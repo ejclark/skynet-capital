@@ -61,10 +61,10 @@ export const COND_SCOUT: Playbook = {
 const DAY_MS = 86_400_000;
 
 /**
- * `SKYNET_COND_SCOUT_UNIVERSE` — a comma list of tickers, dark (empty) by default, the same shape
- * `SKYNET_PLAYBOOKS` uses, and since #4535 only the fallback for a host bot holding no COND-SCOUT
- * subscription (`resolveCondScoutUniverse`). Tokens that aren't plausible tickers are dropped
- * rather than guessed at; duplicates collapse.
+ * A comma list of tickers — the shape `SKYNET_COND_SCOUT_UNIVERSE` and a COND-SCOUT subscription's
+ * symbols use. The env value is no longer a source of names (#4535 slice 4c-2); the bots app only
+ * parses it to report it, so the dashboard can copy it into the host's subscription once. Tokens
+ * that aren't plausible tickers are dropped rather than guessed at; duplicates collapse.
  */
 export function parseCondScoutUniverse(raw: string | undefined): readonly string[] {
   const seen = new Set<string>();
@@ -76,20 +76,19 @@ export function parseCondScoutUniverse(raw: string | undefined): readonly string
 }
 
 /** Where the scout's names came from this check — said in the log whenever it changes. */
-export type CondScoutSource = "subscription" | "paused" | "env" | "dark";
+export type CondScoutSource = "subscription" | "paused" | "dark";
 
 /**
  * THE SCOUT'S NAMES ARE ITS BOT'S OWN SETTING (#4535 slice 2a). The host bot's COND-SCOUT
  * subscription decides whenever the bot holds one: switched on, its `symbols` are the names (empty
  * means unrestricted, as on every subscription — every name the stream carries); paused, it scans
- * nothing. The env knob serves only a bot holding no COND-SCOUT subscription at all, so a pause in
- * the bot's settings is never undone by a server value (Moneypenny's precedence note on #4535,
- * 2026-10-04). With neither, the scout stays dark. Read on every check, so a change lands without
- * a restart; the caller keeps the last subscriptions it received when the dashboard is unreachable.
+ * nothing. A bot holding no COND-SCOUT subscription at all scans nothing: the env knob no longer
+ * serves it (#4535 slice 4c-2), so no server value can undo a pause or an unsubscribe. Read on
+ * every check, so a change lands without a restart; the caller keeps the last subscriptions it
+ * received when the dashboard is unreachable.
  */
 export function resolveCondScoutUniverse(
   hostSubscriptions: readonly Pick<PlaybookSubscription, "playbookId" | "enabled" | "symbols">[],
-  envRaw: string | undefined,
   streamed: readonly string[],
 ): { readonly wanted: readonly string[]; readonly source: CondScoutSource } {
   const mine = hostSubscriptions.filter((s) => s.playbookId === COND_SCOUT_ID);
@@ -99,7 +98,6 @@ export function resolveCondScoutUniverse(
     return { wanted: named.length > 0 ? named : [...streamed], source: "subscription" };
   }
   if (mine.length > 0) return { wanted: [], source: "paused" };
-  if (envRaw) return { wanted: parseCondScoutUniverse(envRaw), source: "env" };
   return { wanted: [], source: "dark" };
 }
 

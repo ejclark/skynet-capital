@@ -121,17 +121,17 @@ describe("copying hardcore, the forced-pick count and staging into stored settin
       const stored: ControlsState = {
         bots: Object.fromEntries(Object.entries(result.written).map(([id, w]) => [id, w.after])),
       };
-      const envHardcore = new Set(settings.hardcore);
+      // What the env alone ran before the bots stopped reading it (slice 4c-2): the bots it named,
+      // its pick count, and its "+stage" (never with no picks) — now read from the stored copy.
       const ids = [HOST, OTHER];
-      const todayPicks = effectiveBetaPicks(undefined, settings.betaPicks);
-      const thenPicks = effectiveBetaPicks(stored.bots[HOST]?.betaPicks, 0);
+      const thenPicks = effectiveBetaPicks(stored.bots[HOST]?.betaPicks);
 
-      expect(effectiveHardcoreIds(ids, new Set(), stored)).toEqual(
-        effectiveHardcoreIds(ids, envHardcore, empty),
+      expect(effectiveHardcoreIds(ids, stored)).toEqual(
+        new Set(ids.filter((id) => settings.hardcore.includes(id))),
       );
-      expect(thenPicks).toBe(todayPicks);
-      expect(effectiveBetaStage(stored.bots[HOST]?.betaStage, false, thenPicks)).toBe(
-        effectiveBetaStage(undefined, settings.betaStage, todayPicks),
+      expect(thenPicks).toBe(settings.betaPicks);
+      expect(effectiveBetaStage(stored.bots[HOST]?.betaStage, thenPicks)).toBe(
+        settings.betaPicks > 0 && settings.betaStage,
       );
     });
   });
@@ -310,10 +310,10 @@ describe("copying the shadow scout's names into its host's COND-SCOUT subscripti
       BOTS_UNIVERSE,
       AT,
     );
-    const today = resolveCondScoutUniverse([], PROD.scout, STREAMED);
-    const then = resolveCondScoutUniverse(result.state[HOST] ?? [], undefined, STREAMED);
+    const today = parseCondScoutUniverse(PROD.scout); // what the env scanned, before 4c-2
+    const then = resolveCondScoutUniverse(result.state[HOST] ?? [], STREAMED);
 
-    expect(then.wanted).toEqual(today.wanted);
+    expect(then.wanted).toEqual(today.filter((n) => STREAMED.includes(n)));
     expect(result.state[HOST]).toEqual([
       {
         accountId: HOST,
@@ -361,9 +361,7 @@ describe("copying the shadow scout's names into its host's COND-SCOUT subscripti
       BOTS_UNIVERSE,
       AT,
     );
-    const today = resolveCondScoutUniverse([], "NVDA,ZZZZ", STREAMED).wanted.filter((n) =>
-      STREAMED.includes(n),
-    );
+    const today = parseCondScoutUniverse("NVDA,ZZZZ").filter((n) => STREAMED.includes(n));
 
     expect(result.state[HOST]?.[0]?.symbols).toEqual(["NVDA"]);
     expect(today).toEqual(["NVDA"]);
