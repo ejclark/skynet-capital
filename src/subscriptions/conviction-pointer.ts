@@ -55,6 +55,8 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * over, so the member branch above points at it. A member's broader view on the same pair outranks
  * it — the hand-over takes the pair over, and a take-back returns it to the owner's own day, which
  * stays held underneath (the take-back no longer falls through to the seeded view for that case).
+ * What was written inline before that moves onto the same kind of view on the poll
+ * (`pair-conviction-migration.ts`), so the member branch points at it there too.
  */
 
 /** Members' views as the pointer rule reads them: the ones handed to an account, and every id. */

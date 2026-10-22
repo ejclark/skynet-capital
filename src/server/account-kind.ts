@@ -19,13 +19,16 @@ import { createDefaultPersonas } from "../personas/registry.js";
  *     restriction (the rule `domain/playbook-delegation.ts` already follows).
  */
 
-let personaIds: ReadonlySet<string> | undefined;
+let personaNames: ReadonlyMap<string, string> | undefined;
 
 /** The registry builds every persona object, so it is read once, not on every request. */
-function registeredPersonaIds(): ReadonlySet<string> {
-  if (!personaIds) personaIds = new Set(createDefaultPersonas().map((p) => p.id));
-  return personaIds;
+function registeredPersonas(): ReadonlyMap<string, string> {
+  if (!personaNames) personaNames = new Map(createDefaultPersonas().map((p) => [p.id, p.name]));
+  return personaNames;
 }
+
+/** A bot account's name, as its persona is registered; the account id itself for any other. */
+export const accountName = (id: string): string => registeredPersonas().get(id) ?? id;
 
 export function accountKind(
   id: string,
@@ -33,7 +36,7 @@ export function accountKind(
 ): "bot" | "human" | undefined {
   const onBoard = participants.find((p) => p.id === id)?.kind;
   if (onBoard) return onBoard;
-  if (registeredPersonaIds().has(id)) return "bot";
+  if (registeredPersonas().has(id)) return "bot";
   if (id.startsWith("human-")) return "human";
   return undefined;
 }

@@ -20,7 +20,10 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * run — so it can make a pair do less, never more.
  *
  * Since #5482's contract step it carries only onto a ◆ row no single conviction record steers: a row
- * one record steers is reached by a pointer instead (`carryRowConvictions`).
+ * one record steers is reached by a pointer instead (`carryRowConvictions`). And since its poll
+ * migration even that row's conviction is written as the owner's own view on the pair first
+ * (`pair-conviction-migration.ts`, which reads `rowConviction`), so this inline carry is only the
+ * fallback for a view that could not be written.
  */
 
 /** The reason a carried conviction reads with: whose it is and what it is against, said plainly. */
