@@ -71,6 +71,12 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"On a zero-rate-move month the foreign long-term Treasury valuation change prints *below* the full-sample intercept (+0.081% of the prior month's base) because the last-12-month residual drift (−0.215pp) persists" (FT-tic-monthly-2026-10-16-2)** — added 2026-10-22 from the
+  [tic-monthly-2026-10-16 close-out](events/tic-monthly-2026-10-16.md). Registered 2026-09-08 on August's Δ10Y = 0.0bp. August printed
+  **+0.131%** (+$10.2bn on a $7,783.3bn base) — above the line by 0.05pp, ~0.2σ of the model's residual sd. Do not re-register a
+  directional drift test on this model off the trailing-residual average: it described the past and missed the one month built
+  to measure it. The one-factor model itself passed its band test (FT-1) and is not retired.
+
 - **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
   |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the
   [ism-services-2026-11-04 pulse](events/ism-services-2026-11-04.md). Registered 2026-09-08 at n=9 as the narrow successor to a
