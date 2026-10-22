@@ -71,6 +71,10 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A publisher's skipped GDPNow posting date means no GDPNow vintage exists for that release" (FT-industrial-production-2026-10-16-1)** — added 2026-10-22 from the [industrial-production-2026-10-16 close-out](events/industrial-production-2026-10-16.md). Registered 2026-09-06 from `PostedUpdates` (10-15 and 10-20, no 10-16). The model's own history carries a 10-16 row (GDP 3.643 → 3.566): it re-estimates on every release date and only *posts* on some. Do not infer "no vintage" from the posting schedule; read `TrackingHistory`/`ContribHistory` for the date.
+
+- **"A retail-free G.17 opex Friday ranges under the unconditional 2014-05+ p75 (1.325%) of SPY's close" (FT-industrial-production-2026-10-16-3)** — added 2026-10-22 from the same close-out. Registered 2026-09-06 at class range 0.6602% (p=0.0775); 10-16 ranged **1.652%** on a VIX 16.46 → 19.99 chip/AI sell-off unrelated to the print (gap +0.19%). Do not register an unconditional range bar for a low-impact print; condition on the VIX level or skip the test.
+
 - **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
   |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the
   [ism-services-2026-11-04 pulse](events/ism-services-2026-11-04.md). Registered 2026-09-08 at n=9 as the narrow successor to a
