@@ -84,6 +84,10 @@ issue, and the late-Oct hyperscaler FY27 capex guidance (the master tripwire).
 - **Late Aug–mid Sep** — public S-1 flip on EDGAR (must precede a roadshow by 15+ days; imminent
   if WSJ timing holds). *The* information event: read commitments schedule, related-party terms,
   lockup clause (early-release?), primary/secondary split, audited P&L vs the run-rate claims.
+  _2026-10-22, #5912 slice 3:_ still no public S-1 on EDGAR. When it lands, `npm run
+  research:lockups` files the listing and its lockup as `estimate` calendar entries, even with
+  the size left blank (Anthropic is on its `--watch` list); pricing is expected about 26 days
+  after that first public filing, the median for $500M+ IPOs since 2021.
 - **Sep** — price range vs $965B: below = down-round distinguisher fires (and arms a
   downward-re-mark risk note on AMZN's $190B carry).
 - **Late Sep–Oct** — pricing + first trade. **No position on day 1** — the whole first session is
