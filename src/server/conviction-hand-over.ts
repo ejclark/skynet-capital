@@ -1,4 +1,8 @@
-import { MAX_STEERED_ACCOUNTS, type WiredConviction } from "../autonomous/convictions-wire.js";
+import {
+  MAX_STEERED_ACCOUNTS,
+  MAX_WIRED_CONVICTIONS,
+  type WiredConviction,
+} from "../autonomous/convictions-wire.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { SEEDED_CONVICTIONS } from "../playbooks/conviction-seeds.js";
 import { CONVICTIONS, ConvictionStore } from "../playbooks/conviction-store.js";
@@ -80,6 +84,11 @@ export function handOverPlan(
       ),
     ...(accounts.length > MAX_STEERED_ACCOUNTS
       ? [`a view can steer up to ${MAX_STEERED_ACCOUNTS} of your bots at once`]
+      : []),
+    // Past the wire's bound the bots refuse every member's views at once, so one more is refused here.
+    ...(!handedOver.some((w) => w.conviction.id === conviction.id) &&
+    handedOver.length >= MAX_WIRED_CONVICTIONS
+      ? ["the bots already hold as many views as they can read; try again once one is taken back"]
       : []),
     ...handedOver
       .filter((other) => other.conviction.id !== conviction.id && !isPairView(other.conviction))

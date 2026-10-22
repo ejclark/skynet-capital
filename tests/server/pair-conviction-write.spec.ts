@@ -10,7 +10,7 @@ import {
 } from "../../src/autonomous/convictions-wire.js";
 import { CONVICTIONS } from "../../src/playbooks/conviction-store.js";
 import { BotControlsStore } from "../../src/server/bot-controls-store.js";
-import { heldConvictions } from "../../src/server/conviction-hand-over.js";
+import { handOverPlan, heldConvictions } from "../../src/server/conviction-hand-over.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { MemberConvictionStore } from "../../src/server/member-conviction-store.js";
 import { serveMemberConvictionsApi } from "../../src/server/member-convictions-api-routes.js";
@@ -277,7 +277,38 @@ describe("an owner's conviction is kept as their own view on the pair", () => {
   });
 });
 
-describe("statePairConviction — never past what the bots will hold", () => {
+describe("never past what the bots will hold", () => {
+  const full: WiredConviction[] = Array.from({ length: MAX_WIRED_CONVICTIONS }, (_, i) => ({
+    conviction: aMemberConviction({ id: `view-${i}` }),
+    accounts: ["banker"],
+  }));
+
+  it("refuses a hand-over once the controls wire is full, but not a view already on it", () => {
+    const floor = aMemberConviction();
+    const state = {
+      sauron: [
+        {
+          accountId: "sauron",
+          playbookId: "CRWV-WHEEL",
+          mode: "standard" as const,
+          enabled: true,
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
+        },
+      ],
+    };
+    const refused = handOverPlan(floor, ["sauron"], state, full);
+    expect(refused).toMatchObject({
+      ok: false,
+      problems: [expect.stringMatching(/as many views as they can read/)],
+    });
+    const onIt = [...full.slice(1), { conviction: floor, accounts: ["sauron"] }];
+    expect(handOverPlan(floor, ["sauron"], state, onIt)).toEqual({
+      ok: true,
+      accounts: ["sauron"],
+    });
+  });
+
   it("writes no view once the controls wire is full, and drops an older one so the inline day rules", async () => {
     const dir = await mkdtemp(join(tmpdir(), "skynet-pair-full-"));
     try {
@@ -285,10 +316,6 @@ describe("statePairConviction — never past what the bots will hold", () => {
       const ref = { accountId: "sauron", playbookId: "SAURON" };
       const at = new Date("2026-10-22T15:00:00Z");
       expect(statePairConviction(members, ref, OWN_DAY, "Ada", at).ok).toBe(true);
-      const full: WiredConviction[] = Array.from({ length: MAX_WIRED_CONVICTIONS }, (_, i) => ({
-        conviction: aMemberConviction({ id: `view-${i}` }),
-        accounts: ["banker"],
-      }));
       const crowded = Object.assign(Object.create(members), { handedOver: () => full });
       expect(statePairConviction(crowded, ref, OWN_DAY, "Ada", at).ok).toBe(true);
       expect(members.handedOver()).toEqual([]);
