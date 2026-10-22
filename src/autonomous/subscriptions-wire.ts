@@ -52,7 +52,8 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * expand-first order: the bots read v3 from #5511 on, and the app sends v3 from the migrate step
  * (`dashboard-insights-bridge.ts`), once those bots were live; v2 stays readable for a rollback. A
  * v1 or v2 snapshot does not vouch for a pointer, so the bots drop it, and the pair is checked on
- * its own conviction as before — the migrate step keeps that inline conviction on the same day.
+ * its own conviction as before. Since the contract step's piece 2 a pointed subscription carries
+ * no inline conviction, so a bots build rolled back past v3 would run it with none on record.
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";

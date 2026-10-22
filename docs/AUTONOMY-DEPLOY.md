@@ -97,14 +97,19 @@ Then, from the **Actions** tab → **Autonomy ops** → **Run workflow**:
 - **`flip-mode`**, with `mode: live` — **the one genuinely irreversible step. Run it during a market
   open, watching the logs.** Bots begin placing real (paper) orders; fills show on the board.
 
-- **Bot behaviour is set in the app, not here** (#4535 slice 4, 2026-10-19/20: `set-playbooks`,
-  `set-hardcore`, `set-cond-scout-universe` and `set-beta-forcing` removed). A bot's owner sets it,
-  read by the bots at every poll with no restart and logged with who, before and after: playbooks
-  and the COND-SCOUT shadow scout's names (a COND-SCOUT subscription on the host bot) in the
-  **Playbook Store**; the hardcore build, forced picks per day and after-close staging on the bot's
-  **Settings** card. The bots no longer read `SKYNET_PLAYBOOKS`, `SKYNET_HARDCORE_BOTS`,
-  `SKYNET_BETA_FORCING` or `SKYNET_COND_SCOUT_UNIVERSE` (#5875), so a leftover secret of those names
-  does nothing; Eric unsets them with one `flyctl secrets unset` line.
+- **Bot behaviour is set in the app, not here** (#4535 slice 4: no autonomy-ops action sets it —
+  there is no `set-playbooks`, `set-hardcore`, `set-cond-scout-universe` or `set-beta-forcing`). A
+  bot's owner sets it, read by the bots at every poll with no restart and logged with who, before
+  and after: playbooks and the COND-SCOUT shadow scout's names (a COND-SCOUT subscription on the
+  host bot) in the **Playbook Store**; the hardcore build, forced picks per day and after-close
+  staging on the bot's **Settings** card. The bots obey none of `SKYNET_HARDCORE_BOTS`,
+  `SKYNET_BETA_FORCING` or `SKYNET_COND_SCOUT_UNIVERSE` (#5875): each is parsed only to be
+  reported, and the dashboard copies it once into a bot with no stored setting. Unset those three with one `flyctl secrets unset --stage` line: `--stage` holds the change
+  until the next bot-code deploy, so it never restarts the bots machine on its own.
+  **Keep `SKYNET_PLAYBOOKS`.** It still lists the playbooks the bots run for every account: one it
+  names that a bot is not subscribed to opens nothing on that bot, but it keeps managing the exits
+  of positions that playbook already holds. Removing it would leave those positions with nothing
+  watching their exits.
 
 Flip back with `flip-mode` / `mode: observe` any time — same button, same allowlist.
 

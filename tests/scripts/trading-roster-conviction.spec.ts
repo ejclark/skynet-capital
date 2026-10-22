@@ -115,4 +115,34 @@ describe("a bot's rosters under a member's view", () => {
     expect(sold(r(230))).toHaveLength(1);
     expect(sold(r(-10))).toEqual([]);
   });
+
+  /** #5482 contract piece 3: the inline conviction becomes a view stated on its one pair, so that
+   *  view must run the pair unnarrowed and check it exactly as the inline copy did. */
+  it("runs a view stated on its one pair like the inline conviction it replaces", () => {
+    const onPair = aMemberConviction({ scope: "pair", checkOn: "2026-11-18", narrowings: [] });
+    const lookupOne = (id: string) => (id === onPair.id ? onPair : undefined);
+    expect(resolveBotRoster(bot, [], pointed, undefined, lookupOne).enabled).toEqual([
+      { playbook: CRWV_WHEEL, mode: "standard" },
+    ]);
+    const r = (realizedPl: number) =>
+      tradingRoster(
+        {
+          bot,
+          subscriptions: pointed,
+          enabled: [{ playbook: CRWV_WHEEL, mode: "standard" }],
+          convictionOf: lookupOne,
+        },
+        { maxPositionPct: 0.03 },
+        undefined,
+        { ledgerOf: () => ({ realizedPl, putsClosed: 0, putsAssigned: 0 }) },
+      );
+    const sold = (t: { persona: Persona }) =>
+      t.persona.decide(market(), flat()).filter((i) => i.playbookId === "CRWV-WHEEL");
+    const inline = (realizedPl: number) =>
+      roster(() => ({ realizedPl, putsClosed: 0, putsAssigned: 0 }));
+    expect(sold(r(230))).toEqual(sold(inline(230)));
+    expect(sold(r(230))).toHaveLength(1);
+    expect(sold(r(-10))).toEqual(sold(inline(-10)));
+    expect(sold(r(-10))).toEqual([]);
+  });
 });

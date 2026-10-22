@@ -155,9 +155,16 @@ export function parseProspectus(text) {
     text,
   );
   // "We are offering 9,375,000 shares" names the offering; the first big share count on a cover can
-  // instead be the shares outstanding after it (INNIO's 660M), which overstated its size 10×.
+  // instead be the shares outstanding after it (INNIO's 660M), which overstated its size 10×. The
+  // offering summary's "Common stock offered by us 9,250,000 shares" is the same fact in table form:
+  // missing it read Alector's 68M shares outstanding as its offering, a $176M raise as $1.3B
+  // (#5912 slice 2). The \b matters as much: without it "after th|is offering| 68,365,044 shares"
+  // matched first, so any summary with that line sized the IPO by its post-offering share count.
   const shares =
-    /(?:are|is) (?:offering|selling)\s+([\d,]{7,})\s+(?:of our\s+)?(?:shares|common shares|ordinary shares|American Depositary Shares|ADSs)/i.exec(
+    /\b(?:are|is) (?:offering|selling)\s+([\d,]{7,})\s+(?:of our\s+)?(?:shares|common shares|ordinary shares|American Depositary Shares|ADSs)/i.exec(
+      text,
+    ) ??
+    /(?:Class A )?(?:common stock|common shares|ordinary shares|American Depositary Shares|ADSs) offered by us\s*:?\s*([\d,]{7,})\s+(?:shares|ADSs)/i.exec(
       text,
     ) ??
     /([\d,]{7,})\s+(?:shares|common shares|ordinary shares|American Depositary Shares)/i.exec(text);

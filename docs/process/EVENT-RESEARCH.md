@@ -90,8 +90,10 @@ faithful surfacing of the stance below, never a new claim (see the TEMPLATE). In
   needs: **supply** — unlocking shares as % of float and in days of average volume; **price** — the
   run-up since the IPO price (the literature's pullback is larger after a big run-up); **options**
   — put IV against realized vol and the skew into the date (a known catalyst is usually priced).
-  The default call is "stand aside" until the lockup study (#5912 slice 2) says otherwise; never
-  a position on the listing day.
+  The default call is "stand aside": the lockup study ([`ipo-lockup-expiry.md`](../research/ipo-lockup-expiry.md),
+  #5912 slice 2) found the unlock drag was a 2019–21 effect, flat since 2022, and no trade shape
+  paid at a realistic option price. Log the three reads as the study's forward test; never a
+  position on the listing day.
 - **macro-print / sector / geopolitical** — sourced web research (primary sources over
   aggregators; the seeding of this calendar caught an aggregator publishing a wrong CPI date —
   cite the primary and the check date). Establish: consensus expectation, the whisper if
@@ -472,7 +474,8 @@ powered re-run waits on the OCC archive (#4832).
 
 ## The decision header is gated (`npm run research:lint`)
 
-The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.
+The gate reads `docs/research/events/`, `docs/research/weeks/` and `docs/research/convictions/` —
+one contract, one eye.
 A weekly study's call sheet keys by name rather than by horizon, so the four-horizon rule does not
 apply to it (the lint already skips that check for a by-name table) and its advisory header budget is
 wider, because a by-name sheet grows with the roster rather than with an author's prose.
