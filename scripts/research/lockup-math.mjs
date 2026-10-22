@@ -160,13 +160,20 @@ export function parseProspectus(text) {
   // missing it read Alector's 68M shares outstanding as its offering, a $176M raise as $1.3B
   // (#5912 slice 2). The \b matters as much: without it "after th|is offering| 68,365,044 shares"
   // matched first, so any summary with that line sized the IPO by its post-offering share count.
-  const shares =
-    /\b(?:are|is) (?:offering|selling)\s+([\d,]{7,})\s+(?:of our\s+)?(?:shares|common shares|ordinary shares|American Depositary Shares|ADSs)/i.exec(
+  // "We are offering, on a firm commitment basis, 6,250,000 Class A Ordinary Shares" (FF Global's
+  // F-1/A, 2026-06-03) is the same sentence again; missing it fell through to the first big count,
+  // its 4B AUTHORIZED shares, and sized a $30M IPO at $20B (#5912 slice 3). That last-resort read is
+  // flagged `sharesFrom: "first-count"`, so a caller that needs the size to mean something can
+  // refuse it.
+  const offering =
+    /\b(?:are|is) (?:offering|selling)(?:, on an? [\w -]{2,30} basis,)?\s+([\d,]{7,})\s+(?:of our\s+)?(?:Class [A-Z] )?(?:shares|common shares|ordinary shares|American Depositary Shares|ADSs)/i.exec(
       text,
     ) ??
     /(?:Class A )?(?:common stock|common shares|ordinary shares|American Depositary Shares|ADSs) offered by us\s*:?\s*([\d,]{7,})\s+(?:shares|ADSs)/i.exec(
       text,
-    ) ??
+    );
+  const shares =
+    offering ??
     /([\d,]{7,})\s+(?:shares|common shares|ordinary shares|American Depositary Shares)/i.exec(text);
   const priceUsd = price ? Number(price[1].replace(/,/g, "")) : undefined;
   const sharesOffered = shares ? Number(shares[1].replace(/,/g, "")) : undefined;
@@ -181,23 +188,24 @@ export function parseProspectus(text) {
     earlyRelease: early && quote(early),
     priceUsd,
     sharesOffered,
+    sharesFrom: offering ? "offering" : shares ? "first-count" : undefined,
     offeringUsd: priceUsd && sharesOffered ? Math.round(priceUsd * sharesOffered) : undefined,
   };
 }
 
 /** $670M · $1.8B · $75.0B — the size a reader compares, not the digits. */
-function usd(n) {
+export function usd(n) {
   return n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : `$${Math.round(n / 1e6)}M`;
 }
 
 /** EDGAR's display names are sometimes all caps ("SPACE EXPLORATION TECHNOLOGIES"). */
-function titleCase(name) {
+export function titleCase(name) {
   return name === name.toUpperCase()
     ? name.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase())
     : name;
 }
 
-function quote(sentence) {
+export function quote(sentence) {
   const s = sentence.trim();
   return s.length > 320 ? `${s.slice(0, 317)}…` : s;
 }
@@ -207,9 +215,9 @@ function quote(sentence) {
 export const HIGH_USD = 5_000_000_000;
 export const MEDIUM_USD = 500_000_000;
 
-function impactFor(usd) {
-  if (usd && usd >= HIGH_USD) return "high";
-  return usd && usd >= MEDIUM_USD ? "medium" : "low";
+export function impactFor(raised) {
+  if (raised && raised >= HIGH_USD) return "high";
+  return raised && raised >= MEDIUM_USD ? "medium" : "low";
 }
 
 /**

@@ -82,8 +82,19 @@ faithful surfacing of the stance below, never a new claim (see the TEMPLATE). In
   [`multi-symbol-sweep.md`](../research/multi-symbol-sweep.md) — never re-propose a killed
   hypothesis without new prints. For a full workup, the `symbol-sweep` workflow adds the
   red-team pass.
+- **ipo-listing** — an IPO prices; first trade is the next session (#5912 slice 3; filed by `npm
+  run research:lockups`). An `estimate` comes from the public S-1 weeks before pricing, dated by
+  base rates its `source` states; it is not a date to act on, and the 424B4 retires it with a
+  dated, `confirmed` twin (`supersededBy`) — so register no forward test on an estimate's id,
+  which would block that retirement until scored. Read the S-1 for what the listing phase needs:
+  the price range against the last private mark, the primary/secondary split, and the lock-up
+  clause (its early-release triggers date the lockup entry beside it). The standing call is no
+  position on day 1 ([`anthropic-ipo.md`](../research/anthropic-ipo.md)); the close-out records
+  the day-1 close against the offer price.
 - **lockup-expiry** — an IPO's insider shares unlock (#5912; filed by `npm run research:lockups`).
-  First re-read the lock-up clause in the 424B4 the `source` cites: an `estimate` entry quotes an
+  An entry whose `source` opens `EST: S-1` was estimated before pricing and waits for the 424B4
+  like its listing above. Otherwise, first re-read the lock-up clause in the 424B4 the `source`
+  cites: an `estimate` entry quotes an
   early-release trigger (an earnings release, a closing-price test, staged tranches), and the
   initial research's job is to name the earliest date it can actually fire. If that settles one
   date, promote the entry with an `SEC:` source that says so. Then the three reads the playbook

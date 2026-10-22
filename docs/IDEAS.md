@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
+  from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
+  discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:
+  the *sense* stage of that loop is manual. A weekly run that opens a PR with any new event files
+  would close it; the workflow file is the protected class, so it boards a platter. The deciding
+  question: how many days between an S-1 flip and its pricing can the calendar afford to miss? The
+  measured gap is 26 days at the median. _(src: Claude · while: #5912 slice 3)_
 - **Does a bot's order expectation name its playbook when it states the mechanic?** The wheel's
   public expectation still says "the bot buys 100 shares at $80 and sells covered calls on them
   next" — the wheel's mechanic, read by every member. #4975 kept a bot's reason and expectation
