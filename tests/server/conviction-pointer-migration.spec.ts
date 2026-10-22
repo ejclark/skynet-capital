@@ -11,6 +11,7 @@ import type { DashboardServerConfig } from "../../src/server/dashboard-server-co
 import { pollSeedsFromEnv } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
 import { serveSubscriptionsApi } from "../../src/server/subscriptions-api-routes.js";
+import { pairViewId } from "../../src/subscriptions/pair-conviction.js";
 
 /**
  * #5482 slice 2, the MIGRATE step, against a real store on a temp file: the app writes a pointer
@@ -206,7 +207,7 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       expect(await readFile(path, "utf8")).toBe(onDisk);
     });
 
-    it("keeps the inline conviction of a subscription no record states", () => {
+    it("moves a conviction no record states onto the owner's own view, never the record's", () => {
       livePair("CRWV-WHEEL");
       store.setConviction("sauron", "CRWV-WHEEL", { reason: "later", checkOn: "2027-04-30" }, AT);
       const seed = pollSeedsFromEnv({
@@ -214,8 +215,9 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
         SKYNET_CONTROLS_FILE: join(dir, "bot-controls.json"),
       });
       seed(controlsPollReport({}), AT);
-      expect(held("CRWV-WHEEL")).toMatchObject({ conviction: { checkOn: "2027-04-30" } });
-      expect(held("CRWV-WHEEL")?.convictionId).toBeUndefined();
+      // The contract step's poll migration (`pair-conviction-migration.ts`): a view, not inline.
+      expect(held("CRWV-WHEEL")?.convictionId).toBe(pairViewId("sauron", "CRWV-WHEEL"));
+      expect(held("CRWV-WHEEL")).not.toHaveProperty("conviction");
     });
 
     it("leaves a file it cannot read whole alone", async () => {

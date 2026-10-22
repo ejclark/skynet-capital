@@ -1,4 +1,8 @@
-import { parseSteeredAccounts, type WiredConviction } from "../autonomous/convictions-wire.js";
+import {
+  MAX_WIRED_CONVICTIONS,
+  parseSteeredAccounts,
+  type WiredConviction,
+} from "../autonomous/convictions-wire.js";
 import { parseStoredConviction } from "../playbooks/conviction-parse.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { SEEDED_CONVICTIONS } from "../playbooks/conviction-seeds.js";
@@ -265,6 +269,46 @@ export class MemberConvictionStore {
       createdAt: prior?.createdAt ?? stamp,
       updatedAt: stamp,
     }));
+  }
+
+  /**
+   * Keep many accounts' views stated on one pair, in one write: the controls poll's migration of
+   * inline convictions (`subscriptions/pair-conviction-migration.ts`). Only as many as the controls
+   * wire has room for (`MAX_WIRED_CONVICTIONS`), in the order given — past it the bots would refuse
+   * every member's views at once, so the rest keep their inline copy until room frees. Nothing on a
+   * file that cannot be read whole. Returns `account/playbookId` for each view written.
+   */
+  statePairs(
+    views: readonly {
+      readonly accountId: string;
+      readonly playbookId: string;
+      readonly view: Conviction;
+    }[],
+    at: Date,
+  ): readonly string[] {
+    const state = this.file.loadIfReadable();
+    if (!state || views.length === 0) return [];
+    const stamp = at.toISOString();
+    let next = state;
+    let wired = handedOverIn(state).length;
+    const stated: string[] = [];
+    for (const { accountId, playbookId, view } of views) {
+      const key = pairViewsKey(accountId);
+      const prior = next[key]?.find((r) => r.conviction.id === view.id);
+      const held = prior?.status === "steering";
+      if (!held && wired >= MAX_WIRED_CONVICTIONS) break;
+      if (!held) wired += 1;
+      next = withRecord(next, key, view.id, {
+        status: "steering",
+        conviction: view,
+        accounts: [accountId],
+        createdAt: prior?.createdAt ?? stamp,
+        updatedAt: stamp,
+      });
+      stated.push(`${accountId}/${playbookId}`);
+    }
+    if (stated.length > 0) this.file.write(next);
+    return stated;
   }
 
   /** Drop an account's view stated on one pair; a missing one is a no-op. */
