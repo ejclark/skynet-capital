@@ -21,7 +21,12 @@
  *    while that is still ahead, and the dated `ipo-listing` when the listing priced inside the
  *    close-out window or an estimate is waiting for it. Then every estimate pass 1 wrote for that
  *    company is marked `supersededBy` its dated twin — unless the estimate's id still has an
- *    unscored forward test, which its research lane must score first (event-scan --validate).
+ *    unscored forward test, which its research lane must score first (event-scan --validate), or
+ *    the ticker changed between filings, which a person settles.
+ *
+ * A deal that stalls and comes back files a fresh pair, which retires the stale one the same way.
+ * One that never comes back leaves a lockup estimate for shares that may never list: 30 days past
+ * its expected pricing with no 424B4, that file is removed while nothing references it.
  *
  * Ownership: an id already in `src/domain/market-events/` is never overwritten, with one exception
  * this file wrote itself — an estimate whose `source` still opens with `EST: S-1 …`. A research lane
@@ -36,7 +41,7 @@
  * User-Agent and at most 10 requests a second; this stays near 5.
  */
 
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { unscoredForwardTests } from "../forward-test-pending.mjs";
@@ -44,6 +49,7 @@ import {
   expectedPricing,
   listingEstimates,
   listingEvent,
+  orphanedLockups,
   readRegistration,
   registeredUsd,
   registrationEstimateCik,
@@ -54,10 +60,14 @@ import { addDays, htmlToText, lockupEvent, parseProspectus } from "./lockup-math
 const UA = "skynet-capital research (ejclark83@gmail.com)";
 const EVENTS_DIR = join(process.cwd(), "src", "domain", "market-events");
 const FORWARD_TESTS_DIR = join(process.cwd(), "docs", "research", "forward-tests");
+const LEDGER_DIR = join(process.cwd(), "docs", "research", "events");
 const SPAC_SIC = "6770";
 // A listing that priced this recently still gets its close-out session (assessment-cadence.json
 // `closeOutWithinDays`), which is where the listing phase's day-1 read gets written down.
 const RECENT_LISTING_DAYS = 6;
+// How far past its expected pricing a listing estimate may sit with no 424B4 before its lockup
+// estimate counts as an orphan (listing-math.mjs, `orphanedLockups`).
+const STALL_DAYS = 30;
 
 // `--today` replays a past day — what the pass would have filed then (pair it with `--until`).
 const { values: clock } = parseArgs({ options: { today: { type: "string" } }, strict: false });
@@ -296,13 +306,14 @@ for (const r of rows) {
 }
 
 let retired = 0;
-const dated = rows.filter((r) => r.dated && r.event).map((r) => r.event);
-for (const { id, supersededBy } of supersessions(existing, dated)) {
+const retiring = new Set();
+const newer = rows.filter((r) => r.event).map((r) => r.event);
+for (const { id, supersededBy, blocked } of supersessions(existing, newer)) {
+  retiring.add(id);
   const open = unscoredForwardTests(id, FORWARD_TESTS_DIR);
-  if (open.length) {
-    console.log(
-      `  ⚠  ${id} not retired: ${open.length} unscored forward test(s) — score them first`,
-    );
+  if (blocked || open.length) {
+    const why = blocked ?? `${open.length} unscored forward test(s) — score them first`;
+    console.log(`  ⚠  ${id} not retired: ${why}`);
     continue;
   }
   console.log(`  ↳  ${id} superseded by ${supersededBy}`);
@@ -312,8 +323,26 @@ for (const { id, supersededBy } of supersessions(existing, dated)) {
   }
 }
 
+// A stalled deal's lockup estimate is removed while nothing references it yet: it sits months out,
+// past the research horizon, so normally no ledger or forward test has been written against it.
+let removed = 0;
+for (const e of orphanedLockups(existing, { today, priced, stallDays: STALL_DAYS })) {
+  if (retiring.has(e.id)) continue;
+  const ledger = join(LEDGER_DIR, `${e.id}.md`);
+  const fragment = join(FORWARD_TESTS_DIR, `${e.id}.md`);
+  if (existsSync(ledger) || existsSync(fragment)) {
+    console.log(`  ⚠  ${e.id}: its listing stalled, but research cites it — retire it by hand`);
+    continue;
+  }
+  console.log(`  ✕  ${e.id}: its listing stalled ${STALL_DAYS}+ days with no 424B4 — removed`);
+  if (values.write) {
+    unlinkSync(join(EVENTS_DIR, `${e.id}.json`));
+    removed += 1;
+  }
+}
+
 console.log(
   values.write
-    ? `lockup-discovery: wrote ${written} event file(s), retired ${retired} estimate(s) in src/domain/market-events/`
+    ? `lockup-discovery: wrote ${written}, retired ${retired}, removed ${removed} event file(s) in src/domain/market-events/`
     : "lockup-discovery: dry run — pass --write to file the new ones",
 );

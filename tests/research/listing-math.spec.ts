@@ -2,6 +2,7 @@ import {
   expectedPricing,
   listingEstimates,
   listingEvent,
+  orphanedLockups,
   readRegistration,
   registeredUsd,
   registrationEstimateCik,
@@ -266,6 +267,7 @@ describe("supersessions — the dated pair retires the estimates", () => {
   const datedLockup = {
     id: "cbrs-lockup-expiry-2026-11-09",
     kind: "lockup-expiry",
+    symbols: ["CBRS"],
     source:
       "EST: the lock-up has an early-release trigger. 424B4 https://www.sec.gov/Archives/edgar/data/2021728/000162828026035214/x.htm",
   };
@@ -273,6 +275,7 @@ describe("supersessions — the dated pair retires the estimates", () => {
     {
       id: "cbrs-ipo-listing-2026-05-13",
       kind: "ipo-listing",
+      symbols: ["CBRS"],
       source: "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/2021728/000162828026035214/x.htm",
     },
     datedLockup,
@@ -293,8 +296,58 @@ describe("supersessions — the dated pair retires the estimates", () => {
     expect(supersessions([otherFiler, resourced, retired, sameId], dated)).toEqual([]);
   });
 
+  it("holds a retirement for a person when the ticker changed between filings", () => {
+    // The validator ties a re-dated retirement to the same symbols; writing it would turn CI red.
+    const renamed = dated.map((d) => ({ ...d, symbols: ["CRBS"] }));
+    expect(supersessions([listingEst], renamed)).toEqual([
+      { id: "cbrs-ipo-listing-2026-05-12", blocked: expect.stringMatching(/symbols CBRS differ/) },
+    ]);
+  });
+
+  it("repoints an entry already retired onto the estimate it retires — never a chain", () => {
+    const stale = { ...listingEst, id: "cbrs-ipo-listing-2026-04-20", supersededBy: listingEst.id };
+    expect(supersessions([stale, listingEst], dated.slice(0, 1))).toEqual([
+      { id: "cbrs-ipo-listing-2026-05-12", supersededBy: "cbrs-ipo-listing-2026-05-13" },
+      { id: "cbrs-ipo-listing-2026-04-20", supersededBy: "cbrs-ipo-listing-2026-05-13" },
+    ]);
+  });
+
+  it("lets a fresh estimate pair retire the stale one when a stalled deal comes back", () => {
+    const stale = { ...lockupEst, id: "cbrs-lockup-expiry-2026-10-01", date: "2026-10-01" };
+    expect(supersessions([stale], [lockupEst])).toEqual([
+      { id: "cbrs-lockup-expiry-2026-10-01", supersededBy: "cbrs-lockup-expiry-2026-11-08" },
+    ]);
+  });
+
   it("knows its own estimates by their source, and nothing else", () => {
     expect(registrationEstimateCik(listingEst)).toBe("2021728");
     expect(registrationEstimateCik(datedLockup)).toBeUndefined();
+  });
+});
+
+describe("orphanedLockups — a stalled deal's lockup estimate", () => {
+  const [listingEst, lockupEst] = cbrsEstimates(); // listing expected 2026-05-12
+  const opts = (today: string, priced: string[] = []) => ({
+    today,
+    priced: new Set(priced),
+    stallDays: 30,
+  });
+
+  it("is an orphan once its listing is 30 days past with no 424B4", () => {
+    expect(orphanedLockups([listingEst, lockupEst], opts("2026-06-12")).map((e) => e.id)).toEqual([
+      "cbrs-lockup-expiry-2026-11-08",
+    ]);
+  });
+
+  it("is not one while the deal may still be slipping, once it priced, or once retired", () => {
+    expect(orphanedLockups([listingEst, lockupEst], opts("2026-06-10"))).toEqual([]);
+    expect(orphanedLockups([listingEst, lockupEst], opts("2026-06-12", ["2021728"]))).toEqual([]);
+    const retired = { ...lockupEst, supersededBy: "cbrs-lockup-expiry-2026-11-09" };
+    expect(orphanedLockups([listingEst, retired], opts("2026-06-12"))).toEqual([]);
+  });
+
+  it("is not one when the deal came back with a newer listing estimate", () => {
+    const back = { ...listingEst, id: "cbrs-ipo-listing-2026-07-01", date: "2026-07-01" };
+    expect(orphanedLockups([listingEst, back, lockupEst], opts("2026-06-12"))).toEqual([]);
   });
 });

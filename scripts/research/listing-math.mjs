@@ -197,25 +197,67 @@ export function registrationEstimateCik(event) {
   return REGISTRATION_SOURCE.exec(event.source ?? "")?.[1];
 }
 
+const sameSymbols = (a, b) => (a.symbols ?? []).join(",") === (b.symbols ?? []).join(",");
+
 /**
- * Which registration estimates the dated events retire: every live estimate from the same filer
- * (CIK, read from both sources' EDGAR paths, so a reused ticker cannot match) and of the same kind,
- * under another id. Returns `[{ id, supersededBy }]`. An estimate whose id the dated event already
- * holds is the same file, so it is not here: discovery re-files it in place (the confirming flip).
+ * Which registration estimates the newer events retire. A newer event is the 424B4's dated pair,
+ * or a fresh estimate pair for a deal that came back after its last estimate passed. It retires
+ * every live estimate from the same filer (CIK, read from both sources' EDGAR paths, so a reused
+ * ticker cannot match) and of the same kind, under another id. Returns:
+ *   - `{ id, supersededBy }` for each retirement, plus a repoint for any entry already retired
+ *     onto one of these ids, since event-scan --validate refuses a chain;
+ *   - `{ id, blocked }` when the symbols differ — the listing changed its ticker between filings,
+ *     and the validator ties a re-dated retirement to the same symbols, so a person decides.
+ * An estimate whose id the newer event already holds is the same file, so it is not here:
+ * discovery re-files it in place (the confirming flip).
  */
-export function supersessions(existing, dated) {
-  const out = [];
-  for (const d of dated) {
-    const cik = SEC_FILING.exec(d.source)?.[1];
-    if (!cik) continue;
-    for (const e of existing)
-      if (
-        e.kind === d.kind &&
-        e.id !== d.id &&
-        e.supersededBy === undefined &&
-        registrationEstimateCik(e) === cik
-      )
-        out.push({ id: e.id, supersededBy: d.id });
+export function supersessions(existing, newer) {
+  return newer.flatMap((d) => retiredBy(existing, d));
+}
+
+/** What one newer event retires — `supersessions` for a single event. */
+function retiredBy(existing, d) {
+  const cik = SEC_FILING.exec(d.source)?.[1];
+  const retires = (e) =>
+    cik !== undefined &&
+    e.kind === d.kind &&
+    e.id !== d.id &&
+    e.supersededBy === undefined &&
+    registrationEstimateCik(e) === cik;
+  return existing
+    .filter(retires)
+    .flatMap((e) =>
+      sameSymbols(e, d)
+        ? [
+            { id: e.id, supersededBy: d.id },
+            ...existing
+              .filter((r) => r.supersededBy === e.id)
+              .map((r) => ({ id: r.id, supersededBy: d.id })),
+          ]
+        : [{ id: e.id, blocked: `its symbols ${e.symbols} differ from ${d.id}'s ${d.symbols}` }],
+    );
+}
+
+/**
+ * A deal that stalled leaves a lockup estimate for shares that may never list. Once its listing
+ * estimate is `stallDays` past with no 424B4 (`priced` holds the filers that have one) and no
+ * newer estimate, its live lockup estimates are orphans. A withdrawal is not read from EDGAR, so
+ * a slip is told from a stall by time alone. 30 days past the estimate is later than 53 of the 60
+ * $500M+ IPOs measured since 2021; the other 7 sat for months, and a deal that comes back amends
+ * its S-1 (its financials go stale), which files a fresh pair.
+ */
+export function orphanedLockups(existing, { today, priced, stallDays }) {
+  const cutoff = addDays(today, -stallDays);
+  const listingsBy = new Map();
+  for (const e of existing) {
+    const cik = registrationEstimateCik(e);
+    if (e.kind === "ipo-listing" && cik)
+      listingsBy.set(cik, [...(listingsBy.get(cik) ?? []), e.date]);
   }
-  return out;
+  return existing.filter((e) => {
+    const cik = registrationEstimateCik(e);
+    if (!(e.kind === "lockup-expiry" && cik && e.supersededBy === undefined)) return false;
+    const dates = listingsBy.get(cik) ?? [];
+    return !priced.has(cik) && dates.length > 0 && dates.every((d) => d < cutoff);
+  });
 }

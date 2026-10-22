@@ -59,7 +59,24 @@ export function listingEvent(input: {
 
 export function registrationEstimateCik(event: { source?: string }): string | undefined;
 
+interface Retirable {
+  id: string;
+  kind: string;
+  date?: string;
+  source: string;
+  symbols?: readonly string[];
+  supersededBy?: string;
+}
+
 export function supersessions(
-  existing: readonly { id: string; kind: string; source: string; supersededBy?: string }[],
-  dated: readonly { id: string; kind: string; source: string }[],
-): { id: string; supersededBy: string }[];
+  existing: readonly Retirable[],
+  newer: readonly Retirable[],
+): (
+  | { id: string; supersededBy: string; blocked?: undefined }
+  | { id: string; blocked: string; supersededBy?: undefined }
+)[];
+
+export function orphanedLockups<T extends Retirable & { date: string }>(
+  existing: readonly T[],
+  options: { today: string; priced: ReadonlySet<string>; stallDays: number },
+): T[];
