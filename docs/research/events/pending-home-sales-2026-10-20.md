@@ -337,3 +337,79 @@ as its receipt.
 
 **Last assessed:** 2026-10-16
 <!-- probe-ref: {"symbols":{},"vix":20.6,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://www.bls.gov/news.release/cpi.nr0.htm","status":"403","at":"2026-10-16"}]} -->
+
+## Outcome
+
+**Close-out (2026-10-22, D+2).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); both caches were busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) and nothing here reads them. The *print* is scored from NAR's own
+newsroom release (`nar.realtor/newsroom/pending-home-sales-decreased-7-3-percent-in-september`, HTTP 200,
+690,572 bytes, fetched direct 2026-10-22, `<time>`/`article:published_time` read from the page source); the
+*tape* from Yahoo 5-minute ITB / XHB / SPY / `^VIX` / `^TNX` bars pulled fresh the same day; the *rate*
+from Freddie Mac's `PMMS_history.csv` (direct); the *builder filing* from SEC EDGAR's submissions feed
+(direct). No consensus for the September index was reachable, so "vs expectations" is not claimed.
+
+| Measure | Result | Line | Verdict |
+|---|---|---|---|
+| **Publication time** (`FT-…-1`) | **2026-10-20T09:00:00-05:00** (10:00 ET) | any date other than 2026-10-20 kills | **pass** — 4 for 4 on the 2026 execution record |
+| **PHSI m/m / y/y** | **−7.3% / −11.3%**, down in all four regions (West −9.2%, South −8.2%, Midwest −6.5%, Northeast −4.2%) | not registered | no forecast was made |
+| Index level | ≈ **66.0** — *derived*, 71.2 (Aug, from the 09-17 release) × (1 − 0.073); the release text carries no level | not registered | derived, not read |
+| PMMS 30y, week of 10-22 | **7.32%** (7.28 / 7.40 / 7.40 / 7.32 for 10-01…10-22) | `-3` already scored pass | rate input held above 7% |
+| **NVR Q3 8-K Item 2.02** (`FT-…-2`) | EDGAR lists a 2.02 filing dated **2026-10-22** | kill if ≤ 2026-10-20; score-by 2026-10-31 | **not scored yet** — observed, below |
+| ITB 10:00–10:55 ET | range **60%** of the day's range (1.67% of 2.81%), hour **+0.86%**; session o2c **+2.15%** | 12-17 lane's class average **33.9%** | one session — see below |
+| XHB 10:00–10:55 ET | **68%** of the day's range, hour **+0.93%**; session o2c **+1.79%** | 12-17 lane: ITB-only baseline | one session |
+| SPY 10:00 hour / session | **+0.49%** / o2c **+0.41%** (range 1.05%) | — | ordinary-to-firm |
+| `^VIX` / `^TNX` 10-20 | **18.42 → 17.31** (−6.0% o2c) / **5.10 → 5.12** | 15.52 at the 10-06 row; 20.6 intraday 10-16 | no regime change |
+
+**What happened vs the stance.** The stance — stand aside on every horizon, attribute nothing on 10-20 to
+this print, read the number as a post-hike ~7% mortgage month — held on all four of its items, and the one
+number that moved against it is a single session, not a class.
+
+- **The date label is closed in the confirming direction.** The release carries
+  `2026-10-20T09:00:00-05:00`; the 2026 record is now June→07-16, July→08-18, August→09-17 and
+  September→10-20, each to the day. The statistics page's own "Next release" note now names the *October*
+  edition on **Wednesday, November 18, 2026 at 10 a.m. Eastern** but mislabels it **"Pending Home Sales
+  for September 2026"** — a second series-labelling slip on that page (the first, in September, named the
+  wrong edition under this series' name), and it matches the schedule row for **11-18** that
+  `pending-home-sales-2026-11-18` already carries, so it contradicts nothing.
+- **Item 3 (rates) is the one the number echoes.** NAR's chief economist (Yun): *"Market conditions weakened in
+  September due to fast-rising mortgage rates"*, and *"mortgage rates could be topping out"* —
+  PMMS did print **7.32%** on 10-22 after two weeks at 7.40%. That read is a hedge, not a data point: the
+  falsifier this ledger set for it (a PMMS print below 6.542% before the release) never came close.
+- **The tape leg has one observation that looks like a signature and is not yet one.** ITB's 10:00 hour
+  held **60%** of the day's range and XHB's **68%**, against the 12-17 lane's class average of **33.9%** —
+  on a day that also opened with housing starts at **08:30** (the print itself was not primary-fetched
+  this session, so its size is not claimed), the VIX falling 6%, and the whole tape green (SPY +0.41%). A
+  *weak* print was followed by a *rising* homebuilder hour, which reads as "less bad than feared" or as
+  a rates/risk-on bid that happened to share the clock — **this lane cannot separate them from n=1**, and
+  does not try to. Per the stance, item 4's kill switch is a measured signature **on the release class**,
+  not one session; the 12-17 lane's p = 0.79 (723 sessions) stands until a re-run that includes this date
+  moves it. No percentile for this session against the 723 was computed (it was not re-run), so "unusual"
+  is a description, not a finding. **No tape test is registered** — doing so after seeing the answer would
+  be fitting a hypothesis to the outcome it claims to predict.
+- **The builder cluster landed two days after the print, not on it.** EDGAR's NVR feed shows an Item 2.02
+  8-K dated **2026-10-22** (prior: 2026-07-23), i.e. D+2 — inside the `-2` prediction's direction (≥ 10-21)
+  and the ledger's own ~10-22/23 projection, and *earlier* than the 10-26 to 10-28 the press pulse of
+  10-16 had suggested. Same-day ITB moved **+5.37%** on 10-22 (range 5.78%); that is the builder tape, not
+  the print, and this ledger attributes none of it to either. `-2` is **not scored here**: its score-by is
+  2026-10-31, and scoring early is the falsification the close-out rule forbids. It stays `_open_`.
+- **The corridor behaved.** Housing starts (10-20, 08:30, ninety minutes ahead), NAHB HMI (10-19) and the
+  blackout (10-17 → decision **10-28**) were the only things between the print and a quiet Fed window; no
+  call changes. September's FOMC *hike* (3¾–4%, 12–0) is the cause NAR's economist names indirectly
+  ("mortgage rates have already risen much more than the Federal Reserve's short-term interest rate
+  hikes").
+
+**What this close-out does not claim.** It does not say the print moved ITB, and it does not say it
+didn't. It does not forecast October's index (due **2026-11-18**, `pending-home-sales-2026-11-18`). It does
+not score `-2`. And no outcome here licenses a trade: `symbols: []`, no instrument attaches, and no house
+playbook is macro- or housing-keyed.
+
+**Loop census (sense · decide · act · verify · remember).** Everything here ran by script except one
+stage: **sense** for the print's *content* — `WebFetch`'s summary of the newsroom page contradicted the
+page source (it reported "Publication: September 17, 2026" for the 10-20 release), and only a raw `curl`
+of the page's `<time>` element settled it. A deterministic `<time>`-element reader for NAR's newsroom
+(the date test every PHSI edition's `-1` row scores) would automate that stage; the 12-17 sibling
+(`FT-pending-home-sales-2026-12-17-1`) is the next place it would pay.
+
+**Last assessed:** 2026-10-22
+<!-- probe-ref: {"symbols":{},"vix":18.62,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","spcx-lockup-release-2026-10-22","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":[],"screenStreak":0} -->

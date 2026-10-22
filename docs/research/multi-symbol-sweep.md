@@ -75,6 +75,12 @@ robust, alpha fragile — is the finding.
 
 - **"A retail-free G.17 opex Friday ranges under the unconditional 2014-05+ p75 (1.325%) of SPY's close" (FT-industrial-production-2026-10-16-3)** — added 2026-10-22 from the same close-out. Registered 2026-09-06 at class range 0.6602% (p=0.0775); 10-16 ranged **1.652%** on a VIX 16.46 → 19.99 chip/AI sell-off unrelated to the print (gap +0.19%). Do not register an unconditional range bar for a low-impact print; condition on the VIX level or skip the test.
 
+- **"On a zero-rate-move month the foreign long-term Treasury valuation change prints *below* the full-sample intercept (+0.081% of the prior month's base) because the last-12-month residual drift (−0.215pp) persists" (FT-tic-monthly-2026-10-16-2)** — added 2026-10-22 from the
+  [tic-monthly-2026-10-16 close-out](events/tic-monthly-2026-10-16.md). Registered 2026-09-08 on August's Δ10Y = 0.0bp. August printed
+  **+0.131%** (+$10.2bn on a $7,783.3bn base) — above the line by 0.05pp, ~0.2σ of the model's residual sd. Do not re-register a
+  directional drift test on this model off the trailing-residual average: it described the past and missed the one month built
+  to measure it. The one-factor model itself passed its band test (FT-1) and is not retired.
+
 - **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
   |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the
   [ism-services-2026-11-04 pulse](events/ism-services-2026-11-04.md). Registered 2026-09-08 at n=9 as the narrow successor to a
