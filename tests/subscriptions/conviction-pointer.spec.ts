@@ -330,3 +330,38 @@ describe("a member's view handed over (#5482 slice 6c) — the owner's act is th
     expect(pointAtRecord(sub("CRWV-WHEEL"), records, here).convictionId).toBe(ada.id);
   });
 });
+
+describe("an owner's own view on one pair (#5482 contract piece 3)", () => {
+  const own = view({
+    id: "pair-crwv-wheel-own",
+    owner: "Ada",
+    checkOn: "2027-04-30",
+    steers: ["CRWV-WHEEL"],
+    scope: "pair",
+  });
+  const floor = view({
+    id: "crwv-floor-2026-10",
+    owner: "Ada",
+    checkOn: "2027-02-26",
+    steers: ["CRWV-WHEEL"],
+  });
+  const here = (held: Conviction[]) => ({ held, ids: new Set([own.id, floor.id]) });
+
+  it("is the pointer of the pair it was stated on, and the inline copy goes", () => {
+    const next = restated(
+      sub("CRWV-WHEEL", { conviction: { ...stated, checkOn: own.checkOn } }),
+      records,
+      here([own]),
+    );
+    expect(next.convictionId).toBe(own.id);
+    expect(next).not.toHaveProperty("conviction");
+  });
+
+  it("is outranked by a view handed over on the same pair, and steers it again once that is taken back", () => {
+    const pointedAtOwn = sub("CRWV-WHEEL", { convictionId: own.id });
+    expect(pointAtRecord(pointedAtOwn, records, here([own, floor])).convictionId).toBe(floor.id);
+    expect(pointAtRecord(pointedAtOwn, records, here([floor, own])).convictionId).toBe(floor.id);
+    const takenOver = sub("CRWV-WHEEL", { convictionId: floor.id });
+    expect(pointAtRecord(takenOver, records, here([own])).convictionId).toBe(own.id);
+  });
+});

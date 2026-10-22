@@ -10,7 +10,6 @@ import type { SteerBounds } from "../playbooks/conviction-steering.js";
 import { CONVICTIONS, playbookBounds } from "../playbooks/conviction-store.js";
 import { findPair, pairName, type StrategyId } from "../playbooks/pair-table.js";
 import type { Session } from "./auth/session.js";
-import { creditFor } from "./authored-plays-api-routes.js";
 import {
   canRepoint,
   handOverPlan,
@@ -19,10 +18,12 @@ import {
   refusedNow,
   repoint,
   type TakeOver,
+  takeOverable,
   takesOver,
 } from "./conviction-hand-over.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { creditFor } from "./feedback-attribution.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { GONE, type MemberConvictionRecord } from "./member-conviction-store.js";
 import {
@@ -340,7 +341,7 @@ function mine(config: DashboardServerConfig, session: Session) {
       const refused = refusedNow(record.conviction);
       return { ...record, card, steering, ...(refused.length > 0 ? { refused } : {}) };
     }
-    const over = takesOver(record.conviction, owned, state);
+    const over = takesOver(record.conviction, owned, state, takeOverable(config.memberConvictions));
     return { ...record, card, ...(over.length > 0 ? { takesOver: over } : {}) };
   });
   const steerable = steerablePairs(config, session);

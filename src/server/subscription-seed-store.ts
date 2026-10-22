@@ -34,7 +34,10 @@ import {
   ENV_SEED_AUTHOR,
   envSettingsMarkersPathFrom,
 } from "./env-settings-seed.js";
-import { createMemberConvictionStore } from "./member-conviction-store.js";
+import {
+  createMemberConvictionStore,
+  type MemberConvictionStore,
+} from "./member-conviction-store.js";
 import { createSettingsChangeLog, type SettingsChangeLog } from "./settings-change-log.js";
 import { subscriptionSummary } from "./subscription-changes.js";
 import {
@@ -261,6 +264,23 @@ export function pointConvictions(
 }
 
 /**
+ * An owner's own view on a pair whose account no longer subscribes to it is dropped (#5482 contract
+ * piece 3, `MemberConvictionStore.prunePairViews`): what an unsubscribe whose own drop failed leaves.
+ * Never while the subscriptions file cannot be read whole — a pair it could not see would read as
+ * given up. Returns `account/playbookId` for each one dropped.
+ */
+export function prunePairViews(
+  subscriptions: SubscriptionStore,
+  members: MemberConvictionStore,
+): readonly string[] {
+  const state = subscriptions.loadIfReadable();
+  if (!state) return [];
+  return members.prunePairViews((accountId, playbookId) =>
+    (state[accountId] ?? []).some((s) => s.playbookId === playbookId),
+  );
+}
+
+/**
  * Both seeds for each `/controls` poll, then the ◆ conviction carry and the pointer at its record, built from the environment
  * (beside `SKYNET_SUBSCRIPTIONS_FILE`, over the registry's playbooks); returns a log line for each
  * that wrote. The env roster seeds first, so a `SAURON` named in `SKYNET_PLAYBOOKS` keeps its env mode
@@ -323,6 +343,10 @@ export function pollSeedsFromEnv(
       ...lines(
         carryConvictions(subscriptions, at),
         "carried the ◆ row's conviction onto each subscription stating none (checked on its row's date)",
+      ),
+      ...lines(
+        prunePairViews(subscriptions, memberConvictions),
+        "dropped an owner's own view on a pair the account no longer subscribes to",
       ),
       // After the carry, so a conviction it just wrote is pointed at its record on the same poll.
       ...lines(

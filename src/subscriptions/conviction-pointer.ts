@@ -49,6 +49,12 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * returns. The inline conviction stays where it is the only check: an owner's own day that no
  * record states (the resume after a failed check, #4469 criterion 12), and a pair no record steers
  * (#4469 criterion 2). Which view steers a pair is decided once, by the pointer.
+ *
+ * PIECE 3, THE APP'S HALF: the owner's own day and a pair no record steers now live as a view
+ * stated on that one pair (`pair-conviction.ts`), held on the owner's account like any view handed
+ * over, so the member branch above points at it. A member's broader view on the same pair outranks
+ * it — the hand-over takes the pair over, and a take-back returns it to the owner's own day, which
+ * stays held underneath (the take-back no longer falls through to the seeded view for that case).
  */
 
 /** Members' views as the pointer rule reads them: the ones handed to an account, and every id. */
@@ -137,7 +143,11 @@ export function pointAtRecord(
   records?: readonly Conviction[],
   members?: HeldHere,
 ): PlaybookSubscription {
-  const own = members?.held.filter((r) => r.steers.includes(sub.playbookId)) ?? [];
+  const steering = members?.held.filter((r) => r.steers.includes(sub.playbookId)) ?? [];
+  // A view handed over outranks the owner's own view on the pair: the hand-over takes the pair
+  // over, and a take-back returns it to their own day, which stays held underneath.
+  const broad = steering.filter((r) => r.scope !== "pair");
+  const own = broad.length > 0 ? broad : steering;
   const id = sub.convictionId;
   const [only] = own;
   if (only && own.length === 1) {
