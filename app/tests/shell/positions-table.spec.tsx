@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { DeskPosition } from "../../src/live/desk";
 import type { OptionPositions } from "../../src/live/options";
-import { decayBySymbol, deltaBySymbol } from "../../src/shell/holding-decay";
+import { greeksBySymbol } from "../../src/shell/holding-decay";
 import { PositionsTable } from "../../src/shell/positions-table";
 
 /**
@@ -111,15 +111,18 @@ const BOOK = {
   rows: [{ symbol: SOLD_PUT, positionGreeks: { theta: 11.456, delta: 39.836 } }],
 } as unknown as OptionPositions;
 
-function renderTable(positions: readonly DeskPosition[] = [PUT, CRWV, NVDA], canTrade = true) {
+function renderTable(
+  positions: readonly DeskPosition[] = [PUT, CRWV, NVDA],
+  canTrade = true,
+  book: OptionPositions = BOOK,
+) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <PositionsTable
         positions={positions}
         deskId="sauron"
         totalCount={positions.length}
-        decayBySymbol={decayBySymbol(BOOK)}
-        deltaBySymbol={deltaBySymbol(BOOK)}
+        greeksBySymbol={greeksBySymbol(book)}
         canTrade={canTrade}
       />
     </QueryClientProvider>,
@@ -190,15 +193,53 @@ describe("PositionsTable — the ranked columns (#5071)", () => {
     expect(cell(SOLD_PUT, "greeks").querySelectorAll(".pos-greek")).toHaveLength(2);
   });
 
-  it("says a share has no time decay and moves a dollar a share", () => {
+  it("says a share has no time decay and leaves out its always-$1 Δ (#5960)", () => {
     renderTable();
-    expect(seen(cell("NVDA", "greeks"))).toBe("no time decay Δ +$130 per $1");
-    expect(seen(cell("CRWV", "greeks"))).toBe("no time decay Δ +$55 per $1");
+    expect(seen(cell("NVDA", "greeks"))).toBe("no time decay");
+    expect(seen(cell("CRWV", "greeks"))).toBe("no time decay");
   });
 
-  it("reads a dash for an option the feed did not quote, never a made-up zero", () => {
+  it("reads a dash for an option until the book answers, never a made-up zero", () => {
     renderTable([position({ ...PUT, symbol: "META261120C00700000", display: "META call" })]);
     expect(seen(cell("META261120C00700000", "greeks"))).toBe("—");
+  });
+
+  /** The same put, unquoted by the feed: the book carries our model's figures, or why it has none. */
+  const unquoted = (row: Record<string, unknown>) =>
+    ({
+      available: true,
+      rows: [{ symbol: SOLD_PUT, underlying: "CRWV", ...row }],
+    }) as unknown as OptionPositions;
+
+  it("shows our estimate for an option the feed did not quote, saying est. in words (#5960)", () => {
+    renderTable(
+      [PUT],
+      true,
+      unquoted({
+        estimate: {
+          positionGreeks: { theta: 8.4, delta: 31.2 },
+          volatility: 0.72,
+          volatilityFrom: "mark",
+        },
+      }),
+    );
+    expect(seen(cell(SOLD_PUT, "greeks"))).toBe("θ earns $8/day · Δ +$31 per $1 · est.");
+    expect(cell(SOLD_PUT, "greeks")).toHaveTextContent(/estimated, not quoted/);
+  });
+
+  it("says why there is no estimate instead of a bare dash (#5960)", () => {
+    renderTable([PUT], true, unquoted({ noEstimate: "no-spot" }));
+    expect(seen(cell(SOLD_PUT, "greeks"))).toBe("no price for CRWV yet");
+  });
+
+  it("says the contract has no quote when the volatility is what's missing (#5960)", () => {
+    renderTable([PUT], true, unquoted({ noEstimate: "no-volatility" }));
+    expect(seen(cell(SOLD_PUT, "greeks"))).toBe("no quote for this contract yet");
+  });
+
+  it("never marks the feed's own figures est.", () => {
+    renderTable();
+    expect(seen(cell(SOLD_PUT, "greeks"))).not.toContain("est.");
   });
 
   it("puts the value over today's change, the change signed and toned", () => {
