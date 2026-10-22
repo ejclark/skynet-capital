@@ -311,6 +311,23 @@ table.blotter {
   gap: 12px;
   flex-wrap: wrap;
 }
+/* Which buys a sell comes out of (#5959) — its own line, read before Confirm. */
+.close-panel-fifo {
+  flex-basis: 100%;
+}
+/* What the last close did (#5959): the line, then Dismiss, kept to its label like the row's
+   other buttons (`.btn` is full width by default). */
+.close-receipt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.close-receipt .btn {
+  width: auto;
+  white-space: nowrap;
+}
 @media (max-width: 700px) {
   .desk-tiles {
     grid-template-columns: repeat(2, 1fr);
