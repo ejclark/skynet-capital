@@ -7,7 +7,7 @@ import { withMinus } from "../ui";
 import { ClosePanel, closeRefusal } from "./close-panel";
 import { buysLabel } from "./glossary";
 import { GlossaryTerm } from "./glossary-term";
-import type { HoldingDecay } from "./holding-decay";
+import type { HoldingGreeks } from "./holding-decay";
 import {
   BestWorstContent,
   EventContent,
@@ -140,14 +140,12 @@ function Buys({
 export function PositionRowOpen({
   position,
   deskId,
-  decay,
-  delta,
+  greeks,
   canTrade,
 }: {
   readonly position: DeskPosition;
   readonly deskId: string;
-  readonly decay?: HoldingDecay;
-  readonly delta?: number;
+  readonly greeks?: HoldingGreeks;
   readonly canTrade: boolean;
 }): ReactElement {
   const [closeOpen, setCloseOpen] = useState(false);
@@ -161,7 +159,7 @@ export function PositionRowOpen({
         <div className="pos-more-greeks">
           <dt>θ · Δ</dt>
           <dd>
-            <GreeksContent position={position} decay={decay} delta={delta} />
+            <GreeksContent position={position} greeks={greeks} />
           </dd>
         </div>
         <div className="pos-more-model">

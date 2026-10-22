@@ -7,6 +7,7 @@ import {
   isRepresentative,
   type UnderlyingBeta,
 } from "../options/greeks-aggregator.js";
+import { impliedVolatility, priceOption } from "../options/pricing.js";
 import { daysToExpiryFrom } from "../options/single-leg-odds.js";
 import {
   humanizeOptionSymbol,
@@ -24,6 +25,13 @@ import {
  * Pure: the caller hands in the desk's positions, the snapshots it fetched by contract, the spots
  * it fetched by underlying, and the clock. Absent means absent — a contract the feed didn't
  * quote has no greeks row and is named in `book.uncovered`, never counted as zero.
+ *
+ * ESTIMATED WHEN UNQUOTED (#5960): a contract the feed quoted no greeks for still gets a time decay
+ * and a delta, from our own Black-Scholes (`pricing.ts`) at the underlying's last trade and a
+ * volatility whose source is named — the feed's implied vol when it sent one, else the vol that
+ * reproduces the position's own mark. It rides in `estimate`, never in `positionGreeks`, so the
+ * book above still nets quoted figures only and the reader is told which is which. With no spot
+ * or no volatility there is no estimate, and `noEstimate` says which input was missing.
  *
  * BETA-WEIGHTED (#4327): the book's delta is also re-expressed in SPY shares and dollars, from
  * betas the caller MEASURED (`beta.ts`) — a name with no beta is left raw and named, never 1.0.
@@ -73,6 +81,19 @@ export interface OptionPositionRow {
   readonly impliedVol?: number;
   readonly bid?: number;
   readonly ask?: number;
+  /** Only when the feed quoted no greeks: our model's figures for the holding (#5960). */
+  readonly estimate?: GreeksEstimate;
+  /** Only when the feed quoted no greeks and no estimate could be made: the missing input. */
+  readonly noEstimate?: "no-spot" | "no-volatility";
+}
+
+/** A model estimate of a holding's greeks, scaled like `positionGreeks`, with its volatility and
+ *  where that came from: "feed" (the contract's quoted implied vol) or "mark" (solved from the
+ *  position's own market value). An estimate — European, no dividends, zero rate — never a quote. */
+export interface GreeksEstimate {
+  readonly positionGreeks: ContractGreeks;
+  readonly volatility: number;
+  readonly volatilityFrom: "feed" | "mark";
 }
 
 export interface OptionPositionsView {
@@ -95,6 +116,41 @@ function scaled(greeks: ContractGreeks, contracts: number): ContractGreeks {
     ...(greeks.gamma !== undefined ? { gamma: exposure(greeks.gamma, k) } : {}),
     ...(greeks.theta !== undefined ? { theta: exposure(greeks.theta, k) } : {}),
     ...(greeks.vega !== undefined ? { vega: exposure(greeks.vega, k) } : {}),
+  };
+}
+
+/** The volatility to estimate with, and its source; undefined when neither source has one. */
+function estimateVolatility(
+  input: { spot: number; strike: number; daysToExpiry: number; type: "call" | "put" },
+  feedVol: number | undefined,
+  position: HeldPosition,
+): { volatility: number; from: "feed" | "mark" } | undefined {
+  if (feedVol !== undefined && Number.isFinite(feedVol) && feedVol > 0) {
+    return { volatility: feedVol, from: "feed" };
+  }
+  const mark = Math.abs(position.marketValue) / (Math.abs(position.quantity) * OPTION_MULTIPLIER);
+  const solved = impliedVolatility({ ...input, marketPrice: mark });
+  return solved === undefined ? undefined : { volatility: solved, from: "mark" };
+}
+
+/** Our own figures for a holding the feed quoted no greeks for, or the input that was missing. */
+function estimateGreeks(
+  input: { strike: number; daysToExpiry: number; type: "call" | "put" },
+  spot: number | undefined,
+  feedVol: number | undefined,
+  position: HeldPosition,
+): Pick<OptionPositionRow, "estimate" | "noEstimate"> {
+  if (spot === undefined || !(spot > 0)) return { noEstimate: "no-spot" };
+  const vol = estimateVolatility({ ...input, spot }, feedVol, position);
+  const valued = vol && priceOption({ ...input, spot, volatility: vol.volatility });
+  if (!(vol && valued)) return { noEstimate: "no-volatility" };
+  const { delta, gamma, theta, vega } = valued;
+  return {
+    estimate: {
+      positionGreeks: scaled({ delta, gamma, theta, vega }, position.quantity),
+      volatility: vol.volatility,
+      volatilityFrom: vol.from,
+    },
   };
 }
 
@@ -126,7 +182,14 @@ export function optionPositionsView(
       ...(spot !== undefined
         ? { spot, inTheMoney: parts.type === "call" ? spot > parts.strike : spot < parts.strike }
         : {}),
-      ...(greeks ? { greeks, positionGreeks: scaled(greeks, position.quantity) } : {}),
+      ...(greeks
+        ? { greeks, positionGreeks: scaled(greeks, position.quantity) }
+        : estimateGreeks(
+            { strike: parts.strike, daysToExpiry, type: parts.type },
+            spot,
+            snapshot?.impliedVol,
+            position,
+          )),
       ...(snapshot?.impliedVol !== undefined ? { impliedVol: snapshot.impliedVol } : {}),
       ...(snapshot?.bid !== undefined ? { bid: snapshot.bid } : {}),
       ...(snapshot?.ask !== undefined ? { ask: snapshot.ask } : {}),
