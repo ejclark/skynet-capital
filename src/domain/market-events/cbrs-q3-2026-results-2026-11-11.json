@@ -6,8 +6,6 @@
   "status": "estimate",
   "source": "EST: no date announced. Aggregators (WebSearch 2026-10-20: earnings-calendar sites) project 2026-11-11 after the close, 'not confirmed by the company, projected from past report dates'. Cross-checked against EDGAR (data.sec.gov submissions, fetched 2026-10-20): Q1 8-K Item 2.02 filed 2026-06-23, Q2 8-K Item 2.02 and 10-Q both filed 2026-08-12 (a Wednesday, 43 days after quarter-end); 43 days after 2026-09-30 is 2026-11-12, so 11-11 or 11-12 are both on pattern. Filed estimate: the company has not announced it. Re-checked by this event's own initial research 2026-10-20: no 'sets date' release yet for Q3; the Q2 equivalent was issued 2026-07-22 (21 days ahead of the 2026-08-12 print, StockTitan copy of the Business Wire release), so the Q3 date announcement is expected on or about 2026-10-21 for an 11-11 print. Still estimate",
   "impact": "high",
-  "symbols": [
-    "CBRS"
-  ],
+  "symbols": ["CBRS"],
   "notes": "Discovered during the cbrs-lockup-expiry-2026-11-09 initial research (2026-10-20). Why it is a dated event of its own: the 424B4 ties the final lock-up release to the EARLIER of 6:00 a.m. ET on the second trading day after this release or 180 days after the prospectus (2026-11-09). A release on or before 2026-11-04 would pull the final unlock earlier than 11-09; on pattern (11-11/11-12) it lands after the 180-day date and the unlock is 11-09 regardless. Both prior reactions were down: 2026-06-24 -19.1% and 2026-08-13 -12.6% vs the semiconductor ETF SMH (close-to-close, Yahoo daily bars). Same week as CPI 2026-11-10, the est. CoreWeave print 2026-11-10 and the est. US-China tariff truce expiry 2026-11-10. Initial research (docs/research/events/cbrs-q3-2026-results-2026-11-11.md): guide Q3 core revenue $214-216M (consensus $215.3M), core GM 38-40%, FY core $880-890M implying Q4 ~$263-275M; both prior prints beat their own core guide yet fell."
 }
