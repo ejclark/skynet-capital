@@ -18,10 +18,13 @@ import type { MemberConvictionStore, PairViewWrite } from "./member-conviction-s
  *    subscription points at the record, as before, and keeps the narrowings it sets — a view of
  *    their own would replace those, which would trade wider than the record lets it;
  *  - any other day, on any pair: their view is written (or replaced in place, same id);
- *  - no member store wired, or the controls wire already full: no view is written (an older one of
- *    theirs on the pair is dropped), and the subscription keeps its inline copy exactly as before.
- *    A view past `MAX_WIRED_CONVICTIONS` would make the bots refuse every member's views at once,
- *    so that set is never grown past it.
+ *  - the controls wire already full: the write is refused and nothing changes. A view past
+ *    `MAX_WIRED_CONVICTIONS` would make the bots refuse every member's views at once, so that set
+ *    is never grown past it. Until piece 4 the subscription kept an inline copy instead; the bots
+ *    now read pointers only and would run that pair exits-only (`isUnmovedInline`), so a write
+ *    reported as saved would quietly stop the pair. Saying so is the honest answer;
+ *  - no member store wired (a test or local config with no views file): no view is written, and the
+ *    subscription keeps its inline copy, which the bots run exits-only.
  *
  * Written first, so a subscription that points at the view never exists without it. `undo` puts
  * the view back as it was, for a subscription write the change log rolls back after this
@@ -39,8 +42,8 @@ export function statePairConviction(
   const id = pairViewId(ref.accountId, ref.playbookId);
   if (recordFor(ref.playbookId, conviction)) return members.dropPair(ref.accountId, id);
   const wired = members.handedOver().filter((w) => w.conviction.id !== id).length;
-  // Full: the inline copy carries the new day, so an older view of theirs must not outrank it.
-  if (wired >= MAX_WIRED_CONVICTIONS) return members.dropPair(ref.accountId, id);
+  // Full: refused, not kept inline — the bots read pointers only, so an inline copy opens nothing.
+  if (wired >= MAX_WIRED_CONVICTIONS) return { ok: false, reason: CONVICTION_WIRE_FULL };
   const view = pairView({
     ...ref,
     conviction,
@@ -62,6 +65,10 @@ export function dropPairConviction(
 /** Why a form's conviction was refused when the views file could not be read whole. */
 export const CONVICTION_UNSAVED =
   "Your conviction couldn't be saved just now, so nothing was changed. Try again shortly.";
+
+/** Why a form's conviction was refused when the bots already hold as many views as they can read. */
+export const CONVICTION_WIRE_FULL =
+  "The bots already hold as many convictions as they can read, so this one wasn't saved and nothing was changed. Try again once one is taken back.";
 
 export type WithConviction<T> =
   | { readonly ok: true; readonly value: T }
@@ -97,7 +104,11 @@ export function writeWithConviction<T>(
   const viewsBefore = ownViewsOf(members);
   if (!conviction) return { ok: true, value: write(viewsBefore) };
   const stated = statePairConviction(members, ref, conviction, owner, at);
-  if (!stated.ok) return { ok: false, reason: CONVICTION_UNSAVED };
+  if (!stated.ok) {
+    const reason =
+      stated.reason === CONVICTION_WIRE_FULL ? CONVICTION_WIRE_FULL : CONVICTION_UNSAVED;
+    return { ok: false, reason };
+  }
   try {
     return { ok: true, value: write(viewsBefore) };
   } catch (err) {

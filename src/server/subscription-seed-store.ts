@@ -390,7 +390,7 @@ export function pollSeedsFromEnv(
       // The fallback, after the pointer pass: only a ◆ pair the migration could not give a view.
       ...lines(
         carryConvictions(subscriptions, at),
-        "carried the ◆ row's conviction onto each subscription stating none (checked on its row's date)",
+        "carried the ◆ row's conviction inline onto each subscription stating none, as no view could be written (the bots run it exits-only until one is)",
       ),
     ];
   };

@@ -17,6 +17,7 @@ import { LONG_CALL_MAX_CONTRACTS } from "../../src/playbooks/long-call.js";
 import { findPair } from "../../src/playbooks/pair-table.js";
 import { CRWV_LONG_CALL, findPlaybook } from "../../src/playbooks/registry.js";
 import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
+import { pairView } from "../../src/subscriptions/pair-conviction.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
 
@@ -208,13 +209,21 @@ describe("CRWV-LONG-CALL — selling", () => {
 describe("a long call through the real guards", () => {
   const quiet: Persona = { id: "sauron", name: "Sauron", thesis: "test", decide: () => [] };
   const bot: Bot = { persona: quiet, credentials: { apiKey: "k", apiSecret: "s" } };
+  // The owner's reason and day, as the view on its one pair the bots read by pointer (#5482).
+  const own = pairView({
+    accountId: "sauron",
+    playbookId: "CRWV-LONG-CALL",
+    conviction: { reason: "CRWV recovers over 3 to 6 months", checkOn: "2027-01-29" },
+    owner: "Sauron",
+    statedOn: "2026-10-16",
+  });
   const sub = (capitalAllocated: number): PlaybookSubscription => ({
     accountId: "sauron",
     playbookId: "CRWV-LONG-CALL",
     mode: "standard",
     capitalAllocated,
     enabled: true,
-    conviction: { reason: "CRWV recovers over 3 to 6 months", checkOn: "2027-01-29" },
+    convictionId: own.id,
     createdAt: "2026-10-16T00:00:00.000Z",
     updatedAt: "2026-10-16T00:00:00.000Z",
   });
@@ -224,7 +233,11 @@ describe("a long call through the real guards", () => {
       discipline: { calendar: CALENDAR },
       optionsLevel: level,
     };
-    const trading = tradingRoster(resolveBotRoster(bot, [], [sub(capital)]), risk);
+    const lookup = (id: string) => (id === own.id ? own : undefined);
+    const trading = tradingRoster(
+      resolveBotRoster(bot, [], [sub(capital)], undefined, lookup),
+      risk,
+    );
     const context = market(asOf, chain(asOf));
     const raw = trading.persona.decide(context, book());
     return { raw, ...applyGuardsWithVerdicts(raw, book(), context, trading.risk) };
