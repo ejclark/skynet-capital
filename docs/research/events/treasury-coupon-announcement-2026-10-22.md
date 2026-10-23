@@ -388,3 +388,109 @@ fills `## Outcome` below from re-run instrument data (cache busted first), never
 
 **Last assessed:** 2026-10-20
 <!-- probe-ref: {"symbols":{},"vix":18.44,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","case-shiller-hpi-2026-10-27","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","fhfa-hpi-2026-10-27","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","new-home-sales-2026-10-27","pending-home-sales-2026-10-20","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-gilt-auction-short-2026-10-27","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["meta-2026-10-28-print"],"screenStreak":0} -->
+
+## Outcome
+
+**Assessed 2026-10-23 (D+1, inside the close-out window).** `rates` event, `symbols: []` — no
+`earnings-cycle`/`intraday-edges` target applies, so the instrument cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) was run and had nothing
+to clear (recorded, not skipped silently). Every number below is a fresh pull this session, never carried
+from a prior row: treasurydirect `xml/A_20261022_1.xml`-`_8.xml` (HTTP 200; the `A_20261022_5-8.pdf` renderings also return 200 but were not text-parsed here),
+`TA_WS/securities/upcoming` (HTTP 200), Treasury's daily par curve XML, Yahoo daily and 30-minute bars for
+`^VIX`/`^TNX`/`^FVX`/`^TYX`. **One source did not have it yet:** fiscaldata `auctions_query`
+(`announcemt_date:eq:2026-10-22`) returned `total-count` 0 and its newest `announcemt_date` was 2026-10-15 —
+the dataset lags the announcement by at least a day, so the scoring below rests on the two Treasury primaries
+that carry it, not on fiscaldata. The run-length anchors registered from fiscaldata on 2026-09-05 were not re-run.
+
+### The announcement, re-pulled from the primary
+
+| Security | CUSIP | Reopening? | Offering | Auction | Issue/settle |
+|---|---|---|---|---|---|
+| 2-Year NOTE | **91282CRU7** | No | **$69.000B** | 2026-10-26 | 2026-11-02 |
+| 5-Year NOTE | **91282CRT0** | No | **$70.000B** | 2026-10-27 | 2026-11-02 |
+| 2-Year FRN | **91282CRS2** | **No — new issue** (`CurrentlyOutstanding` 0) | **$30.000B** | 2026-10-28 | 2026-11-02 |
+| 7-Year NOTE | **91282CRV5** | No | **$44.000B** | 2026-10-29 | 2026-11-02 |
+| 13-Week BILL | 912797VU8 | Yes | $95.000B | 2026-10-26 | 2026-10-29 |
+| 26-Week BILL | 912797WW3 | No | $82.000B | 2026-10-26 | 2026-10-29 |
+| 6-Week BILL | 912797VG9 | Yes | $95.000B | 2026-10-27 | 2026-10-29 |
+| 52-Week BILL | 912797WT0 | No | $54.000B | 2026-10-27 | 2026-10-29 |
+
+All eight rows carry `AnnouncementDate` 2026-10-22 and `updatedTimestamp` **11:01:44-11:08:52 ET** (bills
+11:01-11:03, FRN 11:04, 5Y 11:05, 7Y 11:06, 2Y 11:08). That reading closes the limit this entry's calendar
+file disclosed: the ~11:00 ET slot was a convention, and the observed publication window is 11:01-11:09. The
+composition (four coupon-type securities plus the four bills) is exactly what the Tentative Auction Schedule
+named (17,195 bytes, unrevised across five reads from 2026-09-05 to 2026-10-20). The coupon block is
+**$213B**, as registered. The FRN row is `Note` / `FloatingRate` Y / `Reopening` N in Treasury's feed and a new
+issue by `CurrentlyOutstanding` 0 in the XML, the registered reading.
+
+### Forward tests scored
+
+- **`FT-treasury-coupon-announcement-2026-10-22-1`** — **PASS.** Predicted 2Y **$69B**, 5Y **$70B**, 7Y
+  **$44B**, 2-Year FRN new issue **$30B**; printed **$69.000B / $70.000B / $44.000B / $30.000B**, the FRN as a
+  new issue, on the scheduled date. Base rate was disclosed up front as near-uninformative, and it behaved
+  that way: it extends the 2Y/5Y/7Y and FRN new-issue size grids by one more announcement (run lengths were
+  not re-counted, since fiscaldata does not yet carry this release). What the pass
+  does carry is the channel's terminal test: this was the **last** announcement `sb0590`'s table covers, and
+  Treasury's written Oct-26 row (`69 58 70 44 39 13 22 30`) matched it on every leg that could be checked.
+  Neither void condition fired: the announcement came on its scheduled date, and Treasury press releases
+  `sb0653`-`sb0667` (`sb0668` is 404) carry no coupon or FRN size action. One observation about an issuance
+  convention, never a price template or a rate view.
+- **`FT-treasury-coupon-announcement-2026-10-22-3`** — **PASS.** Predicted 13-Week **$95B**, 26-Week **$82B**,
+  52-Week **$54B**; printed **$95.000B / $82.000B / $54.000B**. The 6-Week (deliberately excluded) printed
+  $95B, unchanged. The 52-week's 4-week cadence: $52B (07-07, 08-04, 09-01) -> $54B (09-29) -> **$54B**
+  (this announcement), so the single step has now held for one cycle. That is one more observation consistent
+  with the rolling reading and not a test of it — the disclosed weakness (four observations, one step) stands,
+  with five now.
+- **`FT-treasury-coupon-announcement-2026-10-22-2`** — **left `_open_` on purpose.** It scores the
+  **2026-10-28** FRN new issue's high discount margin, which does not exist until that auction clears, and its
+  registered `Score by` is **2026-10-29**. The scanner's `forwardTestsBeyondWindow` flag names it; per
+  EVENT-RESEARCH.md's `forward-test-due` mode (#2884) the same lane is re-dispatched on 10-29 to score it
+  from the auction result, which is a better record than an `unscoreable` verdict written seven days early
+  about data that will exist. The pass line as re-anchored by the 10-13 row is **<= 6.0bp** (09-23 reopening
+  4.0bp + the 2.0bp tolerance); `highDiscountMargin` is blank on the live announced row today, as expected.
+
+### Kill switches, adjudicated against the close-out data
+
+- **"Any of 2Y $69B · 5Y $70B · 7Y $44B · FRN $30B printing off-grid"** — does **not** fire (all four on size).
+- **"The 2026-09-17 announcement printing off `69 58 70 44 39 13 22 28`"** — did not fire; adjudicated by
+  that event's own close-out (ledger row 2026-09-22).
+- **"The 2026-09-23 FRN reopening printing a discount margin above 10.0bp"** — did not fire (4.0bp; ledger row
+  2026-10-13).
+- **"The 2026-10-28 FRN new issue more than 2.0bp above the 09-23 reopening"** — **open**: the auction is
+  five days out. It is `-2`'s own kill and is scored by that row, not here.
+- **"Treasury dropping or qualifying *for at least the next several quarters*"** — still pending; it is
+  `FT-39`'s question at **2026-11-04**, not this event's. Nothing in the 10-22 release qualifies it.
+- **"An off-cycle coupon or FRN issuance action"** — does **not** fire. Treasury press releases `sb0664`-`sb0667`
+  (new since the 10-20 row) read by title, fetched direct: an Iran sanctions release, a housing-affordability
+  release, a Paraguay readout and an outbound-investment proposed rule — zero coupon-size, CMB, buyback or
+  refunding items. The bill sizes are the lever `sb0590` reserves and do not fire it.
+
+### Tape, for the record (no attribution claimed)
+
+Treasury par, primary: 10-21 -> **10-22** — 3-Mo 4.25 -> **4.22** · 2Y 4.81 -> **4.65** · 5Y 4.95 -> **4.78**
+· 7Y 5.03 -> **4.86** · 10Y 5.13 -> **4.96** · 30Y 5.42 -> **5.29**. Yahoo `^TNX` 5.146 -> **4.953**,
+`^FVX` 4.972 -> **4.768**, `^TYX` 5.439 -> **5.287**. VIX **16.68 -> 19.03** (10-23 reads 19.70 on the day's
+latest bar, an unfinished session). The whole curve rallied ~13-20bp on the day. **The announcement did not cause it, and the intraday bars show why:** `^TNX`
+was already **5.040 at 08:20 ET** on 10-22 (about 10bp under the prior close) before any Treasury publication,
+and across the window holding the 11:01-11:09 stamps it moved 5.011 (10:50) -> 4.996 (11:20), -1.5bp, inside
+the session's ordinary drift. What drove the overnight gap was not identified this session — it was not
+searched for, and the same-day print/geopolitical calendar (see `adjacentIds`) was not re-sourced. The
+announcement restated four numbers already in writing since 2026-08-05, as leg 12 of the initial research
+committed to before the fact: **no tape move is attributed to it**, and no position was or is keyed to it.
+
+### What this closes
+
+**Stand aside held for the whole life of this event, and it was correct — nothing was keyed to a scheduled,
+pre-published announcement, and nothing is retrofitted now.** What the event resolved: the eight-security
+composition (not the four the calendar named) was found at D-47 from Treasury's own schedule, every size was
+registered against a written commitment, and the written word bound on every leg, on first contact with the
+primary. The durable outputs stand as written at initial research: the FRN, examined for the first time in
+this calendar and at a four-year-low discount margin; the bill leg's new baseline (95 / 82 / 54, held); and the
+correction that 10-22, not 10-15, is the last coupon announcement `sb0590` covers. The calendar file keeps
+`status: estimate`: this lane records the observed announcement from Treasury's documents and does not rewrite
+a calendar entry's date status on a close-out. **What stays open: `-2` on 2026-10-29** (the FRN discount
+margin at the 10-28 FOMC-day auction), then **11-04** (the quarterly refunding, where `FT-39` lives and the
+grid itself can change). The scanner goes quiet on this event until 10-29.
+
+**Last assessed:** 2026-10-23
+<!-- probe-ref: {"symbols":{},"vix":19.03,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","case-shiller-hpi-2026-10-27","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","fhfa-hpi-2026-10-27","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","new-home-sales-2026-10-27","pending-home-sales-2026-10-20","spcx-lockup-release-2026-10-22","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-gilt-auction-short-2026-10-27","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":[],"screenStreak":0} -->
