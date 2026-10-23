@@ -202,3 +202,48 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-20
 <!-- probe-ref: {"symbols":{"META":705.44},"vix":18.44,"daysBand":"high:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","msft-def14a-2026-10-22","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["retail-sales-2026-10-15"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-23, D+3).** Scored from Yahoo daily closes pulled today after the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`); sector mode runs neither
+instrument. Ruling facts are NEWS: ABC News / CNBC / The Hill / AppleInsider headlines via search (CNBC and The
+Hill returned HTTP 403 to direct fetch, cited by headline only) and ppc.land, which read the filed judgment.
+
+**What happened: the ruling landed on the date, at $25B, on print night.** Judge Francis Mathew filed the
+judgment on **2026-10-21** (10:51 a.m. per ppc.land's read of the docket; ABC's wire carried it at 7:43 p.m. ET)
+— the derived date held. He computed the $219.5B statutory ceiling (43,899,720 violations x $5,000) and cut it
+to **$25B** "without setting out how the lower figure was reached"; New Mexico had asked $35-45B, Meta argued a
+$345M-$3.45B cap. The order adds **15% a year interest** (~$3.75B/yr on its face), carries no payment schedule or
+stay terms, and reserves injunctive relief. Meta said it "will appeal." It is below the state's ask but ~7x Meta's
+$3.45B cap — not the modal-low outcome the stance expected.
+
+| Measure (Yahoo daily) | 10-20 | 10-21 | 10-22 | 10-20 → 10-22 |
+|---|---|---|---|---|
+| META | 694.25 | 697.52 (+0.47%) | 648.85 (-6.98%) | **-6.54%** |
+| QQQ | 717.63 | 725.20 (+1.05%) | 704.47 (-2.86%) | **-1.83%** |
+| META excess vs QQQ | | -0.58pt | **-4.12pt** | **-4.71pt** |
+| ^VIX | 17.31 | 16.68 | 19.03 | +1.72pt |
+
+**Scored.** `FT-meta-nm-privacy-penalty-ruling-2026-10-20-1` = **kill**. The bracket (10-20 to 10-22 close) breaches the +/-4%
+line at -4.71pt, and the first post-news session alone does too (-4.12pt); 10-23 had not closed when this was
+scored and cannot rescue it. The stance's own kill switch also fired independently: the ruling is **$25B, past the $20B
+line** ("closer to NM's ask than Meta's cap"). Two kill conditions, one direction.
+
+**What this does not show.** The 10-22 drop cannot be attributed to the ruling. Meta's Q3 print was after the close
+on **10-21** (`confirmed`, IR; the calendar had carried it since 10-12) — the registration and the stance's "eight days
+later" read the stale 10-28 estimate and never separated the two. Same session: revenue +26% to $64.60B, a
+negative $2.12B free cash flow, 2026 capex guided to $135-145B and a non-voting Class C share plan; coverage
+(CNBC, Yahoo, BusinessToday) leads with AI-spend worries, and QQQ itself fell 2.86% (VIX +2.35pt). The only
+Q3 litigation charge found ($9.9B) is the August multistate agreement, not this case. So the kill is on the rule
+as written, not a measurement of the ruling's own price effect, which a print-free window would be needed to
+isolate. The 10-21 session itself (+0.47%, before the news reached the tape) is the only clean read, and it is
+flat. The "This quarter" falsifier (a Q3 10-Q accrual tied to this case) has not been seen.
+
+**Lessons for the next legal-ruling event.** Run `--on-date` for the ruling date **and** read the symbol's own
+print before registering a price-window test: a ruling due inside a print week is a confounded window. The
+15%-interest term and the unexplained $25B were not in any pre-ruling coverage the ledger read, so a
+"low modal outcome" prior from a hearing's tone was the wrong read on the number.
+
+**Last assessed:** 2026-10-23
+<!-- probe-ref: {"symbols":{"META":648.85},"vix":19.03,"daysBand":"high:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","msft-def14a-2026-10-22","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["retail-sales-2026-10-15"],"screenStreak":0} -->
