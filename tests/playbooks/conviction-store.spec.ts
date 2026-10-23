@@ -99,9 +99,11 @@ describe("statedCheck", () => {
   const lookup = (id: string) => (id === "other-view" ? record() : undefined);
   const own = { reason: "my call", checkOn: "2027-04-30" };
 
-  it("is the subscription's own conviction when it points at no record", () => {
+  // The contract step's piece 4, bots first: pointers only. An inline copy with no pointer is one
+  // the app's poll could not move onto a view; it gives no day, and the roster runs it exits-only.
+  it("never reads an inline conviction with no pointer, and says so", () => {
     expect(statedCheck(aSubscription("sauron", "CRWV-WHEEL", { conviction: own }), lookup)).toEqual(
-      { checkOn: "2027-04-30", from: "subscription" },
+      { note: "CRWV-WHEEL: its conviction is not on a view yet" },
     );
     expect(statedCheck(aSubscription("sauron", "CRWV-WHEEL"), lookup)).toEqual({});
   });
@@ -113,7 +115,6 @@ describe("statedCheck", () => {
     });
     expect(statedCheck(sub, lookup)).toEqual({
       checkOn: "2027-01-29",
-      from: "record",
       convictionId: "other-view",
     });
   });
@@ -147,6 +148,6 @@ describe("statedCheck", () => {
 
   it("reads the build's store by default", () => {
     const sub = aSubscription("sauron", "CRWV-LONG-CALL", { convictionId: "ai-dip-2026-10" });
-    expect(statedCheck(sub).from).toBe("record");
+    expect(statedCheck(sub).convictionId).toBe("ai-dip-2026-10");
   });
 });

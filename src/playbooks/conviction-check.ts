@@ -1,7 +1,6 @@
 import { type OptionBook, optionBook } from "../domain/option-book.js";
 import type { PlaybookSubscription, Portfolio, Quote } from "../domain/types.js";
 import { OPTION_MULTIPLIER } from "../trading/option-symbols.js";
-import { statedCheck } from "./conviction-store.js";
 import { findPair, type Pair, pairName } from "./pair-table.js";
 import { wheelStrategyTag } from "./wheel.js";
 
@@ -39,10 +38,12 @@ export interface PairLedger {
 /** A pair the house did not mark ✓, whose owner has stated no conviction — neither its own nor a
  *  record's that steers it (#5482 slice 2). A pointer is a stated view even where this build's store
  *  cannot read it (a member's, held by the bots' own lookup): its pair is not unstated, and one the
- *  bots cannot resolve runs exits-only and says so (`steeredBy`). Authored plays and ids the pair
- *  table does not know are not pairs, so they are never labelled. */
+ *  bots cannot resolve runs exits-only and says so (`steeredBy`). An inline copy with no pointer is
+ *  stated too, just not on a view yet: it runs exits-only and says so (`subscriptionRoster`), so
+ *  "still trading" would be false of it (the contract step's piece 4). Authored plays and ids the
+ *  pair table does not know are not pairs, so they are never labelled. */
 export function isConvictionNotStated(sub: PlaybookSubscription): boolean {
-  if (!sub.enabled || sub.convictionId !== undefined || statedCheck(sub).checkOn) return false;
+  if (!sub.enabled || sub.convictionId !== undefined || sub.conviction) return false;
   const pair = findPair(sub.playbookId);
   return pair !== undefined && pair.evidence.status !== "researched";
 }

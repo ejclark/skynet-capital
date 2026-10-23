@@ -162,7 +162,8 @@ describe("the controls poll moves inline convictions onto views", () => {
         .pointers()
         .heldBy("sauron")
         .find((c) => c.id === id);
-    expect(after && statedCheck(after, lookup).checkOn).toBe(before && statedCheck(before).checkOn);
+    // The day the inline copy stated (the bots no longer read it, #5482 contract piece 4).
+    expect(after && statedCheck(after, lookup).checkOn).toBe(before?.conviction?.checkOn);
     expect(members.pointers().heldBy("banker")).toEqual([]);
   });
 

@@ -79,7 +79,8 @@ interface PairRowView extends PairRowEntry {
    *  this bot; the pre-print run-up yields it" — today's hand-off, not a refusal. */
   readonly handOff?: string;
   /** An option pair the bot refuses because another option pair it reads first owns the ticker:
-   *  "not trading — the call spread owns NVDA". */
+   *  "not trading — the call spread owns NVDA". Or a pair whose conviction is still inline, with no
+   *  pointer, which the bots run exits-only (`withUnmovedConvictions`). */
   readonly notTrading?: string;
   /** A conviction view steers this pair: whose, the check day, and its claims' scorecard
    *  (#5482 slice 5). The same for every viewer; it is the record's, not the account's. */
@@ -151,6 +152,38 @@ function subscribedNotes(id: string, onBot: readonly Pair[]): Partial<PairRowVie
   const handOff = pair ? handOffNote(pair, onBot) : undefined;
   const notTrading = pair ? notTradingNote(pair, onBot) : undefined;
   return { ...(handOff ? { handOff } : {}), ...(notTrading ? { notTrading } : {}) };
+}
+
+/** What the row says when its subscription's conviction is still inline (#5482 contract piece 4). */
+export const UNMOVED_CONVICTION_NOTE =
+  "Opening nothing new: its conviction hasn't moved onto a view yet. Exits still run.";
+
+/**
+ * Each row whose subscription still carries an inline conviction with no pointer, saying it opens
+ * nothing new (#5482 contract piece 4, the state block's default). The bots read pointers only, so
+ * such a pair has no check day and runs exits-only; the app's poll moves the copy onto a view
+ * unless that move is refused. Reads the RAW subscriptions: the Store's own rows show an owner's
+ * view as an inline conviction (`asOwnConviction`), so they cannot tell the two apart. A row that
+ * already says why it is not trading keeps that reason.
+ */
+export function withUnmovedConvictions<
+  Row extends { readonly id: string; readonly notTrading?: string },
+  Card extends { readonly pairs: readonly Row[] },
+>(strategies: readonly Card[], raw: readonly PlaybookSubscription[]): Card[] {
+  const unmoved = new Set(
+    raw
+      .filter((s) => s.enabled && s.conviction && s.convictionId === undefined)
+      .map((s) => s.playbookId),
+  );
+  if (unmoved.size === 0) return [...strategies];
+  return strategies.map((card) => ({
+    ...card,
+    pairs: card.pairs.map((row) =>
+      unmoved.has(row.id) && !row.notTrading
+        ? { ...row, notTrading: UNMOVED_CONVICTION_NOTE }
+        : row,
+    ),
+  }));
 }
 
 /** The strategy cards with the viewer's own account joined on each row's pair id. A viewer who

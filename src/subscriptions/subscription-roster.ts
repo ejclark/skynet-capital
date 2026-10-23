@@ -1,6 +1,6 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { AuthoredRoster } from "../playbooks/authored-play.js";
-import type { ConvictionLookup } from "../playbooks/conviction-store.js";
+import { type ConvictionLookup, INLINE_NOT_MOVED } from "../playbooks/conviction-store.js";
 import type { EnabledPlaybook, Playbook } from "../playbooks/playbook.js";
 import { findPlaybook } from "../playbooks/registry.js";
 import { steeredBy } from "../playbooks/steered-playbook.js";
@@ -38,7 +38,8 @@ function authoredPlay(
  * A house playbook whose subscription points at a conviction record steering it runs narrowed by
  * that record (#5482 slice 4, `steeredBy`): `steered` says each fence, once, for the boot log. A
  * narrowing that would widen a bound is `refused` whole and the pair runs exits-only, so nothing
- * new opens on a conviction that did not hold.
+ * new opens on a conviction that did not hold. So does a subscription that still carries an inline
+ * conviction with no pointer (#5482 contract piece 4): the bots no longer read one.
  */
 export function subscriptionRoster(
   subscriptions: readonly PlaybookSubscription[],
@@ -64,11 +65,15 @@ export function subscriptionRoster(
     }
     // A member's own authored play is never steered: a record steers house pairs. One carrying a
     // pointer anyway is held like any pointer the bots cannot use (`steeredBy` refuses it), since a
-    // pointed pair never reads its inline conviction (#5482 contract piece 2).
+    // pointed pair never reads its inline conviction (#5482 contract piece 2). An inline copy with
+    // no pointer is never read either (piece 4, `statedCheck`), so its pair has no check day and
+    // runs exits-only the same way, until the app's poll moves the copy onto a view.
     const result =
-      own && sub.convictionId === undefined
-        ? { playbook: own, says: [] }
-        : steeredBy(house, sub, convictionOf);
+      sub.convictionId === undefined && sub.conviction
+        ? { playbook: house, refused: INLINE_NOT_MOVED }
+        : own && sub.convictionId === undefined
+          ? { playbook: own, says: [] }
+          : steeredBy(house, sub, convictionOf);
     if ("refused" in result) {
       steeringRefused.push(`${sub.playbookId}: ${result.refused}`);
       enabled.push({ playbook: house, mode: sub.mode, exitsOnly: true });

@@ -99,7 +99,8 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       await subscribe("CRWV-WHEEL", { reason: "pushed out", checkOn: "2027-04-30" });
       const wheel = held("CRWV-WHEEL");
       expect(wheel?.convictionId).toBeUndefined();
-      expect(wheel && statedCheck(wheel).checkOn).toBe("2027-04-30");
+      // This store has no views to write to, so the owner's day stays inline, unpointed.
+      expect(wheel?.conviction?.checkOn).toBe("2027-04-30");
     });
 
     it("a re-subscribe that states none keeps the pointer it had", async () => {
@@ -188,9 +189,10 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       expect(after.map(({ convictionId: _p, updatedAt: _u, ...rest }) => rest)).toEqual(
         before.map(({ updatedAt: _u, conviction: _c, ...rest }) => rest),
       );
-      // Same check day before and after: pointing moves no check.
+      // Same check day before and after: pointing moves no check. (The bots no longer read the
+      // inline day, #5482 contract piece 4; it is the day the owner stated.)
       expect(after.map((s) => statedCheck(s).checkOn)).toEqual(
-        before.map((s) => statedCheck(s).checkOn),
+        before.map((s) => s.conviction?.checkOn),
       );
     });
 
@@ -255,7 +257,10 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       const sent = JSON.parse(JSON.stringify(subscriptionsOnTheWire(store, AT.getTime())));
       const seen = parseSubscriptionsSnapshot(sent)?.accounts.sauron?.[0];
       expect(seen?.conviction).toBeUndefined();
-      expect(seen && statedCheck(seen)).toMatchObject({ checkOn: DAY, from: "record" });
+      expect(seen && statedCheck(seen)).toMatchObject({
+        checkOn: DAY,
+        convictionId: expect.any(String),
+      });
     });
   });
 });

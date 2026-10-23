@@ -8,6 +8,7 @@ import {
   MAX_WIRED_CONVICTIONS,
   type WiredConviction,
 } from "../../src/autonomous/convictions-wire.js";
+import { UNMOVED_CONVICTION_NOTE } from "../../src/observatory/playbook-store-json-view.js";
 import { CONVICTIONS } from "../../src/playbooks/conviction-store.js";
 import { BotControlsStore } from "../../src/server/bot-controls-store.js";
 import { handOverPlan, heldConvictions } from "../../src/server/conviction-hand-over.js";
@@ -148,6 +149,33 @@ describe("an owner's conviction is kept as their own view on the pair", () => {
     const row = rows.find((r) => r.id === "SAURON");
     expect(row?.subscription?.conviction).toEqual(OWN_DAY);
     expect(row?.subscription).not.toHaveProperty("convictionId");
+    // A view the bots check by its pointer is trading: the row carries no exits-only note.
+    expect(row).not.toHaveProperty("notTrading");
+  });
+
+  // #5482 contract piece 4: the bots read pointers only, so a copy the poll could not move onto a
+  // view runs its pair exits-only, and the owner's row says so (the state block's default).
+  it("WHEN a conviction is still inline with no pointer, the row says the pair opens nothing new", async () => {
+    const state = subs.load();
+    subs.replace({
+      ...state,
+      sauron: (state.sauron ?? []).map((s) =>
+        s.playbookId === "SAURON" ? { ...s, conviction: OWN_DAY } : s,
+      ),
+    });
+    const { res, out } = fakeRes();
+    await serveSubscriptionsApi(
+      get("/api/playbook-store?id=sauron"),
+      res,
+      "/api/playbook-store",
+      config,
+      ada,
+    );
+    const rows = (JSON.parse(out.body || "{}").strategies ?? []).flatMap(
+      (c: { pairs: unknown[] }) => c.pairs,
+    ) as { id: string; notTrading?: string }[];
+    expect(rows.find((r) => r.id === "SAURON")?.notTrading).toBe(UNMOVED_CONVICTION_NOTE);
+    expect(rows.find((r) => r.id === "CRWV-WHEEL")).not.toHaveProperty("notTrading");
   });
 
   it("WHEN the conviction is re-dated, the view is replaced in place and the pointer stays", async () => {
