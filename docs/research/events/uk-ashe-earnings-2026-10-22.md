@@ -95,3 +95,57 @@ in the row instead (#2946): it can never become due, so a calendar file for it i
 prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
+
+## Outcome
+
+**Assessed 2026-10-23 (D+1).** `symbols: []`, so the cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) had no target; everything below was fetched fresh from ONS this session
+(HTTP 200, raw HTML, not a summary). **Scorecard: the expectation was killed, the date held.
+The stand-aside stance needed nothing from the number and stands.**
+
+| Test | Prediction | Measured | Verdict |
+|---|---|---|---|
+| `FT-uk-ashe-earnings-2026-10-22-1` | median weekly full-time growth **2.0%–4.0%** (kill at 4.5%+) | **+5.8%** (£811.20 vs £766.60) | **kill** |
+| `FT-uk-ashe-earnings-2026-10-22-2` | three bulletins live, all dated 22 October 2026 | all three, each "Release date: 22 October 2026" | **pass** |
+
+### Leg 1 — the print (ONS, release dated 22 October 2026 9:30am)
+
+*Employee earnings in the UK: 2026*: median weekly earnings for full-time employees **£811.20** vs £766.60 in
+April 2025, **+5.8%** nominal and **+2.7%** real (CPIH-deflated; implies CPIH near 3.0%). All employees **+4.9%**,
+part-time **+2.9%** (−0.1% real), hourly ex-overtime full-time £20.81 vs £19.68 (+5.7%), annual full-time
+£40,911 vs £39,157 (+4.5%). The 2025 base stayed **£766.60** after revision, so the "revised base" caveat in
+Leg 3 cost nothing. All 2026 figures are provisional; final data October 2027. The 2025 achieved sample was
+revised up from 174,000 to **182,000**, and ONS calls 2026 the largest ASHE sample on record.
+*Low and high pay*: low-paid jobs ticked up to **2.8%**; **346,000** jobs (1.1%) paid below the NLW/NMW.
+*Gender pay gap*: full-time **6.8%**, down from 7.2%.
+
+### Leg 2 — why the anchor missed
+
+The anchor did not move: the monthly AWE regular-pay series (KAI7, current vintage published 2026-10-20)
+still reads **£697 vs £674 = +3.4%** for April 2026. So ASHE − AWE came in at **+2.4 points**, against a prior
+range of −1.4 to +0.5 (n=4). The registered band assumed that range would hold; it did not, and the miss is
+in the gap, not in the AWE reading. The monthly data and the annual survey disagreed by more than in any of
+the four editions used. **Candidate causes, none tested here:** the two series measure different things (an
+April pay-period snapshot of median full-time weekly pay against a seasonally adjusted three-month all-employee
+mean); the largest ASHE sample on record; the April 2026 National Living Wage rise (£12.71, +4.1%,
+search-relayed, not re-fetched) bunching the lower half of the full-time distribution. Four points was a
+thin base for a gap estimate, as the ledger said; this is what a fifth looks like.
+
+### Leg 3 — the stance
+
+Stand aside held without being tested: with `symbols: []` there is no tracked name to measure the
+"moved >2% in 04:30–09:30 ET" kill switch against, so that switch is **not evaluated**, neither fired nor
+cleared. The UK-side reaction (gilts, sterling) was not fetched. VIX: 16.68 on 10-21, **19.03** on the
+10-22 print day, **20.15** latest on 10-23 (Yahoo chart, regularMarketPrice; the 10-22 and 10-23 readings
+are secondary); a 2.4-point jump in one session is a louder candidate for anything that moved on 10-22 than
+a stale April pay survey. The release also fell inside the Low Pay Commission's end-October advice window
+and six days before the Budget (Autumn Budget date **estimate**, unchanged).
+
+**Lesson for the next macro-print ledger:** a band built from a four-edition gap should say it is a
+four-edition gap in the At a glance row, not only in the limits. This ledger did (Medium confidence), and the
+miss was still wider than the whole range. The `Proves it wrong` cell for "this week" fired as written.
+
+**The stance holds unchanged: stand aside.** This document goes quiet.
+
+**Last assessed:** 2026-10-23
+<!-- probe-ref: {"symbols":{},"vix":20.15,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","case-shiller-hpi-2026-10-27","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","fhfa-hpi-2026-10-27","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","new-home-sales-2026-10-27","pending-home-sales-2026-10-20","spcx-lockup-release-2026-10-22","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-gilt-auction-short-2026-10-27","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["meta-2026-10-28-print"],"screenStreak":0} -->

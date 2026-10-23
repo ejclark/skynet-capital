@@ -952,6 +952,16 @@ robust, alpha fragile — is the finding.
   the fast-restart branch as the base case until the line's own history (restored in three days in
   April, in about twelve here) says otherwise.
 
+- **ASHE's April pay growth lands within the monthly AWE gap range, i.e. 2.0–4.0% (FT-uk-ashe-earnings-2026-10-22-1)** — added 2026-10-23 from the
+  [uk-ashe-earnings-2026-10-22 close-out](events/uk-ashe-earnings-2026-10-22.md). Registered 2026-10-16 on a
+  four-edition ASHE−AWE gap of −1.4 to +0.5pp (2022–2025) applied to April 2026 AWE regular pay of +3.4%, with
+  a kill at 4.5% or higher. ONS printed **+5.8%** (£811.20 vs £766.60) on 2026-10-22 while AWE for the same
+  April still read +3.4%: a gap of **+2.4pp**, outside the range. **What it does and does not refute:** the
+  date, the three-bulletin release and the stand-aside (no tracked symbol) are untouched. What breaks is the
+  assumption that a four-point gap range transfers to the next edition. Do not re-propose a fixed ASHE
+  headline band built from the monthly series without a longer gap history, or a reason the 2026 gap was
+  special (sample size, NLW bunching and the median-vs-mean difference are untested candidates).
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
