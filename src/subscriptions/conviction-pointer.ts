@@ -184,8 +184,8 @@ export function heldHere(
 /**
  * `sub`, whose conviction was just stated or changed: its pointer is recomputed from the new
  * conviction, so a pointer never outlives the view it described. The record the new conviction
- * matches, else none — an owner who sets a day no record holds is checked on that day, not on the
- * record's (`statedCheck` reads the record first).
+ * matches, else none — an owner who sets a day no record holds is checked on that day, through
+ * their own view on the pair (`pair-conviction-write.ts`), never on the record's.
  */
 export function restated(
   sub: PlaybookSubscription,

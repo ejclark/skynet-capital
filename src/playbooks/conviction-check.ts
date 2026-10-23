@@ -1,6 +1,7 @@
 import { type OptionBook, optionBook } from "../domain/option-book.js";
 import type { PlaybookSubscription, Portfolio, Quote } from "../domain/types.js";
 import { OPTION_MULTIPLIER } from "../trading/option-symbols.js";
+import { isUnmovedInline } from "./conviction-store.js";
 import { findPair, type Pair, pairName } from "./pair-table.js";
 import { wheelStrategyTag } from "./wheel.js";
 
@@ -43,7 +44,7 @@ export interface PairLedger {
  *  "still trading" would be false of it (the contract step's piece 4). Authored plays and ids the
  *  pair table does not know are not pairs, so they are never labelled. */
 export function isConvictionNotStated(sub: PlaybookSubscription): boolean {
-  if (!sub.enabled || sub.convictionId !== undefined || sub.conviction) return false;
+  if (!sub.enabled || sub.convictionId !== undefined || isUnmovedInline(sub)) return false;
   const pair = findPair(sub.playbookId);
   return pair !== undefined && pair.evidence.status !== "researched";
 }
@@ -95,10 +96,6 @@ export function netPl(
   return Math.round((ledger.realizedPl + open) * 100) / 100;
 }
 
-export type ConvictionVerdict =
-  | { readonly pass: true; readonly netPl: number }
-  | { readonly pass: false; readonly netPl: number; readonly reason: string };
-
 /** The wheel's retire test: more than 1 in 3 sold puts finished in the money. A strategy with no
  *  put-based test never fails it. In words when it fails, else undefined. */
 function retireFailure(pair: Pair, checkOn: string, ledger: PairLedger): string | undefined {
@@ -106,24 +103,6 @@ function retireFailure(pair: Pair, checkOn: string, ledger: PairLedger): string 
     return undefined;
   }
   return `${pairName(pair)}: ${ledger.putsAssigned} of ${ledger.putsClosed} sold puts finished in the money at its ${checkOn} check, more than 1 in 3`;
-}
-
-/** Read one pair's check: net P/L at or above $0, and the strategy's retire test not failed. */
-export function checkConviction(
-  pair: Pair,
-  checkOn: string,
-  ledger: PairLedger,
-  net: number,
-): ConvictionVerdict {
-  if (net < 0) {
-    return {
-      pass: false,
-      netPl: net,
-      reason: `${pairName(pair)}: net P/L is ${dollars(net)} at its ${checkOn} check`,
-    };
-  }
-  const retired = retireFailure(pair, checkOn, ledger);
-  return retired ? { pass: false, netPl: net, reason: retired } : { pass: true, netPl: net };
 }
 
 /** One steered pair's reading for a record's check: its history and its net P/L now. */
@@ -163,11 +142,12 @@ export function checkRecord(
   const netPl = Math.round(readings.reduce((sum, r) => sum + r.net, 0) * 100) / 100;
   if (netPl < 0) {
     const names = readings.map((r) => pairName(r.pair)).join(" + ");
+    const together = readings.length > 1 ? " together" : "";
     return {
       pass: false,
       netPl,
       stopped: readings.map((r) => r.pair.id),
-      reason: `${names}: net P/L is ${dollars(netPl)} together at the ${checkOn} check`,
+      reason: `${names}: net P/L is ${dollars(netPl)}${together} at the ${checkOn} check`,
     };
   }
   // An owner who accepts assignment is judged on the money alone (`Conviction.acceptsAssignment`).

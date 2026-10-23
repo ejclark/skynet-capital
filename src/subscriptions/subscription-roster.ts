@@ -1,6 +1,10 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { AuthoredRoster } from "../playbooks/authored-play.js";
-import { type ConvictionLookup, INLINE_NOT_MOVED } from "../playbooks/conviction-store.js";
+import {
+  type ConvictionLookup,
+  INLINE_NOT_MOVED,
+  isUnmovedInline,
+} from "../playbooks/conviction-store.js";
 import type { EnabledPlaybook, Playbook } from "../playbooks/playbook.js";
 import { findPlaybook } from "../playbooks/registry.js";
 import { steeredBy } from "../playbooks/steered-playbook.js";
@@ -68,12 +72,11 @@ export function subscriptionRoster(
     // pointed pair never reads its inline conviction (#5482 contract piece 2). An inline copy with
     // no pointer is never read either (piece 4, `statedCheck`), so its pair has no check day and
     // runs exits-only the same way, until the app's poll moves the copy onto a view.
-    const result =
-      sub.convictionId === undefined && sub.conviction
-        ? { playbook: house, refused: INLINE_NOT_MOVED }
-        : own && sub.convictionId === undefined
-          ? { playbook: own, says: [] }
-          : steeredBy(house, sub, convictionOf);
+    const result = isUnmovedInline(sub)
+      ? { playbook: house, refused: INLINE_NOT_MOVED }
+      : own && sub.convictionId === undefined
+        ? { playbook: own, says: [] }
+        : steeredBy(house, sub, convictionOf);
     if ("refused" in result) {
       steeringRefused.push(`${sub.playbookId}: ${result.refused}`);
       enabled.push({ playbook: house, mode: sub.mode, exitsOnly: true });

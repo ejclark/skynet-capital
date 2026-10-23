@@ -20,6 +20,7 @@ import {
 import { type BotsOnlyGateView, botsOnlyGateView } from "../domain/playbook-bots-only.js";
 import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
+import { isUnmovedInline } from "../playbooks/conviction-store.js";
 import { findPair, type Pair, type StrategyId } from "../playbooks/pair-table.js";
 import { budgetedOn } from "../subscriptions/strategy-budgets.js";
 import {
@@ -171,9 +172,7 @@ export function withUnmovedConvictions<
   Card extends { readonly pairs: readonly Row[] },
 >(strategies: readonly Card[], raw: readonly PlaybookSubscription[]): Card[] {
   const unmoved = new Set(
-    raw
-      .filter((s) => s.enabled && s.conviction && s.convictionId === undefined)
-      .map((s) => s.playbookId),
+    raw.filter((s) => s.enabled && isUnmovedInline(s)).map((s) => s.playbookId),
   );
   if (unmoved.size === 0) return [...strategies];
   return strategies.map((card) => ({

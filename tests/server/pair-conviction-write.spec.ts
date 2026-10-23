@@ -15,7 +15,12 @@ import { handOverPlan, heldConvictions } from "../../src/server/conviction-hand-
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { MemberConvictionStore } from "../../src/server/member-conviction-store.js";
 import { serveMemberConvictionsApi } from "../../src/server/member-convictions-api-routes.js";
-import { CONVICTION_UNSAVED, statePairConviction } from "../../src/server/pair-conviction-write.js";
+import {
+  CONVICTION_UNSAVED,
+  CONVICTION_WIRE_FULL,
+  statePairConviction,
+  writeWithConviction,
+} from "../../src/server/pair-conviction-write.js";
 import { SettingsChangeLog } from "../../src/server/settings-change-log.js";
 import { pollSeedsFromEnv } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
@@ -337,7 +342,9 @@ describe("never past what the bots will hold", () => {
     });
   });
 
-  it("writes no view once the controls wire is full, and drops an older one so the inline day rules", async () => {
+  // #5482 contract piece 4: the bots read pointers only, so keeping the day inline would quietly
+  // run the pair exits-only. The write is refused instead, and says why.
+  it("refuses a new view once the controls wire is full, and changes nothing", async () => {
     const dir = await mkdtemp(join(tmpdir(), "skynet-pair-full-"));
     try {
       const members = new MemberConvictionStore(join(dir, "member-convictions.json"));
@@ -345,8 +352,18 @@ describe("never past what the bots will hold", () => {
       const at = new Date("2026-10-22T15:00:00Z");
       expect(statePairConviction(members, ref, OWN_DAY, "Ada", at).ok).toBe(true);
       const crowded = Object.assign(Object.create(members), { handedOver: () => full });
-      expect(statePairConviction(crowded, ref, OWN_DAY, "Ada", at).ok).toBe(true);
-      expect(members.handedOver()).toEqual([]);
+      const later = { ...OWN_DAY, checkOn: "2027-05-28" };
+      expect(statePairConviction(crowded, ref, later, "Ada", at)).toEqual({
+        ok: false,
+        reason: CONVICTION_WIRE_FULL,
+      });
+      const write = rstest.fn();
+      expect(writeWithConviction(crowded, ref, later, "Ada", at, write)).toEqual({
+        ok: false,
+        reason: CONVICTION_WIRE_FULL,
+      });
+      expect(write).not.toHaveBeenCalled();
+      expect(members.handedOver().map((w) => w.conviction.checkOn)).toEqual([OWN_DAY.checkOn]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

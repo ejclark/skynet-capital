@@ -106,13 +106,26 @@ export interface StatedCheck {
 /** Why an unpointed subscription that still carries an inline conviction runs exits-only. */
 export const INLINE_NOT_MOVED = "its conviction is not on a view yet";
 
+/** A subscription whose inline conviction was never moved onto a view: no pointer, a copy, on a
+ *  pair the table knows. The one test the bots' exits-only rule (`subscriptionRoster`), the gate's
+ *  note and the owner's row (`withUnmovedConvictions`) share, so they cannot disagree. An authored
+ *  play or an id that is no pair is left out: no view can be stated on one, and its inline copy was
+ *  never checked, so it keeps running as before. */
+export function isUnmovedInline(sub: PlaybookSubscription): boolean {
+  return (
+    sub.convictionId === undefined &&
+    sub.conviction !== undefined &&
+    findPair(sub.playbookId) !== undefined
+  );
+}
+
 export function statedCheck(
   sub: PlaybookSubscription,
   lookup: ConvictionLookup = lookupConviction,
 ): StatedCheck {
   const id = sub.convictionId;
   if (id === undefined) {
-    return sub.conviction ? { note: `${sub.playbookId}: ${INLINE_NOT_MOVED}` } : {};
+    return isUnmovedInline(sub) ? { note: `${sub.playbookId}: ${INLINE_NOT_MOVED}` } : {};
   }
   const record = lookup(id);
   if (!record) {

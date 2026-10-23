@@ -33,8 +33,10 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * already passed (a latched failure) is stated on the subscription's start day, else the day before
  * its check (`statedOnFor`). A view the store's rules would refuse (a pair no row holds), or the
  * views file could not read back (an inline reason past a stored claim's length), is not written:
- * the subscription keeps its inline copy, as before, rather than point at a view that would hold
- * its pair exits-only — or leave the file unreadable, which refuses every member's write.
+ * the subscription keeps its inline copy rather than leave the file unreadable, which refuses
+ * every member's write. Since piece 4 the bots never read that copy: on a pair the table knows it
+ * runs exits-only and its row says so (`isUnmovedInline`); on an id that is no pair it was never
+ * checked, and still is not.
  */
 
 /** One view to write on one account, and the subscription it is for. */
