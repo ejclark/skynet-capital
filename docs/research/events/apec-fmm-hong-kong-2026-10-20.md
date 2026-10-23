@@ -116,3 +116,31 @@ in the row instead (#2946): it can never become due, so a calendar file for it i
 prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
+
+## Outcome
+
+**Closed 2026-10-23 (D+3).** The stance held: a ceremonial meeting that moved nothing tracked, with the
+US represented below Cabinet level. No instruments apply (no symbols keyed), so this is scored from
+sourced reporting and one VIX re-pull, not from the earnings-cycle or intraday-edges tools (cache
+cleared anyway). Not an action event; the date label below stays as filed.
+
+| Claim in the stance | Result | Source (read 2026-10-23) |
+|---|---|---|
+| Days are Oct 20–21 | **Held.** apec.org now lists the meeting "20–21 October 2026, Hong Kong, China", a primary; the HKSAR release of 10-21 says it "started yesterday". | apec.org events page; info.gov.hk P2026102100745 |
+| Bessent skips, US led below Cabinet level | **Held, with a gap.** The only US official reported in Hong Kong is Under Secretary Erin Browne, who held a bilateral with Vietnam's finance minister on 10-20 (VietnamPlus calls her "Deputy Secretary"; Treasury's own Oct IMF notice calls her Under Secretary). No report found places Bessent there. No readout names the head of delegation. | vietnamplus.vn post1143211; chinadailyhk.com 641480, 641483 |
+| Not market-moving; no tariff or export-control provision | **Held.** Outputs were a joint statement (global imbalances, resilience) and a digital-infrastructure financing statement; the coverage read carries no tariff, trade or export-control text. | chinadailyhk.com 641480, 641483 |
+| VIX regime | 10-19 18.44 · 10-20 17.31 · 10-21 16.68 · 10-22 19.03 · 10-23 19.71 (bar as of 2026-10-23). The 10-22 jump came after the meeting ended and nothing links it to this event. | Yahoo chart ^VIX |
+
+**What was wrong or thin.** The attendance claim rests on absence of a Bessent report plus one Browne
+sighting, not a Treasury readout; I found none. SCMP's two articles still 403, so the pre-meeting
+reporting stayed second-hand.
+
+**Forward test.** FT-apec-fmm-hong-kong-2026-10-20-1 scored **pass** (see its fragment, with the
+caveat above). Nothing joins the kill list.
+
+**Loop note (sense · decide · act · verify · remember).** The one step a person would still do is
+reading a Treasury readout for the delegation head; the lane could not reach one, so "who led" stays
+inferred.
+
+**Last assessed:** 2026-10-23
+<!-- probe-ref: {"symbols":{},"vix":19.71,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","spcx-lockup-release-2026-10-22","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["meta-2026-10-28-print","retail-sales-2026-10-15"],"screenStreak":0} -->
