@@ -962,6 +962,17 @@ robust, alpha fragile — is the finding.
   headline band built from the monthly series without a longer gap history, or a reason the 2026 gap was
   special (sample size, NLW bunching and the median-vs-mean difference are untested candidates).
 
+- **A UMich final lands within 1.0 point of its preliminary after a second loaded back half
+  (FT-umich-sentiment-final-2026-10-23-1)** — added 2026-10-25 from the
+  [umich-sentiment-final-2026-10-23 close-out](events/umich-sentiment-final-2026-10-23.md). Registered
+  2026-10-09 on a 48.0% base rate of \|Δ\| ≥ 1.0 (n=25) plus September's +0.3, with a kill at \|Δ\| ≥ 1.0.
+  The October prelim printed **46.3** and the publisher's final **48.0**: \|Δ\| = **1.7**, upward, through a
+  window that held a hot CPI (3.7% y/y) and Brent running to $109. **What it does and does not refute:**
+  the 48% base rate and "direction is not called" stand. What breaks is reading September's +0.3 as
+  evidence that back-half event load stops moving the final: two consecutive finals, one +0.3 and one
+  +1.7, are consistent with a coin flip on size. Do not re-propose a small-revision call for a UMich final
+  on event-load grounds; n=1 killed on its first test, the mirror of the FT-55 kill above.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
