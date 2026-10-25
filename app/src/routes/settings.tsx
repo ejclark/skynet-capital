@@ -17,11 +17,17 @@ import { AccountOwnershipLine, GuestListCard, UnclaimedAccountsCard } from "../s
 import { BotSettingsPanel } from "../shell/bot-settings";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
+import { GithubTokenCard } from "../shell/github-token-card";
 import { MissionControl, MissionControlLink } from "../shell/mission-control";
 import { PreferencesCard } from "../shell/preferences-card";
 import { ProfileRail } from "../shell/profile-rail";
 import { resolveSection } from "../shell/sections";
-import { SETTINGS_SECTIONS, type SettingsSection, SettingsToc } from "../shell/settings-toc";
+import {
+  OWNER_SECTIONS,
+  SETTINGS_SECTIONS,
+  type SettingsSection,
+  SettingsToc,
+} from "../shell/settings-toc";
 import { InlineResult, KindChip } from "../ui";
 
 /**
@@ -366,10 +372,10 @@ function SettingsPage(): ReactElement {
   const first = accounts[0];
   const selected = accounts.find((a) => a.id === selectedId) ?? first;
   const isOwner = guestList.data?.owner === true;
-  // Resolved against what this viewer can actually see: `?section=guests` on a non-owner falls
-  // back to the first section rather than stranding them on an empty stage.
+  // Resolved against what this viewer can actually see: an owner section (`?section=guests`) on a
+  // non-owner falls back to the first section rather than stranding them on an empty stage.
   const section = resolveSection(
-    SETTINGS_SECTIONS.filter((s) => s.id !== "guests" || isOwner),
+    SETTINGS_SECTIONS.filter((s) => isOwner || !OWNER_SECTIONS.has(s.id)),
     asked,
   );
   return (
@@ -378,7 +384,7 @@ function SettingsPage(): ReactElement {
         <>
           <ProfileRail current="settings" />
           <hr />
-          <SettingsToc current={section} showGuests={isOwner} onSelect={setSection} />
+          <SettingsToc current={section} isOwner={isOwner} onSelect={setSection} />
         </>
       }
     >
@@ -432,6 +438,7 @@ function SettingsPage(): ReactElement {
         )
       ) : null}
       {section === "guests" ? <GuestListCard /> : null}
+      {section === "github" ? <GithubTokenCard /> : null}
     </SettingsFrame>
   );
 }

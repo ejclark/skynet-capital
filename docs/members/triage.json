@@ -202,6 +202,11 @@
     "mustBeSeenBy": "fund owner only (the card returns null otherwise)"
   },
   {
+    "screen": "/settings ?section=github",
+    "verdict": "keep",
+    "mustBeSeenBy": "fund owner only (renews Moneypenny's GitHub token; the card returns null otherwise)"
+  },
+  {
     "screen": "/learn",
     "verdict": "redirect-only",
     "target": "/accounts?section=milestones"
