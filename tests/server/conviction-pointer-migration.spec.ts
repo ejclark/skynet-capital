@@ -12,12 +12,14 @@ import { pollSeedsFromEnv } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
 import { serveSubscriptionsApi } from "../../src/server/subscriptions-api-routes.js";
 import { pairViewId } from "../../src/subscriptions/pair-conviction.js";
+import { subscriptionRoster } from "../../src/subscriptions/subscription-roster.js";
 
 /**
  * #5482 slice 2, the MIGRATE step, against a real store on a temp file: the app writes a pointer
  * when a conviction matches a record, the poll migrates the two live CRWV subscriptions once, the
- * bots receive it on `subscriptions.v3`. Since the contract step's piece 2 a pointed subscription
- * carries no inline copy beside its pointer, so the bots check it on the record's day alone.
+ * bots receive it on the wire (`subscriptions.v4` since contract piece 4). Since the contract
+ * step's piece 2 a pointed subscription carries no inline copy beside its pointer, so the bots
+ * check it on the record's day alone.
  */
 
 const session = { email: "eric@example.com", name: "Eric Clark" } as never;
@@ -246,9 +248,9 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       });
     });
 
-    it("the app sends subscriptions.v3, and the bots read the pointer off it", () => {
+    it("the app sends subscriptions.v4, and the bots read the pointer off it", () => {
       const sent = JSON.parse(JSON.stringify(subscriptionsOnTheWire(store, AT.getTime())));
-      expect(sent.kind).toBe("subscriptions.v3");
+      expect(sent.kind).toBe("subscriptions.v4");
       const read = parseSubscriptionsSnapshot(sent);
       expect(read?.accounts.sauron?.[0]).toMatchObject({ convictionId: VIEW });
     });
@@ -260,6 +262,46 @@ describe("the app points a subscription at its conviction record (#5482 slice 2,
       expect(seen && statedCheck(seen)).toMatchObject({
         checkOn: DAY,
         convictionId: expect.any(String),
+      });
+    });
+
+    describe("an inline copy the poll could not move (contract piece 4)", () => {
+      const unmoved = (reason: string, checkOn: string) =>
+        writeFile(
+          path,
+          JSON.stringify({
+            sauron: [
+              {
+                accountId: "sauron",
+                playbookId: "CRWV-WHEEL",
+                mode: "standard",
+                enabled: true,
+                createdAt: AT.toISOString(),
+                updatedAt: AT.toISOString(),
+                conviction: { reason, checkOn },
+              },
+            ],
+          }),
+        );
+      const sent = () => JSON.parse(JSON.stringify(subscriptionsOnTheWire(store, AT.getTime())));
+
+      it("reaches the bots as there, and its pair runs exits-only", async () => {
+        await unmoved("my call", "2027-04-30");
+        const read = parseSubscriptionsSnapshot(sent());
+        expect(read?.kind).toBe("subscriptions.v4");
+        const roster = subscriptionRoster(read?.accounts.sauron ?? []);
+        expect(roster.enabled.map((e) => [e.playbook.id, e.exitsOnly])).toEqual([
+          ["CRWV-WHEEL", true],
+        ]);
+      });
+
+      it("moves the version for being there, never for its words or day", async () => {
+        await unmoved("my call", "2027-04-30");
+        const first = sent().version;
+        await unmoved("other words", "2027-06-30");
+        expect(sent().version).toBe(first);
+        store.replace({});
+        expect(sent().version).not.toBe(first);
       });
     });
   });

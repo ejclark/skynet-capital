@@ -61,8 +61,8 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * subscription still carries one with no pointer, which is a copy the app's poll could not move
  * onto a view, and which runs its pair exits-only (`subscriptionRoster`). Dropping that bit would
  * let such a pair trade unchecked, the one state no owner chose. The same expand-first order: the
- * bots read v4 from this piece on, and the app sends it only once those bots are live; v3 stays
- * readable for a rollback. A v2 snapshot never vouches for a pointer, so on a bots build with this
+ * bots read v4 from #5989 on, and the app sends v4 from the piece's app half
+ * (`dashboard-insights-bridge.ts`), once those bots were live; v3 stays readable for a rollback. A v2 snapshot never vouches for a pointer, so on a bots build with this
  * piece every pair it carries a conviction for runs exits-only: a rollback that far fails safe.
  */
 
