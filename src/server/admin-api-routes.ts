@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AllowlistEntry } from "./auth/allowlist-store.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { githubTokenStatus, rotateGithubToken } from "./github-token.js";
 import { EMAIL } from "./invite-form.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
@@ -15,6 +16,9 @@ import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-s
  *                                    on the account, so it stays deliberately owner-only, and
  *                                    an address that can't sign in is refused exactly as the
  *                                    HTML page refuses it.
+ *   GET/POST /api/admin/github-token → the app's GitHub token (Moneypenny's filing credential):
+ *                                    GET is its status, never the token; POST replaces it after
+ *                                    GitHub accepts it (`github-token.ts`).
  *
  * The rules are Mission Control's (`controls-api-routes.ts`): the owner check re-runs here on
  * every request against each surface's OWN dep, never inherited; every non-owner GET answers
@@ -182,6 +186,33 @@ async function serveClaim(
   sendJson(res, 200, applyClaim(config, owner, body));
 }
 
+async function serveGithubToken(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const deps = config.githubToken;
+  const owner = ownerOf(deps?.isOwner, session);
+  if ((req.method ?? "GET") === "GET") {
+    sendJson(res, 200, owner && deps ? await githubTokenStatus(deps) : { owner: false });
+    return;
+  }
+  const raw = await readJsonPost(req, res, ADMIN_BODY_CAP_BYTES);
+  if (raw === undefined) return;
+  if (!(owner && deps)) {
+    sendJson(res, 403, { error: "The GitHub token answers only to owners." });
+    return;
+  }
+  const body = parseJsonRecord(raw);
+  const token = body ? boundedString(body.token, 255) : undefined;
+  if (!token) {
+    sendJson(res, 400, { error: "malformed token body" });
+    return;
+  }
+  sendJson(res, 200, await rotateGithubToken(deps, token, owner, new Date()));
+}
+
 /** Handle `/api/admin/*`. Returns true when the request was answered. */
 export async function serveAdminApi(
   req: IncomingMessage,
@@ -196,6 +227,10 @@ export async function serveAdminApi(
   }
   if (path === "/api/admin/claim") {
     await serveClaim(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/admin/github-token") {
+    await serveGithubToken(req, res, config, session);
     return true;
   }
   return false;

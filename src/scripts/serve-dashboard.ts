@@ -49,6 +49,7 @@ import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import type { DashboardServerConfig } from "../server/dashboard-server-config.js";
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
+import { bootGithubToken } from "../server/github-token.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
@@ -75,6 +76,8 @@ const PORT = resolvePort(process.env);
 
 async function main(): Promise<void> {
   warnUnpinnedVolumes(process.env);
+  // Before anything resolves a GitHub-backed feature: a token saved from Settings beats the host secret.
+  const githubToken = bootGithubToken(process.env);
   const dataSource = resolveDataSource(process.env);
   // E2E DETERMINISM (#4683): `freezePage` pins the browser's clock, but the Council computes its
   // week label from the server's own `new Date()`, so every baseline carrying it changed on
@@ -366,6 +369,7 @@ async function main(): Promise<void> {
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
+          githubToken: githubToken.deps((email: string) => owners.has(email)),
           // The account-link table. Reads the live board so a just-added account is
           // linkable immediately, and refuses any address that can't sign in — a link to
           // somebody outside the gate is a link nobody could ever use.
