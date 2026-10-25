@@ -39,7 +39,6 @@ export function accountsOpen(ownerId) {
     "/api/accounts/networth",
     `/api/desk/${me}`,
     "/api/board?by=month",
-    "/api/council",
     `/api/accounts/${me}/equity-curve?range=1M`,
     "/api/trade/bars?symbol=SPY&days=31",
     `/api/desk/${me}/activity`,
