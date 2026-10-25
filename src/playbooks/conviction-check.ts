@@ -1,7 +1,7 @@
 import { type OptionBook, optionBook } from "../domain/option-book.js";
 import type { PlaybookSubscription, Portfolio, Quote } from "../domain/types.js";
 import { OPTION_MULTIPLIER } from "../trading/option-symbols.js";
-import { isUnmovedInline } from "./conviction-store.js";
+import { isConvictionOffView } from "./conviction-store.js";
 import { findPair, type Pair, pairName } from "./pair-table.js";
 import { wheelStrategyTag } from "./wheel.js";
 
@@ -41,10 +41,12 @@ export interface PairLedger {
  *  cannot read it (a member's, held by the bots' own lookup): its pair is not unstated, and one the
  *  bots cannot resolve runs exits-only and says so (`steeredBy`). An inline copy with no pointer is
  *  stated too, just not on a view yet: it runs exits-only and says so (`subscriptionRoster`), so
- *  "still trading" would be false of it (the contract step's piece 4). Authored plays and ids the
- *  pair table does not know are not pairs, so they are never labelled. */
+ *  "still trading" would be false of it (the contract step's piece 4). So would it be of a ◆ pair
+ *  with neither, which trades only on a conviction and runs exits-only the same way: the label is
+ *  for the other non-✓ pairs (`isConvictionOffView`). Authored plays and ids the pair table does not
+ *  know are not pairs, so they are never labelled. */
 export function isConvictionNotStated(sub: PlaybookSubscription): boolean {
-  if (!sub.enabled || sub.convictionId !== undefined || isUnmovedInline(sub)) return false;
+  if (!sub.enabled || sub.convictionId !== undefined || isConvictionOffView(sub)) return false;
   const pair = findPair(sub.playbookId);
   return pair !== undefined && pair.evidence.status !== "researched";
 }

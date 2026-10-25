@@ -64,6 +64,9 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * bots read v4 from #5989 on, and the app sends v4 from the piece's app half
  * (`dashboard-insights-bridge.ts`), once those bots were live; v3 stays readable for a rollback. A v2 snapshot never vouches for a pointer, so on a bots build with this
  * piece every pair it carries a conviction for runs exits-only: a rollback that far fails safe.
+ * Since the inline carry's replacement (bots first) so does every ◆ pair a v1 or v2 snapshot
+ * carries, copy or not: a ◆ pair with no pointer runs exits-only (`isConvictionOffView`). That is
+ * what lets the app stop writing the ◆ row's copy.
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";

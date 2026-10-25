@@ -4,6 +4,7 @@ import { AI_DIP_2026_10, SEEDED_CONVICTIONS } from "../../src/playbooks/convicti
 import {
   CONVICTIONS,
   ConvictionStore,
+  isConvictionOffView,
   lookupConviction,
   statedCheck,
 } from "../../src/playbooks/conviction-store.js";
@@ -95,6 +96,41 @@ describe("the seeded AI-dip conviction", () => {
   });
 });
 
+/** The one test the bots' exits-only rule, the gate's note and the owner's row share. */
+describe("isConvictionOffView", () => {
+  const own = { reason: "my call", checkOn: "2027-04-30" };
+
+  it("is an inline copy with no pointer, on a pair the table knows", () => {
+    expect(isConvictionOffView(aSubscription("sauron", "SAURON", { conviction: own }))).toBe(true);
+    expect(isConvictionOffView(aSubscription("sauron", "CRWV-WHEEL", { conviction: own }))).toBe(
+      true,
+    );
+  });
+
+  it("is a ◆ pair with no pointer, copy or not (the inline carry's replacement)", () => {
+    expect(isConvictionOffView(aSubscription("sauron", "CRWV-WHEEL"))).toBe(true);
+    expect(isConvictionOffView(aSubscription("sauron", "CRWV-LONG-CALL"))).toBe(true);
+  });
+
+  it("is never a pointed subscription, whatever its pointer resolves to", () => {
+    const pointed = { convictionId: "no-such-view", conviction: own };
+    expect(isConvictionOffView(aSubscription("sauron", "CRWV-WHEEL", pointed))).toBe(false);
+    expect(
+      isConvictionOffView(
+        aSubscription("sauron", "CRWV-WHEEL", { convictionId: AI_DIP_2026_10.id }),
+      ),
+    ).toBe(false);
+  });
+
+  it("is never a non-◆ pair with no copy, an authored play, or an id that is no pair", () => {
+    expect(isConvictionOffView(aSubscription("sauron", "SAURON"))).toBe(false);
+    expect(isConvictionOffView(aSubscription("sauron", "S1-NVDA"))).toBe(false);
+    expect(isConvictionOffView(aSubscription("sauron", "U-my-own-play", { conviction: own }))).toBe(
+      false,
+    );
+  });
+});
+
 describe("statedCheck", () => {
   const lookup = (id: string) => (id === "other-view" ? record() : undefined);
   const own = { reason: "my call", checkOn: "2027-04-30" };
@@ -105,7 +141,18 @@ describe("statedCheck", () => {
     expect(statedCheck(aSubscription("sauron", "CRWV-WHEEL", { conviction: own }), lookup)).toEqual(
       { note: "CRWV-WHEEL: its conviction is not on a view yet" },
     );
-    expect(statedCheck(aSubscription("sauron", "CRWV-WHEEL"), lookup)).toEqual({});
+    expect(statedCheck(aSubscription("sauron", "SAURON"), lookup)).toEqual({});
+  });
+
+  // The inline carry's replacement, bots first: a ◆ pair trades only on a conviction, so one with
+  // no pointer has no check day and is said, copy or not; the roster runs it exits-only.
+  it("says a ◆ pair with neither a pointer nor a copy has no view, like an unmoved copy", () => {
+    expect(statedCheck(aSubscription("sauron", "CRWV-WHEEL"), lookup)).toEqual({
+      note: "CRWV-WHEEL: its conviction is not on a view yet",
+    });
+    expect(statedCheck(aSubscription("sauron", "CRWV-LONG-CALL"), lookup)).toEqual({
+      note: "CRWV-LONG-CALL: its conviction is not on a view yet",
+    });
   });
 
   it("is the record's date when the record steers the pair, over the subscription's own", () => {

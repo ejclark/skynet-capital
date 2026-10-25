@@ -1,9 +1,9 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { AuthoredRoster } from "../playbooks/authored-play.js";
 import {
+  CONVICTION_NOT_ON_VIEW,
   type ConvictionLookup,
-  INLINE_NOT_MOVED,
-  isUnmovedInline,
+  isConvictionOffView,
 } from "../playbooks/conviction-store.js";
 import type { EnabledPlaybook, Playbook } from "../playbooks/playbook.js";
 import { findPlaybook } from "../playbooks/registry.js";
@@ -42,8 +42,9 @@ function authoredPlay(
  * A house playbook whose subscription points at a conviction record steering it runs narrowed by
  * that record (#5482 slice 4, `steeredBy`): `steered` says each fence, once, for the boot log. A
  * narrowing that would widen a bound is `refused` whole and the pair runs exits-only, so nothing
- * new opens on a conviction that did not hold. So does a subscription that still carries an inline
- * conviction with no pointer (#5482 contract piece 4): the bots no longer read one.
+ * new opens on a conviction that did not hold. So does a subscription whose conviction is on no
+ * view (`isConvictionOffView`): an inline copy with no pointer (#5482 contract piece 4), which the
+ * bots no longer read, or a ◆ pair with no pointer at all, which trades only on a conviction.
  */
 export function subscriptionRoster(
   subscriptions: readonly PlaybookSubscription[],
@@ -71,9 +72,10 @@ export function subscriptionRoster(
     // pointer anyway is held like any pointer the bots cannot use (`steeredBy` refuses it), since a
     // pointed pair never reads its inline conviction (#5482 contract piece 2). An inline copy with
     // no pointer is never read either (piece 4, `statedCheck`), so its pair has no check day and
-    // runs exits-only the same way, until the app's poll moves the copy onto a view.
-    const result = isUnmovedInline(sub)
-      ? { playbook: house, refused: INLINE_NOT_MOVED }
+    // runs exits-only the same way, until the app's poll moves the copy onto a view. So does a ◆
+    // pair with neither: it trades only on a conviction, and none is on a view.
+    const result = isConvictionOffView(sub)
+      ? { playbook: house, refused: CONVICTION_NOT_ON_VIEW }
       : own && sub.convictionId === undefined
         ? { playbook: own, says: [] }
         : steeredBy(house, sub, convictionOf);
