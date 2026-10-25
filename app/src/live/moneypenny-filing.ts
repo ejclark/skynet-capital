@@ -71,11 +71,11 @@ export const SEND_AS_IS = /^(send|send it|yes|ok|okay|go|file it|do it|sure|yep|
 export const NEVER_MIND =
   /^(never ?mind|cancel|drop it|forget it|no|nope|don'?t( file it)?|scrap it)[.!]?$/i;
 
-/** A 401 is an expired or revoked token: a retry fails identically, so say what's wrong and
- *  where it's fixed (the owner's Settings → GitHub access) instead of inviting one. */
+/** A 401 (expired or revoked token) or 403 (no write permission) fails identically on retry, so
+ *  say what's wrong and where it's fixed (the owner's Settings → GitHub access) instead. */
 export function filingFailedLine(error: string): string {
-  return /\b401\b/.test(error)
-    ? `Moneypenny · i can't file right now — my GitHub access has expired. your draft is saved: an owner renews it in Settings → GitHub access, then say "send".`
+  return /\b40[13]\b/.test(error)
+    ? `Moneypenny · i can't file right now — my GitHub access has expired or lost permission. your draft is saved: an owner renews it in Settings → GitHub access, then say "send".`
     : `Moneypenny · i couldn't file that just now (${error}) — say "send" again in a moment and i'll retry.`;
 }
 

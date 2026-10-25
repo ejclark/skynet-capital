@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -135,6 +135,25 @@ describe("the saved token at boot", () => {
   });
 });
 
+describe("the swap's boundary (red-team, 2026-10-24)", () => {
+  it("never stands the app's token in for somebody else's", () => {
+    useLiveGithubToken(GOOD, OLD);
+    expect(githubHeaders(OLD).Authorization).toBe(`Bearer ${GOOD}`);
+    expect(githubHeaders("ghp_SOMEONE_ELSES_TOKEN_000000000").Authorization).toBe(
+      "Bearer ghp_SOMEONE_ELSES_TOKEN_000000000",
+    );
+  });
+
+  it("ignores a plaintext blob planted on the volume", () => {
+    const { store, path } = tmpStore();
+    writeFileSync(
+      path,
+      JSON.stringify({ v: 1, enc: false, data: JSON.stringify({ token: GOOD }) }),
+    );
+    expect(store.read()).toBeUndefined();
+  });
+});
+
 describe("checkGithubToken", () => {
   const res =
     (status: number, expiry: string | null = null) =>
@@ -222,6 +241,12 @@ describe("Moneypenny on a failed filing", () => {
     const line = filingFailedLine("GitHub responded 401: Bad credentials.");
     expect(line).toContain("Settings → GitHub access");
     expect(line).not.toContain("again in a moment");
+  });
+
+  it("treats a lost write permission the same way", () => {
+    expect(filingFailedLine("GitHub responded 403: Resource not accessible.")).toContain(
+      "Settings → GitHub access",
+    );
   });
 
   it("still offers a retry for a passing failure", () => {

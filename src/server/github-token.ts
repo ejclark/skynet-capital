@@ -52,6 +52,8 @@ export class GithubTokenStore {
     if (!existsSync(this.path)) return undefined;
     try {
       const envelope = JSON.parse(readFileSync(this.path, "utf8")) as Envelope;
+      // save() only ever writes sealed; a plaintext blob is planted, not ours — ignore it.
+      if (!envelope.enc) return undefined;
       const parsed = JSON.parse(open(envelope, this.key, "github token store")) as unknown;
       const record = parsed as Partial<GithubTokenRecord> | null;
       return record && typeof record.token === "string" && record.token
@@ -83,8 +85,8 @@ export function createGithubTokenStore(env: Readonly<Env>): GithubTokenStore {
 /** Make `token` the one every GitHub call uses from now on — the live header override plus the
  *  env var, so anything resolved later reads the same value. */
 export function activateGithubToken(env: Env, token: string): void {
+  useLiveGithubToken(token, env.SKYNET_FEEDBACK_GITHUB_TOKEN);
   env.SKYNET_FEEDBACK_GITHUB_TOKEN = token;
-  useLiveGithubToken(token);
 }
 
 /** Boot step, run before any GitHub-backed feature resolves: a saved token beats the host
@@ -102,7 +104,7 @@ export type TokenCheck =
 
 type FetchLike = (
   url: string,
-  init: { headers: Record<string, string> },
+  init: { headers: Record<string, string>; signal?: AbortSignal },
 ) => Promise<{ status: number; headers: { get(name: string): string | null } }>;
 
 /** GitHub's expiry header reads `2026-11-23 10:00:00 -0600` — parsed to ISO, or undefined. */
@@ -133,6 +135,7 @@ export async function checkGithubToken(
         "User-Agent": "skynet-capital",
         Accept: "application/vnd.github+json",
       },
+      signal: AbortSignal.timeout(10_000),
     });
     if (res.status === 200) {
       const expiresAt = parseExpiry(res.headers.get("github-authentication-token-expiration"));
@@ -249,13 +252,24 @@ export function bootGithubToken(env: Env): {
   const store = createGithubTokenStore(env);
   const liveAtBoot = applySavedGithubToken(env, store);
   const repo = env.SKYNET_FEEDBACK_REPO ?? "ejclark/skynet-capital";
+  // The status view re-asks on every mount and tab focus; a minute's memory per token keeps the
+  // owner's browser from hammering GitHub (repeated bad-credential calls earn a lockout).
+  const recent = new Map<string, { at: number; check: TokenCheck }>();
+  const check = async (token: string): Promise<TokenCheck> => {
+    const hit = recent.get(token);
+    if (hit && Date.now() - hit.at < 60_000) return hit.check;
+    const fresh = await checkGithubToken(token, repo);
+    recent.clear();
+    recent.set(token, { at: Date.now(), check: fresh });
+    return fresh;
+  };
   return {
     deps: (isOwner) => ({
       isOwner,
       store,
       repo,
       current: () => env.SKYNET_FEEDBACK_GITHUB_TOKEN || undefined,
-      check: (token) => checkGithubToken(token, repo),
+      check,
       activate: (token) => activateGithubToken(env, token),
       liveAtBoot,
     }),
