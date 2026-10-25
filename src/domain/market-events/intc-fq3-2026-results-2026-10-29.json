@@ -1,0 +1,11 @@
+{
+  "id": "intc-fq3-2026-results-2026-10-29",
+  "kind": "sector",
+  "title": "Intel fiscal Q3 2026 results (after the close; call 2 p.m. PT) — the chip tape's last peer print before AMD's 11-03",
+  "date": "2026-10-29",
+  "status": "confirmed",
+  "source": "IR: Intel's own press release 'Intel to Report Third-Quarter 2026 Financial Results' (intc.com/news-events/press-releases/detail/1782/), released 2026-10-06 4:01 pm EDT and re-fetched direct 2026-10-25 by this event's own initial research (the proposing sibling lane, amd-fq3-2026-results-2026-11-03, read the same page on 2026-10-22): 'will report third-quarter financial results on Thursday, October 29, 2026, promptly after close of market. Intel will then hold an earnings conference call at 2 p.m. PDT that day'. Promoted estimate -> confirmed 2026-10-25 on the company's own announcement, two independent direct reads. The same day carries PCE, Q3 GDP and the AMZN print",
+  "impact": "medium",
+  "symbols": ["INTC"],
+  "notes": "Discovered during the amd-fq3-2026-results-2026-11-03 pulse (2026-10-22). INTC fell 7% to about $86.64 on 2026-10-22 inside the eight-plus-session chip sell-off that has AMD -21% from its 10-06 high; it is the last semiconductor print before AMD's night, so its guide is a free read on CPU and foundry demand. Not an earnings-calendar entry."
+}
