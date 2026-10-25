@@ -35,7 +35,7 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * views file could not read back (an inline reason past a stored claim's length), is not written:
  * the subscription keeps its inline copy rather than leave the file unreadable, which refuses
  * every member's write. Since piece 4 the bots never read that copy: on a pair the table knows it
- * runs exits-only and its row says so (`isUnmovedInline`); on an id that is no pair it was never
+ * runs exits-only and its row says so (`isConvictionOffView`); on an id that is no pair it was never
  * checked, and still is not.
  */
 

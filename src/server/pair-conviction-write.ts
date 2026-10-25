@@ -21,7 +21,7 @@ import type { MemberConvictionStore, PairViewWrite } from "./member-conviction-s
  *  - the controls wire already full: the write is refused and nothing changes. A view past
  *    `MAX_WIRED_CONVICTIONS` would make the bots refuse every member's views at once, so that set
  *    is never grown past it. Until piece 4 the subscription kept an inline copy instead; the bots
- *    now read pointers only and would run that pair exits-only (`isUnmovedInline`), so a write
+ *    now read pointers only and would run that pair exits-only (`isConvictionOffView`), so a write
  *    reported as saved would quietly stop the pair. Saying so is the honest answer;
  *  - no member store wired (a test or local config with no views file): no view is written, and the
  *    subscription keeps its inline copy, which the bots run exits-only.

@@ -93,6 +93,35 @@ describe("tradingRoster — the conviction gate on the live path", () => {
       console.log = log;
     }
   });
+
+  /** The inline carry's replacement, bots first: a ◆ pair with neither a pointer nor a copy runs
+   *  exits-only the same way, and is never called "still trading". */
+  it("opens nothing on a ◆ pair with neither a pointer nor a copy, and never says it still trades", () => {
+    const errors: string[] = [];
+    const logs: string[] = [];
+    const error = console.error;
+    const log = console.log;
+    console.error = (line: string) => errors.push(line);
+    console.log = (line: string) => logs.push(line);
+    try {
+      const bare = [aSubscription("sauron", "CRWV-WHEEL")];
+      const resolved = resolveBotRoster(bot, [], bare);
+      expect(resolved.enabled).toEqual([
+        { playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true },
+      ]);
+      expect(errors.join("\n")).toContain(
+        "conviction REFUSED, exits only — CRWV-WHEEL: its conviction is not on a view yet",
+      );
+      expect(logs.join("\n")).not.toContain("conviction not stated");
+      const r = tradingRoster(resolved, { maxPositionPct: 0.03 });
+      expect(
+        r.persona.decide(market(), flat()).filter((i) => i.playbookId === "CRWV-WHEEL"),
+      ).toEqual([]);
+    } finally {
+      console.error = error;
+      console.log = log;
+    }
+  });
 });
 
 /**

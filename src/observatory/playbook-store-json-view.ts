@@ -20,7 +20,7 @@ import {
 import { type BotsOnlyGateView, botsOnlyGateView } from "../domain/playbook-bots-only.js";
 import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
-import { isUnmovedInline } from "../playbooks/conviction-store.js";
+import { isConvictionOffView } from "../playbooks/conviction-store.js";
 import { findPair, type Pair, type StrategyId } from "../playbooks/pair-table.js";
 import { budgetedOn } from "../subscriptions/strategy-budgets.js";
 import {
@@ -80,8 +80,8 @@ interface PairRowView extends PairRowEntry {
    *  this bot; the pre-print run-up yields it" — today's hand-off, not a refusal. */
   readonly handOff?: string;
   /** An option pair the bot refuses because another option pair it reads first owns the ticker:
-   *  "not trading — the call spread owns NVDA". Or a pair whose conviction is still inline, with no
-   *  pointer, which the bots run exits-only (`withUnmovedConvictions`). */
+   *  "not trading — the call spread owns NVDA". Or a pair whose conviction is on no view, which the
+   *  bots run exits-only (`withUnmovedConvictions`). */
   readonly notTrading?: string;
   /** A conviction view steers this pair: whose, the check day, and its claims' scorecard
    *  (#5482 slice 5). The same for every viewer; it is the record's, not the account's. */
@@ -155,15 +155,15 @@ function subscribedNotes(id: string, onBot: readonly Pair[]): Partial<PairRowVie
   return { ...(handOff ? { handOff } : {}), ...(notTrading ? { notTrading } : {}) };
 }
 
-/** What the row says when its subscription's conviction is still inline (#5482 contract piece 4). */
+/** What the row says when its subscription's conviction is on no view (#5482 contract piece 4). */
 export const UNMOVED_CONVICTION_NOTE =
   "Opening nothing new: its conviction hasn't moved onto a view yet. Exits still run.";
 
 /**
- * Each row whose subscription still carries an inline conviction with no pointer, saying it opens
- * nothing new (#5482 contract piece 4, the state block's default). The bots read pointers only, so
- * such a pair has no check day and runs exits-only; the app's poll moves the copy onto a view
- * unless that move is refused. Reads the RAW subscriptions: the Store's own rows show an owner's
+ * Each row whose subscription's conviction is on no view, saying it opens nothing new (#5482
+ * contract piece 4, the state block's default): an inline copy with no pointer, or a ◆ pair with
+ * neither (`isConvictionOffView`). The bots read pointers only, so such a pair has no check day and
+ * runs exits-only; the app's poll moves the copy onto a view unless that move is refused. Reads the RAW subscriptions: the Store's own rows show an owner's
  * view as an inline conviction (`asOwnConviction`), so they cannot tell the two apart. A row that
  * already says why it is not trading keeps that reason.
  */
@@ -172,7 +172,7 @@ export function withUnmovedConvictions<
   Card extends { readonly pairs: readonly Row[] },
 >(strategies: readonly Card[], raw: readonly PlaybookSubscription[]): Card[] {
   const unmoved = new Set(
-    raw.filter((s) => s.enabled && isUnmovedInline(s)).map((s) => s.playbookId),
+    raw.filter((s) => s.enabled && isConvictionOffView(s)).map((s) => s.playbookId),
   );
   if (unmoved.size === 0) return [...strategies];
   return strategies.map((card) => ({
