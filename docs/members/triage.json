@@ -110,26 +110,24 @@
     "target": "/leaderboard (keeps by/a/b)"
   },
   {
-    "screen": "/activity ?section=feed",
+    "screen": "/activity",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in"
   },
   {
     "screen": "/activity ?section=pnl",
-    "verdict": "keep",
-    "mustBeSeenBy": "anyone signed in"
+    "verdict": "redirect-only",
+    "target": "/activity (booked P&L is the strip above the feed)"
   },
   {
     "screen": "/activity ?section=pulse (Feedback pulse)",
-    "verdict": "undecided",
-    "mustBeSeenBy": "anyone signed in",
-    "target": "nobody needs this — no member's job reads other members' filings; your own are on Profile → Feedback (this list's empty state already links there): fold in, or keep a league-wide list?"
+    "verdict": "redirect-only",
+    "target": "/activity?q=is:feedback"
   },
   {
     "screen": "/activity ?section=council",
-    "verdict": "undecided",
-    "target": "composer meant for Overview beside the standing (IA); Activity fold into the league page is open",
-    "mustBeSeenBy": "member (composer), anyone (read)"
+    "verdict": "retire",
+    "target": "/activity — the weekly Council retired (#5992); a thesis lives in playbook authoring"
   },
   {
     "screen": "/research ?section=board",

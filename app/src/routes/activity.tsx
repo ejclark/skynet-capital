@@ -12,19 +12,13 @@ import {
   parseActivityQuery,
   toggleActivityQualifier,
 } from "../live/activity-feed";
-import { fetchCouncil } from "../live/council";
-import { fetchCouncilReplies } from "../live/council-replies";
 import { fetchFilingComments } from "../live/filing-comments";
 import { useRefineSearch } from "../live/refine-search";
 import { fetchWire, type WireFeed, type WireTrade } from "../live/wire";
 import { ActivityDays } from "../shell/activity-days";
-import { CouncilCompose } from "../shell/council-compose";
-import { CouncilLines } from "../shell/council-lines";
 import { FilingOnramp } from "../shell/filing-onramp";
 import { PageFrame } from "../shell/frame";
 import { PnlStrip } from "../shell/pnl-strip";
-import { SectionSwitch } from "../shell/section-switch";
-import { type PageSection, resolveSection } from "../shell/sections";
 import { DevelopmentRow } from "../shell/wire-development-row";
 import { FilingRow } from "../shell/wire-filing-row";
 import { MilestoneRow } from "../shell/wire-milestone-row";
@@ -53,11 +47,11 @@ import { FilterChip, InlineResult } from "../ui";
  *     the shape was built to pass.
  *   - Booked P&L is a STRIP, not a section: a standing snapshot, always true, never paged to
  *     (#784's criterion — "never a fourth item competing for the same section concept").
- *   - The Council stays a SECTION: a composer plus this week's lines is not a record of something
- *     that happened, so it is not a kind of event and does not belong in the feed.
- * Two sections remain, and the one that is current renders ALONE at every width — Settings' own use
- * of the same switch, and the shape Eric asked for on 2026-09-06 after #1749 shipped the "beside"
- * version ("the whole page just feels like a hot mess"). Mobile-first (`CLAUDE.md`): the feed is
+ *   - The Council was the one SECTION beside the feed, and it is retired (#5992, Eric, 2026-10-24:
+ *     a weekly market call "encourages people to think they can time the market"). A thesis now
+ *     lives in playbook authoring, where it is shadow-tested before it trades — so the page is one
+ *     feed with no section switch, and `?section=council` lands on that feed. Mobile-first
+ *     (`CLAUDE.md`): the feed is
  * curated at 390px — one row per event, the kind word at the left edge — and a wider viewport gives
  * the same rows more room, never new concepts. Each day opens with a centred divider and the rows
  * keep only their time (#5257, `shell/activity-days.tsx`).
@@ -82,19 +76,10 @@ const DESK_CHIPS = [
 ] as const;
 const FILING_CHIPS = [["show:shipped", "Include shipped"]] as const;
 
-type ActivitySection = "feed" | "council";
-
-const SECTIONS: readonly PageSection<ActivitySection>[] = [
-  { id: "feed", label: "Activity" },
-  { id: "council", label: "The Council" },
-];
-
-/** The controls row (#3807 slice 2a — the rail left the frame): the page's sections first, then —
- *  only while the feed is the current one — its filter groups, the same one-model qualifiers the bar
- *  accepts as text. A group whose kind the filter has already excluded is not rendered: a "Buys"
- *  chip beside a list narrowed to filings would be a control with nothing to do, the same reason the
- *  whole row hides when the page has paged away from the feed. The `<hr />` keeps the two roles
- *  apart at every width, where the row hides the group labels. */
+/** The controls row (#3807 slice 2a — the rail left the frame): the feed's filter groups, the same
+ *  one-model qualifiers the bar accepts as text. A group whose kind the filter has already excluded
+ *  is not rendered: a "Buys" chip beside a list narrowed to filings would be a control with nothing
+ *  to do. */
 function WireControls({
   query,
   filter,
@@ -103,8 +88,6 @@ function WireControls({
   milestonesEnabled,
   playsEnabled,
   onChange,
-  section,
-  onSection,
 }: {
   readonly query: string;
   readonly filter: ActivityFilter;
@@ -117,8 +100,6 @@ function WireControls({
   readonly milestonesEnabled: boolean;
   readonly playsEnabled: boolean;
   readonly onChange: (next: string) => void;
-  readonly section: ActivitySection;
-  readonly onSection: (next: ActivitySection) => void;
 }): ReactElement {
   const group = (label: string, chips: readonly (readonly [string, string])[]) => (
     <>
@@ -146,16 +127,10 @@ function WireControls({
   const filings = feedbackEnabled && filingsInScope(filter);
   return (
     <>
-      <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
-      {section === "feed" ? (
-        <>
-          <hr />
-          {kinds.length > 1 ? group("Kind", kinds) : null}
-          {tradesInScope ? group("Side", SIDE_CHIPS) : null}
-          {tradesInScope ? group("Desks", DESK_CHIPS) : null}
-          {filings ? group("Filings", FILING_CHIPS) : null}
-        </>
-      ) : null}
+      {kinds.length > 1 ? group("Kind", kinds) : null}
+      {tradesInScope ? group("Side", SIDE_CHIPS) : null}
+      {tradesInScope ? group("Desks", DESK_CHIPS) : null}
+      {filings ? group("Filings", FILING_CHIPS) : null}
     </>
   );
 }
@@ -184,63 +159,6 @@ function WireFilterBar({
         />
       </div>
     </div>
-  );
-}
-
-/** THE COUNCIL (issue #2224 shape 1) — one line per member per week, visible inside the gate
- *  (`docs/THE-GAME.md:117`: "the argument is the product"). This is the league's shared view:
- *  everyone's lines. The composer itself is `shell/council-compose.tsx` since #3963, because the
- *  member's own line also renders beside their standing on the Profile Overview and it is ONE
- *  record — same endpoint, same `["council"]` query key, no copy to drift.
- *
- *  Replies under each line (#5097) are their own read, `["council-replies"]`: a failed or unwired
- *  one leaves the lines without their fold, never the section without its lines. A reply write
- *  refreshes both reads, because a refused reply usually means the line itself moved. */
-function CouncilSection(): ReactElement {
-  const queryClient = useQueryClient();
-  const council = useQuery({ queryKey: ["council"], queryFn: fetchCouncil });
-  const replies = useQuery({ queryKey: ["council-replies"], queryFn: fetchCouncilReplies });
-
-  if (council.isPending) return <p className="note">Tuning in…</p>;
-  if (council.isError || !council.data) return <p className="note">The Council is unreachable.</p>;
-  const data = council.data;
-  if (!data.enabled) {
-    return <p className="note">The Council isn't switched on yet in this deployment.</p>;
-  }
-
-  return (
-    <section className="wire-panel">
-      <h2 className="wire-h">The Council</h2>
-      <p className="note">
-        One line, once a week: your thesis and your bot's stance. Visible to the whole league — the
-        argument is the product.
-      </p>
-      <CouncilCompose
-        week={data}
-        // An edited line re-marks its replies as answering an earlier version — refresh both.
-        onSaved={() =>
-          Promise.all([
-            queryClient.invalidateQueries({ queryKey: ["council"] }),
-            queryClient.invalidateQueries({ queryKey: ["council-replies"] }),
-          ])
-        }
-      />
-      {data.entries.length === 0 ? (
-        <p className="note">Nobody's spoken yet this week — be the first.</p>
-      ) : (
-        <CouncilLines
-          week={data.week}
-          entries={data.entries}
-          {...(replies.data ? { threads: replies.data } : {})}
-          onReplySaved={() =>
-            Promise.all([
-              queryClient.invalidateQueries({ queryKey: ["council-replies"] }),
-              queryClient.invalidateQueries({ queryKey: ["council"] }),
-            ])
-          }
-        />
-      )}
-    </section>
   );
 }
 
@@ -362,8 +280,7 @@ function FeedSection({
 }
 
 function WirePage(): ReactElement {
-  const { q, section: asked } = Route.useSearch();
-  const navigate = Route.useNavigate();
+  const { q } = Route.useSearch();
   const refine = useRefineSearch<ReturnType<typeof readSearch>>();
   const wire = useQuery({
     queryKey: ["wire"],
@@ -407,12 +324,6 @@ function WirePage(): ReactElement {
       300,
     );
   };
-  const section = resolveSection(SECTIONS, asked);
-  const setSection = (next: ActivitySection) =>
-    void navigate({
-      search: (prev) => ({ ...prev, section: next === "feed" ? undefined : next }),
-      replace: true,
-    });
 
   if (wire.isPending)
     return (
@@ -442,8 +353,6 @@ function WirePage(): ReactElement {
           milestonesEnabled={Boolean(feed.milestonesEnabled)}
           playsEnabled={Boolean(feed.playsEnabled)}
           onChange={setFilter}
-          section={section}
-          onSection={setSection}
         />
       }
     >
@@ -454,36 +363,27 @@ function WirePage(): ReactElement {
           pulse of the whole league, one feed.
         </p>
       </header>
-      {section === "feed" ? (
-        <>
-          <PnlStrip rows={feed.pnl} />
-          <FeedSection
-            wire={feedWithOlder}
-            filter={filter}
-            query={query}
-            onChange={setFilter}
-            onLoadMore={cursor ? loadMore : undefined}
-            loadingMore={loadingMore}
-            loadMoreError={loadMoreError}
-          />
-        </>
-      ) : (
-        <CouncilSection />
-      )}
+      <PnlStrip rows={feed.pnl} />
+      <FeedSection
+        wire={feedWithOlder}
+        filter={filter}
+        query={query}
+        onChange={setFilter}
+        onLoadMore={cursor ? loadMore : undefined}
+        loadingMore={loadingMore}
+        loadMoreError={loadMoreError}
+      />
     </PageFrame>
   );
 }
 
 /**
- * `?section=pnl` and `?section=pulse` are LEGACY (#784 slice 3 folded both into the feed), and a
- * bookmark on either must not strand: `pnl` lands on the feed with the strip right there, and
- * `pulse` lands on the feed pre-filtered to filings, which is the thing that URL was asking for.
- * An unknown value falls through to the feed via `resolveSection`, never a blank stage.
+ * Every `?section=` is LEGACY, and a bookmark on one must not strand: `pnl` (#784 slice 3) lands on
+ * the feed with the strip right there, `pulse` lands on the feed pre-filtered to filings, which is
+ * the thing that URL was asking for, and `council` (#5992) — like any unknown value — is dropped,
+ * so it lands on the plain feed, never a blank stage.
  */
-function readSearch(search: Record<string, unknown>): {
-  readonly q?: string;
-  readonly section?: ActivitySection;
-} {
+function readSearch(search: Record<string, unknown>): { readonly q?: string } {
   const asked = typeof search.section === "string" ? search.section : undefined;
   const q =
     typeof search.q === "string" && search.q.length > 0 && search.q.length <= 200
@@ -491,10 +391,7 @@ function readSearch(search: Record<string, unknown>): {
       : asked === "pulse"
         ? "is:feedback"
         : undefined;
-  return {
-    ...(q ? { q } : {}),
-    ...(SECTIONS.some((s) => s.id === asked) ? { section: asked as ActivitySection } : {}),
-  };
+  return q ? { q } : {};
 }
 
 export const Route = createFileRoute("/activity")({
