@@ -164,6 +164,13 @@ comments can never resume this lane — the gate ignores anything carrying the C
    suggestion applied untraced that breaks green is a retro, not a flake.
 4. **Verify by exit status, never tailed output**: `npm run typecheck`, `npm run lint`, `npm test`.
    The envelope gate runs inside `npm test`, so a green suite is also proof you stayed in bounds.
+   **A screen you changed on purpose is re-baselined here, not left for CI to fail** (#5994). If
+   the diff touches `app/` or `src/`, also run `npx playwright install --with-deps chromium` once,
+   then `npx playwright test`. A screenshot mismatch on a page this change set out to alter (a
+   section removed, a card added, copy reworded) is the change itself: re-run those specs with
+   `--update-snapshots`, commit the PNGs with the change, and name them in the PR body. Any other
+   mismatch is a regression to fix, never a baseline to replace. This runner is Linux, the platform
+   the baselines are cut on; skipping this opens every intentional visual change red.
 5. **Open the PR** with a body following `.github/pull_request_template.md`: `## The picture` first
    (a before/after screenshot for UI work when cheap; otherwise `Picture: waived — automated
    feedback build`), then a Summary bullet containing `Closes #<issue-number>` — or `Part of #<issue-number>` when this is not
