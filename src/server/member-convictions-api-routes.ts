@@ -69,7 +69,8 @@ import {
  * (`false`), before anything else runs.
  */
 
-const MEMBER_CONVICTIONS_BODY_CAP_BYTES = 16_384;
+/** UTF-8 bytes (#6075): 12 claims × three 600-character fields can be up to 64,800 bytes. */
+const MEMBER_CONVICTIONS_BODY_CAP_BYTES = 98_304;
 
 /** Said with every draft: what a saved view does until its owner hands it over. */
 export const DRAFT_NOTE =
