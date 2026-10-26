@@ -33,12 +33,15 @@ const bars = (rise: number) =>
     v: 1,
   }));
 
+const adjustments: string[] = [];
 const fakeOptions = (failing: string[] = []) =>
   ({
-    getBars: (symbol: string) =>
-      failing.includes(symbol)
+    getBars: (symbol: string, _start: string, _end: string, _limit: number, adjustment: string) => {
+      adjustments.push(adjustment);
+      return failing.includes(symbol)
         ? Promise.reject(new Error("feed down"))
-        : Promise.resolve(bars(symbol === "SPY" ? 2 : symbol === "XLE" ? 6 : 1)),
+        : Promise.resolve(bars(symbol === "SPY" ? 2 : symbol === "XLE" ? 6 : 1));
+    },
   }) as unknown as AlpacaOptionsClient;
 
 const eric = {
@@ -103,6 +106,8 @@ describe("GET /api/research/coverage", () => {
       ret: "+6.0%",
       vsSpy: "+4.0 pts vs S&P",
     });
+    // Adjusted closes, so an ex-dividend date never reads as a price drop.
+    expect(new Set(adjustments)).toEqual(new Set(["all"]));
   });
 
   it("blanks only the fund whose read failed", async () => {

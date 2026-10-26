@@ -2,8 +2,9 @@ import { benchmarkReturns } from "./benchmark-returns.js";
 
 /**
  * THE SECTOR FUND NUMBERS on R&D → Coverage (#3811 slice 3): each SPDR Select Sector fund's
- * last-month price return, the same window's gap to SPY, and its 20-day realized volatility — all
- * from one fetch of daily bars per fund, through the viewer's own linked account.
+ * last-month return on split- and dividend-adjusted closes, the same window's gap to SPY, and its
+ * 20-day realized volatility — all from one fetch of daily bars per fund, through the viewer's own
+ * linked account.
  *
  * These are PROMPTS TO LOOK, never trade signals (the brief's constraint): no order button rides
  * beside them, and a number this module cannot compute honestly is absent rather than estimated.

@@ -124,6 +124,17 @@ describe("R&D → Coverage", () => {
     expect(screen.queryByText(/pts vs S&P/)).toBeNull();
   });
 
+  it("falls back to the month itself when the S&P leg is missing, and names a fund that came back empty", async () => {
+    served = payload({
+      sectors: SECTORS.map((r) =>
+        r.sector === "Technology" ? { ...r, fundLine: { ret: "-0.8%", retTone: "neg" } } : r,
+      ),
+    });
+    mount();
+    expect((await screen.findAllByText("-0.8%")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/XLE — no market data/).length).toBe(1);
+  });
+
   it("names a holding outside every sector in the readout", async () => {
     mount();
     expect(await screen.findByText(/1 outside all of them \(EEM, Unclassified\)/)).toBeTruthy();

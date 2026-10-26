@@ -108,24 +108,45 @@ function Summary({ data }: { readonly data: CoverageJson }): ReactElement {
   );
 }
 
-function FundLine({ row }: { readonly row: CoverageRowJson }): ReactNode {
+/**
+ * The sector fund's month. At phone width ONE number survives — the gap to the S&P, the one the
+ * prompt reads off ("XLE +6 pts vs S&P") — falling back to the month itself when the S&P leg is
+ * missing; desk width adds the rest. A fund that came back empty while others did says so on every
+ * width; with no market data at all, the page's as-of line says it once instead of eleven times.
+ */
+function FundLine({
+  row,
+  fundsAvailable,
+}: {
+  readonly row: CoverageRowJson;
+  readonly fundsAvailable: boolean;
+}): ReactNode {
   if (!row.fund) return null;
   const f = row.fundLine;
-  if (!f) return <span className="cov-fund cov-wide-only cov-none">no market data</span>;
+  if (!f)
+    return (
+      <span className={fundsAvailable ? "cov-fund cov-none" : "cov-fund cov-wide-only cov-none"}>
+        {fundsAvailable ? `${row.fund} — ` : ""}no market data
+      </span>
+    );
+  const lead = f.vsSpy
+    ? { text: f.vsSpy, tone: f.vsSpyTone ?? "flat" }
+    : { text: f.ret, tone: f.retTone };
   return (
     <span className="cov-fund">
+      <span className="cov-phone-only">
+        {row.fund} <span className={`num tone-${lead.tone}`}>{lead.text}</span> · 1M
+      </span>
       <span className="cov-wide-only">
         {row.fund} <span className={`num tone-${f.retTone}`}>{f.ret}</span> · 1M
+        {f.vsSpy ? (
+          <>
+            {" · "}
+            <span className={`num tone-${f.vsSpyTone ?? "flat"}`}>{f.vsSpy}</span>
+          </>
+        ) : null}
+        {f.vol ? ` · ${f.vol}` : null}
       </span>
-      {f.vsSpy ? (
-        <span>
-          <span className="cov-phone-only">{row.fund} </span>
-          <span className="cov-sep cov-wide-only"> · </span>
-          <span className={`num tone-${f.vsSpyTone ?? "flat"}`}>{f.vsSpy}</span>
-          <span className="cov-phone-only"> · 1M</span>
-        </span>
-      ) : null}
-      {f.vol ? <span className="cov-wide-only"> · {f.vol}</span> : null}
     </span>
   );
 }
@@ -133,9 +154,11 @@ function FundLine({ row }: { readonly row: CoverageRowJson }): ReactNode {
 function RowBody({
   row,
   slots,
+  fundsAvailable,
 }: {
   readonly row: CoverageRowJson;
   readonly slots: readonly Slot[];
+  readonly fundsAvailable: boolean;
 }): ReactElement {
   const gap = row.depth === "gap" && row.fund !== null;
   // Three groups, each said once: the names with a ledger, then "dated:" and "held:" — a word per
@@ -185,7 +208,7 @@ function RowBody({
           "next: nothing dated ahead"
         )}
       </span>
-      <FundLine row={row} />
+      <FundLine row={row} fundsAvailable={fundsAvailable} />
     </>
   );
 }
@@ -201,7 +224,9 @@ function Rows({
 }): ReactElement {
   const slots = slotsFor(data);
   const style = { "--cov-cols": slots.length } as CSSProperties;
-  const body = (row: CoverageRowJson) => <RowBody row={row} slots={slots} />;
+  const body = (row: CoverageRowJson) => (
+    <RowBody row={row} slots={slots} fundsAvailable={data.funds.available} />
+  );
   return (
     <section className="rx-panel cov-table" style={style} aria-label="Coverage by sector">
       <div className="cov-head" aria-hidden="true">

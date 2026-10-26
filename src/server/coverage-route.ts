@@ -39,7 +39,9 @@ async function sectorFunds(
     .toISOString()
     .slice(0, 10);
   const end = now.toISOString().slice(0, 10);
-  const read = (sym: string) => client.getBars(sym, start, end).catch(() => undefined);
+  // Adjusted closes ("all"): a return across an ex-dividend date or a split must not read the
+  // payout as a price drop — `getBars`' own note; the chart keeps `raw` because it prints trades.
+  const read = (sym: string) => client.getBars(sym, start, end, 1000, "all").catch(() => undefined);
   // Twelve reads in parallel, each failing alone: one fund's hiccup blanks its own row, not the column.
   const [spy, ...funds] = await Promise.all([
     read("SPY"),
