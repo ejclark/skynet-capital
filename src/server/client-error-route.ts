@@ -16,7 +16,8 @@ import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-s
  * an email: the log buffer is readable by anyone with deploy access.
  */
 export const CLIENT_ERROR_PATH = "/api/client-error";
-const CAP_BYTES = 2_048;
+/** UTF-8 bytes (#6075): the four fields' 920 characters can be up to 2,760 bytes plus JSON. */
+const CAP_BYTES = 4_096;
 const KINDS = new Set(["stale-chunk", "render"]);
 /** 20 a member per 10 minutes — enough to see a pattern, too few to drown the gauge. */
 const THROTTLE_MAX = 20;

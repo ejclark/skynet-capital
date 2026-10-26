@@ -18,7 +18,8 @@ import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-s
  *
  * Never GitHub: see `filing-comments-form.ts` for why the deps carry no issue client at all.
  */
-const SUBMIT_CAP_BYTES = 2_048;
+/** UTF-8 bytes (#6075): a 1,500-character comment can be up to 4,500 bytes plus its JSON. */
+const SUBMIT_CAP_BYTES = 8_192;
 
 async function serveSubmit(
   req: IncomingMessage,
