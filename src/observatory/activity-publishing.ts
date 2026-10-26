@@ -55,6 +55,8 @@ export function publishingActivityStore(
     },
     list: (participantId) => store.list(participantId),
     latest: (participantId) => store.latest(participantId),
+    // Forwarded, or the Wire's fold would quietly re-list the whole ledger behind this wrapper.
+    ...(store.sinceAll ? { sinceAll: store.sinceAll.bind(store) } : {}),
   };
 }
 
@@ -89,6 +91,7 @@ export function publishingFeedbackLogStore(
       }
     },
     list: (opaqueMemberId) => store.list(opaqueMemberId),
+    ...(store.sinceAll ? { sinceAll: store.sinceAll.bind(store) } : {}),
   };
 }
 
