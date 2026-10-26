@@ -18,6 +18,21 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **The dupe scan counts same-named per-route constants as copies.** Three of today's dupe
+  candidates were names, not code: `BODY_CAP_BYTES` (six routes, six different caps, 1–16 KB),
+  `MAX_ID` (next in line, likely the same), and half of `num`/`pct`. The athlete has to diff every
+  body and rename the divergent ones to clear the scan — real clarity, but the judgment repeats every
+  rep. A scan rule that groups copies by body hash rather than by name would hand the athlete only
+  true duplicates. _(src: Claude · while: governor cycles 1–4, 2026-10-26)_
+- **The spec-gap scan counts a types-only import as coverage.** A spec that imports a type from an
+  untested module clears that module from the gap list without exercising it; two backfill reps
+  today had to dodge it on purpose (`Parameters<typeof fn>` instead). Counting only value imports
+  would keep the number honest. _(src: Claude · while: governor cycle 4, 2026-10-26)_
+- **Parallel athletes make `tests/scripts/steer-*` and `history-sampler` specs time out.** Six
+  distinct specs hit the 5 s timeout today while 4–8 worktrees ran `npm run verify` at once in one
+  container; each passed alone, and the merged cycle branches verified green. Not a CI flake on
+  record — but if one shows up in CI, these are the suspects (timer- and spawn-heavy).
+  _(src: Claude · while: governor cycles 1–4, 2026-10-26)_
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:
