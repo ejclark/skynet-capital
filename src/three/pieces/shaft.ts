@@ -2,7 +2,7 @@ import * as THREE from "three";
 import type { Bucket, Vec3 } from "../kit/bucket.js";
 import { box, keep, turret } from "../kit/greebles.js";
 import type { TowerProfile } from "../kit/profile.js";
-import type { Rng } from "../kit/rng.js";
+import { pick, type Rng } from "../kit/rng.js";
 import { bladeShape, finShape, type Pt } from "../kit/shapes.js";
 
 /**
@@ -14,8 +14,6 @@ import { bladeShape, finShape, type Pt } from "../kit/shapes.js";
 
 const shape = (pts: readonly Pt[]): THREE.Shape =>
   new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
-
-const pick = <T>(rng: Rng, arr: readonly T[]): T => arr[Math.floor(rng.next() * arr.length)] as T;
 
 export interface ShaftBuild {
   /** Where the drifting axis ended up — the crown and the Eye sit on it, not on x = z = 0. */
