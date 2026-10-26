@@ -13,8 +13,7 @@
  * Dark unless `SKYNET_BOTS_HEALTH_PATH` is set (fly.bots.toml points it at the volume), same
  * posture as `SKYNET_BOTS_DB_PATH`. Best-effort: a write failure warns and never touches boot.
  */
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { writeFileAtomicSync } from "../storage/atomic-write.js";
 import type { RestoredBotsState } from "./bots-state-db.js";
 
 /** Mirrors the three boot lines in `bootMissionControl` (autonomous-live-wiring.ts). */
@@ -91,10 +90,8 @@ export function openBotsHealthFile(
       updatedAt: now().toISOString(),
     };
     try {
-      mkdirSync(dirname(path), { recursive: true });
-      const tmp = `${path}.tmp`;
-      writeFileSync(tmp, `${JSON.stringify(health, null, 2)}\n`, "utf8");
-      renameSync(tmp, path); // atomic: a reader never sees a half-written stamp
+      // atomic: a reader never sees a half-written stamp
+      writeFileAtomicSync(path, `${JSON.stringify(health, null, 2)}\n`);
     } catch (error) {
       process.emitWarning(`[health] stamp failed (non-fatal): ${String(error)}`);
     }

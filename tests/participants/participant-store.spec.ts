@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { StoredParticipant } from "../../src/participants/participant-store.js";
@@ -83,5 +83,20 @@ describe("FileParticipantStore", () => {
     expect(store.has("human-c")).toBe(true);
     expect(store.has("nope")).toBe(false);
     rmSync(path, { force: true });
+  });
+});
+
+describe("when a write fails part-way (#4612 slice 9)", () => {
+  it("leaves the sealed file as it was rather than truncated", () => {
+    const path = tmpFile();
+    const store = new FileParticipantStore(path, "test-secret-0123456789abcdef");
+    store.add(entry("human-eric"));
+    const before = readFileSync(path, "utf8");
+    // A directory where the temp file goes makes the write throw, as a full volume would.
+    mkdirSync(`${path}.tmp`);
+
+    expect(() => store.add(entry("human-m1"))).toThrow();
+    expect(readFileSync(path, "utf8")).toBe(before);
+    expect(store.load().map((p) => p.id)).toEqual(["human-eric"]);
   });
 });
