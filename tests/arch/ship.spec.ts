@@ -919,7 +919,7 @@ describe("ship — integration tests gate every merge path", () => {
     const open = source.slice(source.indexOf("cmd_open()"), source.indexOf("cmd_automerge()"));
     const e2e = open.indexOf("npm run test:e2e");
     expect(e2e).toBeGreaterThan(open.indexOf("npm run verify"));
-    expect(e2e).toBeLessThan(open.indexOf("git push"));
+    expect(e2e).toBeLessThan(open.indexOf('cmd_push "$branch"'));
     expect(open).toMatch(/LOCAL INTEGRATION TESTS FAILED — not pushing/);
   });
 
@@ -1071,5 +1071,86 @@ describe("ship open — a branch behind origin/main is merged up, never rebased"
     expect(stderr).toContain("git merge origin/main --no-edit");
     expect(stdout).not.toContain("merged origin/main");
     expect(git(["rev-parse", "HEAD"])).toBe(before);
+  });
+});
+
+/**
+ * A REFUSED PUSH SAYS WHY (#4495, 2026-10-02).
+ *
+ * The push loop sent stderr to /dev/null, so when GitHub refused a lane's workflow-file push for
+ * want of the `workflows` permission, the log read only "push failed after retries" and the cause
+ * took a second, manual push to see — half of the ~5 minutes each failure cost. These run the real
+ * `ship push` against a bare origin whose pre-receive hook refuses the way GitHub did, echoing a
+ * token-bearing URL the way git can, so the mask is tested on the same output path.
+ */
+describe("ship push — a refused push prints the remote's reason", () => {
+  const refuse = (reason: string) => {
+    const root = mkdtempSync(join(tmpdir(), "ship-push-"));
+    const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const work = join(root, "work");
+    const hits = join(root, "hits");
+    try {
+      git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+      writeFileSync(join(root, "reason"), `${reason}\n`);
+      const hook = join(root, "origin.git", "hooks", "pre-receive");
+      writeFileSync(
+        hook,
+        [
+          "#!/bin/sh",
+          `echo hit >> '${hits}'`,
+          `cat '${join(root, "reason")}' >&2`,
+          "echo 'seen at https://x-access-token:ghs_s3cr3tT0ken@github.com/o/r.git' >&2",
+          "exit 1",
+          "",
+        ].join("\n"),
+      );
+      chmodSync(hook, 0o755);
+      git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+      git(work, ["config", "user.email", "spec@example.com"]);
+      git(work, ["config", "user.name", "spec"]);
+      git(work, ["checkout", "-q", "-b", "feedback/1"]);
+      git(work, ["commit", "-q", "--allow-empty", "-m", "fix: the item"]);
+      let code = 0;
+      let stderr = "";
+      try {
+        execFileSync("bash", [resolve("scripts/ship.sh"), "push", "feedback/1"], {
+          cwd: work,
+          env,
+          stdio: "pipe",
+        });
+      } catch (error) {
+        const e = error as { status?: number; stderr?: Buffer };
+        code = e.status ?? 1;
+        stderr = e.stderr?.toString() ?? "";
+      }
+      return { code, stderr, attempts: readFileSync(hits, "utf8").trim().split("\n").length };
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it("names the `workflows` permission when that is why the remote refused", () => {
+    const r = refuse(
+      "refusing to allow a GitHub App to create or update workflow `.github/workflows/x.yml` without `workflows` permission",
+    );
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("ship: push failed — the remote said:");
+    expect(r.stderr).toContain("without `workflows` permission");
+    expect(r.stderr).toContain("this credential lacks the `workflows` permission");
+  });
+
+  it("masks the token a remote message can echo back", () => {
+    const r = refuse("pre-receive says no");
+    expect(r.stderr).toContain("x-access-token:***@github.com");
+    expect(r.stderr).not.toContain("ghs_s3cr3tT0ken");
+  });
+
+  it("stops at the first answered rejection — a retry cannot change it", () => {
+    const r = refuse("pre-receive says no");
+    expect(r.attempts).toBe(1);
+    expect(r.stderr).toContain("pre-receive says no");
+    expect(r.stderr).not.toContain("lacks the `workflows` permission");
   });
 });
