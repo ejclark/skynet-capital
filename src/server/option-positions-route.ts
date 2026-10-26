@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Bar } from "../alpaca/alpaca-options-client.js";
+import { DAY_MS } from "../domain/time.js";
 import { BETA_LOOKBACK_DAYS, betaFromCloses } from "../options/beta.js";
 import type { UnderlyingBeta } from "../options/greeks-aggregator.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
@@ -21,7 +22,6 @@ import { requireGet, sendJson } from "./page-shell.js";
  * Beta-weighting (#4327): a year of daily closes per underlying and for SPY, through the same
  * client, fitted by `beta.ts`; a name that can't be fitted stays un-weighted and named.
  */
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Measured betas by `SYMBOL|end-day`: a beta fitted on a year of closes does not change within a
  *  day, so each name costs one bars read per day, not one per poll. Public market data, so one

@@ -19,18 +19,18 @@ const MIN = 60 * SEC;
 const DAY = 24 * 60 * MIN;
 
 /** Spot in session: a trade older than this is aging; older than SPOT_STALE is stale. */
-export const SPOT_AGING_MS = MIN;
-export const SPOT_STALE_MS = 5 * MIN;
+const SPOT_AGING_MS = MIN;
+const SPOT_STALE_MS = 5 * MIN;
 /** Option quotes in session. */
-export const CHAIN_AGING_MS = 5 * MIN;
-export const CHAIN_STALE_MS = 15 * MIN;
+const CHAIN_AGING_MS = 5 * MIN;
+const CHAIN_STALE_MS = 15 * MIN;
 /** Out of session, a value from the last session is honest; older than this spans a missing session. */
-export const CLOSED_STALE_MS = 4 * DAY;
+const CLOSED_STALE_MS = 4 * DAY;
 /** Spot vs option-implied spot: past this, one of the two sources is wrong. */
-export const PARITY_TOLERANCE = 0.01;
+const PARITY_TOLERANCE = 0.01;
 /** Research older than this is stale on its face. */
-export const RESEARCH_STALE_DAYS = 7;
-export const RESEARCH_AGING_DAYS = 3;
+const RESEARCH_STALE_DAYS = 7;
+const RESEARCH_AGING_DAYS = 3;
 
 const row = (
   id: PulseItem["id"],
