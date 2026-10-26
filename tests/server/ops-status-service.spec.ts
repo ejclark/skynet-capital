@@ -3,6 +3,7 @@ import {
   activitySignal,
   bridgeSignal,
   buildOpsStatus,
+  convictionCopiesLogLine,
   convictionCopiesSignal,
   inlineConvictionCopies,
   personaGateSignal,
@@ -223,6 +224,17 @@ describe("the inline conviction copies row (#5482)", () => {
       },
     });
     expect(broken.signals.find((s) => s.id === "conviction-copies")?.verdict).toBe("unknown");
+  });
+
+  it("logs the same read as one line a lane can filter for, and never throws", () => {
+    expect(convictionCopiesLogLine(() => ({}))).toMatch(/^\[convictions\] inline copies ok: /);
+    expect(convictionCopiesLogLine(() => ({ sauron: [sub("SAURON", copy)] }))).toContain(
+      "inline copies attention: 1 subscription(s)",
+    );
+    const line = convictionCopiesLogLine(() => {
+      throw new Error("disk");
+    });
+    expect(line).toMatch(/^\[convictions\] inline copies unknown: /);
   });
 });
 
