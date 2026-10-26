@@ -403,9 +403,19 @@ describe("the covered-call lever", () => {
       );
     });
 
-    // Copy bug found while backfilling: the template hard-codes the article, so an 18% or 8% chance
-    // reads "about a 18% chance". Written for the correct grammar; src is add-only here.
-    it.todo("says 'an 18% chance', not 'a 18% chance', when the odds start with an eight");
+    it("says 'an' before odds said with a vowel sound — eight, eleven, eighteen, eighty-something", () => {
+      for (const [p, text] of [
+        [0.18, "about an 18% chance"],
+        [0.08, "about an 8% chance"],
+        [0.11, "about an 11% chance"],
+        [0.85, "about an 85% chance"],
+        [0.12, "about a 12% chance"],
+        [0.1, "about a 10% chance"],
+      ] as const) {
+        const c = coveredCallCall(ctx(), ladderOf(row({ probAssigned: p })));
+        expect(c.reasons[1]?.text).toContain(`(${text})`);
+      }
+    });
 
     it("measures the gain over what was paid: strike less basis, plus the premium, on 100 shares", () => {
       // (100 − 90) × 100 + 150 = $1,150
