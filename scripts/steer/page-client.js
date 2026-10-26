@@ -89,56 +89,32 @@
   let connecting = true;
   const held = new Map();
 
-  // What became of Done, in words. Never a colour, never a spinner alone.
-  const TELLING = "Done — telling Claude…";
+  // What became of Done, in words (status-client.js); the lines that need the watch stay here.
+  const {
+    ACK,
+    LIFECYCLE,
+    MAYBE,
+    NO_REACH,
+    QUIET_MS,
+    REOPENED,
+    RELOAD,
+    TELLING,
+    UNHEARD,
+    UNPOSTED,
+    UNTOLD,
+    WAIT,
+    ackOf,
+    clock,
+    notSaved,
+    readBackOf,
+    refused,
+    unable,
+  } = globalThis.steerStatus;
+  const { textOf } = globalThis.steerCopy;
   /** Is the round's doc still watched? A dead watch can't show the read-back, so the line says reload. */
   let live = true;
-  const WAIT = "The read-back shows here when it's posted.";
-  const RELOAD = "Reload the page to see the read-back once it's posted.";
   const waiting = () => (live ? WAIT : RELOAD);
   const sent = () => `Done — sent to Claude. ${waiting()}`;
-  const NOT_LISTENING =
-    "Done — saved. No Claude session is listening right now; the next page reads it back.";
-  const NO_REACH = "Done — saved. This view can't reach Claude; the next page reads it back.";
-  const NOT_REACHED =
-    "Done — saved. Claude couldn't be reached just now; the next page reads it back.";
-  const REOPENED = "Reopened — press Done again when you're finished.";
-  /** The session stamped `ackAt` after this Done: it heard, and the read-back is on its way. */
-  const ACK = "Claude got your Done, reading back…";
-  // A sent Done no session answers (Eric, 2026-10-13: "I've had to click 'done'.. nothing
-  // happens"): a session's page watch drops after hours idle, yet the send still reads
-  // "available". Five minutes after the press with no read-back, the bar says how to wake it.
-  const QUIET_MS = 5 * 60 * 1000;
-  const UNHEARD =
-    "No reply yet: the session that drew this page isn't listening. Open it and say “done” (or “watch my page”).";
-  // A rejected send is not proof nothing was posted (comments.d.ts), so only a code that says the
-  // send was refused before writing earns "wasn't told"; any other rejection of the send hedges.
-  const UNTOLD = "wasn't told";
-  const MAYBE = "may not have been told";
-  const UNPOSTED = [
-    "claude_unavailable",
-    "consent_required",
-    "forbidden",
-    "invalid",
-    "transform_error",
-    "rate_limited",
-  ];
-  const LIFECYCLE = ["not_granted", "capability_disabled", "capability_removed"];
-  const notSaved = (told) =>
-    `Done didn't save, and Claude ${told} — use Copy as text and paste it in chat.`;
-  const notTold = (why, told) =>
-    `Done — saved, but Claude ${told}: ${why}. Say “done” in chat to start the read-back.`;
-  /** `canSendToClaude` said no (comments.d.ts): only `no_session` means no session is listening;
-   *  `writers_only`, `off` or a value it doesn't know means this view can't send. */
-  const unable = (can) => (can === "no_session" ? NOT_LISTENING : NO_REACH);
-  /** A refused send, by its code (comments.d.ts). None is retried: a new press is the retry. */
-  function refused(code, told) {
-    if (code === "claude_unavailable") return NOT_REACHED;
-    if (LIFECYCLE.includes(code)) return NO_REACH;
-    if (code === "consent_required") return notTold("the page wasn't allowed to comment", told);
-    if (code === "forbidden") return notTold("commenting from this page is off here", told);
-    return notTold("sending it failed", told);
-  }
   /** Bumped by every Done, Reopen and new read-back: a send still pending never covers a later line. */
   let turn = 0;
   let toldLine = "";
@@ -508,25 +484,6 @@
     if (focused) doneBtn.focus();
   }
 
-  /** A clock time in the viewer's own zone; another day's carries its weekday. */
-  function clock(ms) {
-    const t = new Date(ms);
-    const day = t.toDateString() === new Date().toDateString() ? {} : { weekday: "short" };
-    return t.toLocaleString([], { ...day, hour: "numeric", minute: "2-digit" });
-  }
-  /** The session's read-back on the round's document, or null when there is none to show. */
-  function readBackOf(d) {
-    const at = typeof d?.readBackAt === "string" ? d.readBackAt : "";
-    const ms = Date.parse(at);
-    if (!at || Number.isNaN(ms)) return null;
-    const raw = typeof d.readBackSummary === "string" ? d.readBackSummary : "";
-    const summary = raw.replace(/\s+/g, " ").trim().slice(0, 200);
-    return {
-      key: `${at}|${summary}`,
-      ms,
-      line: `Read back ${clock(ms)}${summary ? ` · ${summary}` : ""}`,
-    };
-  }
   /** The round's document as it opened: a read-back after the last Done shows; a Done without one
    *  says it is waiting. */
   function opened(d) {
@@ -540,8 +497,6 @@
       toldLine = ACK;
     } else if (!Number.isNaN(doneMs)) toldLine = `Done at ${clock(doneMs)}. ${waiting()}`;
   }
-  /** The session's `ackAt` as a time, or NaN. NaN compares false, so a missing one never counts. */
-  const ackOf = (d) => (typeof d?.ackAt === "string" ? Date.parse(d.ackAt) : Number.NaN);
   /** The round's document changed: a new read-back shows, else a new ack of this Done, without a
    *  reload; the listening line reads its stamp either way. */
   function heard(d) {
@@ -636,36 +591,14 @@
     typed(sec, key, "note", t.value);
   });
 
-  function decisionText(d) {
-    const r = state.decisions[d.key] || blank();
-    // A round-0 pick chooses a problem to fix first; it is never a build (docs/process/REDESIGN.md).
-    const bits = [r.pick && `${d.problems ? "fix first" : "build"} ${r.pick}`, r.verdict].filter(
-      Boolean,
-    );
-    for (const o of Object.keys(r.react).sort()) bits.push(`${r.react[o]} ${o}`);
-    const line = (s) => (s || "").trim().replace(/\s+/g, " ");
-    for (const [id, v, n] of pinsUi?.said(d.key, r) ?? [])
-      bits.push(["pin", id, v, n && `“${line(n)}”`].filter(Boolean).join(" "));
-    for (const [id, v, n] of marksUi?.said(d.key, r) ?? []) {
-      const m = r.marks[id];
-      const at = `${Math.round(m.x)}% across ${Math.round(m.y)}% down`;
-      bits.push(["mark", id, at, v, n && `“${line(n)}”`].filter(Boolean).join(" "));
-    }
-    for (const [, t] of outcomesUi?.said(d.key, r) ?? []) bits.push(`outcome “${line(t)}”`);
-    bits.push(...optionNotesSaid(d.key, r).map(([o, t]) => `note on ${o} “${line(t)}”`));
-    const note = line(r.note);
-    return `#${d.issue} ${d.title}: ${bits.join(", ") || "—"}${note ? ` | ${note}` : ""}`;
-  }
-  function text() {
-    const lines = [`Decisions page ${ID}`, ...TP.decisions.map(decisionText)];
-    for (const sec of ["queue", "reel"]) {
-      for (const [k, r] of Object.entries(state[sec])) {
-        if (r.verdict) lines.push(`${sec} #${k}: ${r.verdict}${r.note ? ` | ${r.note}` : ""}`);
-      }
-    }
-    lines.push(meta.doneAt ? `Done at ${meta.doneAt}` : "Not marked done");
-    return lines.join("\n");
-  }
+  /** What each picture says for one decision, for Copy as text (copy-client.js). */
+  const said = {
+    pins: (key, r) => pinsUi?.said(key, r),
+    marks: (key, r) => marksUi?.said(key, r),
+    outcomes: (key, r) => outcomesUi?.said(key, r),
+    optionNotes: optionNotesSaid,
+  };
+  const text = () => textOf({ id: ID, decisions: TP.decisions, state, meta, said });
   copyBtn.addEventListener("click", () => {
     const flash = (m) => {
       copyBtn.textContent = m;
