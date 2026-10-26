@@ -15,7 +15,7 @@ import { dispatchScan, endBuild, routeWake, wakeNext } from "../../../scripts/mo
 //   1. the PR-open sync put `in-progress` back seconds after the session took it off (plan/4469:
 //      off 04:45:30Z, back on 04:45:54Z, held 8h), so a finished build kept its slot;
 //   2. a slot freeing is not a merge, so nothing woke the queue when one did.
-// Every read is injected: no `gh`, no network (admission.spec.ts's header says why that matters).
+// Every read is injected: no `gh`, no network (tests/support/admission-fixtures.ts says why that matters).
 
 type Issue = {
   number: number;
