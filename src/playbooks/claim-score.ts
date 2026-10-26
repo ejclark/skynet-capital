@@ -1,4 +1,5 @@
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
+import { blank } from "./claim-blank.js";
 import type { ConvictionClaim } from "./conviction-record.js";
 import { money } from "./format-money.js";
 
@@ -239,8 +240,6 @@ export interface ScoreLedgerEntry {
   readonly score: ClaimScore;
 }
 export type ScoreLedger = Readonly<Record<string, readonly ScoreLedgerEntry[]>>;
-
-const blank = (value: string | undefined): boolean => !value || value.trim().length === 0;
 
 /** Every rule a stored score breaks, in words; empty means it may be attached. */
 export function scoreProblems(score: ClaimScore): readonly string[] {
