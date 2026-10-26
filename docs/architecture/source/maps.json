@@ -1358,7 +1358,7 @@
             "id": "audit",
             "label": "Stall and conflict audit",
             "path": "scripts/moneypenny/audit.mjs",
-            "responsibility": "audit() emits flag-stall / silent-feedback / plan-ready-stall / flag-conflict / clear-in-progress / retitle-work-mode intents with stall-flagged and conflict-flagged labels as memory; CONFLICT_REPAIR_CAP 3 escalates to needs-eric, and workModeRetitle keeps the spigot's tracking-issue title in step with the position the lanes read"
+            "responsibility": "audit() emits flag-stall / silent-feedback / plan-ready-stall / flag-conflict / clear-in-progress / clear-stall / retitle-work-mode intents with stall-flagged and conflict-flagged labels as memory (silent-feedback times the wait, not the filing, and clears its flag once answered, #6042); CONFLICT_REPAIR_CAP 3 escalates to needs-eric, and workModeRetitle keeps the spigot's tracking-issue title in step with the position the lanes read"
           },
           {
             "id": "wake",
