@@ -276,11 +276,16 @@ quadrantChart
 ````
 _A call sheet as a picture: confidence × edge; never a P/L claim (`BRAND.md`)._
 
-**The legibility budget** (the first two clauses are on trial — #4550; their drawn pairs and the
-measured phone numbers are on #3778, and this line changes to match whichever version wins):
-≤15 nodes; plain words, not paths (`login canvas`, never
-`src/three/pieces/eye-shader.ts`); no SHAs, env vars, or CLI flags in labels; quote labels
-containing special characters. The real reading condition is a phone at 390px.
+**The legibility budget** (the real reading condition is a phone at 390px): **a picture fits one
+phone screen and its text clears 12px**. At 390px wide the drawing is no taller than one 844px
+screen, and 390 ÷ drawing width × font is at least 12px; `npm run shoot:mermaid-pairs` prints both
+numbers per side (`phone before 16.4px 1.06 screens`) and flags a miss, advisory. This replaced
+"≤15 nodes" (#4550): [the drawn pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981857928)
+put 20 nodes at 12.9px, still readable, but 1.60 screens against 1.06 for the same story in 8. The
+count was standing in for the glance, and the glance is measured directly now. Then: plain words,
+not paths (`login canvas`, never `src/three/pieces/eye-shader.ts`), still on trial on #4550 with
+[its pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981860237); no SHAs,
+env vars, or CLI flags in labels; quote labels containing special characters.
 
 **Rules the design rounds found** (round 2, iterating the five #3778 pairs, and round 3, the
 Claude Design handoff on plan #3786; each is rule · tell · fix). A first draft is the right type with
@@ -328,7 +333,8 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     defect beside the decision · three coloured boxes · the fork gets the accent, the rest is paper.
 13. **Narrow the drawing first; then the font.** Text on a phone is 390 ÷ drawing width × font,
     and `npm run shoot:mermaid-pairs` prints that number per side on every shot line (`phone before
-    15.7px, after 15.6px`), flagging anything under 12 px · 10.6 px effective on a 720 px drawing ·
+    15.7px …, after 15.6px …`, the screen count beside each), flagging anything under 12 px · 10.6 px
+    effective on a 720 px drawing ·
     lines of about 16 characters,
     `config: flowchart: { nodeSpacing: 24, rankSpacing: 36, padding: 10 }`, and
     `classDef default font-size:20px,font-family:Verdana`, the one font lever that works on
@@ -452,7 +458,8 @@ flowchart TD
   as the diagram it should have been, a showcase contender for a colleague. It renders each pair
   with the pinned Mermaid (GitHub's version) on GitHub's own light and dark canvases, lints every
   diagram first (a failure is a "Did not render" panel, never an empty box), crops to the frame
-  and writes a `<id>.json` sidecar (caption, alt text, bytes, dimensions, lint) to build the
+  and writes a `<id>.json` sidecar (caption, alt text, bytes, dimensions, lint, and per side the
+  phone text size and screen count of the legibility budget) to build the
   gallery comment from. Scale 1 fits the 100KB budget; `--scale 1.5` is the crisp shareable set;
   `--layout stacked` is the phone read. **The pairs file for a showcase lives on its issue, not in
   the tree** — the only committed one is the spec fixture, `tests/fixtures/mermaid-pairs/example.json`.
@@ -510,7 +517,8 @@ The repo's hard invariant — *never let a flourish imply something false* — a
    cannot drift.
 6. **Better is measured, on two axes, before a redraw ships** (Eric, 2026-09-26: "interrogate
    the decision to objectively measure better or worse"). The mechanical axis is rule 13's number,
-   printed by the pair renderer for the old and the new drawing side by side; the second look may
+   printed by the pair renderer for the old and the new drawing side by side, with the screen count
+beside it; the second look may
    not cost the first read. The reading axis is a blind read: a zero-context reader (a fresh
    subagent, given only the render and no caption) writes the argument in one sentence, what
    changed versus what it replaced, and what slowed it; the redraw passes when the sentence
