@@ -367,10 +367,9 @@ describe("SubscriptionStore", () => {
       });
     }
 
-    it("a re-subscribe keeps the conviction and newer fields on the record it replaces", async () => {
-      // A day no record states, so the conviction is the pair's own check and stays inline.
-      const conviction = { reason: "Eric's call", checkOn: "2027-03-31" };
-      await writeFile(path, JSON.stringify({ sauron: [{ ...newerField, conviction }] }), "utf8");
+    it("a re-subscribe keeps the pointer and newer fields on the record it replaces", async () => {
+      const convictionId = "ai-dip-2026-10";
+      await writeFile(path, JSON.stringify({ sauron: [{ ...newerField, convictionId }] }), "utf8");
       const store = new SubscriptionStore(path);
 
       store.subscribe(
@@ -380,8 +379,27 @@ describe("SubscriptionStore", () => {
       );
 
       const [after] = store.load().sauron ?? [];
-      expect(after).toMatchObject({ mode: "aggressive", conviction, window: { avoid: ["print"] } });
+      expect(after).toMatchObject({
+        mode: "aggressive",
+        convictionId,
+        window: { avoid: ["print"] },
+      });
       expect(after).not.toHaveProperty("capitalAllocated");
+    });
+
+    it("drops a retired inline conviction on the next write, and says nothing (#5482)", async () => {
+      const conviction = { reason: "Eric's call", checkOn: "2027-03-31" };
+      await writeFile(path, JSON.stringify({ sauron: [{ ...newerField, conviction }] }), "utf8");
+      const reports: string[] = [];
+      const store = new SubscriptionStore(path, (m) => reports.push(m));
+      expect(store.loadIfReadable()).toBeDefined();
+
+      store.setEnabled("sauron", "CRWV-WHEEL", false, LATER);
+
+      const raw = JSON.parse(await readFile(path, "utf8"));
+      expect(raw.sauron[0]).not.toHaveProperty("conviction");
+      expect(raw.sauron[0].window).toEqual({ avoid: ["print"] });
+      expect(reports).toEqual([]);
     });
 
     it("reads the allocations, and an empty set for a file with none or a torn one", async () => {
