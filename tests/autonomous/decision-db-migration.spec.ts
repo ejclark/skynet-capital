@@ -92,6 +92,18 @@ describe("migrateAuditToDecisionDb", () => {
     expect(db.listByPersona("sauron")).toHaveLength(2);
   });
 
+  it("reads rotated, gzipped audit files and the active file — a full replay finds every record (#6006)", async () => {
+    const rotating = new JsonlAuditStore(dir, { rotateAtBytes: 1 }); // every append rotates the last
+    for (let at = 1; at <= 4; at++) await rotating.record(decision({ at }));
+    await rotating.record(decision({ at: 1, personaId: "beta-scout" }));
+
+    expect(await migrateAuditToDecisionDb(rotating, db, { watermark: false })).toBe(5);
+    expect(db.listByPersona("sauron").map((r) => r.at)).toEqual([4, 3, 2, 1]);
+
+    await rotating.record(decision({ at: 5 }));
+    expect(await migrateAuditToDecisionDb(rotating, db)).toBe(1); // only the record past the watermark
+  });
+
   it("returns 0 on an empty (or never-written) audit trail, writing nothing", async () => {
     const count = await migrateAuditToDecisionDb(audit, db);
     expect(count).toBe(0);
