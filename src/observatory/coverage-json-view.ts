@@ -79,7 +79,7 @@ export interface CoverageViewInputs {
   readonly funds: { readonly byFund: ReadonlyMap<string, FundStats> } | { readonly note: string };
 }
 
-const RANK: Record<CoverageDepth, number> = {
+const COVERAGE_DEPTH_RANK: Record<CoverageDepth, number> = {
   researched: 0,
   held: 1,
   calendar: 2,
@@ -90,7 +90,7 @@ const RANK: Record<CoverageDepth, number> = {
 /** H's one order, shared by the ring and the rows so the ring's arcs read as the list below. */
 function hOrder(a: SectorCoverage, b: SectorCoverage): number {
   return (
-    RANK[a.depth] - RANK[b.depth] ||
+    COVERAGE_DEPTH_RANK[a.depth] - COVERAGE_DEPTH_RANK[b.depth] ||
     b.researched.length - a.researched.length ||
     b.eventLedgers.length - a.eventLedgers.length ||
     a.sector.localeCompare(b.sector)
