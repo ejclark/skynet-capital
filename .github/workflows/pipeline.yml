@@ -322,50 +322,33 @@ jobs:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
+      - name: Set up Node (version from mise.toml)
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
+
       # The `if:` above reads labels from the EVENT PAYLOAD — a snapshot taken when the PR was
       # opened/marked ready, minutes before verify finishes. A `hold-merge` applied after that
       # snapshot (ship.sh --hold used to label just after `opened`, which is how #3735 merged
       # unreviewed — docs/LESSONS.md) is invisible to it. Re-read the LIVE labels right before
       # arming; a failed read fails the job, so nothing arms unchecked.
-      # #4351 (2026-09-30): a burst of ~120 issue writes spent the App's hourly budget and both of
-      # this job's API calls 403'd — two green PRs sat unarmed with nothing to re-arm them. Each call
-      # below goes through this wrapper: on a rate-limit error it waits for the reset (capped at 15
-      # min, 3 tries) instead of failing. Any other error still fails at once, unchanged.
-      - name: Rate-limit retry helper
-        run: |
-          cat > "$RUNNER_TEMP/gh-retry.sh" <<'EOF'
-          #!/usr/bin/env bash
-          set -uo pipefail
-          for i in 1 2 3; do
-            if out=$("$@" 2>&1); then printf '%s\n' "$out"; exit 0; fi
-            printf '%s\n' "$out" >&2
-            grep -qiE 'rate limit|HTTP 429' <<<"$out" || exit 1
-            [ "$i" = 3 ] && exit 1
-            reset=$(gh api rate_limit --jq '[.resources.core.reset, .resources.graphql.reset] | max' 2>/dev/null || echo 0)
-            wait=$(( reset - $(date +%s) + 5 )); [ "$wait" -lt 30 ] && wait=30; [ "$wait" -gt 900 ] && wait=900
-            echo "rate-limited (try $i/3) — waiting ${wait}s for the reset" >&2
-            sleep "$wait"
-          done
-          EOF
-          chmod +x "$RUNNER_TEMP/gh-retry.sh"
-
+      # Every gh call in this job goes through scripts/arm-merge.mjs (specced: tests/scripts/arm-merge.spec.ts):
+      # a rate limit waits for the reset (#4351: a burst of issue writes spent the App's budget and
+      # this job 403'd), GitHub's 5xx / GraphQL internal error retries with backoff (#6093: one
+      # hiccup stranded a green PR), three tries at most; anything else fails at once. It was inline
+      # bash, which retried only rate limits; the classifier is gh.mjs's own (#4675).
       - name: Still unheld? (live labels, not the event snapshot)
         id: hold
         if: ${{ steps.app-token.outputs.token != '' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          LABELS=$("$RUNNER_TEMP/gh-retry.sh" gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" --jq '.[].name')
+          LABELS=$(node scripts/arm-merge.mjs retry -- gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" --jq '.[].name')
           if printf '%s\n' "$LABELS" | grep -qx 'hold-merge'; then
             echo "hold-merge is on the PR now — not arming"; echo "held=true" >> "$GITHUB_OUTPUT"
           else
             echo "held=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Set up Node (version from mise.toml)
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
 
       # Same restore-keys fix as `verify` (docs/LESSONS.md, 2026-09-04) — root-only here, but the
       # exact-key-only miss is the same failure mode regardless of which tree.
@@ -417,36 +400,10 @@ jobs:
         if: ${{ steps.envelope.outputs.blocking == 'false' && steps.hold.outputs.held == 'false' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          PR="${{ github.event.pull_request.number }}"
-          if ! OUT=$("$RUNNER_TEMP/gh-retry.sh" gh pr merge --auto --squash "$PR" 2>&1); then
-            # GitHub refuses --auto on a PR that is already mergeable, answering "clean status" or
-            # "unstable status". Unstable = every REQUIRED check passed and some non-required one has
-            # not (the queued `claude`/`fly-io` suites), and this job only runs after verify +
-            # integration tests passed, so a direct squash lands nothing arming would not. Matching
-            # "clean" alone failed the job and stranded green PRs unarmed (#4750: 8 of 10 stuck
-            # research PRs on 2026-10-18 carried the "unstable status" line).
-            # gh can also take the direct-merge path on the arm call itself, so "Base branch was
-            # modified" can surface here, before the retry loop below (#5805, #5903 on 2026-10-19/20:
-            # green, mergeable, left unarmed). Same remedy: fall through to the retried direct merge.
-            if echo "$OUT" | grep -qiE "(clean|unstable) status|base branch was modified"; then
-              echo "$OUT"
-              echo "already green — merging directly instead of arming"
-              # main can move between the clean-status read and this merge ("GraphQL: Base branch was
-              # modified", #4939: the arm job died there and left a clean PR unarmed for 187 hours).
-              # Retry only that message, three tries; every other failure still fails the step.
-              for try in 1 2 3; do
-                if MERGE_OUT=$("$RUNNER_TEMP/gh-retry.sh" gh pr merge --squash "$PR" 2>&1); then echo "$MERGE_OUT"; break; fi
-                echo "$MERGE_OUT" >&2
-                { echo "$MERGE_OUT" | grep -qi "base branch was modified" && [ "$try" -lt 3 ]; } || exit 1
-                echo "base branch moved (try $try/3) — retrying the merge"
-                sleep 5
-              done
-            else
-              echo "$OUT" >&2
-              exit 1
-            fi
-          fi
+        # Arms squash auto-merge; on GitHub's "clean/unstable status" refusal (#4750) or a base that
+        # moved under the arm call itself (#5932) it merges directly instead, retrying a moved base
+        # (#4939). The why for each branch lives beside its code in scripts/arm-merge.mjs.
+        run: node scripts/arm-merge.mjs arm "${{ github.event.pull_request.number }}"
 
   deploy:
     name: release · deploy
