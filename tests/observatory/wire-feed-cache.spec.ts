@@ -1,4 +1,5 @@
 import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import type { ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { JsonlActivityEventBus } from "../../src/observatory/activity-bus.js";
@@ -29,6 +30,8 @@ import { buildWireTradeRows } from "../../src/observatory/wire-data.js";
 import { type WireFeed, wireFeedReader } from "../../src/observatory/wire-feed-cache.js";
 import { type FeedbackLogEntry, JsonlFeedbackLogStore } from "../../src/server/feedback-log.js";
 import type { FeedbackStatus } from "../../src/server/feedback-status.js";
+import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
+import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
 import type { JsonlTail } from "../../src/storage/jsonl-store.js";
 
 /**
@@ -386,6 +389,42 @@ function counted<T>(
   };
 }
 
+/** Every body `/api/wire` serves for `url`, walked through its own `Link: rel="next"` header. */
+async function routeWalk(deps: WireRouteDeps, url: string): Promise<unknown[]> {
+  const bodies: unknown[] = [];
+  let next: string | undefined = url;
+  while (next) {
+    const out = { body: "", headers: {} as Record<string, string> };
+    const res = {
+      writeHead(_status: number, headers: Record<string, string>) {
+        out.headers = headers;
+      },
+      end(body: string) {
+        out.body = body;
+      },
+    } as unknown as ServerResponse;
+    await serveWireJson(res, next, deps, true);
+    bodies.push(JSON.parse(out.body));
+    next = /<([^>]+)>; rel="next"/.exec(out.headers.link ?? "")?.[1];
+  }
+  return bodies;
+}
+
+const hub = {
+  getState: () => ({
+    generatedAt: NOW,
+    participants: PARTICIPANTS.map((id) => ({
+      id,
+      displayName: id,
+      kind: id.startsWith("human") ? "human" : "bot",
+      cash: 0,
+      equity: 0,
+      positions: [],
+    })),
+    collisions: [],
+  }),
+} as unknown as ObservatoryHub;
+
 describe("the Wire's append-aware fold (#4458)", () => {
   let root: string;
   let dirs: { activity: string; bus: string; feedback: string };
@@ -430,6 +469,29 @@ describe("the Wire's append-aware fold (#4458)", () => {
 
       expect(fold.events.length).toBeLessThan(cold.events.length);
       expect(fold.records.length).toBeLessThan(cold.records.length);
+    });
+  });
+
+  describe("when /api/wire is served from the fold", () => {
+    it("serves every page and every ?symbol= page byte for byte as the whole reads do", async () => {
+      const shared: WireRouteDeps = {
+        hub,
+        readAllLadderProgress: () => Promise.resolve([]),
+        readAllOrderAudit: () => Promise.resolve([]),
+      };
+      const whole: WireRouteDeps = {
+        ...shared,
+        readAllActivityEvents: () => sources.bus.list(),
+        readAllTradeActivity: () => sources.activity.list(),
+        readAllFeedback: () => sources.feedbackLog.list(),
+      };
+      const folded: WireRouteDeps = { ...shared, readWireFeed: wireFeedReader(sources).read };
+
+      for (const url of ["/api/wire?per_page=50", "/api/wire?per_page=20&symbol=NVDA"]) {
+        const expected = await routeWalk(whole, url);
+        expect(expected.length).toBeGreaterThan(10);
+        expect(await routeWalk(folded, url)).toEqual(expected);
+      }
     });
   });
 
