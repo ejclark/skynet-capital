@@ -101,8 +101,8 @@ export const lookupConviction: ConvictionLookup = (id) => CONVICTIONS.get(id);
  * only on a conviction (#4469 criterion 2), so one with no pointer is held the same way whether or
  * not an inline copy rides beside it. Before, only the ◆ row's carried copy held it; with neither
  * it read "conviction not stated", which never stops a pair, so it would have traded unchecked. This
- * is what lets the app stop writing that copy: the state block's default for "may the bots run a ◆
- * pair with no usable pointer exits-only?" was yes.
+ * is what let the app stop writing that copy (its app half dropped the poll's inline carry): the
+ * state block's default for "may the bots run a ◆ pair with no usable pointer exits-only?" was yes.
  */
 export interface StatedCheck {
   readonly checkOn?: string;
