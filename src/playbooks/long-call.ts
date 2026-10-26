@@ -23,7 +23,7 @@ import {
 } from "../options/contract-picker.js";
 import { humanizeOptionSymbol, OPTION_MULTIPLIER } from "../trading/option-symbols.js";
 import { expiryInside, inQuietPeriod, type Steering } from "./conviction-steering.js";
-import { EXIT_DTE, longCallExit, TAKE_PROFIT } from "./long-call-rules.js";
+import { EXIT_DTE, longCallExit } from "./long-call-rules.js";
 import { optionCloseIntent, optionOpenIntent } from "./option-intent.js";
 import { pairFor } from "./pair-table.js";
 import type { Playbook } from "./playbook.js";
@@ -53,9 +53,6 @@ import type { Playbook } from "./playbook.js";
  * STATE COMES FROM THE POSITIONS ALONE, as the wheel's does: a restart reads correctly.
  */
 
-/** The exit rules (`EXIT_DTE`, `TAKE_PROFIT`) live in `long-call-rules.ts`, shared with the member's side; re-exported here. */
-export { EXIT_DTE, TAKE_PROFIT };
-
 /** The window it buys in, in calendar days to expiry: the latest listed expiry inside it. */
 const MIN_DTE = 120;
 const MAX_DTE = 200;
@@ -67,7 +64,7 @@ const NO_CHASE = 1.1;
 const DELTA_MISS = 0.1;
 
 /** Target delta per mode: deeper in the money is steadier, further out more leveraged. */
-export const LONG_CALL_DELTAS: Readonly<Record<PlaybookMode, number>> = {
+const LONG_CALL_DELTAS: Readonly<Record<PlaybookMode, number>> = {
   conservative: 0.7,
   standard: 0.6,
   aggressive: 0.5,
@@ -96,7 +93,7 @@ export interface LongCallSetting {
 }
 
 /** The strategy tag its buys carry on the decision record. */
-export const longCallTag = (symbol: string): string => `${symbol.toLowerCase()}-long-call`;
+const longCallTag = (symbol: string): string => `${symbol.toLowerCase()}-long-call`;
 
 /** The held calls this play trades: long calls on the ticker, nothing else. */
 function heldCalls(portfolio: Portfolio, symbol: string): HeldContract[] {
