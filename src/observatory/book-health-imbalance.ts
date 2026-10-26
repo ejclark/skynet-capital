@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
-import { capitalized, playName } from "./book-health-detectors.js";
+import { capitalized } from "../ui/capitalized.js";
+import { playName } from "./book-health-detectors.js";
 import type { BookReading, HealthFinding, PlayHealth } from "./book-health-view.js";
 import { latestVerdictPass } from "./bot-heartbeat-view.js";
 import { formatCurrency } from "./render-atoms.js";

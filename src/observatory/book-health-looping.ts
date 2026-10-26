@@ -4,7 +4,8 @@ import { marketDayKey } from "../domain/market-day.js";
 import { opensRisk } from "../domain/option-book.js";
 import type { PlaybookSubscription, PlaybookVerdictState } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
-import { capitalized, playName } from "./book-health-detectors.js";
+import { capitalized } from "../ui/capitalized.js";
+import { playName } from "./book-health-detectors.js";
 import type { BookReading, HealthFinding, LoopKind } from "./book-health-view.js";
 import { REFUSAL_LABEL } from "./decision-json-view.js";
 

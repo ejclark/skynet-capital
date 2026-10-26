@@ -13,6 +13,7 @@ import { findPair, type Pair, pairName } from "../playbooks/pair-table.js";
 import type { Playbook } from "../playbooks/playbook.js";
 import { findPlaybook } from "../playbooks/registry.js";
 import type { OptionMarketPort } from "../ports/option-market.js";
+import { capitalized } from "../ui/capitalized.js";
 
 /**
  * WHAT A NEW SUBSCRIPTION NEEDS FROM THE LIVE MARKET AND THE ACCOUNT (#4469 slice 3a part 2,
@@ -69,7 +70,6 @@ export interface LiveNeedsInput {
 }
 
 const dollars = (amount: number): string => `$${Math.round(amount).toLocaleString("en-US")}`;
-const capitalized = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** The cash one open of the playbook ties up: what the guards would reserve for it, plus premium. */
 function oneContractCash(intent: OrderIntent): number {
