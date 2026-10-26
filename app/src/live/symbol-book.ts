@@ -50,6 +50,19 @@ export interface SymbolRow {
   readonly pl: number;
   /** "$550 to close" — a sold option's cost to buy back today; absent for anything else. */
   readonly toClose?: string;
+  /** The contract's terms, for saying what its dates mean (`symbol-why.ts`); absent for shares. */
+  readonly option?: SymbolOption;
+}
+
+export interface SymbolOption {
+  readonly type: "call" | "put";
+  readonly strike: number;
+  /** `YYYY-MM-DD`. */
+  readonly expiry: string;
+  readonly short: boolean;
+  readonly contracts: number;
+  /** What it was sold or bought for, whole dollars; absent when the basis is unreadable. */
+  readonly premium?: number;
 }
 
 export interface SymbolAction {
@@ -115,6 +128,14 @@ function rowOf(deskId: string, p: SymbolPosition, wheel: boolean): SymbolRow {
           : "no target recorded",
       pl,
       ...(short && owed !== undefined ? { toClose: `${wholeDollars(owed)} to close` } : {}),
+      option: {
+        type: occ.type,
+        strike: occ.strike,
+        expiry: occ.expiration,
+        short,
+        contracts: count,
+        ...(premium !== undefined ? { premium: Math.abs(premium) } : {}),
+      },
     };
   }
   return {

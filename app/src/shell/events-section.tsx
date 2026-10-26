@@ -9,6 +9,7 @@ import { ALL_RANGE, type DayRange, inRange, rangeFor, stepAnchor } from "../live
 import { useRefineSearch } from "../live/refine-search";
 import { DEFAULT_LENS, fetchResearchCalendar } from "../live/research";
 import { type SymbolDesk, symbolView } from "../live/symbol-book";
+import { whyFor } from "../live/symbol-why";
 import { BookLanesPicture } from "./book-lanes";
 import { BookRangeHead, rangeWords } from "./book-range-head";
 import { AgendaRow } from "./events-agenda";
@@ -199,6 +200,7 @@ export function EventsSection({
   const events = research.data?.events ?? [];
   const calls = research.data?.calls ?? [];
   const { desks: book, book: one, named } = symbolView(desks, symbol);
+  const why = whyFor(one);
 
   const join = (r: DayRange) =>
     bookEventsIn({ desks: book, events, calls, range: r, lens: horizon.lens });
@@ -302,7 +304,12 @@ export function EventsSection({
               aria-label={`Events ${phrase}`}
             >
               {rows.map((event, i) => (
-                <AgendaRow key={`${event.tier} ${event.id}`} event={event} order={i} />
+                <AgendaRow
+                  key={`${event.tier} ${event.id}`}
+                  event={event}
+                  order={i}
+                  why={why(event)}
+                />
               ))}
             </ol>
           ) : null}
