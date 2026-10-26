@@ -1,4 +1,5 @@
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
+import { blank } from "./claim-blank.js";
 
 /**
  * WHAT A CLAIM CARRIES ONCE THE SYSTEM HAS LOOKED AT IT (#5482 slice 3, criterion 2). A conviction
@@ -82,8 +83,6 @@ interface UntestableClaim {
 export type ClaimStudy = StudiedClaim | ForwardTestOffer | UntestableClaim;
 
 const DAY_IN_TEXT = /\d{4}-\d{2}-\d{2}/g;
-/** Empty, or missing: entries are read from a JSON file, so a field may not be there at all. */
-const blank = (value: string | undefined): boolean => !value || value.trim().length === 0;
 const namesADay = (text: string): boolean => (text.match(DAY_IN_TEXT) ?? []).some(isCalendarDay);
 
 function verdictProblems(v: ClaimVerdict): string[] {

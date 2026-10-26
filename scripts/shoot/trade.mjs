@@ -6,24 +6,12 @@
 import { resolve } from "node:path";
 import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
-import { desk, deskWithOption, noOrders, workingOrders } from "./trade-account-fixture.mjs";
-import {
-  deliveryOff,
-  deliveryOn,
-  deliveryUnconfigured,
-  noAlerts,
-  positionWatchAlerts,
-} from "./trade-alerts-fixture.mjs";
+import { desk, noOrders } from "./trade-account-fixture.mjs";
+import { deliveryOff, noAlerts } from "./trade-alerts-fixture.mjs";
 import { bars, chain, quote, studyBars } from "./trade-chart-fixture.mjs";
-import {
-  draftScript,
-  draftSent,
-  lifecycleAnswer,
-  noLifecycle,
-  rollDraft,
-  rollLegs,
-  rollScript,
-} from "./trade-draft-fixture.mjs";
+import { shootClosingScenes } from "./trade-closing-scenes.mjs";
+import { draftScript, draftSent, noLifecycle } from "./trade-draft-fixture.mjs";
+import { shootOrdersScenes } from "./trade-orders-scenes.mjs";
 import {
   freshPlays,
   plays,
@@ -32,6 +20,7 @@ import {
   throughLongs,
 } from "./trade-plays-fixture.mjs";
 import { tradeStubs } from "./trade-stubs.mjs";
+import { shootWorkingOrdersScenes } from "./trade-working-orders-scenes.mjs";
 
 let currentPlays = freshPlays;
 let currentSettings = settings;
@@ -639,388 +628,65 @@ await page.getByRole("heading", { name: "Working orders" }).waitFor();
 await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
 await shootBench("bench-desktop");
 
-// Working orders (#3407 P1 slice 2; the Orders section since Workbench slice 3) — one GTC limit
-// and one partial fill, two settled rows below them. PHONE FIRST: 390px proves
-// the row wraps its type line under the symbol instead of clipping; desktop proves it widened.
-currentPlays = plays;
-currentOrders = workingOrders;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
-await page.getByText("Working orders").waitFor();
-await page.getByText("Settled today").waitFor();
-await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
-const shootWorkingOrders = shooter(page, resolve("docs/shots/working-orders"));
-await shootWorkingOrders("working-orders-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
-await shootWorkingOrders("working-orders-desktop");
-// The two-tap cancel, armed: the row's Cancel became its own Confirm / Keep pair.
-await page.setViewportSize({ width: 390, height: 844 });
-await page.getByRole("button", { name: "Cancel" }).first().click();
-await page.getByRole("button", { name: "Confirm cancel" }).waitFor();
-await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
-await shootWorkingOrders("working-orders-cancel-armed-phone");
-// Modify (#3407 P1 1b): Keep the cancel, open the drawer on the GTC limit, raise the price —
-// the note says exactly what the broker will be told before Send change is pressed.
-await page.getByRole("button", { name: "Keep" }).click();
-await page.getByRole("button", { name: "Modify" }).first().click();
-await page.getByLabel("Limit price").fill("172");
-await page.getByText("Will send: limit $172.00").waitFor();
-await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootModify = shooter(page, resolve("docs/shots/working-orders-modify"));
-await shootModify("working-orders-modify-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByRole("heading", { name: "Working orders" }).scrollIntoViewIfNeeded();
-await shootModify("working-orders-modify-desktop");
-// The option order's drawer asks for Contracts — the word the broker's quantity means.
-await page.setViewportSize({ width: 390, height: 844 });
-await page.getByRole("button", { name: "Keep as is" }).click();
-await page.getByRole("button", { name: "Modify" }).nth(1).click();
-await page.getByLabel("Contracts").waitFor();
-await page.getByText("NVDA $180 CALL · Sep 25").scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy(0, -120));
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-await shootModify("working-orders-option-modify-phone");
-currentOrders = noOrders;
-
-// Limit close (#3407 P1 slice 3) — the option positions card under the ticket with Limit
-// pressed and a premium typed, then the reviewed confirm line naming the limit. Phone first.
-currentPlays = plays;
-currentDesk = deskWithOption;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
-await page.getByRole("heading", { name: "Option positions" }).waitFor();
-await page.getByRole("button", { name: "Limit" }).click();
-await page.getByLabel("Limit price per share").fill("13.50");
-await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
-const shootLimitClose = shooter(page, resolve("docs/shots/limit-close"));
-await shootLimitClose("limit-close-phone");
-// The same card with its Position Statement line and book foot (#3407 P2 slice 3).
-await page.getByText("18 DTE").waitFor();
-const shootOptionPositions = shooter(page, resolve("docs/shots/option-positions"));
-await shootOptionPositions("option-positions-phone");
-// The book foot weighted to SPY, with the beta's source and as-of beside it (#4327). PHONE FIRST.
-const shootBeta = shooter(page, resolve("docs/shots/beta-weighted-book"));
-await page.getByText(/Weighted to SPY/).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy(0, 160));
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-await shootBeta("beta-weighted-book-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
-await shootLimitClose("limit-close-desktop");
-await page.getByText(/Weighted to SPY/).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy(0, 160));
-await shootBeta("beta-weighted-book-desktop");
-
-// The alerts strip (#3407 P4 slice 1): what the held positions are saying — a critical
-// assignment-risk row, a week-out expiry warning, a month-out FYI; the badge word and glyph carry
-// the priority, the left accent steps with it. PHONE FIRST.
-currentAlerts = positionWatchAlerts;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
-await page.getByText(/assignment risk/).waitFor();
-await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy(0, -80));
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootAlerts = shooter(page, resolve("docs/shots/desk-alerts"));
-await shootAlerts("desk-alerts-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByRole("heading", { name: "Alerts" }).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy(0, -120));
-await shootAlerts("desk-alerts-desktop");
-
-// Delivery (#3407 P4 slice 3): the same strip, with the member's own switch for "also reach me when
-// this page is closed". Two more phone frames — delivery ON (the destination the session carried,
-// never a field anyone typed) and the unconfigured deployment saying so in words.
-const frameDelivery = async (tag) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
-  await page.getByRole("heading", { name: "Send these to me" }).scrollIntoViewIfNeeded();
-  await page.evaluate(() => window.scrollBy(0, 40));
-  await shootAlerts(tag);
-};
-currentDelivery = deliveryOn;
-await frameDelivery("alert-delivery-on-phone");
-currentDelivery = deliveryUnconfigured;
-await frameDelivery("alert-delivery-unconfigured-phone");
-currentDelivery = deliveryOff;
-currentAlerts = noAlerts;
-
-// Expiries and assignments (#3407 slice 4) — the last card in the Orders pane: the four ways a
-// contract ends with no order behind it, each saying what it did to the realized P/L and, where it
-// did nothing, why not. The sentences in the frame are the server's own (`lifecycleRows` builds the
-// fixture). PHONE FIRST.
-currentLifecycle = lifecycleAnswer;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
-await page.getByRole("heading", { name: "Expiries and assignments" }).waitFor();
-await page.getByRole("heading", { name: "Expiries and assignments" }).scrollIntoViewIfNeeded();
-// Past the heading by a card's worth: the frame has to prove the CONTRAST between a counted row
-// and an uncounted one, which takes three rows, not the heading plus one.
-await page.evaluate(() => window.scrollBy(0, 230));
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootLifecycle = shooter(page, resolve("docs/shots/option-lifecycle"));
-await shootLifecycle("option-lifecycle-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByRole("heading", { name: "Expiries and assignments" }).scrollIntoViewIfNeeded();
-await shootLifecycle("option-lifecycle-desktop");
-currentLifecycle = noLifecycle;
-
-// Roll as one ticket (#3407 P3 slice 3) — the same held put, Roll… opened: target expiration
-// and strike from the chain, the two legs spelled out, then the reviewed Confirm naming the net
-// and the max loss. The chain stub answers every expiration with the same NVDA rows, so the
-// strike list is the fixture's; the scripted draft is what the review reads. PHONE FIRST.
-currentDraftScript = rollScript;
-currentDraftFallback = rollDraft("reviewed", rollLegs, {
-  verdict: { ok: true, refusals: [], warnings: [] },
+await shootWorkingOrdersScenes({
+  page,
+  origin,
+  state: {
+    setPlays: (value) => {
+      currentPlays = value;
+    },
+    setOrders: (value) => {
+      currentOrders = value;
+    },
+    setDesk: (value) => {
+      currentDesk = value;
+    },
+  },
 });
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=101&symbol=NVDA&section=orders`);
-await page.getByRole("heading", { name: "Option positions" }).waitFor();
-await page.getByRole("button", { name: "Roll…" }).click();
-await page.getByLabel("Roll to").waitFor();
-await page.getByRole("button", { name: "Review roll…" }).click();
-await page.getByRole("button", { name: /Confirm roll/ }).waitFor();
-await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
-const shootRoll = shooter(page, resolve("docs/shots/roll"));
-await shootRoll("roll-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByRole("heading", { name: "Option positions" }).scrollIntoViewIfNeeded();
-await shootRoll("roll-desktop");
-currentDraftScript = [];
-currentDraftFallback = draftSent;
-currentDesk = desk;
 
-// Day / GTC on the options ticket (#3407 P1 slice 4) — the same control the stock ticket got,
-// under the chain on a 201 ticket; GTC pressed so the frame proves the pick, not the default.
-currentPlays = throughLongs;
-currentDesk = desk;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
-await page.locator(".straddle-scroll").waitFor();
-await page.getByRole("button", { name: "GTC" }).click();
-await page.getByText("Time in force").scrollIntoViewIfNeeded();
-// The straddle is wider than the phone; scrollIntoView can drag the page sideways — pin it back.
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootOptionsTif = shooter(page, resolve("docs/shots/options-tif"));
-await shootOptionsTif("options-tif-phone");
+await shootOrdersScenes({
+  page,
+  origin,
+  state: {
+    setAlerts: (value) => {
+      currentAlerts = value;
+    },
+    setDelivery: (value) => {
+      currentDelivery = value;
+    },
+    setLifecycle: (value) => {
+      currentLifecycle = value;
+    },
+    setDraftScript: (value) => {
+      currentDraftScript = value;
+    },
+    setDraftFallback: (value) => {
+      currentDraftFallback = value;
+    },
+    setDesk: (value) => {
+      currentDesk = value;
+    },
+  },
+});
 
-// Quote coverage under the chain (#3407 P2 slice 1) — the one-line provenance that turns a "—"
-// cell into "the feed didn't quote this strike": indicative feed, 4 of 5 strikes, an as-of.
-currentPlays = throughLongs;
-currentChain = {
-  ...currentChain,
-  quotes: { source: "indicative", quoted: 4, total: 5, asOf: "2026-09-21T14:05:00Z" },
-};
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
-await page.getByText(/strikes quoted/).waitFor();
-await page.getByText(/strikes quoted/).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootChainCoverage = shooter(page, resolve("docs/shots/chain-coverage"));
-await shootChainCoverage("chain-coverage-phone");
-
-// Greeks, IV and the odds on the option order screen (#3407 P2 slice 2) — a reviewed 201 ticket:
-// chance of profit never without expected value beside it, the four greeks as one line.
-currentPlays = throughLongs;
-await page.setViewportSize({ width: 390, height: 844 });
-// Typed strike, then Review clicked straight away — the regression proof for the lost first
-// click (`keepFocus`, gate-frame.tsx): before the fix this click landed on nothing.
-await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
-await page.locator(".straddle-scroll").waitFor();
-await page.getByLabel("Strike", { exact: true }).fill("175");
-await page.getByRole("button", { name: "Review order" }).click();
-await page.getByText("Chance of profit").waitFor();
-await page.getByText("Chance of profit").scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootOrderOdds = shooter(page, resolve("docs/shots/order-odds"));
-await shootOrderOdds("order-odds-phone");
-
-// The payoff diagram on the single-leg ticket (#3407): the same reviewed 201 ticket, scrolled
-// to the figure under the grid — the loss side hatched, the breakeven ticked, the edge label
-// saying the loss keeps going past the window.
-await page.locator(".payoff").scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy(0, -160));
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootOptionPayoff = shooter(page, resolve("docs/shots/option-payoff"));
-await shootOptionPayoff("option-payoff-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.locator(".payoff").scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy(0, -200));
-await shootOptionPayoff("option-payoff-desktop");
-
-// P0 template hygiene (#3407): content-sized fields (a 4-character strike no longer a third of
-// the panel) and the two-column estimate. Phone first, then the desktop frame that proves the
-// fields expanded instead of stretching. `?strike=` arrives already committed, so the chain
-// accordion (2026-09-22) opens collapsed — the fields grid this scene is actually about doesn't
-// depend on it either way, so the readiness wait is the Strike field's own seeded value, not the
-// (now-collapsed) chain table.
-currentPlays = throughLongs;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=175`);
-await page.getByLabel("Strike", { exact: true }).waitFor();
-await page.getByLabel("Strike", { exact: true }).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootTemplate = shooter(page, resolve("docs/shots/p0-template"));
-await shootTemplate("ticket-fields-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByLabel("Strike", { exact: true }).scrollIntoViewIfNeeded();
-await shootTemplate("ticket-fields-desktop");
-await page.getByRole("button", { name: "Review order" }).click();
-await page.getByText("Chance of profit").waitFor();
-await page.getByText("Chance of profit").scrollIntoViewIfNeeded();
-await shootTemplate("estimate-desktop");
-
-// An honest empty limit (#3407 P0): a strike the chain doesn't list gets no seeded premium, so
-// Review stays disabled and the note says what is missing — the ticket no longer refuses itself.
-currentPlays = throughLongs;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=190`);
-await page.getByText(/needs a premium per share/).waitFor();
-await page.getByText(/needs a premium per share/).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootHonest = shooter(page, resolve("docs/shots/p0-honest"));
-await shootHonest("limit-note-phone");
-
-// The in-the-money rail on the strike cell (#3407 P0): visible at 390px without scrolling —
-// calls in the money above the divider carry the bar on the strike's left edge, puts below it on
-// the right.
-currentPlays = throughLongs;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
-await page.locator(".straddle-scroll").waitFor();
-// Bring the divider row (and the in-the-money rows around it) into the frame, not the page top.
-await page.getByText(/^Current price ·/).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollTo({ left: 0 }));
-const shootRail = shooter(page, resolve("docs/shots/itm-rail"));
-await shootRail("itm-rail-phone");
-
-// THE MILESTONE STRIP, BACK ON /trade (Eric, 2026-09-22, after two intermediate placements — a
-// rail item list, then nothing: "The milestone ladder is still on the left... i want to restore
-// previous design where this milestone information is rendered across the top") — the same
-// component `/learn/trading` renders, now also above the Bench on `/trade`. `plays` (one fill in:
-// 101 earned, 102 open, the rest locked) shows all three rung states in one frame. PHONE FIRST.
-currentPlays = plays;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?play=201`);
-await page.getByText("Milestone · Trading ladder").waitFor();
-await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
-const shootMilestoneStrip = shooter(page, resolve("docs/shots/trade-milestone-strip"));
-await shootMilestoneStrip("trade-milestone-strip-phone");
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByText("Milestone · Trading ladder").waitFor();
-await shootMilestoneStrip("trade-milestone-strip-desktop");
-
-// THE OUTLOOK PANE (#3407, slice 4 — the outlook-to-structure surface). An AUXILIARY entry into
-// the bench, never its home: `?section=outlook` opens it, the view is stated with three segment
-// rows, and the ask is explicit because one read is up to 22 broker calls. What the frames have to
-// prove is the honesty, not the layout: the long call's ceiling reads "unlimited" rather than a
-// sampled figure, its reward-to-risk says which side has no ceiling, the vol regime says WHY it
-// can't be called rich or cheap, and one structure the chain couldn't carry is folded underneath
-// with its reason rather than quietly missing. PHONE FIRST.
-currentPlays = plays;
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?section=outlook&symbol=NVDA&play=101`);
-await page.getByText(/Nothing is read until you ask/).waitFor();
-await page.getByRole("button", { name: "Show me the structures" }).click();
-await page.getByText("Bull call spread").waitFor();
-await page.getByText(/couldn't be ranked/).waitFor();
-const shootOutlook = shooter(page, resolve("docs/shots/outlook"));
-// The controls frame first (the view, stated), then the answer — at 390px they do not share a
-// screen, and the answer is the one that carries the honesty rules, so it gets its own frame.
-await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
-await shootOutlook("outlook-view-phone");
-await page.getByRole("button", { name: "Show me the structures" }).scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy({ top: 120, left: 0 }));
-await shootOutlook("outlook-phone");
-// Docked, the pane is full-span below the ticket (it is one of the three that never dock on their
-// own), so the desktop frame scrolls to it — what it proves is that the wide layout ADDS ROOM for
-// the marks that were one scroll away at 390px, not that it introduces a figure the phone lacks.
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.getByText("Bull call spread").waitFor();
-await page.locator("#bench-outlook").scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy({ top: -24, left: 0 }));
-await shootOutlook("outlook-desktop");
-
-// THE WATCHLIST PANE (#3407 P4 / #4332) — the names a member keeps an eye on, the prices moving,
-// one tap from any row onto the bench. Another AUXILIARY entry (`?section=watchlist`), so it never
-// docks on its own either. What the frames have to prove is the honesty, not the layout: three
-// rows receive pushed frames and carry the feed's own "◦ live" mark, the fourth receives none and
-// so shows its last read price with NO claim about freshness — and the caption under the list
-// says what that difference means, instead of leaving a member to guess why one row is still.
-// PHONE FIRST.
-const watched = ["NVDA", "AAPL", "MSFT", "TSLA"];
-const watchQuotes = {
-  NVDA: { symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" },
-  AAPL: { symbol: "AAPL", last: 225.1, change: -0.88, changePct: -0.39, tone: "neg" },
-  MSFT: { symbol: "MSFT", last: 412.06, change: 0.03, changePct: 0.01, tone: "flat" },
-  TSLA: { symbol: "TSLA", last: 248.74, change: -4.12, changePct: -1.63, tone: "neg" },
-};
-currentWatchlist = {
-  ok: true,
-  available: true,
-  limit: 20,
-  watching: watched.map((symbol) => ({ symbol, at: "2026-10-01T13:00:00Z" })),
-};
-// One answer per symbol, which the pathname-keyed stub table can't do (`shell.mjs` passes the
-// pathname alone) — a predicate route, registered after the blanket stub so it wins, and scoped
-// to `/api/trade/quote` exactly so the stream path below is untouched.
-const perSymbolQuote = (route) => {
-  const url = new URL(route.request().url());
-  const symbol = url.searchParams.get("symbol") ?? "";
-  return route.fulfill({
-    json: watchQuotes[symbol] ?? { quoteNote: "no price right now" },
-  });
-};
-// The matcher is hoisted, not written inline twice: `page.unroute` matches on the SAME matcher
-// reference, so a second arrow with identical text would never find the route it meant to remove.
-const isQuoteRead = (url) => new URL(url).pathname === "/api/trade/quote";
-await page.route(isQuoteRead, perSymbolQuote);
-// One connection carries the whole set, so one fulfilled batch proves the seam — the same
-// technique as the quote-stream scene above, with TSLA deliberately left out of the live set.
-// Delayed deliberately, so the batch lands AFTER each row's one-shot read — the order production
-// has (the hub does its own snapshot read once the subscription exists) and the one that makes
-// this frame deterministic rather than a race between two stubs answering in the same tick.
-const liveSet = ["NVDA", "AAPL", "MSFT"];
-const pushSet = async (route) => {
-  await new Promise((done) => setTimeout(done, 500));
-  return route.fulfill({
-    status: 200,
-    headers: { "content-type": "text/event-stream", "cache-control": "no-cache" },
-    body:
-      `event: hello\ndata: ${JSON.stringify({ symbol: "NVDA", symbols: liveSet, at: "2026-10-04T17:45:12Z" })}\n\n` +
-      liveSet
-        .map(
-          (symbol) =>
-            `event: quote\ndata: ${JSON.stringify({ ...watchQuotes[symbol], asOf: "2026-10-04T17:45:12Z" })}\n\n`,
-        )
-        .join(""),
-  });
-};
-await page.route("**/api/trade/quote-stream*", pushSet);
-await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/trade?section=watchlist&symbol=NVDA&play=101`);
-await page.getByRole("button", { name: /^NVDA .* open it on the bench$/ }).waitFor();
-await page.getByText(/4 of 20 names/).waitFor();
-// Three rows streaming, the fourth not — the exact contrast these frames exist to show, waited on
-// rather than assumed, so a regression in the seam fails the harness instead of shipping a frame
-// that quietly proves nothing.
-await page.locator(".wl-row .quote-live").nth(2).waitFor();
-const shootWatchlist = shooter(page, resolve("docs/shots/watchlist"));
-// `scrollIntoView`, not `…IfNeeded`: the pane technically fits, so "if needed" leaves it pinned to
-// the bottom edge with the caption clipped — and the caption is half the point of the frame.
-await page.locator(".wl").evaluate((el) => el.scrollIntoView({ block: "start" }));
-await page.evaluate(() => window.scrollBy({ top: -72, left: 0 }));
-await shootWatchlist("watchlist-phone");
-// Docked, the pane is full-span below the ticket (one of the four that never dock on their own),
-// so the desktop frame scrolls to it: the wide layout puts each row's symbol and its price on ONE
-// line, which is the room the phone layout was already wrapping — not a new concept.
-await page.setViewportSize({ width: 1280, height: 900 });
-await page.locator("#bench-watchlist").scrollIntoViewIfNeeded();
-await page.evaluate(() => window.scrollBy({ top: -24, left: 0 }));
-await shootWatchlist("watchlist-desktop");
-await page.unroute("**/api/trade/quote-stream*", pushSet);
-await page.unroute(isQuoteRead, perSymbolQuote);
+await shootClosingScenes({
+  page,
+  origin,
+  state: {
+    getChain: () => currentChain,
+    setChain: (value) => {
+      currentChain = value;
+    },
+    setPlays: (value) => {
+      currentPlays = value;
+    },
+    setDesk: (value) => {
+      currentDesk = value;
+    },
+    setWatchlist: (value) => {
+      currentWatchlist = value;
+    },
+  },
+});
 
 await close();

@@ -20,18 +20,18 @@ export type ActivityVisibility = "public" | "owner-only" | "admin-only";
 /** Did the action this event describes succeed? A ledger line about a *state* (a fill landed, an
  *  order reached a status) is always `"success"` — the record itself is the successful observation;
  *  a failed attempt would be a different event entirely (e.g. `order.rejected`), not this one. */
-export type ActivityOutcome = "success" | "failure" | "error";
+type ActivityOutcome = "success" | "failure" | "error";
 
 /** Who acted. `kind`/`email` are omitted rather than guessed when the source record doesn't carry
  *  them — a capsule names what it doesn't know instead of inventing it. */
-export interface ActivityActor {
+interface ActivityActor {
   readonly participantId: string;
   readonly kind?: "human" | "bot" | "system";
   readonly email?: string;
 }
 
 /** What the action was about. */
-export interface ActivityTarget {
+interface ActivityTarget {
   readonly kind: string;
   readonly id: string;
 }
