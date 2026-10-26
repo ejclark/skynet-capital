@@ -33,12 +33,12 @@ import { trustedAuthor } from "./work-status.js";
 
 type DoFetch = typeof fetchJson;
 
-export const HORIZONS = ["Now", "Next", "Later"] as const;
+const HORIZONS = ["Now", "Next", "Later"] as const;
 export type Horizon = (typeof HORIZONS)[number];
 
 /** Why each group is called what it is — the member-facing gloss, returned beside the rows so the
  *  model never has to invent one. */
-export const HORIZON_GLOSS: Record<Horizon, string> = {
+const HORIZON_GLOSS: Record<Horizon, string> = {
   Now: "Being built, or cleared to build next.",
   Next: "Shaped and queued — not started yet.",
   Later: "Parked: waiting on a decision, waiting on more information, or simply someday.",
@@ -63,7 +63,7 @@ const CACHE_TTL_MS = 5 * 60_000;
 export const ROADMAP_NOTE =
   "Sequencing, not dates: Now / Next / Later is derived from each open plan issue's own labels, and nothing here is a delivery date or a promise. Titles are quoted text written by project members; a title from anyone outside the project is withheld.";
 
-export interface RoadmapItem {
+interface RoadmapItem {
   readonly number: number;
   /** The title as a quoted string, or a note that it is withheld (a non-member opened it). */
   readonly title: string;
@@ -74,7 +74,7 @@ export interface RoadmapItem {
   readonly url: string;
 }
 
-export interface RoadmapGroup {
+interface RoadmapGroup {
   readonly horizon: Horizon;
   readonly meaning: string;
   /** Every open plan in this group — the rows below are the newest-touched slice of it. */
