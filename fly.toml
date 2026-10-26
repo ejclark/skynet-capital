@@ -106,14 +106,14 @@ kill_timeout = "10s"
   # A release only counts once the server answers. Without a check Fly called a machine healthy the
   # moment its process started, so a boot that crashed or hung after listen() reached smoke, not the
   # deploy; with one, `flyctl deploy` waits for it and FAILS the deploy when it never passes
-  # (the pipeline's smoke + rollback steps then own recovery). /pulse is the cheapest public route —
-  # in-memory aggregate JSON, no auth, no disk — until slice 6 adds /healthz. grace_period covers a
-  # cold boot's history rehydrate.
+  # (the pipeline's smoke + rollback steps then own recovery). /healthz (slice 6, #4618) answers
+  # only once boot has finished, touches no store and needs no auth — exactly "is this process up?".
+  # grace_period covers a cold boot's history rehydrate.
   [[http_service.checks]]
     grace_period = "30s"
     interval = "15s"
     method = "GET"
-    path = "/pulse"
+    path = "/healthz"
     timeout = "5s"
 
 # Persistent volume for the self-service participant store (a Fly volume attaches to a single
