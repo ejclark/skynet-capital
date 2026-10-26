@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-manufacturing-pmi-2026-11-02",
+  "kind": "macro-print",
+  "title": "S&P Global US Manufacturing PMI (final, Oct 2026 data) — 09:45 ET, 15 minutes before ISM Manufacturing",
+  "date": "2026-11-02",
+  "status": "estimate",
+  "source": "EST: derived from S&P Global's own stated rule, not read off the November listing. The rule — 'Manufacturing PMI: first working day' — was quoted verbatim from pmi.spglobal.com/Public/Release/ReleaseDates (HTTP 200) by the sp-global-manufacturing-pmi-2026-10-01 entry's 2026-09-09 fetch, and two realized releases of the series sit on its own dates: 'September 01 2026 13:45 UTC' and 'October 01 2026'. 2026-11-02 is the first working day of November (Nov 1 is a Sunday), the same day ISM's 10-01 report names for its own successor. The listing page returned HTTP 403 to this runner on 2026-10-26 (6th-7th pulse in a row), so the November row was NOT re-read. Clock: US daylight time ends Sunday 2026-11-01, so the slot is 09:45 EST = 14:45 UTC, not the 13:45 UTC of the EDT-season releases. Filed estimate: no confirmed-source prefix covers a private PMI compiler, and this lane does not self-confirm an event it discovered in-sweep. Checked 2026-10-26",
+  "impact": "low",
+  "symbols": [],
+  "notes": "READ IT, DO NOT TRADE IT. The final revises the 10-23 flash and carries no published consensus, so it is a revision, not a surprise; it lands 15 minutes before ISM Manufacturing, SLOOS-day construction spending and the other 10:00 ET releases on 11-02, and on the first working day of the month, so its window carries month-start flow (the sibling entry's method rule: never rank a first-working-day window against an all-sessions distribution). Nothing here licenses an entry. Discovered during the ism-manufacturing-2026-11-02 D-7 pulse (2026-10-26); the 10-22 pulse had named it as the same-rule candidate for a later pulse."
+}
