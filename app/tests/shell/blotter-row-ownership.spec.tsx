@@ -125,7 +125,9 @@ describe("BlotterRow — ownership gates the writes", () => {
     render(inTable(<BlotterRow position={option()} deskId="human-eric" canTrade />));
     openRow();
 
-    expect(screen.getAllByRole("button", { name: "Close this buy" })).toHaveLength(2);
+    // The oldest buy closes itself; the newer one's sell comes out of the oldest first (#5959).
+    expect(screen.getAllByRole("button", { name: "Close this buy" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /oldest buys first/ })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: /Roll/ })).toHaveLength(2);
   });
 });

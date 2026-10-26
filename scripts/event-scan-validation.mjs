@@ -12,6 +12,8 @@ export const KINDS = [
   "sector",
   "rates",
   "opex",
+  "ipo-listing",
+  "lockup-expiry",
   "geopolitical",
 ];
 export const TIERS = ["critical", "high", "medium", "low"];
@@ -245,7 +247,21 @@ function validateFileNames(files, knownIds, derivedIds, problems, warnings) {
  *    close-out, and `pendingForwardTests` reads the fragment of the id being closed out, so a live
  *    prediction registered against a retired id would simply never be scored by anyone. The lane
  *    retiring the id scores its own rows first — a test killed BY the fix is a kill, and the
- *    fragment has to say which kind it was. */
+ *    fragment has to say which kind it was.
+ *
+ *  ONE EXCEPTION TO SAME DATE — the filing-read kinds (#5912 slice 3). A listing and its lockup are
+ *  filed weeks before pricing from the public S-1, dated by base rates, and the 424B4 then dates
+ *  them: the estimate is retired by the dated entry, which is the same release on a different date
+ *  by construction. The typo guard moves from the date to the release's identity instead: same
+ *  kind and same symbols. Every other rule above still holds. */
+const REDATED_KINDS = new Set(["ipo-listing", "lockup-expiry"]);
+
+const redated = (e, survivor) =>
+  REDATED_KINDS.has(e.kind) &&
+  survivor?.kind === e.kind &&
+  e.symbols?.length > 0 &&
+  e.symbols.join(",") === survivor.symbols?.join(",");
+
 function validateSupersessions(superseded, canonicalIds, byId, forwardTestsDir, problems) {
   for (const e of superseded ?? []) {
     const where = `event "${e.id ?? "?"}"`;
@@ -266,7 +282,7 @@ function validateSupersessions(superseded, canonicalIds, byId, forwardTestsDir, 
       continue;
     }
     const survivor = byId.get(target);
-    if (survivor?.date !== e.date)
+    if (survivor?.date !== e.date && !redated(e, survivor))
       problems.push(
         `${where}: supersededBy "${target}" is dated ${survivor?.date} — a re-slug names the SAME ` +
           `release, so it must share this entry's date (${e.date})`,

@@ -348,3 +348,62 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-16
 <!-- probe-ref: {"symbols":{},"vix":20.41,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","ecb-quiet-period-start-2026-10-21","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","nahb-hmi-2026-10-19","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[{"url":"https://obr.uk/autumn-2026-forecast-date-announced/","status":"403","at":"2026-10-06"}]} -->
+
+## Outcome
+
+**Close-out (2026-10-22, D+2 — inside the `closeOutWithinDays: 6` window; FT-1 and FT-3 score-by dates
+already arrived, FT-2's is 2026-10-29).** Macro-print mode with `symbols: []` runs no
+`earnings-cycle` / `intraday-edges` instrument, so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) was performed and had
+no target. Every figure below was fetched **today** — the ONS `uklabourmarket/october2026` bulletin
+direct (two passes, one for figures and one for verbatim quotes), Yahoo daily and 5-minute bars for
+`NVDA`, `AVGO`, `MRVL`, `CRWV`, `GBPUSD=X` and `^VIX` — never recalled from the tape.
+
+**The release, from the primary (Jun–Aug 2026 unless stated).** *"Annual average regular earnings
+growth was 6.3% for the public sector and 3.0% for the private sector."* Whole-economy regular pay
+**3.7%**, total pay **3.7%** (from 3.9%); unemployment **4.7%** (−0.1pp on the quarter and year),
+employment **75.3%**, inactivity **20.9%**; vacancies **691,000** in Jul–Sep (*"a decrease of 21,000
+(2.9%)"*); payrolled employees **−92,000** y/y, August **+1,000** m/m, September flash **−66,000** y/y;
+claimant count **1.701 million** (September). The LFS line: *"LFS and APS derived outputs that are
+currently official statistics in development will move to official statistics."* Next release
+**2026-11-17** (matches `uk-labour-market-2026-11-17`, already canonical).
+
+| Registered test | Verdict | The number |
+|---|---|---|
+| FT-1 (private regular pay ≤3.2%; kill ≥3.4%) | **pass** | **3.0%** — the Bank's July Q3 path landing on schedule, not a re-acceleration; the ≥3.4% kill was 0.4pp away |
+| FT-2 (OBR EFO excludes this print) | **unscoreable** — settles 2026-10-28 | The EFO ships with the Budget; `obr.uk` is still 403 to this lane |
+| FT-3 (the register badge is stale) | **pass** | LFS outputs "official statistics in development", not accredited; the gov.uk "Accredited" badge was the stale half |
+
+**The stance's own kill switches.** *Wage kill* (≥3.4%): **not fired.** *Designation kill*: **not
+fired.** *Date kill*: **not fired** — it printed 2026-10-20 07:00 as scheduled. *Cut-off kill* (the
+November MPR's cut-off on or before 10-19) and the *placement* half: **open**, they settle on 11-05 and
+10-28. *Staleness kill*: fired and resolved on 2026-10-06.
+
+**The channel kill — neither fired nor cleared, and the tape cannot say which.** The kill was a tracked
+name moving >1% in 02:00–09:30 ET *in a way the tape attributes to the ONS release*. Moves from the last
+print before the release (2026-10-19 19:55 ET) to the 09:25 ET pre-open print: `NVDA` **−0.60%**,
+`AVGO` **−0.61%**, `MRVL` **−2.18%**, `CRWV` **−3.31%**. Two names clear 1%, but the first print after
+19:55 is **04:00 ET** (`MRVL` 232.00, −2.47%; `CRWV` 59.36, −3.08%), so the gap landed in a window with
+no tape at all that holds the 02:00 release and six other hours. From 04:00 to 09:25 they moved
+`MRVL` **+0.29%**, `CRWV` **−0.24%**. Sterling, the instrument the print actually touches, moved
+**+0.16%** across the release (1.3334 at 01:45 ET to 1.3355 at 02:30) on a print with unemployment
+below and pay at the Bank's path. `^VIX` closed 10-19 at **18.44**, 10-20 at **17.31**: a risk-off
+tape already in place since the 10-16 selloff, plus the same-day `meta-nm-privacy-penalty-ruling-2026-10-20`.
+**Read:** no evidence of a UK-labour price channel into these names, and none that rules one out — the
+stand-aside holds, the "no price channel" premise is not shown false, and a gap with no intraday tape
+is a limit on the test, not a finding about the market. Registered as no forward test; recorded here.
+
+**What this close-out did not establish.** The July MPR's 2.8%/~3.0% Q2/Q3 wage path remains
+search-relayed (FT-1's threshold rested on it; the pass does not depend on it, since 3.0% clears ≤3.2%
+by any baseline). No October consensus was ever found, so "in line" is against the Bank's path, not a
+survey. The sibling's `FT-uk-labour-market-2026-09-15-3` question — whether the badge moved — has the
+same answer as FT-3 here and should be scored from it.
+
+**Loop census (sense · decide · act · verify · remember).** The step a person would still do is
+**sense** for the channel kill: no tool returns overnight (00:00–04:00 ET) equity tape, so the one
+test written against the 02:00 ET minute could not be scored mechanically. A forward test keyed to a
+pre-market window needs an instrument that has tape in that window — or a registration that names a
+regular-session window instead.
+
+**Last assessed:** 2026-10-22
+<!-- probe-ref: {"symbols":{},"vix":18.62,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","ecb-quiet-period-start-2026-10-21","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","nahb-hmi-2026-10-19","pending-home-sales-2026-10-20","spcx-lockup-release-2026-10-22","treasury-20y-bond-2026-10-21","treasury-5y-tips-2026-10-22","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[{"url":"https://obr.uk/autumn-2026-forecast-date-announced/","status":"403","at":"2026-10-06"}]} -->

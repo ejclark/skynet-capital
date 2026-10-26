@@ -71,6 +71,14 @@ export const SEND_AS_IS = /^(send|send it|yes|ok|okay|go|file it|do it|sure|yep|
 export const NEVER_MIND =
   /^(never ?mind|cancel|drop it|forget it|no|nope|don'?t( file it)?|scrap it)[.!]?$/i;
 
+/** A 401 (expired or revoked token) or 403 (no write permission) fails identically on retry, so
+ *  say what's wrong and where it's fixed (the owner's Settings → GitHub access) instead. */
+export function filingFailedLine(error: string): string {
+  return /\b40[13]\b/.test(error)
+    ? `Moneypenny · i can't file right now — my GitHub access has expired or lost permission. your draft is saved: an owner renews it in Settings → GitHub access, then say "send".`
+    : `Moneypenny · i couldn't file that just now (${error}) — say "send" again in a moment and i'll retry.`;
+}
+
 export function createFilingLane(ctx: FilingContext) {
   /** File through the one door that files, then report the desk's state. */
   const file = async (draft: Filing): Promise<void> => {
@@ -88,9 +96,7 @@ export function createFilingLane(ctx: FilingContext) {
       // The scripted flow resets so the next message is a message again; a parked draft stays
       // parked in the store, so "send" retries it.
       ctx.save({ flow: "idle", note: "", coach: [] });
-      await ctx.say([
-        `Moneypenny · i couldn't file that just now (${answer.error}) — say "send" again in a moment and i'll retry.`,
-      ]);
+      await ctx.say([filingFailedLine(answer.error)]);
       return;
     }
     ctx.save({ flow: "idle", note: "", coach: [] });

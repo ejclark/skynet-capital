@@ -14,6 +14,7 @@ import { useComparePlace } from "../shell/compare-place";
 import { DeskHoverName } from "../shell/desk-hovercard";
 import { PageFrame } from "../shell/frame";
 import { HeadToHead } from "../shell/head-to-head";
+import { RankFlow } from "../shell/rank-flow";
 import { KindChip } from "../ui";
 
 /**
@@ -220,6 +221,7 @@ function FieldLadder({
             <i style={{ width: `${row.bar}%` }} />
           </span>
           <span className="rank-val num">{row.value}</span>
+          <RankFlow flow={row.flow} />
           <ComparePill row={row} a={a} b={b} armedName={armedName} onTap={onTap} />
         </li>
       ))}

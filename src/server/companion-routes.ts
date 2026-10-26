@@ -11,6 +11,7 @@ import { describePage, pageSymbol } from "../companion/companion-page.js";
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
+import { companionConvictionsFor } from "./companion-convictions-port.js";
 import { recordFirstMessageSafely } from "./companion-message-log.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -177,6 +178,7 @@ async function serveChat(
       messages,
       ...(participantId ? { participantId } : {}),
       ...(context ? { context } : {}),
+      convictions: companionConvictionsFor(config, session),
     },
     {
       onText: (chunk) => {
@@ -193,6 +195,10 @@ async function serveChat(
       // A drafted filing for the rail to hold — the member's reply there is what files it.
       onHandoff: (draft) => {
         res.write(sseFrame(JSON.stringify(draft), "handoff", seq++));
+      },
+      // A drafted view's card (#5482 criterion 9) — the member's tap there is what saves it.
+      onConvictionDraft: (drafted) => {
+        res.write(sseFrame(JSON.stringify(drafted), "conviction", seq++));
       },
       budget: () => modelCallAllowed(session.email),
     },

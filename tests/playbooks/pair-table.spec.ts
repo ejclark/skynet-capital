@@ -7,8 +7,10 @@ import {
   pairFor,
   pairName,
   pairTable,
+  playbookName,
   STRATEGIES,
   statusLabel,
+  withPairNames,
 } from "../../src/playbooks/pair-table.js";
 import { findPlaybook, registeredPlaybooks } from "../../src/playbooks/registry.js";
 
@@ -108,7 +110,7 @@ describe("every row carries the evidence its status promises", () => {
     }
   });
 
-  it("names why a – pair cannot run", () => {
+  it("names why a ⊘ pair cannot run", () => {
     for (const { id, evidence } of rows("cant-run")) {
       expect(evidence.reason, id).toBeTruthy();
     }
@@ -173,7 +175,16 @@ describe("a status reads as a glyph plus a word (criterion 10)", () => {
     expect(labelOf("NVDA-CALL-SPREAD")).toBe("✓ researched, borrowed");
     expect(labelOf("G1-GOOG")).toBe("✓ researched");
     expect(labelOf("CRWV-WHEEL")).toBe("◆ conviction");
-    expect(labelOf("TACO-DJT")).toBe("– can't run");
+    expect(labelOf("TACO-DJT")).toBe("⊘ can't run");
+  });
+
+  it("never draws a status as a minus sign, which reads as 'minus one' before a count (#5093)", () => {
+    // The Store's fold counts rows glyph-first ("⊘ 1 can't run"), so a dash there said "– 1".
+    // ⊘ is the heartbeat's Can't fire: the same meaning, a rule that cannot trade here.
+    expect(EVIDENCE_STATUS["cant-run"].glyph).toBe("⊘");
+    for (const { glyph } of Object.values(EVIDENCE_STATUS)) {
+      expect(glyph).not.toMatch(/^[-–—−]$/);
+    }
   });
 });
 
@@ -202,6 +213,26 @@ describe("a pair is named by what it does, never by its id (criterion 14)", () =
     expect(nameOf("CRWV-WHEEL")).toBe("the wheel on CRWV");
     expect(nameOf("S1-NVDA")).toBe("the pre-print run-up on NVDA");
     expect(nameOf("SAURON")).toBe("Sauron's own rules");
+  });
+
+  it("names an id the table does not know by the id itself, never a guess", () => {
+    expect(playbookName("NVDA-CALL-SPREAD")).toBe("the call spread on NVDA");
+    expect(playbookName("U-eric-my-play")).toBe("U-eric-my-play");
+  });
+
+  it("names the ids in a reason the bot wrote, capitalized where one opens a sentence", () => {
+    expect(withPairNames("S1-NVDA window open (standard): buy the run-up")).toBe(
+      "The pre-print run-up on NVDA window open (standard): buy the run-up",
+    );
+    expect(withPairNames("refused — CRWV-WHEEL owns CRWV. SAURON yields it")).toBe(
+      "refused — the wheel on CRWV owns CRWV. Sauron's own rules yields it",
+    );
+  });
+
+  it("matches whole ids only, longest first, and leaves a bare ticker alone", () => {
+    expect(withPairNames("CRWV-LONG-CALL, not CRWV-WHEEL2 or NVDA")).toBe(
+      "The long call on CRWV, not CRWV-WHEEL2 or NVDA",
+    );
   });
 });
 

@@ -53,9 +53,8 @@ and the first button, never the rail. They skip anything that names a concept th
 0. `/login` — the sign-in page: the scene behind it, one button per provider, "Continue with
    Google" first (the server serves it the same with or without a session). **WHEN an invited
    visitor opens the sign-in page, the app shall show a way to sign in at every width.** Judge:
-   can this reader tell how to get in, in ten seconds? _(Added 2026-09-29, #3816 slice 9 — the
-   first page this member ever saw; a spectacle surface, so the phone frame checks its honest
-   fallback, not a curated layout.)_
+   can this reader tell how to get in, in ten seconds? _(The first page this member ever saw; a
+   spectacle surface, so the phone frame checks its honest fallback, not a curated layout.)_
 1. `/app/` — the league table, ranked rows; the topbar's Profile tab is one tap away and lands on
    the Profile page, which opens on the connect guide for a member with no account. **WHEN a
    signed-in member with no linked account opens the app, the app shall keep a one-tap way into
@@ -76,11 +75,10 @@ and the first button, never the rail. They skip anything that names a concept th
 
 3b. `/app/accounts?section=milestones&chapter=trading` — the trading chapter under the same LOCKED
    card. **WHEN a member with no linked account opens the trading chapter, the card and the ladder
-   list shall agree on whether the next rung is locked.** _Fixed — #5731: the list said "Training
-   wheels off — … nothing is locked" under a card reading LOCKED (the server serves wheels off with
-   no account); it now says "Locked — link an account first, then it unlocks the moment you say
-   hello to Moneypenny." and offers Trade on no rung._ Judge: does this reader know whether trading
-   is open, in one sentence?
+   list shall agree on whether the next rung is locked.** _Fixed — #5731: with no account the list
+   says "Locked — link an account first, then it unlocks the moment you say hello to Moneypenny.",
+   never wheels-off's "nothing is locked" (the server serves wheels off with no account), and offers
+   Trade on no rung._ Judge: does this reader know whether trading is open, in one sentence?
 
 4. `/app/accounts?section=milestones&chapter=onboarding` — Welcome to the league: connect Alpaca, say hello, first trade. **WHEN the
    member opens onboarding, the app shall show the checklist with the first undone step first.**
@@ -90,7 +88,7 @@ and the first button, never the rail. They skip anything that names a concept th
    "Talk to Moneypenny", that opens her rail — where hello is said (goal 2); offline, a line that
    feedback is not switched on yet. **WHEN a member with no linked account opens Profile →
    Feedback, the app shall offer one control that opens Moneypenny.** Judge: can this reader tell
-   how to say hello, in ten seconds? _(Added 2026-09-29, #3816 slice 9.)_
+   how to say hello, in ten seconds?
 
 5. `/app/trade` — "No accounts are linked to your session yet — connect one in Onboarding." — the
    words are the link to the connect guide. **WHEN a member with no linked account opens Trade, the

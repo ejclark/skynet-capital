@@ -1,0 +1,11 @@
+{
+  "id": "inio-lockup-expiry-2026-11-30",
+  "kind": "lockup-expiry",
+  "title": "INIO IPO lockup ends — Innio N.V., 180 days after its 2026-06-03 prospectus",
+  "date": "2026-11-30",
+  "status": "confirmed",
+  "source": "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/2109150/000119312526256992/liberty_-_424b4.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-06-03 (read from its cover); 180 days after it is 2026-11-30. Lock-up clause: \"Substantially all of our existing shareholders, including the selling shareholder, are subject to lock-up agreements with the underwriters of this offering that restrict the shareholders’ ability to transfer common shares for 180 days from the date of this prospectus, subject to certain exceptions.\"",
+  "impact": "medium",
+  "symbols": ["INIO"],
+  "notes": "$2.4B offering. Insiders may sell from the next session; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then."
+}

@@ -12,7 +12,7 @@
   {
     "id": "profile-overview",
     "name": "Profile: Overview",
-    "purpose": "Your account at a glance: what it's worth, where the money sits, the league, your council line and every position.",
+    "purpose": "Your account at a glance: what it's worth, where the money sits, the league and every position.",
     "where": "Profile tab",
     "route": "/app/accounts?account=eric",
     "world": "profile-today",
@@ -126,15 +126,6 @@
     "purpose": "Every trade, filing and milestone across the league, newest first, with a filter.",
     "where": "Activity tab",
     "route": "/app/activity",
-    "world": "profile-today",
-    "viewer": "eric"
-  },
-  {
-    "id": "council",
-    "name": "Activity: The Council",
-    "purpose": "Each member's one line for the week, with replies under each line.",
-    "where": "Activity tab",
-    "route": "/app/activity?section=council",
     "world": "profile-today",
     "viewer": "eric"
   },

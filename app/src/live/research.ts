@@ -53,7 +53,7 @@ export interface ResearchEvent {
   readonly id: string;
   readonly title: string;
   readonly date: string;
-  /** macro-print · earnings · opex · rates · sector · geopolitical · product-launch */
+  /** macro-print · earnings · opex · rates · sector · geopolitical · product-launch · ipo-listing · lockup-expiry */
   readonly kind?: string;
   /** critical · high · medium · low */
   readonly impact?: string;

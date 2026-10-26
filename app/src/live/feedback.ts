@@ -79,11 +79,28 @@ export const submitFeedbackRequest = (input: {
     ...(input.images?.length ? { images: JSON.stringify(input.images) } : { images: undefined }),
   });
 
+/** Mirrors `FollowupOutcome` in src/server/feedback-followup.ts (the shell never imports the
+ *  server tree). */
+export type FollowupOutcome =
+  | "restarted"
+  | "backlog"
+  | "held"
+  | "building"
+  | "blocked"
+  | "closed"
+  | "stranded"
+  | "unchanged";
+
 export const followupRequest = (input: {
   readonly issueNumber: number;
   readonly details: string;
-}): Promise<{ readonly ok: boolean; readonly error?: string }> =>
-  postJson("/api/feedback/followup", input);
+}): Promise<{
+  readonly ok: boolean;
+  readonly error?: string;
+  /** What the follow-up did to the build (#5848) — feedback-followup.ts decides it off the issue
+   *  as it stands, with the claim's own pull rule. */
+  readonly outcome?: FollowupOutcome;
+}> => postJson("/api/feedback/followup", input);
 
 export interface CoachMessage {
   readonly role: "user" | "assistant";

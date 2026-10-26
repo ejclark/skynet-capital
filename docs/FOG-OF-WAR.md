@@ -30,7 +30,7 @@ _Caption — the five questions, in order; every fog shipped here should be trac
 
 ## The criteria, spelled out
 
-The articulated ones are Eric's; the rest are what the three shipped or planned instances have in
+The articulated ones are Eric's; the rest are what the instances in the ledger below have in
 common and nobody had written down.
 
 1. **Fog what accelerates risk, never what explains it.** The day lens is fogged; every call's *why*
@@ -42,9 +42,9 @@ common and nobody had written down.
    (`progression.ts`: "the order id IS the evidence") — never a checkbox, a timer, a quiz alone, or
    money. A fog that money lifts is a paywall wearing a costume.
 4. **The fog must cost the novice ~nothing.** Check before fogging: what does the hidden content say?
-   The research Today row reads "stand aside" on 268 of 272 ledgers — withholding it from a novice
-   loses them nothing they could act on safely. If the hidden content is what a novice needs to be
-   safe, it is a *default*, not a fog candidate.
+   The research Today row reads "stand aside" on 703 of 714 ledgers (2026-10-19) — withholding it
+   from a novice loses them nothing they could act on safely. If the hidden content is what a
+   novice needs to be safe, it is a *default*, not a fog candidate.
 5. **The gate names a rung that exists in the catalog.** A fog is honest only when its unlock is
    earnable. Where the rung is not built yet, the fog says so in words —
    "a rung nobody can fill yet stays locked, honestly" (#1671) — and never implies progress is

@@ -34,19 +34,26 @@ const DISPATCH_BUDGET_FILE = join(process.cwd(), "research-dispatch-budget.json"
 
 const IMPACT_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
 
-/** Close-outs first, then impact, then proximity, then id.
+/** Close-outs first, then first coverage, then impact, then proximity, then id.
  *
  *  Close-outs (`event-passed-unscored`) outrank everything regardless of impact because they are
  *  the one class the cap could destroy rather than delay: assessment-cadence.json's
  *  `closeOutWithinDays: 6` ages a passed event out PERMANENTLY, so a low-impact close-out starved
- *  behind a hundred criticals loses its outcome record for good. Everything else is only ever
- *  deferred. Inside that group `daysUntil` is negative, so ascending order puts the most overdue
- *  — the closest to expiring — first.
+ *  behind a hundred criticals loses its outcome record for good. Inside that group `daysUntil` is
+ *  negative, so ascending order puts the most overdue — the closest to expiring — first.
  *
- *  Known limitation, accepted for now: there is no aging term, so while the due pool is deep the
- *  low-impact tail waits behind tiers that reassess every 1–3 days. That is a starvation of
- *  DEFERRAL, not of data (nothing but close-outs expires), and the horizon prune that drains the
- *  pool is the next slice of #2946. Revisit here if the tail is still starved after it lands. */
+ *  First coverage (`never-assessed`) comes next, soonest first, because it is the OTHER class the
+ *  cap can destroy: once its date passes with no ledger, event-scan re-lists it as a close-out,
+ *  and a pre-event call cannot be registered after the tape has printed. A pulse only refreshes a
+ *  stance that already exists; this row has none. The earlier note here claimed "nothing but
+ *  close-outs expires" and accepted the starvation on that premise — #5979 disproved it:
+ *  `intc-fq3-2026-results-2026-10-29` (medium, never-assessed) sat at rank 41 of 92 behind a cap of
+ *  6 for three days, while the same critical/high pulses refilled the top slots on every tick.
+ *  The class cannot flood the lane: each row leaves `--due` after one session writes its ledger.
+ *
+ *  Known limitation, still accepted: there is no aging term among PULSES, so while the due pool is
+ *  deep the low-impact tail waits behind tiers that reassess every 1–3 days. Pulses only defer —
+ *  the stance they refresh is already on file. */
 const sortKey = (e) => {
   const impact = IMPACT_RANK[e.impact] ?? 99;
   const days = e.daysUntil ?? 0;
@@ -60,7 +67,10 @@ const sortKey = (e) => {
   // able to evict a close-out, which is the one class the cap destroys rather than delays. Its
   // `daysUntil` is negative (the event has passed), so inside its impact tier the longest-orphaned
   // row is served first — the same earliest-first instinct, for free.
-  return e.reason === "event-passed-unscored" ? [0, days, impact] : [1, impact, days];
+  if (e.reason === "event-passed-unscored") return [0, days, impact];
+  // First coverage expires at the print itself, so it sorts by slack too: soonest first.
+  if (e.reason === "never-assessed") return [1, days, impact];
+  return [2, impact, days];
 };
 
 const compareDispatchPriority = (a, b) => {
@@ -308,7 +318,7 @@ export function dueForResearch(dueEvents = [], openPrHeads = [], cap = researchC
       `::notice::dispatch ceiling — ${dispatched.length} of ${eligible.length} eligible event(s) ` +
         `dispatched this tick (cap ${cap}, the work spigot's number for the dial's position — ` +
         `work-mode.json / research-dispatch-budget.json); ${deferred} deferred to later ticks, ` +
-        `close-outs then highest impact then soonest. Next in line: ${next.id} (${next.impact}).`,
+        `close-outs, then first coverage, then highest impact then soonest. Next in line: ${next.id} (${next.impact}).`,
     );
   }
   return dispatched;

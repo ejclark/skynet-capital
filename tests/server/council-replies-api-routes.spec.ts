@@ -6,10 +6,9 @@ import type { CouncilReply } from "../../src/server/council-replies-store.js";
 import { opaqueMemberId } from "../../src/server/feedback-issue.js";
 
 /**
- * `/api/council/replies` (#5097, #2224 option A) — the HTTP layer: unwired answers
- * `{enabled:false}`, the session's own email is the only identity a reply is ever attributed to,
- * a signed-out post is refused, the body is bounded, a burst is throttled, and nothing here
- * reaches the network (no AI, no GitHub — the same posture as comments on a filing).
+ * `/api/council/replies` (#5097, #2224 option A) — the HTTP layer since the Council retired
+ * (#5992): unwired answers `{enabled:false}`, the stored threads still read back pseudonymous, no
+ * write of any kind reaches the store, and nothing here reaches the network.
  */
 
 function fakeRes() {
@@ -39,8 +38,8 @@ const PATH = "/api/council/replies";
 const LINE_AT = "2026-10-05T09:00:00.000Z";
 const lineWriter = opaqueMemberId("writer@example.com");
 
-function depsWith() {
-  const replies: Record<string, CouncilReply[]> = {};
+function depsWith(seed: Record<string, CouncilReply[]> = {}) {
+  const replies: Record<string, CouncilReply[]> = { ...seed };
   let n = 0;
   const deps: CouncilRepliesDeps = {
     load: () => ({ weeks: { "2026-W41": replies } }),
@@ -92,126 +91,53 @@ describe("serveCouncilRepliesApi", () => {
     expect(json()).toEqual({ enabled: false });
   });
 
-  it("stores a reply under the line as the session's member, and reads it back", async () => {
-    const { deps, replies } = depsWith();
-    const { session, id } = freshMember();
-    const post = fakeRes();
-    await serveCouncilRepliesApi(
-      postReq({ lineId: lineWriter, lineAt: LINE_AT, text: " The ruling isn't until November " }),
-      post.res,
-      PATH,
-      deps,
-      session,
-    );
-    expect(post.json()).toEqual({ ok: true });
-    expect(replies[lineWriter]?.[0]).toMatchObject({
-      authorId: id,
-      text: "The ruling isn't until November",
-      lineAt: LINE_AT,
+  it("reads back the stored threads, pseudonymous", async () => {
+    const { deps } = depsWith({
+      [lineWriter]: [
+        {
+          id: "r1",
+          authorId: "someone",
+          text: "The ruling isn't until November",
+          at: LINE_AT,
+          lineAt: LINE_AT,
+        },
+      ],
     });
-
     const read = fakeRes();
-    await serveCouncilRepliesApi(getReq(), read.res, PATH, deps, session);
+    await serveCouncilRepliesApi(getReq(), read.res, PATH, deps, freshMember().session);
     const view = read.json();
     expect(view.enabled).toBe(true);
     expect(view.week).toBe("2026-W41");
-    expect(view.replies[lineWriter]).toEqual([
-      {
-        id: "r1",
-        text: "The ruling isn't until November",
-        at: "2026-10-07T12:00:00.000Z",
-        mine: true,
-        byLineAuthor: false,
-        earlierLine: false,
-      },
-    ]);
-    expect(JSON.stringify(view)).not.toContain(id);
+    expect(view.replies[lineWriter]).toHaveLength(1);
+    expect(JSON.stringify(view)).not.toContain("someone");
     expect(fetches).toBe(0);
   });
 
-  it("never takes the author from the body", async () => {
-    const { deps, replies } = depsWith();
-    const { session, id } = freshMember();
-    await serveCouncilRepliesApi(
-      postReq({ lineId: lineWriter, lineAt: LINE_AT, text: "hi", authorId: "forged" }),
-      fakeRes().res,
-      PATH,
-      deps,
-      session,
-    );
-    expect(replies[lineWriter]?.[0]?.authorId).toBe(id);
-  });
-
-  it("refuses a signed-out post and a malformed body", async () => {
-    const { deps, replies } = depsWith();
-    const signedOut = fakeRes();
-    await serveCouncilRepliesApi(
-      postReq({ lineId: lineWriter, lineAt: LINE_AT, text: "hi" }),
-      signedOut.res,
-      PATH,
-      deps,
-      undefined,
-    );
-    expect(signedOut.out.status).toBe(403);
-    for (const body of [
-      { lineAt: LINE_AT, text: "hi" },
-      { lineId: 7, lineAt: LINE_AT, text: "hi" },
-      { lineId: lineWriter, text: "hi" },
-      { lineId: lineWriter, lineAt: LINE_AT },
-      { lineId: "x".repeat(101), lineAt: LINE_AT, text: "hi" },
-    ]) {
-      const { res, out } = fakeRes();
-      await serveCouncilRepliesApi(postReq(body), res, PATH, deps, freshMember().session);
-      expect(out.status).toBe(400);
-    }
-    expect(replies).toEqual({});
-  });
-
-  it("lets a member delete only their own reply", async () => {
-    const { deps, replies } = depsWith();
+  // #5992 — retired with the Council: a new reply and a take-back both answer 410, the store
+  // untouched, whether or not it is wired.
+  it("refuses every write with 410 and leaves the stored replies in place", async () => {
+    const stored: CouncilReply = {
+      id: "r1",
+      authorId: "someone",
+      text: "kept",
+      at: LINE_AT,
+      lineAt: LINE_AT,
+    };
+    const { deps, replies } = depsWith({ [lineWriter]: [stored] });
     const author = freshMember();
-    await serveCouncilRepliesApi(
-      postReq({ lineId: lineWriter, lineAt: LINE_AT, text: "mine" }),
-      fakeRes().res,
-      PATH,
-      deps,
-      author.session,
-    );
-    await serveCouncilRepliesApi(
-      postReq({ lineId: lineWriter, remove: "r1" }),
-      fakeRes().res,
-      PATH,
-      deps,
-      freshMember().session,
-    );
-    expect(replies[lineWriter]).toHaveLength(1);
-    const removed = fakeRes();
-    await serveCouncilRepliesApi(
-      postReq({ lineId: lineWriter, remove: "r1" }),
-      removed.res,
-      PATH,
-      deps,
-      author.session,
-    );
-    expect(removed.json()).toEqual({ ok: true });
-    expect(replies[lineWriter]).toEqual([]);
-  });
-
-  it("throttles a burst from one member", async () => {
-    const { deps } = depsWith();
-    const { session } = freshMember();
-    const statuses: (number | undefined)[] = [];
-    for (let i = 0; i < 6; i += 1) {
+    for (const [body, session] of [
+      [{ lineId: lineWriter, lineAt: LINE_AT, text: "hi" }, author.session],
+      [{ lineId: lineWriter, remove: "r1" }, author.session],
+      [{ lineId: lineWriter, lineAt: LINE_AT, text: "hi" }, undefined],
+    ] as const) {
       const { res, out } = fakeRes();
-      await serveCouncilRepliesApi(
-        postReq({ lineId: lineWriter, lineAt: LINE_AT, text: `n${i}` }),
-        res,
-        PATH,
-        deps,
-        session,
-      );
-      statuses.push(out.status);
+      expect(await serveCouncilRepliesApi(postReq(body), res, PATH, deps, session)).toBe(true);
+      expect(out.status).toBe(410);
     }
-    expect(statuses.at(-1)).toBe(429);
+    const unwired = fakeRes();
+    await serveCouncilRepliesApi(postReq({}), unwired.res, PATH, undefined, author.session);
+    expect(unwired.out.status).toBe(410);
+    expect(replies[lineWriter]).toEqual([stored]);
+    expect(fetches).toBe(0);
   });
 });

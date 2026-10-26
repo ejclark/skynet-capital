@@ -54,6 +54,9 @@ before it does.**
    2027; the S-1's early-release clause decides the exact date). If a double-digit unlock-driven
    flush prints, enter *after* supply clears on a pre-registered mechanical rule, small,
    pre-stated exit. Acceptable failure: strategic holders don't sell and it never triggers.
+   _2026-10-20, [`ipo-lockup-expiry.md`](ipo-lockup-expiry.md):_ across 355 unlocks, 2019–2026, a
+   double-digit flush into D+3 was followed by −1.5% vs sector over four weeks. No rebound to buy,
+   so this survivor now needs its own evidence before 2027.
 2. **GOOG S-1-disclosure event watch** (survived in two lenses independently): the public S-1
    must quantify related-party compute arrangements — the first audited external look at TPU
    economics. Activate only if the disclosure is material and unredacted (redaction is the base
@@ -81,6 +84,10 @@ issue, and the late-Oct hyperscaler FY27 capex guidance (the master tripwire).
 - **Late Aug–mid Sep** — public S-1 flip on EDGAR (must precede a roadshow by 15+ days; imminent
   if WSJ timing holds). *The* information event: read commitments schedule, related-party terms,
   lockup clause (early-release?), primary/secondary split, audited P&L vs the run-rate claims.
+  _2026-10-22, #5912 slice 3:_ still no public S-1 on EDGAR. When it lands, `npm run
+  research:lockups` files the listing and its lockup as `estimate` calendar entries, even with
+  the size left blank (Anthropic is on its `--watch` list); pricing is expected about 26 days
+  after that first public filing, the median for $500M+ IPOs since 2021.
 - **Sep** — price range vs $965B: below = down-round distinguisher fires (and arms a
   downward-re-mark risk note on AMZN's $190B carry).
 - **Late Sep–Oct** — pricing + first trade. **No position on day 1** — the whole first session is

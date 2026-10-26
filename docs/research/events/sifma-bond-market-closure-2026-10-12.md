@@ -482,7 +482,19 @@ would end the re-dispatch that exists to catch it. The scanner re-opens it as `f
 **77.98** on 10-09; the 1.5× line is measured against the median |close-to-close| of the 20 sessions
 ending 2026-10-12.
 
-Forward tests: `FT-sifma-bond-market-closure-2026-10-12-1` **pass**, `-2` **kill**, `-3` open, all in
+**FT-3 scored (2026-10-20, `forward-test-due`).** TLT's 2026-10-13 session — the first after the 72-hour
+closure gap — closed **78.37** against 78.05 on 10-12: **+0.410%**, a |move| of **1.06×** the median
+|close-to-close| (0.387%) of the 20 sessions ending 2026-10-12 (2026-09-15 → 2026-10-12), under the 1.5× line
+(0.580%). Daily bars re-pulled fresh from the Yahoo chart endpoint with the instrument cache busted; the
+adjusted-close series gives 1.04×. **FT-3 pass** — the cash-bond closure did not defer price discovery into
+the next session. The evidence was never the hit rate (base rate ≈ 67%) but the inverted Columbus-vs-Veterans
+ordering, which one ordinary day neither strengthens nor weakens; the sibling
+[11-11 ledger](sifma-bond-market-closure-2026-11-11.md) is free to read it as one more Columbus observation.
+For the record, the 10-12 TLT volume now reads 15.44M (15.35M at close-out, a 0.6% consolidation revision),
+so the FT-2 ratio of 0.311× is unchanged to three places. The assessment, stance and other verdicts above are
+untouched.
+
+Forward tests: `FT-sifma-bond-market-closure-2026-10-12-1` **pass**, `-2` **kill**, `-3` **pass** (scored 2026-10-20, above), all in
 [`forward-tests/sifma-bond-market-closure-2026-10-12.md`](../forward-tests/sifma-bond-market-closure-2026-10-12.md).
 The `-2` kill moves to the [sweep doc's kill list](../multi-symbol-sweep.md). The annual fixture continues at
 [sifma-bond-holiday-close-2027-10-11](sifma-bond-holiday-close-2027-10-11.md), and the sibling
@@ -491,3 +503,6 @@ its own FT-1 (TLT below 0.80×) scores.
 
 **Last assessed:** 2026-10-13
 <!-- probe-ref: {"symbols":{},"vix":15.21,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-20
+<!-- probe-ref: {"symbols":{},"vix":18.44,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->

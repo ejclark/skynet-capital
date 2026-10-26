@@ -23,6 +23,8 @@ import {
   publishingFeedback,
   publishingMergedPullRequests,
 } from "../observatory/activity-publishing.js";
+import { FLOWS_SHOWN_FROM } from "../observatory/capital-flow.js";
+import { CapitalFlowLedger } from "../observatory/capital-flow-ledger.js";
 import { createBootCapitalFlowStore } from "../observatory/capital-flow-store.js";
 import { CapitalFlowWatch, restartBaseline } from "../observatory/capital-flow-watch.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
@@ -47,6 +49,7 @@ import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import type { DashboardServerConfig } from "../server/dashboard-server-config.js";
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
+import { bootGithubToken } from "../server/github-token.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
@@ -73,6 +76,8 @@ const PORT = resolvePort(process.env);
 
 async function main(): Promise<void> {
   warnUnpinnedVolumes(process.env);
+  // Before anything resolves a GitHub-backed feature: a token saved from Settings beats the host secret.
+  const githubToken = bootGithubToken(process.env);
   const dataSource = resolveDataSource(process.env);
   // E2E DETERMINISM (#4683): `freezePage` pins the browser's clock, but the Council computes its
   // week label from the server's own `new Date()`, so every baseline carrying it changed on
@@ -132,13 +137,21 @@ async function main(): Promise<void> {
     })
     .catch((e) => console.error("[activity] boot reconcile failed:", e));
 
-  // Shadow run of the capital-flow detector (#4563): a paper-balance top-up is recorded, not
-  // rendered, until a week of lines tunes the tolerance. Fire-and-forget, like every sample write.
-  // Seeded from before the restart and gated on the reconcile, so the boot samples are compared
-  // against the last ones from before it once the broker window's fills are in the journal.
+  // The capital-flow detector (#4563): a paper-balance top-up is recorded as an inferred flow, and
+  // the ledger can mark that member's standings row and equity curve (slice 2) — but only flows
+  // from FLOWS_SHOWN_FROM on, which holds every mark back until a week of shadow lines tunes the
+  // tolerance. Fire-and-forget, like every sample write. Seeded from before the restart and gated
+  // on the reconcile, so the boot samples are compared against the last ones from before it once
+  // the broker window's fills are in the journal. A ledger that cannot be read at boot marks
+  // nothing it has not seen this run.
+  const flowLedger = new CapitalFlowLedger(
+    createBootCapitalFlowStore(process.env, dataSource.mode),
+    { shownFrom: FLOWS_SHOWN_FROM },
+  );
+  await flowLedger.load().catch((e) => console.error("[flows] ledger load failed:", e));
   const flowWatch = new CapitalFlowWatch({
     activity,
-    flows: createBootCapitalFlowStore(process.env, dataSource.mode),
+    flows: flowLedger,
     baseline: beforeBoot,
     ready: reconciled,
   });
@@ -251,7 +264,7 @@ async function main(): Promise<void> {
   const { opsStatus, insightsBridge } = wireOpsStatus(
     process.env,
     botControls,
-    { hub, activity, authConfigured: Boolean(auth) },
+    { hub, activity, authConfigured: Boolean(auth), subscriptions },
     credentialsBridge,
   );
   // Broker slow-sync + per-order audit log + desk trading (dashboard-desk-wiring.ts).
@@ -337,6 +350,7 @@ async function main(): Promise<void> {
     logLine: (line) => console.log(line),
     // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
+    capitalFlows: flowLedger,
     password,
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
@@ -355,6 +369,7 @@ async function main(): Promise<void> {
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
+          githubToken: githubToken.deps((email: string) => owners.has(email)),
           // The account-link table. Reads the live board so a just-added account is
           // linkable immediately, and refuses any address that can't sign in — a link to
           // somebody outside the gate is a link nobody could ever use.

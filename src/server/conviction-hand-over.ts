@@ -1,11 +1,22 @@
-import { MAX_STEERED_ACCOUNTS, type WiredConviction } from "../autonomous/convictions-wire.js";
+import {
+  MAX_STEERED_ACCOUNTS,
+  MAX_WIRED_CONVICTIONS,
+  type WiredConviction,
+} from "../autonomous/convictions-wire.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { SEEDED_CONVICTIONS } from "../playbooks/conviction-seeds.js";
 import { CONVICTIONS, ConvictionStore } from "../playbooks/conviction-store.js";
-import { findPair, pairName } from "../playbooks/pair-table.js";
-import type { MemberPointers } from "../subscriptions/conviction-pointer.js";
+import { playbookName } from "../playbooks/pair-table.js";
+import type { MemberPointers, PointerMove } from "../subscriptions/conviction-pointer.js";
+import { isPairView } from "../subscriptions/pair-conviction.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import {
+  convictionNames,
+  POINTER_RULE_AUTHOR,
+  recordPointerMoves,
+} from "./conviction-pointer-changes.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
+import type { SettingsChangeLog } from "./settings-change-log.js";
 import { pointConvictions } from "./subscription-seed-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
 
@@ -23,9 +34,10 @@ import type { SubscriptionStore } from "./subscription-store.js";
  * seeded records (a playbook's bounds may have moved since the draft was kept), every pair it steers
  * still run by one of their bots (a view narrows a pair; it never subscribes one), and no other view
  * of theirs already steering one of those pairs on those bots — two views on one pair would leave
- * which one narrows it to chance. A seeded view on the pair is not a clash: the hand-over takes over
- * from it, said on the row before the tap (`takesOver`), and taking the member's view back returns
- * the pair to it.
+ * which one narrows it to chance. A seeded view on the pair is not a clash, and neither is the
+ * owner's own view stated on that pair (#5482 contract piece 3, `pair-conviction.ts`): the hand-over
+ * takes over from it, said on the row before the tap (`takesOver`), and taking the member's view
+ * back returns the pair to it.
  *
  * THE POINTERS are one rule (`conviction-pointer.ts`), applied here at once and again by every
  * controls poll (`pollSeedsFromEnv`), so a write that fails halfway is finished on the next poll.
@@ -34,10 +46,7 @@ import type { SubscriptionStore } from "./subscription-store.js";
  * still picks every entry and exit, and nothing here places an order.
  */
 
-const nameOf = (pairId: string): string => {
-  const pair = findPair(pairId);
-  return pair ? pairName(pair) : pairId;
-};
+const nameOf = (pairId: string): string => playbookName(pairId);
 
 const titleOf = (conviction: Conviction): string => conviction.title ?? conviction.id;
 
@@ -73,8 +82,13 @@ export function handOverPlan(
     ...(accounts.length > MAX_STEERED_ACCOUNTS
       ? [`a view can steer up to ${MAX_STEERED_ACCOUNTS} of your bots at once`]
       : []),
+    // Past the wire's bound the bots refuse every member's views at once, so one more is refused here.
+    ...(!handedOver.some((w) => w.conviction.id === conviction.id) &&
+    handedOver.length >= MAX_WIRED_CONVICTIONS
+      ? ["the bots already hold as many views as they can read; try again once one is taken back"]
+      : []),
     ...handedOver
-      .filter((other) => other.conviction.id !== conviction.id)
+      .filter((other) => other.conviction.id !== conviction.id && !isPairView(other.conviction))
       .filter((other) => other.accounts.some((id) => accounts.includes(id)))
       .flatMap((other) =>
         other.conviction.steers
@@ -120,8 +134,9 @@ export interface TakeOver extends NamedPair {
 }
 
 /** What handing this view over would take over: the pairs it steers on these accounts that point
- *  at a seeded view now (the AI-dip view, say). A pair another view of the member's steers is not
- *  listed: the hand-over refuses that one (`handOverPlan`), so promising it would be false. */
+ *  at a seeded view now (the AI-dip view, say), or at the owner's own view on that pair (`seeded`
+ *  from `takeOverable`). A pair another view of the member's steers is not listed: the hand-over
+ *  refuses that one (`handOverPlan`), so promising it would be false. */
 export function takesOver(
   conviction: Conviction,
   owned: readonly string[],
@@ -143,12 +158,23 @@ export function takesOver(
   return [...seen.values()];
 }
 
-/** The records the bots act on: the seeded ones, then the members' views handed over. A member's
- *  record the store refuses (a seeded id) is left out, exactly as the bots leave it out. */
+/** The views `GET /api/convictions` serves: the seeded ones, then the members' views handed over.
+ *  A member's record the store refuses (a seeded id) is left out, exactly as the bots leave it out.
+ *  An owner's own view on one pair is left out too: it is the reason they typed on their own
+ *  subscription, shown on their own row as it always was, and never listed as a view of the club. */
 export function heldConvictions(members: MemberConvictionStore | undefined): ConvictionStore {
   return new ConvictionStore([
     ...SEEDED_CONVICTIONS,
-    ...(members?.handedOver() ?? []).map((w) => w.conviction),
+    ...(members?.handedOver() ?? []).map((w) => w.conviction).filter((c) => !isPairView(c)),
+  ]);
+}
+
+/** What a hand-over can take a pair over from: the seeded views, and owners' own views stated on
+ *  one pair (`takesOver`'s `seeded`). */
+export function takeOverable(members: MemberConvictionStore | undefined): ConvictionStore {
+  return new ConvictionStore([
+    ...SEEDED_CONVICTIONS,
+    ...(members?.handedOver() ?? []).map((w) => w.conviction).filter(isPairView),
   ]);
 }
 
@@ -164,15 +190,40 @@ export function canRepoint(subscriptions: SubscriptionStore | undefined): boolea
   return subscriptions === undefined || subscriptions.loadIfReadable() !== undefined;
 }
 
+/** Who moves the pointers a member's own write moves: them on the bots they own, the pointer rule
+ *  on any other account the same pass heals (`conviction-pointer-changes.ts`). */
+export interface RepointLog {
+  readonly log: SettingsChangeLog | undefined;
+  readonly editor: string;
+  readonly owned: readonly string[];
+  /** The view a write just removed, by its title before it went, so its line reads by name. */
+  readonly goneTitle?: string;
+  /** Where a log that will not write is said. */
+  readonly onError?: (message: string) => void;
+}
+
 export function repoint(
   subscriptions: SubscriptionStore,
   members: MemberConvictionStore,
   at: Date,
   gone?: string,
+  changes?: RepointLog,
 ): readonly string[] {
   const read = members.pointers();
   const pointers: MemberPointers = gone
     ? { heldBy: read.heldBy, ids: new Set([...read.ids, gone]) }
     : read;
-  return pointConvictions(subscriptions, at, pointers);
+  const names = convictionNames(members);
+  const record = changes
+    ? (moves: readonly PointerMove[]) =>
+        recordPointerMoves(
+          changes.log,
+          moves,
+          (id) => names(id) ?? (id === gone ? changes.goneTitle : undefined),
+          (account) => (changes.owned.includes(account) ? changes.editor : POINTER_RULE_AUTHOR),
+          at,
+          changes.onError,
+        )
+    : undefined;
+  return pointConvictions(subscriptions, at, pointers, record);
 }

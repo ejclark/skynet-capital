@@ -10,14 +10,15 @@ import type { EquitySample, HistoryStore } from "./history-record.js";
 import type { ActivityView } from "./participant-snapshot.js";
 
 /**
- * The watch that fills the capital-flow ledger (#4563 slice 1 — the shadow run).
+ * The watch that fills the capital-flow ledger (#4563 slice 1).
  *
  * The watch sits beside the history sampler: each new equity sample is compared with that
  * participant's previous one, and only when equity moved beyond tolerance is the fill journal read
  * to ask whether trading explains it (`capital-flow.ts`). Anything left over is appended as an
- * inferred flow in the ledger (`capital-flow-store.ts`). Nothing renders it yet — slice 2 marks
- * the standings row and the equity curve — so a week of shadow lines can tune the tolerance
- * before a member ever sees one.
+ * inferred flow in the ledger (`capital-flow-store.ts`, held in memory by `capital-flow-ledger.ts`).
+ * Slice 2 renders the ledger — a mark on the standings row and the equity curve
+ * (`capital-flow-mark.ts`) — but only for flows recorded from `FLOWS_SHOWN_FROM` on, which stays
+ * `null` (nothing shown) until a week of shadow lines has tuned the tolerance.
  *
  * Unlike the ceremony baseline, a flow DOES span a restart: a reset made while the server was down
  * is still capital that arrived, and both witnesses are durable (the last history sample and the

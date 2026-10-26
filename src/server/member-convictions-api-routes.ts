@@ -5,12 +5,11 @@ import {
   type DraftOutcome,
   draftConviction,
 } from "../playbooks/conviction-draft.js";
-import { parseConvictionDraft } from "../playbooks/conviction-parse.js";
+import { type ConvictionDraftInput, parseConvictionDraft } from "../playbooks/conviction-parse.js";
 import type { SteerBounds } from "../playbooks/conviction-steering.js";
 import { CONVICTIONS, playbookBounds } from "../playbooks/conviction-store.js";
 import { findPair, pairName, type StrategyId } from "../playbooks/pair-table.js";
 import type { Session } from "./auth/session.js";
-import { creditFor } from "./authored-plays-api-routes.js";
 import {
   canRepoint,
   handOverPlan,
@@ -19,10 +18,12 @@ import {
   refusedNow,
   repoint,
   type TakeOver,
+  takeOverable,
   takesOver,
 } from "./conviction-hand-over.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { creditFor } from "./feedback-attribution.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { GONE, type MemberConvictionRecord } from "./member-conviction-store.js";
 import {
@@ -125,7 +126,10 @@ export interface SteerablePairView {
 }
 
 /** The ◆ pairs this session's bots subscribe to whose playbook a conviction can narrow, by id. */
-function steerablePairs(config: DashboardServerConfig, session: Session): SteerablePairView[] {
+export function steerablePairs(
+  config: DashboardServerConfig,
+  session: Session,
+): SteerablePairView[] {
   return [...subscribedPairs(config, session)].sort().flatMap((id) => {
     const pair = findPair(id);
     const bounds = playbookBounds(id);
@@ -143,7 +147,17 @@ function judge(
   replaceId: string | undefined,
 ): DraftOutcome | undefined {
   const input = parseConvictionDraft(body.draft);
-  if (!input) return undefined;
+  return input ? judgeDraft(input, config, session, replaceId) : undefined;
+}
+
+/** Judge a parsed draft for this member — the one judgement `/draft`, `/save` and Moneypenny's chat
+ *  (`companion-convictions-port.ts`) share. */
+export function judgeDraft(
+  input: ConvictionDraftInput,
+  config: DashboardServerConfig,
+  session: Session,
+  replaceId?: string,
+): DraftOutcome {
   const store = config.memberConvictions;
   const memberKey = opaqueMemberId(session.email);
   const mine = store?.list(memberKey).some((r) => r.conviction.id === replaceId) ?? false;
@@ -178,8 +192,10 @@ async function draftOrSave(
       sendJson(res, 200, { ok: false, error: SUBSCRIPTIONS_UNREADABLE });
       return;
     }
-    const done = config.memberConvictions?.delete(opaqueMemberId(session.email), id);
-    if (done?.ok) repointAfter(config, id);
+    const memberKey = opaqueMemberId(session.email);
+    const title = titleBefore(config, memberKey, id);
+    const done = config.memberConvictions?.delete(memberKey, id);
+    if (done?.ok) repointAfter(config, session, id, title);
     sendJson(res, 200, done && !done.ok ? { ok: false, error: done.reason } : { ok: true });
     return;
   }
@@ -211,12 +227,14 @@ async function draftOrSave(
     return;
   }
   const now = config.now?.() ?? new Date();
-  const saved = store.save(opaqueMemberId(session.email), outcome.conviction, now, replaceId);
+  const memberKey = opaqueMemberId(session.email);
+  const title = replaceId ? titleBefore(config, memberKey, replaceId) : undefined;
+  const saved = store.save(memberKey, outcome.conviction, now, replaceId);
   if (!saved.ok) {
     sendJson(res, 200, { ok: false, label: "SIM", problems: [saved.reason] });
     return;
   }
-  if (replaceId) repointAfter(config, replaceId);
+  if (replaceId) repointAfter(config, session, replaceId, title);
   sendJson(res, 200, {
     ...outcome,
     label: "SIM",
@@ -226,12 +244,35 @@ async function draftOrSave(
   });
 }
 
+/** A member's view's title, read before a write that may remove it, so its log line keeps it. */
+function titleBefore(
+  config: DashboardServerConfig,
+  memberKey: string,
+  id: string,
+): string | undefined {
+  const record = config.memberConvictions?.list(memberKey).find((r) => r.conviction.id === id);
+  return record?.conviction.title;
+}
+
 /** The pointer rule, now, after a write that can change which views are held; `gone` is an id the
- *  write may have removed. Unwired stores point nothing; the next poll applies the same rule. */
-function repointAfter(config: DashboardServerConfig, gone?: string): void {
+ *  write may have removed, `goneTitle` its title before. Unwired stores point nothing; the next poll
+ *  applies the same rule. Every pointer it moves on this member's bots is a change log line of
+ *  theirs (`conviction-pointer-changes.ts`). */
+function repointAfter(
+  config: DashboardServerConfig,
+  session: Session,
+  gone?: string,
+  goneTitle?: string,
+): void {
   const { subscriptions, memberConvictions } = config;
   if (subscriptions && memberConvictions) {
-    repoint(subscriptions, memberConvictions, config.now?.() ?? new Date(), gone);
+    repoint(subscriptions, memberConvictions, config.now?.() ?? new Date(), gone, {
+      log: config.controls?.changes,
+      editor: session.email,
+      owned: resolveOwnedIds(session, config),
+      ...(goneTitle ? { goneTitle } : {}),
+      ...(config.logLine ? { onError: config.logLine } : {}),
+    });
   }
 }
 
@@ -259,7 +300,7 @@ async function handOverOrTakeBack(
   const now = config.now?.() ?? new Date();
   if (path === "/api/convictions/take-back") {
     const back = store.takeBack(memberKey, id, now);
-    if (back.ok) repointAfter(config);
+    if (back.ok) repointAfter(config, session);
     sendJson(
       res,
       200,
@@ -282,7 +323,7 @@ async function handOverOrTakeBack(
     sendJson(res, 200, { ok: false, label: "SIM", problems });
     return;
   }
-  repointAfter(config);
+  repointAfter(config, session);
   const steering = pointedPairs(id, owned, subscriptions.load());
   sendJson(res, 200, { ok: true, label: "SIM", steering, note: STEERING_NOTE });
 }
@@ -300,7 +341,7 @@ function mine(config: DashboardServerConfig, session: Session) {
       const refused = refusedNow(record.conviction);
       return { ...record, card, steering, ...(refused.length > 0 ? { refused } : {}) };
     }
-    const over = takesOver(record.conviction, owned, state);
+    const over = takesOver(record.conviction, owned, state, takeOverable(config.memberConvictions));
     return { ...record, card, ...(over.length > 0 ? { takesOver: over } : {}) };
   });
   const steerable = steerablePairs(config, session);

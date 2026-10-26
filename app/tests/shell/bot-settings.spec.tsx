@@ -155,6 +155,41 @@ describe("BotSettingsPanel (#4535 slice 3b)", () => {
     expect(trading?.textContent).toContain("by another owner");
   });
 
+  it("lists which conviction view steers a pair, by title, and a move the app made on its own (#5482)", () => {
+    render(
+      <BotSettingsPanel
+        account={account(
+          settings({
+            changes: [
+              {
+                at: "2026-10-20T15:00:00.000Z",
+                setting: "conviction:CRWV-WHEEL",
+                before: "AI-dip view",
+                after: "CRWV floor",
+                proposedBy: "you",
+                approvedBy: "you",
+              },
+              {
+                at: "2026-10-20T14:00:00.000Z",
+                setting: "conviction:CRWV-LONG-CALL",
+                before: null,
+                after: "AI-dip view",
+                proposedBy: "the app, on its own",
+                approvedBy: "the app, on its own",
+              },
+            ],
+          }),
+        )}
+        onChanged={() => undefined}
+      />,
+    );
+    const [handOver, healed] = screen.getAllByRole("listitem");
+    expect(handOver?.textContent).toContain("View steering CRWV-WHEEL AI-dip view → CRWV floor");
+    expect(handOver?.textContent).toContain("by you");
+    expect(healed?.textContent).toContain("View steering CRWV-LONG-CALL no view → AI-dip view");
+    expect(healed?.textContent).toContain("by the app, on its own");
+  });
+
   it("says so when nothing has been recorded yet", () => {
     render(<BotSettingsPanel account={account(settings())} onChanged={() => undefined} />);
     expect(screen.getByText("No changes recorded yet.")).toBeInTheDocument();

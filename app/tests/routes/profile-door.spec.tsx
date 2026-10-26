@@ -117,14 +117,11 @@ rstest.mock("../../src/shell/accounts-overview-section", () => ({
 rstest.mock("../../src/shell/events-section", () => ({
   EventsSection: () => <p data-testid="events">The book's events</p>,
 }));
-// The tower column's card and council line have their own specs; here only where the column stands.
+// The tower column's card has its own spec; here only where the column stands.
 rstest.mock("../../src/shell/sauron-card", () => ({
   SauronCard: ({ under }: { under?: boolean }) => (
     <section data-testid="tower" data-under={under ? "true" : "false"} />
   ),
-}));
-rstest.mock("../../src/shell/council-line-card", () => ({
-  CouncilLineCard: () => null,
 }));
 rstest.mock("../../src/shell/alpaca-guide", () => ({
   AlpacaGuide: () => <p data-testid="connect-guide">The five-step connect guide</p>,
@@ -220,6 +217,19 @@ describe("the zero-account door", () => {
     const clause = LADDER_CARD_GATE_NOTE.replace(/^unlocks /, "");
     expect(LADDER_GATE_NOTE).toContain(clause);
     expect(LADDER_CARD_NO_ACCOUNT_NOTE).toContain(clause);
+  });
+
+  it("gives LOCKED and WIP their own shapes: ◷ waits on you, ◌ is not built yet (#5093)", async () => {
+    mountAccounts("/accounts?section=milestones");
+    const ladder = await screen.findByRole("link", { name: /M·02/ });
+    const playbooks = await screen.findByRole("link", { name: /M·03/ });
+    // ◷ is the app's "waiting on you" (the ladder gate, the Store's locked door); ◌ is its "not
+    // live yet" (a draft, the Season-gated subscribe door). One glyph, one meaning, on one screen.
+    expect(ladder.querySelector(".mc-badge")).toHaveTextContent("◷ LOCKED");
+    expect(ladder.querySelector(".mc-gate")?.textContent).toMatch(/^◷ /);
+    expect(playbooks.querySelector(".mc-badge")).toHaveTextContent("◌ WIP · SEASON 1");
+    expect(playbooks.querySelector(".mc-gate")).toHaveTextContent("◌ WIP — Season 1 release");
+    expect(playbooks).not.toHaveTextContent("◷");
   });
 
   it("leads with the steps and folds the milestones list one tap below them (#5256)", async () => {

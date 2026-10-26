@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
+  from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
+  discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:
+  the *sense* stage of that loop is manual. A weekly run that opens a PR with any new event files
+  would close it; the workflow file is the protected class, so it boards a platter. The deciding
+  question: how many days between an S-1 flip and its pricing can the calendar afford to miss? The
+  measured gap is 26 days at the median. _(src: Claude · while: #5912 slice 3)_
 - **Does a bot's order expectation name its playbook when it states the mechanic?** The wheel's
   public expectation still says "the bot buys 100 shares at $80 and sells covered calls on them
   next" — the wheel's mechanic, read by every member. #4975 kept a bot's reason and expectation
@@ -1710,6 +1717,9 @@ leadership change. Carried as a ledger thread instead, which means the assessmen
 sees it. Worth deciding whether a `corporate` kind (CEO/CFO transitions, spin-offs, index adds,
 lockup expiries, shareholder votes) earns its place, or whether these belong outside the calendar
 by design — a research PR is the wrong place to widen a shared type either way.
+**Partly landed (2026-10-20, #5912):** lockup expiries got their own `lockup-expiry` kind rather than
+a shared `corporate` one — a playbook selects its events by kind, and a lockup has its own date rule
+(the 424B4's clause, early releases). CEO transitions, spin-offs and votes are still unslotted.
 _(src: Claude · while: the aapl-2026-10-29-print interval-elapsed pulse, 2026-08-30)_
 
 ### General-purpose "escape hatches" to drive process from a phone
