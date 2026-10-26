@@ -54,6 +54,19 @@ describe("the convictions wire", () => {
     expect(parseConvictionsWire({ ...wire, records: many })).toBeUndefined();
   });
 
+  it("carries a view stated on its one pair, and refuses a scope this build does not know", () => {
+    const onPair = { ...record, conviction: aMemberConviction({ scope: "pair", narrowings: [] }) };
+    const wire = buildConvictionsWire([onPair], 5);
+    expect(parseConvictionsWire(onTheWire(wire))?.records[0]?.conviction.scope).toBe("pair");
+    const unknown = {
+      accounts: ["futurist"],
+      conviction: { ...aMemberConviction(), scope: "sector" },
+    };
+    expect(
+      parseConvictionsWire({ kind: CONVICTIONS_WIRE_KIND, at: 5, records: [unknown] }),
+    ).toBeUndefined();
+  });
+
   it("never reads a study, check or score a record carries: those come from the research ledgers", () => {
     const claim = { ...aMemberConviction().claims[0], score: { result: "pass" }, study: {} };
     const wire = onTheWire(

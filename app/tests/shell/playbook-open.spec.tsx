@@ -238,16 +238,16 @@ function open(card: HTMLElement, name: string) {
 describe("a playbook card opened in full (#5073 slice 3)", () => {
   it("reads the Store and the book only once a card is opened", async () => {
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("CRWV-WHEEL", { selector: ".pbb-name" });
+    await screen.findByText("The wheel on CRWV", { selector: ".pbb-name" });
     expect(asked.some((p) => p.includes("/api/playbook-store"))).toBe(false);
     expect(asked.some((p) => p === "/api/desk/sauron")).toBe(false);
   });
 
   it("draws the wheel as a loop, rings step 1, and lays the price on the strike", async () => {
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("CRWV-WHEEL", { selector: ".pbb-name" });
-    const card = cardOf("CRWV-WHEEL");
-    open(card, "CRWV-WHEEL");
+    await screen.findByText("The wheel on CRWV", { selector: ".pbb-name" });
+    const card = cardOf("The wheel on CRWV");
+    open(card, "The wheel on CRWV");
     const loop = await within(card).findByRole("img", { name: /^The wheel on CRWV/ });
     expect(loop.getAttribute("aria-label")).toMatch(/It is on step 1\.$/);
     expect(loop.querySelector("[data-here]")?.textContent).toContain("● you are here");
@@ -262,9 +262,9 @@ describe("a playbook card opened in full (#5073 slice 3)", () => {
 
   it("shows what the bot holds in the ticker, in the row spec, and nothing on another", async () => {
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("CRWV-WHEEL", { selector: ".pbb-name" });
-    const card = cardOf("CRWV-WHEEL");
-    open(card, "CRWV-WHEEL");
+    await screen.findByText("The wheel on CRWV", { selector: ".pbb-name" });
+    const card = cardOf("The wheel on CRWV");
+    open(card, "The wheel on CRWV");
     const holds = await within(card).findByRole("region", { name: "This bot's CRWV" });
     const links = await within(holds).findAllByRole("link");
     expect(links).toHaveLength(2);
@@ -275,9 +275,9 @@ describe("a playbook card opened in full (#5073 slice 3)", () => {
 
   it("says whose say-so it runs on: the owner's conviction, their words, its check day", async () => {
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("CRWV-WHEEL", { selector: ".pbb-name" });
-    const card = cardOf("CRWV-WHEEL");
-    open(card, "CRWV-WHEEL");
+    await screen.findByText("The wheel on CRWV", { selector: ".pbb-name" });
+    const card = cardOf("The wheel on CRWV");
+    open(card, "The wheel on CRWV");
     const say = await within(card).findByRole("region", { name: "Whose say-so it runs on" });
     expect(say.textContent).toContain("◆ Your conviction, run in aggressive mode");
     expect(say.textContent).toContain("“The premium pays me to wait.”");
@@ -293,9 +293,9 @@ describe("a playbook card opened in full (#5073 slice 3)", () => {
 
   it("lays a pre-print window on the calendar with the print and today", async () => {
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("S1-NVDA", { selector: ".pbb-name" });
-    const card = cardOf("S1-NVDA");
-    open(card, "S1-NVDA");
+    await screen.findByText("The pre-print run-up on NVDA", { selector: ".pbb-name" });
+    const card = cardOf("The pre-print run-up on NVDA");
+    open(card, "The pre-print run-up on NVDA");
     const timeline = await within(card).findByRole("img", { name: /^NVDA's window: holds from / });
     expect(timeline.querySelector(".pbr-print")?.textContent).toBe("◆");
     expect(timeline.querySelector(".pbr-today")).not.toBeNull();
@@ -307,9 +307,9 @@ describe("a playbook card opened in full (#5073 slice 3)", () => {
 
   it("says a basket's rule in its one sentence, with no ticker to hold", async () => {
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("SAURON", { selector: ".pbb-name" });
-    const card = cardOf("SAURON");
-    open(card, "SAURON");
+    await screen.findByText("Sauron's own rules", { selector: ".pbb-name" });
+    const card = cardOf("Sauron's own rules");
+    open(card, "Sauron's own rules");
     const rule = await within(card).findByRole("region", { name: "The rule" });
     expect(rule.textContent).toContain("Sauron's own rules over the bots' ten names.");
     expect(within(card).queryByRole("region", { name: /^This bot's / })).toBeNull();

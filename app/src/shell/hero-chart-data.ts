@@ -1,6 +1,7 @@
 import type { LineData, Time } from "lightweight-charts";
 import type { Bar } from "../live/bars";
-import type { EquityCurvePoint } from "../live/equity-curve";
+import type { EquityCurveFlow, EquityCurvePoint } from "../live/equity-curve";
+import { closeHasPassed, marketDayOf } from "../live/market-session";
 
 /**
  * The hero chart's PURE half (#3186 slice 2) — an account's equity-curve points and a symbol's
@@ -15,9 +16,45 @@ import type { EquityCurvePoint } from "../live/equity-curve";
  * point) rather than assuming index `i` on one array lines up with index `i` on the other.
  */
 
+/** A recorded capital flow placed on a day the portfolio line draws (#4563). */
+export interface FlowMarker {
+  readonly time: Time;
+  readonly direction: "added" | "removed";
+  readonly label: string;
+}
+
 export interface OverlaySeries {
   readonly portfolio: readonly LineData[];
   readonly benchmark: readonly LineData[];
+  /** Present only when the account has a recorded flow in this range. */
+  readonly flows?: readonly FlowMarker[];
+}
+
+/**
+ * Each flow on the first day the portfolio line draws WITH the capital in it, so a marker always
+ * sits on the point where the jump shows — never on an earlier day, which would put the capital on
+ * the line before it arrived. A daily point carries that session's end-of-day value, so the flow is
+ * read in market time (the America/New_York day the row's label names): before the close it lands
+ * on its own session; after the close (4:00, or 1:00 on an early close) it lands on the next one; a
+ * weekend reset shows Monday. A flow newer than the curve's last point is not drawn yet — no point
+ * holds the capital — and appears once the curve reaches it.
+ */
+export function flowMarkers(
+  flows: readonly EquityCurveFlow[],
+  portfolio: readonly LineData[],
+): FlowMarker[] {
+  const days = portfolio.map((p) => String(p.time));
+  const markers: FlowMarker[] = [];
+  for (const flow of flows) {
+    const at = new Date(flow.t);
+    const day = marketDayOf(at);
+    const afterClose = closeHasPassed(day, at);
+    const drawn = days.find((d) => (afterClose ? d > day : d >= day));
+    if (drawn !== undefined) {
+      markers.push({ time: drawn as Time, direction: flow.direction, label: flow.label });
+    }
+  }
+  return markers;
 }
 
 /** Equity-curve points and bars both carry a full ISO instant; the chart draws business days. */
@@ -56,17 +93,22 @@ function closeAtOrBefore(
 export function alignOverlay(
   curve: readonly EquityCurvePoint[],
   benchmarkBars: readonly Bar[],
+  curveFlows: readonly EquityCurveFlow[] = [],
 ): OverlaySeries {
   const portfolio: LineData[] = curve.map((p) => ({
     time: curveDay(p.t) as Time,
     value: p.value,
   }));
-  if (curve.length === 0 || benchmarkBars.length === 0) return { portfolio, benchmark: [] };
+  const placed = flowMarkers(curveFlows, portfolio);
+  const flows = placed.length > 0 ? { flows: placed } : {};
+  if (curve.length === 0 || benchmarkBars.length === 0) {
+    return { portfolio, benchmark: [], ...flows };
+  }
 
   const sorted = daysAscending(benchmarkBars);
   const firstDay = curveDay(curve[0]?.t ?? "");
   const base = closeAtOrBefore(sorted, firstDay) ?? sorted[0]?.close;
-  if (base === undefined || base === 0) return { portfolio, benchmark: [] };
+  if (base === undefined || base === 0) return { portfolio, benchmark: [], ...flows };
 
   const benchmark: LineData[] = [];
   for (const point of curve) {
@@ -75,5 +117,5 @@ export function alignOverlay(
     if (close === undefined) continue;
     benchmark.push({ time: day as Time, value: close / base - 1 });
   }
-  return { portfolio, benchmark };
+  return { portfolio, benchmark, ...flows };
 }

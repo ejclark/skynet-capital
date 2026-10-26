@@ -1,7 +1,14 @@
 import type { PlaybookSubscription } from "../../src/domain/types.js";
 import { authoredRoster } from "../../src/playbooks/authored-play.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
-import { COND_SCOUT, G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
+import {
+  COND_SCOUT,
+  CRWV_LONG_CALL,
+  CRWV_WHEEL,
+  G1_GOOG,
+  S1_NVDA,
+  TACO_DJT,
+} from "../../src/playbooks/registry.js";
 import {
   mergeRosters,
   pausedPlaybookIds,
@@ -54,6 +61,31 @@ describe("subscriptionRoster", () => {
     const { enabled, rejected } = subscriptionRoster([sub({ enabled: false })]);
     expect(enabled).toEqual([]);
     expect(rejected).toEqual([]);
+  });
+
+  // The inline carry's replacement, bots first: a ◆ pair trades only on a conviction (#4469 c2).
+  // With neither a pointer nor an inline copy it has no check day, so it opens nothing new and its
+  // exits keep running, the same as an unmoved copy. Before, it read "conviction not stated",
+  // which never stops a pair, so it would have traded unchecked once the app stops carrying a copy.
+  it("runs a ◆ pair with neither a pointer nor a copy exits-only, and says why", () => {
+    const { enabled, steeringRefused } = subscriptionRoster([
+      sub({ playbookId: "CRWV-WHEEL" }),
+      sub({ playbookId: "CRWV-LONG-CALL", mode: "conservative" }),
+    ]);
+    expect(enabled).toEqual([
+      { playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true },
+      { playbook: CRWV_LONG_CALL, mode: "conservative", exitsOnly: true },
+    ]);
+    expect(steeringRefused).toEqual([
+      "CRWV-WHEEL: its conviction is not on a view yet",
+      "CRWV-LONG-CALL: its conviction is not on a view yet",
+    ]);
+  });
+
+  it("still runs a non-◆ pair with no conviction: criterion 11 labels it, never stops it", () => {
+    const { enabled, steeringRefused } = subscriptionRoster([sub({ playbookId: "COND-SCOUT" })]);
+    expect(enabled).toEqual([{ playbook: COND_SCOUT, mode: "standard" }]);
+    expect(steeringRefused).toEqual([]);
   });
 
   it("rejects a subscription naming a playbook id that doesn't exist in the house roster", () => {
@@ -126,6 +158,17 @@ describe("subscriptionRoster with an authored play", () => {
     expect(enabled).toEqual([
       { playbook: S1_NVDA, mode: "standard" },
       { playbook: authored.plays[0], mode: "standard" },
+    ]);
+  });
+
+  it("runs an authored play carrying a conviction pointer exits-only (#5482 contract piece 2)", () => {
+    // No record steers an authored play, so the pointer can never be used, and a pointed pair never
+    // reads its inline conviction: trading it unchecked is the one state no owner chose.
+    const pointed = { ...authoredSub, convictionId: "ai-dip-2026-10" };
+    const { enabled, steeringRefused } = subscriptionRoster([pointed], authored);
+    expect(enabled).toEqual([{ playbook: authored.plays[0], mode: "standard", exitsOnly: true }]);
+    expect(steeringRefused).toEqual([
+      'U-bot-1-earnings-runup: points at conviction "ai-dip-2026-10", which does not steer U-bot-1-earnings-runup',
     ]);
   });
 

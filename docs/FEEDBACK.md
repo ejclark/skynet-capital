@@ -8,8 +8,8 @@ labelled issue on `ejclark/skynet-capital`, so friends and family never need col
 the repo.
 
 **The feature is token-gated.** Until `SKYNET_FEEDBACK_GITHUB_TOKEN` is set the form still renders,
-but a submission returns a friendly "feedback isn't switched on yet" message instead of filing an
-issue. The instant the token is present, submissions go live — no code change, no redeploy beyond
+but a submission returns a friendly "Feedback isn't switched on in this deployment yet" message
+instead of filing an issue. The instant the token is present, submissions go live — no code change, no redeploy beyond
 picking up the new secret.
 
 ## One-time setup
@@ -71,11 +71,18 @@ in code — only as a host secret, exactly like the Alpaca keys.
    keep in sync across a deploy.
 6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
    they already filed without leaving the app. It posts a GitHub comment (never edits the original
-   issue body, which the build lane parses) and re-triggers a build by cycling the `feedback`
-   label, the same retry path already documented in `scripts/moneypenny/index.mjs`. Deliberately
-   routed through this structured, envelope-bound lane rather than the free-form `claude.yml`
-   comment-steering lane — see `src/server/feedback-followup.ts` for why. Ownership is checked
-   against the member's own logged filings before anything posts.
+   issue body, which the build lane parses). On a filing that is already `ready` it also restarts
+   the build by removing and re-adding `ready` — the label that starts the claim (#3912), the
+   claim lease making the re-label a safe retry. A filing still in Backlog gets the comment only,
+   and the member is told it builds once it's picked from the queue: a follow-up never adds `ready`,
+   which would skip the backlog gate below. Nor does it cycle `ready` on a filing the claim's pull
+   rule (`notPullableReason`) refuses — closed, parked on someone, already `in-progress`,
+   `needs-session`, or blocked — and the member's line names which (#5848). If `ready` comes off
+   and won't go back on after one retry, the server logs the issue number (`[feedback-followup]`)
+   so someone can re-add it by hand. Deliberately routed through
+   this structured, envelope-bound lane rather than the free-form `claude.yml` comment-steering
+   lane — see `src/server/feedback-followup.ts` for why. Ownership is checked against the member's
+   own logged filings before anything posts.
 
 ## What the lane will build
 
@@ -93,7 +100,7 @@ until something applies `ready`: Eric's own call, or a triage pass's clear-path 
 ([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
-fresh Claude session. What `ready` means, mechanically and for every puller — the four conditions,
+fresh Claude session. What `ready` means, mechanically and for every puller — the six conditions,
 who may flip it, the plan lane's equivalent comment door — is defined once in
 [`ISSUES.md`](ISSUES.md) → *Ready — the one definition*; the two self-readies above are the cases where a
 session applies it to its own filing. The triage rules for *that* build session live in
@@ -101,10 +108,13 @@ session applies it to its own filing. The triage rules for *that* build session 
 [`envelope.json`](../envelope.json) and is enforced as a red CI check (`scripts/envelope-scan.mjs`)
 on every `feedback/*` branch — not as prompt text a session can reason its way past.
 
-Protected: workflow files and the lanes' own prompts, auth and the invite gate, credentials, the
-brokerage clients, order placement/sizing, the risk guards, playbook definitions, hosting config,
-and new **runtime** dependencies. Everything else — including anything that merely *renders* trades,
-P/L, leaderboards, or bot cards — is ordinary buildable work.
+Protected: workflow files and the lanes' own prompts, the envelope and its gate, auth and the invite
+gate, credentials (the env files and the two narrow gates that turn a broker credential into a usable
+client), the model dials that set the real per-token bill, spend caps and the spend breaker, hosting
+and deploy config, and new **runtime** dependencies. Everything else is ordinary buildable work —
+including the brokerage clients, order placement/sizing, the risk guards and playbook definitions,
+opened on purpose in #928 (`envelope.json` → `$openOnPurpose`), and anything that merely *renders*
+trades, P/L, leaderboards, or bot cards.
 
 Run `node scripts/envelope-scan.mjs --list` for the live table with reasons.
 
@@ -186,7 +196,7 @@ The bot token can write issues, so the endpoint is protected in depth:
 
 | Symptom | Likely cause |
 | --- | --- |
-| "isn't switched on yet" still shows | The env var didn't reach the running process — check the secret name is exactly `SKYNET_FEEDBACK_GITHUB_TOKEN` and the machine rolled. |
+| "isn't switched on in this deployment yet" still shows | The env var didn't reach the running process — check the secret name is exactly `SKYNET_FEEDBACK_GITHUB_TOKEN` and the machine rolled. |
 | Result page: `GitHub responded 404` | Token can't see the repo — wrong resource owner, or the repo wasn't selected. |
 | `GitHub responded 403` | Token is missing **Issues: write** permission. |
 | `GitHub responded 401` | Token is invalid, revoked, or expired — regenerate and re-set the secret. |

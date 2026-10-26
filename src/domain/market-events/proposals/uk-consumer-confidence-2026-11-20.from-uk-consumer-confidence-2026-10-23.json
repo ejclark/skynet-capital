@@ -1,0 +1,11 @@
+{
+  "id": "uk-consumer-confidence-2026-11-20",
+  "kind": "macro-print",
+  "title": "GfK/NIQ UK Consumer Confidence Barometer — November 2026: the first edition whose fieldwork falls wholly after the Budget",
+  "date": "2026-11-20",
+  "status": "estimate",
+  "source": "EST: nielseniq.com/global/en/news-center/2026/consumer-confidence-plunges-11-points-to-24-in-october/, fetched direct 2026-10-25 — the October-2026 barometer release lists the remaining 2026 press-release dates verbatim as 'October 23rd, November 20th and December 18th' (all Fridays). The same list appeared in the July, August and September releases, and its October 23 entry was honoured by this very release, so the November date has one listed date already met. Release time not stated on the page. Filed estimate on the standard three counts: this lane may not self-confirm an event it discovered in-sweep, market-events-data.ts's confirmed-prefix taxonomy has no slot for GfK/NIQ, and the schedule is a note inside a press release. Discovered in the close-out sweep of uk-consumer-confidence-2026-10-23, 2026-10-25",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-consumer-confidence-2026-10-23 LANE, 2026-10-25. Entered the research horizon on 2026-10-21 (D-30 = allImpactsWithinDays); at 2026-10-09 it was D-42 and was named in prose only. Why it earns a slot: the October edition fell 11 points to -24 (fieldwork Oct 1-14, n=2,003), the largest one-month drop since July 2016, with NIQ naming no single driver. The November fieldwork (expected roughly Nov 2-14 on the first-fortnight pattern of every 2026 window) is the first to fall wholly after uk-autumn-budget-2026-10-28 and after the BoE's 2026-11-05 decision, so it is the first read on whether the October collapse was a pre-Budget chill (which should reverse once the Budget resolves, as in November 2024, -21 to -18) or a broader deterioration. Same-day neighbours already on the calendar: uk-retail-sales-2026-11-20, uk-public-sector-finances-2026-11-20. Expected LOW on the same measured grounds as every UK sibling: symbols [], no UK-listed name in this book, no sterling- or rates-keyed house playbook. Estimate widens caution only; nothing date-keyed may act on this."
+}

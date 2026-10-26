@@ -186,7 +186,7 @@ pieces to 1 piece per row/week."* The handles, so the next request can be one ph
 - **Encode at the granularity the data lives at.** A fact about a week gets one mark per week; a
   fact about a day stays on the day. Ask "what is this a fact *about*?" before drawing it.
 - **Common region** (Gestalt; Palmer 1992): items inside one bounded area read as a group. The
-  range on the rail is one band per row, the month lens one block around the grid — never seven
+  range on R&D's month grid is one band per row, the month lens one block around the grid — never seven
   outlined cells asking the eye to do the grouping.
 - **1 + 1 = 3** (Tufte, *Envisioning Information*): two adjacent bordered shapes create a third,
   unintended shape in the gap between them. Thirty bordered tiles make sixty phantom shapes. Fewer

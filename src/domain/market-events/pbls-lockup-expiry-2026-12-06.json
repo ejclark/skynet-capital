@@ -1,0 +1,11 @@
+{
+  "id": "pbls-lockup-expiry-2026-12-06",
+  "kind": "lockup-expiry",
+  "title": "PBLS IPO lockup ends — Parabilis Medicines, 180 days after its 2026-06-09 prospectus",
+  "date": "2026-12-06",
+  "status": "confirmed",
+  "source": "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/1657677/000119312526265983/pbls_424b4.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-06-09 (read from its cover); 180 days after it is 2026-12-06. Lock-up clause: \"Lock-up Arrangements We, all of our directors and executive officers, and the holders of substantially all of our capital stock and securities convertible into or exchangeable for our capital stock (including the shares of common stock to be issued in the concurrent private placement) have entered into lock-up agree…\"",
+  "impact": "medium",
+  "symbols": ["PBLS"],
+  "notes": "$670M offering. Insiders may sell from the next session; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then."
+}

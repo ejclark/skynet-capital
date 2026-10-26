@@ -343,7 +343,7 @@ describe("ThesisDrawer", () => {
       };
       render(withClient(<ThesisDrawer id="bot-sauron" />));
       await waitFor(() => expect(screen.getByText(/^Safeguards/)).toBeInTheDocument());
-      expect(screen.getByText("S1-NVDA · standard")).toBeInTheDocument();
+      expect(screen.getByText("The pre-print run-up on NVDA · standard")).toBeInTheDocument();
       expect(screen.getByText("Watching")).toBeInTheDocument();
       expect(screen.getByText("Off")).toBeInTheDocument();
       expect(screen.getByText("Logs it.")).toBeInTheDocument();
@@ -507,8 +507,8 @@ describe("ThesisDrawer", () => {
           "Nothing checks whether the price move and the news tone disagree on this play.",
         ),
       ).toHaveLength(1);
-      expect(screen.queryByText("SAURON · standard")).not.toBeInTheDocument();
-      expect(screen.getByText("S1-NVDA · standard")).toBeInTheDocument();
+      expect(screen.queryByText("Sauron's own rules · standard")).not.toBeInTheDocument();
+      expect(screen.getByText("The pre-print run-up on NVDA · standard")).toBeInTheDocument();
       // The only buttons are the locked Subscribe box's — no safeguard row is a control.
       expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
         "Subscribe",
@@ -578,7 +578,7 @@ describe("ThesisDrawer", () => {
       render(withClient(<ThesisDrawer id="bot-sauron" />));
       await waitFor(() => expect(screen.getByText("not yet measured")).toBeInTheDocument());
       expect(screen.queryByText(/What protects this play/)).not.toBeInTheDocument();
-      expect(screen.getByText("SAURON · standard")).toBeInTheDocument();
+      expect(screen.getByText("Sauron's own rules · standard")).toBeInTheDocument();
     });
   });
 });

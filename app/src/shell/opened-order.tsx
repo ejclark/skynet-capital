@@ -5,6 +5,7 @@ import type { ActivityReasoning, DeskActivityEvent } from "../live/desk";
 import { pivotLine } from "../live/order-pivots";
 import { orderPlay } from "../live/order-play";
 import { landingFor } from "../live/playbook-landing";
+import { playbookName, withPairNames } from "../live/playbook-name";
 import { quoteQuery } from "../live/quote-query";
 import { cycleAnchor } from "./cycle-anchor";
 import { PivotLine } from "./pivot-line";
@@ -94,7 +95,7 @@ function OrderTable({
       </div>
       <div>
         <dt>Why</dt>
-        <dd>“{why.reason}”</dd>
+        <dd>“{withPairNames(why.reason)}”</dd>
       </div>
       {/* Only on an order that never traded (the server's `brokerWordsFor`), and the owner's alone
           like the playbook (#4650): a broker's message can name the account's specifics. */}
@@ -132,8 +133,9 @@ export function PlaybookLine({
   /** The Ledger's list (#5317): the playbook's name alone — its mode waits in the opened order. */
   readonly bare?: boolean;
 }): ReactElement {
-  const words = `${playbookId}${why.playbookMode ? ` · ${why.playbookMode}` : ""}`;
-  const shown = bare ? playbookId : words;
+  const name = playbookName(playbookId);
+  const words = `${name}${why.playbookMode ? ` · ${why.playbookMode}` : ""}`;
+  const shown = bare ? name : words;
   if (!deskId) return <span>{shown}</span>;
   const { card, mode, fill, from } = landingFor({ ...why, playbookId }, orderId);
   return (

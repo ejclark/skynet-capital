@@ -34,6 +34,21 @@ export class BotControlsStore {
     return this.file.load();
   }
 
+  /** The state, or `undefined` when the file is there but did not read whole — for an unattended
+   *  writer, which must never write over a file it could not read (`subscription-seed-store.ts`). */
+  loadIfReadable(): ControlsState | undefined {
+    return this.file.loadIfReadable();
+  }
+
+  /** Replace some bots' entries WITHOUT stamping the audit line: a one-time copy of the bots app's
+   *  own settings (`env-settings-seed.ts`) is not an owner's edit. The change log records it. */
+  seedBots(bots: Readonly<Record<string, BotControls>>): ControlsState {
+    const state = this.load();
+    const next: ControlsState = { ...state, bots: { ...state.bots, ...bots } };
+    this.file.write(next);
+    return next;
+  }
+
   /** Merge a per-bot patch (undefined fields untouched) and stamp the audit line. */
   setBot(botId: string, patch: BotControls, updatedBy: string, at = new Date()): ControlsState {
     const state = this.load();

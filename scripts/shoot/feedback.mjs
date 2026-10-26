@@ -3,7 +3,8 @@
 // a stub API. Two frames, because the surface's whole behaviour is the difference between them:
 //   · active — the default view, shipped filings hidden (#1308)
 //   · all    — the toggle flipped, shipped filings revealed with 🚀 and the version stamp (#1312)
-// plus a phone frame at 390, where the toggle's words must survive (#5150).
+// plus a phone frame at 390, where the toggle's words must survive (#5150), and two phone frames of
+// a sent follow-up — one that restarted a `ready` filing's build, one still in Backlog (#5848).
 //
 // This is the harness's first use (#1327): #1308 and #1312 both waived their fridge picture with
 // "no authed /feedback shoot script exists for this repo", which is the cost the consolidation was
@@ -55,6 +56,9 @@ const feedback = {
   ],
 };
 
+// What the follow-up endpoint answers — flipped between the two follow-up frames (#5848).
+let followupOutcome = "restarted";
+
 const { page, origin, shoot, close } = await openShell({
   name: "feedback",
   // 1000px tall so the "all" frame fits BOTH shipped rows with their version stamps — at the
@@ -62,6 +66,11 @@ const { page, origin, shoot, close } = await openShell({
   viewport: { width: 1280, height: 1000 },
   stubs: {
     "/api/feedback": feedback,
+    "/api/feedback/followup": () => ({
+      ok: true,
+      url: "https://github.com/ejclark/skynet-capital/issues/1204",
+      outcome: followupOutcome,
+    }),
     "/api/learn": {},
     ...profileStubs([JOE]),
   },
@@ -80,5 +89,25 @@ await shoot("feedback-all");
 await page.setViewportSize({ width: 390, height: 844 });
 await page.getByRole("button", { name: "Active" }).waitFor();
 await shoot("feedback-phone");
+
+// The follow-up line says what actually happened (#5848): a `ready` filing's build starts again;
+// one still in Backlog only gets the comment and waits for the queue.
+const sendFollowup = async (row, words) => {
+  const item = page.locator(".fb-row").nth(row);
+  await item.getByRole("button", { name: /Follow up/ }).click();
+  await item.getByPlaceholder(/What changed/).fill(words);
+  await item.getByRole("button", { name: "Send follow-up" }).click();
+  await item.locator(".fb-followup-body").scrollIntoViewIfNeeded();
+};
+await sendFollowup(0, "Still says unrealized after the close.");
+await page.getByText(/the build starts again/).waitFor();
+await shoot("feedback-followup-ready");
+
+followupOutcome = "backlog";
+await page.reload();
+await page.getByText("Your recent feedback").waitFor();
+await sendFollowup(1, "Return over the season, not the day.");
+await page.getByText(/picked from the queue/).waitFor();
+await shoot("feedback-followup-backlog");
 
 await close();

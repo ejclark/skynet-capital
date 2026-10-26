@@ -173,6 +173,30 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
     expect(out.chunks.some((c) => c.includes("event: done"))).toBe(true);
   });
 
+  // #5482 criterion 9: the turn gets the session's conviction READS (no save, no hand-over), and a
+  // drafted view reaches the rail as its own frame, for the member's tap to act on.
+  it("hands the turn read-only conviction tools and relays a drafted view as a conviction frame", async () => {
+    let port: unknown;
+    const config = configWith({
+      companion: ((input, handlers: CompanionHandlers) => {
+        port = input.convictions;
+        handlers.onConvictionDraft?.({ card: { label: "SIM" } } as never);
+        handlers.onDone();
+        return Promise.resolve();
+      }) as CompanionTurn,
+    });
+    const { res, out } = fakeRes();
+    await serveCompanionApi(
+      post({ messages: [{ role: "user", content: "CRWV is underrated" }] }),
+      res,
+      "/api/companion/chat",
+      config,
+      sessionFor(email()),
+    );
+    expect(Object.keys(port as object).sort()).toEqual(["draft", "mine"]);
+    expect(out.chunks.some((c) => c.includes("event: conviction") && c.includes("SIM"))).toBe(true);
+  });
+
   it("relays a turn-function error as an error frame and ends the stream", async () => {
     const config = configWith({
       companion: ((_input, handlers: CompanionHandlers) => {

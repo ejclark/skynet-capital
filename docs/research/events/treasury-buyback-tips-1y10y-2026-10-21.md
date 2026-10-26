@@ -301,6 +301,7 @@ below 20%, scored against the operation's own published numbers).
 | 2026-09-08 | D-43 | **Initial research banked (above); canonical event file written from the one proposal that existed for this id** (`from-treasury-buyback-tips-10y30y-2026-09-15`, filed the same day) — its stacking read upheld and given the mechanism it lacked. **Schedule primary re-verified:** md5 `79b65955…`, 125,547 bytes, HTTP 200, masthead still "For Publication August 5, 2026"; row verbatim announce 10/20, operation 10/21 1:40–2:00pm, settle 10/22, TIPS 1Y-10Y, 10/22/2027–10/21/2036, max $750M. Exactly **three TIPS rows on the whole 8/6→11/5 document** (9/15, 9/29, **10/21 is the last**). **sb0607 fetched direct (HTTP 200, full body):** "nominal coupon securities … through November 4, 2026" — TIPS uncovered, so $750M is unchanged inside the doubled window; its promised updated schedule still unpublished. **`buybacks_operations`, all 32 TIPS ops:** under the 1Y-10Y label the cap filled **100/100/100/98.0/99.3/98.0/100%** then **54.0%** ($405M) on **2026-07-22**, on **$3,194M** offered (mid-range) — Treasury declined, sellers did not vanish; exact inverse of the 10Y-30Y bucket's 18–28%. **Both explanations for the miss REFUTED** against Treasury's par real curve (670 sessions, 2024-01-02→2026-09-04): auction-eve 5Y-real concession D-3→D-1 is **+2.2bp** on 14 TIPS new issues vs **+0.1bp** on 18 reopenings (07-22 itself +6.0bp), and momentum does not separate it (06-24 filled 100% into a +58bp 60-session selloff; 07-22 missed on +8bp/20d). **`buybacks_security_details` — the load-bearing find:** Treasury excludes the current on-the-run **4/4** ops checked (07-22's 27 eligible lines run 2027-10-15 → 2035-07-15, with in-window **91282CQP9** and **91282CPU9** both absent), so 07-22 was the last op before the 07-23 10Y new issue displaced CPU9 — its newest eligible line was July-2025 paper. **10/21 repeats it:** the 5Y TIPS new issue prices 10/22 (this op's settle date), so QP9 stays excluded one last day. Projected 10/20 list: CPU9 in, QP9 out, CRE3 out, CFR7 out (window opens 10/22/2027). **9/29 is the control** — same bucket, same cap, nearest TIPS auction the 9/17 reopening. **Adjacency — peers:** n/a (`symbols: []`). **Macro:** 5Y real **1.46→2.17** (+71bp) vs 5Y nominal +80bp = **89% real**, 5bp off the 07-27 high of 2.22; 5Y breakeven 2.37, 2026 range **2.16–2.72**, much wider than the 30Y's 2.15–2.34. **VIX 15.30** (09-08 delayed quote) vs the 09-04 close of 14.53, +0.77, under the 3pt bar. **Geopolitics:** nothing touching this instrument; `symbols: []`. **Event tape:** terms do not exist until 10/20 11:00am ET. **Adjacency set: 15 tracked ids within 5 days** — 10/21 also carries the 20Y bond reopening (1:00pm, 40 min earlier) and the ECB quiet-period start, 10/22 the 5Y TIPS new issue + coupon announcement, with the FOMC blackout running from 10/17, so attribution on the day is impossible by construction. **No new dated events discovered** — every adjacent event found is already tracked, including `treasury-refunding-2026-11-04`; no proposal filed. Registered FT-treasury-buyback-tips-1y10y-2026-10-21-**1** (eligible-set projection) and **-2** (fill ≥ $700M). | — (stance set) | 2026-10-08 (low, 15+d band: every 30d) |
 | 2026-10-07 | D-14 | **The control resolved against the structural story; the schedule risk is retired.** **9/29** (same bucket, $750M cap, nearest TIPS auction 12 days earlier): offered **$3,981M**, accepted **$605M = 80.7%**, take share 15.2%, 7 of 28 issues (fiscaldata `buybacks_operations` + `buybacks_security_details`, direct) — below the $700M kill switch, so 10/21 reads as a **regime read**. **Exclusion rule 5/5:** 9/29's 28 lines ran 91282CFR7 → **91282CPU9** (in, took $0) with **91282CQP9 and 91282CRE3 absent**; projected 10/20 list **27 lines** (CFR7 drops, window opens 10/22/2027). **Sibling 9/15 (TIPS 10-30Y)** filled its $500M cap on $2,088M offered — the "This week" falsifier of 09-08 (≥$250M) fired, so Treasury's filter is no fixed price bar. **Schedule:** `Tentative-Buyback-Schedule.pdf` re-fetched (plain curl, HTTP 200) is the **9/9 reissue** — 89,250 bytes, md5 `c49a5351…`, masthead "For Publication September 9, 2026" (09-08 edition: 125,547 B / `79b65955…`); 10/21 row **verbatim unchanged** (announce 10/20, op 10/21 1:40–2:00pm, settle 10/22, TIPS 1Y-10Y, 10/22/2027–10/21/2036, max $750M) while nominal long rows moved to "= or > $4 billion"; reissue left TIPS rows alone. **Adjacency — peers:** n/a (`symbols: []`). **Macro:** the 9/16 FOMC 25bp hike to 3.75–4.00% (12–0) and the 10/2 jobs print (UR 4.2%) are carried from their own ledgers, not re-derived; Treasury par curves direct to 10/06: 5Y real 2.17 (9/4) → **2.66**, 2026 high **2.73** on 9/30; 5Y nominal 4.54 → 5.03; BE5 2.37 → **2.37** (2026 range 2.16–2.72 intact) — all real yield. **VIX 15.01** (10/06 close, Cboe `VIX_History.csv`) vs 15.30, −0.29, under the 3pt bar. **Geopolitics:** nothing touching the instrument. **Event tape:** terms exist at 10/20 11:00am ET. **Adjacency set: 30 tracked ids within 5 days, 0 strong** (JGB 20Y 10/20 · 20Y bond + this op 10/21 · 5Y TIPS + coupon announcement 10/22 · FOMC blackout since 10/17). **No new dated events** — all found already tracked, none proposed. Registered FT-treasury-buyback-tips-1y10y-2026-10-21-**3**. | **Base case moved** — "fill $700M–$750M" → **partial fill, $400M–$750M**; the structural-rerun framing is retired (stance section carries the sentence) | 2026-10-14 (low, 0-14d band: every 7d) |
 | 2026-10-16 | D-5 | **Quiet pulse; nothing moved the terms.** **Schedule:** `Tentative-Buyback-Schedule.pdf` re-fetched (plain curl, HTTP 200) — 89,250 B, md5 `c49a5351…`, **identical** to the 9/9 reissue; 10/21 row unchanged at $750M. **No TIPS operation since 9/29** (fiscaldata `buybacks_operations`, direct); the 10/21 terms still appear only at the 10/20 11:00am ET list, so FT-1/-2/-3 are untouched and unscored. **Nominal read-across (not TIPS):** 10/15 10Y-20Y took its **$6.0B** cap on **$40.8B** offered (14.7% take), 10/8 20Y-30Y likewise $6.0B on $14.9B; 10/6 2Y-3Y took $1.33B of $4B. **Macro:** par curves direct to 10/15 — 5Y real **2.58** (2.66 on 10/6; 9/30 high 2.73), 5Y nominal **4.91**, BE5 **2.33** (2.37) — real yields eased, breakeven in range; CPI 10/14 / PPI + retail sales 10/15 are carried from their own ledgers, not re-derived. **VIX 16.46** (10/15 close, Cboe) vs 15.01, +1.45 (intraday 17.45 on 10/14), under the 3pt bar. **Geopolitics:** nothing touching the instrument. **Event tape:** `--on-date=2026-10-21` lists 7 entries, all tracked; 20Y reopening $13B same day 1:00pm ET. **No new dated events, none proposed.** | None — **read it, do not trade it**; base case stays a partial fill, $400M–$750M (low) | 2026-10-20 (low, 0-14d band: every 7d; terms land that day) |
+| 2026-10-22 | D+1 | **Close-out — it ran at the cap; all three forward tests pass.** `buybacks_operations` + `buybacks_security_details` for `operation_date=2026-10-21` (plain `curl -o`, HTTP 200): **27 eligible, 8 accepted, $4,751M offered, $750M accepted (100.0% of cap, 15.8% take share)**, 1:40–2:00pm ET, settled 10/22 as scheduled. Eligible list matched the projection exactly (CPU9 in at $0; QP9, RE3, CFR7 out) — exclusion rule **6/6**. 9/29's $605M miss did not recur, so the base case's top edge printed. **Rates (Treasury par curves, direct, to 10/21):** 5Y real **2.55** (2.58 on 10/15; 2026 high 2.73), BE5 **2.40** (4.95 nominal), 10Y real 2.76; the 10/22 curve is not yet published, so the pre-knot read is the last clean one. **VIX 16.68** (10/21 close, Cboe) vs 16.46 pulse ref; 10/16 closed **19.99** (+3.5, intraday 22.31) then faded. **Adjacency:** close-out mode, no sweep; 34 tracked ids within 5 days, none proposed. 20Y reopening and 5Y TIPS results are carried from their own ledgers. | **Stance held and cost nothing — read it, do not trade it.** Base case ($400M–$750M) printed at its ceiling; the "regime read" framing is weakened | — (closed; `## Outcome` below) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -312,8 +313,92 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
+## Outcome
+
+**Assessed 2026-10-22 (D+1).** A `rates` event with `symbols: []`, so no `earnings-cycle` /
+`intraday-edges` run applies; `node_modules/.cache/{earnings-cycle,intraday-edges}` were busted per
+the standing rule regardless. Every figure below is fetched fresh this session. Method note: the
+fiscaldata API needs URL-encoded `page%5Bsize%5D` — literal brackets return HTTP 404 under `curl`.
+Treasury's par-curve CSVs and Cboe's `VIX_History.csv` came down by plain `curl` this time.
+
+### The operation, from the primary
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$750,000,000** (unchanged across both schedule editions) |
+| Total par offered | **$4,751,000,000** |
+| Total par accepted | **$750,000,000** |
+| Cover (offered ÷ max) | **6.33×** |
+| Fill (accepted ÷ max) | **100.0%** |
+| Take share (accepted ÷ offered) | **15.8%** |
+| Issues | **8 accepted of 27 eligible** |
+| Window / settlement | 1:40–2:00pm ET **2026-10-21**, settled **2026-10-22** |
+
+Announcement chain, named in `buybacks_operations`' own file-name fields: `BBPA_20261021174000`,
+`BBA_20261021174000`, `BBR_20261021174000`. Nothing moved, resized or cancelled, so all three
+forward tests score rather than void.
+
+**Accepted lines** (`buybacks_security_details`, 27 rows): 91282CJH5 $150M @100.285 · 912810PZ5 $75M
+@100.217 · 91282CDX6 $75M @88.392 · 91282CEZ0 $35M @90.195 · 91282CJY8 $20M @94.258 · 91282CLE9
+$120M @94.859 · 91282CML2 $100M @95.875 · **91282CNS6 $175M @93.715**. The other 19 lines, including
+**91282CPU9**, took **$0**. Against 9/29 the same CUSIPs cleared higher: CNS6 $210M @92.289 → $175M
+@93.715, CML2 @94.477 → @95.875, CEZ0 @89.053 → @90.195.
+
+### Forward tests — three for three
+
+Full receipts in [`forward-tests/treasury-buyback-tips-1y10y-2026-10-21.md`](../forward-tests/treasury-buyback-tips-1y10y-2026-10-21.md).
+
+- **FT-…-1 pass** — the 27-line list matched the projection to the CUSIP: CPU9 in, QP9 / RE3 / CFR7
+  out. The exclusion rule is now **6 of 6**. This is the one claim in the document that was original
+  and mechanical, and it held.
+- **FT-…-2 pass** — $750M accepted, at or above the $700M line.
+- **FT-…-3 pass** — 15.8% take share, at or below 20%. Weak evidence by construction: offers of
+  $4,751M sat above the $3,750M level where this passes automatically.
+
+### What held, and what the close-out adds
+
+- **The stance was correct and cost nothing.** *Read it, do not trade it.* No position, no size.
+  $750M against $26B of 5-Year TIPS the next day is 35:1 and leg 8's arithmetic needs no revision.
+- **The 10/07 base case ($400M–$750M, low confidence) printed at its ceiling.** That is inside
+  its band but it is not the band's centre: the call that the cap would bind less often was half
+  right. Across the label's last three operations accepted was $405M, $605M, $750M — a rising
+  line, not a regime.
+- **The "regime read" is weakened, not dead.** 07-22 and 9/29 missed on offers of $3.2B and $4.0B;
+  10/21 filled on $4.75B. The cleanest reading is that **depth of offers drives the fill** (cap binds
+  at roughly $4.5B+ offered: 06-24 $4,545M → 100%, 10/21 $4,751M → 100%, vs $3,194M → 54%,
+  $3,981M → 81%). That is a descriptive pattern over **five points**, not a tested mechanism, and
+  the thin-offer operations of early 2026 ($2.3B, still capped) contradict it as a rule.
+- **Both candidate mechanisms for 07-22 stay refuted** (leg 4), and the structural "stale eligible
+  set" story stays unproven: 10/21 ran on the same stale-set structure as 07-22 and filled. Two
+  operations with the same structure and opposite results is no signal either way.
+- **Rates tape through the operation:** 5Y real **2.55** (down from 2.66 on 10/6, 2.73 high on
+  9/30), BE5 **2.40** (up from 2.33 on 10/15, inside the 2.16–2.72 range), 10Y real **2.76**. The
+  10/22 curve (the 5-Year knot swap) is not published at write time; the reading instruction stands
+  for anyone comparing.
+
+### Honest limits on this close-out
+
+- **The 20Y reopening and the 5Y TIPS new issue are not scored here.** Both sit in the same 24
+  hours; their results were not yet in `auctions_query` at write time and belong to
+  `treasury-20y-bond-2026-10-21` and `treasury-5y-tips-2026-10-22`.
+- **Attribution on 10/21 is impossible by construction, as registered.** The 20Y reopening priced
+  forty minutes before the window, the FOMC blackout was running, UK CPI landed pre-open. Every
+  forward test scores the operation's own published numbers only.
+- **VIX regime note:** 10/16 closed **19.99** (+3.5 over the 10/15 close, intraday high 22.31), over
+  the 3-point regime bar, then faded to **16.68** by 10/21. Nothing in the scoring depends on it.
+- **Kill switches:** the "accepted ≥ $700M" switch fired as designed (FT-2 pass, structural story
+  quietly dead). The 10/20 list kill switches (QP9 or RE3 present) did not fire. The sb0607-to-TIPS
+  extension and a 10/20 announcement change were never in play.
+
+**`<id>.json` amended.** `status` flipped **`estimate` → `confirmed`** and the source prefix
+**`EST:` → `TSY:`**, on the operation's own fiscaldata announcement/results record read this session,
+the same precedent as `treasury-buyback-tips-1y10y-2026-09-29`.
+
 **Last assessed:** 2026-10-07
 <!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","dallas-fed-mfg-2026-10-26","ecb-quiet-period-start-2026-10-21","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","opex-2026-10-16","pending-home-sales-2026-10-20","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
 
 **Last assessed:** 2026-10-16
 <!-- probe-ref: {"symbols":{},"vix":16.46,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","dallas-fed-mfg-2026-10-26","ecb-quiet-period-start-2026-10-21","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","opex-2026-10-16","pending-home-sales-2026-10-20","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->
+
+**Last assessed:** 2026-10-22
+<!-- probe-ref: {"symbols":{},"vix":16.68,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","dallas-fed-mfg-2026-10-26","ecb-quiet-period-start-2026-10-21","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","opex-2026-10-16","pending-home-sales-2026-10-20","spcx-lockup-release-2026-10-22","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":[],"screenStreak":0,"blocked":[]} -->

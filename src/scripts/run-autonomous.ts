@@ -17,24 +17,27 @@
  *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only. Since
  *                            #4642 slice 10 it opens nothing on its own: a bot opens a position only
  *                            through a playbook it is subscribed to in the Store (exits always run).
- *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3"). 0/unset (default) = dark. The
- *                            owner's stored count for the first bot (Mission Control `betaPicks`,
- *                            read every scan, #4535 slice 2b) wins over this one. When
- *                            armed, and nothing organic trades on a given day, forces up to N small,
- *                            honestly-labeled BETA-SCOUT picks from whatever signal already exists —
- *                            see src/playbooks/beta-scout.ts — and only while the first bot is
- *                            subscribed to BETA-SCOUT in the Store: armed AND subscribed. "3+stage"
- *                            also lets the scout stage its picks after the close for Alpaca's next
- *                            open (holiday-aware) — see autonomous-scout-staging.ts. The owner's
- *                            after-close staging switch for the first bot (`betaStage`, read every
- *                            staging pass, #4535 slice 4b) wins over the "+stage".
- *   SKYNET_HARDCORE_BOTS     comma-separated persona ids to run in HARDCORE research mode (Eric,
- *                            2026-08-20): loosened thresholds, tranche scale-in/out, momentum
- *                            scalps, 90s cooldown, every trade carrying strategy + expectation —
- *                            volume as research data. Unset (default) = dark. Currently: sauron.
- *                            The owner's per-bot switch in Mission Control wins over this and is
- *                            read at every `/controls` poll — the build, its cooldown and its
- *                            readiness gate swap together with no restart (#4535 slice 2c).
+ *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3") — NO LONGER OBEYED (#4535
+ *                            slice 4c-2). The bots only report it, so the dashboard can copy it into
+ *                            the first bot's stored settings once (slice 4c-1). The forced-pick count
+ *                            is the owner's stored `betaPicks` for that bot (Settings card, read every
+ *                            scan, slice 2b), 0 with none; after-close staging is its stored
+ *                            `betaStage` (read every staging pass, slice 4b), off with none. When
+ *                            armed, and nothing organic trades on a given day, the scout forces up to
+ *                            N small, honestly-labeled BETA-SCOUT picks from whatever signal already
+ *                            exists — see src/playbooks/beta-scout.ts — and only while the first bot
+ *                            is subscribed to BETA-SCOUT in the Store: armed AND subscribed. Staging
+ *                            places the picks after the close for Alpaca's next open (holiday-aware) —
+ *                            see autonomous-scout-staging.ts.
+ *   SKYNET_HARDCORE_BOTS     persona ids for HARDCORE research mode (Eric, 2026-08-20) — NO LONGER
+ *                            OBEYED (#4535 slice 4c-2); reported for the same one-time copy. The
+ *                            owner's per-bot switch decides, read at every `/controls` poll: loosened
+ *                            thresholds, tranche scale-in/out, momentum scalps, 90s cooldown, every
+ *                            trade carrying strategy + expectation — volume as research data. The
+ *                            build, its cooldown and its readiness gate swap together with no restart
+ *                            (slice 2c). A bot with no stored switch is standard. Currently: sauron.
+ *   SKYNET_COND_SCOUT_UNIVERSE  the shadow scout's names — NO LONGER OBEYED (slice 4c-2); the host
+ *                            bot's COND-SCOUT subscription decides (autonomous-cond-scout.ts).
  */
 import { existsSync } from "node:fs";
 import type { TraderTuning } from "../autonomous/autonomous-trader.js";
@@ -78,6 +81,7 @@ import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { SYMBOL_FACTS } from "../domain/symbol-facts.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { parseBetaForcing } from "../playbooks/beta-scout.js";
+import { parseCondScoutUniverse } from "../playbooks/cond-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { authoredPlaysHolder } from "./autonomous-authored-plays.js";
@@ -87,6 +91,7 @@ import { bridgeReplication } from "./autonomous-bridge-replication.js";
 import { armCondScout } from "./autonomous-cond-scout.js";
 import { convictionsHolder } from "./autonomous-convictions.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
+import { ignoredEnvSettings } from "./autonomous-env-ignored.js";
 import { watchHardcore } from "./autonomous-hardcore-live.js";
 import { intradayBarsFeed } from "./autonomous-intraday-bars.js";
 import {
@@ -329,33 +334,41 @@ async function runLive(): Promise<void> {
     promotedPlays.rosterFor,
     memberConvictions.lookupFor,
   ); // issue #885
-  // #4535 slice 1b: tell the dashboard the env house roster so it can seed each bot's own
-  // subscriptions from it (uncapped, behaviour-preserving) — rides the next `/controls` poll.
+  // The env's forced-pick arming — parsed only to be reported below (the bots no longer obey it,
+  // #4535 slice 4c-2); the bot it runs on, the first, carries the stored count on its roster.
+  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  // Tell the dashboard the env house roster (#4535 slice 1b) and the env's other behaviour settings
+  // (slice 4c), so it can copy each into the bots' own stored settings once — behaviour-preserving,
+  // ahead of the bots no longer reading the env. Rides the next `/controls` poll.
   controls.reportHouseRoster(
     houseRosterReport(
       bots.map((bot) => bot.persona.id),
       playbookRoster.enabled,
+      {
+        hardcore: [...hardcoreRoster.envIds],
+        betaPicks: betaForcing.maxPicks,
+        betaStage: betaForcing.stageAfterClose,
+        condScoutUniverse: parseCondScoutUniverse(process.env.SKYNET_COND_SCOUT_UNIVERSE),
+      },
     ),
   );
-  // The forced daily pick's env arming — read here because the bot it runs on, the first, carries
-  // it on its roster for the roll call while armed (`tradingRoster`'s `runsScout`).
-  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
-  // ...and its count is the owner's setting for that bot when there is one (Mission Control, read
-  // every scan — #4535 slice 2b), else the env count; 0 from either side is dark.
+  // ...and its count is the owner's setting for that bot (Settings card, read every scan — #4535
+  // slice 2b); none stored is 0 and dark.
   const scoutHostId = botRosters[0]?.bot.persona.id;
+  for (const line of ignoredEnvSettings(bootControls, {
+    hardcore: hardcoreRoster.envIds,
+    betaPicks: betaForcing.maxPicks,
+    betaStage: betaForcing.stageAfterClose,
+    hostId: scoutHostId,
+  })) {
+    console.warn(line);
+  }
   const scoutPicks = () =>
-    effectiveBetaPicks(
-      scoutHostId ? controls.betaPicks(scoutHostId) : undefined,
-      betaForcing.maxPicks,
-    );
+    effectiveBetaPicks(scoutHostId ? controls.betaPicks(scoutHostId) : undefined);
   // ...and whether it stages after the close is the owner's switch for that bot, read every staging
-  // pass (#4535 slice 4b), else the env's "+stage".
+  // pass (#4535 slice 4b); none stored is off.
   const scoutStages = () =>
-    effectiveBetaStage(
-      scoutHostId ? controls.betaStage(scoutHostId) : undefined,
-      betaForcing.stageAfterClose,
-      scoutPicks(),
-    );
+    effectiveBetaStage(scoutHostId ? controls.betaStage(scoutHostId) : undefined, scoutPicks());
   // The 5-minute bars the dark dip-to-bounce playbooks record their would-be orders from (#5489):
   // Alpaca's data host on the shared data credential, fetched only once a playbook asks for a name.
   const intradayBars = intradayBarsFeed(currentCredentials);
@@ -446,7 +459,6 @@ async function runLive(): Promise<void> {
   // mode its readiness gate allows swap together, between cycles — no restart.
   onHardcorePolled = watchHardcore({
     ids: botRosters.map((r) => r.bot.persona.id),
-    envIds: hardcoreRoster.envIds,
     initial: hardcoreRoster.hardcore,
     wantedMode: (id) => effectiveMode(bootControls, id, mode),
     report: controls.reportPersonaGate,

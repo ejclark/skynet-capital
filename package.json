@@ -75,6 +75,7 @@
     "steer:build": "node scripts/steer/build.mjs",
     "steer:readback": "node scripts/steer/readback.mjs",
     "research:lint": "node scripts/research-lint.mjs",
+    "research:lockups": "node scripts/research/lockup-discovery.mjs",
     "research:claims": "tsx src/scripts/claim-studies.ts",
     "research:signals": "tsx src/scripts/signal-schedule.ts",
     "research:dossier": "tsx src/scripts/symbol-dossier.ts",
@@ -91,11 +92,13 @@
     "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js",
     "shoot:tower": "npm run build:scene && node scripts/shoot/tower.mjs",
     "shoot:standings": "tsx scripts/shoot/standings.mjs",
+    "shoot:capital-flow": "tsx scripts/shoot/capital-flow.mjs",
     "shoot:ladder-gate": "tsx scripts/shoot/ladder-gate.mjs",
     "shoot:milestones": "tsx scripts/shoot/milestones.mjs",
     "shoot:filing-comments": "tsx scripts/shoot/filing-comments.mjs",
     "shoot:onboarding": "tsx scripts/shoot/onboarding.mjs",
     "shoot:moneypenny": "tsx scripts/shoot/moneypenny.mjs",
+    "shoot:moneypenny-conviction": "tsx scripts/shoot/moneypenny-conviction.mjs",
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
     "shoot:guidance-recap": "tsx scripts/shoot/guidance-recap.mjs",
@@ -115,7 +118,6 @@
     "design:cards": "node scripts/design-cards.mjs",
     "shoot:activity": "tsx scripts/shoot/activity.mjs",
     "shoot:mission-control": "tsx scripts/shoot/mission-control.mjs",
-    "shoot:council": "tsx scripts/shoot/council.mjs",
     "shoot:thesis": "tsx scripts/shoot/thesis.mjs",
     "test:e2e": "playwright test",
     "test:e2e:auth": "playwright test -c playwright.auth.config.ts",
@@ -143,7 +145,7 @@
     "shoot:mermaid-pairs": "node scripts/shoot/mermaid-pairs.mjs"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
+    "@axe-core/playwright": "4.14.0",
     "@balena/dockerignore": "1.0.2",
     "@biomejs/biome": "2.5.15",
     "@commitlint/cli": "21.2.3",
@@ -156,12 +158,12 @@
     "@types/node": "26.6.5",
     "@types/three": "0.186.0",
     "acorn": "8.19.0",
-    "dependency-cruiser": "18.5.0",
+    "dependency-cruiser": "18.6.0",
     "esbuild": "0.28.2",
     "fast-check": "4.10.2",
     "husky": "9.1.7",
     "jscpd": "5.4.1",
-    "jsdom": "30.1.2",
+    "jsdom": "30.1.3",
     "knip": "6.41.0",
     "mermaid": "11.17.2",
     "npm-run-all2": "9.0.3",
@@ -171,7 +173,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
-    "marked": "18.1.0",
+    "marked": "18.1.1",
     "three": "0.186.1"
   }
 }

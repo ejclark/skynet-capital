@@ -187,7 +187,7 @@ can differ per surface.
 
 ---
 
-## What this needs that doesn't exist yet
+## What this needs, and which parts are built
 
 1. **The history / persistence layer — recording, now being consumed.** Renown, discipline scoring,
    ceremonies, seasons and called-it all need durable *events*, not snapshots. The prod sampler is

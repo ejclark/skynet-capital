@@ -47,7 +47,6 @@ rstest.mock("../../src/live/desk", () => ({
 }));
 rstest.mock("../../src/shell/heartbeat", () => ({ PlaybooksHeadLine: () => null }));
 rstest.mock("../../src/shell/sauron-card", () => ({ SauronCard: () => null }));
-rstest.mock("../../src/shell/council-line-card", () => ({ CouncilLineCard: () => null }));
 
 const row = (orderId: string, minute: number): DeskActivityEvent => ({
   orderId,

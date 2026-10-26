@@ -4,6 +4,7 @@ import { AI_DIP_2026_10, SEEDED_CONVICTIONS } from "../../src/playbooks/convicti
 import {
   CONVICTIONS,
   ConvictionStore,
+  isConvictionOffView,
   lookupConviction,
   statedCheck,
 } from "../../src/playbooks/conviction-store.js";
@@ -95,15 +96,63 @@ describe("the seeded AI-dip conviction", () => {
   });
 });
 
+/** The one test the bots' exits-only rule, the gate's note and the owner's row share. */
+describe("isConvictionOffView", () => {
+  const own = { reason: "my call", checkOn: "2027-04-30" };
+
+  it("is an inline copy with no pointer, on a pair the table knows", () => {
+    expect(isConvictionOffView(aSubscription("sauron", "SAURON", { conviction: own }))).toBe(true);
+    expect(isConvictionOffView(aSubscription("sauron", "CRWV-WHEEL", { conviction: own }))).toBe(
+      true,
+    );
+  });
+
+  it("is a ◆ pair with no pointer, copy or not (the inline carry's replacement)", () => {
+    expect(isConvictionOffView(aSubscription("sauron", "CRWV-WHEEL"))).toBe(true);
+    expect(isConvictionOffView(aSubscription("sauron", "CRWV-LONG-CALL"))).toBe(true);
+  });
+
+  it("is never a pointed subscription, whatever its pointer resolves to", () => {
+    const pointed = { convictionId: "no-such-view", conviction: own };
+    expect(isConvictionOffView(aSubscription("sauron", "CRWV-WHEEL", pointed))).toBe(false);
+    expect(
+      isConvictionOffView(
+        aSubscription("sauron", "CRWV-WHEEL", { convictionId: AI_DIP_2026_10.id }),
+      ),
+    ).toBe(false);
+  });
+
+  it("is never a non-◆ pair with no copy, an authored play, or an id that is no pair", () => {
+    expect(isConvictionOffView(aSubscription("sauron", "SAURON"))).toBe(false);
+    expect(isConvictionOffView(aSubscription("sauron", "S1-NVDA"))).toBe(false);
+    expect(isConvictionOffView(aSubscription("sauron", "U-my-own-play", { conviction: own }))).toBe(
+      false,
+    );
+  });
+});
+
 describe("statedCheck", () => {
   const lookup = (id: string) => (id === "other-view" ? record() : undefined);
   const own = { reason: "my call", checkOn: "2027-04-30" };
 
-  it("is the subscription's own conviction when it points at no record", () => {
+  // The contract step's piece 4, bots first: pointers only. An inline copy with no pointer is one
+  // the app's poll could not move onto a view; it gives no day, and the roster runs it exits-only.
+  it("never reads an inline conviction with no pointer, and says so", () => {
     expect(statedCheck(aSubscription("sauron", "CRWV-WHEEL", { conviction: own }), lookup)).toEqual(
-      { checkOn: "2027-04-30", from: "subscription" },
+      { note: "CRWV-WHEEL: its conviction is not on a view yet" },
     );
-    expect(statedCheck(aSubscription("sauron", "CRWV-WHEEL"), lookup)).toEqual({});
+    expect(statedCheck(aSubscription("sauron", "SAURON"), lookup)).toEqual({});
+  });
+
+  // The inline carry's replacement, bots first: a ◆ pair trades only on a conviction, so one with
+  // no pointer has no check day and is said, copy or not; the roster runs it exits-only.
+  it("says a ◆ pair with neither a pointer nor a copy has no view, like an unmoved copy", () => {
+    expect(statedCheck(aSubscription("sauron", "CRWV-WHEEL"), lookup)).toEqual({
+      note: "CRWV-WHEEL: its conviction is not on a view yet",
+    });
+    expect(statedCheck(aSubscription("sauron", "CRWV-LONG-CALL"), lookup)).toEqual({
+      note: "CRWV-LONG-CALL: its conviction is not on a view yet",
+    });
   });
 
   it("is the record's date when the record steers the pair, over the subscription's own", () => {
@@ -113,29 +162,39 @@ describe("statedCheck", () => {
     });
     expect(statedCheck(sub, lookup)).toEqual({
       checkOn: "2027-01-29",
-      from: "record",
       convictionId: "other-view",
     });
   });
 
-  it("falls back to its own conviction, said, when the pointer names no stored record", () => {
+  // The contract step's piece 2, bots first: a pointed pair is checked one way, never both, so the
+  // app dropping the inline copy changes nothing. Steering holds an unusable pointer exits-only.
+  it("never reads its own conviction when the pointer names no stored record, and says so", () => {
     const sub = aSubscription("sauron", "CRWV-WHEEL", { conviction: own, convictionId: "gone" });
     expect(statedCheck(sub, lookup)).toEqual({
-      checkOn: "2027-04-30",
-      from: "subscription",
       note: 'CRWV-WHEEL points at conviction "gone", which is not stored',
     });
   });
 
-  it("falls back, said, when the record does not steer the pair", () => {
-    const sub = aSubscription("sauron", "CRWV-LONG-CALL", { convictionId: "other-view" });
+  it("never reads its own conviction when the record does not steer the pair, and says so", () => {
+    const sub = aSubscription("sauron", "CRWV-LONG-CALL", {
+      conviction: own,
+      convictionId: "other-view",
+    });
     expect(statedCheck(sub, lookup)).toEqual({
       note: 'CRWV-LONG-CALL points at conviction "other-view", which does not steer it',
     });
   });
 
+  it("checks a pointed subscription the same with or without its inline copy", () => {
+    for (const convictionId of ["other-view", "gone"]) {
+      const bare = aSubscription("sauron", "CRWV-WHEEL", { convictionId });
+      const withCopy = { ...bare, conviction: own };
+      expect(statedCheck(withCopy, lookup)).toEqual(statedCheck(bare, lookup));
+    }
+  });
+
   it("reads the build's store by default", () => {
     const sub = aSubscription("sauron", "CRWV-LONG-CALL", { convictionId: "ai-dip-2026-10" });
-    expect(statedCheck(sub).from).toBe("record");
+    expect(statedCheck(sub).convictionId).toBe("ai-dip-2026-10");
   });
 });

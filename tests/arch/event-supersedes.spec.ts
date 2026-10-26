@@ -178,6 +178,42 @@ describe("supersededBy — the --validate contract", () => {
     expect([ok, out]).toEqual([true, expect.stringContaining("1 superseded, not loaded")]);
   });
 
+  // #5912 slice 3: an IPO's listing and lockup are filed weeks early from the S-1 on an estimated
+  // date, and the 424B4 dates them — the same release on another date, by construction. The typo
+  // guard for these kinds is the release's identity (kind + symbols), not the date.
+  const listing = (id: string, date: string, extra: Record<string, unknown> = {}) =>
+    entry(id, date, { kind: "ipo-listing", symbols: ["ANTH"], ...extra });
+
+  it("accepts a filing-read estimate retired by its dated twin on another date", () => {
+    const { ok, out } = validateFixture({
+      "anth-ipo-listing-2026-11-18.json": listing("anth-ipo-listing-2026-11-18", "2026-11-18", {
+        status: "confirmed",
+        source: "SEC: 424B4",
+      }),
+      "anth-ipo-listing-2026-11-16.json": listing("anth-ipo-listing-2026-11-16", "2026-11-16", {
+        supersededBy: "anth-ipo-listing-2026-11-18",
+      }),
+    });
+    expect([ok, out]).toEqual([true, expect.stringContaining("1 superseded, not loaded")]);
+  });
+
+  it.each([
+    ["another symbol", { symbols: ["ANTX"] }],
+    ["another kind", { kind: "lockup-expiry" }],
+  ])("still refuses a re-dated retirement onto %s", (_why, survivorExtra) => {
+    const { ok, out } = validateFixture({
+      "anth-ipo-listing-2026-11-18.json": listing("anth-ipo-listing-2026-11-18", "2026-11-18", {
+        status: "confirmed",
+        source: "SEC: 424B4",
+        ...survivorExtra,
+      }),
+      "anth-ipo-listing-2026-11-16.json": listing("anth-ipo-listing-2026-11-16", "2026-11-16", {
+        supersededBy: "anth-ipo-listing-2026-11-18",
+      }),
+    });
+    expect([ok, out]).toEqual([false, expect.stringMatching(/a re-slug names the SAME release/)]);
+  });
+
   // Every rule below turns a typo into a red build. Without them `supersededBy` is the one field
   // that can delete an event from the calendar silently — which is strictly worse than the
   // duplicate it exists to retire.

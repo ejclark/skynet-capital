@@ -102,7 +102,7 @@ export function handOffNote(pair: Pair, others: readonly Pair[]): string | undef
 /**
  * A pair the study does not back, on a strategy whose rules read no study (today the wheel): it takes
  * a new subscription only as its owner's labelled, dated conviction (criterion 2). ✗ stand aside, ~
- * screened and ? not studied all count; ✓ and ◆ already have a verdict to stand on, and – can't run
+ * screened and ? not studied all count; ✓ and ◆ already have a verdict to stand on, and ⊘ can't run
  * is refused on its own.
  */
 export function needsConviction(pair: Pair): boolean {

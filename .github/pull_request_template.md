@@ -20,7 +20,7 @@ stateDiagram-v2 · branch mechanics → gitGraph · dataflow → delta flowchart
 removed) · a number over time → xychart-beta · a call sheet → quadrantChart · schema → erDiagram ·
 config → before/after table. The vocabulary card and the story → picture table: docs/PICTURES.md.
 Mermaid: any type GitHub draws (npm run mermaid:lint parses every block — a syntax error is the
-opening frame), ≤15 nodes, plain words in labels, no theme/hex — emphasis by edge weight and shape;
+opening frame), one phone screen at ≥12px text, plain words in labels, no theme/hex — emphasis by edge weight and shape;
 animate every live edge of a flow (`a e1@--> b` + `e1@{ animate: true }`), dotted removed paths stay still.
 The picture states WHAT changed — never how good it is. -->
 
@@ -29,8 +29,9 @@ _Caption —_
 <!-- The caption is required with any picture: one plain-language line naming what it shows and
 where it came from (a route, a shoot script, a diff). It's the line that survives email/mobile. -->
 
-<!-- CARVE-OUT PRs ONLY (workflow files / credentials / spend / outward-facing): add this next,
-top-level, never indented or inside <details> — blast radius comes BEFORE accomplishments:
+<!-- CARVE-OUT PRs ONLY (the irreversible class — the list is envelope.json, and
+`node scripts/envelope-scan.mjs --check <paths>` answers it): add this next, top-level, never
+indented or inside <details> — blast radius comes BEFORE accomplishments:
 > [!WARNING]
 > <what this touches and what could go wrong if it's wrong> -->
 

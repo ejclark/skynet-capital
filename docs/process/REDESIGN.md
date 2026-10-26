@@ -15,7 +15,8 @@ problem"):
 1. **Align** — his marks first, on clean frames, then the problems Claude found. His unprompted
    read comes before any of ours, so ours can't anchor it.
 2. **Scope** — what alignment produces: the goal, the outcomes he'll check by eye and the ranked
-   problems, agreed once with "that's the list". The contract the rest is measured against.
+   problems, agreed once in his words ("that's the list", "proceed", or anything that settles it;
+   never a set phrase). The contract the rest is measured against.
 3. **Work the problem** — design rounds inside that scope, "only as many as needed, no more no
    less": shapes per round sized by uncertainty, rounds only for outcomes still open.
 4. **Learn forward** — a retro before the session archives. Its findings feed the next session's
@@ -32,7 +33,7 @@ flowchart TD
   end
   C2["docs/IA.md §10<br/>the upstream ledger"]
   A -->|"upstream"| C2
-  R -->|"he says: that's the list"| L["2 · Scope<br/>goal · outcomes · ranked problems"]
+  R -->|"his words agree the list"| L["2 · Scope<br/>goal · outcomes · ranked problems"]
   subgraph S3["3 · Work the problem"]
     D["d · Draw for an open outcome<br/>1 shape to confirm · 2–3 for a fork · ≤5 to explore"] --> E["e · Round page<br/>outcome checklist, pins, one pick, Done"]
     E --> F{"f · Done, read back:<br/>every outcome met?"}
@@ -177,18 +178,19 @@ and doesn't lead with its own list.
 - **Loop until it's the list.** Look closer → draw that problem closer (its parts, its cause); Not
   a problem → drop it; his notes add the problems he sees. Each round's intro carries the current
   list, ranked, and says: "when this is the list, say *that's the list* — in a pinned comment or in
-  this session." That phrase ends stage 1 and sets the scope; until he says it, the next round is another problem
-  round, never a shape.
+  this session." His agreement ends stage 1 and sets the scope: that phrase or any words of his that
+  settle the list count, never a ritual phrase (READERS.md, 2026-10-16). Until he agrees it, the
+  next round is another problem round, never a shape.
 - **Upstream problems on the page:** start the option's name with "Upstream:" and say the root and
   the ledger row in its `delta` ("Upstream: the section switch is one shell part every screen
   shares — U3"). He ranks them like any other; a pick tells you whether the goal needs a workaround.
 - **Fast path:** when his notes already name the problems (a board-started session), they arrive
   as marks he has already made: stage 1 shows them in place for him to add to, and stage 2 is the
-  list drafted from his words. Often one round, ending in "that's the list".
+  list drafted from his words. Often one round, ending when he agrees it.
 
 ### 2 · Scope — the agreed proposal
 
-When he says "that's the list", write **the scope** into the state block and post it on the issue,
+When his words agree the list, write **the scope** into the state block and post it on the issue,
 quoting his words. It is what the rest of the session is measured against:
 - **the goal**, as he corrected it;
 - **the outcomes**, O1, O2…, each a thing he can check by eye on a frame ("the order line is on the
@@ -348,8 +350,9 @@ npm run steer:build -- <dir>/tp.json
 
 **g · Simulated members, only where they can be trusted.** A picked shape is tried by simulated
 members only on a screen with a study world (`scripts/study/tasks/<screen>.json`; today only the
-profile) and only after #5099's control re-run passes (`docs/members/study/README.md` → *The
-control rounds*). Anywhere else, say "no member test: <which condition failed>" on the issue in one
+profile) and only after a fixed-build (negative) control passes (`docs/members/study/README.md` →
+*The control rounds*; #5099's re-run failed, and a passed positive control does not open this).
+Anywhere else, say "no member test: <which condition failed>" on the issue in one
 line and go on. Never hold a build for a test that cannot run.
 
 **h · Bank what the round taught.**
@@ -398,7 +401,7 @@ more rounds with no build):
 
 | Rule | On the frame it means |
 |---|---|
-| Define before drawing | No shape until he has said "that's the list"; every shape names the problem it solves (P1, P2…). |
+| Define before drawing | No shape until his words have agreed the list (the intent, not a set phrase); every shape names the problem it solves (P1, P2…). |
 | Upstream is tagged, never patched silently | A problem rooted outside the screen says so ("Upstream: … — U3"); a workaround is labelled "works around U<n>" on the frame. |
 | One section per sitting | A round shows one section; the rest of the screen is today, untouched. |
 | Change one thing, on the same data | Every shape is today plus one named change; same account, same tickers, same numbers. |

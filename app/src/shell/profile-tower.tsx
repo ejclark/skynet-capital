@@ -2,14 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { fetchDesk } from "../live/desk";
 import type { OwnedAccount } from "../live/settings";
-import { CouncilLineCard } from "./council-line-card";
 import { SauronCard } from "./sauron-card";
 
 /**
  * What the Profile page stands under the page's tower (#3977): the league, the tower's shade
- * melting into it, then the member's council line — the character card and council line the
- * Overview carries in its own flow below the bench width (`accounts-overview-section.tsx`), here on
- * every section. The selected account's landmark dials reach the tower through the card's mood.
+ * melting into it — the character card the Overview carries in its own flow below the bench width
+ * (`accounts-overview-section.tsx`), here on every section. The selected account's landmark dials
+ * reach the tower through the card's mood. (The member's council line stood under it until the
+ * Council retired, #5992.)
  */
 export function ProfileTower({
   accounts,
@@ -28,15 +28,12 @@ export function ProfileTower({
   });
   const landmark = only && !desk.data?.[0]?.desk.error ? desk.data?.[0]?.landmark : undefined;
   return (
-    <>
-      <SauronCard
-        {...(landmark ? { landmark } : {})}
-        ownedIds={accounts.map((a) => a.id)}
-        meId={accounts.find((a) => a.kind === "human")?.id}
-        scope=".cockpit"
-        under
-      />
-      <CouncilLineCard />
-    </>
+    <SauronCard
+      {...(landmark ? { landmark } : {})}
+      ownedIds={accounts.map((a) => a.id)}
+      meId={accounts.find((a) => a.kind === "human")?.id}
+      scope=".cockpit"
+      under
+    />
   );
 }

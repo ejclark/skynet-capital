@@ -1,0 +1,11 @@
+{
+  "id": "bsp-lockup-expiry-2026-12-27",
+  "kind": "lockup-expiry",
+  "title": "BSP IPO lockup ends — Bending Spoons S.p.A., 180 days after its 2026-06-30 prospectus",
+  "date": "2026-12-27",
+  "status": "confirmed",
+  "source": "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/2004711/000110465926079884/tm2613674-14_424b4.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-06-30 (read from its cover); 180 days after it is 2026-12-27. Lock-up clause: \"Lock-up agreements We have agreed with the underwriters that, for a period of 180 days after the date of this prospectus (the \"Company Lock-Up Period\"), we will not (i) offer, pledge, sell, contract to sell, sell any option or contract to purchase, purchase any option or contract to sell, grant any option, right, or…\"",
+  "impact": "medium",
+  "symbols": ["BSP"],
+  "notes": "$998M offering. Insiders may sell from the next session; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then."
+}

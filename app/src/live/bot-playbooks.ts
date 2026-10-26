@@ -22,6 +22,7 @@ import {
   ROLL_CALL_WORDS,
   type RollCallLine,
 } from "./heartbeat";
+import { withPairNames } from "./playbook-name";
 
 /** A card's one state: the roll call's when it wins, else the playbook's verdict. "armed" is a
  *  roll-call line that is on with no verdict beside it — the server never sends one, but a card
@@ -235,7 +236,8 @@ export function botPlaybooks(heartbeat: Heartbeat, named = true): BotPlaybooks {
  *  leading "On, …" clause is dropped and a "Paused: …" one too. A sentence that starts any other
  *  way is shown as the server wrote it. */
 export function plainReason(reason: string): string {
-  const trimmed = reason
+  // A pair the roll call or a verdict names by id reads as its name (#4469 slice 3d).
+  const trimmed = withPairNames(reason)
     .replace(/^Paused:\s*/, "")
     .replace(/^On(?:,| and)\s+(?:and |but |with (?=no ))?/, "")
     // A calendar day reads as the card's own dates do ("Nov 18"), and an issue number written for

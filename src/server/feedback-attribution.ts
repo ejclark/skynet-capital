@@ -12,6 +12,7 @@
  * issue here is filed by the same bot token, so `author:` can't do that; `label:member-<id>` can.
  */
 import { createHash } from "node:crypto";
+import type { Session } from "./auth/session.js";
 
 /** Truncated salted sha256, stable per member, pseudonymous to readers. Not cryptographically
  *  unlinkable for a tiny guest list — treated as pseudonymity, not secrecy. */
@@ -38,4 +39,11 @@ export function submitterFor(input: {
   const id = `member \`${opaqueMemberId(input.submitterEmail)}\``;
   const name = input.submitterName?.trim();
   return name ? `**${name}** (${id})` : id;
+}
+
+/** The credit line: the member's own name from the session, cut to the model's limit — how an
+ *  authored play, a conviction view and an owner's own view on a pair name whose they are. */
+export function creditFor(session: Session): string {
+  const named = session.name?.trim() || session.email.split("@")[0] || "A member";
+  return named.replace(/[\r\n]+/g, " ").slice(0, 40);
 }

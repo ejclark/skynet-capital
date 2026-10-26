@@ -46,6 +46,9 @@ export async function bars(symbol) {
       open: q.open[i] * ratio,
       close: a,
       rawClose: close,
+      // Shares traded, as Yahoo reports them; the lockup study only compares volume within a few
+      // weeks of itself, so the split convention never enters a ratio.
+      volume: q.volume?.[i] ?? 0,
     });
   }
   out.sort((x, y) => (x.date < y.date ? -1 : 1));

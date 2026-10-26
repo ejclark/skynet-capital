@@ -12,8 +12,10 @@
 // THE PICTURE is the member session with the most confused turn (a failed session first on a tie;
 // `--picture` names one instead): the frame before, what they did, the frame after — beside the
 // owner's own screenshot (`--owner-shot`, linked, never copied, refused outside `--root`).
-// STRUCTURAL FINDINGS are the ones grade.json counted as new, one per checker `same_as` group, each
-// with its evidence frames; the groups not counted (re-found on the key, held on a dispute) follow.
+// STRUCTURAL FINDINGS are the ones grade.json counted as new, one per checker `same_as` group,
+// ranked (severity · times reported · members reached): the top ten with their evidence frames, the
+// rest folded, text only, with no frames copied; the groups not counted (re-found on the key, held
+// on a dispute) follow.
 // The battle file is {fork, least?, shapes: [{name, success, wrongTurns, involuntaryScroll, ease,
 // frame?}]} (frame paths relative to the file); without it the section says why it did not run.
 // Key item wording appears only with `--reveal`, read from the sealed folder given — a readout
@@ -31,7 +33,13 @@ import {
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseGold } from "./grade-core.mjs";
-import { renderReadout, worstMoment } from "./readout-core.mjs";
+import {
+  rankStructural,
+  renderReadout,
+  STRUCTURAL_TOP,
+  worstMoment,
+  worstSeverity,
+} from "./readout-core.mjs";
 import { FILES, findingView } from "./round-contract.mjs";
 import { findSessions, readJson, readJsonl } from "./round-files.mjs";
 
@@ -203,11 +211,27 @@ export function buildReadout(opts) {
     if (!existsSync(src)) return null;
     return link(copySmall(src, join(shots, `${slug(rel.replace(/\.[a-z]+$/i, ""))}.jpg`)));
   };
-  const structural = Object.values(grade.structural.groups).map((ids) => {
-    const f = findingView(text.get(ids[0]));
-    const frames = f.frames.map(evidenceShot).filter(Boolean);
-    return { finding: f, class: graded.get(f.id)?.class, also: ids.length - 1, frames };
-  });
+  // Ranked here as the page ranks them, so only the ten shown get their frames copied; the
+  // folded rest are text only and copy nothing (#5845: 66 uncapped findings made 48MB).
+  const structural = rankStructural(
+    Object.values(grade.structural.groups).map((ids) => {
+      const f = findingView(text.get(ids[0]));
+      const members = new Set(ids.map((id) => text.get(id)?.member).filter(Boolean)).size;
+      // The group's worst report sets its rank and byline, so a Critical behind a Low lead still
+      // lands in the top ten instead of the fold.
+      const severity = worstSeverity(ids.map((id) => text.get(id)?.severity));
+      return {
+        finding: f,
+        class: graded.get(f.id)?.class,
+        also: ids.length - 1,
+        members,
+        severity,
+      };
+    }),
+  ).map((s, i) => ({
+    ...s,
+    frames: i < STRUCTURAL_TOP ? s.finding.frames.map(evidenceShot).filter(Boolean) : [],
+  }));
 
   let battle = null;
   if (opts.battle) {

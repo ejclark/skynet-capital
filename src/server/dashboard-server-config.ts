@@ -12,6 +12,7 @@ import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
+import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
@@ -32,6 +33,7 @@ import type { CouncilRepliesDeps } from "./council-replies-form.js";
 import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { FilingCommentsDeps } from "./filing-comments-form.js";
+import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
@@ -69,6 +71,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * not on a reconnect, not on a replay. Omit (offline/tests) and the board simply carries no cues.
    */
   readonly ceremonies?: CeremonyChannel;
+  /**
+   * The capital-flow ledger (#4563): a recorded paper-balance top-up or reset marks its standings
+   * row and its equity curve, and a new one asks open boards to re-read. Omit (tests) and no row
+   * or curve carries a mark.
+   */
+  readonly capitalFlows?: CapitalFlowReader;
   /**
    * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
    * When set, every request must carry ?key=<password>.
@@ -108,6 +116,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * auth). Owner-gated inside the handler itself, exactly like `/invite`.
    */
   readonly claim?: ClaimDeps;
+  /**
+   * `GET/POST /api/admin/github-token` — the owner rotates the app's GitHub token (the one
+   * Moneypenny files with) from Settings instead of a host secret. Omit to disable (offline mode,
+   * or no auth). Owner-gated inside the handler; the token is never returned.
+   */
+  readonly githubToken?: GithubTokenDeps;
   /**
    * `GET/POST /u/:id?tab=settings` — Mission Control, the owner's switchboard for the autonomous
    * fleet, served as an account's Settings tab. Omit to disable (offline mode, or no auth).

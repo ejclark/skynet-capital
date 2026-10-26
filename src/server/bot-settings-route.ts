@@ -2,8 +2,10 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { type BotControls, MAX_BETA_PICKS } from "../autonomous/bot-controls.js";
 import { hasHardcoreBuild } from "../personas/registry.js";
 import type { Session } from "./auth/session.js";
+import { POINTER_RULE_AUTHOR } from "./conviction-pointer-changes.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { ENV_SEED_AUTHOR } from "./env-settings-seed.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import {
   controlsChanges,
@@ -136,8 +138,14 @@ export async function serveBotSettings(
   sendJson(res, 200, { ok: true });
 }
 
-/** Who made a change, as the browser may see it: the viewer, or someone else who owns the bot. */
-type ChangeAuthor = "you" | "another owner";
+/** Who made a change, as the browser may see it: the viewer, someone else who owns the bot, the
+ *  one-time copy of the bots app's own setting (#4535 slice 4c, `env-settings-seed.ts`), or the
+ *  poll moving a conviction pointer by its own rule (#5482, `conviction-pointer-changes.ts`). */
+type ChangeAuthor =
+  | "you"
+  | "another owner"
+  | "the operations setting, copied once"
+  | "the app, on its own";
 
 export interface BotSettingsView {
   /** Present exactly when the bot has a hardcore build; `null` = not set here (the ops setting stands). */
@@ -167,10 +175,13 @@ export function botSettingsView(
 ): BotSettingsView | undefined {
   if (!config.controls) return undefined;
   const stored = config.controls.store.load().bots[botId] ?? {};
-  const author = (who: string): ChangeAuthor =>
-    viewerEmail !== undefined && who.toLowerCase() === viewerEmail.toLowerCase()
+  const author = (who: string): ChangeAuthor => {
+    if (who === ENV_SEED_AUTHOR) return "the operations setting, copied once";
+    if (who === POINTER_RULE_AUTHOR) return "the app, on its own";
+    return viewerEmail !== undefined && who.toLowerCase() === viewerEmail.toLowerCase()
       ? "you"
       : "another owner";
+  };
   return {
     ...(hasHardcoreBuild(botId) ? { hardcore: stored.hardcore ?? null } : {}),
     ...(scoutHostId(config) === botId

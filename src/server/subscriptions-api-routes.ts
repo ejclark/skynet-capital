@@ -7,10 +7,15 @@ import {
   delegationLocked,
   raisesDelegation,
 } from "../domain/playbook-delegation.js";
-import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
+import type { SubscriptionConviction } from "../domain/types.js";
+import {
+  playbookStoreView,
+  withUnmovedConvictions,
+} from "../observatory/playbook-store-json-view.js";
 import { withOwnSteering } from "../observatory/steered-by-view.js";
 import { CONVICTIONS, type ConvictionLookup } from "../playbooks/conviction-store.js";
 import { movesNoCapital, STRATEGIES } from "../playbooks/pair-table.js";
+import { asOwnConviction } from "../subscriptions/pair-conviction.js";
 import {
   allocationChangeRefusal,
   allocationRefusal,
@@ -23,8 +28,15 @@ import { accountKind } from "./account-kind.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { creditFor } from "./feedback-attribution.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { readJsonPost, requireGet, sendJson } from "./page-shell.js";
+import {
+  dropPairConviction,
+  type OwnViews,
+  type WithConviction,
+  writeWithConviction,
+} from "./pair-conviction-write.js";
 import { withForecasts } from "./pair-forecast.js";
 import { subscribeLiveReads } from "./subscribe-live-reads.js";
 import { recordAllocationWrite, recordSubscriptionWrite } from "./subscription-changes.js";
@@ -186,6 +198,21 @@ function ownLookup(config: DashboardServerConfig, accountId: string): Conviction
 
 const editorOf = (session: Session | undefined): string => session?.email ?? "unknown";
 
+/** A subscription write stating `conviction`, kept as the owner's own view on the pair first
+ *  (`pair-conviction-write.ts`, #5482 contract piece 3). */
+function writeConviction<T>(
+  config: DashboardServerConfig,
+  session: Session | undefined,
+  ref: { readonly id: string; readonly playbookId: string },
+  conviction: SubscriptionConviction | undefined,
+  write: (viewsBefore: OwnViews) => T,
+): WithConviction<T> {
+  const owner = session ? creditFor(session) : "The owner";
+  const at = config.now?.() ?? new Date();
+  const pair = { accountId: ref.id, playbookId: ref.playbookId };
+  return writeWithConviction(config.memberConvictions, pair, conviction, owner, at, write);
+}
+
 const asOfIso = (config: DashboardServerConfig): string =>
   (config.now?.() ?? new Date()).toISOString();
 
@@ -201,7 +228,12 @@ async function serveStoreIndex(
   // The store omits an account until its first subscribe, so an owned account with no entry yet is
   // an EMPTY list — never "not yours", which hid the Subscribe form from every fresh account (#3623).
   const state = config.subscriptions?.load();
-  const subscriptions = owns && id && state ? (state[id] ?? []) : undefined;
+  const lookup = owns && id ? ownLookup(config, id) : undefined;
+  // An owner's own view on a pair reads as the reason and day they typed (#5482 contract piece 3).
+  const subscriptions =
+    id && state && lookup
+      ? (state[id] ?? []).map((sub) => asOwnConviction(sub, lookup))
+      : undefined;
   const bare = playbookStoreView(
     subscriptions,
     await viewerDelegationLocked(config, session),
@@ -215,9 +247,10 @@ async function serveStoreIndex(
   // Each single-ticker row carries R&D's call for its next earnings report (#5444), and an owned
   // account's rows the view its own pointer names — a member's handed-over one (#5482 slice 6c).
   const forecast = withForecasts(bare.strategies, asOfIso(config));
+  // A pair whose conviction is still inline runs exits-only on the bots, and its row says so.
   const strategies =
-    subscriptions && id
-      ? withOwnSteering(forecast, subscriptions, ownLookup(config, id))
+    subscriptions && lookup && id
+      ? withUnmovedConvictions(withOwnSteering(forecast, subscriptions, lookup), state?.[id] ?? [])
       : forecast;
   const view = { ...bare, strategies };
   // Unwired store → no count at all, rather than a false "No subscribers yet".
@@ -308,18 +341,28 @@ async function handleSubscribe(
     sendJson(res, 200, { ok: false, error: refusal });
     return;
   }
-  recordSubscriptionWrite(config, store, body, editorOf(session), () =>
-    store.subscribe(body.id, {
-      playbookId: body.playbookId,
-      mode: body.mode,
-      ...(body.capitalAllocated !== undefined ? { capitalAllocated: body.capitalAllocated } : {}),
-      enabled: true,
-      ...(body.symbols ? { symbols: body.symbols } : {}),
-      ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
-      ...(body.conviction ? { conviction: body.conviction } : {}),
-    }),
+  const done = writeConviction(config, session, body, body.conviction, (viewsBefore) =>
+    recordSubscriptionWrite(
+      config,
+      store,
+      body,
+      editorOf(session),
+      () =>
+        store.subscribe(body.id, {
+          playbookId: body.playbookId,
+          mode: body.mode,
+          ...(body.capitalAllocated !== undefined
+            ? { capitalAllocated: body.capitalAllocated }
+            : {}),
+          enabled: true,
+          ...(body.symbols ? { symbols: body.symbols } : {}),
+          ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
+          ...(body.conviction ? { conviction: body.conviction } : {}),
+        }),
+      viewsBefore,
+    ),
   );
-  sendJson(res, 200, { ok: true });
+  sendJson(res, 200, done.ok ? { ok: true } : { ok: false, error: done.reason });
 }
 
 /**
@@ -406,16 +449,25 @@ async function handleConviction(
     sendJson(res, 200, { ok: false, error: refusal });
     return;
   }
-  const saved = recordSubscriptionWrite(config, store, body, editorOf(session), () =>
-    store.setConviction(body.id, body.playbookId, body.conviction),
+  // A conviction on a pair the account does not hold writes no view: there is nothing to point.
+  if (!store.load()[body.id]?.some((s) => s.playbookId === body.playbookId)) {
+    sendJson(res, 200, {
+      ok: false,
+      error: `Not subscribed to ${body.playbookId} — subscribe first.`,
+    });
+    return;
+  }
+  const done = writeConviction(config, session, body, body.conviction, (viewsBefore) =>
+    recordSubscriptionWrite(
+      config,
+      store,
+      body,
+      editorOf(session),
+      () => store.setConviction(body.id, body.playbookId, body.conviction),
+      viewsBefore,
+    ),
   );
-  sendJson(
-    res,
-    200,
-    saved
-      ? { ok: true }
-      : { ok: false, error: `Not subscribed to ${body.playbookId} — subscribe first.` },
-  );
+  sendJson(res, 200, done.ok ? { ok: true } : { ok: false, error: done.reason });
 }
 
 /** Allocation — what the account gives one strategy; the budgets already set must fit under it. */
@@ -517,6 +569,10 @@ export async function serveSubscriptionsApi(
     recordSubscriptionWrite(config, store, body, editorOf(session), () =>
       store.unsubscribe(body.id, body.playbookId),
     );
+    dropPairConviction(config.memberConvictions, {
+      accountId: body.id,
+      playbookId: body.playbookId,
+    });
     sendJson(res, 200, { ok: true });
     return true;
   }

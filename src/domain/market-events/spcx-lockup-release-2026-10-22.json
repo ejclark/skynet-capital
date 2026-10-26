@@ -1,0 +1,11 @@
+{
+  "id": "spcx-lockup-release-2026-10-22",
+  "kind": "lockup-expiry",
+  "title": "SPCX Q3-results lock-up release — ~1.3 billion shares (28% of the 180-day cohort) two trading days after Oct 20 results",
+  "date": "2026-10-22",
+  "status": "confirmed",
+  "source": "SEC: 8-K Items 2.02, 9.01 (https://www.sec.gov/Archives/edgar/data/1181412/000162828026066482/spcx-20261020.htm, accession 0001628280-26-066482, fetched 2026-10-26, HTTP 200, Item 2.02 text read): SpaceX issued its earnings release for the quarter ended September 30, 2026 on 2026-10-20 (EDGAR acceptance 20:00:51 UTC = 16:00 ET), a full release furnished as Exhibit 99.1, not flash numbers. So the first full trading day is Wed 10-21 and the second is Thu 2026-10-22. The stage itself is read from SEC: 424B4 (https://www.sec.gov/Archives/edgar/data/1181412/000162828026042639/spaceexplorationtechnologi.htm, fetched 2026-10-20, HTTP 200, read in full): 'up to 1.3 billion shares of Class A common stock, representing 28% of the shares subject to the 180-day lock-up period' on 'the second full trading day on Nasdaq immediately following the public release of our quarterly financial results for the quarter ended September 30, 2026'. Promoted from estimate to confirmed 2026-10-26 at close-out. Checked 2026-10-26",
+  "impact": "high",
+  "symbols": ["SPCX"],
+  "notes": "Largest single stage left in the 180-day cohort: up to ~1.3B Class A shares, ~17.6% of 7,380M Class A outstanding, ~2.3x the 555.6M-share IPO float and ~16 days of 20-day average volume (81.7M). Relative to the tradable pool it is smaller than the first earnings stage was (+46% of ~2.82B eligible-plus-float vs +164% of the IPO float on 2026-08-06). Insider sales are capped by Rule 144 volume limits and by affiliates' exclusion from some stages, so 'eligible' is an upper bound; the Aug 6 stage saw 255.2M traded against 911.5M eligible (28%). The Q3 print itself lands first (reaction session 10-21) and will dominate the tape; read docs/research/events/spcx-lockup-release-2026-10-22.md before reading this as a pure supply event. Superseded the proposal spcx-lockup-release-2026-10-22.from-spcx-lockup-expiry-2026-12-08.json."
+}

@@ -196,6 +196,7 @@ function sidecarFor(pair, lint, opts, mermaidVersion) {
     alt: altText(pair),
     layout: null,
     natural: null,
+    naturalHeight: null,
     scale: opts.scale,
     mermaidVersion,
     githubMermaidVersion: GITHUB_MERMAID_VERSION,
@@ -204,25 +205,40 @@ function sidecarFor(pair, lint, opts, mermaidVersion) {
   };
 }
 
-/** Rule 13's number (docs/PICTURES.md): text on a phone is 390 ÷ drawing width × font, the font
- * being the `classDef default font-size` the diagram sets (Mermaid's own default is 16px). Under
- * PHONE_FLOOR the second look costs the first read; the shot line flags it. */
+/** The legibility budget's two numbers (docs/PICTURES.md, #4550): a picture fits one phone screen
+ * and its text clears 12px. Text on a phone is 390 ÷ drawing width × font (rule 13), the font being
+ * the `classDef default font-size` the diagram sets (Mermaid's own default is 16px); the screens are
+ * the drawing's height at that same scale over the 390 × 844 phone the screenshots use. Past either
+ * limit the shot line flags it — the glance needs both. */
 const PHONE_WIDTH = 390;
+const PHONE_HEIGHT = 844;
 const PHONE_FLOOR = 12;
+const PHONE_SCREENS = 1;
+// GitHub never scales a drawing up, only down to the column.
+const phoneScale = (natural) => Math.min(1, PHONE_WIDTH / natural);
 function phoneFont(side, natural) {
   if (side?.kind !== "mermaid" || !natural) return null;
   const font = Number(
     /classDef default[^\n]*font-size:\s*(\d+(?:\.\d+)?)px/.exec(side.source)?.[1] ?? 16,
   );
-  // GitHub never scales a drawing up, only down to the column.
-  return Math.round(Math.min(1, PHONE_WIDTH / natural) * font * 10) / 10;
+  return Math.round(phoneScale(natural) * font * 10) / 10;
 }
-function phoneLine(pair, natural) {
+function phoneScreens(side, natural, height) {
+  if (side?.kind !== "mermaid" || !natural || !height) return null;
+  return Math.round(((phoneScale(natural) * height) / PHONE_HEIGHT) * 100) / 100;
+}
+function phoneLine(pair, laid) {
   const parts = [];
   for (const side of ["before", "after"]) {
-    const px = phoneFont(pair[side], natural?.[side]);
+    const px = phoneFont(pair[side], laid.natural?.[side]);
     if (px == null) continue;
-    parts.push(`${side} ${px}px${px < PHONE_FLOOR ? " ⚠ under rule 13's floor" : ""}`);
+    const screens = phoneScreens(pair[side], laid.natural?.[side], laid.naturalHeight?.[side]);
+    const flags = [
+      px < PHONE_FLOOR && "under the 12px floor",
+      screens > PHONE_SCREENS && "taller than one phone screen",
+    ].filter(Boolean);
+    const tall = screens == null ? "" : ` ${screens} screens`;
+    parts.push(`${side} ${px}px${tall}${flags.length ? ` ⚠ ${flags.join(", ")}` : ""}`);
   }
   return parts.length ? ` · phone ${parts.join(", ")}` : "";
 }
@@ -237,9 +253,14 @@ async function renderAll(browser, pairs, sidecars, opts, mermaidVersion) {
       Object.assign(car, {
         layout: laid.layout,
         natural: laid.natural,
+        naturalHeight: laid.naturalHeight,
         phone: {
           before: phoneFont(pair.before, laid.natural?.before),
           after: phoneFont(pair.after, laid.natural?.after),
+        },
+        phoneScreens: {
+          before: phoneScreens(pair.before, laid.natural?.before, laid.naturalHeight?.before),
+          after: phoneScreens(pair.after, laid.natural?.after, laid.naturalHeight?.after),
         },
       });
       car.images.push(image);
@@ -248,7 +269,7 @@ async function renderAll(browser, pairs, sidecars, opts, mermaidVersion) {
       const kb = (image.bytes / 1024).toFixed(1);
       const flag = image.overBudget ? ` ⚠ over ${opts.budget}KB at the quality floor` : "";
       console.log(
-        `shot ${join(opts.outDir, image.file)} ${image.width}×${image.height} ${kb}KB q${image.quality} ${laid.layout}${flag}${phoneLine(pair, laid.natural)}`,
+        `shot ${join(opts.outDir, image.file)} ${image.width}×${image.height} ${kb}KB q${image.quality} ${laid.layout}${flag}${phoneLine(pair, laid)}`,
       );
     }
     await page.close();

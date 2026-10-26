@@ -9,7 +9,8 @@
 import { createHash } from "node:crypto";
 import { membersClass } from "./round-contract.mjs";
 
-const SCALE = ["none", "low", "moderate", "high", "critical"];
+/** The one severity scale, mildest first; findings.jsonl holds these words (readout-core ranks by index). */
+export const SCALE = ["none", "low", "moderate", "high", "critical"];
 
 /** Any evaluator's severity on one scale: none · low · moderate · high · critical. */
 export function severityOf(raw) {
