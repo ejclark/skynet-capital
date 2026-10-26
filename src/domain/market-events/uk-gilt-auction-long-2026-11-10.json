@@ -1,0 +1,11 @@
+{
+  "id": "uk-gilt-auction-long-2026-11-10",
+  "kind": "rates",
+  "title": "UK DMO long conventional gilt auction — 5⅜% Treasury Gilt 2056, the first long-end gilt supply test after the 28 Oct Budget",
+  "date": "2026-11-10",
+  "status": "estimate",
+  "source": "EST: dmo.gov.uk/media/qpeksrc0/pr280826.pdf — UK Debt Management Office press notice of 28 August 2026 (calendar of gilt auctions, October to December 2026), re-fetched direct 2026-10-26 (HTTP 200, 193,999 bytes, text layer decoded locally): Table 1 row 'Tuesday 10 November | 10.00am | 5⅜% Treasury Gilt 2056 | Tuesday 3 November' (size and details at 3:30pm London); the 17 August consultation agenda (dmo.gov.uk/media/5kek12uu/sa170826.pdf) types the quarter's single long auction as 'A long conventional gilt'. The stock IS named in the 28 August notice (the proposal and the first-draft source said it was not). Filed estimate: this lane may not self-confirm an event it discovered in-sweep, and the calendar's confirmed-prefix list has no slot for the DMO — the date is the DMO's own, but the 28 October Budget can revise the calendar. Checked 2026-10-26",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY uk-gilt-auction-short-2026-10-27 AT ITS 2026-10-16 INITIAL RESEARCH (proposals/uk-gilt-auction-long-2026-11-10.from-uk-gilt-auction-short-2026-10-27.json, read as input and now shadowed by this canonical file); researched 2026-10-26 (docs/research/events/uk-gilt-auction-long-2026-11-10.md). The only long-conventional auction of the October-December quarter and the first after the Budget (28 Oct) and the BoE decision (5 Nov). The stock is the 5⅜% Treasury Gilt 2056 (ISIN GB00BT7J0241, matures 31 Jan 2056): launched by syndication May 2025, £4.25bn re-opened by syndication 2026-09-08 at 5.8168%. 11-10 is also US CPI day (08:30 ET = 13:30 London, before the gilt close), the US 10y auction and the US–China truce expiry. No position is or will be sized to this: symbols [], low impact, estimate-dated."
+}
