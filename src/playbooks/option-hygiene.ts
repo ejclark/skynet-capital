@@ -119,7 +119,7 @@ function closings(group: readonly DueClose[]): (readonly DueClose[])[] {
   return [a.contract.quantity > 0 ? [a, b] : [b, a]];
 }
 
-const cents = (x: number): number => Math.round(x * 100) / 100;
+const roundCents = (x: number): number => Math.round(x * 100) / 100;
 
 /** A contract's per-share mark without a quote: the broker's own mark, else its average price. */
 function markOf(contract: HeldContract): number {
@@ -127,7 +127,7 @@ function markOf(contract: HeldContract): number {
     contract.marketValue !== undefined
       ? Math.abs(contract.marketValue) / (Math.abs(contract.quantity) * OPTION_MULTIPLIER)
       : undefined;
-  return Math.max(0.01, cents(fromMarket ?? contract.avgPrice));
+  return Math.max(0.01, roundCents(fromMarket ?? contract.avgPrice));
 }
 
 /** The band a close prices inside, from the snapshot: `[bid, ask]` for one leg (the tick read off
@@ -172,7 +172,8 @@ function closePrice(
       0,
     );
     const [only] = closing;
-    const limitPrice = closing.length === 1 && only ? markOf(only.contract) : cents(net) || 0.01;
+    const limitPrice =
+      closing.length === 1 && only ? markOf(only.contract) : roundCents(net) || 0.01;
     return { limitPrice };
   }
   const aggression = closeAggression(sessionsLate, etTimeOf(context.asOf));
