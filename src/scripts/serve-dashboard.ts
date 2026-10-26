@@ -268,7 +268,7 @@ async function main(): Promise<void> {
   const { opsStatus, insightsBridge } = wireOpsStatus(
     process.env,
     botControls,
-    { hub, activity, authConfigured: Boolean(auth), subscriptions },
+    { hub, activity, authConfigured: Boolean(auth) },
     credentialsBridge,
   );
   // Broker slow-sync + per-order audit log + desk trading (dashboard-desk-wiring.ts).

@@ -16,6 +16,8 @@ import type { DashboardServerConfig } from "../../src/server/dashboard-server-co
 import { MemberConvictionStore } from "../../src/server/member-conviction-store.js";
 import { serveMemberConvictionsApi } from "../../src/server/member-convictions-api-routes.js";
 import {
+  CONVICTION_NO_VIEWS,
+  CONVICTION_NOT_KEPT,
   CONVICTION_UNSAVED,
   CONVICTION_WIRE_FULL,
   statePairConviction,
@@ -158,15 +160,17 @@ describe("an owner's conviction is kept as their own view on the pair", () => {
     expect(row).not.toHaveProperty("notTrading");
   });
 
-  // #5482 contract piece 4: the bots read pointers only, so a copy the poll could not move onto a
-  // view runs its pair exits-only, and the owner's row says so (the state block's default).
-  it("WHEN a conviction is still inline with no pointer, the row says the pair opens nothing new", async () => {
+  // #5482 contract piece 4 and the inline carry's replacement: the bots read pointers only, so a ◆
+  // pair with none runs exits-only, and the owner's row says so (the state block's default).
+  it("WHEN a ◆ pair has no pointer, the row says the pair opens nothing new", async () => {
     const state = subs.load();
     subs.replace({
       ...state,
-      sauron: (state.sauron ?? []).map((s) =>
-        s.playbookId === "SAURON" ? { ...s, conviction: OWN_DAY } : s,
-      ),
+      sauron: (state.sauron ?? []).map((s) => {
+        if (s.playbookId !== "CRWV-WHEEL") return s;
+        const { convictionId: _pointer, ...unpointed } = s;
+        return unpointed;
+      }),
     });
     const { res, out } = fakeRes();
     await serveSubscriptionsApi(
@@ -179,8 +183,9 @@ describe("an owner's conviction is kept as their own view on the pair", () => {
     const rows = (JSON.parse(out.body || "{}").strategies ?? []).flatMap(
       (c: { pairs: unknown[] }) => c.pairs,
     ) as { id: string; notTrading?: string }[];
-    expect(rows.find((r) => r.id === "SAURON")?.notTrading).toBe(UNMOVED_CONVICTION_NOTE);
-    expect(rows.find((r) => r.id === "CRWV-WHEEL")).not.toHaveProperty("notTrading");
+    expect(rows.find((r) => r.id === "CRWV-WHEEL")?.notTrading).toBe(UNMOVED_CONVICTION_NOTE);
+    // A pair that is not ◆ with no pointer has no conviction on record: a label, never a stop.
+    expect(rows.find((r) => r.id === "SAURON")).not.toHaveProperty("notTrading");
   });
 
   it("WHEN the conviction is re-dated, the view is replaced in place and the pointer stays", async () => {
@@ -364,6 +369,37 @@ describe("never past what the bots will hold", () => {
       });
       expect(write).not.toHaveBeenCalled();
       expect(members.handedOver().map((w) => w.conviction.checkOn)).toEqual([OWN_DAY.checkOn]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// #5482's last contract piece: no inline copy to fall back on, so a conviction that cannot be kept
+// as a view is refused with a reason that says why, never answered ok and lost.
+describe("statePairConviction — refusals once nothing is kept inline", () => {
+  const AT = new Date("2026-10-26T15:00:00Z");
+  const own = { reason: "My own day.", checkOn: "2027-04-30" };
+  const ref = (playbookId: string) => ({ accountId: "sauron", playbookId });
+
+  it("refuses an own day with no views file wired, but still lets the shared view's day through", () => {
+    expect(statePairConviction(undefined, ref("CRWV-WHEEL"), own, "Ada", AT)).toEqual({
+      ok: false,
+      reason: CONVICTION_NO_VIEWS,
+    });
+    const shared = { reason: "AI dip", checkOn: CONVICTIONS.get("ai-dip-2026-10")?.checkOn ?? "" };
+    expect(statePairConviction(undefined, ref("CRWV-WHEEL"), shared, "Ada", AT).ok).toBe(true);
+  });
+
+  it("refuses a view the pointer rule would never hold: an id the pair table does not know", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "skynet-not-kept-"));
+    try {
+      const views = new MemberConvictionStore(join(dir, "member-convictions.json"));
+      expect(statePairConviction(views, ref("U-my-own-play"), own, "Ada", AT)).toEqual({
+        ok: false,
+        reason: CONVICTION_NOT_KEPT,
+      });
+      expect(views.handedOver()).toEqual([]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

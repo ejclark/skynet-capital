@@ -3,6 +3,7 @@ import { isRecord, survivesParse } from "../storage/parse-guards.js";
 import {
   parseSubscription,
   RESERVED_KEY_PREFIX,
+  RETIRED_FIELDS,
   type SubscriptionsState,
 } from "./subscription-state.js";
 
@@ -130,11 +131,18 @@ function stillUnread(entry: unknown, accountId: string, held: ReadonlySet<string
 }
 
 /** A record this build reads, but only in part — a value of a field it owns that it judged
- *  malformed (a garbled conviction or symbol filter) — which the new state still holds, so the
+ *  malformed (a garbled symbol filter or pointer) — which the new state still holds, so the
  *  rewrite drops that value. Said, because it is the one loss a rewrite still makes. */
 function readInPart(entry: unknown, accountId: string, held: ReadonlySet<string>): boolean {
   const parsed = parseSubscription(entry, accountId);
-  return parsed !== null && held.has(parsed.playbookId) && !survivesParse(entry, parsed);
+  return parsed !== null && held.has(parsed.playbookId) && !survivesParse(unretired(entry), parsed);
+}
+
+/** A record without its retired fields (`RETIRED_FIELDS`): a rewrite drops them on purpose, so
+ *  their loss is neither a malformed value to report nor a reason the file reads in part. */
+function unretired(entry: unknown): unknown {
+  if (!isRecord(entry)) return entry;
+  return Object.fromEntries(Object.entries(entry).filter(([key]) => !RETIRED_FIELDS.has(key)));
 }
 
 /** Lay `state` over the file on disk, keeping everything this build could not read (#4772). */
@@ -166,13 +174,16 @@ export function rewrite(state: SubscriptionsState, onDisk: unknown): Rewrite {
 
 /**
  * Whether a rewrite from `parsed` would decide anything blind — the seeders' bar
- * (`JsonFileStore.loadIfReadable`). A newer build's field on a record is carried, and a reserved
- * file-level key is never the seeders' to change, so neither stops them. A record that did not
+ * (`JsonFileStore.loadIfReadable`). A newer build's field on a record is carried, a retired one is
+ * dropped on purpose (`RETIRED_FIELDS`), and a reserved file-level key is never the seeders' to
+ * change, so none of them stops them. A record that did not
  * parse still does: a seed deciding what an account holds must see every record it holds.
  */
 export function readsWhole(raw: unknown, parsed: SubscriptionsState): boolean {
   if (!isRecord(raw)) return false;
   return Object.entries(raw).every(
-    ([key, value]) => key.startsWith(RESERVED_KEY_PREFIX) || survivesParse(value, parsed[key]),
+    ([key, value]) =>
+      key.startsWith(RESERVED_KEY_PREFIX) ||
+      survivesParse(Array.isArray(value) ? value.map(unretired) : value, parsed[key]),
   );
 }

@@ -95,6 +95,7 @@ import {
 } from "./labels.mjs";
 import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
 import { modelTier } from "./model-tier.mjs";
+import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
@@ -701,6 +702,7 @@ export function peekNext(deps = {}) {
     readPrIssues = () => readOpenPrIssues(),
     readPlans = () => readOpenPlans(),
     continuation = () => continuationContext(),
+    readHold: holdOf = (issue) => readPickupHold(issue),
   } = deps;
   const mode = readMode();
   const ready = withoutOpenPr(readReady().filter(inALane), readPrIssues());
@@ -708,7 +710,7 @@ export function peekNext(deps = {}) {
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
   const pick =
     continuationPick(continuation) ??
-    nextAdmissible(ready, inFlightOf(), mode, waitingOrSkip(readPlans).waiting);
+    rankPick(ready, inFlightOf(), mode, waitingOrSkip(readPlans).waiting, holdOf).pick;
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `has_next=${pick ? "true" : "false"}\n`);
   console.log(
@@ -726,6 +728,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readPlans = () => readOpenPlans(),
     claims = { plan: claimPlan, feedback: claimFeedback },
     continuation = () => continuationContext({ now: nowMs }),
+    readHold: holdOf = (issue) => readPickupHold(issue),
     ...admission
   } = deps;
   const mode = readMode();
@@ -754,7 +757,9 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   // can sit "held" for the whole TTL after its slice ships. Stopping there idled the sweep for up
   // to 2h behind #3960 on 2026-10-01; step past a held pick instead, a bounded number of times.
   for (let tries = 0; tries < SWEEP_HELD_SKIPS; tries++) {
-    const pick = nextAdmissible(pool, inFlight, mode, waiting);
+    const next = rankPick(pool, inFlight, mode, waiting, holdOf);
+    pool = next.pool;
+    const { pick } = next;
     if (!pick) {
       const plans = waiting ? `${waiting.length} plans waiting` : "plans unread";
       const why = `nothing admissible (${pool.length} ready, ${inFlight.length} in flight, ${plans}, work-mode=${mode.position})`;
@@ -793,6 +798,16 @@ function waitingOrSkip(readPlans) {
     );
     return { openPlans: undefined, waiting: undefined };
   }
+}
+
+/**
+ * The rank-order pick, stepping past a plan whose state block names nothing to build (#5707,
+ * `pickup-hold.mjs`). Held plans leave the returned pool, so `claimNext`'s lease loop never
+ * re-reads them; the hold is not a lease skip and does not count against `SWEEP_HELD_SKIPS`.
+ */
+function rankPick(pool, inFlight, mode, waiting, holdOf) {
+  const pickOf = (rest) => nextAdmissible(rest, inFlight, mode, waiting);
+  return nextUnheld(pool, pickOf, holdOf, { who: "retry sweep" });
 }
 
 /** Does a build lane own this issue — a `plan`, or the feedback lane's own (`inFeedbackLane`)? */

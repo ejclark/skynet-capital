@@ -76,6 +76,10 @@ const noOpenPrs = () => new Map<number, number>();
  *  the default is `ghRestAll("issues?state=open&labels=plan")` against live GitHub. */
 const noOpenPlans = () => [];
 
+/** "No plan's state block holds it" — the #5707 hold's read, injected for the same reason: the
+ *  default reads each plan pick's comments from live GitHub (`readPickupHold`). */
+const noHold = () => null;
+
 describe("surfaceOf — the capsule's Surface cell", () => {
   it("reads and normalises the cell (lowercase, trimmed, markdown stripped)", () => {
     expect(surfaceOf(capsule("  The `/app/accounts` **Rail**  "))).toBe("the /app/accounts rail");
@@ -663,6 +667,7 @@ describe("claimNext — the retry sweep hands the pick to its own lane's claim",
       continuation: noContinuation,
       readPrIssues: noOpenPrs,
       readPlans: noOpenPlans,
+      readHold: noHold,
     };
     return { deps, called };
   };
@@ -751,6 +756,7 @@ describe("claimNext — a lease-held pick does not block the rest of the queue",
       continuation: noContinuation,
       readPrIssues: noOpenPrs,
       readPlans: noOpenPlans,
+      readHold: noHold,
     };
     return { r: claimNext(0, "abc", deps), tried };
   };
@@ -781,6 +787,7 @@ describe("claimNext — a lease-held pick does not block the rest of the queue",
       continuation: noContinuation,
       readPrIssues: noOpenPrs,
       readPlans: noOpenPlans,
+      readHold: noHold,
     };
     expect(claimNext(0, "abc", deps)).toMatchObject({ claimed: false, reason: "parked" });
     expect(tried).toEqual([1]);
@@ -813,6 +820,7 @@ describe("peekNext — the push pass asks, and claims nothing", () => {
     continuation: noContinuation,
     readPrIssues: noOpenPrs,
     readPlans: noOpenPlans,
+    readHold: noHold,
   });
 
   it("returns the pick claimNext would take, without taking a lease", () => {
@@ -849,6 +857,7 @@ describe("the sweep skips an issue an open PR already names", () => {
         readInFlight: () => [],
         readPrIssues: () => new Map(named),
         readPlans: noOpenPlans,
+        readHold: noHold,
         claims: { plan: claim, feedback: claim },
         continuation: noContinuation,
       },
@@ -880,5 +889,60 @@ describe("the sweep skips an issue an open PR already names", () => {
     const pool = [at(1, 1), at(2, 2)];
     expect(withoutOpenPr(pool, new Map([[2, 9]])).map((i) => i.number)).toEqual([1]);
     expect(withoutOpenPr(pool)).toEqual(pool);
+  });
+});
+
+// #5707: #4808's block read `Next pickup: none buildable now`, and the sweep claimed it twice into
+// "nothing to build". A plan whose block names nothing is stepped past, never claimed or peeked.
+describe("the sweep steps past a plan whose state block names nothing to build", () => {
+  const at = (n: number, day: number, lane = "plan") => ({
+    ...issue(n, `t${n}`, ["ready", lane]),
+    createdAt: `2026-09-${String(day).padStart(2, "0")}T00:00:00Z`,
+  });
+  const deps = (ready: ReturnType<typeof at>[], held: number[]) => {
+    const tried: number[] = [];
+    const claim = (ctx: ClaimCtx) => {
+      const n = ctx.payload?.issue?.number ?? -1;
+      tried.push(n);
+      return { claimed: true, reason: "claimed", number: n };
+    };
+    return {
+      tried,
+      deps: {
+        readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+        readReady: () => ready,
+        readInFlight: () => [],
+        readPrIssues: noOpenPrs,
+        readPlans: noOpenPlans,
+        readHold: (i: { number?: number }) =>
+          held.includes(i.number ?? -1) ? "its state block names no next pickup" : null,
+        claims: { plan: claim, feedback: claim },
+        continuation: noContinuation,
+      },
+    };
+  };
+
+  it("claims the next ready issue instead of the held plan", () => {
+    const { deps: d, tried } = deps([at(4808, 1), at(42, 2, "feedback")], [4808]);
+    expect(claimNext(0, "abc", d)).toMatchObject({ claimed: true, number: 42 });
+    expect(tried).toEqual([42]);
+  });
+
+  it("claims nothing, and says so, when the held plan is the only ready issue", () => {
+    const { deps: d, tried } = deps([at(4808, 1)], [4808]);
+    const r = claimNext(0, "abc", d);
+    expect(r).toMatchObject({ claimed: false });
+    expect(r.reason).toContain("nothing admissible (0 ready");
+    expect(tried).toEqual([]);
+  });
+
+  it("peeks nothing when the only ready plan is held — no empty session is dispatched", () => {
+    const { deps: d } = deps([at(4808, 1)], [4808]);
+    expect(peekNext(d)).toBeNull();
+  });
+
+  it("peeks the plan once its block names a slice again", () => {
+    const { deps: d } = deps([at(4808, 1)], []);
+    expect(peekNext(d)?.number).toBe(4808);
   });
 });

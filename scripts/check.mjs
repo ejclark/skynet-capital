@@ -8,7 +8,8 @@
 //
 //   npm run check               # biome safe fixes on changed files → typecheck → related tests
 //   npm run check -- --no-fix   # same, but writes no files in the repo (logs still go to tmp)
-//   npm run check -- --full     # whole repo, full suites — what `npm run verify` runs
+//   npm run check -- --full     # whole repo, full suites — what `npm run verify` runs, queued
+//                               # behind the same per-checkout lock (scripts/verify-locked.sh)
 //
 // "Changed" = everything differing from the merge-base with origin/main: committed, staged,
 // unstaged and untracked. (`biome --changed` skips uncommitted edits, and an agent between two
@@ -256,6 +257,18 @@ async function main(argv) {
   const full = argv.includes("--full");
   const fix = !argv.includes("--no-fix");
   const root = git("rev-parse", "--show-toplevel");
+  // A full run is as heavy as `npm run verify`, so it queues behind the same per-checkout lock
+  // (#5548) by re-running itself under scripts/verify-locked.sh, which sets SKYNET_VERIFY_LOCKED
+  // for the inner run. The related-files run stays unlocked: it is the small between-edits call.
+  if (full && process.env.SKYNET_VERIFY_LOCKED !== "1") {
+    const script = join(root, "scripts", "check.mjs");
+    const locked = spawnSync(
+      "bash",
+      [join(root, "scripts", "verify-locked.sh"), "--", process.execPath, script, ...argv],
+      { stdio: "inherit" },
+    );
+    return locked.status ?? 2;
+  }
   const logDir = join(
     tmpdir(),
     "skynet-check",

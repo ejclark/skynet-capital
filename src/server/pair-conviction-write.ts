@@ -1,7 +1,8 @@
 import { MAX_WIRED_CONVICTIONS } from "../autonomous/convictions-wire.js";
 import { marketDayKey } from "../domain/market-day.js";
 import type { SubscriptionConviction } from "../domain/types.js";
-import type { Conviction } from "../playbooks/conviction-record.js";
+import { parseStoredConviction } from "../playbooks/conviction-parse.js";
+import { type Conviction, convictionProblems } from "../playbooks/conviction-record.js";
 import { recordFor } from "../subscriptions/conviction-pointer.js";
 import { isPairView, pairView, pairViewId } from "../subscriptions/pair-conviction.js";
 import type { MemberConvictionStore, PairViewWrite } from "./member-conviction-store.js";
@@ -23,8 +24,12 @@ import type { MemberConvictionStore, PairViewWrite } from "./member-conviction-s
  *    is never grown past it. Until piece 4 the subscription kept an inline copy instead; the bots
  *    now read pointers only and would run that pair exits-only (`isConvictionOffView`), so a write
  *    reported as saved would quietly stop the pair. Saying so is the honest answer;
- *  - no member store wired (a test or local config with no views file): no view is written, and the
- *    subscription keeps its inline copy, which the bots run exits-only.
+ *  - no member store wired (a local config with no views file; production always wires one): a day
+ *    that is a seeded record's still points at the record, and any other is refused. With the
+ *    inline field retired there is nowhere else to keep it, and a pair subscribed on it would
+ *    otherwise run with none on record;
+ *  - a view the pointer rule would never hold (an authored play's id, a reason too long to read
+ *    back): refused, so the form never answers ok over a conviction that went nowhere.
  *
  * Written first, so a subscription that points at the view never exists without it. `undo` puts
  * the view back as it was, for a subscription write the change log rolls back after this
@@ -37,10 +42,12 @@ export function statePairConviction(
   owner: string,
   at: Date,
 ): PairViewWrite {
-  const unchanged: PairViewWrite = { ok: true, undo: () => undefined };
-  if (!members) return unchanged;
   const id = pairViewId(ref.accountId, ref.playbookId);
-  if (recordFor(ref.playbookId, conviction)) return members.dropPair(ref.accountId, id);
+  if (recordFor(ref.playbookId, conviction)) {
+    return members ? members.dropPair(ref.accountId, id) : { ok: true, undo: () => undefined };
+  }
+  // Nowhere to keep the owner's own day: refused, since a subscription no longer holds one inline.
+  if (!members) return { ok: false, reason: CONVICTION_NO_VIEWS };
   const wired = members.handedOver().filter((w) => w.conviction.id !== id).length;
   // Full: refused, not kept inline — the bots read pointers only, so an inline copy opens nothing.
   if (wired >= MAX_WIRED_CONVICTIONS) return { ok: false, reason: CONVICTION_WIRE_FULL };
@@ -50,6 +57,11 @@ export function statePairConviction(
     owner,
     statedOn: marketDayKey(at.toISOString()),
   });
+  // A view the pointer rule would never hold (an authored play's id, a reason past a stored claim's
+  // length) is refused here, so the form never answers ok over a conviction that went nowhere.
+  if (convictionProblems(view).length > 0 || !parseStoredConviction(view)) {
+    return { ok: false, reason: CONVICTION_NOT_KEPT };
+  }
   return members.statePair(ref.accountId, view, at);
 }
 
@@ -65,6 +77,14 @@ export function dropPairConviction(
 /** Why a form's conviction was refused when the views file could not be read whole. */
 export const CONVICTION_UNSAVED =
   "Your conviction couldn't be saved just now, so nothing was changed. Try again shortly.";
+
+/** Why a form's conviction was refused where no views file is wired (a test or local config). */
+export const CONVICTION_NO_VIEWS =
+  "This server has nowhere to keep your own conviction, so nothing was changed. Use the shared view's check day, or run it with a views file.";
+
+/** Why a form's conviction was refused when it cannot be kept as a view on this pair. */
+export const CONVICTION_NOT_KEPT =
+  "This conviction can't be kept as a view on this pair (a strategy you wrote, or a reason that is too long), so nothing was changed.";
 
 /** Why a form's conviction was refused when the bots already hold as many views as they can read. */
 export const CONVICTION_WIRE_FULL =
@@ -105,9 +125,8 @@ export function writeWithConviction<T>(
   if (!conviction) return { ok: true, value: write(viewsBefore) };
   const stated = statePairConviction(members, ref, conviction, owner, at);
   if (!stated.ok) {
-    const reason =
-      stated.reason === CONVICTION_WIRE_FULL ? CONVICTION_WIRE_FULL : CONVICTION_UNSAVED;
-    return { ok: false, reason };
+    const said = [CONVICTION_WIRE_FULL, CONVICTION_NO_VIEWS, CONVICTION_NOT_KEPT];
+    return { ok: false, reason: said.includes(stated.reason) ? stated.reason : CONVICTION_UNSAVED };
   }
   try {
     return { ok: true, value: write(viewsBefore) };

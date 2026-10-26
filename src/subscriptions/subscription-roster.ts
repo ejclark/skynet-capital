@@ -43,8 +43,7 @@ function authoredPlay(
  * that record (#5482 slice 4, `steeredBy`): `steered` says each fence, once, for the boot log. A
  * narrowing that would widen a bound is `refused` whole and the pair runs exits-only, so nothing
  * new opens on a conviction that did not hold. So does a subscription whose conviction is on no
- * view (`isConvictionOffView`): an inline copy with no pointer (#5482 contract piece 4), which the
- * bots no longer read, or a ◆ pair with no pointer at all, which trades only on a conviction.
+ * view (`isConvictionOffView`): a ◆ pair with no pointer, which trades only on a conviction.
  */
 export function subscriptionRoster(
   subscriptions: readonly PlaybookSubscription[],
@@ -70,10 +69,8 @@ export function subscriptionRoster(
     }
     // A member's own authored play is never steered: a record steers house pairs. One carrying a
     // pointer anyway is held like any pointer the bots cannot use (`steeredBy` refuses it), since a
-    // pointed pair never reads its inline conviction (#5482 contract piece 2). An inline copy with
-    // no pointer is never read either (piece 4, `statedCheck`), so its pair has no check day and
-    // runs exits-only the same way, until the app's poll moves the copy onto a view. So does a ◆
-    // pair with neither: it trades only on a conviction, and none is on a view.
+    // pointed pair is checked on its pointer alone (#5482 contract piece 2). A ◆ pair with no
+    // pointer runs exits-only the same way: it trades only on a conviction, and none is on a view.
     const result = isConvictionOffView(sub)
       ? { playbook: house, refused: CONVICTION_NOT_ON_VIEW }
       : own && sub.convictionId === undefined

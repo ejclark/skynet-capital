@@ -5,8 +5,11 @@ set -euo pipefail
 #
 # Every step runs either on THIS machine (git) or on the plentiful REST *core* bucket
 # (15k/hr) — never the scarce GraphQL bucket (5k/hr) that the GitHub MCP spends by the
-# thousands, and NEVER by polling. The completion signal is the merge webhook, not a
-# status loop. A script is a one-time build cost, then ~free per run forever; that is the
+# thousands, and NEVER by polling. The completion signal is the merge webhook — the
+# `pull_request.closed` event (`outcome: merged`) that subscribe_pr_activity pushes into the
+# session — not a status loop. The spirit kept (#5193): no scarce-bucket calls and no model
+# turns spent waiting. Where no event path exists, the one fallback is a single backgrounded
+# REST `until` loop on `pulls/<n>` (CONTRIBUTING.md), never a subcommand here. A script is a one-time build cost, then ~free per run forever; that is the
 # self-healing flywheel (docs/COACHES.md → "Resource cost is a fitness dimension").
 #
 #   scripts/ship.sh open "<pr title>" [--body-file F] [--base B] [--no-verify] [--no-merge]
@@ -368,7 +371,11 @@ EOF_SHOTS
       }
     fi
     echo "ship: local verify (parity with CI — fail fast before spending a runner)…"
-    npm run verify >/tmp/ship-verify.log 2>&1 || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 /tmp/ship-verify.log; exit 1; }
+    # Through verify-locked.sh (#5548): queued behind any other worktree's verify in this checkout,
+    # and a green run stamps the tree so the pre-push hook below skips a second verify of it. Logs
+    # are per-process — a fixed /tmp name let two ships at once overwrite each other's tail.
+    local verify_log="/tmp/ship-verify.$$.log"
+    bash scripts/verify-locked.sh --log "$verify_log" || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 "$verify_log"; exit 1; }
     echo "ship: verify green."
     # INTEGRATION TESTS TOO (2026-09-30, #4094). `verify` is unit/DOM-level; the Playwright suite is
     # CI's `integration tests` job, and #4151/#4155 merged while it was still running and later went
@@ -386,7 +393,7 @@ EOF_SHOTS
         echo "ship: ⚠ local integration tests NOT run — screenshot baselines are Linux-only and this is $(uname -s). CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
       elif node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
         echo "ship: local integration tests (npm run test:e2e)…"
-        npm run test:e2e >/tmp/ship-e2e.log 2>&1 || { echo "ship: LOCAL INTEGRATION TESTS FAILED — not pushing."; tail -30 /tmp/ship-e2e.log; exit 1; }
+        npm run test:e2e >"/tmp/ship-e2e.$$.log" 2>&1 || { echo "ship: LOCAL INTEGRATION TESTS FAILED — not pushing."; tail -30 "/tmp/ship-e2e.$$.log"; exit 1; }
         echo "ship: integration tests green."
       else
         echo "ship: ⚠ local integration tests NOT run — the pinned Chromium build isn't installed here. CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
@@ -1011,6 +1018,19 @@ cmd_platter_board() {
     echo "ship platter board: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
     exit 1 ;;
   esac
+  # The board guards live in the copy of this file being run, and that copy is the PLATTER's
+  # checkout — a main up to a week old. A guard merged since is simply absent: #6032's stale-base
+  # refusal merged at 10:57 on 2026-10-26, and at 11:52 a platter still on the older ship.sh boarded
+  # a 3-file item as 95 files (#5852). Refuse until the platter runs main's copy.
+  git fetch --quiet origin main || {
+    echo "ship platter: cannot fetch origin/main to check this script is current" >&2; exit 1; }
+  local main_ship; main_ship="$(git rev-parse --verify --quiet origin/main:scripts/ship.sh || true)"
+  if [ -n "$main_ship" ] && [ "$main_ship" != "$(git hash-object "$0")" ]; then
+    echo "ship platter: this scripts/ship.sh is not origin/main's — the platter's copy is stale and" >&2
+    echo "  may lack board guards merged since. Catch the platter up first, then re-board:" >&2
+    echo "  git merge origin/main --no-edit" >&2
+    exit 1
+  fi
   platter_board_item "$item" "$subject" "$verify"
   echo "ship platter: pushing ${branch}…"
   git push -u origin "$branch"

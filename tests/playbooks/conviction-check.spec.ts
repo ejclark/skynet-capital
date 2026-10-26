@@ -121,7 +121,6 @@ describe("checkRecord on one pair — net P/L and the wheel's retire test", () =
 });
 
 describe("criterion 11 — a non-✓ pair with no conviction is labelled, never stopped", () => {
-  const conviction = { reason: "my call", checkOn: "2027-01-29" };
   const sub = (id: string, overrides: Partial<PlaybookSubscription> = {}) =>
     aSubscription("sauron", id, overrides);
 
@@ -131,15 +130,11 @@ describe("criterion 11 — a non-✓ pair with no conviction is labelled, never 
   });
 
   // The inline carry's replacement, bots first: a ◆ pair trades only on a conviction (#4469 c2), so
-  // with neither a pointer nor a copy it runs exits-only (`subscriptionRoster`), and "still
+  // with no pointer it runs exits-only (`subscriptionRoster`), and "still
   // trading" would be false of it.
-  it("never labels a ◆ pair with neither a pointer nor a copy: it runs exits-only instead", () => {
+  it("never labels a ◆ pair with no pointer: it runs exits-only instead", () => {
     expect(isConvictionNotStated(sub("CRWV-WHEEL"))).toBe(false);
     expect(isConvictionNotStated(sub("CRWV-LONG-CALL"))).toBe(false);
-  });
-
-  it("is quiet once a conviction is stated", () => {
-    expect(isConvictionNotStated(sub("CRWV-WHEEL", { conviction }))).toBe(false);
   });
 
   it("counts a pointer at a record that steers the pair as stated (#5482 slice 2)", () => {

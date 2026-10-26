@@ -141,51 +141,43 @@ describe("parseSubscriptionsState", () => {
       expect(Object.keys(state ?? {})).toEqual(["acct-1"]);
     });
 
-    it("a re-subscribe carries a conviction and a newer build's field, never what it sets", () => {
-      const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+    it("a re-subscribe carries a pointer and a newer build's field, never what it sets", () => {
       const [prior] =
         parseSubscriptionsState({
-          "acct-1": [{ ...valid, symbols: ["NVDA"], conviction, window: { from: "D-20" } }],
+          "acct-1": [
+            {
+              ...valid,
+              symbols: ["NVDA"],
+              convictionId: "ai-dip-2026-10",
+              window: { from: "D-20" },
+            },
+          ],
         })?.["acct-1"] ?? [];
       expect(prior && carriedOnResubscribe(prior)).toEqual({
-        conviction,
+        convictionId: "ai-dip-2026-10",
         window: { from: "D-20" },
       });
     });
   });
 
-  describe("conviction (#4469 slice 3c part 1)", () => {
+  describe("the inline conviction is retired (#5482, the contract step's last piece)", () => {
     const conviction = {
       reason: "CRWV runs as Eric's conviction, against the study's stand-aside",
       checkOn: "2027-01-29",
     };
 
-    it("parses an owner's reason and the day it is checked", () => {
-      const state = parseSubscriptionsState({ "acct-1": [{ ...valid, conviction }] });
-      expect(state?.["acct-1"]?.[0]?.conviction).toEqual(conviction);
-    });
-
-    it("leaves it absent when there is none on record", () => {
-      const state = parseSubscriptionsState({ "acct-1": [valid] });
-      expect(state?.["acct-1"]?.[0]).not.toHaveProperty("conviction");
-    });
-
-    it("drops a malformed conviction, never the subscription — the bots keep trading it (criterion 11)", () => {
-      for (const bad of [
-        "Eric's call",
-        { reason: "", checkOn: "2027-01-29" },
-        { reason: "   ", checkOn: "2027-01-29" },
-        { reason: "x".repeat(2049), checkOn: "2027-01-29" },
-        { reason: 7, checkOn: "2027-01-29" },
-        { reason: "Eric's call" },
-        { reason: "Eric's call", checkOn: "2027-02-30" },
-        { reason: "Eric's call", checkOn: "2027-1-29" },
-        { reason: "Eric's call", checkOn: "2027-01-29T00:00:00Z" },
-      ]) {
-        const state = parseSubscriptionsState({ "acct-1": [{ ...valid, conviction: bad }] });
+    it("WHEN a stored record still carries one, it is dropped on read, and the subscription kept", () => {
+      for (const stored of [conviction, "Eric's call", { reason: "" }]) {
+        const state = parseSubscriptionsState({ "acct-1": [{ ...valid, conviction: stored }] });
         expect(state?.["acct-1"]).toHaveLength(1);
         expect(state?.["acct-1"]?.[0]).not.toHaveProperty("conviction");
       }
+    });
+
+    it("is never carried forward as a newer build's field would be", () => {
+      const [prior] =
+        parseSubscriptionsState({ "acct-1": [{ ...valid, conviction }] })?.["acct-1"] ?? [];
+      expect(prior && carriedOnResubscribe(prior)).toEqual({});
     });
 
     it("isCalendarDay: a real day only", () => {
@@ -196,13 +188,11 @@ describe("parseSubscriptionsState", () => {
   });
 
   describe("convictionId (#5482 slice 2)", () => {
-    it("parses a pointer at a conviction record beside the subscription's own conviction", () => {
-      const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+    it("parses a pointer at a conviction record", () => {
       const state = parseSubscriptionsState({
-        "acct-1": [{ ...valid, conviction, convictionId: "ai-dip-2026-10" }],
+        "acct-1": [{ ...valid, convictionId: "ai-dip-2026-10" }],
       });
       expect(state?.["acct-1"]?.[0]?.convictionId).toBe("ai-dip-2026-10");
-      expect(state?.["acct-1"]?.[0]?.conviction).toEqual(conviction);
     });
 
     it("drops a malformed pointer, never the subscription", () => {
@@ -253,7 +243,7 @@ describe("parseSubscriptionsState", () => {
       }
     });
 
-    it("carries a sub-field a newer build added, as a conviction's does", () => {
+    it("carries a sub-field a newer build added, as a record's own fields do", () => {
       const next = { ...target, band: { ...target.band, hold: 3 }, owner: "eric" };
       expect(parsed(next)?.[0]?.playTarget).toEqual(next);
     });

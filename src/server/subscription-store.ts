@@ -129,10 +129,10 @@ export class SubscriptionStore {
    * The owner's conviction on an existing subscription (#4469 criteria 2 and 12): why they hold the
    * pair, and the market day it is checked. Setting a new date is how a pair stopped by a failed
    * check resumes. Every other field is kept, so it never resumes a paused subscription or touches
-   * a budget. The pointer at a conviction record is recomputed from the new conviction (#5482
-   * slice 2, `restated`): the record it matches, else none, so a new day no record holds is never
-   * overridden by the record's. Returns undefined and writes nothing when the account has no such
-   * subscription.
+   * a budget. Only the pointer is written (#5482 slice 2, `restated`): the record the conviction
+   * matches, else the owner's own view on the pair, which the caller wrote first
+   * (`pair-conviction-write.ts`) — the conviction itself is never kept on the subscription. Returns
+   * undefined and writes nothing when the account has no such subscription.
    */
   setConviction(
     accountId: string,
@@ -145,7 +145,8 @@ export class SubscriptionStore {
     const prior = existing.find((s) => s.playbookId === playbookId);
     if (!prior) return undefined;
     const next = restated(
-      { ...prior, conviction, updatedAt: at.toISOString() },
+      { ...prior, updatedAt: at.toISOString() },
+      conviction,
       undefined,
       this.heldBy(accountId),
     );
@@ -166,13 +167,19 @@ export class SubscriptionStore {
   /**
    * Create or replace (by `playbookId`) the account's subscription to a playbook. Replacing an
    * existing subscription preserves its original `createdAt`, and every field a subscribe does not
-   * set — a conviction, a newer build's field (#4772). A subscribe that states a conviction points
-   * the subscription at the record it matches (#5482 slice 2); one that states none keeps the
-   * pointer it had, or gains one when its carried conviction matches a record.
+   * set — its pointer, a newer build's field (#4772). A subscribe that states a `conviction` points
+   * the subscription at the record it matches, else at the owner's own view the caller wrote first
+   * (#5482 slice 2, `pair-conviction-write.ts`), and never keeps the conviction itself; one that
+   * states none keeps the pointer it had, or gains one when one record steers its pair.
    */
   subscribe(
     accountId: string,
-    sub: Omit<PlaybookSubscription, "accountId" | "createdAt" | "updatedAt">,
+    {
+      conviction: stated,
+      ...sub
+    }: Omit<PlaybookSubscription, "accountId" | "createdAt" | "updatedAt"> & {
+      readonly conviction?: SubscriptionConviction;
+    },
     at = new Date(),
   ): SubscriptionsState {
     const state = this.load();
@@ -185,12 +192,12 @@ export class SubscriptionStore {
       createdAt: prior?.createdAt ?? at.toISOString(),
       updatedAt: at.toISOString(),
     };
-    // A conviction stated here replaces the carried one, so a carried pointer is recomputed from it;
-    // a pointer the caller names is its own call.
+    // A conviction stated here replaces the carried pointer, which is recomputed from it; a pointer
+    // the caller names is its own call.
     const here = this.heldBy(accountId);
     const next =
-      sub.conviction && sub.convictionId === undefined
-        ? restated(written, undefined, here)
+      stated && sub.convictionId === undefined
+        ? restated(written, stated, undefined, here)
         : pointAtRecord(written, undefined, here);
     const nextState: SubscriptionsState = {
       ...state,
