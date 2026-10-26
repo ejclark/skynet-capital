@@ -368,7 +368,11 @@ EOF_SHOTS
       }
     fi
     echo "ship: local verify (parity with CI — fail fast before spending a runner)…"
-    npm run verify >/tmp/ship-verify.log 2>&1 || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 /tmp/ship-verify.log; exit 1; }
+    # Through verify-locked.sh (#5548): queued behind any other worktree's verify in this checkout,
+    # and a green run stamps the tree so the pre-push hook below skips a second verify of it. Logs
+    # are per-process — a fixed /tmp name let two ships at once overwrite each other's tail.
+    local verify_log="/tmp/ship-verify.$$.log"
+    bash scripts/verify-locked.sh --log "$verify_log" || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 "$verify_log"; exit 1; }
     echo "ship: verify green."
     # INTEGRATION TESTS TOO (2026-09-30, #4094). `verify` is unit/DOM-level; the Playwright suite is
     # CI's `integration tests` job, and #4151/#4155 merged while it was still running and later went
@@ -386,7 +390,7 @@ EOF_SHOTS
         echo "ship: ⚠ local integration tests NOT run — screenshot baselines are Linux-only and this is $(uname -s). CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
       elif node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
         echo "ship: local integration tests (npm run test:e2e)…"
-        npm run test:e2e >/tmp/ship-e2e.log 2>&1 || { echo "ship: LOCAL INTEGRATION TESTS FAILED — not pushing."; tail -30 /tmp/ship-e2e.log; exit 1; }
+        npm run test:e2e >"/tmp/ship-e2e.$$.log" 2>&1 || { echo "ship: LOCAL INTEGRATION TESTS FAILED — not pushing."; tail -30 "/tmp/ship-e2e.$$.log"; exit 1; }
         echo "ship: integration tests green."
       else
         echo "ship: ⚠ local integration tests NOT run — the pinned Chromium build isn't installed here. CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
