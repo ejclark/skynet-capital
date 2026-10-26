@@ -120,18 +120,28 @@ ${inner}
 
 /** Reads a request body as text, capped at 1MB by default — every POST form on this server is
  *  tiny, except /feedback's submit once image attachments ride along (feedback-routes.ts raises
- *  the cap there only). */
+ *  the cap there only). The chunks are kept as bytes and decoded once at the end (#6075): decoding
+ *  each chunk on its own turned a multibyte character split across two TCP chunks into U+FFFD, and
+ *  the cap counts UTF-8 bytes, not UTF-16 units, so it means what its name says. */
 export function readBody(req: IncomingMessage, maxBytes = 1_000_000): Promise<string> {
   return new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk;
-      if (body.length > maxBytes) {
+    const chunks: Buffer[] = [];
+    let bytes = 0;
+    let tooLarge = false;
+    req.on("data", (chunk: Buffer | string) => {
+      if (tooLarge) return;
+      const buf = typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk;
+      bytes += buf.length;
+      if (bytes > maxBytes) {
+        tooLarge = true;
+        chunks.length = 0;
         reject(new Error("body too large"));
         req.destroy();
+        return;
       }
+      chunks.push(buf);
     });
-    req.on("end", () => resolve(body));
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     req.on("error", reject);
   });
 }

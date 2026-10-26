@@ -3,12 +3,10 @@ import type { RoundTrip } from "../trading/round-trips.js";
 import { tradeStats } from "../trading/trade-stats.js";
 import type { TradeActivityRecord } from "./activity-store.js";
 import { deskLedger, formatPctOrDash, formatRatio } from "./desk-data.js";
-import { downsampleMinMax } from "./downsample.js";
-import { equityDrawdownOf } from "./equity-sparkline.js";
-import { doubledAtOf, ordered, seedBaselineOf } from "./history-metrics.js";
 import type { EquitySample } from "./history-store.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
-import { type PulseStreakGroup, pulseStreaks } from "./pulse-streaks.js";
+import { PulseHistoryFold } from "./pulse-history-fold.js";
+import { type PulseStreakGroup, pulseStreaksFrom } from "./pulse-streaks.js";
 import { formatCurrency, formatSigned, formatTimestamp, plClass } from "./render-atoms.js";
 
 /**
@@ -96,27 +94,18 @@ const WEEK_CAP = 12;
 const dayLabel = (iso: string): string =>
   formatDateTime(new Date(iso), "en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
-/** `samples` and `drawdown` both come from the caller's single sort of the whole request
- *  (`deskPulseView`'s `orderedSamples`) — not a fresh sort here, and not a second drawdown scan
- *  (#4612 slice 7). */
-function pulseCurve(
-  samples: readonly EquitySample[],
-  drawdown: ReturnType<typeof equityDrawdownOf>,
-): PulseCurve | null {
-  if (samples.length < 2) return null;
-  const first = samples[0] as EquitySample;
-  const last = samples[samples.length - 1] as EquitySample;
+/** Low, high and drawdown cover every sample folded; only the plotted points are bounded — the
+ *  chart body, not the stats, is what grows with history (#4612 slice 7, #13). */
+function pulseCurve(history: PulseHistoryFold): PulseCurve | null {
+  const { first, last } = history;
+  if (history.count < 2 || !first || !last) return null;
+  const drawdown = history.drawdown();
   const t0 = Date.parse(first.at);
   const span = Math.max(1, Date.parse(last.at) - t0);
-  // Folded, never spread: one argument per stored sample threw RangeError past ~121k (#4615).
-  const low = samples.reduce((m, s) => Math.min(m, s.equity), Number.POSITIVE_INFINITY);
-  const high = samples.reduce((m, s) => Math.max(m, s.equity), Number.NEGATIVE_INFINITY);
+  const { low, high } = history;
   const rise = Math.max(1e-9, high - low);
-  // Low/high/drawdown are measured over every sample above; only the plotted curve is bounded —
-  // the chart body, not the stats, is what grows unboundedly with history (#4612 slice 7, #13).
-  const plotted = downsampleMinMax(samples, (s) => s.equity);
   return {
-    points: plotted.map((s) => ({
+    points: history.curve().map((s) => ({
       x: (Date.parse(s.at) - t0) / span,
       y: (s.equity - low) / rise,
     })),
@@ -161,11 +150,10 @@ function pulseWeeks(trips: readonly RoundTrip[]): PulseWeek[] {
   }));
 }
 
-/** `samples` must already be in ascending `at` order — see `deskPulseView`'s `orderedSamples`. */
-function pulseRace(samples: readonly EquitySample[], equity: number): PulseRace | null {
-  const seed = seedBaselineOf(samples);
+function pulseRace(history: PulseHistoryFold, equity: number): PulseRace | null {
+  const seed = history.first;
   if (!seed || seed.equity <= 0) return null;
-  const already = doubledAtOf(samples);
+  const already = history.doubled;
   const target = seed.equity * 2;
   const progress = Math.max(0, Math.min(100, ((equity - seed.equity) / seed.equity) * 100));
   return already
@@ -181,17 +169,24 @@ function pulseRace(samples: readonly EquitySample[], equity: number): PulseRace 
       };
 }
 
+/** The view from raw samples, in any order — folded here; a server holding a live fold calls
+ *  `deskPulseViewOf` and skips reading the history at all (#4619). */
 export function deskPulseView(
   snapshot: ParticipantSnapshot,
   samples: readonly EquitySample[],
   durable?: readonly TradeActivityRecord[],
 ): DeskPulseView {
+  return deskPulseViewOf(snapshot, PulseHistoryFold.of(samples), durable);
+}
+
+export function deskPulseViewOf(
+  snapshot: ParticipantSnapshot,
+  history: PulseHistoryFold,
+  durable?: readonly TradeActivityRecord[],
+): DeskPulseView {
   const trips = deskLedger(snapshot, durable).trips;
   const stats = tradeStats(trips);
-  // Sorted once for the whole request: curve, drawdown, streaks and the doubling race all walk
-  // this same order instead of each re-sorting the full sample set (#4612 slice 7).
-  const orderedSamples = ordered(samples);
-  const drawdown = equityDrawdownOf(orderedSamples);
+  const drawdown = history.drawdown();
   const tiles: PulseTile[] = [
     {
       key: "equity",
@@ -232,10 +227,10 @@ export function deskPulseView(
     },
   ];
   return {
-    curve: pulseCurve(orderedSamples, drawdown),
+    curve: pulseCurve(history),
     weeks: pulseWeeks(trips),
     tiles,
-    race: pulseRace(orderedSamples, snapshot.equity),
-    streaks: pulseStreaks(orderedSamples, stats),
+    race: pulseRace(history, snapshot.equity),
+    streaks: pulseStreaksFrom(history.dailyChanges(), stats),
   };
 }

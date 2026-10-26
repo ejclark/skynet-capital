@@ -4,6 +4,7 @@ import { isAllowedTimezone } from "../participants/allowed-timezones.js";
 import type { Participant } from "../participants/participant.js";
 import type { ParticipantStore } from "../participants/participant-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
+import { slugify } from "./participant-service.js";
 
 /**
  * DAY-2 ACCOUNT MANAGEMENT — the write side of `/account`: edit a self-service account's
@@ -22,10 +23,10 @@ import type { ObservatoryHub } from "./observatory-hub.js";
  *    literally any signed-in member with no check at all — worse than the convenience it kept
  *    (2026-08-26: closed alongside the multi-account picker, which is what made an owner-linked
  *    bot a normal, not hypothetical, target);
- *  - the rename-must-match-session-name rule below predates the owner link: the
- *    session→account link is now `Participant.ownerEmail`, immutable here, so a rename can no
- *    longer forge that link — the rule is now a stricter-than-needed legacy guard, kept as-is
- *    pending a follow-up UX pass rather than loosened in this security-sensitive PR;
+ *  - a rename never touches ownership: the session→account link is `Participant.ownerEmail` (or
+ *    an owner link), resolved by email and immutable here, so the old must-match-your-sign-in-name
+ *    rule is gone (#6077) — what a rename CAN still do is pass one member off as another, so a
+ *    name another account on the board already uses (display name or slug) is refused;
  *  - bots take timezone edits only; renaming a bot is remove + re-add.
  * When no OAuth is configured there is no session link to protect; the password gate is the
  * boundary and the checks relax, matching every other route's trust level there.
@@ -42,12 +43,6 @@ export interface UpdateProfileInput {
   /** The caller's session email — only used to personalize the host-configured refusal when the
    *  caller is themselves an owner (see `hostConfiguredMessage`). Never an authorization input. */
   readonly requesterEmail?: string;
-  /**
-   * The caller's candidate identity strings (session name + email local-part, lowercased) —
-   * the exact values `resolveCurrentId` matches display names against. A human rename must
-   * land on one of these so the member's own session keeps resolving to their account.
-   */
-  readonly sessionNames?: readonly string[];
   /** OAuth is configured for this deployment (the checks above only bind when it is). */
   readonly authConfigured: boolean;
 }
@@ -195,7 +190,13 @@ export function createAccountService(deps: AccountServiceDeps): {
 
     const displayName = input.displayName?.trim();
     const timezone = input.timezone?.trim();
-    const refusal = profileEditRefusal(existing, input, displayName, timezone);
+    const refusal = profileEditRefusal(
+      existing,
+      input,
+      displayName,
+      timezone,
+      deps.hub.getState().participants,
+    );
     if (refusal) {
       return { ok: false, error: refusal };
     }
@@ -259,8 +260,28 @@ export function createAccountService(deps: AccountServiceDeps): {
 }
 
 /**
+ * True when another account on the board already answers to `name` — the same display name
+ * (trimmed, case-insensitive) or the same slug, compared against both the other account's name
+ * and its id (`human-<slug>`, or a bot's persona id), so "Uncle-Joe" can't pass for "uncle_joe".
+ */
+function nameTaken(
+  name: string,
+  selfId: string,
+  others: readonly { readonly id: string; readonly displayName: string }[],
+): boolean {
+  const lower = name.toLowerCase();
+  const slug = slugify(name);
+  return others.some((p) => {
+    if (p.id === selfId) return false;
+    if (p.displayName.trim().toLowerCase() === lower) return true;
+    if (!slug) return false;
+    return slugify(p.displayName) === slug || p.id.replace(/^human-/, "") === slug;
+  });
+}
+
+/**
  * Everything that can refuse a profile edit, in the order the rules bind: right-to-touch,
- * blank name, the bot-rename ban, the session-link rename guard, the timezone whitelist.
+ * blank name, the bot-rename ban, the name-collision guard, the timezone whitelist.
  * Returns the refusal message, or undefined when the edit may proceed.
  */
 function profileEditRefusal(
@@ -268,20 +289,17 @@ function profileEditRefusal(
   input: UpdateProfileInput,
   displayName: string | undefined,
   timezone: string | undefined,
+  others: readonly { readonly id: string; readonly displayName: string }[],
 ): string | undefined {
   if (input.displayName !== undefined && !displayName) {
     return "A display name can't be blank.";
   }
   const renamed = displayName !== undefined && displayName !== existing.displayName;
   if (renamed && existing.kind === "bot") {
-    return "Bot accounts can't be renamed in place — remove the bot and re-add it under the new name. (A rename could otherwise collide with a member's sign-in identity.)";
+    return "Bot accounts can't be renamed in place — remove the bot and re-add it under the new name. (A rename could otherwise take a member's display name.)";
   }
-  if (
-    renamed &&
-    input.authConfigured &&
-    !(input.sessionNames ?? []).includes((displayName as string).toLowerCase())
-  ) {
-    return "Your sign-in is linked to this account by display name, so the name must match your sign-in name or the part of your email before the @. Renaming it to anything else would orphan the account until proper account linking ships.";
+  if (renamed && nameTaken(displayName as string, existing.id, others)) {
+    return "Another account on the board already uses that name — pick a different one.";
   }
   if (timezone && !isAllowedTimezone(timezone)) {
     return `"${timezone}" isn't one of the offered time zones.`;
