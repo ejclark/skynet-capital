@@ -25,7 +25,7 @@ export type PulseStatus = "fresh" | "aging" | "stale";
  * server measures each input against its live source and hands the status in; the engine only
  * applies the demotion each status carries (see `applyPulse` in `position-guidance-rules.ts`).
  */
-export type PulseInputId = "spot" | "chain" | "research" | "earnings-date" | "filings" | "session";
+type PulseInputId = "spot" | "chain" | "research" | "earnings-date" | "filings" | "session";
 
 export interface PulseItem {
   readonly id: PulseInputId;
@@ -144,7 +144,7 @@ export interface GuidanceCatalyst {
 }
 
 /** What the symbol's research ledger currently licenses on the buy side. */
-export interface LedgerStance {
+interface LedgerStance {
   /** Does any house playbook license a buy right now? (CRWV: no — S1 is kill-listed.) */
   readonly buySignal: boolean;
   readonly buyConfidence: Confidence;
@@ -204,12 +204,12 @@ export interface GuidanceInputs {
  */
 export type GuidanceMarket = Omit<GuidanceInputs, "stake">;
 
-export type Lever = "shares" | "covered-calls" | "cash-secured-puts";
-export type SharesCall = "BUY" | "HOLD" | "SELL" | "DECIDE" | "STAND ASIDE" | "NO ANSWER";
-export type OptionCall = "WRITE" | "WAIT" | "NOT AVAILABLE" | "NO ANSWER";
+type Lever = "shares" | "covered-calls" | "cash-secured-puts";
+type SharesCall = "BUY" | "HOLD" | "SELL" | "DECIDE" | "STAND ASIDE" | "NO ANSWER";
+type OptionCall = "WRITE" | "WAIT" | "NOT AVAILABLE" | "NO ANSWER";
 
 /** Every reason names the rule that produced it, so the "why" is templated and auditable. */
-export type RuleId =
+type RuleId =
   | "DTE-PRINT"
   | "DTE-FLOOR"
   | "STRIKE-BASIS"
@@ -246,7 +246,7 @@ export interface LeverCall {
   readonly atOpen: boolean;
 }
 
-export type DteVerdict = "in" | "too-short" | "after-decision" | "spans-print";
+type DteVerdict = "in" | "too-short" | "after-decision" | "spans-print";
 
 export interface DteMark {
   readonly expiration: string;
@@ -364,7 +364,7 @@ export interface ManageCall {
 }
 
 /** What the house's long-call exit rules say about a call the member bought. */
-export type LongCallVerdict = "TAKE PROFIT" | "TIME STOP" | "HOLD" | "NO ANSWER";
+type LongCallVerdict = "TAKE PROFIT" | "TIME STOP" | "HOLD" | "NO ANSWER";
 
 export interface LongCallCall {
   readonly strike: number;
