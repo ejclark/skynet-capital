@@ -16,8 +16,9 @@ describe("ship open --hold — the label is on before the PR is ever ready", () 
   const open = script.slice(start, next === -1 ? undefined : next);
 
   it("opens a held PR as a draft, and only a held one", () => {
-    expect(open).toContain("'draft':sys.argv[5]=='1'");
-    expect(open).toMatch(/"\$title" "\$branch" "\$base" "\$body" "\$hold"/);
+    // The body rides stdin (#6212: one argv string caps at 128 KiB), so $hold is argv[4].
+    expect(open).toContain("'draft':sys.argv[4]=='1'");
+    expect(open).toMatch(/"\$title" "\$branch" "\$base" "\$hold"/);
   });
 
   it("labels hold-merge before it promotes the draft to ready", () => {
@@ -161,13 +162,17 @@ describe("ship — a curl that sends a body declares it as JSON", () => {
   it("sets Content-Type on api()'s request in the same expansion as its body", () => {
     const start = script.indexOf("api() {");
     const fn = script.slice(start, script.indexOf("\n}\n", start));
-    // One expansion, not two: a body with no header is not a state this can reach.
-    expect(fn).toContain('${3:+-H "Content-Type: application/json" -d "$3"}');
+    // One curl line, not two: a body with no header is not a state this can reach. The body is on
+    // stdin since #6212, so the header pins to the `--data-binary @-` that reads it.
+    const joined = fn.replace(/\\\n\s*/g, " ");
+    expect(joined).toMatch(/-H "Content-Type: application\/json" --data-binary @-/);
   });
 
   it("finds no body-sending curl anywhere in the script without the header", () => {
     expect(curls.length).toBeGreaterThan(2); // api(), promote_ready, the automerge mutation
-    const bare = curls.filter((c) => /-d ["']/.test(c) && !c.includes("Content-Type"));
+    const bare = curls.filter(
+      (c) => /(-d|--data-binary) ["'@]/.test(c) && !c.includes("Content-Type"),
+    );
     expect(bare).toEqual([]);
   });
 });
