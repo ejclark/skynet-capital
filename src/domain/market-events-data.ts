@@ -110,7 +110,7 @@ import type { ImpactTier, MarketEvent } from "./market-events-types.js";
 export type { ImpactTier, MarketEvent };
 
 /** Where the per-event files live, relative to the repo root (see PATH RESOLUTION above). */
-export const MARKET_EVENTS_DIR = join("src", "domain", "market-events");
+const MARKET_EVENTS_DIR = join("src", "domain", "market-events");
 
 /**
  * PROPOSALS (issue #1717) — the one add/add class the per-event split left behind. Two research
@@ -123,8 +123,8 @@ export const MARKET_EVENTS_DIR = join("src", "domain", "market-events");
  * proposal as input); otherwise the first proposal by file name stands in, deterministically.
  * Proposals shadowed by a canonical file are inert, never deleted by another lane.
  */
-export const PROPOSALS_SUBDIR = "proposals";
-export const PROPOSAL_FILE_RE = /^([a-z0-9][a-z0-9-]*)\.from-([a-z0-9][a-z0-9-]*)\.json$/;
+const PROPOSALS_SUBDIR = "proposals";
+const PROPOSAL_FILE_RE = /^([a-z0-9][a-z0-9-]*)\.from-([a-z0-9][a-z0-9-]*)\.json$/;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const isString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
