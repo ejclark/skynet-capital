@@ -225,7 +225,7 @@ export function feedbackReadyIntent(ctx) {
   const issue = ctx.payload?.issue;
   if (!issue) return { ready: false, reason: "no issue in the payload" };
   if (!inFeedbackLane(issue)) {
-    return { ready: false, reason: "ready, but not a feedback or bug issue — not this lane's" };
+    return { ready: false, reason: "ready, but a `plan` — the plan lane's, not this one" };
   }
   if (issue.state && issue.state !== "open") {
     return { ready: false, reason: `issue #${issue.number} is not open` };
