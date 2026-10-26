@@ -145,3 +145,98 @@ describe("feedback coach reply recovery", () => {
     expect(sent.system ?? "").toContain("SIZE DISCIPLINE");
   });
 });
+
+// #6205 (evidence: #6007). The coach prompt's label `What "done" looks like` carries quotes. Under
+// the enforced JSON schema a bare `"` the model writes inside "details" CLOSES the string, and the
+// decoder carries on with valid JSON — so `JSON.parse` succeeds on a brief cut mid-word, the area
+// survives, and nothing says anything was lost. #6007's body is this fixture, byte for byte where
+// it matters: the fold opened, "**What" dangling, no `</details>`.
+describe("a brief cut short by a quote (#6205)", () => {
+  const cutBrief =
+    "• Let members attach images to Moneypenny messages\\n\\n<details><summary><strong>The brief</strong></summary>\\n\\n**What** — Add ability to attach screenshots.\\n\\n**Where** — Moneypenny chat.\\n\\n**What ";
+  const quoteCut = `{"draft": {"title": "Add screenshot attachments to Moneypenny chat", "details": "${cutBrief}", "area": "activity", "criteria": ["The app shall accept a pasted screenshot"], "assumptions": [], "outOfScope": [], "readiness": "spec-complete"}}`;
+  const memberNote =
+    'Let me attach screenshots — "done" means I can paste one and the bot sees it.';
+
+  it("reproduces: the reply parses, so only the fold says the brief stopped short", () => {
+    expect(() => JSON.parse(quoteCut)).not.toThrow();
+    expect((JSON.parse(quoteCut) as { draft: { details: string } }).draft.details).not.toMatch(
+      /<\/details>/,
+    );
+  });
+
+  it("marks the lost section out loud and closes the fold", () => {
+    const result = parseCoachReply(quoteCut, 2) as { details: string; cut?: boolean };
+
+    expect(result.cut).toBe(true);
+    expect(result.details).toContain("the rest of this brief was cut off");
+    expect(result.details.match(/<\/details>/g)).toHaveLength(1);
+    expect(result.details.trimEnd().endsWith("</details>")).toBe(true);
+  });
+
+  it("never lets a cut brief claim to be spec-complete", () => {
+    const result = parseCoachReply(quoteCut, 2) as {
+      spec: { readiness: string; assumptions: readonly string[] };
+    };
+
+    expect(result.spec.readiness).toBe("partial");
+    expect(result.spec.assumptions.join(" ")).toContain("cut off mid-write");
+  });
+
+  it("carries the member's own words in full inside the fold", async () => {
+    const coach = createFeedbackCoach({ apiKey: "k" }, () =>
+      Promise.resolve(anthropicReply(quoteCut)),
+    );
+
+    const result = (await coach({
+      kind: "feature",
+      messages: [{ role: "user", content: memberNote }],
+    })) as { details: string };
+
+    expect(result.details).toContain(`> ${memberNote}`);
+    expect(result.details.indexOf(memberNote)).toBeLessThan(result.details.indexOf("</details>"));
+  });
+
+  it("does the same for a reply the token cap cut mid-string", async () => {
+    const coach = createFeedbackCoach({ apiKey: "k" }, () =>
+      Promise.resolve(anthropicReply(`{"draft": {"title": "t", "details": "${cutBrief}`)),
+    );
+
+    const result = (await coach({
+      kind: "feature",
+      messages: [{ role: "user", content: memberNote }],
+    })) as { details: string; cut?: boolean };
+
+    expect(result.cut).toBe(true);
+    expect(result.details).toContain("the rest of this brief was cut off");
+    expect(result.details).toContain(`> ${memberNote}`);
+    expect(result.details.match(/<\/details>/g)).toHaveLength(1);
+  });
+
+  it("leaves a whole brief untouched", () => {
+    const whole = `{"draft": {"title": "t", "details": "- a\\n\\n<details><summary>s</summary>\\n\\n**What \\"done\\" looks like** — x\\n\\n</details>", "criteria": ["c"], "assumptions": [], "outOfScope": [], "readiness": "spec-complete"}}`;
+
+    const result = parseCoachReply(whole, 1) as {
+      details: string;
+      cut?: boolean;
+      spec: { readiness: string };
+    };
+
+    expect(result.cut).toBeUndefined();
+    expect(result.details).toContain('**What "done" looks like** — x');
+    expect(result.details).not.toContain("cut off");
+    expect(result.spec.readiness).toBe("spec-complete");
+  });
+
+  it("keeps quotes out of the labels the prompt asks the model to copy", async () => {
+    let sent: { system?: string } = {};
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
+      sent = body as { system?: string };
+      return Promise.resolve(anthropicReply('{"question": "where?"}'));
+    });
+
+    await coach({ kind: "feature", messages: [{ role: "user", content: "x" }] });
+
+    expect(sent.system ?? "").not.toContain('"done"');
+  });
+});

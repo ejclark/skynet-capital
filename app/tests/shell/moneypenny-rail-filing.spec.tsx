@@ -143,6 +143,62 @@ describe("MoneypennyRail — the drafted filing", () => {
     });
   });
 
+  // #6205: #6007 filed a capsule cut mid-word through this pass. A cut shaping reply is a failed
+  // one — the draft she showed and the member said "send" to is whole, so that is what files.
+  it("files her whole draft when the coach's shaping comes back cut", async () => {
+    const sent: { url: string; body: unknown }[] = [];
+    globalThis.fetch = ((url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      sent.push({ url, body });
+      if (url === "/api/companion") return Promise.resolve(json({ enabled: true, disclosure: "" }));
+      if (url === "/api/companion/chat")
+        return Promise.resolve(
+          new Response(
+            'event: handoff\ndata: {"kind":"feature","title":"Attach screenshots in chat","details":"Paste a screenshot; done means the bot sees it."}\n\nevent: delta\ndata: {"text":"drafted."}\n\nevent: done\ndata: {}\n\n',
+            { status: 200, headers: { "content-type": "text/event-stream" } },
+          ),
+        );
+      if (url === "/feedback/coach")
+        return Promise.resolve(
+          json({
+            ok: true,
+            done: true,
+            title: "Add screenshot attachments to Moneypenny chat",
+            details: "- attach images\n\n<details>**What",
+            spec: { readiness: "partial" },
+            cut: true,
+          }),
+        );
+      if (url === "/api/feedback")
+        return Promise.resolve(
+          body
+            ? json({ ok: true, url: "u", number: 9 })
+            : json({
+                enabled: true,
+                coachEnabled: true,
+                followupEnabled: false,
+                feedbackCount: 1,
+                celebrating: [],
+                recent: [],
+              }),
+        );
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    }) as typeof globalThis.fetch;
+    mount();
+    await act(() => useMoneypenny.getState().openRail());
+    const box = screen.getByLabelText("Message Moneypenny");
+    fireEvent.change(box, { target: { value: "report it" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText("Moneypenny · drafted.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Send it" }));
+    expect(await screen.findByText(/filed as issue #9/)).toBeInTheDocument();
+    expect(sent.find((c) => c.url === "/api/feedback" && c.body)?.body).toMatchObject({
+      kind: "feature",
+      title: "Attach screenshots in chat",
+      details: "Paste a screenshot; done means the bot sees it.",
+    });
+  });
+
   it("says plainly when the live chat didn't answer, instead of a scripted stand-in", async () => {
     globalThis.fetch = ((url: string) => {
       if (url === "/api/companion") return Promise.resolve(json({ enabled: true, disclosure: "" }));
