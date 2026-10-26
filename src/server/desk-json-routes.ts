@@ -289,6 +289,7 @@ async function heartbeatPayload(
   const records = found.kind === "bot" ? await config.readDecisions?.(found.id) : undefined;
   if (!records) return { available: false, kind: found.kind };
   const roster = botRoster(found, config);
+  const readRunStart = config.readVerdictRunStart;
   const heartbeat = botHeartbeatView(
     records,
     new Date(),
@@ -296,6 +297,7 @@ async function heartbeatPayload(
     botHoldings(found, roster),
     roster,
     config.readCheckWeek?.(found.id),
+    readRunStart && ((verdict, startAt) => readRunStart(found.id, startAt, verdict)),
   );
   return { available: true, heartbeat: owner ? heartbeat : withoutHeartbeatPlaybookIds(heartbeat) };
 }

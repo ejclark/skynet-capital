@@ -3,13 +3,14 @@ import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
+import type { VerdictRunStart } from "../autonomous/decision-db-verdict-run.js";
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
 import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
-import type { OrderIntent } from "../domain/types.js";
+import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
@@ -168,6 +169,14 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  `decision-db-week.ts`) — the Playbooks strip and lanes. Omit, or return undefined, to leave
    *  the heartbeat's `week` off: no strip is better than one drawing gaps nobody recorded. */
   readonly readCheckWeek?: (participantId: string) => CheckWeekRows | undefined;
+  /** When the run of a playbook's verdict holding at the pass `startAt` began (#4953,
+   *  `decision-db-verdict-run.ts`) — the Playbooks cards' exact "since". Omit and "since" reaches
+   *  only as far back as the passes `readDecisions` returned, said as "at least since". */
+  readonly readVerdictRunStart?: (
+    participantId: string,
+    startAt: number,
+    verdict: PlaybookVerdict,
+  ) => VerdictRunStart | undefined;
   /** Each house playbook's funnel over the last ten sessions (#4450 slice 5a, `playbook-funnel.ts`)
    *  — R&D → Playbooks' house metrics. Omit and the performance read carries `funnel: null`, so a
    *  card says nothing rather than ten sessions of zeros nobody recorded. */

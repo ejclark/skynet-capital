@@ -134,6 +134,69 @@ describe("botHeartbeatView — per-playbook verdicts", () => {
     expect(view.playbooks?.[0]?.sinceIsLowerBound).toBe(true);
   });
 
+  it("WHEN the store can date a run the page could not see the end of, 'since' is exact (#4953)", () => {
+    const asked: [PlaybookVerdict, number][] = [];
+    const twoHoursAgo = NOW.getTime() - 2 * 3_600_000;
+    const view = botHeartbeatView(
+      [pass(0, [s1("long")]), pass(15_000, [s1("long")])],
+      NOW,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      (verdict, startAt) => {
+        asked.push([verdict, startAt]);
+        return { at: twoHoursAgo, reachesOldest: false };
+      },
+    );
+    expect(asked).toEqual([[s1("long"), NOW.getTime()]]);
+    expect(view.playbooks?.[0]).toMatchObject({
+      since: new Date(twoHoursAgo).toISOString(),
+      sinceIsLowerBound: false,
+    });
+  });
+
+  it("asks the store nothing for a run that breaks inside the page — it is already exact", () => {
+    let asked = 0;
+    const view = botHeartbeatView(
+      [pass(0, [s1("long")]), pass(15_000, [s1("flat")])],
+      NOW,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      () => {
+        asked++;
+        return { at: 0, reachesOldest: false };
+      },
+    );
+    expect(asked).toBe(0);
+    expect(view.playbooks?.[0]).toMatchObject({
+      since: NOW.toISOString(),
+      sinceIsLowerBound: false,
+    });
+  });
+
+  it("keeps 'at least since' when the run reaches the first recorded pass, or the store cannot say", () => {
+    const records = [pass(0, [s1("long")]), pass(15_000, [s1("long")])];
+    const first = NOW.getTime() - 86_400_000;
+    const reaches = botHeartbeatView(records, NOW, true, undefined, undefined, undefined, () => ({
+      at: first,
+      reachesOldest: true,
+    }));
+    expect(reaches.playbooks?.[0]).toMatchObject({
+      since: new Date(first).toISOString(),
+      sinceIsLowerBound: true,
+    });
+    const silent = botHeartbeatView(records, NOW, true, undefined, undefined, undefined, () => {
+      return undefined;
+    });
+    expect(silent.playbooks?.[0]).toMatchObject({
+      since: new Date(NOW.getTime() - 15_000).toISOString(),
+      sinceIsLowerBound: true,
+    });
+  });
+
   it("reads verdicts from the newest pass that has them, skipping a halted one", () => {
     const view = botHeartbeatView(
       [pass(0, undefined, "manual"), pass(15_000, [s1("flat")])],
