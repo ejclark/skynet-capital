@@ -45,113 +45,28 @@
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
 
-import { AuthoredShadowRunner } from "../../src/autonomous/authored-shadow-runner.ts";
-import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
-import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
-import { emptyForm, specFromForm } from "../../src/playbooks/authored-play-form.ts";
-import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../../src/playbooks/registry.ts";
-import { viewOf } from "../../src/server/authored-plays-api-routes.ts";
 import { withForecasts } from "../../src/server/pair-forecast.ts";
+import { authoredGroups } from "./playbook-store-authored.mjs";
 // Each card's closed-trade numbers (#3665): S1-NVDA with a record, SAURON without one.
 import { performance } from "./playbook-store-fixture.mjs";
+import {
+  COUNTS,
+  deskFor,
+  heartbeat,
+  JOE,
+  PHONE,
+  SAURON,
+  STORE,
+  settings,
+  subscription,
+  TODAY,
+  twoBots,
+  underHeader,
+  views,
+  withCounts,
+} from "./playbook-store-world.mjs";
 import { openShell } from "./shell.mjs";
-
-const SAURON = { id: "sauron", name: "Sauron", kind: "bot", hostConfigured: true, profile: null };
-const JOE = {
-  id: "human-joe",
-  name: "Uncle Joe",
-  kind: "human",
-  hostConfigured: false,
-  profile: null,
-};
-
-// The shell's header reads the account roster on every `/app/*` surface — unstubbed it throws
-// before the route ever renders.
-const settings = {
-  authConfigured: true,
-  adminWired: false,
-  fleetSuspended: false,
-  timezones: [],
-  accounts: [SAURON, JOE],
-};
-
-const tiles = {
-  openPositions: 0,
-  invested: "$0.00",
-  dayPl: "$0.00",
-  dayTone: "flat",
-  unrealized: "$0.00",
-  unrealizedNote: "no positions",
-  unrealizedTone: "flat",
-  cash: "$1,000,000.00",
-};
-const deskFor = (account) => ({
-  generatedAt: "2026-10-05T15:00:00Z",
-  desk: { id: account.id, name: account.name, kind: account.kind, positions: [], tiles },
-});
-
-// The subscriber count (#3970): enabled subscriptions across every account, a bare number.
-const COUNTS = { "S1-NVDA": 3, SAURON: 1 };
-const withCounts = (view, counts = COUNTS) => ({
-  ...view,
-  cards: view.cards.map((card) => ({ ...card, subscribers: counts[card.id] ?? 0 })),
-});
-
-const AT = "2026-10-01T14:00:00.000Z";
-const subscription = (playbookId, over) => ({
-  accountId: "sauron",
-  playbookId,
-  mode: "standard",
-  enabled: true,
-  createdAt: AT,
-  updatedAt: AT,
-  ...over,
-});
-// SAURON on, aimed at NVDA + CRWV; S1-NVDA paused. G1-GOOG and TACO-DJT not subscribed.
-const SAURON_SUBSCRIPTIONS = [
-  subscription("SAURON", { capitalAllocated: 25_000, symbols: ["NVDA", "CRWV"] }),
-  subscription("S1-NVDA", { mode: "conservative", capitalAllocated: 10_000, enabled: false }),
-];
-
-const views = {
-  catalog: withCounts(playbookStoreView(undefined)),
-  fresh: withCounts(playbookStoreView([])),
-  fogged: withCounts(playbookStoreView([], true)),
-  sauron: withCounts(playbookStoreView(SAURON_SUBSCRIPTIONS)),
-  human: withCounts(playbookStoreView([], false, [], true)),
-};
-
-// The bot's own Heartbeat, with the roll call the live code would read for this roster —
-// `playbookRollCall` over a pass that ran SAURON, never hand-written sentences.
-const NOW = new Date("2026-10-05T15:00:00Z");
-const verdicts = [{ playbookId: "SAURON", mode: "standard", state: "tactical" }];
-const heartbeat = {
-  available: true,
-  heartbeat: {
-    state: "beating",
-    marketOpen: true,
-    lastPassAt: "2026-10-05T14:59:40Z",
-    sinceLastPassMs: 20_000,
-    cadenceMs: 15_000,
-    staleAfterMs: 120_000,
-    playbooks: verdicts.map((v) => ({ ...v, since: AT, sinceIsLowerBound: false })),
-    rollCall: playbookRollCall(
-      verdicts,
-      NOW,
-      registeredPlaybooks(),
-      PLAYBOOK_WIRING_GAPS,
-      UPCOMING_PRINTS,
-    ),
-  },
-};
-
-// One shell per state rather than a reload: the browser serves a fulfilled route from its own
-// memory cache on reload, so a second state has to be a second page load with its own stubs.
-// `scrollTo` lands the named text just under the sticky top bar and market strip (~150px), not at
-// the very top edge, where they would cover it.
-const underHeader = (el) =>
-  window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 150);
 
 // `shell` passes `viewport` and `quality` (a dense frame's lower JPEG quality, under the ~100KB cap)
 // straight to openShell; either left undefined keeps its default.
@@ -177,7 +92,11 @@ async function frame({
       [`/api/desk/${account.id}`]: deskFor(account),
       [`/api/desk/${account.id}/heartbeat`]: heartbeat,
       [`/api/desk/${account.id}/probes`]: { available: false },
-      [`/api/desk/${account.id}/decisions`]: { available: true, kind: account.kind, cycles: [] },
+      [`/api/desk/${account.id}/decisions`]: {
+        available: true,
+        kind: account.kind,
+        cycles: [],
+      },
       ...extraStubs,
     },
   });
@@ -194,8 +113,6 @@ async function frame({
 
 // The subscribe form sits behind its row's "Subscribe" disclosure (#4469 slice 3b).
 const openSubscribe = (page) => page.locator(".pb-subscribe-disclosure > summary").first().click();
-const PHONE = { width: 390, height: 844 };
-const STORE = "/app/research?section=playbooks";
 const groups = {
   store: [
     {
@@ -237,7 +154,11 @@ const groups = {
       viewport: PHONE,
       act: openSubscribe,
     },
-    { tag: "delegation-locked", view: views.fogged, expect: "Delegating capital opens after" },
+    {
+      tag: "delegation-locked",
+      view: views.fogged,
+      expect: "Delegating capital opens after",
+    },
     {
       tag: "delegation-earned",
       view: views.fresh,
@@ -296,7 +217,11 @@ const groups = {
       path: "/app/u/sauron/decisions",
       scrollTo: "Which playbooks this bot runs",
     },
-    { tag: "desktop-1-bot-subscribed", view: views.sauron, expect: "new entries: NVDA, CRWV" },
+    {
+      tag: "desktop-1-bot-subscribed",
+      view: views.sauron,
+      expect: "new entries: NVDA, CRWV",
+    },
     {
       tag: "desktop-2-human-door",
       view: views.human,
@@ -364,8 +289,14 @@ groups["sauron-rules"] = [
     act: undefined,
     scrollTo: "It runs his standard rules on that bot's own account",
   }),
-  sauronFrame("phone-3-sauron-subscribed-fixture", { view: views.sauronRules, path: undefined }),
-  sauronFrame("phone-4-sauron-paused-fixture", { view: views.sauronPaused, path: undefined }),
+  sauronFrame("phone-3-sauron-subscribed-fixture", {
+    view: views.sauronRules,
+    path: undefined,
+  }),
+  sauronFrame("phone-4-sauron-paused-fixture", {
+    view: views.sauronPaused,
+    path: undefined,
+  }),
   sauronFrame("desktop-sauron-card", { viewport: undefined, quality: 55 }),
 ];
 
@@ -376,7 +307,10 @@ groups["sauron-rules"] = [
 views.scoutSubscribed = withCounts(
   playbookStoreView([
     subscription("SAURON"),
-    subscription("BETA-SCOUT", { mode: "conservative", capitalAllocated: 10_000 }),
+    subscription("BETA-SCOUT", {
+      mode: "conservative",
+      capitalAllocated: 10_000,
+    }),
   ]),
   { ...COUNTS, SAURON: 1, "BETA-SCOUT": 1 },
 );
@@ -396,7 +330,10 @@ groups["subscribed-only"] = [
     path: undefined,
     act: toScoutCard,
   }),
-  sauronFrame("phone-4-sauron-paused-fixture", { view: views.sauronPaused, path: undefined }),
+  sauronFrame("phone-4-sauron-paused-fixture", {
+    view: views.sauronPaused,
+    path: undefined,
+  }),
   sauronFrame("phone-5-sauron-pause-row", {
     act: undefined,
     scrollTo: "Research settings",
@@ -414,8 +351,14 @@ groups["subscribed-only"] = [
 // deck with no account. The wheel and run-up rows, then Sauron's own rules' folded "? not studied".
 views.byStrategy = withCounts(
   playbookStoreView([
-    subscription("CRWV-WHEEL", { mode: "aggressive", capitalAllocated: 75_000 }),
-    subscription("S1-NVDA", { capitalAllocated: 50_000, compoundAllocation: true }),
+    subscription("CRWV-WHEEL", {
+      mode: "aggressive",
+      capitalAllocated: 75_000,
+    }),
+    subscription("S1-NVDA", {
+      capitalAllocated: 50_000,
+      compoundAllocation: true,
+    }),
   ]),
   { ...COUNTS, "CRWV-WHEEL": 1 },
 );
@@ -430,7 +373,10 @@ const strategyFrame = (tag, over = {}) => ({
   ...over,
 });
 groups.strategies = [
-  strategyFrame("phone-1-owner-pairs", { path: undefined, act: toStrategy("The wheel") }),
+  strategyFrame("phone-1-owner-pairs", {
+    path: undefined,
+    act: toStrategy("The wheel"),
+  }),
   strategyFrame("phone-2-rows-by-evidence", {
     path: undefined,
     expect: "The pre-print run-up",
@@ -441,8 +387,15 @@ groups.strategies = [
     expect: "Sauron's own rules",
     act: toStrategy("Sauron's own rules"),
   }),
-  strategyFrame("phone-4-catalog", { view: views.catalog, act: toStrategy("The wheel") }),
-  strategyFrame("desktop-owner-pairs", { path: undefined, viewport: undefined, quality: 55 }),
+  strategyFrame("phone-4-catalog", {
+    view: views.catalog,
+    act: toStrategy("The wheel"),
+  }),
+  strategyFrame("desktop-owner-pairs", {
+    path: undefined,
+    viewport: undefined,
+    quality: 55,
+  }),
 ];
 
 // #4469 slice 3b part 2: the ticker picker. The run-up's list is the richest one (Sauron holds NVDA,
@@ -547,7 +500,11 @@ const scoredFixture = (view) => ({
           scoredOn: "2027-02-03",
           basis: "No CRWV close from 2026-10-16 to 2027-02-01 reached $63.15.",
         },
-        "2a": { outcome: "pass", scoredOn: "2026-11-07", basis: "Fixture reading." },
+        "2a": {
+          outcome: "pass",
+          scoredOn: "2026-11-07",
+          basis: "Fixture reading.",
+        },
       };
       const claims = pair.steeredBy.claims.map((c) =>
         decide[c.label] ? { ...c, ...decide[c.label] } : c,
@@ -649,15 +606,6 @@ groups.window = [
 // (#5444) and the wide layout (#5448). The view carries each row's forecast exactly as the route
 // adds it (`withForecasts` over the real research shelf), on today's clock. Two bots are the
 // viewer's own, so the + panel lists both; the subscribe answer is a fixture (`{ ok: true }`).
-const TODAY = "2026-10-16T15:00:00Z";
-const BANKER = {
-  id: "banker",
-  name: "The Banker",
-  kind: "bot",
-  hostConfigured: true,
-  profile: null,
-};
-const twoBots = { ...settings, accounts: [SAURON, BANKER, JOE] };
 views.oneBuild = {
   ...views.fresh,
   strategies: withForecasts(views.fresh.strategies, TODAY),
@@ -717,230 +665,13 @@ groups["one-build"] = [
     quality: 60,
     act: (page) => page.getByRole("button", { name: /^The wheel/ }).click(),
   }),
-  oneBuild("wide-1-three-columns", { viewport: { width: 1800, height: 1000 }, quality: 55 }),
+  oneBuild("wide-1-three-columns", {
+    viewport: { width: 1800, height: 1000 },
+    quality: 55,
+  }),
 ];
 
-// #5457 slice 1 — "Your playbooks" and the authoring form. The draft rows are the server's own
-// `viewOf` over a record `specFromForm` made, and every refusal on a frame is the form's own
-// sentence, so a frame cannot show a number or a reason the save would not send.
-const DRAFT_FORM = {
-  ...emptyForm("sauron"),
-  name: "My NVDA run-up",
-  symbol: "NVDA",
-  thesis: "Long the drift into the print, out before the dead final week.",
-};
-const draftView = (form, at = "2026-10-16T15:00:00.000Z") => {
-  const made = specFromForm(form, "Eric");
-  if (!made.ok) throw new Error(`fixture form refused: ${JSON.stringify(made.refusals)}`);
-  return viewOf({
-    id: `U-${made.spec.authorAccountId}-${made.spec.slug}`,
-    name: form.name,
-    status: "draft",
-    spec: made.spec,
-    createdAt: at,
-    updatedAt: at,
-  });
-};
-const DRAFTS = [
-  draftView(DRAFT_FORM),
-  draftView({
-    ...emptyForm("banker", "event-window"),
-    name: "News pop",
-    symbol: "DJT",
-    thesis: "A named headline moves it for about an hour, then it gives it back.",
-  }),
-];
-views.author = { ...views.fresh, strategies: withForecasts(views.fresh.strategies, TODAY) };
-// A frame waits for the drafts' read before it acts, so the count in the heading is never a race.
-const authorFrame = (tag, { act, ...over } = {}, drafts = DRAFTS) => ({
-  tag,
-  view: views.author,
-  expect: "Create scenarios, develop strategies, track results.",
-  path: STORE,
-  clockAt: TODAY,
-  extraStubs: {
-    "/api/settings": twoBots,
-    "/api/authored-plays": { plays: drafts },
-    "/api/authored-plays/save": { ok: true, play: DRAFTS[0] },
-  },
-  act: async (page) => {
-    if (drafts.length > 0) await page.locator(".pba-row").first().waitFor();
-    if (act) await act(page);
-  },
-  ...over,
-});
-const openForm = async (page) => {
-  await page.getByRole("button", { name: /New playbook/ }).click();
-  await page.getByRole("form", { name: "New playbook" }).waitFor();
-};
-const fillForm = async (page) => {
-  await page.getByLabel("Ticker", { exact: true }).fill("NVDA");
-  await page.getByLabel("Name", { exact: true }).fill("My NVDA run-up");
-  await page
-    .getByLabel("Why it should work")
-    .fill("Long the drift into the print, out before the dead final week.");
-};
-const toForm = (page) => page.locator(".pba-form").evaluate(underHeader);
-groups.author = [
-  authorFrame("phone-1-your-playbooks", { viewport: PHONE }),
-  authorFrame("phone-2-form", {
-    viewport: PHONE,
-    act: async (page) => {
-      await openForm(page);
-      await toForm(page);
-    },
-  }),
-  authorFrame("phone-3-filled", {
-    viewport: PHONE,
-    act: async (page) => {
-      await openForm(page);
-      await fillForm(page);
-      await page.locator(".pba-size").evaluate(underHeader);
-    },
-  }),
-  authorFrame("phone-4-refused", {
-    viewport: PHONE,
-    act: async (page) => {
-      await openForm(page);
-      await fillForm(page);
-      const days = page.getByLabel("Buy this many days before the report");
-      await days.fill("90");
-      await page.getByLabel("Aggressive", { exact: true }).fill("5");
-      await page.getByRole("button", { name: "Save draft" }).click();
-      await page.getByText(/past the 60 this strategy allows/).waitFor();
-      await toForm(page);
-    },
-  }),
-  authorFrame(
-    "phone-5-no-bot",
-    { viewport: PHONE, extraStubs: { "/api/settings": { ...settings, accounts: [JOE] } } },
-    [],
-  ),
-  authorFrame("desktop-1-form", { quality: 60, act: openForm }),
-  authorFrame("desktop-2-drafts", { quality: 60 }),
-];
-
-// #5457 slice 2 — a draft in its shadow test. The report on each row is what the REAL runner writes:
-// `AuthoredShadowRunner` over a few passes at fixture prices (NVDA reports Nov 12 on this calendar),
-// then the server's own `viewOf` — so a frame cannot show a count, a trade or a window the bots
-// would not report. Only the quotes and the account's equity are fixtures.
-const SHADOW_SINCE = "2026-10-20T13:00:00.000Z";
-const SHADOW_CALENDAR = [
-  { symbol: "NVDA", date: "2026-11-12", status: "confirmed", source: "IR: shoot fixture" },
-];
-const shadowReportFor = (spec, id, days, lastFor) => {
-  let clock = 0;
-  const runner = new AuthoredShadowRunner({
-    risk: { maxPositionPct: 0.03 },
-    blockedReason: () => null,
-    portfolioOf: () => ({ cash: 250_000, positions: [] }),
-    calendar: SHADOW_CALENDAR,
-    now: () => clock,
-  });
-  runner.setOrders([{ id, since: SHADOW_SINCE, spec }]);
-  for (const [day, last] of days) {
-    clock = Date.parse(`${day}T14:35:00Z`);
-    runner.runPass({
-      asOf: `${day}T14:30:00Z`,
-      quotes: {
-        [spec.symbols[0]]: {
-          symbol: spec.symbols[0],
-          bid: last - 0.05,
-          ask: last + 0.05,
-          last,
-          asOf: `${day}T14:30:00Z`,
-        },
-      },
-      momentum: {},
-      newsSentiment: {},
-    });
-  }
-  return runner.report(lastFor).plays;
-};
-const shadowRecord = (form, at) => {
-  const made = specFromForm(form, "Eric");
-  if (!made.ok) throw new Error(`fixture form refused: ${JSON.stringify(made.refusals)}`);
-  return {
-    id: `U-${made.spec.authorAccountId}-${made.spec.slug}`,
-    name: form.name,
-    status: "shadow",
-    shadowSince: SHADOW_SINCE,
-    spec: made.spec,
-    createdAt: at,
-    updatedAt: SHADOW_SINCE,
-  };
-};
-const nvdaRecord = shadowRecord(DRAFT_FORM, "2026-10-16T15:00:00.000Z");
-const newsRecord = shadowRecord(
-  {
-    ...emptyForm("banker", "event-window"),
-    name: "News pop",
-    symbol: "DJT",
-    thesis: "A named headline moves it for about an hour, then it gives it back.",
-  },
-  "2026-10-16T15:00:00.000Z",
-);
-const shadowFrame = (tag, days, over = {}) => {
-  const plays = [
-    ...shadowReportFor(nvdaRecord.spec, nvdaRecord.id, days, 1),
-    ...shadowReportFor(newsRecord.spec, newsRecord.id, [["2026-10-21", 40]], 1),
-  ];
-  const report = { kind: "authored-shadow.v1", at: 1, plays };
-  return authorFrame(tag, { ...over }, [viewOf(nvdaRecord, report), viewOf(newsRecord, report)]);
-};
-// Window opens Oct 23 (20 days before Nov 12); the first rows are mid-window, the last a round trip.
-const MID_WINDOW = [
-  ["2026-10-22", 180],
-  ["2026-10-23", 181],
-  ["2026-10-26", 184],
-];
-const ROUND_TRIP = [...MID_WINDOW, ["2026-11-09", 192]];
-groups.shadow = [
-  authorFrame("phone-6-shadow-offer", { viewport: PHONE }),
-  shadowFrame("phone-7-shadow-running", MID_WINDOW, { viewport: PHONE }),
-  shadowFrame("phone-8-shadow-round-trip", ROUND_TRIP, { viewport: PHONE }),
-  shadowFrame("desktop-3-shadow-running", MID_WINDOW, { quality: 60 }),
-];
-
-// #5457 slice 3 — promoting a play that passed. The checks on each row are the server's own
-// `promotionVerdict` over what the REAL runner reports (`viewOf`); the pass is 11 session days with
-// one closed round trip, the not-yet frame is the same play three days in.
-const PASSED = [
-  ["2026-10-23", 181],
-  ["2026-10-26", 182],
-  ["2026-10-27", 183],
-  ["2026-10-28", 184],
-  ["2026-10-29", 185],
-  ["2026-10-30", 186],
-  ["2026-11-02", 187],
-  ["2026-11-03", 188],
-  ["2026-11-04", 189],
-  ["2026-11-05", 190],
-  ["2026-11-09", 192],
-];
-const toPromote = (page) => page.locator(".pba-promote").evaluate(underHeader);
-const promoteFrame = (tag, days, over = {}, make = (r) => r) => {
-  const report = {
-    kind: "authored-shadow.v1",
-    at: 1,
-    plays: shadowReportFor(nvdaRecord.spec, nvdaRecord.id, days, 1),
-  };
-  return authorFrame(
-    tag,
-    { ...over },
-    [make(nvdaRecord, report)].map((r) => viewOf(r, report, true)),
-  );
-};
-const promotedRecord = (() => {
-  const { shadowSince: _ended, ...kept } = nvdaRecord;
-  return { ...kept, status: "promoted" };
-})();
-groups.promote = [
-  promoteFrame("phone-9-promote-not-yet", MID_WINDOW, { viewport: PHONE }),
-  promoteFrame("phone-10-promote-passed", PASSED, { viewport: PHONE, act: toPromote }),
-  promoteFrame("phone-11-promoted-trading", PASSED, { viewport: PHONE }, () => promotedRecord),
-  promoteFrame("desktop-4-promote-passed", PASSED, { quality: 60, act: toPromote }),
-];
+Object.assign(groups, authoredGroups);
 
 // #4450 slices 5a–5b: each card's house block ends on its funnel over the last ten sessions —
 // S1-NVDA with its declared signal counted between checks and orders, SAURON (no research signal)
