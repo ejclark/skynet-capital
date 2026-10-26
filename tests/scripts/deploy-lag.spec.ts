@@ -248,7 +248,7 @@ describe("deploy lag — missing inputs", () => {
   });
 
   // #5955: 16 bots releases failed smoke and rolled back while this read "bots app is current".
-  it("never takes a bots release whose smoke failed as the baseline", () => {
+  it("never takes a bots release whose smoke failed, or is still running, as the baseline", () => {
     const bin = join(dir, "bin-smoke");
     mkdirSync(bin);
     const bots = (smoke: string) =>
@@ -259,7 +259,8 @@ describe("deploy lag — missing inputs", () => {
         "#!/bin/sh",
         'case "$*" in',
         `  *commits/main*) echo '{"sha":"${HEAD}"}' ;;`,
-        `  *per_page=20*) echo '{"workflow_runs":[{"id":2,"head_sha":"${HEAD}"},{"id":1,"head_sha":"${RELEASED}"}]}' ;;`,
+        `  *per_page=20*) echo '{"workflow_runs":[{"id":3,"head_sha":"${HEAD}"},{"id":2,"head_sha":"${HEAD}"},{"id":1,"head_sha":"${RELEASED}"}]}' ;;`,
+        `  *runs/3/jobs*) echo '{"jobs":[${bots("null").replace('"null"', "null")}]}' ;;`,
         `  *runs/2/jobs*) echo '{"jobs":[${bots("failure")}]}' ;;`,
         `  *runs/1/jobs*) echo '{"jobs":[${bots("success")}]}' ;;`,
         `  *compare/${RELEASED}...${HEAD}*) echo '{"files":[{"filename":"src/autonomous/run.ts"}]}' ;;`,
