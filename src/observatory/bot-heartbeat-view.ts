@@ -10,7 +10,7 @@ import type {
   PlaybookVerdict,
   PlaybookVerdictState,
 } from "../domain/types.js";
-import { CONVICTION_NOT_ON_VIEW, type ConvictionLookup } from "../playbooks/conviction-store.js";
+import type { ConvictionLookup } from "../playbooks/conviction-store.js";
 import { findPair, type Pair } from "../playbooks/pair-table.js";
 import type { Playbook } from "../playbooks/playbook.js";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../playbooks/registry.js";
@@ -18,7 +18,7 @@ import { notTradingNote, subscribedPairs } from "../subscriptions/subscribe-elig
 import { pausedPlaybookIds, rosterSteering } from "../subscriptions/subscription-roster.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import { type CheckWeekView, checkWeekView } from "./check-week-view.js";
-import { UNMOVED_CONVICTION_NOTE } from "./playbook-store-json-view.js";
+import { convictionHoldNote } from "./playbook-store-json-view.js";
 import { readPlaybookWindow, type UnconfirmedPrint } from "./playbook-window.js";
 
 /**
@@ -213,13 +213,6 @@ const EXITS_ONLY_REASON =
 const UNKNOWN_REASON =
   "Subscribed, but the bots find no playbook by this id, so nothing on this bot runs it.";
 
-/** Why the bots hold a subscribed pair exits-only for its conviction, in the owner's row's words
- *  where it has some (`withUnmovedConvictions`), else the bots' own refusal. */
-function convictionHoldReason(refused: string): string {
-  if (refused === CONVICTION_NOT_ON_VIEW) return UNMOVED_CONVICTION_NOTE;
-  return `Opening nothing new: its conviction view can't steer it (${refused}). Exits still run.`;
-}
-
 /** Why a pair the bot is subscribed to records no pass: the bots drop the later of two option pairs
  *  on one ticker (`claimOptionUnderlyings`), so "starting" would be a promise nothing keeps. */
 const NOT_TRADING_WHY =
@@ -238,7 +231,7 @@ function idleLine(
 ): RollCallLine {
   if (held.subscribed && !playbook) return { playbookId, status: "off", reason: UNKNOWN_REASON };
   if (held.convictionRefused !== undefined) {
-    return { playbookId, status: "off", reason: convictionHoldReason(held.convictionRefused) };
+    return { playbookId, status: "off", reason: convictionHoldNote(held.convictionRefused) };
   }
   // A playbook with its own off-reason (the forced daily pick: one bot, one setting) keeps it —
   // a subscription alone never makes it run, so "starts next pass" would be a promise.
