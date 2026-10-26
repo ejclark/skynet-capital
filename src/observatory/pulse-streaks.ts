@@ -1,6 +1,7 @@
 import type { TradeStats } from "../trading/trade-stats.js";
 import {
   currentStreakIn,
+  type DayChange,
   type DayStreak,
   dailyChangesOf,
   longestStreakIn,
@@ -60,12 +61,8 @@ function dayRow(label: string, streak: DayStreak | null): PulseStreakRow | null 
   };
 }
 
-/**
- * The three day rows share one keying of the history: each sample is put in its day once.
- * `samples` must already be in ascending `at` order — see `pulseStreaks`.
- */
-function dayRows(samples: readonly EquitySample[], timezone: string | undefined): PulseStreakRow[] {
-  const changes = dailyChangesOf(samples, timezone);
+/** The three day rows, read off one list of day-over-day changes. */
+function dayRows(changes: readonly DayChange[]): PulseStreakRow[] {
   const current = currentStreakIn(changes);
   return [
     dayRow(current?.direction === "red" ? "Running red" : "Running green", current),
@@ -107,20 +104,28 @@ function tradeRows(stats: TradeStats): PulseStreakRow[] {
 
 /**
  * Both run families for one desk, each group carrying its own empty state. `samples` must already
- * be in ascending `at` order — `deskPulseView` sorts once for the whole Pulse request and this is
- * one of the sections that reuses it (#4612 slice 7).
+ * be in ascending `at` order (#4612 slice 7); a reader that already holds the day changes calls
+ * `pulseStreaksFrom` instead.
  */
 export function pulseStreaks(
   samples: readonly EquitySample[],
   stats: TradeStats,
   timezone?: string,
 ): PulseStreakGroup[] {
+  return pulseStreaksFrom(dailyChangesOf(samples, timezone), stats);
+}
+
+/** `pulseStreaks` from day-over-day changes already in hand — `PulseHistoryFold.dailyChanges`. */
+export function pulseStreaksFrom(
+  changes: readonly DayChange[],
+  stats: TradeStats,
+): PulseStreakGroup[] {
   return [
     {
       title: "Trading-day runs",
       caption:
         "Recorded equity, day over day. A closed market has no sample, so weekends and holidays never break a run; totals include unrealized moves.",
-      rows: dayRows(samples, timezone),
+      rows: dayRows(changes),
       empty:
         "Needs two recorded days with a move between them — no day is back-filled or flattened.",
     },
