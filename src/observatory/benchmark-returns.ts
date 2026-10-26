@@ -1,3 +1,4 @@
+import { DAY_MS } from "../domain/time.js";
 import type { NetWorthWindowKey } from "./networth-json-view.js";
 
 /**
@@ -22,8 +23,6 @@ const WINDOW_DAYS: Record<NetWorthWindowKey, number> = {
 
 /** The lookback the route asks the feed for: the longest window plus a week of holiday slack. */
 export const BENCHMARK_LOOKBACK_DAYS = WINDOW_DAYS["1Y"] + 7;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function benchmarkReturns(
   bars: readonly { readonly t: string; readonly c: number }[],
