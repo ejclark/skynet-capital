@@ -1,4 +1,5 @@
 import { etWall } from "../domain/et-wall.js";
+import { finiteOrUndefined } from "../domain/finite.js";
 import { BAR_MINUTES, type FetchIntradayBars, type IntradayBar } from "../domain/intraday-bar.js";
 import type { AlpacaTradingTransport } from "./trading-transport.js";
 
@@ -27,13 +28,12 @@ const PAGE_LIMIT = 10_000;
 /** A window of ~20 sessions is one page; three is headroom, not a loop to a cursor that never ends. */
 const MAX_PAGES = 3;
 
-const num = (value: unknown): number | undefined =>
-  typeof value === "number" && Number.isFinite(value) ? value : undefined;
-
 function barOf(raw: Record<string, unknown>): IntradayBar | undefined {
   const at = typeof raw.t === "string" ? Date.parse(raw.t) : Number.NaN;
   const wall = etWall(at);
-  const [open, high, low, close, volume] = [raw.o, raw.h, raw.l, raw.c, raw.v].map(num);
+  const [open, high, low, close, volume] = [raw.o, raw.h, raw.l, raw.c, raw.v].map(
+    finiteOrUndefined,
+  );
   if (
     !wall ||
     open === undefined ||

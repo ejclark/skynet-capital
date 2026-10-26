@@ -1,3 +1,4 @@
+import { finiteOrUndefined } from "../domain/finite.js";
 import type { ActivityEvent } from "../observatory/activity-event.js";
 import { humanizeOptionSymbol, parseOccSymbol } from "../trading/option-symbols.js";
 import type { Alert, AlertPriority } from "./alert.js";
@@ -31,10 +32,6 @@ const WORDS: Record<string, { readonly word: string; readonly priority: AlertPri
   rejected: { word: "rejected", priority: "warning" },
 };
 
-function num(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
 function str(value: unknown): string | undefined {
   return typeof value === "string" && value !== "" ? value : undefined;
 }
@@ -45,8 +42,8 @@ function money(value: number): string {
 
 /** "5 of 10 " for a partial, "5 " for a fill, nothing otherwise — the size in the ledger's numbers. */
 function sizeWords(status: string, payload: ActivityEvent["payload"]): string {
-  const quantity = num(payload.quantity);
-  const filled = num(payload.filledQuantity);
+  const quantity = finiteOrUndefined(payload.quantity);
+  const filled = finiteOrUndefined(payload.filledQuantity);
   if (status === "partially_filled" && filled !== undefined && quantity !== undefined) {
     return `${filled} of ${quantity} `;
   }
@@ -54,7 +51,7 @@ function sizeWords(status: string, payload: ActivityEvent["payload"]): string {
 }
 
 function priceWords(status: string, payload: ActivityEvent["payload"]): string {
-  const price = num(payload.price);
+  const price = finiteOrUndefined(payload.price);
   const filled = status === "filled" || status === "partially_filled";
   return price !== undefined && filled ? ` @ ${money(price)}` : "";
 }
