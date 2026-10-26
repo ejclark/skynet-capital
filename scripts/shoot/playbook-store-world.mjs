@@ -135,6 +135,12 @@ export const PHONE = { width: 390, height: 844 };
 export const STORE = "/app/research?section=playbooks";
 
 export const TODAY = "2026-10-16T15:00:00Z";
+
+// The subscribe form sits behind its row's "Subscribe" disclosure (#4469 slice 3b).
+export const openSubscribe = (page) =>
+  page.locator(".pb-subscribe-disclosure > summary").first().click();
+// The SAURON card's own text, found by the `sauron-rules`, `subscribed-only` and `funnel` frames.
+export const SAURON_CARD = "Sauron's own trading rules";
 export const BANKER = {
   id: "banker",
   name: "The Banker",
