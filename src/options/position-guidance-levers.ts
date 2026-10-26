@@ -41,6 +41,13 @@ export interface LeverContext {
 
 export const why = (rule: GuidanceReason["rule"], text: string): GuidanceReason => ({ rule, text });
 
+/** "about a 20% chance" / "about an 18% chance" — the article follows how the number is said
+ *  aloud: eight, eleven, eighteen and eighty-something take "an". */
+function aboutChance(p: number): string {
+  const text = pct(p);
+  return `about ${/^(8|1[18](?!\d))/.test(text) ? "an" : "a"} ${text} chance`;
+}
+
 export function windowText(input: GuidanceInputs): string {
   const e = input.earnings;
   if (!e) return "no earnings report on the calendar";
@@ -262,7 +269,7 @@ export function coveredCallCall(ctx: LeverContext, ladder: LadderResult): LeverC
         : ` That's ${usd(-net)} less than you paid for those 100 — a loss, which your exit goal accepts.`;
   const outcome = why(
     stake.goal === "keep-shares" ? "GOAL" : "STRIKE-BASIS",
-    `If ${symbol} closes above ${usd(best.strike)} on ${dayText(best.expiration)} (about a ${pct(best.probAssigned)} chance), 100 of your ${shares} shares are sold at ${usd(best.strike)} — you keep the ${usd(keep)} but miss any rise above it.${basisGain}${stake.goal === "keep-shares" ? " You want to keep the shares, so favour the rows with the lowest chance." : ""}`,
+    `If ${symbol} closes above ${usd(best.strike)} on ${dayText(best.expiration)} (${aboutChance(best.probAssigned)}), 100 of your ${shares} shares are sold at ${usd(best.strike)} — you keep the ${usd(keep)} but miss any rise above it.${basisGain}${stake.goal === "keep-shares" ? " You want to keep the shares, so favour the rows with the lowest chance." : ""}`,
   );
   return lever({
     lever: "covered-calls",
@@ -345,7 +352,7 @@ export function cashSecuredPutCall(ctx: LeverContext, ladder: LadderResult): Lev
   }
   const outcome = why(
     "STRIKE-OWN",
-    `If ${symbol} closes below ${usd(best.strike)} on ${dayText(best.expiration)} (about a ${pct(best.probAssigned)} chance), you must buy 100 shares for ${usd(best.strike * 100)} — even if it's far lower then. Your cost would be ${usd(best.effectiveEntry ?? best.strike)} a share after the premium.`,
+    `If ${symbol} closes below ${usd(best.strike)} on ${dayText(best.expiration)} (${aboutChance(best.probAssigned)}), you must buy 100 shares for ${usd(best.strike * 100)} — even if it's far lower then. Your cost would be ${usd(best.effectiveEntry ?? best.strike)} a share after the premium.`,
   );
   return lever({
     lever: "cash-secured-puts",

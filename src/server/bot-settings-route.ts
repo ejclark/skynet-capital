@@ -36,7 +36,7 @@ import {
  * Every change lands in the settings change log (`settings-change-log.ts`), suspend/resume included.
  */
 
-const BODY_CAP_BYTES = 1_024;
+const BOT_SETTINGS_BODY_CAP_BYTES = 1_024;
 
 interface BotSettingsBody {
   readonly id: string;
@@ -109,7 +109,7 @@ export async function serveBotSettings(
   config: DashboardServerConfig,
   session: Session | undefined,
 ): Promise<void> {
-  const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
+  const raw = await readJsonPost(req, res, BOT_SETTINGS_BODY_CAP_BYTES);
   if (raw === undefined) return;
   const body = parseBotSettingsBody(raw);
   if (!body) {
