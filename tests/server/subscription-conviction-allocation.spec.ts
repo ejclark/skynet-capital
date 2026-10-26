@@ -1,17 +1,16 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
-import { carryConvictions } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
 import { serveSubscriptionsApi } from "../../src/server/subscriptions-api-routes.js";
 
 /**
  * #4469 slice 3c part 3 — the app writes an owner's conviction and a strategy allocation, checks
- * each ticker's budget against it, and carries the ◆ row's conviction onto the CRWV wheel's
- * subscriptions. Against a real store on a temp file, so what reaches disk is what is asserted.
+ * each ticker's budget against it, and points the CRWV wheel's subscription at the view that
+ * steers its ◆ row. Against a real store on a temp file, so what reaches disk is what is asserted.
  */
 
 const session = { email: "eric@example.com", name: "Eric Clark" } as never;
@@ -90,22 +89,11 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
   });
 
   describe("the ◆ row's conviction reaches the CRWV wheel's subscription", () => {
-    it("by the pointer at the view that steers it: the carry copies nothing, and writes nothing", async () => {
+    it("by the pointer at the view that steers it, with no inline copy (#5482)", () => {
       // #5482's contract step: a ◆ row one view steers is reached by a pointer, not an inline copy.
       const wheel = store.load().sauron?.find((s) => s.playbookId === "CRWV-WHEEL");
       expect(wheel?.convictionId).toBe("ai-dip-2026-10");
       expect(wheel?.conviction).toBeUndefined();
-      const onDisk = await readFile(path, "utf8");
-      expect(carryConvictions(store)).toEqual([]);
-      expect(await readFile(path, "utf8")).toBe(onDisk);
-    });
-
-    it("leaves a file it cannot read whole alone", async () => {
-      await writeFile(path, JSON.stringify({ sauron: [{ playbookId: "CRWV-WHEEL" }] }));
-      expect(carryConvictions(store)).toEqual([]);
-      expect(JSON.parse(await readFile(path, "utf8"))).toEqual({
-        sauron: [{ playbookId: "CRWV-WHEEL" }],
-      });
     });
   });
 
