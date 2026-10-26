@@ -86,12 +86,18 @@ export function describeLag(lag, { released, head } = {}) {
  * names (a failed deploy-bots job followed by docs-only merges), and force_bots_deploy is the
  * recovery lever.
  *
- * @param {{head?: string, botsReleased?: string, botsChanged?: string[]}} state — botsReleased
- *   empty-string = scanned clean, genuinely no bots deploy yet; absent = the scan itself failed.
+ * @param {{head?: string, botsReleased?: string, botsChanged?: string[], botsRolledBack?: number}} state
+ *   — botsReleased empty-string = scanned clean, no bots release that passed smoke; absent = the
+ *   scan itself failed. botsRolledBack counts the newer releases that failed smoke and rolled back.
  */
 export function botsDeployLag(state = {}) {
-  const { head, botsReleased, botsChanged } = state;
+  const { head, botsReleased, botsChanged, botsRolledBack = 0 } = state;
   if (botsReleased === undefined || botsChanged === undefined) return { known: false };
+  if (!botsReleased && botsRolledBack > 0) {
+    // Every bots release in the scanned window failed smoke: not "never deployed", a dark fleet.
+    const reason = `the last ${botsRolledBack} bots release(s) all failed smoke and rolled back`;
+    return { known: true, baseline: false, lagging: true, reason };
+  }
   if (!botsReleased) return { known: true, baseline: false, lagging: false };
   if (botsReleased === head || botsChanged.length === 0) {
     return { known: true, baseline: true, lagging: false };
@@ -103,6 +109,9 @@ export function botsDeployLag(state = {}) {
 /** One-line bots-app summary, sibling of describeLag. */
 export function describeBotsLag(lag, { botsReleased } = {}) {
   if (!lag.known) return "bots app: state unknown (jobs API unreadable) — not judging";
+  if (!lag.baseline && lag.lagging) {
+    return `bots app is STALE — ${lag.reason}; check the machine is started (#5955)`;
+  }
   if (!lag.baseline) return "bots app: no deploy baseline yet (pre-cutover, or never deployed)";
   if (!lag.lagging) {
     return `bots app is current — nothing bot-relevant since its last deploy (${short(botsReleased)})`;
@@ -132,12 +141,14 @@ const gh = (args) => execFileSync("gh", args, { encoding: "utf8" });
  * deploy split, a red `deploy-bots` job fails the whole run, and the old status=success run
  * filter would have declared the dashboard undeployed when its own deploy job was green. The
  * bots baseline is stricter still — the job's "Deploy bots" STEP must have succeeded, because a
- * preflight skip concludes the job green without deploying anything. Throws on any API failure;
+ * preflight skip concludes the job green without deploying anything, and its smoke step must not
+ * have failed, because a failed smoke rolls the release back. Throws on any API failure;
  * the caller decides what fails soft.
  */
 function scanRunBaselines() {
   let released = "";
   let botsReleased;
+  const rolledBack = [];
   const runs =
     JSON.parse(
       gh([
@@ -154,14 +165,26 @@ function scanRunBaselines() {
       released = run.head_sha;
     }
     if (botsReleased === undefined) {
-      const step = jobs
-        .find((j) => j.name === "release · deploy bots")
-        ?.steps?.find((s) => s.name === "Deploy bots");
-      if (step?.conclusion === "success") botsReleased = run.head_sha;
+      const steps = jobs.find((j) => j.name === "release · deploy bots")?.steps ?? [];
+      const step = (name) => steps.find((s) => s.name === name)?.conclusion;
+      if (step("Deploy bots") === "success") {
+        // A release whose smoke failed was rolled back, so the bots never ran it (#5955: 16 such
+        // runs read as "bots app is current" while the machine sat stopped). Keep scanning back.
+        if (step("Smoke test the bots release") === "failure") {
+          rolledBack.push(run.head_sha);
+        } else {
+          botsReleased = run.head_sha;
+        }
+      }
     }
   }
+  if (rolledBack.length > 0) {
+    notes.push(
+      `· ${rolledBack.length} newer bots release(s) failed smoke and rolled back (latest ${rolledBack[0].slice(0, 7)}) — the baseline is the last one that passed`,
+    );
+  }
   // Scanned clean with no real bots deploy in the window: report "no baseline", not "unknown".
-  return { released, botsReleased: botsReleased ?? "" };
+  return { released, botsReleased: botsReleased ?? "", botsRolledBack: rolledBack.length };
 }
 
 /** `·` notes naming a skipped input, printed to stderr so `--json` stdout stays parseable. */
@@ -172,8 +195,9 @@ function readState() {
   let released = "";
   let botsReleased;
   let botsChanged;
+  let botsRolledBack = 0;
   try {
-    ({ released, botsReleased } = scanRunBaselines());
+    ({ released, botsReleased, botsRolledBack } = scanRunBaselines());
     botsChanged =
       botsReleased && botsReleased !== head
         ? (JSON.parse(
@@ -209,7 +233,7 @@ function readState() {
             mergedBy: c.author?.login ?? c.committer?.login ?? "",
           }),
         );
-  return { head, released, stranded, botsReleased, botsChanged };
+  return { head, released, stranded, botsReleased, botsChanged, botsRolledBack };
 }
 
 /** Read a whole stdin stream synchronously — the `--explain` fixture channel. */
