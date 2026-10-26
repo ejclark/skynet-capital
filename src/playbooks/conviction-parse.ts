@@ -38,7 +38,7 @@ const MAX_PAIR_ID = 64;
 
 const isNumberValue = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const text = (v: unknown, max = MAX_TEXT): string | undefined => boundedString(v, max);
-const day = (v: unknown): string | undefined => text(v, 10);
+const boundedDay = (v: unknown): string | undefined => text(v, 10);
 
 /** A list of at most `max` items each `parse` reads, or undefined when any one is not. */
 function listOf<T>(raw: unknown, max: number, parse: (item: unknown) => T | undefined) {
@@ -62,7 +62,7 @@ export function parseClaim(raw: unknown, statementMax = MAX_TEXT): ConvictionCla
   const tag = CLAIM_TAGS.find((t) => t === raw.tag);
   const bucket = CLAIM_BUCKETS.find((b) => b === raw.bucket);
   if (!(statement && evidence && falsifier && tag && bucket)) return undefined;
-  const scoreBy = raw.scoreBy === undefined ? undefined : day(raw.scoreBy);
+  const scoreBy = raw.scoreBy === undefined ? undefined : boundedDay(raw.scoreBy);
   if (raw.scoreBy !== undefined && scoreBy === undefined) return undefined;
   return {
     tag: tag as ClaimTag,
@@ -93,7 +93,7 @@ function parseNarrowing(raw: unknown): Narrowing | undefined {
     case "dte":
       return parseDte(raw);
     case "expiry-from": {
-      const on = day(raw.day);
+      const on = boundedDay(raw.day);
       return on ? { kind: "expiry-from", day: on } : undefined;
     }
     case "strike-ceiling": {
@@ -138,7 +138,7 @@ export function parseConvictionDraft(
 ): ConvictionDraftInput | undefined {
   if (!isRecord(raw)) return undefined;
   const title = text(raw.title, MAX_TITLE);
-  const checkOn = day(raw.checkOn);
+  const checkOn = boundedDay(raw.checkOn);
   const claims = listOf(raw.claims, MAX_CLAIMS, (c) => parseClaim(c, statementMax));
   const steers = listOf(raw.steers, MAX_STEERS, (s) => text(s, MAX_PAIR_ID));
   const narrowings =
@@ -171,7 +171,7 @@ export function parseStoredConviction(raw: unknown): Conviction | undefined {
   const draft = parseConvictionDraft(raw, MAX_TEXT + CLAIM_LABEL_ROOM);
   const id = text(raw.id, MAX_CONVICTION_ID);
   const owner = text(raw.owner, 80);
-  const statedOn = day(raw.statedOn);
+  const statedOn = boundedDay(raw.statedOn);
   if (!(draft && id && owner && statedOn)) return undefined;
   if (raw.scope !== undefined && raw.scope !== "pair") return undefined;
   return { id, owner, statedOn, ...draft, ...(raw.scope === "pair" ? { scope: "pair" } : {}) };
