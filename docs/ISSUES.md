@@ -292,6 +292,10 @@ knowing:
   zero-context puller than a link.
 - **A `not planned` close is never relayed.** That close is a decision, and overturning a decision
   mechanically is the opposite of what the lane is for.
+- **A close by the PR that built it is never relayed** (#6014). A build PR says `Closes #N` only on
+  the final slice, so a merged PR that closes `#N` and merged just before it closed *is* the
+  remainder landing, even when its session left `next-slice` behind. It still relays when the close
+  was manual, or when that PR's body or a comment after it opened states work still to do.
 
 The push path only relays closes from the watermark (`RELAY_FROM`) forward, so nothing is lost from
 here on with no noise; the historical queue is `node scripts/moneypenny/relay.mjs --list --backfill`
