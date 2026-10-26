@@ -124,7 +124,9 @@ export const CONVICTION_NOT_ON_VIEW = "its conviction is not on a view yet";
  *  pointer: that is criterion 11's "conviction not stated", a label and never a stop. Until #5482's
  *  last contract piece an inline copy with no pointer counted too; that field is retired, and the
  *  live count read none before it was (`subscription-state.ts`). */
-export function isConvictionOffView(sub: PlaybookSubscription): boolean {
+export function isConvictionOffView(
+  sub: Pick<PlaybookSubscription, "convictionId" | "playbookId">,
+): boolean {
   if (sub.convictionId !== undefined) return false;
   return findPair(sub.playbookId)?.evidence.status === "conviction";
 }

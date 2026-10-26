@@ -10,13 +10,15 @@ import type {
   PlaybookVerdict,
   PlaybookVerdictState,
 } from "../domain/types.js";
+import { CONVICTION_NOT_ON_VIEW, type ConvictionLookup } from "../playbooks/conviction-store.js";
 import { findPair, type Pair } from "../playbooks/pair-table.js";
 import type { Playbook } from "../playbooks/playbook.js";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../playbooks/registry.js";
 import { notTradingNote, subscribedPairs } from "../subscriptions/subscribe-eligibility.js";
-import { pausedPlaybookIds } from "../subscriptions/subscription-roster.js";
+import { pausedPlaybookIds, rosterSteering } from "../subscriptions/subscription-roster.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import { type CheckWeekView, checkWeekView } from "./check-week-view.js";
+import { UNMOVED_CONVICTION_NOTE } from "./playbook-store-json-view.js";
 import { readPlaybookWindow, type UnconfirmedPrint } from "./playbook-window.js";
 
 /**
@@ -134,8 +136,11 @@ export function unmanagedHoldings(
  *   up on their next `/controls` poll and run it from the pass after.
  * - `off` — registered, but no pass on hand ran it: nobody switched it on for this bot. Said
  *   differently when the bots app's own playbook setting names it and the bot holds no
- *   subscription (exits only, `resolveBotRoster`), and when the bot is subscribed to an id no
- *   playbook answers to (the bots refuse it, `subscriptionRoster`).
+ *   subscription (exits only, `resolveBotRoster`), when the bot is subscribed to an id no
+ *   playbook answers to (the bots refuse it, `subscriptionRoster`), and when the bots hold a
+ *   subscribed pair exits-only for its conviction (#5482): a ◆ pair with no view, or a pointer
+ *   the bots cannot use. That pair records no verdict, so "starting" would be a promise nothing
+ *   keeps; the line asks the bots' own test (`rosterSteering`) with the bot's own lookup.
  * - `blocked` — registered, but the live wiring cannot make it fire (`PLAYBOOK_WIRING_GAPS`).
  *   Blocked wins over everything: a playbook that runs but can never trade is not online.
  *
@@ -149,7 +154,13 @@ export type RollCallStatus = "armed" | "paused" | "starting" | "off" | "blocked"
 /** What the dashboard knows of a bot's roster beyond its passes (#4650). */
 export interface RollCallRoster {
   /** Every Store subscription the bot holds, on or paused. */
-  readonly subscriptions: readonly Pick<PlaybookSubscription, "playbookId" | "enabled">[];
+  readonly subscriptions: readonly Pick<
+    PlaybookSubscription,
+    "playbookId" | "enabled" | "convictionId"
+  >[];
+  /** The conviction records a pointer on this bot resolves to, as the bots resolve them: the seeded
+   *  ones and the member views handed to this account. Absent reads the seeded ones only. */
+  readonly convictionOf?: ConvictionLookup;
   /** The playbook ids the bots app's own playbook setting (`SKYNET_PLAYBOOKS`) runs on this bot,
    *  as its latest `/controls` poll reported them (`house-roster-wire.ts`). Absent when it reported
    *  none. One the bot holds no subscription to opens nothing and still runs its exits. */
@@ -202,6 +213,13 @@ const EXITS_ONLY_REASON =
 const UNKNOWN_REASON =
   "Subscribed, but the bots find no playbook by this id, so nothing on this bot runs it.";
 
+/** Why the bots hold a subscribed pair exits-only for its conviction, in the owner's row's words
+ *  where it has some (`withUnmovedConvictions`), else the bots' own refusal. */
+function convictionHoldReason(refused: string): string {
+  if (refused === CONVICTION_NOT_ON_VIEW) return UNMOVED_CONVICTION_NOTE;
+  return `Opening nothing new: its conviction view can't steer it (${refused}). Exits still run.`;
+}
+
 /** Why a pair the bot is subscribed to records no pass: the bots drop the later of two option pairs
  *  on one ticker (`claimOptionUnderlyings`), so "starting" would be a promise nothing keeps. */
 const NOT_TRADING_WHY =
@@ -211,9 +229,17 @@ const NOT_TRADING_WHY =
 function idleLine(
   playbookId: string,
   playbook: Playbook | undefined,
-  held: { readonly subscribed: boolean; readonly exitsOnly: boolean },
+  held: {
+    readonly subscribed: boolean;
+    readonly exitsOnly: boolean;
+    /** The bots' refusal of its conviction, for an enabled subscription they run exits-only. */
+    readonly convictionRefused?: string;
+  },
 ): RollCallLine {
   if (held.subscribed && !playbook) return { playbookId, status: "off", reason: UNKNOWN_REASON };
+  if (held.convictionRefused !== undefined) {
+    return { playbookId, status: "off", reason: convictionHoldReason(held.convictionRefused) };
+  }
   // A playbook with its own off-reason (the forced daily pick: one bot, one setting) keeps it —
   // a subscription alone never makes it run, so "starts next pass" would be a promise.
   if (held.subscribed && !playbook?.whenOff) {
@@ -221,6 +247,18 @@ function idleLine(
   }
   if (held.exitsOnly) return { playbookId, status: "off", reason: EXITS_ONLY_REASON };
   return { playbookId, status: "off", reason: playbook?.whenOff ?? OFF_REASON };
+}
+
+/** The bots' refusal of an enabled subscription's conviction (`rosterSteering`), or nothing. */
+function convictionRefusal(
+  playbook: Playbook | undefined,
+  roster: RollCallRoster | undefined,
+  playbookId: string,
+): { readonly convictionRefused?: string } {
+  const sub = roster?.subscriptions.find((s) => s.playbookId === playbookId && s.enabled);
+  if (!(playbook && sub)) return {};
+  const result = rosterSteering(playbook, sub, roster?.convictionOf);
+  return "refused" in result ? { convictionRefused: result.refused } : {};
 }
 
 export function playbookRollCall(
@@ -263,6 +301,7 @@ export function playbookRollCall(
       return idleLine(playbookId, playbook, {
         subscribed: subscribed.includes(playbookId),
         exitsOnly: exitsOnly.has(playbookId),
+        ...convictionRefusal(playbook, roster, playbookId),
       });
     }
     if (!playbook) {

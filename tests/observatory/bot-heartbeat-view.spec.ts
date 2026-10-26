@@ -7,6 +7,8 @@ import {
   STALE_AFTER_MS,
   unmanagedHoldings,
 } from "../../src/observatory/bot-heartbeat-view.js";
+import { UNMOVED_CONVICTION_NOTE } from "../../src/observatory/playbook-store-json-view.js";
+import { lookupConviction } from "../../src/playbooks/conviction-store.js";
 import { findPair, type Pair } from "../../src/playbooks/pair-table.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
 
@@ -432,6 +434,44 @@ describe("playbookRollCall — reads the bot's own subscriptions", () => {
     expect(line?.reason).toMatch(/opens nothing and its exit rules still sell what it holds/);
     // Named there AND subscribed is an ordinary subscription.
     expect(lineFor("S1-NVDA", null, roster)?.status).toBe("starting");
+  });
+
+  /** #5482 — the bots run a subscribed pair exits-only when its conviction cannot steer it, and an
+   *  exits-only pair records no verdict, so "starting" was a promise nothing kept. */
+  it("WHEN a ◆ pair is subscribed with no conviction view, says it opens nothing new — never starting", () => {
+    const line = lineFor("CRWV-WHEEL", null, { subscriptions: [sub("CRWV-WHEEL")] });
+    expect(line).toEqual({
+      playbookId: "CRWV-WHEEL",
+      status: "off",
+      reason: UNMOVED_CONVICTION_NOTE,
+    });
+  });
+
+  it("WHEN a pair points at a view the bot does not hold, says why it opens nothing new", () => {
+    const pointed = { ...sub("CRWV-WHEEL"), convictionId: "gone-2026-10" };
+    const line = lineFor("CRWV-WHEEL", null, {
+      subscriptions: [pointed],
+      convictionOf: () => undefined,
+    });
+    expect(line).toMatchObject({ status: "off" });
+    expect(line?.reason).toBe(
+      `Opening nothing new: its conviction view can't steer it (points at conviction "gone-2026-10", which these bots do not hold). Exits still run.`,
+    );
+  });
+
+  it("WHEN a pair points at a view that steers it, still says it starts on the next pass", () => {
+    const seeded = lookupConviction("ai-dip-2026-10");
+    if (!seeded) throw new Error("no seeded AI-dip view");
+    const held = { ...seeded, narrowings: [] };
+    const pointed = { ...sub("CRWV-WHEEL"), convictionId: held.id };
+    const roster = {
+      subscriptions: [pointed],
+      convictionOf: (id: string) => (id === held.id ? held : undefined),
+    };
+    expect(lineFor("CRWV-WHEEL", null, roster)?.status).toBe("starting");
+    // A paused one stays Paused: it runs exits only whatever its conviction says.
+    const paused = { ...roster, subscriptions: [{ ...pointed, enabled: false }] };
+    expect(lineFor("CRWV-WHEEL", null, paused)?.status).toBe("paused");
   });
 
   it("judges from the passes alone when the subscriptions could not be read", () => {

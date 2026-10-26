@@ -13,7 +13,6 @@ import {
   withUnmovedConvictions,
 } from "../observatory/playbook-store-json-view.js";
 import { withOwnSteering } from "../observatory/steered-by-view.js";
-import { CONVICTIONS, type ConvictionLookup } from "../playbooks/conviction-store.js";
 import { movesNoCapital, STRATEGIES } from "../playbooks/pair-table.js";
 import { asOwnConviction } from "../subscriptions/pair-conviction.js";
 import {
@@ -24,6 +23,7 @@ import {
 import { newSubscriptionRefusal } from "../subscriptions/subscribe-eligibility.js";
 import { liveNeedsRefusal } from "../subscriptions/subscribe-live-needs.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import { accountConvictionLookup } from "./account-conviction-lookup.js";
 import { accountKind } from "./account-kind.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
@@ -188,14 +188,6 @@ function subscriberCounts(
   return counts;
 }
 
-/** The records a pointer on this account resolves to: the seeded ones, then the member views handed
- *  to it — the bots' own rule (`autonomous-convictions.ts`), so a row never shows a view that does
- *  not steer that bot. */
-function ownLookup(config: DashboardServerConfig, accountId: string): ConvictionLookup {
-  const held = config.memberConvictions?.pointers().heldBy(accountId) ?? [];
-  return (id) => CONVICTIONS.get(id) ?? held.find((c) => c.id === id);
-}
-
 const editorOf = (session: Session | undefined): string => session?.email ?? "unknown";
 
 /** A subscription write stating `conviction`, kept as the owner's own view on the pair first
@@ -228,7 +220,7 @@ async function serveStoreIndex(
   // The store omits an account until its first subscribe, so an owned account with no entry yet is
   // an EMPTY list — never "not yours", which hid the Subscribe form from every fresh account (#3623).
   const state = config.subscriptions?.load();
-  const lookup = owns && id ? ownLookup(config, id) : undefined;
+  const lookup = owns && id ? accountConvictionLookup(config, id) : undefined;
   // An owner's own view on a pair reads as the reason and day they typed (#5482 contract piece 3).
   const subscriptions =
     id && state && lookup
