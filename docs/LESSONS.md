@@ -35,6 +35,15 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A debounce skip counted as proof — the capsule erosion check cleared `needs-eric` from a deploy that never ran
+- **SHA:** n/a   **DATE:** 2026-10-26   **STATUS:** closed
+- **SIGNAL:** none fired. On 2026-10-25T02:18Z the `--audit` tick removed `needs-eric` from #5955 (bots down since ~10-22) as "passed on the last 3 pushes"; two of the three runs (40153426584, 40152637913) were preflight debounce skips that never deployed, and the job failed again minutes later. Recurrences then piled up as `Failed again` comments with no label, no orphan flag and no repair until Eric re-applied the label by hand on 10-26T11:40Z — ~33 hours.
+- **ROOT CAUSE:** three predicates in `scripts/moneypenny/capsule-stall.mjs` each trusted a proxy. (1) `jobPassed` read the job's conclusion, and a job whose preflight skips every real step still concludes `success` — the capsule's own `Failing step` row (here `Smoke test the bots release`) was never consulted. (2) The orphan check skipped any capsule carrying the eroded marker, forever, so a recurrence after a false clear could never re-arm it. (3) `hasLinkedPr` counted any merged PR that mentioned the capsule — mention-only #5982 (merged 10-23) kept #5955 "linked" through every later recurrence.
+- **PREVENTION:** script — the erosion check now reads the capsule's failing step and counts a run only when that step ran green in every leg (skips leave the run out, paging up to 20 completed pushes; a failure ends the streak); a trusted `Failed again` after the eroded comment lifts the orphan suppression; a merged PR counts only if it merged after the latest recurrence. Fixtures built from jobs 121050112951, 121048415887 and 121047616850 in `tests/scripts/moneypenny/capsule-stall.spec.ts` (#6076).
+- **SIDE QUESTS:** none — the general shape ("`success` is not the same as *did the work*") is worth checking wherever else a job conclusion stands in for an outcome; the deploy smoke step is the honest signal for the deploy jobs.
+
+---
+
 ### `route` red on main: retry each ghRestAll page on a github 5xx
 - **SHA:** 7b8ca01   **DATE:** 2026-10-20   **STATUS:** closed
 - **COVERS:** f7efc4d
