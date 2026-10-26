@@ -82,6 +82,31 @@ promote_ready() {
   [ "$(http_of "$rresp")" = 200 ] && grep -q '"draft":false' <<<"$(body_of "$rresp")"
 }
 
+# push — `git push -u origin <branch>` with retries for a network blip, and the remote's own words
+# when it fails. The loop used to send stderr to /dev/null, so a lane push GitHub refused for want
+# of the `workflows` permission printed only "push failed after retries" — and the cause took a
+# second, manual push to read (#4495, ~5 min per failure). Now the last attempt's stderr is
+# printed with any `x-access-token:<token>@` masked (a lane's origin URL carries the App token,
+# and git echoes it on some errors). A rejection the remote actually answered (`[rejected]` /
+# `[remote rejected]`) is final: retrying cannot change the answer, so it stops at once.
+cmd_push() {
+  local branch="${1:?usage: scripts/ship.sh push <branch>}" n=0 err
+  # stderr is captured for the diagnosis; stdout (fd 3) still reaches the terminal as before.
+  until { err="$(git push -u origin "$branch" 2>&1 >&3)"; } 3>&1; do
+    n=$((n+1))
+    if grep -q '\[\(remote \)\{0,1\}rejected\]' <<<"$err" || [ "$n" -gt 4 ]; then
+      echo "ship: push failed — the remote said:" >&2
+      sed -E 's#x-access-token:[^@[:space:]]*@#x-access-token:***@#g; s#^#  #' <<<"$err" >&2
+      if grep -q 'without `\{0,1\}workflows`\{0,1\} permission' <<<"$err"; then
+        echo "ship: this credential lacks the \`workflows\` permission, which pushing a .github/workflows/** change needs." >&2
+        echo "  Push with a token that has it (a lane's App token does — the #5594 checkout); retrying will not help." >&2
+      fi
+      exit 1
+    fi
+    sleep $((2**n))
+  done
+}
+
 # checkverify — is the head's latest `verify` check a REAL run? A pure verdict over a check-runs
 # JSON document on stdin (GET /commits/<sha>/check-runs), so the spec pins it with no network.
 # Prints one word: real (success/failure/…), pending (queued/in progress), stale (latest is
@@ -460,9 +485,7 @@ EOF_SHOTS
   # characters, so a bare $branch… is the undefined variable "branch…" and set -u kills the run
   # right before the push. Brace any variable followed by a non-ASCII character in this file.
   echo "ship: pushing ${branch}…"
-  local n=0; until git push -u origin "$branch" 2>/dev/null; do
-    n=$((n+1)); [ "$n" -le 4 ] || { echo "ship: push failed after retries" >&2; exit 1; }
-    sleep $((2**n)); done
+  cmd_push "$branch"
 
   local body; body="$(cat "$bodyfile")"
   # ORDER, for a held PR: open as a DRAFT → label `hold-merge` → promote to ready. pipeline.yml's
@@ -1033,7 +1056,7 @@ cmd_platter_board() {
   fi
   platter_board_item "$item" "$subject" "$verify"
   echo "ship platter: pushing ${branch}…"
-  git push -u origin "$branch"
+  cmd_push "$branch"
   platter_sync_body "$branch"
 }
 
@@ -1058,6 +1081,7 @@ case "${1:-}" in
   pinshots) shift; cmd_pinshots "$@" ;;
   checkarm) shift; cmd_checkarm "$@" ;;
   checkverify) shift; cmd_checkverify "$@" ;;
+  push) shift; cmd_push "$@" ;;
   platter) shift; cmd_platter "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | push <branch> | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
 esac
