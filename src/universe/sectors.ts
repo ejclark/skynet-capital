@@ -1,6 +1,6 @@
 /**
- * Ticker → sector, the one owner (lifted from empire-skyline so every renderer and the projection
- * layer share a single map). Curated so the tickers threaded through the app + fixtures theme
+ * Ticker → sector, the one owner (lifted from the since-deleted SVG skyline so every renderer and
+ * the projection layer share a single map). Curated so the tickers threaded through the app + fixtures theme
  * correctly; extend as holdings grow.
  */
 export type Sector = "tech" | "energy" | "broad" | "gold" | "market";
