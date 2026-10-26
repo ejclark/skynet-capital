@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-pmi-commodity-price-supply-2026-11-02",
+  "kind": "macro-print",
+  "title": "S&P Global PMI Commodity Price & Supply Indicators (Oct 2026 data) — 11:00 ET, an hour after the US manufacturing final",
+  "date": "2026-11-02",
+  "status": "estimate",
+  "source": "EST: read verbatim off S&P Global's own calendar listing, pmi.spglobal.com/Public/Release/ReleaseDates?language=en, fetched direct 2026-10-26 with a browser User-Agent (HTTP 200, 26,777 bytes): 'November 02 ... 16:00 UTC S&P Global PMI Commodity Price & Supply Indicators'. 16:00 UTC is 11:00 EST once US daylight time ends 2026-11-01 (the 10-01 release of the same series sat at 15:00 UTC = 11:00 EDT). Filed estimate on the standing schema gap for a private PMI compiler, not on date doubt. Checked 2026-10-26",
+  "impact": "low",
+  "symbols": [],
+  "notes": "READ IT, DO NOT TRADE IT. Monthly series from the same PMI panels, released the same day as the US manufacturing final; the sibling sp-global-pmi-commodity-price-supply-2026-10-01 ledger carries the method. Proposed by the sp-global-manufacturing-pmi-2026-11-02 initial research (2026-10-26) because the 11-02 listing carries it and node scripts/event-scan.mjs --on-date=2026-11-02 showed no entry for it."
+}

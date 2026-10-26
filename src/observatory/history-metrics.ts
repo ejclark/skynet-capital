@@ -1,3 +1,4 @@
+import { DAY_MS } from "../domain/time.js";
 import type { EquitySample } from "./history-store.js";
 
 /**
@@ -22,7 +23,6 @@ import type { EquitySample } from "./history-store.js";
  *  - the first recorded day is never a green day; it has no prior close to have beaten.
  */
 
-export const DAY_MS = 24 * 60 * 60 * 1000;
 /** Calendar months vary; the trophy/delta window uses a plain 30-day month, labeled as such. */
 export const MONTH_MS = 30 * DAY_MS;
 

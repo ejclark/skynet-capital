@@ -16,8 +16,9 @@ import type { SubscriptionsState } from "./subscription-state.js";
  *
  *  - an owner's own day that no record states (the resume after a failed check, #4469 c12);
  *  - a pair no record steers (a stand-aside pair taken on the owner's conviction, #4469 c2);
- *  - a ◆ row's conviction no single record steers, which the row carry would have written inline
- *    (`row-conviction.ts`) — written as a view instead, the carry kept only as the fallback.
+ *  - a ◆ row's conviction no single record steers, which the row carry used to write inline
+ *    (`row-conviction.ts`) — written as a view instead. With no view, the bots hold the ◆ pair
+ *    exits-only (`isConvictionOffView`), so no inline fallback is written any more.
  *
  * Which subscriptions: the ones the pointer rule leaves with no pointer (`pointAtRecord`, applied
  * with members' views as they stand), so a pair a seeded record or a member's view already steers
@@ -28,15 +29,17 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * changed the mechanism (a view, not an inline copy). The view says exactly what the inline copy
  * did, and the bots check it the same way (#5939).
  *
+ * THE LAST CONTRACT PIECE: every inline copy has moved (the live count read none on 2026-10-26),
+ * and the field is retired (`subscription-state.ts`), so only a ◆ row's conviction is left to
+ * migrate, and with it went the path that kept an inline copy when a view could not be written.
+ *
  * Two defaults, from the state block: the owner's name is not known from an account, so it is the
  * account's bot name (`ownerOf`); and a view must be stated before its check day, so one whose day
  * already passed (a latched failure) is stated on the subscription's start day, else the day before
- * its check (`statedOnFor`). A view the store's rules would refuse (a pair no row holds), or the
- * views file could not read back (an inline reason past a stored claim's length), is not written:
- * the subscription keeps its inline copy rather than leave the file unreadable, which refuses
- * every member's write. Since piece 4 the bots never read that copy: on a pair the table knows it
- * runs exits-only and its row says so (`isConvictionOffView`); on an id that is no pair it was never
- * checked, and still is not.
+ * its check (`statedOnFor`). A view the store's rules would refuse, or the views file could not
+ * read back, is not written, rather than leave the file unreadable, which refuses every member's
+ * write: the ◆ pair stays unpointed and runs exits-only, and its row says so
+ * (`isConvictionOffView`).
  */
 
 /** One view to write on one account, and the subscription it is for. */
@@ -61,7 +64,7 @@ export function statedOnFor(sub: PlaybookSubscription, checkOn: string, at: Date
   return started < checkOn ? started : dayBefore(checkOn);
 }
 
-/** The conviction `sub` is checked on with no pointer: its inline copy, else its ◆ row's. */
+/** The ◆ row's conviction, for a subscription the pointer rule leaves with no pointer. */
 function unpointedConviction(
   sub: PlaybookSubscription,
   records: readonly Conviction[],
@@ -70,12 +73,12 @@ function unpointedConviction(
 ): SubscriptionConviction | undefined {
   const pointed = pointAtRecord(sub, records, heldHere(members, sub.accountId));
   if (pointed.convictionId !== undefined) return undefined;
-  return pointed.conviction ?? rowConviction(lookup(sub.playbookId));
+  return rowConviction(lookup(sub.playbookId));
 }
 
 /**
- * Pure: the owner's own view for every subscription the pointer rule leaves unpointed with a
- * conviction to check (its inline copy, or its ◆ row's), in file order. Empty on the common poll.
+ * Pure: the owner's own view for every subscription the pointer rule leaves unpointed on a ◆ row
+ * (carrying the row's conviction), in file order. Empty on the common poll.
  */
 export function ownViewsToState(
   state: SubscriptionsState,

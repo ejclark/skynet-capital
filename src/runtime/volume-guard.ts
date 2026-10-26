@@ -31,6 +31,24 @@ export const PERSISTED_STORES: Readonly<Record<string, string>> = {
 };
 
 /**
+ * Stores with NO relative default: the var is the whole switch, and unset means the feature is
+ * dark (no audit trail, no decision DB, no IV clock) rather than writing under `/app/data`. They
+ * are still durable data, so a value that is set must sit on the volume, and the sizes line must
+ * count them (#4621, slice 9 of #4612: "every file the server writes is declared"). Siblings are
+ * derived, never declared: `decisions.db` sits beside `SKYNET_BOTS_DB_PATH` (`decisionDbPathFrom`),
+ * `council.json` beside `SKYNET_CONTROLS_FILE`, and the run marker beside `SKYNET_HISTORY_DIR`.
+ * `tests/arch/volume-persistence.spec.ts` fails when a new `env.SKYNET_*_DIR|FILE|STORE|PATH` read
+ * is in neither this list nor `PERSISTED_STORES` nor the scan's named non-stores.
+ */
+export const OPT_IN_STORES: readonly string[] = [
+  "SKYNET_AUDIT_DIR",
+  "SKYNET_BOTS_DB_PATH",
+  "SKYNET_BOTS_HEALTH_PATH",
+  "SKYNET_FLOW_DIR",
+  "SKYNET_IV_HISTORY_DIR",
+];
+
+/**
  * Runtime backstop for the class of bug in `docs/LESSONS.md` ("The guest list was never on the
  * volume, so every deploy locked the members out"). `tests/arch/volume-persistence.spec.ts`
  * catches a store missing from `fly.toml` BEFORE a merge, by reading the file — it cannot catch
@@ -51,8 +69,16 @@ export function volumePersistenceWarnings(env: Env, mount = "/data"): string[] {
   if (!env.FLY_APP_NAME) {
     return [];
   }
-  return Object.entries(PERSISTED_STORES)
-    .map(([name, fallback]) => [name, env[name] ?? fallback] as const)
+  const optedIn = OPT_IN_STORES.flatMap((name) => {
+    const value = env[name];
+    return value ? [[name, value] as const] : [];
+  });
+  return [
+    ...Object.entries(PERSISTED_STORES).map(
+      ([name, fallback]) => [name, env[name] ?? fallback] as const,
+    ),
+    ...optedIn,
+  ]
     .filter(([, effective]) => !effective.startsWith(`${mount}/`))
     .map(
       ([name, effective]) =>

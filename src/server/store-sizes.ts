@@ -1,6 +1,6 @@
 import { readdirSync, statfsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { PERSISTED_STORES } from "../runtime/volume-guard.js";
+import { OPT_IN_STORES, PERSISTED_STORES } from "../runtime/volume-guard.js";
 
 /**
  * How big each durable store is, and how much room the volume has left (#4618, slice 6 of #4612).
@@ -36,22 +36,30 @@ export interface StoreSizes {
 const storeName = (envVar: string): string =>
   envVar
     .replace(/^SKYNET_/, "")
-    .replace(/_(DIR|FILE|STORE)$/, "")
+    .replace(/_(DIR|FILE|STORE|PATH)$/, "")
     .toLowerCase()
     .replaceAll("_", "-");
 
-/** Measure every store `PERSISTED_STORES` declares, at the path this process actually uses. */
+/** Measure every store `PERSISTED_STORES` declares, plus each `OPT_IN_STORES` var this process set. */
 export function measureStores(env: Env, mount?: string): StoreSizes {
-  const stores = Object.entries(PERSISTED_STORES).map(([envVar, fallback]) => ({
+  const defaulted = Object.entries(PERSISTED_STORES).map(([envVar, fallback]) => ({
     name: storeName(envVar),
     bytes: pathBytes(env[envVar] ?? fallback),
   }));
+  const optedIn = OPT_IN_STORES.flatMap((envVar) => {
+    const path = env[envVar];
+    return path ? [{ name: storeName(envVar), bytes: pathBytes(path) }] : [];
+  });
+  const stores = [...defaulted, ...optedIn];
   if (!mount) return { stores };
   try {
     const fs = statfsSync(mount);
     return {
       stores,
-      volume: { freeBytes: fs.bavail * fs.bsize, totalBytes: fs.blocks * fs.bsize },
+      volume: {
+        freeBytes: fs.bavail * fs.bsize,
+        totalBytes: fs.blocks * fs.bsize,
+      },
     };
   } catch {
     return { stores };

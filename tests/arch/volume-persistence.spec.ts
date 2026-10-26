@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PERSISTED_STORES } from "../../src/runtime/volume-guard.js";
+import { OPT_IN_STORES, PERSISTED_STORES } from "../../src/runtime/volume-guard.js";
 
 // Volume-persistence gate — the mechanical answer to "will this store survive a deploy?".
 //
@@ -33,6 +33,12 @@ const EPHEMERAL: Readonly<Record<string, string>> = {
   // alongside the other stores in `[env]`), not this lane's to self-authorize.
   SKYNET_COMMUNITY_PROGRESSION_FILE:
     "claim-state only, not earned truth; loses at most a repeat celebration on deploy",
+};
+
+/** Path-shaped `SKYNET_*` reads that are not data this server writes, each with the reason. */
+const NOT_A_STORE: Readonly<Record<string, string>> = {
+  SKYNET_HALT_FILE: "the kill switch: an operator touches it, the bots only test it exists",
+  SKYNET_RESEARCH_DIR: "read-only research shelf; points the suite at a frozen fixture",
 };
 
 function tsFiles(dir: string): string[] {
@@ -86,6 +92,25 @@ describe("volume persistence", () => {
     expect(stores.get("SKYNET_ALLOWLIST_STORE")).toBe("data/allowlist.json");
     expect(stores.get("SKYNET_PARTICIPANT_STORE")).toBe("data/participants.json");
     expect(stores.size).toBeGreaterThanOrEqual(8);
+  });
+
+  it("declares every path-shaped env var the server reads, defaulted or opt-in (#4621)", () => {
+    const pattern = /(?:process\.)?env\.(SKYNET_[A-Z0-9_]*(?:DIR|FILE|STORE|PATH))\b/g;
+    const read = new Set<string>();
+    for (const file of tsFiles(SRC)) {
+      for (const [, name] of readFileSync(file, "utf8").matchAll(pattern)) read.add(name as string);
+    }
+    expect(read.size).toBeGreaterThanOrEqual(20); // the scan must not go blind
+    const undeclared = [...read].filter(
+      (n) => !(n in PERSISTED_STORES || OPT_IN_STORES.includes(n) || n in NOT_A_STORE),
+    );
+    expect(
+      undeclared,
+      "read from src/ but declared nowhere: add to PERSISTED_STORES (it has a data/ default), " +
+        "OPT_IN_STORES (no default, dark when unset) or NOT_A_STORE with the reason",
+    ).toEqual([]);
+    const stale = OPT_IN_STORES.filter((n) => !read.has(n));
+    expect(stale, "in OPT_IN_STORES but no longer read in src/ — remove").toEqual([]);
   });
 
   it("mounts a volume the stores can be pinned to", () => {

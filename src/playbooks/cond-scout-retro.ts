@@ -14,10 +14,11 @@
  * held at least a day: an hour-old mark annualizes into noise, and a 5-to-14-day thesis isn't
  * answered by its first hour.
  */
+
+import { DAY_MS } from "../domain/time.js";
 import type { ConditionReading } from "./cond-scout.js";
 import type { ShadowClose, ShadowSnapshot } from "./cond-scout-ledger.js";
 
-const DAY_MS = 86_400_000;
 const dayOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 
 /** A hypothetical exit at one moment inside the hold. */

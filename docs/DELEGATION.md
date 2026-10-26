@@ -44,11 +44,16 @@ into separate lint, typecheck and per-suite calls (#5191).
    variables or chains around git.** The guard refuses the compound form too — the 2026-10-11
    token audit counted 285 such refusals in 79 agents, about 15.4M tokens a week. Where plain
    `git` is refused (the rtk rewrite, #5055), call `/usr/bin/git`. Put both rules in every
-   worktree agent's prompt. **Temp files are yours alone:** write them inside your own worktree
+   worktree agent's prompt. **An isolated agent never waits on a PR merge** — its dispatcher
+   does: a session through `subscribe_pr_activity` (the merge arrives as `pull_request.closed`),
+   a Workflow step through one backgrounded REST loop (`CONTRIBUTING.md`, #5193). **Temp files are yours alone:** write them inside your own worktree
    (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
    label — never a shared generic name such as a bare body.md. Every agent in a workflow shares one
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
-   (#5240, #5245).
+   (#5240, #5245). **Stop only your own processes:** `pkill -P $$ -f rstest`, never a bare
+   `pkill -f rstest` — that kills every sibling worktree's test run too. You never need it to clear
+   load: full verifies queue one at a time per checkout (`scripts/verify-locked.sh`, #5548), and the
+   pre-push hook skips a tree `ship.sh open` already verified green.
    **Finished worktrees are swept, not left** (#5548: ten at once filled a cloud session's disk,
    and they were only ever removed by hand). **After an agent's PR merges, the session that
    dispatched it runs `npm run worktree:sweep`** (dry run: each `.claude/worktrees/*` entry,

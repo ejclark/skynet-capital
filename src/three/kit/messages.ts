@@ -30,7 +30,7 @@ export type TowerMessage =
 /** Scene → page. */
 export type TowerNotice = { readonly type: "tower:ready" };
 
-const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const isFiniteValue = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
 /** The fields of a `MessageEvent` the check needs. */
 export interface Envelope {
@@ -54,11 +54,13 @@ export function readTowerMessage(e: Envelope, here: Here): TowerMessage | undefi
   switch (m.type) {
     case "tower:glance":
     case "tower:regard":
-      return num(m.x) && num(m.y) ? { type: m.type, x: m.x, y: m.y } : undefined;
+      return isFiniteValue(m.x) && isFiniteValue(m.y)
+        ? { type: m.type, x: m.x, y: m.y }
+        : undefined;
     case "tower:release":
       return { type: "tower:release" };
     case "tower:mood":
-      return num(m.power) && num(m.health)
+      return isFiniteValue(m.power) && isFiniteValue(m.health)
         ? { type: "tower:mood", power: m.power, health: m.health }
         : undefined;
     case "tower:run":

@@ -20,6 +20,8 @@
  * ABSENCE OVER PLACEHOLDERS. An indicator the history can't support yet stays `undefined`, and a
  * hypothesis that needs it doesn't fire (the `src/indicators/` doctrine, restated in its header).
  */
+
+import { DAY_MS } from "../domain/time.js";
 import type { MarketContext, OrderForecast, PlaybookSubscription } from "../domain/types.js";
 import { rsi, sma } from "../indicators/index.js";
 import type { Playbook } from "./playbook.js";
@@ -57,8 +59,6 @@ export const COND_SCOUT: Playbook = {
   desiredState: () => "no-window",
   decide: () => [],
 };
-
-const DAY_MS = 86_400_000;
 
 /**
  * A comma list of tickers — the shape `SKYNET_COND_SCOUT_UNIVERSE` and a COND-SCOUT subscription's

@@ -33,6 +33,16 @@ describe("store sizes", () => {
     expect(sizes.volume?.totalBytes).toBeGreaterThan(0);
   });
 
+  it("counts an opt-in store only when this process set it (#4621)", () => {
+    writeFileSync(join(dir, "bots-state.db"), "x".repeat(40));
+    const unset = measureStores({});
+    expect(unset.stores.map((s) => s.name)).not.toContain("bots-db");
+    const set = measureStores({
+      SKYNET_BOTS_DB_PATH: join(dir, "bots-state.db"),
+    });
+    expect(set.stores.find((s) => s.name === "bots-db")?.bytes).toBe(40);
+  });
+
   it("logs the largest stores first and leaves out empty ones", () => {
     const line = formatStoreSizes({
       stores: [

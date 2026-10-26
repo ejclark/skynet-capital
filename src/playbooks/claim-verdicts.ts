@@ -1,3 +1,4 @@
+import { fixedPct } from "../domain/percent.js";
 import type { ClaimVerdict, StudyConfidence, StudyReading } from "./claim-study.js";
 import type { ConvictionClaim } from "./conviction-record.js";
 
@@ -22,14 +23,14 @@ import type { ConvictionClaim } from "./conviction-record.js";
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj | null =>
   typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Obj) : null;
-const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+const finiteNumberOrNull = (v: unknown): number | null =>
+  typeof v === "number" && Number.isFinite(v) ? v : null;
 
 /** The independent units a medium grade needs: clusters pooled, episodes own-history. */
 export const MEDIUM_UNITS = 30;
 
-const pct = (x: number, digits = 0): string => `${(x * 100).toFixed(digits)}%`;
 const signedPct = (x: number, digits = 0): string =>
-  `${x >= 0 ? "+" : "-"}${pct(Math.abs(x), digits)}`;
+  `${x >= 0 ? "+" : "-"}${fixedPct(Math.abs(x), digits)}`;
 const usd = (x: number): string => `$${x.toFixed(2)}`;
 
 const confidenceOf = (reading: StudyReading, units: number | null): StudyConfidence =>
@@ -63,16 +64,16 @@ function verdict(
 export function judgePremiumRichness(claim: ConvictionClaim, output: unknown): ClaimVerdict | null {
   const o = obj(output);
   const fit = obj(o?.fit);
-  const rank = num(fit?.rank);
-  const gap = num(fit?.gap);
-  const iv30 = num(o?.iv30);
+  const rank = finiteNumberOrNull(fit?.rank);
+  const gap = finiteNumberOrNull(fit?.gap);
+  const iv30 = finiteNumberOrNull(o?.iv30);
   const fitVerdict = fit?.verdict;
   if (!(o && fit) || rank === null || gap === null || iv30 === null) return null;
   if (fitVerdict !== "fits" && fitVerdict !== "thin" && fitVerdict !== "stand aside") return null;
   const symbol = typeof o.symbol === "string" ? o.symbol : "the name";
   const reading: StudyReading =
     fitVerdict === "fits" ? "supports" : fitVerdict === "thin" ? "mixed" : "against";
-  const where = `implied ${pct(iv30)} sits at the ${ordinal(Math.round(rank * 100))} pct of ${symbol}'s own next-30-day outcomes, ${(gap * 100).toFixed(1)} vol pts over the mean`;
+  const where = `implied ${fixedPct(iv30)} sits at the ${ordinal(Math.round(rank * 100))} pct of ${symbol}'s own next-30-day outcomes, ${(gap * 100).toFixed(1)} vol pts over the mean`;
   return verdict(claim, {
     reading,
     call: premiumCall(reading, rank, where),
@@ -106,8 +107,8 @@ function premiumCall(reading: StudyReading, rank: number, where: string): string
 function wheelRungOdds(ladder: unknown): Record<string, number> {
   for (const rung of Array.isArray(ladder) ? ladder : []) {
     const r = obj(rung);
-    const priced = num(r?.pricedAssignment);
-    const historical = num(r?.historicalAssignment);
+    const priced = finiteNumberOrNull(r?.pricedAssignment);
+    const historical = finiteNumberOrNull(r?.historicalAssignment);
     if (r?.rung === WHEEL_DELTA && priced !== null && historical !== null) {
       return { d20PricedAssignment: priced, d20HistoricalAssignment: historical };
     }
@@ -127,7 +128,7 @@ interface CycleReading {
 function cycleReading(output: unknown): CycleReading | null {
   const first = Array.isArray(output) ? output[0] : output;
   const today = obj(obj(first)?.today);
-  const close = num(today?.close);
+  const close = finiteNumberOrNull(today?.close);
   if (!today || close === null || typeof today.date !== "string") return null;
   return {
     close,
@@ -137,7 +138,8 @@ function cycleReading(output: unknown): CycleReading | null {
   };
 }
 
-const unitsOf = (h: Obj): number | null => num(h.sample === "own" ? h.episodes : h.clusters);
+const unitsOf = (h: Obj): number | null =>
+  finiteNumberOrNull(h.sample === "own" ? h.episodes : h.clusters);
 
 const noSample = (claim: ConvictionClaim): ClaimVerdict =>
   verdict(claim, {
@@ -151,7 +153,11 @@ const noSample = (claim: ConvictionClaim): ClaimVerdict =>
 /** The band a sample row prints, or null if any of its quantiles is missing. */
 function quantiles(v: unknown): { p25: number; p50: number; p75: number } | null {
   const b = obj(v);
-  const [p25, p50, p75] = [num(b?.p25), num(b?.p50), num(b?.p75)];
+  const [p25, p50, p75] = [
+    finiteNumberOrNull(b?.p25),
+    finiteNumberOrNull(b?.p50),
+    finiteNumberOrNull(b?.p75),
+  ];
   return p25 === null || p50 === null || p75 === null ? null : { p25, p50, p75 };
 }
 
@@ -167,7 +173,7 @@ export function judgeFloor(claim: ConvictionClaim, output: unknown): ClaimVerdic
   const further = quantiles(h.further);
   const scaled = quantiles(h.furtherScaled);
   const units = unitsOf(h);
-  const toLow = Array.isArray(h.toLow) ? num(h.toLow[2]) : null;
+  const toLow = Array.isArray(h.toLow) ? finiteNumberOrNull(h.toLow[2]) : null;
   if (!(further && scaled) || units === null || toLow === null) return null;
   const reading: StudyReading =
     further.p50 <= -0.05 ? "supports" : further.p50 > -0.02 ? "against" : "mixed";
@@ -179,7 +185,7 @@ export function judgeFloor(claim: ConvictionClaim, output: unknown): ClaimVerdic
         : "Some more pullback";
   return verdict(claim, {
     reading,
-    call: `${lead}: the median like-weather episode fell a further ${pct(-further.p50)} (about ${usd(c.close * (1 + further.p50))}), ${pct(-scaled.p50)} vol-scaled (about ${usd(c.close * (1 + scaled.p50))}); the low came about ${toLow} sessions in.`,
+    call: `${lead}: the median like-weather episode fell a further ${fixedPct(-further.p50)} (about ${usd(c.close * (1 + further.p50))}), ${fixedPct(-scaled.p50)} vol-scaled (about ${usd(c.close * (1 + scaled.p50))}); the low came about ${toLow} sessions in.`,
     confidence: confidenceOf(reading, units),
     why: `cycle-phase on ${c.date}: ${units} independent ${h.sample === "own" ? "episodes" : "clusters"} (${h.sample} history, ${h.level}); closes, not intraday lows.`,
     numbers: {
@@ -208,15 +214,15 @@ export function judgeRecovery(claim: ConvictionClaim, output: unknown): ClaimVer
   if (!c) return null;
   const h = c.headline;
   if (!h) return noSample(claim);
-  const within63 = num(h.entryIn63);
-  const oldHigh = num(h.highIn126);
+  const within63 = finiteNumberOrNull(h.entryIn63);
+  const oldHigh = finiteNumberOrNull(h.highIn126);
   const units = unitsOf(h);
   const medianBack = Array.isArray(h.backToEntry) ? h.backToEntry[2] : undefined;
   if (within63 === null || oldHigh === null || units === null || medianBack === undefined) {
     return null;
   }
   // A censored recovery (not back within the horizon) is printed as ">126", never a number.
-  const medianSessions = num(medianBack);
+  const medianSessions = finiteNumberOrNull(medianBack);
   const reading: StudyReading =
     within63 >= 0.5 ? "supports" : medianSessions !== null ? "mixed" : "against";
   const lead =
@@ -227,7 +233,7 @@ export function judgeRecovery(claim: ConvictionClaim, output: unknown): ClaimVer
         : "Back to entry is not the base case";
   return verdict(claim, {
     reading,
-    call: `${lead}: ${pct(within63)} of like-weather episodes closed back above ${usd(c.close)} within 63 sessions (median ${medianSessions ?? String(medianBack)}), and ${pct(oldHigh)} regained the old high within 126.`,
+    call: `${lead}: ${fixedPct(within63)} of like-weather episodes closed back above ${usd(c.close)} within 63 sessions (median ${medianSessions ?? String(medianBack)}), and ${fixedPct(oldHigh)} regained the old high within 126.`,
     confidence: confidenceOf(reading, units),
     why: `cycle-phase on ${c.date}: ${units} independent ${h.sample === "own" ? "episodes" : "clusters"} (${h.sample} history, ${h.level}); a recovery past 126 sessions counts as not recovered.`,
     numbers: {
@@ -262,9 +268,9 @@ export function judgePrePrintPut(claim: ConvictionClaim, output: unknown): Claim
   const rung = (Array.isArray(h.rungs) ? h.rungs : [])
     .map(obj)
     .find((r) => r !== null && r.delta === WHEEL_DELTA);
-  const raw = num(rung?.raw);
-  const scaled = num(rung?.scaled);
-  const strike = num(rung?.strike);
+  const raw = finiteNumberOrNull(rung?.raw);
+  const scaled = finiteNumberOrNull(rung?.scaled);
+  const strike = finiteNumberOrNull(rung?.strike);
   if (!rung || raw === null || scaled === null || strike === null || units === null) return null;
   const priced = WHEEL_DELTA;
   const worst = Math.max(raw, scaled);
@@ -278,10 +284,12 @@ export function judgePrePrintPut(claim: ConvictionClaim, output: unknown): Claim
         ? "Underpaid"
         : "Fair, not rich";
   const history =
-    pct(raw) === pct(scaled) ? pct(raw) : `${pct(best)} to ${pct(worst)} (raw and vol-scaled)`;
+    fixedPct(raw) === fixedPct(scaled)
+      ? fixedPct(raw)
+      : `${fixedPct(best)} to ${fixedPct(worst)} (raw and vol-scaled)`;
   return verdict(claim, {
     reading,
-    call: `${lead}: the ${usd(strike)} put${c.putExpiry ? ` expiring ${c.putExpiry}` : ""} is priced at ${pct(priced)} odds of assignment; like-weather episodes finished under that strike ${history}.`,
+    call: `${lead}: the ${usd(strike)} put${c.putExpiry ? ` expiring ${c.putExpiry}` : ""} is priced at ${fixedPct(priced)} odds of assignment; like-weather episodes finished under that strike ${history}.`,
     confidence: confidenceOf(reading, units),
     why: `cycle-phase on ${c.date}: the close at the last expiry before the print, ${units} independent ${h.sample === "own" ? "episodes" : "clusters"} (${h.sample} history, ${h.level}); priced odds are the put's delta.`,
     numbers: {

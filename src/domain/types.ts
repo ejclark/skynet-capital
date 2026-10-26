@@ -352,25 +352,17 @@ export interface PlaybookSubscription {
    */
   readonly compoundAllocation?: boolean;
   /**
-   * The owner's labelled, dated conviction (#4469 criteria 2, 11 and 12): the verdict a pair
-   * trades on when the house study did not say ✓, as Eric's wheel on CRWV does (#4642: "CRWV runs
-   * as Eric's conviction, against the study's stand-aside"). Absent = no conviction on record.
-   * The Store writes it (slice 3c part 3: on subscribe, or `setConviction`), a ◆ pair's row carries
-   * its own onto a subscription that states none (`row-conviction.ts`), and `subscriptions.v2`
-   * fingerprints it, so the bots stop new entries when its check fails (`with-conviction-gate.ts`).
-   * Since #5482's contract step it sits only on an unpointed subscription, and since piece 4 the
-   * bots never read it (`statedCheck` reads pointers only): a copy still here is one the app's poll
-   * could not move onto a view, and its pair runs exits-only (`subscriptionRoster`).
-   */
-  readonly conviction?: SubscriptionConviction;
-  /**
    * A pointer at a conviction record (#5482 slice 2, `playbooks/conviction-record.ts`): one view
-   * that steers several pairs, checked on one date. When the record steers this subscription's
-   * pair, its check date replaces `conviction.checkOn` (`conviction-store.ts` `statedCheck`).
-   * Once present it is the whole check: the bots never read `conviction` on a pointed subscription,
-   * and a pointer they cannot use runs the pair exits-only (`steeredBy`), so the app drops the
-   * inline copy wherever it can resolve the pointer (`subscriptions/conviction-pointer.ts`).
-   * Behavioral only on a `subscriptions.v3` snapshot or later, the first whose version names it.
+   * that steers several pairs, checked on one date (`conviction-store.ts` `statedCheck`). It is a
+   * subscription's whole conviction: an owner's own reason and day live as their view on the pair
+   * (`subscriptions/pair-conviction.ts`), and a pointer the bots cannot use runs the pair exits-only
+   * (`steeredBy`). Behavioral only on a `subscriptions.v3` snapshot or later, the first whose
+   * version names it.
+   *
+   * There is no inline conviction beside it any more (#5482, the contract step's last piece): the
+   * `{reason, checkOn}` a subscription once carried (#4469 slice 3c) moved onto views, the live
+   * count read none on 2026-10-26, and a stored copy is now dropped on read
+   * (`subscription-state.ts`).
    */
   readonly convictionId?: string;
   /**
@@ -396,7 +388,9 @@ export interface PlayTarget {
   readonly band?: { readonly signal: number; readonly gate: number };
 }
 
-/** An owner's conviction on one pair — why they hold it, and the market day it is checked. */
+/** An owner's conviction on one pair, as the subscribe and conviction forms state it: why they hold
+ *  it, and the market day it is checked. Written as their own view on the pair, never onto the
+ *  subscription (`subscriptions/pair-conviction.ts`), and read back the same way (`asOwnConviction`). */
 export interface SubscriptionConviction {
   /** In the owner's words; never empty. */
   readonly reason: string;

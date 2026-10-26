@@ -573,6 +573,98 @@ describe("ship platter — refusals that keep the platter an assembly point, not
     }
   });
 
+  // 2026-10-26, #5852: an item branch cut from today's main, boarded onto a platter cut a week
+  // earlier, squashed the whole week of main into one "item" — 504 files under a two-file subject,
+  // with a revert sha that would have reverted all of them.
+  it("refuses an item based on a newer main than the platter, before squashing anything", () => {
+    const root = mkdtempSync(join(tmpdir(), "ship-board-stale-"));
+    const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const work = join(root, "work");
+    try {
+      git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+      git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+      git(work, ["config", "user.email", "spec@example.com"]);
+      git(work, ["config", "user.name", "spec"]);
+      git(work, ["commit", "-q", "--allow-empty", "-m", "chore: seed"]);
+      git(work, ["push", "-q", "origin", "main"]);
+      git(work, ["checkout", "-q", "-b", "platter/2026-10-19"]);
+      git(work, ["commit", "-q", "--allow-empty", "-m", "chore: an earlier item"]);
+      git(work, ["checkout", "-q", "main"]);
+      git(work, ["commit", "-q", "--allow-empty", "-m", "feat: a week of main"]);
+      git(work, ["push", "-q", "origin", "main"]);
+      git(work, ["checkout", "-q", "-b", "fix/item"]);
+      git(work, ["commit", "-q", "--allow-empty", "-m", "fix: the item"]);
+      git(work, ["push", "-q", "origin", "fix/item"]);
+      git(work, ["checkout", "-q", "platter/2026-10-19"]);
+      const before = git(work, ["rev-parse", "HEAD"]);
+
+      let code = 0;
+      let stderr = "";
+      try {
+        execFileSync("bash", [resolve("scripts/ship.sh"), "platter", "board", "fix/item"], {
+          cwd: work,
+          env,
+          stdio: "pipe",
+        });
+      } catch (error) {
+        const e = error as { status?: number; stderr?: Buffer };
+        code = e.status ?? 1;
+        stderr = e.stderr?.toString() ?? "";
+      }
+      expect(code).toBe(1);
+      expect(stderr).toContain("newer main than the platter");
+      expect(stderr).toContain("git merge origin/main --no-edit");
+      expect(git(work, ["rev-parse", "HEAD"])).toBe(before);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // 2026-10-26, #5852 again: the refusal above merged at 10:57 and an item boarded past it at
+  // 11:52, because `board` ran the platter's own checkout of this script, cut before the guard.
+  it("refuses to board while the running ship.sh is not origin/main's copy", () => {
+    const root = mkdtempSync(join(tmpdir(), "ship-board-stale-script-"));
+    const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const work = join(root, "work");
+    try {
+      git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+      git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+      git(work, ["config", "user.email", "spec@example.com"]);
+      git(work, ["config", "user.name", "spec"]);
+      mkdirSync(join(work, "scripts"));
+      writeFileSync(join(work, "scripts", "ship.sh"), "# main's newer copy\n");
+      git(work, ["add", "."]);
+      git(work, ["commit", "-q", "-m", "chore: seed"]);
+      git(work, ["push", "-q", "origin", "main"]);
+      git(work, ["checkout", "-q", "-b", "platter/2026-10-19"]);
+      const before = git(work, ["rev-parse", "HEAD"]);
+
+      let code = 0;
+      let stderr = "";
+      try {
+        execFileSync("bash", [resolve("scripts/ship.sh"), "platter", "board", "fix/item"], {
+          cwd: work,
+          env,
+          stdio: "pipe",
+        });
+      } catch (error) {
+        const e = error as { status?: number; stderr?: Buffer };
+        code = e.status ?? 1;
+        stderr = e.stderr?.toString() ?? "";
+      }
+      expect(code).toBe(1);
+      expect(stderr).toContain("not origin/main's");
+      expect(stderr).toContain("git merge origin/main --no-edit");
+      expect(git(work, ["rev-parse", "HEAD"])).toBe(before);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("refuses a platter name outside platter/ — the branch name is how the platter is found", () => {
     const { code, stderr } = run(["platter", "open", "feedback/1", "--name", "wip/whatever"]);
     expect(code).toBe(1);

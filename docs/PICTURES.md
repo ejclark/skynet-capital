@@ -276,20 +276,28 @@ quadrantChart
 ````
 _A call sheet as a picture: confidence × edge; never a P/L claim (`BRAND.md`)._
 
-**The legibility budget** (the first two clauses are on trial — #4550; their drawn pairs and the
-measured phone numbers are on #3778, and this line changes to match whichever version wins):
-≤15 nodes; plain words, not paths (`login canvas`, never
-`src/three/pieces/eye-shader.ts`); no SHAs, env vars, or CLI flags in labels; quote labels
-containing special characters. The real reading condition is a phone at 390px.
+**The legibility budget** (the real reading condition is a phone at 390px): **a picture fits one
+phone screen and its text clears 12px**. At 390px wide the drawing is no taller than one 844px
+screen, and 390 ÷ drawing width × font is at least 12px; `npm run shoot:mermaid-pairs` prints both
+numbers per side (`phone before 16.4px 1.06 screens`) and flags a miss, advisory. This replaced
+"≤15 nodes" (#4550): [the drawn pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981857928)
+put 20 nodes at 12.9px, still readable, but 1.60 screens against 1.06 for the same story in 8. The
+count was standing in for the glance, and the glance is measured directly now. Then: plain words,
+not paths (`login canvas`, never `src/three/pieces/eye-shader.ts`). When a builder needs the path,
+it goes in a table beside the picture and the label says what the thing does (rule 1, the same
+answer as for a sha). [The pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981860237)
+kept this one (#4550): paths widened the drawing 17% and took phone text from 14.2 px to 12.2 px,
+one more path from the floor. No SHAs, env vars, or CLI flags in labels; quote labels containing
+special characters.
 
 **Rules the design rounds found** (round 2, iterating the five #3778 pairs, and round 3, the
 Claude Design handoff on plan #3786; each is rule · tell · fix). A first draft is the right type with
 first-draft words; the third draft has fewer nodes, a title that states the claim, the old path drawn
 dotted, phone direction, and labels a friend with no context reads without stopping.
 
-1. **A handle is not a word.** Shas, versions and ids stay in the table beside the picture; a label
-   says what the handle means · `revert: b0a4c8a` tagged on every commit · `reverts alone`, the
-   ledger row keeps the sha.
+1. **A handle is not a word.** Shas, versions, ids and file paths stay in the table beside the
+   picture; a label says what the handle means · `revert: b0a4c8a` tagged on every commit ·
+   `reverts alone`, the ledger row keeps the sha.
 2. **A fork shape asks a question.** The text in a diamond ends in `?`; the exits carry the
    answers · a hexagon stating "parse it the way GitHub does" · `door{"parses like<br/>GitHub?"}`.
 3. **Two boxes per rank on a phone.** In `TD` no rank holds more than two boxes · three side by
@@ -319,8 +327,9 @@ dotted, phone direction, and labels a friend with no context reads without stopp
 10. **One weapon per enemy: the type matches the story.** Flow → flowchart, count → erDiagram,
     lifecycle → stateDiagram-v2, order in time → sequence, containment → a box with boxes inside
     · a gitGraph for a story about a button · the decision table above.
-11. **Kurosawa mode: the look is a mode, switched whole.** A picture copies one named snippet
-    whole (house teal, or ink mode); never a hex chosen in flight, never two modes
+11. **Kurosawa mode: the look is a mode, switched whole.** A picture that wears a look at all (plain
+    is the default, *Dark mode* below) copies one named snippet whole (house teal, or ink mode);
+    never a hex chosen in flight, never two modes
     in one drawing · a one-off fill · the snippet, copied whole; the lint refuses a `classDef` hex
     outside a checked-in snippet.
 12. **The glint: one loud thing, and it is the decision.** Exactly one element carries the
@@ -328,14 +337,17 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     defect beside the decision · three coloured boxes · the fork gets the accent, the rest is paper.
 13. **Narrow the drawing first; then the font.** Text on a phone is 390 ÷ drawing width × font,
     and `npm run shoot:mermaid-pairs` prints that number per side on every shot line (`phone before
-    15.7px, after 15.6px`), flagging anything under 12 px · 10.6 px effective on a 720 px drawing ·
+    15.7px …, after 15.6px …`, the screen count beside each), flagging anything under 12 px · 10.6 px
+    effective on a 720 px drawing ·
     lines of about 16 characters,
     `config: flowchart: { nodeSpacing: 24, rankSpacing: 36, padding: 10 }`, and
     `classDef default font-size:20px,font-family:Verdana`, the one font lever that works on
     flowchart and erDiagram (frontmatter `fontSize` is a no-op for flowchart text).
 14. **In a state diagram the removed path is a note, not an edge.** State diagrams cannot dash a
     transition · a before that lives only in the caption · `note left of <new state>` reading
-    "was: …"; the note's dashed link is the delta mark.
+    "was: …"; the note's dashed link is the delta mark. Write it in the block form (`note left of
+    X`, the text, `end note`): in the one-line form `note left of X: was: …` the second colon is a
+    parse error on 11.17.2.
 15. **A C4 context puts the system's boundary in the middle.** Layout follows declaration order ·
     relation labels drawn over other boxes · declare the boundaries left, centre, right in the
     order the edges leave the system; `Rel_L` / `Rel_R` / `Rel_U` / `Rel_D`.
@@ -357,7 +369,12 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     allows; a markdown string in a classic label needs the backtick form
     (`["\`**bold**<br/>fact\`"]`), a `@{ label: }` shape takes it bare.
 
-**Dark mode:** the default is NO `theme`, no `themeVariables`, no hex — GitHub picks light or dark
+**Dark mode:** the default is plain, for every picture: NO `theme`, no `themeVariables`, no hex,
+and no snippet unless the picture is a decision (the one exception, *ink mode* below). Settled by
+[a drawn pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981880259) on
+#4550: the same held-PR fork plain and in ink measured identical (19.9 px on a phone, 1.12 screens),
+so the look buys nothing on geometry and spends rule 12's one loud thing wherever it is worn.
+GitHub picks light or dark
 from the page, and a pinned theme freezes one of them (the lint fails `theme:` in frontmatter and
 in `%%{init}%%`, which is deprecated upstream anyway). Emphasis that survives both modes and a
 colourblind reader is *achromatic*: a thick edge (`==>`) for what is new, a dotted one (`-.->`) for
@@ -394,8 +411,9 @@ it, the house `removed` unchanged. Every class holds ≥ 4.5:1 text on fill and 
 both GitHub canvases (`tests/ui/mermaid-classdef.spec.ts` verifies every snippet on this page); the
 seal red's stroke is light because its fill and a dark stroke both sat under 3:1 against GitHub's
 dark canvas. **Scope:** decision pictures — a PR's opening frame or a held PR with a fork in it,
-where gold marks the one decision and red marks a defect beside it (rule 12); architecture and
-flow pictures keep the teal. A look is a mode, switched whole (rule 11): a picture uses the teal
+where gold marks the one decision and red marks a defect beside it (rule 12). A decision picture
+*may* wear it; it is never required. Architecture, dataflow and lifecycle pictures stay plain, and
+reach for the teal snippet only when a delta needs marking beyond edge weight. A look is a mode, switched whole (rule 11): a picture uses the teal
 snippet or this one, never both, and the lint refuses any hex outside either. The generated held-PR
 pictures (`scripts/platter-picture.mjs`) wear it.
 
@@ -452,7 +470,8 @@ flowchart TD
   as the diagram it should have been, a showcase contender for a colleague. It renders each pair
   with the pinned Mermaid (GitHub's version) on GitHub's own light and dark canvases, lints every
   diagram first (a failure is a "Did not render" panel, never an empty box), crops to the frame
-  and writes a `<id>.json` sidecar (caption, alt text, bytes, dimensions, lint) to build the
+  and writes a `<id>.json` sidecar (caption, alt text, bytes, dimensions, lint, and per side the
+  phone text size and screen count of the legibility budget) to build the
   gallery comment from. Scale 1 fits the 100KB budget; `--scale 1.5` is the crisp shareable set;
   `--layout stacked` is the phone read. **The pairs file for a showcase lives on its issue, not in
   the tree** — the only committed one is the spec fixture, `tests/fixtures/mermaid-pairs/example.json`.
@@ -510,7 +529,8 @@ The repo's hard invariant — *never let a flourish imply something false* — a
    cannot drift.
 6. **Better is measured, on two axes, before a redraw ships** (Eric, 2026-09-26: "interrogate
    the decision to objectively measure better or worse"). The mechanical axis is rule 13's number,
-   printed by the pair renderer for the old and the new drawing side by side; the second look may
+   printed by the pair renderer for the old and the new drawing side by side, with the screen count
+beside it; the second look may
    not cost the first read. The reading axis is a blind read: a zero-context reader (a fresh
    subagent, given only the render and no caption) writes the argument in one sentence, what
    changed versus what it replaced, and what slowed it; the redraw passes when the sentence

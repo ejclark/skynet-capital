@@ -1,0 +1,275 @@
+/* R&D → Coverage (#3811 slice 3) — shape H: the ring over the matrix. Tokens only.
+ * Phone first: each row is the name beside fixed count slots, plain lines beneath. Above the tablet
+ * width the same row widens into columns — names, next dated item, sector fund — room, not new
+ * concepts (CLAUDE.md, mobile-first). Every state carries a shape and a word; hue only doubles it
+ * (docs/BRAND.md → Accessibility). */
+
+.cov-asof {
+  margin: 0 0 10px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* ---- the summary: ring beside its readout ---- */
+.cov-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+.cov-ring {
+  flex: none;
+  width: 200px;
+  height: 200px;
+  color: var(--text);
+}
+.cov-arc-depth {
+  fill: none;
+  stroke: currentColor;
+}
+.cov-arc--researched .cov-arc-depth {
+  stroke: var(--accent);
+  stroke-width: 14;
+}
+.cov-arc--held .cov-arc-depth,
+.cov-arc--calendar .cov-arc-depth {
+  stroke-width: 9;
+}
+.cov-arc--events .cov-arc-depth {
+  stroke-width: 9;
+  stroke-dasharray: 7 4;
+}
+.cov-arc--gap .cov-arc-depth {
+  stroke-width: 4;
+  stroke-dasharray: 1.5 4;
+  stroke: var(--muted);
+}
+.cov-arc-tick {
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.cov-arc-label {
+  font: 9px var(--mono);
+  fill: currentColor;
+}
+.cov-arc--gap .cov-arc-label {
+  fill: var(--muted);
+}
+.cov-arc-held {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 6;
+}
+.cov-arc-held--none {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 1 3;
+}
+.cov-ring-count {
+  font: 700 28px var(--mono);
+  fill: currentColor;
+}
+.cov-ring-word {
+  font: 9px var(--mono);
+  fill: var(--muted);
+}
+.cov-read {
+  flex: 1 1 160px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: var(--text-md);
+}
+.cov-read p {
+  margin: 0;
+}
+.cov-big {
+  font-size: 16px;
+}
+.cov-key {
+  font: var(--text-xs) / 1.4 var(--mono);
+  color: var(--muted);
+}
+
+/* ---- the marks: the calendar's grammar, one shape per state ---- */
+.cov-mk {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+.cov-mk--dot {
+  border-radius: 50%;
+  background: var(--accent);
+}
+.cov-mk--ring {
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+}
+.cov-mk--sq {
+  border: 1.5px solid var(--text);
+  border-radius: 1px;
+}
+.cov-mk--dash {
+  border-radius: 50%;
+  border: 1.5px dashed var(--text);
+}
+.cov-mk--hatch {
+  width: 14px;
+  background: repeating-linear-gradient(45deg, var(--muted) 0 1.5px, transparent 1.5px 4px);
+}
+.cov-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0 0 10px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.cov-legend-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ---- the rows ---- */
+.cov-table {
+  --cov-slot: 54px;
+  padding-top: 8px;
+  padding-bottom: 4px;
+}
+.cov-head,
+.cov-hit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) calc(var(--cov-cols) * var(--cov-slot));
+  column-gap: 8px;
+  align-items: center;
+}
+.cov-head {
+  font-size: 10px;
+  line-height: 1.15;
+  color: var(--muted);
+  padding: 0 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.cov-slots {
+  display: grid;
+  grid-template-columns: repeat(var(--cov-cols), var(--cov-slot));
+}
+.cov-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cov-row {
+  border-bottom: 1px solid var(--border);
+}
+.cov-row:last-child {
+  border-bottom: 0;
+}
+.cov-hit {
+  width: 100%;
+  row-gap: 3px;
+  padding: 8px 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+button.cov-hit {
+  cursor: pointer;
+}
+button.cov-hit:hover {
+  background: var(--surface-2);
+}
+button.cov-hit[aria-pressed="true"] {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.cov-row--gap .cov-hit {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--muted) 18%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+}
+.cov-name {
+  font-size: var(--text-md);
+  min-width: 0;
+}
+.cov-ticker {
+  font: var(--text-xs) var(--mono);
+  color: var(--muted);
+}
+.cov-slot {
+  display: inline-flex;
+  align-items: center;
+  font: var(--text-sm) var(--mono);
+}
+.cov-none {
+  color: var(--muted);
+}
+.cov-names,
+.cov-next,
+.cov-fund {
+  grid-column: 1 / -1;
+  font: var(--text-xs) / 1.35 var(--mono);
+  color: var(--muted);
+  min-width: 0;
+}
+.cov-names:empty {
+  display: none;
+}
+/* An event title can run to a sentence ("New Residential Sales — … 10:00 a.m. ET, FOMC-eve"); two
+ * lines carry the what and the date's place, and the Board holds the rest. */
+.cov-next {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.cov-next b {
+  color: var(--text);
+}
+.cov-wide-only {
+  display: none;
+}
+
+/* Desk width: the lines beneath become columns. */
+@media (min-width: 861px) {
+  .cov-table {
+    --cov-slot: 64px;
+  }
+  .cov-head,
+  .cov-hit {
+    grid-template-columns:
+      minmax(170px, 0.9fr) calc(var(--cov-cols) * var(--cov-slot)) minmax(0, 1.4fr)
+      minmax(0, 1.8fr) minmax(140px, 0.8fr);
+  }
+  .cov-names,
+  .cov-next,
+  .cov-fund {
+    grid-column: auto;
+  }
+  .cov-names:empty {
+    display: block;
+  }
+  .cov-head .cov-names,
+  .cov-head .cov-next,
+  .cov-head .cov-fund {
+    font: inherit;
+  }
+  .cov-wide-only {
+    display: inline;
+  }
+  .cov-phone-only {
+    display: none;
+  }
+  .cov-ring {
+    width: 240px;
+    height: 240px;
+  }
+}

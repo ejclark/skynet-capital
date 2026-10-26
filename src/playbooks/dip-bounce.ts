@@ -32,6 +32,7 @@
 import { type EarningsPrint, printSpan } from "../domain/earnings-calendar.js";
 import type { IntradayBar } from "../domain/intraday-bar.js";
 import { sessionsBetween } from "../domain/market-calendar.js";
+import { wholePct } from "../domain/percent.js";
 import type { RecoveryLevel, WouldBeOrder } from "../domain/playbook-observation.js";
 
 export type { IntradayBar, RecoveryLevel, WouldBeOrder };
@@ -326,12 +327,10 @@ function refusal(
   if (oldest >= rule.gateDay) return `gate: a tranche is ${oldest} sessions old`;
   if (oldest >= rule.signalDay) return `signal: a tranche is ${oldest} sessions old`;
   const share = (open.filter((t) => t.day < b.day).length * rule.tranche) / allocation;
-  if (share >= rule.gateShare) return `gate: ${pct(share)} of the allocation tied up`;
-  if (share >= rule.signalShare) return `signal: ${pct(share)} of the allocation tied up`;
+  if (share >= rule.gateShare) return `gate: ${wholePct(share)} of the allocation tied up`;
+  if (share >= rule.signalShare) return `signal: ${wholePct(share)} of the allocation tied up`;
   return undefined;
 }
-
-const pct = (share: number): string => `${Math.round(share * 100)}%`;
 
 function bookLevel(
   held: readonly Tranche[],
@@ -350,9 +349,9 @@ function bookLevel(
         (oldest.level === "gate" ? "; its target sell keeps working" : ""),
     );
   }
-  if (tiedUp >= rule.gateShare) reasons.push(`gate: ${pct(tiedUp)} of the allocation tied up`);
+  if (tiedUp >= rule.gateShare) reasons.push(`gate: ${wholePct(tiedUp)} of the allocation tied up`);
   else if (tiedUp >= rule.signalShare)
-    reasons.push(`signal: ${pct(tiedUp)} of the allocation tied up`);
+    reasons.push(`signal: ${wholePct(tiedUp)} of the allocation tied up`);
   if (halted) reasons.push("gate: down 8% of the allocation in five sessions; no buys this week");
   const level: RecoveryLevel = reasons.some((r) => r.startsWith("gate"))
     ? "gate"

@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { writeFileAtomicSync } from "./atomic-write.js";
 import { survivesParse } from "./parse-guards.js";
 
 /**
@@ -92,10 +92,7 @@ export class JsonFileStore<T> {
 
   write(state: T): void {
     const body = this.serialize ? this.serialize(state, this.onDisk()) : state;
-    mkdirSync(dirname(this.path), { recursive: true });
-    const tmp = `${this.path}.tmp`;
-    writeFileSync(tmp, `${JSON.stringify(body, null, 2)}\n`, "utf8");
-    renameSync(tmp, this.path);
+    writeFileAtomicSync(this.path, `${JSON.stringify(body, null, 2)}\n`);
   }
 
   private onDisk(): unknown {

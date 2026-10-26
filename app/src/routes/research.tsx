@@ -3,8 +3,9 @@ import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { liftHorizonTokens } from "../live/horizon-params";
 import { useRefineSearch } from "../live/refine-search";
-import { DEFAULT_LENS } from "../live/research";
+import { DEFAULT_LENS, parseResearchQuery, toggleSectorScope } from "../live/research";
 import { useBoardView } from "../shell/board-section";
+import { CoverageSection } from "../shell/coverage-section";
 import { PageFrame } from "../shell/frame";
 import { PlaybooksSection, usePlaybooksSection } from "../shell/playbooks-section";
 import { SectionSwitch } from "../shell/section-switch";
@@ -32,7 +33,7 @@ import { type PageSection, resolveSection } from "../shell/sections";
  * box is lifted out of `q` into those params below.
  */
 
-type ResearchSection = "board" | "playbooks";
+type ResearchSection = "board" | "coverage" | "playbooks";
 
 /*
  * R&D (#3623, Eric 2026-09-23: "rename this to R & D") — "Playbooks" is the one home for house
@@ -40,9 +41,14 @@ type ResearchSection = "board" | "playbooks";
  * retired (its evidence line, window, exposure and traits now ride on the Playbooks cards), and so
  * is Collections (its ideas are banked in `docs/PATTERNS.md` → discovery); an old `?section=plays`
  * or `?section=collections` link lands on Playbooks.
+ *
+ * "Coverage" (#3811 slice 3, `coverage-section.tsx`) sits beside Board because the two are a pair:
+ * the Board's calendar answers WHEN, Coverage answers WHERE across the 11 GICS sectors, and a tap
+ * on a sector lands back on the Board with a `sector:` token in its query.
  */
 const SECTIONS: readonly PageSection<ResearchSection>[] = [
   { id: "board", label: "Board" },
+  { id: "coverage", label: "Coverage" },
   { id: "playbooks", label: "Playbooks" },
 ];
 
@@ -86,6 +92,18 @@ function ResearchPage(): ReactElement {
 
   const playbooks = usePlaybooksSection(section === "playbooks", search.account);
 
+  // A sector tap from Coverage SETS the scope (a second tap on the same sector from the map must
+  // not clear what it just asked for), then opens the Board with the filter in place at once.
+  const scopedSector = parseResearchQuery(query).sector;
+  const onPickSector = (sector: string) => {
+    const next = scopedSector === sector ? query : toggleSectorScope(query, sector);
+    clearTimeout(urlTimer.current);
+    setQuery(next);
+    void navigate({
+      search: (prev) => ({ ...prev, section: undefined, q: next.trim() === "" ? undefined : next }),
+    });
+  };
+
   const onSelectSection = (next: ResearchSection) =>
     void navigate({
       search: (prev) => ({ ...prev, section: next === "board" ? undefined : next }),
@@ -104,6 +122,8 @@ function ResearchPage(): ReactElement {
           {board.band}
           {board.body}
         </>
+      ) : section === "coverage" ? (
+        <CoverageSection scoped={scopedSector} onPick={onPickSector} />
       ) : section === "playbooks" ? (
         <PlaybooksSection
           store={playbooks.store}
@@ -111,6 +131,7 @@ function ResearchPage(): ReactElement {
           accountName={playbooks.accounts.find((a) => a.id === search.account)?.name}
           accounts={playbooks.accounts}
           accountsReady={playbooks.accountsReady}
+          {...(search.strategy ? { initialPick: search.strategy } : {})}
         />
       ) : null}
     </PageFrame>
@@ -132,6 +153,8 @@ export const Route = createFileRoute("/research")({
         ? { section: search.section as ResearchSection }
         : {}),
     ...(facet(search.account) ? { account: facet(search.account) } : {}),
+    // The fit finder's link (#4469 slice 4): the strategy card to open on Playbooks.
+    ...(facet(search.strategy) ? { strategy: facet(search.strategy) } : {}),
   }),
   component: ResearchPage,
 });

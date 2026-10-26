@@ -1,3 +1,4 @@
+import { freeShares } from "../../src/trading/option-economics.js";
 import {
   type OptionTicketContext,
   previewOptionClose,
@@ -344,6 +345,16 @@ describe("previewOptionOrder — shares already covering a call you sold", () =>
     expect(preview.refusals.join(" ")).toContain(
       "you hold 300, 200 of them already covering calls you've sold",
     );
+  });
+
+  it("holds no shares back for a sold call a held long call already caps (#4736)", () => {
+    // Long the 430s under the sold 440s: a debit spread, so all 300 shares stay free.
+    const capping = { symbol: "MSFT260918C00430000", quantity: 2, avgPrice: 9, marketValue: 0 };
+    const preview = previewOptionOrder(request, context({ positions: [shares, sold, capping] }));
+    expect(preview.refusals.join(" ")).not.toContain("Covered means");
+    // One long caps one short: the second sold call still holds its 100 shares.
+    const one = { ...capping, quantity: 1 };
+    expect(freeShares({ positions: [shares, sold, one] }, "MSFT")).toBe(200);
   });
 
   it("ignores long calls, puts, and other stocks when counting what's promised", () => {

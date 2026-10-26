@@ -12,6 +12,7 @@
  * FAIL-CLOSED. Same house style as `decision-wire.ts`: every field checked, counts and strings
  * bounded, numbers finite, enums from their real sets. Anything off → undefined → HTTP 400.
  */
+import { finiteOrUndefined } from "../domain/finite.js";
 import {
   SCOUT_CONDITIONS,
   SCOUT_HYPOTHESES,
@@ -58,8 +59,6 @@ export interface CondScoutSnapshot {
 
 const id = (v: unknown): string | undefined =>
   typeof v === "string" && v.length > 0 && v.length <= MAX_ID ? v : undefined;
-const num = (v: unknown): number | undefined =>
-  typeof v === "number" && Number.isFinite(v) ? v : undefined;
 const hypothesisOf = (v: unknown) => SCOUT_HYPOTHESES.find((h) => h === v);
 const conditionOf = (v: unknown) => SCOUT_CONDITIONS.find((c) => c === v);
 
@@ -81,11 +80,11 @@ function parseOpen(v: unknown): OpenProbeView | undefined {
   const hypothesis = hypothesisOf(v.hypothesis);
   const condition = conditionOf(v.condition);
   const [openedAt, expiresAt, entryPrice, stopPrice, notional] = [
-    num(v.openedAt),
-    num(v.expiresAt),
-    num(v.entryPrice),
-    num(v.stopPrice),
-    num(v.notional),
+    finiteOrUndefined(v.openedAt),
+    finiteOrUndefined(v.expiresAt),
+    finiteOrUndefined(v.entryPrice),
+    finiteOrUndefined(v.stopPrice),
+    finiteOrUndefined(v.notional),
   ];
   if (
     !(pid && symbol && hypothesis && condition) ||
@@ -97,7 +96,7 @@ function parseOpen(v: unknown): OpenProbeView | undefined {
   ) {
     return undefined;
   }
-  const markRoi = num(v.markRoi);
+  const markRoi = finiteOrUndefined(v.markRoi);
   if (v.markRoi !== undefined && markRoi === undefined) return undefined;
   return {
     id: pid,
@@ -118,7 +117,12 @@ const EARLIER_LABELS: readonly ExitCheckpoint["label"][] = ["25%", "50%", "75%",
 function parseEarlier(v: unknown): ExitCheckpoint | undefined {
   if (!isRecord(v)) return undefined;
   const label = EARLIER_LABELS.find((l) => l === v.label);
-  const [at, daysHeld, roi, roiPerDay] = [num(v.at), num(v.daysHeld), num(v.roi), num(v.roiPerDay)];
+  const [at, daysHeld, roi, roiPerDay] = [
+    finiteOrUndefined(v.at),
+    finiteOrUndefined(v.daysHeld),
+    finiteOrUndefined(v.roi),
+    finiteOrUndefined(v.roiPerDay),
+  ];
   if (
     !label ||
     at === undefined ||
@@ -134,10 +138,14 @@ function parseEarlier(v: unknown): ExitCheckpoint | undefined {
 function parseLater(v: unknown): LaterExit | undefined {
   if (!isRecord(v)) return undefined;
   const label = id(v.label);
-  const [horizonDays, dueAt] = [num(v.horizonDays), num(v.dueAt)];
+  const [horizonDays, dueAt] = [finiteOrUndefined(v.horizonDays), finiteOrUndefined(v.dueAt)];
   if (!label || horizonDays === undefined || dueAt === undefined) return undefined;
   const filled = v.roi !== undefined;
-  const [roi, roiPerDay, filledAt] = [num(v.roi), num(v.roiPerDay), num(v.filledAt)];
+  const [roi, roiPerDay, filledAt] = [
+    finiteOrUndefined(v.roi),
+    finiteOrUndefined(v.roiPerDay),
+    finiteOrUndefined(v.filledAt),
+  ];
   if (filled && (roi === undefined || roiPerDay === undefined || filledAt === undefined)) {
     return undefined;
   }
@@ -154,7 +162,7 @@ function parseLater(v: unknown): LaterExit | undefined {
 function parseMarket(v: unknown): MarketBenchmark | undefined {
   if (!isRecord(v)) return undefined;
   const symbol = id(v.symbol);
-  const [roi, excess] = [num(v.roi), num(v.excess)];
+  const [roi, excess] = [finiteOrUndefined(v.roi), finiteOrUndefined(v.excess)];
   return symbol && roi !== undefined && excess !== undefined ? { symbol, roi, excess } : undefined;
 }
 
@@ -168,15 +176,15 @@ function parseRetro(v: unknown): ProbeRetro | undefined {
   const condition = conditionOf(v.condition);
   const reason = REASONS.find((r) => r === v.reason);
   const nums = {
-    openedAt: num(v.openedAt),
-    closedAt: num(v.closedAt),
-    daysHeld: num(v.daysHeld),
-    roi: num(v.roi),
-    roiPerDay: num(v.roiPerDay),
-    bestMarkRoi: num(v.bestMarkRoi),
-    worstMarkRoi: num(v.worstMarkRoi),
-    snapshotCount: num(v.snapshotCount),
-    entryPrice: num(v.entryPrice),
+    openedAt: finiteOrUndefined(v.openedAt),
+    closedAt: finiteOrUndefined(v.closedAt),
+    daysHeld: finiteOrUndefined(v.daysHeld),
+    roi: finiteOrUndefined(v.roi),
+    roiPerDay: finiteOrUndefined(v.roiPerDay),
+    bestMarkRoi: finiteOrUndefined(v.bestMarkRoi),
+    worstMarkRoi: finiteOrUndefined(v.worstMarkRoi),
+    snapshotCount: finiteOrUndefined(v.snapshotCount),
+    entryPrice: finiteOrUndefined(v.entryPrice),
   };
   if (!(probeId && symbol && hypothesis && condition && reason)) return undefined;
   if (Object.values(nums).some((n) => n === undefined)) return undefined;
@@ -188,8 +196,8 @@ function parseRetro(v: unknown): ProbeRetro | undefined {
   if (!(earlierExits && laterExits)) return undefined;
   const market = v.market === undefined ? undefined : parseMarket(v.market);
   if (v.market !== undefined && !market) return undefined;
-  const rsiDelta = num(v.rsiDelta);
-  const sentimentDelta = num(v.sentimentDelta);
+  const rsiDelta = finiteOrUndefined(v.rsiDelta);
+  const sentimentDelta = finiteOrUndefined(v.sentimentDelta);
   return {
     probeId,
     symbol,
@@ -218,7 +226,7 @@ function parseRetro(v: unknown): ProbeRetro | undefined {
 export function parseCondScoutSnapshot(value: unknown): CondScoutSnapshot | undefined {
   if (!isRecord(value) || value.kind !== COND_SCOUT_KIND) return undefined;
   const hostPersonaId = id(value.hostPersonaId);
-  const at = num(value.at);
+  const at = finiteOrUndefined(value.at);
   const open = list(value.open, MAX_OPEN_PROBES, parseOpen);
   const retros = list(value.retros, MAX_RETROS, parseRetro);
   if (!hostPersonaId || at === undefined || !open || !retros) return undefined;

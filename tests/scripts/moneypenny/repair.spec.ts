@@ -2,7 +2,11 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { logArgVariants, sanitizeLog } from "../../../scripts/moneypenny/repair-logs.mjs";
+import {
+  annotationLines,
+  logArgVariants,
+  sanitizeLog,
+} from "../../../scripts/moneypenny/repair-logs.mjs";
 
 // The self-healing lane's router, exercised the way moneypenny.spec.ts exercises its own: feed a
 // fixture `workflow_run` payload through `--dry-run` and assert the INTENTS. The dry run never
@@ -110,6 +114,36 @@ describe("moneypenny repair — routing a failed run", () => {
     expect(intent?.body).not.toContain("dep-warden review");
     expect(intent?.body).toContain("gh run rerun 37370406790 --failed");
     expect(intent?.body).not.toContain("rejected the workflow file");
+  });
+
+  it("names the step a lost runner left unfinished — never 'unknown'", () => {
+    // #6033: run 40304642365's research leg died 50 minutes in with claude-code-action frozen at
+    // `in_progress`. No step failed, so the capsule read "Failing step: unknown" over an empty
+    // fold, and the repair session had to dig the "runner lost communication" annotation out itself.
+    const [intent, ...rest] = dryRun("workflow-run-runner-lost.json");
+    const body = intent?.body ?? "";
+
+    expect(rest).toEqual([]);
+    expect(intent?.title).toBe(
+      "[ci] Moneypenny Events (event-research automation) — research due events",
+    );
+    expect(body).toContain(
+      "| **Failing step** | Run anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea (never finished — the runner went away mid-step) |",
+    );
+    expect(body).not.toContain("| **Failing step** | unknown |");
+    expect(body).toContain("check-runs/121511697452/annotations");
+    expect(body).toContain("gh run rerun 40304642365 --failed");
+  });
+
+  it("keeps 'unknown' for a failed job whose steps all finished — no runner story invented", () => {
+    const payload = JSON.parse(
+      readFileSync("tests/fixtures/events/workflow-run-runner-lost.json", "utf8"),
+    );
+    for (const step of payload.jobs[1].steps) step.status = "completed";
+    const [intent] = dryRunPayload(payload);
+
+    expect(intent?.body).toContain("| **Failing step** | unknown |");
+    expect(intent?.body).not.toContain("runner went away");
   });
 
   it("still reports the real failure when a run has one beside a starved job", () => {
@@ -316,6 +350,24 @@ describe("moneypenny repair — fetching the evidence", () => {
     const raw = "2026-08-26T23:03:39.9371678Z ##[error]App creation was refused";
 
     expect(sanitizeLog(raw)).toBe("##[error]App creation was refused");
+  });
+
+  it("falls back to the job's failure annotations — where a lost runner's diagnosis lives (#6033)", () => {
+    const annotations = [
+      {
+        annotation_level: "failure",
+        message: "The hosted runner lost communication with the server.",
+      },
+      {
+        annotation_level: "notice",
+        message: "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026.",
+      },
+    ];
+
+    expect(annotationLines(annotations)).toEqual([
+      "##[error]The hosted runner lost communication with the server.",
+    ]);
+    expect(annotationLines({ message: "Not Found" })).toEqual([]);
   });
 });
 

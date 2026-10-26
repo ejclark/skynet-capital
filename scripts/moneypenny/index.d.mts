@@ -84,6 +84,8 @@ export function claimNext(
     readReady?: () => AdmissionIssue[];
     readPrIssues?: () => Map<number, number>;
     claims?: Record<"plan" | "feedback", typeof claimPlan>;
+    /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or plans read GitHub. */
+    readHold?: (issue: AdmissionIssue) => string | null;
   },
 ): ClaimResult & { lane?: "plan" | "feedback" };
 /** How many lease-held picks one sweep steps past before giving up for the tick. */
@@ -100,6 +102,8 @@ export function peekNext(
     readPrIssues?: () => Map<number, number>;
     /** The continuation context `pickContinuation` reads; inject it, or the default reads GitHub. */
     continuation?: () => unknown;
+    /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or plans read GitHub. */
+    readHold?: (issue: AdmissionIssue) => string | null;
   },
 ): AdmissionIssue | null;
 /** #5056 slice 2: a freed build slot — peek the sweep, dispatch the scan when it names work. */

@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { writeFileAtomicSync } from "../storage/atomic-write.js";
 import { deriveKey, type Envelope, open, seal } from "../storage/secure-envelope.js";
 import type { Participant } from "./participant.js";
 
@@ -97,8 +97,8 @@ export class FileParticipantStore implements ParticipantStore {
 
   private write(participants: readonly StoredParticipant[]): void {
     if (!this.key) return;
-    mkdirSync(dirname(this.path), { recursive: true });
-    writeFileSync(this.path, JSON.stringify(seal(JSON.stringify(participants), this.key)));
+    // tmp + rename: an OOM kill mid-write must not leave a torn credential file (#4612 slice 9).
+    writeFileAtomicSync(this.path, JSON.stringify(seal(JSON.stringify(participants), this.key)));
   }
 }
 

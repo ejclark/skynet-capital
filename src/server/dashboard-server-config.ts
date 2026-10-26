@@ -88,6 +88,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly auth?: Authenticator;
   /**
+   * The origin members reach the server at (`SKYNET_PUBLIC_URL`), used for OAuth's redirect
+   * address. Omit to derive it from each request's own proto and host.
+   */
+  readonly publicUrl?: string;
+  /**
    * Self-service onboarding handler. When provided, `GET /add` serves a form and `POST /add`
    * registers a new account. Omit to disable the feature (e.g. offline mode).
    */

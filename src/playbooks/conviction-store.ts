@@ -101,8 +101,12 @@ export const lookupConviction: ConvictionLookup = (id) => CONVICTIONS.get(id);
  * only on a conviction (#4469 criterion 2), so one with no pointer is held the same way whether or
  * not an inline copy rides beside it. Before, only the ◆ row's carried copy held it; with neither
  * it read "conviction not stated", which never stops a pair, so it would have traded unchecked. This
- * is what lets the app stop writing that copy: the state block's default for "may the bots run a ◆
- * pair with no usable pointer exits-only?" was yes.
+ * is what let the app stop writing that copy (its app half dropped the poll's inline carry): the
+ * state block's default for "may the bots run a ◆ pair with no usable pointer exits-only?" was yes.
+ *
+ * THE FIELD IS RETIRED (the contract step's last piece). With no copy left to move (the live count
+ * read none on 2026-10-26), a subscription no longer has an inline conviction at all, so the only
+ * pair held for want of a view is a ◆ one with no pointer.
  */
 export interface StatedCheck {
   readonly checkOn?: string;
@@ -113,18 +117,16 @@ export interface StatedCheck {
 /** Why an unpointed subscription that trades on a conviction runs exits-only. */
 export const CONVICTION_NOT_ON_VIEW = "its conviction is not on a view yet";
 
-/** A subscription whose conviction is on no view: no pointer, on a pair the table knows, and either
- *  an inline copy the app's poll never moved onto a view, or a ◆ row (which trades only on a
- *  conviction) with no copy at all. The one test the bots' exits-only rule (`subscriptionRoster`),
- *  the gate's note and the owner's row (`withUnmovedConvictions`) share, so they cannot disagree. An
- *  authored play or an id that is no pair is left out: no view can be stated on one, and its inline
- *  copy was never checked, so it keeps running as before. So is a non-◆ pair with no copy: that is
- *  criterion 11's "conviction not stated", a label and never a stop. */
+/** A subscription whose conviction is on no view: a ◆ row (which trades only on a conviction) with
+ *  no pointer. The one test the bots' exits-only rule (`subscriptionRoster`), the gate's note and
+ *  the owner's row (`withUnmovedConvictions`) share, so they cannot disagree. An authored play or an
+ *  id that is no pair is left out: no view can be stated on one. So is a non-◆ pair with no
+ *  pointer: that is criterion 11's "conviction not stated", a label and never a stop. Until #5482's
+ *  last contract piece an inline copy with no pointer counted too; that field is retired, and the
+ *  live count read none before it was (`subscription-state.ts`). */
 export function isConvictionOffView(sub: PlaybookSubscription): boolean {
   if (sub.convictionId !== undefined) return false;
-  const pair = findPair(sub.playbookId);
-  if (pair === undefined) return false;
-  return sub.conviction !== undefined || pair.evidence.status === "conviction";
+  return findPair(sub.playbookId)?.evidence.status === "conviction";
 }
 
 export function statedCheck(
