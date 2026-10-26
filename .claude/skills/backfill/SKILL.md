@@ -25,9 +25,11 @@ never re-derives the target from a fresh scan.
 
 ## Steps
 
-1. `git fetch origin main && git checkout -B test/backfill-<slug> origin/main`, then
-   `bash scripts/worktree-setup.sh` — required in a worktree, or every subsequent tool call exits
-   127. Skip only if the caller already did this on this branch.
+1. **In a worktree:** `bash scripts/wt-start.sh test/backfill-<slug>` — fetch, branch off `origin/main` and
+   `node_modules` (it runs `worktree-setup.sh`; without it every later tool call exits 127), in one
+   call. **In the primary checkout** (`wt-start.sh` refuses there): `git fetch origin main`, then
+   `git checkout -B test/backfill-<slug> origin/main` — two separate calls, never one `&&` chain
+   (`docs/DELEGATION.md` rail 2). Skip only if the caller already did this on this branch.
 2. **Check the carve-out before reading anything** (Guardrails, first bullet). Then confirm the
    target is still flagged (`node scripts/spec-gap-scan.mjs`); if it isn't, report
    `status: "blocked"` with "already covered on main" and stop.
@@ -60,7 +62,7 @@ never re-derives the target from a fresh scan.
   carve-out above, write the spec for the correct behavior, mark it `.todo`/skip with a comment
   explaining why, and report it — never enshrine a bug.
 - Add-only: never modify `src/**` to make a test pass, never weaken an existing spec.
-- A tool exiting 127 means step 1's `worktree-setup.sh` was skipped or failed — run it and read
+- A tool exiting 127 means step 1's `wt-start.sh` (which runs `worktree-setup.sh`) was skipped or failed — run it and read
   what it says; never hand-roll a `node_modules` workaround.
 
 ## Calling convention (grind)
