@@ -1,6 +1,10 @@
 import {
+  DEFAULT_ROOT_ON_FLY,
+  dataRoot,
+  dataRootProblem,
   OPT_IN_STORES,
   PERSISTED_STORES,
+  resolveStorePath,
   volumePersistenceWarnings,
 } from "../../src/runtime/volume-guard.js";
 
@@ -71,5 +75,75 @@ describe("volumePersistenceWarnings", () => {
     });
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain("SKYNET_BOTS_DB_PATH");
+  });
+});
+
+// Derived stores (#4604): a new store takes its path from one root instead of its own fly.toml
+// line, so adding one never needs a protected-file merge.
+describe("derived store paths", () => {
+  const fly = { FLY_APP_NAME: "skynet-capital" };
+
+  it("roots at the Fly mount on Fly, a disposable relative dir elsewhere, and the override over both", () => {
+    expect(dataRoot(fly)).toBe(DEFAULT_ROOT_ON_FLY);
+    expect(dataRoot({})).toBe("data");
+    expect(dataRoot({ NODE_ENV: "production" })).toBe("data"); // a VM sets SKYNET_DATA_ROOT
+    expect(dataRoot({ ...fly, SKYNET_DATA_ROOT: "/data/stores" })).toBe("/data/stores");
+    expect(dataRoot({ SKYNET_DATA_ROOT: "/srv/skynet" })).toBe("/srv/skynet");
+  });
+
+  it("puts a store under the root, and lets its own explicit var win", () => {
+    expect(resolveStorePath(fly, "SKYNET_WATCHLIST_DIR", "watchlist")).toBe("/data/watchlist");
+    expect(resolveStorePath({}, "SKYNET_WATCHLIST_DIR", "watchlist")).toBe("data/watchlist");
+    expect(
+      resolveStorePath(
+        { ...fly, SKYNET_WATCHLIST_DIR: "/data/elsewhere" },
+        "SKYNET_WATCHLIST_DIR",
+        "watchlist",
+      ),
+    ).toBe("/data/elsewhere");
+  });
+});
+
+describe("dataRootProblem — the derived root must be a real mount on Fly", () => {
+  const fly = { FLY_APP_NAME: "skynet-capital" };
+  const stores = { SKYNET_WATCHLIST_DIR: "watchlist" };
+  const devices =
+    (map: Record<string, number>) =>
+    (path: string): number | undefined =>
+      map[path];
+
+  it("passes when the root sits on a different device than /", () => {
+    expect(dataRootProblem(fly, devices({ "/": 1, "/data": 2 }), stores)).toBeUndefined();
+  });
+
+  it("refuses when the root is on the image's own filesystem, naming the first store", () => {
+    const problem = dataRootProblem(fly, devices({ "/": 1, "/data": 1 }), stores);
+    expect(problem).toContain("Refusing to boot");
+    expect(problem).toContain('SKYNET_WATCHLIST_DIR would write to "/data/watchlist"');
+    expect(problem).toContain("not on a mounted volume");
+  });
+
+  it("refuses when the root is missing — the volume never attached", () => {
+    expect(dataRootProblem(fly, devices({ "/": 1 }), stores)).toContain("missing");
+  });
+
+  it("checks the overridden root, not the default", () => {
+    const env = { ...fly, SKYNET_DATA_ROOT: "/app/data" };
+    expect(dataRootProblem(env, devices({ "/": 1, "/data": 2, "/app/data": 1 }), stores)).toContain(
+      '"/app/data/watchlist"',
+    );
+  });
+
+  it("names the root itself when no store derives from it yet", () => {
+    expect(dataRootProblem(fly, devices({ "/": 1, "/data": 1 }), {})).toContain(
+      'the data root "/data"',
+    );
+  });
+
+  it("is silent off Fly — a VM's root disk persists, so a shared device is not a defect", () => {
+    expect(dataRootProblem({}, devices({ "/": 1, data: 1 }), stores)).toBeUndefined();
+    expect(
+      dataRootProblem({ NODE_ENV: "production" }, devices({ "/": 1, data: 1 }), stores),
+    ).toBeUndefined();
   });
 });
