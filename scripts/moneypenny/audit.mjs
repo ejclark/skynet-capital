@@ -121,7 +121,7 @@ export function audit(deps = {}) {
       issueNumber: f.number,
       title: f.title,
       hoursSinceFiled: f.hoursSinceFiled,
-      body: `🔇 **No answer yet** — this was filed **${f.hoursSinceFiled}h** ago and has not reached a PR or a verdict. Every session must end somewhere a member can see: a PR, \`next-slice\`, \`needs-info\`, or \`needs-eric\`.\n\nRemove and re-add the \`ready\` label to retry the build (since #3912 \`ready\` starts it, not \`feedback\`) — the claim lease makes a re-label a safe retry, not a second build. If it is waiting on something, say so here so it stops looking dropped.\n\n${FOOTER}`,
+      body: `🔇 **No answer yet** — this was filed **${f.hoursSinceFiled}h** ago and has not reached a PR or a verdict. Every session must end somewhere a member can see: a PR, \`next-slice\`, \`needs-info\`, or \`needs-eric\`.\n\nRe-apply the \`feedback\` label to retry the build — the claim lease makes a re-label a safe retry, not a second build. If it is waiting on something, say so here so it stops looking dropped.\n\n${FOOTER}`,
     });
   }
   // #897 (closing #877's deferred slice 3): a `ready` comment on a plan issue that never got

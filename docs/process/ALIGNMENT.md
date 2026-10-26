@@ -37,4 +37,3 @@ alignment has come — and the evidence that lets a class stop asking.
 | 2026-10-18 | bot safety rules | #5730 · let a breaker tripped by an outage re-arm at the next session? | Yes, outage breakers only (medium) | — | pending |
 | 2026-10-18 | engineering gates | #5730 · raise 11 over-budget debt gates to today's counts? | Yes (high) | — | pending |
 | 2026-10-18 | session housekeeping | Archive this session? (asked with the archive audit's all-green table) | Yes, archive (high) | Yes, archive | match |
-| 2026-10-26 | spend limits | #6020 · the research spend breaker never counted; trip at $60/4h scaled by the dial, keep $15, or leave it? | $60/4h scaled by the dial (medium) | — | pending |

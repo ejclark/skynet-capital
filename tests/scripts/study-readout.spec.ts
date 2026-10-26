@@ -1,14 +1,4 @@
-import {
-  appendFileSync,
-  copyFileSync,
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
@@ -18,11 +8,7 @@ import { buildReadout, FRAME_CAP, readoutArgs } from "../../scripts/study/readou
 import {
   actionWords,
   formulaSentence,
-  RANKING,
-  rankStructural,
   SECTIONS,
-  STRUCTURAL_TOP,
-  structuralSection,
   worstMoment,
 } from "../../scripts/study/readout-core.mjs";
 
@@ -32,9 +18,10 @@ import {
 
 const FIX = join(import.meta.dirname, "../fixtures/study-grade");
 
-/** The fixture round, graded. */
-function gradeFixture() {
-  return gradeRound(
+/** Grade the fixture round into a temp dir and render its readout there; returns the page. */
+function render(extra: string[] = []) {
+  const root = mkdtempSync(join(tmpdir(), "study-readout-"));
+  const grade = gradeRound(
     loadRound(
       gradeArgs([
         "--sealed",
@@ -50,11 +37,6 @@ function gradeFixture() {
       ]),
     ),
   );
-}
-
-/** Grade the fixture round into a temp dir and render its readout there; returns the page. */
-function render(extra: string[] = [], round = join(FIX, "round"), grade = gradeFixture()) {
-  const root = mkdtempSync(join(tmpdir(), "study-readout-"));
   const gradePath = join(root, "grade.json");
   writeFileSync(gradePath, JSON.stringify(grade));
   const out = buildReadout(
@@ -62,7 +44,7 @@ function render(extra: string[] = [], round = join(FIX, "round"), grade = gradeF
       "--grade",
       gradePath,
       "--round",
-      round,
+      join(FIX, "round"),
       "--study",
       "made-up-house",
       "--next-area",
@@ -142,141 +124,6 @@ describe("formulaSentence — what's wrong · principle · why it matters · fix
   });
 });
 
-describe("structuralSection — the top ten ranked, the rest folded (#5845)", () => {
-  // One new structural problem as readout.mjs hands it over; `n` keeps each title unique.
-  const item = (n: number, severity: string | null, also = 0, members = 1) => ({
-    finding: { what: `Problem ${n}`, severity, member: "night-owl", frames: [] },
-    class: "members",
-    also,
-    members,
-    frames: [`../../shots/study-x/p${n}.jpg`],
-  });
-  const noTail = { structural: { refound: {}, held: {} } };
-  const page = (items: ReturnType<typeof item>[]) =>
-    structuralSection({ structural: items, grade: noTail }).join("\n");
-
-  it("ranks by severity, then times reported, then members reached, the input order breaking ties", () => {
-    const ranked = rankStructural([
-      item(1, "Low", 5, 3),
-      item(2, "3"),
-      item(3, "Critical"),
-      item(4, "High", 2, 1),
-      item(5, "High", 2, 2),
-      item(6, "high", 4, 1),
-      item(7, null, 9, 9),
-      item(8, "High", 2, 2),
-    ]);
-    expect(ranked.map((s) => s.finding.what)).toEqual([
-      "Problem 3",
-      "Problem 6",
-      "Problem 5",
-      "Problem 8",
-      "Problem 4",
-      "Problem 2",
-      "Problem 1",
-      "Problem 7",
-    ]);
-  });
-
-  it("shows the ten ranked highest with frames and folds every other one, text only", () => {
-    const items = Array.from({ length: 13 }, (_, i) => item(i + 1, i < 3 ? "Low" : "High"));
-    const md = page(items);
-    expect(STRUCTURAL_TOP).toBe(10);
-    expect(md).toContain(RANKING);
-    expect(md.indexOf(RANKING)).toBeLessThan(md.indexOf("### 1."));
-    expect(md).toContain("### 1. Problem 4");
-    expect(md).toContain("### 10. Problem 13");
-    expect(md).not.toContain("### 11.");
-    expect(md.match(/<details>/g)).toHaveLength(1);
-    const fold = md.slice(md.indexOf("<details>"));
-    expect(fold).toContain("<summary>The other 3, ranked the same way, text only</summary>");
-    for (const n of [1, 2, 3]) expect(fold).toContain(`- **Problem ${n}**`);
-    expect(fold).not.toContain("![frame]");
-    expect(md.match(/!\[frame\]/g)).toHaveLength(10);
-  });
-
-  it("shows all of them, unfolded, when there are ten or fewer", () => {
-    const md = page(Array.from({ length: 10 }, (_, i) => item(i + 1, "High")));
-    expect(md).toContain("### 10. Problem 10");
-    expect(md).not.toContain("<details>");
-    expect(md.match(/!\[frame\]/g)).toHaveLength(10);
-  });
-});
-
-describe("buildReadout — a round with more than ten structural problems (#5845)", () => {
-  // The fixture round, copied, with sixteen new structural groups in place of its three, each
-  // carrying a frame of its own. Fifteen are single reports (six High, nine Moderate); the last
-  // is led by a Low report whose second report is Critical, so ranking by the lead would fold it.
-  const round = join(mkdtempSync(join(tmpdir(), "study-readout-round-")), "round");
-  cpSync(join(FIX, "round"), round, { recursive: true });
-  mkdirSync(join(round, "extra"));
-  const frame = join(
-    FIX,
-    "round/5-sessions/commuter/made-up-house/desktop/t1/run-1/frames/000.jpg",
-  );
-  const finding = (id: string, severity: string, what: string) => {
-    copyFileSync(frame, join(round, "extra", `${id.toLowerCase()}.jpg`));
-    return {
-      id,
-      class: "members",
-      member: `m-${id}`,
-      level: "structural",
-      severity,
-      what,
-      evidence: [`extra/${id.toLowerCase()}.jpg`],
-    };
-  };
-  const singles = Array.from({ length: 15 }, (_, i) =>
-    finding(`S${i + 1}`, i < 6 ? "high" : "moderate", `Single problem ${i + 1}`),
-  );
-  const pair = [
-    finding("L1", "low", "Lead low, second critical"),
-    finding("L2", "critical", "The same, worse"),
-  ];
-  appendFileSync(
-    join(round, "findings.jsonl"),
-    `${[...singles, ...pair].map((f) => JSON.stringify(f)).join("\n")}\n`,
-  );
-  const grade = gradeFixture();
-  grade.structural.groups = {
-    ...Object.fromEntries(singles.map((f) => [f.id, [f.id]])),
-    L1: ["L1", "L2"],
-  };
-  // Graded as the round's own unmatched finds are: new, so a checker's same_as group counts them.
-  const unmatched = { voice: null, expert: null, gold: null, score: 0, disputed: false };
-  grade.findings.push(
-    ...[...singles, ...pair].map(({ id, member, level }) => ({
-      ...unmatched,
-      id,
-      class: "members",
-      member,
-      level,
-      verdict: "unmatched",
-    })),
-  );
-  const { markdown, shots, page } = render([], round, grade);
-  const copied = readdirSync(shots);
-
-  it("ranks a group by its worst report, so a Critical behind a Low lead comes first", () => {
-    expect(markdown).toContain("### 1. Lead low, second critical");
-    expect(markdown).toMatch(/### 1\. Lead low[\s\S]*?· critical · reported 1 more time/);
-    expect(markdown.slice(markdown.indexOf("<details>"))).not.toContain("Lead low");
-  });
-
-  it("copies frames for the ten shown only, never for a folded one", () => {
-    const evidence = copied.filter((f) => f.startsWith("extra-")).sort();
-    const shown = ["l1", ...Array.from({ length: 9 }, (_, i) => `s${i + 1}`)];
-    expect(evidence).toEqual(shown.map((id) => `extra-${id}.jpg`).sort());
-    for (const n of [10, 11, 12, 13, 14, 15]) {
-      expect(copied).not.toContain(`extra-s${n}.jpg`);
-      expect(markdown).toContain(`- **Single problem ${n}**`);
-    }
-    // Everything else in the folder is the picture's frames, each one linked from the page.
-    for (const f of copied) expect(markdown).toContain(`study-made-up-house/${f}`);
-    expect(existsSync(page)).toBe(true);
-  });
-});
-
 describe("buildReadout — the made-up round, rendered", () => {
   const { markdown, shots, page } = render(["--battle", join(FIX, "battle.json")]);
 
@@ -320,14 +167,8 @@ describe("buildReadout — the made-up round, rendered", () => {
     expect(markdown).toContain("1 of your 7 could not be shown in the test world and was struck");
   });
 
-  it("lists every structural problem, ranked, with its frames, words and one-sentence formula", () => {
-    // Critical first; the Moderate member find outranks the expert's 2 of 4 on members reached.
-    expect(markdown).toContain(RANKING);
-    expect(markdown).toContain(
-      "### 1. The answer lives on a page you have to leave the hallway to reach",
-    );
-    expect(markdown).toContain("### 2. The cellar is only reachable through the garden");
-    expect(markdown).toContain("### 3. Two rooms show the same list under different names");
+  it("lists every structural problem with its frames, words and one-sentence formula", () => {
+    expect(markdown).toContain("### 3. The cellar is only reachable through the garden");
     expect(markdown).not.toContain("### 4.");
     expect(markdown).toContain(
       "- F13: already on your key (B1), so re-found, not new — not counted.",

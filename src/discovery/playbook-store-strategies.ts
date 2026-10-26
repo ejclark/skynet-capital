@@ -54,7 +54,7 @@ export interface StrategyCardEntry
   readonly strategy: StrategyId;
   readonly screen?: string;
   readonly noScreen?: string;
-  /** Its pairs by evidence: ✓ first, then ◆ ~ ✗ ? ⊘, table order within a status. */
+  /** Its pairs by evidence: ✓ first, then ◆ ~ ✗ ? –, table order within a status. */
   readonly pairs: readonly PairRowEntry[];
 }
 

@@ -173,31 +173,6 @@ describe("whose say-so a playbook runs on", () => {
     expect(say.studyHref).toBe("/research/crwv-premium-fit");
   });
 
-  it("reads a pointed pair's check day from the view it points at, never the row's", () => {
-    const steeredBy = {
-      convictionId: "my-view",
-      title: "My view",
-      owner: "member",
-      checkOn: "2027-02-26",
-      scorecard: { pass: 0, fail: 0, pending: 1, untestable: 0 },
-      claims: [],
-    };
-    // Pointed at a view, the subscription carries no inline conviction (#5482 contract step).
-    const pointedAt = (convictionId: string): PairRowView => ({
-      ...wheel,
-      steeredBy,
-      subscription: { mode: "aggressive", enabled: true, convictionId },
-    });
-    const say = saySoOf(pointedAt("my-view"));
-    expect(say.dated).toMatch(/^Checked again Feb 26, 2027/);
-    expect(say.reason).toBeUndefined();
-    // Pointed at a view the row does not show: no day, rather than another view's.
-    expect(saySoOf(pointedAt("another-view")).dated).toBeUndefined();
-    // A row the viewer holds no subscription to keeps the row's own day.
-    const { subscription: _none, ...unheld } = pointedAt("my-view");
-    expect(saySoOf(unheld).dated).toMatch(/^Checked again Jan 29, 2027/);
-  });
-
   it("names a researched pair by the Store's own label and its shelf date", () => {
     const say = saySoOf({
       id: "S1-NVDA",

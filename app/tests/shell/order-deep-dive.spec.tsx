@@ -109,7 +109,7 @@ describe("OrderDeepDive — what it shows", () => {
   it("puts the playbook, its plan and what retires it in the owner's block alone", () => {
     render(wrap(<OrderDeepDive event={wheel} variant="page" showPlaybook onClose={noop} />));
     expect(screen.getByText("The playbook · only you see this")).toBeInTheDocument();
-    expect(screen.getByText("The wheel on CRWV")).toBeInTheDocument();
+    expect(screen.getByText("CRWV-WHEEL")).toBeInTheDocument();
     expect(screen.getByText(/sells covered calls on them next/)).toBeInTheDocument();
     expect(screen.getByText(/the bot buys 100 shares at \$80$/)).toBeInTheDocument();
     // The playbook's own falsifier, in its own field since #5043 — the order's invalidator no
@@ -130,7 +130,7 @@ describe("OrderDeepDive — what it shows", () => {
     expect(screen.getByRole("region", { name: "At Nov 6, the play" })).toBeInTheDocument();
     expect(screen.getByText(/Our study of CRWV/)).toBeInTheDocument();
     expect(screen.queryByText(/only you see this/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/CRWV-WHEEL|the wheel on CRWV/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CRWV-WHEEL/)).not.toBeInTheDocument();
     expect(screen.queryByText(/covered calls/)).not.toBeInTheDocument();
     expect(screen.queryByText(/retires/)).not.toBeInTheDocument();
   });

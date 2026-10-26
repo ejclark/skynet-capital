@@ -93,7 +93,7 @@ describe("callSpread — a second ticker", () => {
     // No company override: the ticker directory's own name, and the setting's own exit.
     expect(open?.reason).toContain("Broadcom confirmed its 2026-12-10 print");
     expect(open?.reason).toContain("three sessions before");
-    expect(open?.forecast?.retireRule).toContain("AVGO's D-10→D-3 return");
+    expect(open?.forecast?.invalidator).toContain("AVGO's D-10→D-3 return");
   });
 });
 

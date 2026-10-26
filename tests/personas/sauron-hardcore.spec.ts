@@ -1,8 +1,4 @@
-import {
-  applyHardcore,
-  createDefaultPersonas,
-  envHardcoreControls,
-} from "../../src/personas/registry.js";
+import { applyHardcore, createDefaultPersonas } from "../../src/personas/registry.js";
 import {
   HARDCORE_SAURON_CONFIG,
   SauronHardcorePersona,
@@ -150,7 +146,7 @@ describe("SauronHardcorePersona", () => {
   });
 });
 
-describe("applyHardcore — the owner's stored hardcore roster swap", () => {
+describe("applyHardcore — the SKYNET_HARDCORE_BOTS roster swap", () => {
   it("stays completely dark when the var is unset", () => {
     const base = createDefaultPersonas();
     const roster = applyHardcore(base, {} as NodeJS.ProcessEnv);
@@ -159,44 +155,35 @@ describe("applyHardcore — the owner's stored hardcore roster swap", () => {
     expect(roster.personas).toEqual(base);
   });
 
-  it("swaps a persona the owner's stored setting names for its hardcore build, same id and slot", () => {
-    const roster = applyHardcore(createDefaultPersonas(), {} as NodeJS.ProcessEnv, {
-      bots: { sauron: { hardcore: true } },
-    });
+  it("swaps a named persona for its hardcore build, same id and slot", () => {
+    const roster = applyHardcore(createDefaultPersonas(), {
+      SKYNET_HARDCORE_BOTS: "sauron",
+    } as NodeJS.ProcessEnv);
     const sauron = roster.personas.find((p) => p.id === "sauron");
     expect(sauron).toBeInstanceOf(SauronHardcorePersona);
     expect(roster.hardcore.has("sauron")).toBe(true);
   });
 
-  it("no longer obeys the env: a bot with no stored setting stays standard (#4535 slice 4c-2)", () => {
-    const roster = applyHardcore(createDefaultPersonas(), {
-      SKYNET_HARDCORE_BOTS: "sauron",
-    } as NodeJS.ProcessEnv);
-    expect(roster.hardcore.size).toBe(0);
-    expect(roster.personas.find((p) => p.id === "sauron")).not.toBeInstanceOf(
-      SauronHardcorePersona,
+  it("Mission Control overrides the env in both directions", () => {
+    const disarmed = applyHardcore(
+      createDefaultPersonas(),
+      { SKYNET_HARDCORE_BOTS: "sauron" } as NodeJS.ProcessEnv,
+      { bots: { sauron: { hardcore: false } } },
     );
-    // ...but still parses it, so the bots app can report it for the dashboard to copy once.
-    expect([...roster.envIds]).toEqual(["sauron"]);
-  });
-
-  it("an owner's stored false keeps a bot standard", () => {
-    const disarmed = applyHardcore(createDefaultPersonas(), {} as NodeJS.ProcessEnv, {
-      bots: { sauron: { hardcore: false } },
-    });
     expect(disarmed.hardcore.size).toBe(0);
+
+    const armed = applyHardcore(createDefaultPersonas(), {} as NodeJS.ProcessEnv, {
+      bots: { sauron: { hardcore: true } },
+    });
+    expect(armed.hardcore.has("sauron")).toBe(true);
+    expect(armed.personas.find((p) => p.id === "sauron")).toBeInstanceOf(SauronHardcorePersona);
   });
 
-  it("a replay's env roster rides in as stored settings", () => {
-    const env = { SKYNET_HARDCORE_BOTS: "sauron" } as NodeJS.ProcessEnv;
-    const roster = applyHardcore(createDefaultPersonas(), env, envHardcoreControls(env));
-    expect(roster.hardcore.has("sauron")).toBe(true);
-  });
-
-  it("refuses env ids with no hardcore build instead of guessing", () => {
+  it("refuses ids with no hardcore build instead of guessing", () => {
     const roster = applyHardcore(createDefaultPersonas(), {
       SKYNET_HARDCORE_BOTS: "sauron, banker",
     } as NodeJS.ProcessEnv);
+    expect(roster.hardcore.has("sauron")).toBe(true);
     expect(roster.rejected).toEqual(["banker"]);
     expect(roster.personas.find((p) => p.id === "banker")).not.toBeInstanceOf(
       SauronHardcorePersona,

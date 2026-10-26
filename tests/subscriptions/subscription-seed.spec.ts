@@ -265,17 +265,10 @@ describe("the house-roster report on the /controls poll", () => {
     expect(parseControlsPollRoster(headers)).toEqual(report);
   });
 
-  it("sends no header when no bot is wired", () => {
+  it("sends no header when there is nothing to seed", () => {
     expect(controlsPollRosterHeaders(undefined)).toEqual({});
+    expect(controlsPollRosterHeaders(houseRosterReport([BOT], []))).toEqual({});
     expect(controlsPollRosterHeaders(houseRosterReport([], house))).toEqual({});
-  });
-
-  // #4535 slice 4c: the app takes the forced pick's host from `accounts[0]`, so the accounts must
-  // reach it with no env roster at all — and an empty roster then seeds nothing (above).
-  it("sends the accounts on their own when the env roster is empty", () => {
-    const headers = controlsPollRosterHeaders(houseRosterReport([BOT], []));
-
-    expect(parseControlsPollRoster(headers)).toEqual({ accounts: [BOT], roster: [] });
   });
 
   it.each([
@@ -285,7 +278,7 @@ describe("the house-roster report on the /controls poll", () => {
       "a blank account id",
       { accounts: [""], roster: [{ playbookId: "S1-NVDA", mode: "standard" }] },
     ],
-    ["no accounts", { accounts: [], roster: [{ playbookId: "S1-NVDA", mode: "standard" }] }],
+    ["an empty roster", { accounts: [BOT], roster: [] }],
   ])("reads %s as not reported, never as a partial roster", (_label, payload) => {
     const raw =
       typeof payload === "string"

@@ -30,7 +30,7 @@ import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { type PlaybookFunnelView, readHouseFunnel } from "../autonomous/playbook-funnel.js";
 import {
   buildSubscriptionsSnapshot,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
 } from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent } from "../domain/types.js";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
@@ -131,15 +131,14 @@ const CHECK_WEEK_TTL_MS = 15_000;
  *  last ten sessions, behind a card nobody can tell is a minute old. */
 const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
 
-/** The Playbook Store as the bots receive it on every poll: `subscriptions.v4`, with each
- *  subscription's pointer at a conviction record in the version, and only whether an inline copy
- *  the poll could not move is there, never its words or day (#5482 contract piece 4). */
+/** The Playbook Store as the bots receive it on every poll: `subscriptions.v3`, with each
+ *  subscription's conviction and its pointer at a conviction record in the version. */
 export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
   return buildSubscriptionsSnapshot(
     store.load(),
     at,
     store.loadAllocations(),
-    SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
+    SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
   );
 }
 
@@ -216,10 +215,10 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
-    // v4 (#5482 contract piece 4) fingerprints each subscription's pointer and one bit for an
-    // unmoved inline copy, not its words or day: the bots read pointers only. Sent only once the
-    // bots that read v4 (#5989) were deployed: a bots build that predates it reads v4 as "not
-    // reported" and keeps the roster it had. v1 to v3 stay readable by the bots for a rollback.
+    // v3 adds each subscription's pointer at a conviction record to its version (#5482 slice 2),
+    // on top of v2's conviction (#4469 slice 3c part 3). Sent only once the bots that read v3
+    // (#5511) were deployed: a bots build that predates it reads v3 as "not reported" and keeps
+    // the roster it had. v1 and v2 stay readable by the bots for a rollback.
     subscriptions: () => subscriptionsOnTheWire(subscriptions),
     onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();

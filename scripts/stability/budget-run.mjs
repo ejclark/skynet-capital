@@ -140,8 +140,6 @@ try {
       SKYNET_GOOGLE_CLIENT_SECRET: "stability-fake-secret",
       SKYNET_ALLOWED_EMAILS: OWNER_EMAIL,
       SKYNET_STORE_SECRET: "stability-store-secret-0123456789",
-      // Never a token saved from Settings: this run must not reach GitHub.
-      SKYNET_GITHUB_TOKEN_STORE: "/nonexistent/github-token.json",
       ...Object.fromEntries(
         roster.flatMap((p) => [
           [p.keyVar, `stab-${p.id}`],

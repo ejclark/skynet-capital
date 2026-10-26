@@ -13,7 +13,7 @@ flowchart LR
   S2 -.->|"the run-up<br/>retraces"| G["the gave-back<br/>no twin yet"]
 ```
 
-- **14 acceptance lines, 1 of them known gap** (`it.fails`), turning red the day it is fixed.
+- **14 acceptance lines, 3 of them known gaps** (`it.fails`), each turning red the day it is fixed.
 - **Two engines disagree on one CRWV holding:** guidance says hold, the card says "cut it" (#4952).
 
 <details><summary><strong>How a scenario is written, and the ratchet</strong></summary>

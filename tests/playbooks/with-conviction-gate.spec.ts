@@ -3,39 +3,16 @@ import type { Persona } from "../../src/personas/persona.js";
 import type { PairLedger } from "../../src/playbooks/conviction-check.js";
 import type { Conviction } from "../../src/playbooks/conviction-record.js";
 import { withConvictionGate } from "../../src/playbooks/with-conviction-gate.js";
-import { pairView } from "../../src/subscriptions/pair-conviction.js";
 import { aContext, anOptionIntent, aPortfolio, aSubscription } from "../support/builders.js";
 
 /**
  * #4469 criterion 12 — a failed conviction check stops NEW entries and nothing else. The gate is
  * Pause's rule (`pausedMayPlace`): exits and a covered call pass, every other open is dropped.
- *
- * An owner's own reason and day are a view stated on its one pair (#5482 contract piece 3), and the
- * bots read pointers only (piece 4), so the owner's check here is a pointer at that view.
  */
 
 const CHECK_DAY = "2027-01-29T15:00:00Z";
 const conviction = { reason: "my call on CRWV", checkOn: "2027-01-29" };
-const ownView = (checkOn = conviction.checkOn): Conviction =>
-  pairView({
-    accountId: "sauron",
-    playbookId: "CRWV-WHEEL",
-    conviction: { ...conviction, checkOn },
-    owner: "Sauron",
-    statedOn: "2026-10-16",
-  });
-const OWN = ownView();
-const sub = aSubscription("sauron", "CRWV-WHEEL", { convictionId: OWN.id });
-/** The gate over the owner's own view, with `checkOn` its stated day. */
-const gateOwn = (
-  persona: Persona,
-  deps: Omit<Parameters<typeof withConvictionGate>[1], "convictionOf">,
-  checkOn = conviction.checkOn,
-) =>
-  withConvictionGate(persona, {
-    convictionOf: (id) => (id === OWN.id ? ownView(checkOn) : undefined),
-    ...deps,
-  });
+const sub = aSubscription("sauron", "CRWV-WHEEL", { conviction });
 
 const put = anOptionIntent();
 const coveredCall = anOptionIntent({
@@ -89,32 +66,15 @@ describe("withConvictionGate", () => {
     ).toBe(persona);
   });
 
-  // The contract step's piece 4: an inline copy with no pointer is one the app's poll could not
-  // move onto a view. It gives no check day; the roster runs its pair exits-only.
-  it("never reads an inline conviction with no pointer, and says so once", () => {
-    const log = rstest.fn();
-    const persona = inner([put]);
-    const inline = aSubscription("sauron", "CRWV-WHEEL", { conviction });
-    const gated = withConvictionGate(persona, {
-      subscriptions: [inline],
-      ledgerOf: () => ledger({ realizedPl: -50 }),
-      log,
-    });
-    expect(gated).toBe(persona);
-    expect(log).toHaveBeenCalledTimes(1);
-    expect(log.mock.calls[0]?.[0]).toContain("its conviction is not on a view yet");
-    expect(log.mock.calls[0]?.[0]).toContain("opens nothing new meanwhile");
-  });
-
   it("changes nothing before the check day, and does not read the ledger", () => {
     const ledgerOf = rstest.fn(() => ledger({ realizedPl: -999 }));
-    const gated = gateOwn(inner(), { subscriptions: [sub], ledgerOf });
+    const gated = withConvictionGate(inner(), { subscriptions: [sub], ledgerOf });
     expect(gated.decide(at("2027-01-28T15:00:00Z"), book())).toEqual(all);
     expect(ledgerOf).not.toHaveBeenCalled();
   });
 
   it("changes nothing when the check passes", () => {
-    const gated = gateOwn(inner(), {
+    const gated = withConvictionGate(inner(), {
       subscriptions: [sub],
       ledgerOf: () => ledger({ realizedPl: 230 }),
     });
@@ -123,7 +83,7 @@ describe("withConvictionGate", () => {
 
   it("on a failed check drops the pair's new opens and keeps exits, a covered call and everyone else's orders", () => {
     const log = rstest.fn();
-    const gated = gateOwn(inner(), {
+    const gated = withConvictionGate(inner(), {
       subscriptions: [sub],
       ledgerOf: () => ledger({ realizedPl: -50 }),
       log,
@@ -137,7 +97,7 @@ describe("withConvictionGate", () => {
   });
 
   it("fails on the wheel's retire test even when the book is in profit", () => {
-    const gated = gateOwn(inner([put]), {
+    const gated = withConvictionGate(inner([put]), {
       subscriptions: [sub],
       ledgerOf: () => ledger({ realizedPl: 900, putsClosed: 4, putsAssigned: 2 }),
     });
@@ -146,14 +106,14 @@ describe("withConvictionGate", () => {
 
   it("asks the ledger for the pair's put tag, so only the wheel's sold puts are counted", () => {
     const ledgerOf = rstest.fn(() => ledger());
-    gateOwn(inner(), { subscriptions: [sub], ledgerOf }).decide(at(CHECK_DAY), book());
+    withConvictionGate(inner(), { subscriptions: [sub], ledgerOf }).decide(at(CHECK_DAY), book());
     expect(ledgerOf).toHaveBeenCalledWith("CRWV-WHEEL", "crwv-wheel-put");
   });
 
   it("reads the check once: a book that recovers does not resume the pair until its owner sets a new date", () => {
     let realizedPl = -50;
     const log = rstest.fn();
-    const gated = gateOwn(inner([put]), {
+    const gated = withConvictionGate(inner([put]), {
       subscriptions: [sub],
       ledgerOf: () => ledger({ realizedPl }),
       log,
@@ -165,19 +125,20 @@ describe("withConvictionGate", () => {
   });
 
   it("a new check date is a new reading: the owner re-dating a failed pair resumes it", () => {
-    // Restating the day replaces the view in place: the same id, a new day.
-    const gated = gateOwn(
-      inner([put]),
-      { subscriptions: [sub], ledgerOf: () => ledger({ realizedPl: -50 }) },
-      "2027-04-30",
-    );
+    const redated = aSubscription("sauron", "CRWV-WHEEL", {
+      conviction: { reason: "still my call", checkOn: "2027-04-30" },
+    });
+    const gated = withConvictionGate(inner([put]), {
+      subscriptions: [redated],
+      ledgerOf: () => ledger({ realizedPl: -50 }),
+    });
     expect(gated.decide(at(CHECK_DAY), book())).toEqual([put]);
     expect(gated.decide(at("2027-04-30T15:00:00Z"), book())).toEqual([]);
   });
 
   it("an unread check is not a failed one: with no ledger entries continue, said once", () => {
     const log = rstest.fn();
-    const gated = gateOwn(inner([put]), { subscriptions: [sub], log });
+    const gated = withConvictionGate(inner([put]), { subscriptions: [sub], log });
     expect(gated.decide(at(CHECK_DAY), book())).toEqual([put]);
     expect(gated.decide(at(CHECK_DAY), book())).toEqual([put]);
     expect(log).toHaveBeenCalledTimes(1);
@@ -188,7 +149,7 @@ describe("withConvictionGate", () => {
     const shares = aPortfolio({
       positions: [{ symbol: "CRWV", quantity: 100, avgPrice: 80 }],
     });
-    const gated = gateOwn(inner([put]), {
+    const gated = withConvictionGate(inner([put]), {
       subscriptions: [sub],
       ledgerOf: () => ledger({ realizedPl: 230 }),
       log,
@@ -204,9 +165,9 @@ describe("withConvictionGate", () => {
   it("leaves a disabled subscription's conviction alone, and passes the persona's other seams through", () => {
     const optionUnderlyings = ["CRWV"];
     const persona: Persona = { ...inner(), optionUnderlyings };
-    const paused = aSubscription("sauron", "CRWV-WHEEL", { convictionId: OWN.id, enabled: false });
-    expect(gateOwn(persona, { subscriptions: [paused] })).toBe(persona);
-    const gated = gateOwn(persona, {
+    const paused = aSubscription("sauron", "CRWV-WHEEL", { conviction, enabled: false });
+    expect(withConvictionGate(persona, { subscriptions: [paused] })).toBe(persona);
+    const gated = withConvictionGate(persona, {
       subscriptions: [sub],
       ledgerOf: () => ledger(),
     });
@@ -273,16 +234,13 @@ describe("withConvictionGate, with a conviction record", () => {
     expect(gated.decide(at("2027-03-31T15:00:00Z"), book())).toEqual([]);
   });
 
-  it("never reads the subscription's own date, said once, when the record does not steer the pair", () => {
-    // The contract step's piece 2: a pointed pair is checked on its pointer alone. One it cannot
-    // use gives no check day here; the roster runs that pair exits-only (`steeredBy`).
+  it("falls back to the subscription's own date, said once, when the record does not steer the pair", () => {
     const log = rstest.fn();
-    const persona = inner([put]);
     const pointed = aSubscription("sauron", "CRWV-WHEEL", {
       conviction,
       convictionId: "ai-dip-test",
     });
-    const gated = withConvictionGate(persona, {
+    const gated = withConvictionGate(inner([put]), {
       subscriptions: [pointed],
       convictionOf: lookup(["CRWV-LONG-CALL"]),
       log,
@@ -290,21 +248,7 @@ describe("withConvictionGate, with a conviction record", () => {
     });
     expect(log).toHaveBeenCalledTimes(1);
     expect(log.mock.calls[0]?.[0]).toContain("does not steer it");
-    expect(log.mock.calls[0]?.[0]).toContain("opens nothing new meanwhile");
-    expect(gated).toBe(persona);
-  });
-
-  it("gates a pointed pair the same with or without its inline copy", () => {
-    const bare = aSubscription("sauron", "CRWV-WHEEL", { convictionId: "ai-dip-test" });
-    for (const subscriptions of [[bare], [{ ...bare, conviction }]]) {
-      const gated = withConvictionGate(inner([put]), {
-        subscriptions,
-        convictionOf: lookup(["CRWV-WHEEL"]),
-        ...failing,
-      });
-      expect(gated.decide(at(CHECK_DAY), book())).toEqual([put]);
-      expect(gated.decide(at("2027-03-31T15:00:00Z"), book())).toEqual([]);
-    }
+    expect(gated.decide(at(CHECK_DAY), book())).toEqual([]);
   });
 
   it("an unknown pointer with no conviction of its own gates nothing", () => {
@@ -457,12 +401,13 @@ describe("withConvictionGate, a record's check across the pairs it steers", () =
     expect(log).toHaveBeenCalledTimes(1);
   });
 
-  it("reads a pair on its owner's own view alone, beside a record's group", () => {
-    const own = aSubscription("sauron", "CRWV-WHEEL", { convictionId: OWN.id });
-    const gated = gate([own, longCall], undefined, {
-      ...pairs({ "CRWV-WHEEL": -50, "CRWV-LONG-CALL": 500 }),
-      convictionOf: (id: string) => (id === OWN.id ? OWN : convictionOf(id)),
-    });
+  it("reads a subscription on its own conviction alone, beside a record's group", () => {
+    const own = aSubscription("sauron", "CRWV-WHEEL", { conviction });
+    const gated = gate(
+      [own, longCall],
+      undefined,
+      pairs({ "CRWV-WHEEL": -50, "CRWV-LONG-CALL": 500 }),
+    );
     // The wheel's own check fails by itself; the long call's record holds on its own book.
     expect(gated.decide(at(CHECK_DAY), book())).toEqual([callOpen, callClose, shareSell]);
   });

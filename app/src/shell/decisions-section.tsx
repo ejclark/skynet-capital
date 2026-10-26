@@ -7,7 +7,6 @@ import {
   fetchDeskDecisions,
   type RefusedIntent,
 } from "../live/desk";
-import { playbookName, withPairNames } from "../live/playbook-name";
 import { EnvPill, InlineResult } from "../ui";
 import { cycleAnchor } from "./cycle-anchor";
 
@@ -41,7 +40,7 @@ function PlaybookChip({
   if (!outcome.playbook) return null;
   return (
     <span className="chip chip-bot">
-      {playbookName(outcome.playbook)}
+      {outcome.playbook}
       {outcome.playbookMode ? ` · ${outcome.playbookMode}` : ""}
     </span>
   );
@@ -93,7 +92,7 @@ export function OutcomeLine({
       {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
       <ResultWords outcome={outcome} showBroker={showPlaybook} />
-      <span className="cycle-reason">“{withPairNames(outcome.reason)}”</span>
+      <span className="cycle-reason">“{outcome.reason}”</span>
       {outcome.expectation ? (
         <p className="cycle-expectation">
           Expected: {outcome.expectation}
@@ -135,7 +134,7 @@ export function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
       {intent.guardReason ? <span className="cycle-guard">{intent.guardReason}</span> : null}
       {/* a strategy name, not an account kind — its own chip style is open on #5365 */}
       {intent.strategy ? <span className="chip chip-bot">{intent.strategy}</span> : null}
-      <span className="cycle-reason">“{withPairNames(intent.reason)}”</span>
+      <span className="cycle-reason">“{intent.reason}”</span>
       {intent.expectation ? (
         <p className="cycle-expectation">Expected: {intent.expectation}</p>
       ) : null}

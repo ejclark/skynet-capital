@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { type FollowupOutcome, followupRequest, type RecentFiling } from "../live/feedback";
+import { followupRequest, type RecentFiling } from "../live/feedback";
 import { InlineResult } from "../ui";
 import { Toggle } from "./toggle";
 
@@ -87,23 +87,6 @@ function StatusTrack({ steps }: { readonly steps: readonly Step[] }): ReactEleme
   );
 }
 
-/** What a sent follow-up did (#5848): the server restarts the build only when the claim would
- *  take it, and names why when it didn't, so the line never promises a build that isn't coming.
- *  An unknown or missing outcome gets the plain line — the comment posted, nothing more claimed. */
-const SENT = "Sent — it's on your issue.";
-const SENT_LINES: Readonly<Record<FollowupOutcome, string>> = {
-  restarted: "Sent — it's on your issue, and the build starts again with it.",
-  backlog: "Sent — it's on your issue; it builds once it's picked from the queue.",
-  held: "Sent — it's on your issue; the build waits on a person first.",
-  building: "Sent — it's on your issue; it's being built right now.",
-  blocked: "Sent — it's on your issue; the build starts once the issues it waits on close.",
-  closed: "Sent — it's on your issue. This one is closed, so nothing rebuilds from it.",
-  stranded: "Sent — it's on your issue, but the build couldn't be restarted.",
-  unchanged: SENT,
-};
-const sentLine = (outcome: FollowupOutcome | undefined): string =>
-  outcome && Object.hasOwn(SENT_LINES, outcome) ? SENT_LINES[outcome] : SENT;
-
 function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactElement {
   const [open, setOpen] = useState(false);
   const [details, setDetails] = useState("");
@@ -118,7 +101,10 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
       });
       setNote(
         reply.ok
-          ? { ok: true, text: sentLine(reply.outcome) }
+          ? {
+              ok: true,
+              text: "Sent — it lands on your issue and re-triggers the build.",
+            }
           : { ok: false, text: reply.error ?? "Couldn't send that." },
       );
       if (reply.ok) setDetails("");

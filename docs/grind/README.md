@@ -170,7 +170,7 @@ prose ("the target below") rather than trying to template inside the instruction
   (2026-10-03) is why: the four athlete agents ran once between them in 30 days while their gates
   carried real debt, so the dispatch layer is the part that was idle, not the drills. Landing the
   wave as one cycle PR stays the caller's job — a rep opens nothing.
-- [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one doc's dead references
+- [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one dead doc reference
   flagged by `scripts/doc-rot-scan.mjs`.
 - [`instruction-drift.instructions.md`](instruction-drift.instructions.md) — read one instruction
   file changed since the last run (or one skill's files) for what that scan cannot see: two files
@@ -226,7 +226,7 @@ name: triage-comment-bloat
 description: triage one file's narration-only comments flagged by scripts/comment-bloat-scan.mjs
 effort: high                 # low | medium | high | xhigh | max
 isolation: worktree          # worktree | none — `none` is an explicit "this chore needs no checkout"
-model: opus                  # optional; alias only, never a pinned id. Omit to take grind's default.
+model: fable                 # optional; alias only, never a pinned id. Omit to take grind's default.
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 ---
 ```
@@ -243,7 +243,7 @@ node scripts/grind-manifest.mjs --args --items '["src/a.ts","src/b.ts"]' --item-
   "items": ["src/a.ts", "src/b.ts"],
   "itemSource": "comment-bloat-scan.mjs",
   "steps": [
-    { "kind": "instructions", "path": "docs/grind/triage-comment-bloat.instructions.md", "effort": "high", "isolation": true, "model": "opus" },
+    { "kind": "instructions", "path": "docs/grind/triage-comment-bloat.instructions.md", "effort": "high", "isolation": true },
     { "kind": "script", "command": "git ls-remote --exit-code --heads origin {prev.branch}" }
   ]
 }

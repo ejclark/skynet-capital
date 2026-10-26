@@ -6,7 +6,7 @@ import {
   MIGRATION_CHUNK,
   migrateAuditToDecisionDb,
 } from "../../src/autonomous/decision-db-migration.js";
-import type { AuditStore, DecisionRecord } from "../../src/autonomous/decision-record.js";
+import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { JsonlAuditStore } from "../../src/autonomous/jsonl-audit-store.js";
 
 const decision = (over: Partial<DecisionRecord> = {}): DecisionRecord => ({
@@ -73,23 +73,6 @@ describe("migrateAuditToDecisionDb", () => {
 
     expect(count).toBe(MIGRATION_CHUNK + 7);
     expect(db.maxAtAll().sauron).toBe(MIGRATION_CHUNK + 7); // the last chunk landed too
-  });
-
-  it("streams the trail instead of loading it whole — list() is never called", async () => {
-    // By 2026-10-22 list()'s one big array outgrew the bots' 512 MB VM and every boot died of heap
-    // exhaustion; the backfill must hold only what is past the watermark.
-    await audit.record(decision({ at: 1 }));
-    await audit.record(decision({ at: 2 }));
-    const streaming: AuditStore = {
-      record: (entry) => audit.record(entry),
-      list: () => {
-        throw new Error("list() loads the whole trail");
-      },
-      stream: (personaId) => audit.stream(personaId),
-    };
-
-    expect(await migrateAuditToDecisionDb(streaming, db)).toBe(2);
-    expect(db.listByPersona("sauron")).toHaveLength(2);
   });
 
   it("returns 0 on an empty (or never-written) audit trail, writing nothing", async () => {

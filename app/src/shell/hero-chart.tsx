@@ -10,7 +10,7 @@ import {
 } from "../live/equity-curve";
 import { percentTone, signedPercent } from "../ui";
 import { readChartPalette } from "./chart-mount";
-import { alignOverlay, type FlowMarker, type OverlaySeries } from "./hero-chart-data";
+import { alignOverlay, type OverlaySeries } from "./hero-chart-data";
 import { type HighLine, mountHeroChart } from "./hero-chart-mount";
 
 /**
@@ -68,34 +68,6 @@ export function HeroChartLegend({
   );
 }
 
-/** The curve's recorded capital flows, named under the chart (#4563): the canvas marker only says
- *  where; this says how much, that it is not a gain, and that we inferred it. Exported for its spec. */
-export function HeroChartFlows({
-  flows,
-}: {
-  readonly flows: readonly FlowMarker[] | undefined;
-}): ReactElement | null {
-  if (!flows || flows.length === 0) return null;
-  return (
-    <div className="hero-chart-flows">
-      <ul>
-        {flows.map((flow) => (
-          <li key={`${String(flow.time)}:${flow.label}`}>
-            <span className="hero-chart-flow-glyph" aria-hidden="true">
-              ■
-            </span>
-            {flow.label}
-          </li>
-        ))}
-      </ul>
-      <p className="note">
-        A balance change with no trade to explain it — inferred from our own records, not reported
-        by the broker.
-      </p>
-    </div>
-  );
-}
-
 /** Mounted only once there's an overlay to draw — torn down and remounted fresh whenever the
  *  aligned series changes (a new range fetched both series anew). */
 function HeroChartCanvas({
@@ -118,7 +90,6 @@ function HeroChartCanvas({
     <>
       <HeroChartLegend overlay={overlay} high={high} />
       <div ref={container} className="hero-chart-canvas" />
-      <HeroChartFlows flows={overlay.flows} />
     </>
   );
 }
@@ -168,7 +139,7 @@ export function HeroChart({
     body = <p className="note">No net worth history for this range yet.</p>;
   } else {
     const bars = benchmark.data && "bars" in benchmark.data ? benchmark.data.bars : [];
-    const overlay = alignOverlay(curve.data.points, bars, curve.data.flows);
+    const overlay = alignOverlay(curve.data.points, bars);
     body = <HeroChartCanvas overlay={overlay} high={high} />;
   }
 

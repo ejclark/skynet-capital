@@ -5,7 +5,6 @@ import {
   streamAnthropicMessage,
   textDelta,
 } from "./companion-anthropic-stream.js";
-import type { ChatConvictionDraft, CompanionConvictions } from "./companion-convictions.js";
 import {
   COMPANION_MAX_MESSAGE_CHARS,
   effortFor,
@@ -56,10 +55,6 @@ export interface CompanionTurnInput {
   /** The member's live context for this turn (`companion-context.ts`) — rides in the volatile
    *  half of the system prompt, after the cache breakpoint, never in the cached half. */
   readonly context?: string;
-  /** The session's own conviction reads (#5482 criterion 9), bound by the route for this turn —
-   *  they need the session, which the boot-time tools don't have. Absent: the two conviction
-   *  tools answer "not available". */
-  readonly convictions?: CompanionConvictions;
 }
 
 export interface CompanionHandlers {
@@ -69,9 +64,6 @@ export interface CompanionHandlers {
   /** The model drafted a filing from the conversation (`draft_feedback`) — the rail holds it and
    *  only the member's reply sends it. Optional: a caller with no rail just drops the draft. */
   readonly onHandoff?: (draft: FeedbackDraft) => void;
-  /** She drafted a member's view (`draft_conviction`) — the rail shows its card, and only the
-   *  member's tap there saves it and hands it over. Optional, like `onHandoff`. */
-  readonly onConvictionDraft?: (drafted: ChatConvictionDraft) => void;
   /** Asked before every billed model call; false means the member's budget for this window is
    *  spent — the turn stops looking things up and answers with what it already has, or reports
    *  the throttle honestly when it has nothing. Optional: no hook, no budget. */
@@ -215,10 +207,7 @@ export function createCompanionChat(
       model,
       volatile,
       initial,
-      {
-        ...(config.tools ?? { snapshotFor: () => undefined }),
-        ...(input.convictions ? { convictions: input.convictions } : {}),
-      },
+      config.tools ?? { snapshotFor: () => undefined },
       canUseDesk ? input.participantId : undefined,
       handlers,
     );

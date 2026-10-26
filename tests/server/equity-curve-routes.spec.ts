@@ -172,60 +172,6 @@ describe("serveEquityCurveJson", () => {
     expect(answered(out).points).toEqual([]);
   });
 
-  it("annotates a recorded capital flow inside the curve's span, by the account's own id (#4563)", async () => {
-    const asked: string[] = [];
-    const { res, out } = fakeRes();
-    await serveEquityCurveJson(
-      res,
-      "human-eric",
-      "/api/accounts/human-eric/equity-curve?range=7D",
-      configWith({
-        tradingClientFor: () => fakeClient({}),
-        capitalFlows: {
-          flowsFor: (id: string) => {
-            asked.push(id);
-            return [
-              {
-                participantId: id,
-                from: "1970-01-01T00:00:01.000Z",
-                at: "1970-01-01T00:00:01.500Z",
-                amount: 5_000,
-                direction: "added",
-                unexplainedCash: 5_000,
-                basis: "inferred",
-              },
-            ];
-          },
-          subscribe: () => () => undefined,
-        },
-      }),
-      session,
-    );
-    expect(asked).toEqual(["human-eric"]);
-    expect(answered(out).flows).toEqual([
-      {
-        t: "1970-01-01T00:00:01.500Z",
-        direction: "added",
-        label: "Capital added $5,000 on Dec 31 — not a gain",
-      },
-    ]);
-  });
-
-  it("carries no flows key at all when the account has none — the curve reads as today", async () => {
-    const { res, out } = fakeRes();
-    await serveEquityCurveJson(
-      res,
-      "human-eric",
-      "/api/accounts/human-eric/equity-curve?range=7D",
-      configWith({
-        tradingClientFor: () => fakeClient({}),
-        capitalFlows: { flowsFor: () => [], subscribe: () => () => undefined },
-      }),
-      session,
-    );
-    expect("flows" in answered(out)).toBe(false);
-  });
-
   it("skips the ownership check entirely when no auth is configured (offline mode)", async () => {
     const periodCalls: string[] = [];
     const { res, out } = fakeRes();

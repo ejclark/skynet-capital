@@ -95,7 +95,7 @@ export function PositionSize({ p }: { readonly p: DeskPosition }): ReactElement 
 }
 
 /** "θ earns $11/day · Δ +$40 per $1", the figures in the text colour. */
-export function GreeksLine({ theta, delta, estimated }: GreeksParts): ReactElement {
+export function GreeksLine({ theta, delta }: GreeksParts): ReactElement {
   return (
     <span className="pos-card-greeks">
       <span className="visually-hidden">, </span>
@@ -116,21 +116,6 @@ export function GreeksLine({ theta, delta, estimated }: GreeksParts): ReactEleme
         <span className="pos-greek">
           Δ <span className="pos-card-greek-fig num">{delta}</span> per $1
         </span>
-      ) : null}
-      {/* Our model's figures, not the feed's (#5960): said in a word, never by colour alone. */}
-      {estimated ? (
-        <>
-          <span className="pos-greek-sep" aria-hidden="true">
-            {" · "}
-          </span>
-          <span
-            className="pos-greek"
-            title="Estimated by our pricing model: the feed didn't quote this contract"
-          >
-            <span aria-hidden="true">est.</span>
-            <span className="visually-hidden">, estimated, not quoted</span>
-          </span>
-        </>
       ) : null}
     </span>
   );

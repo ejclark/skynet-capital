@@ -4,7 +4,7 @@ import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import type { DeskPosition } from "../live/desk";
 import { manageSearch } from "../live/manage-handoff";
 import { withMinus } from "../ui";
-import { greeksParts, type HoldingGreeks } from "./holding-decay";
+import { greeksParts, type HoldingDecay } from "./holding-decay";
 import { positionAnchor } from "./position-anchor";
 import {
   Bracketed,
@@ -54,12 +54,14 @@ function tradeSearch(deskId: string, symbol: string) {
 export function PositionCards({
   positions,
   deskId,
-  greeksBySymbol,
+  decayBySymbol,
+  deltaBySymbol,
   guide,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
-  readonly greeksBySymbol?: ReadonlyMap<string, HoldingGreeks>;
+  readonly decayBySymbol?: ReadonlyMap<string, HoldingDecay>;
+  readonly deltaBySymbol?: ReadonlyMap<string, number>;
   /** Each position's guidance line, drawn under its link in the same card. */
   readonly guide?: (position: DeskPosition) => ReactNode;
 }): ReactElement {
@@ -75,7 +77,9 @@ export function PositionCards({
       </li>
       {positions.map((p) => {
         const day = dayChange(p);
-        const greeks = p.isOption ? greeksParts(greeksBySymbol?.get(p.symbol)) : {};
+        const greeks = p.isOption
+          ? greeksParts(decayBySymbol?.get(p.symbol), deltaBySymbol?.get(p.symbol))
+          : {};
         return (
           <li key={p.symbol} className={guide ? "pos-card-guided" : undefined}>
             <Link

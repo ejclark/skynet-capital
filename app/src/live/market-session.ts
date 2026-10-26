@@ -86,11 +86,6 @@ export function nextSessionAfterToday(now: Date = new Date()): string {
   return tradingDayAfter(easternParts(now).date);
 }
 
-/** The New York calendar day (`YYYY-MM-DD`) an instant falls on — the day the market reads it as. */
-export function marketDayOf(now: Date): string {
-  return easternParts(now).date;
-}
-
 /** Whether `date`'s close (4:00, or 1:00 on an early close) has passed at `now`. */
 export function closeHasPassed(date: string, now: Date = new Date()): boolean {
   const e = easternParts(now);

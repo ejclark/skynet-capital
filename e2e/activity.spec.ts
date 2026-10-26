@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 // design decision 6 in the wider plan.
 test("renders the activity page", async ({ page }) => {
   await page.goto("/app/activity");
+  // exact: true — "Activity" is also the feed section's own switch label.
   await expect(page.getByRole("heading", { name: "Activity", exact: true })).toBeVisible();
 });
 
@@ -13,16 +14,9 @@ test("shows booked P&L as a strip above one feed", async ({ page }) => {
   await page.goto("/app/activity");
   await expect(page.getByRole("heading", { name: "Booked P&L" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Everything, newest first" })).toBeVisible();
+  // The section switch keeps only what is genuinely a different shape of data.
+  await expect(page.getByRole("button", { name: "The Council" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Booked P&L" })).toHaveCount(0);
-});
-
-// #5992 — the weekly Council market call is retired: no tab to page to, and a bookmark on it lands
-// on the feed rather than a blank stage.
-test("shows no Council, and lands a ?section=council bookmark on the feed", async ({ page }) => {
-  await page.goto("/app/activity?section=council");
-  await expect(page.getByRole("heading", { name: "Everything, newest first" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "The Council" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "The Council" })).toHaveCount(0);
 });
 
 // This deployment runs with the feedback lane unwired, so the feed has exactly one kind — and says

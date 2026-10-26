@@ -5,10 +5,9 @@ import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
 import type { DeskPosition, PositionLot } from "../live/desk";
 import { withMinus } from "../ui";
 import { ClosePanel, closeRefusal } from "./close-panel";
-import { CloseReceipt, type SentClose } from "./close-receipt";
 import { buysLabel } from "./glossary";
 import { GlossaryTerm } from "./glossary-term";
-import type { HoldingGreeks } from "./holding-decay";
+import type { HoldingDecay } from "./holding-decay";
 import {
   BestWorstContent,
   EventContent,
@@ -48,15 +47,6 @@ function lotAsPosition(position: DeskPosition, lot: PositionLot): DeskPosition {
 
 const unit = (position: DeskPosition) => (position.isOption ? "contracts" : "shares");
 
-/** A buy's close button, in words that say what the order does (#5959). The ledger pairs a sell
- *  with the oldest buy first (`round-trips.ts`, FIFO) and the order names no buy, so only the
- *  oldest buy's sell closes that buy; any other's comes out of older buys first, and says so. */
-function buyCloseLabel(position: DeskPosition, lot: PositionLot, index: number): string {
-  return index === 0
-    ? "Close this buy"
-    : `Sell ${lot.quantity} ${unit(position)} (oldest buys first)`;
-}
-
 /** The buys that make up the position: when, how many at what, worth now, P/L since. Each closes
  *  as a sell of its own size, so the row's close refusal holds for every buy (#5091): under a short
  *  stock, "Close this buy" would add to the short — off, described by the row's own reason. */
@@ -65,17 +55,12 @@ function Buys({
   deskId,
   canTrade,
   refusedWhyId,
-  onClosing,
-  onClosed,
 }: {
   readonly position: DeskPosition;
   readonly deskId: string;
   readonly canTrade: boolean;
   /** When the row's Close is off: the id of its visible reason, which every buy's Close cites. */
   readonly refusedWhyId?: string;
-  /** A buy's close opened — the next action, which clears the last receipt. */
-  readonly onClosing: () => void;
-  readonly onClosed: (sent: SentClose) => void;
 }): ReactElement | null {
   const [closing, setClosing] = useState<string | undefined>(undefined);
   const rollWhyId = useId();
@@ -86,7 +71,7 @@ function Buys({
     <section className="pos-buys" aria-label={`${buysLabel(lots.length)} for ${position.display}`}>
       <h4 className="pos-open-title">{buysLabel(lots.length)}</h4>
       <ul className="pos-buys-list">
-        {lots.map((lot, index) => (
+        {lots.map((lot) => (
           <li key={lot.lotId} className="pos-buy">
             <span className="pos-buy-when">{lot.openedAt}</span>
             <span className="pos-buy-size num">
@@ -112,12 +97,9 @@ function Buys({
                     type="button"
                     className="btn mc-btn close-btn"
                     aria-expanded={closing === lot.lotId}
-                    onClick={() => {
-                      onClosing();
-                      setClosing(closing === lot.lotId ? undefined : lot.lotId);
-                    }}
+                    onClick={() => setClosing(closing === lot.lotId ? undefined : lot.lotId)}
                   >
-                    {buyCloseLabel(position, lot, index)}
+                    Close this buy
                   </button>
                 )}
                 {rolls ? (
@@ -137,12 +119,7 @@ function Buys({
                 <ClosePanel
                   deskId={deskId}
                   position={lotAsPosition(position, lot)}
-                  buys={lots}
-                  sellsOldestFirst={index > 0}
-                  onDone={(sent) => {
-                    setClosing(undefined);
-                    onClosed(sent);
-                  }}
+                  onDone={() => setClosing(undefined)}
                 />
               </div>
             ) : null}
@@ -163,18 +140,17 @@ function Buys({
 export function PositionRowOpen({
   position,
   deskId,
-  greeks,
+  decay,
+  delta,
   canTrade,
 }: {
   readonly position: DeskPosition;
   readonly deskId: string;
-  readonly greeks?: HoldingGreeks;
+  readonly decay?: HoldingDecay;
+  readonly delta?: number;
   readonly canTrade: boolean;
 }): ReactElement {
   const [closeOpen, setCloseOpen] = useState(false);
-  // The last close sent from this row (#5959) — kept here, not in the panel, so it outlives the
-  // panel and a buy the sell emptied; cleared by Dismiss or the next close opened.
-  const [receipt, setReceipt] = useState<SentClose | undefined>(undefined);
   const whyId = useId();
   const refusal = closeRefusal(position);
   const many = (position.lots?.length ?? 0) > 0;
@@ -185,7 +161,7 @@ export function PositionRowOpen({
         <div className="pos-more-greeks">
           <dt>θ · Δ</dt>
           <dd>
-            <GreeksContent position={position} greeks={greeks} />
+            <GreeksContent position={position} decay={decay} delta={delta} />
           </dd>
         </div>
         <div className="pos-more-model">
@@ -226,17 +202,7 @@ export function PositionRowOpen({
         deskId={deskId}
         canTrade={canTrade}
         {...(refusal ? { refusedWhyId: whyId } : {})}
-        onClosing={() => setReceipt(undefined)}
-        onClosed={setReceipt}
       />
-      {receipt ? (
-        <CloseReceipt
-          key={receipt.orderId}
-          deskId={deskId}
-          sent={receipt}
-          onDismiss={() => setReceipt(undefined)}
-        />
-      ) : null}
       <div className="pos-open-acts">
         {/* Shares only: the guidance is about what to do with a stock you hold (#3729 step 4). The
             link carries the symbol and account, never the stake. */}
@@ -258,10 +224,7 @@ export function PositionRowOpen({
             type="button"
             className="btn mc-btn close-btn"
             aria-expanded={closeOpen}
-            onClick={() => {
-              setReceipt(undefined);
-              setCloseOpen(!closeOpen);
-            }}
+            onClick={() => setCloseOpen(!closeOpen)}
           >
             {many ? "Close all" : "Close"}
           </button>
@@ -275,15 +238,7 @@ export function PositionRowOpen({
         </p>
       ) : null}
       {canTrade && closeOpen && !refusal ? (
-        <ClosePanel
-          deskId={deskId}
-          position={position}
-          {...(position.lots ? { buys: position.lots } : {})}
-          onDone={(sent) => {
-            setCloseOpen(false);
-            setReceipt(sent);
-          }}
-        />
+        <ClosePanel deskId={deskId} position={position} onDone={() => setCloseOpen(false)} />
       ) : null}
     </div>
   );

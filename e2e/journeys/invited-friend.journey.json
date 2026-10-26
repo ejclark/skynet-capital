@@ -156,8 +156,7 @@
           "expect": [
             { "role": "heading", "name": "Playbooks", "exact": true },
             { "role": "columnheader", "name": "Playbook", "absent": true },
-            { "text": "S1-NVDA", "absent": true },
-            { "text": "the pre-print run-up on NVDA", "absent": true }
+            { "text": "S1-NVDA", "absent": true }
           ],
           "judge": "can this reader tell the bot is alive without learning its playbooks?"
         }

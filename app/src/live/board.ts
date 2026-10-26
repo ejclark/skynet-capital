@@ -29,13 +29,6 @@ export const parseBoardMetric = (raw: unknown): BoardMetric =>
  *  sorts below every real one, reads "—", and never takes part in a gap. */
 export const isUnranked = (row: { readonly sortValue: number }): boolean => row.sortValue <= -1e8;
 
-/** A recorded capital flow's mark on a row (#4563) — mirrors the server's `FlowMark`. */
-export interface BoardFlow {
-  readonly direction: "added" | "removed";
-  readonly text: string;
-  readonly title: string;
-}
-
 export interface BoardRow {
   readonly key: string;
   readonly name: string;
@@ -44,8 +37,6 @@ export interface BoardRow {
   readonly tone: FieldTone;
   readonly bar: number;
   readonly sortValue: number;
-  /** Present only on a row with a recorded paper-balance top-up or reset. */
-  readonly flow?: BoardFlow;
 }
 
 export interface BoardBlock {

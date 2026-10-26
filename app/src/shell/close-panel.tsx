@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
-import type { DeskPosition, PositionLot } from "../live/desk";
+import type { DeskPosition } from "../live/desk";
 import { type OptionDraft, type OptionPreview, reviewOption, submitOption } from "../live/options";
 import { held, parseQuantity } from "../live/quantity";
 import {
@@ -12,7 +12,6 @@ import {
   type TicketResult,
 } from "../live/ticket";
 import { InlineResult } from "../ui";
-import { fifoLine, refreshAfterClose, type SentClose } from "./close-receipt";
 import { plural } from "./position-row-spec";
 
 /* Moved from blotter-row.tsx (#5071), when a row's Close moved into its opened row. */
@@ -68,74 +67,23 @@ type CloseState =
   | { readonly step: "done"; readonly result: TicketResult }
   | { readonly step: "error"; readonly message: string };
 
-/** The accepted order as the row's receipt reads it: the reviewed count and estimate, and which
- *  way it went — a sell, or a written option's buy to close. */
-function sentClose(
-  position: DeskPosition,
-  result: { readonly orderId: string; readonly status: string },
-  preview: TicketPreview | OptionPreview,
-  count: number,
-): SentClose {
-  return {
-    orderId: result.orderId,
-    status: result.status,
-    symbol: position.symbol,
-    display: position.display,
-    side: "positionIntent" in preview ? preview.side : preview.action,
-    count,
-    ...(preview.estNotional !== undefined ? { estNotional: preview.estNotional } : {}),
-  };
-}
-
-/** The button that reviews a close. A buy that is not the oldest sells — it closes nothing of its
- *  own (#5959) — so it never says "Close". */
-function reviewLabel(sellsOldestFirst: boolean, count: number, isFull: boolean): string {
-  if (sellsOldestFirst) return `Sell ${count}`;
-  return isFull ? "Close all" : `Close ${count}`;
-}
-
-/** Said before Confirm: the buys a sell of the reviewed count comes out of, oldest first (#5959).
- *  Buys are long lots only (`desk-json-view.ts` lists none under a short), so this close sells. */
-function FifoNote({
-  buys,
-  count,
-  unit,
-}: {
-  readonly buys: readonly PositionLot[] | undefined;
-  readonly count: number;
-  readonly unit: string;
-}): ReactElement | null {
-  const line = fifoLine(buys, count, unit);
-  return line ? <span className="tkt-close-note close-panel-fifo">{line}</span> : null;
-}
-
 /**
  * The inline close panel — qty input → review → confirm, same review-then-confirm discipline as
  * every order on this desk. Options close via `reviewOption`/`submitOption` (direction resolved
  * server-side, and always the count named, so one buy of a larger position never reads as "close
  * everything held"); stocks close via `reviewTicket`/`submitTicket` with `action: "sell"`, and a
  * short stock not at all (`closeRefusal`). The confirm step says the side and the count the
- * server previewed and, on a many-buy position, which buys the sell comes out of (#5959: the
- * ledger pairs a sell with the oldest buy first). Once the order is accepted, every read of the
- * desk's positions is invalidated and `onDone` hands the sent order to the host, whose receipt
- * (`close-receipt.tsx`) outlives this panel.
+ * server previewed. On a successful fill, the desk + activity queries are invalidated so positions
+ * and the ledger refresh without a manual page reload.
  */
 export function ClosePanel({
   deskId,
   position,
-  buys,
-  sellsOldestFirst = false,
   onDone,
 }: {
   readonly deskId: string;
   readonly position: DeskPosition;
-  /** The whole position's buys, oldest first — the confirm step names the ones a sell shrinks. */
-  readonly buys?: readonly PositionLot[];
-  /** One buy that is not the oldest: a sell of its size comes out of older buys first, so the
-   *  button says "Sell", never "Close", and the confirm step says which buys shrink. */
-  readonly sellsOldestFirst?: boolean;
-  /** The order, once accepted — the host's receipt reads it after this panel is gone. */
-  readonly onDone: (sent: SentClose) => void;
+  readonly onDone: () => void;
 }): ReactElement {
   const queryClient = useQueryClient();
   const whyId = useId();
@@ -148,6 +96,12 @@ export function ClosePanel({
   const typed = parseQuantity(qty);
   const closeQty = Math.min(Number.isFinite(typed) ? typed : 0, fullQty);
   const isFull = closeQty >= fullQty;
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["desk", deskId] });
+    void queryClient.invalidateQueries({ queryKey: ["desk-activity", deskId] });
+    void queryClient.invalidateQueries({ queryKey: ["accounts-networth"] });
+  };
 
   // One draft for both steps, so Confirm sends exactly what was reviewed: the count is fixed at
   // Review and carried in the reviewed state, because the desk can refetch in between (window
@@ -180,7 +134,7 @@ export function ClosePanel({
     }
   };
 
-  const confirm = async (count: number, preview: TicketPreview | OptionPreview) => {
+  const confirm = async (count: number) => {
     setState({ step: "submitting" });
     try {
       const result = position.isOption
@@ -188,8 +142,8 @@ export function ClosePanel({
         : await submitTicket(ticketDraft(count));
       setState({ step: "done", result });
       if (result.ok) {
-        refreshAfterClose(queryClient, deskId);
-        onDone(sentClose(position, result, preview, count));
+        refresh();
+        onDone();
       }
     } catch (error) {
       setState({ step: "error", message: String(error) });
@@ -238,7 +192,7 @@ export function ClosePanel({
             disabled={closeQty < 1 || closeQty > fullQty}
             onClick={() => void review()}
           >
-            {reviewLabel(sellsOldestFirst, closeQty, isFull)}
+            {isFull ? "Close all" : `Close ${closeQty}`}
           </button>
         </div>
       ) : null}
@@ -253,11 +207,10 @@ export function ClosePanel({
                   ? ` · est $${state.preview.estNotional.toLocaleString("en-US")}`
                   : ""}
               </span>
-              <FifoNote buys={buys} count={state.count} unit={qtyUnit(position, state.count)} />
               <button
                 type="button"
                 className="btn btn-primary mc-btn"
-                onClick={() => void confirm(state.count, state.preview)}
+                onClick={() => void confirm(state.count)}
               >
                 Confirm
               </button>

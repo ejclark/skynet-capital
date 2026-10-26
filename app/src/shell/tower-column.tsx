@@ -10,8 +10,8 @@ import { TowerSlot } from "./vantage";
  * (`frame.tsx`) is two columns on every page but Settings: the stage, and this column. The column
  * holds the art box the shell's one tower frame is laid over (`vantage.tsx` — the same frame on
  * every page, so moving between pages never reloads the tower), then whatever the page stands under
- * it: the league on the Profile page (`profile-tower.tsx`), the account's league on its own page,
- * nothing elsewhere.
+ * it: the league and the member's council line on the Profile page (`profile-tower.tsx`), the
+ * account's league on its own page, nothing elsewhere.
  *
  * WHY THE FRAME AND NOT A PAGE: constant geometry (`frame.tsx`; Eric, 2026-08-28: "content shift
  * greatly degrades user experience") — a column on some pages only would move the stage's edge as

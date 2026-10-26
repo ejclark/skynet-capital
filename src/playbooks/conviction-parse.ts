@@ -157,12 +157,7 @@ export function parseConvictionDraft(
   };
 }
 
-/**
- * A whole record as the member store keeps it: the draft plus id, owner, the day it was stated, and
- * its scope — which only the server sets, so it is read here and never from a draft. A scope this
- * build does not know makes the record unreadable: read as an ordinary view, it would be judged by
- * rules its writer did not mean, and a pointer at it runs its pair exits-only until the bots learn it.
- */
+/** A whole record as the member store keeps it: the draft plus id, owner and the day it was stated. */
 export function parseStoredConviction(raw: unknown): Conviction | undefined {
   if (!isRecord(raw)) return undefined;
   const draft = parseConvictionDraft(raw, MAX_TEXT + CLAIM_LABEL_ROOM);
@@ -170,6 +165,5 @@ export function parseStoredConviction(raw: unknown): Conviction | undefined {
   const owner = text(raw.owner, 80);
   const statedOn = day(raw.statedOn);
   if (!(draft && id && owner && statedOn)) return undefined;
-  if (raw.scope !== undefined && raw.scope !== "pair") return undefined;
-  return { id, owner, statedOn, ...draft, ...(raw.scope === "pair" ? { scope: "pair" } : {}) };
+  return { id, owner, statedOn, ...draft };
 }

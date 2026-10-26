@@ -287,7 +287,6 @@ front end. The existence risk its sibling flagged is retired for this date and r
 | 2026-10-02 | D-14 | **Dispatched early by a cadence band transition**: daysUntil crossed 38→14, `low:15+` → `low:0+` under `assessment-cadence.json` (the interval tightens 30d→7d from here; the transition itself is not new information). **The dress-rehearsal scored, split exactly as this ledger's own Leg 4 drift finding set up.** `tic-monthly-2026-09-16`'s close-out (2026-09-22) scored July data: `FT-tic-monthly-2026-09-16-1` **PASSED** — July's valuation change printed **−$101.56bn** against the model's **−$95.1bn** point (0.34σ, inside ±1σ) — the model this ledger's August call leans on held its own out-of-sample test. `FT-…-2` **FAILED**: July LT net purchases flipped **negative (−$3.56bn)** for the first time in this series, tripping kill switch 2 and breaking the "headline falls, net purchases stay positive" pattern that held 9 of the prior 14 months — a genuine complication for Leg 5's structural read, recorded there, not edited here. **Macro since 09-08 — the biggest stretch in this calendar's life so far.** The Fed **hiked 25bp to 3.75–4.00%** on 09-16, unanimous 12–0, its first hike in three years, and the September SEP median jumped to **4.1%** from June's 3.8 (`fomc-2026-09-16` close-out). August CPI printed hot (**+0.4% headline / +0.3% core** m/m, `cpi-2026-09-11` close-out) and August jobs beat sharply (**+162k** vs +55k consensus, prior revisions flipped net positive) — the pair that repriced the hike from a coin flip to a near-lock ahead of the meeting. None of this event's own kill switches fired (they key on the August TIC print and the 10-19 reaction, not the FOMC itself), but the regime behind every number in this document shifted from a cutting-cycle prior to a hiking one. **The curve sold off broadly as a result** — Treasury's daily par yield curve (fetched direct today, HTTP 200): 10Y **4.78% (09-04) → 5.24% (10-01) → 5.28% (10-02)**, 30Y **5.24% → 5.61% → 5.63%**, 2Y **4.37% → 4.78% → 4.83%**, a **+46 to +50bp** move on the 10-year in four weeks. This postdates August's own month-end reading (the **4.75%→4.75%, Δ=0** that FT-1/FT-2 are keyed on), so it touches no registered band, but it sets up September as the mirror-image month — a large positive Δ10Y where August had none — the live test of the model's *slope* term rather than its intercept, due on `tic-monthly-2026-11-18`. **VIX regime:** 14.53 (09-04) → **16.39** (10-01 close, CBOE `VIX_History.csv` primary, fetched direct), **+1.86pts** — under the 3pt material threshold, no regime call. **Geopolitical/policy:** unchanged — PL 119-103 still funds through 2026-12-11, no new lapse risk, the existence-risk retirement for 10-16 stands. **Corridor:** **41** tracked ids within ±5 days (up from 21 at the last pulse, as near-term coverage filled in), two confirmed high-impact — `cpi-2026-10-14`, `retail-sales-2026-10-15` — both already tracked at the last pulse; no new strong adjacent. **Peer prints:** n/a (`symbols: []`). **Blocked:** none — both the Treasury par-curve CSV and CBOE's VIX history fetched direct, HTTP 200. No new dated adjacency found outside the existing calendar; nothing proposed this pulse. | — (stand-aside holds; the FOMC hike changes the regime narrative, not this `low`-tier, `symbols: []` print's tradeability) | 2026-10-09 (`low:0+`, every 7d) |
 | 2026-10-09 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 15.4 (-1.0pt since last), band unchanged (low:0+), 44 adjacent event(s) tracked, new in corridor since last pulse: `meta-nm-privacy-penalty-ruling-2026-10-20`, `opec-momr-2026-10-13`, `warsh-imf-fireside-2026-10-15` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-16 |
 | 2026-10-16 | D-0 | **Pre-release pulse** — run ~15:00 ET, an hour before the 16:00 release; `ticdata.treasury.gov/Publish/slt_table1.txt` (direct, HTTP 200) still tops out at reference month 2026-07, so **August is not published and all four FTs stay `_open_` for close-out**. **Date holds:** Treasury's release-dates page re-fetched direct (HTTP 200) still reads Oct `16` / `30 - final`, no revision notice; PL 119-103 still funds through 2026-12-11. **Macro since 10-09:** CPI 10-14 hot (headline +0.6% m/m, 3.7% y/y; core +0.3%/2.6%, press-grade via `opex-2026-10-16`), Retail Sales 10-15 +0.8% (Census primary, gasoline-led), PPI 10-15 +1.3% (BLS release text, largest since 2022-03). **Rates:** par curve direct — 10Y **5.24% (10-09) → 5.10% (10-15)**, 30Y 5.60 → 5.43, 2Y 4.80 → 4.77: the long end rallied *through* hot prints. FT-3's 10-19 baseline is the 10-16 close, not yet printed. **VIX** 16.46 (10-15 close, CBOE direct) vs 15.41 last ref (+1.05) — under 3pt. **Corridor:** 45 ids within ±5d, strong adjacents still only CPI and Retail Sales, both printed. **Beyond the August data:** none of this touches the Δ=0 intercept test. **Proposed (1 file):** `tic-shca-annual-final-2026-10-30` (estimate, low; the page's other 'final' column, end-Dec-2025 holdings of foreign securities; absent from the calendar per `--on-date`). **Blocked:** none. | — (stand-aside holds on every horizon; kill switches 1–4 unscored until the print) | 2026-10-19 (close-out due; FT-3 scores on 10-19) |
-| 2026-10-22 | D+6 | **Close-out** (last day of `closeOutWithinDays: 6`). August data **published 2026-10-16 as scheduled** (Treasury sb0662, direct; next release 2026-11-18). Scored from re-fetched Treasury tables, not memory: **FT-1 PASS** (valchg +$10.2bn = +0.131%, in band), **FT-2 KILL** (+0.131% ≥ +0.081%; the drift was not supported, by 0.05pp ≈ 0.2σ), **FT-3 PASS** (10Y 5.09 → 5.15 = +6bp on 10-19; mixed read, 10-16 was a sell-off day), **FT-4 PASS** (official bills −24.1% y/y vs coupons −1.8%). Surprise the stance missed: LT Treasury net purchases **+$108.9bn**, 4th-largest of 43 months, after July's −$3.6bn. **Adjacency:** VIX 10-16 close 19.99 (from 16.46, intraday 22.31; no dated driver, per `opex-2026-10-16`), 16.68 on 10-21; 10Y 5.09% (10-16) → 5.13% (10-21); no tracked strong adjacent new. **Proposed:** nothing — no new dated adjacency. **Blocked:** none. | — (stand-aside held; FT-2 killed, see Outcome) | — (closed; no further pulses) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -298,69 +297,6 @@ every row; a dated adjacent event found gets proposed as a new
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
 
-## Outcome
-
-**Close-out (2026-10-22, D+6 — the last day inside `closeOutWithinDays: 6`).** Macro-print mode runs no
-`earnings-cycle` / `intraday-edges` instrument (`symbols: []`); the cache bust touched nothing this event
-reads. "Re-run data" here means re-fetching every primary today (HTTP 200): Treasury's `slt_table1.txt`,
-`slt_table3.txt`, `slt_table5.txt`, press release **sb0662** (dated 2026-10-16, the scheduled day), and the
-daily par yield curve CSV. Stand-aside cost nothing and was never tradeable (`symbols: []`, `low` tier).
-
-**Verdict: the model's intercept held, its drift story did not, and the structural read gained a bill-line
-confirmation.** Three of four forward tests pass; one is a kill.
-
-### What printed for August 2026 (Table 3, Grand Total)
-
-| Line | Jul-2026 | Aug-2026 | Δ |
-|---|---|---|---|
-| Total foreign UST holdings (LT+ST) | $9,248.4bn | $9,331.7bn | +$83.3bn |
-| LT UST holdings | $7,783.3bn | $7,914.3bn | +$131.1bn |
-| LT UST net purchases | −$3.56bn | **+$108.9bn** | flips back, 4th-largest of 43 months |
-| LT UST valuation change | −$101.56bn | **+$10.2bn** | |
-| Foreign official UST holdings | $3,773.1bn | $3,755.6bn | −$17.5bn |
-| Official share of total | 40.80% | 40.25% | −0.55pp |
-
-Holdings identity closes: +$131.1bn change − $108.9bn net purchases − $10.2bn valuation = **+$11.95bn**
-residual, inside the logged sd of $26.0bn. The press release's headline: net foreign long-term purchases
-**$300.7bn** (private $257.8bn, official $42.9bn), foreign T-bill holdings **−$47.8bn**.
-
-### Scoring
-
-| FT | Verdict | Actual vs registered |
-|---|---|---|
-| FT-…-10-16-1 | **PASS** | valchg **+0.131%** of the $7,783.3bn July base, inside −0.28%/+0.34% and far inside the ±0.60% retirement line; +$10.2bn, under $30bn |
-| FT-…-10-16-2 | **KILL** | +0.131% is **at or above +0.081%** — kill switch 2 fires. Miss is 0.05pp, ~0.2σ of the 0.25pp residual sd |
-| FT-…-10-16-3 | **PASS** | 10Y 5.09% → 5.15% on 10-19 = **+6bp**, under 10bp |
-| FT-…-10-16-4 | **PASS** | official bills −24.1% y/y ($312.2bn vs $411.6bn) vs coupons −1.8% ($3,443.4bn vs $3,508.2bn); bills below $410bn |
-
-**FT-2 and the drift.** The trailing-twelve-month residual average of −0.215pp described the past correctly
-and predicted August poorly: the month that removed the slope term printed a **positive** residual
-(+0.05pp against the full-sample intercept). That is one month. It does not rescue the full-sample intercept
-either — a +0.05pp miss is inside the noise in both directions — so the honest reading is that the
-intercept is not resolved by a single observation, and the sibling's debiasing warning (July near −$112bn
-against a −$101.6bn print) was directionally right for July and wrong for August. Moved to the sweep doc's
-kill list as a narrow entry.
-
-**FT-3 is a mixed read, not a clean one.** 2026-10-19 had no Fed decision, as registered, but the
-10-16 session before it was a sell-off (SPX −1.09%, VIX 16.46 → 19.99, no dated driver found) and the
-release printed at 16:00 into the close. +6bp is inside the bar and says nothing about TIC specifically.
-
-**What the stance missed.** The ledger called August "cleaner" on the mark but not on flow. Flow was the
-story: LT Treasury net purchases **+$108.9bn** after July's first negative print, with private foreigners
-the larger buyer of long-term securities overall. The official-retreat read (Leg 5) held on the bill
-line (official bills −$42.2bn in August alone) while official coupons rose $24.6bn — consistent with
-"reserve managers running down cash", and a reminder that the headline Treasury total rose +$83.3bn
-despite it.
-
-### Honest limits of this close-out
-
-- **One out-of-sample month per test.** FT-1 and FT-4 passes are observations, not validation; FT-2 is a
-  kill on one observation by a margin well inside the residual sd.
-- **July base used is the table's own** ($7,783.259bn), identical to the figure printed in September, so no
-  denominator restatement moved any score.
-- **Nothing here licenses a trade.** `symbols: []`, no macro-keyed house playbook.
-
-
 **Last assessed:** 2026-10-02
 <!-- probe-ref: {"symbols":{},"vix":16.39,"daysBand":"low:0+","adjacentIds":["imf-world-bank-annual-meetings-2026-10-12","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","bobl-5y-auction-2026-10-13","existing-home-sales-2026-10-13","sp-global-investment-manager-index-2026-10-13","beige-book-2026-10-14","bund-30y-auction-2026-10-14","cpi-2026-10-14","iea-omr-2026-10-14","jgb-5y-auction-2026-10-14","ssa-cola-2027-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","g20-fmcbg-bangkok-2026-10-15","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","uk-monthly-gdp-2026-10-15","import-export-prices-2026-10-16","industrial-production-2026-10-16","opex-2026-10-16","treasury-primary-dealer-agenda-2026-10-16","fomc-blackout-start-2026-10-17","nahb-hmi-2026-10-19","housing-starts-2026-10-20","jgb-20y-auction-2026-10-20","pending-home-sales-2026-10-20","uk-labour-market-2026-10-20","ecb-quiet-period-start-2026-10-21","treasury-20y-bond-2026-10-21","treasury-buyback-tips-1y10y-2026-10-21","uk-cpi-2026-10-21","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->
 
@@ -369,6 +305,3 @@ despite it.
 
 **Last assessed:** 2026-10-16
 <!-- probe-ref: {"symbols":{},"vix":16.46,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","treasury-20y-bond-2026-10-21","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->
-
-**Last assessed:** 2026-10-22
-<!-- probe-ref: {"symbols":{},"vix":16.68,"daysBand":"low:0+","adjacentIds":["apec-fmm-hong-kong-2026-10-20","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","treasury-20y-bond-2026-10-21","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->

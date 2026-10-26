@@ -15,7 +15,7 @@ import {
   windowPlan,
 } from "../live/playbook-rule";
 import { fetchPlaybookStore } from "../live/playbook-store";
-import { greeksBySymbol } from "./holding-decay";
+import { decayBySymbol, deltaBySymbol } from "./holding-decay";
 import { WheelLoop } from "./playbook-rule";
 import { WindowTimeline } from "./playbook-window";
 import { PositionCards } from "./position-cards";
@@ -164,7 +164,8 @@ function Holdings({
         <PositionCards
           positions={ticker.held}
           deskId={deskId}
-          greeksBySymbol={greeksBySymbol(ticker.book.data)}
+          decayBySymbol={decayBySymbol(ticker.book.data)}
+          deltaBySymbol={deltaBySymbol(ticker.book.data)}
         />
       )}
     </section>

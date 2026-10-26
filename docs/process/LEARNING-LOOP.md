@@ -32,7 +32,7 @@ budget is custom, and the per-iteration record is fixed, so effort compares acro
 | 8 | **Cycle gate** | The explicit condition that must hold before scaling from thin slice to the full run. | Custom |
 | 9 | **Kill rule** | The dated observation that ends or pivots the loop — `closed` is not the only way out, and a loop with no way to die runs on as ceremony. | Custom |
 | 10 | **Owning issue** | The GitHub plan issue tracking the loop's state across cycles — one loop, one issue, reused every cycle. Its state block holds the current status. | Fixed |
-| 11 | **Next check** | A date the next result will be visible, kept in the list below, where the push-tick check (`scripts/loop-check.mjs`) posts it once it arrives. | Fixed (location), custom (date) |
+| 11 | **Next check** | A date the next result will be visible, kept in the list below, where the daily digest flags it once it arrives. | Fixed (location), custom (date) |
 | 12 | **Weakness capture** | A caught flaw is banked in `docs/LESSONS.md` via `/retro` — root cause, detection signal, prevention. Never only a chat message. | Fixed |
 | 13 | **Process artifact** | The refined, reusable procedure lives in one versioned file (`docs/grind/*.instructions.md`, or the nearest equivalent for a non-grind domain) that the next cycle edits in place, never a fresh ad hoc prompt re-deriving what's already known. | Fixed |
 | 14 | **Iterations** | The budget (how many cycles of the five moves, as Eric dials it — "commanding x number of iterations is a normalized way to instruct the degree of effort", 2026-10-18) and, per iteration, a row on the owning issue: its cost (tokens · dollars · wall time) and how far it moved the aim's number. Stop early, and say so, when an iteration moves the number less than the loop states as worth an iteration; never spend the rest of a budget because it is there. | Custom (budget), fixed (the record) |
@@ -135,10 +135,9 @@ for someone to remember, overdue work that goes quiet.
 
 ## Loops running now
 
-One row per loop. `node scripts/doctrine-scan.mjs --due` lists any row whose **Next check** date
-has arrived while its **State** is still live (`source: "loop-list"`). The secretary-digest
-Routine's stored prompt does not run that scan (checked 2026-10-19), so the push-tick check below is
-what actually surfaces a due row. Settle a check by doing it, then moving the date forward — or by
+One row per loop. The daily digest (`node scripts/doctrine-scan.mjs --due`, run by the
+secretary-digest Routine) lists any row whose **Next check** date has arrived while its **State**
+is still live, under Needs-you. Settle a check by doing it, then moving the date forward — or by
 ending the loop (`closed` · `killed` · `pivoted` · `replaced`). A cell that isn't a date is never
 flagged, so point it at the loop's own scanner when one already exists rather than double-flag, or
 name the event that triggers the check. A row is never deleted — an ended loop keeps its row with an
@@ -155,8 +154,8 @@ or end the loop. **Check results post to:** #5724
 |---|---|---|---|---|
 | Bot doctrine checks | Does each bot's written doctrine still match its code? | #2287 | running | its dossier ledger (`docs/BOTS-SAURON.md`), flagged by the same scan |
 | Mobile-first bet | Is expanding a curated phone view faster than retrofitting a desktop one? | `CLAUDE.md` → Mobile-first | running | 2026-10-31 — wrong if the next three phone-first surfaces each needed a desktop re-layout PR |
-| Research scorecard | Do high-confidence forward-test calls pass more often than medium ones? (If not, confidence is not telling us anything about size.) `npm run research:scorecard` | #4061 | running | 2026-10-31 — re-run; baseline 2026-09-30: high 16 of 25 decided pass, medium 21 of 33, both 64% |
-| Did the fix hold? | Do gate-type LESSONS preventions recur less than doctrine-only ones? `npm run lessons:held` | #4062 | running | 2026-10-21 — re-run; baseline 2026-09-30: gate or script 6 of 55 recurred (11%), doctrine 0 of 9, ledger-only 2 of 7 (29%) |
+| Research scorecard | Do high-confidence forward-test calls pass more often than medium ones? (If not, confidence is not telling us anything about size.) `npm run research:scorecard` | #4061 | running | 2026-10-31 — re-run and post on #4061; baseline 2026-09-30: high 16 of 25 decided pass, medium 21 of 33, both 64% |
+| Did the fix hold? | Do gate-type LESSONS preventions recur less than doctrine-only ones? `npm run lessons:held` | #4062 | running | 2026-10-21 — re-run and post on #4062; baseline 2026-09-30: gate or script 6 of 55 recurred (11%), doctrine 0 of 9, ledger-only 2 of 7 (29%) |
 | Bottleneck before/after | Does each `bottleneck` fix move the number it named? `npm run bottleneck:baseline` | #4063 | running | 2026-10-21 — re-run; recount #3926 for its After line; baseline 2026-09-30: 1 of 40 carry a Before number (#3926: 63 "Failed again" comments in 7 days, 4 fixes stuck 21–25 days) |
 | Readiness rubric | Do items the rubric flags deliver worse than unflagged ones? | #4056 | running | 2026-10-31 — kill everything but the parked check if flagged and unflagged land within 5pp |
 | Handoffs, not lanes, bind delivery | Is ownership of each handoff the limit, rather than build capacity? | #4056 | running | 2026-10-31 — wrong if ready items wait >24h median for a free lane while the ready queue is non-empty |
@@ -172,6 +171,6 @@ or end the loop. **Check results post to:** #5724
 | Research kill list | Does each killed hypothesis stay dead? (`docs/research/multi-symbol-sweep.md`) | #3955 | running | on each sweep Eric names tickers for — a kill reopens only on its stated condition |
 | Capability adoption | Does a full-adoption pass cost what we predicted? (#3748, #3769 differed 13× in tokens) | #3769 | running | before the next run — write its predicted token cost first |
 | steering-touch-points | Does one page at 8am and 4pm get Eric's decisions answered faster, in ≤45 active minutes a weekday? (`.claude/skills/steer`) | #5056 | running | 2026-10-17 — one week of pages; wrong if by 2026-10-24 pages are submitted on ≥8 of 10 weekdays and a Needs-you decision still waits a median of ≥6 days |
-| Member studies | Do simulated members find what a real member struggled with, without seeing it — and anything structural he missed? (`docs/members/study/README.md`) | #4943 | running | the next fixed-build control at a fresh pin, graded (#4943's state block, due by 2026-10-17); on a pass, scaling to Trade goes to Eric. Eric chose "revise the method first" on 2026-10-10; first round 2026-10-09: recall 12 of 12, 66 structural, fixed-build control failed (`docs/members/study/profile-2026-10/readout.md`); its re-run 2026-10-11 failed 2 of 7 (`docs/members/study/README.md` → Lessons) |
+| Member studies | Do simulated members find what a real member struggled with, without seeing it — and anything structural he missed? (`docs/members/study/README.md`) | #4943 | graded — waiting on Eric | on Eric's answer to the readout (scale to Trade · revise · stop); first round 2026-10-09: recall 12 of 12, 66 structural, fixed-build control failed (`docs/members/study/profile-2026-10/readout.md`) |
 | Bot readiness evals | Does each bot pass its fixed scenario set? (`src/evals/`) | README phase 6 | blocked-on-fix | when the evals are live-verified — the bot learning loop's own plan owns it |
 | Haiku eval replay | Can Haiku/Sonnet do Layer 1 research as well as Opus? | #3264 | pivoted (#3300) | none — ended; worked example above |

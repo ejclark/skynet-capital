@@ -71,20 +71,6 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
-- **"META's 2-trading-day excess return vs QQQ around the New Mexico privacy-penalty ruling stays within +/-4%, whatever figure the judge sets" (FT-meta-nm-privacy-penalty-ruling-2026-10-20-1)** — added 2026-10-23 from the [meta-nm-privacy-penalty-ruling-2026-10-20 close-out](events/meta-nm-privacy-penalty-ruling-2026-10-20.md). Registered 2026-10-03 off the unconfounded 10-01 hearing day (+0.1%/+0.4%). The ruling came on 10-21 at **$25B** (past the stance's $20B line) and META 10-20 to 10-22 returned -6.54% vs QQQ -1.83% (**-4.71pt**). Confounded: Meta's Q3 print was after the close the same day (the registration read a stale 10-28 estimate), so this kills the rule as written, not the ruling's isolated price effect. Do not re-register a price-window test around a legal ruling that falls inside a print week; separate the two first, and do not read a hearing day's muted tape as a prior for the number.
-
-- **"The seven-day ECB quiet window carries no `^STOXX50E` close-to-close move >= 1.50% (2x the 0.75% baseline), extrapolated from 13 windows in 2025-26" (FT-ecb-quiet-period-start-2026-10-21-1)** — added 2026-10-22 from the [ecb-quiet-period-start-2026-10-21 close-out](events/ecb-quiet-period-start-2026-10-21.md). Registered 2026-09-05 (0 of 54 trimmed sessions at 2x; 11 of 13 prior windows would have passed). The 10-22 session, day two of the window, closed **-1.94%** on an equity-wide risk-off tape (`^GDAXI` -1.07%, EUR/USD flat); no cause was sourced. Do not register a no-large-move threshold on a quiet window from a thin-tail count: the null is a statement about the 2025 sample, not a property of the gate. The topic-scope test (FT-2) passed and is not retired.
-
-- **"A publisher's skipped GDPNow posting date means no GDPNow vintage exists for that release" (FT-industrial-production-2026-10-16-1)** — added 2026-10-22 from the [industrial-production-2026-10-16 close-out](events/industrial-production-2026-10-16.md). Registered 2026-09-06 from `PostedUpdates` (10-15 and 10-20, no 10-16). The model's own history carries a 10-16 row (GDP 3.643 → 3.566): it re-estimates on every release date and only *posts* on some. Do not infer "no vintage" from the posting schedule; read `TrackingHistory`/`ContribHistory` for the date.
-
-- **"A retail-free G.17 opex Friday ranges under the unconditional 2014-05+ p75 (1.325%) of SPY's close" (FT-industrial-production-2026-10-16-3)** — added 2026-10-22 from the same close-out. Registered 2026-09-06 at class range 0.6602% (p=0.0775); 10-16 ranged **1.652%** on a VIX 16.46 → 19.99 chip/AI sell-off unrelated to the print (gap +0.19%). Do not register an unconditional range bar for a low-impact print; condition on the VIX level or skip the test.
-
-- **"On a zero-rate-move month the foreign long-term Treasury valuation change prints *below* the full-sample intercept (+0.081% of the prior month's base) because the last-12-month residual drift (−0.215pp) persists" (FT-tic-monthly-2026-10-16-2)** — added 2026-10-22 from the
-  [tic-monthly-2026-10-16 close-out](events/tic-monthly-2026-10-16.md). Registered 2026-09-08 on August's Δ10Y = 0.0bp. August printed
-  **+0.131%** (+$10.2bn on a $7,783.3bn base) — above the line by 0.05pp, ~0.2σ of the model's residual sd. Do not re-register a
-  directional drift test on this model off the trailing-residual average: it described the past and missed the one month built
-  to measure it. The one-factor model itself passed its band test (FT-1) and is not retired.
-
 - **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
   |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the
   [ism-services-2026-11-04 pulse](events/ism-services-2026-11-04.md). Registered 2026-09-08 at n=9 as the narrow successor to a
@@ -951,27 +937,6 @@ robust, alpha fragile — is the finding.
   Gulf repair off a first estimate: the next ledger carrying a press repair window should register
   the fast-restart branch as the base case until the line's own history (restored in three days in
   April, in about twelve here) says otherwise.
-
-- **ASHE's April pay growth lands within the monthly AWE gap range, i.e. 2.0–4.0% (FT-uk-ashe-earnings-2026-10-22-1)** — added 2026-10-23 from the
-  [uk-ashe-earnings-2026-10-22 close-out](events/uk-ashe-earnings-2026-10-22.md). Registered 2026-10-16 on a
-  four-edition ASHE−AWE gap of −1.4 to +0.5pp (2022–2025) applied to April 2026 AWE regular pay of +3.4%, with
-  a kill at 4.5% or higher. ONS printed **+5.8%** (£811.20 vs £766.60) on 2026-10-22 while AWE for the same
-  April still read +3.4%: a gap of **+2.4pp**, outside the range. **What it does and does not refute:** the
-  date, the three-bulletin release and the stand-aside (no tracked symbol) are untouched. What breaks is the
-  assumption that a four-point gap range transfers to the next edition. Do not re-propose a fixed ASHE
-  headline band built from the monthly series without a longer gap history, or a reason the 2026 gap was
-  special (sample size, NLW bunching and the median-vs-mean difference are untested candidates).
-
-- **A UMich final lands within 1.0 point of its preliminary after a second loaded back half
-  (FT-umich-sentiment-final-2026-10-23-1)** — added 2026-10-25 from the
-  [umich-sentiment-final-2026-10-23 close-out](events/umich-sentiment-final-2026-10-23.md). Registered
-  2026-10-09 on a 48.0% base rate of \|Δ\| ≥ 1.0 (n=25) plus September's +0.3, with a kill at \|Δ\| ≥ 1.0.
-  The October prelim printed **46.3** and the publisher's final **48.0**: \|Δ\| = **1.7**, upward, through a
-  window that held a hot CPI (3.7% y/y) and Brent running to $109. **What it does and does not refute:**
-  the 48% base rate and "direction is not called" stand. What breaks is reading September's +0.3 as
-  evidence that back-half event load stops moving the final: two consecutive finals, one +0.3 and one
-  +1.7, are consistent with a coin flip on size. Do not re-propose a small-revision call for a UMich final
-  on event-load grounds; n=1 killed on its first test, the mirror of the FT-55 kill above.
 
 ## Portfolio-level critique — what no single-symbol view sees
 

@@ -125,11 +125,7 @@ describe("SAURON on Sauron's own account — his persona's intents, stamped", ()
   });
 
   it("a hardcore build stays exact: its own intents are the ones stamped", () => {
-    const { personas } = applyHardcore(
-      [new SauronPersona()],
-      {},
-      { bots: { sauron: { hardcore: true } } },
-    );
+    const { personas } = applyHardcore([new SauronPersona()], { SKYNET_HARDCORE_BOTS: "sauron" });
     const hardcore = personas[0];
     if (!hardcore) throw new Error("no persona");
     expect(hardcore).toBeInstanceOf(SauronHardcorePersona);

@@ -92,16 +92,6 @@ function jaccard(a, b) {
 
 const OVERLAP_THRESHOLD = 0.42;
 
-/** Two events that each name tickers and share none are two companies' events, never one release —
- *  however alike their titles (#5912: every lockup expiry reads "<SYM> IPO lockup ends — <co>, 180
- *  days after its <date> prospectus", and three same-day pairs scored 0.50–0.63 on that template).
- *  Market-wide events (`symbols: []`), where every measured duplicate lived, are still scored. */
-function differentCompanies(a, b) {
-  const sa = a?.symbols ?? [];
-  const sb = b?.symbols ?? [];
-  return sa.length > 0 && sb.length > 0 && !sa.some((s) => sb.includes(s));
-}
-
 /**
  * One warning line per same-date pair of events whose titles overlap at or above `threshold`,
  * in `(date, id, id)` order. Feed it the LIVE calendar: entries already retired with
@@ -121,7 +111,6 @@ export function titleOverlapWarnings(events, threshold = OVERLAP_THRESHOLD) {
     const tokens = ranked.map((e) => titleTokens(e?.title));
     for (let i = 0; i < ranked.length; i++)
       for (let j = i + 1; j < ranked.length; j++) {
-        if (differentCompanies(ranked[i], ranked[j])) continue;
         const score = jaccard(tokens[i], tokens[j]);
         if (score < threshold) continue;
         warnings.push(

@@ -10,7 +10,6 @@ type Env = Readonly<Record<string, string | undefined>>;
  */
 export const PERSISTED_STORES: Readonly<Record<string, string>> = {
   SKYNET_ALLOWLIST_STORE: "data/allowlist.json",
-  SKYNET_GITHUB_TOKEN_STORE: "data/github-token.json",
   SKYNET_PARTICIPANT_STORE: "data/participants.json",
   SKYNET_CONTROLS_FILE: "data/bot-controls.json",
   SKYNET_ACTIVITY_DIR: "data/activity",

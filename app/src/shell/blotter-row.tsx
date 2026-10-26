@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { useState } from "react";
 import type { DeskPosition } from "../live/desk";
-import type { HoldingGreeks } from "./holding-decay";
+import type { HoldingDecay } from "./holding-decay";
 import { positionAnchor } from "./position-anchor";
 import {
   BestWorstContent,
@@ -28,14 +28,17 @@ import { PositionRowOpen } from "./position-row-open";
 export function BlotterRow({
   position,
   deskId,
-  greeks,
+  decay,
+  delta,
   canTrade = true,
   guide,
 }: {
   readonly position: DeskPosition;
   readonly deskId: string;
-  /** This holding's θ and Δ from the option book: quoted, estimated, or why neither (#5960). */
-  readonly greeks?: HoldingGreeks;
+  /** This holding's time decay from the option book, when the feed quoted it. */
+  readonly decay?: HoldingDecay;
+  /** Its dollars for a $1 rise in the stock, from the same book. */
+  readonly delta?: number;
   /** Does the viewer own this account (#3807 slice 2d, dead end 4)? The server refuses an order
    *  on any account that isn't yours (`account-identity-gate.ts`), so off it Close, Close this buy
    *  and Roll do not render — the page says why in visible text beside the blotter. Guidance is a
@@ -53,7 +56,7 @@ export function BlotterRow({
             zero width does not lay out (`positions-columns.css`). */}
         <td className={colClass("greeks")}>
           <div className="pos-cell">
-            <GreeksContent position={position} greeks={greeks} />
+            <GreeksContent position={position} decay={decay} delta={delta} />
           </div>
         </td>
         <ValueCell position={position} />
@@ -98,7 +101,8 @@ export function BlotterRow({
             <PositionRowOpen
               position={position}
               deskId={deskId}
-              greeks={greeks}
+              decay={decay}
+              delta={delta}
               canTrade={canTrade}
             />
           </td>

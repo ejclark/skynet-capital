@@ -11,26 +11,20 @@ import type { Playbook } from "./playbook.js";
  * house playbook is not steered by Eric's view.
  *
  * The result is one of three, and never an order:
- *  - `playbook` unchanged, nothing said: no pointer, or a record that narrows nothing on this pair;
+ *  - `playbook` unchanged, nothing said: no pointer, or a record that does not steer this pair (the
+ *    check date's own fallback already says so), or a record that narrows nothing on this pair;
  *  - `playbook` narrowed, with `says` naming each fence for the boot log;
  *  - `refused`: the narrowing would widen a bound (or points at a study that is not attached), or
- *    the pointer names a record this lookup does not hold, or one that does not steer this pair.
- *    Refused WHOLE, with the reason, and the pair fails safe: the caller runs it exits-only, so
- *    what it holds still exits and nothing new opens. Running it unnarrowed instead would trade
- *    wider than its owner meant to.
+ *    the pointer names a record this lookup does not hold. Refused WHOLE, with the reason, and the
+ *    pair fails safe: the caller runs it exits-only, so what it holds still exits and nothing new
+ *    opens. Running it unnarrowed instead would trade wider than its owner meant to.
  *
  * WHY A RECORD NOT HELD IS REFUSED (#5482 slice 6c). A seeded record ships with the build, so the
  * bots always hold it. A member's record arrives over the controls poll (`convictions-wire.ts`), and
  * a pointer at one can be read before the record is: a boot on the kept subscriptions while the
  * dashboard is down, or a record whose owner's bot is not one it may steer. Its narrowings are
- * unknown then, so the pair opens nothing until they are.
- *
- * WHY A RECORD THAT DOES NOT STEER THE PAIR IS REFUSED TOO (#5482 slice 2, the contract step's
- * piece 2). A pointed subscription is checked on its pointer alone, never on the inline conviction
- * beside it (`statedCheck`), so a pointer that cannot be used gives the pair no check day. Running
- * it unnarrowed and unchecked would be the one state no owner chose. The pointer rule only ever
- * points at a record steering the pair (`conviction-pointer.ts`), so this is the gap between a
- * record changing and the next poll re-pointing, and the pair waits it out exits-only.
+ * unknown then, so the pair opens nothing until they are. The check date keeps its own fallback
+ * (`statedCheck`): an unresolved pointer neither stops nor clears a check; only steering fails safe.
  */
 export type SteeredPlaybook =
   | { readonly playbook: Playbook; readonly says: readonly string[] }
@@ -50,12 +44,7 @@ export function steeredBy(
       refused: `points at conviction "${sub.convictionId}", which these bots do not hold`,
     };
   }
-  if (!record.steers.includes(sub.playbookId)) {
-    return {
-      playbook,
-      refused: `points at conviction "${sub.convictionId}", which does not steer ${sub.playbookId}`,
-    };
-  }
+  if (!record.steers.includes(sub.playbookId)) return unchanged;
   const narrow = (record.narrowings ?? [])
     .filter((n) => n.pair === sub.playbookId)
     .flatMap((n) => n.narrow);

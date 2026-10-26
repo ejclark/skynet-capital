@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileAllowlistStore } from "../../../src/server/auth/allowlist-store.js";
@@ -120,22 +120,5 @@ describe("file allowlist store", () => {
     expect(store.remove("GUEST@example.com")).toBe(true);
     expect(store.emails().size).toBe(0);
     expect(store.remove("nobody@example.com")).toBe(false);
-  });
-
-  it("keeps the previous guest list whole when a write fails part-way (#4612 slice 9)", () => {
-    const store = new FileAllowlistStore(path(), "s");
-    store.add(entry("guest@example.com"));
-    const before = readFileSync(path(), "utf8");
-    // A directory where the temp file goes makes the write throw, as a full volume would.
-    mkdirSync(`${path()}.tmp`);
-
-    expect(() => store.add(entry("second@example.com"))).toThrow();
-    expect(readFileSync(path(), "utf8")).toBe(before);
-    expect([...new FileAllowlistStore(path(), "s").emails()]).toEqual(["guest@example.com"]);
-  });
-
-  it("leaves no temp file behind after a write", () => {
-    new FileAllowlistStore(path(), "s").add(entry("guest@example.com"));
-    expect(existsSync(`${path()}.tmp`)).toBe(false);
   });
 });

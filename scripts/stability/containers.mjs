@@ -142,24 +142,8 @@ export function serverProbe(server) {
     state,
     status: () => docker("exec", server, "cat", "/proc/1/status"),
     resetPeak: () => docker("exec", server, "sh", "-c", "echo 5 > /proc/1/clear_refs"),
-    // cgroup v2's memory.peak, else v1's max_usage_in_bytes; null on a host exposing neither (a
-    // cgroup v1 sandbox without the memory controller mounted crashed the run here, #4619) — the
-    // per-phase VmHWM above stays the gated number either way.
-    cgroupPeakMb: () => {
-      const read = spawnSync(
-        "docker",
-        [
-          "exec",
-          server,
-          "sh",
-          "-c",
-          "cat /sys/fs/cgroup/memory.peak 2>/dev/null || cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes",
-        ],
-        { encoding: "utf8" },
-      );
-      const bytes = Number(read.stdout.trim());
-      return read.status === 0 && bytes > 0 ? Math.round(bytes / 1048576) : null;
-    },
+    cgroupPeakMb: () =>
+      Math.round(Number(docker("exec", server, "cat", "/sys/fs/cgroup/memory.peak")) / 1048576),
     logs: () => {
       const out = spawnSync("docker", ["logs", server], { encoding: "utf8" });
       return `${out.stdout}${out.stderr}`;

@@ -9,7 +9,6 @@ import {
   type PlayHealth,
   standingLine,
 } from "../live/book-health";
-import { playbookTitle } from "../live/playbook-name";
 
 /**
  * ONE FINDING PER ROW (#5493 slice 3, the Balance section's lead): the level as a glyph and a word
@@ -47,9 +46,9 @@ export function PlayLink({
         card: playbookId,
         ...(mode ? { mode } : {}),
       }}
-      aria-label={`${playbookTitle(playbookId)} — open its card on Playbooks`}
+      aria-label={`${playbookId} — open its card on Playbooks`}
     >
-      {playbookTitle(playbookId)}
+      {playbookId}
       <span aria-hidden="true"> ›</span>
     </Link>
   );

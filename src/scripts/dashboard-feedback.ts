@@ -42,9 +42,8 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
   const feedbackLog = createFeedbackLogStore(env);
   // Live status for those filings — GitHub itself, never a local store.
   const feedbackStatus = resolveFeedbackStatus(env);
-  // A member adding more to a filing they already own, and the build restart that comes with it
-  // when it is in Ready — a filing left without `ready` by a failed restart is logged here.
-  const feedbackFollowup = resolveFeedbackFollowup(env, (line) => console.warn(line));
+  // A member adding more to a filing they already own, and the re-trigger that comes with it.
+  const feedbackFollowup = resolveFeedbackFollowup(env);
   // The community milestone track — own store, own derivation; never the trade ladder's.
   const communityProgression = createCommunityProgressionService({
     readFeedback: (id) => feedbackLog.list(id),

@@ -1,8 +1,6 @@
-import { equityDrawdown } from "../../src/observatory/equity-sparkline.js";
 import type { EquitySample } from "../../src/observatory/history-store.js";
 import {
   lossHeadroomGauge,
-  lossHeadroomGauges,
   unmeasuredVitals,
   wireTradeVitals,
 } from "../../src/observatory/vitals.js";
@@ -72,39 +70,6 @@ describe("lossHeadroomGauge", () => {
     ];
     const gauge = lossHeadroomGauge(samples, "2026-08-28T10:00:00Z");
     expect(gauge.detailText).toBe(`1.0% of ${(RESTRICT_DRAWDOWN_PCT * 100).toFixed(1)}% cap`);
-  });
-});
-
-describe("lossHeadroomGauges", () => {
-  // The index must answer exactly what the per-row filter + equityDrawdown did before #4619 — the
-  // Wire's numbers move only in speed. Unsorted input, tied instants, and cut points that fall
-  // before, between, on and after the samples.
-  const history = [
-    sample("2026-08-28T12:00:00.000Z", 97_500),
-    sample("2026-08-28T09:00:00.000Z", 100_000),
-    sample("2026-08-28T11:00:00.000Z", 103_000),
-    sample("2026-08-28T10:00:00.000Z", 96_000),
-    sample("2026-08-28T11:00:00.000Z", 99_000),
-    sample("2026-08-28T13:00:00.000Z", 94_000),
-  ];
-  const before = (atIso: string) => {
-    const dd = equityDrawdown(history.filter((s) => s.at <= atIso));
-    return dd ? `${(dd.ddPct).toFixed(1)}% of 5.0% cap` : "unmeasured";
-  };
-  const gauge = lossHeadroomGauges(history);
-
-  it.each([
-    "2026-08-28T08:00:00.000Z",
-    "2026-08-28T09:00:00.000Z",
-    "2026-08-28T10:00:00.000Z",
-    "2026-08-28T10:30:00.000Z",
-    "2026-08-28T11:00:00.000Z",
-    "2026-08-28T12:00:00.000Z",
-    "2026-08-28T23:59:59.999Z",
-  ])("matches the filter-and-scan reading as of %s", (atIso) => {
-    const g = gauge(atIso);
-    expect(g.measured ? g.detailText : "unmeasured").toBe(before(atIso));
-    expect(g).toEqual(lossHeadroomGauge(history, atIso));
   });
 });
 

@@ -1,13 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import type { DeskPosition, PositionLot } from "../../src/live/desk";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { DeskPosition } from "../../src/live/desk";
 import * as actualOptions from "../../src/live/options" with { rstest: "importActual" };
 import type { OptionDraft, OptionPreview } from "../../src/live/options";
 import * as actualTicket from "../../src/live/ticket" with { rstest: "importActual" };
 import type { TicketDraft, TicketPreview } from "../../src/live/ticket";
 import { ClosePanel } from "../../src/shell/close-panel";
-import { PositionRowOpen } from "../../src/shell/position-row-open";
 
 /**
  * The desk's Close (#5086). The server sends a position's size signed and formatted ("-1" for a
@@ -19,11 +17,6 @@ import { PositionRowOpen } from "../../src/shell/position-row-open";
  * SHALL say "Sell" and the count. WHEN the position is short stock, THE Close SHALL be off with
  * its reason in words, and no sell SHALL ever be reviewed (a sell adds to a short).
  */
-
-// The opened row's Guidance link is a router Link; no router here.
-rstest.mock("@tanstack/react-router", () => ({
-  Link: ({ children }: { children: ReactNode }) => <a href="/trade">{children}</a>,
-}));
 
 const optionCalls: Array<{ step: "review" | "submit"; draft: OptionDraft }> = [];
 const ticketCalls: Array<{ step: "review" | "submit"; draft: TicketDraft }> = [];
@@ -268,63 +261,5 @@ describe("ClosePanel — short stock", () => {
 
     fireEvent.click(close);
     expect(ticketCalls).toEqual([]);
-  });
-});
-
-describe("Close on a position of three buys (#5959)", () => {
-  const buy = (openedAt: string, quantity: string): PositionLot => ({
-    lotId: `NVDA-${openedAt}`,
-    openedAt,
-    quantity,
-    costPerShare: "$200.00",
-    price: "$232.10",
-    costBasis: "$0",
-    value: "$0",
-    dayPl: "$0",
-    dayTone: "flat",
-    totalPl: "$0",
-    returnPct: "0%",
-    totalTone: "flat",
-  });
-  const nvda = position({
-    quantity: "88",
-    lots: [buy("10/22 14:20", "10"), buy("10/22 14:25", "56"), buy("10/22 14:28", "22")],
-  });
-  const renderRow = () =>
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <PositionRowOpen position={nvda} deskId="sauron" canTrade />
-      </QueryClientProvider>,
-    );
-
-  it("says, before Confirm, that a sell sized to the newest buy comes out of the oldest", async () => {
-    renderRow();
-    fireEvent.click(screen.getByRole("button", { name: "Sell 22 shares (oldest buys first)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Sell 22" }));
-
-    await screen.findByRole("button", { name: "Confirm" });
-    expect(ticketCalls[0]?.draft).toMatchObject({ symbol: "NVDA", quantity: 22, action: "sell" });
-    expect(
-      screen.getByText(
-        "Comes out of your oldest buys first: 10/22 14:20, 10 → 0 · 10/22 14:25, 56 → 44 shares",
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("keeps a line in the row once the order is sent, until Dismiss", async () => {
-    renderRow();
-    fireEvent.click(screen.getByRole("button", { name: "Close this buy" }));
-    // The oldest buy's own panel: "Close all" of its 10 shares — the row's "Close all" sits beside it.
-    const panel = document.querySelector(".pos-buy-close") as HTMLElement;
-    fireEvent.click(within(panel).getByRole("button", { name: "Close all" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Confirm" }));
-
-    const receipt = await screen.findByRole("status");
-    expect(receipt).toHaveTextContent("Sell 10 NVDA sent · est $2,321 · waiting for the fill");
-    // The panel is gone; the line is what stays.
-    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });

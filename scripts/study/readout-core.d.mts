@@ -10,25 +10,18 @@ export interface Moment {
   action: string;
   quote: string;
 }
-/** One new structural problem: a checker `same_as` group, led by its first finding. */
-export interface StructuralItem {
-  /** round-contract.mjs → findingView */
-  finding: Record<string, unknown> & { what: string; severity?: string | null };
-  class?: string;
-  /** How many more times the group reported it. */
-  also: number;
-  /** How many distinct members the group's findings came from. */
-  members?: number;
-  /** The worst severity across the group's reports; ranks and bylines it (else the lead's). */
-  severity?: string | null;
-  frames: string[];
-}
 export interface ReadoutModel {
   study: string;
   grade: Grade;
   picture: (Moment & { member: string; viewport: string }) | null;
   ownerShot: string | null;
-  structural: StructuralItem[];
+  structural: {
+    /** round-contract.mjs → findingView */
+    finding: Record<string, unknown> & { what: string };
+    class?: string;
+    also: number;
+    frames: string[];
+  }[];
   titles: Record<string, string> | null;
   battle: {
     fork: string;
@@ -71,13 +64,4 @@ export function formulaSentence(f: {
   why?: string;
   fix?: string;
 }): string;
-export const STRUCTURAL_TOP: number;
-export const RANKING: string;
-export function severityRank(raw: unknown): number;
-export function worstSeverity<T>(list: T[]): T | null;
-export function rankStructural<T extends StructuralItem>(items: T[]): T[];
-export function structuralSection(model: {
-  structural: StructuralItem[];
-  grade: { structural: { refound?: Record<string, unknown>; held?: Record<string, unknown> } };
-}): string[];
 export function renderReadout(model: ReadoutModel): string;

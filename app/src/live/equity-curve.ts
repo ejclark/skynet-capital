@@ -14,19 +14,9 @@ export interface EquityCurvePoint {
   readonly value: number;
 }
 
-/** A recorded capital flow inside the curve's span (#4563) — mirrors the server's `CurveFlow`. */
-export interface EquityCurveFlow {
-  readonly t: string;
-  readonly direction: "added" | "removed";
-  /** "Capital added $300,000 on Oct 5 — not a gain", server-formatted. */
-  readonly label: string;
-}
-
 export interface EquityCurve {
   readonly range: EquityCurveRange;
   readonly points: readonly EquityCurvePoint[];
-  /** Absent when the account has no recorded flow in this range. */
-  readonly flows?: readonly EquityCurveFlow[];
 }
 
 async function getJson<T>(url: string): Promise<T> {

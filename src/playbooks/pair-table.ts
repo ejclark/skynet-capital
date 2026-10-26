@@ -169,8 +169,7 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
 };
 
 /** What the evidence says about one pair, as a glyph plus a word (criterion 10: hue never carries
- *  it alone, and neither does a glyph). Can't run is ⊘, the heartbeat's Can't fire: a dash read
- *  as "minus one" on the Store's counted fold ("– 1 can't run", #5093). */
+ *  it alone, and neither does a glyph). */
 export type EvidenceStatus =
   | "researched"
   | "conviction"
@@ -187,7 +186,7 @@ export const EVIDENCE_STATUS: Readonly<
   screened: { glyph: "~", word: "screened" },
   "stand-aside": { glyph: "✗", word: "stand aside" },
   "not-studied": { glyph: "?", word: "not studied" },
-  "cant-run": { glyph: "⊘", word: "can't run" },
+  "cant-run": { glyph: "–", word: "can't run" },
 };
 
 export interface PairEvidence {
@@ -473,39 +472,6 @@ export function isStale(evidence: PairEvidence, asOfIso: string): boolean {
 export function pairName(pair: Pair): string {
   const { name } = STRATEGIES[pair.strategy];
   return pair.symbols.length === 1 ? `${name} on ${pair.symbols[0]}` : name;
-}
-
-/** A playbook id named to its owner (criterion 14, slice 3d): its pair's name, or the id itself
- *  for one the table does not know — a member-authored play (`U-<account>-<slug>`) has no pair.
- *  Never call this for a reader who does not own the bot: they get neither (#885). */
-export function playbookName(id: string, lookup = findPair): string {
-  const pair = lookup(id);
-  return pair ? pairName(pair) : id;
-}
-
-/** Whole ids only — `S1-NVDA` never eats into a longer id or a bare `NVDA` — longest first, so
- *  `CRWV-LONG-CALL` wins over any id that prefixes it (the boundary #4442's redaction uses). */
-const PAIR_ID_IN_TEXT = new RegExp(
-  `(?<![A-Za-z0-9-])(?:${[...PAIRS]
-    .map((pair) => pair.id)
-    .sort((a, b) => b.length - a.length)
-    .join("|")})(?![A-Za-z0-9-])`,
-  "g",
-);
-
-/**
- * A reason the bot wrote with ids ("S1-NVDA window open (standard): …"), as its owner reads it:
- * every pair id named (slice 3d), capitalized where it opens a sentence. The words stay ids at the
- * source on purpose — a non-owner's copy is redacted by matching ids (#4442,
- * `observatory/playbook-name-redaction.ts`), so only a reader who already received the ids, the
- * owner, ever has them renamed.
- */
-export function withPairNames(text: string): string {
-  return text.replace(PAIR_ID_IN_TEXT, (id: string, at: number) => {
-    const name = playbookName(id);
-    const opens = at === 0 || /[.!?:]\s+$/.test(text.slice(0, at));
-    return opens ? name.charAt(0).toUpperCase() + name.slice(1) : name;
-  });
 }
 
 /** "✓ researched, weakened" — the status as a glyph plus words. */

@@ -110,24 +110,26 @@
     "target": "/leaderboard (keeps by/a/b)"
   },
   {
-    "screen": "/activity",
+    "screen": "/activity ?section=feed",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in"
   },
   {
     "screen": "/activity ?section=pnl",
-    "verdict": "redirect-only",
-    "target": "/activity (booked P&L is the strip above the feed)"
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in"
   },
   {
     "screen": "/activity ?section=pulse (Feedback pulse)",
-    "verdict": "redirect-only",
-    "target": "/activity?q=is:feedback"
+    "verdict": "undecided",
+    "mustBeSeenBy": "anyone signed in",
+    "target": "nobody needs this — no member's job reads other members' filings; your own are on Profile → Feedback (this list's empty state already links there): fold in, or keep a league-wide list?"
   },
   {
     "screen": "/activity ?section=council",
-    "verdict": "retire",
-    "target": "/activity — the weekly Council retired (#5992); a thesis lives in playbook authoring"
+    "verdict": "undecided",
+    "target": "composer meant for Overview beside the standing (IA); Activity fold into the league page is open",
+    "mustBeSeenBy": "member (composer), anyone (read)"
   },
   {
     "screen": "/research ?section=board",
@@ -198,11 +200,6 @@
     "screen": "/settings ?section=guests",
     "verdict": "keep",
     "mustBeSeenBy": "fund owner only (the card returns null otherwise)"
-  },
-  {
-    "screen": "/settings ?section=github",
-    "verdict": "keep",
-    "mustBeSeenBy": "fund owner only (renews Moneypenny's GitHub token; the card returns null otherwise)"
   },
   {
     "screen": "/learn",

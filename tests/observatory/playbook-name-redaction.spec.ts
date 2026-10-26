@@ -53,21 +53,4 @@ describe("withoutPlaybookNames", () => {
       },
     });
   });
-
-  it("keeps only a stored spread order's own falsifier, never its playbook's 3-print test (#5828)", () => {
-    const stored =
-      "NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints, or this spread exits below its cost";
-    expect(
-      withoutPlaybookNames({
-        forecast: { invalidator: stored },
-        reasoning: { expectation: stored },
-      }),
-    ).toEqual({
-      forecast: { invalidator: "this spread exits below its cost" },
-      reasoning: { expectation: stored },
-    });
-    expect(withoutPlaybookNames({ invalidator: "this spread exits below its cost" })).toEqual({
-      invalidator: "this spread exits below its cost",
-    });
-  });
 });

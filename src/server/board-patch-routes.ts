@@ -1,5 +1,4 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { DashboardData } from "../observatory/dashboard-data.js";
 import type { LeaderMetric } from "../observatory/standings-metric.js";
@@ -63,16 +62,11 @@ function toCue(transition: WorldTransition): WorldCue {
  * Fold hub state (and ceremony cues) into the numbered channel. Called ONCE per server: the diff is
  * computed a single time per tick no matter how many viewers are connected, which is the other half
  * of what made the old full-render channel expensive. Returns an unsubscribe.
- *
- * A newly recorded capital flow (#4563) changes a row's mark, which no field op carries — so it
- * rides the run as a `reframe`, and each open board re-reads `/api/board`. Flows are rare (a member
- * resetting their paper balance), so a full re-read costs nothing worth a new op kind.
  */
 export function driveBoardChannel(
   hub: ObservatoryHub,
   channel: BoardPatchChannel,
   ceremonies?: CeremonyChannel,
-  flows?: Pick<CapitalFlowReader, "subscribe">,
 ): () => void {
   let prev = hub.getState();
   let prevWorld = projectWorld(prev.participants);
@@ -95,21 +89,9 @@ export function driveBoardChannel(
       next: state,
     });
   });
-  const offFlows = flows?.subscribe(() => {
-    const state = hub.getState();
-    channel.publish(
-      state.generatedAt,
-      [{ kind: "reframe", reason: "a capital flow was recorded" }],
-      {
-        prev: state,
-        next: state,
-      },
-    );
-  });
   return () => {
     offHub();
     offCeremony?.();
-    offFlows?.();
   };
 }
 

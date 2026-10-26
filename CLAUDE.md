@@ -243,9 +243,9 @@ iteration stops moving the number (`LEARNING-LOOP.md` field 14).
   still asks is `envelope.json`'s, mechanically — never "a branch I did not create".
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
-  CI check on autonomous lanes. A prose restatement drifts — a copy that drops `and hard to
-  reverse` makes "outward-facing" fire on copy changes. Cite the file; don't re-copy the list.
-  **Read the words narrowly:** *outward-facing* = reachable by a non-member
+  CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped
+  `and hard to reverse`, which is how "outward-facing" came to fire on copy changes. Cite the file;
+  don't re-copy the list. **Read the words narrowly:** *outward-facing* = reachable by a non-member
   or changing an external contract; *spend* = provisioning a credential or raising a cap, never
   picking a model tier on a lane already paid for.
 - **Safety scales to stakes.** Risk tolerance = f(recoverability, worst-case magnitude) — not probability
@@ -596,11 +596,9 @@ common routes:
   normal, expected verdict, not a shortfall.
 - **"make a shareable page"** (field guide, dashboard, report) → the `artifact-smith` agent (builds
   from `docs/BRAND.md` tokens).
-- **A finished Claude Design session** → one of the two paths in [`docs/HANDOFFS.md`](docs/HANDOFFS.md)
-  — mark the canvas boards `build` and fire the design lane with one tap, or attach the session's
-  export to a Claude Code session with a one-line ask (Eric, 2026-09-24: "attaching the artifact
-  from the claude design session is enough for you to take it from here"). Either way Eric's own act
-  is the go signal; a saved canvas or an idle bundle triggers nothing.
+- **A finished Claude Design session** → a `[handoff]` GitHub issue carrying contract + bundle
+  ([`docs/HANDOFFS.md`](docs/HANDOFFS.md)); filing triggers nothing — Eric's comment or label is the
+  go signal, exactly as `ready` is for a plan.
 - **Drawing or reviewing any diagram** (a PR picture, an issue, a plan's lifecycle, an architecture
   page, a reply) → **`/mermaid`** — the type by story, the delta grammar, GitHub's actual renderer
   facts and one reference card per type, loaded only then (Eric, 2026-09-25: expert on demand, no
@@ -660,8 +658,7 @@ is expected and fine; the docs are the memory.
 - **Commits & PRs are documents** ([`docs/ENGINEERING.md`](docs/ENGINEERING.md) → _Change
   communication_): plain-language **Summary** + **Why**, weeds below the fold, mirroring
   `.github/pull_request_template.md`; proportional — no ceremony on a typo fix.
-- Verify before merge: `npm run verify` (typecheck + lint + tests, root and `app/` — the set the
-  pre-push hook and CI run), + a screenshot for visual
+- Verify before merge: `npm run typecheck`, `npm run lint`, `npm test`, + a screenshot for visual
   work (`npm run shoot:login` or an offline render). **Verify by exit status, not tailed output** —
   a pipeline exits with the last command's status, so `cmd | tail && …` will not halt on failure.
   Code gotchas (the inline login-canvas template-literal trap, `prefers-reduced-motion`):

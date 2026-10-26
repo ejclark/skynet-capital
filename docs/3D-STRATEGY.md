@@ -55,7 +55,7 @@ Each slice is small, reversible, and rides an existing seam. The APIs below were
 
 | # | Slice | Mechanic | How, concretely |
 |---|---|---|---|
-| 1 | **Ceremony camera** | Seize the camera to consecrate a win — the single highest-ROI pattern | `Animation.CreateAndStartAnimation` on an `ArcRotateCamera` alpha/beta/radius/target with `CubicEase` (the scene's camera is the `PerspectiveCamera` + `OrbitControls` that `createStage` builds); `FramingBehavior` is a ready-made "present the winner's tower"; a pipeline's `depthOfFieldEnabled` for the close-up (the scene has no post stack; see *Phones*). Fire on THE-GAME ceremonies: topping-out, ground-break, founding. |
+| 1 | **Ceremony camera** | Seize the camera to consecrate a win — the single highest-ROI pattern | `Animation.CreateAndStartAnimation` on the existing `ArcRotateCamera` (`window.__towerCamera`) alpha/beta/radius/target with `CubicEase`; `FramingBehavior` is a ready-made "present the winner's tower"; enable the already-built pipeline's `depthOfFieldEnabled` for the close-up (deliberately off at tower scale today). Fire on THE-GAME ceremonies: topping-out, ground-break, founding. |
 | 2 | **Landmark leveling, live** | The tower *is* the scoreboard | Wire real standings into the dials that already exist: `resolveTowerParams({prominence, health})`. The rank→0..1 function is `botLandmarkProminence` (`src/observatory/standings.ts`); it reaches the tower as `?power=` through `towerSrc` (`app/src/shell/sauron-card.tsx`). |
 | 3 | **Idle orbit + tour mode** | Visitability; the world as a place you show someone | `AutoRotationBehavior` for the idle observatory orbit; `Curve3.CreateCatmullRomSpline` + `Path3D` for an auto-camera tour through an empire's highlights. |
 | 4 | **Photo mode / share-a-moment** | Retention + distribution inside the invite gate | `shoot:tower` is already the deterministic capture rig. Add a "bank this moment" that renders a ceremony card (shot + honest caption: ticker, P/L, renown reason) into the group feed. |
@@ -65,7 +65,7 @@ Each slice is small, reversible, and rides an existing seam. The APIs below were
 | 8 | **Diegetic labels** | The telestrator, in-world | `@babylonjs/gui`: fullscreen ADT + `label.linkWithMesh(tower)` + a `Line` with `connectedControl` *is* the callout mechanic natively; `AdvancedDynamicTexture.CreateForMesh` for true in-world steles/banners (fog and DOF apply — a leaderboard as a monument plaza). |
 | 9 | **WebGPU snapshot mode** | Free speed on mostly-static city scenes | `WebGPUEngine.CreateAsync` behind a `navigator.gpu` check (API-compatible; `createStage` branches once); `engine.snapshotRendering` claims up to ~10× on static scenes — exactly a merged/thin-instanced city. Optional at our scale; WebGL2 stays the screenshot baseline. |
 
-**Phones:** the risk is not draw calls (the merged tower is ~20, `src/three/kit/bucket.ts`) but per-pixel spend. The scene
+**Phones:** the risk is not draw calls (the merged tower is ~6–10) but per-pixel spend. The scene
 has no post stack; `src/three/kit/quality.ts` sets its pixel-ratio cap, frame cap, shadow map and
 ember count. Levers, in order: `setHardwareScalingLevel`, `SceneOptimizer.OptimizeAsync` toward a
 target FPS, `freezeActiveMeshes`/`material.freeze` for static content. No official draw-call

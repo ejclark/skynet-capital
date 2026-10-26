@@ -97,32 +97,6 @@ describe("research dispatch ceiling", () => {
     expect(ids(dueForResearch(rows, [], 9))).toEqual(["stale-closeout", "fresh-closeout"]);
   });
 
-  // First coverage is the OTHER class the ceiling could destroy: a never-assessed event whose date
-  // passes is re-listed as a close-out, and its pre-event call can never be registered after the
-  // print. #5979: intc-fq3-2026-results-2026-10-29 (medium) sat at rank 41 of 92 behind a cap of 6
-  // for three days while critical pulses refilled the top slots every tick.
-  it("never starves a first-coverage event behind pulses that refresh an existing stance", () => {
-    const rows = [
-      ev("crit-pulse", "critical", 3),
-      ev("high-pulse", "high", 1),
-      ev("medium-first", "medium", 4, "never-assessed"),
-    ];
-    expect(ids(dueForResearch(rows, [], 1))).toEqual(["medium-first"]);
-  });
-
-  it("serves first coverage soonest first, and still behind every close-out", () => {
-    const rows = [
-      ev("crit-first-far", "critical", 40, "never-assessed"),
-      ev("low-first-near", "low", 2, "never-assessed"),
-      ev("low-closeout", "low", -1, "event-passed-unscored"),
-    ];
-    expect(ids(dueForResearch(rows, [], 9))).toEqual([
-      "low-closeout",
-      "low-first-near",
-      "crit-first-far",
-    ]);
-  });
-
   it("reports the deferred remainder on stderr, and says nothing when everything fits", () => {
     const seen: string[] = [];
     // The deferral ::notice:: goes to stderr by design — stdout carries the matrix JSON — so

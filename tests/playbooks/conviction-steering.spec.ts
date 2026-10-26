@@ -15,10 +15,9 @@ import {
   resolveSteering,
   type SteerBounds,
 } from "../../src/playbooks/conviction-steering.js";
-import { ConvictionStore, lookupConviction } from "../../src/playbooks/conviction-store.js";
+import { ConvictionStore } from "../../src/playbooks/conviction-store.js";
 import { CRWV_LONG_CALL, CRWV_WHEEL } from "../../src/playbooks/registry.js";
 import { steeredBy } from "../../src/playbooks/steered-playbook.js";
-import { pairView } from "../../src/subscriptions/pair-conviction.js";
 import { subscriptionRoster } from "../../src/subscriptions/subscription-roster.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import {
@@ -419,23 +418,11 @@ describe("CRWV-WHEEL under the AI-dip view", () => {
 
 describe("a subscription runs the playbook its conviction narrows", () => {
   it("narrows the subscription that points at the record, and only that one", () => {
-    // Another member's wheel runs on their own view on that one pair, which narrows nothing.
-    const theirs = pairView({
-      accountId: "acct-other",
-      playbookId: "CRWV-WHEEL",
-      conviction: { reason: "their call", checkOn: "2027-01-29" },
-      owner: "Another member",
-      statedOn: "2026-10-16",
-    });
-    const roster = subscriptionRoster(
-      [
-        aiDipSub("CRWV-WHEEL"),
-        aiDipSub("CRWV-LONG-CALL"),
-        aSubscription("acct-other", "CRWV-WHEEL", { convictionId: theirs.id }),
-      ],
-      undefined,
-      (id) => (id === theirs.id ? theirs : lookupConviction(id)),
-    );
+    const roster = subscriptionRoster([
+      aiDipSub("CRWV-WHEEL"),
+      aiDipSub("CRWV-LONG-CALL"),
+      aSubscription("acct-other", "CRWV-WHEEL"),
+    ]);
     expect(roster.steeringRefused).toEqual([]);
     expect(roster.steered).toEqual([
       expect.stringMatching(/^CRWV-WHEEL: strikes at or under \$53\.67/),
@@ -459,18 +446,9 @@ describe("a subscription runs the playbook its conviction narrows", () => {
     expect(roster.steeringRefused).toEqual([`CRWV-WHEEL: ${reason}`]);
   });
 
-  it("runs a pair exits-only while its pointer names a record that does not steer it (#5482 contract piece 2)", () => {
-    // A pointed pair never reads its inline conviction, so an unusable pointer leaves it no check
-    // day; trading it unnarrowed and unchecked is the one state no owner chose.
+  it("leaves a pointer at a record that does not steer the pair alone", () => {
     const lookup = () => ({ ...AI_DIP_2026_10, steers: ["CRWV-LONG-CALL"] });
-    const reason = 'points at conviction "ai-dip-2026-10", which does not steer CRWV-WHEEL';
-    expect(steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL"), lookup)).toEqual({
-      playbook: CRWV_WHEEL,
-      refused: reason,
-    });
-    const roster = subscriptionRoster([aiDipSub("CRWV-WHEEL")], undefined, lookup);
-    expect(roster.enabled).toEqual([{ playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true }]);
-    expect(roster.steeringRefused).toEqual([`CRWV-WHEEL: ${reason}`]);
+    expect(steeredBy(CRWV_WHEEL, aiDipSub("CRWV-WHEEL"), lookup).playbook).toBe(CRWV_WHEEL);
   });
 
   it("refuses a widening whole and runs the pair exits-only, saying why", () => {

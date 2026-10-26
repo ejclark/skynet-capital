@@ -1215,6 +1215,26 @@ const research = {
   ledgers: [],
 };
 
+// The Council's week (#3963): the member's own line, which the Overview now carries beside the
+// standing. `entries` stays the league's read on Activity → Council, so only `mine` shows here.
+const council = {
+  enabled: true,
+  week: "2026-W40",
+  mine: {
+    id: "a1b2c3d4e5",
+    text: "Holding the NVDA call through the print — the skew is still call-heavy.",
+    at: "2026-09-28T14:00:00.000Z",
+  },
+  entries: [
+    {
+      id: "a1b2c3d4e5",
+      text: "Holding the NVDA call through the print — the skew is still call-heavy.",
+      at: "2026-09-28T14:00:00.000Z",
+    },
+  ],
+  plays: [{ id: "S1-NVDA", symbol: "NVDA" }],
+};
+
 const { page, origin, out, close } = await openShell({
   name: "accounts",
   stubs: {
@@ -1223,6 +1243,7 @@ const { page, origin, out, close } = await openShell({
     "/api/research": research,
     // The calendar-only slice (#4204) the Events section and the cockpit head now read.
     "/api/research/calendar": research,
+    "/api/council": council,
     // The netted option book the Money strip reads its plain greeks from: the NVDA call, 3 contracts.
     "/api/trade/option-positions": {
       available: true,
@@ -1344,6 +1365,14 @@ await page.screenshot({
 });
 console.log(`shot ${join(out, "accounts-phone-full.jpg")}`);
 
+// Your council line (#3963): under the card that carries the league standing, the member's own
+// line for the week with the composer to edit it — the write the IA put beside the standing
+// (docs/IA.md §5.7). Everyone else's stays on Activity → Council, the link under it.
+await page.locator(".council-mine").scrollIntoViewIfNeeded();
+await page.waitForTimeout(150);
+await shootCockpit("accounts-council-phone");
+await page.evaluate(() => window.scrollTo(0, 0));
+
 // The guidance line on every row (#5070; the "Needs a decision" pager it replaced retired): the
 // first card's guidance opened in place, with Not now and its return condition.
 await page.locator(".pos-cards .pos-guide-call").first().scrollIntoViewIfNeeded();
@@ -1459,6 +1488,13 @@ await page.goto(`${origin}/app/accounts`);
 await page.locator(".league-card").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-wide-desktop");
+
+// The council line expanded (#3963): the wide screen adds room in the standing's own column — the
+// same card, same record, no new concepts (CLAUDE.md → mobile-first).
+await page.locator(".council-mine").scrollIntoViewIfNeeded();
+await page.waitForTimeout(150);
+await shootCockpit("accounts-council-desktop");
+await page.evaluate(() => window.scrollTo(0, 0));
 
 // The guidance line at 1600 (#5070): a full-width row under each position in the table.
 await page.locator(".blotter .row-guide").first().scrollIntoViewIfNeeded();

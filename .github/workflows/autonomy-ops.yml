@@ -13,14 +13,6 @@ name: Autonomy ops
 # (src/autonomous/bot-credentials-client.ts, proven live 2026-09-04). The roster lives in
 # fly.bots.toml's [env] (SKYNET_AUTONOMOUS_BOTS). The env-var credential path is break-glass only,
 # reachable from a terminal (`flyctl secrets set`), never from a button.
-#
-# Bot behaviour is not set here (#4535 slice 4, 2026-10-19/20). `set-playbooks`, `set-hardcore`,
-# `set-cond-scout-universe` and `set-beta-forcing` are gone: each wrote a secret and restarted the
-# bots, and a bot's owner now changes each in the app instead — playbooks and the shadow scout's
-# names in the Playbook Store; the hardcore build, the forced-pick count and after-close staging on
-# the bot's Settings card — read at every /controls poll, no restart, every change in the settings
-# change log. The bots no longer read the four behaviour secrets (#5875). Observe/live stays here
-# (`flip-mode`): it is house-wide infrastructure, not one bot's behaviour.
 
 on:
   workflow_dispatch:
@@ -35,6 +27,10 @@ on:
           - logs
           - bootstrap-bots-app
           - flip-mode
+          - set-playbooks
+          - set-beta-forcing
+          - set-hardcore
+          - set-cond-scout-universe
       target_app:
         description: >-
           Which Fly app to operate on. After the deploy split the bots fleet lives in
@@ -54,6 +50,39 @@ on:
           - observe
           - live
         default: observe
+      playbooks:
+        description: >-
+          Playbook roster, "id:mode" pairs — only read by set-playbooks. Empty string = all
+          playbooks dark. e.g. "S1-NVDA:standard,G1-GOOG:conservative". Valid ids/modes are
+          enforced at boot (src/playbooks/registry.ts refuses unknown tokens loudly).
+        required: false
+        type: string
+        default: ""
+      beta_forcing:
+        description: >-
+          Beta-phase forced-pick count — only read by set-beta-forcing. Empty or "0" = dark. When
+          armed, and nothing organic trades on a given day, forces up to N small, honestly-labeled
+          BETA-SCOUT picks (see src/playbooks/beta-scout.ts). Eric's beta-phase directive: "2-3".
+        required: false
+        type: string
+        default: ""
+      hardcore_bots:
+        description: >-
+          Comma-separated persona ids for HARDCORE research mode — only read by set-hardcore.
+          Empty string = hardcore dark. Unknown ids are refused loudly at boot
+          (src/personas/registry.ts). Currently built: sauron.
+        required: false
+        type: string
+        default: ""
+      cond_scout_universe:
+        description: >-
+          COND-SCOUT shadow-probe universe, comma-separated tickers — only read by
+          set-cond-scout-universe. Empty string = scout dark. e.g. "NVDA,AAPL,SPY". Shadow ledger
+          only, never orders; non-ticker tokens are dropped and symbols off the live price stream
+          are skipped at boot (src/playbooks/cond-scout.ts parseCondScoutUniverse).
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -94,7 +123,7 @@ jobs:
           FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
 
       - name: Logs — recent buffer, no streaming (this runner exits, it can't tail forever)
-        # Every mode action here tells the operator to go check `fly logs` by hand from a
+        # Every mode/roster action above tells the operator to go check `fly logs` by hand from a
         # terminal — this is that check, self-serve, without one. `--no-tail` dumps the recent
         # buffer and exits instead of streaming (this job has no interactive session to Ctrl-C).
         if: ${{ inputs.action == 'logs' }}
@@ -118,13 +147,89 @@ jobs:
           if flyctl status -a skynet-capital-bots >/dev/null 2>&1; then
             echo "skynet-capital-bots already exists — nothing to create."
           elif flyctl apps create skynet-capital-bots --org personal; then
-            echo "Created. Next: add Sauron's Alpaca paper key in the app (Settings -> Account -> Sauron -> Rotate), turn on its hardcore build on its Settings card if wanted, then Pipeline -> force_bots_deploy to stand the machine up in observe."
+            echo "Created. Next: add Sauron's Alpaca paper key in the app (Settings -> Account -> Sauron -> Rotate), set-hardcore if wanted, then Pipeline -> force_bots_deploy to stand the machine up in observe."
           else
             echo "::error::App creation was refused — the available token is app-scoped, not org-capable. The laptop fix (once): fly tokens create deploy -o personal, then add the output as repo secret FLY_ORG_TOKEN and re-run this button. Nothing was created or changed."
             exit 1
           fi
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+
+      - name: Set playbook roster
+        if: ${{ inputs.action == 'set-playbooks' }}
+        # PLAYBOOKS is passed via env and read as a shell variable ($PLAYBOOKS), never
+        # interpolated directly into the script via ${{ }} — this is the only free-text
+        # (type: string) input in this workflow (every other action uses a fixed `choice`
+        # dropdown GitHub validates before the job runs), so it's the one place a naive
+        # ${{ inputs.playbooks }} inline substitution would be a script-injection vector.
+        # Low real-world exposure (only reviewers already approved on this environment can
+        # supply it) but no reason to carry the shape of the risk when this is free to avoid.
+        run: |
+          echo "Setting SKYNET_PLAYBOOKS=$PLAYBOOKS"
+          if [ -z "$PLAYBOOKS" ]; then
+            flyctl secrets unset SKYNET_PLAYBOOKS -a "$TARGET_APP" || true
+            echo "Roster cleared — all playbooks dark."
+          else
+            flyctl secrets set "SKYNET_PLAYBOOKS=$PLAYBOOKS" -a "$TARGET_APP"
+            echo "::warning::Playbooks armed. They still only ENTER on a confirmed IR print date (estimates stay dark) and only in live mode past the readiness gate. Watch fly logs -a $TARGET_APP for the [playbooks] armed line."
+          fi
+        env:
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+          PLAYBOOKS: ${{ inputs.playbooks }}
+
+      - name: Set beta-phase forcing
+        if: ${{ inputs.action == 'set-beta-forcing' }}
+        # BETA_FORCING passed via env and read as a shell variable, not interpolated via ${{ }} —
+        # same free-text-input discipline as set-playbooks above (only reviewers already approved
+        # on this environment can supply it, but there's no reason to carry the injection shape).
+        run: |
+          echo "Setting SKYNET_BETA_FORCING=$BETA_FORCING"
+          if [ -z "$BETA_FORCING" ] || [ "$BETA_FORCING" = "0" ]; then
+            flyctl secrets unset SKYNET_BETA_FORCING -a "$TARGET_APP" || true
+            echo "Cleared — beta-phase forced trading stays dark."
+          else
+            flyctl secrets set "SKYNET_BETA_FORCING=$BETA_FORCING" -a "$TARGET_APP"
+            echo "::warning::Beta-phase forcing armed at $BETA_FORCING pick(s)/day. Fires ONLY when nothing organic trades that day, sized well below every playbook's softest mode, and every pick's reason states plainly that it's a forced non-conviction fill. Watch fly logs -a $TARGET_APP for the [beta-scout] armed line."
+          fi
+        env:
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+          BETA_FORCING: ${{ inputs.beta_forcing }}
+
+      - name: Set hardcore roster
+        if: ${{ inputs.action == 'set-hardcore' }}
+        # HARDCORE_BOTS passed via env and read as a shell variable, not interpolated via ${{ }} —
+        # same free-text-input discipline as set-playbooks/set-beta-forcing above.
+        run: |
+          echo "Setting SKYNET_HARDCORE_BOTS=$HARDCORE_BOTS"
+          if [ -z "$HARDCORE_BOTS" ]; then
+            flyctl secrets unset SKYNET_HARDCORE_BOTS -a "$TARGET_APP" || true
+            echo "Cleared — hardcore research mode dark; personas run their standard builds."
+          else
+            flyctl secrets set "SKYNET_HARDCORE_BOTS=$HARDCORE_BOTS" -a "$TARGET_APP"
+            echo "::warning::Hardcore armed for: $HARDCORE_BOTS — loosened thresholds, tranche scale-in/out, 90s cooldown (research volume). Watch fly logs -a $TARGET_APP for the [hardcore] armed line."
+          fi
+        env:
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+          HARDCORE_BOTS: ${{ inputs.hardcore_bots }}
+
+      - name: Set COND-SCOUT universe
+        if: ${{ inputs.action == 'set-cond-scout-universe' }}
+        # COND_SCOUT_UNIVERSE passed via env and read as a shell variable, not interpolated via
+        # ${{ }} — same free-text-input discipline as set-playbooks above. The runner
+        # (src/scripts/autonomous-cond-scout.ts) holds no broker: armed, it writes shadow probes
+        # to the ledger the Heartbeat "Shadow probes" card reads (#3651), nothing more.
+        run: |
+          echo "Setting SKYNET_COND_SCOUT_UNIVERSE=$COND_SCOUT_UNIVERSE"
+          if [ -z "$COND_SCOUT_UNIVERSE" ]; then
+            flyctl secrets unset SKYNET_COND_SCOUT_UNIVERSE -a "$TARGET_APP" || true
+            echo "Cleared — COND-SCOUT dark; no new shadow probes open."
+          else
+            flyctl secrets set "SKYNET_COND_SCOUT_UNIVERSE=$COND_SCOUT_UNIVERSE" -a "$TARGET_APP"
+            echo "::warning::COND-SCOUT armed on the shadow ledger (no orders). Symbols not on the live price stream are dropped at boot. Watch fly logs -a $TARGET_APP for the [cond-scout] armed line."
+          fi
+        env:
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+          COND_SCOUT_UNIVERSE: ${{ inputs.cond_scout_universe }}
 
       - name: Preflight — refuse live on the bots app while the old shared-app bots group survives
         # The mechanical anti-double-trade gate for the deploy-split cutover. The boot-time

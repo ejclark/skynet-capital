@@ -508,45 +508,6 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
-
-## Outcome
-
-**Close-out (2026-10-22, D+6, `event-passed-unscored`).** Scored from data re-fetched today on a cold
-cache, never from this ledger's own intraday rows. SPY and ^VIX are Yahoo `v8/finance/chart` daily bars
-(the same source `intraday-bars.mjs` reads; `node_modules` is absent on this runner so the script
-itself was not run, and the instrument cache dirs were already empty). FT-1 is read from the Atlanta
-Fed's own `GDPTrackingModelDataAndForecasts.xlsx` (new path under `…/research-and-data/data/gdpnow/`;
-the `…/cqer/researchcq/…` paths the ledger cited now return a soft-404 page) and its
-`GDPNowcastDataReleaseDates.xlsx`. `symbols: []`, no position, no instrument: **stand aside held, and
-nothing here licenses an entry.**
-
-| FT | Registered prediction | Observed | Verdict |
-|---|---|---|---|
-| 1 | no GDPNow vintage dated 2026-10-16; next after 10-15 is 10-20 | the model's own history (`TrackingHistory`, `ContribHistory`) carries a **10-16 row** ("Industrial production, Import/export prices, Monthly Treasury Statement"): GDP **3.643 → 3.566** (−0.077pp), then 10-20 at 3.499. The *published* schedule did skip it (`PostedUpdates`: 10-15, 10-20) and the public RSS has no 10-16 item | **kill** |
-| 2 | SPY 10-16 gap below 0.542% | open 773.24 vs 771.79 close = **+0.188%** | **pass** |
-| 3 | SPY 10-16 range below 1.325% | high 773.25, low 760.64, close 763.25 = **1.652%** | **kill** |
-| 4 | annual revision not published on/before 10-16 | Board feed: revision **2026-11-24**, 2022 base — after this print | **pass** |
-| 5 | 10-16 gap smaller than the 10-15 gap | **0.188%** vs 10-15 open 766.25 / 10-14 close 769.60 = **0.435%** | **pass** |
-
-**What the two kills say.** *FT-1 was a wrong inference, not a near miss:* Leg 4 read "the publisher
-schedules no update" as "no vintage exists", but the model re-estimates on every release date and the
-workbook's history logs a row for each — the same rows Leg 3's 48 month-3 vintages were counted from,
-including dates `PostedUpdates` skips. A skipped *posting* is not a skipped *vintage*; the nowcast
-absorbed this print on its own morning (|ΔGDP| 0.077pp, inside the 0.0975pp month-3 median — Leg 3's
-"quiet" finding stands, Leg 4's mechanism does not). *FT-3 failed on the day's tape, not the print:*
-the session ranged 1.652% as a chip/AI sell-off (SPY −1.10%, VIX 16.46 → 19.99 close, intraday high
-22.31) unfolded after a flat open (gap +0.19%, passing FT-2); no G.17 cause is asserted — the print's
-own nowcast footprint was ordinary. The kill-switch range line (2.065%, p90) was **not** reached. The
-Equipment channel moved 17.61 → 17.82 (growth rate, +0.20pp), roughly 0.01pp of contribution at its
-~5–6% GDP share — an estimate, not a read of the contribution sheet — well under the 0.10pp switch.
-
-**What the print was** (Fed `g17`, fetched 10-16): September IP +0.7% (utilities +3.5%, manufacturing
-+0.3%), capacity utilization 76.9%. The stance held through the date. One lesson for the next month-3
-edition: a retail-free class mean (range p=0.0775, narrower) is a prior about the print, not about the
-tape — a vol shock that has nothing to do with the release can land on the same date, and FT-3 should
-have been framed against a VIX-conditioned range rather than the unconditional p75.
-
-
 **Last assessed:** 2026-10-02
 <!-- probe-ref: {"symbols":{},"vix":15.9,"daysBand":"low:0+","adjacentIds":["imf-world-bank-annual-meetings-2026-10-12","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","bobl-5y-auction-2026-10-13","existing-home-sales-2026-10-13","sp-global-investment-manager-index-2026-10-13","beige-book-2026-10-14","bund-30y-auction-2026-10-14","cpi-2026-10-14","iea-omr-2026-10-14","jgb-5y-auction-2026-10-14","ssa-cola-2027-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","g20-fmcbg-bangkok-2026-10-15","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","uk-monthly-gdp-2026-10-15","import-export-prices-2026-10-16","opex-2026-10-16","tic-monthly-2026-10-16","treasury-primary-dealer-agenda-2026-10-16","fomc-blackout-start-2026-10-17","nahb-hmi-2026-10-19","housing-starts-2026-10-20","jgb-20y-auction-2026-10-20","pending-home-sales-2026-10-20","uk-labour-market-2026-10-20","ecb-quiet-period-start-2026-10-21","treasury-20y-bond-2026-10-21","treasury-buyback-tips-1y10y-2026-10-21","uk-cpi-2026-10-21","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->
 
@@ -558,6 +519,3 @@ have been framed against a VIX-conditioned range rather than the unconditional p
 
 **Last assessed:** 2026-10-16
 <!-- probe-ref: {"symbols":{},"vix":20.93,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://www.atlantafed.org/cqer/research/gdpnow","status":"200 (empty body, 0 bytes)","at":"2026-10-16"}]} -->
-
-**Last assessed:** 2026-10-22
-<!-- probe-ref: {"symbols":{},"vix":18.61,"daysBand":"low:0+","adjacentIds":["apec-fmm-hong-kong-2026-10-20","beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-quiet-period-start-2026-10-21","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-buyback-10y20y-2026-10-15","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","vix-expiration-2026-10-21","warsh-imf-fireside-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[{"url":"https://www.atlantafed.org/-/media/Project/Atlanta/FRBA/Documents/cqer/researchcq/gdpnow/GDPNowcastDataReleaseDates.xlsx","status":"200-soft-404 (path moved to …/research-and-data/data/gdpnow/)","at":"2026-10-22"}]} -->

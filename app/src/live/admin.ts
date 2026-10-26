@@ -53,23 +53,3 @@ export const linkRequest = (input: {
   readonly email?: string;
   readonly unlink?: boolean;
 }): Promise<AdminAnswer> => postJson("/api/admin/claim", input);
-
-/** The app's GitHub token (Moneypenny's filing credential) — its status, never the token. */
-export type GithubTokenView =
-  | { readonly owner: false }
-  | {
-      readonly owner: true;
-      readonly secure: boolean;
-      readonly repo: string;
-      readonly source: "saved" | "host" | "none";
-      readonly savedAt?: string;
-      readonly savedBy?: string;
-      readonly expiresAt?: string;
-      readonly working: boolean;
-      readonly problem?: string;
-    };
-
-export const fetchGithubToken = (): Promise<GithubTokenView> => getJson("/api/admin/github-token");
-
-export const rotateGithubTokenRequest = (token: string): Promise<AdminAnswer> =>
-  postJson("/api/admin/github-token", { token });

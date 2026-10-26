@@ -261,40 +261,6 @@ describe("the owner's conviction on their row", () => {
     expect(screen.getByRole("button", { name: "State a conviction" })).toBeInTheDocument();
   });
 
-  it("names the view a pointed pair is steered by and its day, never 'no conviction stated'", () => {
-    // #5482 contract step: a pointed subscription carries no inline conviction; the view is its check.
-    const steeredBy = {
-      convictionId: "ai-dip-2026-10",
-      title: "AI-dip view",
-      owner: "Eric",
-      checkOn: "2027-01-29",
-      scorecard: { pass: 0, fail: 0, pending: 8, untestable: 2 },
-      claims: [],
-    };
-    const pointed = pair("CRWV-WHEEL", "CRWV", {
-      status: "conviction",
-      steeredBy,
-      subscription: { mode: "standard", enabled: true, convictionId: "ai-dip-2026-10" },
-    });
-    mountCard(wheel([pointed]));
-    expect(screen.getByText(/steered by AI-dip view · checked on/)).toBeInTheDocument();
-    expect(screen.queryByText(/No conviction stated/)).not.toBeInTheDocument();
-    // Re-dating is the owner's own day, the resume after a failed check.
-    expect(screen.getByRole("button", { name: "Set a new date" })).toBeInTheDocument();
-  });
-
-  it("says a pointed pair is steered even when the row shows another view, with no day", () => {
-    const pointed = pair("CRWV-WHEEL", "CRWV", {
-      status: "conviction",
-      subscription: { mode: "standard", enabled: true, convictionId: "a-view-not-shown" },
-    });
-    mountCard(wheel([pointed]));
-    expect(
-      screen.getByText(/steered by a conviction view this page can't read/),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/No conviction stated/)).not.toBeInTheDocument();
-  });
-
   it("leaves a researched pair without one alone", () => {
     const backed = pair("S1-NVDA", "NVDA", {
       subscription: { mode: "standard", capitalAllocated: 50_000, enabled: true },

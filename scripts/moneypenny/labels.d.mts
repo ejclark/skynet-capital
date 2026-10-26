@@ -26,5 +26,3 @@ export function notPullableReason(
 ): string | null;
 /** The board's Ready column: open, `ready`, buildable, not `in-progress`, no open blocker (#4393). */
 export function pullable(issue: PullableIssue | null | undefined, opts?: PullOptions): boolean;
-/** The labels that each say "this waits on someone" — nothing builds an issue carrying one. */
-export const PARKING_LABELS: readonly string[];

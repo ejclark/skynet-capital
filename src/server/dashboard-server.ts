@@ -61,7 +61,7 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   // ONE channel per server, driven by ONE hub subscription: the board diff is computed once per
   // tick regardless of how many viewers are watching, and every viewer shares one seq run.
   const channel = createBoardChannel();
-  driveBoardChannel(config.hub, channel, config.ceremonies, config.capitalFlows);
+  driveBoardChannel(config.hub, channel, config.ceremonies);
   return createServer((req, res) => {
     void handle(req, res, config, channel).catch((error: unknown) => {
       // Last-resort net (mirrors insights-listener.ts): every route handler below is expected to
@@ -200,8 +200,8 @@ async function serveWriteApis(
   if (await serveOnboardingApi(req, res, path, config, session)) return true;
   if (await servePlaybookReads(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
-  if (serveCouncilApi(req, res, path, config.council, session)) return true;
-  if (serveCouncilRepliesApi(req, res, path, config.councilReplies, session)) return true;
+  if (await serveCouncilApi(req, res, path, config.council, session)) return true;
+  if (await serveCouncilRepliesApi(req, res, path, config.councilReplies, session)) return true;
   if (await serveFilingCommentsApi(req, res, path, config.filingComments, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;

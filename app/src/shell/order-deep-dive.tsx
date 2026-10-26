@@ -14,7 +14,6 @@ import {
   sizeWord,
 } from "../live/order-facts";
 import { orderPlay, playTitle } from "../live/order-play";
-import { playbookTitle, withPairNames } from "../live/playbook-name";
 import { quoteQuery } from "../live/quote-query";
 import { withMinus } from "../ui";
 import { BetGlyph } from "./bet-glyph";
@@ -139,7 +138,7 @@ export function OrderDeepDive({
       {why ? (
         <section className="dd-section">
           <h4 className="dd-label">Why</h4>
-          <p className="dd-why">“{withPairNames(why.reason)}”</p>
+          <p className="dd-why">“{why.reason}”</p>
         </section>
       ) : null}
       {showPlaybook && why?.playbookId ? <PlaybookBlock why={why} /> : null}
@@ -192,7 +191,7 @@ function PlaybookBlock({ why }: { readonly why: ActivityReasoning }): ReactEleme
     <section className="dd-section dd-playbook">
       <h4 className="dd-label">The playbook · only you see this</h4>
       <p>
-        <b>{why.playbookId ? playbookTitle(why.playbookId) : ""}</b>
+        <b>{why.playbookId}</b>
         {why.playbookMode ? ` · ${why.playbookMode}` : ""}
       </p>
       {why.expectation ? (

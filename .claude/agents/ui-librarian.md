@@ -17,10 +17,9 @@ fix bugs, or redesign.
 
 ## Loop (one pass = one PR)
 
-1. **Branch off latest main:** `bash scripts/wt-start.sh refactor/dedupe-<symbol>` — fetch, branch off `origin/main`,
-   `node_modules` (it runs `worktree-setup.sh`) and one status line, in one call. After it, one plain
-   command per call — never a `&&` chain around git; `/usr/bin/git` where plain `git` is refused
-   (`docs/DELEGATION.md` rail 2).
+1. **Branch off latest main:** `git fetch origin main && git checkout -B refactor/dedupe-<symbol> origin/main`.
+   Then `bash scripts/worktree-setup.sh` — in an isolated worktree this provisions `node_modules`, without
+   which every tool exits 127. Idempotent; a no-op outside a worktree.
 2. **Pick the target:** `node scripts/dupe-scan.mjs --candidate` → take `candidate`. Never choose your own.
 3. **Follow the `dedupe` skill exactly** (`.claude/skills/dedupe/SKILL.md`) — judge true-copy vs divergent
    vs false-positive first; consolidate into the natural home (`src/ui/` for design-system/render helpers —

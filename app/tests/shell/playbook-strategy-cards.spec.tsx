@@ -142,20 +142,6 @@ describe("a strategy card", () => {
     expect(screen.queryByLabelText("Capital to delegate ($)")).not.toBeInTheDocument();
   });
 
-  it("puts a can't-run row's refusal under the row's own ⊘, never a second glyph (#5093)", () => {
-    const refusal = "TACO-DJT isn't running on the bots yet.";
-    mount(
-      wheel([
-        pair("TACO-DJT", "DJT", {
-          status: "cant-run",
-          statusLabel: "⊘ can't run",
-          subscribeRefusal: refusal,
-        }),
-      ]),
-    );
-    expect(screen.getByText(refusal).closest("p")).toHaveTextContent(`⊘ ${refusal}`);
-  });
-
   it("says what the bot does with a held pair: the hand-off and the not-trading line", () => {
     mount(
       wheel([
@@ -194,13 +180,13 @@ describe("the fold", () => {
     pair("TSLA-WHEEL", "TSLA", { status: "stand-aside", statusLabel: "✗ stand aside" }),
     pair("X-WHEEL", "XOM", { status: "not-studied", statusLabel: "? not studied" }),
     pair("Y-WHEEL", "YUM", { status: "not-studied", statusLabel: "? not studied" }),
-    pair("TACO-DJT", "DJT", { status: "cant-run", statusLabel: "⊘ can't run" }),
+    pair("TACO-DJT", "DJT", { status: "cant-run", statusLabel: "– can't run" }),
   ]);
 
-  it("folds ✗ ? and ⊘ rows into one counted line, with the researched row open", () => {
+  it("folds ✗ ? and – rows into one counted line, with the researched row open", () => {
     mount(folded);
     const summary = screen.getByText(/^4 more:/);
-    expect(summary).toHaveTextContent("4 more: ✗ 1 stand aside · ? 2 not studied · ⊘ 1 can't run");
+    expect(summary).toHaveTextContent("4 more: ✗ 1 stand aside · ? 2 not studied · – 1 can't run");
     const fold = summary.closest("details");
     if (!(fold instanceof HTMLElement)) throw new Error("no fold");
     expect(fold).not.toHaveAttribute("open");

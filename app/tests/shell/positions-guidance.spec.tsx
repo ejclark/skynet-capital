@@ -127,6 +127,7 @@ rstest.mock("../../src/shell/networth-card", () => ({
 }));
 rstest.mock("../../src/shell/money-strip", () => ({ MoneyStrip: () => null }));
 rstest.mock("../../src/shell/sauron-card", () => ({ SauronCard: () => null }));
+rstest.mock("../../src/shell/council-line-card", () => ({ CouncilLineCard: () => null }));
 rstest.mock("../../src/shell/new-high-ceremony", () => ({ NewHighCeremony: () => null }));
 rstest.mock("../../src/shell/use-tower-column", () => ({ useTowerColumn: () => false }));
 

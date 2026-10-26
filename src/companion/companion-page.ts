@@ -37,6 +37,7 @@ const ACTIVITY_SECTIONS: Readonly<Record<string, string>> = {
   feed: "the trading activity feed",
   pnl: "booked P&L",
   pulse: "the feedback pulse",
+  council: "the Council (members' weekly thesis lines)",
 };
 
 const RESEARCH_SECTIONS: Readonly<Record<string, string>> = {

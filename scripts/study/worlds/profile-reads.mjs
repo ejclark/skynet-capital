@@ -39,9 +39,9 @@ const SHELL = [
   "/api/playbooks",
   "/api/playbook-store",
   "/api/join",
-  // One tap from the profile (the app nav, the header's icons): Activity's feed, Moneypenny's
-  // feedback, Settings' owner-gated cards (a non-owner gets `{owner:false}` from the real handler,
-  // as in production).
+  // One tap from the profile (the app nav, the header's icons): Activity's feed and the Council
+  // beside it, Moneypenny's feedback, Settings' owner-gated cards (a non-owner gets `{owner:false}`
+  // from the real handler, as in production).
   "/api/wire",
   "/api/feedback",
   "/api/feedback/comments",
@@ -57,12 +57,12 @@ const YTD_DAYS = Math.ceil((Date.parse(INSTANT) - YEAR_START) / 86_400_000) + 1;
 const BAR_DAYS = [7, 31, 93, 180, 366, YTD_DAYS, 1825];
 
 /** Hand-off reads: the trade page the profile's actions open, and the stores beside it. */
-const TRADE = ["/api/trade/plays", "/api/companion", "/api/saved-positions"];
+const TRADE = ["/api/trade/plays", "/api/council", "/api/companion", "/api/saved-positions"];
 
 /** Reads the redesign kit's screens make beyond the profile (scripts/redesign/screens.json):
- *  R&D's playbook records, and the playbook store's first fetch, which the page sends before any
- *  playbook is chosen (an empty `id`, answered as production does). */
-const BEYOND = ["/api/outpost/performance", "/api/playbook-store?id="];
+ *  the Council's reply threads, R&D's playbook records, and the playbook store's first fetch,
+ *  which the page sends before any playbook is chosen (an empty `id`, answered as production does). */
+const BEYOND = ["/api/council/replies", "/api/outpost/performance", "/api/playbook-store?id="];
 
 /** The options chain the trade page opens on: its symbol, each side, the default expiry (none
  *  named) and the front one — the first Friday on or after the instant, the first expiration the

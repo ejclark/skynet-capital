@@ -86,27 +86,16 @@ export function ConvictionFields({
  * new date — the move after a failed check, and the routine one before it. With none on record the
  * control reads "State a conviction", and the bots keep the pair trading, labelled "conviction not
  * stated" (criterion 11): the line says so rather than leave the owner to infer it.
- *
- * A pair pointed at a conviction view (#5482) carries no inline conviction: the view is its check,
- * so the line names the view and its day (`steeredBy`), never "no conviction stated". A pointer
- * whose view this page cannot read (`steeredBy` absent, `pointed` set) still says it is steered,
- * without a day it cannot vouch for. A new date set here is the owner's own, and replaces the view.
  */
 export function ConvictionPanel({
   accountId,
   playbookId,
   conviction,
-  steeredBy,
-  pointed = false,
   onChanged,
 }: {
   readonly accountId: string;
   readonly playbookId: string;
   readonly conviction?: ConvictionView;
-  /** The view the subscription points at, when the row can read it. */
-  readonly steeredBy?: { readonly title: string; readonly checkOn: string };
-  /** The subscription points at a view. */
-  readonly pointed?: boolean;
   readonly onChanged: () => void;
 }): ReactElement {
   const [open, setOpen] = useState(false);
@@ -143,21 +132,6 @@ export function ConvictionPanel({
               <span aria-hidden="true">◆</span> Conviction
             </b>{" "}
             · {conviction.reason} · checked on <span className="num">{conviction.checkOn}</span>
-          </>
-        ) : steeredBy ? (
-          <>
-            <b className="pb-status-state">
-              <span aria-hidden="true">◆</span> Conviction
-            </b>{" "}
-            · steered by {steeredBy.title} · checked on{" "}
-            <span className="num">{steeredBy.checkOn}</span>
-          </>
-        ) : pointed ? (
-          <>
-            <b className="pb-status-state">
-              <span aria-hidden="true">◆</span> Conviction
-            </b>{" "}
-            · steered by a conviction view this page can't read; its check still applies.
           </>
         ) : (
           <>
@@ -213,7 +187,7 @@ export function ConvictionPanel({
               setOpen(true);
             }}
           >
-            {conviction || pointed ? "Set a new date" : "State a conviction"}
+            {conviction ? "Set a new date" : "State a conviction"}
           </button>
         </div>
       )}

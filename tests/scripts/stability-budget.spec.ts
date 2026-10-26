@@ -62,7 +62,7 @@ describe("flyEnv / flyCommand — production's wiring, read from fly.toml", () =
 describe("accountsOpen / accountsBurst — what a member's Accounts click fires", () => {
   it("opens Accounts as the shell does: its reads and the viewed account's Pulse, no stream", () => {
     const open = accountsOpen("human-eric");
-    expect(open).toHaveLength(12);
+    expect(open).toHaveLength(13);
     expect(open.filter((p) => p.endsWith("/pulse"))).toEqual(["/api/desk/human-eric/pulse"]);
     expect(open.some((p) => p.startsWith("/events"))).toBe(false);
   });

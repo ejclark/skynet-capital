@@ -248,7 +248,7 @@ node scripts/study/readout.mjs --grade <round>/grade.json --round <round dir> --
 
 1. A picture: a member stuck, beside the owner's own screenshot.
 2. The headline counts.
-3. Structural findings first: the top ten ranked, the rest folded.
+3. Structural findings first, uncapped.
 4. The scorecard, with disputes marked.
 5. The battle-test.
 6. The job map.
@@ -443,7 +443,7 @@ node scripts/study/round.mjs --pin <other pin> --out <fresh dir> --sealed <answe
   every answer. A resumed round now replays recorded answers, and the merge gets 30 minutes (#5010).
   Resume with the same, unedited `--profile` path: the round compares the path and its hash.
 - 2026-10-09 · the generated readout printed all 66 structural findings with every frame (794 lines,
-  48MB) and had to be cut to a top ten by hand. Done in #5845: `readout.mjs` ranks and shows ten, the rest folded.
+  48MB) and had to be cut to a top ten by hand. Next: `readout.mjs` ranks and caps at ten, the rest folded.
 - 2026-10-09 · the experts read the member cards, so their finds are primed — but the grader
   counts an expert's find as unprimed, and every item came out "unprimed". Either give experts no
   cards or count card-exposed finds apart.

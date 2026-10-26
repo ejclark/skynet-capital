@@ -1,13 +1,11 @@
 // The readout's words and layout (#4943) — pure: readout.mjs gathers the frames and files, this
 // turns them into markdown. The order is fixed by the plan and never changes between studies, so
 // the owner learns where to look once (docs/members/study/README.md → "The readout"):
-//   1 a picture · 2 the headline · 3 new structural problems, the top ten ranked and the rest
-//   folded (#5845) · 4 the scorecard ·
+//   1 a picture · 2 the headline · 3 new structural problems, uncapped · 4 the scorecard ·
 //   5 the design battle-test · 6 the job map · 7 what it missed · 8 one question.
 // Plain words throughout; key items are shown by id, with their wording only when revealed.
 
 import { basename } from "node:path";
-import { SCALE, severityOf } from "./round-findings.mjs";
 
 export const SECTIONS = [
   "A member, stuck",
@@ -181,95 +179,35 @@ function whoWords(f) {
   return f.expert ? ` (expert ${f.expert})` : "";
 }
 
-/** How many new structural problems get their frames; the rest sit in one fold, text only. */
-export const STRUCTURAL_TOP = 10;
-/** The one sentence the section opens on, so the owner knows why the first one is first. */
-export const RANKING =
-  "Ranked by severity, then how many times it was reported, then how many members it reached.";
-
-/**
- * A severity as its place on round-findings.mjs's one scale (none 0 … critical 4). findings.jsonl
- * already holds that scale's words, put there by severityOf; the digit and capital-letter handling
- * here is only a fallback for un-normalised input such as the hand-written fixture, and it maps an
- * unknown word to low exactly as the collector does. A finding with no severity at all ranks last.
- */
-export function severityRank(raw) {
-  if (raw == null || raw === "") return -1;
-  const s = String(raw);
-  return SCALE.indexOf(severityOf(/^[0-4]$/.test(s) ? Number(s) : s));
-}
-
-/** The worst severity among a group's reports: a group ranks by its worst one, not its lead. */
-export function worstSeverity(list) {
-  let worst = null;
-  for (const raw of list) if (severityRank(raw) > severityRank(worst)) worst = raw;
-  return worst;
-}
-
-/** The group's worst severity when readout.mjs worked it out, else its lead finding's. */
-const groupSeverity = (s) => s.severity ?? s.finding.severity;
-
-/** Highest severity first, then most reports, then most members reached; ties keep input order. */
-export function rankStructural(items) {
-  return items
-    .map((s, i) => ({ s, i, sev: severityRank(groupSeverity(s)), seen: 1 + (s.also ?? 0) }))
-    .sort(
-      (a, b) =>
-        b.sev - a.sev || b.seen - a.seen || (b.s.members ?? 0) - (a.s.members ?? 0) || a.i - b.i,
-    )
-    .map(({ s }) => s);
-}
-
-/** The byline under a finding: who found it, how bad, where, how often. */
-function foundBy(s) {
-  const f = s.finding;
-  const who = `${CLASS_WORDS[s.class] ?? s.class}${whoWords(f)}`;
-  const worst = groupSeverity(s);
-  return `Found by ${who}${worst ? ` · ${sev(worst)}` : ""}${f.where ? ` · ${f.where}` : ""}${s.also ? ` · reported ${s.also} more time${s.also > 1 ? "s" : ""}` : ""}`;
-}
-
-function shown(s, i) {
-  const f = s.finding;
-  const strip = s.frames.length
-    ? [
-        `| ${s.frames.map((_, n) => `Frame ${n + 1}`).join(" | ")} |`,
-        `|${"---|".repeat(s.frames.length)}`,
-        `| ${s.frames.map((p) => img("frame", p)).join(" | ")} |`,
-      ]
-    : ["_No frames were recorded with this finding._"];
-  return [
-    `### ${i + 1}. ${f.what}`,
-    "",
-    ...strip,
-    "",
-    ...(f.quote ? [`> "${oneLine(f.quote)}"`, ""] : []),
-    // A member's finding carries a quote, not a principle/why/fix — no empty formula for it.
-    ...(f.principle || f.why || f.fix ? [formulaSentence(f), ""] : []),
-    `_${foundBy(s)}._`,
-    "",
-  ];
-}
-
-/** New structural problems: the top ten ranked with frames, every other one folded below. */
-export function structuralSection({ structural: items, grade }) {
+function structural({ structural: items, grade }) {
   const rest = notCounted(grade.structural);
   const tail = rest.length ? ["", "Not counted as new:", "", ...rest] : [];
   if (!items.length) return ["None that a checker confirmed.", ...tail];
-  const ranked = rankStructural(items);
-  const top = ranked.slice(0, STRUCTURAL_TOP);
-  const more = ranked.slice(STRUCTURAL_TOP);
-  const fold = more.length
-    ? [
-        "<details>",
-        `<summary>The other ${more.length}, ranked the same way, text only</summary>`,
+  return [
+    ...items.flatMap((s, i) => {
+      const f = s.finding;
+      const strip = s.frames.length
+        ? [
+            `| ${s.frames.map((_, n) => `Frame ${n + 1}`).join(" | ")} |`,
+            `|${"---|".repeat(s.frames.length)}`,
+            `| ${s.frames.map((p) => img("frame", p)).join(" | ")} |`,
+          ]
+        : ["_No frames were recorded with this finding._"];
+      const who = `${CLASS_WORDS[s.class] ?? s.class}${whoWords(f)}`;
+      return [
+        `### ${i + 1}. ${f.what}`,
         "",
-        ...more.map((s) => `- **${oneLine(s.finding.what)}** — ${foundBy(s)}.`),
+        ...strip,
         "",
-        "</details>",
+        ...(f.quote ? [`> "${oneLine(f.quote)}"`, ""] : []),
+        // A member's finding carries a quote, not a principle/why/fix — no empty formula for it.
+        ...(f.principle || f.why || f.fix ? [formulaSentence(f), ""] : []),
+        `_Found by ${who}${f.severity ? ` · ${sev(f.severity)}` : ""}${f.where ? ` · ${f.where}` : ""}${s.also ? ` · reported ${s.also} more time${s.also > 1 ? "s" : ""}` : ""}._`,
         "",
-      ]
-    : [];
-  return [RANKING, "", ...top.flatMap(shown), ...fold, ...tail];
+      ];
+    }),
+    ...tail,
+  ];
 }
 
 const mark = (score, primed) =>
@@ -403,7 +341,7 @@ function question({ nextArea, cost }) {
   ];
 }
 
-const BODIES = [picture, headline, structuralSection, scorecard, battle, jobMap, missed, question];
+const BODIES = [picture, headline, structural, scorecard, battle, jobMap, missed, question];
 
 /** The whole readout, sections in the fixed order. */
 export function renderReadout(model) {

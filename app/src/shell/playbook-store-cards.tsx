@@ -88,10 +88,8 @@ function NewSubscription({
       />
     );
   }
-  // ⊘ is "can't", the pair table's can't run and the heartbeat's Can't fire: a dash here put a
-  // second glyph on a can't-run row beside its "⊘ can't run" (#5093).
   if (refusal) {
-    return <SubscribeDoor glyph="⊘" note={refusal} title="This pair takes no new subscription" />;
+    return <SubscribeDoor glyph="–" note={refusal} title="This pair takes no new subscription" />;
   }
   return (
     <details className="pb-subscribe-disclosure">

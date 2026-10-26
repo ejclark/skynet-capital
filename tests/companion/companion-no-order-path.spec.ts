@@ -97,11 +97,9 @@ describe("behavioral: the dispatcher refuses every order-shaped or adversarial a
     }
   });
 
-  it("the real tool list is the eight read-only lookups plus the two draft hand-offs — nothing else exists to call", () => {
+  it("the real tool list is the seven read-only lookups plus the draft hand-off — nothing else exists to call", () => {
     expect(COMPANION_TOOL_DEFS.map((t) => t.name).sort()).toEqual([
-      "draft_conviction",
       "draft_feedback",
-      "get_my_convictions",
       "get_my_curriculum_progress",
       "get_my_positions",
       "get_my_round_trips",

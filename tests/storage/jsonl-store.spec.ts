@@ -212,37 +212,4 @@ describe("JsonlKeyedStore", () => {
       expect(await store.latest("alpha")).toEqual({ key: "alpha", value: 1 });
     });
   });
-  describe("when streaming entries one at a time", () => {
-    const collect = async (iterable: AsyncIterable<Entry>): Promise<Entry[]> => {
-      const out: Entry[] = [];
-      for await (const entry of iterable) out.push(entry);
-      return out;
-    };
-
-    it("yields the same entries as list, across every key", async () => {
-      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
-      await store.append("alpha", { key: "alpha", value: 1 });
-      await store.append("beta", { key: "beta", value: 2 });
-      await store.append("alpha", { key: "alpha", value: 3 });
-
-      expect(await collect(store.stream())).toEqual(await store.list());
-      expect(await collect(store.stream("alpha"))).toEqual(await store.list("alpha"));
-    });
-
-    it("skips a torn line and keeps the intact ones", async () => {
-      writeFileSync(join(dir, "alpha.jsonl"), '{"key":"alpha","value":1}\n{"key":"al');
-      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
-
-      expect(await collect(store.stream("alpha"))).toEqual([{ key: "alpha", value: 1 }]);
-    });
-
-    it("yields nothing for a key whose file was never written, or a missing directory", async () => {
-      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
-      const missing = join(dir, "nope");
-      const absent = new JsonlKeyedStore<Entry>(missing, fileFor(missing));
-
-      expect(await collect(store.stream("ghost"))).toEqual([]);
-      expect(await collect(absent.stream())).toEqual([]);
-    });
-  });
 });

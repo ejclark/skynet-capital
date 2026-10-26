@@ -1,8 +1,9 @@
 import type { ReactElement } from "react";
 import type { DeskPosition, PositionEvent } from "../live/desk";
+import { held } from "../live/quantity";
 import { withMinus } from "../ui";
 import { GlossaryTerm } from "./glossary-term";
-import { greeksParts, type HoldingGreeks } from "./holding-decay";
+import { greeksParts, type HoldingDecay } from "./holding-decay";
 import {
   dayChange,
   GreeksLine,
@@ -101,27 +102,36 @@ export function PositionCell({ position }: { readonly position: DeskPosition }):
   );
 }
 
-/** What time and a $1 move in the stock do to the holding, one per line. The column is the
- *  options' (#5960): a share says only that it has no time decay — its Δ is always $1 a share and
- *  tells the reader nothing. An option the feed didn't quote shows our model's figures marked
- *  "est.", or says why there are none ("no price for CRWV yet"); "—" only until the book answers. */
+/** What time and a $1 move in the stock do to the holding, one per line. A share has no time
+ *  decay and moves a dollar a share; an option the feed didn't quote reads "—". */
 export function GreeksContent({
   position,
-  greeks,
+  decay,
+  delta,
 }: {
   readonly position: DeskPosition;
-  readonly greeks?: HoldingGreeks;
+  readonly decay?: HoldingDecay;
+  readonly delta?: number;
 }): ReactElement {
   if (!position.isOption) {
+    const { count, short } = held(position.quantity);
+    const move = greeksParts(undefined, short ? -count : count).delta;
     return (
       <span className="pos-card-greeks">
         <span className="pos-greek muted">no time decay</span>
+        {move ? (
+          <>
+            <span className="visually-hidden">,</span>{" "}
+            <span className="pos-greek">
+              Δ <span className="pos-card-greek-fig num">{move}</span> per $1
+            </span>
+          </>
+        ) : null}
       </span>
     );
   }
-  const parts = greeksParts(greeks);
-  if (parts.theta || parts.delta) return <GreeksLine {...parts} />;
-  return <span className="muted">{greeks?.missing ?? "—"}</span>;
+  const parts = greeksParts(decay, delta);
+  return parts.theta || parts.delta ? <GreeksLine {...parts} /> : <span className="muted">—</span>;
 }
 
 /** The value, and today's change under it: "−$550" over "−$60 today". */

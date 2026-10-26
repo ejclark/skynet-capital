@@ -96,7 +96,6 @@ Three predictions carry score-by dates and are registered in [`forward-tests/uk-
 |---|---|---|---|---|
 | 2026-10-09 | D-14 | **Initial research.** Canonical `market-events/uk-consumer-confidence-2026-10-23.json` written from the single proposal (`from-uk-consumer-confidence-2026-09-25`, read in full, now inert), correcting its fieldwork guess: October windows are Oct 1–2 to Oct 12–15 (2023/24/25 primaries), so 2026 is in the field now. **Sept print** −13 (+1, third rise), window Sep 1–14, NIQ blames returning inflation, no Budget wording; sibling close-out killed its give-back and mechanism tests. Sep→Oct changes −9/−1/+2 (n=3). **Sweep:** peers n/a; macro — UK CPI 3.1%, BoE hold + QT plan, FOMC hike all pre-window, UK retail sales +2.4% y/y (sibling row); VIX **15.41** (14.87 at 09-25), no regime shift; geopolitics — Budget 10-28 headroom talk (City AM, secondary, 09-24), nothing touching a UK-consumer channel; tape — 40 tracked events within 5 days, one confirmed high (`fomc-2026-10-28`), same-day `uk-retail-sales-2026-10-23`. BRC September monitor and a consensus not findable. **Beyond horizon, named only:** the Nov 20 and Dec 18 editions. **No proposal filed** (`--on-date=2026-10-23` shows every same-day entry already present). | **Initial stance set** — stand aside; lean "climb stops" at low confidence. FT-…-1/-2/-3 registered | 2026-10-23 is the print; close-out from D+1 (2026-10-24), FT scores 2026-10-24 |
 | 2026-10-16 | D-7 | **Pulse; date holds, stance stands, backdrop leans harder into the "climb stops" lean.** **Date:** NIQ September release re-fetched direct — still "October 23rd, November 20th and December 18th"; Sept window Sep 1–14 confirmed; no October release yet, so FT-1 (window) is unreadable until 10-23, and fieldwork should already be closed (~Oct 14). **Tape since 10-09:** VIX **19.99** vs 15.41 (+4.6pt, regime shift; Cboe/Yahoo bar via repo probe) on a chip/AI sell-off and a hot US CPI 10-14 (10Y ~5.1%, sibling ledgers); no tracked symbol, so stand-aside is untouched. **UK:** BoE Nov hike priced ~100% (tradingeconomics 10-14, via sibling), Sept CPI centre ~3.5% (Polymarket, thin) but it publishes 10-21, AFTER this window closed — respondents saw August's 3.1% and the rate-path talk, not the print. **Survey cross-check (secondary):** BRC–Opinium Sept (pub 09-29) UK-economy 3-month expectations −34 (from −28), personal finances −15 (from −9) — a different instrument and window, but same direction as FT-2's inflation channel. Budget 10-28 date re-confirmed by HM Treasury per retail-insight-network (09-29); headroom reported thin, tax-rise speculation live. **Peers:** none (`symbols: []`). **Proposals:** none — `--on-date=2026-10-23` lists all five same-day entries already present; Nov 20 and Dec 18 editions are beyond the horizon, named only. | **None** — stance stands; FT-2 lean (−13 or lower) now has more support but stays **low** confidence, unsized. FT-1/-2/-3 untouched | 2026-10-23 is the print; close-out from D+1 (2026-10-24) |
-| 2026-10-25 | D+2 (close-out) | **Close-out, scored from the NIQ primary** (October 2026 release, fetched direct twice 2026-10-25). Headline **−24, down 11** (Sep −13); window **Oct 1–14**, n=2,003. Sub-measures: general economy next-12m **−36** (−14), last-12m **−48** (−12), major purchases **−22** (−14), personal finances next-12m **−3** (−8), savings **+28** (+1). NIQ: largest drop since July 2016, "no single major economic event", cost of living plus conflicts feeding inflation "now at 3.5%" — no Budget wording. **FT-1 pass, FT-2 pass, FT-3 pass.** Direction right, size missed by 11 points. **Sweep:** UK CPI 3.5% (10-21, after the window closed); VIX **19.45** (10-23); no tracked symbol. **Proposal:** Nov 20 edition now inside the horizon (D-26) → filed. Detail in `## Outcome`. | — (closed; stand-aside held, zero capital) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -116,75 +115,3 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-10-16
 <!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","case-shiller-hpi-2026-10-27","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","fhfa-hpi-2026-10-27","fomc-2026-10-28","goog-2026-10-28-print","housing-starts-2026-10-20","housing-vacancies-q3-2026-10-28","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","meta-nm-privacy-penalty-ruling-2026-10-20","msft-2026-10-27-print","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","new-home-sales-2026-10-27","pending-home-sales-2026-10-20","treasury-20y-bond-2026-10-21","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["fomc-2026-10-28"],"screenStreak":0,"blocked":[]} -->
-
-## Outcome
-
-**Close-out (2026-10-25, D+2 — inside the `closeOutWithinDays` window; all three fragment rows carry a
-2026-10-24 score-by, already arrived).** Macro-print mode runs no symbol-keyed instrument
-(`symbols: []` throughout); both instrument caches were busted per the lane's standing instruction
-though nothing here reads them. Scored from NIQ's own October 2026 release
-(`nielseniq.com/global/en/news-center/2026/consumer-confidence-plunges-11-points-to-24-in-october/`),
-fetched direct today — never from memory or secondary wire coverage. The page was read through a
-summarising fetcher, so figures below are as extracted twice, not hand-transcribed from the HTML.
-
-**The release.** Headline **−24, down 11 points** from September's −13 — ending the three-month climb
-and the largest one-month fall since July 2016 (post-Brexit), smaller only than the COVID onset (−25).
-Fieldwork **October 1–14**, sample **2,003** (16+, UK). Sub-measures (change on September): personal
-finances past-12m **−10** (−7), next-12m **−3** (−8); general economy past-12m **−48** (−12), next-12m
-**−36** (−14); major purchase index **−22** (−14); savings index **+28** (+1, outside the headline).
-Neil Bellamy: "With no single major economic event driving the decline, and with weakness seen across
-the full spectrum of income, age and gender demographic groups"; "relentless cost-of-living pressures,
-against an international backdrop of unresolved regional conflicts that are themselves contributing to
-domestic inflation now at 3.5%, appear to have swept aside the nascent optimism we saw following the
-appointment of a new UK prime minister this summer." No Budget, tax or Chancellor wording. (The 3.5% is
-September CPI, published 2026-10-21 — after fieldwork closed — so the quote cites the print, not
-something respondents saw.)
-
-**Leg 1 / FT-…-1 (window opens Oct 1–2, closes Oct 12–15) — PASS.** Stated window Oct 1–14: inside
-the registered bar (start not before 09-29, end not before 10-11). The policy week was before the first
-interview day and the Budget (10-28) after the last — the structural frame held.
-
-**Leg 2–4 / FT-…-2 (the climb stops, −13 or lower) — PASS, but the call was badly undersized.** −24 is
-11 points under the line. The lean named the inflation channel at low confidence and expected a pause;
-the series instead had its second-worst month on record. Honest read: the direction was right and the
-reason mostly unproven — NIQ itself says no single event drove it, and the sub-measure that would carry
-a fiscal-anticipation signal (general economy next-12m) fell 14 points, which fits the pre-Budget
-channel *and* the inflation channel *and* a broad mood shift equally. September's refutation of the
-Budget mechanism is therefore not reopened, but not strengthened either. A pass on a lean that missed
-the magnitude by 11 points is one observation, not a validated model.
-
-**Leg 5 / FT-…-3 (date and next-release line) — PASS.** Published 2026-10-23; the release lists
-"October 23rd, November 20th and December 18th", so the November edition is dated 2026-11-20 as the
-estimate had it. Release time is still not stated on the page. The `estimate` label stays: the
-taxonomy has no GfK/NIQ slot, which this lane may not fix by self-confirming.
-
-**Leg 6 (no market channel) — stand-aside held, untested by construction.** `symbols: []`; zero
-capital was keyed to this date. VIX closed **19.45** on 2026-10-23 (18.44 / 17.31 / 16.68 / 19.03 the
-four sessions before; Yahoo chart endpoint, secondary) — no regime move attributable to a UK survey.
-
-**The call, scored against the tape.** All three registered predictions passed; the one that carried
-real information (FT-2) passed with an error of 11 points in size, which says the low-confidence label
-was right and a −13 anchor was far too gentle. Nothing here licensed, or would have rewarded, a position.
-
-**Adjacency at close-out.** The November 20 edition is now D-26, inside `allImpactsWithinDays: 30`,
-and it is the first fieldwork window (~Nov 2–14) fully after the Budget (10-28). Not on the calendar
-(`--on-date=2026-11-20` listed seven entries, none the barometer) → proposed as
-`proposals/uk-consumer-confidence-2026-11-20.from-uk-consumer-confidence-2026-10-23.json`
-(`estimate`). The December 18 edition is past the horizon — named only. Same-day
-`uk-retail-sales-2026-10-23` is a sibling lane's to close.
-
-**Honest limits at close-out.** Release figures came through a summarising fetcher; the release time
-is unverified; no consensus for the October print was found, so the surprise size against the market
-is unknown; the cause of the fall is not isolated by NIQ and not by this doc. This doc goes quiet.
-
-### Forward tests scored
-
-| Test | Prediction | Result | Verdict |
-|---|---|---|---|
-| `FT-uk-consumer-confidence-2026-10-23-1` | Window starts Oct 1–2, closes Oct 12–15 | **Oct 1–14**, n=2,003 | **pass** |
-| `FT-uk-consumer-confidence-2026-10-23-2` | Headline −13 or lower | **−24**, down 11 | **pass** |
-| `FT-uk-consumer-confidence-2026-10-23-3` | Publishes 10-23; next release 11-20 | **2026-10-23**; next "November 20th" | **pass** |
-
-**Last assessed:** 2026-10-25 (close-out — this event goes quiet; all three registered forward tests
-are now scored, none remain open)
-<!-- probe-ref: {"symbols":{},"vix":19.45,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","case-shiller-hpi-2026-10-27","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","fhfa-hpi-2026-10-27","fomc-2026-10-28","goog-2026-10-28-print","housing-starts-2026-10-20","housing-vacancies-q3-2026-10-28","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","meta-nm-privacy-penalty-ruling-2026-10-20","msft-2026-10-27-print","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","new-home-sales-2026-10-27","pending-home-sales-2026-10-20","treasury-20y-bond-2026-10-21","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["fomc-2026-10-28"],"screenStreak":0,"blocked":[]} -->

@@ -4,9 +4,9 @@ import { serveCouncilApi } from "../../src/server/council-api-routes.js";
 import type { CouncilDeps } from "../../src/server/council-form.js";
 
 /**
- * `/api/council`'s HTTP layer since the Council retired (#5992): unwired answers `{enabled:false}`,
- * a signed-out GET still sees the stored week (the auth gate already ran), and no write of any kind
- * reaches the store.
+ * `/api/council`'s HTTP layer: unwired answers `{enabled:false}`, a signed-out GET still sees the
+ * week (the auth gate already ran), a signed-out POST is refused, and the session's own email is
+ * the ONLY identity a submitted line is ever attributed to.
  */
 
 function fakeRes() {
@@ -63,6 +63,9 @@ function depsWith(
 }
 
 const member = { email: "member@example.com" } as never;
+// The retract specs post several times; their own members keep the shared throttle out of it.
+const retractor = { email: "retractor@example.com" } as never;
+const stickler = { email: "stickler@example.com" } as never;
 
 describe("serveCouncilApi", () => {
   it("ignores other paths", async () => {
@@ -89,35 +92,91 @@ describe("serveCouncilApi", () => {
     expect(body.mine).toBeUndefined();
   });
 
-  // #5992 — the Council is retired: every write answers 410 and touches no store, while the stored
-  // lines stay readable (archived, never deleted).
-  it("refuses every write with 410, signed in or out, and leaves the stored lines in place", async () => {
-    const stored = { abc: { text: "bullish", at: "2026-09-07T12:00:00.000Z" } };
-    const { deps, submits, retracts } = depsWith({ "2026-W37": stored });
-    for (const [body, session] of [
-      [{ text: "bullish" }, member],
-      [{ text: "bullish", playbookId: "S1-NVDA" }, member],
-      [{ retract: true }, member],
-      [{ text: "bullish" }, undefined],
-    ] as const) {
-      const { res, out } = fakeRes();
-      expect(await serveCouncilApi(postReq(body), res, "/api/council", deps, session)).toBe(true);
-      expect(out.status).toBe(410);
-      expect(JSON.parse(out.body ?? "{}")).toEqual({
-        ok: false,
-        error: "The Council is retired — write your thesis into a playbook, where it gets tested.",
-      });
-    }
+  it("refuses a signed-out POST", async () => {
+    const { res, out } = fakeRes();
+    const { deps, submits } = depsWith();
+    const req = postReq({ text: "bullish" });
+    await serveCouncilApi(req, res, "/api/council", deps, undefined);
+    expect(out.status).toBe(403);
     expect(submits).toEqual([]);
-    expect(retracts).toEqual([]);
-    const read = fakeRes();
-    await serveCouncilApi(getReq(), read.res, "/api/council", deps, member);
-    expect(JSON.parse(read.out.body ?? "{}").entries).toHaveLength(1);
   });
 
-  it("refuses a write even where no store is wired", async () => {
+  it("requires application/json", async () => {
     const { res, out } = fakeRes();
-    await serveCouncilApi(postReq({ text: "bullish" }), res, "/api/council", undefined, member);
-    expect(out.status).toBe(410);
+    const { deps, submits } = depsWith();
+    const req = postReq({ text: "bullish" }, "application/x-www-form-urlencoded");
+    await serveCouncilApi(req, res, "/api/council", deps, member);
+    expect(out.status).toBe(415);
+    expect(submits).toEqual([]);
+  });
+
+  it("attributes a submitted line to the SESSION's email, never a body field", async () => {
+    const { res, out } = fakeRes();
+    const { deps, submits } = depsWith();
+    const req = postReq({ text: "bullish", opaqueMemberId: "attacker-supplied" });
+    await serveCouncilApi(req, res, "/api/council", deps, member);
+    expect(submits).toHaveLength(1);
+    expect(submits[0]?.memberId).not.toBe("attacker-supplied");
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+  });
+
+  it("forwards a tagged playbookId to submitThesis", async () => {
+    const { res, out } = fakeRes();
+    const { deps, submits } = depsWith();
+    const req = postReq({ text: "bullish", playbookId: "S1-NVDA" });
+    await serveCouncilApi(req, res, "/api/council", deps, member);
+    expect(submits[0]?.playbookId).toBe("S1-NVDA");
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+  });
+
+  it("refuses an unknown playbookId via submitThesis's own validation", async () => {
+    const { res, out } = fakeRes();
+    const { deps, submits } = depsWith();
+    const req = postReq({ text: "bullish", playbookId: "NOT-A-REAL-PLAY" });
+    await serveCouncilApi(req, res, "/api/council", deps, member);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({
+      ok: false,
+      error: "Unknown play — pick one from the list.",
+    });
+    expect(submits).toEqual([]);
+  });
+
+  it("rejects a malformed body with 400", async () => {
+    const { res, out } = fakeRes();
+    const { deps } = depsWith();
+    const req = postReq({ text: 7 });
+    await serveCouncilApi(req, res, "/api/council", deps, member);
+    expect(out.status).toBe(400);
+  });
+
+  it("takes back the SESSION's own line on retract — a body id never picks whose", async () => {
+    const { deps, retracts, submits } = depsWith();
+    const first = fakeRes();
+    await serveCouncilApi(postReq({ text: "bullish" }), first.res, "/api/council", deps, retractor);
+    const ownId = submits[0]?.memberId;
+    const { res, out } = fakeRes();
+    const req = postReq({ retract: true, opaqueMemberId: "someone-else" });
+    await serveCouncilApi(req, res, "/api/council", deps, retractor);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+    expect(retracts).toEqual([{ week: "2026-W37", memberId: ownId }]);
+    const read = fakeRes();
+    await serveCouncilApi(getReq(), read.res, "/api/council", deps, retractor);
+    expect(JSON.parse(read.out.body ?? "{}").entries).toEqual([]);
+  });
+
+  it("refuses a signed-out retract", async () => {
+    const { res, out } = fakeRes();
+    const { deps, retracts } = depsWith();
+    await serveCouncilApi(postReq({ retract: true }), res, "/api/council", deps, undefined);
+    expect(out.status).toBe(403);
+    expect(retracts).toEqual([]);
+  });
+
+  it("treats a non-boolean retract as a malformed write, never a retract", async () => {
+    const { res, out } = fakeRes();
+    const { deps, retracts } = depsWith();
+    await serveCouncilApi(postReq({ retract: "true" }), res, "/api/council", deps, stickler);
+    expect(out.status).toBe(400);
+    expect(retracts).toEqual([]);
   });
 });

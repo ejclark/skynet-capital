@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { deriveKey, type Envelope, open, seal } from "../../storage/secure-envelope.js";
 
@@ -158,11 +158,7 @@ export class FileAllowlistStore implements AllowlistStore {
 
   private write(entries: AllowlistEntry[]): void {
     mkdirSync(dirname(this.path), { recursive: true });
-    // tmp + rename, never in place: an OOM kill mid-write would leave a torn guest list that
-    // locks every member out on the next boot (#4612 slice 9; `writeFileAtomicSync` once #6030 lands).
-    const tmp = `${this.path}.tmp`;
-    writeFileSync(tmp, JSON.stringify(seal(JSON.stringify(entries), this.key)));
-    renameSync(tmp, this.path);
+    writeFileSync(this.path, JSON.stringify(seal(JSON.stringify(entries), this.key)));
   }
 }
 

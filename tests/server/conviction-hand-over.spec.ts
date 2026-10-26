@@ -133,8 +133,7 @@ describe("handing a member's view to their bots", () => {
       { conviction: expect.objectContaining({ id: ID }), accounts: ["sauron"] },
     ]);
     expect(pointer("sauron")).toBe(ID);
-    // Grace's bot stays on the seeded view that steers its pair (#5482 contract step).
-    expect(pointer("banker")).toBe(AI_DIP?.id);
+    expect(pointer("banker")).toBeUndefined();
     const mine = await call("/api/convictions/mine", get());
     expect(mine.convictions[0]).toMatchObject({
       status: "steering",
@@ -142,12 +141,12 @@ describe("handing a member's view to their bots", () => {
     });
   });
 
-  it("takes it back: a draft again, and the pair back on the seeded view that steers it", async () => {
+  it("takes it back: a draft again, and the pointer dropped", async () => {
     await save({ draft: draft() });
     await handOver();
     expect(await takeBack()).toEqual({ ok: true, label: "SIM", note: DRAFT_NOTE });
     expect(store.handedOver()).toEqual([]);
-    expect(pointer("sauron")).toBe(AI_DIP?.id);
+    expect(pointer("sauron")).toBeUndefined();
   });
 
   it("takes it back when it is edited, even under a new name, and says so", async () => {
@@ -156,14 +155,14 @@ describe("handing a member's view to their bots", () => {
     const edited = await save({ draft: draft("CRWV floor, revised"), replaceId: ID });
     expect(edited).toMatchObject({ ok: true, tookBack: true, note: TOOK_BACK_NOTE });
     expect(store.handedOver()).toEqual([]);
-    expect(pointer("sauron")).toBe(AI_DIP?.id);
+    expect(pointer("sauron")).toBeUndefined();
   });
 
-  it("returns the pair to the seeded view when a steering view is deleted", async () => {
+  it("drops the pointer when a steering view is deleted", async () => {
     await save({ draft: draft() });
     await handOver();
     expect(await call("/api/convictions/delete", post({ id: ID }))).toEqual({ ok: true });
-    expect(pointer("sauron")).toBe(AI_DIP?.id);
+    expect(pointer("sauron")).toBeUndefined();
   });
 
   it("never hands over another member's view", async () => {
@@ -220,7 +219,7 @@ describe("handing a member's view to their bots", () => {
   it("is finished by the next poll when the hand-over's own pointer write never landed", async () => {
     await save({ draft: draft() });
     store.handOver(opaqueMemberId("ada@example.com"), ID, ["sauron"], NOW);
-    expect(pointer("sauron")).toBe(AI_DIP?.id);
+    expect(pointer("sauron")).toBeUndefined();
     expect(pointConvictions(subs, NOW, store.pointers())).toEqual(["sauron/CRWV-WHEEL"]);
     expect(pointer("sauron")).toBe(ID);
   });
@@ -265,7 +264,7 @@ describe("handing a member's view to their bots", () => {
     await writeFile(join(dir, "member-convictions.json"), JSON.stringify(raw));
     expect(store.pointers().heldBy("sauron")).toEqual([]);
     expect(pointConvictions(subs, NOW, store.pointers())).toEqual(["sauron/CRWV-WHEEL"]);
-    expect(pointer("sauron")).toBe(AI_DIP?.id);
+    expect(pointer("sauron")).toBeUndefined();
     const mine = await call("/api/convictions/mine", get());
     expect(mine.convictions[0].refused.length).toBeGreaterThan(0);
   });

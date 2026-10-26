@@ -10,7 +10,6 @@ import { AutonomousTrader } from "../autonomous/autonomous-trader.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { enabledBotIds } from "../bots/bot-registry.js";
-import { envHardcoreControls } from "../personas/registry.js";
 import { readOfflineEvents } from "../runtime/data-source.js";
 import { resolveRoster } from "./autonomous-live-wiring.js";
 import { auditStore, decisionSink, logResult } from "./autonomous-sinks.js";
@@ -20,7 +19,7 @@ const OFFLINE_STARTING_CASH = 1_000_000;
 /** Replay fixtures against in-memory brokers, no keys, always "open." */
 export function runOffline(): void {
   const enabled = new Set(enabledBotIds(process.env));
-  const personas = resolveRoster(enabled, envHardcoreControls(process.env)).personas;
+  const personas = resolveRoster(enabled).personas;
   if (personas.length === 0) {
     console.error(`No enabled personas. Wanted: ${[...enabled].join(", ")}`);
     process.exit(1);

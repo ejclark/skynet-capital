@@ -97,11 +97,9 @@ export async function runToolRounds(
   handlers: CompanionHandlers,
 ): Promise<ToolRoundOutcome> {
   let working = [...initial];
-  const deps: CompanionDeskDeps = {
-    ...deskDeps,
-    ...(handlers.onHandoff ? { onDraft: handlers.onHandoff } : {}),
-    ...(handlers.onConvictionDraft ? { onConvictionDraft: handlers.onConvictionDraft } : {}),
-  };
+  const deps: CompanionDeskDeps = handlers.onHandoff
+    ? { ...deskDeps, onDraft: handlers.onHandoff }
+    : deskDeps;
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     if (handlers.budget && !handlers.budget()) {
       if (round === 0) {

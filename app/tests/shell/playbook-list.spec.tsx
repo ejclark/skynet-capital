@@ -64,7 +64,7 @@ const WHEEL = strategy(
   "options",
 );
 const TACO = strategy("event", "the TACO event play", [
-  pair("TACO-DJT", ["DJT"], { status: "cant-run", statusLabel: "⊘ can't run" }),
+  pair("TACO-DJT", ["DJT"], { status: "cant-run", statusLabel: "– can't run" }),
 ]);
 const SAURON = strategy("persona-rules", "Sauron's own rules", [
   pair("SAURON", ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"], {

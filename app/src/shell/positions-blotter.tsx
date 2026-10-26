@@ -14,7 +14,7 @@ import { fetchOptionPositions } from "../live/options";
 import { MARK_KINDS, MARK_TOKEN, MARK_WORD } from "../live/position-mark";
 import { rowCallOf } from "../live/row-call";
 import { FilterChip } from "../ui";
-import { greeksBySymbol } from "./holding-decay";
+import { decayBySymbol, deltaBySymbol } from "./holding-decay";
 import { useKeepPlace } from "./keep-place";
 import { useLandOnPosition } from "./position-anchor";
 import { PositionCards } from "./position-cards";
@@ -167,7 +167,8 @@ export function PositionsBlotter({
     enabled: hasOptions,
     staleTime: 30_000,
   });
-  const greeks = useMemo(() => greeksBySymbol(statement.data), [statement.data]);
+  const decay = useMemo(() => decayBySymbol(statement.data), [statement.data]);
+  const delta = useMemo(() => deltaBySymbol(statement.data), [statement.data]);
   const bookRows = useMemo(
     () => new Map((statement.data?.rows ?? []).map((r) => [r.symbol, r] as const)),
     [statement.data],
@@ -271,7 +272,8 @@ export function PositionsBlotter({
               positions={shown}
               deskId={deskId}
               totalCount={positions.length}
-              greeksBySymbol={greeks}
+              decayBySymbol={decay}
+              deltaBySymbol={delta}
               canTrade={canTrade}
               guide={guide}
             />
@@ -279,7 +281,8 @@ export function PositionsBlotter({
               <PositionCards
                 positions={shown}
                 deskId={deskId}
-                greeksBySymbol={greeks}
+                decayBySymbol={decay}
+                deltaBySymbol={delta}
                 guide={guide}
               />
             ) : null}

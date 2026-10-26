@@ -20,7 +20,6 @@ import type { Session } from "./auth/session.js";
 import { PROMOTED_LOCK } from "./authored-play-store.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
-import { creditFor } from "./feedback-attribution.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import {
   boundedString,
@@ -158,6 +157,12 @@ export function viewOf(
 function isRunning(record: AuthoredPlayRecord, config: DashboardServerConfig): boolean {
   const held = config.subscriptions?.load()[record.spec.authorAccountId] ?? [];
   return held.some((s) => s.playbookId === record.id && s.enabled);
+}
+
+/** The credit line: the member's own name from the session, cut to the model's limit. */
+export function creditFor(session: Session): string {
+  const named = session.name?.trim() || session.email.split("@")[0] || "A member";
+  return named.replace(/[\r\n]+/g, " ").slice(0, 40);
 }
 
 function runsOnRefusal(

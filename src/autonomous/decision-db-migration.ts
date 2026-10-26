@@ -1,5 +1,5 @@
 import type { DecisionDb } from "./decision-db.js";
-import type { AuditStore, DecisionRecord } from "./decision-record.js";
+import type { AuditStore } from "./decision-record.js";
 
 /**
  * Backfill of the JSONL audit trail into the queryable store, run every boot.
@@ -10,11 +10,6 @@ import type { AuditStore, DecisionRecord } from "./decision-record.js";
  * historical cycle(s)`, #5002). Now it writes only what is past each persona's newest stored `at`
  * (`maxAtAll()`, computed from the data itself), in batched transactions that yield between
  * chunks, and reports what it actually inserted.
- *
- * And it STREAMS the trail rather than `list()`ing it: `list()` parses every line into one array
- * before the watermark filter runs, and by 2026-10-22 that array outgrew the bots' 512 MB VM —
- * every boot died of heap exhaustion seconds after starting, the rollback image too (#5992
- * thread). Only records past the watermark are ever held, at most one chunk at a time.
  *
  * Trade-off, on purpose: a record OLDER than a persona's newest stored one is not re-tried. The
  * live sink writes JSONL and the store together, so such a gap only follows a failed store write;
@@ -29,19 +24,12 @@ export async function migrateAuditToDecisionDb(
   db: DecisionDb,
   opts: { watermark?: boolean } = {},
 ): Promise<number> {
+  const records = await audit.list();
   const newest = opts.watermark === false ? {} : db.maxAtAll();
-  const records = audit.stream ? audit.stream() : await audit.list();
-  let chunk: DecisionRecord[] = [];
-  let written = 0;
-  for await (const record of records) {
-    if (record.at <= (newest[record.personaId] ?? Number.NEGATIVE_INFINITY)) continue;
-    chunk.push(record);
-    if (chunk.length < MIGRATION_CHUNK) continue;
-    db.recordBatch(chunk);
-    written += chunk.length;
-    chunk = [];
+  const fresh = records.filter((record) => record.at > (newest[record.personaId] ?? -Infinity));
+  for (let i = 0; i < fresh.length; i += MIGRATION_CHUNK) {
+    db.recordBatch(fresh.slice(i, i + MIGRATION_CHUNK));
     await yieldToLoop(); // let socket keepalives and ticks through between transactions
   }
-  if (chunk.length > 0) db.recordBatch(chunk);
-  return written + chunk.length;
+  return fresh.length;
 }

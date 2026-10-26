@@ -32,10 +32,8 @@ import type { EquitySample } from "./history-record.js";
  *   - **A restart gap** whose orders outran the broker's recent-order window; the watch only
  *     bridges a gap that window covers (`capital-flow-watch.ts`).
  *
- * Slice 1 records in shadow precisely so the tolerance can be tuned against the recorded series —
- * with these sources named — before a member sees a line. Slice 2 built the rendering (the row's
- * mark in `capital-flow-mark.ts`, served from `capital-flow-ledger.ts`) but holds it behind
- * `FLOWS_SHOWN_FROM` below until that tuning lands (tracked on #4563).
+ * Slice 1 runs in shadow precisely so the tolerance can be tuned against the recorded series —
+ * with these sources named — before anything renders it.
  */
 export interface CapitalFlow {
   readonly participantId: string;
@@ -64,15 +62,6 @@ export interface CapitalFlowStore {
 export function flowTolerance(equity: number): number {
   return Math.max(1_000, Math.abs(equity) * 0.005);
 }
-
-/**
- * The instant from which a recorded flow is SHOWN to members — on the standings row and the equity
- * curve (#4563). `null` holds every mark back: the ledger keeps recording, nothing renders. A false
- * line would tell the whole league that an earned gain was not earned, so the marks wait until
- * `flowTolerance` has been tuned against a week of shadow lines. The tuning step sets this to the
- * instant the tuned tolerance ships, so a line recorded under the untuned default is never shown.
- */
-export const FLOWS_SHOWN_FROM: string | null = null;
 
 /** Dollars of filled notional one order had reached by `when` — its most-filled journal line at or
  *  before that instant. The journal is append-only, so an order can sit on several lines. */

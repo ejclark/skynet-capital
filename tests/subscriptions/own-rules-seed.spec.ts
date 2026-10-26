@@ -24,6 +24,7 @@ import {
 } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
 import { pointAtRecords } from "../../src/subscriptions/conviction-pointer.js";
+import { carryRowConvictions } from "../../src/subscriptions/row-conviction.js";
 import {
   EMPTY_SEED_MARKERS,
   SEEDED_FROM_OWN_RULES,
@@ -358,10 +359,10 @@ describe("seeding Sauron's own rules as his subscription", () => {
     let store: SubscriptionStore;
     let seed: ReturnType<typeof pollSeedsFromEnv>;
 
-    /** Eric's live state once the pointer at its record (#5482) has run: the CRWV wheel points at
-     *  the AI-dip view that steers its row, with no inline copy, so the seeds below are the only
-     *  writes a poll makes. */
-    const POLLED = pointAtRecords(LIVE_STATE, AT).state;
+    /** Eric's live state once the ◆ carry and the pointer at its record (#5482 slice 2) have run: the
+     *  CRWV wheel holds its row's conviction and points at the AI-dip view, so the seeds below are
+     *  the only writes a poll makes. */
+    const POLLED = pointAtRecords(carryRowConvictions(LIVE_STATE, AT).state, AT).state;
 
     beforeEach(() => {
       dir = mkdtempSync(join(tmpdir(), "own-rules-poll-"));
@@ -436,10 +437,11 @@ describe("seeding Sauron's own rules as his subscription", () => {
       expect(store.load()).toEqual(POLLED);
     });
 
-    it("points Eric's live CRWV wheel at the view that steers its ◆ row on the first poll, once (#4469 3c part 3, #5482 contract step)", () => {
+    it("carries the wheel's ◆ conviction onto Eric's live CRWV wheel on the first poll, then points it at its record, once (#4469 3c part 3, #5482 slice 2)", () => {
       store.replace(LIVE_STATE);
       expect(seed(controlsPollReport({}), AT)).toEqual([
-        "[subscriptions] pointed each subscription at the record that steers it, or at the member's view handed over to it (an inline copy beside the pointer dropped): sauron/CRWV-WHEEL",
+        "[subscriptions] carried the ◆ row's conviction onto each subscription stating none (checked on its row's date): sauron/CRWV-WHEEL",
+        "[subscriptions] pointed each subscription at the record its conviction states, or at the member's view handed over to it (its inline conviction kept): sauron/CRWV-WHEEL",
       ]);
       expect(store.load()).toEqual(POLLED);
       expect(seed(controlsPollReport({}), LATER)).toEqual([]);

@@ -1,7 +1,5 @@
-import { createReadStream } from "node:fs";
 import { appendFile, mkdir, open, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { createInterface } from "node:readline";
 
 /**
  * Shared file-level primitives for the "one append-only JSONL file per key under `dir`" pattern used
@@ -54,39 +52,6 @@ async function readJsonlEntriesInto<T>(file: string, entries: T[]): Promise<void
       // this guard exists to avoid, not one it should introduce.
       process.emitWarning(`[jsonl-store] skipping malformed line in ${file}`);
     }
-  }
-}
-
-/**
- * Every well-formed entry of `file`, one line at a time — the whole file is never held in memory.
- * `readJsonlEntriesInto` reads the file as one string and parses all of it; the bots' audit trail
- * outgrew a 512 MB VM that way (32 MB of JSONL on 2026-10-09, a boot-time OOM crash loop by
- * 2026-10-22, #5992 thread), so a reader that only wants some of the rows streams instead. Same
- * torn-line tolerance; a missing file yields nothing.
- */
-async function* streamJsonlEntries<T>(file: string): AsyncGenerator<T> {
-  const input = createReadStream(file, { encoding: "utf8" });
-  const opened = new Promise<boolean>((resolve) => {
-    input.once("open", () => resolve(true));
-    input.once("error", () => resolve(false));
-  });
-  if (!(await opened)) return;
-  const lines = createInterface({ input, crlfDelay: Number.POSITIVE_INFINITY });
-  try {
-    for await (const line of lines) {
-      if (line.length === 0) continue;
-      let entry: T;
-      try {
-        entry = JSON.parse(line) as T;
-      } catch {
-        process.emitWarning(`[jsonl-store] skipping malformed line in ${file}`);
-        continue;
-      }
-      yield entry;
-    }
-  } finally {
-    lines.close();
-    input.destroy();
   }
 }
 
@@ -157,12 +122,6 @@ export class JsonlKeyedStore<T> {
       await readJsonlEntriesInto(file, entries);
     }
     return entries;
-  }
-
-  /** `list`, one entry at a time — for a reader that keeps only some rows (see `streamJsonlEntries`). */
-  async *stream(key?: string): AsyncGenerator<T> {
-    const files = key ? [this.fileFor(key)] : await listJsonlFiles(this.dir);
-    for (const file of files) yield* streamJsonlEntries<T>(file);
   }
 
   /** The newest entry appended for `key`, without reading the rest of its file (#4612 slice 7). */

@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import type { DeskPosition } from "../live/desk";
 import { BlotterRow } from "./blotter-row";
-import type { HoldingGreeks } from "./holding-decay";
+import type { HoldingDecay } from "./holding-decay";
 import { colClass, POS_COLUMNS, PositionsHeaderRow } from "./position-columns";
 
 /**
@@ -26,15 +26,17 @@ export function PositionsTable({
   positions,
   deskId,
   totalCount,
-  greeksBySymbol,
+  decayBySymbol,
+  deltaBySymbol,
   canTrade = true,
   guide,
 }: {
   readonly positions: readonly DeskPosition[];
   readonly deskId: string;
-  /** θ and Δ per OCC symbol, from the option book (#3689 slice 6, #5059, #5960); absent until it
-   *  answers. */
-  readonly greeksBySymbol?: ReadonlyMap<string, HoldingGreeks>;
+  /** Time decay per OCC symbol, from the option book (#3689 slice 6); absent until it answers. */
+  readonly decayBySymbol?: ReadonlyMap<string, HoldingDecay>;
+  /** Dollars per $1 in the stock per OCC symbol, from the same book (#5059). */
+  readonly deltaBySymbol?: ReadonlyMap<string, number>;
   /** Unfiltered count, for the empty-state copy (0 open vs. 0 matching a filter). */
   readonly totalCount: number;
   /** Does the viewer own this account? Off it, no row renders a write (`BlotterRow`). */
@@ -69,7 +71,8 @@ export function PositionsTable({
                 key={position.symbol}
                 position={position}
                 deskId={deskId}
-                greeks={greeksBySymbol?.get(position.symbol)}
+                decay={decayBySymbol?.get(position.symbol)}
+                delta={deltaBySymbol?.get(position.symbol)}
                 canTrade={canTrade}
                 guide={guide?.(position)}
               />

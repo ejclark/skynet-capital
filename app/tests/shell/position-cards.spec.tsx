@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { DeskPosition } from "../../src/live/desk";
 import type { OptionPositions } from "../../src/live/options";
-import { greeksBySymbol } from "../../src/shell/holding-decay";
+import { decayBySymbol, deltaBySymbol } from "../../src/shell/holding-decay";
 import { PositionCards } from "../../src/shell/position-cards";
 
 /**
@@ -151,7 +151,12 @@ function renderBook(held: readonly DeskPosition[] = [CRWV_PUT, NVDA, CRWV]) {
     [UNQUOTED]: undefined,
   });
   render(
-    <PositionCards positions={held} deskId="sauron" greeksBySymbol={greeksBySymbol(statement)} />,
+    <PositionCards
+      positions={held}
+      deskId="sauron"
+      decayBySymbol={decayBySymbol(statement)}
+      deltaBySymbol={deltaBySymbol(statement)}
+    />,
   );
 }
 
@@ -234,30 +239,9 @@ describe("PositionCards — options, in Eric's row spec (#5059)", () => {
     }
   });
 
-  it("says nothing about greeks for a contract the feed didn't quote and we couldn't estimate", () => {
+  it("says nothing about greeks for a contract the feed didn't quote", () => {
     renderBook([META_CALL]);
     expect(seen(card("META"))).not.toMatch(/θ|Δ/);
-  });
-
-  it("ends an estimated line with est. (#5960)", () => {
-    const statement = {
-      available: true,
-      rows: [
-        {
-          symbol: SOLD_PUT,
-          underlying: "CRWV",
-          estimate: { positionGreeks: { theta: 8.4, delta: 31.2 }, volatility: 0.7 },
-        },
-      ],
-    } as unknown as OptionPositions;
-    render(
-      <PositionCards
-        positions={[CRWV_PUT]}
-        deskId="sauron"
-        greeksBySymbol={greeksBySymbol(statement)}
-      />,
-    );
-    expect(seen(card("CRWV \\$80"))).toMatch(/θ earns \$8\/day · Δ \+\$31 per \$1 · est\.$/);
   });
 });
 

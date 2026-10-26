@@ -210,22 +210,12 @@ export function ghRateLimit({ readRest = ghRest, readGraphql = ghGraphqlBudget, 
  * LOUD ON THE CEILING, never a silent stop. Running out of pages mid-list is the same class of bug
  * as the one this fixes, so `maxPages` throws rather than returning what it happened to collect —
  * `gatherDeps`'s fail-closed doctrine, applied to pagination.
- *
- * EVERY PAGE GETS `withRetry` (#5918). Fail-closed made one 5xx on ANY page fatal to the whole
- * list, and the retry lived caller by caller: #5354 wrapped the relay's read, projects-reconcile
- * wrapped its own, and the ~20 others got one attempt — until `route --audit` died on a single
- * `returned error: 500` from page 2 of the open-issue read (run 39441832513, 2026-10-20). Retrying
- * here, per page, covers every caller at once and never re-fetches the pages already in hand.
  */
-export function ghRestAll(
-  path,
-  { perPage = 100, maxPages = 20, read = ghRest, sleep = sleepSync, ...opts } = {},
-) {
+export function ghRestAll(path, { perPage = 100, maxPages = 20, ...opts } = {}) {
   const sep = path.includes("?") ? "&" : "?";
   const all = [];
   for (let page = 1; page <= maxPages; page++) {
-    const url = `${path}${sep}per_page=${perPage}&page=${page}`;
-    const batch = withRetry(() => read(url, opts), { sleep });
+    const batch = ghRest(`${path}${sep}per_page=${perPage}&page=${page}`, opts);
     if (!Array.isArray(batch)) throw new Error(`ghRestAll: ${path} did not return a list.`);
     all.push(...batch);
     if (batch.length < perPage) return all;

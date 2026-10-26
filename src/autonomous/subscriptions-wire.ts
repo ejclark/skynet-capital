@@ -52,37 +52,20 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * expand-first order: the bots read v3 from #5511 on, and the app sends v3 from the migrate step
  * (`dashboard-insights-bridge.ts`), once those bots were live; v2 stays readable for a rollback. A
  * v1 or v2 snapshot does not vouch for a pointer, so the bots drop it, and the pair is checked on
- * its own conviction as before. Since the contract step's piece 2 a pointed subscription carries
- * no inline conviction, so a bots build rolled back past v3 would run it with none on record.
- *
- * `subscriptions.v4` (#5482 contract piece 4) is a contract, not an addition: since this piece the
- * bots read pointers only (`statedCheck`), so an inline conviction's reason and day change nothing
- * a bot does, and v4 stops fingerprinting them. It keeps ONE bit of the inline field: whether a
- * subscription still carries one with no pointer, which is a copy the app's poll could not move
- * onto a view, and which runs its pair exits-only (`subscriptionRoster`). Dropping that bit would
- * let such a pair trade unchecked, the one state no owner chose. The same expand-first order: the
- * bots read v4 from #5989 on, and the app sends v4 from the piece's app half
- * (`dashboard-insights-bridge.ts`), once those bots were live; v3 stays readable for a rollback. A v2 snapshot never vouches for a pointer, so on a bots build with this
- * piece every pair it carries a conviction for runs exits-only: a rollback that far fails safe.
- * Since the inline carry's replacement (bots first) so does every ◆ pair a v1 or v2 snapshot
- * carries, copy or not: a ◆ pair with no pointer runs exits-only (`isConvictionOffView`). That is
- * what let the app stop writing the ◆ row's copy (the replacement's app half).
+ * its own conviction as before — the migrate step keeps that inline conviction on the same day.
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";
 export const SUBSCRIPTIONS_SNAPSHOT_KIND_V2 = "subscriptions.v2";
 export const SUBSCRIPTIONS_SNAPSHOT_KIND_V3 = "subscriptions.v3";
-export const SUBSCRIPTIONS_SNAPSHOT_KIND_V4 = "subscriptions.v4";
 export type SubscriptionsSnapshotKind =
   | typeof SUBSCRIPTIONS_SNAPSHOT_KIND
   | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V2
-  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V3
-  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V4;
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V3;
 const SNAPSHOT_KINDS: readonly string[] = [
   SUBSCRIPTIONS_SNAPSHOT_KIND,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
 ];
 
 /**
@@ -133,10 +116,6 @@ function behavioralFields(
     sub.compoundAllocation === true,
   ];
   if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND) return v1;
-  // v4: the pointer, and only whether an unmoved inline copy is there, never what it says.
-  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V4) {
-    return [...v1, sub.convictionId ?? null, sub.conviction !== undefined];
-  }
   const v2 = [...v1, sub.conviction ? [sub.conviction.reason, sub.conviction.checkOn] : null];
   if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V2) return v2;
   return [...v2, sub.convictionId ?? null];
@@ -180,15 +159,12 @@ export function buildSubscriptionsSnapshot(
 }
 
 /** The state with only the fields `kind`'s version vouches for: v1 leaves off every conviction
- *  and pointer, v2 every pointer, v3 and v4 nothing. v4 vouches that an inline conviction is there,
- *  not for its words or day, and nothing on the bots reads those any more (`statedCheck`). */
+ *  and pointer, v2 every pointer, v3 nothing. */
 function vouchedFor(
   state: SubscriptionsState,
   kind: SubscriptionsSnapshotKind,
 ): SubscriptionsState {
-  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V3 || kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V4) {
-    return state;
-  }
+  if (kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V3) return state;
   return Object.fromEntries(
     Object.entries(state).map(([accountId, subs]) => [
       accountId,
@@ -240,8 +216,7 @@ export function parseSubscriptionsSnapshot(value: unknown): SubscriptionsSnapsho
     kind: known,
     at,
     version,
-    // A version applies only what it describes: no conviction under v1, no pointer under v1 or v2;
-    // under v4 an inline conviction counts only for being there (it holds its pair exits-only).
+    // A version applies only what it describes: no conviction under v1, no pointer under v1 or v2.
     accounts: vouchedFor(parsed, known),
     ...(Object.keys(allocations).length > 0 ? { allocations } : {}),
   };

@@ -56,17 +56,10 @@ function matcherFor(ids: Iterable<string>): RegExp | undefined {
  */
 const LEGACY_RETIRE_RULE = /;\s*the play retires if\b[\s\S]*$/i;
 const LEGACY_WHEEL = /\bthe wheel buys\b/g;
-/** A call-spread order stored before #5828 LED with its playbook's multi-print retire test
- *  ("NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints, or this spread exits below its cost");
- *  the same walk keeps only the order's own clause after "or". */
-const LEGACY_SPREAD_RETIRE_TEST = /^[\s\S]*?\bon \d+ of the next \d+ prints,\s*or\s+/i;
 
 /** An invalidator as a non-owner reads it: the order's own falsifier, never the playbook's. */
 export function withoutLegacyRetireRule(invalidator: string): string {
-  return invalidator
-    .replace(LEGACY_RETIRE_RULE, "")
-    .replace(LEGACY_SPREAD_RETIRE_TEST, "")
-    .replace(LEGACY_WHEEL, "the bot buys");
+  return invalidator.replace(LEGACY_RETIRE_RULE, "").replace(LEGACY_WHEEL, "the bot buys");
 }
 
 function redact<T>(value: T, matcher: RegExp | undefined, key?: string): T {

@@ -18,10 +18,6 @@ type EventKind =
   | "product-launch"
   | "sector" // PJM capacity auctions, export-control deadlines, FERC dockets
   | "rates" // Treasury auctions & supply — move yields, which move our long-duration AI names
-  | "ipo-listing" // an IPO prices; first trade is the next session. `estimate` from the public S-1
-  // (expected pricing, measured base rates), `confirmed` once the 424B4 dates it (#5912 slice 3)
-  | "lockup-expiry" // an IPO's lock-up ends — insider supply unlocks; date read from the 424B4 by
-  // scripts/research/lockup-discovery.mjs, `confirmed` only when the clause has no early release (#5912)
   | "opex" // options expiration (monthly 3rd Friday; quarterly = triple/quad witching) — pin/gamma
   | "geopolitical"; // dated checkpoints only (a summit, a tariff deadline) — regime shifts with
 // no date belong in the adjacency checklist, not here (see docs/process/EVENT-RESEARCH.md)

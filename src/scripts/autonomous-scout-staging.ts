@@ -92,7 +92,7 @@ export function announceScout(
 ): void {
   if (betaForcing.maxPicks <= 0) return;
   if (!accountName) {
-    log.warn("[beta-scout] forced picks set but no bot account available — staying dark.");
+    log.warn("[beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.");
     return;
   }
   log.log(

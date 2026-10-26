@@ -3,13 +3,12 @@ name: redesign
 description: >-
   Run one screen's redesign from Eric's notes to a filed build, in four stages: align (his marks on
   clean frames first, then the problems Claude found, all pinned on one frame), scope (goal,
-  outcomes, ranked problems, agreed in his words, never a set phrase), work the problem (design rounds sized
+  outcomes, ranked problems, agreed with "that's the list"), work the problem (design rounds sized
   by the scope: 1 shape to confirm, 2–3 for a fork, up to 5 to explore), and learn forward (a retro
   before archiving that routes his notes to the loop, his reader profile and the personas). Upstream
   problems go to the ledger in docs/IA.md §10. Use when Eric names a screen to redesign ("redesign
-  the trade form", "I have feedback on this screen"), or when a feedback board comment "Start
-  redesign: <id> (<route>)" arrives for a screen. The loop is docs/process/REDESIGN.md; the plan
-  is #5143.
+  the trade form", "I have feedback on this screen"), or when a feedback board "Start a session"
+  comment arrives for a screen. The loop is docs/process/REDESIGN.md; the plan is #5143.
 ---
 
 # /redesign — one screen, from his notes to a build

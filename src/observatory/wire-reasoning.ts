@@ -6,7 +6,7 @@ import type { EquitySample } from "./history-store.js";
 import { optionContractLine } from "./option-contract-line.js";
 import { optionFillCost, optionFillCostWords } from "./option-fill-cost.js";
 import { withoutPlaybookNames } from "./playbook-name-redaction.js";
-import { type WireTradeVitals, wireTradeVitalsFor } from "./vitals.js";
+import { type WireTradeVitals, wireTradeVitals } from "./vitals.js";
 import type { WireTradeRow } from "./wire-data.js";
 
 /**
@@ -161,30 +161,17 @@ export function attachWireReasoning(
   rows: readonly WireTradeRow[],
   deps: WireReasoningDeps,
 ): WireTradeWithReasoning[] {
-  // One vitals index per account, built on its first row: a page holds many rows per bot, and
-  // re-scanning a 180-day history per row was the Wire's whole 1.2 s (#4619).
-  const vitalsByParticipant = new Map<string, (atIso: string) => WireTradeVitals>();
-  const vitalsOf = (participantId: string) => {
-    const samples = deps.historyByParticipant?.get(participantId);
-    if (!samples) return undefined;
-    let vitals = vitalsByParticipant.get(participantId);
-    if (!vitals) {
-      vitals = wireTradeVitalsFor(samples);
-      vitalsByParticipant.set(participantId, vitals);
-    }
-    return vitals;
-  };
   return rows.map((row) => {
     if (row.kind !== "bot") return row;
     const reasoning = reasoningForOrder(row.orderId, deps);
     if (!reasoning) return row;
-    const vitals = vitalsOf(row.participantId);
+    const samples = deps.historyByParticipant?.get(row.participantId);
     return {
       ...row,
       reasoning: deps.ownsAccount?.(row.participantId)
         ? reasoning
         : withoutOwnerReasoning(reasoning),
-      ...(vitals ? { vitals: vitals(row.at) } : {}),
+      ...(samples ? { vitals: wireTradeVitals(samples, row.at) } : {}),
     };
   });
 }

@@ -146,29 +146,39 @@ describe("resolveCondScoutUniverse — the scout's names are its host bot's own 
   });
 
   it("scans the names an on subscription lists, normalized", () => {
-    expect(resolveCondScoutUniverse([sub(true, ["nvda", " amd"])], streamed)).toEqual({
+    expect(resolveCondScoutUniverse([sub(true, ["nvda", " amd"])], undefined, streamed)).toEqual({
       wanted: ["NVDA", "AMD"],
       source: "subscription",
     });
   });
 
   it("reads an on subscription with no names as every name the stream carries", () => {
-    expect(resolveCondScoutUniverse([sub(true)], streamed)).toEqual({
+    expect(resolveCondScoutUniverse([sub(true)], undefined, streamed)).toEqual({
       wanted: streamed,
       source: "subscription",
     });
   });
 
-  it("scans nothing while the subscription is paused", () => {
-    expect(resolveCondScoutUniverse([sub(false, ["MU"])], streamed)).toEqual({
+  it("lets the bot's setting win over the env knob, a pause included", () => {
+    expect(resolveCondScoutUniverse([sub(true, ["MU"])], "NVDA", streamed).wanted).toEqual(["MU"]);
+    expect(resolveCondScoutUniverse([sub(false, ["MU"])], "NVDA", streamed)).toEqual({
       wanted: [],
       source: "paused",
     });
   });
 
-  it("stays dark for a bot holding no COND-SCOUT subscription, whatever else it holds", () => {
+  it("falls back to the env knob only for a bot holding no COND-SCOUT subscription", () => {
     const other = { playbookId: "S1-NVDA", enabled: true };
-    expect(resolveCondScoutUniverse([other], streamed)).toEqual({ wanted: [], source: "dark" });
-    expect(resolveCondScoutUniverse([], streamed)).toEqual({ wanted: [], source: "dark" });
+    expect(resolveCondScoutUniverse([other], "nvda,amd", streamed)).toEqual({
+      wanted: ["NVDA", "AMD"],
+      source: "env",
+    });
+  });
+
+  it("stays dark with neither", () => {
+    expect(resolveCondScoutUniverse([], undefined, streamed)).toEqual({
+      wanted: [],
+      source: "dark",
+    });
   });
 });

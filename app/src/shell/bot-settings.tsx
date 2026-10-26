@@ -24,7 +24,7 @@ import { InlineResult } from "../ui";
  * proposed it, who approved it, before and after (the plan's criterion 4). Ownership is the only
  * gate, so one person does both and the line says so once. The Playbook Store's writes land here
  * too (slice 3c): a subscription line reads as the server's one-line summary, an allocation as
- * dollars, and which conviction view steers a pair (#5482) by the view's title, "no view" for none.
+ * dollars.
  * @category desk
  */
 
@@ -40,12 +40,10 @@ const SETTING_NAMES: Readonly<Record<string, string>> = {
 
 const SUBSCRIPTION = "subscription:";
 const ALLOCATION = "allocation:";
-const CONVICTION = "conviction:";
 
 /** A change line's name: the controls settings by name, a Store line by its playbook or strategy. */
 function settingName(setting: string): string {
   if (setting.startsWith(SUBSCRIPTION)) return setting.slice(SUBSCRIPTION.length);
-  if (setting.startsWith(CONVICTION)) return `View steering ${setting.slice(CONVICTION.length)}`;
   if (setting.startsWith(ALLOCATION)) {
     return `Allocation to ${setting.slice(ALLOCATION.length).replaceAll("-", " ")}`;
   }
@@ -55,7 +53,6 @@ function settingName(setting: string): string {
 /** A stored value in words; `null` = nothing stored, so the operations setting stands. */
 function valueWords(setting: string, value: BotSettingChange["before"]): string {
   if (setting.startsWith(SUBSCRIPTION)) return value === null ? "not subscribed" : String(value);
-  if (setting.startsWith(CONVICTION)) return value === null ? "no view" : String(value);
   if (setting.startsWith(ALLOCATION)) {
     return typeof value === "number" ? `$${value.toLocaleString("en-US")}` : "none";
   }

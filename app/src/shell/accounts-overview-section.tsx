@@ -3,6 +3,7 @@ import type { DeskSnapshot } from "../live/desk";
 import type { AccountNetWorthView, NetWorthStatsView } from "../live/networth";
 import type { OwnedAccount } from "../live/settings";
 import { AccountsPositionsSection } from "./accounts-positions-section";
+import { CouncilLineCard } from "./council-line-card";
 import { HeldEventsLine } from "./held-events-line";
 import { MoneyStrip } from "./money-strip";
 import { NetWorthCard } from "./networth-card";
@@ -43,8 +44,10 @@ import { useTowerColumn } from "./use-tower-column";
  * #3977: at the bench width and wider the card leaves this grid for the page's own tower column
  * (`tower-column.tsx`), open and unboxed from just under the navbar; the grid is then one column.
  *
- * #5992: the member's weekly council line (#3963) no longer stands under the league card — the
- * Council retired, and a thesis now lives in playbook authoring, where it is tested before it trades.
+ * #3963: under the card that carries the league standing, the member's own council line for the week
+ * — write or edit it here (docs/IA.md §5.7: "`mine` (member × week) renders on the Overview beside
+ * the standing"). It is the member's line, not this account's, and it says so; everyone else's stays
+ * on Activity → Council.
  */
 export function OverviewSection({
   stats,
@@ -161,8 +164,8 @@ function positionPageOf(
   );
 }
 
-/** The boxed card in the Overview's own flow, below the bench width: the tower over the league.
- *  At the bench width it stands open in the page's tower column. */
+/** The boxed card in the Overview's own flow, below the bench width: the tower over the league,
+ *  then the member's council line. At the bench width it stands open in the page's tower column. */
 function OverviewCard({
   landmark,
   owned,
@@ -178,6 +181,7 @@ function OverviewCard({
         meId={owned.find((a) => a.kind === "human")?.id}
         scope=".cockpit"
       />
+      <CouncilLineCard />
     </div>
   );
 }
