@@ -140,7 +140,9 @@ export function createFilingLane(ctx: FilingContext) {
         },
       ],
     }).catch(() => undefined);
-    if (!(reply?.ok && reply.done)) return draft;
+    // A cut brief (#6205 — #6007 filed one, mid-word) is a failed shaping: the draft the member
+    // already saw and said "send" to is whole, so it files instead of half a capsule.
+    if (!(reply?.ok && reply.done) || reply.cut) return draft;
     // No `spec`: a build spec earns the `curated` label downstream (feedback-issue.ts), which the
     // build lane treats as license to build unattended — and this pass never interviewed anyone
     // (red-team A5). The capsule and area ride; the interview-backed spec stays the coach path's.
