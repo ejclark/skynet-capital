@@ -293,6 +293,80 @@ describe("feedback coach", () => {
     expect(sent.messages[0]?.content).toBe("chart bad");
   });
 
+  describe("when the coach's reply stops on max_tokens (#6080)", () => {
+    // The fixture: a draft cut mid-capsule — the shape that, unhandled, files as a finished brief.
+    const truncated: JsonResponse = {
+      status: 200,
+      body: {
+        stop_reason: "max_tokens",
+        content: [
+          {
+            type: "text",
+            text: '{"draft": {"title": "Show greeks on the chain", "details": "- Add greeks\\n<details><summary><strong>The brief</strong></summary>\\n**What** — greeks\\n**Where** — the chain\\n**What',
+          },
+        ],
+      },
+    };
+    const messages = [
+      { role: "user" as const, content: "I want delta and theta on the options chain" },
+      { role: "assistant" as const, content: "On the phone view or desktop?" },
+      { role: "user" as const, content: "both" },
+    ];
+
+    it("never files the cut brief: the details are the member's own words, the cut-off said in them", async () => {
+      let calls = 0;
+      const coach = createFeedbackCoach({ apiKey: "k" }, () => {
+        calls++;
+        return Promise.resolve(truncated);
+      });
+
+      const result = await coach({ kind: "feature", messages });
+
+      expect(calls).toBe(1); // no retry — a second call per turn is a spend change
+      expect(result).toMatchObject({ ok: true, done: true });
+      if (!(result.ok && result.done)) throw new Error("expected a draft");
+      expect(result.details).not.toContain("**Where** — the chain");
+      expect(result.details).toContain("> I want delta and theta on the options chain");
+      expect(result.details).toContain("cut off mid-write");
+      expect(result.details.match(/<details>|<details /g)?.length).toBe(
+        result.details.match(/<\/details>/g)?.length,
+      );
+      expect(result.spec.readiness).toBe("partial");
+      expect(result.spec.assumptions.join(" ")).toContain("length limit");
+    });
+
+    it("an ordinary end_turn reply is still parsed whole", async () => {
+      const coach = createFeedbackCoach({ apiKey: "k" }, () =>
+        Promise.resolve({
+          status: 200,
+          body: {
+            stop_reason: "end_turn",
+            content: [{ type: "text", text: '{"question": "phone or desktop?"}' }],
+          },
+        }),
+      );
+      const result = await coach({ kind: "feature", messages: messages.slice(0, 1) });
+      expect(result).toEqual({ ok: true, done: false, question: "phone or desktop?" });
+    });
+  });
+
+  it("logs one usage line per coach call", async () => {
+    const lines: string[] = [];
+    const coach = createFeedbackCoach({ apiKey: "k", logLine: (l) => lines.push(l) }, () =>
+      Promise.resolve({
+        status: 200,
+        body: {
+          content: [{ type: "text", text: '{"question": "where?"}' }],
+          usage: { input_tokens: 700, output_tokens: 12, cache_creation_input_tokens: 0 },
+        },
+      }),
+    );
+    await coach({ kind: "bug", messages: [{ role: "user", content: "hi" }] });
+    expect(lines).toEqual([
+      "claude-usage surface=feedback-coach model=claude-haiku-4-5 input=700 output=12 cache_read=0 cache_creation=0",
+    ]);
+  });
+
   it("reports an API failure honestly instead of pretending to coach", async () => {
     const coach = createFeedbackCoach({ apiKey: "k" }, () =>
       Promise.resolve({ status: 429, body: { error: { message: "rate limited" } } }),

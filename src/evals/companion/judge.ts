@@ -1,4 +1,4 @@
-import { anthropicApiError } from "../../http/anthropic-reply.js";
+import { anthropicApiError, logAnthropicUsage, usageOf } from "../../http/anthropic-reply.js";
 import type { fetchJson, JsonResponse } from "../../http/fetch-json.js";
 
 /**
@@ -70,6 +70,7 @@ export async function judge(
   rounds: readonly string[],
   replies: readonly string[],
   rubric: string,
+  logLine?: (line: string) => void,
 ): Promise<JudgeVerdict> {
   const prompt = `RUBRIC:\n${rubric}\n\nTRANSCRIPT:\n${transcriptBlock(rounds, replies)}`;
   let res: JsonResponse;
@@ -83,7 +84,12 @@ export async function judge(
         max_tokens: JUDGE_MAX_TOKENS,
         system: JUDGE_SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
-        output_config: { format: { type: "json_schema", schema: VERDICT_SCHEMA } },
+        // Effort pinned, not inherited (#6080): `high` is Sonnet 5.5's default today, so grading
+        // is unchanged — but a future default change can no longer shift the grade with no diff.
+        output_config: {
+          effort: "high",
+          format: { type: "json_schema", schema: VERDICT_SCHEMA },
+        },
       },
     );
   } catch (error) {
@@ -94,6 +100,7 @@ export async function judge(
   }
   const apiError = anthropicApiError(res, "companion-eval judge");
   if (apiError) return { pass: false, reason: apiError };
+  logAnthropicUsage("companion-eval-judge", JUDGE_MODEL, usageOf(res.body), logLine);
   const body = res.body as {
     stop_reason?: string;
     content?: readonly { type: string; text?: string }[];

@@ -21,7 +21,7 @@
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { anthropicApiError } from "../http/anthropic-reply.js";
+import { anthropicApiError, logAnthropicUsage, usageOf } from "../http/anthropic-reply.js";
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
 import { AREA_PROMPT_CLAUSE, FEEDBACK_AREAS } from "./feedback-areas.js";
 import {
@@ -40,6 +40,7 @@ import { MODEL } from "./feedback-coach-model.js";
 import {
   type CoachMessage,
   type CoachResult,
+  cutOffDraft,
   type FeedbackSpec,
   parseCoachReply,
   repeatsLastQuestion,
@@ -101,8 +102,8 @@ The remaining draft fields are the BUILD SPEC — the machine-readable contract,
 // prompt. The root `anyOf` is what makes it "exactly one": a question, or a draft — never `{}`
 // (which would show the member the garbled-reply line) and never both. No `maxLength`
 // (unsupported), so the 80-char title and bullet limits stay in the prompt and in `toSpec`. A
-// refusal can still miss the schema and a max_tokens stop can still cut the JSON short —
-// `feedback-coach-reply.ts`'s salvage → recovery-line ladder stays the net for both.
+// refusal can still miss the schema — `feedback-coach-reply.ts`'s salvage → recovery-line ladder
+// stays the net for it. A max_tokens stop is read off `stop_reason` and ends in `cutOffDraft`.
 const STRINGS = { type: "array", items: { type: "string" } } as const;
 const DRAFT_SCHEMA = {
   type: "object",
@@ -138,6 +139,8 @@ const COACH_REPLY_SCHEMA = {
 
 interface CoachConfig {
   readonly apiKey: string;
+  /** The server log — each coach call writes one usage line here (#6080). */
+  readonly logLine?: (line: string) => void;
 }
 
 type DoFetch = typeof fetchJson;
@@ -175,13 +178,10 @@ function toAnthropicMessage(m: CoachMessage): {
   return { role: m.role, content: blocks };
 }
 
-/** The model's text out of a Messages API response, or the honest error. */
-function replyText(res: JsonResponse): { text?: string; error?: string } {
-  const apiError = anthropicApiError(res, "coach");
-  if (apiError) return { error: apiError };
+/** The model's text out of a Messages API response already checked by `anthropicApiError`. */
+function replyText(res: JsonResponse): string {
   const content = (res.body as { content?: readonly { type?: string; text?: string }[] }).content;
-  const text = (content ?? []).find((b) => b.type === "text")?.text ?? "";
-  return text ? { text } : { error: "coach returned no text" };
+  return (content ?? []).find((b) => b.type === "text")?.text ?? "";
 }
 
 /** Build the bound coach-turn function. `doFetch` is injectable for specs. */
@@ -215,9 +215,18 @@ export function createFeedbackCoach(config: CoachConfig, doFetch: DoFetch = fetc
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : "coach unreachable" };
     }
-    const reply = replyText(res);
-    if (!reply.text) return { ok: false, error: reply.error ?? "" };
-    const result = parseCoachReply(reply.text, userRounds);
+    const apiError = anthropicApiError(res, "coach");
+    if (apiError) return { ok: false, error: apiError };
+    logAnthropicUsage("feedback-coach", MODEL, usageOf(res.body), config.logLine);
+    // A reply cut off on `max_tokens` is never filed as a finished brief (#6080) — and never
+    // retried (a second call per turn is a spend change): the member's own words go out instead,
+    // with the cut-off said in the details.
+    if ((res.body as { stop_reason?: string }).stop_reason === "max_tokens") {
+      return cutOffDraft(input.messages, userRounds);
+    }
+    const text = replyText(res);
+    if (!text) return { ok: false, error: "coach returned no text" };
+    const result = parseCoachReply(text, userRounds);
     // A model that re-asks the question it just asked is stalled, not conversing — end the loop
     // with the member's own words in the form rather than sending them round again. No
     // retry call: another API round-trip per stall would be a per-use spend change, not a bug fix.
@@ -230,10 +239,11 @@ export function createFeedbackCoach(config: CoachConfig, doFetch: DoFetch = fetc
 /** Env factory — `undefined` (inert) until ANTHROPIC_API_KEY is set. */
 export function resolveFeedbackCoach(
   env: Readonly<Record<string, string | undefined>>,
+  logLine?: (line: string) => void,
 ): CoachTurn | undefined {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) return undefined;
-  return createFeedbackCoach({ apiKey });
+  return createFeedbackCoach({ apiKey, ...(logLine ? { logLine } : {}) });
 }
 
 // Coach-specific burst throttle: a conversation is several turns, so the cap is looser than the

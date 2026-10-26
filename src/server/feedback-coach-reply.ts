@@ -11,9 +11,11 @@
  * next question. Answering it fed that blob back as the coach's last turn, so the model re-drafted,
  * truncated again, and the member sat in a loop staring at structured output. Three rules close it:
  *
- *   1. **A cut-off draft is still a draft.** `salvageTruncatedDraft` recovers the title and however
- *      much of the capsule arrived, marked `partial` with the truncation named as an assumption —
- *      a shortened draft the member can edit beats a loop, and the honesty rail still holds.
+ *   1. **A cut-off draft is never filed as finished.** A reply whose `stop_reason` is `max_tokens`
+ *      ends in `cutOffDraft` — the member's own words, the cut-off said in the details (#6080).
+ *      Unterminated JSON without that stop reason still gets `salvageTruncatedDraft`: the title and
+ *      however much of the capsule arrived, marked `partial` with the truncation named as an
+ *      assumption — a shortened draft the member can edit beats a loop.
  *   2. **Structured output never reaches a member.** Anything JSON-shaped that cannot be salvaged
  *      becomes a plain-English recovery line. Prose (a refusal — the one reply the enforced schema
  *      does not bind) still passes through, because that IS readable.
@@ -236,6 +238,35 @@ const blockquote = (s: string): string =>
  * fills, the conversation ends, and their feedback reaches the queue instead of dying in a loop.
  */
 export function stalledDraft(messages: readonly CoachMessage[], rounds = 0): CoachResult {
+  return ownWordsDraft(messages, rounds, STALLED_BULLET, STALLED_NOTE);
+}
+
+const STALLED_BULLET =
+  "The AI coach stalled mid-conversation, so this is the member's own wording rather than a shaped capsule.";
+
+const CUT_OFF_BULLET =
+  "The coach's brief was cut off mid-write (it hit its length limit), so this is the member's own wording rather than a shaped capsule.";
+
+const CUT_OFF_NOTE =
+  "The coach's reply stopped on its length limit before the brief was finished, so the details are the member's own words verbatim rather than a curated capsule. Confirm the specifics with them before building.";
+
+/**
+ * The terminal state when the coach's reply stopped on `max_tokens` (#6080): a cut brief is never
+ * filed as complete. No retry — another call is a per-use spend change, the same rule as the stall
+ * path — so the member's own words go out instead, and the cut-off is said in the DETAILS text,
+ * because the rail's finishing pass (`moneypenny-filing.ts` `shape()`) keeps the details and drops
+ * the spec.
+ */
+export function cutOffDraft(messages: readonly CoachMessage[], rounds = 0): CoachResult {
+  return ownWordsDraft(messages, rounds, CUT_OFF_BULLET, CUT_OFF_NOTE);
+}
+
+function ownWordsDraft(
+  messages: readonly CoachMessage[],
+  rounds: number,
+  bullet: string,
+  assumption: string,
+): CoachResult {
   const note = messages.find((m) => m.role === "user")?.content.trim() ?? "";
   const headline = deFold((note.split("\n").find((l) => l.trim()) ?? "").trim());
   const transcript = messages
@@ -247,15 +278,15 @@ export function stalledDraft(messages: readonly CoachMessage[], rounds = 0): Coa
     )
     .join("\n");
   const details = [
-    `- ${headline.slice(0, 120) || "A member started feedback but the coach stalled before shaping it."}`,
-    "- The AI coach stalled mid-conversation, so this is the member's own wording rather than a shaped capsule.",
+    `- ${headline.slice(0, 120) || "A member started feedback but the coach stopped before shaping it."}`,
+    `- ${bullet}`,
     "",
     "<details><summary><strong>The brief</strong></summary>",
     "",
     "**What**",
     "",
     blockquote(note || "(no note captured)"),
-    ...(transcript ? ["", "**What we worked out before it stalled**", "", transcript] : []),
+    ...(transcript ? ["", "**What we worked out before it stopped**", "", transcript] : []),
     "",
     "</details>",
   ].join("\n");
@@ -264,6 +295,6 @@ export function stalledDraft(messages: readonly CoachMessage[], rounds = 0): Coa
     done: true,
     title: (headline.slice(0, 80) || "Feedback from a member").trim(),
     details,
-    spec: toSpec({ assumptions: [STALLED_NOTE] }, rounds),
+    spec: toSpec({ assumptions: [assumption] }, rounds),
   };
 }

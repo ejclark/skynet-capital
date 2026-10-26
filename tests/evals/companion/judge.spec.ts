@@ -43,6 +43,33 @@ describe("judge", () => {
     expect(sent.output_config?.format?.schema?.required).toEqual(["pass", "reason"]);
   });
 
+  it("pins its effort to high rather than inheriting the model's default (#6080)", async () => {
+    let sent: { output_config?: { effort?: string } } = {};
+    const doFetch = (_m: string, _u: string, _h: unknown, body: unknown) => {
+      sent = body as typeof sent;
+      return Promise.resolve(jsonReply('{"pass": true, "reason": "ok"}'));
+    };
+    await judge(doFetch, "k", ["a"], ["b"], "rubric");
+    expect(sent.output_config?.effort).toBe("high");
+  });
+
+  it("logs one usage line for the grading call", async () => {
+    const lines: string[] = [];
+    const doFetch = () =>
+      Promise.resolve({
+        status: 200,
+        body: {
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: '{"pass": true, "reason": "ok"}' }],
+          usage: { input_tokens: 900, output_tokens: 30 },
+        },
+      } as JsonResponse);
+    await judge(doFetch, "k", ["a"], ["b"], "rubric", (l) => lines.push(l));
+    expect(lines).toEqual([
+      "claude-usage surface=companion-eval-judge model=claude-sonnet-5-5 input=900 output=30 cache_read=0 cache_creation=0",
+    ]);
+  });
+
   it("parses a fail verdict with reasoning", async () => {
     const doFetch = () =>
       Promise.resolve(jsonReply('{"pass": false, "reason": "reversed on pushback"}'));

@@ -17,6 +17,8 @@ if (!apiKey) {
   process.exit(0);
 }
 
-const report = await runCompanionEval(COMPANION_FIXTURES, apiKey);
+const report = await runCompanionEval(COMPANION_FIXTURES, apiKey, undefined, undefined, (line) =>
+  console.log(line),
+);
 console.log(formatCompanionReport(report));
 process.exit(report.passed === report.total ? 0 : 1);
