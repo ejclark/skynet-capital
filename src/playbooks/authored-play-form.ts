@@ -178,7 +178,7 @@ export function slugFromName(name: string): string {
 
 const SETTING_KEYS: readonly SettingKey[] = ["enterDaysBefore", "exitDaysBefore", "holdMinutes"];
 
-const plural = (n: number, unit: StrategySetting["unit"]): string =>
+const countUnit = (n: number, unit: StrategySetting["unit"]): string =>
   `${n} ${n === 1 ? unit.replace(/s$/, "") : unit}`;
 
 const isNumber = (value: unknown): value is number =>
@@ -255,17 +255,17 @@ function phrase(field: string, problem: string, form: AuthoredPlayForm): FormRef
     case "trigger.enterDaysBefore":
       return {
         field: "enterDaysBefore",
-        reason: `${plural(form.settings.enterDaysBefore ?? 0, "days")} before the report is past the ${maxEnterDaysBefore} this strategy allows — a setting can only narrow it.`,
+        reason: `${countUnit(form.settings.enterDaysBefore ?? 0, "days")} before the report is past the ${maxEnterDaysBefore} this strategy allows — a setting can only narrow it.`,
       };
     case "trigger.exitDaysBefore":
       return {
         field: "exitDaysBefore",
-        reason: `Selling ${plural(form.settings.exitDaysBefore ?? 0, "days")} before the report has to come after buying ${plural(form.settings.enterDaysBefore ?? 0, "days")} before it.`,
+        reason: `Selling ${countUnit(form.settings.exitDaysBefore ?? 0, "days")} before the report has to come after buying ${countUnit(form.settings.enterDaysBefore ?? 0, "days")} before it.`,
       };
     case "trigger.holdMinutes":
       return {
         field: "holdMinutes",
-        reason: `${plural(form.settings.holdMinutes ?? 0, "minutes")} is outside the 1–${maxHoldMinutes} minutes this strategy allows — a setting can only narrow it.`,
+        reason: `${countUnit(form.settings.holdMinutes ?? 0, "minutes")} is outside the 1–${maxHoldMinutes} minutes this strategy allows — a setting can only narrow it.`,
       };
     case "size":
       return {
@@ -366,8 +366,8 @@ export function formFromSpec(name: string, spec: AuthoredPlaySpec): AuthoredPlay
 export function settingsLine(spec: AuthoredPlaySpec): string {
   const { trigger } = spec;
   return trigger.kind === "event-window"
-    ? `hold ${plural(trigger.holdMinutes, "minutes")} after the news`
-    : `buy ${plural(trigger.enterDaysBefore, "days")} before the report, sell ${trigger.exitDaysBefore} before`;
+    ? `hold ${countUnit(trigger.holdMinutes, "minutes")} after the news`
+    : `buy ${countUnit(trigger.enterDaysBefore, "days")} before the report, sell ${trigger.exitDaysBefore} before`;
 }
 
 /** The form's own shape check for a body off the wire — strict, so nothing is coerced. */
