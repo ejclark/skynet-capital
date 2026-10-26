@@ -8,6 +8,21 @@ export interface ClosedWithRemainder {
   readonly closedAt?: string | null;
   readonly stateReason?: string | null;
   readonly state?: string;
+  /** REST timeline rows, trimmed — present only when `gatherRelayDeps` read them. */
+  readonly timeline?: readonly TimelineRow[];
+}
+
+export interface TimelineRow {
+  readonly event?: string;
+  readonly created_at?: string;
+  readonly body?: string;
+  readonly source?: {
+    readonly issue?: {
+      readonly number: number;
+      readonly body?: string | null;
+      readonly pull_request?: { readonly merged_at?: string | null };
+    };
+  };
 }
 
 export interface RelayIntent {
@@ -24,6 +39,7 @@ export interface RelayIntent {
 export const REMAINDER_LABELS: string[];
 export const RELAY_FROM: string;
 export const RELAY_CAP: number;
+export const CLOSE_WINDOW_MS: number;
 
 export function relayTitle(number: number, title?: string): string;
 export function remainderLabels(labels?: readonly (string | { name?: string })[]): string[];
@@ -32,6 +48,7 @@ export function notRelayableReason(
   issue: ClosedWithRemainder | null | undefined,
   opts?: { relayFrom?: string; backfill?: boolean },
 ): string | null;
+export function finalSliceBy(issue: ClosedWithRemainder | null | undefined): number | null;
 export function routeRelay(deps?: {
   closedWithRemainder?: readonly ClosedWithRemainder[];
   openIssueTitles?: readonly string[];
@@ -46,6 +63,8 @@ export function gatherRelayDeps(opts?: {
   labels?: readonly string[];
   /** The backoff between retries of a GitHub 5xx — a spec passes a no-op. */
   sleep?: (ms: number) => void;
+  relayFrom?: string;
+  backfill?: boolean;
 }): ClosedWithRemainder[];
 export function executeRelay(
   intent: RelayIntent,

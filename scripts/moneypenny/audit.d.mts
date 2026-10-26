@@ -66,6 +66,8 @@ export interface AuditDeps {
   workMode?: WorkModeState | null;
   /** The instruction-drift chore's ticket intent (#5729), from `driftChoreIntent` — null for none. */
   driftChore?: AuditIntent | null;
+  /** Green, unarmed PRs whose arm job failed — the re-arm act stage (stranded-pr.mjs). */
+  stranded?: import("./stranded-pr.mjs").StrandedPr[];
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];

@@ -7,6 +7,7 @@ import { driftChoreFromRepo } from "./drift-chore.mjs";
 import { ghRestAll, sh } from "./gh.mjs";
 import { FOOTER, LABELS, PARKING_LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
+import { rearmIntents, strandedOrNone } from "./stranded-pr.mjs";
 import { loadWorkModeConfig, resolveWorkMode } from "./work-mode.mjs";
 import { workModeRetitle } from "./work-mode-title.mjs";
 
@@ -301,6 +302,9 @@ export function audit(deps = {}) {
   // stamped. Decided in drift-chore.mjs (`driftChoreIntent`); the open ticket is its own memory.
   // Each is at most one intent, null when there is nothing to do.
   intents.push(...[workModeRetitle(deps.workMode), deps.driftChore].filter(Boolean));
+  // The stranded-PR act stage (stranded-pr.mjs): re-run a green PR's failed arm job, once per head.
+  // `halt` stops every lane, so it stops this too — re-arming lands work.
+  if (deps.workMode?.mode?.position !== "halt") intents.push(...rearmIntents(deps.stranded));
   return intents;
 }
 
@@ -582,6 +586,7 @@ export function gatherAuditDeps(nowMs) {
     alreadyFlaggedPRs,
     workMode: workModeState(nowMs, json),
     driftChore: driftChoreFromRepo(issues),
+    stranded: strandedOrNone(nowMs),
   };
 }
 

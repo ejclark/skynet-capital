@@ -58,7 +58,21 @@ November). So:
    reader after the backup time fixes it by hand.
 4. Confirm with `npm run work-gate`: `position: surge`, `dispatch: true`.
 
-## 2. Waves
+## 2. Waves — finish WIP before starting a wave (hard rule)
+
+Eric, 2026-10-26 23:20Z: *"If churn is a concern, improve orchestration to manage WIP, complete
+WIP, then resume making improvements."* **Before every new wave, count agent-owned WIP; if it is
+over 6 (surge's `inFlightCap` in `work-mode.json`), start nothing — finish first.**
+
+| Counts as WIP | How to count it | How to finish it |
+|---|---|---|
+| Open child sessions | `list_sessions` (yours, not archived) | resume a stalled one; archive a done one |
+| Open non-held agent PRs | open PRs without `hold-merge` | drive to green; close a superseded one |
+| Stranded green PRs | `node scripts/stuck-pr-scan.mjs --json` | the command the scan names |
+| Unposted workflow outputs | flip results not yet through `clear-path-post.mjs`; audit findings not yet filed | post them; file them |
+
+**Eric-held PRs are a separate count** — `hold-merge`, the platter: reported in every check-in as
+*clicks owed*, never counted as WIP to finish, never "finished" by a session.
 
 A wave is 4–8 child sessions (`create_session`, tagged `issue:<n>`, cloud, `docs/COMPUTE.md`
 routing — never a tier picked to save tokens; this is the one time spare quota is the point).
@@ -79,7 +93,8 @@ PRs; each confirmed finding is filed `bug` + `fast-track` and leads the next wav
 
 One `send_later` per check-in. Each posts a short footed comment on #4153 (shape: the 2026-10-26
 17:54Z check-in): shipped since the last one, self-readies and refutations, stranded PRs, what is
-running. Check the dial still reads surge and `main` has no reverts.
+running, WIP against the cap of 6, and clicks owed. Check the dial still reads surge and `main` has no
+reverts.
 
 ## 4. Known traps
 
