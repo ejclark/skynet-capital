@@ -26,7 +26,8 @@
 // iconify icon packs (GitHub never loads them, they render as "?"); the `journey` type (a
 // UX-satisfaction chart, the wrong shape for reasoning). Notes: `%%{init}%%` (deprecated upstream,
 // use frontmatter), `layout: elk` (GitHub falls back to dagre silently; a state diagram errors instead), `click` (dead on GitHub),
-// a long diagram (the ≤15-node legibility budget is taste — pointed at, never gated).
+// a long diagram (the legibility budget — one phone screen at ≥12px — is measured by the pair
+// renderer, which has a browser; this is only a line-count proxy, pointed at, never gated).
 //
 // THE ROUND-3 RULES (docs/PICTURES.md → "Rules the design rounds found", plan #3786, 2026-09-26).
 // One is gated because it protects the both-modes colour contract: a `classDef`/`style` hex that is
@@ -55,7 +56,7 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** What github.com renders — read from its production bundle on 2026-09-25. Move with the pin. */
 export const GITHUB_MERMAID_VERSION = "11.17.2";
-/** Non-blank lines past which a diagram gets an advisory note — the ≤15-node budget, in lines. */
+/** Non-blank lines past which a diagram gets an advisory note — a proxy for one phone screen. */
 export const LONG_DIAGRAM_LINES = 40;
 
 const CORPUS_ROOTS = ["docs", ".github", ".claude"];
@@ -269,7 +270,7 @@ function policyFindings(source, config, head, at, registry) {
   const lineCount = source.split("\n").filter((l) => l.trim()).length;
   if (lineCount > LONG_DIAGRAM_LINES) {
     notes.push(
-      `${at}: ${lineCount} lines — the legibility budget is ≤15 nodes on a 390px phone (docs/PICTURES.md); split or simplify`,
+      `${at}: ${lineCount} lines — the legibility budget is one 390px phone screen at ≥12px text (docs/PICTURES.md); measure it with npm run shoot:mermaid-pairs, or split`,
     );
   }
   const round3 = roundThreeFindings(source, head, at, registry);

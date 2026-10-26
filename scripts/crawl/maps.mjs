@@ -1,8 +1,9 @@
 // The journey maps — one mermaid flowchart per member, written to docs/members/maps.md from the
 // journey files plus the run's results. docs/PICTURES.md's grammar for a colourblind reader: the
 // member's path is the THICK edge (`==>`), a dead end is a CROSS-HEAD (`--x`) into a node that
-// names it, and the route graph is plain boxes — no hue carries meaning. Node budget: 15 per map
-// (the legibility budget PICTURES.md points at); routes beyond it fold into "… n more".
+// names it, and the route graph is plain boxes — no hue carries meaning. Node budget: 15 per map,
+// this generator's stand-in for PICTURES.md's one-phone-screen budget; routes beyond it fold into
+// "… n more".
 //
 // Generated, never hand-edited: `npm run mermaid:lint docs/members/maps.md` is the gate.
 
