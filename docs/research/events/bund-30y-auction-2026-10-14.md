@@ -475,6 +475,13 @@ wrong for the second consecutive Bund "30Y" ledger, so every allotment statistic
 "two 30Y lines" reference class is on a mixed 20Y/30Y auction. The 09-16 and 10-14 prints are the
 only two data points for this mixed format; do not widen the allotment band on them alone.
 
+### Forward tests scored later (2026-10-26)
+
+`FT-1`, `FT-2` and `FT-3` were scored on 2026-10-26, after their 2026-10-21 score-by, from re-fetched
+primaries (details in their Outcome cells): all three **pass** — b2o 1.54 with US 30Y −4bp; allotment
+EUR 1,888.79m inside the band; Bundesbank 30Y −7bp with the ≥ EUR 2.0bn group at |t| = 0.34. The
+mixed 20Y/30Y caveat above applies to `FT-2` and `FT-3`. `FT-4` remains open to 2027-01-08.
+
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
@@ -485,6 +492,7 @@ only two data points for this mixed format; do not widen the allotment band on t
 | 2026-10-07 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 15.0 (-1.0pt since last), band unchanged (low:0+), 32 adjacent event(s) tracked, new in corridor since last pulse: `opec-momr-2026-10-13` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-14 |
 
 | 2026-10-15 | D+1 | **Close-out** (see `## Outcome`). Second line was DE000BU2T000, a 2047 (20Y) bond — `FT-5` killed, kill switch 7 fired; EUR 1,888.79m allotted, in band; US 30Y −4bp on CPI day; `FT-1…4` left open to their score-by dates. Adjacency sweep: no new dated event proposed (the 11-11 sibling is already on the calendar; anything beyond is outside the horizon). Beyond-horizon note: UST−Bund 30Y spread +172bp on 10-14 (sibling `FT-3` kill ≥ +170bp, judged 12-31). | None — stand aside held; leg 1's tenor claim is withdrawn | — |
+| 2026-10-26 | D+12 | **Forward-test scoring** (`forward-test-due`; `FT-1…3` reached their 2026-10-21 score-by). Re-fetched the Finanzagentur issuance-history workbook, Bundesbank SDMX 30Y and the Treasury par-yield CSV; the rebuilt pipeline reproduces the registration figures exactly (n = 213, +1.14bp t = 1.93; multi-ISIN ≥ EUR 2.0bn +0.54bp t = 0.33, n = 37). `FT-1` **pass** (b2o 1.54, US 30Y −4bp), `FT-2` **pass** (EUR 1,888.79m), `FT-3` **pass** (−7bp; group t = 0.34 with both 2026 auctions). `FT-4` stays open to 2027-01-08. Adjacency (secondary, not a pulse): VIX 17.91 (Yahoo; 16.87 at close-out); US 30Y CMT 5.33% on 10-23, Bundesbank 30Y 3.70% on 10-26; no new dated event proposed (11-11 sibling already on the calendar). | None — no stance change; nothing re-assessed | — |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -503,3 +511,6 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-15
 <!-- probe-ref: {"symbols":{},"vix":16.87,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","import-export-prices-2026-10-16","industrial-production-2026-10-16","mtis-2026-10-15","opex-2026-10-16","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->
+
+**Last assessed:** 2026-10-26
+<!-- probe-ref: {"symbols":{},"vix":17.91,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","cpi-2026-10-14","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","import-export-prices-2026-10-16","industrial-production-2026-10-16","mtis-2026-10-15","opex-2026-10-16","philly-fed-mfg-2026-10-15","ppi-2026-10-15","retail-sales-2026-10-15","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0,"blocked":[]} -->
