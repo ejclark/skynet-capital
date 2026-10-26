@@ -42,7 +42,8 @@ const CSS = readFileSync(new URL("./page.css", import.meta.url), "utf8");
 // `steerMarks`, a round's focus `steerFocus`, the added outcomes `steerOutcomes`, the page
 // notes' `steerPageNotes`, the compare modes `steerCompare` and the width switch `steerWidths`;
 // the page script calls each (pins-client.js, ear-client.js, marks-client.js, focus-client.js,
-// outcomes-client.js, page-notes-client.js, compare-client.js, widths-client.js).
+// outcomes-client.js, page-notes-client.js, compare-client.js, widths-client.js); record-client.js
+// defines `steerRecord`, the shape of a decision record, which the page script takes from.
 const CLIENT = [
   "./pins-client.js",
   "./ear-client.js",
@@ -52,6 +53,7 @@ const CLIENT = [
   "./page-notes-client.js",
   "./compare-client.js",
   "./widths-client.js",
+  "./record-client.js",
   "./page-client.js",
 ]
   .map((f) => readFileSync(new URL(f, import.meta.url), "utf8"))
