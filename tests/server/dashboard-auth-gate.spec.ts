@@ -79,6 +79,26 @@ describe("gateRequest — per-user OAuth mode", () => {
     expect(out.headers).toMatchObject({ location: "/login", "set-cookie": "cleared-cookie" });
   });
 
+  it("hands the auth routes SKYNET_PUBLIC_URL as the origin, whatever the request's headers say (#4621)", async () => {
+    const { res } = fakeResponse();
+    const seen: string[] = [];
+    const auth = {
+      loginPage: () => "",
+      handleAuthRoute: (_q: unknown, _s: unknown, _p: string, base: string) => {
+        seen.push(base);
+        return Promise.resolve(true);
+      },
+      sessionFrom: () => undefined,
+      clearCookie: () => "",
+    };
+    const req = { headers: { host: "10.0.3.7:8787" } } as unknown as IncomingMessage;
+    const publicUrl = "https://skynet.example.com";
+    const config = { auth, publicUrl } as unknown as DashboardServerConfig;
+    await gateRequest(req, res, "/auth/google", "/auth/google", config);
+    await gateRequest(req, res, "/auth/google", "/auth/google", { auth } as never);
+    expect(seen).toEqual(["https://skynet.example.com", "http://10.0.3.7:8787"]);
+  });
+
   it("redirects an unauthenticated request to /login", async () => {
     const { res, out } = fakeResponse();
     const auth = {
