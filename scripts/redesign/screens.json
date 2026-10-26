@@ -139,6 +139,15 @@
     "viewer": "eric"
   },
   {
+    "id": "research-coverage",
+    "name": "R&D: Coverage",
+    "purpose": "Where our research reaches across the 11 market sectors, what you hold in each, and the gaps; a tap opens that sector on the Board.",
+    "where": "R&D tab",
+    "route": "/app/research?section=coverage",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
     "id": "research-playbooks",
     "name": "R&D: Playbooks",
     "purpose": "The playbook catalog: what each strategy does, its evidence and record, and subscribing a bot to it.",

@@ -1,0 +1,76 @@
+/**
+ * `GET /api/research/coverage` (#3811 slice 3) — R&D's Coverage section as data: the slice-1 join
+ * (`shelfCoverage`) for THIS viewer's holdings, plus each sector fund's month from the viewer's own
+ * linked account.
+ *
+ * Identity doctrine as `/api/accounts/networth` (`networth-api-routes.ts`): holdings are the
+ * session's own accounts only (open question 4's default — the map shows what YOU hold), and bars
+ * load only through an options client one of those accounts owns. No linked client → no number,
+ * and a note saying why; never a stale or invented one (criterion 5).
+ */
+import type { ServerResponse } from "node:http";
+import { allEvents } from "../domain/market-events.js";
+import { GICS_SECTORS } from "../domain/sector-coverage.js";
+import { coverageJsonView } from "../observatory/coverage-json-view.js";
+import {
+  type FundStats,
+  fundStats,
+  SECTOR_FUND_LOOKBACK_DAYS,
+} from "../observatory/sector-fund-stats.js";
+import type { Session } from "./auth/session.js";
+import { resolveOwnedIds } from "./dashboard-identity.js";
+import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { shelfCoverage } from "./sector-coverage-service.js";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const NO_ACCOUNT_NOTE =
+  "No market data — sector-fund prices load through your own linked account, and none is linked.";
+
+/** Every sector fund's month through one owned client — or the note for why there are none. */
+async function sectorFunds(
+  config: DashboardServerConfig,
+  ownedIds: readonly string[],
+  now: Date,
+): Promise<{ byFund: ReadonlyMap<string, FundStats> } | { note: string }> {
+  const client = ownedIds.map((id) => config.optionsClientFor?.(id)).find(Boolean);
+  if (!client) return { note: NO_ACCOUNT_NOTE };
+  const start = new Date(now.getTime() - SECTOR_FUND_LOOKBACK_DAYS * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
+  const end = now.toISOString().slice(0, 10);
+  const read = (sym: string) => client.getBars(sym, start, end).catch(() => undefined);
+  // Twelve reads in parallel, each failing alone: one fund's hiccup blanks its own row, not the column.
+  const [spy, ...funds] = await Promise.all([
+    read("SPY"),
+    ...GICS_SECTORS.map((s) => read(s.fund)),
+  ]);
+  const byFund = new Map<string, FundStats>();
+  GICS_SECTORS.forEach((s, i) => {
+    const bars = funds[i];
+    const stats = bars ? fundStats(bars, spy) : undefined;
+    if (stats) byFund.set(s.fund, stats);
+  });
+  return { byFund };
+}
+
+export async function serveCoverageJson(
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const ownedIds = config.auth ? resolveOwnedIds(session, config) : [];
+  const owned = config.hub.getState().participants.filter((p) => ownedIds.includes(p.id));
+  const now = config.now?.() ?? new Date();
+  const asOfIso = now.toISOString();
+  const held = owned.flatMap((p) => p.positions.map((pos) => pos.symbol));
+  const view = coverageJsonView({
+    asOfIso,
+    map: shelfCoverage(asOfIso, held),
+    upcoming: allEvents(asOfIso),
+    holdingsRead: owned.length > 0,
+    funds: await sectorFunds(config, ownedIds, now),
+  });
+  res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+  res.end(JSON.stringify(view));
+}
