@@ -27,7 +27,13 @@ import {
 } from "./participant-snapshot.js";
 import { type OpenedBy, openedBy } from "./position-opened-by.js";
 import { type PlainPosition, plainPosition } from "./position-plain.js";
-import { formatCurrency, formatSigned, formatTimestamp, pct, plClass } from "./render-atoms.js";
+import {
+  formatCurrency,
+  formatSigned,
+  formatSignedPercent,
+  formatTimestamp,
+  plClass,
+} from "./render-atoms.js";
 import {
   type DeskActivityLeg,
   type DeskActivityLine,
@@ -108,7 +114,7 @@ interface DeskPositionView extends PlainPosition {
  *  ("-116%" on a sold put that would cost $550 to close against $255 collected). Past 100 the
  *  hundredths are noise, and on a phone card they push the size line onto a second row (#5059). */
 function returnLabel(value: number): string {
-  if (Math.abs(value) < 100) return pct(value);
+  if (Math.abs(value) < 100) return formatSignedPercent(value);
   return `${value >= 0 ? "+" : ""}${value.toFixed(0)}%`;
 }
 
@@ -255,7 +261,7 @@ export function deskView(
         costBasis: formatCurrency(basis),
         value: formatCurrency(position.marketValue),
         dayPl: formatSigned(day.amount),
-        dayPct: day.pct === null ? "—" : pct(day.pct),
+        dayPct: day.pct === null ? "—" : formatSignedPercent(day.pct),
         dayTone: plClass(day.amount),
         totalPl: formatSigned(pl),
         totalPlRaw: pl,
@@ -292,7 +298,7 @@ export function deskView(
       dayTone: plClass(dayTotal),
       dayPlRaw: dayTotal,
       unrealized: formatSigned(unrealized),
-      unrealizedNote: `${pct(returnOnCost)} on cost`,
+      unrealizedNote: `${formatSignedPercent(returnOnCost)} on cost`,
       unrealizedTone: plClass(unrealized),
       unrealizedRaw: unrealized,
       cash: formatCurrency(snapshot.cash),
@@ -391,7 +397,7 @@ export function deskActivityView(
       ...(pl
         ? {
             realizedPl: formatSigned(pl.realized),
-            returnPct: pct(pl.returnPct),
+            returnPct: formatSignedPercent(pl.returnPct),
             realizedTone: plClass(pl.realized) as Tone,
           }
         : {}),

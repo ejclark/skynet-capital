@@ -100,7 +100,7 @@ import { servePreflight } from "./subscriptions-preflight-route.js";
  * same settings change log a bot's Settings card lists — both or neither.
  */
 
-const BODY_CAP_BYTES = 4_096;
+const SUBSCRIPTIONS_BODY_CAP_BYTES = 4_096;
 
 /**
  * The viewer's OWN delegation gate. Keyed on the signed-in member's ladder (`resolveCurrentId`),
@@ -534,7 +534,7 @@ export async function serveSubscriptionsApi(
   }
   if (!WRITE_PATHS.includes(path)) return false;
 
-  const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
+  const raw = await readJsonPost(req, res, SUBSCRIPTIONS_BODY_CAP_BYTES);
   if (raw === undefined) return true;
   if (!config.subscriptions) {
     sendJson(res, 200, { ok: false, error: "The Playbook Store isn't wired in this deployment." });
