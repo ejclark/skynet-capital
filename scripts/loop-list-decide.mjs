@@ -67,3 +67,17 @@ export function overdueLoops({ today, rows }) {
     .filter((r) => r.nextCheck && r.nextCheck <= today)
     .map((r) => ({ ...r, due: true, reason: "loop-check-overdue", nextDueDate: r.nextCheck }));
 }
+
+/** A date anywhere in a cell — what a reader sees, as opposed to what `leadingDate` can schedule. */
+const ANY_DATE = /\b(\d{4}-\d{2}-\d{2})\b/;
+
+/** The lint: running rows whose Next check cell holds a date but does not lead with it. The scan
+ *  reads only a leading date, so such a row is never posted and never flagged — the Member studies
+ *  row sat a week past "due by 2026-10-17" that way (#5724). A cell with no date at all is left
+ *  alone on purpose: "on each sweep Eric names tickers for" is an event, not a buried date. */
+export function buriedDates(rows) {
+  return (rows ?? [])
+    .filter((r) => !ENDED.has(r.state.split(/\s/)[0]))
+    .filter((r) => !r.nextCheck && ANY_DATE.test(r.nextCheckText ?? ""))
+    .map((r) => ({ loop: r.loop, date: ANY_DATE.exec(r.nextCheckText)[1] }));
+}
