@@ -54,6 +54,7 @@ import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { recordPasses } from "../server/play-milestone-sync.js";
+import { publicOriginFrom } from "../server/public-url.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
@@ -71,10 +72,13 @@ import { wireOpsStatus } from "./dashboard-ops-status.js";
 import { wireOptionLifecycleSweep } from "./dashboard-option-lifecycle.js";
 import { bootTelemetry } from "./dashboard-telemetry.js";
 import { startIvClock } from "./iv-clock-wiring.js";
+import { assertProductionAccess } from "./production-access.js";
 
 const PORT = resolvePort(process.env);
 
 async function main(): Promise<void> {
+  // First of all: a production boot with no sign-in must fail, not serve an open dashboard (#4621).
+  assertProductionAccess(process.env);
   warnUnpinnedVolumes(process.env);
   // Before anything resolves a GitHub-backed feature: a token saved from Settings beats the host secret.
   const githubToken = bootGithubToken(process.env);
@@ -343,6 +347,7 @@ async function main(): Promise<void> {
     }),
   });
 
+  const publicUrl = publicOriginFrom(process.env);
   const healthHistory = createBookHealthHistoryStore(process.env, (m) => console.error(m));
   const dashboardConfig: DashboardServerConfig = {
     hub,
@@ -353,6 +358,7 @@ async function main(): Promise<void> {
     capitalFlows: flowLedger,
     password,
     ...(auth ? { auth } : {}),
+    ...(publicUrl ? { publicUrl } : {}),
     addParticipant: (input) => service.addParticipant(input),
     rotateCredentials: (input) => service.rotateCredentials(input),
     accountAdmin: buildAccountAdmin(accounts, store),
