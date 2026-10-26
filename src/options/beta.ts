@@ -35,15 +35,15 @@ export const MIN_BETA_OBSERVATIONS = 60;
 /** The lookback the route asks for: a year of calendar days, ~250 trading days. */
 export const BETA_LOOKBACK_DAYS = 365;
 
-const day = (t: string): string => t.slice(0, 10);
+const dayPrefix = (t: string): string => t.slice(0, 10);
 
 /** Close-to-close simple returns keyed by the later day, over days present in `keep`. */
 function returnsByDay(bars: readonly DailyClose[], keep: ReadonlySet<string>) {
   const out = new Map<string, number>();
   let prev: DailyClose | undefined;
   for (const bar of bars) {
-    if (!keep.has(day(bar.t))) continue;
-    if (prev && prev.c > 0 && Number.isFinite(bar.c)) out.set(day(bar.t), bar.c / prev.c - 1);
+    if (!keep.has(dayPrefix(bar.t))) continue;
+    if (prev && prev.c > 0 && Number.isFinite(bar.c)) out.set(dayPrefix(bar.t), bar.c / prev.c - 1);
     prev = bar;
   }
   return out;
@@ -58,8 +58,8 @@ export function betaFromCloses(
   benchmark: readonly DailyClose[],
 ): MeasuredBeta | undefined {
   // Pair on days BOTH closed, so a halted day in one series never pairs two different spans.
-  const benchDays = new Set(benchmark.map((b) => day(b.t)));
-  const shared = new Set(stock.map((b) => day(b.t)).filter((d) => benchDays.has(d)));
+  const benchDays = new Set(benchmark.map((b) => dayPrefix(b.t)));
+  const shared = new Set(stock.map((b) => dayPrefix(b.t)).filter((d) => benchDays.has(d)));
   const rs = returnsByDay(stock, shared);
   const rb = returnsByDay(benchmark, shared);
   const pairs: [number, number][] = [];
