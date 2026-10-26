@@ -36,6 +36,7 @@ import {
 } from "../observatory/history-boot.js";
 import type { EquitySample } from "../observatory/history-record.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
+import { pulseHistoryReader } from "../observatory/pulse-history-cache.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
@@ -425,6 +426,7 @@ async function main(): Promise<void> {
     recordMessage: (id) => companionMessageLog.record(id),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
+    readPulseHistory: pulseHistoryReader(history),
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
     recordOrderAudit: (entry) => orderAudit.record(entry),
