@@ -120,7 +120,9 @@ function runCheck() {
     return { path, protected: true, pattern: rule.pattern, why: rule.why, blocking: true };
   });
   console.log(JSON.stringify(out, null, 2));
-  process.exit(0);
+  // exitCode, never exit(): process.exit() drops stdout still queued on a pipe, which cut every
+  // --check list past 64 KiB mid-string (#6018). Returning lets Node flush, then exit 0.
+  process.exitCode = 0;
 }
 
 function runList() {
@@ -132,7 +134,7 @@ function runList() {
     `\n  new runtime dependencies: ${manifest.allowNewRuntimeDeps ? "allowed" : "PROTECTED (devDependencies stay open)"}`,
   );
   console.log(`\n${manifest.$openOnPurpose ?? ""}`);
-  process.exit(0);
+  process.exitCode = 0;
 }
 
 // Which branch are we on? GITHUB_HEAD_REF FIRST and deliberately: on a PR, actions/checkout

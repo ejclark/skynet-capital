@@ -48,3 +48,17 @@ describe("--check normalizes the path it is given (#1355)", () => {
     expect(r.protected).toBe(false);
   });
 });
+
+// #6018 — process.exit() dropped stdout still queued on a pipe, cutting --check JSON at 64 KiB.
+// A slow reader is load-bearing: execFileSync drains as it goes and never sees the truncation.
+describe("--check survives a pipe past 64 KiB (#6018)", () => {
+  it("emits parseable JSON with one row per path when the reader is slow", () => {
+    const paths = Array.from({ length: 1500 }, (_, i) => `src/does-not-exist-${i}.ts`);
+    const out = execFileSync(
+      "sh",
+      ["-c", 'node scripts/envelope-scan.mjs --check "$@" | { sleep 0.5; cat; }', "sh", ...paths],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+    expect((JSON.parse(out) as Check[]).length).toBe(paths.length);
+  });
+});
