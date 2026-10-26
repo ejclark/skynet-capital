@@ -879,8 +879,18 @@ platter_board_item() {
   local item="$1" subject="$2" verify="$3"
   git diff --quiet && git diff --cached --quiet || {
     echo "ship platter: uncommitted changes — commit or drop them before boarding" >&2; exit 1; }
+  # An item cut from a NEWER main than the platter's would squash every main commit in between into
+  # this one item — and its revert sha would then revert all of them (2026-10-26, #5852: a two-file
+  # item boarded as 504 files). Main is fetched first because the item fetch below owns FETCH_HEAD.
+  git fetch --quiet origin main || {
+    echo "ship platter: cannot fetch origin/main to check the item's base" >&2; exit 1; }
   git fetch --quiet origin "$item" || {
     echo "ship platter: cannot fetch origin/$item — push the item branch first" >&2; exit 1; }
+  git merge-base --is-ancestor "$(git merge-base FETCH_HEAD origin/main)" HEAD || {
+    echo "ship platter: $item is based on a newer main than the platter — boarding it would fold" >&2
+    echo "  those main commits into this one item. Catch the platter up first, then re-board:" >&2
+    echo "  git merge origin/main --no-edit" >&2
+    exit 1; }
 
   local before item_sha; before="$(git rev-parse HEAD)"; item_sha="$(git rev-parse FETCH_HEAD)"
   # Default to the item's newest subject; --subject overrides, which is what a multi-commit item
