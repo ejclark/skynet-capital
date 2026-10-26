@@ -1014,6 +1014,19 @@ cmd_platter_board() {
     echo "ship platter board: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
     exit 1 ;;
   esac
+  # The board guards live in the copy of this file being run, and that copy is the PLATTER's
+  # checkout — a main up to a week old. A guard merged since is simply absent: #6032's stale-base
+  # refusal merged at 10:57 on 2026-10-26, and at 11:52 a platter still on the older ship.sh boarded
+  # a 3-file item as 95 files (#5852). Refuse until the platter runs main's copy.
+  git fetch --quiet origin main || {
+    echo "ship platter: cannot fetch origin/main to check this script is current" >&2; exit 1; }
+  local main_ship; main_ship="$(git rev-parse --verify --quiet origin/main:scripts/ship.sh || true)"
+  if [ -n "$main_ship" ] && [ "$main_ship" != "$(git hash-object "$0")" ]; then
+    echo "ship platter: this scripts/ship.sh is not origin/main's — the platter's copy is stale and" >&2
+    echo "  may lack board guards merged since. Catch the platter up first, then re-board:" >&2
+    echo "  git merge origin/main --no-edit" >&2
+    exit 1
+  fi
   platter_board_item "$item" "$subject" "$verify"
   echo "ship platter: pushing ${branch}…"
   git push -u origin "$branch"
