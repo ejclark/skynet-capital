@@ -89,12 +89,11 @@ describe("withConvictionGate", () => {
     ).toBe(persona);
   });
 
-  // The contract step's piece 4: an inline copy with no pointer is one the app's poll could not
-  // move onto a view. It gives no check day; the roster runs its pair exits-only.
-  it("never reads an inline conviction with no pointer, and says so once", () => {
+  // A ◆ pair with no pointer gives no check day; the roster runs it exits-only.
+  it("gives a ◆ pair with no pointer no check day, and says so once", () => {
     const log = rstest.fn();
     const persona = inner([put]);
-    const inline = aSubscription("sauron", "CRWV-WHEEL", { conviction });
+    const inline = aSubscription("sauron", "CRWV-WHEEL");
     const gated = withConvictionGate(persona, {
       subscriptions: [inline],
       ledgerOf: () => ledger({ realizedPl: -50 }),
@@ -233,10 +232,7 @@ describe("withConvictionGate, with a conviction record", () => {
   const failing = { ledgerOf: () => ledger({ realizedPl: -50 }) };
 
   it("checks a pointed subscription on the record's date, not its own", () => {
-    const pointed = aSubscription("sauron", "CRWV-WHEEL", {
-      conviction,
-      convictionId: "ai-dip-test",
-    });
+    const pointed = aSubscription("sauron", "CRWV-WHEEL", { convictionId: "ai-dip-test" });
     const gated = withConvictionGate(inner([put]), {
       subscriptions: [pointed],
       convictionOf: lookup(["CRWV-WHEEL"]),
@@ -278,10 +274,7 @@ describe("withConvictionGate, with a conviction record", () => {
     // use gives no check day here; the roster runs that pair exits-only (`steeredBy`).
     const log = rstest.fn();
     const persona = inner([put]);
-    const pointed = aSubscription("sauron", "CRWV-WHEEL", {
-      conviction,
-      convictionId: "ai-dip-test",
-    });
+    const pointed = aSubscription("sauron", "CRWV-WHEEL", { convictionId: "ai-dip-test" });
     const gated = withConvictionGate(persona, {
       subscriptions: [pointed],
       convictionOf: lookup(["CRWV-LONG-CALL"]),

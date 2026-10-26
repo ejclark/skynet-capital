@@ -41,8 +41,8 @@ import { pausedMayPlace } from "./playbook.js";
  * WHICH DATE (#5482 slice 2): a subscription that points at a conviction record steering its pair
  * is checked on the record's date, so one view gates every pair it steers on one day. Nothing else
  * is checked (the contract step's piece 4, pointers only): an inline conviction is never read. A
- * pointer the store cannot resolve, one at a record that does not steer the pair, an inline copy
- * with no pointer, or a ◆ pair with neither is said once and gives no check day, and the roster
+ * pointer the store cannot resolve, one at a record that does not steer the pair, or a ◆ pair with
+ * no pointer is said once and gives no check day, and the roster
  * already runs that pair exits-only (`statedCheck`, `steeredBy`, `subscriptionRoster`). An owner's own reason and day are a
  * one-pair record since piece 3, so they are read here like any other.
  *

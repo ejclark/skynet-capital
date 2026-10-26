@@ -97,6 +97,15 @@ export function statedConviction(view: Conviction): SubscriptionConviction | und
 }
 
 /**
+ * A subscription as its owner reads it (the Store row, the change log's line): stored, plus the
+ * reason and day of their own view on the pair when it points at one. Read-only — a subscription
+ * stores no inline conviction since #5482's last contract piece.
+ */
+export type SubscriptionAsRead = PlaybookSubscription & {
+  readonly conviction?: SubscriptionConviction;
+};
+
+/**
  * `sub` as its owner reads it: a pointer at their own view on this pair reads as the reason and
  * day they stated, exactly as the inline conviction did, so the Store row and its check line are
  * unchanged by where the conviction is kept. Every other subscription is returned as it is.
@@ -104,7 +113,7 @@ export function statedConviction(view: Conviction): SubscriptionConviction | und
 export function asOwnConviction(
   sub: PlaybookSubscription,
   lookup: (id: string) => Conviction | undefined,
-): PlaybookSubscription {
+): SubscriptionAsRead {
   const id = sub.convictionId;
   const view = id === undefined ? undefined : lookup(id);
   const stated = view?.steers.includes(sub.playbookId) ? statedConviction(view) : undefined;

@@ -273,9 +273,9 @@ export class MemberConvictionStore {
 
   /**
    * Keep many accounts' views stated on one pair, in one write: the controls poll's migration of
-   * inline convictions (`subscriptions/pair-conviction-migration.ts`). Only as many as the controls
+   * ◆ rows' convictions (`subscriptions/pair-conviction-migration.ts`). Only as many as the controls
    * wire has room for (`MAX_WIRED_CONVICTIONS`), in the order given — past it the bots would refuse
-   * every member's views at once, so the rest keep their inline copy until room frees. Nothing on a
+   * every member's views at once, so the rest stay unpointed (exits-only) until room frees. Nothing on a
    * file that cannot be read whole. Returns `account/playbookId` for each view written.
    */
   statePairs(

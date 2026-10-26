@@ -131,8 +131,10 @@ export class SubscriptionStore {
    * check resumes. Every other field is kept, so it never resumes a paused subscription or touches
    * a budget. The pointer at a conviction record is recomputed from the new conviction (#5482
    * slice 2, `restated`): the record it matches, else none, so a new day no record holds is never
-   * overridden by the record's. Returns undefined and writes nothing when the account has no such
-   * subscription.
+   * overridden by the record's. The conviction itself is never stored on the subscription (#5482's
+   * last contract piece): the caller states it as the owner's view on the pair first
+   * (`pair-conviction-write.ts`), and this points at that view. Returns undefined and writes nothing
+   * when the account has no such subscription.
    */
   setConviction(
     accountId: string,
@@ -145,7 +147,8 @@ export class SubscriptionStore {
     const prior = existing.find((s) => s.playbookId === playbookId);
     if (!prior) return undefined;
     const next = restated(
-      { ...prior, conviction, updatedAt: at.toISOString() },
+      { ...prior, updatedAt: at.toISOString() },
+      conviction,
       undefined,
       this.heldBy(accountId),
     );
@@ -166,14 +169,15 @@ export class SubscriptionStore {
   /**
    * Create or replace (by `playbookId`) the account's subscription to a playbook. Replacing an
    * existing subscription preserves its original `createdAt`, and every field a subscribe does not
-   * set — a conviction, a newer build's field (#4772). A subscribe that states a conviction points
-   * the subscription at the record it matches (#5482 slice 2); one that states none keeps the
-   * pointer it had, or gains one when its carried conviction matches a record.
+   * set — a pointer, a newer build's field (#4772). A subscribe that states a conviction
+   * (`stated`, never stored) points the subscription at the record or view it matches (#5482
+   * slice 2); one that states none keeps the pointer it had, or gains the one record that steers it.
    */
   subscribe(
     accountId: string,
     sub: Omit<PlaybookSubscription, "accountId" | "createdAt" | "updatedAt">,
     at = new Date(),
+    stated?: SubscriptionConviction,
   ): SubscriptionsState {
     const state = this.load();
     const existing = state[accountId] ?? [];
@@ -189,8 +193,8 @@ export class SubscriptionStore {
     // a pointer the caller names is its own call.
     const here = this.heldBy(accountId);
     const next =
-      sub.conviction && sub.convictionId === undefined
-        ? restated(written, undefined, here)
+      stated && sub.convictionId === undefined
+        ? restated(written, stated, undefined, here)
         : pointAtRecord(written, undefined, here);
     const nextState: SubscriptionsState = {
       ...state,

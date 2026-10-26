@@ -29,20 +29,12 @@ const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscriptio
 const AT = Date.parse("2026-10-16T12:00:00.000Z");
 const V2 = SUBSCRIPTIONS_SNAPSHOT_KIND_V2;
 const V3 = SUBSCRIPTIONS_SNAPSHOT_KIND_V3;
-const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
 const pointed = { convictionId: "ai-dip-2026-10" };
 const v3 = (state: SubscriptionsState) => subscriptionsVersion(state, V3);
 const roundTrip = (kind: typeof V2 | typeof V3 | typeof SUBSCRIPTIONS_SNAPSHOT_KIND) =>
   parseSubscriptionsSnapshot(
     JSON.parse(
-      JSON.stringify(
-        buildSubscriptionsSnapshot(
-          { sauron: [sub({ conviction, ...pointed })] },
-          AT,
-          undefined,
-          kind,
-        ),
-      ),
+      JSON.stringify(buildSubscriptionsSnapshot({ sauron: [sub(pointed)] }, AT, undefined, kind)),
     ),
   );
 
@@ -54,9 +46,8 @@ describe("subscriptions.v3 — the conviction pointer joins the fingerprint", ()
     expect(v3({ sauron: [sub({ convictionId: "another-view" })] })).not.toBe(held);
   });
 
-  it("still moves for every v2 field", () => {
+  it("still moves for every v1 field", () => {
     const base = v3({ sauron: [sub(pointed)] });
-    expect(v3({ sauron: [sub({ ...pointed, conviction })] })).not.toBe(base);
     expect(v3({ sauron: [sub({ ...pointed, enabled: false })] })).not.toBe(base);
   });
 
@@ -66,24 +57,18 @@ describe("subscriptions.v3 — the conviction pointer joins the fingerprint", ()
     );
   });
 
-  it("round trips as v3, pointer and conviction intact", () => {
+  it("round trips as v3, the pointer intact", () => {
     const parsed = roundTrip(V3);
     expect(parsed?.kind).toBe(V3);
     expect(parsed?.accounts.sauron?.[0]?.convictionId).toBe("ai-dip-2026-10");
-    expect(parsed?.accounts.sauron?.[0]?.conviction).toEqual(conviction);
   });
 
-  it("drops the pointer a v2 snapshot carries and keeps its conviction", () => {
-    const parsed = roundTrip(V2);
-    expect(parsed?.kind).toBe(V2);
-    expect(parsed?.accounts.sauron?.[0]).not.toHaveProperty("convictionId");
-    expect(parsed?.accounts.sauron?.[0]?.conviction).toEqual(conviction);
-  });
-
-  it("drops both from a v1 snapshot", () => {
-    const parsed = roundTrip(SUBSCRIPTIONS_SNAPSHOT_KIND);
-    expect(parsed?.accounts.sauron?.[0]).not.toHaveProperty("convictionId");
-    expect(parsed?.accounts.sauron?.[0]).not.toHaveProperty("conviction");
+  it("drops the pointer a v2 or v1 snapshot carries", () => {
+    for (const kind of [V2, SUBSCRIPTIONS_SNAPSHOT_KIND] as const) {
+      const parsed = roundTrip(kind);
+      expect(parsed?.kind).toBe(kind);
+      expect(parsed?.accounts.sauron?.[0]).not.toHaveProperty("convictionId");
+    }
   });
 
   it("refuses a v3 payload whose version was computed the v2 way", () => {

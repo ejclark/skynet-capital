@@ -127,13 +127,14 @@ describe("rewrite — keep what this build could not read (#4772)", () => {
     expect(rewrite({ sauron: (state.sauron ?? []).slice(2) }, disk).notes).toEqual([]);
   });
 
-  it("carries a conviction's sub-field a newer build added, so nothing is said or lost", () => {
-    const conviction = { reason: "Eric's call", checkOn: "2027-01-29", retireTest: "1-in-3" };
+  it("drops a retired inline conviction an old build wrote, says so, and holds the seeders off", () => {
+    // #5482's last contract piece retired the field after the live count read zero copies.
+    const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
     const disk = { sauron: [record("CRWV-WHEEL", { conviction })] };
     const { document, notes } = rewrite(parsed(disk), disk);
-    expect(document).toEqual(disk);
-    expect(notes).toEqual([]);
-    expect(readsWhole(disk, parsed(disk))).toBe(true);
+    expect(document).toEqual({ sauron: [record("CRWV-WHEEL")] });
+    expect(notes).toEqual(["sauron: dropped a malformed value from 1 record"]);
+    expect(readsWhole(disk, parsed(disk))).toBe(false);
   });
 
   it("writes the state alone over a missing or unreadable file", () => {

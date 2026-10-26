@@ -34,10 +34,11 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * already passed (a latched failure) is stated on the subscription's start day, else the day before
  * its check (`statedOnFor`). A view the store's rules would refuse (a pair no row holds), or the
  * views file could not read back (an inline reason past a stored claim's length), is not written:
- * the subscription keeps its inline copy rather than leave the file unreadable, which refuses
- * every member's write. Since piece 4 the bots never read that copy: on a pair the table knows it
- * runs exits-only and its row says so (`isConvictionOffView`); on an id that is no pair it was never
- * checked, and still is not.
+ * the pair stays unpointed rather than leave the file unreadable, which refuses every member's
+ * write; a ◆ pair with no pointer runs exits-only and its row says so (`isConvictionOffView`).
+ *
+ * THE LAST CONTRACT PIECE: the inline field is gone (the live count read zero copies first,
+ * #6046), so only the ◆ row's branch is left. The keep-inline path went with it.
  */
 
 /** One view to write on one account, and the subscription it is for. */
@@ -62,7 +63,7 @@ export function statedOnFor(sub: PlaybookSubscription, checkOn: string, at: Date
   return started < checkOn ? started : dayBefore(checkOn);
 }
 
-/** The conviction `sub` is checked on with no pointer: its inline copy, else its ◆ row's. */
+/** The conviction `sub` is checked on with no pointer: its ◆ row's (no inline copy is left). */
 function unpointedConviction(
   sub: PlaybookSubscription,
   records: readonly Conviction[],
@@ -71,12 +72,12 @@ function unpointedConviction(
 ): SubscriptionConviction | undefined {
   const pointed = pointAtRecord(sub, records, heldHere(members, sub.accountId));
   if (pointed.convictionId !== undefined) return undefined;
-  return pointed.conviction ?? rowConviction(lookup(sub.playbookId));
+  return rowConviction(lookup(sub.playbookId));
 }
 
 /**
  * Pure: the owner's own view for every subscription the pointer rule leaves unpointed with a
- * conviction to check (its inline copy, or its ◆ row's), in file order. Empty on the common poll.
+ * conviction to check (its ◆ row's), in file order. Empty on the common poll.
  */
 export function ownViewsToState(
   state: SubscriptionsState,

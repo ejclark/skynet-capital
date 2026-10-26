@@ -203,10 +203,7 @@ describe("a conviction pointer that moves is a line in the settings change log",
   it("WHEN the poll moves a pointer on its own, the line is the app's", () => {
     // Written raw so no write path pointed it: the poll's seeded match is the only mover.
     subs.replace({
-      sauron: (subs.load().sauron ?? []).map(({ convictionId: _pointer, ...s }) => ({
-        ...s,
-        conviction: { reason: "AI dip", checkOn: AI_DIP?.checkOn ?? "" },
-      })),
+      sauron: (subs.load().sauron ?? []).map(({ convictionId: _pointer, ...s }) => s),
     });
     const seed = pollSeedsFromEnv({
       SKYNET_SUBSCRIPTIONS_FILE: join(dir, "playbook-subscriptions.json"),

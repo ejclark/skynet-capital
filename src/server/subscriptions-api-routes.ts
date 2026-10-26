@@ -348,17 +348,21 @@ async function handleSubscribe(
       body,
       editorOf(session),
       () =>
-        store.subscribe(body.id, {
-          playbookId: body.playbookId,
-          mode: body.mode,
-          ...(body.capitalAllocated !== undefined
-            ? { capitalAllocated: body.capitalAllocated }
-            : {}),
-          enabled: true,
-          ...(body.symbols ? { symbols: body.symbols } : {}),
-          ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
-          ...(body.conviction ? { conviction: body.conviction } : {}),
-        }),
+        store.subscribe(
+          body.id,
+          {
+            playbookId: body.playbookId,
+            mode: body.mode,
+            ...(body.capitalAllocated !== undefined
+              ? { capitalAllocated: body.capitalAllocated }
+              : {}),
+            enabled: true,
+            ...(body.symbols ? { symbols: body.symbols } : {}),
+            ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
+          },
+          undefined,
+          body.conviction,
+        ),
       viewsBefore,
     ),
   );

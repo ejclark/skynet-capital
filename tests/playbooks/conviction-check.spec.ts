@@ -121,7 +121,6 @@ describe("checkRecord on one pair — net P/L and the wheel's retire test", () =
 });
 
 describe("criterion 11 — a non-✓ pair with no conviction is labelled, never stopped", () => {
-  const conviction = { reason: "my call", checkOn: "2027-01-29" };
   const sub = (id: string, overrides: Partial<PlaybookSubscription> = {}) =>
     aSubscription("sauron", id, overrides);
 
@@ -136,10 +135,6 @@ describe("criterion 11 — a non-✓ pair with no conviction is labelled, never 
   it("never labels a ◆ pair with neither a pointer nor a copy: it runs exits-only instead", () => {
     expect(isConvictionNotStated(sub("CRWV-WHEEL"))).toBe(false);
     expect(isConvictionNotStated(sub("CRWV-LONG-CALL"))).toBe(false);
-  });
-
-  it("is quiet once a conviction is stated", () => {
-    expect(isConvictionNotStated(sub("CRWV-WHEEL", { conviction }))).toBe(false);
   });
 
   it("counts a pointer at a record that steers the pair as stated (#5482 slice 2)", () => {

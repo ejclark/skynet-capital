@@ -3,7 +3,6 @@ import {
   type PlaybookMode,
   type PlaybookSubscription,
   type PlayTarget,
-  type SubscriptionConviction,
 } from "../domain/types.js";
 import { boundedString, isRecord } from "../storage/parse-guards.js";
 
@@ -39,13 +38,15 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
   "updatedAt",
   "symbols",
   "compoundAllocation",
+  // Retired (#5482's last contract piece): an inline conviction is dropped on read, never carried
+  // along as an unknown field. The live count read zero before it went (#6046).
   "conviction",
   "convictionId",
   "playTarget",
 ]);
 
 /** The fields a subscribe sets; a re-subscribe carries everything else forward from the record it
- *  replaces — a conviction (unless the subscribe states its own) and any newer build's field. */
+ *  replaces — a pointer (unless the subscribe states its own conviction) and any newer build's field. */
 const SET_BY_SUBSCRIBE: ReadonlySet<string> = new Set([
   "accountId",
   "playbookId",
@@ -85,22 +86,8 @@ export function isCalendarDay(value: unknown): value is string {
   return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value;
 }
 
-/** A malformed conviction (blank, over `boundedString`'s cap, or no real check day) drops the
- *  conviction, never the subscription — the same posture as a malformed `symbols`, and the bots
- *  keep trading a pair with none on record (criterion 11). A sub-field a newer build added rides
- *  along unchanged, as a record's own unknown fields do (#4772). */
-function parseConviction(raw: unknown): SubscriptionConviction | undefined {
-  if (!isRecord(raw)) return undefined;
-  const reason = boundedString(raw.reason);
-  const { checkOn } = raw;
-  if (reason === undefined || reason.trim().length === 0) return undefined;
-  if (!isCalendarDay(checkOn)) return undefined;
-  return { ...raw, reason, checkOn };
-}
-
 /** A conviction record's id (#5482 slice 2): kebab-case and bounded, or dropped — never the
- *  subscription. Since the bots read pointers only (contract piece 4), a dropped id leaves an
- *  inline copy, if any, that runs its pair exits-only (`statedCheck`, `isConvictionOffView`). */
+ *  subscription. A ◆ pair whose id is dropped runs exits-only (`isConvictionOffView`). */
 export const CONVICTION_ID_MAX = 64;
 export const CONVICTION_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 function parseConvictionId(raw: unknown): string | undefined {
@@ -113,8 +100,7 @@ const fraction = (n: unknown): n is number => typeof n === "number" && n > 0 && 
 /** A play's target (#5483 slice 3): a weight strictly between 0 and 1, and, when stated, a lean
  *  range and a band of fractions in order. Shape only: whether it sits inside its playbook's bounds
  *  is `resolvePlayTarget`'s, which needs the playbook. A malformed target drops the target, never
- *  the subscription, the same posture as a malformed conviction. A sub-field a newer build added rides
- *  along unchanged, as a conviction's does. */
+ *  the subscription. A sub-field a newer build added rides along unchanged. */
 function parsePlayTarget(raw: unknown): PlayTarget | undefined {
   if (!(isRecord(raw) && fraction(raw.weight))) return undefined;
   const { weight, lean, band } = raw;
@@ -150,7 +136,6 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     updatedAt,
     symbols,
     compoundAllocation,
-    conviction,
     convictionId,
     playTarget,
   } = raw;
@@ -167,7 +152,6 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
   if (typeof enabled !== "boolean") return null;
   if (typeof createdAt !== "string" || typeof updatedAt !== "string") return null;
   const parsedSymbols = parseSymbols(symbols);
-  const parsedConviction = parseConviction(conviction);
   const parsedConvictionId = parseConvictionId(convictionId);
   const parsedPlayTarget = parsePlayTarget(playTarget);
   return {
@@ -181,7 +165,6 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     updatedAt,
     ...(parsedSymbols ? { symbols: parsedSymbols } : {}),
     ...(compoundAllocation === true ? { compoundAllocation: true } : {}),
-    ...(parsedConviction ? { conviction: parsedConviction } : {}),
     ...(parsedConvictionId ? { convictionId: parsedConvictionId } : {}),
     ...(parsedPlayTarget ? { playTarget: parsedPlayTarget } : {}),
   };

@@ -110,7 +110,5 @@ describe("asOwnConviction — what the owner's row reads", () => {
     expect(asOwnConviction(seeded, lookup)).toBe(seeded);
     const elsewhere = sub({ playbookId: "S1-NVDA", convictionId: view.id });
     expect(asOwnConviction(elsewhere, lookup)).toBe(elsewhere);
-    const inline = sub({ conviction });
-    expect(asOwnConviction(inline, lookup)).toBe(inline);
   });
 });

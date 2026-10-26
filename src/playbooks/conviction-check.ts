@@ -39,10 +39,8 @@ export interface PairLedger {
 /** A pair the house did not mark ✓, whose owner has stated no conviction — neither its own nor a
  *  record's that steers it (#5482 slice 2). A pointer is a stated view even where this build's store
  *  cannot read it (a member's, held by the bots' own lookup): its pair is not unstated, and one the
- *  bots cannot resolve runs exits-only and says so (`steeredBy`). An inline copy with no pointer is
- *  stated too, just not on a view yet: it runs exits-only and says so (`subscriptionRoster`), so
- *  "still trading" would be false of it (the contract step's piece 4). So would it be of a ◆ pair
- *  with neither, which trades only on a conviction and runs exits-only the same way: the label is
+ *  bots cannot resolve runs exits-only and says so (`steeredBy`). "Still trading" would be false of
+ *  a ◆ pair with no pointer, which trades only on a conviction and runs exits-only: the label is
  *  for the other non-✓ pairs (`isConvictionOffView`). Authored plays and ids the pair table does not
  *  know are not pairs, so they are never labelled. */
 export function isConvictionNotStated(sub: PlaybookSubscription): boolean {

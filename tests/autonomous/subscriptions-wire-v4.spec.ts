@@ -13,9 +13,9 @@ import type { SubscriptionsState } from "../../src/subscriptions/subscription-st
 
 /**
  * `subscriptions.v4` (#5482 contract piece 4): the bots read pointers only, so an inline
- * conviction's words and day leave the fingerprint. One bit stays: an inline copy with no pointer
- * is one the app's poll could not move onto a view, and its pair runs exits-only. Expand first: the
- * bots read v4 from this build, and the app keeps sending v3 until they are live.
+ * conviction's words and day left the fingerprint. Its one bit (an unmoved copy is there) is always
+ * false since the last contract piece removed the inline field, which is what every live
+ * subscription already hashed to.
  */
 
 const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscription => ({
@@ -32,6 +32,9 @@ const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscriptio
 const AT = Date.parse("2026-10-23T12:00:00.000Z");
 const V4 = SUBSCRIPTIONS_SNAPSHOT_KIND_V4;
 const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+/** A subscription as an old build wrote it, inline copy and all — never a shape this build makes. */
+const withInline = (over: Partial<PlaybookSubscription> = {}) =>
+  ({ ...sub(over), conviction }) as PlaybookSubscription;
 const pointed = { convictionId: "ai-dip-2026-10" };
 const v4 = (state: SubscriptionsState) => subscriptionsVersion(state, V4);
 const wire = (state: SubscriptionsState, kind: SubscriptionsSnapshotKind = V4) =>
@@ -45,13 +48,16 @@ describe("subscriptions.v4 — pointers only on the wire", () => {
     expect(v4({ sauron: [sub({ convictionId: "another-view" })] })).not.toBe(held);
   });
 
-  it("moves when an unmoved inline copy is there, never for its words or day", () => {
-    const plain = v4({ sauron: [sub()] });
-    const inline = v4({ sauron: [sub({ conviction })] });
-    expect(inline).not.toBe(plain);
-    expect(
-      v4({ sauron: [sub({ conviction: { reason: "other words", checkOn: "2027-04-30" } })] }),
-    ).toBe(inline);
+  it("is the version it always was for a subscription with no inline copy (the live shape)", () => {
+    // Pinned from the build before the inline field went: the bit hashed false for every
+    // subscription once the live count read zero copies (#6046), so no live roster re-versions.
+    expect(v4({ sauron: [sub(pointed)] })).toBe("f6811519c4812eb2");
+    expect(v4({ sauron: [sub()] })).toBe("f50bc8d01901c4a6");
+  });
+
+  it("drops an inline copy an old build sent, so the pair reads as unpointed", () => {
+    const parsed = parseSubscriptionsSnapshot(wire({ sauron: [withInline()] }));
+    expect(parsed?.accounts.sauron?.[0]).not.toHaveProperty("conviction");
   });
 
   it("still moves for every v1 field", () => {
@@ -74,15 +80,12 @@ describe("subscriptions.v4 — pointers only on the wire", () => {
     };
     expect(parseSubscriptionsSnapshot(forged)).toBeUndefined();
     // A v3 fingerprint is not a v4 one, so a kind relabelled in flight is refused too.
-    const relabelled = wire(
-      { sauron: [sub({ ...pointed, conviction })] },
-      SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
-    );
+    const relabelled = wire({ sauron: [sub(pointed)] }, SUBSCRIPTIONS_SNAPSHOT_KIND_V3);
     expect(parseSubscriptionsSnapshot({ ...relabelled, kind: V4 })).toBeUndefined();
   });
 
-  it("runs a pair whose inline copy never moved exits-only, off the parsed snapshot", () => {
-    const parsed = parseSubscriptionsSnapshot(wire({ sauron: [sub({ conviction })] }));
+  it("runs a ◆ pair with no pointer exits-only, inline copy or not, off the parsed snapshot", () => {
+    const parsed = parseSubscriptionsSnapshot(wire({ sauron: [withInline()] }));
     const roster = subscriptionRoster(parsed?.accounts.sauron ?? []);
     expect(roster.enabled.map((e) => [e.playbook.id, e.exitsOnly])).toEqual([["CRWV-WHEEL", true]]);
     expect(roster.steeringRefused).toEqual(["CRWV-WHEEL: its conviction is not on a view yet"]);

@@ -73,16 +73,16 @@ describe("tradingRoster — the conviction gate on the live path", () => {
     expect(r.persona.optionDemand).toBeDefined();
   });
 
-  /** #5482 contract piece 4: the bots read pointers only. An inline copy the app's poll could not
-   *  move onto a view gives no check day, so its pair opens nothing new rather than trade unchecked. */
-  it("opens nothing on a pair whose conviction is still inline, with no pointer", () => {
+  /** #5482: the bots read pointers only. A ◆ pair with no pointer gives no check day, so it opens
+   *  nothing new rather than trade unchecked. */
+  it("opens nothing on a ◆ pair with no pointer", () => {
     const errors: string[] = [];
     const error = console.error;
     const log = console.log;
     console.error = (line: string) => errors.push(line);
     console.log = () => undefined;
     try {
-      const inline = [aSubscription("sauron", "CRWV-WHEEL", { conviction })];
+      const inline = [aSubscription("sauron", "CRWV-WHEEL")];
       const resolved = resolveBotRoster(bot, [], inline);
       expect(resolved.enabled).toEqual([
         { playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true },

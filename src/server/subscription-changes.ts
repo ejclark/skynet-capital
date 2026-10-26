@@ -2,7 +2,7 @@ import type { PlaybookSubscription } from "../domain/types.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import type { StrategyId } from "../playbooks/pair-table.js";
 import { pointerMove } from "../subscriptions/conviction-pointer.js";
-import { asOwnConviction } from "../subscriptions/pair-conviction.js";
+import { asOwnConviction, type SubscriptionAsRead } from "../subscriptions/pair-conviction.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
 import { convictionNames, pointerChange } from "./conviction-pointer-changes.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -43,7 +43,7 @@ export function subscriptionSummary(
   viewOf?: (id: string) => Conviction | undefined,
 ): string | null {
   if (!given) return null;
-  const sub = viewOf ? asOwnConviction(given, viewOf) : given;
+  const sub: SubscriptionAsRead = viewOf ? asOwnConviction(given, viewOf) : given;
   const symbols = sub.symbols ?? [];
   const named =
     symbols.length > MAX_SYMBOLS_NAMED

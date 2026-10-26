@@ -176,30 +176,23 @@ describe("parseSubscriptionsSnapshot refuses anything it cannot fully reproduce"
 });
 
 describe("carried, not behavioral on v1 (#4469 slice 3c part 1)", () => {
-  const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
   const allocations = {
     sauron: { wheel: { capitalAllocated: 75_000, updatedAt: "2026-10-07T00:00:00.000Z" } },
   };
 
-  it("the version does not move for a conviction, a newer build's field, or the allocations", () => {
+  it("the version does not move for a newer build's field, or the allocations", () => {
     const plain = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT);
     const carried = buildSubscriptionsSnapshot(
-      { sauron: [{ ...sub({ conviction }), window: { from: "D-20" } } as PlaybookSubscription] },
+      { sauron: [{ ...sub(), window: { from: "D-20" } } as PlaybookSubscription] },
       AT,
       allocations,
     );
     expect(carried.version).toBe(plain.version);
   });
 
-  it("a conviction (on v2) and the allocations survive the bridge to the bots", () => {
-    const snapshot = buildSubscriptionsSnapshot(
-      { sauron: [sub({ conviction })] },
-      AT,
-      allocations,
-      SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
-    );
+  it("the allocations survive the bridge to the bots", () => {
+    const snapshot = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, allocations);
     const parsed = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
-    expect(parsed?.accounts.sauron?.[0]?.conviction).toEqual(conviction);
     expect(parsed?.allocations).toEqual(allocations);
   });
 
@@ -221,43 +214,14 @@ describe("carried, not behavioral on v1 (#4469 slice 3c part 1)", () => {
 });
 
 /**
- * `subscriptions.v2` (#4469 slice 3c part 2): the one wire change that adds a behavioral field.
- * The criterion this holds: only the added field moves the version.
+ * `subscriptions.v2` (#4469 slice 3c part 2) added the inline conviction to the fingerprint. Since
+ * #5482's last contract piece no subscription carries one, so v2's slot is always empty, and a v2
+ * snapshot an old app built over a conviction no longer reproduces its version: refused, and the
+ * bots keep the roster they hold.
  */
-describe("subscriptions.v2 — the conviction joins the fingerprint, once", () => {
-  const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+describe("subscriptions.v2 — after the inline conviction went", () => {
   const V2 = SUBSCRIPTIONS_SNAPSHOT_KIND_V2;
   const v2 = (state: SubscriptionsState) => subscriptionsVersion(state, V2);
-
-  it("moves for a conviction, and for a changed reason or check date", () => {
-    const plain = v2({ sauron: [sub()] });
-    const held = v2({ sauron: [sub({ conviction })] });
-    expect(held).not.toBe(plain);
-    expect(
-      v2({ sauron: [sub({ conviction: { ...conviction, checkOn: "2027-02-26" } })] }),
-    ).not.toBe(held);
-    expect(v2({ sauron: [sub({ conviction: { ...conviction, reason: "new view" } })] })).not.toBe(
-      held,
-    );
-  });
-
-  it("moves for nothing else new: timestamps, a newer build's field and allocations still do not", () => {
-    const base = buildSubscriptionsSnapshot({ sauron: [sub({ conviction })] }, AT, undefined, V2);
-    const carried = buildSubscriptionsSnapshot(
-      {
-        sauron: [
-          {
-            ...sub({ conviction, updatedAt: "2026-10-09T09:30:00.000Z" }),
-            window: { from: "D-20" },
-          } as PlaybookSubscription,
-        ],
-      },
-      AT + 60_000,
-      { sauron: { wheel: { capitalAllocated: 75_000, updatedAt: "2026-10-09T00:00:00.000Z" } } },
-      V2,
-    );
-    expect(carried.version).toBe(base.version);
-  });
 
   it("every v1 field still moves it", () => {
     const base = v2({ sauron: [sub()] });
@@ -272,35 +236,27 @@ describe("subscriptions.v2 — the conviction joins the fingerprint, once", () =
     }
   });
 
-  it("round trips as v2, conviction intact", () => {
-    const snapshot = buildSubscriptionsSnapshot(
-      { sauron: [sub({ conviction })] },
-      AT,
-      undefined,
-      V2,
-    );
-    const parsed = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
-    expect(parsed?.kind).toBe(V2);
-    expect(parsed?.accounts.sauron?.[0]?.conviction).toEqual(conviction);
+  it("round trips as v2", () => {
+    const snapshot = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, V2);
+    expect(parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)))?.kind).toBe(V2);
   });
 
-  it("is read from this build on, while the app still sends v1 — expand first", () => {
-    expect(buildSubscriptionsSnapshot({ sauron: [sub()] }, AT).kind).toBe(
-      SUBSCRIPTIONS_SNAPSHOT_KIND,
-    );
-  });
-
-  it("drops a conviction a v1 snapshot carries — its version never vouched for it", () => {
-    const snapshot = buildSubscriptionsSnapshot({ sauron: [sub({ conviction })] }, AT);
-    const parsed = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
-    expect(parsed?.kind).toBe(SUBSCRIPTIONS_SNAPSHOT_KIND);
-    expect(parsed?.accounts.sauron?.[0]).not.toHaveProperty("conviction");
+  it("refuses a v2 snapshot an old app versioned over an inline conviction", () => {
+    const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+    const old = {
+      kind: V2,
+      at: AT,
+      // The version the build before this piece computed for exactly these contents.
+      version: "2462a344083b9833",
+      accounts: { sauron: [{ ...sub(), conviction }] },
+    };
+    expect(parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(old)))).toBeUndefined();
   });
 
   it("refuses a v2 payload whose version was computed the v1 way", () => {
     const snapshot = {
-      ...buildSubscriptionsSnapshot({ sauron: [sub({ conviction })] }, AT, undefined, V2),
-      version: subscriptionsVersion({ sauron: [sub({ conviction })] }),
+      ...buildSubscriptionsSnapshot({ sauron: [sub({ symbols: ["NVDA"] })] }, AT, undefined, V2),
+      version: subscriptionsVersion({ sauron: [sub({ symbols: ["NVDA"] })] }),
     };
     expect(parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)))).toBeUndefined();
   });

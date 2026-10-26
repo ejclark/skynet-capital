@@ -23,8 +23,9 @@ import type { MemberConvictionStore, PairViewWrite } from "./member-conviction-s
  *    is never grown past it. Until piece 4 the subscription kept an inline copy instead; the bots
  *    now read pointers only and would run that pair exits-only (`isConvictionOffView`), so a write
  *    reported as saved would quietly stop the pair. Saying so is the honest answer;
- *  - no member store wired (a test or local config with no views file): no view is written, and the
- *    subscription keeps its inline copy, which the bots run exits-only.
+ *  - no member store wired (a test or local config with no views file): a seeded record's day
+ *    still points at the record; any other day is refused, since a subscription holds no inline
+ *    copy since #5482's last contract piece.
  *
  * Written first, so a subscription that points at the view never exists without it. `undo` puts
  * the view back as it was, for a subscription write the change log rolls back after this
@@ -37,10 +38,12 @@ export function statePairConviction(
   owner: string,
   at: Date,
 ): PairViewWrite {
-  const unchanged: PairViewWrite = { ok: true, undo: () => undefined };
-  if (!members) return unchanged;
   const id = pairViewId(ref.accountId, ref.playbookId);
-  if (recordFor(ref.playbookId, conviction)) return members.dropPair(ref.accountId, id);
+  if (recordFor(ref.playbookId, conviction)) {
+    return members ? members.dropPair(ref.accountId, id) : { ok: true, undo: () => undefined };
+  }
+  // Nowhere to keep the owner's own day: refused, since a subscription no longer holds one inline.
+  if (!members) return { ok: false, reason: CONVICTION_UNSAVED };
   const wired = members.handedOver().filter((w) => w.conviction.id !== id).length;
   // Full: refused, not kept inline — the bots read pointers only, so an inline copy opens nothing.
   if (wired >= MAX_WIRED_CONVICTIONS) return { ok: false, reason: CONVICTION_WIRE_FULL };
