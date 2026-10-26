@@ -22,11 +22,13 @@ export async function accountsFixture() {
   const ericDesk = new URL("./accounts-eric-desk-fixture.mjs", import.meta.url).href;
   const sauronDesk = new URL("./accounts-sauron-desk-fixture.mjs", import.meta.url).href;
   const activity = new URL("./accounts-activity-fixture.mjs", import.meta.url).href;
+  const pulse = new URL("./accounts-pulse-fixture.mjs", import.meta.url).href;
   const imports =
     `import { ericActivity, sauronActivity } from ${JSON.stringify(activity)};\n` +
     `import { sauronAllPasses, sauronNoTrades, sauronProbes, sauronRollCall, sauronVerdict } from ${JSON.stringify(heartbeat)};\n` +
     `import { ericDesk } from ${JSON.stringify(ericDesk)};\n` +
-    `import { sauronDesk } from ${JSON.stringify(sauronDesk)};`;
+    `import { sauronDesk } from ${JSON.stringify(sauronDesk)};\n` +
+    `import { ericEquityCurve, ericPulse, sauronPulse, spyBars } from ${JSON.stringify(pulse)};`;
   const body = `${imports}\n${src.slice(from, to)}\nexport const stubs = {${src.slice(stubsAt + "stubs: {".length, stubsEnd)}\n};`;
   const mod = await import(`data:text/javascript;base64,${Buffer.from(body).toString("base64")}`);
   return mod.stubs;
