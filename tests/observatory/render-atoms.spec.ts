@@ -4,8 +4,8 @@ import {
   formatActivityTime,
   formatCurrency,
   formatSigned,
+  formatSignedPercent,
   formatTimestamp,
-  pct,
   plClass,
   profileHref,
   tile,
@@ -78,17 +78,17 @@ describe("plClass", () => {
   });
 });
 
-describe("pct", () => {
+describe("formatSignedPercent", () => {
   it("prefixes a positive percentage with a plus sign and two decimals", () => {
-    expect(pct(3.4)).toBe("+3.40%");
+    expect(formatSignedPercent(3.4)).toBe("+3.40%");
   });
 
   it("keeps the minus sign for a negative percentage", () => {
-    expect(pct(-3.4)).toBe("-3.40%");
+    expect(formatSignedPercent(-3.4)).toBe("-3.40%");
   });
 
   it("prefixes zero with a plus sign", () => {
-    expect(pct(0)).toBe("+0.00%");
+    expect(formatSignedPercent(0)).toBe("+0.00%");
   });
 });
 

@@ -1,6 +1,6 @@
 import type { FieldTone, WorldPatchOp } from "../universe/world-patch.js";
 import type { DashboardData } from "./dashboard-data.js";
-import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
+import { formatCurrency, formatSigned, formatSignedPercent, plClass } from "./render-atoms.js";
 import { type CohortStats, cohortStats } from "./standings-cohort.js";
 import {
   type LeaderMetric,
@@ -75,12 +75,12 @@ export function cohortView(stats: CohortStats): { text: TextMap; tone: ToneMap }
       totalEquity: formatCurrency(stats.totalEquity),
       avgEquity: formatCurrency(stats.avgEquity),
       unrealized: formatSigned(stats.totalUnrealized),
-      return: pct(stats.returnPct),
+      return: formatSignedPercent(stats.returnPct),
       breadth: `${stats.breadthPct.toFixed(0)}%`,
       spread: `${stats.spread.toFixed(2)}%`,
       // No best performer yet renders as an em dash and an EMPTY figure — never a fabricated 0%.
       bestName: stats.best ? stats.best.name : "—",
-      bestPct: stats.best ? pct(stats.best.pct) : "",
+      bestPct: stats.best ? formatSignedPercent(stats.best.pct) : "",
     },
     tone: {
       unrealized: plClass(stats.totalUnrealized),

@@ -1,4 +1,4 @@
-import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
+import { formatCurrency, formatSigned, formatSignedPercent, plClass } from "./render-atoms.js";
 
 /**
  * NET WORTH AS DATA — `/api/accounts/networth`, the JSON view behind the Accounts page's Summary
@@ -193,7 +193,7 @@ function windowView(
   return {
     label,
     note,
-    value: pct(r * 100),
+    value: formatSignedPercent(r * 100),
     tone: plClass(r),
     known: true,
     ...vsBenchmark(r, bench),
@@ -282,7 +282,7 @@ function dayChangeView(
 ): { readonly text: string; readonly tone: Tone } {
   const move = equity - lastEquity;
   const pctVal = lastEquity !== 0 ? (move / lastEquity) * 100 : 0;
-  return { text: `${formatSigned(move)} · ${pct(pctVal)}`, tone: plClass(move) };
+  return { text: `${formatSigned(move)} · ${formatSignedPercent(pctVal)}`, tone: plClass(move) };
 }
 
 /** An all-empty window map — the shape an errored account renders with, so every window reads "—". */
@@ -381,7 +381,7 @@ function aggregateStats(
     return {
       label: w.label,
       note: w.note,
-      value: pct(r * 100),
+      value: formatSignedPercent(r * 100),
       tone: plClass(r),
       known: true,
       ...(reporting.length < live.length ? { partial: true } : {}),

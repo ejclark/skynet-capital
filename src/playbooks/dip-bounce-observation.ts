@@ -25,6 +25,7 @@
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import { etWall } from "../domain/et-wall.js";
 import { BAR_MINUTES, type IntradayBar } from "../domain/intraday-bar.js";
+import { wholePct } from "../domain/percent.js";
 import type {
   DayObservation,
   PlaybookObservation,
@@ -77,12 +78,10 @@ function exitWhy(t: Tranche, rule: DipBounceRule): string {
     return `${target}; signal (${t.age} sessions held): no new buys in the name, this sell stays working — ${kept}`;
   return (
     `${target}; held ${t.age} sessions, no level yet (signal at ${rule.signalDay} sessions or ` +
-    `${pct(rule.signalShare)} tied up, gate at ${rule.gateDay} sessions, ${pct(rule.gateShare)} ` +
-    `tied up or ${pct(rule.weeklyStop)} down in a week) — ${kept}`
+    `${wholePct(rule.signalShare)} tied up, gate at ${rule.gateDay} sessions, ${wholePct(rule.gateShare)} ` +
+    `tied up or ${wholePct(rule.weeklyStop)} down in a week) — ${kept}`
   );
 }
-
-const pct = (share: number): string => `${Math.round(share * 100)}%`;
 
 /** The level a refusal's reason names; a full book (no tranche free) is no recovery level at all. */
 const levelOfRefusal = (why: string): RecoveryLevel =>
