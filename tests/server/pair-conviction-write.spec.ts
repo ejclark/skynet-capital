@@ -158,15 +158,17 @@ describe("an owner's conviction is kept as their own view on the pair", () => {
     expect(row).not.toHaveProperty("notTrading");
   });
 
-  // #5482 contract piece 4: the bots read pointers only, so a copy the poll could not move onto a
-  // view runs its pair exits-only, and the owner's row says so (the state block's default).
-  it("WHEN a conviction is still inline with no pointer, the row says the pair opens nothing new", async () => {
+  // #5482 contract piece 4 and the inline carry's replacement: the bots read pointers only, so a ◆
+  // pair with none runs exits-only, and the owner's row says so (the state block's default).
+  it("WHEN a ◆ pair has no pointer, the row says the pair opens nothing new", async () => {
     const state = subs.load();
     subs.replace({
       ...state,
-      sauron: (state.sauron ?? []).map((s) =>
-        s.playbookId === "SAURON" ? { ...s, conviction: OWN_DAY } : s,
-      ),
+      sauron: (state.sauron ?? []).map((s) => {
+        if (s.playbookId !== "CRWV-WHEEL") return s;
+        const { convictionId: _pointer, ...unpointed } = s;
+        return unpointed;
+      }),
     });
     const { res, out } = fakeRes();
     await serveSubscriptionsApi(
@@ -179,8 +181,9 @@ describe("an owner's conviction is kept as their own view on the pair", () => {
     const rows = (JSON.parse(out.body || "{}").strategies ?? []).flatMap(
       (c: { pairs: unknown[] }) => c.pairs,
     ) as { id: string; notTrading?: string }[];
-    expect(rows.find((r) => r.id === "SAURON")?.notTrading).toBe(UNMOVED_CONVICTION_NOTE);
-    expect(rows.find((r) => r.id === "CRWV-WHEEL")).not.toHaveProperty("notTrading");
+    expect(rows.find((r) => r.id === "CRWV-WHEEL")?.notTrading).toBe(UNMOVED_CONVICTION_NOTE);
+    // A pair that is not ◆ with no pointer has no conviction on record: a label, never a stop.
+    expect(rows.find((r) => r.id === "SAURON")).not.toHaveProperty("notTrading");
   });
 
   it("WHEN the conviction is re-dated, the view is replaced in place and the pointer stays", async () => {
