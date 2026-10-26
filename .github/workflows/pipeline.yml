@@ -426,7 +426,10 @@ jobs:
             # integration tests passed, so a direct squash lands nothing arming would not. Matching
             # "clean" alone failed the job and stranded green PRs unarmed (#4750: 8 of 10 stuck
             # research PRs on 2026-10-18 carried the "unstable status" line).
-            if echo "$OUT" | grep -qiE "(clean|unstable) status"; then
+            # gh can also take the direct-merge path on the arm call itself, so "Base branch was
+            # modified" can surface here, before the retry loop below (#5805, #5903 on 2026-10-19/20:
+            # green, mergeable, left unarmed). Same remedy: fall through to the retried direct merge.
+            if echo "$OUT" | grep -qiE "(clean|unstable) status|base branch was modified"; then
               echo "$OUT"
               echo "already green — merging directly instead of arming"
               # main can move between the clean-status read and this merge ("GraphQL: Base branch was
