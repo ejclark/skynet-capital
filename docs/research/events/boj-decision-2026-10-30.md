@@ -41,6 +41,14 @@ printed 2.7%** on 2026-10-02 (consensus 2.4%, Aug 1.8%). The national September 
 above 2.0% there is likely. Stance is unchanged (stand aside); confidence in the hold-modal read
 drops from Medium-High to **Medium** until 10-23 resolves it.
 
+**Update, 2026-10-26 (D-4) — the data kill fired, and the market read it as December, not October.**
+**National core CPI printed 2.1% for September** (released 2026-10-23 JST; Bloomberg headline and
+briefs.co, matching the Reuters poll) — the first print at or above 2% this year, so the data kill
+below **fired**. Its predicted consequence did not follow: press-cited swap pricing puts an October
+30 hike **under 5%** and a December 18 hike **near 80%** (secondary, not instrument-fetched).
+Hold-modal is intact and the 10-30 event risk shifts to the **Outlook Report wording**. VIX is
+**19.45** (10-23 close) vs 15.27 at the last full row — a regime move. Stand aside, unchanged.
+
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
 | Today | **Stand aside** — nothing here is ours to hold | High | `symbols: []`, no house playbook is rates- or FX-keyed, and at D-55 there is no position this event could be sized into | A tracked name (NVDA/AVGO/MRVL/CRWV) moving **>2%** on any session **2026-09-05 → 2026-10-29** that the tape attributes to a BoJ headline — the "no price channel" premise would be wrong and this doc is rebuilt |
@@ -376,6 +384,38 @@ hold-modal read lowered to Medium, because the evidence since 09-30 leans toward
    event discovered that is absent from the calendar (`--on-date` checked for 10-30, 10-14 and
    10-23), so **no proposal is filed**.
 
+**Amendment, 2026-10-26 (D-4) — the data kill fired; stance unchanged (stand aside, zero capital);
+hold-modal re-argued and kept, confidence back to Medium-High.**
+
+1. **Data kill: FIRED.** National core CPI (all items less fresh food) printed **2.1%** y/y for
+   September, up from **1.7%** in August, released **2026-10-23 JST** (Bloomberg headline; briefs.co
+   page fetched, matching Reuters-poll consensus). First print at or above 2% in 2026, as this
+   doc's 10-14 amendment expected. The other cells on that page (core-core **2.4%**, energy
+   **-0.6%** m/m) are one fetch each and not relied on.
+2. **The kill's own prediction did not hold.** It said October hike odds would "rise toward
+   September's." Press-cited swap pricing (search-summarised from FXStreet/Bloomberg; the FXStreet
+   pages returned **403**, so it was not read directly) has an October 30 hike **under 5%** and
+   December 18 **near 80%**, down from **~25%** on 10-06. Capital Economics (via briefs.co) expects
+   *"another rate increase in December"*. Finance Minister Katayama said Japan is *"on the cusp of
+   shifting to a period of sustained inflation driven by rising wages"* with *"no gap"* to the
+   BoJ: the government brake the 10-14 amendment named is easing, but toward December.
+3. **Re-argument.** The hawkish case stopped being only a projection, which argues for hiking
+   *sooner*. Pricing says the BoJ gets its Outlook Report to restate the case first and acts at
+   the December meeting. Hold-modal survives on pricing, so confidence returns to **Medium-High**.
+   The weak link is evidence quality (one secondary pricing read, no direct instrument).
+4. **What 10-30 carries now:** the Outlook wording (FT-boj-decision-2026-10-30-2) and whether the
+   statement or Ueda opens December. With core at 2.1% the *"clearly above 2 percent"* window looks
+   likelier to be reaffirmed than pushed out; that is a lean, not a score.
+5. **USD/JPY (poundsterlinglive daily):** 158.14 (10-21) → **156.77 (10-22, -0.87%)** → 156.86
+   (10-23) → 156.79 (10-26). The move came on CPI day and stays inside FT-1's ±2.0% band; no
+   carry-unwind signal. FT-1 stays unscored until the 10-29 → 10-30 close.
+6. **VIX regime (Yahoo daily):** 15.27 (10-13) → 19.99 (10-16) → 16.68 (10-21) → 19.03 (10-22) →
+   **19.45 (10-23)** → 18.17 (10-26, session in progress). +4.2 points on the last full-row
+   baseline, past the 3-point band. This doc owns no options play, so it prices nothing here.
+7. **Channel and politics kills:** not fired; no tracked name moved on a BoJ headline in sources
+   read, and no US retreat from the Bessent position found. Date kill: no change to the 10-29/30
+   MPM located (schedule not re-fetched this pulse).
+
 **Kill switches:**
 
 - ~~**Fork kill (the one that rewrites this doc):** the BoJ **holding** on **2026-09-18**.~~ —
@@ -402,7 +442,8 @@ hold-modal read lowered to Medium, because the evidence since 09-30 leans toward
 - **Channel kill:** a tracked name (NVDA/AVGO/MRVL/CRWV) moving **>2%** on any session **2026-09-05
   → 2026-10-29** that the tape attributes to a BoJ headline. Leg 9's "no price channel" claim would
   be false. Re-check every pulse.
-- **Data kill:** Japanese national core CPI printing **at or above 2.0%** in any release before
+- **Data kill — FIRED 2026-10-26:** (national core 2.1%, Sept print; see the 10-26 amendment above
+  and `japan-cpi-2026-10-23`). Original wording: Japanese national core CPI printing **at or above 2.0%** in any release before
   2026-10-30. Leg 7's "the hawkish case is still a projection" framing weakens, October's hike odds
   rise toward September's, and the hold-modal call needs re-argument. Release dates unsourced —
   see limits. Re-check every pulse.
@@ -427,6 +468,7 @@ so re-registering it would inflate the out-of-sample count with one observation 
 | 2026-09-30 | D-30 | **Full session — the fork this doc was built to watch resolved.** **The BoJ hiked 25bp to 1.25% on 2026-09-18, 7-2** (Asada/Sato dissenting to hold; Takata/Tamura for the hike but objecting to Outlook wording), per [`boj-decision-2026-09-18`](boj-decision-2026-09-18.md#outcome)'s close-out. **Fork kill (score by 09-19) did NOT fire; pace kill (score by 09-26) did NOT fire on the evidence located** (search-corroborated only — no primary re-fetch of the BoJ's own statement this pulse). Both retired below. **Real market pricing now exists:** futures-derived (centralbank.watch, "data as of 2026-09-29") October hike 15.2%/no-change 84.8%, December hike 71.5%/no-change 24.1%; per-meeting venue book (Polymarket "Bank of Japan Decision in October?", fetched 2026-09-30, $161K volume) no-change ~77%, December 25bp-increase 56% ($9.2K volume) — FT-3's preferred instrument agrees directionally, less lopsided than futures. **USD/JPY range-bound since the hike:** 157.89 (09-18) → 158.81 (09-24) → 156.48 (09-30), no carry-unwind signal; this event's own carry kill (FT-1) stays unscored, on track for the 10-29→10-30 close. **VIX** 16.04 (09-29 close) vs 14.53 anchor, +1.51pt, below the 3-point regime band. **Corridor re-measured:** `event-scan --on-date` swept 10-25→11-04, **52 tracked events within ±5 days**, up from 28 at initial research (calendar growth, not re-estimation); `adjacentStrongIds` = `fomc-2026-10-28`, `gdp-q3-2026-advance-2026-10-29`, `pce-2026-10-29`, `eci-q3-2026-10-30`. **No new dated adjacency to propose** — `--on-date=2026-10-30` shows all 8 same-date entries already tracked (4 new since initial research, filed by other lanes: `ecb-spf-q4-2026-10-30`, `g20-foreign-ministers-atlanta-2026-10-30`, `russell-style-month-end-capping-effective-2026-10-30`, `uk-blue-book-2026-10-30`/`uk-pink-book-2026-10-30`), and the ±5-day sweep surfaced nothing absent from the live calendar. **Channel/politics kills:** not fired, nothing new found (no BoJ-attributed tracked-symbol move; no post-09-18 Bessent commentary located). **Data kill:** still open, unsourced — `stat.go.jp` not re-attempted this pulse. Cadence band transitioned **medium:31+ → medium:8+** (interval 21d → 7d). | **Amendment (fork resolved; hold-modal confirmed, not conditional) — see Stance section for the full sweep.** Stance unchanged: stand aside, zero capital. | 2026-10-07 (medium, 8+d band: every 7d) |
 | 2026-10-07 | D-23 | **Deterministic screen (no Claude session).** Readings — VIX 15.0 (-1.0pt since last), band unchanged (medium:8+), 52 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-14 |
 | 2026-10-14 | D-16 | **Full session (screen found `new-adjacent-event:ism-manufacturing-2026-11-02`).** **Oct-hike pricing up**, headline-cited only: 15.2% (09-29) → ~20% OIS (10-01/02) → ~25% (10-06); one 36% outlier. **Tokyo core CPI 2.7%** (10-02; cons. 2.4%, Aug 1.8%), core-core 3.0% — **data kill (national core ≥2.0%) likely on est. 10-23** (`japan-cpi-2026-10-23`, on calendar). **SoO (09-30):** some members want to "accelerate the pace"; MoF/Cabinet Office urge caution. **Tankan (10-01):** mfg +24, non-mfg +35 (first fall in 5 qtrs). Ueda ≈10-06: keeps raising, no pace. USD/JPY 158.31 (10-14), band 157.7–158.5; VIX 15.27. US CPI prints today (aggregator only, unverified). Polymarket page was the 2025 market — discarded. No proposal: nothing absent from calendar. | Confidence in hold-modal Medium-High → **Medium**; stance (stand aside) unchanged — see Stance 2026-10-14 amendment | 2026-10-21 (medium, 8+d band: every 7d) |
+| 2026-10-26 | D-4 | **Full session (interval-elapsed, medium:0+ band).** **Data kill FIRED:** national core CPI **2.1%** for Sept (released 10-23 JST; Aug 1.7%; Bloomberg headline + briefs.co, matches Reuters poll); core-core 2.4% single-source, not relied on. **Pricing shifted to December, not October:** Oct 30 hike **<5%**, Dec 18 **~80%** (press-cited swaps via search summary; FXStreet pages 403, not instrument-fetched); Capital Economics expects a December hike; MoF Katayama: "no gap" with BoJ. **USD/JPY** 158.14 (10-21) → 156.77 (10-22, -0.87%) → 156.79 (10-26), inside FT-1's ±2.0%. **VIX 19.45** (10-23 close; 18.17 on 10-26 intraday) vs 15.27 — +4.2, past the 3pt band. **Peers:** none (`symbols: []`). **Corridor:** `--on-date=2026-10-30` shows 11 entries, all tracked; ±5-day sweep found nothing absent. Beyond horizon: BoJ 12-18 already on calendar. No proposal filed. FT-1/FT-2 stay _open_ (score by 10-31). | Hold-modal re-argued and kept; confidence Medium → **Medium-High**; stance (stand aside) unchanged — see Stance 2026-10-26 amendment | 2026-10-28 (medium, 0+d band: every 2d) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -444,3 +486,6 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-14
 <!-- probe-ref: {"symbols":{},"vix":15.27,"daysBand":"medium:8+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","meta-2026-10-28-print","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-26
+<!-- probe-ref: {"symbols":{},"vix":19.45,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","meta-2026-10-28-print","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0,"blocked":[{"url":"https://www.fxstreet.com/news/japanese-yen-gathers-strength-as-cpi-inflation-exceeds-target-backing-boj-rate-hikes-202610230028","status":403,"at":"2026-10-26"},{"url":"https://www.fxstreet.com/news/japans-inflation-figures-are-next-for-a-yen-stuck-near-15800-202610202325","status":403,"at":"2026-10-26"}]} -->

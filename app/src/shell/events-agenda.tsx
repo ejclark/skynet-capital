@@ -57,8 +57,11 @@ function RowLink({ event }: { readonly event: BookEvent }): ReactElement {
 export function AgendaRow({
   event,
   order = 0,
+  why,
 }: {
   readonly event: BookEvent;
+  /** On Events narrowed to one symbol (#6082): what this date does to what you hold on it. */
+  readonly why?: string | undefined;
   /** Its place in the list — each row steps in a beat after the one above. */
   readonly order?: number;
 }): ReactElement {
@@ -73,6 +76,7 @@ export function AgendaRow({
         <LaneGlyphIcon glyph={glyphOf(event)} />
       </span>
       <span className="agenda-title">{event.title}</span>
+      {why ? <span className="agenda-why">{why}</span> : null}
       <span className={`book-tier book-tier-${event.tier}`}>{TIER_WORD[event.tier]}</span>
       {event.call ? (
         <span className="agenda-call">

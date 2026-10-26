@@ -225,6 +225,83 @@ describe("deskView lots", () => {
     expect(sumOf("totalPl")).toBeCloseTo(aapl?.totalPlRaw ?? Number.NaN, 0);
   });
 
+  // #6169: the row's basis is Alpaca's `avg_entry_price` (same-day buys averaged, compressed FIFO
+  // overnight); the buys keep their own fill prices and a sell relieves the oldest first. Buy 56 @
+  // $210 and 22 @ $213, sell 22: Alpaca holds 56 @ $210.846… = $11,807; the buys hold 34 @ $210 +
+  // 22 @ $213 = $11,826. Overnight the day's buys compress to one lot at that same average before
+  // the sell, so it lands on the same figures.
+  describe("partition against the row, with and without a partial sell", () => {
+    const avg = (56 * 210 + 22 * 213) / 78;
+    const afterSell = (at: string) => ({
+      position: snapshot({
+        positions: [{ symbol: "AAPL", quantity: 56, avgPrice: avg, marketValue: 56 * 215 }],
+      }),
+      open: [
+        { symbol: "AAPL", quantity: 34, price: 210, at },
+        { symbol: "AAPL", quantity: 22, price: 213, at },
+      ],
+    });
+    const fixtures = [
+      {
+        name: "no sell",
+        position: snapshot(),
+        open: [
+          { symbol: "AAPL", quantity: 100, price: 180, at: "2026-09-10T14:00:00Z" },
+          { symbol: "AAPL", quantity: 100, price: 198.4, at: "2026-09-15T14:00:00Z" },
+        ],
+        gap: 0,
+      },
+      {
+        name: "a same-day partial sell",
+        ...afterSell("2026-10-26T14:00:00Z"),
+        gap: 11_826 - 56 * avg,
+      },
+      {
+        name: "an overnight partial sell",
+        ...afterSell("2026-10-23T14:00:00Z"),
+        gap: 11_826 - 56 * avg,
+      },
+    ];
+    const raw = (text: string) => Number(text.replace(/−/g, "-").replace(/[^0-9.-]/g, ""));
+
+    for (const { name, position, open, gap } of fixtures) {
+      it(`sums the buys to the row, cost basis off by basisGap — ${name}`, () => {
+        const row = deskView(position, ledgerWith(open)).positions[0];
+        const lots = row?.lots ?? [];
+        const sumOf = (field: "quantity" | "costBasis" | "value" | "totalPl") =>
+          lots.reduce((sum, lot) => sum + raw(lot[field]), 0);
+
+        expect(row?.basisGap).toBeCloseTo(gap, 6);
+        expect(sumOf("quantity")).toBe(raw(row?.quantity ?? ""));
+        expect(sumOf("value")).toBeCloseTo(raw(row?.value ?? ""), 0);
+        // Whole-dollar display: each lot rounds on its own, so allow a dollar per lot.
+        expect(
+          Math.abs(sumOf("costBasis") - (raw(row?.costBasis ?? "") + gap)),
+        ).toBeLessThanOrEqual(lots.length);
+        expect(
+          Math.abs(sumOf("totalPl") - ((row?.totalPlRaw ?? Number.NaN) - gap)),
+        ).toBeLessThanOrEqual(lots.length);
+      });
+    }
+
+    it("says the gap in words — both figures, the signed difference, and why", () => {
+      const { position, open } = afterSell("2026-10-26T14:00:00Z");
+      const row = deskView(position, ledgerWith(open)).positions[0];
+      expect(row?.basisNote).toBe(
+        "Alpaca averages these 56 shares at $210.85 ($11,807); each buy below keeps its own price " +
+          "($11,826), so the buys' P/L totals −$19 against the row's. Sold + held P/L is the same " +
+          "either way.",
+      );
+      // The row keeps Alpaca's figures.
+      expect(row?.costBasis).toBe("$11,807");
+    });
+
+    it("adds no line when the gap rounds under a dollar", () => {
+      const row = deskView(snapshot(), ledgerWith(fixtures[0]?.open ?? [])).positions[0];
+      expect(row?.basisNote).toBeUndefined();
+    });
+  });
+
   it("shows only whole-dollar cost basis on a lot, never cents", () => {
     const ledger = ledgerWith([
       { symbol: "AAPL", quantity: 200, price: 189.2, at: "2026-09-10T14:00:00Z" },

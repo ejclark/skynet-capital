@@ -294,10 +294,16 @@ export const parkedReason = (number, labels = []) =>
  * so its CLI passes `{ interactive: true }` and still sees the issue, and `ready` + `needs-session`
  * stays a legal pair rather than one `feedback-guard.mjs` would have to report.
  *
- * @param {{ interactive?: boolean }} [opts] `interactive: true` only from a live session's pull
+ * BOARDED ON A HELD PLATTER (#6191): `boardedOn` maps an issue to the open platter PR whose body
+ * closes it (`platterClosesByIssue`, pr-issues.mjs). Its last item is built and waits only on
+ * Eric's merge, so a pull ships nothing (#5837 ran three empty builds against #5852). The map is
+ * read by the caller, so this rule stays pure; a caller that passes none skips the check.
+ *
+ * @param {{ interactive?: boolean, boardedOn?: Map<number, number> }} [opts] `interactive: true`
+ * only from a live session's pull
  * @returns {string | null} why the issue may not be pulled, or null when it may
  */
-export function notPullableReason(issue, { interactive = false } = {}) {
+export function notPullableReason(issue, { interactive = false, boardedOn } = {}) {
   if (!issue) return "no issue to pull";
   const n = issue.number;
   if (issue.state && String(issue.state).toLowerCase() !== "open") return `#${n} is not open`;
@@ -312,6 +318,8 @@ export function notPullableReason(issue, { interactive = false } = {}) {
   if (!interactive && names.includes(LABELS.needsSession.name)) {
     return `#${n} carries \`needs-session\` — its remainder waits on an interactive session (/work-issues), not a lane`;
   }
+  const boarded = boardedReason(n, boardedOn);
+  if (boarded) return boarded;
   const blockers = openBlockers(issue);
   if (blockers > 0) {
     return `#${n} is blocked by ${blockers} open issue${blockers === 1 ? "" : "s"} — it starts when they close`;
@@ -329,6 +337,13 @@ export function notPullableReason(issue, { interactive = false } = {}) {
  * reads as 0 — the same unknown-is-unblocked reading the rule gave before this check existed.
  */
 const openBlockers = (issue) => Number(issue?.issue_dependencies_summary?.blocked_by) || 0;
+
+/** Why issue `n` may not be pulled because an open platter closes it, or null (#6191). */
+export function boardedReason(n, boardedOn) {
+  const platter = boardedOn?.get?.(n);
+  if (!platter) return null;
+  return `#${n} is boarded on held platter #${platter} — nothing is left to build; the platter's merge closes it`;
+}
 
 /** Is this issue in the board's Ready column — may an automated puller start it? (#4393) */
 export const pullable = (issue, opts) => notPullableReason(issue, opts) === null;

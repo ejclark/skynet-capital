@@ -387,7 +387,13 @@ describe("recheckPullable — the fresh re-read before a claim (#5266)", () => {
   });
 
   it("passes when the fresh row agrees with the payload", () => {
-    expect(recheckPullable(payloadRow, () => payloadRow)).toBeNull();
+    expect(
+      recheckPullable(
+        payloadRow,
+        () => payloadRow,
+        () => new Map(),
+      ),
+    ).toBeNull();
   });
 
   it("fails closed when the issue cannot be re-read", () => {

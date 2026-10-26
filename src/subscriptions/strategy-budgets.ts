@@ -8,6 +8,7 @@ import {
   STRATEGIES,
   type StrategyId,
 } from "../playbooks/pair-table.js";
+import { capitalized } from "../ui/capitalized.js";
 import type { StrategyAllocation } from "./subscriptions-file.js";
 
 /**
@@ -34,8 +35,6 @@ import type { StrategyAllocation } from "./subscriptions-file.js";
 export const MAX_CHECK_DAYS = 366;
 
 const dollars = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
-
-const capitalized = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** The strategy a playbook id trades, when the pair table names it. */
 export function strategyOf(playbookId: string, lookup = findPair): StrategyId | undefined {

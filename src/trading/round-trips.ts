@@ -5,8 +5,12 @@
  * and one-and-a-bit trades; nothing downstream can say "your win rate" until those fills are
  * matched into closed round trips. Every serious journal does this, and does it with **FIFO lot
  * matching** — first shares in are the first shares out — because that is the industry (and IRS)
- * default, so a number computed here reconciles with a brokerage statement instead of quietly
- * disagreeing with it.
+ * default. Each lot keeps its own fill price.
+ *
+ * That does NOT always match Alpaca's position (#6169): its `avg_entry_price` averages same-day buys
+ * and runs a compressed FIFO overnight, so after a partial sell the open lots' basis can differ from
+ * the position's cost basis. Realized + unrealized P/L is the same either way; only the split moves.
+ * `desk-json-view.ts`'s `basisGap` measures the difference and says it on screen.
  *
  * Honesty invariants (asserted by specs):
  *  - a fill with no recorded fill price cannot produce a P/L, so it is **excluded and counted**

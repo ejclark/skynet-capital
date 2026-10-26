@@ -536,6 +536,73 @@ describe("ship platter — the ledger is a pure function of the boarded commits"
     expect(body).toMatch(/whole platter or nothing/);
     expect(body).toContain("scripts/platter-merge-scan.mjs");
   });
+
+  // #4562: a boarded item used to lose its `Closes #N`, so the platter's merge closed nothing and
+  // 4 of 8 platters' issues were closed by hand. The trailers ride the item commit; the body turns
+  // them into Summary bullets, so GitHub's own link closes them under either merge button.
+  describe("carries each item's issue references into the Summary (#4562)", () => {
+    let refsBase: string;
+    beforeAll(() => {
+      refsBase = git(["rev-parse", "HEAD"]).trim();
+      board("c.txt", "feat(ci): finish the board wiring", [
+        "Platter-Item: plan/3913",
+        "Platter-Sha: 111122223333",
+        "Platter-Verify: verify green 2026-10-04T10:00Z",
+        "Platter-Paths: none",
+        "Platter-Closes: #3913",
+        "Platter-Closes: #4246",
+        "Platter-Refs: #4393",
+      ]);
+      board("d.txt", "chore(ci): slice 4 of the envelope plan", [
+        "Platter-Item: plan/4535",
+        "Platter-Sha: 444455556666",
+        "Platter-Verify: verify green 2026-10-04T11:00Z",
+        "Platter-Paths: none",
+        "Platter-Refs: #4535",
+        "Platter-Refs: #4246",
+      ]);
+    });
+
+    const summary = (body: string) =>
+      body.slice(body.indexOf("## Summary"), body.indexOf("<details>", body.indexOf("## Summary")));
+
+    it("puts one closing keyword per issue in the Summary, naming the row that boarded it", () => {
+      const s = summary(ledger(["--base", base, "--body"]));
+      expect(s).toContain("- Closes #3913 — boarded as item 3.");
+      expect(s).toContain("- Closes #4246 — boarded as item 3."); // item 4 only refs it
+      expect(s).toContain("- Part of #4393 — boarded as item 3.");
+      expect(s).toContain("- Part of #4535 — boarded as item 4.");
+      expect(s).not.toContain("Part of #4246"); // closed wins; checkbody refuses both
+    });
+
+    it("still passes ship checkbody — the keywords sit inside the Summary", () => {
+      const file = join(dir, "refs-body.md");
+      writeFileSync(file, ledger(["--base", base, "--body"]));
+      const { code, stdout } = run(["checkbody", file]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("passes the picture/format contract");
+    });
+
+    it("closes nothing for an item that is not boarded — a dropped item's trailer is gone", () => {
+      // The body reads only <base>..HEAD, so an item off the platter contributes nothing: with
+      // item 3 gone, #3913 is not named at all and #4246 falls back to item 4's `Part of`.
+      const item3 =
+        git(["rev-list", "--reverse", `${refsBase}..HEAD`])
+          .trim()
+          .split("\n")[0] ?? "";
+      const s = summary(ledger(["--base", item3, "--body"]));
+      expect(s).not.toContain("#3913");
+      expect(s).not.toMatch(/closes #4246/i);
+      expect(s).toContain("- Part of #4246 — boarded as item 1.");
+    });
+
+    it("leaves the ledger table and its revert column as they were — no new column", () => {
+      const rows = ledger(["--base", base]).trim().split("\n");
+      expect(rows[0]).toBe("| # | item | why | verify evidence | revert |");
+      expect(rows[4]).toMatch(/^\| 3 \| `plan\/3913` \| .* \| `[0-9a-f]{7}` \|$/);
+      expect(rows.join("\n")).not.toContain("Platter-Closes");
+    });
+  });
 });
 
 describe("ship platter — refusals that keep the platter an assembly point, not a workspace", () => {
@@ -919,7 +986,7 @@ describe("ship — integration tests gate every merge path", () => {
     const open = source.slice(source.indexOf("cmd_open()"), source.indexOf("cmd_automerge()"));
     const e2e = open.indexOf("npm run test:e2e");
     expect(e2e).toBeGreaterThan(open.indexOf("npm run verify"));
-    expect(e2e).toBeLessThan(open.indexOf("git push"));
+    expect(e2e).toBeLessThan(open.indexOf('cmd_push "$branch"'));
     expect(open).toMatch(/LOCAL INTEGRATION TESTS FAILED — not pushing/);
   });
 
@@ -1071,5 +1138,86 @@ describe("ship open — a branch behind origin/main is merged up, never rebased"
     expect(stderr).toContain("git merge origin/main --no-edit");
     expect(stdout).not.toContain("merged origin/main");
     expect(git(["rev-parse", "HEAD"])).toBe(before);
+  });
+});
+
+/**
+ * A REFUSED PUSH SAYS WHY (#4495, 2026-10-02).
+ *
+ * The push loop sent stderr to /dev/null, so when GitHub refused a lane's workflow-file push for
+ * want of the `workflows` permission, the log read only "push failed after retries" and the cause
+ * took a second, manual push to see — half of the ~5 minutes each failure cost. These run the real
+ * `ship push` against a bare origin whose pre-receive hook refuses the way GitHub did, echoing a
+ * token-bearing URL the way git can, so the mask is tested on the same output path.
+ */
+describe("ship push — a refused push prints the remote's reason", () => {
+  const refuse = (reason: string) => {
+    const root = mkdtempSync(join(tmpdir(), "ship-push-"));
+    const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const work = join(root, "work");
+    const hits = join(root, "hits");
+    try {
+      git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+      writeFileSync(join(root, "reason"), `${reason}\n`);
+      const hook = join(root, "origin.git", "hooks", "pre-receive");
+      writeFileSync(
+        hook,
+        [
+          "#!/bin/sh",
+          `echo hit >> '${hits}'`,
+          `cat '${join(root, "reason")}' >&2`,
+          "echo 'seen at https://x-access-token:ghs_s3cr3tT0ken@github.com/o/r.git' >&2",
+          "exit 1",
+          "",
+        ].join("\n"),
+      );
+      chmodSync(hook, 0o755);
+      git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+      git(work, ["config", "user.email", "spec@example.com"]);
+      git(work, ["config", "user.name", "spec"]);
+      git(work, ["checkout", "-q", "-b", "feedback/1"]);
+      git(work, ["commit", "-q", "--allow-empty", "-m", "fix: the item"]);
+      let code = 0;
+      let stderr = "";
+      try {
+        execFileSync("bash", [resolve("scripts/ship.sh"), "push", "feedback/1"], {
+          cwd: work,
+          env,
+          stdio: "pipe",
+        });
+      } catch (error) {
+        const e = error as { status?: number; stderr?: Buffer };
+        code = e.status ?? 1;
+        stderr = e.stderr?.toString() ?? "";
+      }
+      return { code, stderr, attempts: readFileSync(hits, "utf8").trim().split("\n").length };
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it("names the `workflows` permission when that is why the remote refused", () => {
+    const r = refuse(
+      "refusing to allow a GitHub App to create or update workflow `.github/workflows/x.yml` without `workflows` permission",
+    );
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("ship: push failed — the remote said:");
+    expect(r.stderr).toContain("without `workflows` permission");
+    expect(r.stderr).toContain("this credential lacks the `workflows` permission");
+  });
+
+  it("masks the token a remote message can echo back", () => {
+    const r = refuse("pre-receive says no");
+    expect(r.stderr).toContain("x-access-token:***@github.com");
+    expect(r.stderr).not.toContain("ghs_s3cr3tT0ken");
+  });
+
+  it("stops at the first answered rejection — a retry cannot change it", () => {
+    const r = refuse("pre-receive says no");
+    expect(r.attempts).toBe(1);
+    expect(r.stderr).toContain("pre-receive says no");
+    expect(r.stderr).not.toContain("lacks the `workflows` permission");
   });
 });

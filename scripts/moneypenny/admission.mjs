@@ -44,8 +44,16 @@
 import { classOf } from "../rank.mjs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRestAll, sh } from "./gh.mjs";
-import { FOOTER, LABELS, labelNames, notPullableReason, pullable } from "./labels.mjs";
+import {
+  boardedReason,
+  FOOTER,
+  LABELS,
+  labelNames,
+  notPullableReason,
+  pullable,
+} from "./labels.mjs";
 import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
+import { platterClosesByIssue } from "./pr-issues.mjs";
 import { isStartedPlan, statusForIssue, subIssueCounts, WAITING } from "./projects.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
@@ -446,14 +454,32 @@ export function gateAdmission(issue, deps = {}) {
  *
  * @returns {string | null} why the issue may not be pulled now, or null when it may
  */
-export function recheckPullable(issue, read = readIssue) {
+export function recheckPullable(issue, read = readIssue, boarded = readBoarded) {
   let fresh;
   try {
     fresh = read(issue.number);
   } catch (err) {
     return `queued: #${issue.number} could not be re-read — ${String(err?.message).slice(0, 200)}`;
   }
-  return notPullableReason({ ...issue, ...fresh });
+  // The platter read comes last, so an issue the labels already refuse costs no PR list.
+  return notPullableReason({ ...issue, ...fresh }) ?? boardedReason(issue.number, boarded());
+}
+
+/**
+ * Issue → the open platter PR that closes it (#6191, `platterClosesByIssue`). Both claim lanes ask
+ * it after their label checks pass. FAIL-OPEN to an empty map, as the sweep's own open-PR read is
+ * (`readOpenPrIssues`, index.mjs): a failed read costs at most one empty build, which is smaller
+ * than refusing every claim on a GitHub blip.
+ */
+export function readBoarded(list = () => ghRestAll("pulls?state=open"), log = console.log) {
+  try {
+    return platterClosesByIssue(list());
+  } catch (err) {
+    log(
+      `::warning::the open platters could not be read — not screening for boarded issues: ${String(err?.message).slice(0, 200)}`,
+    );
+    return new Map();
+  }
 }
 
 // ── the CLI (#4393 slice 3) — read-only; never comments, never labels ────────────────────────────

@@ -65,7 +65,7 @@ export function severityOf(f: HealthFinding): number {
   return f.reading;
 }
 
-const RANK: Record<HealthLevel, number> = { signal: 1, gate: 2 };
+const HEALTH_RANK: Record<HealthLevel, number> = { signal: 1, gate: 2 };
 
 export function sampleOf(asOf: string, findings: readonly HealthFinding[]): HealthSample {
   const seen = new Set<string>();
@@ -122,8 +122,12 @@ export function standingOf(
   if (!(first && ref)) return { since: asOf, standingMs: 0, trend: "new" };
   const standingMs = Math.max(0, now - first.at);
   const since = new Date(first.at).toISOString();
-  if (RANK[finding.level] !== RANK[ref.level]) {
-    return { since, standingMs, trend: RANK[finding.level] > RANK[ref.level] ? "worse" : "better" };
+  if (HEALTH_RANK[finding.level] !== HEALTH_RANK[ref.level]) {
+    return {
+      since,
+      standingMs,
+      trend: HEALTH_RANK[finding.level] > HEALTH_RANK[ref.level] ? "worse" : "better",
+    };
   }
   const change = (severityOf(finding) - ref.severity) / Math.max(Math.abs(ref.severity), 1e-9);
   const trend: Trend =

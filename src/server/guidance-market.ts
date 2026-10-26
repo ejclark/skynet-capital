@@ -13,8 +13,8 @@ import type { IvSample } from "../research/iv-record.js";
 /** Trading days per year for annualizing daily realized volatility. */
 const TRADING_DAYS = 252;
 /** Realized vol wants about a month of sessions; fewer returns than this is noise, not a reading. */
-export const MIN_RETURNS = 10;
-export const RV_SESSIONS = 20;
+const MIN_RETURNS = 10;
+const RV_SESSIONS = 20;
 
 /** Annualized close-to-close realized volatility over the last `RV_SESSIONS` returns. */
 export function realizedVolatility(closes: readonly number[]): number | undefined {
@@ -62,7 +62,7 @@ export function parityImpliedSpot(
 }
 
 /** A parity pair's quotes must be at least this tight (spread ÷ mid) to read spot off. */
-export const PARITY_MAX_SPREAD = 0.05;
+const PARITY_MAX_SPREAD = 0.05;
 /** How many strikes out from the money parity looks for a tight pair before giving up. */
 const PARITY_PAIRS_TRIED = 3;
 
@@ -99,7 +99,7 @@ export function toGuidanceQuote(
 }
 
 /** Days either side of an unbounded ESTIMATE the guidance treats as the print's window. */
-export const ESTIMATE_WINDOW_DAYS = 7;
+const ESTIMATE_WINDOW_DAYS = 7;
 
 const shift = (date: string, days: number): string => {
   const d = new Date(`${date}T00:00:00Z`);

@@ -68,7 +68,7 @@ export interface FitAnswer {
 }
 
 /** Lower is shown first. */
-const RANK: Readonly<Record<FitStatus, number>> = {
+const FIT_STATUS_RANK: Readonly<Record<FitStatus, number>> = {
   researched: 0,
   conviction: 1,
   screened: 2,
@@ -153,5 +153,8 @@ export function fitFor(symbol: string, asOfIso: string): FitAnswer {
       const row = unstudied(strategy, sym, asOfIso);
       return { ...base, ...row, ...EVIDENCE_STATUS[row.status] };
     });
-  return { symbol: sym, fits: fits.sort((a, b) => RANK[a.status] - RANK[b.status]) };
+  return {
+    symbol: sym,
+    fits: fits.sort((a, b) => FIT_STATUS_RANK[a.status] - FIT_STATUS_RANK[b.status]),
+  };
 }
