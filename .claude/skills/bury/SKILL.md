@@ -26,9 +26,12 @@ never re-derives the target from a fresh scan — a gate's output *is* the gate 
 
 ## Steps
 
-1. `git fetch origin main && git checkout -B refactor/bury-<slug> origin/main` (`<slug>` from the
-   target file or export name), then `bash scripts/worktree-setup.sh` — required inside a worktree,
-   or every subsequent tool call exits 127. Skip only if the caller already did this on this branch.
+1. **In a worktree:** `bash scripts/wt-start.sh refactor/bury-<slug>` — fetch, branch off `origin/main` and
+   `node_modules` (it runs `worktree-setup.sh`; without it every later tool call exits 127), in one
+   call. **In the primary checkout** (`wt-start.sh` refuses there): `git fetch origin main`, then
+   `git checkout -B refactor/bury-<slug> origin/main` — two separate calls, never one `&&` chain
+   (`docs/DELEGATION.md` rail 2). `<slug>` comes from the target file or export
+   name. Skip only if the caller already did this on this branch.
 2. Confirm the target is still flagged: `npx knip --no-exit-code --reporter compact`. If it isn't,
    report `status: "blocked"` with "already fixed on main" and stop.
 3. **Read the code first**, then grep for every reference before touching anything. Grep the
@@ -60,7 +63,7 @@ never re-derives the target from a fresh scan — a gate's output *is* the gate 
 - Behavior must not change. Deleting something referenced anywhere — including a script,
   workflow, or deploy-config reference outside `src/`/`tests/`/`docs/` — is a failed rep.
 - Never bypass a gate, never use `--no-verify`, never edit a budget upward.
-- A tool exiting 127 means step 1's `worktree-setup.sh` was skipped or failed — run it and read
+- A tool exiting 127 means step 1's `wt-start.sh` (which runs `worktree-setup.sh`) was skipped or failed — run it and read
   what it says; never hand-roll a `node_modules` workaround.
 - If blocked (verify fails, target already fixed, or target is protected), report `status:
   "blocked"` with why — don't improvise past it.
