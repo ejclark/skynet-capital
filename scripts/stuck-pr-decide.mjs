@@ -138,7 +138,7 @@ function judgeGreen({ pr, ghosts, age, hours }) {
       hours: h,
       why: `green for ${h}h and auto-merge was never armed — the arm job did not reach it`,
       ghosts,
-      fix: "check the `arm auto-merge` job's conclusion on the head's Pipeline run; then `scripts/ship.sh automerge <n>`",
+      fix: "a failed `arm auto-merge` job is re-run once per head by Moneypenny's audit (stranded-pr.mjs) on the next push to main; if it failed again, read that job's log, then `scripts/ship.sh automerge <n>`",
     };
   }
   return null;
@@ -157,6 +157,39 @@ function judgeHeadless({ pr, ghosts, age, hours }) {
     ghosts,
     fix: FIX_REAL_IDENTITY,
   };
+}
+
+/**
+ * Branches an open platter PR has boarded. A platter's body is its ledger, one row per item naming
+ * the item's branch (`Platter-Item`, scripts/platter-refs.mjs), so an item branch named in an open
+ * `platter/` PR's body is already on its way to Eric's merge: its own PR must never arm. Pure.
+ */
+export function boardedBranches(openPrs = []) {
+  const bodies = openPrs
+    .filter((p) => /^platter\//.test(p.head?.ref ?? ""))
+    .map((p) => p.body ?? "");
+  return (ref) => {
+    if (!ref || bodies.length === 0) return false;
+    const escaped = ref.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+    const named = new RegExp(`(^|[^\\w/.-])${escaped}($|[^\\w/.-])`);
+    return bodies.some((b) => named.test(b));
+  };
+}
+
+/**
+ * Why a stuck PR is not ours to clear, or null. Two kinds never auto-arm (2026-10-26: #5381–#5383,
+ * dependabot bumps to `.github/workflows/**`, were named "unarmed" beside research PRs): a diff that
+ * touches envelope.json's protected class waits for Eric's merge by design, and a branch already
+ * boarded on a platter lands with it. Neither is stuck; both were left alone on purpose.
+ *
+ * @param {{ pr: {head?: {ref?: string}}, files: string[], isProtected: (path: string) => boolean,
+ *           isBoarded: (ref: string) => boolean }} input
+ */
+export function exemptReason({ pr, files = [], isProtected, isBoarded }) {
+  const hits = files.filter((f) => isProtected(f));
+  if (hits.length) return `envelope-protected (${hits.slice(0, 3).join(", ")})`;
+  if (isBoarded(pr.head?.ref ?? "")) return "boarded on an open platter";
+  return null;
 }
 
 /** One human line per stuck PR. */
