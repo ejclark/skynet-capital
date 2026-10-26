@@ -219,7 +219,9 @@ export function startInsightsBridge(
     // v4 (#5482 contract piece 4) fingerprints each subscription's pointer and one bit, always
     // false since the inline field went: the bots read pointers only. Sent only once the
     // bots that read v4 (#5989) were deployed: a bots build that predates it reads v4 as "not
-    // reported" and keeps the roster it had. v1 to v3 stay readable by the bots for a rollback.
+    // reported" and keeps the roster it had. v1 to v3 stay readable by the bots for a rollback,
+    // except a v2 or v3 snapshot that carries an inline conviction, which no longer reproduces
+    // its version (#5482's last contract piece).
     subscriptions: () => subscriptionsOnTheWire(subscriptions),
     onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();

@@ -71,9 +71,9 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * THE LAST CONTRACT PIECE (#5482): the inline field is gone from `PlaybookSubscription`, after the
  * live count read zero copies (the ops-status row, read through the dashboard's boot log, #6046).
  * v4's bit is now always false, which is what every live subscription already hashed to, so the
- * version does not move. A v2 snapshot that still carried a conviction (only an app rolled back
- * past #5511) no longer matches its own version, so the bots refuse it and keep the roster they
- * hold — still the safe direction.
+ * version does not move. A v2 or v3 snapshot that still carried a conviction (v3 builds the v2
+ * slot into its own fingerprint) no longer matches its own version, so the bots refuse it and keep
+ * the roster they hold — still the safe direction. Only an app rolled back past #6000 sends one.
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";

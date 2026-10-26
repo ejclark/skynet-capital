@@ -1,4 +1,3 @@
-import type { SubscriptionAsRead } from "../subscriptions/pair-conviction.js";
 /**
  * THE PLAYBOOK STORE, as data (issue #885) — the catalog merged with one account's own
  * subscriptions. No cross-account visibility (Eric, settled fork): the caller passes only the
@@ -23,6 +22,7 @@ import { type DelegationGateView, delegationGateView } from "../domain/playbook-
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
 import { isConvictionOffView } from "../playbooks/conviction-store.js";
 import { findPair, type Pair, type StrategyId } from "../playbooks/pair-table.js";
+import type { SubscriptionAsRead } from "../subscriptions/pair-conviction.js";
 import { budgetedOn } from "../subscriptions/strategy-budgets.js";
 import {
   handOffNote,

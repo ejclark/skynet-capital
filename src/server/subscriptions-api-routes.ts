@@ -360,7 +360,7 @@ async function handleSubscribe(
             ...(body.symbols ? { symbols: body.symbols } : {}),
             ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
           },
-          undefined,
+          config.now?.() ?? new Date(),
           body.conviction,
         ),
       viewsBefore,

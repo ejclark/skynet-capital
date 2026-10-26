@@ -20,10 +20,10 @@ import type { SubscriptionsState } from "./subscription-state.js";
  *
  * WHEN A CONVICTION "MATCHES" A RECORD: the record steers the subscription's pair and states the
  * same check day. That is the whole test, and it is why pointing changes no check: the date the
- * bots read is the date the subscription already had. A subscription whose conviction states
- * another day, or that no record steers, matches nothing and keeps its inline conviction, exactly
- * as before. Two records matching at once is not a match either: which view the pair belongs to
- * is not this file's call, so it stays inline.
+ * bots read is the date the subscription already had. A conviction that states another day, or on a
+ * pair no record steers, matches nothing (it is the owner's own view on the pair instead,
+ * `pair-conviction-write.ts`). Two records matching at once is not a match either: which view the
+ * pair belongs to is not this file's call, so it gets no pointer from a record.
  *
  * A MEMBER'S VIEW, HANDED OVER, MATCHES BY ITS OWNER'S ACT (#5482 slice 6c). When a member hands a
  * view to their bots (`member-conviction-store.ts`), it names the accounts it may steer. On those

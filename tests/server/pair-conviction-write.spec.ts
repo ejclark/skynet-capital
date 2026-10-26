@@ -16,6 +16,8 @@ import type { DashboardServerConfig } from "../../src/server/dashboard-server-co
 import { MemberConvictionStore } from "../../src/server/member-conviction-store.js";
 import { serveMemberConvictionsApi } from "../../src/server/member-convictions-api-routes.js";
 import {
+  CONVICTION_NO_VIEWS,
+  CONVICTION_NOT_KEPT,
   CONVICTION_UNSAVED,
   CONVICTION_WIRE_FULL,
   statePairConviction,
@@ -362,6 +364,37 @@ describe("never past what the bots will hold", () => {
       });
       expect(write).not.toHaveBeenCalled();
       expect(members.handedOver().map((w) => w.conviction.checkOn)).toEqual([OWN_DAY.checkOn]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// #5482's last contract piece: no inline copy to fall back on, so a conviction that cannot be kept
+// as a view is refused with a reason that says why, never answered ok and lost.
+describe("statePairConviction — refusals once nothing is kept inline", () => {
+  const AT = new Date("2026-10-26T15:00:00Z");
+  const own = { reason: "My own day.", checkOn: "2027-04-30" };
+  const ref = (playbookId: string) => ({ accountId: "sauron", playbookId });
+
+  it("refuses an own day with no views file wired, but still lets the shared view's day through", () => {
+    expect(statePairConviction(undefined, ref("CRWV-WHEEL"), own, "Ada", AT)).toEqual({
+      ok: false,
+      reason: CONVICTION_NO_VIEWS,
+    });
+    const shared = { reason: "AI dip", checkOn: CONVICTIONS.get("ai-dip-2026-10")?.checkOn ?? "" };
+    expect(statePairConviction(undefined, ref("CRWV-WHEEL"), shared, "Ada", AT).ok).toBe(true);
+  });
+
+  it("refuses a view the pointer rule would never hold: an id the pair table does not know", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "skynet-not-kept-"));
+    try {
+      const views = new MemberConvictionStore(join(dir, "member-convictions.json"));
+      expect(statePairConviction(views, ref("U-my-own-play"), own, "Ada", AT)).toEqual({
+        ok: false,
+        reason: CONVICTION_NOT_KEPT,
+      });
+      expect(views.handedOver()).toEqual([]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
