@@ -86,7 +86,7 @@ describe("LedgerTable — each bot trade opens to its decision", () => {
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     expect(screen.getByText(/BETA-PHASE FORCED PICK/)).toBeInTheDocument();
     expect(screen.getByText("beta-scout")).toBeInTheDocument();
-    expect(screen.getByText("BETA-SCOUT · conservative")).toBeInTheDocument();
+    expect(screen.getByText("the forced daily pick · conservative")).toBeInTheDocument();
   });
 
   // #885: "at this time, we do not show what playbooks others are using" — a non-owner's page.
@@ -197,7 +197,7 @@ describe("LedgerTable — a bot's option fill", () => {
     const pivots = [...container.querySelectorAll(".pv-pivot")].map((p) => p.textContent);
     expect(pivots).toEqual(["Breakeven $82.95", "Strike $85", "now $86.10"]);
     expect(container.querySelector(".pv-side-below")).toHaveTextContent("ITM · below $85");
-    expect(screen.getByText("CRWV-WHEEL · standard")).toBeInTheDocument();
+    expect(screen.getByText("the wheel on CRWV · standard")).toBeInTheDocument();
     const labels = [...container.querySelectorAll(".oo-table dt")].map((dt) => dt.textContent);
     expect(labels).toEqual(["Placed by", "Why"]);
     expect(screen.queryByText(/limit \$2\.10/)).not.toBeInTheDocument();
@@ -325,7 +325,7 @@ describe("LedgerTable — a bot's spread and its legs", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Why NVDA $185/$200 CALL SPREAD · 13 NOV 26 was bought" }),
     );
-    expect(screen.getByText("NVDA-CALL-SPREAD · standard")).toBeInTheDocument();
+    expect(screen.getByText("the call spread on NVDA · standard")).toBeInTheDocument();
     // A spread draws no price line (one strike can't describe it); its proof is Full detail's.
     expect(container.querySelector(".pv")).toBeNull();
     expect(screen.queryByText(/D-20→D-5/)).not.toBeInTheDocument();
@@ -518,15 +518,15 @@ describe("LedgerTable — the playbook, as a way in to its card", () => {
     render(<LedgerTable events={[placed]} deskId="sauron" />);
     // The Playbook column names it bare; the opened order adds the mode it ran in.
     const [inList] = screen.getAllByRole("link", {
-      name: "SAURON · aggressive — open its card on Playbooks",
+      name: "Sauron's own rules · aggressive — open its card on Playbooks",
     });
-    expect(inList?.textContent).toBe("SAURON ›");
+    expect(inList?.textContent).toBe("Sauron's own rules ›");
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
     const [, link] = screen.getAllByRole("link", {
-      name: "SAURON · aggressive — open its card on Playbooks",
+      name: "Sauron's own rules · aggressive — open its card on Playbooks",
     });
     if (!link) throw new Error("the opened order drew no playbook link");
-    expect(link.textContent).toBe("SAURON · aggressive ›");
+    expect(link.textContent).toBe("Sauron's own rules · aggressive ›");
     expect(link).toHaveAttribute(
       "href",
       `/accounts?account=sauron&section=playbooks&card=SAURON&mode=aggressive&fill=${Date.parse("2026-10-05T15:20:00.000Z")}&from=ord-1`,
@@ -536,7 +536,7 @@ describe("LedgerTable — the playbook, as a way in to its card", () => {
   it("keeps the playbook as plain words on a ledger that merges several accounts", () => {
     render(<LedgerTable events={[placed]} />);
     fireEvent.click(screen.getByRole("button", { name: "Why MSFT was bought" }));
-    expect(screen.getByText("SAURON · aggressive")).toBeInTheDocument();
+    expect(screen.getByText("Sauron's own rules · aggressive")).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
