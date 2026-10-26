@@ -64,7 +64,9 @@ primary_region = "ord"  # Chicago — same region as the dashboard, so the bridg
   SKYNET_BOTS_HEALTH_PATH = "/data/health.json"
 
 [processes]
-  bots = "npm run run:autonomous"
+  # Plain node on the esbuild bundle (Dockerfile's build:bots), like the dashboard's process: the
+  # image carries production dependencies only, so there is no tsx to run the sources (#4621).
+  bots = "node --enable-source-maps dist/bots.mjs"
 
 [mounts]
   source = "skynet_bots_data"
