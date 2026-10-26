@@ -1,0 +1,47 @@
+{
+  "repository": { "default_branch": "main" },
+  "workflow_run": {
+    "id": 40304642365,
+    "name": "Moneypenny Events (event-research automation)",
+    "conclusion": "failure",
+    "event": "workflow_dispatch",
+    "head_branch": "main",
+    "html_url": "https://github.com/ejclark/skynet-capital/actions/runs/40304642365"
+  },
+  "jobs": [
+    {
+      "id": 121510633046,
+      "name": "route",
+      "conclusion": "success",
+      "runner_name": "GitHub Actions 1000041880",
+      "labels": ["ubuntu-latest"],
+      "steps": [{ "name": "Run Moneypenny", "status": "completed", "conclusion": "success" }]
+    },
+    {
+      "id": 121511697452,
+      "name": "research due events (uk-gilt-auction-long-2026-11-10, never-assessed)",
+      "conclusion": "failure",
+      "runner_name": "GitHub Actions 1000041890",
+      "labels": ["ubuntu-latest"],
+      "steps": [
+        { "name": "Set up job", "status": "completed", "conclusion": "success" },
+        {
+          "name": "Run ./.github/actions/oauth-token-gate",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea",
+          "status": "in_progress",
+          "conclusion": ""
+        },
+        {
+          "name": "Surface the swallowed Claude result on failure",
+          "status": "pending",
+          "conclusion": ""
+        }
+      ]
+    }
+  ],
+  "deps": { "openIssues": [] }
+}

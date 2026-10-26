@@ -17,6 +17,8 @@
  *
  * Pure: markdown in, markdown out. All filesystem and calendar reading is src/scripts/week-study.ts.
  */
+
+import { DAY_MS } from "../domain/time.js";
 import type { HorizonRow } from "../server/research-event-calls.js";
 
 /** The Monday–Sunday span of one ISO week, plus its label. */
@@ -57,8 +59,6 @@ export interface WeekStudyInput {
   /** The date the composition ran — the `**Last assessed:**` contract line. */
   readonly composedOn: string;
 }
-
-const DAY_MS = 86_400_000;
 
 const utc = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
 const isoOf = (d: Date): string => d.toISOString().slice(0, 10);

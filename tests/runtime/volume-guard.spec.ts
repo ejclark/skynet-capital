@@ -1,4 +1,8 @@
-import { PERSISTED_STORES, volumePersistenceWarnings } from "../../src/runtime/volume-guard.js";
+import {
+  OPT_IN_STORES,
+  PERSISTED_STORES,
+  volumePersistenceWarnings,
+} from "../../src/runtime/volume-guard.js";
 
 // Boot-time half of the volume-persistence guard (tests/arch/volume-persistence.spec.ts is the
 // pre-merge half). This is the net that catches the drift the CI gate structurally cannot: a
@@ -10,9 +14,11 @@ describe("volumePersistenceWarnings", () => {
 
   it("is silent outside Fly — a bare FLY_APP_NAME is the only trigger", () => {
     expect(volumePersistenceWarnings({})).toEqual([]);
-    expect(volumePersistenceWarnings({ SKYNET_ALLOWLIST_STORE: "data/allowlist.json" })).toEqual(
-      [],
-    );
+    expect(
+      volumePersistenceWarnings({
+        SKYNET_ALLOWLIST_STORE: "data/allowlist.json",
+      }),
+    ).toEqual([]);
   });
 
   it("is silent on Fly once every store is pinned under the mount", () => {
@@ -22,7 +28,10 @@ describe("volumePersistenceWarnings", () => {
   it("warns when a store is left unset — the exact failure that locked members out", () => {
     // SKYNET_ALLOWLIST_STORE missing entirely, so it falls back to the relative default.
     const { SKYNET_ALLOWLIST_STORE: _omit, ...rest } = pinned;
-    const warnings = volumePersistenceWarnings({ FLY_APP_NAME: "skynet-capital", ...rest });
+    const warnings = volumePersistenceWarnings({
+      FLY_APP_NAME: "skynet-capital",
+      ...rest,
+    });
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain("SKYNET_ALLOWLIST_STORE");
     expect(warnings[0]).toContain("data/allowlist.json");
@@ -45,5 +54,22 @@ describe("volumePersistenceWarnings", () => {
     expect(
       volumePersistenceWarnings({ FLY_APP_NAME: "skynet-capital", ...custom }, "/srv"),
     ).toEqual([]);
+  });
+
+  it("leaves an unset opt-in store alone — unset means the feature is dark, not unpinned", () => {
+    const env = { FLY_APP_NAME: "skynet-capital", ...pinned };
+    for (const name of OPT_IN_STORES) expect(env).not.toHaveProperty(name);
+    expect(volumePersistenceWarnings(env)).toEqual([]);
+  });
+
+  it("warns when an opt-in store is set off the mount, and not when it is on it", () => {
+    const base = { FLY_APP_NAME: "skynet-capital", ...pinned };
+    expect(volumePersistenceWarnings({ ...base, SKYNET_AUDIT_DIR: "/data/audit" })).toEqual([]);
+    const warnings = volumePersistenceWarnings({
+      ...base,
+      SKYNET_BOTS_DB_PATH: "bots-state.db",
+    });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("SKYNET_BOTS_DB_PATH");
   });
 });

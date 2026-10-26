@@ -1,5 +1,6 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { writeFileAtomicSync } from "../storage/atomic-write.js";
 
 /**
  * The unclean-restart marker (#4618, slice 6 of #4612). An OOM kill fails no workflow run and the
@@ -89,10 +90,8 @@ export function openRunMarker(
   };
   const write = (): void => {
     try {
-      mkdirSync(dirname(path), { recursive: true });
-      const tmp = `${path}.tmp`;
-      writeFileSync(tmp, `${JSON.stringify(marker)}\n`, "utf8");
-      renameSync(tmp, path); // atomic: a kill mid-write leaves the old marker, never half of one
+      // atomic: a kill mid-write leaves the old marker, never half of one
+      writeFileAtomicSync(path, `${JSON.stringify(marker)}\n`);
     } catch (error) {
       warn(`[run-marker] write failed (non-fatal): ${String(error)}`);
     }

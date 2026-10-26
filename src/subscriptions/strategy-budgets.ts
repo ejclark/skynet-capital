@@ -1,4 +1,5 @@
 import { marketDayKey } from "../domain/market-day.js";
+import { DAY_MS } from "../domain/time.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import {
   findPair,
@@ -31,8 +32,6 @@ import type { StrategyAllocation } from "./subscriptions-file.js";
 
 /** A conviction's check day may sit at most this far out. */
 export const MAX_CHECK_DAYS = 366;
-
-const DAY_MS = 86_400_000;
 
 const dollars = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
 

@@ -1,3 +1,4 @@
+import { finiteOrUndefined } from "../domain/finite.js";
 import { GUARD_REFUSAL_REASONS, type GuardRefusalReason } from "../engine/guards.js";
 import {
   type AuthoredPlaysState,
@@ -47,8 +48,6 @@ export function buildShadowOrders(state: AuthoredPlaysState, at: number): Shadow
 
 const text = (v: unknown, max = MAX_TEXT): string | undefined =>
   typeof v === "string" && v.length > 0 && v.length <= max ? v : undefined;
-const num = (v: unknown): number | undefined =>
-  typeof v === "number" && Number.isFinite(v) ? v : undefined;
 
 function parseOrder(raw: unknown): ShadowOrder | undefined {
   if (!isRecord(raw)) return undefined;
@@ -61,7 +60,7 @@ function parseOrder(raw: unknown): ShadowOrder | undefined {
 /** Bots side: the orders in a poll body, or `undefined` for anything short of a clean, whole set. */
 export function parseShadowOrders(value: unknown): ShadowOrders | undefined {
   if (!isRecord(value) || value.kind !== SHADOW_ORDERS_KIND) return undefined;
-  const at = num(value.at);
+  const at = finiteOrUndefined(value.at);
   if (at === undefined || !Array.isArray(value.plays) || value.plays.length > MAX_SHADOW_PLAYS) {
     return undefined;
   }
@@ -136,15 +135,15 @@ export interface ShadowReport {
 function parseTradeView(raw: unknown): ShadowTradeView | undefined {
   if (!isRecord(raw)) return undefined;
   const [at, quantity, price, bid, ask] = [
-    num(raw.at),
-    num(raw.quantity),
-    num(raw.price),
-    num(raw.bid),
-    num(raw.ask),
+    finiteOrUndefined(raw.at),
+    finiteOrUndefined(raw.quantity),
+    finiteOrUndefined(raw.price),
+    finiteOrUndefined(raw.bid),
+    finiteOrUndefined(raw.ask),
   ];
   const symbol = text(raw.symbol, 20);
   const side = raw.side === "buy" || raw.side === "sell" ? raw.side : undefined;
-  const realized = num(raw.realized);
+  const realized = finiteOrUndefined(raw.realized);
   if (
     at === undefined ||
     quantity === undefined ||
@@ -181,7 +180,7 @@ function parseRefusal(raw: unknown): ShadowRefusalView | null | undefined {
 function parseHolding(raw: unknown): ShadowReportEntry["holding"] | null | undefined {
   if (raw === undefined) return null;
   if (!isRecord(raw)) return undefined;
-  const [quantity, avgPrice] = [num(raw.quantity), num(raw.avgPrice)];
+  const [quantity, avgPrice] = [finiteOrUndefined(raw.quantity), finiteOrUndefined(raw.avgPrice)];
   return quantity === undefined || avgPrice === undefined ? undefined : { quantity, avgPrice };
 }
 
@@ -192,11 +191,11 @@ function parseEntry(raw: unknown): ShadowReportEntry | undefined {
   const state = STATES.find((s) => s === raw.state);
   const window = WINDOWS.find((w) => w === raw.window);
   const counts = [
-    num(raw.sessions),
-    num(raw.tradeCount),
-    num(raw.roundTrips),
-    num(raw.realized),
-    num(raw.refused),
+    finiteOrUndefined(raw.sessions),
+    finiteOrUndefined(raw.tradeCount),
+    finiteOrUndefined(raw.roundTrips),
+    finiteOrUndefined(raw.realized),
+    finiteOrUndefined(raw.refused),
   ] as const;
   const holding = parseHolding(raw.holding);
   const lastRefusal = parseRefusal(raw.lastRefusal);
@@ -211,7 +210,7 @@ function parseEntry(raw: unknown): ShadowReportEntry | undefined {
     if (!trade) return undefined;
     recent.push(trade);
   }
-  const lastPassAt = num(raw.lastPassAt);
+  const lastPassAt = finiteOrUndefined(raw.lastPassAt);
   const [sessions, tradeCount, roundTrips, realized, refused] = counts as readonly number[] as [
     number,
     number,
@@ -239,7 +238,7 @@ function parseEntry(raw: unknown): ShadowReportEntry | undefined {
 /** App side: the bots' report, or `undefined` for anything short of a clean one. */
 export function parseShadowReport(value: unknown): ShadowReport | undefined {
   if (!isRecord(value) || value.kind !== SHADOW_REPORT_KIND) return undefined;
-  const at = num(value.at);
+  const at = finiteOrUndefined(value.at);
   if (at === undefined || !Array.isArray(value.plays) || value.plays.length > MAX_SHADOW_PLAYS) {
     return undefined;
   }
