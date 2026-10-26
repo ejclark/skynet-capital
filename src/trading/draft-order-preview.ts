@@ -39,7 +39,7 @@ export interface DraftPreview {
   readonly payoff?: PayoffCurve;
 }
 
-export interface PayoffPoint {
+interface PayoffPoint {
   readonly price: number;
   readonly pnl: number;
 }
@@ -66,7 +66,7 @@ export interface DatedCurve {
 }
 
 /** What the model needs beyond a leg to mark it before expiry: its IV and its own clock. */
-export interface DatedModel {
+interface DatedModel {
   readonly volatility: number;
   readonly daysToExpiry: number;
 }
@@ -132,7 +132,7 @@ export function datedCurves(
  * whose underlying has no spot, or whose premium the solver cannot invert, has no model — and
  * `datedCurves` then draws nothing rather than a line with a guessed leg in it.
  */
-export function legDatedModels(
+function legDatedModels(
   spots: ReadonlyMap<string, number>,
   now: Date,
 ): (leg: DraftLeg) => DatedModel | undefined {
@@ -182,7 +182,7 @@ function stockPnlAt(stock: StockComponent | undefined, price: number): number {
 }
 
 /** How many evenly spaced samples the curve carries besides the strikes themselves. */
-export const PAYOFF_SAMPLES = 40;
+const PAYOFF_SAMPLES = 40;
 
 /**
  * The curve as points: even samples across the window plus the strikes (the only kinks), so a
