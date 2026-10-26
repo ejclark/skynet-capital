@@ -1,5 +1,6 @@
 import { STRATEGIES, type StrategyId } from "../playbooks/pair-table.js";
 import { isRecord, survivesParse } from "../storage/parse-guards.js";
+import { plural } from "../ui/plural.js";
 import {
   parseSubscription,
   RESERVED_KEY_PREFIX,
@@ -120,8 +121,6 @@ export interface Rewrite {
    *  never silent. */
   readonly notes: readonly string[];
 }
-
-const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
 /** A record this build cannot read, which the new state has not replaced by playbook id. */
 function stillUnread(entry: unknown, accountId: string, held: ReadonlySet<string>): boolean {

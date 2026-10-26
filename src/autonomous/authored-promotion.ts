@@ -42,18 +42,18 @@ export interface PromotionVerdict {
   readonly blocker?: string;
 }
 
-const plural = (n: number, one: string, many: string): string => (n === 1 ? one : many);
+const wordFor = (n: number, one: string, many: string): string => (n === 1 ? one : many);
 
 function sentenceFor(id: PromotionCheckId, sessions: number, refused: number): string {
   switch (id) {
     case "sessions": {
       const left = PROMOTION_BAR.sessions - sessions;
-      return `${left} more ${plural(left, "session", "sessions")} to watch before it can trade.`;
+      return `${left} more ${wordFor(left, "session", "sessions")} to watch before it can trade.`;
     }
     case "round-trips":
       return "It hasn't bought and sold yet, so the test has shown nothing to trust.";
     case "refusals":
-      return `A guard refused it ${refused} ${plural(refused, "time", "times")}, so the live play would not have traded as written.`;
+      return `A guard refused it ${refused} ${wordFor(refused, "time", "times")}, so the live play would not have traded as written.`;
   }
 }
 
@@ -75,7 +75,7 @@ export function promotionVerdict(entry: ShadowReportEntry | undefined): Promotio
     {
       id: "round-trips",
       met: roundTrips >= PROMOTION_BAR.roundTrips,
-      progress: `${roundTrips} closed ${plural(roundTrips, "round trip", "round trips")}, ${PROMOTION_BAR.roundTrips} needed`,
+      progress: `${roundTrips} closed ${wordFor(roundTrips, "round trip", "round trips")}, ${PROMOTION_BAR.roundTrips} needed`,
     },
     {
       id: "refusals",
@@ -83,7 +83,7 @@ export function promotionVerdict(entry: ShadowReportEntry | undefined): Promotio
       progress:
         refused === 0
           ? "no guard refusals"
-          : `${refused} guard ${plural(refused, "refusal", "refusals")}, ${PROMOTION_BAR.refusals} allowed`,
+          : `${refused} guard ${wordFor(refused, "refusal", "refusals")}, ${PROMOTION_BAR.refusals} allowed`,
     },
   ];
   const unmet = checks.find((c) => !c.met);
