@@ -8,7 +8,7 @@ import {
   participantUnrealized,
 } from "./participant-card.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
-import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
+import { formatCurrency, formatSigned, formatSignedPercent, plClass } from "./render-atoms.js";
 import { cohortStats } from "./standings-cohort.js";
 import type { LeaderMetric } from "./standings-metric.js";
 import {
@@ -169,7 +169,7 @@ function compareSide(snapshot: ParticipantSnapshot): CompareSide {
     unrealizedTone: plClass(pl),
     realized: snapshot.realizedPl === undefined ? "—" : formatSigned(snapshot.realizedPl),
     realizedTone: plClass(snapshot.realizedPl ?? 0),
-    returnPct: pct(returned),
+    returnPct: formatSignedPercent(returned),
     returnTone: plClass(returned),
   };
 }
@@ -202,7 +202,12 @@ export function standingsCompareView(
       ...(a.realizedPl === undefined || b.realizedPl === undefined
         ? []
         : [compareDelta("Realized", a.realizedPl, b.realizedPl, formatSigned)]),
-      compareDelta("Open-position return", participantReturnPct(a), participantReturnPct(b), pct),
+      compareDelta(
+        "Open-position return",
+        participantReturnPct(a),
+        participantReturnPct(b),
+        formatSignedPercent,
+      ),
     ],
     holdings: holdingsUnion(a, b).map(({ symbol, aValue: av, bValue: bv }) => ({
       symbol,

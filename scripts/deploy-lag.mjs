@@ -138,14 +138,17 @@ const gh = (args) => execFileSync("gh", args, { encoding: "utf8" });
  */
 /**
  * What one run did to the bots app: "landed", "rolled back", or nothing (a preflight skip, a run
- * that never reached the deploy). A release whose smoke failed was rolled back, so the bots never
+ * that never reached the deploy, a smoke test still running). A release whose smoke failed was rolled back, so the bots never
  * ran it (#5955: 16 such runs read as "bots app is current" while the machine sat stopped).
  */
 function botsReleaseOutcome(jobs) {
   const steps = jobs.find((j) => j.name === "release · deploy bots")?.steps ?? [];
   const step = (name) => steps.find((s) => s.name === name)?.conclusion;
   if (step("Deploy bots") !== "success") return undefined;
-  return step("Smoke test the bots release") === "failure" ? "rolled back" : "landed";
+  // Only a passed smoke is a landing: one still running (or cancelled) has proven nothing yet.
+  const smoke = step("Smoke test the bots release");
+  if (smoke === "failure") return "rolled back";
+  return smoke === "success" ? "landed" : undefined;
 }
 
 /**
