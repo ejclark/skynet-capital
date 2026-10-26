@@ -30,6 +30,13 @@ export const DEFAULT_HOURS = 3;
 const NOT_A_GHOST = new Set(["success", "neutral", "skipped"]);
 
 /**
+ * Branch protection counts a skipped required check as passing, and every docs-only PR skips
+ * `integration tests`. Requiring `success` made every research PR invisible here: #5940 and #6019
+ * sat green and unarmed from 2026-10-22 while the scan named only code PRs.
+ */
+const PASSING = new Set(["success", "neutral", "skipped"]);
+
+/**
  * A check suite that holds no check runs and did not succeed: a workflow run that never started a
  * job. Only the Actions app counts — the `claude` and `fly-io` suites sit `queued` with no runs on
  * every PR and mean nothing.
@@ -94,7 +101,7 @@ export function judgePr({
   // required check green, or none reported at all with a ghost sitting on the head.
   const allGreen =
     required.every((name) => latest.has(name)) &&
-    runs.every(({ run }) => run.status === "completed" && run.conclusion === "success");
+    runs.every(({ run }) => run.status === "completed" && PASSING.has(run.conclusion ?? ""));
   if (allGreen) {
     const greenAt = Math.max(...runs.map((v) => v.at));
     return judgeGreen({ pr, ghosts, age: (now - greenAt) / 3.6e6, hours });
