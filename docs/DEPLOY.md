@@ -192,6 +192,13 @@ switch (`SKYNET_AUDIT_DIR`, `SKYNET_BOTS_DB_PATH`, `SKYNET_BOTS_HEALTH_PATH`, `S
 set, the boot warning and the arch scan hold them to the volume too, and the hourly `[stores]`
 line counts them.
 
+**A new store needs no `fly.toml` line (#4604).** Register it in `DERIVED_STORES` in
+`volume-guard.ts` and read its path with `storePath(env, "SKYNET_X_DIR")`: it lands at
+`/data/<name>` on Fly (`SKYNET_DATA_ROOT` overrides the root, its own var still wins). Because no
+line pins it, the boot proves the root instead — on Fly the server **refuses to start** if `/data`
+is missing or on the image's own filesystem, naming the store it would have written there. The
+arch scan checks the root against `[mounts] destination`, so the file is read, never edited.
+
 ## Render / Railway / any container host (same Docker image)
 
 The `Dockerfile` is host-agnostic. On Render: New → Web Service → point at this repo →
@@ -207,7 +214,9 @@ Docker → set the same env vars (Render injects `PORT`, which the server honors
   match the provider console's registered callback. Unset, the request's own proto and `Host` are
   used (right on Fly and localhost).
 - **Mount one volume and point every store var at it** (`SKYNET_HISTORY_DIR`,
-  `SKYNET_PARTICIPANT_STORE`, … — the full list is `PERSISTED_STORES` and `OPT_IN_STORES`).
+  `SKYNET_PARTICIPANT_STORE`, … — the full list is `PERSISTED_STORES` and `OPT_IN_STORES`), and
+  **set `SKYNET_DATA_ROOT`** to a directory on it — the stores in `DERIVED_STORES` resolve under it,
+  and off Fly they otherwise fall back to a relative `data/`.
 - **Check the release** with `scripts/smoke.sh https://<your host>`.
 
 ## After deploying
