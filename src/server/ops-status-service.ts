@@ -254,6 +254,17 @@ export async function buildOpsStatus(inputs: OpsStatusInputs): Promise<OpsStatus
   };
 }
 
+/**
+ * The copies row as one boot-log line (#5482 contract step), so a lane can read the count through
+ * `fly-logs.yml` (filter `\[convictions\]`) instead of waiting on a member to open the panel.
+ * The live store is otherwise unreadable to any lane, and the last contract piece waits on this
+ * number. Same read and wording as the row; never throws.
+ */
+export function convictionCopiesLogLine(read: () => SubscriptionsState | undefined): string {
+  const { verdict, detail } = copiesFrom(read);
+  return `[convictions] inline copies ${verdict}: ${detail}`;
+}
+
 /** Never throws: a read that fails reads as `unknown`, like the activity row. */
 function copiesFrom(read: () => SubscriptionsState | undefined): OpsSignal {
   try {

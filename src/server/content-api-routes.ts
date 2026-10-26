@@ -15,6 +15,7 @@ import { serveDeskJson } from "./desk-json-routes.js";
 import { ownsDesk } from "./desk-owner-gate.js";
 import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { fitAnswerFor } from "./fit-route.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
 import { outlooksFor } from "./outlook-route.js";
 import {
@@ -141,6 +142,11 @@ export async function serveContentApi(
     // The symbol summary, light (#4807 slice 4): one pure read per name, no broker.
     const sym = new URL(url, "http://localhost").searchParams.get("symbol") ?? "";
     return json(outlooksFor(sym, new Date().toISOString()));
+  }
+  if (path === "/api/research/fit") {
+    // The fit finder (#4469 slice 4): which strategies one ticker fits. Pure, no broker.
+    const sym = new URL(url, "http://localhost").searchParams.get("symbol") ?? "";
+    return json(fitAnswerFor(sym, new Date().toISOString()));
   }
   if (path === "/api/research/mentions") {
     // The `sym:` scope's second net (#3962). The shelf payload carries slugs and titles, never the

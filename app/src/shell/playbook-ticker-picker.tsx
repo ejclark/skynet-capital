@@ -1,5 +1,4 @@
 import { type ReactElement, useEffect, useId, useRef, useState } from "react";
-import { submitFeedbackRequest } from "../live/feedback";
 import type {
   BotsOnlyGateView,
   DelegationGateView,
@@ -7,6 +6,7 @@ import type {
   PlaybookStoreCardView,
   StrategyCardView,
 } from "../live/playbook-store";
+import { askForResearch } from "../live/research-request";
 import { pairTitle } from "./playbook-store-cards";
 import { SubscribeForm } from "./playbook-subscribe-form";
 import { SymbolRecapFor } from "./symbol-recap-for";
@@ -87,18 +87,7 @@ function AddTicker({
     setBusy(true);
     setNote(undefined);
     try {
-      const answer = await submitFeedbackRequest({
-        kind: "feature",
-        title: `Study ${ticker} for ${strategy.name} in the Playbook Store`,
-        area: "Playbook Store",
-        details: [
-          `Add ${ticker} to ${strategy.name} in the Playbook Store (#4469).`,
-          "",
-          `Run the strategy's research screen on ${ticker} once, write its call sheet with a confidence and a dated falsifier, and add its row to the pair table: researched, a conviction, screened, stand aside, or can't run, with the reason. Research is per strategy and ticker, not per account, so every subscriber reuses it.`,
-          "",
-          "Asked from the ticker picker on the strategy's card.",
-        ].join("\n"),
-      });
+      const answer = await askForResearch(strategy.name, ticker);
       setNote(
         answer.ok
           ? `Asked. ${ticker} appears on this list once its research is done; nothing trades on it before then.`
