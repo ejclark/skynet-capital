@@ -1,3 +1,4 @@
+import type { VerdictRunStart } from "../autonomous/decision-db-verdict-run.js";
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { unmanagedTickers } from "../domain/bots-universe.js";
@@ -42,9 +43,11 @@ export interface PlaybookHeartbeat {
   readonly playbookId: string;
   readonly mode: PlaybookMode;
   readonly state: PlaybookVerdictState;
-  /** When this verdict began, as far back as the passes on hand reach. */
+  /** When this verdict began: exact from the store's history when `runStart` is wired (#4953),
+   *  else as far back as the passes on hand reach. */
   readonly since: string;
-  /** True when the run reaches the oldest pass on hand — the real start may be earlier. */
+  /** True when the run reaches the oldest pass it could see — the page's, or with `runStart` the
+   *  persona's first recorded pass — so the real start may be earlier. */
   readonly sinceIsLowerBound: boolean;
 }
 
@@ -298,7 +301,17 @@ export function latestVerdictPass(newestFirst: readonly DecisionRecord[]): {
   return pass?.playbookVerdicts ? { index, verdicts: pass.playbookVerdicts, at: pass.at } : null;
 }
 
-function playbookLines(newestFirst: readonly DecisionRecord[]): PlaybookHeartbeat[] | null {
+/** Where the store says a verdict's run began (`DecisionDb.verdictRunStart`, #4953), for the run
+ *  holding at the pass `startAt`. Undefined when it cannot say. */
+export type VerdictRunStartRead = (
+  verdict: PlaybookVerdict,
+  startAt: number,
+) => VerdictRunStart | undefined;
+
+function playbookLines(
+  newestFirst: readonly DecisionRecord[],
+  runStart?: VerdictRunStartRead,
+): PlaybookHeartbeat[] | null {
   const pass = latestVerdictPass(newestFirst);
   if (!pass) return null;
   const start = pass.index;
@@ -311,17 +324,22 @@ function playbookLines(newestFirst: readonly DecisionRecord[]): PlaybookHeartbea
       if (match?.state !== verdict.state) break;
       oldest = i;
     }
+    const pageRanOut = oldest === newestFirst.length - 1;
+    // Only a run the page could not see the end of costs a store read: one that breaks inside
+    // the page is already exact.
+    const exact = pageRanOut ? runStart?.(verdict, pass.at) : undefined;
     return {
       ...verdict,
-      since: new Date(newestFirst[oldest]?.at ?? 0).toISOString(),
-      sinceIsLowerBound: oldest === newestFirst.length - 1,
+      since: new Date(exact?.at ?? newestFirst[oldest]?.at ?? 0).toISOString(),
+      sinceIsLowerBound: exact ? exact.reachesOldest : pageRanOut,
     };
   });
 }
 
 /** `records` newest first, as `DecisionDb.listByPersona` returns them. `holdings` absent — the
  *  dashboard could not read the bot's book or its subscriptions — leaves `unmanaged` off; `roster`
- *  absent judges the roll call from the passes alone; `weekRows` absent leaves `week` off. */
+ *  absent judges the roll call from the passes alone; `weekRows` absent leaves `week` off;
+ *  `runStart` absent (no store, the JSONL fallback) leaves "since" bounded by the page. */
 export function botHeartbeatView(
   records: readonly DecisionRecord[],
   now: Date,
@@ -329,6 +347,7 @@ export function botHeartbeatView(
   holdings?: BotHoldings,
   roster?: RollCallRoster,
   weekRows?: CheckWeekRows,
+  runStart?: VerdictRunStartRead,
 ): HeartbeatView {
   const verdicts = latestVerdictPass(records)?.verdicts ?? null;
   const house = registeredPlaybooks();
@@ -369,6 +388,6 @@ export function botHeartbeatView(
     lastPassAt: new Date(newest.at).toISOString(),
     sinceLastPassMs,
     ...(newest.halted ? { halted: newest.halted } : {}),
-    playbooks: playbookLines(records),
+    playbooks: playbookLines(records, runStart),
   };
 }
