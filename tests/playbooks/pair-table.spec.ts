@@ -7,8 +7,10 @@ import {
   pairFor,
   pairName,
   pairTable,
+  playbookName,
   STRATEGIES,
   statusLabel,
+  withPairNames,
 } from "../../src/playbooks/pair-table.js";
 import { findPlaybook, registeredPlaybooks } from "../../src/playbooks/registry.js";
 
@@ -211,6 +213,26 @@ describe("a pair is named by what it does, never by its id (criterion 14)", () =
     expect(nameOf("CRWV-WHEEL")).toBe("the wheel on CRWV");
     expect(nameOf("S1-NVDA")).toBe("the pre-print run-up on NVDA");
     expect(nameOf("SAURON")).toBe("Sauron's own rules");
+  });
+
+  it("names an id the table does not know by the id itself, never a guess", () => {
+    expect(playbookName("NVDA-CALL-SPREAD")).toBe("the call spread on NVDA");
+    expect(playbookName("U-eric-my-play")).toBe("U-eric-my-play");
+  });
+
+  it("names the ids in a reason the bot wrote, capitalized where one opens a sentence", () => {
+    expect(withPairNames("S1-NVDA window open (standard): buy the run-up")).toBe(
+      "The pre-print run-up on NVDA window open (standard): buy the run-up",
+    );
+    expect(withPairNames("refused — CRWV-WHEEL owns CRWV. SAURON yields it")).toBe(
+      "refused — the wheel on CRWV owns CRWV. Sauron's own rules yields it",
+    );
+  });
+
+  it("matches whole ids only, longest first, and leaves a bare ticker alone", () => {
+    expect(withPairNames("CRWV-LONG-CALL, not CRWV-WHEEL2 or NVDA")).toBe(
+      "The long call on CRWV, not CRWV-WHEEL2 or NVDA",
+    );
   });
 });
 

@@ -114,6 +114,7 @@ Registered forward tests: `docs/research/forward-tests/spcx-lockup-release-2026-
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-10-20 | 2 | Initial. Read 424B4 clause (d): 28% (~1.3B sh) opens 2nd full session after Q3 results; Q3 results set for Oct 20 after close (IR, title + wires; page 403) → Oct 22, still estimate (results unpublished at ~11:30 ET). Q2 precedent: 8-K 08-04 16:01 ET → stage 08-06. Stage ≈ +46% of tradable pool (Aug 6 was +164%). Stage days: +6.1/−4.0/−3.9/−0.2/+1.2%. Options: Oct 23 straddle ~8.2% vs Oct 21 ~7.2%, no release premium. SPCX 147.96 (10-19 close), VIX 17.63 (down from 19.99 on 10-16), only strong adjacent in the corridor is the META print 10-28. | — (initial; stand aside) | 2026-10-21 (high:0+, 1d) |
+| 2026-10-26 | D+4 | **Close-out.** 8-K Item 2.02 accepted 2026-10-20 16:00 ET (EDGAR) → the clause fired Thu 10-22 as estimated; stage date confirmed. SPCX 10-20 close 147.79 → 10-21 **159.31** (+7.8%, print) → 10-22 **144.75** (−9.1%, stage day, SPY −1.2%) → 10-23 **147.49** (+1.9%). FT-1 excess −5.72% (pass), FT-2 volume 197.0M vs 255.2M (pass). Full reading in `## Outcome`. VIX 19.20 (10-26) vs 17.61. Adjacency: 328.4M stage opens today 10-26, Dec 8 stage has its own ledger; nothing new dated inside the horizon, no proposal. | — (closed unchanged: stand aside; no position) | none — `## Outcome` written |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -128,3 +129,67 @@ in the row instead (#2946): it can never become due, so a calendar file for it i
 prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
+
+## Outcome
+
+**Close-out (2026-10-26, D+4).** Instrument caches busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`; neither instrument keys on a lock-up event, so neither was needed).
+Every price and volume below was re-fetched from the Yahoo chart endpoint on 2026-10-26 (SPCX, SPY, ^VIX),
+never read from this ledger's earlier rows.
+
+### The date: confirmed
+
+SpaceX's 8-K (Items 2.02, 9.01; accession 0001628280-26-066482) was accepted by EDGAR on 2026-10-20 at
+16:00 ET and furnishes the Q3 earnings release as Exhibit 99.1 ("issued an earnings release announcing
+results for the quarter ended September 30, 2026", read in full). That is a full release, not flash numbers,
+so the 424B4 clause's second full trading day is Thu 2026-10-22, exactly the estimate. The event entry is
+flipped to `confirmed` on that `SEC:` source. No 8-K, waiver or amended lock-up changed the stage (kill
+switch 2 not hit).
+
+### The tape, measured
+
+| Session | SPCX close | SPCX day | SPY day | Volume |
+|---|---|---|---|---|
+| Tue 10-20 (results after close) | 147.79 | −0.1% | +0.3% | 117.2M |
+| Wed 10-21 (print reaction) | 159.31 | +7.8% | +0.5% | 220.8M |
+| **Thu 10-22 (stage day)** | **144.75** | **−9.1%** | −1.2% | **197.0M** |
+| Fri 10-23 | 147.49 | +1.9% | −0.5% | 110.4M |
+
+- **Stage-day return is the worst of the stages on record:** −9.1%, against −4.0% for the previous worst.
+  The earlier stage days ranged −4.0% to +6.1%; this one sits outside that range.
+- **The print's gain was erased on the stage day:** 10-22 closed below the pre-print close (−2.1% from
+  10-20's 147.79), then 10-23 recovered +1.9%. The daily bars cannot say how much of the 10-22 fall was
+  supply and how much was the print's reaction fading; SPY was also −1.2% that day.
+- **Volume was 2.4× the 20-day average (81.7M) but 77% of Aug 6's 255.2M.** The initial research
+  estimated 290–365M shares if the 22–28% take-up repeated; 197.0M traded in total, so either take-up
+  was lower or part of it settled outside the stage session. Form 4 / 144 filings would say which.
+
+### Forward tests — both scored
+
+- **FT-1: pass (kill not triggered).** Oct 21 close 159.31 → Oct 23 close 147.49 is −7.42%; SPY 773.09 →
+  759.97 is −1.70%; excess **−5.72%**, above the −8% kill line. A narrow pass: the stage day alone
+  was −9.1% raw and −7.96% excess, a hair inside the line, and the Oct 23 rebound is what widened the
+  margin to −5.72%. The registered two-day window is the one scored.
+- **FT-2: pass.** Oct 22 volume **197,046,500** < 255.2M (Aug 6).
+- Neither is a scored kill, so nothing moves to the sweep doc's kill list.
+
+### Stance vs outcome
+
+The stand-aside call held no position through a −9.1% day and a +7.8% day alike. A short would not have
+been supported either: the fall did not extend (+1.9% next session) and the 10-23 close sat 0.2% below
+the pre-print close. The thesis
+"the print will drown the supply signal" is MIXED: the print moved the stock +7.8% and the stage session
+took it all back. One stage, one print, one cohort: n = 1, and no new trade shape is supported — the
+playbook default ([`ipo-lockup-expiry.md`](../ipo-lockup-expiry.md)) stands. What it does change: the
+sibling [Dec 8 ledger](spcx-lockup-expiry-2026-12-08.md)'s stage-day sample now holds a −9.1% datum
+beside the five smaller ones, and its own FT-1 is still the test that matters.
+
+### Adjacency and what is next
+
+- The 328.4M stage first trades today (Mon 10-26); the Dec 8 final stage (up to 797.6M) has its own ledger.
+  Nothing dated inside the horizon was discovered, so no proposal is filed.
+- Not machine-read: the Exhibit 99.1 results body (the 8-K's own Item 2.02 text was read); the cause of the
+  10-22 move is therefore not attributed to the print's contents.
+
+**Last assessed:** 2026-10-26
+<!-- probe-ref: {"symbols":{"SPCX":147.49},"vix":19.2,"daysBand":"high:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","case-shiller-hpi-2026-10-27","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","fhfa-hpi-2026-10-27","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","new-home-sales-2026-10-27","pending-home-sales-2026-10-20","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-gilt-auction-short-2026-10-27","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["meta-2026-10-28-print"],"screenStreak":0,"blocked":[{"url":"https://ir.spacex.com/updates/releases-details/2026/SpaceX-to-Post-Third-Quarter-2026-Results-and-Host-Webcast-on-October-20-2026-2026-QssQGye3im/default.aspx","status":"403","at":"2026-10-20"}]} -->

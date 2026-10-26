@@ -24,7 +24,6 @@ import {
 } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
 import { pointAtRecords } from "../../src/subscriptions/conviction-pointer.js";
-import { carryRowConvictions } from "../../src/subscriptions/row-conviction.js";
 import {
   EMPTY_SEED_MARKERS,
   SEEDED_FROM_OWN_RULES,
@@ -359,10 +358,10 @@ describe("seeding Sauron's own rules as his subscription", () => {
     let store: SubscriptionStore;
     let seed: ReturnType<typeof pollSeedsFromEnv>;
 
-    /** Eric's live state once the ◆ carry and the pointer at its record (#5482) have run: the CRWV
-     *  wheel points at the AI-dip view that steers its row, with no inline copy, so the seeds below
-     *  are the only writes a poll makes. */
-    const POLLED = pointAtRecords(carryRowConvictions(LIVE_STATE, AT).state, AT).state;
+    /** Eric's live state once the pointer at its record (#5482) has run: the CRWV wheel points at
+     *  the AI-dip view that steers its row, with no inline copy, so the seeds below are the only
+     *  writes a poll makes. */
+    const POLLED = pointAtRecords(LIVE_STATE, AT).state;
 
     beforeEach(() => {
       dir = mkdtempSync(join(tmpdir(), "own-rules-poll-"));

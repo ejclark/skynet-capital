@@ -420,6 +420,15 @@ describe("the committed work-mode.json", () => {
   // #3960 slice 4, the third pair of this shape: the dial's `normal` number must equal whatever the
   // consumer already did, or "normal changes nothing" stops being true. grind.js's MAX_ITEMS is its
   // own sanity ceiling, so a `normal` grindWidth below it would silently narrow every grind run.
+  // #4437: surge's research cap was a guess until a week of ::notice::cost lines priced a tick —
+  // ~$1.01 a session, linear, so 2x normal is ~$12 a tick and 3x (~$18) would cross the spend
+  // breaker's $15/4h line on one tick alone. Pinned as a ratio so a lane PR cannot quietly raise it.
+  it("keeps surge's research cap at the measured 2x normal (#4437)", () => {
+    expect(committed.positions.surge.researchPerTick).toBe(
+      2 * committed.positions.normal.researchPerTick,
+    );
+  });
+
   it("keeps normal's grind width equal to grind.js's MAX_ITEMS, so normal changes nothing", () => {
     const grind = readFileSync(".claude/workflows/grind.js", "utf8");
     const maxItems = Number(grind.match(/const MAX_ITEMS = (\d+)/)?.[1]);

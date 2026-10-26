@@ -49,6 +49,9 @@ type Sidecar = {
   caption: string;
   alt: string;
   layout: "side" | "stacked";
+  natural: Record<"before" | "after", number>;
+  naturalHeight: Record<"before" | "after", number>;
+  phoneScreens: Record<"before" | "after", number | null>;
   lint: Record<"before" | "after", { ok: boolean; problems: string[] }>;
   images: {
     mode: string;
@@ -161,6 +164,19 @@ describe.skipIf(!HAVE_CHROMIUM)("mermaid-pairs: the fixture renders offline", ()
       for (const img of car.images) expect(img.alt).toContain(`GitHub ${img.mode} mode`);
       expect(car.lint.before.ok && car.lint.after.ok).toBe(true);
     }
+  });
+
+  it("measures how many 390 × 844 phone screens each drawing takes, and none for a table", () => {
+    const pr = sidecar(out.both, "pr-picture");
+    for (const side of ["before", "after"] as const) {
+      const scale = Math.min(1, 390 / pr.natural[side]);
+      const expected = Math.round(((scale * pr.naturalHeight[side]) / 844) * 100) / 100;
+      expect(pr.phoneScreens[side]).toBeGreaterThan(0);
+      expect(pr.phoneScreens[side]).toBe(expected);
+    }
+    const platter = sidecar(out.both, "platter");
+    expect(platter.phoneScreens.before).toBeNull();
+    expect(platter.phoneScreens.after).toBeGreaterThan(0);
   });
 
   it("honours --layout: stacked is narrower and taller than side for the same pair", () => {
