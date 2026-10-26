@@ -8,7 +8,10 @@ import {
   MAX_WIRED_CONVICTIONS,
   type WiredConviction,
 } from "../../src/autonomous/convictions-wire.js";
-import { UNMOVED_CONVICTION_NOTE } from "../../src/observatory/playbook-store-json-view.js";
+import {
+  convictionHoldNote,
+  UNMOVED_CONVICTION_NOTE,
+} from "../../src/observatory/playbook-store-json-view.js";
 import { CONVICTIONS } from "../../src/playbooks/conviction-store.js";
 import { BotControlsStore } from "../../src/server/bot-controls-store.js";
 import { handOverPlan, heldConvictions } from "../../src/server/conviction-hand-over.js";
@@ -186,6 +189,35 @@ describe("an owner's conviction is kept as their own view on the pair", () => {
     expect(rows.find((r) => r.id === "CRWV-WHEEL")?.notTrading).toBe(UNMOVED_CONVICTION_NOTE);
     // A pair that is not ◆ with no pointer has no conviction on record: a label, never a stop.
     expect(rows.find((r) => r.id === "SAURON")).not.toHaveProperty("notTrading");
+  });
+
+  // The roll call's test (`rosterSteering`) on the owner's row: a pointer the bots refuse holds the
+  // pair exits-only too, and before this the row read as trading.
+  it("WHEN a pair points at a view the bots cannot use, the row says it opens nothing new and why", async () => {
+    const state = subs.load();
+    subs.replace({
+      ...state,
+      sauron: (state.sauron ?? []).map((s) =>
+        s.playbookId === "CRWV-WHEEL" ? { ...s, convictionId: "no-such-view" } : s,
+      ),
+    });
+    const { res, out } = fakeRes();
+    await serveSubscriptionsApi(
+      get("/api/playbook-store?id=sauron"),
+      res,
+      "/api/playbook-store",
+      config,
+      ada,
+    );
+    const rows = (JSON.parse(out.body || "{}").strategies ?? []).flatMap(
+      (c: { pairs: unknown[] }) => c.pairs,
+    ) as { id: string; notTrading?: string }[];
+    expect(rows.find((r) => r.id === "CRWV-WHEEL")?.notTrading).toBe(
+      convictionHoldNote('points at conviction "no-such-view", which these bots do not hold'),
+    );
+    expect(rows.find((r) => r.id === "CRWV-WHEEL")?.notTrading).toMatch(
+      /^Opening nothing new: .*no-such-view.*Exits still run\.$/,
+    );
   });
 
   it("WHEN the conviction is re-dated, the view is replaced in place and the pointer stays", async () => {

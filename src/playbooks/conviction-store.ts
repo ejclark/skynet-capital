@@ -119,7 +119,7 @@ export const CONVICTION_NOT_ON_VIEW = "its conviction is not on a view yet";
 
 /** A subscription whose conviction is on no view: a ◆ row (which trades only on a conviction) with
  *  no pointer. The one test the bots' exits-only rule (`subscriptionRoster`), the gate's note and
- *  the owner's row (`withUnmovedConvictions`) share, so they cannot disagree. An authored play or an
+ *  the owner's row (`withConvictionHolds`) share, so they cannot disagree. An authored play or an
  *  id that is no pair is left out: no view can be stated on one. So is a non-◆ pair with no
  *  pointer: that is criterion 11's "conviction not stated", a label and never a stop. Until #5482's
  *  last contract piece an inline copy with no pointer counted too; that field is retired, and the

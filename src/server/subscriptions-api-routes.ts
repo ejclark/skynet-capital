@@ -8,10 +8,7 @@ import {
   raisesDelegation,
 } from "../domain/playbook-delegation.js";
 import type { SubscriptionConviction } from "../domain/types.js";
-import {
-  playbookStoreView,
-  withUnmovedConvictions,
-} from "../observatory/playbook-store-json-view.js";
+import { playbookStoreView, withConvictionHolds } from "../observatory/playbook-store-json-view.js";
 import { withOwnSteering } from "../observatory/steered-by-view.js";
 import { movesNoCapital, STRATEGIES } from "../playbooks/pair-table.js";
 import { asOwnConviction } from "../subscriptions/pair-conviction.js";
@@ -239,10 +236,14 @@ async function serveStoreIndex(
   // Each single-ticker row carries R&D's call for its next earnings report (#5444), and an owned
   // account's rows the view its own pointer names — a member's handed-over one (#5482 slice 6c).
   const forecast = withForecasts(bare.strategies, asOfIso(config));
-  // A pair whose conviction is still inline runs exits-only on the bots, and its row says so.
+  // A pair the bots run exits-only for its conviction (no view, or one they can't use) says why.
   const strategies =
     subscriptions && lookup && id
-      ? withUnmovedConvictions(withOwnSteering(forecast, subscriptions, lookup), state?.[id] ?? [])
+      ? withConvictionHolds(
+          withOwnSteering(forecast, subscriptions, lookup),
+          state?.[id] ?? [],
+          lookup,
+        )
       : forecast;
   const view = { ...bare, strategies };
   // Unwired store → no count at all, rather than a false "No subscribers yet".
