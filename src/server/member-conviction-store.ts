@@ -38,7 +38,7 @@ import type { MemberPointers } from "../subscriptions/conviction-pointer.js";
  * held and wired like any view handed over, and listed to no member as one of their views.
  */
 
-export type MemberConvictionStatus = "draft" | "steering";
+type MemberConvictionStatus = "draft" | "steering";
 
 export interface MemberConvictionRecord {
   readonly status: MemberConvictionStatus;
@@ -73,7 +73,7 @@ function parseRecord(raw: unknown): MemberConvictionRecord | undefined {
 
 /** Total: a torn file is `undefined` (the store falls back to empty); a record this build cannot
  *  read is dropped, never fatal to the file. */
-export function parseMemberConvictionsState(raw: unknown): MemberConvictionsState | undefined {
+function parseMemberConvictionsState(raw: unknown): MemberConvictionsState | undefined {
   if (!isRecord(raw)) return undefined;
   const state: Record<string, readonly MemberConvictionRecord[]> = {};
   for (const [member, list] of Object.entries(raw)) {
@@ -389,7 +389,7 @@ export class MemberConvictionStore {
  * change log — reads these records like any other view handed over.
  */
 const PAIR_VIEWS_PREFIX = "account:";
-export const pairViewsKey = (accountId: string): string => `${PAIR_VIEWS_PREFIX}${accountId}`;
+const pairViewsKey = (accountId: string): string => `${PAIR_VIEWS_PREFIX}${accountId}`;
 
 const accountOfKey = (key: string): string | undefined =>
   key.startsWith(PAIR_VIEWS_PREFIX) ? key.slice(PAIR_VIEWS_PREFIX.length) : undefined;

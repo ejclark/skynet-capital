@@ -69,13 +69,14 @@ export interface FeedbackDraft {
   readonly details: string;
 }
 
-const KINDS = new Set(["bug", "feature", "idea"]);
+const FEEDBACK_DRAFT_KINDS = new Set(["bug", "feature", "idea"]);
 
 /** The model's draft, bounded and typed — anything else is refused as no draft at all. */
 export function parseFeedbackDraft(input: unknown): FeedbackDraft | undefined {
   if (!input || typeof input !== "object") return undefined;
   const raw = input as { kind?: unknown; title?: unknown; details?: unknown };
-  const kind = typeof raw.kind === "string" && KINDS.has(raw.kind) ? raw.kind : "idea";
+  const kind =
+    typeof raw.kind === "string" && FEEDBACK_DRAFT_KINDS.has(raw.kind) ? raw.kind : "idea";
   const title = typeof raw.title === "string" ? raw.title.trim().slice(0, 80) : "";
   const details = typeof raw.details === "string" ? raw.details.trim().slice(0, 4000) : "";
   if (!(title && details)) return undefined;
