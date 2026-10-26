@@ -32,6 +32,7 @@ import {
   occStrikeLabel,
 } from "../trading/option-symbols.js";
 import { expiryInside, inQuietPeriod, type Steering } from "./conviction-steering.js";
+import { money } from "./format-money.js";
 import { optionOpenIntent } from "./option-intent.js";
 import { type PairEvidence, pairFor } from "./pair-table.js";
 import type { Playbook } from "./playbook.js";
@@ -242,8 +243,6 @@ function nextSale(
   return { phase, type: phase === "flat" ? "put" : "call", expiration, blackout };
 }
 
-const cents = (x: number): string => `$${x.toFixed(2)}`;
-
 /** The words and the forecast for one sale — a put or a call, honest about what assignment means. */
 function saleText(
   wheel: Wheel,
@@ -256,7 +255,7 @@ function saleText(
   const { symbol, retireRule } = wheel;
   const name = humanizeOptionSymbol(occSymbol);
   const k = occStrikeLabel(strike);
-  const paid = `${cents(premium)} a share ($${Math.round(premium * OPTION_MULTIPLIER)} for the contract)`;
+  const paid = `${money(premium)} a share ($${Math.round(premium * OPTION_MULTIPLIER)} for the contract)`;
   if (sale.type === "put") {
     const collateral = (strike * OPTION_MULTIPLIER).toLocaleString("en-US");
     return {
@@ -278,7 +277,7 @@ function saleText(
       },
     };
   }
-  const cost = shareCost === undefined ? "cost" : `${cents(shareCost)} cost`;
+  const cost = shareCost === undefined ? "cost" : `${money(shareCost)} cost`;
   return {
     reason:
       `Selling one covered ${name} for about ${paid} against 100 ${symbol} shares ` +
