@@ -249,6 +249,11 @@ disagree about what may be built:
    session, so `/work-issues` (which passes `interactive: true`) still sees it.
 6. **not blocked** — no open `blocked-by` issue (`openBlockers`); it starts when they close.
 
+**Ready names no lane label.** A `ready` issue is the plan lane's if it carries `plan` and the
+feedback lane's otherwise (`inFeedbackLane`), which adds `feedback` when it claims one without it.
+No issue is Ready that nothing builds: #4953/#4201 (`ready` + `enhancement`) sat admitted and
+unclaimed until `feedback` was hand-added, the same gap #5332 closed for `bug` alone.
+
 **Who may flip it.** Eric, always. A session may apply `ready` to its own *small, well-scoped*
 filing at capture (`FEEDBACK.md` → *What the lane will build*). **Beyond that, a session applies
 `ready` when the path is clear and Eric's flip would only be a rubber stamp** (Eric, 2026-10-19:
@@ -260,7 +265,10 @@ an independent verifier tried to refute the call and could not. The flip is a fo
 four checks, the verifier's line) and then the label, so the label stays an authorization with a
 paper trail rather than a formality — what it never becomes is a way to keep a loop fed. Falsifier:
 if by 2026-11-19 three session-readied issues end `needs-eric`, closed `not_planned`, or in a
-reverted build, narrow this back to his flip. A `plan` issue has a second, equivalent door: a ready-shaped comment from
+reverted build, narrow this back to his flip. **Run it by name:** `.claude/workflows/clear-path-flip.js`
+(`{issues: [...]}`) judges the four checks, sends each positive call to two independent refuters
+(envelope paths · the thread) and returns survivors; `node scripts/clear-path-post.mjs <result.json>`
+posts only those, adding `feedback` when missing — no lane pulls an issue without it. A `plan` issue has a second, equivalent door: a ready-shaped comment from
 an OWNER/MEMBER/COLLABORATOR (`isReadySignal()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
