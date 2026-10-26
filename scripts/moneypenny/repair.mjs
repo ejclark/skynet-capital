@@ -368,6 +368,31 @@ export function runnerStarved(run, jobs) {
 }
 
 /**
+ * A failed job whose runner stopped answering mid-step (#6033). Measured 2026-10-26: run
+ * 40304642365's `uk-gilt-auction-long` leg ran 50 minutes, then GitHub concluded the job `failure`
+ * with its claude-code-action step frozen at `in_progress` — no step ever failed, the log blob was
+ * gone (404), and the only evidence was the annotation "The hosted runner lost communication with
+ * the server". The capsule read "Failing step: unknown" over an empty fold, and a repair session
+ * had to reconstruct all of that by hand. A step left unfinished on a completed job is the shape.
+ */
+function unfinishedStep(job) {
+  return (job?.steps ?? []).find((s) => s.status && s.status !== "completed")?.name;
+}
+
+/** What the fold says when the runner went away — read beside the log, never instead of it. */
+function lostRunnerNote(run, job, step) {
+  return [
+    "",
+    `Step "${step}" never finished: the job concluded failure while it was still running, so no`,
+    "step failed and the runner never reported back. GitHub's annotation for this shape reads",
+    '"The hosted runner lost communication with the server". On ubuntu-latest that is GitHub\'s',
+    "runner, unless the step itself starved it of CPU or memory, which is ours. Confirm with:",
+    `  gh api repos/{owner}/{repo}/check-runs/${job.id}/annotations`,
+    `Recover the dropped work with a re-run: gh run rerun ${run.id} --failed`,
+  ].join("\n");
+}
+
+/**
  * Turn a run's jobs into the failures to report. Pure — `logOf` is the only impure part and is
  * injected. Jobs that failed are the normal case; a failed run with none of those is either starved
  * of runners (`runnerStarved`) or rejected outright (`parseFailure`) — never "nothing to report".
@@ -375,11 +400,16 @@ export function runnerStarved(run, jobs) {
 export function failuresFrom(run, jobs = [], logOf = () => "") {
   const failed = jobs
     .filter((j) => j.conclusion === "failure")
-    .map((j) => ({
-      job: j.name,
-      step: (j.steps ?? []).find((s) => s.conclusion === "failure")?.name,
-      logTail: logOf(j.id),
-    }));
+    .map((j) => {
+      const step = (j.steps ?? []).find((s) => s.conclusion === "failure")?.name;
+      const lost = step ? undefined : unfinishedStep(j);
+      if (!lost) return { job: j.name, step, logTail: logOf(j.id) };
+      return {
+        job: j.name,
+        step: `${lost} (never finished — the runner went away mid-step)`,
+        logTail: `${logOf(j.id)}${lostRunnerNote(run, j, lost)}`,
+      };
+    });
   if (failed.length || run.conclusion !== "failure") return failed;
   const starved = jobs.filter(neverAcquired);
   return starved.length ? [runnerStarved(run, starved)] : [parseFailure(run)];

@@ -5,3 +5,5 @@
 export function logArgVariants(jobId: number | string): string[][];
 /** A raw Actions log made readable in a fold: no BOM, no escape sequences, no ISO timestamps. */
 export function sanitizeLog(raw: unknown): string;
+/** A job's failure-level annotations as `##[error]` fold lines; notices and junk are dropped. */
+export function annotationLines(annotations: unknown): string[];
