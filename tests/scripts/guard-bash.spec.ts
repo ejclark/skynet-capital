@@ -79,6 +79,37 @@ describe("guard-bash — the verdict", () => {
     }
   });
 
+  it("refuses a raw issue/PR comment write and points at issues.mjs (#4537)", () => {
+    for (const cmd of [
+      "gh issue comment 4537 --body hi",
+      "gh pr comment 12 -F c.md",
+      "GH_TOKEN=x gh issue comment 1 --edit-last -b y",
+      "gh api --method PATCH repos/o/r/issues/comments/6074658599 -f body=@b",
+      "gh api repos/o/r/issues/4537/comments -f body=hi",
+      'curl -s -X POST -H "Authorization: Bearer $T" https://api.github.com/repos/o/r/issues/4537/comments -d @c.json',
+      "cd x && curl --request PATCH https://api.github.com/repos/o/r/issues/comments/9 --data @b.json",
+      "curl -s https://api.github.com/repos/o/r/issues/4537/comments -d @c.json",
+    ]) {
+      const v = guardVerdict(bash(cmd));
+      expect(v.allow, cmd).toBe(false);
+      if (!v.allow) expect(v.reason).toContain("issues -- update");
+    }
+  });
+
+  it("allows comment reads, other API writes, and text that only names a comment write", () => {
+    for (const cmd of [
+      "gh api repos/o/r/issues/4537/comments --jq '.[].body'",
+      'curl -s -H "Authorization: Bearer $T" https://api.github.com/repos/o/r/issues/4537/comments?per_page=100',
+      "gh api --method PATCH repos/o/r/issues/4537 -f state=closed",
+      "curl -X POST https://api.github.com/repos/o/r/pulls/12/comments/3/replies -d @r.json",
+      "npm run issues -- update 4537 --edit-comment 9 --comment-file c.md",
+      "echo 'gh issue comment 1' > notes.md",
+      "git commit -m 'never gh pr comment by hand'",
+    ]) {
+      expect(guardVerdict(bash(cmd)).allow, cmd).toBe(true);
+    }
+  });
+
   it("ignores tools other than Bash", () => {
     expect(guardVerdict({ tool_name: "Edit", tool_input: { file_path: "git stash" } }).allow).toBe(
       true,
