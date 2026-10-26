@@ -72,7 +72,7 @@ import {
  * new env var — so one seed's marker on an account never stops the other.
  */
 /** What one seed call wrote — both empty on almost every poll. */
-export interface SeedWrite {
+interface SeedWrite {
   /** Accounts that gained a subscription (and were marked). */
   readonly added: readonly string[];
   /** Accounts only marked: they already held everything this seed would add. */
@@ -175,7 +175,7 @@ export function createOwnRulesSeeder(
  * COND-SCOUT on the env's names. The copy is a settings change, so it lands in the bot's change log
  * as the Store's own subscribe would, authored as a copy of the operations setting.
  */
-export function createCondScoutSeeder(
+function createCondScoutSeeder(
   subscriptions: SubscriptionStore,
   markersPath: string,
   changes: SettingsChangeLog | undefined,
@@ -229,7 +229,7 @@ export function createCondScoutSeeder(
  * after it points each subscription at its view and logs the move. Never while either file cannot be read whole, and no write on the common poll, when no
  * subscription is left unpointed. Returns `account/playbookId` for each view written.
  */
-export function migratePairConvictions(
+function migratePairConvictions(
   subscriptions: SubscriptionStore,
   members: MemberConvictionStore,
   at = new Date(),
@@ -270,7 +270,7 @@ export function pointConvictions(
  * Never while the subscriptions file cannot be read whole — a pair it could not see would read as
  * given up. Returns `account/playbookId` for each one dropped.
  */
-export function prunePairViews(
+function prunePairViews(
   subscriptions: SubscriptionStore,
   members: MemberConvictionStore,
 ): readonly string[] {
