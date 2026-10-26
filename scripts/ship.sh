@@ -54,13 +54,21 @@ repo() {
 
 # api METHOD PATH [JSON] → prints "<body>\n__SHIP_HTTP__<code>". Parse in the CALLER, never via a
 # global — this function runs inside $(...), a subshell, so any var it set would be lost on return.
+# The JSON goes to curl on stdin, never as an argument: Linux caps one argv string at 128 KiB, and
+# a platter ledger (~122 KB on #5852) died at curl's `-d` argument with "Argument list too long"
+# (#6212). The same cap is why every payload builder below reads its body from stdin, not sys.argv.
 api() {
-  curl -sS -X "$1" -w '\n__SHIP_HTTP__%{http_code}' \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Accept: application/vnd.github+json" \
-    -H "X-GitHub-Api-Version: 2022-11-28" \
-    -H "User-Agent: skynet-ship" \
-    ${3:+-H "Content-Type: application/json" -d "$3"} "$API/repos/$(repo)$2"
+  local args=(-sS -X "$1" -w '\n__SHIP_HTTP__%{http_code}'
+    -H "Authorization: Bearer $TOKEN"
+    -H "Accept: application/vnd.github+json"
+    -H "X-GitHub-Api-Version: 2022-11-28"
+    -H "User-Agent: skynet-ship")
+  if [ -n "${3:-}" ]; then
+    printf '%s' "$3" | curl "${args[@]}" -H "Content-Type: application/json" --data-binary @- \
+      "$API/repos/$(repo)$2"
+  else
+    curl "${args[@]}" "$API/repos/$(repo)$2"
+  fi
 }
 http_of() { printf '%s' "${1##*__SHIP_HTTP__}"; }              # code from an api() result
 body_of() { printf '%s' "${1%$'\n'__SHIP_HTTP__*}"; }         # body from an api() result
@@ -149,7 +157,7 @@ reverify_held() {
     real|pending) echo "ship: #$num's latest verify is a real run ($verdict)." ;;
     *)
       local marker='<!-- ship: re-verify, the draft run left verify skipped (#4168) -->' patch presp
-      patch="$(python3 -c "import json,sys; print(json.dumps({'body': sys.argv[1] + '\n\n' + sys.argv[2]}))" "$body" "$marker")"
+      patch="$(printf '%s' "$body" | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read() + '\n\n' + sys.argv[1]}))" "$marker")"
       presp="$(api PATCH "/pulls/$num" "$patch")"
       if [ "$(http_of "$presp")" = 200 ]; then
         echo "ship: #$num's latest verify was $verdict (a late draft run cancelled it) — fired an edited event so a real verify runs (#4168)."
@@ -496,8 +504,8 @@ EOF_SHOTS
   # `ready_for_review` event that follows the label carries it, so the job skips that one too, and
   # `verify` runs on it. The draft lives for about a second, inside this function — never lingers.
   # An unheld PR is opened ready, as always: a draft skips `verify` (docs/LESSONS.md 2026-08-14).
-  local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4],'draft':sys.argv[5]=='1'}))" \
-    "$title" "$branch" "$base" "$body" "$hold")"
+  local payload; payload="$(printf '%s' "$body" | python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.stdin.read(),'draft':sys.argv[4]=='1'}))" \
+    "$title" "$branch" "$base" "$hold")"
   echo "ship: opening PR over REST (core bucket)…"
   local resp http body opened_hits=""; resp="$(api POST "/pulls" "$payload")"
   http="$(http_of "$resp")"; body="$(body_of "$resp")"
@@ -1015,27 +1023,30 @@ platter_item_refs() {
   node "$(dirname "$0")/platter-refs.mjs" "${args[@]}"
 }
 
-# Refresh the open platter PR's ledger. Best-effort by design: the commit is already made and
-# pushed, so a failed PATCH is a stale body to fix by hand, never a lost item.
+# Refresh the open platter PR's ledger. The commit is already made and pushed, so a failure here is
+# a stale body to fix by hand, never a lost item — but it returns non-zero with that said plainly,
+# so the board ends red on a named cause rather than on a bare curl error (#6212).
 platter_sync_body() {
   local branch="$1" owner resp http body num newbody payload
   owner="$(repo)"; owner="${owner%%/*}"
-  resp="$(api GET "/pulls?state=open&head=$owner:$branch")"
+  resp="$(api GET "/pulls?state=open&head=$owner:$branch")" || true
   http="$(http_of "$resp")"; body="$(body_of "$resp")"
   if [ "$http" != 200 ]; then
-    echo "ship platter: GET pulls returned HTTP $http — refresh the ledger by hand." >&2; return 0
+    echo "ship platter: GET pulls returned HTTP ${http:-none} — refresh the ledger by hand." >&2; return 1
   fi
   num="$(printf '%s' "$body" | python3 -c 'import sys,json; r=json.load(sys.stdin); print(r[0]["number"] if r else "")')"
   if [ -z "$num" ]; then
-    echo "ship platter: no open PR for $branch — open one with 'ship platter open'." >&2; return 0
+    echo "ship platter: no open PR for $branch — open one with 'ship platter open'." >&2; return 1
   fi
   newbody="$(platter_body)"
-  payload="$(python3 -c "import json,sys; print(json.dumps({'body': sys.argv[1]}))" "$newbody")"
-  resp="$(api PATCH "/pulls/$num" "$payload")"; http="$(http_of "$resp")"
+  payload="$(printf '%s' "$newbody" | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read()}))")"
+  resp="$(api PATCH "/pulls/$num" "$payload")" || true
+  http="$(http_of "$resp")"
   if [ "$http" = 200 ]; then
     echo "ship platter: ledger refreshed on #$num."
   else
-    echo "ship platter: PATCH body returned HTTP $http — refresh #$num's ledger by hand." >&2
+    echo "ship platter: PATCH body returned HTTP ${http:-none} — refresh #$num's ledger by hand." >&2
+    return 1
   fi
 }
 
@@ -1105,7 +1116,10 @@ cmd_platter_board() {
   platter_board_item "$item" "$subject" "$verify" "$closes" "$partof" "$closes_set" "$partof_set"
   echo "ship platter: pushing ${branch}…"
   cmd_push "$branch"
-  platter_sync_body "$branch"
+  platter_sync_body "$branch" || {
+    echo "ship platter: $item boarded and pushed, but the PR body sync FAILED — the ledger is stale (see above)." >&2
+    exit 1
+  }
 }
 
 cmd_platter() {
@@ -1120,6 +1134,9 @@ cmd_platter() {
     *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
   esac
 }
+
+# Sourced (a spec driving api() or platter_sync_body against a stub curl), stop at the definitions.
+[ "${BASH_SOURCE[0]}" = "$0" ] || return 0
 
 case "${1:-}" in
   open) shift; cmd_open "$@" ;;
