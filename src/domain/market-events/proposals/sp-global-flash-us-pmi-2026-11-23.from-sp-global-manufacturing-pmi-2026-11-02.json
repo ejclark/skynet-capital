@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-flash-us-pmi-2026-11-23",
+  "kind": "macro-print",
+  "title": "S&P Global Flash US PMI (Nov 2026) — 09:45 ET, the date this survey's information actually lands",
+  "date": "2026-11-23",
+  "status": "estimate",
+  "source": "EST: read verbatim off S&P Global's own calendar listing, pmi.spglobal.com/Public/Release/ReleaseDates?language=en, fetched direct 2026-10-26 with a browser User-Agent (HTTP 200, 26,777 bytes): 'November 23 ... 14:45 UTC S&P Global Flash US PMI'. 14:45 UTC is 09:45 EST. The 2026-10-23 flash, the same series, was read first-hand this session (PDF masthead: 'Embargoed until 0945 EDT (1345 UTC) 23 October 2026'). Filed estimate on the standing schema gap for a private PMI compiler, not on date doubt. Checked 2026-10-26",
+  "impact": "low",
+  "symbols": [],
+  "notes": "READ IT, DO NOT TRADE IT. The flash is the only term of the S&P Global US manufacturing survey that carries a published consensus; the final carries only the revision (flash-to-final: July +0.1, August +0.7, September -1.1). Proposed by the sp-global-manufacturing-pmi-2026-11-02 initial research (2026-10-26) because node scripts/event-scan.mjs --on-date=2026-11-23 showed no S&P Global entry; the series has had a flash entry each month since 2026-09-23."
+}
