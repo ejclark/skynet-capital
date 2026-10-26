@@ -6,14 +6,7 @@
 import { resolve } from "node:path";
 import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
-import {
-  currentOptionReview,
-  desk,
-  deskWithOption,
-  noOrders,
-  optionPositions,
-  workingOrders,
-} from "./trade-account-fixture.mjs";
+import { desk, deskWithOption, noOrders, workingOrders } from "./trade-account-fixture.mjs";
 import {
   deliveryOff,
   deliveryOn,
@@ -21,7 +14,7 @@ import {
   noAlerts,
   positionWatchAlerts,
 } from "./trade-alerts-fixture.mjs";
-import { bars, chain, quote, studyBars, symbolSearch } from "./trade-chart-fixture.mjs";
+import { bars, chain, quote, studyBars } from "./trade-chart-fixture.mjs";
 import {
   draftScript,
   draftSent,
@@ -31,7 +24,6 @@ import {
   rollLegs,
   rollScript,
 } from "./trade-draft-fixture.mjs";
-import { outlookAnswer } from "./trade-outlook-fixture.mjs";
 import {
   freshPlays,
   plays,
@@ -39,7 +31,7 @@ import {
   settingsTwoAccounts,
   throughLongs,
 } from "./trade-plays-fixture.mjs";
-import { recentOrdersActivity } from "./trade-recent-orders-fixture.mjs";
+import { tradeStubs } from "./trade-stubs.mjs";
 
 let currentPlays = freshPlays;
 let currentSettings = settings;
@@ -54,7 +46,6 @@ let currentBars = bars;
 let currentWatchlist = { ok: true, available: true, limit: 20, watching: [] };
 let currentOrders = noOrders;
 let currentDesk = desk;
-const currentOptionPositions = optionPositions;
 let currentDelivery = deliveryOff;
 let currentAlerts = noAlerts;
 
@@ -70,52 +61,21 @@ currentDraftFallback = draftSent;
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
-  stubs: {
-    "/api/trade/plays": () => currentPlays,
-    "/api/settings": () => currentSettings,
-    // The calendar head reads the research shelf (#3807); an unstubbed `{}` crashed the page with
-    // "not iterable" before any frame was shot (found 2026-09-30, #3977). An empty shelf is honest.
-    "/api/research": { events: [], closures: [], calls: [], symbols: [], studies: [], ledgers: [] },
-    "/api/desk/*": () => currentDesk,
-    // Exact key beats the `/api/desk/*` prefix above (`lib.mjs`'s `stubBody`) — every fixture in
-    // this script logs in as the same "human-eric" account (`settings.accounts[0].id`).
-    "/api/desk/human-eric/activity": recentOrdersActivity,
-    "/api/trade/quote": () => currentQuote,
-    "/api/trade/chain": () => currentChain,
-    // Matched by pathname alone (`lib.mjs`'s `stubBody`), so one key covers any `?symbol=&days=`.
-    "/api/trade/bars": () => currentBars,
-    // Matched by pathname alone too, so one key covers any `?q=`.
-    "/api/symbols/search": () => symbolSearch,
-    // Working orders (#3407 P1 slice 2) — pathname-matched, so one key covers `?participantId=`.
-    "/api/trade/orders": () => currentOrders,
-    // The reviewed option order (#3407 P2 slice 2): greeks, IV, chance of profit beside expected
-    // value — every number the server's own rules would print, as one stub.
-    "/api/trade/option/review": () => currentOptionReview,
-    // Position Statement vocabulary on the positions card (#3407 P2 slice 3).
-    "/api/trade/option-positions": () => currentOptionPositions,
-    // What happened without an order (#3407 slice 4) — pathname-matched like its siblings.
-    "/api/trade/option-lifecycle": () => currentLifecycle,
-    "/api/trade/alerts": () => currentAlerts,
-    "/api/trade/alerts/dismiss": { ok: true },
-    // Delivery's read and write share one path; the stub answers both with the current state
-    // (pathname-matched, so `?participantId=` is covered).
-    "/api/trade/alerts/delivery": () => currentDelivery,
-    "/api/trade/cancel": { ok: true, orderId: "wo-1" },
-    "/api/trade/replace": {
-      ok: true,
-      orderId: "wo-9",
-      replaces: "wo-1",
-      status: "pending_replace",
-    },
-    // The multi-leg builder's lifecycle (#3407 P3 slice 1) — one scripted answer per action, in
-    // the order the scene clicks them; the last answer repeats so a stray re-read stays put.
-    "/api/trade/draft": () => currentDraftScript.shift() ?? currentDraftFallback,
-    // The Outlook pane's ranked structures (#3407 slice 4) — pathname-matched, so one key covers
-    // any `?direction=&magnitude=&horizon=`.
-    "/api/trade/structures": () => outlookAnswer,
-    // The watchlist (#4332) — pathname-matched, so one key covers the GET and the POST toggle.
-    "/api/trade/watchlist": () => currentWatchlist,
-  },
+  stubs: tradeStubs({
+    plays: () => currentPlays,
+    settings: () => currentSettings,
+    desk: () => currentDesk,
+    quote: () => currentQuote,
+    chain: () => currentChain,
+    bars: () => currentBars,
+    orders: () => currentOrders,
+    lifecycle: () => currentLifecycle,
+    alerts: () => currentAlerts,
+    delivery: () => currentDelivery,
+    watchlist: () => currentWatchlist,
+    draftScript: () => currentDraftScript,
+    draftFallback: () => currentDraftFallback,
+  }),
 });
 
 // THE BUG THIS FIXES (2026-09-06): a fresh account, nothing earned. 102 (Sell stock) used to open
