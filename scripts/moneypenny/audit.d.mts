@@ -17,10 +17,8 @@ export interface TimelineEvent {
   event?: string;
   created_at?: string;
   label?: { name?: string };
-}
-export interface AuditComment {
+  /** A `commented` event's text — the plan-stall clock reads ready-flips from it. */
   body?: unknown;
-  createdAt?: string;
 }
 export interface UnclaimedIssue {
   title: string;
@@ -33,7 +31,7 @@ export interface SilentFeedbackIssue {
   /** Whole hours since the issue last began waiting for an answer (#6042), not since it was filed. */
   hoursWaiting: number;
 }
-/** A silent-feedback flag whose test no longer holds — a `clear-stall` target (#6042). */
+/** A silent-feedback or plan-stall flag whose test no longer holds — a `clear-stall` target (#6042). */
 export interface StaleStallFlag {
   title: string;
   number: number;
@@ -125,13 +123,25 @@ export function silentFeedbackFrom(
 export function staleStallFlags(issues?: AuditIssue[]): StaleStallFlag[];
 /** The pure stall/silent-feedback/plan-stall audit: dependencies in, flag intents out. */
 export function audit(deps?: AuditDeps): AuditIntent[];
-/** The pure per-issue plan-stall decision — is this a live candidate, and if so how old? */
+/** A plan answered, handed on, parked or in build, by labels alone — no read needed (#6042). */
+export function planSpokenFor(issue?: AuditIssue): boolean;
+/** The latest ready-flip (comment or `ready` added) in ms; null if none or `ready` was taken back. */
+export function latestPlanFlip(timeline?: TimelineEvent[]): number | null;
+/** The pure per-issue plan-stall decision — is this a live candidate, and if so how long waiting? */
 export function readyPlanCandidate(
   issue: AuditIssue,
-  comments?: AuditComment[],
+  timeline?: TimelineEvent[],
   hasClaim?: boolean,
   nowMs?: number,
 ): ReadyPlanCandidate | null;
+/** The plan-stall writer: unflagged candidates to threshold, and flagged plans to clear (#6042). */
+export function planStallFrom(
+  issues?: AuditIssue[],
+  timelineOf?: (n: number | undefined) => TimelineEvent[],
+  claimOf?: (n: number | undefined) => boolean,
+  nowMs?: number,
+  flagged?: number[],
+): { readyPlans: ReadyPlanCandidate[]; staleFlags: StaleStallFlag[] };
 /** The open issues carrying `in-progress`, each with whole hours since `updatedAt` (#3960). */
 export function staleInProgressFrom(
   issues?: { title: string; number: number; updatedAt: string; labels?: { name: string }[] }[],

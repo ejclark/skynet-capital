@@ -2,6 +2,7 @@ import {
   audit,
   CONFLICT_REPAIR_CAP,
   owedAnswer,
+  planStallFrom,
   readyPlanCandidate,
   silentFeedbackFrom,
   staleInProgressFrom,
@@ -27,9 +28,16 @@ const planIssue = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const at = (hoursAgo: number) => new Date(NOW - hoursAgo * 3_600_000).toISOString();
 const readyComment = (hoursAgo: number, body = "ready") => ({
+  event: "commented",
   body,
-  createdAt: new Date(NOW - hoursAgo * 3_600_000).toISOString(),
+  created_at: at(hoursAgo),
+});
+const labelEvent = (name: string, hoursAgo: number, event = "labeled") => ({
+  event,
+  created_at: at(hoursAgo),
+  label: { name },
 });
 
 describe("readyPlanCandidate — the pure per-issue stall decision", () => {
@@ -38,10 +46,43 @@ describe("readyPlanCandidate — the pure per-issue stall decision", () => {
     expect(candidate).toEqual({ title: "[plan] some plan", number: 466, hoursSinceReady: 50 });
   });
 
-  it("uses the FIRST ready comment in comment order (gh lists comments oldest-first)", () => {
-    const comments = [readyComment(72), readyComment(10)];
-    expect(readyPlanCandidate(planIssue(), comments, false, NOW)?.hoursSinceReady).toBe(72);
+  // #6042 — the first flip was the clock, so #4808 (readied 10-07, worked through three slices on
+  // 10-18) still read as 19 days stalled on 10-26.
+  it("times the plan from its LATEST ready-flip, not its first", () => {
+    const timeline = [readyComment(72), readyComment(10)];
+    expect(readyPlanCandidate(planIssue(), timeline, false, NOW)?.hoursSinceReady).toBe(10);
   });
+
+  it("counts the `ready` label as a flip, and an unpark as a fresh start", () => {
+    const labelled = [readyComment(300), labelEvent("ready", 30)];
+    expect(readyPlanCandidate(planIssue(), labelled, false, NOW)?.hoursSinceReady).toBe(30);
+    const unparked = [
+      ...labelled,
+      labelEvent("needs-eric", 20),
+      labelEvent("needs-eric", 4, "unlabeled"),
+    ];
+    expect(readyPlanCandidate(planIssue(), unparked, false, NOW)?.hoursSinceReady).toBe(4);
+  });
+
+  it("is null once the lane took `ready` back after the latest flip — that answered it", () => {
+    const withdrawn = [
+      readyComment(400),
+      labelEvent("ready", 200),
+      labelEvent("ready", 180, "unlabeled"),
+    ];
+    expect(readyPlanCandidate(planIssue(), withdrawn, false, NOW)).toBeNull();
+    // A fresh flip after the withdrawal is a new wait.
+    const reflipped = [...withdrawn, readyComment(60)];
+    expect(readyPlanCandidate(planIssue(), reflipped, false, NOW)?.hoursSinceReady).toBe(60);
+  });
+
+  it.each(["next-slice", "in-progress", "needs-eric", "needs-info", "needs-design"])(
+    "is null while the plan carries `%s` — something already spoke for it",
+    (label) => {
+      const issue = planIssue({ labels: [{ name: "plan" }, { name: label }] });
+      expect(readyPlanCandidate(issue, [readyComment(50)], false, NOW)).toBeNull();
+    },
+  );
 
   it("is null without the plan label", () => {
     const issue = planIssue({ labels: [{ name: "enhancement" }] });
@@ -62,13 +103,109 @@ describe("readyPlanCandidate — the pure per-issue stall decision", () => {
     expect(readyPlanCandidate(issue, [readyComment(50)], false, NOW)).toBeNull();
   });
 
-  it("is null with no comments at all", () => {
+  it("is null with an empty timeline", () => {
     expect(readyPlanCandidate(planIssue(), [], false, NOW)).toBeNull();
   });
 
   it("is null when no comment reads as a ready-flip", () => {
-    const comments = [readyComment(50, "can you clarify the second bullet?")];
-    expect(readyPlanCandidate(planIssue(), comments, false, NOW)).toBeNull();
+    const timeline = [readyComment(50, "can you clarify the second bullet?")];
+    expect(readyPlanCandidate(planIssue(), timeline, false, NOW)).toBeNull();
+  });
+});
+
+// #6042 slice 2 — plan flags clear the way silent-feedback flags do: the writer's own test runs on
+// flagged plans too, and a flag whose test is false comes off with no comment.
+describe("planStallFrom — the plan writer's flags and clears (#6042)", () => {
+  const plan = (number: number, labels: string[], extra: Record<string, unknown> = {}) =>
+    planIssue({
+      number,
+      title: `[plan] ${number}`,
+      labels: labels.map((name) => ({ name })),
+      ...extra,
+    });
+  const run = (
+    issues: ReturnType<typeof plan>[],
+    timeline: object[],
+    flagged: number[] = [],
+    claimed = false,
+  ) =>
+    planStallFrom(
+      issues,
+      () => timeline,
+      () => claimed,
+      NOW,
+      flagged,
+    );
+  const intents = (
+    issues: ReturnType<typeof plan>[],
+    timeline: object[],
+    flagged: number[] = [],
+  ) => {
+    const plans = run(issues, timeline, flagged);
+    return audit({
+      readyPlans: plans.readyPlans,
+      staleStallFlags: plans.staleFlags,
+      alreadyFlagged: flagged,
+    });
+  };
+
+  it("clears #4808's shape: flagged, then answered by next-slice, with no read and no comment", () => {
+    const read = rstest.fn(() => []);
+    const answeredPlan = plan(4808, ["plan", "next-slice", "stall-flagged"]);
+    const plans = planStallFrom([answeredPlan], read, () => false, NOW, [4808]);
+    expect(plans).toEqual({ readyPlans: [], staleFlags: [{ title: "[plan] 4808", number: 4808 }] });
+    expect(read).not.toHaveBeenCalled();
+    const out = intents([answeredPlan], [], [4808]);
+    expect(out.map((i) => [i.kind, i.issueNumber, i.body])).toEqual([
+      ["clear-stall", 4808, undefined],
+    ]);
+  });
+
+  it("clears a flag once the lane took `ready` back", () => {
+    const withdrawn = [readyComment(400), labelEvent("ready", 180, "unlabeled")];
+    expect(run([plan(4808, ["plan", "stall-flagged"])], withdrawn, [4808]).staleFlags).toHaveLength(
+      1,
+    );
+  });
+
+  it("clears a flag once a claim is held — the plan is being built", () => {
+    expect(
+      run([plan(7, ["plan", "stall-flagged"])], [readyComment(90)], [7], true).staleFlags,
+    ).toHaveLength(1);
+  });
+
+  it("leaves a flag alone while its test still holds — still stalled, never re-pinged", () => {
+    expect(intents([plan(7, ["plan", "stall-flagged"])], [readyComment(90)], [7])).toEqual([]);
+  });
+
+  it("re-flags a cleared plan only on a fresh flip, timed from that flip", () => {
+    const cleared = plan(4808, ["plan"]);
+    const withdrawn = [readyComment(400), labelEvent("ready", 180, "unlabeled")];
+    expect(intents([cleared], withdrawn)).toEqual([]);
+    expect(intents([cleared], [...withdrawn, readyComment(10)])).toEqual([]);
+    const out = intents([cleared], [...withdrawn, readyComment(49)]);
+    expect(out.map((i) => [i.kind, i.issueNumber, i.hoursSinceReady])).toEqual([
+      ["flag-plan-stall", 4808, 49],
+    ]);
+  });
+
+  it("keeps a plan's flag while it is still owed a feedback answer, so the two writers never fight", () => {
+    const owed = plan(8, ["plan", "feedback", "ready", "stall-flagged"]);
+    expect(run([owed], [labelEvent("ready", 180, "unlabeled")], [8]).staleFlags).toEqual([]);
+  });
+
+  it("never clears a repair writer's flag", () => {
+    const repair = [
+      plan(9, ["plan", "ci-failure", "stall-flagged"]),
+      plan(10, ["plan", "next-slice", "stall-flagged"], { title: "[event-research] nvda-q3" }),
+    ];
+    expect(run(repair, [], [9, 10]).staleFlags).toEqual([]);
+  });
+
+  it("reads no claim for a plan with no live flip", () => {
+    const claim = rstest.fn(() => false);
+    planStallFrom([plan(11, ["plan"])], () => [], claim, NOW, []);
+    expect(claim).not.toHaveBeenCalled();
   });
 });
 
