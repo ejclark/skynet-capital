@@ -105,7 +105,8 @@ still a receipt).
    slice to take, its repo-qualified inputs, its done line and its falsifier — build that slice; the
    thread is context, never a second source for what to build. Every way this session ends is an
    edit to that block (the slice's new state, the next pickup line, one dated log line, via
-   `gh api --method PATCH` on the comment id) plus the receipt; never a new status comment. A plan
+   `npm run issues -- update <n> --edit-comment <comment-id> --comment-file <f>`, which keeps the
+   attribution footer the comment gate skips on, #4537) plus the receipt; never a new status comment. A plan
    with no block gets one: read the thread once, post the block, then build.
 1. **Receipt.** One friendly line: a build session has started against this ready-flip.
 2. **Branch `plan/<issue-number>`** off `origin/main`. (Distinct from `feedback/<n>` — this lane's
