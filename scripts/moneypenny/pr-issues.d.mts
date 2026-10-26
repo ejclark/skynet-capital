@@ -17,6 +17,12 @@ export function derivePrIssues(pr?: {
   repo?: string;
 }): number[];
 
+/** The numbers closing keywords name (`closes`) and provenance phrases name (`refs`), apart. */
+export function keywordIssuesOf(
+  text?: string | null,
+  repo?: string,
+): { closes: number[]; refs: number[] };
+
 /** True when a PR names no issue and is not a machine lane's — invisible to the board. */
 export function namesNoIssue(pr?: {
   title?: string | null;

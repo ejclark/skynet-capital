@@ -748,8 +748,14 @@ cmd_merge() {
 # "10 PRs consolidated into 1 or a few PRs result in fewer touch points... the items are details").
 #
 #   scripts/ship.sh platter open <item-branch> [--name platter/<date>] [--subject S] [--no-verify]
-#   scripts/ship.sh platter board <item-branch> [--subject S] [--no-verify]
+#                                [--closes N[,M]] [--part-of N[,M]]
+#   scripts/ship.sh platter board <item-branch> [--subject S] [--no-verify] [--closes …] [--part-of …]
 #   scripts/ship.sh platter ledger [--base <ref>] [--body]
+#
+# `--closes` / `--part-of` name the issues the item finishes or advances; with neither, the item's
+# own PR's keywords are read, and a branch number alone is only ever `Part of` (#4562). They ride as
+# `Platter-Closes:` / `Platter-Refs:` trailers, and the body turns them into Summary bullets, so the
+# platter's one merge closes the issues behind its items — under either button.
 #
 # Four rules that are load-bearing, not preferences:
 #   - NOTHING RED BOARDS. `board` runs `npm run verify` on the POST-board tree — the union so far,
@@ -846,6 +852,13 @@ platter_picture() {
   node "$(dirname "$0")/platter-picture.mjs" open --count "$count"
 }
 
+# The issues the boarded items close or are part of, one Summary bullet each (#4562). Read from the
+# same commits as the ledger, so dropping an item (re-opening without it) drops its close too.
+platter_summary_refs() {
+  git log --reverse --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" \
+    | node "$(dirname "$0")/platter-refs.mjs" summary
+}
+
 platter_body() {
   cat <<EOF
 ## The picture
@@ -871,6 +884,7 @@ _Caption — the platter ledger, read from the boarded commits: each item, the e
 - One merge clears every protected-path change below; the boundary does not move, only its cost.
 - **Merge with "Create a merge commit", never squash** — one commit per item is what keeps revert granular.
 - Each item was verified green on the union as it boarded; this PR is that union's first CI run.
+$(platter_summary_refs)
 
 <details>
 <summary><strong>How to land this, and how to drop one bad item</strong></summary>
@@ -906,7 +920,7 @@ EOF
 
 # board one item onto the checked-out platter. Shared by `open` (the first item) and `board`.
 platter_board_item() {
-  local item="$1" subject="$2" verify="$3"
+  local item="$1" subject="$2" verify="$3" closes="${4-}" partof="${5-}" closes_set="${6:-0}" partof_set="${7:-0}"
   git diff --quiet && git diff --cached --quiet || {
     echo "ship platter: uncommitted changes — commit or drop them before boarding" >&2; exit 1; }
   # An item cut from a NEWER main than the platter's would squash every main commit in between into
@@ -928,6 +942,10 @@ platter_board_item() {
   [ -n "$subject" ] || subject="$(git log -1 --format=%s FETCH_HEAD)"
   printf '%s\n' "$subject" | npx commitlint || {
     echo "ship platter: the item subject above is not a valid Conventional Commit — pass --subject." >&2
+    exit 1; }
+  # Resolved before the squash, so a bad --closes refuses with the platter untouched and unverified.
+  local refs; refs="$(platter_item_refs "$item" "$subject" "$closes" "$partof" "$closes_set" "$partof_set")" || {
+    echo "ship platter: --closes / --part-of take issue numbers (4246,3913) — the platter is unchanged." >&2
     exit 1; }
 
   git merge --squash FETCH_HEAD || {
@@ -966,9 +984,35 @@ platter_board_item() {
     else
       printf 'Platter-Paths: none\n'
     fi
+    [ -z "$refs" ] || printf '%s\n' "$refs"
   } > "$msg"
   git commit --quiet -F "$msg"
   echo "ship platter: boarded $item as $(git rev-parse --short HEAD) — $subject"
+  [ -z "$refs" ] || echo "ship platter: carries $(printf '%s' "$refs" | tr '\n' ' ')"
+}
+
+# The item's Platter-Closes / Platter-Refs trailer lines (#4562; scripts/platter-refs.mjs owns the
+# rules). With neither flag passed, the item's own PR is read — newest first, any state, since a
+# superseded item PR is closed once its content boards — best-effort: no PR, or no answer, leaves
+# only what the branch and subject name, and those are only ever `Part of`.
+platter_item_refs() {
+  local item="$1" subject="$2" closes="$3" partof="$4" closes_set="$5" partof_set="$6"
+  local args=(trailers --item "$item" --subject "$subject")
+  [ "$closes_set" = 1 ] && args+=(--closes "$closes")
+  [ "$partof_set" = 1 ] && args+=(--part-of "$partof")
+  if [ "$closes_set" != 1 ] && [ "$partof_set" != 1 ]; then
+    local owner resp http bodyfile="/tmp/ship-platter-item-pr.md"
+    owner="$(repo)"; owner="${owner%%/*}"
+    resp="$(api GET "/pulls?state=all&head=$owner:$item&per_page=1" 2>/dev/null || true)"
+    http="$(http_of "$resp")"
+    if [ "$http" = 200 ]; then
+      body_of "$resp" | python3 -c 'import sys,json; r=json.load(sys.stdin); print((r[0].get("body") or "") if r else "")' \
+        > "$bodyfile" && args+=(--pr-body-file "$bodyfile")
+    else
+      echo "ship platter: could not read $item's PR (HTTP ${http:-none}) — only its branch/subject refs board; pass --closes to close." >&2
+    fi
+  fi
+  node "$(dirname "$0")/platter-refs.mjs" "${args[@]}"
 }
 
 # Refresh the open platter PR's ledger. Best-effort by design: the commit is already made and
@@ -999,11 +1043,13 @@ cmd_platter_open() {
   local item="${1:-}"; shift || true
   [ -n "$item" ] || {
     echo "ship platter open: an item branch is required — a PR cannot open on an empty diff" >&2; exit 1; }
-  local name="" subject="" verify=1
+  local name="" subject="" verify=1 closes="" partof="" closes_set=0 partof_set=0
   while [ $# -gt 0 ]; do case "$1" in
     --name) name="$2"; shift 2 ;;
     --subject) subject="$2"; shift 2 ;;
     --no-verify) verify=0; shift ;;
+    --closes) closes="$2"; closes_set=1; shift 2 ;;
+    --part-of) partof="$2"; partof_set=1; shift 2 ;;
     *) echo "ship platter open: unknown arg $1" >&2; exit 1 ;;
   esac; done
   [ -n "$name" ] || name="platter/$(date -u +%Y-%m-%d)"
@@ -1015,7 +1061,7 @@ cmd_platter_open() {
   git diff --quiet && git diff --cached --quiet || { echo "ship platter: uncommitted changes — commit first" >&2; exit 1; }
   git fetch --quiet origin main
   git checkout -q -B "$name" origin/main
-  platter_board_item "$item" "$subject" "$verify"
+  platter_board_item "$item" "$subject" "$verify" "$closes" "$partof" "$closes_set" "$partof_set"
 
   local bodyfile="/tmp/ship-platter-body.md"
   platter_body > "$bodyfile"
@@ -1029,10 +1075,12 @@ cmd_platter_open() {
 cmd_platter_board() {
   local item="${1:-}"; shift || true
   [ -n "$item" ] || { echo "ship platter board: an item branch is required" >&2; exit 1; }
-  local subject="" verify=1
+  local subject="" verify=1 closes="" partof="" closes_set=0 partof_set=0
   while [ $# -gt 0 ]; do case "$1" in
     --subject) subject="$2"; shift 2 ;;
     --no-verify) verify=0; shift ;;
+    --closes) closes="$2"; closes_set=1; shift 2 ;;
+    --part-of) partof="$2"; partof_set=1; shift 2 ;;
     *) echo "ship platter board: unknown arg $1" >&2; exit 1 ;;
   esac; done
 
@@ -1054,7 +1102,7 @@ cmd_platter_board() {
     echo "  git merge origin/main --no-edit" >&2
     exit 1
   fi
-  platter_board_item "$item" "$subject" "$verify"
+  platter_board_item "$item" "$subject" "$verify" "$closes" "$partof" "$closes_set" "$partof_set"
   echo "ship platter: pushing ${branch}…"
   cmd_push "$branch"
   platter_sync_body "$branch"
@@ -1069,7 +1117,7 @@ cmd_platter() {
     # the record after landing, from the first-parent log, in whichever ending is true (merge commit
     # or squash) — posted as a comment on the landed PR by whoever reports it (the digest, a session).
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
-    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] | board <item-branch> [--subject S] [--no-verify] | ledger [--base <ref>] [--body] | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
   esac
 }
 

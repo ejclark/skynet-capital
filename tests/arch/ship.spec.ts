@@ -536,6 +536,73 @@ describe("ship platter — the ledger is a pure function of the boarded commits"
     expect(body).toMatch(/whole platter or nothing/);
     expect(body).toContain("scripts/platter-merge-scan.mjs");
   });
+
+  // #4562: a boarded item used to lose its `Closes #N`, so the platter's merge closed nothing and
+  // 4 of 8 platters' issues were closed by hand. The trailers ride the item commit; the body turns
+  // them into Summary bullets, so GitHub's own link closes them under either merge button.
+  describe("carries each item's issue references into the Summary (#4562)", () => {
+    let refsBase: string;
+    beforeAll(() => {
+      refsBase = git(["rev-parse", "HEAD"]).trim();
+      board("c.txt", "feat(ci): finish the board wiring", [
+        "Platter-Item: plan/3913",
+        "Platter-Sha: 111122223333",
+        "Platter-Verify: verify green 2026-10-04T10:00Z",
+        "Platter-Paths: none",
+        "Platter-Closes: #3913",
+        "Platter-Closes: #4246",
+        "Platter-Refs: #4393",
+      ]);
+      board("d.txt", "chore(ci): slice 4 of the envelope plan", [
+        "Platter-Item: plan/4535",
+        "Platter-Sha: 444455556666",
+        "Platter-Verify: verify green 2026-10-04T11:00Z",
+        "Platter-Paths: none",
+        "Platter-Refs: #4535",
+        "Platter-Refs: #4246",
+      ]);
+    });
+
+    const summary = (body: string) =>
+      body.slice(body.indexOf("## Summary"), body.indexOf("<details>", body.indexOf("## Summary")));
+
+    it("puts one closing keyword per issue in the Summary, naming the row that boarded it", () => {
+      const s = summary(ledger(["--base", base, "--body"]));
+      expect(s).toContain("- Closes #3913 — boarded as item 3.");
+      expect(s).toContain("- Closes #4246 — boarded as item 3."); // item 4 only refs it
+      expect(s).toContain("- Part of #4393 — boarded as item 3.");
+      expect(s).toContain("- Part of #4535 — boarded as item 4.");
+      expect(s).not.toContain("Part of #4246"); // closed wins; checkbody refuses both
+    });
+
+    it("still passes ship checkbody — the keywords sit inside the Summary", () => {
+      const file = join(dir, "refs-body.md");
+      writeFileSync(file, ledger(["--base", base, "--body"]));
+      const { code, stdout } = run(["checkbody", file]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("passes the picture/format contract");
+    });
+
+    it("closes nothing for an item that is not boarded — a dropped item's trailer is gone", () => {
+      // The body reads only <base>..HEAD, so an item off the platter contributes nothing: with
+      // item 3 gone, #3913 is not named at all and #4246 falls back to item 4's `Part of`.
+      const item3 =
+        git(["rev-list", "--reverse", `${refsBase}..HEAD`])
+          .trim()
+          .split("\n")[0] ?? "";
+      const s = summary(ledger(["--base", item3, "--body"]));
+      expect(s).not.toContain("#3913");
+      expect(s).not.toMatch(/closes #4246/i);
+      expect(s).toContain("- Part of #4246 — boarded as item 1.");
+    });
+
+    it("leaves the ledger table and its revert column as they were — no new column", () => {
+      const rows = ledger(["--base", base]).trim().split("\n");
+      expect(rows[0]).toBe("| # | item | why | verify evidence | revert |");
+      expect(rows[4]).toMatch(/^\| 3 \| `plan\/3913` \| .* \| `[0-9a-f]{7}` \|$/);
+      expect(rows.join("\n")).not.toContain("Platter-Closes");
+    });
+  });
 });
 
 describe("ship platter — refusals that keep the platter an assembly point, not a workspace", () => {

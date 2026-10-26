@@ -26,6 +26,12 @@
 // claim, and the sweep stays off an issue its open PR names (`withoutOpenPr`, index.mjs). Closing
 // such a PR still takes a leftover label off, exactly as before.
 //
+// A HELD PLATTER IS NEVER A BUILD EITHER (#4562). Since its body names the issues its items close,
+// this sync would otherwise mark each one `in-progress` for the whole hold (#5132 waited five days)
+// and, on the release side, keep the label on after the item's own PR closed as superseded — the
+// same finished-build-holding-a-slot class as plan/4469. The items were built and verified before
+// they boarded; the platter only waits on Eric's merge, and its merge closes them.
+//
 // Pure decision (`planPrInProgress`) + injected IO (`syncPrInProgress`), the split projects.mjs /
 // projects-sync.mjs already use, so a spec drives the whole flow with no network. Every read is
 // REST (the core bucket — #4183 is what spending GraphQL on a sweep costs); the label write is the
@@ -36,7 +42,7 @@
 import { ghRest, ghRestAll, withRetry } from "./gh.mjs";
 import { isClaimed } from "./index.mjs";
 import { LABELS, setInProgress } from "./labels.mjs";
-import { derivePrIssues } from "./pr-issues.mjs";
+import { derivePrIssues, laneClassOf } from "./pr-issues.mjs";
 import { isRetryableRestError } from "./projects.mjs";
 import { readIssue } from "./projects-sync.mjs";
 
@@ -49,6 +55,9 @@ const CLAIM_LANE_BRANCH = /^(?:feedback|plan)\/\d+$/;
 /** Is this PR a claim lane's own build — the one kind whose `in-progress` the claim owns? */
 export const isClaimLaneBuild = (headRef) => CLAIM_LANE_BRANCH.test(String(headRef ?? ""));
 
+/** Is this PR a platter — a held batch of finished items, never a build in progress? */
+export const isPlatter = (headRef) => laneClassOf(headRef) === "platter";
+
 /** "apply" for an event that means a build is (still) open, "release" for one that ends it. */
 export function intentOf(event) {
   if (APPLY_EVENTS.has(event)) return "apply";
@@ -59,7 +68,8 @@ export function intentOf(event) {
 /**
  * The pure decision for each issue a PR names. `facts` per issue: `isOpenIssue` (open, and an issue
  * rather than a PR), `hasLabel`, `namedByOtherOpenPr`, `leased`, `laneBuild` (the PR is a claim
- * lane's own — `isClaimLaneBuild`). Returns one row per issue:
+ * lane's own — `isClaimLaneBuild`), `platter` (the PR is a platter — `isPlatter`). Returns one row
+ * per issue:
  * `{number, action: "add" | "remove" | "none", reason}`.
  */
 export function planPrInProgress({ event, facts = [] } = {}) {
@@ -71,6 +81,8 @@ export function planPrInProgress({ event, facts = [] } = {}) {
     if (intent === "apply") {
       if (f.hasLabel) return row("none", "already in-progress");
       if (f.laneBuild) return row("none", "a claim lane build's own PR — its claim owns the label");
+      if (f.platter)
+        return row("none", "a held platter — its items are built, its merge closes them");
       return row("add", "an open PR names it");
     }
     if (!f.hasLabel) return row("none", "carries no in-progress");
@@ -114,19 +126,20 @@ export function syncPrInProgress(
   const named = derivePrIssues(prEvidence(pr));
   const intent = intentOf(event);
   const laneBuild = isClaimLaneBuild(pr?.head?.ref);
+  const platter = isPlatter(pr?.head?.ref);
 
   const facts = named.map((number) => {
     if (!intent) return { number };
     const issue = readIssueFn(number);
     const isOpenIssue = issue?.state === "open" && !issue?.pull_request;
     const hasLabel = (issue?.labels ?? []).some((l) => l?.name === LABELS.inProgress.name);
-    return { number, isOpenIssue, hasLabel, laneBuild };
+    return { number, isOpenIssue, hasLabel, laneBuild, platter };
   });
 
   if (intent === "release" && facts.some((f) => f.isOpenIssue && f.hasLabel)) {
     const stillNamed = new Set(
       listOpenPrs()
-        .filter((p) => p?.number !== Number(prNumber))
+        .filter((p) => p?.number !== Number(prNumber) && !isPlatter(p?.head?.ref))
         .flatMap((p) => derivePrIssues(prEvidence(p))),
     );
     for (const f of facts) {
