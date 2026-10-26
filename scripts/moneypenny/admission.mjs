@@ -6,7 +6,7 @@
 //
 // PURE HALF: `surfaceOf`, `admitBuild`, `nextAdmissible`, `queueNote`, `isDuplicateQueueNote` — no
 // network, no clock. IMPURE HALF: `readInFlight` and `gateAdmission`, every read injectable so a
-// spec drives them without a fake `gh` (tests/scripts/moneypenny/admission.spec.ts).
+// spec drives them without a fake `gh` (tests/scripts/moneypenny/admission-*.spec.ts).
 //
 // THE RULES, in the order they are asked (the first refusal wins):
 //   1. `halt` refuses everything — even `fast-track`. A brake is a brake (work-mode.mjs ACTOR_RULES:
