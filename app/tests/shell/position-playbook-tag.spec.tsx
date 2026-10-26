@@ -119,9 +119,9 @@ describe("PositionPlaybookTag", () => {
       ),
     );
     const tag = await screen.findByRole("link", {
-      name: "Opened by CRWV-WHEEL, waiting for its window — open its card on Playbooks",
+      name: "Opened by the wheel on CRWV, waiting for its window — open its card on Playbooks",
     });
-    expect(tag.textContent).toBe("◷ CRWV-WHEEL · waiting ›");
+    expect(tag.textContent).toBe("◷ the wheel on CRWV · waiting ›");
     expect(tag).toHaveAttribute(
       "href",
       `/accounts?account=sauron&section=playbooks&card=CRWV-WHEEL&mode=aggressive&pos=${PUT}`,
@@ -131,10 +131,10 @@ describe("PositionPlaybookTag", () => {
 
   it("names a playbook with no card on this bot now without a state it cannot vouch for", async () => {
     render(withClient(<Rows positions={[position({ playbookId: "S1-NVDA" })]} />));
-    await screen.findByRole("link", { name: /Opened by S1-NVDA/ });
+    await screen.findByRole("link", { name: /Opened by the pre-print run-up on NVDA/ });
     await new Promise((r) => setTimeout(r, 0));
-    const tag = screen.getByRole("link", { name: /Opened by S1-NVDA/ });
-    expect(tag.textContent).toBe("S1-NVDA ›");
+    const tag = screen.getByRole("link", { name: /Opened by the pre-print run-up on NVDA/ });
+    expect(tag.textContent).toBe("the pre-print run-up on NVDA ›");
   });
 
   it("draws nothing, and asks for no heartbeat, when no position names a playbook", async () => {
