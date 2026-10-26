@@ -10,7 +10,7 @@
 // Usage: npm run build --prefix app && npm run shoot:accounts [outdir]
 
 import { join } from "node:path";
-import { ericDesk, sauronDesk } from "./accounts-desk-fixture.mjs";
+import { ericDesk } from "./accounts-eric-desk-fixture.mjs";
 import {
   sauronAllPasses,
   sauronNoTrades,
@@ -18,6 +18,7 @@ import {
   sauronRollCall,
   sauronVerdict,
 } from "./accounts-heartbeat-fixture.mjs";
+import { sauronDesk } from "./accounts-sauron-desk-fixture.mjs";
 import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
 

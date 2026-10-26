@@ -19,10 +19,12 @@ export async function accountsFixture() {
   // The data block closes over Sauron's Heartbeat fixture, now a real module: a `data:` module
   // can only import by absolute URL, so hand it the file's own.
   const heartbeat = new URL("./accounts-heartbeat-fixture.mjs", import.meta.url).href;
-  const desk = new URL("./accounts-desk-fixture.mjs", import.meta.url).href;
+  const ericDesk = new URL("./accounts-eric-desk-fixture.mjs", import.meta.url).href;
+  const sauronDesk = new URL("./accounts-sauron-desk-fixture.mjs", import.meta.url).href;
   const imports =
     `import { sauronAllPasses, sauronNoTrades, sauronProbes, sauronRollCall, sauronVerdict } from ${JSON.stringify(heartbeat)};\n` +
-    `import { ericDesk, sauronDesk } from ${JSON.stringify(desk)};`;
+    `import { ericDesk } from ${JSON.stringify(ericDesk)};\n` +
+    `import { sauronDesk } from ${JSON.stringify(sauronDesk)};`;
   const body = `${imports}\n${src.slice(from, to)}\nexport const stubs = {${src.slice(stubsAt + "stubs: {".length, stubsEnd)}\n};`;
   const mod = await import(`data:text/javascript;base64,${Buffer.from(body).toString("base64")}`);
   return mod.stubs;
