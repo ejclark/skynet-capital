@@ -23,11 +23,18 @@ import {
   costBasis,
   dayPl,
   type ParticipantSnapshot,
+  type PositionView,
   unrealizedPl,
 } from "./participant-snapshot.js";
 import { type OpenedBy, openedBy } from "./position-opened-by.js";
 import { type PlainPosition, plainPosition } from "./position-plain.js";
-import { formatCurrency, formatSigned, formatTimestamp, pct, plClass } from "./render-atoms.js";
+import {
+  formatCurrency,
+  formatSigned,
+  formatSignedPercent,
+  formatTimestamp,
+  plClass,
+} from "./render-atoms.js";
 import {
   type DeskActivityLeg,
   type DeskActivityLine,
@@ -98,6 +105,12 @@ interface DeskPositionView extends PlainPosition {
   /** Present only when the fill ledger's open lots for this symbol are all long and their
    *  quantities sum exactly to the position's own, sign included — see `lotsFor`. */
   readonly lots?: readonly PositionLot[];
+  /** Beside `lots` only: Σ lot qty × lot price − the row's cost basis (#6169). Alpaca averages
+   *  same-day buys and re-bases overnight, while each lot keeps its own fill price, so after a
+   *  partial sell the two disagree; the lots' total P/L is `totalPlRaw − basisGap`. */
+  readonly basisGap?: number;
+  /** The gap said in words, under the buys — only when it rounds to $1 or more. */
+  readonly basisNote?: string;
   /** The playbook that opened the whole position (#5073 slice 4b, `position-opened-by.ts`). Only
    *  on a ledger the route tagged, which it does for the bot's owner alone (#885). */
   readonly playbookId?: OpenedBy["playbookId"];
@@ -108,15 +121,20 @@ interface DeskPositionView extends PlainPosition {
  *  ("-116%" on a sold put that would cost $550 to close against $255 collected). Past 100 the
  *  hundredths are noise, and on a phone card they push the size line onto a second row (#5059). */
 function returnLabel(value: number): string {
-  if (Math.abs(value) < 100) return pct(value);
+  if (Math.abs(value) < 100) return formatSignedPercent(value);
   return `${value >= 0 ? "+" : ""}${value.toFixed(0)}%`;
 }
 
 /**
  * Reconstruct a position's lot breakdown from the round-trip matcher's `open` lots (Slice 1 of
- * #3186) — never independently re-derived, so a lot's qty/cost-basis/value/P&L are each a
- * strict partition of the position's own (same `mark`, same `lastdayPrice` rule as the parent),
- * and summing them algebraically reduces to exactly the parent row's figures.
+ * #3186) — never independently re-derived, so a lot's qty/value/day P&L are each a strict
+ * partition of the position's own (same `mark`, same `lastdayPrice` rule as the parent).
+ *
+ * Cost basis is the exception (#6169). Each lot keeps its own fill price and a sell relieves the
+ * oldest first (`round-trips.ts`), but the row's basis is Alpaca's `avg_entry_price`, which averages
+ * same-day buys and re-bases overnight. After a partial sell the lots' basis can sit off the row's
+ * by `basisGap`, so their total P&L sums to the row's minus that gap. It is computed live, never
+ * cached: Alpaca's beginning-of-day sync moves the average with no trade at all.
  *
  * Deliberately conservative: a written/short lot has inverted P&L semantics this view doesn't
  * attempt to render yet, and a truncated fill window can leave the reconstructed quantity short
@@ -125,25 +143,51 @@ function returnLabel(value: number): string {
  * or silently-wrong lot list.
  */
 function lotsFor(
-  symbol: string,
   openLots: readonly OpenLot[] | undefined,
-  position: {
-    readonly quantity: number;
-    readonly marketValue: number;
-    readonly lastdayPrice?: number;
-  },
+  position: PositionView,
   mark: number,
-): PositionLot[] | undefined {
+): Pick<DeskPositionView, "lots" | "basisGap" | "basisNote"> {
+  const { symbol } = position;
   const lots = (openLots ?? []).filter((lot) => lot.symbol === symbol);
-  if (lots.length === 0) return undefined;
-  if (lots.some((lot) => lot.short)) return undefined;
+  if (lots.length === 0) return {};
+  if (lots.some((lot) => lot.short)) return {};
 
   // Signed (#5091): every lot here is a buy, so only a long position can be their sum. A cut-off
   // window can leave buys whose sizes match a SHORT position's in absolute terms; listed, each
   // would offer "Close this buy" — a sell that adds to the short.
   const gotQty = lots.reduce((sum, lot) => sum + lot.quantity, 0);
-  if (Math.abs(gotQty - position.quantity) > 1e-6) return undefined;
+  if (Math.abs(gotQty - position.quantity) > 1e-6) return {};
 
+  const basisGap =
+    lots.reduce((sum, lot) => sum + lot.quantity * lot.price, 0) - costBasis(position);
+  const note = basisNote(position, basisGap);
+  return {
+    lots: lotRows(symbol, lots, position, mark),
+    basisGap,
+    ...(note ? { basisNote: note } : {}),
+  };
+}
+
+/** The one line under the buys when their basis sits $1 or more off the row's (#6169) — both
+ *  figures, the difference signed and in words (never colour alone), and why. */
+function basisNote(position: PositionView, basisGap: number): string | undefined {
+  if (Math.round(basisGap) === 0) return undefined;
+  const alpaca = costBasis(position);
+  return (
+    `Alpaca averages these ${position.quantity.toLocaleString("en-US")} ` +
+    `${isOccSymbol(position.symbol) ? "contracts" : "shares"} at ${formatPrice(position.avgPrice)} ` +
+    `(${formatCurrency(alpaca)}); each buy below keeps its own price ` +
+    `(${formatCurrency(alpaca + basisGap)}), so the buys' P/L totals ` +
+    `${formatSigned(-basisGap)} against the row's. Sold + held P/L is the same either way.`
+  );
+}
+
+function lotRows(
+  symbol: string,
+  lots: readonly OpenLot[],
+  position: PositionView,
+  mark: number,
+): PositionLot[] {
   const lastday = position.lastdayPrice ?? 0;
   return lots.map((lot, index): PositionLot => {
     const value = lot.quantity * mark;
@@ -226,7 +270,7 @@ export function deskView(
       const day = dayPl(position);
       const mark = position.quantity !== 0 ? position.marketValue / position.quantity : 0;
       const option = isOccSymbol(position.symbol);
-      const lots = lotsFor(position.symbol, ledger?.open, position, mark);
+      const lots = lotsFor(ledger?.open, position, mark);
       const opener = openedBy(position.symbol, position.quantity, ledger?.open);
       const display = humanizeOptionSymbol(position.symbol);
       forConsiderations.push({
@@ -255,7 +299,7 @@ export function deskView(
         costBasis: formatCurrency(basis),
         value: formatCurrency(position.marketValue),
         dayPl: formatSigned(day.amount),
-        dayPct: day.pct === null ? "—" : pct(day.pct),
+        dayPct: day.pct === null ? "—" : formatSignedPercent(day.pct),
         dayTone: plClass(day.amount),
         totalPl: formatSigned(pl),
         totalPlRaw: pl,
@@ -265,7 +309,7 @@ export function deskView(
         returnPct: basis !== 0 ? returnLabel((pl / Math.abs(basis)) * 100) : "—",
         totalTone: plClass(pl),
         weightPct: held > 0 ? (Math.max(0, position.marketValue) / held) * 100 : 0,
-        ...(lots ? { lots } : {}),
+        ...lots,
         ...opener,
       };
     });
@@ -292,7 +336,7 @@ export function deskView(
       dayTone: plClass(dayTotal),
       dayPlRaw: dayTotal,
       unrealized: formatSigned(unrealized),
-      unrealizedNote: `${pct(returnOnCost)} on cost`,
+      unrealizedNote: `${formatSignedPercent(returnOnCost)} on cost`,
       unrealizedTone: plClass(unrealized),
       unrealizedRaw: unrealized,
       cash: formatCurrency(snapshot.cash),
@@ -391,7 +435,7 @@ export function deskActivityView(
       ...(pl
         ? {
             realizedPl: formatSigned(pl.realized),
-            returnPct: pct(pl.returnPct),
+            returnPct: formatSignedPercent(pl.returnPct),
             realizedTone: plClass(pl.realized) as Tone,
           }
         : {}),

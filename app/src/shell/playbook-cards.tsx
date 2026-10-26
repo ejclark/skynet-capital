@@ -18,6 +18,7 @@ import {
   UNMANAGED_WORDS,
 } from "../live/heartbeat";
 import { landingCard, type PlaybookLanding } from "../live/playbook-landing";
+import { playbookName, playbookTitle } from "../live/playbook-name";
 import { land } from "./landing";
 import { PlaybookOpen, WhenOpened } from "./playbook-open";
 import { positionAnchor } from "./position-anchor";
@@ -79,7 +80,7 @@ function metaOf(card: PlaybookCard, named: boolean): string {
 
 /** A playbook's name, or on a bot the viewer does not own (#885) the mode it runs in. */
 function titleOf(card: PlaybookCard, named: boolean): string {
-  if (named && card.playbookId) return card.playbookId;
+  if (named && card.playbookId) return playbookTitle(card.playbookId);
   const mode = card.mode ?? "unnamed";
   return `${mode.charAt(0).toUpperCase()}${mode.slice(1)} mode`;
 }
@@ -328,12 +329,13 @@ function PlaybookRow({
   );
 }
 
-/** "BETA-SCOUT is off" · "A and B are off" · "A, B and C are off" — on this bot. */
+/** "The forced daily pick is off" · "A and B are off" · "A, B and C are off" — on this bot. */
 function offSentence(off: readonly RollCallLine[]): string {
-  const ids = off.map((l) => l.playbookId);
+  const ids = off.map((l) => playbookName(l.playbookId));
   const names =
     ids.length === 1 ? ids[0] : `${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]}`;
-  return `${names} ${ids.length === 1 ? "is" : "are"} off on this bot`;
+  const sentence = `${names} ${ids.length === 1 ? "is" : "are"} off on this bot`;
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 
 /** The footer: every house playbook nobody switched on for this bot, named once, opening to why
@@ -359,7 +361,7 @@ function OffFooter({
           <ul>
             {off.map((line) => (
               <li key={line.playbookId}>
-                <span className="num">{line.playbookId}</span> {plainReason(line.reason)}
+                <b>{playbookTitle(line.playbookId)}:</b> {plainReason(line.reason)}
               </li>
             ))}
           </ul>
@@ -390,7 +392,7 @@ function NoCard({
   return (
     <div className="pbb-arrival pbb-nocard">
       <p>
-        <span className="num">{landing.card}</span> {did}.{" "}
+        {playbookTitle(landing.card)} {did}.{" "}
         {isOff
           ? "It is off on this bot now — it is named in the footer below."
           : "It is not one of this bot's playbooks now, so it has no card here."}

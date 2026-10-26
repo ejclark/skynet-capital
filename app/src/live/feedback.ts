@@ -119,6 +119,8 @@ export type CoachAnswer =
       readonly details: string;
       readonly area?: string;
       readonly spec: unknown;
+      /** The coach's brief stopped short (#6205) — its details say so and quote the member. */
+      readonly cut?: true;
     }
   | { readonly ok: false; readonly error: string };
 

@@ -391,6 +391,10 @@ function CockpitBody({
         day={pinnedDay}
         onPickDay={onPickDay}
         accounts={new Map(accounts.map((a) => [a.id, a.name]))}
+        // One symbol's picture (#6082) — the same `?symbol=` the Ledger narrows by, so the
+        // address stays `?section=events` and only the narrowing rides along.
+        symbol={narrowing.symbol}
+        onSymbol={(next) => onNarrow({ symbol: next, playbook: undefined })}
       />
     );
   if (section === "overview") {

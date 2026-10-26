@@ -1,5 +1,5 @@
 import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import { fetchPlaybookPerformance, type PlaybookMetricsView } from "../live/playbook-performance";
 import {
   fetchPlaybookStore,
@@ -89,6 +89,7 @@ export function PlaybooksSection({
   accountName,
   accounts = [],
   accountsReady = true,
+  initialPick,
 }: {
   readonly store: UseQueryResult<PlaybookStoreView>;
   readonly accountId?: string;
@@ -97,10 +98,18 @@ export function PlaybooksSection({
   readonly accounts?: readonly OwnedAccount[];
   /** False while `accounts` is still being read, so "you have no bot" is never said early. */
   readonly accountsReady?: boolean;
+  /** The strategy card to open on arrival — the fit finder's link (#4469 slice 4). */
+  readonly initialPick?: string;
 }): ReactElement {
   const queryClient = useQueryClient();
-  const [picked, setPicked] = useState<string | undefined>();
+  const [picked, setPicked] = useState<string | undefined>(initialPick);
   const onChanged = () => void queryClient.invalidateQueries({ queryKey: ["playbook-store"] });
+  // Arriving from the fit finder: the card it named is open already; bring it into view once the
+  // catalog has rendered.
+  const storeReady = store.isSuccess;
+  useEffect(() => {
+    if (initialPick && storeReady) scrollToCard(initialPick);
+  }, [initialPick, storeReady]);
   // One read, two groupings (#3665): `mine` is the selected account's own closed trades — only for
   // an account the viewer manages, and the server re-scopes `?accounts=` to owned ids regardless —
   // and `house` is every account's, drawn on every card even in catalog-only mode. Unmanaged views

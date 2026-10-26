@@ -4,11 +4,17 @@ export const ORPHAN_AFTER_HOURS: number;
 export const GREEN_PUSHES: number;
 export const ORPHAN_MARKER: string;
 export const ERODED_MARKER: string;
+export const RECURRENCE: string;
 
 type Label = { name?: string } | string;
+export interface CapsuleStep {
+  name?: string;
+  conclusion?: string | null;
+}
 export interface CapsuleJob {
   name?: string;
   conclusion?: string | null;
+  steps?: readonly CapsuleStep[];
 }
 export interface CapsuleRun {
   id: number;
@@ -39,21 +45,30 @@ export interface TimelineEvent {
 }
 type Run = (cmd: string, args: string[]) => string;
 
-export function capsuleTarget(issue?: {
-  body?: string | null;
-  title?: string;
-}): { workflow: string; job: string } | null;
-export function jobPassed(jobs: readonly CapsuleJob[] | undefined, job: string): boolean;
-export function hasLinkedPr(timeline?: readonly TimelineEvent[]): boolean;
+type Target = { workflow: string; job: string; step?: string };
+export function capsuleTarget(issue?: { body?: string | null; title?: string }): Target | null;
+export function jobVerdict(
+  jobs: readonly CapsuleJob[] | undefined,
+  job: string,
+  step?: string,
+): "pass" | "fail" | null;
+export function jobPassed(
+  jobs: readonly CapsuleJob[] | undefined,
+  job: string,
+  step?: string,
+): boolean;
+export function hasLinkedPr(timeline?: readonly TimelineEvent[], since?: string): boolean;
 export function lookupsFor(
   issue: { labels?: readonly Label[]; created_at?: string; createdAt?: string },
   nowMs: number,
   orphanAfterHours?: number,
 ): { orphan: boolean; eroded: boolean };
-export function greenProof(
-  capsule: Capsule,
+export function provenRuns(
+  runs: readonly CapsuleRun[] | undefined,
+  target: Target,
   n?: number,
-): { workflow: string; job: string; runs: CapsuleRun[] } | null;
+): { passes: CapsuleRun[]; ended: boolean };
+export function greenProof(capsule: Capsule, n?: number): (Target & { runs: CapsuleRun[] }) | null;
 export function capsuleIntents(deps?: {
   capsules?: readonly Capsule[];
   orphanAfterHours?: number;

@@ -8,6 +8,7 @@ import {
   createCompanionChat,
   type DoStreamFetch,
   REFUSAL_MESSAGE,
+  TRUNCATED_MESSAGE,
   withExhaustedNote,
 } from "../../src/companion/companion-chat.js";
 import {
@@ -316,6 +317,36 @@ describe("tools-on — a bounded non-streaming round trip, then the streamed rep
     expect(stream.tool_choice).toEqual({ type: "none" });
     const lastRound = fetchCalls[fetchCalls.length - 1]?.messages ?? [];
     expect(stream.messages.slice(0, lastRound.length)).toEqual(lastRound);
+    // Sonnet 5.5 (the default): the note is a final system message after the tool_result turn —
+    // a harness notice, not text in the member's turn (#6080).
+    // The last round's own assistant turn and tool_result turn, then the note.
+    expect(stream.messages).toHaveLength(lastRound.length + 3);
+    const toolTurn = stream.messages[stream.messages.length - 2];
+    expect(toolTurn?.role).toBe("user");
+    expect(toolTurn?.content.every((b) => b.type === "tool_result")).toBe(true);
+    const note = stream.messages[stream.messages.length - 1] as unknown as {
+      role: string;
+      content: string;
+    };
+    expect(note.role).toBe("system");
+    expect(note.content).toContain("Tool lookups are exhausted for this turn");
+  });
+
+  it("on Haiku 4.5 the exhaustion note stays a text block after the last tool_result — Haiku rejects a mid-conversation system message", async () => {
+    const streamCalls: unknown[] = [];
+    const chat = createCompanionChat(
+      { apiKey: "k", tools: deskDeps, resolveModel: () => "claude-haiku-4-5" },
+      () => Promise.resolve(toolUseReply("get_my_positions")),
+      fakeDoStream(["ok"], streamCalls),
+    );
+    await chat(
+      { messages: [userMsg("what do I own?")], participantId: "acct-1" },
+      collect().handlers,
+    );
+    const stream = streamCalls[0] as {
+      messages: readonly { role: string; content: readonly { type: string; text?: string }[] }[];
+    };
+    expect(stream.messages.some((m) => m.role === "system")).toBe(false);
     const last = stream.messages[stream.messages.length - 1];
     expect(last?.role).toBe("user");
     expect(last?.content[0]?.type).toBe("tool_result");
@@ -324,20 +355,22 @@ describe("tools-on — a bounded non-streaming round trip, then the streamed rep
     expect(note?.text).toContain("Tool lookups are exhausted for this turn");
   });
 
-  it("with no tool round run (MAX_TOOL_ROUNDS dialled to 0), the streamed leg's history goes out unchanged — a plain-string turn is never spread into characters", () => {
+  it("with no tool round run (MAX_TOOL_ROUNDS dialled to 0), the streamed leg's history goes out unchanged on either model — a plain-string turn is never spread into characters", () => {
     const memberOnly = [
       { role: "user", content: "what do I own?" },
       { role: "assistant", content: "Let me check." },
       { role: "user", content: "and my cash?" },
     ];
-    expect(withExhaustedNote(memberOnly)).toEqual(memberOnly);
     // Never rewrites an assistant turn into a user one, even with block content.
     const endsOnAssistant = [
       { role: "user", content: "hi" },
       { role: "assistant", content: [{ type: "text", text: "hello" }] },
     ];
-    expect(withExhaustedNote(endsOnAssistant)).toEqual(endsOnAssistant);
-    expect(withExhaustedNote([])).toEqual([]);
+    for (const model of ["claude-sonnet-5-5", "claude-haiku-4-5"] as const) {
+      expect(withExhaustedNote(memberOnly, model)).toEqual(memberOnly);
+      expect(withExhaustedNote(endsOnAssistant, model)).toEqual(endsOnAssistant);
+      expect(withExhaustedNote([], model)).toEqual([]);
+    }
   });
 
   it("a failed lookup goes back flagged is_error; a successful one carries no flag", async () => {
@@ -428,6 +461,48 @@ describe("a decline (stop_reason refusal) is never presented as a finished reply
     expect(c.texts).toEqual(["Sure, the first step is"]);
     expect(c.errors).toEqual([REFUSAL_MESSAGE]);
     expect(c.done()).toBe(false);
+  });
+
+  it("a max_tokens stop on the streamed leg ends as an error so the rail marks the reply cut off, not complete (#6080)", async () => {
+    const chat = createCompanionChat(
+      { apiKey: "k" },
+      () => Promise.resolve(toolUseReply("get_play_catalog")),
+      fakeDoStreamEvents([textEvent("The three plays are"), stopEvent("max_tokens")], []),
+    );
+    const c = collect();
+    await chat({ messages: [userMsg("hi")] }, c.handlers);
+    expect(c.texts).toEqual(["The three plays are"]);
+    expect(c.errors).toEqual([TRUNCATED_MESSAGE]);
+    expect(c.done()).toBe(false);
+  });
+
+  it("the streamed leg logs one usage line to the server log: input and cache from message_start, output from message_delta", async () => {
+    const lines: string[] = [];
+    const chat = createCompanionChat(
+      { apiKey: "k", logLine: (l) => lines.push(l) },
+      () => Promise.resolve(toolUseReply("get_play_catalog")),
+      fakeDoStreamEvents(
+        [
+          {
+            type: "message_start",
+            message: {
+              usage: { input_tokens: 50, output_tokens: 1, cache_read_input_tokens: 4000 },
+            },
+          },
+          textEvent("done"),
+          {
+            type: "message_delta",
+            delta: { stop_reason: "end_turn" },
+            usage: { output_tokens: 80 },
+          },
+        ],
+        [],
+      ),
+    );
+    await chat({ messages: [userMsg("hi")] }, collect().handlers);
+    expect(lines).toEqual([
+      `claude-usage surface=companion-stream model=${COMPANION_MODEL} input=50 output=80 cache_read=4000 cache_creation=0`,
+    ]);
   });
 
   it("an ordinary end_turn on the streamed leg still finishes normally", async () => {

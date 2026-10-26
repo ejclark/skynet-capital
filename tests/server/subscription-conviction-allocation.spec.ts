@@ -1,17 +1,18 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
-import { carryConvictions } from "../../src/server/subscription-seed-store.js";
+import { MemberConvictionStore } from "../../src/server/member-conviction-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
 import { serveSubscriptionsApi } from "../../src/server/subscriptions-api-routes.js";
+import { pairViewId } from "../../src/subscriptions/pair-conviction.js";
 
 /**
  * #4469 slice 3c part 3 — the app writes an owner's conviction and a strategy allocation, checks
- * each ticker's budget against it, and carries the ◆ row's conviction onto the CRWV wheel's
- * subscriptions. Against a real store on a temp file, so what reaches disk is what is asserted.
+ * each ticker's budget against it, and points the CRWV wheel's subscription at the view that
+ * steers its ◆ row. Against a real store on a temp file, so what reaches disk is what is asserted.
  */
 
 const session = { email: "eric@example.com", name: "Eric Clark" } as never;
@@ -31,6 +32,9 @@ function get(url: string): IncomingMessage {
   req.headers = {};
   return req;
 }
+
+/** The views file beside the store, as production wires it; reset per test (`beforeEach`). */
+let members: MemberConvictionStore | undefined;
 
 async function call(
   store: SubscriptionStore,
@@ -52,6 +56,7 @@ async function call(
     resolveOwnerIds: () => ["sauron"],
     now: TODAY,
     subscriptions: store,
+    ...(members ? { memberConvictions: members } : {}),
   } as unknown as DashboardServerConfig;
   await serveSubscriptionsApi(req, res, path, config, session);
   return {
@@ -70,7 +75,9 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), "skynet-3c3-"));
     path = join(dir, "playbook-subscriptions.json");
-    store = new SubscriptionStore(path);
+    const views = new MemberConvictionStore(join(dir, "member-convictions.json"));
+    members = views;
+    store = new SubscriptionStore(path, undefined, () => views.pointers());
     store.subscribe("sauron", {
       playbookId: "CRWV-WHEEL",
       mode: "aggressive",
@@ -90,22 +97,11 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
   });
 
   describe("the ◆ row's conviction reaches the CRWV wheel's subscription", () => {
-    it("by the pointer at the view that steers it: the carry copies nothing, and writes nothing", async () => {
+    it("by the pointer at the view that steers it, with no inline copy (#5482)", () => {
       // #5482's contract step: a ◆ row one view steers is reached by a pointer, not an inline copy.
       const wheel = store.load().sauron?.find((s) => s.playbookId === "CRWV-WHEEL");
       expect(wheel?.convictionId).toBe("ai-dip-2026-10");
-      expect(wheel?.conviction).toBeUndefined();
-      const onDisk = await readFile(path, "utf8");
-      expect(carryConvictions(store)).toEqual([]);
-      expect(await readFile(path, "utf8")).toBe(onDisk);
-    });
-
-    it("leaves a file it cannot read whole alone", async () => {
-      await writeFile(path, JSON.stringify({ sauron: [{ playbookId: "CRWV-WHEEL" }] }));
-      expect(carryConvictions(store)).toEqual([]);
-      expect(JSON.parse(await readFile(path, "utf8"))).toEqual({
-        sauron: [{ playbookId: "CRWV-WHEEL" }],
-      });
+      expect(wheel).not.toHaveProperty("conviction");
     });
   });
 
@@ -119,11 +115,34 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
       });
       expect(answer.body).toEqual({ ok: true });
       const wheel = store.load().sauron?.find((s) => s.playbookId === "CRWV-WHEEL");
-      expect(wheel?.conviction).toEqual({
-        reason: "The premium still pays for the tail.",
+      // Kept as the owner's own view on the pair, and pointed at; never on the subscription.
+      expect(wheel?.convictionId).toBe(pairViewId("sauron", "CRWV-WHEEL"));
+      expect(wheel).not.toHaveProperty("conviction");
+      const [view] = members?.handedOver() ?? [];
+      expect(view?.conviction).toMatchObject({
         checkOn: "2027-04-30",
+        claims: [{ statement: "The premium still pays for the tail." }],
       });
       expect(wheel).toMatchObject({ enabled: false, capitalAllocated: 75_000, mode: "aggressive" });
+    });
+
+    it("refuses a day that needs a view when no views file is wired, and changes nothing", async () => {
+      members = undefined;
+      const before = store.load();
+      const answer = await write(store, "conviction", {
+        id: "sauron",
+        playbookId: "CRWV-WHEEL",
+        conviction: { reason: "My call.", checkOn: "2027-04-30" },
+      });
+      expect(answer.body.ok).toBe(false);
+      expect(store.load()).toEqual(before);
+      // The seeded record's own day needs no view, so it is still taken.
+      const seeded = await write(store, "conviction", {
+        id: "sauron",
+        playbookId: "CRWV-WHEEL",
+        conviction: { reason: "My call.", checkOn: "2027-01-29" },
+      });
+      expect(seeded.body).toEqual({ ok: true });
     });
 
     it("refuses a check day that has come, or is more than a year out", async () => {
@@ -135,9 +154,9 @@ describe("the Store writes conviction and allocations (#4469 slice 3c part 3)", 
         });
         expect(answer.body.ok).toBe(false);
       }
-      expect(
-        store.load().sauron?.find((s) => s.playbookId === "CRWV-WHEEL")?.conviction,
-      ).toBeUndefined();
+      expect(store.load().sauron?.find((s) => s.playbookId === "CRWV-WHEEL")).toMatchObject({
+        convictionId: "ai-dip-2026-10",
+      });
     });
 
     it("never creates a subscription", async () => {

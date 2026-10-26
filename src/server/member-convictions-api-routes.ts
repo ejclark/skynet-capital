@@ -5,12 +5,15 @@ import {
   type DraftOutcome,
   draftConviction,
 } from "../playbooks/conviction-draft.js";
-import { type ConvictionDraftInput, parseConvictionDraft } from "../playbooks/conviction-parse.js";
+import {
+  type ConvictionDraftInput,
+  MAX_CONVICTION_ID,
+  parseConvictionDraft,
+} from "../playbooks/conviction-parse.js";
 import type { SteerBounds } from "../playbooks/conviction-steering.js";
 import { CONVICTIONS, playbookBounds } from "../playbooks/conviction-store.js";
 import { findPair, pairName, type StrategyId } from "../playbooks/pair-table.js";
 import type { Session } from "./auth/session.js";
-import { creditFor } from "./authored-plays-api-routes.js";
 import {
   canRepoint,
   handOverPlan,
@@ -19,10 +22,12 @@ import {
   refusedNow,
   repoint,
   type TakeOver,
+  takeOverable,
   takesOver,
 } from "./conviction-hand-over.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { creditFor } from "./feedback-attribution.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { GONE, type MemberConvictionRecord } from "./member-conviction-store.js";
 import {
@@ -64,8 +69,8 @@ import {
  * (`false`), before anything else runs.
  */
 
-const BODY_CAP_BYTES = 16_384;
-const MAX_ID = 64;
+/** UTF-8 bytes (#6075): 12 claims × three 600-character fields can be up to 64,800 bytes. */
+const MEMBER_CONVICTIONS_BODY_CAP_BYTES = 98_304;
 
 /** Said with every draft: what a saved view does until its owner hands it over. */
 export const DRAFT_NOTE =
@@ -178,11 +183,11 @@ async function draftOrSave(
   config: DashboardServerConfig,
   session: Session,
 ): Promise<void> {
-  const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
+  const raw = await readJsonPost(req, res, MEMBER_CONVICTIONS_BODY_CAP_BYTES);
   if (raw === undefined) return;
   const body = parseJsonRecord(raw);
   if (path === "/api/convictions/delete") {
-    const id = boundedString(body?.id, MAX_ID);
+    const id = boundedString(body?.id, MAX_CONVICTION_ID);
     if (!id) {
       sendJson(res, 400, { error: "malformed delete body" });
       return;
@@ -199,7 +204,7 @@ async function draftOrSave(
     return;
   }
   const replaceId =
-    body?.replaceId === undefined ? undefined : boundedString(body.replaceId, MAX_ID);
+    body?.replaceId === undefined ? undefined : boundedString(body.replaceId, MAX_CONVICTION_ID);
   const outcome =
     body && (body.replaceId === undefined || replaceId)
       ? judge(body, config, session, replaceId)
@@ -283,9 +288,9 @@ async function handOverOrTakeBack(
   config: DashboardServerConfig,
   session: Session,
 ): Promise<void> {
-  const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
+  const raw = await readJsonPost(req, res, MEMBER_CONVICTIONS_BODY_CAP_BYTES);
   if (raw === undefined) return;
-  const id = boundedString(parseJsonRecord(raw)?.id, MAX_ID);
+  const id = boundedString(parseJsonRecord(raw)?.id, MAX_CONVICTION_ID);
   if (!id) {
     sendJson(res, 400, { error: "malformed conviction id" });
     return;
@@ -340,7 +345,7 @@ function mine(config: DashboardServerConfig, session: Session) {
       const refused = refusedNow(record.conviction);
       return { ...record, card, steering, ...(refused.length > 0 ? { refused } : {}) };
     }
-    const over = takesOver(record.conviction, owned, state);
+    const over = takesOver(record.conviction, owned, state, takeOverable(config.memberConvictions));
     return { ...record, card, ...(over.length > 0 ? { takesOver: over } : {}) };
   });
   const steerable = steerablePairs(config, session);

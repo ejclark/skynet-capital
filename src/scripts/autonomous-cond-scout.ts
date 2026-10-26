@@ -23,12 +23,12 @@ import {
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import { DAY_MS } from "../domain/time.js";
 import type { MarketContext, PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
 import { parseCondScoutUniverse, resolveCondScoutUniverse } from "../playbooks/cond-scout.js";
 import { ALPACA_DATA_BASE_URL } from "../runtime/data-source.js";
 
-const DAY_MS = 86_400_000;
 /** Calendar days of daily bars to ask for: ~40 sessions, comfortably past SMA20 and RSI14. */
 const LOOKBACK_DAYS = 60;
 

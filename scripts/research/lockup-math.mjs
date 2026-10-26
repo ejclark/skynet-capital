@@ -12,8 +12,9 @@
  *     line "Through and including <date> (the 25th day after the date of this prospectus)"), and
  *   - every lock-up sentence names ONE period, and
  *   - no lock-up sentence carries an early-release trigger (an earnings release, a closing-price
- *     test, staged tranches). Those can unlock shares before the stated period ends, so the stated
- *     end is not the date — the entry stays `estimate` with the clause quoted for a reader.
+ *     test, staged tranches, a blackout-period cut-off). Those can unlock shares before the stated
+ *     period ends, so the stated end is not the date — the entry stays `estimate` with the clause
+ *     quoted for a reader.
  * Anything short of that is an `estimate`, which may only widen caution, never open a position.
  *
  * PURE: no I/O, no clock, no network.
@@ -94,16 +95,26 @@ const EARLY = /earnings|closing price|early release|released early|earlier of|st
 // Parabilis, Accelevation and Cerebras 90 days early.
 const STATUTORY = /Rule (?:144|701)/;
 
+// "If at least 120 days have elapsed … and such lock-up period is scheduled to end during or within
+// five trading days prior to … a blackout period, such lock-up period will end ten trading days prior
+// to the commencement of such blackout period" (X-Energy). It names no period after the prospectus
+// date, so it is not one of the lock-up sentences below and EARLY never saw it: XE was filed
+// `confirmed` on its 180-day date while its lock-up had ended seven weeks earlier (#5920). The
+// blackout dates live in the insider trading policy, not the filing, so the date cannot be computed.
+const BLACKOUT = /black-?\s?out period/i;
+
+function sentencesOf(text) {
+  return text.split(/(?<=[.;])\s+(?=[A-Z•])/);
+}
+
 /** The lock-up sentences: the ones naming a lock-up (or market stand-off) and a period. */
 function lockupSentences(text) {
-  return text
-    .split(/(?<=[.;])\s+(?=[A-Z•])/)
-    .filter(
-      (s) =>
-        LOCKUP_WORD.test(s) &&
-        !STATUTORY.test(s) &&
-        /days (?:after|following|from) the date of/i.test(s),
-    );
+  return sentencesOf(text).filter(
+    (s) =>
+      LOCKUP_WORD.test(s) &&
+      !STATUTORY.test(s) &&
+      /days (?:after|following|from) the date of/i.test(s),
+  );
 }
 
 /**
@@ -150,7 +161,10 @@ export function parseProspectus(text) {
   const sentences = lockupSentences(text);
   const counts = lockupPeriods(sentences);
   const periods = [...counts.keys()].sort((a, b) => a - b);
-  const early = sentences.find((s) => EARLY.test(s));
+  const early =
+    sentences.find((s) => EARLY.test(s)) ??
+    sentencesOf(text).find((s) => LOCKUP_WORD.test(s) && BLACKOUT.test(s));
+  const trigger = early && (EARLY.exec(early) ?? BLACKOUT.exec(early));
   const price = /public offering price (?:of the [\w ]{2,30}? )?(?:is|of) (?:US)?\$([\d,.]+)/i.exec(
     text,
   );
@@ -160,13 +174,20 @@ export function parseProspectus(text) {
   // missing it read Alector's 68M shares outstanding as its offering, a $176M raise as $1.3B
   // (#5912 slice 2). The \b matters as much: without it "after th|is offering| 68,365,044 shares"
   // matched first, so any summary with that line sized the IPO by its post-offering share count.
-  const shares =
-    /\b(?:are|is) (?:offering|selling)\s+([\d,]{7,})\s+(?:of our\s+)?(?:shares|common shares|ordinary shares|American Depositary Shares|ADSs)/i.exec(
+  // "We are offering, on a firm commitment basis, 6,250,000 Class A Ordinary Shares" (FF Global's
+  // F-1/A, 2026-06-03) is the same sentence again; missing it fell through to the first big count,
+  // its 4B AUTHORIZED shares, and sized a $30M IPO at $20B (#5912 slice 3). That last-resort read is
+  // flagged `sharesFrom: "first-count"`, so a caller that needs the size to mean something can
+  // refuse it.
+  const offering =
+    /\b(?:are|is) (?:offering|selling)(?:, on an? [\w -]{2,30} basis,)?\s+([\d,]{7,})\s+(?:of our\s+)?(?:Class [A-Z] )?(?:shares|common shares|ordinary shares|American Depositary Shares|ADSs)/i.exec(
       text,
     ) ??
     /(?:Class A )?(?:common stock|common shares|ordinary shares|American Depositary Shares|ADSs) offered by us\s*:?\s*([\d,]{7,})\s+(?:shares|ADSs)/i.exec(
       text,
-    ) ??
+    );
+  const shares =
+    offering ??
     /([\d,]{7,})\s+(?:shares|common shares|ordinary shares|American Depositary Shares)/i.exec(text);
   const priceUsd = price ? Number(price[1].replace(/,/g, "")) : undefined;
   const sharesOffered = shares ? Number(shares[1].replace(/,/g, "")) : undefined;
@@ -178,28 +199,33 @@ export function parseProspectus(text) {
     lockupDays,
     periods,
     lockupQuote: stating && quote(stating),
-    earlyRelease: early && quote(early),
+    earlyRelease: early && quote(early, trigger.index),
     priceUsd,
     sharesOffered,
+    sharesFrom: offering ? "offering" : shares ? "first-count" : undefined,
     offeringUsd: priceUsd && sharesOffered ? Math.round(priceUsd * sharesOffered) : undefined,
   };
 }
 
 /** $670M · $1.8B · $75.0B — the size a reader compares, not the digits. */
-function usd(n) {
+export function usd(n) {
   return n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : `$${Math.round(n / 1e6)}M`;
 }
 
 /** EDGAR's display names are sometimes all caps ("SPACE EXPLORATION TECHNOLOGIES"). */
-function titleCase(name) {
+export function titleCase(name) {
   return name === name.toUpperCase()
     ? name.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase())
     : name;
 }
 
-function quote(sentence) {
+/** A long sentence is cut to 320 characters, keeping `from` (the trigger) in view. */
+export function quote(sentence, from = 0) {
   const s = sentence.trim();
-  return s.length > 320 ? `${s.slice(0, 317)}…` : s;
+  if (s.length <= 320) return s;
+  const start = Math.max(0, Math.min(from - 160, s.length - 319));
+  if (start === 0) return `${s.slice(0, 317)}…`;
+  return start + 319 >= s.length ? `…${s.slice(start)}` : `…${s.slice(start, start + 318)}…`;
 }
 
 /** Impact by money raised — it sets the research cadence (`assessment-cadence.json`). A $5B+ listing
@@ -207,9 +233,9 @@ function quote(sentence) {
 export const HIGH_USD = 5_000_000_000;
 export const MEDIUM_USD = 500_000_000;
 
-function impactFor(usd) {
-  if (usd && usd >= HIGH_USD) return "high";
-  return usd && usd >= MEDIUM_USD ? "medium" : "low";
+export function impactFor(raised) {
+  if (raised && raised >= HIGH_USD) return "high";
+  return raised && raised >= MEDIUM_USD ? "medium" : "low";
 }
 
 /**

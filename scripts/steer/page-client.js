@@ -69,10 +69,9 @@
   let metaStored = false;
   /** Record paths the store is known to hold (loaded, or written here): a pin merges into these. */
   const stored = new Set();
-  /** A decision record's fields keyed by pin (or mark) id, each merged one key at a time. */
-  const MAPS = ["pins", "pinNotes", "marks", "outcomesAdded", "optionNotes"];
-  /** A decision record's own fields merged alone, never with the whole record: `revealAt`. */
-  const MERGED = ["revealAt"];
+  // A decision record's shape and its keyed fields (record-client.js).
+  const { MAPS, MERGED, blank, fromDoc, keyValue, liveOf, noteValue, put, read, split, toggle } =
+    globalThis.steerRecord;
   /** Pin ids this view has reacted to or written on, by field and decision key: only these may
    *  overwrite what the store holds there. */
   const touched = Object.fromEntries(MAPS.map((f) => [f, new Map()]));
@@ -90,56 +89,32 @@
   let connecting = true;
   const held = new Map();
 
-  // What became of Done, in words. Never a colour, never a spinner alone.
-  const TELLING = "Done — telling Claude…";
+  // What became of Done, in words (status-client.js); the lines that need the watch stay here.
+  const {
+    ACK,
+    LIFECYCLE,
+    MAYBE,
+    NO_REACH,
+    QUIET_MS,
+    REOPENED,
+    RELOAD,
+    TELLING,
+    UNHEARD,
+    UNPOSTED,
+    UNTOLD,
+    WAIT,
+    ackOf,
+    clock,
+    notSaved,
+    readBackOf,
+    refused,
+    unable,
+  } = globalThis.steerStatus;
+  const { textOf } = globalThis.steerCopy;
   /** Is the round's doc still watched? A dead watch can't show the read-back, so the line says reload. */
   let live = true;
-  const WAIT = "The read-back shows here when it's posted.";
-  const RELOAD = "Reload the page to see the read-back once it's posted.";
   const waiting = () => (live ? WAIT : RELOAD);
   const sent = () => `Done — sent to Claude. ${waiting()}`;
-  const NOT_LISTENING =
-    "Done — saved. No Claude session is listening right now; the next page reads it back.";
-  const NO_REACH = "Done — saved. This view can't reach Claude; the next page reads it back.";
-  const NOT_REACHED =
-    "Done — saved. Claude couldn't be reached just now; the next page reads it back.";
-  const REOPENED = "Reopened — press Done again when you're finished.";
-  /** The session stamped `ackAt` after this Done: it heard, and the read-back is on its way. */
-  const ACK = "Claude got your Done, reading back…";
-  // A sent Done no session answers (Eric, 2026-10-13: "I've had to click 'done'.. nothing
-  // happens"): a session's page watch drops after hours idle, yet the send still reads
-  // "available". Five minutes after the press with no read-back, the bar says how to wake it.
-  const QUIET_MS = 5 * 60 * 1000;
-  const UNHEARD =
-    "No reply yet: the session that drew this page isn't listening. Open it and say “done” (or “watch my page”).";
-  // A rejected send is not proof nothing was posted (comments.d.ts), so only a code that says the
-  // send was refused before writing earns "wasn't told"; any other rejection of the send hedges.
-  const UNTOLD = "wasn't told";
-  const MAYBE = "may not have been told";
-  const UNPOSTED = [
-    "claude_unavailable",
-    "consent_required",
-    "forbidden",
-    "invalid",
-    "transform_error",
-    "rate_limited",
-  ];
-  const LIFECYCLE = ["not_granted", "capability_disabled", "capability_removed"];
-  const notSaved = (told) =>
-    `Done didn't save, and Claude ${told} — use Copy as text and paste it in chat.`;
-  const notTold = (why, told) =>
-    `Done — saved, but Claude ${told}: ${why}. Say “done” in chat to start the read-back.`;
-  /** `canSendToClaude` said no (comments.d.ts): only `no_session` means no session is listening;
-   *  `writers_only`, `off` or a value it doesn't know means this view can't send. */
-  const unable = (can) => (can === "no_session" ? NOT_LISTENING : NO_REACH);
-  /** A refused send, by its code (comments.d.ts). None is retried: a new press is the retry. */
-  function refused(code, told) {
-    if (code === "claude_unavailable") return NOT_REACHED;
-    if (LIFECYCLE.includes(code)) return NO_REACH;
-    if (code === "consent_required") return notTold("the page wasn't allowed to comment", told);
-    if (code === "forbidden") return notTold("commenting from this page is off here", told);
-    return notTold("sending it failed", told);
-  }
   /** Bumped by every Done, Reopen and new read-back: a send still pending never covers a later line. */
   let turn = 0;
   let toldLine = "";
@@ -148,18 +123,6 @@
   /** The ack already shown, by its time, for the same reason. */
   let ackedMs = Number.NaN;
 
-  const blank = () => ({
-    pick: null,
-    react: {},
-    verdict: null,
-    note: "",
-    pins: {},
-    pinNotes: {},
-    marks: {},
-    outcomesAdded: {},
-    optionNotes: {},
-    revealAt: null,
-  });
   const rec = (sec, key) => {
     state[sec][key] = state[sec][key] || blank();
     return state[sec][key];
@@ -190,22 +153,6 @@
       .filter((t) => t.dataset.key === key)
       .map((t) => [t.dataset.opt, noteValue(r?.optionNotes?.[t.dataset.opt])])
       .filter(([, v]) => v);
-  /** A stored `pins` or `pinNotes` that isn't a plain object (a hand-edited record) reads as none. */
-  const mapOf = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
-  /** A note as it is written: the text, or null for an empty one. */
-  const noteValue = (v) => (typeof v === "string" && v.trim() ? v : null);
-  /** One pin key's stored value: a reaction as it is, a note as noteValue, a mark as its spot
-   *  (marks-client.js); a cleared one is null. */
-  const keyValue = (field, v) => {
-    if (field === "pinNotes" || field === "optionNotes") return noteValue(v);
-    if (field === "marks") return v && typeof v === "object" ? v : null;
-    // An added outcome (outcomes-client.js) is its words and when; a blank one is none.
-    if (field === "outcomesAdded") return typeof v?.text === "string" && v.text.trim() ? v : null;
-    return v || null;
-  };
-  /** The live entries of one keyed field, as a whole record writes them. */
-  const liveOf = (field, m) =>
-    Object.fromEntries(Object.entries(mapOf(m)).filter(([, v]) => keyValue(field, v)));
 
   /** Is this button's value the saved one? An option row reads its pick/react, else the verdict. */
   const pressed = (r, opt, v) => {
@@ -372,24 +319,6 @@
       );
     });
   }
-  /** A field path (`pick`, `react.A`, `pins.B:phone:1`) → [field, sub-key or undefined]. */
-  const split = (p) => {
-    const i = p.indexOf(".");
-    return i < 0 ? [p] : [p.slice(0, i), p.slice(i + 1)];
-  };
-  const read = (r, p) => {
-    const [f, k] = split(p);
-    return k === undefined ? r?.[f] : r?.[f]?.[k];
-  };
-  function put(r, p, v) {
-    const [f, k] = split(p);
-    if (k === undefined) r[f] = v;
-    else {
-      r[f] = { ...mapOf(r[f]) };
-      if (v == null) delete r[f][k];
-      else r[f][k] = v;
-    }
-  }
   /** One answer changed at these field paths: written now — a pin's reaction or note as its one
    *  key, anything else as the whole record — or held, as the values he left, while the store
    *  connects. */
@@ -455,32 +384,6 @@
     return chain(`tp/${ID}`, (ref) => putMeta(ref, { pageNotes: { [id]: entry } }));
   }
 
-  /** An option row's press: Build toggles the pick (and lifts a Not on it); More/Not toggles its
-   *  mark (and a Not drops the pick). */
-  function pressOption(r, opt, v) {
-    if (v === "build") {
-      r.pick = r.pick === opt ? null : opt;
-      if (r.pick === opt && r.react[opt] === "not") delete r.react[opt];
-      return;
-    }
-    if (r.react[opt] === v) delete r.react[opt];
-    else r.react[opt] = v;
-    if (v === "not" && r.pick === opt) r.pick = null;
-  }
-  /** One press: an option row toggles its pick or its More/Not mark; any other row its verdict.
-   *  Returns the field paths it changed. */
-  function toggle(r, opt, v) {
-    if (!opt) {
-      r.verdict = r.verdict === v ? null : v;
-      return ["verdict"];
-    }
-    const was = { pick: r.pick, mark: r.react[opt] };
-    pressOption(r, opt, v);
-    const paths = [];
-    if (r.pick !== was.pick) paths.push("pick");
-    if (r.react[opt] !== was.mark) paths.push(`react.${opt}`);
-    return paths;
-  }
   function runNote(k) {
     const go = pendingNotes.get(k);
     pendingNotes.delete(k);
@@ -581,25 +484,6 @@
     if (focused) doneBtn.focus();
   }
 
-  /** A clock time in the viewer's own zone; another day's carries its weekday. */
-  function clock(ms) {
-    const t = new Date(ms);
-    const day = t.toDateString() === new Date().toDateString() ? {} : { weekday: "short" };
-    return t.toLocaleString([], { ...day, hour: "numeric", minute: "2-digit" });
-  }
-  /** The session's read-back on the round's document, or null when there is none to show. */
-  function readBackOf(d) {
-    const at = typeof d?.readBackAt === "string" ? d.readBackAt : "";
-    const ms = Date.parse(at);
-    if (!at || Number.isNaN(ms)) return null;
-    const raw = typeof d.readBackSummary === "string" ? d.readBackSummary : "";
-    const summary = raw.replace(/\s+/g, " ").trim().slice(0, 200);
-    return {
-      key: `${at}|${summary}`,
-      ms,
-      line: `Read back ${clock(ms)}${summary ? ` · ${summary}` : ""}`,
-    };
-  }
   /** The round's document as it opened: a read-back after the last Done shows; a Done without one
    *  says it is waiting. */
   function opened(d) {
@@ -613,8 +497,6 @@
       toldLine = ACK;
     } else if (!Number.isNaN(doneMs)) toldLine = `Done at ${clock(doneMs)}. ${waiting()}`;
   }
-  /** The session's `ackAt` as a time, or NaN. NaN compares false, so a missing one never counts. */
-  const ackOf = (d) => (typeof d?.ackAt === "string" ? Date.parse(d.ackAt) : Number.NaN);
   /** The round's document changed: a new read-back shows, else a new ack of this Done, without a
    *  reload; the listening line reads its stamp either way. */
   function heard(d) {
@@ -709,36 +591,14 @@
     typed(sec, key, "note", t.value);
   });
 
-  function decisionText(d) {
-    const r = state.decisions[d.key] || blank();
-    // A round-0 pick chooses a problem to fix first; it is never a build (docs/process/REDESIGN.md).
-    const bits = [r.pick && `${d.problems ? "fix first" : "build"} ${r.pick}`, r.verdict].filter(
-      Boolean,
-    );
-    for (const o of Object.keys(r.react).sort()) bits.push(`${r.react[o]} ${o}`);
-    const line = (s) => (s || "").trim().replace(/\s+/g, " ");
-    for (const [id, v, n] of pinsUi?.said(d.key, r) ?? [])
-      bits.push(["pin", id, v, n && `“${line(n)}”`].filter(Boolean).join(" "));
-    for (const [id, v, n] of marksUi?.said(d.key, r) ?? []) {
-      const m = r.marks[id];
-      const at = `${Math.round(m.x)}% across ${Math.round(m.y)}% down`;
-      bits.push(["mark", id, at, v, n && `“${line(n)}”`].filter(Boolean).join(" "));
-    }
-    for (const [, t] of outcomesUi?.said(d.key, r) ?? []) bits.push(`outcome “${line(t)}”`);
-    bits.push(...optionNotesSaid(d.key, r).map(([o, t]) => `note on ${o} “${line(t)}”`));
-    const note = line(r.note);
-    return `#${d.issue} ${d.title}: ${bits.join(", ") || "—"}${note ? ` | ${note}` : ""}`;
-  }
-  function text() {
-    const lines = [`Decisions page ${ID}`, ...TP.decisions.map(decisionText)];
-    for (const sec of ["queue", "reel"]) {
-      for (const [k, r] of Object.entries(state[sec])) {
-        if (r.verdict) lines.push(`${sec} #${k}: ${r.verdict}${r.note ? ` | ${r.note}` : ""}`);
-      }
-    }
-    lines.push(meta.doneAt ? `Done at ${meta.doneAt}` : "Not marked done");
-    return lines.join("\n");
-  }
+  /** What each picture says for one decision, for Copy as text (copy-client.js). */
+  const said = {
+    pins: (key, r) => pinsUi?.said(key, r),
+    marks: (key, r) => marksUi?.said(key, r),
+    outcomes: (key, r) => outcomesUi?.said(key, r),
+    optionNotes: optionNotesSaid,
+  };
+  const text = () => textOf({ id: ID, decisions: TP.decisions, state, meta, said });
   copyBtn.addEventListener("click", () => {
     const flash = (m) => {
       copyBtn.textContent = m;
@@ -838,20 +698,6 @@
 
   const use = (name) =>
     window.claude?.use ? window.claude.use(name).catch(() => null) : Promise.resolve(null);
-  const fromDoc = (v = {}) => ({
-    pick: v.pick || null,
-    react: v.react || {},
-    verdict: v.verdict || null,
-    note: v.note || "",
-    // A cleared reaction or note is stored as null (saveKeys); the page holds only the live ones.
-    pins: liveOf("pins", v.pins),
-    pinNotes: liveOf("pinNotes", v.pinNotes),
-    // Records saved before marks and the reveal existed read as none of either.
-    marks: liveOf("marks", v.marks),
-    outcomesAdded: liveOf("outcomesAdded", v.outcomesAdded),
-    optionNotes: liveOf("optionNotes", v.optionNotes),
-    revealAt: typeof v.revealAt === "string" ? v.revealAt : null,
-  });
   /** One section from the store; false when it can't be read, so no count is drawn from a gap. */
   const loadSection = (sec) =>
     db

@@ -30,19 +30,19 @@ function esc(s: string): string {
   );
 }
 
-function money(n: number): string {
+function signedWholeDollars(n: number): string {
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
   return `${sign}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
 }
 
 /** One feedback row: character · play · result badge · damage/reward · note. */
-function row(o: PlayOutcome): string {
+function feedbackRow(o: PlayOutcome): string {
   const plCls = o.pnl > 0 ? "pf-pos" : o.pnl < 0 ? "pf-neg" : "pf-flat";
   return `<li class="pf-row pf-${o.result}">
       <span class="pf-char">${esc(o.character)}</span>
       <span class="pf-play">${esc(o.play)}</span>
       <span class="pf-result">${RESULT_LABEL[o.result]}</span>
-      <span class="pf-pnl ${plCls}">${o.result === "live" ? "…" : money(o.pnl)}</span>
+      <span class="pf-pnl ${plCls}">${o.result === "live" ? "…" : signedWholeDollars(o.pnl)}</span>
       ${o.note ? `<span class="pf-note">${esc(o.note)}</span>` : ""}
     </li>`;
 }
@@ -52,5 +52,5 @@ export function renderPlayFeedbackLog(outcomes: readonly PlayOutcome[]): string 
   if (outcomes.length === 0) {
     return `<div class="play-feedback play-feedback-idle"><span class="pf-idle">No plays in flight — the desk is watching.</span></div>`;
   }
-  return `<ul class="play-feedback">${outcomes.map(row).join("")}</ul>`;
+  return `<ul class="play-feedback">${outcomes.map(feedbackRow).join("")}</ul>`;
 }

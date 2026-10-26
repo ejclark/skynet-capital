@@ -28,9 +28,9 @@ import {
  * slice entirely (new autonomous-engine plumbing, tracked as slice 4d).
  */
 
-export type ThesisVerdict = "entering" | "exiting" | "holding" | "standing aside" | "no data yet";
+type ThesisVerdict = "entering" | "exiting" | "holding" | "standing aside" | "no data yet";
 
-export interface ThesisCall {
+interface ThesisCall {
   readonly verdict: ThesisVerdict;
   readonly why: string;
   /** Formatted from the latest cycle's `forecast.horizonMs`, when the persona's rule is time-bound. */
@@ -64,7 +64,7 @@ export interface ThesisMarker {
   readonly momentum?: number;
 }
 
-export interface ThesisHealth {
+interface ThesisHealth {
   readonly measured: boolean;
   readonly label: string;
   readonly detail?: string;
@@ -72,7 +72,7 @@ export interface ThesisHealth {
 
 /** One equity point for the track-record chart's backdrop line — the same samples `health` reads,
  *  reshaped for the chart rather than recomputed. */
-export interface ThesisEquityPoint {
+interface ThesisEquityPoint {
   readonly t: string;
   readonly value: number;
 }

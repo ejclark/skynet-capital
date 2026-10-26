@@ -12,6 +12,7 @@ import {
   type RiskConfig,
 } from "../../src/engine/guards.js";
 import { playbookIntents } from "../../src/playbooks/playbook.js";
+import { pairView } from "../../src/subscriptions/pair-conviction.js";
 import { subscriptionRoster } from "../../src/subscriptions/subscription-roster.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import {
@@ -35,6 +36,16 @@ const subscribed = (playbookId: string, capitalAllocated: number): PlaybookSubsc
   updatedAt: "2026-10-05T00:00:00.000Z",
 });
 
+// A ◆ pair trades only on a conviction on a view (#5482): the wheel's is its owner's own, on its
+// one pair, read by its pointer.
+const OWN_WHEEL = pairView({
+  accountId: "sauron",
+  playbookId: "CRWV-WHEEL",
+  conviction: { reason: "my call", checkOn: "2027-01-29" },
+  owner: "Sauron",
+  statedOn: "2026-10-05",
+});
+
 /** The bot's cycle with its options level and its own subscriptions: what each play emits, and
  *  what the guards make of it. */
 function cycle(
@@ -48,7 +59,9 @@ function cycle(
   readonly approved: readonly OrderIntent[];
   readonly refused: readonly GuardRefusalReason[];
 } {
-  const { enabled, rejected } = subscriptionRoster([subscription]);
+  const { enabled, rejected } = subscriptionRoster([subscription], undefined, (id) =>
+    id === OWN_WHEEL.id ? OWN_WHEEL : undefined,
+  );
   if (rejected.length > 0) throw new Error(`not a house playbook: ${rejected.join(", ")}`);
   const intents = playbookIntents(enabled, context, portfolio, calendar);
   const config: RiskConfig = {
@@ -100,7 +113,7 @@ describe("CRWV-WHEEL through the guards", () => {
   const context = withOptionQuotes(aContext({ CRWV: { last: 92 } }, AS_OF), QUOTES, {
     CRWV: ["2026-11-20", "2026-12-18", "2026-12-31", "2027-01-15"],
   });
-  const wheel = subscribed("CRWV-WHEEL", 10_000);
+  const wheel = { ...subscribed("CRWV-WHEEL", 10_000), convictionId: OWN_WHEEL.id };
 
   it("sells a cash-secured $75 put (CRWV's 0.15-delta pin) the guards cut to the one contract $10,000 secures", () => {
     const run = cycle(wheel, CALENDAR, context, aPortfolio({ cash: 100_000 }));

@@ -1,4 +1,8 @@
-import { parseSteeredAccounts, type WiredConviction } from "../autonomous/convictions-wire.js";
+import {
+  MAX_WIRED_CONVICTIONS,
+  parseSteeredAccounts,
+  type WiredConviction,
+} from "../autonomous/convictions-wire.js";
 import { parseStoredConviction } from "../playbooks/conviction-parse.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { SEEDED_CONVICTIONS } from "../playbooks/conviction-seeds.js";
@@ -27,9 +31,14 @@ import type { MemberPointers } from "../subscriptions/conviction-pointer.js";
  * handed over. Which subscriptions point at a held view is the pointer rule's call
  * (`conviction-pointer.ts`, fed by `pointers`). A status this build does not know is unreadable
  * rather than read as a draft.
+ *
+ * AN OWNER'S CONVICTION ON ONE PAIR LIVES HERE TOO (#5482 contract piece 3): the subscribe and
+ * conviction forms write it as a view stated on that pair, steering, on that one account
+ * (`statePair`, kept under `pairViewsKey`), in place of the inline copy on the subscription. It is
+ * held and wired like any view handed over, and listed to no member as one of their views.
  */
 
-export type MemberConvictionStatus = "draft" | "steering";
+type MemberConvictionStatus = "draft" | "steering";
 
 export interface MemberConvictionRecord {
   readonly status: MemberConvictionStatus;
@@ -64,7 +73,7 @@ function parseRecord(raw: unknown): MemberConvictionRecord | undefined {
 
 /** Total: a torn file is `undefined` (the store falls back to empty); a record this build cannot
  *  read is dropped, never fatal to the file. */
-export function parseMemberConvictionsState(raw: unknown): MemberConvictionsState | undefined {
+function parseMemberConvictionsState(raw: unknown): MemberConvictionsState | undefined {
   if (!isRecord(raw)) return undefined;
   const state: Record<string, readonly MemberConvictionRecord[]> = {};
   for (const [member, list] of Object.entries(raw)) {
@@ -245,6 +254,119 @@ export class MemberConvictionStore {
     return { ok: true, record, tookBack: replaced?.status === "steering" };
   }
 
+  /**
+   * Keep an owner's view stated on one pair (`subscriptions/pair-conviction.ts`) as steering, on
+   * that one account: the subscribe or conviction form's write, ahead of the subscription it
+   * points. Replaces the account's view by the same id. `undo` puts back what was there, for a
+   * subscription write that is rolled back after it.
+   */
+  statePair(accountId: string, view: Conviction, at: Date): PairViewWrite {
+    const stamp = at.toISOString();
+    return this.writePair(accountId, view.id, (prior) => ({
+      status: "steering",
+      conviction: view,
+      accounts: [accountId],
+      createdAt: prior?.createdAt ?? stamp,
+      updatedAt: stamp,
+    }));
+  }
+
+  /**
+   * Keep many accounts' views stated on one pair, in one write: the controls poll's migration of
+   * inline convictions (`subscriptions/pair-conviction-migration.ts`). Only as many as the controls
+   * wire has room for (`MAX_WIRED_CONVICTIONS`), in the order given — past it the bots would refuse
+   * every member's views at once, so the rest keep their inline copy until room frees. Nothing on a
+   * file that cannot be read whole. Returns `account/playbookId` for each view written.
+   */
+  statePairs(
+    views: readonly {
+      readonly accountId: string;
+      readonly playbookId: string;
+      readonly view: Conviction;
+    }[],
+    at: Date,
+  ): readonly string[] {
+    const state = this.file.loadIfReadable();
+    if (!state || views.length === 0) return [];
+    const stamp = at.toISOString();
+    let next = state;
+    let wired = handedOverIn(state).length;
+    const stated: string[] = [];
+    for (const { accountId, playbookId, view } of views) {
+      const key = pairViewsKey(accountId);
+      const prior = next[key]?.find((r) => r.conviction.id === view.id);
+      const held = prior?.status === "steering";
+      if (!held && wired >= MAX_WIRED_CONVICTIONS) break;
+      if (!held) wired += 1;
+      next = withRecord(next, key, view.id, {
+        status: "steering",
+        conviction: view,
+        accounts: [accountId],
+        createdAt: prior?.createdAt ?? stamp,
+        updatedAt: stamp,
+      });
+      stated.push(`${accountId}/${playbookId}`);
+    }
+    if (stated.length > 0) this.file.write(next);
+    return stated;
+  }
+
+  /** Drop an account's view stated on one pair; a missing one is a no-op. */
+  dropPair(accountId: string, id: string): PairViewWrite {
+    return this.writePair(accountId, id, () => undefined);
+  }
+
+  /**
+   * Drop every view stated on one pair whose account no longer subscribes to that pair — what an
+   * unsubscribe whose own drop failed leaves behind, or a write undone halfway. Left in place, it
+   * would steer the pair again the moment it is resubscribed, on a day its owner stated for a
+   * subscription they gave up. Returns `account/playbookId` for each one dropped.
+   */
+  prunePairViews(
+    subscribed: (accountId: string, playbookId: string) => boolean,
+  ): readonly string[] {
+    const state = this.file.loadIfReadable();
+    if (!state) return [];
+    const dropped: string[] = [];
+    const next: Record<string, readonly MemberConvictionRecord[]> = {};
+    for (const [key, records] of Object.entries(state)) {
+      const accountId = accountOfKey(key);
+      const kept =
+        accountId === undefined
+          ? records
+          : records.filter((r) => {
+              const pair = r.conviction.steers[0];
+              const keep = pair !== undefined && subscribed(accountId, pair);
+              if (!keep) dropped.push(`${accountId}/${pair ?? r.conviction.id}`);
+              return keep;
+            });
+      if (kept.length > 0) next[key] = kept;
+    }
+    if (dropped.length > 0) this.file.write(next);
+    return dropped;
+  }
+
+  private writePair(
+    accountId: string,
+    id: string,
+    next: (prior: MemberConvictionRecord | undefined) => MemberConvictionRecord | undefined,
+  ): PairViewWrite {
+    const state = this.file.loadIfReadable();
+    if (!state) return { ok: false, reason: UNREADABLE_FILE };
+    const key = pairViewsKey(accountId);
+    const prior = state[key]?.find((r) => r.conviction.id === id);
+    const record = next(prior);
+    if (!(record || prior)) return { ok: true, undo: () => undefined };
+    this.file.write(withRecord(state, key, id, record));
+    return {
+      ok: true,
+      undo: () => {
+        const now = this.file.loadIfReadable();
+        if (now) this.file.write(withRecord(now, key, id, prior));
+      },
+    };
+  }
+
   /** Remove one of this member's records; a missing id is a no-op. */
   delete(
     memberKey: string,
@@ -257,6 +379,37 @@ export class MemberConvictionStore {
     this.file.write({ ...state, [memberKey]: mine.filter((r) => r.conviction.id !== id) });
     return { ok: true };
   }
+}
+
+/**
+ * Where an account's views stated on one pair are kept: in this file beside members' views, under
+ * the account rather than a member, because the controls poll that heals them knows an account and
+ * never its owner. A member's key is ten hex characters (`opaqueMemberId`), so this is never one,
+ * and no member's `list` reads it. Every other read — the wire, the pointer rule, the names in the
+ * change log — reads these records like any other view handed over.
+ */
+const PAIR_VIEWS_PREFIX = "account:";
+const pairViewsKey = (accountId: string): string => `${PAIR_VIEWS_PREFIX}${accountId}`;
+
+const accountOfKey = (key: string): string | undefined =>
+  key.startsWith(PAIR_VIEWS_PREFIX) ? key.slice(PAIR_VIEWS_PREFIX.length) : undefined;
+
+/** A write of one view stated on a pair, and how to put back what it replaced. */
+export type PairViewWrite =
+  | { readonly ok: true; readonly undo: () => void }
+  | { readonly ok: false; readonly reason: string };
+
+/** `state` with the record `id` under `key` replaced by `record`, added, or (undefined) removed. */
+function withRecord(
+  state: MemberConvictionsState,
+  key: string,
+  id: string,
+  record: MemberConvictionRecord | undefined,
+): MemberConvictionsState {
+  const others = (state[key] ?? []).filter((r) => r.conviction.id !== id);
+  const list = record ? [...others, record] : others;
+  const { [key]: _old, ...rest } = state;
+  return list.length > 0 ? { ...rest, [key]: list } : rest;
 }
 
 function handedOverIn(state: MemberConvictionsState): readonly WiredConviction[] {

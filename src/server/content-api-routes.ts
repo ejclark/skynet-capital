@@ -8,12 +8,14 @@ import { standingsBoardView, standingsCompareView } from "../observatory/standin
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { Session } from "./auth/session.js";
 import type { BoardPatchChannel } from "./board-patch-routes.js";
+import { serveCoverageJson } from "./coverage-route.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
 import { ownsDesk } from "./desk-owner-gate.js";
 import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { fitAnswerFor } from "./fit-route.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
 import { outlooksFor } from "./outlook-route.js";
 import {
@@ -131,10 +133,20 @@ export async function serveContentApi(
   // The calendar's slice (#3977 slice 5): the three surfaces that draw the market calendar read
   // this ~8% projection of the same view instead of the whole shelf. Same dispatcher, same gate.
   if (path === "/api/research/calendar") return serialized(cachedShelfBodies().calendar);
+  if (path === "/api/research/coverage") {
+    // R&D → Coverage (#3811 slice 3): the viewer's own holdings and fund bars, so never cached.
+    await serveCoverageJson(res, config, session);
+    return true;
+  }
   if (path === "/api/research/outlook") {
     // The symbol summary, light (#4807 slice 4): one pure read per name, no broker.
     const sym = new URL(url, "http://localhost").searchParams.get("symbol") ?? "";
     return json(outlooksFor(sym, new Date().toISOString()));
+  }
+  if (path === "/api/research/fit") {
+    // The fit finder (#4469 slice 4): which strategies one ticker fits. Pure, no broker.
+    const sym = new URL(url, "http://localhost").searchParams.get("symbol") ?? "";
+    return json(fitAnswerFor(sym, new Date().toISOString()));
   }
   if (path === "/api/research/mentions") {
     // The `sym:` scope's second net (#3962). The shelf payload carries slugs and titles, never the

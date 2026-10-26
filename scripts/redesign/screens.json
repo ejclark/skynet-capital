@@ -12,7 +12,7 @@
   {
     "id": "profile-overview",
     "name": "Profile: Overview",
-    "purpose": "Your account at a glance: what it's worth, where the money sits, the league, your council line and every position.",
+    "purpose": "Your account at a glance: what it's worth, where the money sits, the league and every position.",
     "where": "Profile tab",
     "route": "/app/accounts?account=eric",
     "world": "profile-today",
@@ -130,20 +130,20 @@
     "viewer": "eric"
   },
   {
-    "id": "council",
-    "name": "Activity: The Council",
-    "purpose": "Each member's one line for the week, with replies under each line.",
-    "where": "Activity tab",
-    "route": "/app/activity?section=council",
-    "world": "profile-today",
-    "viewer": "eric"
-  },
-  {
     "id": "research",
     "name": "R&D: Board",
     "purpose": "The house's calls on upcoming market events, filterable by name, sector, event or call.",
     "where": "R&D tab",
     "route": "/app/research",
+    "world": "profile-today",
+    "viewer": "eric"
+  },
+  {
+    "id": "research-coverage",
+    "name": "R&D: Coverage",
+    "purpose": "Where our research reaches across the 11 market sectors, what you hold in each, and the gaps; a tap opens that sector on the Board.",
+    "where": "R&D tab",
+    "route": "/app/research?section=coverage",
     "world": "profile-today",
     "viewer": "eric"
   },

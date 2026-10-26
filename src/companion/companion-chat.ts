@@ -1,3 +1,4 @@
+import { type AnthropicUsage, logAnthropicUsage, usageOf } from "../http/anthropic-reply.js";
 import { fetchJson } from "../http/fetch-json.js";
 import {
   type AnthropicStreamEvent,
@@ -9,6 +10,7 @@ import type { ChatConvictionDraft, CompanionConvictions } from "./companion-conv
 import {
   COMPANION_MAX_MESSAGE_CHARS,
   effortFor,
+  harnessNoteAsSystem,
   MAX_HISTORY_MESSAGES,
   MAX_TOKENS_PER_REPLY,
   MAX_TURNS,
@@ -23,11 +25,12 @@ import {
   REFUSAL_MESSAGE,
   runToolRounds,
   systemBlocks,
+  TRUNCATED_MESSAGE,
   toolsFor,
 } from "./companion-tool-rounds.js";
 import type { CompanionDeskDeps, FeedbackDraft } from "./companion-tools.js";
 
-export { BUDGET_SPENT_MESSAGE, REFUSAL_MESSAGE };
+export { BUDGET_SPENT_MESSAGE, REFUSAL_MESSAGE, TRUNCATED_MESSAGE };
 
 type DoStream = typeof streamAnthropicMessage;
 
@@ -76,6 +79,9 @@ export interface CompanionHandlers {
    *  spent — the turn stops looking things up and answers with what it already has, or reports
    *  the throttle honestly when it has nothing. Optional: no hook, no budget. */
   readonly budget?: () => boolean;
+  /** Where each billed call's one usage line goes (#6080). Absent, the chat config's `logLine`
+   *  takes it; with neither, no line is written. */
+  readonly onUsage?: (line: string) => void;
 }
 
 export type CompanionTurn = (
@@ -107,19 +113,26 @@ export interface CompanionChatConfig {
    *  model without a redeploy. Omit for the protected file's own default; resolved ONCE at the
    *  top of a turn, never mid-turn, so one conversation turn never splits across two models. */
   readonly resolveModel?: () => CompanionModelId | undefined;
+  /** The server log — each billed call writes one usage line here (#6080). */
+  readonly logLine?: (line: string) => void;
 }
 
 const EXHAUSTED_NOTE =
   "Tool lookups are exhausted for this turn — answer with what you already have rather than looking anything up again.";
 
-/** The streamed leg's history: the exhaustion note as a text block after the last tool_result, in
- *  the same user turn, so the rounds' messages stay byte-identical. Guarded, not assumed: with no
- *  tool round run (`MAX_TOOL_ROUNDS` dialled to 0) the last turn is plain-string member text —
- *  nothing was looked up and no thinking block needs protecting, so the history goes out unchanged
- *  and `tool_choice: none` alone stops a lookup. */
-export function withExhaustedNote(working: readonly unknown[]): readonly unknown[] {
+/** The streamed leg's history, append-only so the rounds' messages stay byte-identical: on Sonnet
+ *  5.5 the exhaustion note is a final `role: "system"` message (a harness notice, not member text —
+ *  `harnessNoteAsSystem`); on Haiku 4.5 it is a text block after the last tool_result, in the same
+ *  user turn. Guarded, not assumed: with no tool round run (`MAX_TOOL_ROUNDS` dialled to 0) the
+ *  last turn is plain-string member text — nothing was looked up and no thinking block needs
+ *  protecting, so the history goes out unchanged and `tool_choice: none` alone stops a lookup. */
+export function withExhaustedNote(
+  working: readonly unknown[],
+  model: CompanionModelId,
+): readonly unknown[] {
   const last = working[working.length - 1] as { role?: unknown; content?: unknown } | undefined;
   if (last?.role !== "user" || !Array.isArray(last.content)) return working;
+  if (harnessNoteAsSystem(model)) return [...working, { role: "system", content: EXHAUSTED_NOTE }];
   return [
     ...working.slice(0, -1),
     { role: "user", content: [...last.content, { type: "text", text: EXHAUSTED_NOTE }] },
@@ -128,7 +141,7 @@ export function withExhaustedNote(working: readonly unknown[]): readonly unknown
 
 /** The one leg the member actually reads — streamed. Append-only against the tool rounds: the same
  *  `system` and `tools` (so their thinking blocks and the cached prefix stay valid), `tool_choice:
- *  none` to stop another lookup, and the exhaustion note after the last tool_result. */
+ *  none` to stop another lookup, and the exhaustion note appended last (`withExhaustedNote`). */
 async function streamFinalReply(
   doStream: DoStream,
   headers: Headers,
@@ -143,8 +156,10 @@ async function streamFinalReply(
     handlers.onError(BUDGET_SPENT_MESSAGE);
     return;
   }
-  const messages = withExhaustedNote(working);
+  const messages = withExhaustedNote(working, model);
   let stopReason: string | undefined;
+  // Input and cache counts arrive on `message_start`, the output count on `message_delta`.
+  let usage: AnthropicUsage | undefined;
   try {
     await doStream(
       ANTHROPIC_URL,
@@ -159,18 +174,24 @@ async function streamFinalReply(
         messages,
       },
       (event: AnthropicStreamEvent) => {
+        if (event.type === "message_start") usage = usageOf(event.message);
         if (event.type === "message_delta") {
           stopReason =
             (event.delta as { stop_reason?: string } | undefined)?.stop_reason ?? stopReason;
+          const final = usageOf(event);
+          if (final) usage = { ...usage, ...final };
         }
         const delta = textDelta(event);
         if (delta) handlers.onText(delta);
       },
     );
+    logAnthropicUsage("companion-stream", model, usage, handlers.onUsage);
     // A decline is stop_reason "refusal" — before any text, or after partial text that is not an
     // answer. Report it as an error: with nothing streamed the rail shows the decline message, and
     // after partial text it marks the line cut off rather than presenting it as a finished reply.
+    // A `max_tokens` stop is the same shape of not-finished (#6080): the rail marks it cut off.
     if (stopReason === "refusal") handlers.onError(REFUSAL_MESSAGE);
+    else if (stopReason === "max_tokens") handlers.onError(TRUNCATED_MESSAGE);
     else handlers.onDone();
   } catch (error) {
     handlers.onError(error instanceof Error ? error.message : "companion unreachable");
@@ -185,7 +206,9 @@ export function createCompanionChat(
 ): CompanionTurn {
   const headers = { "x-api-key": config.apiKey, "anthropic-version": "2023-06-01" };
 
-  return async (input, handlers) => {
+  return async (input, turnHandlers) => {
+    const onUsage = turnHandlers.onUsage ?? config.logLine;
+    const handlers: CompanionHandlers = onUsage ? { ...turnHandlers, onUsage } : turnHandlers;
     const refused = companionBoundsError(input.messages);
     if (refused) {
       handlers.onError(refused);
@@ -242,6 +265,7 @@ export function resolveCompanionChat(
   env: Readonly<Record<string, string | undefined>>,
   tools?: CompanionDeskDeps,
   resolveModel?: () => CompanionModelId | undefined,
+  logLine?: (line: string) => void,
 ): CompanionTurn | undefined {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) return undefined;
@@ -249,6 +273,7 @@ export function resolveCompanionChat(
     apiKey,
     ...(tools ? { tools } : {}),
     ...(resolveModel ? { resolveModel } : {}),
+    ...(logLine ? { logLine } : {}),
   });
 }
 

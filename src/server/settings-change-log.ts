@@ -43,7 +43,7 @@ export interface SettingsChangeLogState {
   readonly accounts: Readonly<Record<string, readonly SettingsChange[]>>;
 }
 
-export const EMPTY_SETTINGS_CHANGES: SettingsChangeLogState = { accounts: {} };
+const EMPTY_SETTINGS_CHANGES: SettingsChangeLogState = { accounts: {} };
 
 /** A few months of an owner's clicks; older lines drop off the front. */
 export const MAX_CHANGES_PER_ACCOUNT = 200;
@@ -72,7 +72,7 @@ function parseChange(raw: unknown): SettingsChange | null {
 }
 
 /** Total, defensive parse — a torn file degrades to empty, never a throw (`parseCouncilState`). */
-export function parseSettingsChangeLog(raw: unknown): SettingsChangeLogState | null {
+function parseSettingsChangeLog(raw: unknown): SettingsChangeLogState | null {
   if (!(isRecord(raw) && isRecord(raw.accounts))) return null;
   const accounts: Record<string, SettingsChange[]> = {};
   for (const [id, list] of Object.entries(raw.accounts)) {
@@ -161,7 +161,7 @@ export function recordControlsChange(
 }
 
 /** A sibling of the already-pinned controls file — the move `councilFilePathFrom` makes. */
-export function settingsChangeLogPathFrom(controlsFilePath: string): string {
+function settingsChangeLogPathFrom(controlsFilePath: string): string {
   return siblingPath(controlsFilePath, "settings-changes.json");
 }
 

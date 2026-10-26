@@ -114,7 +114,7 @@ describe("rewrite — keep what this build could not read (#4772)", () => {
   it("says when it drops a malformed value of a field it owns from a record the state still holds", () => {
     const disk = {
       sauron: [
-        record("CRWV-WHEEL", { conviction: { reason: "", checkOn: "2027-01-29" } }),
+        record("CRWV-WHEEL", { convictionId: "AI Dip" }),
         record("S1-NVDA", { symbols: [] }),
         record("G1-GOOG"),
       ],
@@ -127,13 +127,19 @@ describe("rewrite — keep what this build could not read (#4772)", () => {
     expect(rewrite({ sauron: (state.sauron ?? []).slice(2) }, disk).notes).toEqual([]);
   });
 
-  it("carries a conviction's sub-field a newer build added, so nothing is said or lost", () => {
+  it("drops a retired inline conviction quietly, and the file still reads whole (#5482)", () => {
     const conviction = { reason: "Eric's call", checkOn: "2027-01-29", retireTest: "1-in-3" };
-    const disk = { sauron: [record("CRWV-WHEEL", { conviction })] };
+    const disk = { sauron: [record("CRWV-WHEEL", { conviction }), record("S1-NVDA")] };
     const { document, notes } = rewrite(parsed(disk), disk);
-    expect(document).toEqual(disk);
+    expect(document).toEqual({ sauron: [record("CRWV-WHEEL"), record("S1-NVDA")] });
     expect(notes).toEqual([]);
+    // The seeders' bar: a retired field never makes the file read as "not whole".
     expect(readsWhole(disk, parsed(disk))).toBe(true);
+  });
+
+  it("still refuses to read whole a record that does not parse, retired field or not", () => {
+    const disk = { sauron: [record("CRWV-WHEEL", { mode: "observe-v2", conviction: {} })] };
+    expect(readsWhole(disk, parsed(disk))).toBe(false);
   });
 
   it("writes the state alone over a missing or unreadable file", () => {

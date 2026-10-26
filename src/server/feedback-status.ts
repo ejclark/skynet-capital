@@ -42,7 +42,7 @@ export type FetchFeedbackStatuses = (
   issueNumbers: readonly number[],
 ) => Promise<ReadonlyMap<number, FeedbackStatus>>;
 
-const CACHE_TTL_MS = 5 * 60_000;
+const FEEDBACK_STATUS_CACHE_TTL_MS = 5 * 60_000;
 
 /** Folds a GitHub issue's `state` + labels into the app's own status vocabulary — same mapping
  *  docs/FEEDBACK.md's "four ways a build session ends" table already defines. A closed issue reads
@@ -85,7 +85,7 @@ export function createStatusFetcher(
     const now = Date.now();
     const stale = [...new Set(issueNumbers)].filter((n) => {
       const hit = cache.get(n);
-      return !hit || now - hit.at > CACHE_TTL_MS;
+      return !hit || now - hit.at > FEEDBACK_STATUS_CACHE_TTL_MS;
     });
     await Promise.all(
       stale.map(async (n) => {

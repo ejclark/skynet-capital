@@ -18,7 +18,7 @@ import { humanizeOptionSymbol, isOccSymbol, parseOccSymbol } from "../trading/op
 
 const MAX_ROWS = 5;
 
-function usd(value: number): string {
+function signedUsd(value: number): string {
   const abs = Math.abs(value).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -31,16 +31,16 @@ function onSymbol(position: PositionView, symbol: string): boolean {
   return parseOccSymbol(position.symbol)?.underlying === symbol;
 }
 
-function row(position: PositionView): string {
+function holdingLine(position: PositionView): string {
   const side = position.quantity < 0 ? "short " : "";
   const count = Math.abs(position.quantity);
-  const worth = `now worth ${usd(position.marketValue)}`;
+  const worth = `now worth ${signedUsd(position.marketValue)}`;
   if (isOccSymbol(position.symbol)) {
     const noun = count === 1 ? "contract" : "contracts";
-    return `${side}${count} ${humanizeOptionSymbol(position.symbol)} ${noun} at ${usd(position.avgPrice)} each, ${worth}`;
+    return `${side}${count} ${humanizeOptionSymbol(position.symbol)} ${noun} at ${signedUsd(position.avgPrice)} each, ${worth}`;
   }
   const noun = count === 1 ? "share" : "shares";
-  return `${side}${count} ${noun} at ${usd(position.avgPrice)} avg, ${worth}`;
+  return `${side}${count} ${noun} at ${signedUsd(position.avgPrice)} avg, ${worth}`;
 }
 
 export interface DeskRead {
@@ -58,7 +58,7 @@ export function describeHolding(
   if (!(symbol && desk) || desk.error) return undefined;
   const held = desk.positions.filter((p) => p.quantity !== 0 && onSymbol(p, symbol));
   if (held.length === 0) return `they hold no open position on ${symbol}`;
-  const rows = held.slice(0, MAX_ROWS).map(row);
+  const rows = held.slice(0, MAX_ROWS).map(holdingLine);
   const more = held.length > MAX_ROWS ? `; and ${held.length - MAX_ROWS} more` : "";
   return `on ${symbol} they hold ${rows.join("; ")}${more}`;
 }

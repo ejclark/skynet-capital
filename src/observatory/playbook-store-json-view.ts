@@ -20,7 +20,10 @@ import {
 import { type BotsOnlyGateView, botsOnlyGateView } from "../domain/playbook-bots-only.js";
 import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
+import { CONVICTION_NOT_ON_VIEW, type ConvictionLookup } from "../playbooks/conviction-store.js";
 import { findPair, type Pair, type StrategyId } from "../playbooks/pair-table.js";
+import { findPlaybook } from "../playbooks/registry.js";
+import type { OwnerReadSubscription } from "../subscriptions/pair-conviction.js";
 import { budgetedOn } from "../subscriptions/strategy-budgets.js";
 import {
   handOffNote,
@@ -29,6 +32,7 @@ import {
   notTradingNote,
   subscribedPairs,
 } from "../subscriptions/subscribe-eligibility.js";
+import { rosterSteering } from "../subscriptions/subscription-roster.js";
 import type { StrategyAllocation } from "../subscriptions/subscriptions-file.js";
 import { whipsawStatsByPlaybook } from "../trading/playbook-whipsaw.js";
 import type { RoundTrip } from "../trading/round-trips.js";
@@ -79,7 +83,8 @@ interface PairRowView extends PairRowEntry {
    *  this bot; the pre-print run-up yields it" — today's hand-off, not a refusal. */
   readonly handOff?: string;
   /** An option pair the bot refuses because another option pair it reads first owns the ticker:
-   *  "not trading — the call spread owns NVDA". */
+   *  "not trading — the call spread owns NVDA". Or a pair the bots run exits-only for its
+   *  conviction: on no view, or a view they cannot use (`withConvictionHolds`). */
   readonly notTrading?: string;
   /** A conviction view steers this pair: whose, the check day, and its claims' scorecard
    *  (#5482 slice 5). The same for every viewer; it is the record's, not the account's. */
@@ -130,7 +135,7 @@ function whipsawMetric(stats: ReturnType<typeof whipsawStatsByPlaybook>[number])
   return { label: "Whipsaw rate", value };
 }
 
-function subscriptionView(sub: PlaybookSubscription): SubscriptionView {
+function subscriptionView(sub: OwnerReadSubscription): SubscriptionView {
   return {
     mode: sub.mode,
     ...(sub.capitalAllocated !== undefined ? { capitalAllocated: sub.capitalAllocated } : {}),
@@ -153,10 +158,56 @@ function subscribedNotes(id: string, onBot: readonly Pair[]): Partial<PairRowVie
   return { ...(handOff ? { handOff } : {}), ...(notTrading ? { notTrading } : {}) };
 }
 
+/** What the row says when its subscription's conviction is on no view (#5482 contract piece 4). */
+export const UNMOVED_CONVICTION_NOTE =
+  "Opening nothing new: its conviction hasn't moved onto a view yet. Exits still run.";
+
+/** Why the bots hold a subscribed pair exits-only for its conviction (`rosterSteering`'s refusal):
+ *  the words above for a ◆ pair with no view, else the bots' own reason. The owner's row and the
+ *  roll call (`playbookRollCall`) both say it, so the two read alike. */
+export function convictionHoldNote(refused: string): string {
+  if (refused === CONVICTION_NOT_ON_VIEW) return UNMOVED_CONVICTION_NOTE;
+  return `Opening nothing new: its conviction view can't steer it (${refused}). Exits still run.`;
+}
+
+/**
+ * Each row the bots hold exits-only for its conviction, saying it opens nothing new and why (#5482):
+ * a ◆ pair with no pointer (contract piece 4, the state block's default), or a pointer the bots
+ * cannot use: a view not held on this account, one that does not steer the pair, or narrowings
+ * refused whole. The test is the bots' own (`rosterSteering`) with the account's own `lookup`, the
+ * one the roll call asks, so the row and the roll call cannot disagree. Before, only the first case
+ * had words, and a refused pointer's row read as trading. Reads the RAW subscriptions: the Store's
+ * own rows show an owner's view as an inline conviction (`asOwnConviction`), so they cannot tell a
+ * pointer from none. A row that already says why it is not trading keeps that reason.
+ */
+export function withConvictionHolds<
+  Row extends { readonly id: string; readonly notTrading?: string },
+  Card extends { readonly pairs: readonly Row[] },
+>(
+  strategies: readonly Card[],
+  raw: readonly PlaybookSubscription[],
+  lookup: ConvictionLookup,
+): Card[] {
+  const held = new Map<string, string>();
+  for (const sub of raw) {
+    const playbook = sub.enabled ? findPlaybook(sub.playbookId) : undefined;
+    const result = playbook ? rosterSteering(playbook, sub, lookup) : undefined;
+    if (result && "refused" in result) held.set(sub.playbookId, convictionHoldNote(result.refused));
+  }
+  if (held.size === 0) return [...strategies];
+  return strategies.map((card) => ({
+    ...card,
+    pairs: card.pairs.map((row) => {
+      const note = held.get(row.id);
+      return note && !row.notTrading ? { ...row, notTrading: note } : row;
+    }),
+  }));
+}
+
 /** The strategy cards with the viewer's own account joined on each row's pair id. A viewer who
  *  does not manage the account (no `subscriptions`) gets the bare rows. */
 function strategyCardsView(
-  subscriptions: readonly PlaybookSubscription[] | undefined,
+  subscriptions: readonly OwnerReadSubscription[] | undefined,
   asOfIso: string,
   envNamed: readonly string[] | undefined,
   allocations: AccountAllocations | undefined,
@@ -203,7 +254,7 @@ function strategyCardsView(
 type AccountAllocations = Readonly<Partial<Record<StrategyId, StrategyAllocation>>>;
 
 export function playbookStoreView(
-  subscriptions: readonly PlaybookSubscription[] | undefined,
+  subscriptions: readonly OwnerReadSubscription[] | undefined,
   delegationLocked = false,
   /** The viewing account's OWN closed round-trips (#3543 slice 2) — never another account's,
    *  same "no cross-account visibility" boundary #885 already settled for subscriptions. Defaults

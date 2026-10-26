@@ -196,6 +196,15 @@ export interface OptionPositionRow {
   readonly impliedVol?: number;
   readonly bid?: number;
   readonly ask?: number;
+  /** Only when the feed quoted no greeks (#5960): our model's figures for the holding, scaled like
+   *  `positionGreeks`, and where its volatility came from (the feed's implied vol, or the mark). */
+  readonly estimate?: {
+    readonly positionGreeks: { delta?: number; gamma?: number; theta?: number; vega?: number };
+    readonly volatility: number;
+    readonly volatilityFrom: "feed" | "mark";
+  };
+  /** Only when there are no greeks and no estimate: the input that was missing. */
+  readonly noEstimate?: "no-spot" | "no-volatility";
 }
 
 export interface OptionBookGreeks {

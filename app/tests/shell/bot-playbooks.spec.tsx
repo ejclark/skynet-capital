@@ -117,9 +117,13 @@ describe("BotPlaybooksSection — the bot's checks on top, one card per playbook
   it("draws each playbook once, under the counted line", async () => {
     next = desk;
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    expect(await screen.findByText("TACO-DJT")).toBeInTheDocument();
-    for (const id of ["SAURON", "S1-NVDA", "TACO-DJT"]) {
-      expect(screen.getAllByText(id)).toHaveLength(1);
+    expect(await screen.findByText("The TACO event play on DJT")).toBeInTheDocument();
+    for (const name of [
+      "Sauron's own rules",
+      "The pre-print run-up on NVDA",
+      "The TACO event play on DJT",
+    ]) {
+      expect(screen.getAllByText(name)).toHaveLength(1);
     }
     const line = document.querySelector(".pbb-count")?.textContent ?? "";
     expect(line).toContain("● 1 trading on live signals");
@@ -133,8 +137,8 @@ describe("BotPlaybooksSection — the bot's checks on top, one card per playbook
   it("says Can't fire on TACO-DJT's card, never the verdict it also recorded", async () => {
     next = desk;
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("TACO-DJT");
-    const taco = cardOf("TACO-DJT");
+    await screen.findByText("The TACO event play on DJT");
+    const taco = cardOf("The TACO event play on DJT");
     expect(taco.getAttribute("data-state")).toBe("blocked");
     expect(taco.textContent).toContain("Can't fire");
     expect(taco.textContent).not.toMatch(/waiting for (a|its) window/i);
@@ -167,14 +171,14 @@ describe("BotPlaybooksSection — the bot's checks on top, one card per playbook
   it("opens a card in place: the rest of its reason, mode, since, and the way to change it", async () => {
     next = desk;
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("SAURON");
-    const card = cardOf("SAURON");
+    await screen.findByText("Sauron's own rules");
+    const card = cardOf("Sauron's own rules");
     expect(
       within(card).getByText("Reading live price and sentiment every pass"),
     ).toBeInTheDocument();
     const details = card.querySelector("details");
     expect(details?.open).toBe(false);
-    fireEvent.click(within(card).getByText("SAURON"));
+    fireEvent.click(within(card).getByText("Sauron's own rules"));
     expect(details?.open).toBe(true);
     expect(within(card).getAllByText(/^aggressive · since /).length).toBeGreaterThan(0);
     // The sentence goes on where the closed card stopped — its first clause is never said twice.
@@ -189,8 +193,8 @@ describe("BotPlaybooksSection — the bot's checks on top, one card per playbook
   it("names an off playbook once, in the footer, beside the way to change it", async () => {
     next = desk;
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    expect(await screen.findByText(/BETA-SCOUT is off on this bot/)).toBeInTheDocument();
-    expect(screen.queryByText("BETA-SCOUT", { selector: ".pbb-name" })).toBeNull();
+    expect(await screen.findByText(/The forced daily pick is off on this bot/)).toBeInTheDocument();
+    expect(screen.queryByText("The forced daily pick", { selector: ".pbb-name" })).toBeNull();
     expect(screen.getByRole("link", { name: "Change in R&D ›" })).toHaveAttribute(
       "href",
       "/app/research?section=playbooks&account=sauron",
@@ -256,7 +260,15 @@ describe("BotPlaybooksSection — someone else's bot", () => {
       withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" showPlaybooks={false} />),
     );
     expect(await screen.findByText(/is the bot owner's to see/)).toBeInTheDocument();
-    for (const id of ["SAURON", "S1-NVDA", "TACO-DJT", "BETA-SCOUT"]) {
+    // Neither the ids nor their plain names (#4469 criterion 14).
+    for (const id of [
+      "SAURON",
+      "S1-NVDA",
+      "TACO-DJT",
+      "BETA-SCOUT",
+      "Sauron's own rules",
+      "on NVDA",
+    ]) {
       expect(screen.queryByText(new RegExp(id))).toBeNull();
     }
     expect(screen.queryByRole("link", { name: /R&D/ })).toBeNull();
@@ -384,23 +396,25 @@ describe("BotPlaybooksSection — the week on one clock", () => {
   it("gives each card its lane on the same clock, said in words for a screen reader", async () => {
     next = withWeek();
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("SAURON");
-    const lane = within(cardOf("SAURON")).getByRole("img");
+    await screen.findByText("Sauron's own rules");
+    const lane = within(cardOf("Sauron's own rules")).getByRole("img");
     expect(lane.getAttribute("aria-label")).toBe(
       "This week: trading on live signals in 64 of 64 half hours asked. 1 trade placed.",
     );
     expect(lane.querySelectorAll('.wk-cell[data-s="tactical"]')).toHaveLength(64);
     expect(lane.querySelectorAll(".wk-mark")).toHaveLength(1);
     expect(
-      within(cardOf("S1-NVDA")).getByRole("img").querySelectorAll('[data-s="no-window"]'),
+      within(cardOf("The pre-print run-up on NVDA"))
+        .getByRole("img")
+        .querySelectorAll('[data-s="no-window"]'),
     ).toHaveLength(64);
   });
 
   it("hatches a can't-fire card's lane, whatever its checks recorded", async () => {
     next = withWeek();
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("TACO-DJT");
-    const lane = within(cardOf("TACO-DJT")).getByRole("img");
+    await screen.findByText("The TACO event play on DJT");
+    const lane = within(cardOf("The TACO event play on DJT")).getByRole("img");
     expect(lane.getAttribute("aria-label")).toBe("This week: can't fire.");
     expect(lane.querySelectorAll('[data-s="blocked"]')).toHaveLength(64);
     expect(lane.querySelectorAll('[data-s="no-window"]')).toHaveLength(0);
@@ -409,18 +423,20 @@ describe("BotPlaybooksSection — the week on one clock", () => {
   it("hatches a can't-fire card that never ran, still on the clock", async () => {
     next = withWeek({ lanes: week.lanes.filter((l) => l.playbookId !== "TACO-DJT") });
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("TACO-DJT");
+    await screen.findByText("The TACO event play on DJT");
     expect(
-      within(cardOf("TACO-DJT")).getByRole("img").querySelectorAll('[data-s="blocked"]'),
+      within(cardOf("The TACO event play on DJT"))
+        .getByRole("img")
+        .querySelectorAll('[data-s="blocked"]'),
     ).toHaveLength(64);
   });
 
   it("opens a card to the key to its shapes and its trades in words", async () => {
     next = withWeek();
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("SAURON");
-    const card = cardOf("SAURON");
-    fireEvent.click(within(card).getByText("SAURON"));
+    await screen.findByText("Sauron's own rules");
+    const card = cardOf("Sauron's own rules");
+    fireEvent.click(within(card).getByText("Sauron's own rules"));
     expect(within(card).getByText("Waiting for its window")).toBeInTheDocument();
     expect(card.querySelector(".wk-trades")?.textContent).toMatch(/^▲ Buy NVDA placed /);
   });
@@ -435,14 +451,14 @@ describe("BotPlaybooksSection — the week on one clock", () => {
     );
     next = { available: true, heartbeat: { ...sauron, rollCall, week } };
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" />));
-    await screen.findByText("S1-NVDA");
-    const card = cardOf("S1-NVDA");
+    await screen.findByText("The pre-print run-up on NVDA");
+    const card = cardOf("The pre-print run-up on NVDA");
     expect(within(card).getByText("Waiting on a confirmed date")).toBeInTheDocument();
     const lane = within(card).getByRole("img");
     expect(lane.getAttribute("aria-label")).toBe(
       "This week: waiting on a confirmed date — no window open in 64 of 64 half hours asked.",
     );
-    fireEvent.click(within(card).getByText("S1-NVDA"));
+    fireEvent.click(within(card).getByText("The pre-print run-up on NVDA"));
     const key = card.querySelector(".wk-key");
     expect(key?.textContent).toContain("No window open");
     expect(key?.textContent).not.toContain("Waiting for its window");
@@ -482,19 +498,19 @@ describe("BotPlaybooksSection — arriving from an order", () => {
   it("opens that card in place and lands on it, and on no other card", async () => {
     next = withWeek();
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" landing={landing} />));
-    await screen.findByText("SAURON");
-    const card = cardOf("SAURON");
+    await screen.findByText("Sauron's own rules");
+    const card = cardOf("Sauron's own rules");
     expect(card.querySelector("details")?.open).toBe(true);
     expect(card.hasAttribute("data-landed")).toBe(true);
-    expect(cardOf("S1-NVDA").querySelector("details")?.open).toBe(false);
-    expect(cardOf("S1-NVDA").hasAttribute("data-landed")).toBe(false);
+    expect(cardOf("The pre-print run-up on NVDA").querySelector("details")?.open).toBe(false);
+    expect(cardOf("The pre-print run-up on NVDA").hasAttribute("data-landed")).toBe(false);
   });
 
   it("rings the order's mark on the card's lane, and says so in words", async () => {
     next = withWeek();
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" landing={landing} />));
-    await screen.findByText("SAURON");
-    const card = cardOf("SAURON");
+    await screen.findByText("Sauron's own rules");
+    const card = cardOf("Sauron's own rules");
     const lane = within(card).getByRole("img");
     expect(lane.querySelectorAll(".wk-mark[data-ringed]")).toHaveLength(1);
     expect(lane.getAttribute("aria-label")).toContain("The order you came from is ringed.");
@@ -508,9 +524,11 @@ describe("BotPlaybooksSection — arriving from an order", () => {
   it("carries one way back, to the order's row on this bot's Ledger", async () => {
     next = withWeek();
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" landing={landing} />));
-    await screen.findByText("SAURON");
+    await screen.findByText("Sauron's own rules");
     expect(
-      within(cardOf("SAURON")).getByRole("link", { name: "← Back to the order in the Ledger" }),
+      within(cardOf("Sauron's own rules")).getByRole("link", {
+        name: "← Back to the order in the Ledger",
+      }),
     ).toHaveAttribute("href", "/accounts?account=sauron&section=ledger#act-ord-1");
   });
 
@@ -518,8 +536,8 @@ describe("BotPlaybooksSection — arriving from an order", () => {
     next = withWeek();
     const older = { ...landing, fill: Date.parse("2026-09-28T15:20:00Z") };
     render(withClient(<BotPlaybooksSection deskId="sauron" botName="Sauron" landing={older} />));
-    await screen.findByText("SAURON");
-    const card = cardOf("SAURON");
+    await screen.findByText("Sauron's own rules");
+    const card = cardOf("Sauron's own rules");
     expect(card.querySelectorAll("[data-ringed]")).toHaveLength(0);
     expect(card.textContent).toContain("placed before this week, so its lane has no mark to ring");
   });
@@ -569,8 +587,8 @@ describe("BotPlaybooksSection — arriving from a position", () => {
         />,
       ),
     );
-    await screen.findByText("SAURON");
-    const card = cardOf("SAURON");
+    await screen.findByText("Sauron's own rules");
+    const card = cardOf("Sauron's own rules");
     expect(card.querySelector("details")?.open).toBe(true);
     expect(card.hasAttribute("data-landed")).toBe(true);
     expect(

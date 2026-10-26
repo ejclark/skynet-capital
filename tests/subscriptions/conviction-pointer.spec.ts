@@ -9,10 +9,11 @@ import {
 } from "../../src/subscriptions/conviction-pointer.js";
 
 /**
- * #5482 slice 2, the MIGRATE step: a subscription whose conviction a record states is pointed at
- * that record, once. Since the contract step's piece 2 the inline copy goes wherever the pointer
- * resolves, and a subscription stating none is pointed at the one record that steers its pair.
- * Everything else is left exactly as it was.
+ * #5482 slice 2, the MIGRATE step: a subscription whose stated conviction a record states is pointed
+ * at that record, once, and a subscription stating none is pointed at the one record that steers its
+ * pair. Since the contract step's last piece a subscription carries no inline conviction: a form's
+ * conviction is handed to the rule (`stated`) only to choose the pointer. Everything else is left
+ * exactly as it was.
  */
 
 const AT = new Date("2026-10-17T12:00:00.000Z");
@@ -71,9 +72,8 @@ describe("recordFor — when a conviction matches a record", () => {
 });
 
 describe("pointAtRecord — a missing pointer added, none ever replaced", () => {
-  it("adds the record's id and drops the inline copy, since the pointer is the whole check", () => {
-    const s = sub("CRWV-WHEEL", { conviction: stated });
-    expect(pointAtRecord(s, records)).toEqual({
+  it("adds the id of the record a stated conviction matches, and keeps no copy of it", () => {
+    expect(pointAtRecord(sub("CRWV-WHEEL"), records, undefined, stated)).toEqual({
       ...sub("CRWV-WHEEL"),
       convictionId: "ai-dip-test",
     });
@@ -91,15 +91,18 @@ describe("pointAtRecord — a missing pointer added, none ever replaced", () => 
   });
 
   it("returns the very subscription when there is nothing to add", () => {
-    const redated = sub("CRWV-WHEEL", { conviction: { ...stated, checkOn: "2027-04-30" } });
-    const unsteered = sub("S1-NVDA", { conviction: stated });
-    const bare = sub("S1-NVDA");
+    const redated = { ...stated, checkOn: "2027-04-30" };
+    const wheel = sub("CRWV-WHEEL");
+    expect(pointAtRecord(wheel, records, undefined, redated)).toBe(wheel);
+    const nvda = sub("S1-NVDA");
+    expect(pointAtRecord(nvda, records, undefined, stated)).toBe(nvda);
+    expect(pointAtRecord(nvda, records)).toBe(nvda);
     const pointed = sub("CRWV-WHEEL", { convictionId: "ai-dip-test" });
-    for (const s of [redated, unsteered, bare, pointed]) expect(pointAtRecord(s, records)).toBe(s);
+    expect(pointAtRecord(pointed, records)).toBe(pointed);
   });
 
   it("leaves a pointer already there alone, even one no record answers to", () => {
-    const dangling = sub("CRWV-WHEEL", { conviction: stated, convictionId: "gone" });
+    const dangling = sub("CRWV-WHEEL", { convictionId: "gone" });
     expect(pointAtRecord(dangling, records)).toBe(dangling);
   });
 });
@@ -114,17 +117,15 @@ describe("pointAtRecord — a stale pointer is dropped", () => {
 
   it("drops a pointer at a seeded record that no longer steers the pair, and re-matches", () => {
     const narrowed = [view({ steers: ["CRWV-LONG-CALL"] })];
-    const s = sub("CRWV-WHEEL", { conviction: stated, convictionId: "ai-dip-test" });
-    const next = pointAtRecord(s, narrowed);
-    expect(next).not.toHaveProperty("convictionId");
-    expect(next.conviction).toEqual(stated);
-    // Another seeded record that steers the pair on the same day is matched in its place.
+    const s = sub("CRWV-WHEEL", { convictionId: "ai-dip-test" });
+    expect(pointAtRecord(s, narrowed)).not.toHaveProperty("convictionId");
+    // Another seeded record that steers the pair is matched in its place.
     const moved = [...narrowed, view({ id: "successor-view", steers: ["CRWV-WHEEL"] })];
     expect(pointAtRecord(s, moved).convictionId).toBe("successor-view");
   });
 
   it("drops a pointer no record holds only where members' ids are known", () => {
-    const dangling = sub("CRWV-WHEEL", { conviction: stated, convictionId: "gone" });
+    const dangling = sub("CRWV-WHEEL", { convictionId: "gone" });
     expect(pointAtRecord(dangling, records, known)).toEqual({
       ...sub("CRWV-WHEEL"),
       convictionId: "ai-dip-test",
@@ -141,46 +142,30 @@ describe("pointAtRecord — a stale pointer is dropped", () => {
     expect(moves).toEqual([{ accountId: "sauron", playbookId: "S1-NVDA", from: "ai-dip-test" }]);
   });
 
-  it("keeps a pointer at a seeded record that steers the pair, and drops whatever its inline copy says", () => {
-    const s = sub("CRWV-WHEEL", {
-      conviction: { ...stated, checkOn: "2027-04-30" },
-      convictionId: "ai-dip-test",
-    });
-    expect(pointAtRecord(s, records, known)).toEqual(
-      sub("CRWV-WHEEL", { convictionId: "ai-dip-test" }),
-    );
+  it("keeps a pointer at a seeded record that steers the pair", () => {
+    const s = sub("CRWV-WHEEL", { convictionId: "ai-dip-test" });
+    expect(pointAtRecord(s, records, known)).toBe(s);
   });
 });
 
 describe("restated — a pointer never outlives the conviction it described", () => {
-  it("drops the pointer when the new conviction states another day", () => {
-    const s = sub("CRWV-WHEEL", {
-      conviction: { ...stated, checkOn: "2027-04-30" },
-      convictionId: "ai-dip-test",
-    });
-    const next = restated(s, records);
-    expect(next).not.toHaveProperty("convictionId");
-    expect(next.conviction?.checkOn).toBe("2027-04-30");
+  it("drops the pointer when the new conviction states another day, and keeps no copy", () => {
+    const s = sub("CRWV-WHEEL", { convictionId: "ai-dip-test" });
+    const next = restated(s, { ...stated, checkOn: "2027-04-30" }, records);
+    expect(next).toEqual(sub("CRWV-WHEEL"));
   });
 
   it("points a conviction that now matches, and keeps the one it already had", () => {
-    expect(restated(sub("CRWV-WHEEL", { conviction: stated }), records).convictionId).toBe(
-      "ai-dip-test",
-    );
+    expect(restated(sub("CRWV-WHEEL"), stated, records).convictionId).toBe("ai-dip-test");
     expect(
-      restated(sub("CRWV-WHEEL", { conviction: stated, convictionId: "ai-dip-test" }), records)
-        .convictionId,
+      restated(sub("CRWV-WHEEL", { convictionId: "ai-dip-test" }), stated, records).convictionId,
     ).toBe("ai-dip-test");
   });
 });
 
 describe("pointAtRecords — the migration", () => {
   const live = () => ({
-    sauron: [
-      sub("CRWV-WHEEL", { conviction: stated }),
-      sub("CRWV-LONG-CALL", { conviction: stated, mode: "aggressive" }),
-      sub("S1-NVDA"),
-    ],
+    sauron: [sub("CRWV-WHEEL"), sub("CRWV-LONG-CALL", { mode: "aggressive" }), sub("S1-NVDA")],
   });
 
   it("points both live CRWV subscriptions and touches nothing else on them", () => {
@@ -192,8 +177,12 @@ describe("pointAtRecords — the migration", () => {
       convictionId: "ai-dip-test",
       updatedAt: AT.toISOString(),
     });
-    expect(call).toMatchObject({ mode: "aggressive", capitalAllocated: 75_000, enabled: true });
-    expect(call?.conviction).toBeUndefined();
+    expect(call).toMatchObject({
+      mode: "aggressive",
+      capitalAllocated: 75_000,
+      enabled: true,
+      convictionId: "ai-dip-test",
+    });
     expect(nvda).toEqual(sub("S1-NVDA"));
   });
 
@@ -204,30 +193,16 @@ describe("pointAtRecords — the migration", () => {
     expect(second.state).toBe(first.state);
   });
 
-  it("keeps the inline conviction of a subscription no record states, and does not stamp it", () => {
-    const input = {
-      sauron: [sub("CRWV-WHEEL", { conviction: { ...stated, checkOn: "2027-04-30" } })],
-      banker: [sub("S1-NVDA")],
-    };
-    const { state, pointed } = pointAtRecords(input, AT, records);
+  it("leaves a subscription no single record steers unstamped", () => {
+    const input = { sauron: [sub("CRWV-WHEEL")], banker: [sub("S1-NVDA")] };
+    const { state, pointed } = pointAtRecords(input, AT, [view(), view({ id: "another-view" })]);
     expect(pointed).toEqual([]);
     expect(state).toBe(input);
   });
 
-  it("drops the inline copy beside a pointer it resolves, and logs no move for it", () => {
-    const input = {
-      sauron: [sub("CRWV-WHEEL", { conviction: stated, convictionId: "ai-dip-test" })],
-    };
-    const { state, pointed, moves } = pointAtRecords(input, AT, records);
-    expect(pointed).toEqual(["sauron/CRWV-WHEEL"]);
-    expect(moves).toEqual([]);
-    expect(state.sauron?.[0]).not.toHaveProperty("conviction");
-    expect(state.sauron?.[0]?.convictionId).toBe("ai-dip-test");
-  });
-
   it("points a paused subscription too — it resumes under the same record", () => {
     const { state } = pointAtRecords(
-      { sauron: [sub("CRWV-WHEEL", { conviction: stated, enabled: false })] },
+      { sauron: [sub("CRWV-WHEEL", { enabled: false })] },
       AT,
       records,
     );
@@ -235,7 +210,7 @@ describe("pointAtRecords — the migration", () => {
   });
 
   it("never replaces a pointer an owner or a later slice already wrote", () => {
-    const input = { sauron: [sub("CRWV-WHEEL", { conviction: stated, convictionId: "gone" })] };
+    const input = { sauron: [sub("CRWV-WHEEL", { convictionId: "gone" })] };
     expect(pointAtRecords(input, AT, records).state).toBe(input);
   });
 
@@ -264,7 +239,7 @@ describe("a member's view handed over (#5482 slice 6c) — the owner's act is th
 
   it("points every subscription on a named account to a pair it steers, whatever day it states", () => {
     const input = {
-      sauron: [sub("CRWV-WHEEL"), sub("CRWV-LONG-CALL", { conviction: stated })],
+      sauron: [sub("CRWV-WHEEL"), sub("CRWV-LONG-CALL")],
       banker: [sub("CRWV-WHEEL")],
     };
     const { state, pointed } = pointAtRecords(input, AT, records, members({ sauron: [ada] }));
@@ -275,9 +250,7 @@ describe("a member's view handed over (#5482 slice 6c) — the owner's act is th
   });
 
   it("takes over from a seeded record's pointer, and hands it back once taken back", () => {
-    const seeded = {
-      sauron: [sub("CRWV-WHEEL", { conviction: stated, convictionId: "ai-dip-test" })],
-    };
+    const seeded = { sauron: [sub("CRWV-WHEEL", { convictionId: "ai-dip-test" })] };
     const over = pointAtRecords(seeded, AT, records, members({ sauron: [ada] }));
     expect(over.state.sauron?.[0]?.convictionId).toBe(ada.id);
     // Taken back: still a member's id, held by no account — dropped, and the seeded match runs again.
@@ -320,13 +293,47 @@ describe("a member's view handed over (#5482 slice 6c) — the owner's act is th
   it("survives a restated conviction: the pointer stays on the view while it is handed over", () => {
     const here = { held: [ada], ids: new Set([ada.id]) };
     const next = restated(
-      sub("CRWV-WHEEL", { conviction: { ...stated, checkOn: "2027-06-30" }, convictionId: ada.id }),
+      sub("CRWV-WHEEL", { convictionId: ada.id }),
+      { ...stated, checkOn: "2027-06-30" },
       records,
       here,
     );
     expect(next.convictionId).toBe(ada.id);
-    // The view is the whole check while it is handed over: no inline copy beside it.
-    expect(next).not.toHaveProperty("conviction");
     expect(pointAtRecord(sub("CRWV-WHEEL"), records, here).convictionId).toBe(ada.id);
+  });
+});
+
+describe("an owner's own view on one pair (#5482 contract piece 3)", () => {
+  const own = view({
+    id: "pair-crwv-wheel-own",
+    owner: "Ada",
+    checkOn: "2027-04-30",
+    steers: ["CRWV-WHEEL"],
+    scope: "pair",
+  });
+  const floor = view({
+    id: "crwv-floor-2026-10",
+    owner: "Ada",
+    checkOn: "2027-02-26",
+    steers: ["CRWV-WHEEL"],
+  });
+  const here = (held: Conviction[]) => ({ held, ids: new Set([own.id, floor.id]) });
+
+  it("is the pointer of the pair it was stated on", () => {
+    const next = restated(
+      sub("CRWV-WHEEL"),
+      { ...stated, checkOn: own.checkOn },
+      records,
+      here([own]),
+    );
+    expect(next).toEqual({ ...sub("CRWV-WHEEL"), convictionId: own.id });
+  });
+
+  it("is outranked by a view handed over on the same pair, and steers it again once that is taken back", () => {
+    const pointedAtOwn = sub("CRWV-WHEEL", { convictionId: own.id });
+    expect(pointAtRecord(pointedAtOwn, records, here([own, floor])).convictionId).toBe(floor.id);
+    expect(pointAtRecord(pointedAtOwn, records, here([floor, own])).convictionId).toBe(floor.id);
+    const takenOver = sub("CRWV-WHEEL", { convictionId: floor.id });
+    expect(pointAtRecord(takenOver, records, here([own])).convictionId).toBe(own.id);
   });
 });

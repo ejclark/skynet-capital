@@ -18,9 +18,7 @@ describe("describePage — known pages map to fixed words", () => {
   });
 
   it("names the Activity and research sections", () => {
-    expect(describePage("/activity?section=council")).toBe(
-      "the Activity page, showing the Council (members' weekly thesis lines)",
-    );
+    expect(describePage("/activity?section=pnl")).toBe("the Activity page, showing booked P&L");
     expect(describePage("/research?section=playbooks")).toBe(
       "the research page, showing the playbooks",
     );

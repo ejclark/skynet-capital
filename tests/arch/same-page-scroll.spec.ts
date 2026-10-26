@@ -25,9 +25,12 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
     ['account: a.id, section: "ledger"', "All accounts' way into one account's list (#5165)"],
     ["section: next === opening ? undefined : next", "section switch (held by #4943)"],
   ],
-  "app/src/routes/activity.tsx": [['next === "feed"', "section switch (held by #4943)"]],
+  // Activity's section switch left with the Council (#5992): the page has no reset of its own.
   // Playbooks' "Subscribe as" account switch left with the picker (#5442): one reset remains.
-  "app/src/routes/research.tsx": [['next === "board"', "section switch (held by #4943)"]],
+  "app/src/routes/research.tsx": [
+    ['next === "board"', "section switch (held by #4943)"],
+    ["section: undefined, q: next", "a Coverage sector tap opens the Board filtered to it (#3811)"],
+  ],
   "app/src/routes/settings.tsx": [['next === "preferences"', "section switch (held by #4943)"]],
   "app/src/routes/trade.tsx": [
     ['next === "ticket"', "section switch (held by #4943)"],

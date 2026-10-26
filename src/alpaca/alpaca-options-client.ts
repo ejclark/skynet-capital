@@ -143,7 +143,7 @@ export interface PlaceMultiLegOrderParams {
   readonly clientOrderId?: string;
 }
 
-const num = (value: unknown): number | undefined => {
+const positiveNumber = (value: unknown): number | undefined => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 };
@@ -204,7 +204,7 @@ export interface ContractSnapshot {
 }
 
 /**
- * Parse one greek. Unlike `num`, zero and negatives are legitimate here (a deep-OTM gamma, a put's
+ * Parse one greek. Unlike `positiveNumber`, zero and negatives are legitimate here (a deep-OTM gamma, a put's
  * delta, any long option's theta), so finiteness is the only gate. Everything that is not a number
  * or a numeric string is ABSENT — `Number` would otherwise hand back a confident 0 for `null`, `""`
  * and `[]`, and a 1 for `true`, and a fabricated greek is worse on a desk than a blank one.
@@ -230,7 +230,7 @@ const greeksOf = (raw: RawGreeks | undefined): Partial<Record<GreekKey, number>>
  * A daily bar's volume field, when the feed reported a usable one. `null`, `undefined` and an
  * empty string are UNREPORTED — deliberately not run through `Number()`, which turns all three
  * into a perfectly plausible 0 and would let "the feed said nothing" render as "nothing traded".
- * Unlike `num`, zero IS a legitimate value here (a real zero-volume day), so the gate is
+ * Unlike `positiveNumber`, zero IS a legitimate value here (a real zero-volume day), so the gate is
  * finite-and->=0, not finite-and->0 — a fresh small local copy of `alpaca-options-flow.ts`'s
  * `barVolume`, kept separate on purpose: this client is the lower-level, protected module that
  * adapter reads FROM, never the reverse.
@@ -244,7 +244,7 @@ const barVolume = (value: unknown): number | undefined => {
 
 /**
  * One OHLCV field of a daily bar — the same finiteness-only gate as `greek`, under a name that
- * says what it reads. Zero is legitimate here too (a zero-volume day, a halted bar), so `num`'s
+ * says what it reads. Zero is legitimate here too (a zero-volume day, a halted bar), so `positiveNumber`'s
  * `> 0` would silently drop a real bar; and non-numeric junk (`null`, `""`, `[]`, `true`) stays
  * ABSENT rather than coercing to a confident 0, so `getBars` drops a corrupt bar whole instead of
  * feeding a fabricated close into indicator math downstream.
@@ -312,11 +312,13 @@ export class AlpacaOptionsClient {
       await this.getWithBackoff(path),
     );
     const rows: OptionChainRow[] = (body.option_contracts ?? [])
-      .filter((c) => c.tradable !== false && num(c.strike_price) !== undefined)
+      .filter((c) => c.tradable !== false && positiveNumber(c.strike_price) !== undefined)
       .map((c) => ({
         occSymbol: c.symbol,
-        strike: num(c.strike_price) as number,
-        ...(num(c.close_price) !== undefined ? { closePrice: num(c.close_price) as number } : {}),
+        strike: positiveNumber(c.strike_price) as number,
+        ...(positiveNumber(c.close_price) !== undefined
+          ? { closePrice: positiveNumber(c.close_price) as number }
+          : {}),
         ...(c.open_interest != null && Number.isFinite(Number(c.open_interest))
           ? { openInterest: Number(c.open_interest) }
           : {}),
@@ -343,7 +345,7 @@ export class AlpacaOptionsClient {
       );
       if (response.status < 200 || response.status >= 300) return undefined;
       const body = response.body as { trade?: { p?: unknown } } | null;
-      return num(body?.trade?.p);
+      return positiveNumber(body?.trade?.p);
     } catch {
       return undefined;
     }
@@ -367,14 +369,14 @@ export class AlpacaOptionsClient {
         prevDailyBar?: { c?: unknown };
         latestQuote?: { bp?: unknown; ap?: unknown };
       } | null;
-      const last = num(body?.latestTrade?.p);
-      const prevClose = num(body?.prevDailyBar?.c);
+      const last = positiveNumber(body?.latestTrade?.p);
+      const prevClose = positiveNumber(body?.prevDailyBar?.c);
       if (last === undefined || prevClose === undefined) return undefined;
       // The NBBO rides along for the ticket's limit-at-mid default (#3407 slice 6). Unlike an
       // option's $0.00 bid (a real quote, `price0`), a stock with no bid or no ask outside the
       // session has no market to price a limit against, so both must be positive to be carried.
-      const bid = num(body?.latestQuote?.bp);
-      const ask = num(body?.latestQuote?.ap);
+      const bid = positiveNumber(body?.latestQuote?.bp);
+      const ask = positiveNumber(body?.latestQuote?.ap);
       const nbbo = bid !== undefined && ask !== undefined && bid > 0 && ask > 0 ? { bid, ask } : {};
       const lastAt = stampOf(body?.latestTrade?.t);
       return { last, prevClose, ...nbbo, ...(lastAt ? { lastAt } : {}) };
@@ -626,8 +628,8 @@ export class AlpacaOptionsClient {
           ...(price0(snap.latestQuote?.bp) !== undefined
             ? { bid: price0(snap.latestQuote?.bp) as number }
             : {}),
-          ...(num(snap.latestQuote?.ap) !== undefined
-            ? { ask: num(snap.latestQuote?.ap) as number }
+          ...(positiveNumber(snap.latestQuote?.ap) !== undefined
+            ? { ask: positiveNumber(snap.latestQuote?.ap) as number }
             : {}),
           ...(barVolume(snap.dailyBar?.v) !== undefined
             ? { volume: barVolume(snap.dailyBar?.v) as number }
@@ -645,8 +647,8 @@ export class AlpacaOptionsClient {
 function contractSnapshotOf(snap: RawSnapshot): ContractSnapshot {
   const greeks = greeksOf(snap.greeks);
   const bid = price0(snap.latestQuote?.bp);
-  const ask = num(snap.latestQuote?.ap);
-  const impliedVol = num(snap.impliedVolatility);
+  const ask = positiveNumber(snap.latestQuote?.ap);
+  const impliedVol = positiveNumber(snap.impliedVolatility);
   const quotedAt = stampOf(snap.latestQuote?.t);
   return {
     ...(bid !== undefined ? { bid } : {}),

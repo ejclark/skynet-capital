@@ -18,11 +18,18 @@ export interface PullableIssue {
 /** `interactive: true` only from a live session's pull — it may take a `needs-session` issue (#5236). */
 export interface PullOptions {
   interactive?: boolean;
+  /** Issue → the open platter PR whose body closes it (#6191); refused when present. */
+  boardedOn?: ReadonlyMap<number, number>;
 }
 /** Why an automated puller may not start this issue (first failing rule), or null (#4393). */
 export function notPullableReason(
   issue: PullableIssue | null | undefined,
   opts?: PullOptions,
+): string | null;
+/** Why issue `n` may not be pulled because an open platter closes it, or null (#6191). */
+export function boardedReason(
+  n: number | undefined,
+  boardedOn?: ReadonlyMap<number, number>,
 ): string | null;
 /** The board's Ready column: open, `ready`, buildable, not `in-progress`, no open blocker (#4393). */
 export function pullable(issue: PullableIssue | null | undefined, opts?: PullOptions): boolean;

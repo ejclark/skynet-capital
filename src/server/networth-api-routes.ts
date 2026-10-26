@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import type { AlpacaPortfolioHistory } from "../alpaca/alpaca-trading-client.js";
+import { DAY_MS } from "../domain/time.js";
 import { BENCHMARK_LOOKBACK_DAYS, benchmarkReturns } from "../observatory/benchmark-returns.js";
 import { lastFinite } from "../observatory/month-return-sync.js";
 import {
@@ -66,8 +67,6 @@ function firstFundedDay(h: AlpacaPortfolioHistory | undefined): string | undefin
   const ts = i < 0 ? undefined : h.timestamp[i];
   return typeof ts === "number" ? new Date(ts * 1000).toISOString() : undefined;
 }
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** SPY's per-window return, through the first owned account with a market-data client. One feed
  *  read serves every account and the aggregate. Any failure leaves the "vs S&P" column out rather

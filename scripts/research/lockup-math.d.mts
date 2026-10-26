@@ -9,9 +9,14 @@ export interface ParsedProspectus {
   readonly earlyRelease?: string;
   readonly priceUsd?: number;
   readonly sharesOffered?: number;
+  readonly sharesFrom?: "offering" | "first-count";
   readonly offeringUsd?: number;
 }
 export function parseProspectus(text: string): ParsedProspectus;
+export function usd(n: number): string;
+export function titleCase(name: string): string;
+export function quote(sentence: string): string;
+export function impactFor(raised: number | undefined): "high" | "medium" | "low";
 export const HIGH_USD: number;
 export const MEDIUM_USD: number;
 export function lockupEvent(input: {

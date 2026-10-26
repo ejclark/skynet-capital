@@ -96,7 +96,7 @@ const TERMINAL: Record<string, Exclude<DeskOrderState, "working" | "partial">> =
   expired: "expired",
 };
 
-function num(raw: string | number | null | undefined): number | undefined {
+function coerceNumber(raw: string | number | null | undefined): number | undefined {
   if (raw === null || raw === undefined) return undefined;
   const value = Number(raw);
   return Number.isFinite(value) ? value : undefined;
@@ -123,9 +123,9 @@ const REPLACEABLE_TYPES = new Set(["limit", "stop", "stop_limit"]);
 export function deskOrderRow(order: AlpacaOrder): DeskOrderRow | undefined {
   const state = stateFor(order);
   if (!state) return undefined;
-  const limitPrice = num(order.limit_price);
-  const stopPrice = num(order.stop_price);
-  const avgFillPrice = num(order.filled_avg_price);
+  const limitPrice = coerceNumber(order.limit_price);
+  const stopPrice = coerceNumber(order.stop_price);
+  const avgFillPrice = coerceNumber(order.filled_avg_price);
   const settledAt = settledStamp(order, state);
   const contract = parseOccSymbol(order.symbol);
   return {
@@ -135,8 +135,8 @@ export function deskOrderRow(order: AlpacaOrder): DeskOrderRow | undefined {
     unit: contract ? "contracts" : "shares",
     side: order.side,
     orderType: (order.type ?? "market").toLowerCase(),
-    quantity: num(order.qty) ?? 0,
-    filledQuantity: num(order.filled_qty) ?? 0,
+    quantity: coerceNumber(order.qty) ?? 0,
+    filledQuantity: coerceNumber(order.filled_qty) ?? 0,
     ...(limitPrice !== undefined ? { limitPrice } : {}),
     ...(stopPrice !== undefined ? { stopPrice } : {}),
     ...(avgFillPrice !== undefined ? { avgFillPrice } : {}),

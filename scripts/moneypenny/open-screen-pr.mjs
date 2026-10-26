@@ -18,6 +18,7 @@
 //
 // Degrades to a clean, loud no-op with no GH_TOKEN/GITHUB_TOKEN or no network.
 import { reexecWithProxy } from "../proxy-reexec.mjs";
+import { LABELS } from "./labels.mjs";
 
 const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
 const repo = process.env.GITHUB_REPOSITORY; // "owner/repo", set by every GitHub Actions runner
@@ -88,8 +89,35 @@ async function listOpenPrs() {
   return res.json();
 }
 
+// A screen PR carrying any of these is PARKED — it cannot merge (a conflict) or will not merge
+// unattended (held, or waiting on Eric), so it cannot race a fresh screen for the header line. It
+// only blocks. #5931 sat `needs-eric` + `conflict-flagged` from 2026-10-20 and stopped every
+// deterministic screen for six days (#6072).
+const PARKED_LABELS = new Set([
+  LABELS.conflictFlagged.name,
+  LABELS.needsEric.name,
+  LABELS.holdMerge.name,
+]);
+
+const isScreenPr = (pr) =>
+  typeof pr?.head?.ref === "string" && pr.head.ref.startsWith("moneypenny/screen-");
+
+const isParked = (pr) =>
+  Array.isArray(pr?.labels) && pr.labels.some((l) => PARKED_LABELS.has(l?.name));
+
 /**
- * Pure. True when an existing open PR already carries an unmerged screen commit.
+ * Pure. The open screen PRs a fresh screen supersedes. A screen re-derives its whole header from
+ * `main`, so a parked PR's diff carries nothing the new one lacks — closing it loses nothing.
+ *
+ * @param {readonly {head?: {ref?: string}, labels?: {name?: string}[]}[]} openPrs
+ */
+export function parkedScreenPrs(openPrs) {
+  return openPrs.filter((pr) => isScreenPr(pr) && isParked(pr));
+}
+
+/**
+ * Pure. True when an existing open PR already carries an unmerged screen commit that could still
+ * merge — a parked one (see PARKED_LABELS) never counts.
  *
  * This is the root cause behind a 19-PR conflict backlog found 2026-09-19: a screened event's doc
  * header (`**Last assessed:**` + the `probe-ref` comment) is REWRITTEN in place, not appended, and
@@ -100,12 +128,37 @@ async function listOpenPrs() {
  * open a second screen PR while one is already open makes that race structurally impossible instead
  * of merely rare.
  *
- * @param {readonly {head?: {ref?: string}}[]} openPrs
+ * @param {readonly {head?: {ref?: string}, labels?: {name?: string}[]}[]} openPrs
  */
 export function hasOpenScreenPr(openPrs) {
-  return openPrs.some(
-    (pr) => typeof pr?.head?.ref === "string" && pr.head.ref.startsWith("moneypenny/screen-"),
-  );
+  return openPrs.some((pr) => isScreenPr(pr) && !isParked(pr));
+}
+
+async function closeSuperseded(parked, newNumber) {
+  for (const old of parked) {
+    try {
+      await fetch(`https://api.github.com/repos/${repo}/issues/${old.number}/comments`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({
+          body: `Superseded by #${newNumber} — a fresh screen of the same events from current \`main\`.`,
+        }),
+      });
+      const res = await fetch(`https://api.github.com/repos/${repo}/pulls/${old.number}`, {
+        method: "PATCH",
+        headers: headers(),
+        body: JSON.stringify({ state: "closed" }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      console.log(
+        `::notice::open-screen-pr: closed parked #${old.number}, superseded by #${newNumber}.`,
+      );
+    } catch (err) {
+      console.log(
+        `::warning::open-screen-pr: could not close parked #${old.number} (${err.message}) — it no longer blocks the screen, so this is cosmetic.`,
+      );
+    }
+  }
 }
 
 async function main() {
@@ -155,6 +208,12 @@ async function main() {
     process.exit(0);
   }
   console.log(`::notice::open-screen-pr: opened #${pr.number} for the deterministic screen.`);
+  try {
+    const parked = parkedScreenPrs(await listOpenPrs()).filter((p) => p.number !== pr.number);
+    await closeSuperseded(parked, pr.number);
+  } catch (err) {
+    console.log(`::warning::open-screen-pr: parked-PR sweep skipped (${err.message}).`);
+  }
   let verdict;
   try {
     verdict = await tryArmAutoMerge(pr.node_id);

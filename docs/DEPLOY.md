@@ -186,11 +186,38 @@ moment a pinned store drifts off the volume by any route CI can't see — a hand
 block, an override set outside git, a var unset after the fact. If you ever see that warning after
 a deploy, fix `fly.toml`'s `[env]` block and redeploy before anyone invites a new member.
 
-## Render / Railway (same Docker image)
+**Opt-in stores are on the same list.** A few stores have no default path — the var is the whole
+switch (`SKYNET_AUDIT_DIR`, `SKYNET_BOTS_DB_PATH`, `SKYNET_BOTS_HEALTH_PATH`, `SKYNET_FLOW_DIR`,
+`SKYNET_IV_HISTORY_DIR`; `OPT_IN_STORES` in `volume-guard.ts`). Unset means the feature is dark;
+set, the boot warning and the arch scan hold them to the volume too, and the hourly `[stores]`
+line counts them.
+
+**A new store needs no `fly.toml` line (#4604).** Register it in `DERIVED_STORES` in
+`volume-guard.ts` and read its path with `storePath(env, "SKYNET_X_DIR")`: it lands at
+`/data/<name>` on Fly (`SKYNET_DATA_ROOT` overrides the root, its own var still wins). Because no
+line pins it, the boot proves the root instead — on Fly the server **refuses to start** if `/data`
+is missing or on the image's own filesystem, naming the store it would have written there. The
+arch scan checks the root against `[mounts] destination`, so the file is read, never edited.
+
+## Render / Railway / any container host (same Docker image)
 
 The `Dockerfile` is host-agnostic. On Render: New → Web Service → point at this repo →
 Docker → set the same env vars (Render injects `PORT`, which the server honors). Enable
-"always on" (no idle sleep) so streams stay connected.
+"always on" (no idle sleep) so streams stay connected. On a host that is not Fly (ECS/ALB, a VM):
+
+- **Set `NODE_ENV=production`.** Fly marks itself with `FLY_APP_NAME`; elsewhere this is the
+  production signal. With it, the server **refuses to boot** unless sign-in is configured
+  (`SKYNET_SESSION_SECRET` plus a provider pair, or `SKYNET_DASHBOARD_PASSWORD`), so a deploy that
+  lost its secrets fails instead of serving an open dashboard.
+- **Set `SKYNET_PUBLIC_URL`** (e.g. `https://skynet.example.com`) when a proxy hides the real
+  scheme or name from the server — it is the origin OAuth's `redirect_uri` is built from, and must
+  match the provider console's registered callback. Unset, the request's own proto and `Host` are
+  used (right on Fly and localhost).
+- **Mount one volume and point every store var at it** (`SKYNET_HISTORY_DIR`,
+  `SKYNET_PARTICIPANT_STORE`, … — the full list is `PERSISTED_STORES` and `OPT_IN_STORES`), and
+  **set `SKYNET_DATA_ROOT`** to a directory on it — the stores in `DERIVED_STORES` resolve under it,
+  and off Fly they otherwise fall back to a relative `data/`.
+- **Check the release** with `scripts/smoke.sh https://<your host>`.
 
 ## After deploying
 

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Bucket, MatKey, Vec3 } from "./bucket.js";
-import type { Rng } from "./rng.js";
+import { pick, type Rng } from "./rng.js";
 
 /**
  * MASONRY MOLECULES — the repeatable pieces the fortress, the shaft annexes and the crown are all
@@ -14,8 +14,6 @@ import type { Rng } from "./rng.js";
 
 export const box = (x: number, y: number, z: number): THREE.BufferGeometry =>
   new THREE.BoxGeometry(x, y, z);
-
-const pick = <T>(rng: Rng, arr: readonly T[]): T => arr[Math.floor(rng.next() * arr.length)] as T;
 
 /** A seven-sided spike standing on `at`. */
 export function spire(

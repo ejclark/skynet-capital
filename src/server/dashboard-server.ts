@@ -200,8 +200,8 @@ async function serveWriteApis(
   if (await serveOnboardingApi(req, res, path, config, session)) return true;
   if (await servePlaybookReads(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
-  if (await serveCouncilApi(req, res, path, config.council, session)) return true;
-  if (await serveCouncilRepliesApi(req, res, path, config.councilReplies, session)) return true;
+  if (serveCouncilApi(req, res, path, config.council, session)) return true;
+  if (serveCouncilRepliesApi(req, res, path, config.councilReplies, session)) return true;
   if (await serveFilingCommentsApi(req, res, path, config.filingComments, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;

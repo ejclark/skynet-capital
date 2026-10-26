@@ -37,7 +37,7 @@ export interface AssembledChain {
   readonly chain: readonly ChainContract[];
 }
 
-const KINDS = ["call", "put"] as const;
+const OPTION_SIDES = ["call", "put"] as const;
 
 /**
  * Assemble calls + puts across the nearest `maxExpirations` listed expirations into one chain the
@@ -59,7 +59,7 @@ export async function assembleChain(
     // serially would only add latency to a turn the member is waiting on.
     const pages = await Promise.all(
       expirations.flatMap((expiration) =>
-        KINDS.map(async (kind) => ({
+        OPTION_SIDES.map(async (kind) => ({
           kind,
           expiration,
           daysToExpiry: daysUntil(today, expiration),

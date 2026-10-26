@@ -19,7 +19,7 @@ import { ENGAGEMENT_MILESTONES } from "./engagement.js";
  * the engagement milestone, so its 10 comes from there (one source of truth, never counted twice).
  */
 
-export type OnboardingStepId = "connect" | "first-message" | "first-trade";
+type OnboardingStepId = "connect" | "first-message" | "first-trade";
 
 export interface OnboardingStep {
   readonly id: OnboardingStepId;
@@ -30,7 +30,7 @@ export interface OnboardingStep {
   readonly route: string;
 }
 
-export const ONBOARDING_STEP_POINTS = 10;
+const ONBOARDING_STEP_POINTS = 10;
 
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   {
@@ -84,7 +84,7 @@ export interface OnboardingEvidence {
   readonly firstFillEarned: boolean;
 }
 
-export interface OnboardingStepState extends OnboardingStep {
+interface OnboardingStepState extends OnboardingStep {
   readonly done: boolean;
 }
 

@@ -1,11 +1,13 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { sessionsBetween } from "../domain/market-calendar.js";
 import { marketDayKey } from "../domain/market-day.js";
+import { wholePct } from "../domain/percent.js";
 import { positionValue } from "../domain/portfolio.js";
 import type { Portfolio, Position } from "../domain/types.js";
-import { findPair, pairName } from "../playbooks/pair-table.js";
+import { playbookName } from "../playbooks/pair-table.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
 import type { OpenLot } from "../trading/round-trips.js";
+import { capitalized } from "../ui/capitalized.js";
 import type {
   BookReading,
   HealthFinding,
@@ -27,14 +29,8 @@ import { formatCurrency } from "./render-atoms.js";
 
 /** "the wheel on CRWV" for the owner; anyone else reads no playbook name or strategy (#885). */
 export function playName(playbookId: string, ownerView: boolean): string {
-  if (!ownerView) return "one of this account's playbooks";
-  const pair = findPair(playbookId);
-  return pair ? pairName(pair) : playbookId;
+  return ownerView ? playbookName(playbookId) : "one of this account's playbooks";
 }
-
-export const capitalized = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
-
-const wholePct = (share: number): string => `${Math.round(share * 100)}%`;
 
 /** A position's underlying: the ticker itself, or an option contract's. */
 export function underlyingOf(symbol: string): string {

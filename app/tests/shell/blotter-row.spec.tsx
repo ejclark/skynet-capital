@@ -191,17 +191,54 @@ describe("BlotterRow", () => {
       expect(sum(lots.lots?.[0]?.totalPl ?? "0", lots.lots?.[1]?.totalPl ?? "0")).toBe(995);
     });
 
+    // #6169: after a partial sell the buys can sit off Alpaca's averaged basis; say why in words.
+    it("says in words why the buys don't add up to the row, when the server sends the line", () => {
+      const note =
+        "Alpaca averages these 199 shares at $500.05 ($99,510); each buy below keeps its own " +
+        "price ($99,500), so the buys' P/L totals +$10 against the row's. Sold + held P/L is " +
+        "the same either way.";
+      render(
+        inTable(
+          <BlotterRow position={{ ...lots, basisGap: -10, basisNote: note }} deskId="sauron" />,
+        ),
+      );
+      fireEvent.click(opener());
+      const buys = screen.getByRole("region", { name: "2 buys for SPY" });
+      expect(within(buys).getByText(note)).toBeVisible();
+    });
+
+    it("adds no line when the buys and the row agree", () => {
+      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
+      fireEvent.click(opener());
+      expect(screen.queryByText(/Alpaca averages/)).not.toBeInTheDocument();
+    });
+
     it("opens a buy-scoped close panel from Close this buy, independent of the other buy", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
       fireEvent.click(opener());
 
-      const closeBuy = screen.getAllByRole("button", { name: "Close this buy" });
-      expect(closeBuy).toHaveLength(2);
-      fireEvent.click(closeBuy[0] as HTMLElement);
+      const closeBuy = screen.getByRole("button", { name: "Close this buy" });
+      const sellNewer = screen.getByRole("button", { name: "Sell 100 shares (oldest buys first)" });
+      fireEvent.click(closeBuy);
 
       // The close panel scopes to the first buy's own 99 shares, not the full 199.
       expect(screen.getByRole("spinbutton")).toHaveValue(99);
-      expect(closeBuy[1]).toHaveAttribute("aria-expanded", "false");
+      expect(sellNewer).toHaveAttribute("aria-expanded", "false");
+    });
+
+    // #5959: a sell names no buy, and the ledger pairs it with the oldest first — so only the
+    // oldest buy's sell closes that buy. A newer one says what its order does instead.
+    it("promises Close this buy only on the oldest buy; a newer one says it sells oldest first", () => {
+      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
+      fireEvent.click(opener());
+
+      expect(screen.getAllByRole("button", { name: "Close this buy" })).toHaveLength(1);
+      fireEvent.click(screen.getByRole("button", { name: "Sell 100 shares (oldest buys first)" }));
+
+      expect(screen.getByRole("spinbutton")).toHaveValue(100);
+      expect(screen.getByRole("button", { name: "Sell 100" })).toBeInTheDocument();
+      // The only "Close all" left is the row's own, which does close every buy.
+      expect(screen.getAllByRole("button", { name: "Close all" })).toHaveLength(1);
     });
 
     // #5091: each buy closes as a sell of its own size, so under a short position "Close this buy"

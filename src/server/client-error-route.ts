@@ -16,8 +16,9 @@ import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-s
  * an email: the log buffer is readable by anyone with deploy access.
  */
 export const CLIENT_ERROR_PATH = "/api/client-error";
-const CAP_BYTES = 2_048;
-const KINDS = new Set(["stale-chunk", "render"]);
+/** UTF-8 bytes (#6075): the four fields' 920 characters can be up to 2,760 bytes plus JSON. */
+const CAP_BYTES = 4_096;
+const CLIENT_ERROR_KINDS = new Set(["stale-chunk", "render"]);
 /** 20 a member per 10 minutes — enough to see a pattern, too few to drown the gauge. */
 const THROTTLE_MAX = 20;
 const THROTTLE_WINDOW_MS = 600_000;
@@ -38,7 +39,8 @@ export function parseClientError(raw: string): ClientErrorReport | undefined {
   const message = boundedString(body.message, 500);
   // An empty path is legal (the shell sends "" where `location` is missing); a non-string is not.
   const path = typeof body.path === "string" && body.path.length <= 300 ? body.path : undefined;
-  if (!(kind && KINDS.has(kind) && name && message && path !== undefined)) return undefined;
+  if (!(kind && CLIENT_ERROR_KINDS.has(kind) && name && message && path !== undefined))
+    return undefined;
   return { kind: kind as ClientErrorReport["kind"], name, message, path };
 }
 

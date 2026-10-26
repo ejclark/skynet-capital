@@ -1,3 +1,5 @@
+import type { JsonlTail } from "../storage/jsonl-store.js";
+
 /**
  * The equity-history store's shared shapes — split out from `history-store.ts` so the in-memory
  * and JSONL implementations can both depend on them without importing `history-store.ts` itself
@@ -32,4 +34,7 @@ export interface HistoryStore {
   /** The newest sample for one participant, without reading the rest of their history — the
    *  bounded alternative to `list(participantId)` for a "what's the latest" lookup (#4612 slice 7). */
   latest(participantId: string): Promise<EquitySample | undefined>;
+  /** The samples appended for one participant since `offset`, in file order — the append-aware
+   *  read `pulse-history-cache.ts` folds (#4619). Optional: without it a reader re-lists. */
+  since?(participantId: string, offset: number): Promise<JsonlTail<EquitySample>>;
 }

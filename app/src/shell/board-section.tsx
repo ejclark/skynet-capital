@@ -33,6 +33,7 @@ import {
 import { FilterChip } from "../ui";
 import { EventHorizon } from "./event-horizon";
 import { FacetRow } from "./facet-row";
+import { SymbolFitFor } from "./symbol-fit-for";
 import { SymbolRecapFor } from "./symbol-recap-for";
 
 /**
@@ -604,6 +605,9 @@ export function useBoardView({
         {filter.symbols.slice(0, RECAPS_SHOWN).map((sym) => (
           <SymbolRecapFor key={sym} symbol={sym} />
         ))}
+        {/* The fit finder (#4469 slice 4): which strategies the named symbol fits — one symbol,
+            the first, so the panel never doubles the recap list. */}
+        {filter.symbols[0] ? <SymbolFitFor symbol={filter.symbols[0]} /> : null}
         <CallBoard
           data={data}
           filter={filter}

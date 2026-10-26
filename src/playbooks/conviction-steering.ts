@@ -3,6 +3,7 @@ import { nextSession } from "../domain/market-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
 import type { ClaimStudy } from "./claim-study.js";
+import { money } from "./format-money.js";
 
 /**
  * STEERING: A CONVICTION NARROWS THE SETTINGS OF THE PAIRS IT STEERS (#5482 slice 4, criteria 3 and
@@ -32,7 +33,7 @@ import type { ClaimStudy } from "./claim-study.js";
  * only restate it, and a flip would be a widening.
  */
 
-export type FloorOfClaim = { readonly floorOfClaim: string };
+type FloorOfClaim = { readonly floorOfClaim: string };
 
 export type Narrowing =
   | { readonly kind: "dte"; readonly min?: number; readonly max?: number }
@@ -41,13 +42,7 @@ export type Narrowing =
   | { readonly kind: "quiet"; readonly sessionsAfterPrint: number }
   | { readonly kind: "contracts"; readonly max: number };
 
-export const NARROWING_KINDS = [
-  "dte",
-  "expiry-from",
-  "strike-ceiling",
-  "quiet",
-  "contracts",
-] as const;
+const NARROWING_KINDS = ["dte", "expiry-from", "strike-ceiling", "quiet", "contracts"] as const;
 
 /** One steered pair's narrowings, and the claims (by their number in the record) they come from. */
 export interface PairNarrowings {
@@ -93,14 +88,10 @@ export interface ClaimRead {
 
 const MAX_QUIET_SESSIONS = 60;
 const refuse = (reason: string): SteeringResolution => ({ ok: false, reason });
-const money = (n: number): string => `$${n.toFixed(2)}`;
 const isCount = (n: number): boolean => Number.isInteger(n) && n >= 0;
 
 /** The claim a label names ("7" is the claim whose statement opens "7. "), or undefined. */
-export function claimByLabel<C extends ClaimRead>(
-  claims: readonly C[],
-  label: string,
-): C | undefined {
+function claimByLabel<C extends ClaimRead>(claims: readonly C[], label: string): C | undefined {
   return claims.find((c) => c.statement.startsWith(`${label}. `));
 }
 

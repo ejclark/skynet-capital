@@ -22,7 +22,7 @@ import type { SteerBounds } from "../playbooks/conviction-steering.js";
  */
 
 /** A ◆ pair the member's bots run, with the room its playbook allows. */
-export interface ChatSteerablePair {
+interface ChatSteerablePair {
   readonly pair: string;
   /** "the wheel on CRWV". */
   readonly name: string;
@@ -31,7 +31,7 @@ export interface ChatSteerablePair {
 }
 
 /** A view the member already holds, as the model needs it: what it is called and what it steers. */
-export interface ChatHeldView {
+interface ChatHeldView {
   readonly id: string;
   readonly title?: string;
   /** `draft` steers nothing; `steering` narrows its pairs on the member's bots. */
@@ -47,7 +47,7 @@ export interface ChatConvictionsSummary {
 }
 
 /** A pair a hand-over would take over from the view steering it now. */
-export interface ChatTakeOver {
+interface ChatTakeOver {
   readonly pair: string;
   readonly name: string;
   /** The view steering it now, by its title. */
@@ -64,7 +64,7 @@ export interface ChatConvictionDraft {
   readonly takesOver: readonly ChatTakeOver[];
 }
 
-export type ChatDraftOutcome =
+type ChatDraftOutcome =
   | { readonly ok: true; readonly drafted: ChatConvictionDraft }
   | { readonly ok: false; readonly problems: readonly string[] };
 
@@ -81,7 +81,7 @@ export type ConvictionToolName = (typeof CONVICTION_TOOL_NAMES)[number];
 export const CARD_SHOWN =
   "shown to the member as a card in the rail; nothing is saved and nothing steers yet. Only their own tap there saves it and hands it to their bots.";
 
-const day = { type: "string", description: "YYYY-MM-DD." } as const;
+const dayProp = { type: "string", description: "YYYY-MM-DD." } as const;
 
 export const CONVICTION_TOOL_DEFS = [
   {
@@ -122,7 +122,7 @@ export const CONVICTION_TOOL_DEFS = [
                 type: "string",
                 description: "The one dated observation that proves it wrong.",
               },
-              scoreBy: day,
+              scoreBy: dayProp,
             },
             required: ["tag", "statement", "bucket", "evidence", "falsifier"],
           },
@@ -151,7 +151,7 @@ export const CONVICTION_TOOL_DEFS = [
                     },
                     min: { type: "number" },
                     max: { type: "number" },
-                    day,
+                    day: dayProp,
                     ceiling: { type: "number" },
                     sessionsAfterPrint: { type: "number" },
                   },

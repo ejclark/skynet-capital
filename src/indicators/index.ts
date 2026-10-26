@@ -32,17 +32,7 @@ import { EMA_GLOSS, ema } from "./ema.js";
 import { RSI_GLOSS, rsi } from "./rsi.js";
 import { SMA_GLOSS, sma } from "./sma.js";
 
-export {
-  BOLLINGER_GLOSS,
-  type BollingerBand,
-  bollingerBands,
-  EMA_GLOSS,
-  ema,
-  RSI_GLOSS,
-  rsi,
-  SMA_GLOSS,
-  sma,
-};
+export { type BollingerBand, bollingerBands, ema, rsi, sma };
 
 /** All four "how to read this" lines in one place, keyed by indicator name. */
 export const INDICATOR_GLOSS = {

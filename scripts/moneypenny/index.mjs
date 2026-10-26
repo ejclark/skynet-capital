@@ -59,6 +59,7 @@ import { loopCheck } from "../loop-check.mjs";
 import {
   gateAdmission,
   nextAdmissible,
+  readBoarded,
   readInFlight,
   readOpenIssues,
   readOpenPlans,
@@ -84,6 +85,7 @@ import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import {
+  boardedReason,
   ensureLabel,
   ensureVocabulary,
   inFeedbackLane,
@@ -95,6 +97,7 @@ import {
 } from "./labels.mjs";
 import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
 import { modelTier } from "./model-tier.mjs";
+import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
@@ -326,7 +329,7 @@ export function claimFeedback(
   }
   const issue = intent.issue;
   // #5266 — the payload predates any link added after `ready`; ask the pull rule on a fresh read.
-  const stale = recheckPullable(issue, admission.readIssue);
+  const stale = recheckPullable(issue, admission.readIssue, admission.readBoarded);
   if (stale) {
     console.log(`::notice::not building feedback #${issue.number} — ${stale}`);
     return { claimed: false, reason: stale };
@@ -635,6 +638,12 @@ export function claimPlan(
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
+  // #6191 — a plan whose last slice is boarded on a held platter has nothing left to build.
+  const boarded = boardedReason(issue.number, (admission.readBoarded ?? readBoarded)());
+  if (boarded) {
+    console.log(`::notice::not building plan #${issue.number} — ${boarded}`);
+    return { claimed: false, reason: boarded };
+  }
   // #3960 — same gate as the feedback claim. A continuation is the next slice of a started plan,
   // which the started-plan cap never refuses (#4393 criterion 6), so it skips that read.
   const gate = gateAdmission(issue, { ...admission, started: Boolean(ctx.continuation) });
@@ -701,6 +710,7 @@ export function peekNext(deps = {}) {
     readPrIssues = () => readOpenPrIssues(),
     readPlans = () => readOpenPlans(),
     continuation = () => continuationContext(),
+    readHold: holdOf = (issue) => readPickupHold(issue),
   } = deps;
   const mode = readMode();
   const ready = withoutOpenPr(readReady().filter(inALane), readPrIssues());
@@ -708,7 +718,7 @@ export function peekNext(deps = {}) {
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
   const pick =
     continuationPick(continuation) ??
-    nextAdmissible(ready, inFlightOf(), mode, waitingOrSkip(readPlans).waiting);
+    rankPick(ready, inFlightOf(), mode, waitingOrSkip(readPlans).waiting, holdOf).pick;
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `has_next=${pick ? "true" : "false"}\n`);
   console.log(
@@ -726,6 +736,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readPlans = () => readOpenPlans(),
     claims = { plan: claimPlan, feedback: claimFeedback },
     continuation = () => continuationContext({ now: nowMs }),
+    readHold: holdOf = (issue) => readPickupHold(issue),
     ...admission
   } = deps;
   const mode = readMode();
@@ -754,7 +765,9 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   // can sit "held" for the whole TTL after its slice ships. Stopping there idled the sweep for up
   // to 2h behind #3960 on 2026-10-01; step past a held pick instead, a bounded number of times.
   for (let tries = 0; tries < SWEEP_HELD_SKIPS; tries++) {
-    const pick = nextAdmissible(pool, inFlight, mode, waiting);
+    const next = rankPick(pool, inFlight, mode, waiting, holdOf);
+    pool = next.pool;
+    const { pick } = next;
     if (!pick) {
       const plans = waiting ? `${waiting.length} plans waiting` : "plans unread";
       const why = `nothing admissible (${pool.length} ready, ${inFlight.length} in flight, ${plans}, work-mode=${mode.position})`;
@@ -793,6 +806,16 @@ function waitingOrSkip(readPlans) {
     );
     return { openPlans: undefined, waiting: undefined };
   }
+}
+
+/**
+ * The rank-order pick, stepping past a plan whose state block names nothing to build (#5707,
+ * `pickup-hold.mjs`). Held plans leave the returned pool, so `claimNext`'s lease loop never
+ * re-reads them; the hold is not a lease skip and does not count against `SWEEP_HELD_SKIPS`.
+ */
+function rankPick(pool, inFlight, mode, waiting, holdOf) {
+  const pickOf = (rest) => nextAdmissible(rest, inFlight, mode, waiting);
+  return nextUnheld(pool, pickOf, holdOf, { who: "retry sweep" });
 }
 
 /** Does a build lane own this issue — a `plan`, or the feedback lane's own (`inFeedbackLane`)? */
@@ -1549,9 +1572,14 @@ function executeOne(i, stallRepairs = []) {
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);
     console.log(
-      `::warning::silent feedback — #${i.issueNumber} no receipt after ${i.hoursSinceFiled}h`,
+      `::warning::silent feedback — #${i.issueNumber} no answer after ${i.hoursWaiting}h waiting`,
     );
-    return `🔇 silent feedback — \`${i.title}\` no receipt after ${i.hoursSinceFiled}h (commented on #${i.issueNumber})`;
+    return `🔇 silent feedback — \`${i.title}\` no answer after ${i.hoursWaiting}h waiting (commented on #${i.issueNumber})`;
+  }
+  if (i.kind === "clear-stall") {
+    // #6042 — the answer already spoke, so no comment; the label's absence is the new state.
+    sh("gh", ["issue", "edit", String(i.issueNumber), "--remove-label", LABELS.stall.name]);
+    return `🧹 cleared \`${LABELS.stall.name}\` — \`${i.title}\` has its answer (#${i.issueNumber})`;
   }
   if (i.kind === "flag-plan-stall") {
     commentAndFlagStall(i);

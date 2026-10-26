@@ -7,6 +7,8 @@ import {
   STALE_AFTER_MS,
   unmanagedHoldings,
 } from "../../src/observatory/bot-heartbeat-view.js";
+import { UNMOVED_CONVICTION_NOTE } from "../../src/observatory/playbook-store-json-view.js";
+import { lookupConviction } from "../../src/playbooks/conviction-store.js";
 import { findPair, type Pair } from "../../src/playbooks/pair-table.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
 
@@ -132,6 +134,69 @@ describe("botHeartbeatView — per-playbook verdicts", () => {
   it("flags 'since' as a lower bound when the run reaches the oldest pass on hand", () => {
     const view = botHeartbeatView([pass(0, [s1("long")]), pass(15_000, [s1("long")])], NOW, true);
     expect(view.playbooks?.[0]?.sinceIsLowerBound).toBe(true);
+  });
+
+  it("WHEN the store can date a run the page could not see the end of, 'since' is exact (#4953)", () => {
+    const asked: [PlaybookVerdict, number][] = [];
+    const twoHoursAgo = NOW.getTime() - 2 * 3_600_000;
+    const view = botHeartbeatView(
+      [pass(0, [s1("long")]), pass(15_000, [s1("long")])],
+      NOW,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      (verdict, startAt) => {
+        asked.push([verdict, startAt]);
+        return { at: twoHoursAgo, reachesOldest: false };
+      },
+    );
+    expect(asked).toEqual([[s1("long"), NOW.getTime()]]);
+    expect(view.playbooks?.[0]).toMatchObject({
+      since: new Date(twoHoursAgo).toISOString(),
+      sinceIsLowerBound: false,
+    });
+  });
+
+  it("asks the store nothing for a run that breaks inside the page — it is already exact", () => {
+    let asked = 0;
+    const view = botHeartbeatView(
+      [pass(0, [s1("long")]), pass(15_000, [s1("flat")])],
+      NOW,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      () => {
+        asked++;
+        return { at: 0, reachesOldest: false };
+      },
+    );
+    expect(asked).toBe(0);
+    expect(view.playbooks?.[0]).toMatchObject({
+      since: NOW.toISOString(),
+      sinceIsLowerBound: false,
+    });
+  });
+
+  it("keeps 'at least since' when the run reaches the first recorded pass, or the store cannot say", () => {
+    const records = [pass(0, [s1("long")]), pass(15_000, [s1("long")])];
+    const first = NOW.getTime() - 86_400_000;
+    const reaches = botHeartbeatView(records, NOW, true, undefined, undefined, undefined, () => ({
+      at: first,
+      reachesOldest: true,
+    }));
+    expect(reaches.playbooks?.[0]).toMatchObject({
+      since: new Date(first).toISOString(),
+      sinceIsLowerBound: true,
+    });
+    const silent = botHeartbeatView(records, NOW, true, undefined, undefined, undefined, () => {
+      return undefined;
+    });
+    expect(silent.playbooks?.[0]).toMatchObject({
+      since: new Date(NOW.getTime() - 15_000).toISOString(),
+      sinceIsLowerBound: true,
+    });
   });
 
   it("reads verdicts from the newest pass that has them, skipping a halted one", () => {
@@ -369,6 +434,44 @@ describe("playbookRollCall — reads the bot's own subscriptions", () => {
     expect(line?.reason).toMatch(/opens nothing and its exit rules still sell what it holds/);
     // Named there AND subscribed is an ordinary subscription.
     expect(lineFor("S1-NVDA", null, roster)?.status).toBe("starting");
+  });
+
+  /** #5482 — the bots run a subscribed pair exits-only when its conviction cannot steer it, and an
+   *  exits-only pair records no verdict, so "starting" was a promise nothing kept. */
+  it("WHEN a ◆ pair is subscribed with no conviction view, says it opens nothing new — never starting", () => {
+    const line = lineFor("CRWV-WHEEL", null, { subscriptions: [sub("CRWV-WHEEL")] });
+    expect(line).toEqual({
+      playbookId: "CRWV-WHEEL",
+      status: "off",
+      reason: UNMOVED_CONVICTION_NOTE,
+    });
+  });
+
+  it("WHEN a pair points at a view the bot does not hold, says why it opens nothing new", () => {
+    const pointed = { ...sub("CRWV-WHEEL"), convictionId: "gone-2026-10" };
+    const line = lineFor("CRWV-WHEEL", null, {
+      subscriptions: [pointed],
+      convictionOf: () => undefined,
+    });
+    expect(line).toMatchObject({ status: "off" });
+    expect(line?.reason).toBe(
+      `Opening nothing new: its conviction view can't steer it (points at conviction "gone-2026-10", which these bots do not hold). Exits still run.`,
+    );
+  });
+
+  it("WHEN a pair points at a view that steers it, still says it starts on the next pass", () => {
+    const seeded = lookupConviction("ai-dip-2026-10");
+    if (!seeded) throw new Error("no seeded AI-dip view");
+    const held = { ...seeded, narrowings: [] };
+    const pointed = { ...sub("CRWV-WHEEL"), convictionId: held.id };
+    const roster = {
+      subscriptions: [pointed],
+      convictionOf: (id: string) => (id === held.id ? held : undefined),
+    };
+    expect(lineFor("CRWV-WHEEL", null, roster)?.status).toBe("starting");
+    // A paused one stays Paused: it runs exits only whatever its conviction says.
+    const paused = { ...roster, subscriptions: [{ ...pointed, enabled: false }] };
+    expect(lineFor("CRWV-WHEEL", null, paused)?.status).toBe("paused");
   });
 
   it("judges from the passes alone when the subscriptions could not be read", () => {

@@ -108,7 +108,7 @@ describe("LedgerCards — one card an order, under its day", () => {
     expect(put.querySelector(".act-cash")).toHaveTextContent(/^\+\$255$/);
     expect(put.querySelector(".act-sub")).toHaveTextContent("$80 PUT · Nov 6 at $2.55");
     const foot = put.querySelector(".act-foot");
-    expect(foot).toHaveTextContent("CRWV-WHEEL");
+    expect(foot).toHaveTextContent("the wheel on CRWV");
     expect(foot?.querySelector(".act-outcome")).toHaveTextContent("open");
     // The bet lives in the opened order now (#5317), never in the list.
     expect(put.querySelector(".bet-glyph")).toBeNull();
@@ -187,7 +187,7 @@ describe("LedgerCards — one card an order, under its day", () => {
       "10:31 AM ET · filled at $2.55 a share",
     );
     expect(body).toHaveTextContent(/the market under-estimates how far CRWV moves/);
-    expect(body).toHaveTextContent("CRWV-WHEEL · aggressive");
+    expect(body).toHaveTextContent("the wheel on CRWV · aggressive");
   });
 
   it("names an expiry report where a side would be, with no cash and no price", () => {
@@ -282,7 +282,7 @@ describe("LedgerCards — an opened order leads with its price line", () => {
     expect(labels).toEqual(["Placed by", "Why"]);
     const placed = body.querySelector(".oo-placed");
     expect(placed).toHaveTextContent("sauron");
-    expect(placed).toHaveTextContent("CRWV-WHEEL · aggressive");
+    expect(placed).toHaveTextContent("the wheel on CRWV · aggressive");
     expect(placed).toHaveTextContent("3 ideas → 1 past the guards");
     for (const gone of ["Order", "Cost", "Strategy", "Expected", "Proves it wrong"]) {
       expect(within(body).queryByText(gone)).not.toBeInTheDocument();
