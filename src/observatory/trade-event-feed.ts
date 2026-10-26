@@ -1,8 +1,4 @@
-import {
-  type ActivityEvent,
-  activityEventFromTradeRecord,
-  forVisibility,
-} from "./activity-event.js";
+import { type ActivityEvent, activityEventFromTradeRecord, PUBLIC_ONLY } from "./activity-event.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 
 /**
@@ -32,11 +28,6 @@ import type { TradeActivityRecord } from "./activity-record.js";
 /** The fill-bearing event types `activity-event.ts` emits for a trade. `order.submitted` is NOT
  *  one: it carries no fill, and its `owner-only` tier means it was never on the public feed. */
 const TRADE_FILL_EVENT_TYPES: ReadonlySet<string> = new Set(["order.filled", "order.updated"]);
-
-/** The cross-member feed is a public surface, so it reads only the public tier — the same
- *  `forVisibility` gate `desk-events-route.ts` applies to an owner's own stream. Belt and braces
- *  beside the event-type filter: both say "no submission lines", for two different reasons. */
-const PUBLIC_ONLY = forVisibility(["public"]);
 
 /** What one trade event says a fill did — the fields a feed row needs, decoded out of the envelope
  *  so no consumer narrows `payload` twice. `source` is kept raw (the envelope widens it past
