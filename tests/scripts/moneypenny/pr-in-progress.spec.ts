@@ -150,6 +150,41 @@ describe("pr-in-progress: closing a PR unmarks the issue only when nothing else 
   });
 });
 
+// #4562: a platter's body now names the issues its items close. It is a held batch of finished
+// builds waiting on Eric's merge — never a build — so it must neither take a cap slot on open nor
+// keep one after the item's own PR closes as superseded (the plan/4469 class).
+describe("pr-in-progress: a held platter is never a build", () => {
+  const platter = {
+    number: 950,
+    title: "chore(platter): protected-path changes — 2026-10-04",
+    body: "## Summary\n- Closes #4246 — boarded as item 5.",
+    head: { ref: "platter/2026-10-04" },
+  };
+
+  it("does not mark the issues its Summary closes when it opens or is edited", () => {
+    const h = harness({ pr: platter, issues: { 4246: issue("open") } });
+    const { plan } = syncPrInProgress(950, "edited", h.deps);
+    expect(h.writes).toEqual([]);
+    expect(plan[0]?.reason).toBe("a held platter — its items are built, its merge closes them");
+  });
+
+  it("does not hold the label after the item's own PR closes as superseded", () => {
+    const item = {
+      number: 940,
+      title: "feat(x): y",
+      body: "Closes #4246",
+      head: { ref: "plan/3913" },
+    };
+    const h = harness({
+      pr: item,
+      issues: { 4246: issue("open", ["in-progress"]) },
+      openPrs: [platter],
+    });
+    syncPrInProgress(940, "closed", h.deps);
+    expect(h.writes).toEqual(["-4246"]);
+  });
+});
+
 describe("pr-in-progress: events", () => {
   it.each([
     ["opened", "apply"],
