@@ -75,7 +75,7 @@ import { delegationRefusal } from "./subscriptions-api-routes.js";
  */
 
 const AUTHORED_PLAYS_BODY_CAP_BYTES = 8_192;
-const MAX_ID = 100;
+const AUTHORED_PLAY_MAX_ID = 100;
 
 const now = (config: DashboardServerConfig): Date => config.now?.() ?? new Date();
 
@@ -185,7 +185,7 @@ function parseSaveBody(
   const form = parseAuthoredPlayForm(body.form);
   if (!form) return undefined;
   if (body.replaceId === undefined) return { form };
-  const replaceId = boundedString(body.replaceId, MAX_ID);
+  const replaceId = boundedString(body.replaceId, AUTHORED_PLAY_MAX_ID);
   return replaceId ? { form, replaceId } : undefined;
 }
 
@@ -231,7 +231,7 @@ function setShadow(
   memberKey: string,
 ): void {
   const body = parseJsonRecord(raw);
-  const id = boundedString(body?.id, MAX_ID);
+  const id = boundedString(body?.id, AUTHORED_PLAY_MAX_ID);
   if (!id || typeof body?.on !== "boolean") {
     sendJson(res, 400, { error: "malformed shadow body" });
     return;
@@ -296,7 +296,7 @@ async function setPromoted(
   memberKey: string,
 ): Promise<void> {
   const body = parseJsonRecord(raw);
-  const id = boundedString(body?.id, MAX_ID);
+  const id = boundedString(body?.id, AUTHORED_PLAY_MAX_ID);
   if (!id || typeof body?.on !== "boolean") {
     sendJson(res, 400, { error: "malformed promote body" });
     return;
@@ -429,7 +429,7 @@ export async function serveAuthoredPlaysApi(
     await setPromoted(res, raw, config, session, memberKey);
     return true;
   }
-  const id = boundedString(parseJsonRecord(raw)?.id, MAX_ID);
+  const id = boundedString(parseJsonRecord(raw)?.id, AUTHORED_PLAY_MAX_ID);
   if (!id) {
     sendJson(res, 400, { error: "malformed delete body" });
     return true;

@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { cleanStake } from "../options/guidance-stake-parse.js";
+import { MAX_SAVED_POSITION_ID } from "../options/saved-position.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -28,7 +29,6 @@ import {
 
 const SAVED_POSITIONS_BODY_CAP_BYTES = 4_096;
 const MAX_NAME = 60;
-const MAX_ID = 40;
 
 function parseName(raw: unknown): string | undefined {
   const s = boundedString(raw, MAX_NAME);
@@ -61,7 +61,7 @@ interface UpdateBody {
 function parseUpdateBody(raw: string): UpdateBody | undefined {
   const body = parseJsonRecord(raw);
   if (!body) return undefined;
-  const id = boundedString(body.id, MAX_ID);
+  const id = boundedString(body.id, MAX_SAVED_POSITION_ID);
   if (!id) return undefined;
   const name = body.name === undefined ? undefined : parseName(body.name);
   if (body.name !== undefined && name === undefined) return undefined;
@@ -77,7 +77,7 @@ function parseUpdateBody(raw: string): UpdateBody | undefined {
 function parseIdBody(raw: string): { readonly id: string } | undefined {
   const body = parseJsonRecord(raw);
   if (!body) return undefined;
-  const id = boundedString(body.id, MAX_ID);
+  const id = boundedString(body.id, MAX_SAVED_POSITION_ID);
   return id ? { id } : undefined;
 }
 

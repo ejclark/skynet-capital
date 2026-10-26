@@ -30,7 +30,7 @@ import { isRecord } from "../storage/parse-guards.js";
 export const COND_SCOUT_KIND = "cond-scout.v1";
 export const MAX_OPEN_PROBES = 20;
 export const MAX_RETROS = 50;
-const MAX_ID = 64;
+const SCOUT_MAX_TOKEN = 64;
 const MAX_CHECKPOINTS = 8;
 
 /** What the Heartbeat needs to draw one open probe — narrower than the runner's own record. */
@@ -58,7 +58,7 @@ export interface CondScoutSnapshot {
 }
 
 const id = (v: unknown): string | undefined =>
-  typeof v === "string" && v.length > 0 && v.length <= MAX_ID ? v : undefined;
+  typeof v === "string" && v.length > 0 && v.length <= SCOUT_MAX_TOKEN ? v : undefined;
 const hypothesisOf = (v: unknown) => SCOUT_HYPOTHESES.find((h) => h === v);
 const conditionOf = (v: unknown) => SCOUT_CONDITIONS.find((c) => c === v);
 
