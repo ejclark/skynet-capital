@@ -14,9 +14,9 @@ import type { SubscriptionsState } from "./subscription-state.js";
  *    never drops one (`pointAtRecord`).
  *  - ON THE POLL, for what was written before any of this existed (`pointAtRecords`): the live
  *    CRWV wheel carried the ◆ row's conviction (#4642) and CRWV-LONG-CALL its own, both checked
- *    2027-01-29, the date the AI-dip record holds. Unmarked and idempotent, like the row carry
- *    beside it (`row-conviction.ts`): an invariant re-read each poll, no write when nothing needs
- *    a pointer.
+ *    2027-01-29, the date the AI-dip record holds. Unmarked and idempotent, like the poll migration
+ *    before it (`pair-conviction-migration.ts`): an invariant re-read each poll, no write when
+ *    nothing needs a pointer.
  *
  * WHEN A CONVICTION "MATCHES" A RECORD: the record steers the subscription's pair and states the
  * same check day. That is the whole test, and it is why pointing changes no check: the date the
