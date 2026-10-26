@@ -16,8 +16,9 @@ import type { SubscriptionsState } from "./subscription-state.js";
  *
  *  - an owner's own day that no record states (the resume after a failed check, #4469 c12);
  *  - a pair no record steers (a stand-aside pair taken on the owner's conviction, #4469 c2);
- *  - a ◆ row's conviction no single record steers, which the row carry would have written inline
- *    (`row-conviction.ts`) — written as a view instead, the carry kept only as the fallback.
+ *  - a ◆ row's conviction no single record steers, which the row carry used to write inline
+ *    (`row-conviction.ts`) — written as a view instead. With no view, the bots hold the ◆ pair
+ *    exits-only (`isConvictionOffView`), so no inline fallback is written any more.
  *
  * Which subscriptions: the ones the pointer rule leaves with no pointer (`pointAtRecord`, applied
  * with members' views as they stand), so a pair a seeded record or a member's view already steers
