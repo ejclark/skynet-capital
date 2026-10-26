@@ -50,7 +50,10 @@ into separate lint, typecheck and per-suite calls (#5191).
    (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
    label — never a shared generic name such as a bare body.md. Every agent in a workflow shares one
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
-   (#5240, #5245).
+   (#5240, #5245). **Stop only your own processes:** `pkill -P $$ -f rstest`, never a bare
+   `pkill -f rstest` — that kills every sibling worktree's test run too. You never need it to clear
+   load: full verifies queue one at a time per checkout (`scripts/verify-locked.sh`, #5548), and the
+   pre-push hook skips a tree `ship.sh open` already verified green.
    **Finished worktrees are swept, not left** (#5548: ten at once filled a cloud session's disk,
    and they were only ever removed by hand). **After an agent's PR merges, the session that
    dispatched it runs `npm run worktree:sweep`** (dry run: each `.claude/worktrees/*` entry,
