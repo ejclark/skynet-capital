@@ -21,7 +21,9 @@ export async function accountsFixture() {
   const heartbeat = new URL("./accounts-heartbeat-fixture.mjs", import.meta.url).href;
   const ericDesk = new URL("./accounts-eric-desk-fixture.mjs", import.meta.url).href;
   const sauronDesk = new URL("./accounts-sauron-desk-fixture.mjs", import.meta.url).href;
+  const activity = new URL("./accounts-activity-fixture.mjs", import.meta.url).href;
   const imports =
+    `import { ericActivity, sauronActivity } from ${JSON.stringify(activity)};\n` +
     `import { sauronAllPasses, sauronNoTrades, sauronProbes, sauronRollCall, sauronVerdict } from ${JSON.stringify(heartbeat)};\n` +
     `import { ericDesk } from ${JSON.stringify(ericDesk)};\n` +
     `import { sauronDesk } from ${JSON.stringify(sauronDesk)};`;
