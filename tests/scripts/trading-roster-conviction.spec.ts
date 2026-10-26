@@ -73,27 +73,6 @@ describe("tradingRoster — the conviction gate on the live path", () => {
     expect(r.persona.optionDemand).toBeDefined();
   });
 
-  /** #5482 contract piece 4: the bots read pointers only. An inline copy the app's poll could not
-   *  move onto a view gives no check day, so its pair opens nothing new rather than trade unchecked. */
-  it("opens nothing on a pair whose conviction is still inline, with no pointer", () => {
-    const errors: string[] = [];
-    const error = console.error;
-    const log = console.log;
-    console.error = (line: string) => errors.push(line);
-    console.log = () => undefined;
-    try {
-      const inline = [aSubscription("sauron", "CRWV-WHEEL", { conviction })];
-      const resolved = resolveBotRoster(bot, [], inline);
-      expect(resolved.enabled).toEqual([
-        { playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true },
-      ]);
-      expect(errors.join("\n")).toContain("its conviction is not on a view yet");
-    } finally {
-      console.error = error;
-      console.log = log;
-    }
-  });
-
   /** The inline carry's replacement, bots first: a ◆ pair with neither a pointer nor a copy runs
    *  exits-only the same way, and is never called "still trading". */
   it("opens nothing on a ◆ pair with neither a pointer nor a copy, and never says it still trades", () => {

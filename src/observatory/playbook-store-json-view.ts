@@ -22,6 +22,7 @@ import { type DelegationGateView, delegationGateView } from "../domain/playbook-
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
 import { isConvictionOffView } from "../playbooks/conviction-store.js";
 import { findPair, type Pair, type StrategyId } from "../playbooks/pair-table.js";
+import type { OwnerReadSubscription } from "../subscriptions/pair-conviction.js";
 import { budgetedOn } from "../subscriptions/strategy-budgets.js";
 import {
   handOffNote,
@@ -132,7 +133,7 @@ function whipsawMetric(stats: ReturnType<typeof whipsawStatsByPlaybook>[number])
   return { label: "Whipsaw rate", value };
 }
 
-function subscriptionView(sub: PlaybookSubscription): SubscriptionView {
+function subscriptionView(sub: OwnerReadSubscription): SubscriptionView {
   return {
     mode: sub.mode,
     ...(sub.capitalAllocated !== undefined ? { capitalAllocated: sub.capitalAllocated } : {}),
@@ -161,10 +162,10 @@ export const UNMOVED_CONVICTION_NOTE =
 
 /**
  * Each row whose subscription's conviction is on no view, saying it opens nothing new (#5482
- * contract piece 4, the state block's default): an inline copy with no pointer, or a ◆ pair with
- * neither (`isConvictionOffView`). The bots read pointers only, so such a pair has no check day and
- * runs exits-only; the app's poll moves the copy onto a view unless that move is refused. Reads the RAW subscriptions: the Store's own rows show an owner's
- * view as an inline conviction (`asOwnConviction`), so they cannot tell the two apart. A row that
+ * contract piece 4, the state block's default): a ◆ pair with no pointer (`isConvictionOffView`).
+ * The bots read pointers only, so such a pair has no check day and runs exits-only until the app's
+ * poll points it at a view. Reads the RAW subscriptions: the Store's own rows show an owner's view
+ * as an inline conviction (`asOwnConviction`), so they cannot tell the two apart. A row that
  * already says why it is not trading keeps that reason.
  */
 export function withUnmovedConvictions<
@@ -188,7 +189,7 @@ export function withUnmovedConvictions<
 /** The strategy cards with the viewer's own account joined on each row's pair id. A viewer who
  *  does not manage the account (no `subscriptions`) gets the bare rows. */
 function strategyCardsView(
-  subscriptions: readonly PlaybookSubscription[] | undefined,
+  subscriptions: readonly OwnerReadSubscription[] | undefined,
   asOfIso: string,
   envNamed: readonly string[] | undefined,
   allocations: AccountAllocations | undefined,
@@ -235,7 +236,7 @@ function strategyCardsView(
 type AccountAllocations = Readonly<Partial<Record<StrategyId, StrategyAllocation>>>;
 
 export function playbookStoreView(
-  subscriptions: readonly PlaybookSubscription[] | undefined,
+  subscriptions: readonly OwnerReadSubscription[] | undefined,
   delegationLocked = false,
   /** The viewing account's OWN closed round-trips (#3543 slice 2) — never another account's,
    *  same "no cross-account visibility" boundary #885 already settled for subscriptions. Defaults

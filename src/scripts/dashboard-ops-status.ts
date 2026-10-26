@@ -3,12 +3,7 @@ import type { BotControlsStore } from "../server/bot-controls-store.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
 import { resolveDeployLagFetcher } from "../server/ops-status-deploy-lag.js";
 import type { OpsStatusDeps } from "../server/ops-status-routes.js";
-import {
-  buildOpsStatus,
-  convictionCopiesLogLine,
-  resolveOpsStatusRepo,
-} from "../server/ops-status-service.js";
-import type { SubscriptionStore } from "../server/subscription-store.js";
+import { buildOpsStatus, resolveOpsStatusRepo } from "../server/ops-status-service.js";
 import {
   type CredentialsBridgeDeps,
   type InsightsBridgeHandle,
@@ -31,8 +26,6 @@ export interface OpsStatusSetupDeps {
    *  password mode has no membership, only one shared key, so there is still no panel to serve
    *  there. */
   readonly authConfigured: boolean;
-  /** The Playbook Store's subscriptions, for the inline-conviction-copies row (#5482). */
-  readonly subscriptions?: SubscriptionStore;
 }
 
 /** Latest `at` among trade-activity records belonging to a BOT participant — the panel's
@@ -67,9 +60,6 @@ export function wireOpsStatus(
   credentialsDeps?: CredentialsBridgeDeps,
 ): { opsStatus: OpsStatusDeps | undefined; insightsBridge: InsightsBridgeHandle } {
   const insightsBridge = startInsightsBridge(env, botControls, credentialsDeps);
-  // Every deploy boots the dashboard, so the count is in the Fly log after each merge (#5482).
-  const { subscriptions } = rest;
-  if (subscriptions) console.log(convictionCopiesLogLine(() => subscriptions.loadIfReadable()));
   return { opsStatus: setupOpsStatus({ env, insightsBridge, ...rest }), insightsBridge };
 }
 
@@ -90,9 +80,6 @@ export function setupOpsStatus(deps: OpsStatusSetupDeps): OpsStatusDeps | undefi
         botsRunningSha: () => deps.insightsBridge.botsRunningSha(),
         personaGateVerdicts: () => deps.insightsBridge.botsGate(),
         lastBotActivityAt: () => lastBotActivityAt(deps.hub, deps.activity),
-        ...(deps.subscriptions
-          ? { subscriptions: () => deps.subscriptions?.loadIfReadable() }
-          : {}),
         ...(fetchDeploySignals ? { fetchDeploySignals } : {}),
         repo,
       }),

@@ -224,10 +224,9 @@ export function createCondScoutSeeder(
 
 /**
  * The poll migration of #5482 contract piece 3 (`pair-conviction-migration.ts`): each subscription
- * the pointer rule leaves unpointed with a conviction to check — its inline copy, or its ◆ row's —
- * gets its owner's own view on the pair, named for the account's bot (`accountName`). Views only:
- * the pointer pass after it points each subscription at its view, drops the inline copy and logs
- * the move. Never while either file cannot be read whole, and no write on the common poll, when no
+ * the pointer rule leaves unpointed on a ◆ row gets its owner's own view on the pair, carrying the
+ * row's conviction and named for the account's bot (`accountName`). Views only: the pointer pass
+ * after it points each subscription at its view and logs the move. Never while either file cannot be read whole, and no write on the common poll, when no
  * subscription is left unpointed. Returns `account/playbookId` for each view written.
  */
 export function migratePairConvictions(
@@ -348,7 +347,7 @@ export function pollSeedsFromEnv(
       // After both seeds, so a ◆ pair one of them just added gets its row's conviction at once.
       ...lines(
         migratePairConvictions(subscriptions, memberConvictions, at),
-        "moved an inline conviction (or a ◆ row's) onto its owner's own view on the pair",
+        "gave a ◆ row's conviction its owner's own view on the pair",
       ),
       // After the migration, so a view it just wrote is pointed at on the same poll.
       ...lines(
@@ -362,7 +361,7 @@ export function pollSeedsFromEnv(
             onReadError,
           ),
         ),
-        "pointed each subscription at the record that steers it, or at the member's view handed over to it (an inline copy beside the pointer dropped)",
+        "pointed each subscription at the record that steers it, or at the member's view handed over to it",
       ),
     ];
   };

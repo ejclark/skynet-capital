@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   buildSubscriptionsSnapshot,
   parseSubscriptionsSnapshot,
@@ -176,30 +177,28 @@ describe("parseSubscriptionsSnapshot refuses anything it cannot fully reproduce"
 });
 
 describe("carried, not behavioral on v1 (#4469 slice 3c part 1)", () => {
-  const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
   const allocations = {
     sauron: { wheel: { capitalAllocated: 75_000, updatedAt: "2026-10-07T00:00:00.000Z" } },
   };
 
-  it("the version does not move for a conviction, a newer build's field, or the allocations", () => {
+  it("the version does not move for a newer build's field, or the allocations", () => {
     const plain = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT);
     const carried = buildSubscriptionsSnapshot(
-      { sauron: [{ ...sub({ conviction }), window: { from: "D-20" } } as PlaybookSubscription] },
+      { sauron: [{ ...sub(), window: { from: "D-20" } } as PlaybookSubscription] },
       AT,
       allocations,
     );
     expect(carried.version).toBe(plain.version);
   });
 
-  it("a conviction (on v2) and the allocations survive the bridge to the bots", () => {
+  it("the allocations survive the bridge to the bots", () => {
     const snapshot = buildSubscriptionsSnapshot(
-      { sauron: [sub({ conviction })] },
+      { sauron: [sub()] },
       AT,
       allocations,
       SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
     );
     const parsed = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
-    expect(parsed?.accounts.sauron?.[0]?.conviction).toEqual(conviction);
     expect(parsed?.allocations).toEqual(allocations);
   });
 
@@ -221,33 +220,21 @@ describe("carried, not behavioral on v1 (#4469 slice 3c part 1)", () => {
 });
 
 /**
- * `subscriptions.v2` (#4469 slice 3c part 2): the one wire change that adds a behavioral field.
- * The criterion this holds: only the added field moves the version.
+ * `subscriptions.v2` (#4469 slice 3c part 2): the one wire change that added a behavioral field, a
+ * subscription's inline conviction. That field is retired (#5482, the contract step's last piece),
+ * so its term is frozen at `null`, what a subscription with none always hashed to.
  */
-describe("subscriptions.v2 — the conviction joins the fingerprint, once", () => {
-  const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+describe("subscriptions.v2 — the retired conviction's term, frozen", () => {
   const V2 = SUBSCRIPTIONS_SNAPSHOT_KIND_V2;
   const v2 = (state: SubscriptionsState) => subscriptionsVersion(state, V2);
 
-  it("moves for a conviction, and for a changed reason or check date", () => {
-    const plain = v2({ sauron: [sub()] });
-    const held = v2({ sauron: [sub({ conviction })] });
-    expect(held).not.toBe(plain);
-    expect(
-      v2({ sauron: [sub({ conviction: { ...conviction, checkOn: "2027-02-26" } })] }),
-    ).not.toBe(held);
-    expect(v2({ sauron: [sub({ conviction: { ...conviction, reason: "new view" } })] })).not.toBe(
-      held,
-    );
-  });
-
-  it("moves for nothing else new: timestamps, a newer build's field and allocations still do not", () => {
-    const base = buildSubscriptionsSnapshot({ sauron: [sub({ conviction })] }, AT, undefined, V2);
+  it("moves for nothing new: timestamps, a newer build's field and allocations still do not", () => {
+    const base = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, V2);
     const carried = buildSubscriptionsSnapshot(
       {
         sauron: [
           {
-            ...sub({ conviction, updatedAt: "2026-10-09T09:30:00.000Z" }),
+            ...sub({ updatedAt: "2026-10-09T09:30:00.000Z" }),
             window: { from: "D-20" },
           } as PlaybookSubscription,
         ],
@@ -272,16 +259,11 @@ describe("subscriptions.v2 — the conviction joins the fingerprint, once", () =
     }
   });
 
-  it("round trips as v2, conviction intact", () => {
-    const snapshot = buildSubscriptionsSnapshot(
-      { sauron: [sub({ conviction })] },
-      AT,
-      undefined,
-      V2,
-    );
+  it("round trips as v2", () => {
+    const snapshot = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, V2);
     const parsed = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
     expect(parsed?.kind).toBe(V2);
-    expect(parsed?.accounts.sauron?.[0]?.conviction).toEqual(conviction);
+    expect(parsed?.accounts).toEqual({ sauron: [sub()] });
   });
 
   it("is read from this build on, while the app still sends v1 — expand first", () => {
@@ -290,18 +272,26 @@ describe("subscriptions.v2 — the conviction joins the fingerprint, once", () =
     );
   });
 
-  it("drops a conviction a v1 snapshot carries — its version never vouched for it", () => {
-    const snapshot = buildSubscriptionsSnapshot({ sauron: [sub({ conviction })] }, AT);
-    const parsed = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
-    expect(parsed?.kind).toBe(SUBSCRIPTIONS_SNAPSHOT_KIND);
-    expect(parsed?.accounts.sauron?.[0]).not.toHaveProperty("conviction");
-  });
-
   it("refuses a v2 payload whose version was computed the v1 way", () => {
     const snapshot = {
-      ...buildSubscriptionsSnapshot({ sauron: [sub({ conviction })] }, AT, undefined, V2),
-      version: subscriptionsVersion({ sauron: [sub({ conviction })] }),
+      ...buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, V2),
+      version: subscriptionsVersion({ sauron: [sub()] }),
     };
     expect(parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)))).toBeUndefined();
+  });
+
+  it("reads an older app's v2 snapshot that carried a conviction as not reported", () => {
+    // That app hashed the words and day; this build drops them and cannot reproduce its version.
+    const sent = JSON.parse(
+      JSON.stringify(buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, V2)),
+    );
+    const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+    sent.accounts.sauron[0].conviction = conviction;
+    const v1 = ["S1-NVDA", "standard", 5_000, true, null, false];
+    sent.version = createHash("sha256")
+      .update(JSON.stringify([["sauron", [[...v1, [conviction.reason, conviction.checkOn]]]]]))
+      .digest("hex")
+      .slice(0, 16);
+    expect(parseSubscriptionsSnapshot(sent)).toBeUndefined();
   });
 });
