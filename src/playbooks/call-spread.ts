@@ -327,9 +327,11 @@ function openIntent(
       `$${width.toLocaleString("en-US")}. It is sold back by ${entry.exitDay} whatever it is worth then.${oneSigma}`,
     forecast: {
       direction: "up",
-      invalidator:
-        `${symbol}'s D-${spread.enter}→D-${spread.exit} return ≤ 0 on 2 of the next 3 prints, or ` +
-        "this spread exits below its cost",
+      invalidator: "this spread exits below its cost",
+      // The playbook's own falsifier across prints — the owner's alone (#5828), never the order's.
+      retireRule:
+        `The playbook retires if ${symbol}'s D-${spread.enter}→D-${spread.exit} return is ≤ 0 ` +
+        "on 2 of the next 3 prints.",
     },
     selection: {
       rule: "spread-by-delta",

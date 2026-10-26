@@ -8,6 +8,7 @@ import {
   type ThesisData,
   type ThesisMarker,
 } from "../live/desk";
+import { playbookTitle, withPairNames } from "../live/playbook-name";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { readChartPalette } from "./chart-mount";
 import { ladderStamp, SAFEGUARD_STATE_GLYPH, SAFEGUARD_STATE_LABEL } from "./safeguard-state";
@@ -138,7 +139,7 @@ function SafeguardLadder({
         ladder.map((entry, i) => (
           <div className="thesis-ladder-play" key={`${entry.playbookId ?? i}:${entry.mode}`}>
             <p className="thesis-ladder-play-name">
-              {entry.playbookId ?? `Play ${i + 1}`} · {entry.mode}
+              {entry.playbookId ? playbookTitle(entry.playbookId) : `Play ${i + 1}`} · {entry.mode}
             </p>
             {entry.stages === null ? (
               <p className="note">
@@ -182,7 +183,7 @@ function CallBanner({ call }: { readonly call: ThesisData["call"] }): ReactEleme
   return (
     <div className={`thesis-call thesis-call-${call.verdict.replace(/\s+/g, "-")}`}>
       <p className="thesis-verdict">{VERDICT_LABEL[call.verdict]}</p>
-      <p className="thesis-why">{call.why}</p>
+      <p className="thesis-why">{withPairNames(call.why)}</p>
       <dl className="thesis-call-meta">
         {call.window ? (
           <div>
@@ -248,7 +249,7 @@ function MarkerRow({
       </div>
       {open && marker.reasoning ? (
         <div className="thesis-marker-detail">
-          <p className="cycle-reason">“{marker.reasoning.reason}”</p>
+          <p className="cycle-reason">“{withPairNames(marker.reasoning.reason)}”</p>
           {marker.reasoning.expectation ? (
             <p className="cycle-expectation">Expected: {marker.reasoning.expectation}</p>
           ) : null}

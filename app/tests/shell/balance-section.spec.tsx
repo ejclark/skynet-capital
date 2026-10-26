@@ -247,7 +247,7 @@ describe("BalanceSection findings", () => {
       "href",
       "/accounts?account=bot-sauron&section=playbooks&card=CRWV-LONG-CALL&mode=aggressive",
     );
-    expect(link).toHaveAccessibleName("CRWV-LONG-CALL — open its card on Playbooks");
+    expect(link).toHaveAccessibleName("The long call on CRWV — open its card on Playbooks");
     const concentrated = screen.getByText(/CRWV is 46%/).closest("li");
     expect(within(concentrated as HTMLElement).queryByRole("link")).toBeNull();
   });
@@ -287,7 +287,7 @@ describe("BalanceSection plays", () => {
     const names = [...document.querySelectorAll(".bal-play .bal-play-link")].map(
       (a) => a.textContent,
     );
-    expect(names).toEqual(["CRWV-LONG-CALL ›", "CRWV-WHEEL ›", "NBIS-WHEEL ›"]);
+    expect(names).toEqual(["The long call on CRWV ›", "The wheel on CRWV ›", "NBIS-WHEEL ›"]);
   });
 
   it("says what each play has committed and left idle, with the bar's share in words", async () => {

@@ -355,8 +355,8 @@ export interface PlaybookSubscription {
    * The owner's labelled, dated conviction (#4469 criteria 2, 11 and 12): the verdict a pair
    * trades on when the house study did not say ✓, as Eric's wheel on CRWV does (#4642: "CRWV runs
    * as Eric's conviction, against the study's stand-aside"). Absent = no conviction on record.
-   * The Store writes it (slice 3c part 3: on subscribe, or `setConviction`), a ◆ pair's row carries
-   * its own onto a subscription that states none (`row-conviction.ts`), and `subscriptions.v2`
+   * The Store writes it (slice 3c part 3: on subscribe, or `setConviction`), a ◆ pair's row carried
+   * its own onto a subscription that stated none until #5482 (`row-conviction.ts`), and `subscriptions.v2`
    * fingerprints it, so the bots stop new entries when its check fails (`with-conviction-gate.ts`).
    * Since #5482's contract step it sits only on an unpointed subscription, and since piece 4 the
    * bots never read it (`statedCheck` reads pointers only): a copy still here is one the app's poll

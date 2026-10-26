@@ -66,7 +66,7 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * piece every pair it carries a conviction for runs exits-only: a rollback that far fails safe.
  * Since the inline carry's replacement (bots first) so does every ◆ pair a v1 or v2 snapshot
  * carries, copy or not: a ◆ pair with no pointer runs exits-only (`isConvictionOffView`). That is
- * what lets the app stop writing the ◆ row's copy.
+ * what let the app stop writing the ◆ row's copy (the replacement's app half).
  */
 
 export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v1";

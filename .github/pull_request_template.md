@@ -20,7 +20,7 @@ stateDiagram-v2 · branch mechanics → gitGraph · dataflow → delta flowchart
 removed) · a number over time → xychart-beta · a call sheet → quadrantChart · schema → erDiagram ·
 config → before/after table. The vocabulary card and the story → picture table: docs/PICTURES.md.
 Mermaid: any type GitHub draws (npm run mermaid:lint parses every block — a syntax error is the
-opening frame), ≤15 nodes, plain words in labels, no theme/hex — emphasis by edge weight and shape;
+opening frame), one phone screen at ≥12px text, plain words in labels, no theme/hex — emphasis by edge weight and shape;
 animate every live edge of a flow (`a e1@--> b` + `e1@{ animate: true }`), dotted removed paths stay still.
 The picture states WHAT changed — never how good it is. -->
 
