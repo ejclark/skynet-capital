@@ -55,7 +55,7 @@ export function describeUncleanExit(previous: RunMarker): string {
   );
 }
 
-const row = (label: string, value: string): string => `| ${label} | ${value} |`;
+const tableRow = (label: string, value: string): string => `| ${label} | ${value} |`;
 
 /** One occurrence as a capsule table — the issue body's top and each later comment share it. */
 export function occurrenceTable(previous: RunMarker, bootedAgainAt: Date): string {
@@ -69,14 +69,14 @@ export function occurrenceTable(previous: RunMarker, bootedAgainAt: Date): strin
   return [
     "| | |",
     "|---|---|",
-    row("**Run booted**", `${previous.bootedAt} · \`${previous.gitSha ?? "build unknown"}\``),
-    row("**Last seen alive**", previous.lastSeenAt),
-    row("**Memory**", rss),
-    row(
+    tableRow("**Run booted**", `${previous.bootedAt} · \`${previous.gitSha ?? "build unknown"}\``),
+    tableRow("**Last seen alive**", previous.lastSeenAt),
+    tableRow("**Memory**", rss),
+    tableRow(
       "**Event loop**",
       previous.lastLoopMaxMs === undefined ? "no reading" : `${previous.lastLoopMaxMs} ms max`,
     ),
-    row("**Booted again**", bootedAgainAt.toISOString()),
+    tableRow("**Booted again**", bootedAgainAt.toISOString()),
   ].join("\n");
 }
 
