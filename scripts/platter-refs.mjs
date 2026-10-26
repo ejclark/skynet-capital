@@ -22,6 +22,10 @@
 //      (`Part of #n`) refs — the intent that PR already stated (#4494 carried `Closes #4246, #3913`).
 //   3. A number read off the branch or subject is ONLY ever a ref. A branch number is provenance, not
 //      completion: `plan/4535` boarded slice 4 of a still-open plan, and closing it would be a lie.
+//   4. A claim lane's own build (`feedback/<n>`, `plan/<n>`) with neither flag, and no PR body that
+//      names #n, is REFUSED (#6191). Rule 3 alone gave it `Part of #n`, so the platter's merge left
+//      #n open (#5837's item on #5852, hand-closed). The lane is the one session that knows whether
+//      its item finishes the issue, so the board asks it to say so instead of guessing either way.
 import { readFileSync } from "node:fs";
 import { derivePrIssues, keywordIssuesOf } from "./moneypenny/pr-issues.mjs";
 
@@ -29,6 +33,9 @@ const CLOSES_TRAILER = "Platter-Closes";
 const REFS_TRAILER = "Platter-Refs";
 
 const sorted = (nums) => [...new Set(nums)].sort((a, b) => a - b);
+
+/** The feedback and plan lanes' build branches, the same shape pr-in-progress.mjs keys on. */
+const CLAIM_LANE_BRANCH = /^(?:feedback|plan)\/(\d+)$/;
 
 /** `"4246, #3913"` → `[3913, 4246]`; empty → `[]`; anything that is not an issue number throws. */
 export function parseIssueList(text) {
@@ -61,6 +68,13 @@ export function itemRefs({ item = "", subject = "", closes, partOf, prBody = "" 
     return { closes: c, refs: sorted(partOf ?? []).filter((n) => !c.includes(n)) };
   }
   const stated = keywordIssuesOf(stripCode(prBody));
+  const own = Number(CLAIM_LANE_BRANCH.exec(String(item))?.[1] ?? 0);
+  if (own && !stated.closes.includes(own) && !stated.refs.includes(own)) {
+    throw new Error(
+      `${item} builds #${own}, and nothing says whether this item finishes it — pass ` +
+        `--closes ${own} if it is the issue's last work, or --part-of ${own} if work remains`,
+    );
+  }
   const inferred = derivePrIssues({ title: subject, headRef: item });
   return {
     closes: stated.closes,

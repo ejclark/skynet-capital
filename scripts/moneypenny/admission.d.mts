@@ -43,6 +43,8 @@ export interface AdmissionDeps {
   comments?: (n: number) => Array<{ body?: string }>;
   comment?: (n: number, body: string) => unknown;
   log?: (line: string) => void;
+  /** #6191: issue → the open platter that closes it; the claim lanes read GitHub without it. */
+  readBoarded?: () => ReadonlyMap<number, number>;
 }
 
 export const QUEUE_MARKER: string;
@@ -120,7 +122,13 @@ export function readIssue(
 export function recheckPullable(
   issue: AdmissionIssue,
   read?: (n: number) => AdmissionIssue,
+  boarded?: () => ReadonlyMap<number, number>,
 ): string | null;
+/** #6191: issue → the open platter that closes it, from the open PRs; fail-open to an empty map. */
+export function readBoarded(
+  list?: () => ReadonlyArray<{ number?: number; body?: string | null; head?: { ref?: string } }>,
+  log?: (line: string) => void,
+): Map<number, number>;
 export interface AdmissionCliIO {
   readMode?: AdmissionDeps["readMode"];
   readInFlight?: () => AdmissionIssue[];

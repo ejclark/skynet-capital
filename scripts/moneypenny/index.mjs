@@ -59,6 +59,7 @@ import { loopCheck } from "../loop-check.mjs";
 import {
   gateAdmission,
   nextAdmissible,
+  readBoarded,
   readInFlight,
   readOpenIssues,
   readOpenPlans,
@@ -84,6 +85,7 @@ import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import {
+  boardedReason,
   ensureLabel,
   ensureVocabulary,
   inFeedbackLane,
@@ -327,7 +329,7 @@ export function claimFeedback(
   }
   const issue = intent.issue;
   // #5266 — the payload predates any link added after `ready`; ask the pull rule on a fresh read.
-  const stale = recheckPullable(issue, admission.readIssue);
+  const stale = recheckPullable(issue, admission.readIssue, admission.readBoarded);
   if (stale) {
     console.log(`::notice::not building feedback #${issue.number} — ${stale}`);
     return { claimed: false, reason: stale };
@@ -636,6 +638,12 @@ export function claimPlan(
     return { claimed: false, reason: intent.reason };
   }
   const issue = intent.issue;
+  // #6191 — a plan whose last slice is boarded on a held platter has nothing left to build.
+  const boarded = boardedReason(issue.number, (admission.readBoarded ?? readBoarded)());
+  if (boarded) {
+    console.log(`::notice::not building plan #${issue.number} — ${boarded}`);
+    return { claimed: false, reason: boarded };
+  }
   // #3960 — same gate as the feedback claim. A continuation is the next slice of a started plan,
   // which the started-plan cap never refuses (#4393 criterion 6), so it skips that read.
   const gate = gateAdmission(issue, { ...admission, started: Boolean(ctx.continuation) });

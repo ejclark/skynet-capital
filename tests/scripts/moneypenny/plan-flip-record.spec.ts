@@ -30,6 +30,7 @@ const setup = ({ position = "normal" as "normal" | "halt", inFlight = [1, 2, 3] 
     readMode: () => ({ position, caps: { inFlightCap: 3 }, until: null, reason: "x" }),
     readInFlight: () => inFlight.map(busy),
     readPlans: () => [],
+    readBoarded: () => new Map<number, number>(),
     comments: () => [],
     comment: quiet,
     log: quiet,

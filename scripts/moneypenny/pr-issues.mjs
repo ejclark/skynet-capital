@@ -121,6 +121,24 @@ export function keywordIssuesOf(text = "", repo = REPO) {
 }
 
 /**
+ * WHAT THE OPEN PLATTERS WILL CLOSE (#6191): issue → the platter PR whose body closes it. A held
+ * platter's body carries one `Closes #n` Summary bullet per `Platter-Closes` trailer (#4562), so an
+ * issue it closes has nothing left to build — it waits on Eric's merge, which closes it. #5837 was
+ * pulled three more times after its last item boarded #5852. A `Part of #n` bullet is not counted:
+ * that item's issue still has work left, which a puller may take. Pure: open PR rows in, map out.
+ */
+export function platterClosesByIssue(openPrs = [], repo = REPO) {
+  const byIssue = new Map();
+  for (const pr of openPrs ?? []) {
+    if (laneClassOf(pr?.head?.ref) !== "platter") continue;
+    for (const n of keywordIssuesOf(pr?.body ?? "", repo).closes) {
+      if (!byIssue.has(n)) byIssue.set(n, pr.number);
+    }
+  }
+  return byIssue;
+}
+
+/**
  * Does a PR leave NO trace of what it builds — names no issue and is not a machine lane's? The
  * advisory check for criterion 8 (scripts/pr-provenance-scan.mjs): such a PR is invisible to the
  * board, so the in-flight cap cannot count it. Lane PRs are exempt by class — they map to a
