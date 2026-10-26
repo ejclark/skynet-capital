@@ -31,6 +31,8 @@
 // is unexercised; the spec drives `reconcileBoard` end to end through injected IO only. Its first
 // workflow run (board-sync.yml, on every push to main — slice 2) is the live test — and the one assumption that run checks is
 // that `gh project item-list --format json` puts the Status option's name on each item as `status`.
+// #4760 replaced that read with `readBoardItemsFromGh` (one GraphQL query, ~1 point per 100 cards
+// instead of ~310 a sweep) in the same shape; its log line names the points each sweep spent.
 //
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-reconcile.mjs [--dry-run]
 import { missingDecisionCallout } from "./decision-callout.mjs";
