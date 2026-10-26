@@ -47,6 +47,7 @@ import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
 import { DEFAULT_MODEL } from "./model-tier.mjs";
+import { BLOCKER_READS, nextSubIssue } from "./pickup-hold.mjs";
 import { derivePrIssues } from "./pr-issues.mjs";
 import {
   allReceiptsOf,
@@ -92,34 +93,11 @@ export const MAX_CANDIDATES = 5;
  *  the next push, which is minutes away. */
 export const STOP_CAP = 1;
 
-/** How many open sub-issues one candidate reads blockers for. Past this the answer is UNKNOWN, and
- *  `nextSubIssue` refuses an unknown rather than guessing it unblocked (see its header). */
-const BLOCKER_READS = 10;
-
 const DAY_MS = 864e5;
 
-/**
- * The next slice to take: the first open sub-issue whose every blocker is closed (#4056's
- * correction). Order is the sub-issue list's own, which GitHub returns in the order they were
- * attached — the plan's slicing order.
- *
- * AN UNREAD BLOCKER LIST IS UNKNOWN, NEVER "UNBLOCKED". The gather reads blockers for the first
- * `BLOCKER_READS` open slices only, so a sub-issue with no entry in `blockedBy` has not been asked
- * about — and treating that as "no blockers" would dispatch a slice whose dependency is still open,
- * which is precisely the check #4056 asked for. A plan deep enough to run past that bound falls
- * back to the block's next-pickup line instead, which a human wrote.
- *
- * @param blockedBy map of sub-issue number → its blocker issues (`[{ state }]`)
- */
-export function nextSubIssue(subIssues = [], blockedBy = {}) {
-  const known = (s) => Object.hasOwn(blockedBy ?? {}, s.number);
-  return (
-    (subIssues ?? [])
-      .filter((s) => s && (s.state ?? "open") === "open")
-      .find((s) => known(s) && blockedBy[s.number].every((b) => (b?.state ?? "open") !== "open")) ??
-    null
-  );
-}
+// `nextSubIssue` (the first open, unblocked slice) lives in pickup-hold.mjs since #5707, so the
+// pick's hold and this lane ask one rule; it is re-exported here for the callers that import it.
+export { nextSubIssue };
 
 /**
  * WHICH SLICE A TEXT NAMES — the ordinal a pickup line ("slice 4, board subtraction") or a slice's

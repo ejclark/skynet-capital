@@ -71,6 +71,7 @@ function wake({
         readInFlight: () => inFlight,
         readPrIssues: () => new Map(openPrs),
         readPlans: () => [],
+        readHold: () => null,
         continuation: noContinuation,
       }),
     isHeld: (n: number) => leased.includes(n),
@@ -222,6 +223,7 @@ describe("a freed build slot wakes the queue — merge or no merge", () => {
         readInFlight: () => [],
         readPrIssues: () => new Map(),
         readPlans: () => [],
+        readHold: () => null,
         continuation: noContinuation,
       },
       claimed: (slug: string) => {

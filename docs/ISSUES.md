@@ -491,6 +491,12 @@ its next slice itself):
   and no open slice is read as "this plan is finished" and nothing continues — which is correct on
   the last slice, and a silent stall if the line was simply forgotten. Either bold shape works
   (`**Next pickup: …**` or `**Next pickup:** …`).
+- **A pickup nobody can build starts with `none`, then says the wait** (#5707): `none buildable
+  until #4808 slice 1 merges`, `none until S1-NVDA's first fill`, `none — Eric's two steps`. The
+  retry sweep and `admission.mjs --check` skip such a plan (unless an open, unblocked sub-issue
+  remains), so it stops waking empty sessions; editing the line to name a slice is the wake, on the
+  next push. A line that does not *start* with `none` reads as a slice. A wait on another plan's
+  slice that has its own issue is a native blocked-by link instead, which lifts itself on close.
 - **The edit itself is the proof of work.** A continued slice that ends with the block byte-identical
   stops the plan and assigns Eric with the run link — the lane cannot tell "nothing moved" from
   "moved but did not say so". Editing in place on finish is therefore not hygiene; it is how the

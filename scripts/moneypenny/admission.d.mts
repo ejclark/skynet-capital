@@ -127,6 +127,8 @@ export interface AdmissionCliIO {
   readReady?: () => AdmissionIssue[];
   readIssue?: (n: number) => AdmissionIssue;
   readPlans?: () => AdmissionIssue[];
+  /** Why a plan has nothing to build (#5707, `readPickupHold`); inject it, or plans read GitHub. */
+  readHold?: (issue: AdmissionIssue) => string | null;
   print?: (line: string) => void;
   printErr?: (line: string) => void;
 }

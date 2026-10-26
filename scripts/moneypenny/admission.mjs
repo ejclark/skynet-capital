@@ -36,6 +36,7 @@
 // decides whether it may start NOW. A live session — the claim lanes ask through `gateAdmission`,
 // `/work-issues` through the read-only CLI at the foot of this file:
 //   node scripts/moneypenny/admission.mjs --check <n>   # {admit, reason, queuedBehind?}; exit 0 | 3
+//   (`--check` and `--next` also step past a plan whose state block names nothing to build, #5707)
 //   node scripts/moneypenny/admission.mjs --next        # the sweep's pick, same JSON; exit 0 | 3
 //   node scripts/moneypenny/admission.mjs --queue       # the Ready column, in pick order (JSON)
 // The CLI never comments and never labels. A session Eric starts by hand is the EXPEDITE class: it
@@ -44,6 +45,7 @@ import { classOf } from "../rank.mjs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRestAll, sh } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason, pullable } from "./labels.mjs";
+import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
 import { isStartedPlan, statusForIssue, subIssueCounts, WAITING } from "./projects.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
@@ -489,6 +491,7 @@ export function runCli(argv = [], io = {}) {
     readReady = () => readOpenIssues(LABELS.ready.name),
     readIssue: issueOf = (n) => readIssue(n),
     readPlans = () => readOpenPlans(),
+    readHold = (issue) => readPickupHold(issue, { log: printErr }),
     print = (line) => console.log(line),
     printErr = (line) => console.error(line),
   } = io;
@@ -541,7 +544,8 @@ export function runCli(argv = [], io = {}) {
     } catch (err) {
       return refuse("the open plans could not be read", err);
     }
-    const pick = nextAdmissible(ready, inFlight, mode, waiting);
+    const pickOf = (rest) => nextAdmissible(rest, inFlight, mode, waiting);
+    const { pick } = nextUnheld(ready, pickOf, readHold, { log: printErr });
     if (!pick) {
       const why = `nothing admissible (${pullQueue(ready).length} pullable, ${inFlight.length} in flight, ${waiting.length} plans waiting, work-mode=${mode.position})`;
       return out({ admit: false, reason: why });
@@ -554,15 +558,29 @@ export function runCli(argv = [], io = {}) {
   } catch (err) {
     return refuse(`#${n} could not be read`, err);
   }
-  const verdict = checkAdmission({ issue, inFlight, mode, interactive: true });
-  if (!(verdict.admit && isFreshPlan(issue))) return out({ number: n, ...verdict });
   let gated;
   try {
-    gated = startedPlanInputs(issue, readPlans());
+    gated = checkOne(issue, { inFlight, mode, readPlans, readHold });
   } catch (err) {
     return refuse("the open plans could not be read", err);
   }
-  return out({ number: n, ...checkAdmission({ inFlight, mode, interactive: true, ...gated }) });
+  return out({ number: n, ...gated });
+}
+
+/**
+ * `--check`'s verdict for one issue: the pull rule and the gate, the started-plan cap for a fresh
+ * plan, then — only when all of that admits — the #5707 hold: the sweep steps past a plan whose
+ * state block names nothing to build, and a live session asking about it gets the same answer
+ * (Eric's 2026-10-19 pass admitted #4450 here). Throws when the open plans cannot be read.
+ */
+function checkOne(issue, { inFlight, mode, readPlans, readHold }) {
+  let verdict = checkAdmission({ issue, inFlight, mode, interactive: true });
+  if (verdict.admit && isFreshPlan(issue)) {
+    const gated = startedPlanInputs(issue, readPlans());
+    verdict = checkAdmission({ inFlight, mode, interactive: true, ...gated });
+  }
+  const hold = verdict.admit ? readHold(issue) : null;
+  return hold ? { admit: false, reason: `not buildable now: ${hold}` } : verdict;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`)
