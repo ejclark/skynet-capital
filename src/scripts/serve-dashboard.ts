@@ -37,7 +37,9 @@ import {
 import type { EquitySample } from "../observatory/history-record.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { pulseHistoryReader } from "../observatory/pulse-history-cache.js";
+import { rememberSpreadLegs } from "../observatory/spread-activity.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
+import { wireFeedReader } from "../observatory/wire-feed-cache.js";
 import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { createIvHistoryStore } from "../research/iv-sampler.js";
@@ -356,6 +358,13 @@ async function main(): Promise<void> {
     }),
   });
 
+  // `/wire`'s three ledgers, folded once per process and then advanced by appended lines only
+  // (#4458) — the publishing wrappers forward `sinceAll`, so this reads the files they write.
+  const readWireFeed = wireFeedReader({
+    bus: activityEventBus,
+    activity,
+    feedbackLog,
+  }).read;
   const publicUrl = publicOriginFrom(process.env);
   const healthHistory = createBookHealthHistoryStore(process.env, (m) => console.error(m));
   const dashboardConfig: DashboardServerConfig = {
@@ -445,6 +454,8 @@ async function main(): Promise<void> {
     readAllActivityEvents: () => activityEventBus.list(),
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
+    // …and the same three, off the fold above; the reads above stay as the route's fallback.
+    readWireFeed,
     // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and the audit
     // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
     readAllLadderProgress,
@@ -503,7 +514,10 @@ async function main(): Promise<void> {
     ...(insightsBridge.personasOfOrders
       ? { personasOfOrders: insightsBridge.personasOfOrders }
       : {}),
-    ...(insightsBridge.findSpreadLeg ? { findSpreadLeg: insightsBridge.findSpreadLeg } : {}),
+    // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458).
+    ...(insightsBridge.findSpreadLeg
+      ? { findSpreadLeg: rememberSpreadLegs(insightsBridge.findSpreadLeg) }
+      : {}),
     // The decision funnel (PR 7b) — same replicated store, same no-JSONL-fallback posture as
     // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
     ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
@@ -564,10 +578,12 @@ async function main(): Promise<void> {
     );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
     telemetry.listening();
+    // Then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read.
+    // Best effort: a failed warm leaves the fold to the first request, which reads it the same way.
     void warmPulseFolds(
       roster.map((p) => p.id),
       readPulseHistory,
-    );
+    ).then(() => readWireFeed().catch(() => undefined));
   });
 }
 

@@ -157,6 +157,29 @@ describe("serveWireJson", () => {
       expect(tradesFrom(out.body)).toHaveLength(1);
     });
 
+    // #4458 — the per-process fold replaces all three whole reads; they stay as the fallback.
+    it("reads the fold, not the whole ledgers, when the fold is wired", async () => {
+      const { res, out } = capture();
+      const whole = () => Promise.reject(new Error("a whole read on a request path"));
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: whole,
+        readAllTradeActivity: whole,
+        readAllFeedback: whole,
+        readWireFeed: () =>
+          Promise.resolve({
+            events: [activityEventFromTradeRecord(record({ orderId: "on-bus" }))],
+            records: [record({ orderId: "pre-bus", at: "2026-07-01T00:00:00.000Z" })],
+            filings: [entry({ title: "Folded idea" })],
+          }),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toHaveLength(2);
+      expect(JSON.parse(out.body).wire.feedback[0]?.title).toBe("Folded idea");
+    });
+
     it("never puts an owner-only order.submitted line on the cross-member feed", async () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
