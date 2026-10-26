@@ -13,3 +13,12 @@
  */
 export const fin = (value: number | undefined): number =>
   typeof value === "number" && Number.isFinite(value) ? value : 0;
+
+/**
+ * A wire field that is a finite number, or `undefined` — the total-parser counterpart to `fin`.
+ * Where `fin` turns junk into 0 for arithmetic, this keeps "absent" distinct so a caller can drop
+ * the row instead of rendering a measured zero. Strict on type: a numeric string is NOT accepted
+ * (`Number("")` would be a confident 0); callers that coerce on purpose keep their own local reader.
+ */
+export const finiteOrUndefined = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) ? value : undefined;
