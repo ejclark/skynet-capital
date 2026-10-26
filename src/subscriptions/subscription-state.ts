@@ -68,12 +68,12 @@ const SET_BY_SUBSCRIBE: ReadonlySet<string> = new Set([
   "compoundAllocation",
 ]);
 
-const pick = (record: object, keep: (key: string) => boolean): Record<string, unknown> =>
+const keepEntries = (record: object, keep: (key: string) => boolean): Record<string, unknown> =>
   Object.fromEntries(Object.entries(record).filter(([key]) => keep(key)));
 
 /** What a re-subscribe keeps from the record it replaces (#4772). */
 export function carriedOnResubscribe(prior: PlaybookSubscription): Record<string, unknown> {
-  return pick(prior, (key) => !SET_BY_SUBSCRIBE.has(key));
+  return keepEntries(prior, (key) => !SET_BY_SUBSCRIBE.has(key));
 }
 
 /** A malformed `symbols` (not an array, or one with a non-string/empty entry) drops the WHOLE
@@ -165,7 +165,7 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
   const parsedConvictionId = parseConvictionId(convictionId);
   const parsedPlayTarget = parsePlayTarget(playTarget);
   return {
-    ...pick(raw, (key) => !(KNOWN_FIELDS.has(key) || RETIRED_FIELDS.has(key))),
+    ...keepEntries(raw, (key) => !(KNOWN_FIELDS.has(key) || RETIRED_FIELDS.has(key))),
     accountId,
     playbookId,
     mode: mode as PlaybookMode,
