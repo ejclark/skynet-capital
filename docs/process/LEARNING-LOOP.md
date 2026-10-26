@@ -116,6 +116,19 @@ for someone to remember, overdue work that goes quiet.
 | Product/UX | Journeys never run in CI (5 failing on main); crawl 22 days old; judge never run | built: the 5 journey steps fixed (one real contradiction found, filed and fixed by the lane in under an hour: #5731 → #5737) and loop freshness in the daily config audit; the CI job is a protected-path ask (#5730) |
 | Engineering | 11 of 14 debt budgets over, no trigger for the athletes; 14 unlearned incidents ageing out | filed with the follow-ups |
 
+**2026-10-26 — the first surge.** Three loops a session ran by hand that day, each now a
+deliverable. The stage a person still did is named first.
+
+| Loop | Stage still by hand | Now automated by |
+|---|---|---|
+| Clear-path flip (`docs/ISSUES.md` → *Who may flip it*) | decide + verify: a session judged 21 issues and recruited refuters itself; 2 flips lacked `feedback` and never built | `.claude/workflows/clear-path-flip.js` (judge → two refuters) and `scripts/clear-path-post.mjs` (posts survivors only, adds `feedback`) |
+| Post-merge correctness audit | sense + verify: a session read 11 merged builds and re-checked its own findings | `.claude/workflows/post-merge-audit.js` (reviewer per PR → trace + reproduce refuters) |
+| The surge itself | remember: the dial, the pre-reset revert, the relay and resume traps lived in one session's context | `.claude/skills/surge/SKILL.md` |
+
+Still human: the *sense* that quota is spare (Eric's phrase starts it, by rule — surge is his) and
+the *act* of filing confirmed audit findings, which stays a session step until a finding's shape is
+stable enough to file mechanically.
+
 ## Starting a new loop
 
 1. Fill fields 1–9 before running anything — if the aim, baseline, prediction, pressure test,
