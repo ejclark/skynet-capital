@@ -3,7 +3,11 @@ import type { BotControlsStore } from "../server/bot-controls-store.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
 import { resolveDeployLagFetcher } from "../server/ops-status-deploy-lag.js";
 import type { OpsStatusDeps } from "../server/ops-status-routes.js";
-import { buildOpsStatus, resolveOpsStatusRepo } from "../server/ops-status-service.js";
+import {
+  buildOpsStatus,
+  convictionCopiesLogLine,
+  resolveOpsStatusRepo,
+} from "../server/ops-status-service.js";
 import type { SubscriptionStore } from "../server/subscription-store.js";
 import {
   type CredentialsBridgeDeps,
@@ -63,6 +67,9 @@ export function wireOpsStatus(
   credentialsDeps?: CredentialsBridgeDeps,
 ): { opsStatus: OpsStatusDeps | undefined; insightsBridge: InsightsBridgeHandle } {
   const insightsBridge = startInsightsBridge(env, botControls, credentialsDeps);
+  // Every deploy boots the dashboard, so the count is in the Fly log after each merge (#5482).
+  const { subscriptions } = rest;
+  if (subscriptions) console.log(convictionCopiesLogLine(() => subscriptions.loadIfReadable()));
   return { opsStatus: setupOpsStatus({ env, insightsBridge, ...rest }), insightsBridge };
 }
 
