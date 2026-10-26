@@ -75,7 +75,7 @@ export class GithubTokenStore {
 
 type Env = Record<string, string | undefined>;
 
-export function createGithubTokenStore(env: Readonly<Env>): GithubTokenStore {
+function createGithubTokenStore(env: Readonly<Env>): GithubTokenStore {
   return new GithubTokenStore(
     env.SKYNET_GITHUB_TOKEN_STORE ?? "data/github-token.json",
     env.SKYNET_STORE_SECRET,
@@ -84,7 +84,7 @@ export function createGithubTokenStore(env: Readonly<Env>): GithubTokenStore {
 
 /** Make `token` the one every GitHub call uses from now on — the live header override plus the
  *  env var, so anything resolved later reads the same value. */
-export function activateGithubToken(env: Env, token: string): void {
+function activateGithubToken(env: Env, token: string): void {
   useLiveGithubToken(token, env.SKYNET_FEEDBACK_GITHUB_TOKEN);
   env.SKYNET_FEEDBACK_GITHUB_TOKEN = token;
 }
