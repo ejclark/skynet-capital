@@ -36,6 +36,7 @@ import {
 } from "../observatory/history-boot.js";
 import type { EquitySample } from "../observatory/history-record.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
+import { pulseHistoryReader } from "../observatory/pulse-history-cache.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
@@ -107,6 +108,9 @@ async function main(): Promise<void> {
   // history and write the baseline BEFORE the hub exists, so no live fill lands on an unseeded 0 and
   // no `realizedPl: 0` sample is recorded for the next boot to rehydrate.
   const history = createBootHistoryStore(process.env, dataSource.mode);
+  // Pulse's live folds (#4619): built once per participant after `listen`, then kept up to date
+  // by what is appended, so no Pulse — not even the first after a deploy — parses a whole history.
+  const readPulseHistory = pulseHistoryReader(history);
   const booted = await buildDashboardData(roster, { clientFactory: dataSource.clientFactory });
   // The capital-flow watch compares across the restart gap, so it needs each participant's last
   // sample from BEFORE the boot samples below are written (#4563).
@@ -425,6 +429,7 @@ async function main(): Promise<void> {
     recordMessage: (id) => companionMessageLog.record(id),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
+    readPulseHistory,
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
     recordOrderAudit: (entry) => orderAudit.record(entry),
@@ -551,7 +556,24 @@ async function main(): Promise<void> {
     );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
     telemetry.listening();
+    void warmPulseFolds(
+      roster.map((p) => p.id),
+      readPulseHistory,
+    );
   });
+}
+
+/** Fold each participant's history one at a time after `listen`, yielding between them so the
+ *  first requests after a deploy are never queued behind all twelve (#4619). Best effort: a
+ *  failed warm leaves that participant to fold on its first Pulse, exactly as before. */
+async function warmPulseFolds(
+  ids: readonly string[],
+  read: (id: string) => Promise<unknown>,
+): Promise<void> {
+  for (const id of ids) {
+    await new Promise((resolve) => setImmediate(resolve));
+    await read(id).catch(() => undefined);
+  }
 }
 
 main().catch((error) => {

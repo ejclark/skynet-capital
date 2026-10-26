@@ -46,12 +46,18 @@ const bot: StoredParticipant = {
   credentials: { apiKey: "bk", apiSecret: "bs" },
 };
 
-const board = (): DashboardData => ({
+const row = (id: string, displayName: string, kind: "bot" | "human") => ({
+  id,
+  displayName,
+  kind,
+  cash: 10,
+  equity: 10,
+  positions: [],
+});
+
+const board = (extra: DashboardData["participants"] = []): DashboardData => ({
   generatedAt: "t0",
-  participants: [
-    { id: "human-ann", displayName: "Ann", kind: "human", cash: 10, equity: 10, positions: [] },
-    { id: "sauron", displayName: "Sauron", kind: "bot", cash: 10, equity: 10, positions: [] },
-  ],
+  participants: [row("human-ann", "Ann", "human"), row("sauron", "Sauron", "bot"), ...extra],
   collisions: [],
 });
 
@@ -68,11 +74,12 @@ function makeService(
     roster?: StoredParticipant[];
     owners?: string[];
     clientFactory?: typeof okFactory;
+    extraRows?: DashboardData["participants"];
   } = {},
 ) {
   const store = overrides.store ?? new MemStore();
   if (!overrides.store) store.items = [ann, bot];
-  const hub = new ObservatoryHub(board());
+  const hub = new ObservatoryHub(board(overrides.extraRows));
   const stopped: string[] = [];
   const roster = overrides.roster;
   const owners = overrides.owners;
@@ -88,7 +95,7 @@ function makeService(
   return { service, store, hub, stopped };
 }
 
-const selfInput = { requesterId: "human-ann", sessionNames: ["ann"], authConfigured: true };
+const selfInput = { requesterId: "human-ann", authConfigured: true };
 
 describe("account service — updateProfile", () => {
   it("refuses everything when the store cannot encrypt", async () => {
@@ -161,7 +168,6 @@ describe("account service — updateProfile", () => {
       id: "human-ann",
       timezone: "UTC",
       requesterId: "human-joe",
-      sessionNames: ["joe"],
       authConfigured: true,
     });
     expect(other).toMatchObject({ ok: false });
@@ -170,38 +176,61 @@ describe("account service — updateProfile", () => {
     const unresolved = await service.updateProfile({
       id: "human-ann",
       timezone: "UTC",
-      sessionNames: ["ann"],
       authConfigured: true,
     });
     expect(unresolved).toMatchObject({ ok: false });
     expect(store.items.find((p) => p.id === "human-ann")?.timezone).toBe("America/New_York");
   });
 
-  it("refuses a human rename that would break the session link", async () => {
-    const { service, store } = makeService();
+  // #6077: ownership resolves by session email (owner stamps/links), never by display name, so a
+  // rename can't orphan the account — the old must-match-your-sign-in-name rule told members a
+  // false reason. What a rename can still do is pass one account off as another.
+  it("renames a member's own profile to an unused name, and shows it on the board", async () => {
+    const { service, store, hub } = makeService();
     const result = await service.updateProfile({
       id: "human-ann",
       displayName: "Annie Oakley",
       ...selfInput,
     });
+    expect(result).toEqual({ ok: true, id: "human-ann", displayName: "Annie Oakley" });
+    expect(store.items.find((p) => p.id === "human-ann")?.displayName).toBe("Annie Oakley");
+    const row = hub.getState().participants.find((p) => p.id === "human-ann");
+    expect(row?.displayName).toBe("Annie Oakley");
+  });
+
+  it("lets a member re-case their own name — it's not taken by anyone else", async () => {
+    const { service } = makeService();
+    const result = await service.updateProfile({
+      id: "human-ann",
+      displayName: "ANN",
+      ...selfInput,
+    });
+    expect(result).toMatchObject({ ok: true, displayName: "ANN" });
+  });
+
+  it.each([
+    ["another account's display name, any case", "  sauron "],
+    ["another account's slug", "Sauron!"],
+  ])("refuses a rename to %s", async (_label, displayName) => {
+    const { service, store } = makeService();
+    const result = await service.updateProfile({ id: "human-ann", displayName, ...selfInput });
     expect(result).toMatchObject({ ok: false });
-    if (!result.ok) expect(result.error).toContain("linked to this account by display name");
+    if (!result.ok) {
+      expect(result.error).toBe(
+        "Another account on the board already uses that name — pick a different one.",
+      );
+    }
     expect(store.items.find((p) => p.id === "human-ann")?.displayName).toBe("Ann");
   });
 
-  it("renames a human to a name their session still resolves to, and shows it on the board", async () => {
-    const { service, store, hub } = makeService();
+  it("refuses a rename onto another account's id slug even when its display name differs", async () => {
+    const { service } = makeService({ extraRows: [row("human-uncle_joe", "Joe", "human")] });
     const result = await service.updateProfile({
       id: "human-ann",
-      displayName: "ann",
-      requesterId: "human-ann",
-      sessionNames: ["ann", "ann.smith"],
-      authConfigured: true,
+      displayName: "Uncle Joe",
+      ...selfInput,
     });
-    expect(result).toEqual({ ok: true, id: "human-ann", displayName: "ann" });
-    expect(store.items.find((p) => p.id === "human-ann")?.displayName).toBe("ann");
-    const row = hub.getState().participants.find((p) => p.id === "human-ann");
-    expect(row?.displayName).toBe("ann");
+    expect(result).toMatchObject({ ok: false });
   });
 
   it("allows any rename when no OAuth is configured (no session link exists to protect)", async () => {
@@ -252,7 +281,6 @@ describe("account service — updateProfile", () => {
       id: "sauron",
       timezone: "America/Chicago",
       requesterId: "human-ann",
-      sessionNames: ["ann"],
       authConfigured: true,
     });
     expect(result).toMatchObject({ ok: false });

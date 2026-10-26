@@ -27,7 +27,9 @@ Eric-sourced.
 - **The spec-gap scan counts a types-only import as coverage.** A spec that imports a type from an
   untested module clears that module from the gap list without exercising it; two backfill reps
   today had to dodge it on purpose (`Parameters<typeof fn>` instead). Counting only value imports
-  would keep the number honest. _(src: Claude · while: governor cycle 4, 2026-10-26)_
+  would keep the number honest. The same scan also ranks pure-data fixture files first —
+  `src/evals/companion/fixtures.ts` (15 scripted conversations, no branching) topped it in cycle 5;
+  skipping files with no function or class would stop athletes spending a rep deciding to skip it. _(src: Claude · while: governor cycle 4, 2026-10-26)_
 - **Parallel athletes make `tests/scripts/steer-*` and `history-sampler` specs time out.** Six
   distinct specs hit the 5 s timeout today while 4–8 worktrees ran `npm run verify` at once in one
   container; each passed alone, and the merged cycle branches verified green. Not a CI flake on
@@ -334,9 +336,6 @@ picks it up starts from the fork, not the wish.
   may be on another owned `?desk=`. Own data only, so honesty, not leakage. Honor `?desk=` when it
   is in `resolveOwnedIds`. Unproven: no multi-desk repro yet. _(src: Claude · while: #2224 shape 3
   red-team, H3)_
-- **`readBody` decodes each chunk separately** (`src/server/page-shell.ts:124-137`, `body +=
-  chunk`), so a multibyte character split across TCP chunks is stored as U+FFFD, in a Council line
-  for example. Collect Buffers and decode once. _(src: Claude · while: #2224 shape 3 red-team, H4)_
 - **Nobody is told their Council line got a reply.** Replies (#5097) render only under the line on
   Activity → The Council; the member's own line card on the Overview (`council-line-card.tsx`)
   says nothing when someone answers. A "2 replies to your line ›" link there closes the loop an
@@ -705,6 +704,12 @@ nothing until it expires. Options: an `if: failure()` step that calls `releaseCl
 Medic releasing the lease named in the failed run. Cheap either way; the TTL already bounds the
 damage. _(src: Claude · while: fixing the feedback-lane tier failure and building the medic)_
 
+### `/add` should refuse a display name another account already uses
+#6077 gave the profile rename a name-collision refusal (display name or slug, `nameTaken` in
+`account-service.ts`), but `addParticipant` still checks only the derived id. If Ann renames
+herself "Joe", a later member adding "Joe" gets the free id `human-joe` and the board shows two
+Joes. Reuse the same check on the add path. _(src: Claude · while: #6077 rename-guard fix)_
+
 ### Boot-time quarantine for a store row that collides with the roster
 The owner-link PR (#466) closed the write-time hole (`addParticipant` now refuses an id already
 claimed by an env-configured account), but a row written *before* that fix shipped — none should
@@ -713,14 +718,6 @@ roster account's real credentials, since `resolveOwnerId`/`findParticipant` don'
 boot. Cheap defense-in-depth: at startup, flag any store id that collides with `envRoster` and
 refuse to serve it rather than trusting the write-time guard alone. _(src: Claude · while: #466
 owner-link security review, red-team verification pass, 2026-08-21)_
-
-### Retire the display-name rename guard now that ownerEmail is the real link
-`account-service.ts`'s `profileEditRefusal` still requires a human rename to match the session's
-sign-in name/email local-part — a rule that existed only because `resolveCurrentId` used to
-resolve by display name. Now that `Participant.ownerEmail` is the actual (immutable) link, the
-rule is stricter than needed and blocks legitimate renames for no security reason. Loosen it in a
-follow-up UX pass, not in the owner-link security PR itself. _(src: Claude · while: #466 owner-link
-security review, 2026-08-21)_
 
 ### Intent-vs-outcome scoring → per-strategy confidence ratings
 Hardcore research mode now records a forward `expectation` on every intent (alongside `strategy`),
@@ -1500,6 +1497,10 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## Shipped (recent)
 
+- **`readBody` decodes once, as bytes** (#6075, PR #6091): chunks are kept as Buffers and decoded at
+  the end, so a multibyte character split across TCP chunks no longer becomes U+FFFD, and the cap
+  counts UTF-8 bytes. Four caps too small for their fields in bytes were raised. _(src: Claude ·
+  while: #2224 shape 3 red-team, H4)_
 - **IDEAS.md sweep, 2026-09-30** (#4056 slice 5): 14 of the 30 oldest entries retired. The evidence
   per entry is in the sweep PR's table.
   - Shipped: feedback triage/auto-fix automation and the autonomous issue system (Moneypenny's

@@ -19,7 +19,8 @@ import { deskLedger, realizedByOrder, roundTripLinks } from "../observatory/desk
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
-import { deskPulseView } from "../observatory/pulse-json-view.js";
+import { PulseHistoryFold } from "../observatory/pulse-history-fold.js";
+import { deskPulseViewOf } from "../observatory/pulse-json-view.js";
 import { safeguardLadderView } from "../observatory/safeguard-ladder-view.js";
 import { type SpreadOf, spreadLookup } from "../observatory/spread-activity.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
@@ -387,14 +388,18 @@ export async function serveDeskJson(
   if (sub === "pulse") {
     // Each pulse section owns its empty state (performance-view doctrine): no history wired means
     // a null curve that says "still accruing", never a missing page.
-    const [samples, durable] = await Promise.all([
-      config.readHistory?.(id) ?? [],
+    // The live fold when the server keeps one (#4619): Pulse then folds only what was appended
+    // since the last read, never the whole history again.
+    const [history, durable] = await Promise.all([
+      config.readPulseHistory
+        ? config.readPulseHistory(id)
+        : (config.readHistory?.(id) ?? Promise.resolve([])).then((s) => PulseHistoryFold.of(s)),
       config.readTradeActivity?.(id),
     ]);
     res.end(
       JSON.stringify({
         generatedAt: state.generatedAt,
-        pulse: deskPulseView(found, samples, durable),
+        pulse: deskPulseViewOf(found, history, durable),
       }),
     );
     return;
