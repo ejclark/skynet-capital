@@ -18,7 +18,7 @@ import { humanizeOptionSymbol, isOccSymbol, parseOccSymbol } from "../trading/op
 
 const MAX_ROWS = 5;
 
-function usd(value: number): string {
+function signedUsd(value: number): string {
   const abs = Math.abs(value).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -34,13 +34,13 @@ function onSymbol(position: PositionView, symbol: string): boolean {
 function row(position: PositionView): string {
   const side = position.quantity < 0 ? "short " : "";
   const count = Math.abs(position.quantity);
-  const worth = `now worth ${usd(position.marketValue)}`;
+  const worth = `now worth ${signedUsd(position.marketValue)}`;
   if (isOccSymbol(position.symbol)) {
     const noun = count === 1 ? "contract" : "contracts";
-    return `${side}${count} ${humanizeOptionSymbol(position.symbol)} ${noun} at ${usd(position.avgPrice)} each, ${worth}`;
+    return `${side}${count} ${humanizeOptionSymbol(position.symbol)} ${noun} at ${signedUsd(position.avgPrice)} each, ${worth}`;
   }
   const noun = count === 1 ? "share" : "shares";
-  return `${side}${count} ${noun} at ${usd(position.avgPrice)} avg, ${worth}`;
+  return `${side}${count} ${noun} at ${signedUsd(position.avgPrice)} avg, ${worth}`;
 }
 
 export interface DeskRead {

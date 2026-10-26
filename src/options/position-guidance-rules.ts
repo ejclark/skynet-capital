@@ -57,16 +57,21 @@ export const GUIDANCE_DISCLOSURE =
   "Educational, not financial advice. Option prices here are estimates; the trade form re-checks " +
   "live prices before any order. Chances come from a standard pricing model that assumes no sudden jumps.";
 
-const RANK: Readonly<Record<Confidence, number>> = { none: 0, low: 1, medium: 2, high: 3 };
+const CONFIDENCE_RANK: Readonly<Record<Confidence, number>> = {
+  none: 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+};
 
 /** The lower of two grades — a cap never raises a call. */
 export function capConfidence(grade: Confidence, cap: Confidence): Confidence {
-  return RANK[grade] <= RANK[cap] ? grade : cap;
+  return CONFIDENCE_RANK[grade] <= CONFIDENCE_RANK[cap] ? grade : cap;
 }
 
 /** The house rule: a low grade is a stand-aside, never a small bet. */
 export function actionable(grade: Confidence): boolean {
-  return RANK[grade] >= RANK.medium;
+  return CONFIDENCE_RANK[grade] >= CONFIDENCE_RANK.medium;
 }
 
 /** The ET calendar date (YYYY-MM-DD) of an instant — the whole market day is anchored on ET. */
