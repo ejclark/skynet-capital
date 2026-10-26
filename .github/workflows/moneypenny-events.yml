@@ -125,7 +125,12 @@ concurrency:
   # `feedback` event on the SAME issue (e.g. a genuine re-label retry) still collides with the
   # first, which is the intended dedupe, since `claimFeedback`'s lease already makes that safe.
   # Empty for push/workflow_dispatch (no `label` on those payloads), so their grouping is unchanged.
-  group: moneypenny-events-${{ github.event_name }}-${{ github.event.issue.number || github.ref }}-${{ github.event.label.name || '' }}
+  # EXCEPT a `scan` dispatch (2026-10-26, #5130): it is one claim AND one build in the same run, so a
+  # shared group held every later claim behind the running build — builds ran strictly one at a
+  # time under any in-flight cap, and 43% of wakes were cancelled from the one-pending slot. A scan
+  # now gets its own group (the run id); the claim alone is serialized by `route`'s job-level group
+  # below, so the cap and the lease still bound concurrent builds. Every other event keeps the key.
+  group: moneypenny-events-${{ github.event_name }}-${{ github.event.issue.number || github.ref }}-${{ github.event.label.name || '' }}${{ github.event_name == 'workflow_dispatch' && inputs.command == 'scan' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: false
 
 jobs:
@@ -174,6 +179,13 @@ jobs:
   route:
     name: route
     runs-on: ubuntu-latest
+    # One `scan` claim at a time (#5130), so the in-flight count a claim reads is never stale; queued
+    # wakes wait in line (FIFO, up to 100) instead of cancelling each other. Any other event keys on
+    # its own run id — its workflow-level group above already serializes it as before. `queue: max`
+    # with `cancel-in-progress: true` is a validation error, so this group never sets the latter.
+    concurrency:
+      group: moneypenny-route-${{ github.event_name == 'workflow_dispatch' && inputs.command == 'scan' && 'scan' || github.run_id }}
+      queue: max
     outputs:
       due_events: ${{ steps.screen.outputs.due }}
       # #3960 slice 3: the retry sweep (`next`) fills a lane when no event-driven claim did.
@@ -570,6 +582,10 @@ jobs:
       max-parallel: 8
       matrix:
         event: ${{ fromJSON(needs.route.outputs.due_events) }}
+    # Scan runs now overlap (#5130), so two ticks can list the same due event before its PR opens.
+    # One leg per event id at a time: the second finds it no longer due and stops (the prompt says so).
+    concurrency:
+      group: moneypenny-research-${{ matrix.event.id }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
