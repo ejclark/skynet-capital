@@ -137,6 +137,18 @@ const gh = (args) => execFileSync("gh", args, { encoding: "utf8" });
  * script exists to notice.
  */
 /**
+ * What one run did to the bots app: "landed", "rolled back", or nothing (a preflight skip, a run
+ * that never reached the deploy). A release whose smoke failed was rolled back, so the bots never
+ * ran it (#5955: 16 such runs read as "bots app is current" while the machine sat stopped).
+ */
+function botsReleaseOutcome(jobs) {
+  const steps = jobs.find((j) => j.name === "release · deploy bots")?.steps ?? [];
+  const step = (name) => steps.find((s) => s.name === name)?.conclusion;
+  if (step("Deploy bots") !== "success") return undefined;
+  return step("Smoke test the bots release") === "failure" ? "rolled back" : "landed";
+}
+
+/**
  * ONE bounded scan resolves both baselines from JOB conclusions, not run conclusions: after the
  * deploy split, a red `deploy-bots` job fails the whole run, and the old status=success run
  * filter would have declared the dashboard undeployed when its own deploy job was green. The
@@ -165,17 +177,9 @@ function scanRunBaselines() {
       released = run.head_sha;
     }
     if (botsReleased === undefined) {
-      const steps = jobs.find((j) => j.name === "release · deploy bots")?.steps ?? [];
-      const step = (name) => steps.find((s) => s.name === name)?.conclusion;
-      if (step("Deploy bots") === "success") {
-        // A release whose smoke failed was rolled back, so the bots never ran it (#5955: 16 such
-        // runs read as "bots app is current" while the machine sat stopped). Keep scanning back.
-        if (step("Smoke test the bots release") === "failure") {
-          rolledBack.push(run.head_sha);
-        } else {
-          botsReleased = run.head_sha;
-        }
-      }
+      const outcome = botsReleaseOutcome(jobs);
+      if (outcome === "landed") botsReleased = run.head_sha;
+      if (outcome === "rolled back") rolledBack.push(run.head_sha);
     }
   }
   if (rolledBack.length > 0) {
