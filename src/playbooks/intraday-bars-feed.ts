@@ -1,4 +1,5 @@
 import type { FetchIntradayBars, IntradayBar, IntradayBarsOf } from "../domain/intraday-bar.js";
+import { DAY_MS } from "../domain/time.js";
 
 /**
  * The 5-minute bars the dark playbooks read (#5489), kept fresh on their own clock so the decision
@@ -26,8 +27,6 @@ export interface IntradayBarsFeedOptions {
   readonly lookbackDays?: number;
   readonly log?: (line: string) => void;
 }
-
-const DAY_MS = 86_400_000;
 
 export class IntradayBarsFeed {
   private readonly wanted = new Set<string>();

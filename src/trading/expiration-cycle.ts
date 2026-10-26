@@ -1,4 +1,5 @@
 import { isMarketClosed } from "../domain/market-calendar.js";
+import { DAY_MS } from "../domain/time.js";
 import { parseOccSymbol } from "./option-symbols.js";
 
 /**
@@ -45,8 +46,6 @@ export type ExpirationCycle = "weekly" | "monthly" | "quarterly";
 
 /** The months whose third-Friday expiration is a triple-witching (quarter ends). */
 const WITCHING_MONTHS: ReadonlySet<number> = new Set([3, 6, 9, 12]);
-
-const DAY_MS = 86_400_000;
 
 const isoDay = (time: number): string => new Date(time).toISOString().slice(0, 10);
 

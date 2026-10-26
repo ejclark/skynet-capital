@@ -1,4 +1,5 @@
 import { type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { DAY_MS } from "../domain/time.js";
 import { OPTION_MULTIPLIER, parseOccSymbol } from "../trading/option-symbols.js";
 import type { PositionView } from "./broker-positions.js";
 import { formatPrice } from "./desk-data.js";
@@ -38,7 +39,6 @@ export interface PlainPosition {
   readonly nextPrint: NextPrint;
 }
 
-const DAY_MS = 86_400_000;
 const UNLIMITED = "unlimited";
 
 /** Calendar days from `now`'s New York date to the expiry date. */
