@@ -182,6 +182,13 @@ comments can never resume this lane — the gate ignores anything carrying the C
    feedback build`), then a Summary bullet containing `Closes #<issue-number>` — or `Part of #<issue-number>` when this is not
    the final slice, so an early slice never closes the issue — GitHub links it
    from anywhere, so it is never line 1. Name any assumption you took under Summary.
+   **If `gh`/`curl`/`git push` answers 401 with `GH_TOKEN`**, the App token has expired (the build ran
+   past its one-hour life, #5936): push and open the PR with `DEFAULT_WORKFLOW_TOKEN` instead
+   (`GH_TOKEN="$DEFAULT_WORKFLOW_TOKEN" gh pr create …`; push to
+   `https://x-access-token:$DEFAULT_WORKFLOW_TOKEN@github.com/$GITHUB_REPOSITORY`). That token's
+   events start no workflow, so the PR opens without `verify`: say so as the Summary's first bullet
+   (`CI not started — opened with the job token after the App token expired (#5936)`). The job's own
+   post-build steps re-mint the App token, so leave `in-progress` to them.
 6. **Do not arm auto-merge by hand** — `pipeline.yml`'s `arm auto-merge` job arms the PR once `verify`
    **and** `integration tests` pass, on open and on every later push (#4094: arming by hand let three
    PRs merge mid-integration-tests, because native auto-merge honours only required checks). Merging deploys;
