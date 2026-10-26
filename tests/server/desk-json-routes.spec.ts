@@ -755,6 +755,43 @@ describe("/heartbeat — a held lot nothing on the bot will sell", () => {
   });
 });
 
+/** #4953: a verdict's "since" is dated from the store, not the 30-pass page. */
+describe("/heartbeat — a verdict's exact start", () => {
+  const verdict = { playbookId: "S1-NVDA", mode: "standard", state: "long" } as const;
+  const passAt = (at: number) => ({
+    at,
+    personaId: "sauron",
+    mode: "live",
+    rawIntents: [],
+    guardedIntents: [],
+    outcomes: [],
+    playbookVerdicts: [verdict],
+  });
+
+  it("asks the store for this bot's run and serves its start as exact", async () => {
+    const asked: unknown[] = [];
+    const { res, out } = fakeRes();
+    await serveDeskJson(
+      res,
+      "/api/desk/sauron/heartbeat",
+      "/api/desk/sauron/heartbeat",
+      configWith({
+        readDecisions: () => Promise.resolve([passAt(2_000_000), passAt(1_985_000)] as never),
+        readVerdictRunStart: (id, startAt, v) => {
+          asked.push([id, startAt, v]);
+          return { at: 1_000_000, reachesOldest: false };
+        },
+      }),
+    );
+    expect(asked).toEqual([["sauron", 2_000_000, verdict]]);
+    const { heartbeat } = answered(out) as { heartbeat: { playbooks: unknown[] } };
+    expect(heartbeat.playbooks[0]).toMatchObject({
+      since: new Date(1_000_000).toISOString(),
+      sinceIsLowerBound: false,
+    });
+  });
+});
+
 /** #4650: the roll call reads this bot's Store subscriptions, so a paused playbook reads Paused and
  *  a fresh one Starts next pass instead of both reading Off until a pass says otherwise. */
 describe("/heartbeat — the roll call reads the bot's subscriptions", () => {

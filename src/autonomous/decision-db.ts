@@ -23,6 +23,7 @@ import {
   type SettledIntent,
   type UnsettledOrder,
 } from "./decision-db-settlements.js";
+import { openVerdictRunReads, type VerdictRunStart } from "./decision-db-verdict-run.js";
 import { type CheckWeekRows, openCheckWeekReads } from "./decision-db-week.js";
 import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
 import { openOptionLedger, type SequencedLifecycle } from "./decision-option-ledger.js";
@@ -101,6 +102,13 @@ export interface DecisionDb {
    *  the week strip and each playbook's lane. Bounded by the window, never a page: see
    *  `decision-db-week.ts`. */
   checkWeek(personaId: string, from: number, to: number, bucketMs: number): CheckWeekRows;
+  /** When the run of `verdict` holding at the pass `startAt` began (#4953) — the heartbeat's exact
+   *  "since", never bounded by a page. See `decision-db-verdict-run.ts`. */
+  verdictRunStart(
+    personaId: string,
+    startAt: number,
+    verdict: PlaybookVerdict,
+  ): VerdictRunStart | undefined;
   /** Every bot's checks and playbook intents in `[from, to)`, grouped by playbook and hour
    *  (#4450 slice 5a) — each playbook's funnel. See `decision-db-playbook-funnel.ts`. */
   playbookFunnel(from: number, to: number): PlaybookFunnelRows;
@@ -202,6 +210,7 @@ export function openDecisionDb(path: string): DecisionDb {
   const observations = openObservationTables(db);
   const results = openIntentResults(db);
   const week = openCheckWeekReads(db);
+  const verdictRun = openVerdictRunReads(db);
   const playbookFunnel = openPlaybookFunnelReads(db);
   const retrospectives = openRetrospectiveReads(db);
 
@@ -542,6 +551,8 @@ export function openDecisionDb(path: string): DecisionDb {
     },
 
     checkWeek: (personaId, from, to, bucketMs) => week.read(personaId, from, to, bucketMs),
+
+    verdictRunStart: (personaId, startAt, verdict) => verdictRun.read(personaId, startAt, verdict),
 
     playbookFunnel: (from, to) => playbookFunnel.read(from, to),
 

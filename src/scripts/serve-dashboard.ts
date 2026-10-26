@@ -508,6 +508,9 @@ async function main(): Promise<void> {
     // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
     ...(insightsBridge.funnelFor ? { funnelFor: insightsBridge.funnelFor } : {}),
     ...(insightsBridge.readCheckWeek ? { readCheckWeek: insightsBridge.readCheckWeek } : {}),
+    ...(insightsBridge.readVerdictRunStart
+      ? { readVerdictRunStart: insightsBridge.readVerdictRunStart }
+      : {}),
     ...(insightsBridge.readPlaybookFunnel
       ? { readPlaybookFunnel: insightsBridge.readPlaybookFunnel }
       : {}),
