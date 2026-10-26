@@ -27,7 +27,7 @@ const UNWIRED = [
   "isn't switched on yet",
   "isn't wired in this deployment",
   "No ops panel is wired",
-  // "Fleet status is unreachable", "Settings are unreachable", "The Council is unreachable" —
+  // "Fleet status is unreachable", "Settings are unreachable", "Activity is unreachable" —
   // never the bridge row's own "may be down, restarting, or unreachable".
   "is unreachable",
   "are unreachable",
@@ -57,12 +57,6 @@ const SURFACES = [
       off("Tuning in…"),
       ...UNWIRED.map(off),
     ],
-  },
-  {
-    id: "nav-council",
-    label: "Activity: the Council",
-    route: "/app/activity?section=council",
-    expect: [role("heading", "The Council"), off("Tuning in…"), ...UNWIRED.map(off)],
   },
   {
     id: "nav-research",

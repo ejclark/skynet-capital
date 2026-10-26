@@ -47,8 +47,8 @@ is the whole list):
 4. Add Sauron's Alpaca paper key **in the app** — Settings → Account → Sauron → Rotate (owner-only,
    verified against Alpaca before it's stored, encrypted at rest). The bots process pulls it over
    the controls bridge within one 30s poll, no restart (#1200; proven live 2026-09-04). The roster
-   is `SKYNET_AUTONOMOUS_BOTS` in `fly.bots.toml`. Add **`set-hardcore`** with `sauron` if research
-   mode is wanted. The `SKYNET_BOT_*` env credentials are break-glass only (a bot the bridge can't
+   is `SKYNET_AUTONOMOUS_BOTS` in `fly.bots.toml`. Turn on Sauron's hardcore build on its
+   Settings card if research mode is wanted (applies at the next poll, no restart). The `SKYNET_BOT_*` env credentials are break-glass only (a bot the bridge can't
    serve boots on them) and are set from a terminal with `flyctl secrets set`, never from a button —
    no autonomy-ops action sets credentials (#1180 slice F).
 5. Click **Actions → Pipeline → Run workflow → check `force_bots_deploy`** — stands the machine up
@@ -97,15 +97,19 @@ Then, from the **Actions** tab → **Autonomy ops** → **Run workflow**:
 - **`flip-mode`**, with `mode: live` — **the one genuinely irreversible step. Run it during a market
   open, watching the logs.** Bots begin placing real (paper) orders; fills show on the board.
 
-- **`set-cond-scout-universe`**, with `cond_scout_universe: NVDA,AAPL,…` — arms the COND-SCOUT
-  shadow scout (#3651) on those tickers: it scans and opens **shadow probes only** (no orders, no
-  broker) that fill the Heartbeat "Shadow probes" card. Tickers off the live price stream are dropped
-  at boot; watch the logs for the `[cond-scout] armed` line. Run it with the input empty to unset
-  `SKYNET_COND_SCOUT_UNIVERSE` and take the scout dark. This secret is only the fallback (#4535):
-  when the host bot (the first the bots app runs) holds a COND-SCOUT subscription, its names — or
-  its pause — win, read on every check with no restart. The owner makes that subscription in the
-  Playbook Store (COND-SCOUT, on the host bot; no budget is asked for, and the symbol chips are the
-  names it scans, none picked meaning all ten), so no ops run is needed to arm it.
+- **Bot behaviour is set in the app, not here** (#4535 slice 4: no autonomy-ops action sets it —
+  there is no `set-playbooks`, `set-hardcore`, `set-cond-scout-universe` or `set-beta-forcing`). A
+  bot's owner sets it, read by the bots at every poll with no restart and logged with who, before
+  and after: playbooks and the COND-SCOUT shadow scout's names (a COND-SCOUT subscription on the
+  host bot) in the **Playbook Store**; the hardcore build, forced picks per day and after-close
+  staging on the bot's **Settings** card. The bots obey none of `SKYNET_HARDCORE_BOTS`,
+  `SKYNET_BETA_FORCING` or `SKYNET_COND_SCOUT_UNIVERSE` (#5875): each is parsed only to be
+  reported, and the dashboard copies it once into a bot with no stored setting. Unset those three with one `flyctl secrets unset --stage` line: `--stage` holds the change
+  until the next bot-code deploy, so it never restarts the bots machine on its own.
+  **Keep `SKYNET_PLAYBOOKS`.** It still lists the playbooks the bots run for every account: one it
+  names that a bot is not subscribed to opens nothing on that bot, but it keeps managing the exits
+  of positions that playbook already holds. Removing it would leave those positions with nothing
+  watching their exits.
 
 Flip back with `flip-mode` / `mode: observe` any time — same button, same allowlist.
 

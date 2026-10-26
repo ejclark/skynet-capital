@@ -99,7 +99,8 @@ function parseConviction(raw: unknown): SubscriptionConviction | undefined {
 }
 
 /** A conviction record's id (#5482 slice 2): kebab-case and bounded, or dropped — never the
- *  subscription, which then reads its own conviction as before (`statedCheck`). */
+ *  subscription. Since the bots read pointers only (contract piece 4), a dropped id leaves an
+ *  inline copy, if any, that runs its pair exits-only (`statedCheck`, `isConvictionOffView`). */
 export const CONVICTION_ID_MAX = 64;
 export const CONVICTION_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 function parseConvictionId(raw: unknown): string | undefined {

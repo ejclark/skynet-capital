@@ -358,6 +358,9 @@ export interface PlaybookSubscription {
    * The Store writes it (slice 3c part 3: on subscribe, or `setConviction`), a ◆ pair's row carries
    * its own onto a subscription that states none (`row-conviction.ts`), and `subscriptions.v2`
    * fingerprints it, so the bots stop new entries when its check fails (`with-conviction-gate.ts`).
+   * Since #5482's contract step it sits only on an unpointed subscription, and since piece 4 the
+   * bots never read it (`statedCheck` reads pointers only): a copy still here is one the app's poll
+   * could not move onto a view, and its pair runs exits-only (`subscriptionRoster`).
    */
   readonly conviction?: SubscriptionConviction;
   /**
@@ -365,9 +368,9 @@ export interface PlaybookSubscription {
    * that steers several pairs, checked on one date. When the record steers this subscription's
    * pair, its check date replaces `conviction.checkOn` (`conviction-store.ts` `statedCheck`).
    * Once present it is the whole check: the bots never read `conviction` on a pointed subscription,
-   * and a pointer they cannot use runs the pair exits-only (`steeredBy`), so the app can drop the
-   * inline copy without changing a trade. Unpointed subscriptions keep `conviction` exactly as
-   * before. Behavioral only on a `subscriptions.v3` snapshot, the first whose version names it.
+   * and a pointer they cannot use runs the pair exits-only (`steeredBy`), so the app drops the
+   * inline copy wherever it can resolve the pointer (`subscriptions/conviction-pointer.ts`).
+   * Behavioral only on a `subscriptions.v3` snapshot or later, the first whose version names it.
    */
   readonly convictionId?: string;
   /**

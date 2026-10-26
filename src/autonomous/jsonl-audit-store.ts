@@ -23,4 +23,8 @@ export class JsonlAuditStore implements AuditStore {
   list(personaId?: string): Promise<DecisionRecord[]> {
     return this.store.list(personaId);
   }
+
+  stream(personaId?: string): AsyncIterable<DecisionRecord> {
+    return this.store.stream(personaId);
+  }
 }

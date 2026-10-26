@@ -10,26 +10,30 @@ import type { PageSection } from "./sections";
  *  every later page share ONE mechanism; this file is now just Settings' section list.
  *  @category navigation
  */
-export type SettingsSection = "preferences" | "account" | "guests";
+export type SettingsSection = "preferences" | "account" | "guests" | "github";
 
 export const SETTINGS_SECTIONS: readonly PageSection<SettingsSection>[] = [
   { id: "preferences", label: "Preferences" },
   { id: "account", label: "Account" },
   { id: "guests", label: "Guest list" },
+  { id: "github", label: "GitHub access" },
 ];
+
+/** Sections only an owner sees — a member's switcher simply doesn't list them. */
+export const OWNER_SECTIONS: ReadonlySet<SettingsSection> = new Set(["guests", "github"]);
 
 export function SettingsToc({
   current,
-  showGuests,
+  isOwner,
   onSelect,
 }: {
   readonly current: SettingsSection;
-  readonly showGuests: boolean;
+  readonly isOwner: boolean;
   readonly onSelect: (section: SettingsSection) => void;
 }): ReactElement {
   return (
     <SectionSwitch
-      sections={SETTINGS_SECTIONS.filter((s) => s.id !== "guests" || showGuests)}
+      sections={SETTINGS_SECTIONS.filter((s) => isOwner || !OWNER_SECTIONS.has(s.id))}
       current={current}
       onSelect={onSelect}
     />

@@ -306,6 +306,43 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-10-22, D+1, `event-passed-unscored`).** Scored from data re-fetched today on a cold
+cache (`node_modules` absent on this runner, so `market-data.mjs` `bars()` ran directly; instrument cache
+dirs cleared first) and from the ECB's own weekly schedule, never from the ledger's earlier rows.
+Both forward tests score beyond `closeOutWithinDays` (score-by 10-28 vs a 10-27 ceiling), but each one's
+verdict is already settled by a monotone condition (a threshold crossed once, a listing made once), so
+neither waits for the window to finish. `symbols: []`, no position, no instrument: **stand aside held,
+and nothing here licenses an entry.** Date is still `estimate`.
+
+| FT | Registered prediction | Observed | Verdict |
+|---|---|---|---|
+| 1 | no `^STOXX50E` close-to-close move >= 1.50% on any session 10-21 -> 10-27 | 10-21 **+1.40%** (6,121.66 -> 6,207.52); **10-22 -1.94%** (6,207.52 -> 6,087.01, opened 6,192.11, i.e. a -0.25% gap, then sold off through the session; Yahoo's last print is 16:00Z, after the 15:30Z European close) | **kill** |
+| 2 | the ECB weekly schedules list >= 1 public GC/Board engagement inside 10-21 -> 10-27 | `press/calendars/weekly` (fetched direct, modified 10-20 17:50 CET, covers 10-16 -> 10-25) lists **three on 10-21 alone**: Lane (CF40-Euro50 panel, Shanghai), Cipollone (ABI Executive Committee, online 10:00 CET), **Lagarde** (on-stage conversation, Museum Reinhard Ernst, Wiesbaden 18:30 CET); plus Montagner and Cipollone on 10-23 | **pass** |
+
+**What the kill says.** FT-1 failed on the tape, not on the silence: a 1.94% down session is a real
+breach of the registered line, scored as written. The concurrent tape, recorded rather than credited to
+the ECB: `^GDAXI` **-1.07%** (10-22), `^GSPC` **7,658.04, -1.28% at the 17:22Z snapshot (intraday, not a
+close)**, `^VIX` **19.17, +14.9% intraday** (from 16.68), `EURUSD=X` **1.1231, +0.04%** — an equity-wide
+risk-off day with a flat currency, not an ECB-specific or euro-specific move. **No cause is asserted:** the
+web searches run for it returned undated or mismatched articles and none is used. The parent ledger's
+leg 4 predicted exactly this reading of a fail (a shock, not the silence), and the registration
+said a pass was weak (11 of 13 prior windows would have passed) and only a fail informs; what it informs
+is narrow: **one 2026 window broke the 2025 null's thin-tail result on its second session**, so the
+"0 of 54 trimmed sessions at 2x" figure is no longer a clean base rate for this window family. It does
+not revive the entry's refuted asymmetry — nothing here shows an official interpretation would have
+changed the 10-22 session.
+
+**What the pass says.** Leg 2's topic-scope reading held on the first window it was tested against
+that was named in advance: Lagarde herself was scheduled in public on the first day of the quiet period.
+Topics were not read (the schedule lists titles, not transcripts), so this establishes that the diary
+keeps running, not what was said; one window, one observation, and the Fed-blackout analogy stays
+wrong as a model of this gate. Coverage stops 10-25, so 10-26 / 10-27 are unread and not needed.
+
+**Left open on purpose:** the 10-23 -> 10-27 sessions are still ahead of this close-out; a later
+reading of them can only add context to FT-1, never reverse its kill.
+
 **Last assessed:** 2026-10-05
 <!-- probe-ref: {"symbols":{},"vix":15.31,"daysBand":"low:15+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","dallas-fed-mfg-2026-10-26","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","opex-2026-10-16","pending-home-sales-2026-10-20","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":[],"screenStreak":1} -->
 
@@ -320,3 +357,6 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-19
 <!-- probe-ref: {"symbols":{},"vix":19.99,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","dallas-fed-mfg-2026-10-26","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","opex-2026-10-16","pending-home-sales-2026-10-20","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["meta-2026-10-28-print"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-22
+<!-- probe-ref: {"symbols":{},"vix":19.17,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","dallas-fed-mfg-2026-10-26","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","opex-2026-10-16","pending-home-sales-2026-10-20","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["meta-2026-10-28-print"],"screenStreak":0} -->

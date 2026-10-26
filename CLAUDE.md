@@ -243,9 +243,9 @@ iteration stops moving the number (`LEARNING-LOOP.md` field 14).
   still asks is `envelope.json`'s, mechanically — never "a branch I did not create".
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
-  CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped
-  `and hard to reverse`, which is how "outward-facing" came to fire on copy changes. Cite the file;
-  don't re-copy the list. **Read the words narrowly:** *outward-facing* = reachable by a non-member
+  CI check on autonomous lanes. A prose restatement drifts — a copy that drops `and hard to
+  reverse` makes "outward-facing" fire on copy changes. Cite the file; don't re-copy the list.
+  **Read the words narrowly:** *outward-facing* = reachable by a non-member
   or changing an external contract; *spend* = provisioning a credential or raising a cap, never
   picking a model tier on a lane already paid for.
 - **Safety scales to stakes.** Risk tolerance = f(recoverability, worst-case magnitude) — not probability
@@ -660,7 +660,8 @@ is expected and fine; the docs are the memory.
 - **Commits & PRs are documents** ([`docs/ENGINEERING.md`](docs/ENGINEERING.md) → _Change
   communication_): plain-language **Summary** + **Why**, weeds below the fold, mirroring
   `.github/pull_request_template.md`; proportional — no ceremony on a typo fix.
-- Verify before merge: `npm run typecheck`, `npm run lint`, `npm test`, + a screenshot for visual
+- Verify before merge: `npm run verify` (typecheck + lint + tests, root and `app/` — the set the
+  pre-push hook and CI run), + a screenshot for visual
   work (`npm run shoot:login` or an offline render). **Verify by exit status, not tailed output** —
   a pipeline exits with the last command's status, so `cmd | tail && …` will not halt on failure.
   Code gotchas (the inline login-canvas template-literal trap, `prefers-reduced-motion`):

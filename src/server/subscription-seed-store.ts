@@ -11,6 +11,7 @@ import {
   type PointerMove,
   pointAtRecords,
 } from "../subscriptions/conviction-pointer.js";
+import { ownViewsToState } from "../subscriptions/pair-conviction-migration.js";
 import { carryRowConvictions } from "../subscriptions/row-conviction.js";
 import {
   EMPTY_SEED_MARKERS,
@@ -23,6 +24,7 @@ import {
   seedOwnRules,
 } from "../subscriptions/subscription-seed.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import { accountName } from "./account-kind.js";
 import { createBotControlsStore } from "./bot-controls-store.js";
 import {
   convictionNames,
@@ -34,7 +36,10 @@ import {
   ENV_SEED_AUTHOR,
   envSettingsMarkersPathFrom,
 } from "./env-settings-seed.js";
-import { createMemberConvictionStore } from "./member-conviction-store.js";
+import {
+  createMemberConvictionStore,
+  type MemberConvictionStore,
+} from "./member-conviction-store.js";
 import { createSettingsChangeLog, type SettingsChangeLog } from "./settings-change-log.js";
 import { subscriptionSummary } from "./subscription-changes.js";
 import {
@@ -222,7 +227,10 @@ export function createCondScoutSeeder(
  * A ◆ row's conviction onto every subscription to it that states none (#4469 slice 3c part 3,
  * `row-conviction.ts`). Unmarked on purpose — an invariant, re-read each poll, so a pair seeded
  * later gets it too — and as careful as the seeds: never over a file it could not read whole, and
- * no write when nothing was carried, so the common poll is one small read.
+ * no write when nothing was carried, so the common poll is one small read. Since #5482's poll
+ * migration it is the fallback: the migration writes a ◆ row's conviction as a view first, so this
+ * carries inline only where that view could not be written (the views file unreadable, or the
+ * controls wire full), and the next poll moves it onto a view.
  */
 export function carryConvictions(
   subscriptions: SubscriptionStore,
@@ -234,6 +242,25 @@ export function carryConvictions(
   if (carried.length === 0) return [];
   subscriptions.replace(next);
   return carried;
+}
+
+/**
+ * The poll migration of #5482 contract piece 3 (`pair-conviction-migration.ts`): each subscription
+ * the pointer rule leaves unpointed with a conviction to check — its inline copy, or its ◆ row's —
+ * gets its owner's own view on the pair, named for the account's bot (`accountName`). Views only:
+ * the pointer pass after it points each subscription at its view, drops the inline copy and logs
+ * the move. Never while either file cannot be read whole, and no write on the common poll, when no
+ * subscription is left unpointed. Returns `account/playbookId` for each view written.
+ */
+export function migratePairConvictions(
+  subscriptions: SubscriptionStore,
+  members: MemberConvictionStore,
+  at = new Date(),
+): readonly string[] {
+  const state = subscriptions.loadIfReadable();
+  if (!state) return [];
+  const views = ownViewsToState(state, at, members.pointers(), accountName);
+  return views.length > 0 ? members.statePairs(views, at) : [];
 }
 
 /**
@@ -261,7 +288,25 @@ export function pointConvictions(
 }
 
 /**
- * Both seeds for each `/controls` poll, then the ◆ conviction carry and the pointer at its record, built from the environment
+ * An owner's own view on a pair whose account no longer subscribes to it is dropped (#5482 contract
+ * piece 3, `MemberConvictionStore.prunePairViews`): what an unsubscribe whose own drop failed leaves.
+ * Never while the subscriptions file cannot be read whole — a pair it could not see would read as
+ * given up. Returns `account/playbookId` for each one dropped.
+ */
+export function prunePairViews(
+  subscriptions: SubscriptionStore,
+  members: MemberConvictionStore,
+): readonly string[] {
+  const state = subscriptions.loadIfReadable();
+  if (!state) return [];
+  return members.prunePairViews((accountId, playbookId) =>
+    (state[accountId] ?? []).some((s) => s.playbookId === playbookId),
+  );
+}
+
+/**
+ * Both seeds for each `/controls` poll, then the conviction migration, the pointer pass and the ◆
+ * carry's fallback, built from the environment
  * (beside `SKYNET_SUBSCRIPTIONS_FILE`, over the registry's playbooks); returns a log line for each
  * that wrote. The env roster seeds first, so a `SAURON` named in `SKYNET_PLAYBOOKS` keeps its env mode
  * and the own-rules seed only marks it. The own-rules seed reads the poll's gate verdicts — one per
@@ -319,12 +364,16 @@ export function pollSeedsFromEnv(
         "marked for the shadow scout's names seed, nothing added (already held)",
       ),
       ...(report.houseRoster ? envSettings(report.houseRoster, at) : []),
-      // After both seeds, so a ◆ pair one of them just added carries its row's conviction at once.
       ...lines(
-        carryConvictions(subscriptions, at),
-        "carried the ◆ row's conviction onto each subscription stating none (checked on its row's date)",
+        prunePairViews(subscriptions, memberConvictions),
+        "dropped an owner's own view on a pair the account no longer subscribes to",
       ),
-      // After the carry, so a conviction it just wrote is pointed at its record on the same poll.
+      // After both seeds, so a ◆ pair one of them just added gets its row's conviction at once.
+      ...lines(
+        migratePairConvictions(subscriptions, memberConvictions, at),
+        "moved an inline conviction (or a ◆ row's) onto its owner's own view on the pair",
+      ),
+      // After the migration, so a view it just wrote is pointed at on the same poll.
       ...lines(
         pointConvictions(subscriptions, at, memberConvictions.pointers(), (moves) =>
           recordPointerMoves(
@@ -336,7 +385,12 @@ export function pollSeedsFromEnv(
             onReadError,
           ),
         ),
-        "pointed each subscription at the record its conviction states, or at the member's view handed over to it (its inline conviction kept)",
+        "pointed each subscription at the record that steers it, or at the member's view handed over to it (an inline copy beside the pointer dropped)",
+      ),
+      // The fallback, after the pointer pass: only a ◆ pair the migration could not give a view.
+      ...lines(
+        carryConvictions(subscriptions, at),
+        "carried the ◆ row's conviction inline onto each subscription stating none, as no view could be written (the bots run it exits-only until one is)",
       ),
     ];
   };

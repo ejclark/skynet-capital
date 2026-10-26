@@ -53,6 +53,8 @@ export function bootServer({ mode, port, bridgePort, timeoutMs = 90_000 }) {
     ...envFor(mode, fixtures),
   };
   delete env.SKYNET_FEEDBACK_GITHUB_TOKEN;
+  // A token saved from Settings would otherwise re-arm filing at boot — point at no store.
+  env.SKYNET_GITHUB_TOKEN_STORE = resolve(fixtures, "no-github-token.json");
   delete env.PORT;
   const child = spawn(
     process.execPath,

@@ -82,16 +82,29 @@ faithful surfacing of the stance below, never a new claim (see the TEMPLATE). In
   [`multi-symbol-sweep.md`](../research/multi-symbol-sweep.md) — never re-propose a killed
   hypothesis without new prints. For a full workup, the `symbol-sweep` workflow adds the
   red-team pass.
+- **ipo-listing** — an IPO prices; first trade is the next session (#5912 slice 3; filed by `npm
+  run research:lockups`). An `estimate` comes from the public S-1 weeks before pricing, dated by
+  base rates its `source` states; it is not a date to act on, and the 424B4 retires it with a
+  dated, `confirmed` twin (`supersededBy`) — so register no forward test on an estimate's id,
+  which would block that retirement until scored. Read the S-1 for what the listing phase needs:
+  the price range against the last private mark, the primary/secondary split, and the lock-up
+  clause (its early-release triggers date the lockup entry beside it). The standing call is no
+  position on day 1 ([`anthropic-ipo.md`](../research/anthropic-ipo.md)); the close-out records
+  the day-1 close against the offer price.
 - **lockup-expiry** — an IPO's insider shares unlock (#5912; filed by `npm run research:lockups`).
-  First re-read the lock-up clause in the 424B4 the `source` cites: an `estimate` entry quotes an
+  An entry whose `source` opens `EST: S-1` was estimated before pricing and waits for the 424B4
+  like its listing above. Otherwise, first re-read the lock-up clause in the 424B4 the `source`
+  cites: an `estimate` entry quotes an
   early-release trigger (an earnings release, a closing-price test, staged tranches), and the
   initial research's job is to name the earliest date it can actually fire. If that settles one
   date, promote the entry with an `SEC:` source that says so. Then the three reads the playbook
   needs: **supply** — unlocking shares as % of float and in days of average volume; **price** — the
   run-up since the IPO price (the literature's pullback is larger after a big run-up); **options**
   — put IV against realized vol and the skew into the date (a known catalyst is usually priced).
-  The default call is "stand aside" until the lockup study (#5912 slice 2) says otherwise; never
-  a position on the listing day.
+  The default call is "stand aside": the lockup study ([`ipo-lockup-expiry.md`](../research/ipo-lockup-expiry.md),
+  #5912 slice 2) found the unlock drag was a 2019–21 effect, flat since 2022, and no trade shape
+  paid at a realistic option price. Log the three reads as the study's forward test; never a
+  position on the listing day.
 - **macro-print / sector / geopolitical** — sourced web research (primary sources over
   aggregators; the seeding of this calendar caught an aggregator publishing a wrong CPI date —
   cite the primary and the check date). Establish: consensus expectation, the whisper if
@@ -472,7 +485,8 @@ powered re-run waits on the OCC archive (#4832).
 
 ## The decision header is gated (`npm run research:lint`)
 
-The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.
+The gate reads `docs/research/events/`, `docs/research/weeks/` and `docs/research/convictions/` —
+one contract, one eye.
 A weekly study's call sheet keys by name rather than by horizon, so the four-horizon rule does not
 apply to it (the lint already skips that check for a by-name table) and its advisory header budget is
 wider, because a by-name sheet grows with the roster rather than with an author's prose.

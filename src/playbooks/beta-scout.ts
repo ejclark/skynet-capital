@@ -68,8 +68,8 @@ export const BETA_SCOUT: Playbook = {
 };
 
 /**
- * `SKYNET_BETA_FORCING` as set by the autonomy-ops `set-beta-forcing` button — parsed only to be
- * reported, the bots no longer obey it (#4535 slice 4c-2): a pick count,
+ * `SKYNET_BETA_FORCING` as the retired autonomy-ops `set-beta-forcing` button set it — parsed only
+ * to be reported, the bots no longer obey it (#4535 slice 4c-2): a pick count,
  * optionally followed by `+stage`. `"2"` = up to 2 forced picks/day, in-hours only (unchanged).
  * `"2+stage"` = the same, AND when the market is closed the scout may stage its picks for the
  * next session (Eric, 2026-09-04: "configuration that nudges sauron to put in an after hours

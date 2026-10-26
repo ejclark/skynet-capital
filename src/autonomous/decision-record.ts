@@ -74,4 +74,6 @@ export interface DecisionRecord {
 export interface AuditStore {
   record(entry: DecisionRecord): Promise<void>;
   list(personaId?: string): Promise<DecisionRecord[]>;
+  /** `list` one record at a time, for a reader that must not hold the whole trail (the boot backfill). */
+  stream?(personaId?: string): AsyncIterable<DecisionRecord>;
 }

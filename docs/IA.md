@@ -750,7 +750,7 @@ CLAUDE.md's shared-universe boundary (#885's playbook fog is the one exception).
 - ◆ **The Wire is the league's feed with two declared joints**: of ~24 wire steps, ~9 are
   symbol-scoped (served, `wire-routes.ts:113-128`, never called), ~10 are one account's fills (the
   book's `GET /api/desk/:id/activity`, open to any id, which `/u/$id/ledger` mounts — dead end 5),
-  ~5 the feed. `symbol` joins into the workbench; `whoId` into the any-account page's Activity (2d).
+  ~5 the feed. `symbol` joins into the workbench; `whoId` into the any-account page's Ledger (2d).
 - ◆ **Freshness disagrees on the merged page**: `/leaderboard` opens a live channel and prints
   "N live ops applied" (`leaderboard.tsx:13,306,317`); the Activity feed is a one-shot query
   refetched on window focus with no channel (`activity.tsx:404`). The seam is stated on the page

@@ -204,7 +204,7 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    to execute if my convictions hold"*): the verdict in one line, then the evidence; "← Research"
    goes back to the board. **WHEN the owner opens a study from R&D, the app shall show its verdict
    first and a way back to the board.** Judge: can this reader tell what to do about it, in ten
-   seconds? _(Added 2026-09-29, #3816 slice 9.)_
+   seconds?
 
 ### j2 — take profit or hold
 
@@ -261,8 +261,6 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    can this reader change the week from here?
 
 ### j6 — the owner's settings
-
-_(Added 2026-09-29, #3816 slice 9.)_
 
 1. `/app/settings` — Settings opens on Preferences: density and theme (dark · light), applied to
    this browser at once. **WHEN the owner opens Settings, the app shall open on Preferences with

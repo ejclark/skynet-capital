@@ -93,13 +93,16 @@ describe("page sections", () => {
   });
 
   describe("one mechanism, not two", () => {
-    it("gives Settings and Activity the same switch component", () => {
+    it("gives Settings, R&D and Trade the same switch component", () => {
       expect(read("app/src/shell/settings-toc.tsx")).toContain("SectionSwitch");
-      expect(read("app/src/routes/activity.tsx")).toContain("SectionSwitch");
+      expect(read("app/src/routes/research.tsx")).toContain("SectionSwitch");
+      expect(read("app/src/routes/trade.tsx")).toContain("SectionSwitch");
     });
 
-    it("keeps Activity's filter chips tied to the section they filter", () => {
-      expect(read("app/src/routes/activity.tsx")).toContain('{section === "feed" ? (');
+    // The Council was Activity's one section beside the feed; with it retired (#5992) the page is
+    // one feed, and a switch with a single section would be a control with nothing to do.
+    it("leaves Activity with no section switch once the Council retired", () => {
+      expect(read("app/src/routes/activity.tsx")).not.toContain("SectionSwitch");
     });
 
     it("builds no tab strip — no page introduces tab roles", () => {

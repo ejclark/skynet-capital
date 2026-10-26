@@ -1,78 +1,44 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Session } from "./auth/session.js";
-import { type CouncilDeps, councilWeekView, retractThesis, submitThesis } from "./council-form.js";
+import { type CouncilDeps, councilWeekView } from "./council-form.js";
 import { opaqueMemberId } from "./feedback-issue.js";
-import { feedbackThrottled } from "./feedback-routes.js";
-import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
+import { sendJson } from "./page-shell.js";
 
 /**
- * `/api/council` — the Sunday Council's write surface (`docs/THE-GAME.md:117`, issue #2224 shape
- * 1): one line per member per week, visible inside the gate. Same shape as `/api/feedback`: GET
- * answers "what's wired" plus the current week's lines (pseudonymous — `opaqueMemberId`, matching
- * the Feedback pulse's own posture) and the viewer's own line when signed in; POST replaces it.
+ * `/api/council` — the Sunday Council's weekly thesis line (`docs/THE-GAME.md:117`, issue #2224
+ * shape 1), RETIRED by #5992 (Eric, 2026-10-24: a weekly market call "encourages people to think
+ * they can time the market", against an app that exists to teach). A thesis now lives in playbook
+ * authoring, where it is shadow-tested before it trades.
  *
- * Owner or member, same door — unlike Mission Control, the Council has no admin half. A
- * signed-out or password-mode request still SEES the week (the gate already let it through this
- * far — `dashboard-auth-gate.ts` runs first), it just can't post one.
+ * What stays: the stored lines (member-authored data is archived, never deleted, in that plan) and
+ * this GET, which no surface reads any more — #5992 slice 3 buries it. What is gone: every write.
+ * A POST, a retract included, answers 410 whether or not the store is wired, so an old tab or a
+ * script can never add a line dated after the retirement (the plan's falsifier).
  */
-const SUBMIT_CAP_BYTES = 1_024;
-
-function serveIndex(res: ServerResponse, deps: CouncilDeps, session: Session | undefined): void {
-  const view = councilWeekView(deps, session ? opaqueMemberId(session.email) : undefined);
-  sendJson(res, 200, { enabled: true, ...view });
-}
-
-async function serveSubmit(
-  req: IncomingMessage,
-  res: ServerResponse,
-  deps: CouncilDeps,
-  session: Session | undefined,
-): Promise<void> {
-  const raw = await readJsonPost(req, res, SUBMIT_CAP_BYTES);
-  if (raw === undefined) return;
-  if (!session) {
-    sendJson(res, 403, { ok: false, error: "Sign in to speak at the Council." });
-    return;
-  }
-  if (feedbackThrottled(`council:${session.email}`)) {
-    sendJson(res, 429, { ok: false, error: "Give it a moment before changing your line again." });
-    return;
-  }
-  const body = parseJsonRecord(raw);
-  if (body?.retract === true) {
-    sendJson(res, 200, retractThesis(opaqueMemberId(session.email), deps));
-    return;
-  }
-  const text = body ? boundedString(body.text, 2_000) : undefined; // form-bounds first; submitThesis owns the real 280-char rule
-  if (text === undefined) {
-    sendJson(res, 400, { ok: false, error: "malformed council body" });
-    return;
-  }
-  // Form-bounds only — submitThesis owns whether the id names a real play.
-  const playbookId = body ? boundedString(body.playbookId, 60) : undefined;
-  const result = submitThesis(text, opaqueMemberId(session.email), deps, playbookId);
-  sendJson(res, 200, result);
-}
+export const COUNCIL_RETIRED = {
+  ok: false,
+  error: "The Council is retired — write your thesis into a playbook, where it gets tested.",
+} as const;
 
 /** Handle `/api/council`. Returns true when the request was answered. Omit `deps` (no store
- *  wired) and every request answers `{enabled:false}` — the honest empty state, same posture as
- *  `/api/feedback` when `submitFeedback` is unwired. */
-export async function serveCouncilApi(
+ *  wired) and a GET answers `{enabled:false}` — the honest empty state. */
+export function serveCouncilApi(
   req: IncomingMessage,
   res: ServerResponse,
   path: string,
   deps: CouncilDeps | undefined,
   session: Session | undefined,
-): Promise<boolean> {
+): boolean {
   if (path !== "/api/council") return false;
+  if ((req.method ?? "GET") !== "GET") {
+    sendJson(res, 410, COUNCIL_RETIRED);
+    return true;
+  }
   if (!deps) {
     sendJson(res, 200, { enabled: false });
     return true;
   }
-  if ((req.method ?? "GET") === "GET") {
-    serveIndex(res, deps, session);
-    return true;
-  }
-  await serveSubmit(req, res, deps, session);
+  const view = councilWeekView(deps, session ? opaqueMemberId(session.email) : undefined);
+  sendJson(res, 200, { enabled: true, ...view });
   return true;
 }

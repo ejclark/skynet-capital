@@ -7,8 +7,6 @@ import type {
 } from "../domain/types.js";
 import type { Persona } from "../personas/persona.js";
 import {
-  type ConvictionVerdict,
-  checkConviction,
   checkRecord,
   netPl,
   type PairLedger,
@@ -41,17 +39,18 @@ import { pausedMayPlace } from "./playbook.js";
  * once, nothing is latched, and the next cycle reads it again.
  *
  * WHICH DATE (#5482 slice 2): a subscription that points at a conviction record steering its pair
- * is checked on the record's date, so one view gates every pair it steers on one day. A subscription
- * with no pointer is checked on its own conviction's date, as before. A pointed one never reads its
- * own (the contract step's piece 2): a pointer the store cannot resolve, or one at a record that
- * does not steer the pair, is said once and gives no check day, and the roster already runs that
- * pair exits-only (`statedCheck`, `steeredBy`).
+ * is checked on the record's date, so one view gates every pair it steers on one day. Nothing else
+ * is checked (the contract step's piece 4, pointers only): an inline conviction is never read. A
+ * pointer the store cannot resolve, one at a record that does not steer the pair, an inline copy
+ * with no pointer, or a ◆ pair with neither is said once and gives no check day, and the roster
+ * already runs that pair exits-only (`statedCheck`, `steeredBy`, `subscriptionRoster`). An owner's own reason and day are a
+ * one-pair record since piece 3, so they are read here like any other.
  *
- * WHICH READING (#5482 criterion 5): a subscription checked on a RECORD is judged with the other
- * pairs that record steers on this bot, together — their net P/L added up (`checkRecord`). When it
- * fails, every pair the record steers stops new entries at once, and a pair that is paused still
- * counts toward the sum, so pausing a loser never hides it. A subscription checked on its own
- * conviction is read by itself, exactly as before. Exits are never filtered either way.
+ * WHICH READING (#5482 criterion 5): a subscription is judged with the other pairs its record
+ * steers on this bot, together — their net P/L added up (`checkRecord`); a one-pair record reads
+ * its pair alone, exactly as the inline check did. When it fails, every pair the record steers
+ * stops new entries at once, and a pair that is paused still counts toward the sum, so pausing a
+ * loser never hides it. Exits are never filtered.
  */
 export interface ConvictionGateDeps {
   /** The bot's own subscriptions — the convictions ride on them. */
@@ -71,41 +70,30 @@ interface RecordGroup {
   readonly acceptsAssignment: boolean;
 }
 
-interface Checks {
-  /** Subscriptions checked on their own conviction, each read alone. */
-  readonly own: { readonly sub: PlaybookSubscription; readonly checkOn: string }[];
-  /** Subscriptions checked on a record, grouped by record id and read together. */
-  readonly records: Map<string, RecordGroup>;
-}
-
-/** Sort the bot's subscriptions into what each is checked on (`statedCheck`), saying a pointer the
- *  store cannot use. A paused pair is not checked on its own, but its book counts toward a record's
- *  sum; a record with every pair paused has nothing left to stop and is read again when one resumes. */
-function checksOf(deps: ConvictionGateDeps, log: (line: string) => void): Checks {
-  const own: Checks["own"][number][] = [];
+/** Group the bot's subscriptions by the record each is checked on (`statedCheck`), saying one that
+ *  has no usable check. A paused pair is not checked on its own, but its book counts toward a
+ *  record's sum; a record with every pair paused has nothing left to stop and is read again when
+ *  one resumes. */
+function checksOf(deps: ConvictionGateDeps, log: (line: string) => void): Map<string, RecordGroup> {
   const records = new Map<string, RecordGroup>();
   for (const sub of deps.subscriptions) {
     const lookup = deps.convictionOf ?? lookupConviction;
     const check = statedCheck(sub, lookup);
     if (sub.enabled && check.note) {
-      log(`${check.note} — no check day until it resolves; its inline conviction is not read`);
+      log(`${check.note} — no check day until it resolves; it opens nothing new meanwhile`);
     }
-    if (!check.checkOn) continue;
-    if (check.from === "record" && check.convictionId !== undefined) {
-      const group = records.get(check.convictionId);
-      if (group) group.subs.push(sub);
-      else {
-        const acceptsAssignment = lookup(check.convictionId)?.acceptsAssignment === true;
-        records.set(check.convictionId, { checkOn: check.checkOn, subs: [sub], acceptsAssignment });
-      }
-    } else if (sub.enabled) {
-      own.push({ sub, checkOn: check.checkOn });
+    if (!(check.checkOn && check.convictionId !== undefined)) continue;
+    const group = records.get(check.convictionId);
+    if (group) group.subs.push(sub);
+    else {
+      const acceptsAssignment = lookup(check.convictionId)?.acceptsAssignment === true;
+      records.set(check.convictionId, { checkOn: check.checkOn, subs: [sub], acceptsAssignment });
     }
   }
   for (const [id, group] of records) {
     if (!group.subs.some((s) => s.enabled)) records.delete(id);
   }
-  return { own, records };
+  return records;
 }
 
 /** Every steered pair's history and net P/L now, or why they cannot all be read: a held position
@@ -142,51 +130,9 @@ function recordLine(id: string, checkOn: string, verdict: RecordVerdict, pairs: 
 
 export function withConvictionGate(inner: Persona, deps: ConvictionGateDeps): Persona {
   const log = deps.log ?? (() => undefined);
-  const { own: convictions, records } = checksOf(deps, log);
-  if (convictions.length === 0 && records.size === 0) return inner;
-  const latched = new Map<string, ConvictionVerdict>();
+  const records = checksOf(deps, log);
+  if (records.size === 0) return inner;
   const unread = new Set<string>();
-
-  const read = (
-    sub: PlaybookSubscription,
-    checkOn: string,
-    context: MarketContext,
-    portfolio: Portfolio,
-  ): ConvictionVerdict | undefined => {
-    const key = `${sub.playbookId}|${checkOn}`;
-    const kept = latched.get(key);
-    if (kept) return kept;
-    const pair = findPair(sub.playbookId);
-    if (!pair) return undefined;
-    if (!deps.ledgerOf) {
-      if (!unread.has(key)) {
-        unread.add(key);
-        log(
-          `conviction check due ${checkOn} for ${sub.playbookId} but no decision store to read it from — entries continue`,
-        );
-      }
-      return undefined;
-    }
-    const ledger = deps.ledgerOf(sub.playbookId, putStrategyTag(pair));
-    const net = netPl(pair, ledger, portfolio, context.quotes);
-    if (net === undefined) {
-      if (!unread.has(`${key}|marks`)) {
-        unread.add(`${key}|marks`);
-        log(
-          `conviction check due ${checkOn} for ${sub.playbookId} but a held position has no mark yet — reading it next cycle`,
-        );
-      }
-      return undefined;
-    }
-    const verdict = checkConviction(pair, checkOn, ledger, net);
-    latched.set(key, verdict);
-    log(
-      verdict.pass
-        ? `conviction check passed for ${sub.playbookId} (${checkOn}): net P/L ${verdict.netPl}`
-        : `conviction check FAILED — ${verdict.reason}; no new entries until its owner sets a new date, exits still run`,
-    );
-    return verdict;
-  };
 
   const latchedRecords = new Map<string, RecordVerdict>();
 
@@ -234,10 +180,6 @@ export function withConvictionGate(inner: Persona, deps: ConvictionGateDeps): Pe
       const intents = inner.decide(context, portfolio);
       const today = marketDayKey(context.asOf);
       const stopped = new Set<string>();
-      for (const { sub, checkOn } of convictions) {
-        if (today < checkOn) continue;
-        if (read(sub, checkOn, context, portfolio)?.pass === false) stopped.add(sub.playbookId);
-      }
       for (const [id, group] of records) {
         if (today < group.checkOn) continue;
         for (const pairId of readRecord(id, group, context, portfolio)?.stopped ?? []) {

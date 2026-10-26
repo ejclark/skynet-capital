@@ -1,7 +1,6 @@
 import type { PlaybookSubscription, Portfolio } from "../../src/domain/types.js";
 import {
   CONVICTION_NOT_STATED,
-  checkConviction,
   checkRecord,
   isConvictionNotStated,
   netPl,
@@ -75,37 +74,41 @@ describe("netPl — the ledger plus what the open positions are worth against co
   });
 });
 
-describe("checkConviction — net P/L and the wheel's retire test", () => {
+/** A one-pair view's check: the reading an owner's own reason and day get since #5482 contract
+ *  piece 3, when the bots stopped reading inline convictions (piece 4). */
+describe("checkRecord on one pair — net P/L and the wheel's retire test", () => {
+  const one = (pair: typeof WHEEL, checkOn: string, history: PairLedger, net: number) =>
+    checkRecord(checkOn, [{ pair, ledger: history, net }]);
+
   it("passes at exactly $0 and above", () => {
-    expect(checkConviction(WHEEL, "2027-01-29", ledger(), 0)).toEqual({ pass: true, netPl: 0 });
+    expect(one(WHEEL, "2027-01-29", ledger(), 0)).toEqual({
+      pass: true,
+      netPl: 0,
+      stopped: [],
+      reason: "",
+    });
   });
 
   it("fails below $0, in words an owner can read", () => {
-    const verdict = checkConviction(WHEEL, "2027-01-29", ledger(), -120);
-    expect(verdict).toMatchObject({ pass: false, netPl: -120 });
-    expect(verdict.pass === false && verdict.reason).toBe(
-      "the wheel on CRWV: net P/L is -$120.00 at its 2027-01-29 check",
-    );
+    const verdict = one(WHEEL, "2027-01-29", ledger(), -120);
+    expect(verdict).toMatchObject({ pass: false, netPl: -120, stopped: ["CRWV-WHEEL"] });
+    expect(verdict.reason).toBe("the wheel on CRWV: net P/L is -$120.00 at the 2027-01-29 check");
   });
 
-  it("fails the retire test when more than 1 in 3 sold puts finished in the money, even in profit", () => {
-    const verdict = checkConviction(
+  it("stops the pair on the retire test when more than 1 in 3 sold puts finished in the money, even in profit", () => {
+    const verdict = one(
       WHEEL,
       "2027-01-29",
       ledger({ realizedPl: 900, putsClosed: 5, putsAssigned: 2 }),
       900,
     );
-    expect(verdict.pass).toBe(false);
-    expect(verdict.pass === false && verdict.reason).toContain(
-      "2 of 5 sold puts finished in the money",
-    );
+    expect(verdict.stopped).toEqual(["CRWV-WHEEL"]);
+    expect(verdict.reason).toContain("2 of 5 sold puts finished in the money");
   });
 
   it("holds at exactly 1 in 3, and with no puts finished yet", () => {
-    expect(checkConviction(WHEEL, "d", ledger({ putsClosed: 3, putsAssigned: 1 }), 5).pass).toBe(
-      true,
-    );
-    expect(checkConviction(WHEEL, "d", ledger(), 5).pass).toBe(true);
+    expect(one(WHEEL, "d", ledger({ putsClosed: 3, putsAssigned: 1 }), 5).stopped).toEqual([]);
+    expect(one(WHEEL, "d", ledger(), 5).stopped).toEqual([]);
   });
 
   it("applies the put test to the wheel only", () => {
@@ -113,9 +116,7 @@ describe("checkConviction — net P/L and the wheel's retire test", () => {
     if (!runUp) throw new Error("S1-NVDA is not in the pair table");
     expect(putStrategyTag(runUp)).toBeUndefined();
     expect(putStrategyTag(WHEEL)).toBe("crwv-wheel-put");
-    expect(checkConviction(runUp, "d", ledger({ putsClosed: 1, putsAssigned: 1 }), 5).pass).toBe(
-      true,
-    );
+    expect(one(runUp, "d", ledger({ putsClosed: 1, putsAssigned: 1 }), 5).stopped).toEqual([]);
   });
 });
 
@@ -124,9 +125,17 @@ describe("criterion 11 — a non-✓ pair with no conviction is labelled, never 
   const sub = (id: string, overrides: Partial<PlaybookSubscription> = {}) =>
     aSubscription("sauron", id, overrides);
 
-  it("names the wheel on CRWV (◆ conviction row) while its owner has stated none", () => {
-    expect(isConvictionNotStated(sub("CRWV-WHEEL"))).toBe(true);
+  it("names SAURON's basket (? not studied) while its owner has stated none", () => {
+    expect(isConvictionNotStated(sub("SAURON"))).toBe(true);
     expect(CONVICTION_NOT_STATED).toBe("conviction not stated");
+  });
+
+  // The inline carry's replacement, bots first: a ◆ pair trades only on a conviction (#4469 c2), so
+  // with neither a pointer nor a copy it runs exits-only (`subscriptionRoster`), and "still
+  // trading" would be false of it.
+  it("never labels a ◆ pair with neither a pointer nor a copy: it runs exits-only instead", () => {
+    expect(isConvictionNotStated(sub("CRWV-WHEEL"))).toBe(false);
+    expect(isConvictionNotStated(sub("CRWV-LONG-CALL"))).toBe(false);
   });
 
   it("is quiet once a conviction is stated", () => {
@@ -211,14 +220,5 @@ describe("checkRecord — a conviction record's check over every pair it steers 
     );
     expect(losing.pass).toBe(false);
     expect(losing.stopped).toEqual(["CRWV-WHEEL"]);
-  });
-
-  it("reads one pair exactly as a single pair's check does", () => {
-    for (const net of [-120, 0, 230]) {
-      const single = checkConviction(WHEEL, "2027-01-29", ledger({ realizedPl: net }), net);
-      const record = checkRecord("2027-01-29", [reading(WHEEL, net)]);
-      expect(record.pass).toBe(single.pass);
-      expect(record.stopped.length > 0).toBe(!single.pass);
-    }
   });
 });

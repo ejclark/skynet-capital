@@ -1,5 +1,8 @@
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
+import type { Conviction } from "../playbooks/conviction-record.js";
+import { CONVICTIONS } from "../playbooks/conviction-store.js";
 import { findPair, type Pair, pairName } from "../playbooks/pair-table.js";
+import { steeringRecord } from "./conviction-pointer.js";
 import type { SubscriptionsState } from "./subscription-state.js";
 
 /**
@@ -15,6 +18,12 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * already states one keeps its own, so an owner who set a new date after a failed check is never
  * put back on the row's. Carrying it only ever stops new entries on a failed check — exits always
  * run — so it can make a pair do less, never more.
+ *
+ * Since #5482's contract step it carries only onto a ◆ row no single conviction record steers: a row
+ * one record steers is reached by a pointer instead (`carryRowConvictions`). And since its poll
+ * migration even that row's conviction is written as the owner's own view on the pair first
+ * (`pair-conviction-migration.ts`, which reads `rowConviction`), so this inline carry is only the
+ * fallback for a view that could not be written.
  */
 
 /** The reason a carried conviction reads with: whose it is and what it is against, said plainly. */
@@ -34,18 +43,31 @@ export interface Carried {
   readonly carried: readonly string[];
 }
 
-/** Pure: `state` with each ◆ row's conviction on every subscription to it that states none. When
- *  nothing is carried, `state` is the very object passed in. */
+/**
+ * Pure: `state` with each ◆ row's conviction on every subscription to it that states none and has
+ * no pointer, on a row no single record steers. When nothing is carried, `state` is the very object
+ * passed in.
+ *
+ * A ◆ row one record steers carries no inline copy any more (#5482 contract piece 2): the pointer
+ * pass after this one points the subscription at that record (`steeringRecord`), and logs the move.
+ * A pointed subscription is skipped too — its pointer is the whole check, and its inline copy was
+ * dropped on purpose, so carrying it back would only rewrite the file every poll.
+ */
 export function carryRowConvictions(
   state: SubscriptionsState,
   at: Date,
   lookup: (id: string) => Pair | undefined = findPair,
+  records: readonly Conviction[] = CONVICTIONS.all(),
 ): Carried {
   const carried: string[] = [];
   const next: Record<string, readonly PlaybookSubscription[]> = {};
+  const carries = (sub: PlaybookSubscription) =>
+    !sub.conviction &&
+    sub.convictionId === undefined &&
+    steeringRecord(sub.playbookId, records) === undefined;
   for (const [accountId, subs] of Object.entries(state)) {
     next[accountId] = subs.map((sub) => {
-      const conviction = sub.conviction ? undefined : rowConviction(lookup(sub.playbookId));
+      const conviction = carries(sub) ? rowConviction(lookup(sub.playbookId)) : undefined;
       if (!conviction) return sub;
       carried.push(`${accountId}/${sub.playbookId}`);
       return { ...sub, conviction, updatedAt: at.toISOString() };

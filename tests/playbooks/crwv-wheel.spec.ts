@@ -21,12 +21,24 @@ import {
 } from "../../src/playbooks/registry.js";
 import { WHEEL_DELTAS, wheel, wheelPhase } from "../../src/playbooks/wheel.js";
 import { resolveBotRoster, tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
+import { pairView } from "../../src/subscriptions/pair-conviction.js";
 import { buildOccSymbol } from "../../src/trading/option-symbols.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
 
 // The wheel's mechanics are measured on CRWV's classic setting — month out, the mode's delta, one
 // contract — and CRWV's 2026-10-16 conviction settings on the live CRWV_WHEEL at the end.
 const CLASSIC = wheel(CRWV_WHEEL_SETTING);
+
+// A ◆ pair trades only on a conviction on a view (#5482): through the live roster, the wheel's is
+// its owner's own, on its one pair, read by its pointer.
+const OWN = pairView({
+  accountId: "sauron",
+  playbookId: "CRWV-WHEEL",
+  conviction: { reason: "my call", checkOn: "2027-01-29" },
+  owner: "Sauron",
+  statedOn: "2026-10-01",
+});
+const ownOf = (id: string) => (id === OWN.id ? OWN : undefined);
 
 // The CRWV wheel on the real 2026 exchange calendar. Print rows pinned as filed on 2026-10-05:
 // CRWV's November estimate (window Nov 9–16, so the blackout runs Nov 9–17 — the session after
@@ -462,6 +474,7 @@ describe("CRWV-WHEEL — paused", () => {
       mode: "aggressive",
       capitalAllocated: 75_000,
       enabled,
+      convictionId: OWN.id,
       createdAt: "2026-10-01T00:00:00.000Z",
       updatedAt: "2026-10-01T00:00:00.000Z",
     });
@@ -473,7 +486,10 @@ describe("CRWV-WHEEL — paused", () => {
       optionsLevel: 1,
     };
     const trade = (enabled: boolean, portfolio: Portfolio) => {
-      const trading = tradingRoster(resolveBotRoster(bot, [], [wheelSub(enabled)]), liveRisk);
+      const trading = tradingRoster(
+        resolveBotRoster(bot, [], [wheelSub(enabled)], undefined, ownOf),
+        liveRisk,
+      );
       const raw = trading.persona.decide(market(), portfolio);
       return { raw, ...applyGuardsWithVerdicts(raw, portfolio, market(), trading.risk) };
     };
@@ -553,12 +569,16 @@ describe("CRWV-WHEEL — its 2026-10-16 settings", () => {
       mode: "aggressive",
       capitalAllocated,
       enabled: true,
+      convictionId: OWN.id,
       createdAt: "2026-10-01T00:00:00.000Z",
       updatedAt: "2026-10-01T00:00:00.000Z",
     });
     const risk = { ...DEFAULT_RISK_CONFIG, discipline: { calendar: CALENDAR }, optionsLevel: 1 };
     const approved = (capital: number) => {
-      const trading = tradingRoster(resolveBotRoster(bot, [], [sub(capital)]), risk);
+      const trading = tradingRoster(
+        resolveBotRoster(bot, [], [sub(capital)], undefined, ownOf),
+        risk,
+      );
       const raw = trading.persona.decide(october, book());
       return applyGuardsWithVerdicts(raw, book(), october, trading.risk).approved;
     };
