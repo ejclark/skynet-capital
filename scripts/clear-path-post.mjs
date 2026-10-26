@@ -8,8 +8,8 @@
 // lands on GitHub (docs/ISSUES.md → "Who may flip it"), so the paper trail has a gate a spec pins
 // rather than a subagent's say-so. For each SURVIVOR carrying two verifier lines it posts the
 // drafted comment with those lines and the footer appended, then applies `ready` — plus `feedback`
-// when missing, because on 2026-10-26 two readied issues without it were never built: no lane
-// pulls an issue that lacks it. It refuses everything else:
+// when the workflow says a non-plan issue lacks it. On 2026-10-26 two readied issues without it sat
+// unbuilt; #6219 fixed that at the lane, and the label still names which lane builds it. It refuses everything else:
 //   - `refuted` and `notClear` entries are never posted (they are the workflow's own "no");
 //   - a survivor with fewer than two distinct verifier lines, a failing check, or no comment is a
 //     malformed result, and ANY malformed survivor refuses the whole run before a single write —

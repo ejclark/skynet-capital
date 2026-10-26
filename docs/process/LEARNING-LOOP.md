@@ -121,7 +121,7 @@ deliverable. The stage a person still did is named first.
 
 | Loop | Stage still by hand | Now automated by |
 |---|---|---|
-| Clear-path flip (`docs/ISSUES.md` → *Who may flip it*) | decide + verify: a session judged 21 issues and recruited refuters itself; 2 flips lacked `feedback` and never built | `.claude/workflows/clear-path-flip.js` (judge → two refuters) and `scripts/clear-path-post.mjs` (posts survivors only, adds `feedback`) |
+| Clear-path flip (`docs/ISSUES.md` → *Who may flip it*) | decide + verify: a session judged 21 issues and recruited refuters itself; 2 flips lacked `feedback` and sat unbuilt (lane fixed by #6219) | `.claude/workflows/clear-path-flip.js` (judge → two refuters) and `scripts/clear-path-post.mjs` (posts survivors only) |
 | Post-merge correctness audit | sense + verify: a session read 11 merged builds and re-checked its own findings | `.claude/workflows/post-merge-audit.js` (reviewer per PR → trace + reproduce refuters) |
 | The surge itself | remember: the dial, the pre-reset revert, the relay and resume traps lived in one session's context | `.claude/skills/surge/SKILL.md` |
 

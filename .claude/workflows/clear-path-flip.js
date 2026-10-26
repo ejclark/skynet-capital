@@ -8,7 +8,8 @@
 // (Eric, 2026-10-19). *Clear* is four written checks, and the call is *earned*: an independent
 // verifier tried to refute it and could not. On 2026-10-26 a surge session ran that by hand over 21
 // issues; the refuters stopped 4 bad calls (#6006, #4458, #5967, #6079) and 2 readied issues that
-// lacked `feedback` were never built because no lane pulls without it. This file is that loop:
+// lacked `feedback` sat unbuilt (fixed at the lane by #6219; the post still adds it to a non-plan
+// issue so the label stays honest before the lane claims it). This file is that loop:
 //
 //   judge (one per issue)  → the four checks with evidence + a drafted comment
 //   refute (two per positive call, independent, different lenses)
@@ -25,7 +26,7 @@
 export const meta = {
   name: 'clear-path-flip',
   description: 'Judge issues against the four clear-path checks, refute each positive call twice, return survivors for clear-path-post.mjs',
-  whenToUse: 'When a session wants to apply `ready` itself under docs/ISSUES.md → Who may flip it — a surge pass over the triage backlog, or any batch of issues whose flip would be a rubber stamp. Args: {issues: [number, ...]}. Read-only: it posts nothing. Save the returned object as JSON and run `node scripts/clear-path-post.mjs <file>` (add --dry-run first) to post the footed comment and apply ready (+ feedback when missing) for survivors only.',
+  whenToUse: 'When a session wants to apply `ready` itself under docs/ISSUES.md → Who may flip it — a surge pass over the triage backlog, or any batch of issues whose flip would be a rubber stamp. Args: {issues: [number, ...]}. Read-only: it posts nothing. Save the returned object as JSON and run `node scripts/clear-path-post.mjs <file>` (add --dry-run first) to post the footed comment and apply ready (+ feedback when a non-plan issue lacks it) for survivors only.',
   phases: [
     { title: 'Judge', detail: 'one judge per issue records the four checks and drafts the comment' },
     { title: 'Refute', detail: 'two independent refuters per positive call: envelope paths, and the thread' },
@@ -90,7 +91,7 @@ Record the four written checks, each with one line of evidence:
 Then draft the flip comment (markdown, no footer — a script adds the verifier lines and footer). Shape:
 **Clear path — session flip** (docs/ISSUES.md → Who may flip it)
 | Check | Verdict | Evidence |
-one row per check. If the issue lacks the \`feedback\` label, add a line saying \`feedback\` is applied with \`ready\` because no build lane pulls an issue without it.
+one row per check. If the issue lacks the \`feedback\` label and is not a \`plan\`, add a line saying \`feedback\` is applied with \`ready\` (the feedback lane builds it).
 
 Be strict: a check you cannot evidence is a fail. Report the issue's current labels and state verbatim.`
 
@@ -146,7 +147,7 @@ const results = await pipeline(
       issue: n,
       title: judged.title,
       checks: judged.checks,
-      addFeedback: !(judged.labels ?? []).includes('feedback'),
+      addFeedback: !(judged.labels ?? []).some((l) => l === 'feedback' || l === 'plan'),
       comment: judged.comment,
       verifiers,
     }
