@@ -27,7 +27,9 @@ Eric-sourced.
 - **The spec-gap scan counts a types-only import as coverage.** A spec that imports a type from an
   untested module clears that module from the gap list without exercising it; two backfill reps
   today had to dodge it on purpose (`Parameters<typeof fn>` instead). Counting only value imports
-  would keep the number honest. _(src: Claude · while: governor cycle 4, 2026-10-26)_
+  would keep the number honest. The same scan also ranks pure-data fixture files first —
+  `src/evals/companion/fixtures.ts` (15 scripted conversations, no branching) topped it in cycle 5;
+  skipping files with no function or class would stop athletes spending a rep deciding to skip it. _(src: Claude · while: governor cycle 4, 2026-10-26)_
 - **Parallel athletes make `tests/scripts/steer-*` and `history-sampler` specs time out.** Six
   distinct specs hit the 5 s timeout today while 4–8 worktrees ran `npm run verify` at once in one
   container; each passed alone, and the merged cycle branches verified green. Not a CI flake on

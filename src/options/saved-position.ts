@@ -31,12 +31,17 @@ export type SavedPositionsState = Readonly<Record<string, readonly SavedPosition
 export const EMPTY_SAVED_POSITIONS: SavedPositionsState = {};
 
 const MAX_NAME = 60;
-const MAX_ID = 40;
+/** Longest id a saved position may carry — the route and the parser share it, so what the route
+ *  accepts is never dropped on read-back. */
+export const MAX_SAVED_POSITION_ID = 40;
 
 function parseSavedPosition(raw: unknown): SavedPosition | null {
   if (!isRecord(raw)) return null;
   const r = raw;
-  const id = typeof r.id === "string" && r.id.length > 0 && r.id.length <= MAX_ID ? r.id : null;
+  const id =
+    typeof r.id === "string" && r.id.length > 0 && r.id.length <= MAX_SAVED_POSITION_ID
+      ? r.id
+      : null;
   const symbol =
     typeof r.symbol === "string" && UNDERLYING_PATTERN.test(r.symbol) ? r.symbol : null;
   const name =
