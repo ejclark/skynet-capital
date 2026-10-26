@@ -116,16 +116,12 @@ export const SHELL_STYLE = `<style>
   .persona-eyebrow{ display:block; font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
   .persona-thesis{ margin:0; font-size:14px; color:var(--text); line-height:1.5; }
   .persona-legend{ margin:8px 0 0; font-size:13px; color:var(--muted); line-height:1.5; font-style:italic; }
-  .empire-band{ margin:0 0 24px; }
   /* Founding CTA — shown on your own funded-but-untraded desk: the reserve is staged, make the first play. */
   .founding-cta{ margin:-8px 0 24px; padding:16px 18px; display:flex; flex-wrap:wrap; align-items:center;
     justify-content:space-between; gap:12px; border:1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
     border-radius:12px; background:color-mix(in srgb, var(--accent) 7%, var(--surface)); }
   .founding-cta-text{ margin:0; color:var(--muted); font-size:14px; line-height:1.5; max-width:60ch; }
   .founding-cta-text strong{ color:var(--text); font-family:var(--mono); }
-  .empire-skyline{ display:block; width:100%; height:auto; max-height:150px; border:1px solid var(--border); border-radius:10px; }
-  /* glanceable per-card thumbnail — the board reads as a region of cities */
-  .empire-thumb{ margin:0 0 14px; } .empire-thumb .empire-skyline{ max-height:88px; }
   .indiv-hero{ display:grid; grid-template-columns:minmax(220px,1fr) 2fr; gap:16px; margin-bottom:24px; align-items:stretch; }
   .hero-equity{ background:var(--surface); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
   .hero-num{ font-size:40px; font-weight:700; line-height:1; }
