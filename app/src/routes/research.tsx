@@ -131,6 +131,7 @@ function ResearchPage(): ReactElement {
           accountName={playbooks.accounts.find((a) => a.id === search.account)?.name}
           accounts={playbooks.accounts}
           accountsReady={playbooks.accountsReady}
+          {...(search.strategy ? { initialPick: search.strategy } : {})}
         />
       ) : null}
     </PageFrame>
@@ -152,6 +153,8 @@ export const Route = createFileRoute("/research")({
         ? { section: search.section as ResearchSection }
         : {}),
     ...(facet(search.account) ? { account: facet(search.account) } : {}),
+    // The fit finder's link (#4469 slice 4): the strategy card to open on Playbooks.
+    ...(facet(search.strategy) ? { strategy: facet(search.strategy) } : {}),
   }),
   component: ResearchPage,
 });

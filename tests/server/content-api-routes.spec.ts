@@ -138,3 +138,33 @@ describe("serveContentApi — the symbol summary, light (#4807 slice 4)", () => 
     expect(none.body).toEqual({ outlooks: {} });
   });
 });
+
+describe("serveContentApi — the fit finder (#4469 slice 4)", () => {
+  const serve = async (url: string) => {
+    const { res, out } = fakeRes();
+    const claimed = await serveContentApi(
+      res,
+      url.split("?")[0] ?? url,
+      url,
+      configWith(),
+      undefined,
+    );
+    return { claimed, status: out.status, body: JSON.parse(out.body ?? "{}") };
+  };
+
+  it("answers one ticker's strategies, best first", async () => {
+    const { claimed, status, body } = await serve("/api/research/fit?symbol=goog");
+    expect(claimed).toBe(true);
+    expect(status).toBe(200);
+    expect(body.symbol).toBe("GOOG");
+    expect(body.fits.length).toBeGreaterThan(0);
+  });
+
+  it("answers an empty list, not an error, for a name that is not a ticker", async () => {
+    const bad = await serve("/api/research/fit?symbol=../etc");
+    expect(bad.status).toBe(200);
+    expect(bad.body).toEqual({ symbol: "", fits: [] });
+    const none = await serve("/api/research/fit");
+    expect(none.body).toEqual({ symbol: "", fits: [] });
+  });
+});
