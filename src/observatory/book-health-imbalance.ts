@@ -22,7 +22,7 @@ import { formatCurrency } from "./render-atoms.js";
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 /** "75.4%" / "70%": a share to a tenth of a point, dropping a trailing ".0". */
-const pct = (share: number): string => `${round1(share * 100)}%`;
+const tenthPct = (share: number): string => `${round1(share * 100)}%`;
 /** Points of share, unsigned: "5.4" / "10". */
 const pts = (fraction: number): string => `${round1(Math.abs(fraction) * 100)}`;
 
@@ -61,7 +61,7 @@ export function detectOffTarget(
           gate: target.gate,
         },
         words:
-          `${name} has ${pct(target.share)} of ${budget} deployed against a ${pct(target.target)} target: ` +
+          `${name} has ${tenthPct(target.share)} of ${budget} deployed against a ${tenthPct(target.target)} target: ` +
           `${pts(target.drift)} points ${direction}, past its ${gate ? "gate" : "signal"} at ${pts(edge)}. ` +
           `${shut ? "Its window is shut right now. " : ""}${tail}`,
       },
