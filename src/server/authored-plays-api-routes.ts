@@ -74,7 +74,7 @@ import { delegationRefusal } from "./subscriptions-api-routes.js";
  * (`false`), before anything else runs.
  */
 
-const BODY_CAP_BYTES = 8_192;
+const AUTHORED_PLAYS_BODY_CAP_BYTES = 8_192;
 const MAX_ID = 100;
 
 const now = (config: DashboardServerConfig): Date => config.now?.() ?? new Date();
@@ -415,7 +415,7 @@ export async function serveAuthoredPlaysApi(
     });
     return true;
   }
-  const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
+  const raw = await readJsonPost(req, res, AUTHORED_PLAYS_BODY_CAP_BYTES);
   if (raw === undefined) return true;
   if (path === "/api/authored-plays/save") {
     save(res, raw, config, session, memberKey);
