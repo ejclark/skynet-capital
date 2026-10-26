@@ -86,14 +86,24 @@ into the conversation as they happen, which is the event-driven watcher `docs/CO
 prefers ("put the watcher on a path you already walk — never add a poller"). **Don't also arm a
 `send_later` self-check-in on top of it** — a timed re-check duplicates the webhook you just
 subscribed to, which is exactly the poller `/ship` forbids ("no status check-ins… act when the
-webhook arrives, not before"). `subscribe_pr_activity` has no "merged" event, so if you need positive
-confirmation the PR actually closed, arm **at most one** bounded check, worded consistently so
-recurring-intent audits see one templated pattern instead of freehand variance:
+webhook arrives, not before"). The merge itself arrives the same way: a `pull_request.closed` event
+with `outcome: merged`, after which the subscription unsubscribes itself (first seen 2026-10-19 on
+#5773, #5193). So the subscription is the positive confirmation. Only if that wake never arrives
+(the PR is visibly merged or closed and nothing came in) arm **at most one** bounded check, worded
+consistently so recurring-intent audits see one templated pattern instead of freehand variance:
 
 > Self check-in: confirm PR #\<n\> merged/closed (and unsubscribe); if still open, note the blocker
 > and stop — don't re-arm again.
 
 One check, not a chain — if it's still open after that, surface it instead of continuing to poll.
+A wait with no event path (a `/grind` or Workflow step, which cannot subscribe) is one REST loop in
+a single `run_in_background` Bash call, never a foreground loop or repeated `gh pr view` (GraphQL,
+refused from cloud sessions). The harness re-invokes the caller when it exits; keep it one line
+with no `git` in it, or the harness will not background it:
+
+```bash
+until s=$(gh api repos/<owner>/<repo>/pulls/<n> --jq '"\(.merged) \(.state)"') && [ "$s" != "false open" ]; do sleep 30; done; echo "pr <n>: $s"
+```
 
 ## Keeping agent sessions moving (no PR churn)
 
