@@ -4,8 +4,8 @@
   "event": { "inputs": { "command": "audit" } },
   "deps": {
     "silentFeedback": [
-      { "title": "[enhancement] Feedback Form Improvement", "number": 455, "hoursSinceFiled": 41 },
-      { "title": "[bug] just filed", "number": 456, "hoursSinceFiled": 1 }
+      { "title": "[enhancement] Feedback Form Improvement", "number": 455, "hoursWaiting": 41 },
+      { "title": "[bug] just readied", "number": 456, "hoursWaiting": 1 }
     ],
     "alreadyFlagged": [],
     "silentAfterHours": 6

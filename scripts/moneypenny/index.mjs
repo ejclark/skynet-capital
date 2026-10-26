@@ -1572,9 +1572,14 @@ function executeOne(i, stallRepairs = []) {
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);
     console.log(
-      `::warning::silent feedback — #${i.issueNumber} no receipt after ${i.hoursSinceFiled}h`,
+      `::warning::silent feedback — #${i.issueNumber} no answer after ${i.hoursWaiting}h waiting`,
     );
-    return `🔇 silent feedback — \`${i.title}\` no receipt after ${i.hoursSinceFiled}h (commented on #${i.issueNumber})`;
+    return `🔇 silent feedback — \`${i.title}\` no answer after ${i.hoursWaiting}h waiting (commented on #${i.issueNumber})`;
+  }
+  if (i.kind === "clear-stall") {
+    // #6042 — the answer already spoke, so no comment; the label's absence is the new state.
+    sh("gh", ["issue", "edit", String(i.issueNumber), "--remove-label", LABELS.stall.name]);
+    return `🧹 cleared \`${LABELS.stall.name}\` — \`${i.title}\` has its answer (#${i.issueNumber})`;
   }
   if (i.kind === "flag-plan-stall") {
     commentAndFlagStall(i);

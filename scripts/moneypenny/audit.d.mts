@@ -9,6 +9,14 @@ export interface AuditIssue {
   closedByPullRequests?: unknown[];
   linkedPullRequests?: unknown[];
   labels?: readonly ({ name?: string } | string)[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+/** One REST issue-timeline event, as far as `waitingSince` reads it (#6042). */
+export interface TimelineEvent {
+  event?: string;
+  created_at?: string;
+  label?: { name?: string };
 }
 export interface AuditComment {
   body?: unknown;
@@ -22,7 +30,13 @@ export interface UnclaimedIssue {
 export interface SilentFeedbackIssue {
   title: string;
   number: number;
-  hoursSinceFiled: number;
+  /** Whole hours since the issue last began waiting for an answer (#6042), not since it was filed. */
+  hoursWaiting: number;
+}
+/** A silent-feedback flag whose test no longer holds — a `clear-stall` target (#6042). */
+export interface StaleStallFlag {
+  title: string;
+  number: number;
 }
 export interface ReadyPlanCandidate {
   title: string;
@@ -59,6 +73,7 @@ export interface AuditDeps {
   readyPlans?: ReadyPlanCandidate[];
   conflictedPRs?: ConflictedPR[];
   staleInProgress?: InProgressIssue[];
+  staleStallFlags?: StaleStallFlag[];
   alreadyFlagged?: number[];
   alreadyFlaggedPRs?: (number | AlreadyFlaggedPR)[];
   staleAfterDays?: number;
@@ -81,7 +96,7 @@ export interface AuditIntent {
   /** Why that position resolved, carried from the dial's reader for the run receipt. */
   reason?: string;
   quietDays?: number;
-  hoursSinceFiled?: number;
+  hoursWaiting?: number;
   hoursSinceReady?: number;
   /** How long a `clear-in-progress` intent's issue had been quiet (#3960). */
   hoursQuiet?: number;
@@ -97,6 +112,17 @@ export const CONFLICT_MARKER: RegExp;
 export function answered(issue?: AuditIssue): boolean;
 /** A `ready` feedback issue with no PR and no terminal label — what the stall audit pings (#5667). */
 export function owedAnswer(issue?: AuditIssue): boolean;
+/** When the issue last began waiting for an answer, from its REST timeline; `fallback` if never (#6042). */
+export function waitingSince(timeline?: TimelineEvent[], fallback?: string): string | undefined;
+/** The silent-feedback candidates, timed from `waitingSince`, minus `in-progress` and already-flagged. */
+export function silentFeedbackFrom(
+  issues?: AuditIssue[],
+  timelineOf?: (n: number | undefined) => TimelineEvent[],
+  nowMs?: number,
+  flagged?: number[],
+): SilentFeedbackIssue[];
+/** Silent-feedback `stall-flagged` issues no longer owed an answer — each gets one `clear-stall`. */
+export function staleStallFlags(issues?: AuditIssue[]): StaleStallFlag[];
 /** The pure stall/silent-feedback/plan-stall audit: dependencies in, flag intents out. */
 export function audit(deps?: AuditDeps): AuditIntent[];
 /** The pure per-issue plan-stall decision — is this a live candidate, and if so how old? */
