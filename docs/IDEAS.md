@@ -702,6 +702,12 @@ nothing until it expires. Options: an `if: failure()` step that calls `releaseCl
 Medic releasing the lease named in the failed run. Cheap either way; the TTL already bounds the
 damage. _(src: Claude · while: fixing the feedback-lane tier failure and building the medic)_
 
+### `/add` should refuse a display name another account already uses
+#6077 gave the profile rename a name-collision refusal (display name or slug, `nameTaken` in
+`account-service.ts`), but `addParticipant` still checks only the derived id. If Ann renames
+herself "Joe", a later member adding "Joe" gets the free id `human-joe` and the board shows two
+Joes. Reuse the same check on the add path. _(src: Claude · while: #6077 rename-guard fix)_
+
 ### Boot-time quarantine for a store row that collides with the roster
 The owner-link PR (#466) closed the write-time hole (`addParticipant` now refuses an id already
 claimed by an env-configured account), but a row written *before* that fix shipped — none should
@@ -710,14 +716,6 @@ roster account's real credentials, since `resolveOwnerId`/`findParticipant` don'
 boot. Cheap defense-in-depth: at startup, flag any store id that collides with `envRoster` and
 refuse to serve it rather than trusting the write-time guard alone. _(src: Claude · while: #466
 owner-link security review, red-team verification pass, 2026-08-21)_
-
-### Retire the display-name rename guard now that ownerEmail is the real link
-`account-service.ts`'s `profileEditRefusal` still requires a human rename to match the session's
-sign-in name/email local-part — a rule that existed only because `resolveCurrentId` used to
-resolve by display name. Now that `Participant.ownerEmail` is the actual (immutable) link, the
-rule is stricter than needed and blocks legitimate renames for no security reason. Loosen it in a
-follow-up UX pass, not in the owner-link security PR itself. _(src: Claude · while: #466 owner-link
-security review, 2026-08-21)_
 
 ### Intent-vs-outcome scoring → per-strategy confidence ratings
 Hardcore research mode now records a forward `expectation` on every intent (alongside `strategy`),

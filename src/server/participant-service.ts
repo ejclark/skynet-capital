@@ -358,7 +358,7 @@ function refusePersona(kind: ParticipantKind, personaId: string | undefined): st
 }
 
 /** "Uncle Joe" -> "uncle_joe" for a stable, readable participant id. */
-function slugify(value: string): string {
+export function slugify(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")

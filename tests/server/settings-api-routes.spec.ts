@@ -119,7 +119,7 @@ describe("serveSettingsApi", () => {
     const captured = (answered(out) as { captured: Record<string, unknown> }).captured;
     expect(captured.requesterId).toBe("human-eric"); // session-resolved, body's claim dropped
     expect(captured.requesterEmail).toBe("eric@example.com");
-    expect(captured.sessionNames).toEqual(["eric clark", "eric"]);
+    expect(captured).not.toHaveProperty("sessionNames");
     expect(captured.authConfigured).toBe(true);
     expect(captured.displayName).toBe("Eric C");
   });
