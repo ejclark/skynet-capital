@@ -41,10 +41,36 @@ describe("platter-refs: what one item closes", () => {
   });
 
   it("never turns a branch or subject number into a close — only ever a ref", () => {
-    expect(itemRefs({ item: "plan/4535", subject: "chore(ci): slice 4 (#4535)" })).toEqual({
+    expect(itemRefs({ item: "feat/4535-ci-pins", subject: "chore(ci): slice 4 (#4535)" })).toEqual({
       closes: [],
       refs: [4535],
     });
+  });
+
+  // #6191 — #5837's last item boarded #5852 as `feedback/5837` with no PR and no flag, so the
+  // platter's merge would have left it open, and the sweep rebuilt it three times meanwhile.
+  it("refuses a claim lane's build that does not say whether it finishes its issue", () => {
+    for (const item of ["feedback/5837", "plan/4535"]) {
+      const n = item.split("/")[1];
+      expect(() => itemRefs({ item, subject: "chore(deps): y" })).toThrow(
+        `pass --closes ${n} if it is the issue's last work, or --part-of ${n} if work remains`,
+      );
+    }
+    // a PR body that names some other issue still says nothing about this one
+    expect(() => itemRefs({ item: "feedback/5837", prBody: "Closes #12" })).toThrow(/#5837/);
+  });
+
+  it("boards a claim lane's build once a flag or its PR body says what it does to its issue", () => {
+    expect(itemRefs({ item: "feedback/5837", closes: [5837] })).toEqual({
+      closes: [5837],
+      refs: [],
+    });
+    expect(itemRefs({ item: "plan/4535", partOf: [4535] })).toEqual({ closes: [], refs: [4535] });
+    expect(itemRefs({ item: "plan/4535", prBody: "- Part of #4535" })).toEqual({
+      closes: [],
+      refs: [4535],
+    });
+    expect(itemRefs({ item: "feedback/5837", prBody: "- Closes #5837" }).closes).toEqual([5837]);
   });
 
   it("ignores a keyword quoted in code — GitHub links neither", () => {

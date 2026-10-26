@@ -23,6 +23,12 @@ export function keywordIssuesOf(
   repo?: string,
 ): { closes: number[]; refs: number[] };
 
+/** Issue → the open platter PR whose body closes it; `Part of` bullets are not counted (#6191). */
+export function platterClosesByIssue(
+  openPrs?: ReadonlyArray<{ number?: number; body?: string | null; head?: { ref?: string } }>,
+  repo?: string,
+): Map<number, number>;
+
 /** True when a PR names no issue and is not a machine lane's — invisible to the board. */
 export function namesNoIssue(pr?: {
   title?: string | null;

@@ -945,7 +945,7 @@ platter_board_item() {
     exit 1; }
   # Resolved before the squash, so a bad --closes refuses with the platter untouched and unverified.
   local refs; refs="$(platter_item_refs "$item" "$subject" "$closes" "$partof" "$closes_set" "$partof_set")" || {
-    echo "ship platter: --closes / --part-of take issue numbers (4246,3913) — the platter is unchanged." >&2
+    echo "ship platter: the item's issue refs did not resolve (platter-refs says why, above) — the platter is unchanged." >&2
     exit 1; }
 
   git merge --squash FETCH_HEAD || {
