@@ -5,6 +5,7 @@ import {
 import {
   buildSubscriptionsSnapshot,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
   type SubscriptionsSnapshot,
 } from "../../src/autonomous/subscriptions-wire.js";
 import type { PlaybookSubscription } from "../../src/domain/types.js";
@@ -144,24 +145,27 @@ describe("createSubscriptionSync", () => {
   });
 });
 
-describe("a conviction on the swap (#4469 slice 3c part 2)", () => {
-  const conviction = { reason: "my call", checkOn: "2027-01-29" };
-  const v2 = (state: SubscriptionsState, at = AT) =>
-    buildSubscriptionsSnapshot(state, at, undefined, SUBSCRIPTIONS_SNAPSHOT_KIND_V2);
+describe("the retired inline conviction on the swap (#5482, the contract step's last piece)", () => {
+  // A record an older build wrote, still carrying the field no build reads any more.
+  const withCopy = (): PlaybookSubscription =>
+    ({
+      ...sub(),
+      conviction: { reason: "my call", checkOn: "2027-01-29" },
+    }) as PlaybookSubscription;
 
-  it("a v2 snapshot that adds a conviction is a swap, and the bot gets the conviction", () => {
-    const sauron = recorder("sauron");
-    const sync = createSubscriptionSync({ bots: [sauron.bot] });
-    sync.accept(v2({ sauron: [sub()] }));
-    expect(sync.accept(v2({ sauron: [sub({ conviction })] }, AT + 1_000))).toBe("applied");
-    expect(sauron.applied.at(-1)?.[0]?.conviction).toEqual(conviction);
-  });
-
-  it("a v1 snapshot that only adds a conviction is not a swap: its version never covered one", () => {
-    const sauron = recorder("sauron");
-    const sync = createSubscriptionSync({ bots: [sauron.bot] });
-    sync.accept(snapshot({ sauron: [sub()] }));
-    expect(sync.accept(snapshot({ sauron: [sub({ conviction })] }, AT + 1_000))).toBe("unchanged");
-    expect(sauron.applied).toHaveLength(1);
+  it("a snapshot that only adds one is not a swap, on any kind: no version covers it now", () => {
+    for (const kind of [SUBSCRIPTIONS_SNAPSHOT_KIND_V2, SUBSCRIPTIONS_SNAPSHOT_KIND_V4] as const) {
+      const sauron = recorder("sauron");
+      const sync = createSubscriptionSync({ bots: [sauron.bot] });
+      sync.accept(buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, kind));
+      const next = buildSubscriptionsSnapshot(
+        { sauron: [withCopy()] },
+        AT + 1_000,
+        undefined,
+        kind,
+      );
+      expect(sync.accept(next)).toBe("unchanged");
+      expect(sauron.applied).toHaveLength(1);
+    }
   });
 });

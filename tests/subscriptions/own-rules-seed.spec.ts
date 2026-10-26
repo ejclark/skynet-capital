@@ -439,7 +439,7 @@ describe("seeding Sauron's own rules as his subscription", () => {
     it("points Eric's live CRWV wheel at the view that steers its ◆ row on the first poll, once (#4469 3c part 3, #5482 contract step)", () => {
       store.replace(LIVE_STATE);
       expect(seed(controlsPollReport({}), AT)).toEqual([
-        "[subscriptions] pointed each subscription at the record that steers it, or at the member's view handed over to it (an inline copy beside the pointer dropped): sauron/CRWV-WHEEL",
+        "[subscriptions] pointed each subscription at the record that steers it, or at the member's view handed over to it: sauron/CRWV-WHEEL",
       ]);
       expect(store.load()).toEqual(POLLED);
       expect(seed(controlsPollReport({}), LATER)).toEqual([]);

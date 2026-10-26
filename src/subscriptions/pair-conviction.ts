@@ -96,6 +96,12 @@ export function statedConviction(view: Conviction): SubscriptionConviction | und
   return isPairView(view) && reason ? { reason, checkOn: view.checkOn } : undefined;
 }
 
+/** A subscription as its owner reads it: their own view on the pair shown as the reason and day
+ *  they stated (`asOwnConviction`). A read for the Store row and the change log, never stored. */
+export type OwnerReadSubscription = PlaybookSubscription & {
+  readonly conviction?: SubscriptionConviction;
+};
+
 /**
  * `sub` as its owner reads it: a pointer at their own view on this pair reads as the reason and
  * day they stated, exactly as the inline conviction did, so the Store row and its check line are
@@ -104,7 +110,7 @@ export function statedConviction(view: Conviction): SubscriptionConviction | und
 export function asOwnConviction(
   sub: PlaybookSubscription,
   lookup: (id: string) => Conviction | undefined,
-): PlaybookSubscription {
+): OwnerReadSubscription {
   const id = sub.convictionId;
   const view = id === undefined ? undefined : lookup(id);
   const stated = view?.steers.includes(sub.playbookId) ? statedConviction(view) : undefined;

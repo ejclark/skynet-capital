@@ -132,8 +132,8 @@ const CHECK_WEEK_TTL_MS = 15_000;
 const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
 
 /** The Playbook Store as the bots receive it on every poll: `subscriptions.v4`, with each
- *  subscription's pointer at a conviction record in the version, and only whether an inline copy
- *  the poll could not move is there, never its words or day (#5482 contract piece 4). */
+ *  subscription's pointer at a conviction record in the version (#5482 contract piece 4). Its
+ *  inline-copy bit is frozen at `false` since the field was retired (`subscriptions-wire.ts`). */
 export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
   return buildSubscriptionsSnapshot(
     store.load(),
@@ -216,8 +216,8 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
-    // v4 (#5482 contract piece 4) fingerprints each subscription's pointer and one bit for an
-    // unmoved inline copy, not its words or day: the bots read pointers only. Sent only once the
+    // v4 (#5482 contract piece 4) fingerprints each subscription's pointer, and a bit for an
+    // inline copy now frozen at `false` (the field is retired): the bots read pointers only. Sent only once the
     // bots that read v4 (#5989) were deployed: a bots build that predates it reads v4 as "not
     // reported" and keeps the roster it had. v1 to v3 stay readable by the bots for a rollback.
     subscriptions: () => subscriptionsOnTheWire(subscriptions),

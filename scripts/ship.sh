@@ -5,8 +5,11 @@ set -euo pipefail
 #
 # Every step runs either on THIS machine (git) or on the plentiful REST *core* bucket
 # (15k/hr) — never the scarce GraphQL bucket (5k/hr) that the GitHub MCP spends by the
-# thousands, and NEVER by polling. The completion signal is the merge webhook, not a
-# status loop. A script is a one-time build cost, then ~free per run forever; that is the
+# thousands, and NEVER by polling. The completion signal is the merge webhook — the
+# `pull_request.closed` event (`outcome: merged`) that subscribe_pr_activity pushes into the
+# session — not a status loop. The spirit kept (#5193): no scarce-bucket calls and no model
+# turns spent waiting. Where no event path exists, the one fallback is a single backgrounded
+# REST `until` loop on `pulls/<n>` (CONTRIBUTING.md), never a subcommand here. A script is a one-time build cost, then ~free per run forever; that is the
 # self-healing flywheel (docs/COACHES.md → "Resource cost is a fitness dimension").
 #
 #   scripts/ship.sh open "<pr title>" [--body-file F] [--base B] [--no-verify] [--no-merge]
