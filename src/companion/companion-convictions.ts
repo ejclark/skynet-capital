@@ -81,7 +81,7 @@ export type ConvictionToolName = (typeof CONVICTION_TOOL_NAMES)[number];
 export const CARD_SHOWN =
   "shown to the member as a card in the rail; nothing is saved and nothing steers yet. Only their own tap there saves it and hands it to their bots.";
 
-const day = { type: "string", description: "YYYY-MM-DD." } as const;
+const dayProp = { type: "string", description: "YYYY-MM-DD." } as const;
 
 export const CONVICTION_TOOL_DEFS = [
   {
@@ -122,7 +122,7 @@ export const CONVICTION_TOOL_DEFS = [
                 type: "string",
                 description: "The one dated observation that proves it wrong.",
               },
-              scoreBy: day,
+              scoreBy: dayProp,
             },
             required: ["tag", "statement", "bucket", "evidence", "falsifier"],
           },
@@ -151,7 +151,7 @@ export const CONVICTION_TOOL_DEFS = [
                     },
                     min: { type: "number" },
                     max: { type: "number" },
-                    day,
+                    day: dayProp,
                     ceiling: { type: "number" },
                     sessionsAfterPrint: { type: "number" },
                   },
