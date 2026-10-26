@@ -1,4 +1,46 @@
-import { anthropicApiError } from "../../src/http/anthropic-reply.js";
+import { anthropicApiError, logAnthropicUsage, usageOf } from "../../src/http/anthropic-reply.js";
+
+describe("logAnthropicUsage — one token-accounting line per Claude call (#6080)", () => {
+  it("logs input, output and both cache counts, keyed by surface and model", () => {
+    const lines: string[] = [];
+    logAnthropicUsage(
+      "companion-tool-round",
+      "claude-sonnet-5-5",
+      {
+        input_tokens: 120,
+        output_tokens: 45,
+        cache_read_input_tokens: 3000,
+        cache_creation_input_tokens: 7,
+      },
+      (l) => lines.push(l),
+    );
+    expect(lines).toEqual([
+      "claude-usage surface=companion-tool-round model=claude-sonnet-5-5 input=120 output=45 cache_read=3000 cache_creation=7",
+    ]);
+  });
+
+  it("reads a missing count as zero rather than dropping the line", () => {
+    const lines: string[] = [];
+    logAnthropicUsage("coach", "m", { output_tokens: 9 }, (l) => lines.push(l));
+    expect(lines[0]).toContain("input=0 output=9 cache_read=0 cache_creation=0");
+  });
+
+  it("writes nothing when the caller wired no sink", () => {
+    expect(() => logAnthropicUsage("coach", "m", { input_tokens: 1 }, undefined)).not.toThrow();
+  });
+
+  it("logs nothing when the reply carried no usage object", () => {
+    const lines: string[] = [];
+    logAnthropicUsage("coach", "m", undefined, (l) => lines.push(l));
+    expect(lines).toEqual([]);
+  });
+
+  it("usageOf reads `usage` off a body or event, and nothing off one without it", () => {
+    expect(usageOf({ usage: { input_tokens: 1 } })).toEqual({ input_tokens: 1 });
+    expect(usageOf({ content: [] })).toBeUndefined();
+    expect(usageOf(undefined)).toBeUndefined();
+  });
+});
 
 /**
  * The shared response-validation preamble the feedback coach and the companion both call —

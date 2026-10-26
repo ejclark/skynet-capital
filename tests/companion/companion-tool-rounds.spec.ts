@@ -7,6 +7,7 @@ import {
   REFUSAL_MESSAGE,
   runToolRounds,
   systemBlocks,
+  TRUNCATED_MESSAGE,
   toolsFor,
 } from "../../src/companion/companion-tool-rounds.js";
 import type { CompanionDeskDeps } from "../../src/companion/companion-tools.js";
@@ -309,6 +310,71 @@ describe("when a round fails", () => {
     await run(doFetch, c);
     expect(c.texts).toEqual([]);
     expect(c.errors).toEqual([REFUSAL_MESSAGE]);
+  });
+
+  describe("when the reply stopped on max_tokens (#6080)", () => {
+    it("a thinking-only truncation reports the cut-off instead of a blank 'finished' reply", async () => {
+      const { doFetch } = scriptedFetch([
+        { status: 200, body: { stop_reason: "max_tokens", content: [{ type: "thinking" }] } },
+      ]);
+      const c = collect();
+      expect(await run(doFetch, c)).toEqual({ kind: "error" });
+      expect(c.texts).toEqual([]);
+      expect(c.errors).toEqual([TRUNCATED_MESSAGE]);
+      expect(c.doneCount()).toBe(0);
+    });
+
+    it("shows partial text, then the error that marks it cut off — never onDone", async () => {
+      const { doFetch } = scriptedFetch([
+        {
+          status: 200,
+          body: { stop_reason: "max_tokens", content: [{ type: "text", text: "Your first" }] },
+        },
+      ]);
+      const c = collect();
+      await run(doFetch, c);
+      expect(c.texts).toEqual(["Your first"]);
+      expect(c.errors).toEqual([TRUNCATED_MESSAGE]);
+      expect(c.doneCount()).toBe(0);
+    });
+
+    it("runs no tool from a cut-off reply — its input may be half-written", async () => {
+      let lookups = 0;
+      const deps: CompanionDeskDeps = {
+        snapshotFor: (id) => {
+          lookups++;
+          return id === "acct-1" ? snapshot : undefined;
+        },
+      };
+      const { doFetch, requests } = scriptedFetch([
+        {
+          status: 200,
+          body: { stop_reason: "max_tokens", content: [toolUse("get_my_positions", "tu-1")] },
+        },
+        textReply("unused"),
+      ]);
+      const c = collect();
+      expect(await run(doFetch, c, { participantId: "acct-1", deps })).toEqual({ kind: "error" });
+      expect(lookups).toBe(0);
+      expect(requests).toHaveLength(1);
+    });
+  });
+
+  it("logs one usage line per round that reported usage", async () => {
+    const lines: string[] = [];
+    const { doFetch } = scriptedFetch([
+      {
+        status: 200,
+        body: {
+          content: [{ type: "text", text: "hi" }],
+          usage: { input_tokens: 10, output_tokens: 2 },
+        },
+      },
+    ]);
+    await run(doFetch, collect(), { handlers: { onUsage: (l: string) => lines.push(l) } });
+    expect(lines).toEqual([
+      `claude-usage surface=companion-tool-round model=${MODEL} input=10 output=2 cache_read=0 cache_creation=0`,
+    ]);
   });
 
   it("does not run a later round after a failure", async () => {

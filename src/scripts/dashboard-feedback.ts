@@ -32,7 +32,7 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
       "ℹ️  In-app feedback is off (no SKYNET_FEEDBACK_GITHUB_TOKEN) — the /feedback form renders but submissions won't file issues.",
     );
   }
-  const feedbackCoach = resolveFeedbackCoach(env);
+  const feedbackCoach = resolveFeedbackCoach(env, (line) => console.log(line));
   if (!feedbackCoach) {
     console.warn(
       "ℹ️  The feedback coach is off (no ANTHROPIC_API_KEY) — the plain /feedback form still works.",

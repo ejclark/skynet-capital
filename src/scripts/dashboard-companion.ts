@@ -104,6 +104,7 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     env,
     tools,
     deps.botControls ? () => deps.botControls?.load().companionModel : undefined,
+    (line) => console.log(line),
   );
   if (!companion) {
     console.warn(

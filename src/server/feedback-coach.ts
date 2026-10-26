@@ -21,7 +21,7 @@
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { anthropicApiError } from "../http/anthropic-reply.js";
+import { anthropicApiError, logAnthropicUsage, usageOf } from "../http/anthropic-reply.js";
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
 import { AREA_PROMPT_CLAUSE, FEEDBACK_AREAS } from "./feedback-areas.js";
 import {
@@ -143,6 +143,8 @@ const COACH_REPLY_SCHEMA = {
 
 interface CoachConfig {
   readonly apiKey: string;
+  /** The server log — each coach call writes one usage line here (#6080). */
+  readonly logLine?: (line: string) => void;
 }
 
 type DoFetch = typeof fetchJson;
@@ -220,6 +222,7 @@ export function createFeedbackCoach(config: CoachConfig, doFetch: DoFetch = fetc
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : "coach unreachable" };
     }
+    logAnthropicUsage("feedback-coach", MODEL, usageOf(res.body), config.logLine);
     const reply = replyText(res);
     if (!reply.text) return { ok: false, error: reply.error ?? "" };
     // The member's own turns ride along so a brief that comes back cut still files their words.
@@ -240,10 +243,11 @@ export function createFeedbackCoach(config: CoachConfig, doFetch: DoFetch = fetc
 /** Env factory — `undefined` (inert) until ANTHROPIC_API_KEY is set. */
 export function resolveFeedbackCoach(
   env: Readonly<Record<string, string | undefined>>,
+  logLine?: (line: string) => void,
 ): CoachTurn | undefined {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) return undefined;
-  return createFeedbackCoach({ apiKey });
+  return createFeedbackCoach({ apiKey, ...(logLine ? { logLine } : {}) });
 }
 
 // Coach-specific burst throttle: a conversation is several turns, so the cap is looser than the
