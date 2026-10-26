@@ -185,7 +185,7 @@ export function audit(deps = {}) {
         prNumber: c.number,
         title: c.title,
         attempt: 1,
-        body: `⚠️ **Merge conflict** — this PR is now conflicted with \`main\` (no push to this branch caused it; \`main\` moved out from under it). Nothing else here watches for this — CI stays silent because no check ever ran against the conflict.\n\nA repair session has been dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n<!-- moneypenny:conflict sha=${c.headRefOid ?? "unknown"} attempt=1 -->\n\n${FOOTER}`,
+        body: `⚠️ **Merge conflict** — this PR is now conflicted with \`main\` (no push to this branch caused it; \`main\` moved out from under it). Nothing else here watches for this — CI stays silent because no check ever ran against the conflict.\n\nA repair session has been dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or hands it to a live session (\`needs-session\`) with the delta to port if it isn't — \`needs-eric\` only when the conflict is in the irreversible class.\n\n<!-- moneypenny:conflict sha=${c.headRefOid ?? "unknown"} attempt=1 -->\n\n${FOOTER}`,
       });
       continue;
     }
@@ -207,7 +207,7 @@ export function audit(deps = {}) {
       prNumber: c.number,
       title: c.title,
       attempt,
-      body: `⚠️ **Merge conflict, again** — this PR was repaired once already and has gone \`CONFLICTING\` against \`main\` again since (attempt ${attempt}/${CONFLICT_REPAIR_CAP}). \`main\` moves every few minutes here, so one repair is not guaranteed to still apply by the time it lands.\n\nA repair session has been re-dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n<!-- moneypenny:conflict sha=${c.headRefOid} attempt=${attempt} -->\n\n${FOOTER}`,
+      body: `⚠️ **Merge conflict, again** — this PR was repaired once already and has gone \`CONFLICTING\` against \`main\` again since (attempt ${attempt}/${CONFLICT_REPAIR_CAP}). \`main\` moves every few minutes here, so one repair is not guaranteed to still apply by the time it lands.\n\nA repair session has been re-dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or hands it to a live session (\`needs-session\`) with the delta to port if it isn't — \`needs-eric\` only when the conflict is in the irreversible class.\n\n<!-- moneypenny:conflict sha=${c.headRefOid} attempt=${attempt} -->\n\n${FOOTER}`,
     });
   }
   // #3960 criterion 4's write half: this push-driven audit IS "the next lane run", so it is where
