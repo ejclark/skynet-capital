@@ -1,4 +1,3 @@
-import { renderEmpireSkyline } from "../../src/observatory/empire-skyline.js";
 import type {
   ParticipantSnapshot,
   PositionView,
@@ -6,11 +5,11 @@ import type {
 import { MAX_STRUCTURES, projectEmpire, tailOf } from "../../src/universe/project.js";
 
 /**
- * THE HONESTY BATTERY — property-based eval over the world projection + skyline renderer.
+ * THE HONESTY BATTERY — property-based eval over the world projection.
  * Unlike the example-based specs, this fires hundreds of seeded adversarial snapshots (NaN cash,
  * zero/negative equity, zero-basis and negative-value positions, 50-position portfolios) and asserts
  * the invariants BRAND.md marks non-negotiable ("never let a flourish imply something false about
- * markets or P/L"). Every future projection/renderer PR gets this honesty review for free —
+ * markets or P/L"). Every future projection PR gets this honesty review for free —
  * the eval target #2 from the ToC survey; implements mined-eval-seed discriminator #4.
  */
 
@@ -75,7 +74,9 @@ describe("honesty battery — projection invariants over adversarial snapshots",
     const failures: string[] = [];
     for (let i = 0; i < CASES; i++) {
       const snap = randomSnapshot(r);
-      const empire = projectEmpire(snap, { personaProminence: randomNumber(r) });
+      const empire = projectEmpire(snap, {
+        personaProminence: randomNumber(r),
+      });
 
       // #4 — no NaN/Infinity anywhere in the world state.
       walkNumbers(empire, `case${i}`, failures);
@@ -101,24 +102,8 @@ describe("honesty battery — projection invariants over adversarial snapshots",
     expect(failures).toEqual([]);
   });
 
-  it("rendered SVG never leaks NaN/Infinity/undefined, and labels the tail iff it exists", () => {
-    const failures: string[] = [];
-    for (let i = 0; i < CASES; i++) {
-      const snap = randomSnapshot(r);
-      const svg = renderEmpireSkyline(snap, { personaProminence: randomNumber(r) });
-      for (const leak of ["NaN", "Infinity", ">undefined<"])
-        if (svg.includes(leak)) failures.push(`case${i}: rendered "${leak}"`);
-      const shouldTail = snap.positions.length > MAX_STRUCTURES;
-      if (shouldTail !== svg.includes(">OUTER<"))
-        failures.push(
-          `case${i}: ${snap.positions.length} positions but OUTER ${shouldTail ? "missing" : "present"}`,
-        );
-    }
-    expect(failures).toEqual([]);
-  });
-
-  it("regression: a NaN prominence dial renders a finite landmark, not the string NaN", () => {
-    const svg = renderEmpireSkyline(
+  it("regression: a NaN prominence dial projects a finite landmark, never NaN", () => {
+    const empire = projectEmpire(
       {
         id: "b",
         displayName: "B",
@@ -130,7 +115,7 @@ describe("honesty battery — projection invariants over adversarial snapshots",
       },
       { personaProminence: Number.NaN },
     );
-    expect(svg).toContain("persona-eye");
-    expect(svg).not.toContain("NaN");
+    expect(empire.landmark).toBeDefined();
+    expect(Number.isFinite(empire.landmark?.prominence)).toBe(true);
   });
 });

@@ -61,7 +61,7 @@ export function tailOf(
  * Clamp that also absorbs NaN/Infinity, falling back to the LOW bound. Deliberately NOT the shared
  * `math/num.clamp`: projection inputs come from live account data where a missing/garbage figure
  * must degrade to "nothing" rather than leak NaN into the rendered world (the honesty invariant).
- * The two look alike and are not the same — see tests/observatory/empire-skyline.spec.ts.
+ * The two look alike and are not the same — see tests/universe/honesty-battery.spec.ts.
  */
 const clampFinite = (v: number, lo: number, hi: number): number =>
   Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo;

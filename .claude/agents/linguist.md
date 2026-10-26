@@ -26,7 +26,7 @@ whether it merely sounds right. Comprehension is the metric, not compliance with
 ## The channels this app and this repo actually have (ground every review in a real reader and a real artifact, not a hypothetical)
 
 - **Bot → human:** `Persona.thesis` (`src/personas/persona.ts`) — "one-line thesis, surfaced in reports
-  and touch-point recaps." `src/observatory/play-feedback.ts`, `participant-card.ts`,
+  and touch-point recaps." `src/observatory/play-feedback.ts`,
   `dashboard-shell.ts` — recap and feed copy a human reads to understand what a bot just did and why.
 - **Human → bot:** anywhere a human's input becomes a `MarketContext`/`OrderIntent` the engine has to
   interpret correctly, or config a persona reads (`configured-persona.ts`) — misread intent here is a
