@@ -9,11 +9,11 @@
  *  (and a held tranche keeps its target sell working at either). */
 export type RecoveryLevel = "none" | "signal" | "gate";
 
-const RANK: Readonly<Record<RecoveryLevel, number>> = { none: 0, signal: 1, gate: 2 };
+const RECOVERY_RANK: Readonly<Record<RecoveryLevel, number>> = { none: 0, signal: 1, gate: 2 };
 
 /** The higher of two levels — the worst a tranche has been. */
 export const worseLevel = (a: RecoveryLevel, b: RecoveryLevel): RecoveryLevel =>
-  RANK[a] >= RANK[b] ? a : b;
+  RECOVERY_RANK[a] >= RECOVERY_RANK[b] ? a : b;
 
 /** An order the rule would place. Not an `OrderIntent`: it cannot reach a broker. */
 export interface WouldBeOrder {
