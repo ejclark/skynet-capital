@@ -249,6 +249,11 @@ disagree about what may be built:
    session, so `/work-issues` (which passes `interactive: true`) still sees it.
 6. **not blocked** — no open `blocked-by` issue (`openBlockers`); it starts when they close.
 
+**Ready names no lane label.** A `ready` issue is the plan lane's if it carries `plan` and the
+feedback lane's otherwise (`inFeedbackLane`), which adds `feedback` when it claims one without it.
+No issue is Ready that nothing builds: #4953/#4201 (`ready` + `enhancement`) sat admitted and
+unclaimed until `feedback` was hand-added, the same gap #5332 closed for `bug` alone.
+
 **Who may flip it.** Eric, always. A session may apply `ready` to its own *small, well-scoped*
 filing at capture (`FEEDBACK.md` → *What the lane will build*). **Beyond that, a session applies
 `ready` when the path is clear and Eric's flip would only be a rubber stamp** (Eric, 2026-10-19:

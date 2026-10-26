@@ -349,16 +349,17 @@ export function boardedReason(n, boardedOn) {
 export const pullable = (issue, opts) => notPullableReason(issue, opts) === null;
 
 /**
- * WHICH ISSUES THE FEEDBACK LANE BUILDS (#5332): `feedback`, and a `bug` that is not a `plan`.
- * CLAUDE.md files a mid-build bug `bug` + `fast-track` and says it is "pulled next", but both lane
- * picks looked only for `plan` and `feedback`, so #5164/#5165/#5175/#5266 sat ready 2–3 days until
- * someone hand-added `feedback`. A `bug` + `plan` stays the plan lane's — both claim steps run on
- * one `ready` event, so letting each lane see it would start two builds.
+ * WHICH ISSUES THE FEEDBACK LANE BUILDS: every one that is not a `plan` (2026-10-26). There are
+ * two build lanes, so `ready` + not-`plan` is the feedback lane's whole share of the pull rule —
+ * anything narrower lets `pullable()` call an issue Ready that no lane will build. That gap opened
+ * twice as an allowlist: #5332 added `bug` after #5164/#5165/#5175/#5266 sat ready 2–3 days, then
+ * #4953/#4201 (`ready` + `enhancement`, readied through the clear-path door) sat admitted and
+ * unclaimed until someone hand-added `feedback`. `ready` takes triage permission to apply, the same
+ * bar `feedback` meets, so it is authorization enough. A `bug` + `plan` stays the plan lane's —
+ * both claim steps run on one `ready` event, so letting each lane see it would start two builds.
  */
 export function inFeedbackLane(issue) {
-  const names = labelNames(issue?.labels);
-  if (names.includes(LABELS.feedback.name)) return true;
-  return names.includes(LABELS.bug.name) && !names.includes(LABELS.plan.name);
+  return !labelNames(issue?.labels).includes(LABELS.plan.name);
 }
 
 /**

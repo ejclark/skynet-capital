@@ -315,11 +315,24 @@ describe("feedbackReadyIntent — the existing shape is kept", () => {
     expect(intent.ready).toBe(true);
   });
 
-  it("is not this lane's without the feedback label", () => {
+  // #4953/#4201 — a `ready` non-plan issue is this lane's whether or not it carries `feedback`;
+  // otherwise `pullable()` shows it in Ready and no lane builds it.
+  it("is ready for a ready enhancement with no feedback label", () => {
+    const labels = ["enhancement", "ready"].map((name) => ({ name }));
     const intent = feedbackReadyIntent({
-      payload: { issue: { number: 1, labels: [{ name: "ready" }] } },
+      payload: {
+        action: "labeled",
+        label: { name: "ready" },
+        issue: { number: 4953, state: "open", labels },
+      },
     });
-    expect(intent.reason).toContain("not a feedback or bug issue");
+    expect(intent.ready).toBe(true);
+  });
+
+  it("is not this lane's when the issue is a plan", () => {
+    const labels = ["plan", "ready"].map((name) => ({ name }));
+    const intent = feedbackReadyIntent({ payload: { issue: { number: 1, labels } } });
+    expect(intent.reason).toContain("the plan lane's");
   });
 
   // #5332 — a mid-build bug is filed `bug` + `fast-track` and "pulled next"; it needs no `feedback`.

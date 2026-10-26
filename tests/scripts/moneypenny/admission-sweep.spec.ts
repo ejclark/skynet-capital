@@ -71,10 +71,13 @@ describe("claimNext — the retry sweep hands the pick to its own lane's claim",
     expect(called[0]?.lane).toBe("plan");
   });
 
-  it("ignores ready issues that belong to neither lane", () => {
-    const { deps, called } = setup([issue(8, "a", ["ready", "enhancement"])]);
-    expect(claimNext(0, "abc", deps).claimed).toBe(false);
-    expect(called).toEqual([]);
+  // #4953/#4201: readied through the clear-path door as `ready` + `enhancement`, admitted by
+  // `--check`, and claimed by nobody until `feedback` was hand-added. Ready means a lane builds it.
+  it("claims a ready enhancement with no feedback label through the feedback lane", () => {
+    const { deps, called } = setup([issue(4953, "a", ["ready", "enhancement"])]);
+    const r = claimNext(0, "abc", deps);
+    expect(r).toMatchObject({ claimed: true, lane: "feedback", number: 4953 });
+    expect(called[0]?.lane).toBe("feedback");
   });
 
   it("a failed plan read costs the tick no feedback pick — the cap only governs fresh plans", () => {
@@ -197,8 +200,12 @@ describe("peekNext — the push pass asks, and claims nothing", () => {
     expect(peekNext(deps([issue(5165, "a", ["ready", "bug", "fast-track"])]))?.number).toBe(5165);
   });
 
-  it("returns null when nothing in either lane is admissible", () => {
-    expect(peekNext(deps([issue(8, "a", ["ready", "enhancement"])]))).toBeNull();
+  it("sees a ready enhancement with no feedback label as something to claim (#4953)", () => {
+    expect(peekNext(deps([issue(4201, "a", ["ready", "enhancement"])]))?.number).toBe(4201);
+  });
+
+  it("returns null when nothing is admissible", () => {
+    expect(peekNext(deps([issue(8, "a", ["enhancement"])]))).toBeNull();
     expect(peekNext(deps([]))).toBeNull();
   });
 });
