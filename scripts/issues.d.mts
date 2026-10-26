@@ -21,6 +21,11 @@ export function findDuplicates<T extends IssueLike>(
   threshold?: number,
 ): T[];
 export function withFooter(body: string): string;
+export function commentWrite(args: { n: number; body: string; editId?: string | number | boolean }): {
+  method: "POST" | "PATCH";
+  path: string;
+  payload: { body: string };
+};
 export function boardStatus(issue: IssueLike): string;
 export function row(issue: IssueLike): string;
 export function nextLabels(current: string[], add?: string[], remove?: string[]): string[];
