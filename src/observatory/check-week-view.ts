@@ -22,14 +22,14 @@ import type { PlaybookMode, PlaybookVerdictState, Side } from "../domain/types.j
  *  wide enough to read a shape in, and aligned to the :00/:30 Eastern every session opens on. */
 export const WEEK_BUCKET_MS = 30 * 60_000;
 
-export interface WeekSession {
+interface WeekSession {
   /** `YYYY-MM-DD`, New York's calendar. */
   readonly date: string;
   readonly openAt: number;
   readonly closeAt: number;
 }
 
-export interface WeekLane {
+interface WeekLane {
   readonly playbookId: string;
   readonly mode: PlaybookMode;
   /** Its index in the heartbeat's `playbooks` (the newest verdict pass) when it is one of them —
@@ -40,7 +40,7 @@ export interface WeekLane {
   readonly states: readonly (readonly (PlaybookVerdictState | null)[])[];
 }
 
-export interface WeekTrade {
+interface WeekTrade {
   readonly at: number;
   readonly symbol: string;
   readonly side: Side;
