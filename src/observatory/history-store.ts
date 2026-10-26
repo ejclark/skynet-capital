@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { JsonlKeyedStore } from "../storage/jsonl-store.js";
+import { JsonlKeyedStore, type JsonlTail } from "../storage/jsonl-store.js";
 import type { EquitySample, HistoryStore } from "./history-record.js";
 import { InMemoryHistoryStore } from "./in-memory-history-store.js";
 
@@ -34,6 +34,10 @@ export class JsonlHistoryStore implements HistoryStore {
 
   latest(participantId: string): Promise<EquitySample | undefined> {
     return this.store.latest(participantId);
+  }
+
+  since(participantId: string, offset: number): Promise<JsonlTail<EquitySample>> {
+    return this.store.since(participantId, offset);
   }
 }
 

@@ -134,6 +134,51 @@ async function readLastJsonlEntry<T>(file: string): Promise<T | undefined> {
   }
 }
 
+/** What `readJsonlEntriesSince` hands back: the new rows, where to resume, and whether to restart. */
+export interface JsonlTail<T> {
+  readonly entries: T[];
+  /** Byte offset just past the last complete line read — the next call's `offset`. */
+  readonly offset: number;
+  /** True when the file is now shorter than `offset`: it was replaced, so fold it again from 0. */
+  readonly reset: boolean;
+}
+
+/**
+ * The entries appended to `file` since byte `offset` — the append-aware read a running fold uses
+ * instead of re-parsing a whole growing ledger per request (#4612 slice 7, #4619). Only complete
+ * lines count: a line still being written (no trailing newline yet) is left for the next call, so
+ * `offset` never lands mid-line. A missing file reads as empty; a shrunken one as `reset`. Same
+ * torn-line tolerance as `readJsonlEntriesInto`.
+ */
+async function readJsonlEntriesSince<T>(file: string, offset: number): Promise<JsonlTail<T>> {
+  let handle: Awaited<ReturnType<typeof open>>;
+  try {
+    handle = await open(file, "r");
+  } catch {
+    return { entries: [], offset: 0, reset: offset > 0 };
+  }
+  try {
+    const { size } = await handle.stat();
+    if (size < offset) return { entries: [], offset: 0, reset: true };
+    if (size === offset) return { entries: [], offset, reset: false };
+    const buffer = Buffer.alloc(size - offset);
+    await handle.read(buffer, 0, buffer.length, offset);
+    const complete = buffer.lastIndexOf(0x0a) + 1;
+    const entries: T[] = [];
+    for (const line of buffer.toString("utf8", 0, complete).split("\n")) {
+      if (line.length === 0) continue;
+      try {
+        entries.push(JSON.parse(line) as T);
+      } catch {
+        process.emitWarning(`[jsonl-store] skipping malformed line in ${file}`);
+      }
+    }
+    return { entries, offset: offset + complete, reset: false };
+  } finally {
+    await handle.close();
+  }
+}
+
 /**
  * One append-only JSONL file per key under `dir` — the shape shared by `JsonlAuditStore`,
  * `JsonlCycleReportStore`, and `JsonlHistoryStore`. Each of those keeps its own public API
@@ -163,6 +208,11 @@ export class JsonlKeyedStore<T> {
   async *stream(key?: string): AsyncGenerator<T> {
     const files = key ? [this.fileFor(key)] : await listJsonlFiles(this.dir);
     for (const file of files) yield* streamJsonlEntries<T>(file);
+  }
+
+  /** The entries appended for `key` since byte `offset` (see `readJsonlEntriesSince`). */
+  since(key: string, offset: number): Promise<JsonlTail<T>> {
+    return readJsonlEntriesSince<T>(this.fileFor(key), offset);
   }
 
   /** The newest entry appended for `key`, without reading the rest of its file (#4612 slice 7). */
