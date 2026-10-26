@@ -48,6 +48,13 @@ Lead with **intent and end-state**, not exhaustive orders; a well-aligned execut
 micromanagement (decentralized command). That is what makes drop-in autonomy work — and cheaper. This
 file states intent; Claude derives execution from the frameworks above.
 
+**The two primary outcomes** (Eric, 2026-10-26, said of a friend he showed the app to, who may
+want to contribute): "1. Enabling a delightful trading experience to make paper money.
+2. Enabling others to contribute to enhance their experience." When two candidates compete, these
+rank them. *Contribute* covers both a member improving their own experience through the in-app
+feedback loop and a person contributing code; granting anyone repo or app access stays Eric's call
+(hard boundaries below).
+
 **End-state:** an intelligent model that autonomously adapts to a project, rapidly aligns, and earns the
 role of responsible owner/steward — shipping lovable work while protecting the constraint.
 
