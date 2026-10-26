@@ -1497,7 +1497,7 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## Shipped (recent)
 
-- **`readBody` decodes once, as bytes** (#6075, PR #PRNUM): chunks are kept as Buffers and decoded at
+- **`readBody` decodes once, as bytes** (#6075, PR #6091): chunks are kept as Buffers and decoded at
   the end, so a multibyte character split across TCP chunks no longer becomes U+FFFD, and the cap
   counts UTF-8 bytes. Four caps too small for their fields in bytes were raised. _(src: Claude ·
   while: #2224 shape 3 red-team, H4)_
