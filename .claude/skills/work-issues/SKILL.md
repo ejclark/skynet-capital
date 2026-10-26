@@ -89,7 +89,8 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    `needs-info` or `needs-eric`; the stall audit only catches one forgotten for 6h. A `needs-eric` item doesn't block
    the rest of the queue; it just stops competing for the same PR slot. **On a `plan` issue, every
    outcome is an edit to its state block** (the slice's new state, the next pickup line, one dated
-   log line) and never a new status comment; the one-line reason for a non-PR outcome goes in the
+   log line), made with `npm run issues -- update N --edit-comment <id> --comment-file f` so it
+   keeps the footer the comment gate skips on (#4537), and never a new status comment; the one-line reason for a non-PR outcome goes in the
    log line.
 8. **REPEAT.** Re-run QUEUE and ADMIT against the new `origin/main` before picking the next issue — same
    re-derivation discipline as `/governor`'s cycle boundary, so two picks never race the same file.

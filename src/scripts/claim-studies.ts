@@ -44,6 +44,7 @@ import {
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
 import { scoreConviction } from "./claim-scoring-run.js";
+import { flag } from "./cli-flag.js";
 
 const run = promisify(execFile);
 const ROOT = process.cwd();
@@ -91,11 +92,6 @@ async function execute(request: StudyRunRequest): Promise<StudyRunOutput> {
     rmSync(dir, { recursive: true, force: true });
   }
 }
-
-const flag = (argv: readonly string[], name: string): string | undefined => {
-  const at = argv.indexOf(`--${name}`);
-  return at === -1 ? undefined : argv[at + 1];
-};
 
 /** The claim's own label in its call sheet ("2a"), else its position. */
 const labelOf = (conviction: Conviction, position: number): string =>

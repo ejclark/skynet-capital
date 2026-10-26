@@ -42,6 +42,7 @@ import {
   type PlayReading,
   type ResolvedPlayTarget,
   tripMoves,
+  usdWhole,
 } from "./play-target.js";
 import type { EnabledPlaybook } from "./playbook.js";
 
@@ -63,9 +64,8 @@ export interface TargetObservationDeps {
 }
 
 const points = (n: number): number => Math.round(n * 1000) / 10;
-const pct = (n: number): string => `${points(n)}%`;
+const pointsPct = (n: number): string => `${points(n)}%`;
 const signedPts = (n: number): string => `${n >= 0 ? "+" : ""}${(n * 100).toFixed(1)}`;
-const usd = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
 const NOTE = "(SIM, observe-only: no order placed, changed or held back)";
 
 function watchingLine(
@@ -75,21 +75,21 @@ function watchingLine(
   reading: PlayReading,
 ): string {
   const { signal, gate } = tripMoves(target);
-  const rise = (m: number) => (Number.isFinite(m) ? `a ${pct(m)} rise` : "no rise");
+  const rise = (m: number) => (Number.isFinite(m) ? `a ${pointsPct(m)} rise` : "no rise");
   return (
-    `${who}: watching. Target ${pct(target.weight)} of its ${usd(ceiling)} budget deployed ` +
-    `(lean ${pct(target.lean.min)} to ${pct(target.lean.max)}); signal at ${points(target.band.signal)} ` +
-    `points, gate at ${points(target.band.gate)}. From the center, a ${pct(-signal.fall)} fall or ` +
-    `${rise(signal.rise)} in the position trips the signal, a ${pct(-gate.fall)} fall or ` +
-    `${rise(gate.rise)} the gate. Now ${pct(reading.share)} (${signedPts(reading.drift)} points): ` +
+    `${who}: watching. Target ${pointsPct(target.weight)} of its ${usdWhole(ceiling)} budget deployed ` +
+    `(lean ${pointsPct(target.lean.min)} to ${pointsPct(target.lean.max)}); signal at ${points(target.band.signal)} ` +
+    `points, gate at ${points(target.band.gate)}. From the center, a ${pointsPct(-signal.fall)} fall or ` +
+    `${rise(signal.rise)} in the position trips the signal, a ${pointsPct(-gate.fall)} fall or ` +
+    `${rise(gate.rise)} the gate. Now ${pointsPct(reading.share)} (${signedPts(reading.drift)} points): ` +
     `${reading.level}. ${NOTE}`
   );
 }
 
 function changeLine(who: string, asOf: string, from: BandLevel, reading: PlayReading): string {
   const where =
-    `${pct(reading.share)} deployed vs a ${pct(reading.target)} target ` +
-    `(${signedPts(reading.drift)} points; ${usd(reading.active)} active, ${usd(reading.holding)} holding)`;
+    `${pointsPct(reading.share)} deployed vs a ${pointsPct(reading.target)} target ` +
+    `(${signedPts(reading.drift)} points; ${usdWhole(reading.active)} active, ${usdWhole(reading.holding)} holding)`;
   if (reading.level === "inside") {
     return `${who} @ ${asOf}: back inside its band from ${from}: ${where}. ${NOTE}`;
   }

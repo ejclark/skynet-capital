@@ -8,12 +8,8 @@ import {
   raisesDelegation,
 } from "../domain/playbook-delegation.js";
 import type { SubscriptionConviction } from "../domain/types.js";
-import {
-  playbookStoreView,
-  withUnmovedConvictions,
-} from "../observatory/playbook-store-json-view.js";
+import { playbookStoreView, withConvictionHolds } from "../observatory/playbook-store-json-view.js";
 import { withOwnSteering } from "../observatory/steered-by-view.js";
-import { CONVICTIONS, type ConvictionLookup } from "../playbooks/conviction-store.js";
 import { movesNoCapital, STRATEGIES } from "../playbooks/pair-table.js";
 import { asOwnConviction } from "../subscriptions/pair-conviction.js";
 import {
@@ -24,6 +20,7 @@ import {
 import { newSubscriptionRefusal } from "../subscriptions/subscribe-eligibility.js";
 import { liveNeedsRefusal } from "../subscriptions/subscribe-live-needs.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import { accountConvictionLookup } from "./account-conviction-lookup.js";
 import { accountKind } from "./account-kind.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
@@ -100,7 +97,7 @@ import { servePreflight } from "./subscriptions-preflight-route.js";
  * same settings change log a bot's Settings card lists — both or neither.
  */
 
-const BODY_CAP_BYTES = 4_096;
+const SUBSCRIPTIONS_BODY_CAP_BYTES = 4_096;
 
 /**
  * The viewer's OWN delegation gate. Keyed on the signed-in member's ladder (`resolveCurrentId`),
@@ -188,14 +185,6 @@ function subscriberCounts(
   return counts;
 }
 
-/** The records a pointer on this account resolves to: the seeded ones, then the member views handed
- *  to it — the bots' own rule (`autonomous-convictions.ts`), so a row never shows a view that does
- *  not steer that bot. */
-function ownLookup(config: DashboardServerConfig, accountId: string): ConvictionLookup {
-  const held = config.memberConvictions?.pointers().heldBy(accountId) ?? [];
-  return (id) => CONVICTIONS.get(id) ?? held.find((c) => c.id === id);
-}
-
 const editorOf = (session: Session | undefined): string => session?.email ?? "unknown";
 
 /** A subscription write stating `conviction`, kept as the owner's own view on the pair first
@@ -228,7 +217,7 @@ async function serveStoreIndex(
   // The store omits an account until its first subscribe, so an owned account with no entry yet is
   // an EMPTY list — never "not yours", which hid the Subscribe form from every fresh account (#3623).
   const state = config.subscriptions?.load();
-  const lookup = owns && id ? ownLookup(config, id) : undefined;
+  const lookup = owns && id ? accountConvictionLookup(config, id) : undefined;
   // An owner's own view on a pair reads as the reason and day they typed (#5482 contract piece 3).
   const subscriptions =
     id && state && lookup
@@ -247,10 +236,14 @@ async function serveStoreIndex(
   // Each single-ticker row carries R&D's call for its next earnings report (#5444), and an owned
   // account's rows the view its own pointer names — a member's handed-over one (#5482 slice 6c).
   const forecast = withForecasts(bare.strategies, asOfIso(config));
-  // A pair whose conviction is still inline runs exits-only on the bots, and its row says so.
+  // A pair the bots run exits-only for its conviction (no view, or one they can't use) says why.
   const strategies =
     subscriptions && lookup && id
-      ? withUnmovedConvictions(withOwnSteering(forecast, subscriptions, lookup), state?.[id] ?? [])
+      ? withConvictionHolds(
+          withOwnSteering(forecast, subscriptions, lookup),
+          state?.[id] ?? [],
+          lookup,
+        )
       : forecast;
   const view = { ...bare, strategies };
   // Unwired store → no count at all, rather than a false "No subscribers yet".
@@ -530,7 +523,7 @@ export async function serveSubscriptionsApi(
   }
   if (!WRITE_PATHS.includes(path)) return false;
 
-  const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
+  const raw = await readJsonPost(req, res, SUBSCRIPTIONS_BODY_CAP_BYTES);
   if (raw === undefined) return true;
   if (!config.subscriptions) {
     sendJson(res, 200, { ok: false, error: "The Playbook Store isn't wired in this deployment." });

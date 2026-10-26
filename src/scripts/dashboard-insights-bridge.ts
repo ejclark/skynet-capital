@@ -22,6 +22,7 @@ import {
   type RetrospectiveRecord,
 } from "../autonomous/decision-db.js";
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
+import type { VerdictRunStart } from "../autonomous/decision-db-verdict-run.js";
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { storeDecisionBatch } from "../autonomous/decision-wire.js";
@@ -32,7 +33,7 @@ import {
   buildSubscriptionsSnapshot,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
 } from "../autonomous/subscriptions-wire.js";
-import type { OrderIntent } from "../domain/types.js";
+import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { Participant } from "../participants/participant.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
@@ -100,6 +101,12 @@ export interface InsightsBridgeHandle {
   readonly funnelFor?: (personaId: string) => DecisionFunnel;
   /** This week's checks, grouped answers and placed trades (#5073 slice 2) — same store. */
   readonly readCheckWeek?: (personaId: string) => CheckWeekRows | undefined;
+  /** When a playbook's current verdict began (#4953) — same store. */
+  readonly readVerdictRunStart?: (
+    personaId: string,
+    startAt: number,
+    verdict: PlaybookVerdict,
+  ) => VerdictRunStart | undefined;
   /** Each house playbook's funnel over the last ten sessions (#4450 slice 5a) — same store. */
   readonly readPlaybookFunnel?: () => PlaybookFunnelView;
   /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
@@ -132,8 +139,8 @@ const CHECK_WEEK_TTL_MS = 15_000;
 const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
 
 /** The Playbook Store as the bots receive it on every poll: `subscriptions.v4`, with each
- *  subscription's pointer at a conviction record in the version, and only whether an inline copy
- *  the poll could not move is there, never its words or day (#5482 contract piece 4). */
+ *  subscription's pointer at a conviction record in the version (#5482 contract piece 4). Its
+ *  inline-copy bit is frozen at `false` since the field was retired (`subscriptions-wire.ts`). */
 export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
   return buildSubscriptionsSnapshot(
     store.load(),
@@ -216,8 +223,8 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
-    // v4 (#5482 contract piece 4) fingerprints each subscription's pointer and one bit for an
-    // unmoved inline copy, not its words or day: the bots read pointers only. Sent only once the
+    // v4 (#5482 contract piece 4) fingerprints each subscription's pointer, and a bit for an
+    // inline copy now frozen at `false` (the field is retired): the bots read pointers only. Sent only once the
     // bots that read v4 (#5989) were deployed: a bots build that predates it reads v4 as "not
     // reported" and keeps the roster it had. v1 to v3 stay readable by the bots for a rollback.
     subscriptions: () => subscriptionsOnTheWire(subscriptions),
@@ -268,6 +275,10 @@ export function startInsightsBridge(
               ? decisionDb.checkWeek(personaId, window.from, window.to, WEEK_BUCKET_MS)
               : undefined;
           }),
+          // Not remembered: the key would carry the newest pass's instant, which moves every 15 s,
+          // and the heartbeat asks only for a run its 30-pass page could not see the end of.
+          readVerdictRunStart: (personaId: string, startAt: number, verdict: PlaybookVerdict) =>
+            decisionDb.verdictRunStart(personaId, startAt, verdict),
           // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
           // position, not one per cycle, so this is generous headroom at this app's trade volume
           // rather than the "growing feed" concern `listByPersona`'s own bound addresses.

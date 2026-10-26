@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-manufacturing-pmi-2026-11-02",
+  "kind": "macro-print",
+  "title": "S&P Global US Manufacturing PMI (final, Oct 2026 data) — 09:45 ET, 15 minutes before ISM Manufacturing",
+  "date": "2026-11-02",
+  "status": "estimate",
+  "source": "EST: read verbatim off S&P Global's own calendar listing, pmi.spglobal.com/Public/Release/ReleaseDates?language=en, fetched direct by this lane 2026-10-26 with a browser User-Agent (HTTP 200, 26,777 bytes; the plain-UA fetch is still 403 as the proposer logged): 'November 02 ... 14:45 UTC S&P Global US Manufacturing PMI'. 14:45 UTC is 09:45 EST (US daylight time ends Sunday 2026-11-01), the same wall-clock slot as the EDT-season releases. Corroborated on the same fetch by the page's own stated rule, quoted verbatim — 'Manufacturing PMI: first working day' — and by a REALIZED release of the same series at the same slot, the 2026-10-01 final, whose PDF masthead reads 'Embargoed until 0945 EDT 1 October 2026' (see the sp-global-manufacturing-pmi-2026-10-01 ledger). The same listing carries 'November 23 ... 14:45 UTC S&P Global Flash US PMI' and 'November 02 ... 16:00 UTC S&P Global PMI Commodity Price & Supply Indicators'. Filed estimate on the standing schema gap, not on date doubt: market-events-data.ts defines no confirmed-source prefix for a private PMI compiler, and this lane may not self-confirm an event it discovered in-sweep. Checked 2026-10-26",
+  "impact": "low",
+  "symbols": [],
+  "notes": "READ IT, DO NOT TRADE IT. The final revises the 10-23 flash (56.0, a 53-month high, vs September's 55.9) and carries no published consensus, so it is a revision, not a surprise; it lands 15 minutes before ISM Manufacturing, SLOOS-day construction spending and the other 10:00 ET releases on 11-02, on the first working day of the month, so its window carries month-start flow (the sibling entry's method rule: never rank a first-working-day window against an all-sessions distribution; normalise within the day). Nothing here licenses an entry. Discovered during the ism-manufacturing-2026-11-02 D-7 pulse (2026-10-26); initial research and the first-hand date read are in docs/research/events/sp-global-manufacturing-pmi-2026-11-02.md."
+}

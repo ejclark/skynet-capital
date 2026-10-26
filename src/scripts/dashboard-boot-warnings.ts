@@ -1,5 +1,10 @@
+import { statSync } from "node:fs";
 import type { AccountCollision } from "../observatory/account-collisions.js";
-import { volumePersistenceWarnings } from "../runtime/volume-guard.js";
+import {
+  DERIVED_STORES,
+  dataRootProblem,
+  volumePersistenceWarnings,
+} from "../runtime/volume-guard.js";
 
 /**
  * BOOT-TIME WARNINGS — drift the CI gates can't see, so it has to be caught live instead. Split
@@ -10,6 +15,27 @@ import { volumePersistenceWarnings } from "../runtime/volume-guard.js";
 /** Volume-persistence backstop (docs/LESSONS.md, "guest list … volume"). */
 export function warnUnpinnedVolumes(env: NodeJS.ProcessEnv): void {
   for (const warning of volumePersistenceWarnings(env)) console.warn(warning);
+}
+
+const deviceOf = (path: string): number | undefined => {
+  try {
+    return statSync(path).dev;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * The derived-store root must be a real mount on Fly (#4604). Refuses the boot once any store
+ * derives its path from it — a refused boot fails the deploy loudly, where a write inside the
+ * image would fail silently on the next one. With no derived store yet it only warns, so the
+ * check is proven against production before anything depends on it.
+ */
+export function assertDataRootMounted(env: NodeJS.ProcessEnv): void {
+  const problem = dataRootProblem(env, deviceOf);
+  if (!problem) return;
+  if (Object.keys(DERIVED_STORES).length > 0) throw new Error(problem);
+  console.warn(`⚠️  ${problem.replace("Refusing to boot", "Would refuse to boot")}`);
 }
 
 /**

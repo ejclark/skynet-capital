@@ -9,6 +9,7 @@ import {
   STRATEGIES,
 } from "../playbooks/pair-table.js";
 import { findPlaybook } from "../playbooks/registry.js";
+import { capitalized } from "../ui/capitalized.js";
 
 /**
  * WHAT A NEW SUBSCRIPTION NEEDS BEFORE IT IS TAKEN (#4469 slice 3a, criterion 9) — said in words, so
@@ -37,8 +38,6 @@ const single = (pair: Pair): string | undefined =>
   pair.symbols.length === 1 ? pair.symbols[0] : undefined;
 
 const instrumentOf = (pair: Pair) => STRATEGIES[pair.strategy].instrument;
-
-const capitalized = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 type HeldSubscription = Pick<PlaybookSubscription, "playbookId"> &
   Partial<Pick<PlaybookSubscription, "enabled">>;

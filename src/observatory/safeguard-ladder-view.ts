@@ -1,3 +1,4 @@
+import { fixedPct } from "../domain/percent.js";
 import type { PlaybookMode, PlaybookVerdict } from "../domain/types.js";
 import { DEFAULT_MOMENTUM_FLOOR, DEFAULT_SENTIMENT_FLOOR } from "../playbooks/mixed-signals.js";
 import type { Playbook } from "../playbooks/playbook.js";
@@ -59,11 +60,6 @@ export interface SafeguardLadderEntry {
 const STAGE_1_NAME = "Price and news disagreeing";
 const STAGE_2_NAME = "Automatic exit on a losing position";
 
-/** `0.02` → `"2.0%"`. Stage copy quotes the play's real floors, never a rounded stand-in. */
-function pct(fraction: number): string {
-  return `${(fraction * 100).toFixed(1)}%`;
-}
-
 function stageOne(playbook: Playbook): SafeguardStageView {
   const dial = playbook.mixedSignals;
   if (!dial) {
@@ -74,7 +70,7 @@ function stageOne(playbook: Playbook): SafeguardStageView {
       does: "Nothing checks whether the price move and the news tone disagree on this play.",
     };
   }
-  const momentum = pct(dial.momentumFloor ?? DEFAULT_MOMENTUM_FLOOR);
+  const momentum = fixedPct(dial.momentumFloor ?? DEFAULT_MOMENTUM_FLOOR, 1);
   const sentiment = (dial.sentimentFloor ?? DEFAULT_SENTIMENT_FLOOR).toFixed(2);
   const floors = `the price has moved ${momentum} or more against a news tone of ${sentiment} or stronger`;
   if (dial.action === "observe") {
@@ -109,7 +105,7 @@ function stageTwo(playbook: Playbook, mode: PlaybookMode): SafeguardStageView {
       does: `No automatic exit on ${mode}. This play sells only when its own rule says to.`,
     };
   }
-  const trip = pct(dial.drawdownTripPct);
+  const trip = fixedPct(dial.drawdownTripPct, 1);
   if (dial.enforcement === "enforce") {
     return {
       stage: 2,

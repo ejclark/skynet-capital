@@ -1,3 +1,4 @@
+import type { VerdictRunStart } from "../autonomous/decision-db-verdict-run.js";
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { unmanagedTickers } from "../domain/bots-universe.js";
@@ -9,13 +10,15 @@ import type {
   PlaybookVerdict,
   PlaybookVerdictState,
 } from "../domain/types.js";
+import type { ConvictionLookup } from "../playbooks/conviction-store.js";
 import { findPair, type Pair } from "../playbooks/pair-table.js";
 import type { Playbook } from "../playbooks/playbook.js";
 import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../playbooks/registry.js";
 import { notTradingNote, subscribedPairs } from "../subscriptions/subscribe-eligibility.js";
-import { pausedPlaybookIds } from "../subscriptions/subscription-roster.js";
+import { pausedPlaybookIds, rosterSteering } from "../subscriptions/subscription-roster.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import { type CheckWeekView, checkWeekView } from "./check-week-view.js";
+import { convictionHoldNote } from "./playbook-store-json-view.js";
 import { readPlaybookWindow, type UnconfirmedPrint } from "./playbook-window.js";
 
 /**
@@ -42,9 +45,11 @@ export interface PlaybookHeartbeat {
   readonly playbookId: string;
   readonly mode: PlaybookMode;
   readonly state: PlaybookVerdictState;
-  /** When this verdict began, as far back as the passes on hand reach. */
+  /** When this verdict began: exact from the store's history when `runStart` is wired (#4953),
+   *  else as far back as the passes on hand reach. */
   readonly since: string;
-  /** True when the run reaches the oldest pass on hand — the real start may be earlier. */
+  /** True when the run reaches the oldest pass it could see — the page's, or with `runStart` the
+   *  persona's first recorded pass — so the real start may be earlier. */
   readonly sinceIsLowerBound: boolean;
 }
 
@@ -131,8 +136,11 @@ export function unmanagedHoldings(
  *   up on their next `/controls` poll and run it from the pass after.
  * - `off` — registered, but no pass on hand ran it: nobody switched it on for this bot. Said
  *   differently when the bots app's own playbook setting names it and the bot holds no
- *   subscription (exits only, `resolveBotRoster`), and when the bot is subscribed to an id no
- *   playbook answers to (the bots refuse it, `subscriptionRoster`).
+ *   subscription (exits only, `resolveBotRoster`), when the bot is subscribed to an id no
+ *   playbook answers to (the bots refuse it, `subscriptionRoster`), and when the bots hold a
+ *   subscribed pair exits-only for its conviction (#5482): a ◆ pair with no view, or a pointer
+ *   the bots cannot use. That pair records no verdict, so "starting" would be a promise nothing
+ *   keeps; the line asks the bots' own test (`rosterSteering`) with the bot's own lookup.
  * - `blocked` — registered, but the live wiring cannot make it fire (`PLAYBOOK_WIRING_GAPS`).
  *   Blocked wins over everything: a playbook that runs but can never trade is not online.
  *
@@ -146,7 +154,13 @@ export type RollCallStatus = "armed" | "paused" | "starting" | "off" | "blocked"
 /** What the dashboard knows of a bot's roster beyond its passes (#4650). */
 export interface RollCallRoster {
   /** Every Store subscription the bot holds, on or paused. */
-  readonly subscriptions: readonly Pick<PlaybookSubscription, "playbookId" | "enabled">[];
+  readonly subscriptions: readonly Pick<
+    PlaybookSubscription,
+    "playbookId" | "enabled" | "convictionId"
+  >[];
+  /** The conviction records a pointer on this bot resolves to, as the bots resolve them: the seeded
+   *  ones and the member views handed to this account. Absent reads the seeded ones only. */
+  readonly convictionOf?: ConvictionLookup;
   /** The playbook ids the bots app's own playbook setting (`SKYNET_PLAYBOOKS`) runs on this bot,
    *  as its latest `/controls` poll reported them (`house-roster-wire.ts`). Absent when it reported
    *  none. One the bot holds no subscription to opens nothing and still runs its exits. */
@@ -208,9 +222,17 @@ const NOT_TRADING_WHY =
 function idleLine(
   playbookId: string,
   playbook: Playbook | undefined,
-  held: { readonly subscribed: boolean; readonly exitsOnly: boolean },
+  held: {
+    readonly subscribed: boolean;
+    readonly exitsOnly: boolean;
+    /** The bots' refusal of its conviction, for an enabled subscription they run exits-only. */
+    readonly convictionRefused?: string;
+  },
 ): RollCallLine {
   if (held.subscribed && !playbook) return { playbookId, status: "off", reason: UNKNOWN_REASON };
+  if (held.convictionRefused !== undefined) {
+    return { playbookId, status: "off", reason: convictionHoldNote(held.convictionRefused) };
+  }
   // A playbook with its own off-reason (the forced daily pick: one bot, one setting) keeps it —
   // a subscription alone never makes it run, so "starts next pass" would be a promise.
   if (held.subscribed && !playbook?.whenOff) {
@@ -218,6 +240,18 @@ function idleLine(
   }
   if (held.exitsOnly) return { playbookId, status: "off", reason: EXITS_ONLY_REASON };
   return { playbookId, status: "off", reason: playbook?.whenOff ?? OFF_REASON };
+}
+
+/** The bots' refusal of an enabled subscription's conviction (`rosterSteering`), or nothing. */
+function convictionRefusal(
+  playbook: Playbook | undefined,
+  roster: RollCallRoster | undefined,
+  playbookId: string,
+): { readonly convictionRefused?: string } {
+  const sub = roster?.subscriptions.find((s) => s.playbookId === playbookId && s.enabled);
+  if (!(playbook && sub)) return {};
+  const result = rosterSteering(playbook, sub, roster?.convictionOf);
+  return "refused" in result ? { convictionRefused: result.refused } : {};
 }
 
 export function playbookRollCall(
@@ -260,6 +294,7 @@ export function playbookRollCall(
       return idleLine(playbookId, playbook, {
         subscribed: subscribed.includes(playbookId),
         exitsOnly: exitsOnly.has(playbookId),
+        ...convictionRefusal(playbook, roster, playbookId),
       });
     }
     if (!playbook) {
@@ -298,7 +333,17 @@ export function latestVerdictPass(newestFirst: readonly DecisionRecord[]): {
   return pass?.playbookVerdicts ? { index, verdicts: pass.playbookVerdicts, at: pass.at } : null;
 }
 
-function playbookLines(newestFirst: readonly DecisionRecord[]): PlaybookHeartbeat[] | null {
+/** Where the store says a verdict's run began (`DecisionDb.verdictRunStart`, #4953), for the run
+ *  holding at the pass `startAt`. Undefined when it cannot say. */
+export type VerdictRunStartRead = (
+  verdict: PlaybookVerdict,
+  startAt: number,
+) => VerdictRunStart | undefined;
+
+function playbookLines(
+  newestFirst: readonly DecisionRecord[],
+  runStart?: VerdictRunStartRead,
+): PlaybookHeartbeat[] | null {
   const pass = latestVerdictPass(newestFirst);
   if (!pass) return null;
   const start = pass.index;
@@ -311,17 +356,22 @@ function playbookLines(newestFirst: readonly DecisionRecord[]): PlaybookHeartbea
       if (match?.state !== verdict.state) break;
       oldest = i;
     }
+    const pageRanOut = oldest === newestFirst.length - 1;
+    // Only a run the page could not see the end of costs a store read: one that breaks inside
+    // the page is already exact.
+    const exact = pageRanOut ? runStart?.(verdict, pass.at) : undefined;
     return {
       ...verdict,
-      since: new Date(newestFirst[oldest]?.at ?? 0).toISOString(),
-      sinceIsLowerBound: oldest === newestFirst.length - 1,
+      since: new Date(exact?.at ?? newestFirst[oldest]?.at ?? 0).toISOString(),
+      sinceIsLowerBound: exact ? exact.reachesOldest : pageRanOut,
     };
   });
 }
 
 /** `records` newest first, as `DecisionDb.listByPersona` returns them. `holdings` absent — the
  *  dashboard could not read the bot's book or its subscriptions — leaves `unmanaged` off; `roster`
- *  absent judges the roll call from the passes alone; `weekRows` absent leaves `week` off. */
+ *  absent judges the roll call from the passes alone; `weekRows` absent leaves `week` off;
+ *  `runStart` absent (no store, the JSONL fallback) leaves "since" bounded by the page. */
 export function botHeartbeatView(
   records: readonly DecisionRecord[],
   now: Date,
@@ -329,6 +379,7 @@ export function botHeartbeatView(
   holdings?: BotHoldings,
   roster?: RollCallRoster,
   weekRows?: CheckWeekRows,
+  runStart?: VerdictRunStartRead,
 ): HeartbeatView {
   const verdicts = latestVerdictPass(records)?.verdicts ?? null;
   const house = registeredPlaybooks();
@@ -369,6 +420,6 @@ export function botHeartbeatView(
     lastPassAt: new Date(newest.at).toISOString(),
     sinceLastPassMs,
     ...(newest.halted ? { halted: newest.halted } : {}),
-    playbooks: playbookLines(records),
+    playbooks: playbookLines(records, runStart),
   };
 }

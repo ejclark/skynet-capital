@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { JsonlKeyedStore } from "../storage/jsonl-store.js";
+import { JsonlKeyedStore, type JsonlTail } from "../storage/jsonl-store.js";
 import type {
   ActivityEvent,
   ActivityEventBus,
@@ -42,6 +42,12 @@ export class JsonlActivityEventBus implements ActivityEventBus {
 
   list(participantId?: string): Promise<ActivityEvent[]> {
     return this.store.list(participantId);
+  }
+
+  sinceAll(
+    from: ReadonlyMap<string, number>,
+  ): Promise<ReadonlyMap<string, JsonlTail<ActivityEvent>>> {
+    return this.store.sinceAll(from);
   }
 
   subscribe(listener: PublishedListener): ActivitySubscription {

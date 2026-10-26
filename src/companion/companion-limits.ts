@@ -32,6 +32,14 @@ export function effortFor(model: string): { readonly output_config?: { readonly 
   return model.startsWith("claude-sonnet") ? { output_config: { effort: "low" } } : {};
 }
 
+/** Sonnet 5.5 takes a mid-conversation `role: "system"` message (no beta header) — the form for a
+ *  harness notice like the tool-exhaustion note, which the model reads as ours, not as member text
+ *  the UNTRUSTED INPUT rule tells it to distrust. Haiku 4.5 rejects that message with a 400, so its
+ *  note stays a text block in the user turn. Gated per model the way `effortFor` is. */
+export function harnessNoteAsSystem(model: string): boolean {
+  return model === "claude-sonnet-5-5";
+}
+
 /**
  * A conversation ends gracefully here rather than growing without bound — the client resends the
  * (trimmed) transcript on every turn since v1 persists nothing server-side, so this doubles as

@@ -4,7 +4,6 @@ import type { ObservatoryHub } from "../server/observatory-hub.js";
 import { resolveDeployLagFetcher } from "../server/ops-status-deploy-lag.js";
 import type { OpsStatusDeps } from "../server/ops-status-routes.js";
 import { buildOpsStatus, resolveOpsStatusRepo } from "../server/ops-status-service.js";
-import type { SubscriptionStore } from "../server/subscription-store.js";
 import {
   type CredentialsBridgeDeps,
   type InsightsBridgeHandle,
@@ -27,8 +26,6 @@ export interface OpsStatusSetupDeps {
    *  password mode has no membership, only one shared key, so there is still no panel to serve
    *  there. */
   readonly authConfigured: boolean;
-  /** The Playbook Store's subscriptions, for the inline-conviction-copies row (#5482). */
-  readonly subscriptions?: SubscriptionStore;
 }
 
 /** Latest `at` among trade-activity records belonging to a BOT participant — the panel's
@@ -83,9 +80,6 @@ export function setupOpsStatus(deps: OpsStatusSetupDeps): OpsStatusDeps | undefi
         botsRunningSha: () => deps.insightsBridge.botsRunningSha(),
         personaGateVerdicts: () => deps.insightsBridge.botsGate(),
         lastBotActivityAt: () => lastBotActivityAt(deps.hub, deps.activity),
-        ...(deps.subscriptions
-          ? { subscriptions: () => deps.subscriptions?.loadIfReadable() }
-          : {}),
         ...(fetchDeploySignals ? { fetchDeploySignals } : {}),
         repo,
       }),

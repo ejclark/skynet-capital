@@ -216,6 +216,7 @@ describe("runCli — the admission CLI /work-issues asks", () => {
       readReady: () => [issue(4, ["ready", "feedback"]), issue(6, ["plan"])],
       readIssue: (n: number) => issue(n, ["ready", "feedback"]),
       readPlans: () => [],
+      readHold: () => null,
       print: (l: string) => out.push(l),
       printErr: (l: string) => err.push(l),
       ...over,
@@ -286,6 +287,34 @@ describe("runCli — the admission CLI /work-issues asks", () => {
     const n = setup({ readReady: () => [handedOff], readIssue: () => handedOff });
     expect(runCli(["--next"], n.io)).toBe(3);
     expect(n.json().reason).toContain("0 pullable");
+  });
+
+  // #5707: Eric's 2026-10-19 /work-issues pass admitted #4450 through `--check` while its block
+  // said nothing was buildable. A live session now gets the answer the sweep does.
+  it("--check and --next refuse a plan whose state block names nothing to build", () => {
+    const held = issue(4808, ["ready", "plan"]);
+    const hold = (i: { number?: number }) =>
+      i.number === 4808 ? "its state block names no next pickup" : null;
+    const c = setup({ readIssue: () => held, readHold: hold });
+    expect(runCli(["--check", "4808"], c.io)).toBe(3);
+    expect(c.json()).toMatchObject({ number: 4808, admit: false });
+    expect(c.json().reason).toContain("names no next pickup");
+    const n = setup({ readReady: () => [held, issue(4, ["ready", "feedback"])], readHold: hold });
+    expect(runCli(["--next"], n.io)).toBe(0);
+    expect(n.json()).toMatchObject({ number: 4, admit: true });
+  });
+
+  it("--check never reads the block of an issue the gate already refused", () => {
+    let reads = 0;
+    const s = setup({
+      readIssue: (n: number) => issue(n, ["feedback"]),
+      readHold: () => {
+        reads += 1;
+        return null;
+      },
+    });
+    expect(runCli(["--check", "4"], s.io)).toBe(3);
+    expect(reads).toBe(0);
   });
 
   it("--queue: prints the Ready column only, exit 0", () => {

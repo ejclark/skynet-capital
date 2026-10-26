@@ -1,4 +1,4 @@
-import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
+import { formatCurrency, formatSigned, formatSignedPercent, plClass } from "./render-atoms.js";
 
 /**
  * NET WORTH AS DATA — `/api/accounts/networth`, the JSON view behind the Accounts page's Summary
@@ -22,11 +22,11 @@ import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
  * ones behind it are dropped — `clipToHistory` below.
  */
 
-export type Tone = "pos" | "neg" | "flat";
+type Tone = "pos" | "neg" | "flat";
 
 export type NetWorthWindowKey = "7D" | "1M" | "3M" | "1Y";
 
-export const NET_WORTH_WINDOWS: readonly {
+const NET_WORTH_WINDOWS: readonly {
   readonly key: NetWorthWindowKey;
   readonly label: string;
   readonly note: string;
@@ -74,7 +74,7 @@ export interface AccountNetWorthInput {
 /** SPY's return per window (`benchmark-returns.ts`); a window it doesn't cover is absent. */
 export type BenchmarkInput = Partial<Record<NetWorthWindowKey, number>>;
 
-export interface NetWorthWindowView {
+interface NetWorthWindowView {
   readonly label: string;
   readonly note: string;
   /** "+1.23%" or "—" when no reporting account had data for this window. */
@@ -100,7 +100,7 @@ interface AllTimeHighView {
   readonly aboveNow: number;
 }
 
-export interface NetWorthStatsView {
+interface NetWorthStatsView {
   readonly value: string;
   readonly valueKnown: boolean;
   /** "+$1,230 · +0.45%" or "—" when the day's move isn't known. */
@@ -153,7 +153,7 @@ function idleView(
   return { idle: `${pct.toFixed(0)}% idle`, idlePct: pct, invested: formatCurrency(invested) };
 }
 
-export interface AccountNetWorthView extends NetWorthStatsView {
+interface AccountNetWorthView extends NetWorthStatsView {
   readonly id: string;
   readonly name: string;
   readonly kind: "human" | "bot";
@@ -193,7 +193,7 @@ function windowView(
   return {
     label,
     note,
-    value: pct(r * 100),
+    value: formatSignedPercent(r * 100),
     tone: plClass(r),
     known: true,
     ...vsBenchmark(r, bench),
@@ -282,7 +282,7 @@ function dayChangeView(
 ): { readonly text: string; readonly tone: Tone } {
   const move = equity - lastEquity;
   const pctVal = lastEquity !== 0 ? (move / lastEquity) * 100 : 0;
-  return { text: `${formatSigned(move)} · ${pct(pctVal)}`, tone: plClass(move) };
+  return { text: `${formatSigned(move)} · ${formatSignedPercent(pctVal)}`, tone: plClass(move) };
 }
 
 /** An all-empty window map — the shape an errored account renders with, so every window reads "—". */
@@ -291,7 +291,7 @@ function emptyWindowsInput(): Record<NetWorthWindowKey, NetWorthWindowInput> {
 }
 
 /** One account's stats — the per-account row and (via `aggregateStats`) the total share this shape. */
-export function netWorthStatsView(input: {
+function netWorthStatsView(input: {
   readonly equity?: number;
   readonly cash?: number;
   readonly positionCount: number;
@@ -381,7 +381,7 @@ function aggregateStats(
     return {
       label: w.label,
       note: w.note,
-      value: pct(r * 100),
+      value: formatSignedPercent(r * 100),
       tone: plClass(r),
       known: true,
       ...(reporting.length < live.length ? { partial: true } : {}),

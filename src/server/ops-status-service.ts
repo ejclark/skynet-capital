@@ -1,5 +1,4 @@
 import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
-import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
 import type { DeploySignalsFetcher } from "./ops-status-deploy-lag.js";
 import { degradedDeploySignals } from "./ops-status-deploy-verdict.js";
 import type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js";
@@ -15,7 +14,7 @@ export type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js"
  * what this process can already see, with no new credential. Eric was on his phone while the bots
  * were dark with no surface that said so; this is that surface's read side.
  *
- * Six signals, each honest about what it actually proves:
+ * Five signals, each honest about what it actually proves:
  *  - `deploy-app` / `deploy-bots` — is `main` deployed? (`ops-status-deploy-lag.ts`, via the
  *    GitHub Actions API the app already reaches for feedback filing).
  *  - `bridge` — has the bots process polled Mission Control recently? The closest credential-free
@@ -29,10 +28,6 @@ export type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js"
  *  - `activity` — when did a bot last place an order? A slower, second-order corroboration of the
  *    bridge signal — deliberately never alarms on its own (markets close; bots go quiet on
  *    weekends), only flagged `unknown` rather than `attention`.
- *  - `conviction-copies` — which subscriptions still carry an inline conviction (#5482's contract
- *    step). The bots never read one: its pair opens nothing new until the poll moves it onto a
- *    view. It is also the one number the last contract piece waits on (dropping the inline field
- *    and `subscriptions.v4`'s presence bit), and no lane can read the live store, so it is said here.
  *
  * The running-commit answer originally needed a Fly read token (the issue's slice 2). It no longer
  * does: #1301 made the bots process stamp its own `GIT_SHA` from inside, and it now reports that
@@ -157,39 +152,6 @@ export function personaGateSignal(verdicts: readonly PersonaGateVerdict[] | unde
   };
 }
 
-/** `account/playbookId` for every subscription still carrying an inline conviction, in file order. */
-export function inlineConvictionCopies(state: SubscriptionsState): readonly string[] {
-  return Object.entries(state).flatMap(([accountId, subs]) =>
-    subs.filter((s) => s.conviction !== undefined).map((s) => `${accountId}/${s.playbookId}`),
-  );
-}
-
-/** The panel's read of inline conviction copies (#5482 contract step): none is `ok`; any is
- *  `attention`, since each holds a pair exits-only that no owner chose; an unreadable file is
- *  `unknown`. No `link`: the poll moves a copy on its own, and nothing in Actions fixes one. */
-export function convictionCopiesSignal(copies: readonly string[] | undefined): OpsSignal {
-  const base = { id: "conviction-copies", label: "Convictions on views" } as const;
-  if (!copies) {
-    return {
-      ...base,
-      verdict: "unknown",
-      detail: "The subscriptions file could not be read whole, so inline copies were not counted.",
-    };
-  }
-  if (copies.length === 0) {
-    return {
-      ...base,
-      verdict: "ok",
-      detail: "No subscription carries an inline conviction: every pair is checked through a view.",
-    };
-  }
-  return {
-    ...base,
-    verdict: "attention",
-    detail: `${copies.length} subscription(s) still carry an inline conviction no view holds, so their pairs open nothing new: ${copies.join(", ")}.`,
-  };
-}
-
 export interface OpsStatusInputs {
   readonly now: () => Date;
   /** Reads the bridge poll tracker (`dashboard-insights-bridge.ts`) — undefined until the bots
@@ -205,9 +167,6 @@ export interface OpsStatusInputs {
   /** Latest `at` among bot-owned trade-activity records; undefined when none exist. Never throws
    *  — a read failure should read as "unknown", not crash the panel. */
   readonly lastBotActivityAt: () => Promise<string | undefined>;
-  /** The subscriptions file as it stands, undefined when it can't be read whole. Absent = the
-   *  `conviction-copies` row is left off (no store wired). */
-  readonly subscriptions?: () => SubscriptionsState | undefined;
   /** Present only when a GitHub token is configured (`resolveDeployLagFetcher`); absent = the
    *  panel's credential-free degraded mode for the two deploy signals. */
   readonly fetchDeploySignals?: DeploySignalsFetcher;
@@ -249,17 +208,6 @@ export async function buildOpsStatus(inputs: OpsStatusInputs): Promise<OpsStatus
       bridgeSignal(inputs.bridgeLastPollAt(), now, link),
       personaGateSignal(inputs.personaGateVerdicts()),
       activitySignal(activityAt, now, link),
-      ...(inputs.subscriptions ? [copiesFrom(inputs.subscriptions)] : []),
     ],
   };
-}
-
-/** Never throws: a read that fails reads as `unknown`, like the activity row. */
-function copiesFrom(read: () => SubscriptionsState | undefined): OpsSignal {
-  try {
-    const state = read();
-    return convictionCopiesSignal(state ? inlineConvictionCopies(state) : undefined);
-  } catch {
-    return convictionCopiesSignal(undefined);
-  }
 }

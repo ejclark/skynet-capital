@@ -28,12 +28,12 @@ function narrowed(context: MarketContext, allowed: ReadonlySet<string>): MarketC
   const { momentum, newsSentiment } = context;
   return {
     ...context,
-    quotes: pick(context.quotes, allowed),
-    ...(momentum ? { momentum: pick(momentum, allowed) } : {}),
-    ...(newsSentiment ? { newsSentiment: pick(newsSentiment, allowed) } : {}),
+    quotes: restrictToSymbols(context.quotes, allowed),
+    ...(momentum ? { momentum: restrictToSymbols(momentum, allowed) } : {}),
+    ...(newsSentiment ? { newsSentiment: restrictToSymbols(newsSentiment, allowed) } : {}),
   };
 }
 
-function pick<T>(record: Readonly<Record<string, T>>, allowed: ReadonlySet<string>) {
+function restrictToSymbols<T>(record: Readonly<Record<string, T>>, allowed: ReadonlySet<string>) {
   return Object.fromEntries(Object.entries(record).filter(([symbol]) => allowed.has(symbol)));
 }

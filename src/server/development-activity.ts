@@ -42,9 +42,10 @@ export interface DevelopmentActivityConfig {
   readonly repo: string;
 }
 
-/** The same five minutes `feedback-status.ts` caches an issue's state for. A merge is not news that
- *  decays in seconds, and `/api/wire` is a `no-store` page that can render on every focus. */
-const CACHE_TTL_MS = 5 * 60_000;
+/** Five minutes — the number `feedback-status.ts` also uses for an issue's state, but a separate
+ *  policy for a separate cache, so each file names its own. A merge is not news that decays in
+ *  seconds, and `/api/wire` is a `no-store` page that can render on every focus. */
+const DEVELOPMENT_ACTIVITY_CACHE_TTL_MS = 5 * 60_000;
 
 /** A FAILED read is cached too, for a shorter minute. Without this the TTL above would never
  *  short-circuit during an outage — a revoked token or a secondary rate limit would make every
@@ -136,7 +137,7 @@ export function createMergedPullRequestFetcher(
 
   return async () => {
     const now = Date.now();
-    const ttl = cached?.ok === false ? FAILURE_TTL_MS : CACHE_TTL_MS;
+    const ttl = cached?.ok === false ? FAILURE_TTL_MS : DEVELOPMENT_ACTIVITY_CACHE_TTL_MS;
     if (cached && now - cached.at <= ttl) return cached.merges;
     // Only the first successful read of a process walks back; after that the window only has to
     // cover what merged since the last poll.

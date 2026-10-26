@@ -12,8 +12,10 @@ import {
   greenProof,
   hasLinkedPr,
   jobPassed,
+  jobVerdict,
   lookupsFor,
   ORPHAN_MARKER,
+  RECURRENCE,
 } from "../../../scripts/moneypenny/capsule-stall.mjs";
 
 // #5727 — the CI repair loop reaching a terminal state on its own. Two conditions a person used to
@@ -99,6 +101,124 @@ describe("jobPassed — every leg of the job succeeded, and at least one ran", (
   });
 });
 
+// #6076 — the real `release · deploy bots` jobs behind #5955's false erosion. Two were preflight
+// debounce skips (jobs 121050112951, 121048415887): every step after the preflight skipped, job
+// conclusion `success`. One really deployed (121047616850): the smoke test ran and passed.
+const SMOKE = "Smoke test the bots release";
+const deploySteps = (work: "success" | "skipped" | "failure") => [
+  { name: "Set up job", conclusion: "success" },
+  { name: "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", conclusion: "success" },
+  { name: "Set up flyctl", conclusion: "success" },
+  { name: "Preflight — should the bots app deploy?", conclusion: "success" },
+  { name: "Resolve image", conclusion: work === "skipped" ? "skipped" : "success" },
+  { name: "Capture previous bots image", conclusion: work === "skipped" ? "skipped" : "success" },
+  { name: "Deploy bots", conclusion: work === "skipped" ? "skipped" : "success" },
+  { name: SMOKE, conclusion: work },
+  {
+    name: "Roll back bots to previous image",
+    conclusion: work === "failure" ? "success" : "skipped",
+  },
+  {
+    name: "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    conclusion: "success",
+  },
+  { name: "Complete job", conclusion: "success" },
+];
+const deployJob = (work: "success" | "skipped" | "failure") => [
+  {
+    name: "release · deploy bots",
+    conclusion: work === "failure" ? "failure" : "success",
+    steps: deploySteps(work),
+  },
+];
+const DEPLOY_BODY = [
+  "**`release · deploy bots` failed on `main` and the work it carries is not getting done.**",
+  "",
+  "| | |",
+  "|---|---|",
+  "| **Workflow** | Pipeline |",
+  "| **Job** | `release · deploy bots` |",
+  `| **Failing step** | ${SMOKE} |`,
+  "| **Run** | [39822385658](https://x/39822385658) |",
+].join("\n");
+
+describe("jobVerdict — a skipped deploy is not a green deploy (#6076)", () => {
+  it("reads the failing step from the capsule's table, and ignores an unknown one", () => {
+    expect(capsuleTarget({ body: DEPLOY_BODY })).toEqual({
+      workflow: "Pipeline",
+      job: "release · deploy bots",
+      step: SMOKE,
+    });
+    const unknown = DEPLOY_BODY.replace(SMOKE, "unknown");
+    expect(capsuleTarget({ body: unknown })).toEqual({
+      workflow: "Pipeline",
+      job: "release · deploy bots",
+    });
+  });
+
+  it("a debounce skip (jobs 121050112951, 121048415887) proves nothing, step or no step", () => {
+    expect(jobVerdict(deployJob("skipped"), "release · deploy bots", SMOKE)).toBeNull();
+    expect(jobPassed(deployJob("skipped"), "release · deploy bots", SMOKE)).toBe(false);
+    // Without a recorded step: every step after the preflight skipped, so still no proof.
+    expect(jobVerdict(deployJob("skipped"), "release · deploy bots")).toBeNull();
+  });
+
+  it("a real deploy whose smoke test passed (job 121047616850) is a pass", () => {
+    expect(jobVerdict(deployJob("success"), "release · deploy bots", SMOKE)).toBe("pass");
+    expect(jobVerdict(deployJob("success"), "release · deploy bots")).toBe("pass");
+  });
+
+  it("a failed smoke test is a failure, and a step missing from the job proves nothing", () => {
+    expect(jobVerdict(deployJob("failure"), "release · deploy bots", SMOKE)).toBe("fail");
+    const noSteps = [{ name: "release · deploy bots", conclusion: "success" }];
+    expect(jobVerdict(noSteps, "release · deploy bots", SMOKE)).toBeNull();
+  });
+
+  it("a job with no preflight keeps its conclusion when no step was recorded", () => {
+    expect(jobVerdict([{ name: "route", conclusion: "success" }], "route")).toBe("pass");
+    expect(jobVerdict([{ name: "route", conclusion: "skipped" }], "route")).toBeNull();
+  });
+});
+
+describe("greenProof — skips are left out, a failure ends the streak (#6076)", () => {
+  const deployRun = (id: number, h: number, work: "success" | "skipped" | "failure") => ({
+    id,
+    url: `https://github.com/o/r/actions/runs/${id}`,
+    createdAt: hoursAgo(h),
+    jobs: deployJob(work),
+  });
+  const deploy = (recentRuns: CapsuleRun[]) =>
+    capsule({
+      number: 5955,
+      title: "[ci] Pipeline — release · deploy bots",
+      body: DEPLOY_BODY,
+      labels: ["ci-failure", "needs-eric"],
+      recentRuns,
+    });
+
+  it("#5955's window — two debounce skips and one real pass — keeps needs-eric", () => {
+    const runs = [deployRun(40153426584, 1, "skipped"), deployRun(40152637913, 2, "skipped")];
+    runs.push(deployRun(40152435829, 3, "success"));
+    expect(capsuleIntents({ capsules: [deploy(runs)] })).toEqual([]);
+  });
+
+  it("three real passes behind the skips clear it, citing only the runs that deployed", () => {
+    const runs = [1, 3, 5].map((h, n) => deployRun(100 + n, h, "skipped"));
+    runs.push(...[2, 4, 6].map((h, n) => deployRun(200 + n, h, "success")));
+    runs.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    const [intent] = capsuleIntents({ capsules: [deploy(runs)] });
+    expect(intent?.kind).toBe("clear-eroded-needs-eric");
+    expect(intent?.body).toContain(`that ran \`${SMOKE}\``);
+    expect(intent?.body).not.toContain("runs/100)");
+    expect(greenProof(deploy(runs))?.runs.map((r) => r.id)).toEqual([200, 201, 202]);
+  });
+
+  it("a failed deploy newer than the passes ends the streak", () => {
+    const runs = [deployRun(4, 1, "failure"), ...[2, 3, 4].map((h) => deployRun(h, h, "success"))];
+    expect(greenProof(deploy(runs))).toBeNull();
+  });
+});
+
 describe("hasLinkedPr — a PR that references the capsule, open or merged", () => {
   const xref = (state: string, merged_at: string | null) => ({
     event: "cross-referenced",
@@ -117,6 +237,14 @@ describe("hasLinkedPr — a PR that references the capsule, open or merged", () 
   it("does not count a PR closed unmerged, or a reference from another issue", () => {
     const fromIssue = { event: "cross-referenced", source: { issue: { state: "open" } } };
     expect(hasLinkedPr([xref("closed", null), fromIssue, { event: "labeled" }])).toBe(false);
+  });
+
+  it("does not count a merged PR the fault recurred after (#6076: mention-only #5982)", () => {
+    const merged = [xref("closed", "2026-10-23T00:00:00Z")];
+    expect(hasLinkedPr(merged, "2026-10-25T02:23:00Z")).toBe(false);
+    expect(hasLinkedPr(merged, "2026-10-22T00:00:00Z")).toBe(true);
+    // An open PR is a repair still in flight, whenever the last recurrence was.
+    expect(hasLinkedPr([xref("open", null)], "2026-10-25T02:23:00Z")).toBe(true);
   });
 });
 
@@ -172,6 +300,21 @@ describe("capsuleIntents — an orphaned capsule", () => {
   it("is not flagged after its needs-eric was cleared as eroded — that comment already spoke", () => {
     const eroded = capsule({ comments: [`🌤 earlier\n${ERODED_MARKER}`] });
     expect(capsuleIntents({ capsules: [eroded] })).toEqual([]);
+  });
+
+  it("is flagged again once the fault recurs after the eroded comment (#6076)", () => {
+    const again = `${RECURRENCE}run [1](https://x/1), job \`route\`, step \`Run\`.`;
+    const recurred = capsule({ comments: [`🌤 earlier\n${ERODED_MARKER}`, again] });
+    const [intent] = capsuleIntents({ capsules: [recurred] });
+    expect(intent?.kind).toBe("flag-capsule-orphan");
+    // A recurrence from BEFORE the eroded comment is what the eroded comment already answered.
+    const before = capsule({ comments: [again, `🌤 earlier\n${ERODED_MARKER}`] });
+    expect(capsuleIntents({ capsules: [before] })).toEqual([]);
+  });
+
+  it("reads the same recurrence prefix repair.mjs writes", () => {
+    const source = readFileSync("scripts/moneypenny/repair.mjs", "utf8");
+    expect(source).toContain(`\`${RECURRENCE}run [`);
   });
 });
 
@@ -304,6 +447,71 @@ describe("gatherCapsules — REST reads, only where a condition could fire", () 
       "actions/runs/11/jobs?per_page=100": jobs("success"),
     });
     expect(capsuleIntents({ capsules: gatherCapsules(NOW, io) })).toEqual([]);
+  });
+});
+
+describe("gatherCapsules — #5955's shape, read live (#6076)", () => {
+  const runsPath = "actions/workflows/9/runs?branch=main&event=push&status=completed&per_page=20";
+  const workflows = { workflows: [{ name: "Pipeline", id: 9 }] };
+  const bot = (body: string, created_at: string) => ({
+    body,
+    created_at,
+    author_association: "NONE",
+    user: { type: "Bot" },
+  });
+  const issue = (labels: string[]) => ({
+    number: 5955,
+    title: "[ci] Pipeline — release · deploy bots",
+    body: DEPLOY_BODY,
+    created_at: hoursAgo(48),
+    labels: labels.map((name) => ({ name })),
+  });
+
+  it("pages past debounce skips and stops reading once three real deploys passed", () => {
+    const work = ["skipped", "success", "skipped", "success", "success", "success"] as const;
+    const runs = work.map((_, n) => ({
+      id: 60 - n,
+      conclusion: "success",
+      created_at: hoursAgo(n + 1),
+      html_url: `u${60 - n}`,
+    }));
+    runs.push({ id: 1, conclusion: "success", created_at: hoursAgo(72), html_url: "u1" });
+    const routes: Record<string, unknown> = {
+      "issues?state=open&labels=ci-failure": [issue(["ci-failure", "needs-eric"])],
+      "issues/5955/comments": [],
+      "actions/workflows?per_page=100": workflows,
+      [runsPath]: { workflow_runs: runs },
+    };
+    work.forEach((w, n) => {
+      routes[`actions/runs/${60 - n}/jobs?per_page=100`] = { total_count: 1, jobs: deployJob(w) };
+    });
+    const io = fakeRest(routes);
+    const [intent] = capsuleIntents({ capsules: gatherCapsules(NOW, io) });
+    expect(intent?.body).toContain("[59](u59), [57](u57), [56](u56)");
+    // The sixth run (55) is never read: three passes already answered it.
+    expect(io.asked).not.toContain("actions/runs/55/jobs?per_page=100");
+    expect(io.asked).not.toContain("actions/runs/1/jobs?per_page=100");
+  });
+
+  it("flags it orphaned again: recurred after the eroded comment, and after the merged PR", () => {
+    const io = fakeRest({
+      "issues?state=open&labels=ci-failure": [issue(["ci-failure"])],
+      "issues/5955/comments": [
+        bot(`🌤 Passing again\n${ERODED_MARKER}`, hoursAgo(34)),
+        bot(`${RECURRENCE}run [7](u7), job \`release · deploy bots\`.`, hoursAgo(30)),
+      ],
+      "issues/5955/timeline": [
+        {
+          event: "cross-referenced",
+          source: { issue: { state: "closed", pull_request: { merged_at: hoursAgo(40) } } },
+        },
+      ],
+    });
+    const capsules = gatherCapsules(NOW, io);
+    expect(capsules[0]?.hasLinkedPr).toBe(false);
+    expect(capsuleIntents({ capsules }).map((i) => [i.kind, i.issueNumber])).toEqual([
+      ["flag-capsule-orphan", 5955],
+    ]);
   });
 });
 

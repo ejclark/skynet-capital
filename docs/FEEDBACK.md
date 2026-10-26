@@ -190,7 +190,8 @@ The bot token can write issues, so the endpoint is protected in depth:
 - **Per-email throttle** — max ~5 submissions per 10 minutes, returning a friendly slow-down
   message.
 - **8 MB body cap** — `readBody`'s byte guard, sized so screenshots ride the same POST
-  (`SUBMIT_CAP_BYTES` in `src/server/feedback-api-routes.ts`; a follow-up gets 8 KB).
+  (`SUBMIT_CAP_BYTES` in `src/server/feedback-api-routes.ts`; a follow-up gets 40 KB, room for its
+  8,000 characters as UTF-8).
 
 ## Troubleshooting
 

@@ -166,14 +166,15 @@ export interface PlayReading {
   readonly wouldDo: string;
 }
 
-const usd = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
+/** Whole dollars with thousands separators ("$12,500") — the wording the play-band lines use. */
+export const usdWhole = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
 
 function wouldDo(level: BandLevel, direction: "over" | "under" | null, move: number): string {
   if (level === "inside" || direction === null) return "nothing: inside its band";
   if (level === "signal") {
     return direction === "over"
-      ? `record it and tell its owner; capital keeps flowing, and the surplus (about ${usd(move)}) would go to holding through the play's own exits`
-      : `record it and tell its owner; capital keeps flowing, and about ${usd(move)} would come out of holding through the play's own new entries`;
+      ? `record it and tell its owner; capital keeps flowing, and the surplus (about ${usdWhole(move)}) would go to holding through the play's own exits`
+      : `record it and tell its owner; capital keeps flowing, and about ${usdWhole(move)} would come out of holding through the play's own new entries`;
   }
   return direction === "over"
     ? "stop new entries into the play until it is back inside the band or its owner resets it; exits are never held back"

@@ -2,12 +2,7 @@ import type { CheckWeekRows } from "../../src/autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import type { OrderIntent, PlaybookVerdictState } from "../../src/domain/types.js";
 import type { GuardRefusalReason } from "../../src/engine/guards.js";
-import {
-  capitalized,
-  openedOn,
-  playName,
-  sessionsHeld,
-} from "../../src/observatory/book-health-detectors.js";
+import { openedOn, playName, sessionsHeld } from "../../src/observatory/book-health-detectors.js";
 import { detectLooping } from "../../src/observatory/book-health-looping.js";
 import {
   BOOK_HEALTH_THRESHOLDS,
@@ -19,6 +14,7 @@ import {
 } from "../../src/observatory/book-health-view.js";
 import { REFUSAL_LABEL } from "../../src/observatory/decision-json-view.js";
 import type { OpenLot } from "../../src/trading/round-trips.js";
+import { capitalized } from "../../src/ui/capitalized.js";
 import { aPortfolio, aPosition, aQuote, aSubscription } from "../support/builders.js";
 
 /**

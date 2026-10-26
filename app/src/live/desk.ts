@@ -46,6 +46,11 @@ export interface DeskPosition {
   readonly totalTone: Tone;
   readonly weightPct: number;
   readonly lots?: readonly PositionLot[];
+  /** Beside `lots` (#6169): the buys' basis minus the row's — Alpaca averages, each buy keeps its
+   *  own price. Raw, like `totalPlRaw`; the display is `basisNote`. */
+  readonly basisGap?: number;
+  /** The gap in words, present only when it rounds to $1 or more. */
+  readonly basisNote?: string;
   /** The playbook that opened the whole position (#5073 slice 4b) — on the bot owner's copy only
    *  (#885), and only when one playbook's orders account for all of it. */
   readonly playbookId?: string;

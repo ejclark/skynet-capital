@@ -22,11 +22,11 @@ export const RETENTION_MS = 14 * 24 * SAMPLE_BUCKET_MS;
 export const MAX_SAMPLES = 14 * 24;
 export const MAX_FINDINGS = 40;
 /** How far back "getting better or worse" looks. */
-export const TREND_WINDOW_MS = 24 * SAMPLE_BUCKET_MS;
+const TREND_WINDOW_MS = 24 * SAMPLE_BUCKET_MS;
 /** A severity must move by this share of where it was to count as a change, not noise. */
-export const TREND_EPSILON = 0.1;
+const TREND_EPSILON = 0.1;
 
-export interface SampledFinding {
+interface SampledFinding {
   /** `findingKey`. */
   readonly k: string;
   readonly l: HealthLevel;
@@ -39,7 +39,7 @@ export interface HealthSample {
   readonly f: readonly SampledFinding[];
 }
 
-export type Trend = "new" | "worse" | "better" | "steady";
+type Trend = "new" | "worse" | "better" | "steady";
 
 export interface Standing {
   /** When the unbroken run of samples holding this finding began (now, for a new one). */
@@ -65,7 +65,7 @@ export function severityOf(f: HealthFinding): number {
   return f.reading;
 }
 
-const RANK: Record<HealthLevel, number> = { signal: 1, gate: 2 };
+const HEALTH_RANK: Record<HealthLevel, number> = { signal: 1, gate: 2 };
 
 export function sampleOf(asOf: string, findings: readonly HealthFinding[]): HealthSample {
   const seen = new Set<string>();
@@ -122,8 +122,12 @@ export function standingOf(
   if (!(first && ref)) return { since: asOf, standingMs: 0, trend: "new" };
   const standingMs = Math.max(0, now - first.at);
   const since = new Date(first.at).toISOString();
-  if (RANK[finding.level] !== RANK[ref.level]) {
-    return { since, standingMs, trend: RANK[finding.level] > RANK[ref.level] ? "worse" : "better" };
+  if (HEALTH_RANK[finding.level] !== HEALTH_RANK[ref.level]) {
+    return {
+      since,
+      standingMs,
+      trend: HEALTH_RANK[finding.level] > HEALTH_RANK[ref.level] ? "worse" : "better",
+    };
   }
   const change = (severityOf(finding) - ref.severity) / Math.max(Math.abs(ref.severity), 1e-9);
   const trend: Trend =

@@ -14,4 +14,11 @@ fi
 # The full local gate — every check CI runs, before anything leaves the machine.
 # Exists because "verify with a subset" (typecheck+test but not lint) shipped red CI twice.
 # CI is confirmation, not the first line of defense. Bypass only knowingly: git push --no-verify.
-npm run verify
+# Queued behind any other verify in this checkout, and skipped when every pushed commit's tree is
+# the one `ship.sh open` just verified green here (#5548: each ship ran verify twice on one tree).
+pushed=""
+while read -r _ local_sha _ _; do
+  case "$local_sha" in *[!0]*) pushed="$pushed $local_sha" ;; esac
+done
+# shellcheck disable=SC2086 # one word per pushed sha
+bash scripts/verify-locked.sh --skip-if-stamped $pushed

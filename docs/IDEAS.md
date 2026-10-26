@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **The dupe scan counts same-named per-route constants as copies.** Three of today's dupe
+  candidates were names, not code: `BODY_CAP_BYTES` (six routes, six different caps, 1–16 KB),
+  `MAX_ID` (next in line, likely the same), and half of `num`/`pct`. The athlete has to diff every
+  body and rename the divergent ones to clear the scan — real clarity, but the judgment repeats every
+  rep. A scan rule that groups copies by body hash rather than by name would hand the athlete only
+  true duplicates. _(src: Claude · while: governor cycles 1–4, 2026-10-26)_
+- **The spec-gap scan counts a types-only import as coverage.** A spec that imports a type from an
+  untested module clears that module from the gap list without exercising it; two backfill reps
+  today had to dodge it on purpose (`Parameters<typeof fn>` instead). Counting only value imports
+  would keep the number honest. The same scan also ranks pure-data fixture files first —
+  `src/evals/companion/fixtures.ts` (15 scripted conversations, no branching) topped it in cycle 5;
+  skipping files with no function or class would stop athletes spending a rep deciding to skip it. _(src: Claude · while: governor cycle 4, 2026-10-26)_
+- **Parallel athletes make `tests/scripts/steer-*` and `history-sampler` specs time out.** Six
+  distinct specs hit the 5 s timeout today while 4–8 worktrees ran `npm run verify` at once in one
+  container; each passed alone, and the merged cycle branches verified green. Not a CI flake on
+  record — but if one shows up in CI, these are the suspects (timer- and spawn-heavy).
+  _(src: Claude · while: governor cycles 1–4, 2026-10-26)_
 - **IPO discovery runs only when someone types it.** `npm run research:lockups` now files a listing
   from its public S-1 (#5912 slice 3), but no schedule calls it, so "Anthropic's S-1 lands and
   discovery files it within one run" (the slice's falsifier) waits on a person remembering the run:
@@ -121,14 +138,6 @@ picks it up starts from the fork, not the wish.
   `docs/process/LEARNING-LOOP.md` when a second domain asks for it, not from one example.
   _(src: Eric · while: redesign loop v3, 2026-10-14: "we should have enough ideas on our iterative
   structure that we can recognize opportunities to build additional process / structure")_
-- **A redesign shoot leaves the 3D scene built, and local e2e then times out under it.**
-  `scripts/redesign/shoot.mjs` builds `public/three/scene.js` (ignored) when missing; after that,
-  `ship open`'s local `test:e2e` renders the tower beside the Profile Overview under software GL
-  and `positions-refine-scroll.spec.ts` (1280px) times out in `settled()` — 2/2 local repeats red,
-  green on clean `main` and green again once `public/three` was deleted (18.9s vs 1.2m). CI never
-  builds the scene, so it never sees it. Cheap fixes to weigh: shoot builds the scene into a temp
-  dir, or the e2e webServer serves without `public/three`.
-  _(src: Claude · while: shipping #5242, a feedback build that shot its 390 frame first)_
 
 - **Put events where planning happens — a direction for the next IA pass, not one surface.** Eric,
   2026-10-10, on Profile → Events: "Having awareness of events is valuable when I am planning my
@@ -215,31 +224,10 @@ picks it up starts from the fork, not the wish.
   cloud path), and three migration-relative comments. The docs half of each already shipped. These
   need an interactive session where Eric approves the edit.
   _(src: Claude · while: the model-fit audit build, batch grind)_
-- **No Claude call site reads `usage` or `stop_reason: "max_tokens"`.** The companion, the coach
-  and the eval judge never log `input_tokens` / `output_tokens` / `cache_read_input_tokens`, so the
-  cost of a prompt change, the cache hit rate and a truncated reply are all invisible. The
-  prompt-audit guide names token accounting as the prerequisite for measuring any cleanup. One
-  `usage` line per call in `src/http/anthropic-reply.ts` is enough to start.
-  _(src: Claude · while: the model-fit audit, finding F20)_
-- **The companion reads `stop_reason` for a refusal only — `max_tokens` and a mid-stream refusal's
-  partial are still unhandled.** (a) Neither leg reads `stop_reason: "max_tokens"`, so a truncated
-  reply finishes as done; the 4000 cap makes it rarer, not handled. (b) A refusal after partial text
-  keeps the partial on the rail with " — cut off"; the migration guide's rule is to discard it.
-  Discarding needs the rail (`app/src/live/moneypenny.ts`, the `failure` branch after the stream)
-  to tell a refusal from a transport error — today both arrive as one `onError` string.
-  _(src: Claude · while: the model-fit audit, batch companion-request — the streamed leg's refusal read)_
-- **Move the companion's exhaustion note to a mid-conversation `role: "system"` message on Sonnet
-  5.5.** Today `EXHAUSTED_NOTE` rides as a text block after the last tool_result. That is the
-  guide's fallback form, valid on Sonnet 5 and Haiku 4.5. But the system prompt's UNTRUSTED INPUT
-  rule tells the model that user-turn text is member data, so the note may steer weakly or be
-  narrated back to the member. Once `claude-sonnet-5-5` is on the companion allowlist (the platter
-  item), gate the system-message form by model the way `effortFor` gates effort.
-  _(src: Claude · while: the model-fit audit, batch companion-request — review of the append-only final leg)_
-- **Pin the companion-eval judge's effort instead of inheriting Sonnet 5.5's default.**
-  `src/evals/companion/judge.ts` sends no `output_config.effort`, so it grades at the API default,
-  and Sonnet 5.5's levels are recalibrated. A default change would shift grading with no diff. Pin
-  `effort: "high"` beside `format`, or sweep the 15 fixtures first and pick.
-  _(src: Claude · while: review of the model-fit structured-outputs batch)_
+- **Claude call-site follow-ups from the model-fit audit → #6080.** `max_tokens` handling, usage
+  logging, the exhaustion note as a system message on Sonnet 5.5 and the judge's pinned effort
+  all ship there; discarding a refusal's partial reply on the rail is its next slice.
+  _(src: Claude · while: the model-fit audit, 2026-10-04)_
 - **Backfill the event ledgers' Rules paragraph onto the current TEMPLATE.** 585 ledgers under
   `docs/research/events/` still say a dated adjacent event "gets proposed" with no horizon, and 543
   say the doc "goes quiet" after close-out. Both contradict `TEMPLATE.md` and the HORIZON LEASH in
@@ -248,11 +236,6 @@ picks it up starts from the fork, not the wish.
   `tests/domain/research-horizon.spec.ts` still say "opus session" in the present tense, while the
   research lane runs the Sonnet tier.
   _(src: Claude · while: the research-lane model-fit batch, RLI-02/03)_
-- **`scripts/issues.mjs` reads only `GH_TOKEN`/`GITHUB_TOKEN`.** `ship.sh` falls back to the gh
-  keyring (`gh auth token`), but `npm run issues` returns a bare 401 in a local session with no env
-  token. That forces a `GH_TOKEN="$(gh auth token)"` prefix, which the permission matcher treats as
-  a new command. Give it the same keyring fallback `ship.sh` has.
-  _(src: Claude · while: filing #4610 during the model-fit audit)_
 - ~~**`/api/wire` reads three full ledgers per request to render ~30 rows.**~~ **Measured and
   routed → #4458** (2026-10-02, while building #784 slice 3). The number the item was waiting for:
   **189 ms and 30.4 MB parsed per request at 100k events**, linear, for ONE of the three legs, on a
@@ -270,12 +253,6 @@ picks it up starts from the fork, not the wish.
   `dry` into the claim functions (decide, print, write nothing) would make the probe cost zero, and
   would let a spec drive the whole CLI branch rather than just the pure half.
   _(src: Claude · while: building #3959 slice 1, after reverting the stray lease)_
-- **Nothing watches a green PR whose arm job failed.** #4349 — the fix for the board-sync GraphQL
-  refusals — passed `verify` and `integration tests`, then its `arm auto-merge` job died on the App's
-  rate limit and it sat unarmed 8h+ while its class failed 11 more runs. `deploy-lag.mjs` watches
-  merged-but-undeployed; the repair lane watches a red `main`; nothing lists open PRs with green
-  checks, a failed arm job, and no `hold-merge`. One digest line would have caught it within the hour.
-  _(src: Claude · while: retro on the 2026-10-01 failed-run sweep, #4242)_
 - **Derive `allowed_bots` from the dispatching token instead of linting two hand-kept lists.**
   Workflow-lint rule 8 decides reachability from the `if:` spelling, so `!= 'push'` slipped past it
   (#4385 widens it; `event_name == 'issues' || …` still under-flags). Three recurrences (09-05,
@@ -319,9 +296,6 @@ picks it up starts from the fork, not the wish.
   may be on another owned `?desk=`. Own data only, so honesty, not leakage. Honor `?desk=` when it
   is in `resolveOwnedIds`. Unproven: no multi-desk repro yet. _(src: Claude · while: #2224 shape 3
   red-team, H3)_
-- **`readBody` decodes each chunk separately** (`src/server/page-shell.ts:124-137`, `body +=
-  chunk`), so a multibyte character split across TCP chunks is stored as U+FFFD, in a Council line
-  for example. Collect Buffers and decode once. _(src: Claude · while: #2224 shape 3 red-team, H4)_
 - **Nobody is told their Council line got a reply.** Replies (#5097) render only under the line on
   Activity → The Council; the member's own line card on the Overview (`council-line-card.tsx`)
   says nothing when someone answers. A "2 replies to your line ›" link there closes the loop an
@@ -473,16 +447,6 @@ picks it up starts from the fork, not the wish.
   dead weight until fixed or retired. _(src: Claude · while: relocating `.exp-tabs` onto the chain
   header, 2026-09-21 — verifying `npm run shoot:straddle` still ran)_
 
-- A fresh `git worktree` created for a background build agent starts with an empty `node_modules`
-  (root and `app/`), which breaks the `.husky/pre-commit` hook's relative `./node_modules/.bin/biome`
-  call and fails `npm run verify` on unrelated things (missing `app`'s `@testing-library/jest-dom`
-  types, a spec needing a `tsx` binary). Two independent overnight `/work-issues` builds hit this
-  same friction on 2026-09-20 (one symlinked `node_modules/.bin` to the main checkout as a local
-  workaround, the other ran a full `npm ci` in both directories) — worth a real fix, likely either
-  `docs/DELEGATION.md`'s worktree-setup step running `npm ci` automatically, or a documented
-  one-liner every build-dispatch prompt should include. _(src: Claude · while: 2026-09-20 overnight
-  `/work-issues` pass — #3183 and #1867 builds)_
-
 - The Atlanta Fed's `GDPTrackingModelDataAndForecasts.xlsx` `ContribArchives` sheet — the per-vintage
   archive the whole housing-starts nowcast "ladder" finding was built from — has not extended past
   2026-07-28 as of 2026-09-18, seven weeks stale, while the same workbook's live `Contributions`/
@@ -602,14 +566,6 @@ to help debug before building anything, since the technique is only useful attac
 target.
 _(src: Eric · while: settings-nav session, 2026-09-04)_
 
-### The remote container runs Node 22 against `engines.node >=24`
-
-Every install warns `EBADENGINE` (package.json wants >=24, the web environment ships v22.22.2).
-Harmless today, but a Node-24-only API in a dependency would break a remote session silently. The
-fix is an environment setting in the Claude Code on the web environment config (Node version /
-setup), which is Eric's — not a repo change.
-_(src: Claude · while: retro on a remote session's dependency-install detour, 2026-09-04)_
-
 ### Merge root and `app/` into one npm workspace
 
 Two npm trees means two `npm ci` calls in the `verify` CI job (root + `app/`) and, before today's
@@ -681,14 +637,11 @@ edit that computes two offsets should assert their order, and any workflow edit 
 against the last-good file before it is pushed — `git diff <last-good-sha> -- <file>` showed the
 duplication instantly once someone looked. _(src: Claude · while: fixing the outage it caused)_
 
-### A claim lease has no release-on-failure path
-
-A build lane takes `claim/feedback-<n>` and then dies (the 2026-08-22 bash failure did exactly
-this). The lease is correct — it stops double-builds — but nothing releases it when the job that
-holds it fails, so the issue reads as claimed-and-building for the full 2h TTL and re-labelling does
-nothing until it expires. Options: an `if: failure()` step that calls `releaseClaim`, or the CI
-Medic releasing the lease named in the failed run. Cheap either way; the TTL already bounds the
-damage. _(src: Claude · while: fixing the feedback-lane tier failure and building the medic)_
+### `/add` should refuse a display name another account already uses
+#6077 gave the profile rename a name-collision refusal (display name or slug, `nameTaken` in
+`account-service.ts`), but `addParticipant` still checks only the derived id. If Ann renames
+herself "Joe", a later member adding "Joe" gets the free id `human-joe` and the board shows two
+Joes. Reuse the same check on the add path. _(src: Claude · while: #6077 rename-guard fix)_
 
 ### Boot-time quarantine for a store row that collides with the roster
 The owner-link PR (#466) closed the write-time hole (`addParticipant` now refuses an id already
@@ -699,14 +652,6 @@ boot. Cheap defense-in-depth: at startup, flag any store id that collides with `
 refuse to serve it rather than trusting the write-time guard alone. _(src: Claude · while: #466
 owner-link security review, red-team verification pass, 2026-08-21)_
 
-### Retire the display-name rename guard now that ownerEmail is the real link
-`account-service.ts`'s `profileEditRefusal` still requires a human rename to match the session's
-sign-in name/email local-part — a rule that existed only because `resolveCurrentId` used to
-resolve by display name. Now that `Participant.ownerEmail` is the actual (immutable) link, the
-rule is stricter than needed and blocks legitimate renames for no security reason. Loosen it in a
-follow-up UX pass, not in the owner-link security PR itself. _(src: Claude · while: #466 owner-link
-security review, 2026-08-21)_
-
 ### Intent-vs-outcome scoring → per-strategy confidence ratings
 Hardcore research mode now records a forward `expectation` on every intent (alongside `strategy`),
 and the durable activity ledger records what actually happened. Join them: score each closed trade's
@@ -715,13 +660,6 @@ named as the goal ("build confidence ratings … that drive larger profit margin
 ratings then gate sizing (small while unproven, scaling with demonstrated edge). The data collection
 side ships with hardcore mode; this is the read side. _(src: Eric ("this will enable us to build
 confidence ratings in the future") · while: hardcore research mode build, 2026-08-20)_
-
-### Real-browser smoke of the critical funnels in CI
-The feedback front door shipped dead (2026-08-21 lesson) with every unit spec green — wiring-time
-bugs are invisible to string-level specs. A tiny Playwright pass (login renders; /feedback coach
-click produces a visible response; Send path reachable) run in `verify` or post-deploy would catch
-the class. Weigh runner cost vs. the funnel's importance. _(src: Claude · while: feedback front-door
-regression fix, 2026-08-21)_
 
 ### In-app "what's new" member feed built from PR pictures
 Extract `## The picture` + Summary from `main`'s squash bodies into a member-facing changelog route —
@@ -869,29 +807,6 @@ discipline as earnings-cycle.mjs: controls, base rates, red team) measuring fade
 coverage volume by event class, before any trade. The reaction-day fade validated on MSFT/GOOG
 is this signal's best-evidenced special case — the study would test whether it generalizes to
 non-earnings events. _(src: Eric · while: post-sweep, 2026-08-12)_
-
-### Playbooks — refine strategies, and configure when to apply them
-Eric's operating model for the trading side, and it resolves the "Sauron is inert" tension better
-than loosening his thresholds would: **his reserve works in his favor.** The path is not "make the
-bot trade more", it is:
-1. **Prove the machinery with a tiny trade** — buy/sell a single share, observe that behavior is
-   intact. Shipped as `npm run smoke:trade` (see `src/trading/smoke-trade.ts`); the point is that
-   *verifying the path must not depend on a strategy firing*.
-2. **Small calculated experiments, iteratively adapted** — each one teaches something specific.
-3. **Playbooks** — named strategies plus *the conditions under which each applies*. The second half
-   is the part that does not exist yet: a persona today hardcodes one strategy, and there is no
-   layer that says "in regime X, run play Y." A playbook is that mapping.
-4. **Patience, then size** — once playbooks cover the scenario space, wait for genuinely ripe
-   conditions and *increase* the bet because conditions are favorable. Conviction sizing already
-   exists (Sauron, and the Prospector's per-claim multiplier); what is missing is the regime read
-   that justifies raising it.
-- **Design note for when this is built:** a playbook is a *third* thing, distinct from persona
-  (a character with a temperament) and strategy (a decision rule). It is the selector between them,
-  and it is what makes "conditions are ripe" a computable statement rather than a feeling. It will
-  need the metrics layer (`plans/metrics-layer.md`) to know whether a play *worked*.
-_(src: Eric · while: sequencing after Sauron's readiness pack — "as playbooks become refined with
-strategies in page to navigate every possible scenario, we can be patient for conditions to be ripe
-to execute a play from a playbook and increase the size of the bets")_
 
 ### Roadmap — Eric's stated build order after Sauron goes autonomous
 Season one's premise is **Sauron trading autonomously**; everything below queues behind it.
@@ -1102,32 +1017,12 @@ learn/experiment/graduate arc as a **university** with a coherent, extensible vo
 _(src: Eric · while: reviewing the founding-reserve / academy engagement work — "I like the university
 metaphor, bank it to expand on")_
 
-### Babylon.js as the composable 3D engine for the gameplay layer
-As the product heads toward SimCity-of-the-empire / human-vs-bot gameplay, the hand-rolled 2D canvas +
-one-off WebGL shaders won't scale to real 3D scenes. **Babylon.js** is the best-in-class
-batteries-included option (scene graph, PBR materials, physics, GUI, glTF asset pipeline, WebGPU) for a
-composable engine. Evaluate it for the north-star gameplay surface (#41): the empire cityscape as a
-navigable 3D scene, personas as entities, plays as scripted set-pieces. Weigh bundle size + the
-"self-contained inline / no external host" constraint (login is CSP-inline today; a game view would be
-its own route/bundle, so that constraint likely relaxes there). _(src: Eric · while: shipping the WebGL
-eye-gaze hero reveal — "the direction we may be headed")_
-
 ### Options academy — progression & the in-app play picker (follow-ups to the risk ladder)
 The `/learn` academy + `src/domain/plays.ts` risk ladder shipped (PR #178): CCP-first, riskier plays
 gated per level. Natural next threads, in priority order:
-- **Server-side progression.** Academy graduation is client-side localStorage today. Persist a learner's
-  unlocked level per participant so it survives devices and can gate real actions (needs the history/
-  persistence backend, or a small per-user KV). _(src: Claude · while: building the options academy)_
-- **Gate the play picker against the ladder.** When an in-app play-selection surface exists (and the
-  login playbook), hide plays above the learner's unlocked level using `unlockedPlays()` / `isLocked()`
-  — "withhold the complex/risky selections until graduated" enforced for real, one source. _(src: Eric ·
-  while: know-your-audience progressive disclosure)_
 - **Interactive lessons.** Each academy lesson could summon its play on a mini payoff/forecast canvas
   (reuse the login playcall machinery) so learners *see* the shape, not just read it. _(src: Claude ·
   while: building the options academy)_
-- **Graduation → capability.** Tie academy level to what a member (or their bot persona) may actually
-  trade — the human-side twin of the bot autonomy-readiness eval ladder. _(src: Claude · while: building
-  the options academy)_
 
 ### The Eye — volumetric rebuild, and the still-open sun/gravity/electric direction
 Shipped (PR #265): the Eye rebuilt as a real raymarched volume — the shipped 2D-skin version showed
@@ -1161,8 +1056,6 @@ taste). Follow-ups, in leverage order:
   cheapest slice that makes the tower *real*. _(src: Claude · while: grounding the 3D strategy)_
 - **Ceremony-camera slice** — `Animation.CreateAndStartAnimation` on the existing `__towerCamera`
   + `FramingBehavior` + the pipeline's dormant DOF; fires on topping-out/founding ceremonies.
-- **Package gaps** — `@babylonjs/loaders` (via `registerBuiltInLoaders` from `/dynamic`) and
-  `@babylonjs/gui`, version-matched to core; prerequisites for GLB loading and diegetic labels.
 - **First art-director rep** — run the roster end-to-end on one scene ask (e.g. the energy empire's
   reactor) to shake out the build-sheet format before it matters. _(src: Claude · while: designing
   the forge relay)_
@@ -1187,7 +1080,6 @@ city persisting.
 - **A pure `renown` module** over history + curriculum + trades, same testable pattern as `reduce.ts`.
 - **Degrees as permissions** — `PLAY_LEVELS` 1–4 gate what a bot may trade; needs server-side academy
   progression (already in this file). Makes the ladder a real safety rail, not a badge.
-- **Thesis capture** — a one-line-per-member-per-week write surface (the Council).
 - **Mentor bounty** — renown for helping another member's bot/thesis, so veterans are incentivized to
   want the novices to do well. _(src: Claude · while: designing for the two-novice roster)_
 - **Graphics: hybrid, not either/or** — 2.5D isometric for the everyday views, Babylon for hero
@@ -1295,16 +1187,6 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   bots/info; that's authorized by the invite-only agreement. Capture the consent language explicitly
   (surfaced at signup / `/welcome`) so the basis for data-sharing is on record. Eric to define the
   wording; low-stakes (paper) but held to a real-cash integrity standard. _(src: Eric · while: clarifying the shared-universe data boundary)_ _(parked 2026-09-30 · revisit 2026-12-31, or sooner when someone outside the founding group is invited)_
-- **Issue-driven distributed development (Eric, 2026-08-11):** "enable Claude to pick up and work
-  GitHub issues… lets humans create issues that get serviced, as well as orchestration for bots to
-  manage their work." Two consumers, one mechanism — humans file work, and bots file their *own*
-  work as issues, which is what makes the development distributed rather than just delegated.
-  **Honest state:** most of the plumbing already exists and is proven — Claude already reads this
-  repo, opens PRs, and auto-merges on green (this whole session is that loop). What is missing is
-  narrow: (a) the **trigger** — an issue labelled `claude` starting a session, rather than Eric
-  starting one; (b) the **trust ladder** below, deciding which issue classes may be serviced
-  unattended; (c) a **concurrency/ownership rule** so two agents never take the same issue. Worth
-  scoping as its own plan; the credentialed step (granting the trigger write access) stays Eric's.
 
 ### Larger tasks (need dedicated focus)
 - **Login terminal drawer + backstory** — convert the canvas play-panel into a terminal-style DOM
@@ -1314,14 +1196,6 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 - **Decoupled playcall drawer** — a left collapsible drawer housing Signal→Play→profit, decoupled from
   the trend chart, carried into the logged-in view; move the playcall recap into it with a connector
   line to its chart position. (tasks #49 + #51-remainder) _(parked 2026-09-30 · revisit 2026-12-31, or sooner when a PR next touches the login play panel; `authenticator.ts` still keeps the drawer helpers for task #49)_
-- **/add as the character sheet — persona field = character class** — the persona-id input on `/add` is
-  really the CLASS slot of a character sheet; redesign the flow around that: bot setup presents the
-  roster as selectable class cards (name, thesis, lore line, risk read from its eval report), Human is
-  the classless default, and the chosen class's readiness-eval badge shows on the card ("READY 100/100").
-  First slice: replace the free-text persona field with a class picker fed from the persona registry +
-  PERSONA_LORE + eval reports. The Banker (shipped) is the first character created THROUGH the
-  sheet→eval→roster pipeline; its realized income is the honest peg for the tournament prize pot
-  (in-app points — no transfers needed). _(src: Eric · while: recognizing the persona field as the character-class slot)_
 - **Bot creation as a D&D character-sheet flow** — a guided process that walks a user through standing up
   a bot, leaning into the primary-tower template. Steps: (1) **account setup identical to a human's** —
   reuse the same account flow, no separate path; (2) **build the bot persona / strategy** — a
@@ -1388,10 +1262,6 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   ghost run.** `docs/shots/pr-<n>/` needs the PR number, so every feedback/plan PR with a picture is
   pushed twice. A stable id known before opening (the issue number the branch is already named for)
   would remove the second push. _(src: Claude · while: retro on #5221's 5-day stall, 2026-10-16)_
-- **Make "a job that can push with a bot token also sets `persist-credentials: false`" a workflow
-  spec rule.** #3334 fixed it in `moneypenny-repair.yml` and it was never carried to
-  `moneypenny-events.yml`; a `tests/arch/workflows.spec.ts` check turns a per-file memory into a rule.
-  _(src: Claude · while: retro on #5221's 5-day stall, 2026-10-16)_
 - **Activity's Feedback pulse mixes open and shipped filings in one flat list.** `/app/feedback`
   (now the Profile page's Feedback section) already built a real Active/All toggle for exactly this (#1308, #1312: shipped filings hidden by
   default); the condensed widget on Activity never inherited it — needs-info, needs-eric, next-slice
@@ -1407,11 +1277,6 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   refuses that push locally; the cheaper version upstream is `scripts/ship.sh open` reading the
   branch's PR state once (REST, core bucket) at the end of `verify` and printing "merged — restart
   from main" instead of pushing. _(src: Claude · while: the pattern-ledger PRs, 2026-09-06)_
-- **Doc-rot gate — the highest-severity gap found, and it has evidence not just a hypothesis.** Both
-  known instances fixed (PR #284); the gate itself is now a drafted plan awaiting Eric's ready-flip —
-  [`plans/doc-rot-gate.md`](plans/doc-rot-gate.md), the PM-mode worked example. Nothing in the repo yet
-  checks whether docs still describe reality; a self-improving system that drifts degrades **silently**.
-  _(src: Claude · while: journey on voice-profiles · plan drafted while: PM-mode scaffolding)_
 - **Mutation testing — the one gate that measures whether the other nine work.** Portfolio finding:
   `arch` · `dupe` · `clone` · `dead` · `depgraph` · `spec:gap` · `incident` are seven scanners, all
   **static and structural**; `eval:persona` / `eval:safety` are behavioral but example-based. Deep on
@@ -1438,17 +1303,6 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 - **Is `OPERATING-MODEL.md` still load-bearing after its promotion?** It is `CLAUDE.md` with the
   Skynet-specific parts boiled out — a promotion already performed, and the live test case for the
   discard problem. Empirically checkable. _(src: Claude · while: journey on voice-profiles)_
-- **Test coverage & quality audit** — the suite (~178) skews to pure logic (personas, reducers, server
-  routes, renderers, empire skyline); the login canvas animation + the vision layer are screenshot- or
-  docs-verified, not unit-tested (by nature). Audit for *logic* behaviors that lack a test (dashboard
-  routes, observatory metrics, reduce/persistence). Balance is the goal: small **single-responsibility**
-  tests (one behavior each — avoid long bundled workflows that hide failures and mix altitudes), but not
-  so granular it becomes death-by-10,000-cuts. _(src: Eric · while: reviewing the suite size)_
-- **Isolated-worktree `node_modules/.bin` is empty** — athletes launched with `isolation: worktree` get a
-  checkout whose `node_modules/.bin` lacks the tool shims (biome/tsx), so husky hooks and the two
-  subprocess-path specs (`app-version`, `dep-graph`) fail until `node_modules` is symlinked from the
-  primary checkout (then removed). Every backfiller hit this and worked around it. Fix: provision the
-  worktree's `.bin` at worktree-create so athletes don't each re-solve it. _(src: Claude · while: running feast athletes in isolated worktrees)_
 - **`bot-broker` drops `credentials.accessToken`** — `createBotBroker` wires `FetchAlpacaTradingTransport`
   with only `{ baseUrl, apiKey, apiSecret }`, never forwarding `bot.credentials.accessToken`, so an
   OAuth-connected bot ("Connect with Alpaca", Round B) would auth with a blank key/secret instead of its
@@ -1485,6 +1339,30 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## Shipped (recent)
 
+- **IDEAS.md sweep, 2026-10-26** (surge pass): 19 inbox and side-quest entries removed — each
+  proven against `origin/main` by the commit that shipped it or the file that now owns it.
+  - Shipped: the redesign shoot builds its 3D scene outside `public/three/` (#5703); `issues.mjs`
+    falls back to `gh auth token` via `ensureGhToken` (#5060); green-but-unarmed PRs are flagged
+    by `stuck-pr-decide.mjs`'s `unarmed` kind (#5589); worktree agents get a provisioned
+    `node_modules` (`scripts/worktree-setup.sh`, `390f32a`; `wt-start.sh`, #5198) — both entries;
+    a failed feedback build releases its claim lease (`if: failure()` → `--release`, `52c2e45`);
+    the real-browser funnel smoke is the required `integration tests` job (#3314); playbooks as
+    named plays with their own conditions (`src/playbooks/registry.ts`, #307); server-side,
+    fill-earned academy progression, the ladder gating the desk, and graduation → capability
+    (`6820888`, #563, #4189); the Council's weekly thesis line (#2502); issue-driven development
+    (the feedback lane, `518960f`, with claim leases); the `/add` class picker (#174); the
+    `persist-credentials: false` workflow spec rule (#5594); the doc-rot gate (#286).
+  - Superseded: Node 22 vs `engines` — `mise.toml` pins Node 24 and `session-start.sh` installs it
+    (#1226), a repo fix rather than an environment one; Babylon.js and its package gaps — the scene
+    moved to three.js (#3718); the test coverage audit — now the spec-gap gate, the test-backfiller
+    and `test-quality-scan` (`713527f`, #972).
+  - Left in place, only partly done: the straddle shoot (label fixed in #4353, desktop frame still
+    throws), the Roadmap (step 1's open taste call), options-mechanics kinds (OPEX and witching
+    shipped; VIX and holidays not), and the red-`main` alert bullet (shares a section with an open one).
+- **`readBody` decodes once, as bytes** (#6075, PR #6091): chunks are kept as Buffers and decoded at
+  the end, so a multibyte character split across TCP chunks no longer becomes U+FFFD, and the cap
+  counts UTF-8 bytes. Four caps too small for their fields in bytes were raised. _(src: Claude ·
+  while: #2224 shape 3 red-team, H4)_
 - **IDEAS.md sweep, 2026-09-30** (#4056 slice 5): 14 of the 30 oldest entries retired. The evidence
   per entry is in the sweep PR's table.
   - Shipped: feedback triage/auto-fix automation and the autonomous issue system (Moneypenny's

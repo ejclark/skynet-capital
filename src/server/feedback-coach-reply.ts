@@ -69,6 +69,9 @@ export type CoachResult =
       /** The form's "where in the app" value, when the coach established one it recognises. */
       readonly area?: FeedbackArea;
       readonly spec: FeedbackSpec;
+      /** The brief stopped short (token cap, or a bare quote that closed the string — #6205); its
+       *  details already say so and carry the member's own words. */
+      readonly cut?: true;
     }
   | { readonly ok: false; readonly error: string };
 
@@ -147,6 +150,15 @@ function readJsonString(src: string, key: string): string | null {
   return unescapeJson(raw);
 }
 
+/** A fold marker inside member prose would break the capsule's single `<details>`. */
+const deFold = (s: string): string => s.replace(/<\/?details>/gi, "");
+
+const blockquote = (s: string): string =>
+  deFold(s)
+    .split("\n")
+    .map((l) => `> ${l}`)
+    .join("\n");
+
 /** True when the text is machine shape rather than something a member should ever be shown. */
 function looksStructured(text: string): boolean {
   const t = text.trim();
@@ -155,28 +167,58 @@ function looksStructured(text: string): boolean {
   );
 }
 
+/** Said inside the fold wherever a brief stopped short, so a lost section is never silent (#6205). */
+const CUT_OFF_LINE = "_(the rest of this brief was cut off before the coach finished writing it.)_";
+
 /**
- * Truncation usually lands INSIDE the capsule's fold, and an unclosed `<details>` swallows every
- * section of the issue template below it. Close what the model opened.
+ * The capsule always ends by closing its fold, so a brief that opened one and never closed it did
+ * not finish. Two ways in, one tell: the token cap cuts the JSON mid-string, or — the #6007 case —
+ * a bare `"` in the brief (`What "done" looks like`) closes the string early and the
+ * schema-enforced decoder carries on with VALID JSON, so `JSON.parse` succeeds on half a brief.
+ * A brief with no fold at all is not read as cut: the note would be a guess, and a false one.
  */
-const balanceFold = (details: string): string => {
+const isCutShort = (details: string): boolean =>
+  (details.match(/<details[^>]*>/gi) ?? []).length > (details.match(/<\/details>/gi) ?? []).length;
+
+/**
+ * Close a cut brief honestly: the cut-off line, then the member's own words verbatim, then every
+ * fold the model opened (an unclosed `<details>` swallows the issue template below it). With no
+ * fold opened at all, one is opened so the member's words still ride inside the capsule's brief.
+ */
+const closeCutFold = (details: string, memberWords = ""): string => {
   const opened = (details.match(/<details[^>]*>/gi) ?? []).length;
   const closed = (details.match(/<\/details>/gi) ?? []).length;
-  return opened > closed ? `${details}\n${"</details>\n".repeat(opened - closed).trim()}` : details;
+  const words = memberWords.trim();
+  return [
+    details.trimEnd(),
+    ...(opened === 0 ? ["", "<details><summary><strong>The brief</strong></summary>"] : []),
+    "",
+    CUT_OFF_LINE,
+    ...(words ? ["", "**In the member's own words**", "", blockquote(words)] : []),
+    "",
+    "</details>\n".repeat(Math.max(1, opened - closed)).trim(),
+  ].join("\n");
 };
 
 /** Recover title + however much of the capsule survived a truncated draft, or null. */
-export function salvageTruncatedDraft(text: string): { title: string; details: string } | null {
+export function salvageTruncatedDraft(
+  text: string,
+  memberWords = "",
+): { title: string; details: string } | null {
   if (!text.includes('"draft"')) return null;
   const title = readJsonString(text, "title")?.trim() ?? "";
   if (!title) return null;
-  return { title, details: balanceFold(readJsonString(text, "details")?.trim() ?? "") };
+  return {
+    title,
+    details: closeCutFold(readJsonString(text, "details")?.trim() ?? "", memberWords),
+  };
 }
 
 /** Parse the model's reply: schema-enforced JSON (`output_config.format`, feedback-coach.ts).
  *  Failures degrade in the order salvage → recovery line → prose-as-question, so a member is never
- *  shown structured output. */
-export function parseCoachReply(text: string, rounds = 0): CoachResult {
+ *  shown structured output. `memberWords` — the member's own turns — is what a cut brief carries
+ *  in full so nothing they said is lost with it. A cut draft comes back `cut: true`. */
+export function parseCoachReply(text: string, rounds = 0, memberWords = ""): CoachResult {
   const stripped = text.trim();
   try {
     const parsed = JSON.parse(stripped) as {
@@ -188,19 +230,32 @@ export function parseCoachReply(text: string, rounds = 0): CoachResult {
     }
     const draft = parsed.draft;
     if (draft && typeof draft.title === "string" && typeof draft.details === "string") {
+      const cut = isCutShort(draft.details);
+      // A cut brief is never spec-complete, whatever the model claimed before it lost the rest.
+      const spec = cut
+        ? toSpec(
+            {
+              ...draft,
+              readiness: "partial",
+              assumptions: [...strList(draft.assumptions, 11), TRUNCATED_NOTE],
+            },
+            rounds,
+          )
+        : toSpec(draft, rounds);
       return {
         ok: true,
         done: true,
         title: draft.title.slice(0, 120),
-        details: draft.details,
+        details: cut ? closeCutFold(draft.details, memberWords) : draft.details,
         ...areaFrom(draft),
-        spec: toSpec(draft, rounds),
+        spec,
+        ...(cut ? { cut: true as const } : {}),
       };
     }
   } catch {
     /* fall through to the recovery ladder */
   }
-  const salvaged = salvageTruncatedDraft(stripped);
+  const salvaged = salvageTruncatedDraft(stripped, memberWords);
   if (salvaged) {
     return {
       ok: true,
@@ -208,6 +263,7 @@ export function parseCoachReply(text: string, rounds = 0): CoachResult {
       title: salvaged.title.slice(0, 120),
       details: salvaged.details,
       spec: toSpec({ assumptions: [TRUNCATED_NOTE] }, rounds),
+      cut: true,
     };
   }
   if (looksStructured(stripped)) return { ok: true, done: false, question: GARBLED_REPLY };
@@ -220,15 +276,6 @@ export function repeatsLastQuestion(messages: readonly CoachMessage[], question:
   const last = [...messages].reverse().find((m) => m.role === "assistant");
   return !!last && norm(last.content) === norm(question);
 }
-
-/** A fold marker inside member prose would break the capsule's single `<details>`. */
-const deFold = (s: string): string => s.replace(/<\/?details>/gi, "");
-
-const blockquote = (s: string): string =>
-  deFold(s)
-    .split("\n")
-    .map((l) => `> ${l}`)
-    .join("\n");
 
 /**
  * The terminal state when the coach stalls: hand the member a draft built from what they actually

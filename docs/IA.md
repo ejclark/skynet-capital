@@ -957,7 +957,7 @@ scenarios asked; 33–36 were added by the red passes; 37 by plan #5496.
     `companion-routes.ts:184-191`) and its parked draft (`moneypenny.ts:76`). No endpoint stores any.
 24. **Member preferences as an applied key** ◆ — theme · density · default account · timezone,
     member-keyed: `SettingsIndex.profile.timezone` is saved **per account** (`settings.ts:15`,
-    `settings.tsx:47-70`) and read only by the legacy `participant-card.ts:84`; the SPA's clock and
+    `settings.tsx:47-70`) and read by nothing since the legacy card was deleted (#4201); the SPA's clock and
     calendar are ET-only (`market-session.ts:32`; `horizon-range.ts:37,39`), decision clocks state
     no zone, and the settings hint "Sets how your account's day boundaries are drawn"
     (`settings.tsx:115`) is a false signal.

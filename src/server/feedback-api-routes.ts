@@ -43,7 +43,8 @@ function parseCommunityAckIds(raw: string): readonly string[] | undefined {
 
 /** Screenshots ride the same POST as base64 — the legacy form's exact allowance. */
 const SUBMIT_CAP_BYTES = 8_000_000;
-const FOLLOWUP_CAP_BYTES = 8_000;
+/** UTF-8 bytes (#6075): an 8,000-character follow-up can be up to 24,000 bytes plus its JSON. */
+const FOLLOWUP_CAP_BYTES = 40_000;
 
 async function serveIndex(
   res: ServerResponse,

@@ -1,4 +1,5 @@
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
+import { blank } from "./claim-blank.js";
 
 /**
  * WHAT A CLAIM CARRIES ONCE THE SYSTEM HAS LOOKED AT IT (#5482 slice 3, criterion 2). A conviction
@@ -19,7 +20,7 @@ import { isCalendarDay } from "../subscriptions/subscription-state.js";
 
 /** The instruments a claim can map to. Each is a script under `scripts/research/`. */
 export type ClaimInstrument = "premium-fit" | "cycle-phase" | "earnings-cycle";
-export const CLAIM_INSTRUMENTS: readonly ClaimInstrument[] = [
+const CLAIM_INSTRUMENTS: readonly ClaimInstrument[] = [
   "premium-fit",
   "cycle-phase",
   "earnings-cycle",
@@ -27,11 +28,11 @@ export const CLAIM_INSTRUMENTS: readonly ClaimInstrument[] = [
 
 /** How the study bears on the claim: it backs it, splits, or cuts against it. Not a size. */
 export type StudyReading = "supports" | "mixed" | "against";
-export const STUDY_READINGS: readonly StudyReading[] = ["supports", "mixed", "against"];
+const STUDY_READINGS: readonly StudyReading[] = ["supports", "mixed", "against"];
 
 /** The instruments grade themselves `low` or `medium` only; a dozen episodes never earn `high`. */
 export type StudyConfidence = "low" | "medium" | "high";
-export const STUDY_CONFIDENCES: readonly StudyConfidence[] = ["low", "medium", "high"];
+const STUDY_CONFIDENCES: readonly StudyConfidence[] = ["low", "medium", "high"];
 
 /** The call sheet's row (docs/process/EVENT-RESEARCH.md): call · confidence · why · falsifier. */
 export interface ClaimVerdict {
@@ -61,7 +62,7 @@ export interface StudiedClaim {
   readonly verdict: ClaimVerdict;
 }
 
-export interface ForwardTestOffer {
+interface ForwardTestOffer {
   readonly disposition: "offer";
   readonly size: 0;
   readonly reason: string;
@@ -73,7 +74,7 @@ export interface ForwardTestOffer {
   };
 }
 
-export interface UntestableClaim {
+interface UntestableClaim {
   readonly disposition: "untestable";
   readonly size: 0;
   readonly reason: string;
@@ -82,8 +83,6 @@ export interface UntestableClaim {
 export type ClaimStudy = StudiedClaim | ForwardTestOffer | UntestableClaim;
 
 const DAY_IN_TEXT = /\d{4}-\d{2}-\d{2}/g;
-/** Empty, or missing: entries are read from a JSON file, so a field may not be there at all. */
-const blank = (value: string | undefined): boolean => !value || value.trim().length === 0;
 const namesADay = (text: string): boolean => (text.match(DAY_IN_TEXT) ?? []).some(isCalendarDay);
 
 function verdictProblems(v: ClaimVerdict): string[] {

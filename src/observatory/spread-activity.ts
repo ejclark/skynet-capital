@@ -101,6 +101,27 @@ export function spreadLookup(deps: SpreadLookupDeps): SpreadOf {
   };
 }
 
+/**
+ * `findSpreadLeg`, remembering every hit for the process (#4458 AC 10). The Wire asks it once per
+ * option fill on every `no-store` request; the leg table is insert-only (`INSERT OR IGNORE`, keyed by
+ * the leg's own id — `decision-db-leg-orders.ts`), so an answer once found never changes. A miss is
+ * not remembered: a spread recorded `working` gets its legs from a late settlement, and the next
+ * request must see them. The spread's own decision stays a per-request read (`spreadLookup`), because
+ * its net appears only once the fill is confirmed.
+ */
+export function rememberSpreadLegs(
+  findSpreadLeg: (legOrderId: string) => OptionOrderLeg | undefined,
+): (legOrderId: string) => OptionOrderLeg | undefined {
+  const found = new Map<string, OptionOrderLeg>();
+  return (legOrderId) => {
+    const held = found.get(legOrderId);
+    if (held) return held;
+    const leg = findSpreadLeg(legOrderId);
+    if (leg) found.set(legOrderId, leg);
+    return leg;
+  };
+}
+
 /** What the fold reads off one fill line — a ledger record, or a fill off the Wire's event feed. */
 interface FillLine {
   readonly orderId: string;

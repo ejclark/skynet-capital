@@ -7,7 +7,7 @@ import {
 } from "../playbooks/conviction-store.js";
 import type { EnabledPlaybook, Playbook } from "../playbooks/playbook.js";
 import { findPlaybook } from "../playbooks/registry.js";
-import { steeredBy } from "../playbooks/steered-playbook.js";
+import { type SteeredPlaybook, steeredBy } from "../playbooks/steered-playbook.js";
 
 /**
  * A subscription's authored play, or `undefined` — the mechanical half of the own-account rule
@@ -43,8 +43,7 @@ function authoredPlay(
  * that record (#5482 slice 4, `steeredBy`): `steered` says each fence, once, for the boot log. A
  * narrowing that would widen a bound is `refused` whole and the pair runs exits-only, so nothing
  * new opens on a conviction that did not hold. So does a subscription whose conviction is on no
- * view (`isConvictionOffView`): an inline copy with no pointer (#5482 contract piece 4), which the
- * bots no longer read, or a ◆ pair with no pointer at all, which trades only on a conviction.
+ * view (`isConvictionOffView`): a ◆ pair with no pointer, which trades only on a conviction.
  */
 export function subscriptionRoster(
   subscriptions: readonly PlaybookSubscription[],
@@ -68,17 +67,7 @@ export function subscriptionRoster(
       rejected.push(sub.playbookId);
       continue;
     }
-    // A member's own authored play is never steered: a record steers house pairs. One carrying a
-    // pointer anyway is held like any pointer the bots cannot use (`steeredBy` refuses it), since a
-    // pointed pair never reads its inline conviction (#5482 contract piece 2). An inline copy with
-    // no pointer is never read either (piece 4, `statedCheck`), so its pair has no check day and
-    // runs exits-only the same way, until the app's poll moves the copy onto a view. So does a ◆
-    // pair with neither: it trades only on a conviction, and none is on a view.
-    const result = isConvictionOffView(sub)
-      ? { playbook: house, refused: CONVICTION_NOT_ON_VIEW }
-      : own && sub.convictionId === undefined
-        ? { playbook: own, says: [] }
-        : steeredBy(house, sub, convictionOf);
+    const result = rosterSteering(house, sub, convictionOf, own !== undefined);
     if ("refused" in result) {
       steeringRefused.push(`${sub.playbookId}: ${result.refused}`);
       enabled.push({ playbook: house, mode: sub.mode, exitsOnly: true });
@@ -88,6 +77,27 @@ export function subscriptionRoster(
     enabled.push({ playbook: result.playbook, mode: sub.mode });
   }
   return { enabled, rejected, steered, steeringRefused };
+}
+
+/**
+ * What an enabled subscription runs once its conviction is read: narrowed, unchanged, or `refused`
+ * (exits-only). The bots' roster and the roll call (`playbookRollCall`) both ask this, so the line
+ * that says a pair is off can never disagree with the rule that holds it off.
+ *
+ * A member's own authored play is never steered: a record steers house pairs. One carrying a
+ * pointer anyway is held like any pointer the bots cannot use (`steeredBy` refuses it), since a
+ * pointed pair is checked on its pointer alone (#5482 contract piece 2). A ◆ pair with no pointer
+ * runs exits-only the same way: it trades only on a conviction, and none is on a view.
+ */
+export function rosterSteering(
+  playbook: Playbook,
+  sub: Pick<PlaybookSubscription, "convictionId" | "playbookId">,
+  convictionOf?: ConvictionLookup,
+  authored = false,
+): SteeredPlaybook {
+  if (isConvictionOffView(sub)) return { playbook, refused: CONVICTION_NOT_ON_VIEW };
+  if (authored && sub.convictionId === undefined) return { playbook, says: [] };
+  return steeredBy(playbook, sub, convictionOf);
 }
 
 /**

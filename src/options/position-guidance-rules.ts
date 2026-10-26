@@ -31,9 +31,9 @@ export const MAX_SPREAD_OF_MID = 0.15;
 export const MIN_BID = 0.1;
 
 /** RICHNESS, while IV history is short: implied ÷ realized. ≥ this, premium pays for the movement. */
-export const RICH_IV_TO_RV = 1.2;
+const RICH_IV_TO_RV = 1.2;
 /** Below 1, the market charges less than the stock actually moves — selling it is underpaid. */
-export const CHEAP_IV_TO_RV = 1.0;
+const CHEAP_IV_TO_RV = 1.0;
 
 /** In session, a strike quoted longer ago than this is not a price anyone can sell at. */
 export const QUOTE_STALE_MS = 15 * 60 * 1000;
@@ -42,7 +42,7 @@ export const QUOTE_STALE_MS = 15 * 60 * 1000;
 export const MIN_OPEN_INTEREST = 100;
 
 /** Richness compares like with like: IV from the expiry nearest this many days, not the nearest weekly. */
-export const RICHNESS_TARGET_DAYS = 25;
+const RICHNESS_TARGET_DAYS = 25;
 
 /** Feed-delta vs our-delta disagreement worth flagging as a data-quality problem. */
 export const DELTA_TOLERANCE = 0.05;
@@ -57,16 +57,21 @@ export const GUIDANCE_DISCLOSURE =
   "Educational, not financial advice. Option prices here are estimates; the trade form re-checks " +
   "live prices before any order. Chances come from a standard pricing model that assumes no sudden jumps.";
 
-const RANK: Readonly<Record<Confidence, number>> = { none: 0, low: 1, medium: 2, high: 3 };
+const CONFIDENCE_RANK: Readonly<Record<Confidence, number>> = {
+  none: 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+};
 
 /** The lower of two grades — a cap never raises a call. */
 export function capConfidence(grade: Confidence, cap: Confidence): Confidence {
-  return RANK[grade] <= RANK[cap] ? grade : cap;
+  return CONFIDENCE_RANK[grade] <= CONFIDENCE_RANK[cap] ? grade : cap;
 }
 
 /** The house rule: a low grade is a stand-aside, never a small bet. */
 export function actionable(grade: Confidence): boolean {
-  return RANK[grade] >= RANK.medium;
+  return CONFIDENCE_RANK[grade] >= CONFIDENCE_RANK.medium;
 }
 
 /** The ET calendar date (YYYY-MM-DD) of an instant — the whole market day is anchored on ET. */

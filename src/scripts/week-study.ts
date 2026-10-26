@@ -30,6 +30,7 @@ import {
   weekHasClosed,
 } from "../research/week-study.js";
 import { adjacentIdsOf, horizonRowsOf } from "../server/research-event-calls.js";
+import { flag } from "./cli-flag.js";
 
 /** A week thinner than this is not a week worth a document — the brief's own floor. */
 const DEFAULT_MIN_EVENTS = 3;
@@ -37,11 +38,6 @@ const DEFAULT_MIN_EVENTS = 3;
 const ROOT = process.cwd();
 const EVENTS_DIR = join(ROOT, "docs", "research", "events");
 const WEEKS_DIR = join(ROOT, "docs", "research", "weeks");
-
-const flag = (argv: readonly string[], name: string): string | undefined => {
-  const at = argv.indexOf(`--${name}`);
-  return at === -1 ? undefined : argv[at + 1];
-};
 
 /** Every researched event dated inside the range, in date order, joined to its ledger's week row. */
 export function collectEntries(range: WeekRange, eventsDir = EVENTS_DIR): WeekEntry[] {

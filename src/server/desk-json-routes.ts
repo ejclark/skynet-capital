@@ -19,7 +19,8 @@ import { deskLedger, realizedByOrder, roundTripLinks } from "../observatory/desk
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { orderOriginIndex } from "../observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
-import { deskPulseView } from "../observatory/pulse-json-view.js";
+import { PulseHistoryFold } from "../observatory/pulse-history-fold.js";
+import { deskPulseViewOf } from "../observatory/pulse-json-view.js";
 import { safeguardLadderView } from "../observatory/safeguard-ladder-view.js";
 import { type SpreadOf, spreadLookup } from "../observatory/spread-activity.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
@@ -29,6 +30,7 @@ import { reasoningForOrder, withoutOwnerReasoning } from "../observatory/wire-re
 import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
 import type { PlaybookTagsByOrder } from "../trading/playbook-attribution.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
+import { accountConvictionLookup } from "./account-conviction-lookup.js";
 import type { Session } from "./auth/session.js";
 import { deskHealthPayload } from "./book-health-payload.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -189,10 +191,10 @@ async function decisionsPayload(
   };
 }
 
-/** This bot's Store subscriptions, on or paused, and the playbooks the bots app's own setting runs
- *  on it (#4650) — read once for the roll call and the unmanaged-lot line. Undefined when the store
- *  is unwired or its file unreadable: a read that failed would hide a paused playbook, so neither
- *  makes a claim from it. */
+/** This bot's Store subscriptions, on or paused, the playbooks the bots app's own setting runs on
+ *  it (#4650), and the conviction records its pointers resolve to (#5482) — read once for the roll
+ *  call and the unmanaged-lot line. Undefined when the store is unwired or its file unreadable: a
+ *  read that failed would hide a paused playbook, so neither makes a claim from it. */
 function botRoster(
   found: ParticipantSnapshot,
   config: DashboardServerConfig,
@@ -200,7 +202,11 @@ function botRoster(
   const state = config.subscriptions?.loadIfReadable();
   if (!state) return undefined;
   const envNamed = envNamedFor(config.readHouseRoster?.(), found.id);
-  return { subscriptions: state[found.id] ?? [], ...(envNamed ? { envNamed } : {}) };
+  return {
+    subscriptions: state[found.id] ?? [],
+    convictionOf: accountConvictionLookup(config, found.id),
+    ...(envNamed ? { envNamed } : {}),
+  };
 }
 
 /** The playbooks the desk's ideas leave out because the account already subscribes to them, on or
@@ -288,6 +294,7 @@ async function heartbeatPayload(
   const records = found.kind === "bot" ? await config.readDecisions?.(found.id) : undefined;
   if (!records) return { available: false, kind: found.kind };
   const roster = botRoster(found, config);
+  const readRunStart = config.readVerdictRunStart;
   const heartbeat = botHeartbeatView(
     records,
     new Date(),
@@ -295,6 +302,7 @@ async function heartbeatPayload(
     botHoldings(found, roster),
     roster,
     config.readCheckWeek?.(found.id),
+    readRunStart && ((verdict, startAt) => readRunStart(found.id, startAt, verdict)),
   );
   return { available: true, heartbeat: owner ? heartbeat : withoutHeartbeatPlaybookIds(heartbeat) };
 }
@@ -387,14 +395,18 @@ export async function serveDeskJson(
   if (sub === "pulse") {
     // Each pulse section owns its empty state (performance-view doctrine): no history wired means
     // a null curve that says "still accruing", never a missing page.
-    const [samples, durable] = await Promise.all([
-      config.readHistory?.(id) ?? [],
+    // The live fold when the server keeps one (#4619): Pulse then folds only what was appended
+    // since the last read, never the whole history again.
+    const [history, durable] = await Promise.all([
+      config.readPulseHistory
+        ? config.readPulseHistory(id)
+        : (config.readHistory?.(id) ?? Promise.resolve([])).then((s) => PulseHistoryFold.of(s)),
       config.readTradeActivity?.(id),
     ]);
     res.end(
       JSON.stringify({
         generatedAt: state.generatedAt,
-        pulse: deskPulseView(found, samples, durable),
+        pulse: deskPulseViewOf(found, history, durable),
       }),
     );
     return;

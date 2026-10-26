@@ -1,3 +1,4 @@
+import { fixedPct } from "../domain/percent.js";
 import type { ClaimVerdict, StudyConfidence, StudyReading } from "./claim-study.js";
 import type { ConvictionClaim } from "./conviction-record.js";
 
@@ -28,10 +29,9 @@ const finiteNumberOrNull = (v: unknown): number | null =>
 /** The independent units a medium grade needs: clusters pooled, episodes own-history. */
 export const MEDIUM_UNITS = 30;
 
-const pct = (x: number, digits = 0): string => `${(x * 100).toFixed(digits)}%`;
 const signedPct = (x: number, digits = 0): string =>
-  `${x >= 0 ? "+" : "-"}${pct(Math.abs(x), digits)}`;
-const usd = (x: number): string => `$${x.toFixed(2)}`;
+  `${x >= 0 ? "+" : "-"}${fixedPct(Math.abs(x), digits)}`;
+const usdNoCommas = (x: number): string => `$${x.toFixed(2)}`;
 
 const confidenceOf = (reading: StudyReading, units: number | null): StudyConfidence =>
   reading !== "mixed" && units !== null && units >= MEDIUM_UNITS ? "medium" : "low";
@@ -73,7 +73,7 @@ export function judgePremiumRichness(claim: ConvictionClaim, output: unknown): C
   const symbol = typeof o.symbol === "string" ? o.symbol : "the name";
   const reading: StudyReading =
     fitVerdict === "fits" ? "supports" : fitVerdict === "thin" ? "mixed" : "against";
-  const where = `implied ${pct(iv30)} sits at the ${ordinal(Math.round(rank * 100))} pct of ${symbol}'s own next-30-day outcomes, ${(gap * 100).toFixed(1)} vol pts over the mean`;
+  const where = `implied ${fixedPct(iv30)} sits at the ${ordinal(Math.round(rank * 100))} pct of ${symbol}'s own next-30-day outcomes, ${(gap * 100).toFixed(1)} vol pts over the mean`;
   return verdict(claim, {
     reading,
     call: premiumCall(reading, rank, where),
@@ -185,7 +185,7 @@ export function judgeFloor(claim: ConvictionClaim, output: unknown): ClaimVerdic
         : "Some more pullback";
   return verdict(claim, {
     reading,
-    call: `${lead}: the median like-weather episode fell a further ${pct(-further.p50)} (about ${usd(c.close * (1 + further.p50))}), ${pct(-scaled.p50)} vol-scaled (about ${usd(c.close * (1 + scaled.p50))}); the low came about ${toLow} sessions in.`,
+    call: `${lead}: the median like-weather episode fell a further ${fixedPct(-further.p50)} (about ${usdNoCommas(c.close * (1 + further.p50))}), ${fixedPct(-scaled.p50)} vol-scaled (about ${usdNoCommas(c.close * (1 + scaled.p50))}); the low came about ${toLow} sessions in.`,
     confidence: confidenceOf(reading, units),
     why: `cycle-phase on ${c.date}: ${units} independent ${h.sample === "own" ? "episodes" : "clusters"} (${h.sample} history, ${h.level}); closes, not intraday lows.`,
     numbers: {
@@ -233,7 +233,7 @@ export function judgeRecovery(claim: ConvictionClaim, output: unknown): ClaimVer
         : "Back to entry is not the base case";
   return verdict(claim, {
     reading,
-    call: `${lead}: ${pct(within63)} of like-weather episodes closed back above ${usd(c.close)} within 63 sessions (median ${medianSessions ?? String(medianBack)}), and ${pct(oldHigh)} regained the old high within 126.`,
+    call: `${lead}: ${fixedPct(within63)} of like-weather episodes closed back above ${usdNoCommas(c.close)} within 63 sessions (median ${medianSessions ?? String(medianBack)}), and ${fixedPct(oldHigh)} regained the old high within 126.`,
     confidence: confidenceOf(reading, units),
     why: `cycle-phase on ${c.date}: ${units} independent ${h.sample === "own" ? "episodes" : "clusters"} (${h.sample} history, ${h.level}); a recovery past 126 sessions counts as not recovered.`,
     numbers: {
@@ -284,10 +284,12 @@ export function judgePrePrintPut(claim: ConvictionClaim, output: unknown): Claim
         ? "Underpaid"
         : "Fair, not rich";
   const history =
-    pct(raw) === pct(scaled) ? pct(raw) : `${pct(best)} to ${pct(worst)} (raw and vol-scaled)`;
+    fixedPct(raw) === fixedPct(scaled)
+      ? fixedPct(raw)
+      : `${fixedPct(best)} to ${fixedPct(worst)} (raw and vol-scaled)`;
   return verdict(claim, {
     reading,
-    call: `${lead}: the ${usd(strike)} put${c.putExpiry ? ` expiring ${c.putExpiry}` : ""} is priced at ${pct(priced)} odds of assignment; like-weather episodes finished under that strike ${history}.`,
+    call: `${lead}: the ${usdNoCommas(strike)} put${c.putExpiry ? ` expiring ${c.putExpiry}` : ""} is priced at ${fixedPct(priced)} odds of assignment; like-weather episodes finished under that strike ${history}.`,
     confidence: confidenceOf(reading, units),
     why: `cycle-phase on ${c.date}: the close at the last expiry before the print, ${units} independent ${h.sample === "own" ? "episodes" : "clusters"} (${h.sample} history, ${h.level}); priced odds are the put's delta.`,
     numbers: {

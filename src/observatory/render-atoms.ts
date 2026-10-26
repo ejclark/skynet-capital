@@ -28,7 +28,7 @@ export function plClass(value: number): "pos" | "neg" | "flat" {
   return "flat";
 }
 
-export function pct(value: number): string {
+export function formatSignedPercent(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 }
 

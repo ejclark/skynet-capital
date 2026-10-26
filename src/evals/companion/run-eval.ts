@@ -40,8 +40,13 @@ async function runFixture(
   apiKey: string,
   doFetch: DoFetch,
   doStream: DoStream,
+  logLine: ((line: string) => void) | undefined,
 ): Promise<FixtureResult> {
-  const companion = createCompanionChat({ apiKey }, doFetch, doStream);
+  const companion = createCompanionChat(
+    { apiKey, ...(logLine ? { logLine } : {}) },
+    doFetch,
+    doStream,
+  );
   const modelHistory: CompanionMessage[] = [];
   const judgeReplies: string[] = [];
   const drafts: (FeedbackDraft | undefined)[] = [];
@@ -77,7 +82,14 @@ async function runFixture(
     drafts.push(draft);
   }
 
-  const verdict = await judge(doFetch, apiKey, fixture.rounds, judgeReplies, fixture.rubric);
+  const verdict = await judge(
+    doFetch,
+    apiKey,
+    fixture.rounds,
+    judgeReplies,
+    fixture.rubric,
+    logLine,
+  );
   return { fixture, replies: judgeReplies, drafts, verdict };
 }
 
@@ -89,10 +101,12 @@ export async function runCompanionEval(
   apiKey: string,
   doFetch: DoFetch = fetchJson,
   doStream: DoStream = streamAnthropicMessage,
+  /** Each Claude call's usage line (#6080) — the script wires stdout, so a run reports its cost. */
+  logLine?: (line: string) => void,
 ): Promise<CompanionEvalReport> {
   const results: FixtureResult[] = [];
   for (const fixture of fixtures) {
-    results.push(await runFixture(fixture, apiKey, doFetch, doStream));
+    results.push(await runFixture(fixture, apiKey, doFetch, doStream, logLine));
   }
   return {
     results,
