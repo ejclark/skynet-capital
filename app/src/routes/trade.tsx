@@ -33,6 +33,13 @@ import { SectionSwitch } from "../shell/section-switch";
 import { resolveSection } from "../shell/sections";
 import { Bench, SECTIONS, type StageProps, type TradeSection } from "../shell/trade-bench";
 import { TradeClock } from "../shell/trade-clock";
+import {
+  chainTapSearch,
+  expSearch,
+  guidanceSearch,
+  strikeSearch,
+  symbolSearch,
+} from "../shell/trade-search";
 import { useBenchWidth } from "../shell/use-bench-width";
 
 /**
@@ -105,19 +112,6 @@ import { useBenchWidth } from "../shell/use-bench-width";
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
 
-/** The ticket a guidance strike presets: covered call → rung 202, put → 201, strike + expiry
- *  together, and the section back to the ticket so the member lands on the preset form. */
-function guidanceSearch<T extends { section?: TradeSection }>(prev: T, row: LadderRow) {
-  const next = {
-    ...prev,
-    play: (row.lever === "covered-calls" ? "202" : "201") as PlayInfo["code"],
-    strike: String(row.strike),
-    exp: row.expiration,
-  };
-  delete next.section;
-  return next;
-}
-
 function TradePage(): ReactElement {
   const {
     desk,
@@ -156,13 +150,7 @@ function TradePage(): ReactElement {
     navigate({
       replace: true,
       resetScroll: false,
-      search: (prev) => {
-        const nextSearch = { ...prev };
-        if (next) nextSearch.symbol = next;
-        else delete nextSearch.symbol;
-        if (prev.strike !== undefined) delete nextSearch.strike;
-        return nextSearch;
-      },
+      search: (prev) => symbolSearch(prev, next),
     });
   };
   /** `?strike=` (task 4e) — a chain cell pick always writes a definite, already-normalized numeric
@@ -177,12 +165,7 @@ function TradePage(): ReactElement {
     navigate({
       replace: true,
       resetScroll: false,
-      search: (prev) => {
-        const nextSearch = { ...prev };
-        if (next) nextSearch.strike = next;
-        else delete nextSearch.strike;
-        return nextSearch;
-      },
+      search: (prev) => strikeSearch(prev, next),
     });
   };
   // Same `["plays"]` key `DeskTicket` queries below — react-query shares the one cached fetch, no
@@ -257,13 +240,8 @@ function TradePage(): ReactElement {
     );
     void navigate({
       resetScroll: false,
-      search: (prev) => {
-        // The expiration travels with the strike (slice 4a): a 180 tapped on the Oct 16 chain
-        // is the Oct 16 180, not whichever expiry the ticket happened to be on.
-        const next = { ...prev, strike: pick.strike, exp: pick.expiration };
-        delete next.section;
-        return target.play ? { ...next, play: target.play } : next;
-      },
+      // The expiration travels with the strike (slice 4a) — see `chainTapSearch`.
+      search: (prev) => chainTapSearch(prev, pick.strike, pick.expiration, target.play),
     });
   };
   /** "Use this" on a guidance strike (#3729): the covered call is rung 202, the put 201; strike
@@ -293,14 +271,7 @@ function TradePage(): ReactElement {
     const normalized = normalizeSymbol(next);
     void navigate({
       resetScroll: false,
-      search: (prev) => {
-        const nextSearch = { ...prev };
-        if (normalized) nextSearch.symbol = normalized;
-        else delete nextSearch.symbol;
-        if (prev.strike !== undefined) delete nextSearch.strike;
-        delete nextSearch.section;
-        return nextSearch;
-      },
+      search: (prev) => symbolSearch(prev, normalized, true),
     });
   };
   /** `?exp=` follows whichever tool changed it — the chain pane's browse or the ticket's own
@@ -311,12 +282,7 @@ function TradePage(): ReactElement {
     void navigate({
       replace: true,
       resetScroll: false,
-      search: (prev) => {
-        const nextSearch = { ...prev };
-        if (normalized) nextSearch.exp = normalized;
-        else delete nextSearch.exp;
-        return nextSearch;
-      },
+      search: (prev) => expSearch(prev, normalized),
     });
   };
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
