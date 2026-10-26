@@ -60,7 +60,11 @@ import { resolvePort } from "../server/resolve-port.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
 import { wireAlertDelivery } from "./dashboard-alert-delivery.js";
-import { warnAccountCollisions, warnUnpinnedVolumes } from "./dashboard-boot-warnings.js";
+import {
+  assertDataRootMounted,
+  warnAccountCollisions,
+  warnUnpinnedVolumes,
+} from "./dashboard-boot-warnings.js";
 import { setupCompanion } from "./dashboard-companion.js";
 import {
   wireAccountDeskAccess,
@@ -81,6 +85,7 @@ async function main(): Promise<void> {
   // First of all: a production boot with no sign-in must fail, not serve an open dashboard (#4621).
   assertProductionAccess(process.env);
   warnUnpinnedVolumes(process.env);
+  assertDataRootMounted(process.env);
   // Before anything resolves a GitHub-backed feature: a token saved from Settings beats the host secret.
   const githubToken = bootGithubToken(process.env);
   const dataSource = resolveDataSource(process.env);

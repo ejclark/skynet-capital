@@ -1,6 +1,11 @@
 import { readdirSync, statfsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { OPT_IN_STORES, PERSISTED_STORES } from "../runtime/volume-guard.js";
+import {
+  DERIVED_STORES,
+  OPT_IN_STORES,
+  PERSISTED_STORES,
+  resolveStorePath,
+} from "../runtime/volume-guard.js";
 
 /**
  * How big each durable store is, and how much room the volume has left (#4618, slice 6 of #4612).
@@ -40,7 +45,10 @@ const storeName = (envVar: string): string =>
     .toLowerCase()
     .replaceAll("_", "-");
 
-/** Measure every store `PERSISTED_STORES` declares, plus each `OPT_IN_STORES` var this process set. */
+/**
+ * Measure every store `PERSISTED_STORES` and `DERIVED_STORES` declare, plus each `OPT_IN_STORES`
+ * var this process set.
+ */
 export function measureStores(env: Env, mount?: string): StoreSizes {
   const defaulted = Object.entries(PERSISTED_STORES).map(([envVar, fallback]) => ({
     name: storeName(envVar),
@@ -50,7 +58,13 @@ export function measureStores(env: Env, mount?: string): StoreSizes {
     const path = env[envVar];
     return path ? [{ name: storeName(envVar), bytes: pathBytes(path) }] : [];
   });
-  const stores = [...defaulted, ...optedIn];
+  const derived = Object.entries(DERIVED_STORES as Readonly<Record<string, string>>).map(
+    ([envVar, dir]) => ({
+      name: storeName(envVar),
+      bytes: pathBytes(resolveStorePath(env, envVar, dir)),
+    }),
+  );
+  const stores = [...defaulted, ...optedIn, ...derived];
   if (!mount) return { stores };
   try {
     const fs = statfsSync(mount);

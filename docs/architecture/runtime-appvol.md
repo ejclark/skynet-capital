@@ -8,7 +8,7 @@
 
 **Entrypoints:** `fly.toml [env] SKYNET_*_STORE/_DIR/_FILE → /data/…` · `fly.toml [mounts] skynet_data → /data`
 
-**Grounding:** fly.toml pins every store path; src/runtime/volume-guard.ts lists PERSISTED_STORES; tests/arch/volume-persistence.spec.ts fails CI if a new `data/…` default is not pinned (EPHEMERAL exception: SKYNET_COMMUNITY_PROGRESSION_FILE); src/scripts/dashboard-insights-bridge.ts opens join(SKYNET_INSIGHTS_DIR, 'decisions.db').
+**Grounding:** fly.toml pins every store path; src/runtime/volume-guard.ts lists PERSISTED_STORES, and DERIVED_STORES resolve under one root (SKYNET_DATA_ROOT, else /data on Fly) with no fly.toml line — the boot refuses on Fly unless that root is a separate mount (#4604); tests/arch/volume-persistence.spec.ts fails CI if a new `data/…` default is not pinned (EPHEMERAL exception: SKYNET_COMMUNITY_PROGRESSION_FILE); src/scripts/dashboard-insights-bridge.ts opens join(SKYNET_INSIGHTS_DIR, 'decisions.db').
 
 **Refuter's verdict:** grounded — Keep the element as drawn and add three things. First, council.json: a sibling of bot-controls.json, derived by councilFilePathFrom, with no env var. Second, iv-history/: SKYNET_IV_HISTORY_DIR, which has no default, so t
 
