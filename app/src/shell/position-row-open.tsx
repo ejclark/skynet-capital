@@ -149,6 +149,8 @@ function Buys({
           </li>
         ))}
       </ul>
+      {/* Why the buys don't add up to the row after a partial sell (#6169) — said in words. */}
+      {position.basisNote ? <p className="lot-why">{position.basisNote}</p> : null}
       {/* Roll's reason as text, once under the buys (#3807 slice 2e, dead end 8): a title has no
           hover on a phone. Every Roll above points at it with aria-describedby. */}
       {rolls ? (

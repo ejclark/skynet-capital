@@ -191,6 +191,28 @@ describe("BlotterRow", () => {
       expect(sum(lots.lots?.[0]?.totalPl ?? "0", lots.lots?.[1]?.totalPl ?? "0")).toBe(995);
     });
 
+    // #6169: after a partial sell the buys can sit off Alpaca's averaged basis; say why in words.
+    it("says in words why the buys don't add up to the row, when the server sends the line", () => {
+      const note =
+        "Alpaca averages these 199 shares at $500.05 ($99,510); each buy below keeps its own " +
+        "price ($99,500), so the buys' P/L totals +$10 against the row's. Sold + held P/L is " +
+        "the same either way.";
+      render(
+        inTable(
+          <BlotterRow position={{ ...lots, basisGap: -10, basisNote: note }} deskId="sauron" />,
+        ),
+      );
+      fireEvent.click(opener());
+      const buys = screen.getByRole("region", { name: "2 buys for SPY" });
+      expect(within(buys).getByText(note)).toBeVisible();
+    });
+
+    it("adds no line when the buys and the row agree", () => {
+      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
+      fireEvent.click(opener());
+      expect(screen.queryByText(/Alpaca averages/)).not.toBeInTheDocument();
+    });
+
     it("opens a buy-scoped close panel from Close this buy, independent of the other buy", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
       fireEvent.click(opener());
