@@ -65,7 +65,7 @@ import {
  * (`false`), before anything else runs.
  */
 
-const BODY_CAP_BYTES = 16_384;
+const MEMBER_CONVICTIONS_BODY_CAP_BYTES = 16_384;
 const MAX_ID = 64;
 
 /** Said with every draft: what a saved view does until its owner hands it over. */
@@ -179,7 +179,7 @@ async function draftOrSave(
   config: DashboardServerConfig,
   session: Session,
 ): Promise<void> {
-  const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
+  const raw = await readJsonPost(req, res, MEMBER_CONVICTIONS_BODY_CAP_BYTES);
   if (raw === undefined) return;
   const body = parseJsonRecord(raw);
   if (path === "/api/convictions/delete") {
@@ -284,7 +284,7 @@ async function handOverOrTakeBack(
   config: DashboardServerConfig,
   session: Session,
 ): Promise<void> {
-  const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
+  const raw = await readJsonPost(req, res, MEMBER_CONVICTIONS_BODY_CAP_BYTES);
   if (raw === undefined) return;
   const id = boundedString(parseJsonRecord(raw)?.id, MAX_ID);
   if (!id) {

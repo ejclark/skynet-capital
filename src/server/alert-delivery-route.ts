@@ -36,7 +36,7 @@ import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shel
  */
 
 export const ALERT_DELIVERY_PATH = "/api/trade/alerts/delivery";
-const BODY_CAP_BYTES = 2_048;
+const ALERT_DELIVERY_BODY_CAP_BYTES = 2_048;
 /** An address this app will send to — the member's own, as their provider gave it to us. */
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -122,7 +122,7 @@ async function serveWrite(
   config: DashboardServerConfig,
   session: Session | undefined,
 ): Promise<void> {
-  const raw = await readJsonPost(req, res, BODY_CAP_BYTES);
+  const raw = await readJsonPost(req, res, ALERT_DELIVERY_BODY_CAP_BYTES);
   if (raw === undefined) return;
   const body = parseJsonRecord(raw);
   const participantId = body?.participantId;
