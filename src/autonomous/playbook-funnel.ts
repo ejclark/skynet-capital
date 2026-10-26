@@ -29,9 +29,9 @@ import { computeFunnel } from "./decision-funnel.js";
 
 /** Ten sessions: the window slice 6's deciding question names ("over 10 trading days, on how
  *  many did no playbook raise a signal?"). */
-export const FUNNEL_SESSIONS = 10;
+const FUNNEL_SESSIONS = 10;
 
-export interface PlaybookFunnelCounts {
+interface PlaybookFunnelCounts {
   /** Passes that consulted the playbook. */
   readonly checks: number;
   /** Passes on which it raised its declared signal; null when no pass can measure that. */
@@ -46,7 +46,7 @@ export interface PlaybookFunnelCounts {
   readonly filled: number;
 }
 
-export interface PlaybookFunnelDay extends PlaybookFunnelCounts {
+interface PlaybookFunnelDay extends PlaybookFunnelCounts {
   /** `YYYY-MM-DD`, New York's calendar. */
   readonly date: string;
 }
