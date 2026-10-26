@@ -3,12 +3,13 @@ import type { ReactElement } from "react";
 import { botPlaybooks, CARD_WORDS, type PlaybookCard } from "../live/bot-playbooks";
 import type { DeskPosition } from "../live/desk";
 import { landingCard, landingForPosition } from "../live/playbook-landing";
+import { playbookName } from "../live/playbook-name";
 import { useHeartbeat } from "./heartbeat";
 
 /**
  * WHICH PLAYBOOK OPENED THIS POSITION (#5073 slice 4b — #5037 round 2, R2-pos: "a position's footer
  * names its playbook… landing on the playbook's card open with one way back"). One line in the
- * row's footer, under the guidance line: "Opened by ◷ CRWV-WHEEL · waiting ›". The name and one
+ * row's footer, under the guidance line: "Opened by ◷ the wheel on CRWV · waiting ›". The name and one
  * state word, nothing more (Eric's 0e71d5f8: progressive reveal) — the card it opens says the rest.
  *
  * The server sends the playbook only on the bot owner's copy, and only when one playbook's orders
@@ -52,10 +53,10 @@ export function PositionPlaybookTag({
         data-state={card?.state}
         to="/accounts"
         search={{ account: deskId, section: "playbooks", ...landing }}
-        aria-label={`Opened by ${landing.card}${words ? `, ${words.word.toLowerCase()}` : ""} — open its card on Playbooks`}
+        aria-label={`Opened by ${playbookName(landing.card)}${words ? `, ${words.word.toLowerCase()}` : ""} — open its card on Playbooks`}
       >
         {words ? <span aria-hidden="true">{words.glyph} </span> : null}
-        <span className="pos-pb-name">{landing.card}</span>
+        <span className="pos-pb-name">{playbookName(landing.card)}</span>
         {words ? <span className="pos-pb-word"> · {words.tag}</span> : null}
         <span className="pos-pb-chev" aria-hidden="true">
           {" ›"}

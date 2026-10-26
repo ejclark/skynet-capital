@@ -6,7 +6,7 @@ import {
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { SEEDED_CONVICTIONS } from "../playbooks/conviction-seeds.js";
 import { CONVICTIONS, ConvictionStore } from "../playbooks/conviction-store.js";
-import { findPair, pairName } from "../playbooks/pair-table.js";
+import { playbookName } from "../playbooks/pair-table.js";
 import type { MemberPointers, PointerMove } from "../subscriptions/conviction-pointer.js";
 import { isPairView } from "../subscriptions/pair-conviction.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
@@ -46,10 +46,7 @@ import type { SubscriptionStore } from "./subscription-store.js";
  * still picks every entry and exit, and nothing here places an order.
  */
 
-const nameOf = (pairId: string): string => {
-  const pair = findPair(pairId);
-  return pair ? pairName(pair) : pairId;
-};
+const nameOf = (pairId: string): string => playbookName(pairId);
 
 const titleOf = (conviction: Conviction): string => conviction.title ?? conviction.id;
 

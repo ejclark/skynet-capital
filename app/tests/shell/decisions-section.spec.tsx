@@ -81,6 +81,33 @@ describe("CycleRow", () => {
     expect(screen.getByText("S2-NVDA · aggressive")).toBeInTheDocument();
   });
 
+  // #4469 criterion 14: the owner reads "the wheel on CRWV", never `CRWV-WHEEL`.
+  it("names a pair in its chip and its reason by what it does, never by its id", () => {
+    render(
+      <CycleRow
+        cycle={cycle({
+          outcomes: [
+            {
+              symbol: "NVDA",
+              side: "buy",
+              quantity: 10,
+              action: "placed",
+              reason: "S1-NVDA window open (standard): buy the run-up",
+              playbook: "S1-NVDA",
+              playbookMode: "standard",
+            },
+          ],
+        })}
+      />,
+    );
+    open();
+    expect(screen.getByText("the pre-print run-up on NVDA · standard")).toBeInTheDocument();
+    expect(
+      screen.getByText("“The pre-print run-up on NVDA window open (standard): buy the run-up”"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/S1-NVDA/)).not.toBeInTheDocument();
+  });
+
   // #885: "at this time, we do not show what playbooks others are using".
   it("draws no playbook chip on a bot the viewer does not own", () => {
     render(
