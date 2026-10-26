@@ -33,7 +33,7 @@ import { money } from "./format-money.js";
  * only restate it, and a flip would be a widening.
  */
 
-export type FloorOfClaim = { readonly floorOfClaim: string };
+type FloorOfClaim = { readonly floorOfClaim: string };
 
 export type Narrowing =
   | { readonly kind: "dte"; readonly min?: number; readonly max?: number }
@@ -42,13 +42,7 @@ export type Narrowing =
   | { readonly kind: "quiet"; readonly sessionsAfterPrint: number }
   | { readonly kind: "contracts"; readonly max: number };
 
-export const NARROWING_KINDS = [
-  "dte",
-  "expiry-from",
-  "strike-ceiling",
-  "quiet",
-  "contracts",
-] as const;
+const NARROWING_KINDS = ["dte", "expiry-from", "strike-ceiling", "quiet", "contracts"] as const;
 
 /** One steered pair's narrowings, and the claims (by their number in the record) they come from. */
 export interface PairNarrowings {
@@ -97,10 +91,7 @@ const refuse = (reason: string): SteeringResolution => ({ ok: false, reason });
 const isCount = (n: number): boolean => Number.isInteger(n) && n >= 0;
 
 /** The claim a label names ("7" is the claim whose statement opens "7. "), or undefined. */
-export function claimByLabel<C extends ClaimRead>(
-  claims: readonly C[],
-  label: string,
-): C | undefined {
+function claimByLabel<C extends ClaimRead>(claims: readonly C[], label: string): C | undefined {
   return claims.find((c) => c.statement.startsWith(`${label}. `));
 }
 
