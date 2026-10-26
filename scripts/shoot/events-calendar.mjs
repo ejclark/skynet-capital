@@ -174,6 +174,8 @@ await page.goto(`${events}&symbol=CRWV&span=quarter`);
 await page.locator(".sym-foot .recap, .sym-foot .recap-loading").first().waitFor();
 await page.evaluate(() => window.scrollTo(0, 0));
 await shoot("events-symbol-crwv-phone");
+await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
+await shoot("events-symbol-crwv-list-phone");
 
 await page.goto(`${origin}/app/accounts?account=bot-sauron`);
 await page.locator(".held-next").waitFor();
