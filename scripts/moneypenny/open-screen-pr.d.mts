@@ -5,5 +5,14 @@
 /** Classify a raw `enablePullRequestAutoMerge` GraphQL response body (as text). */
 export function classifyAutoMergeResult(rawBody: string): "armed" | "already-clean" | "error";
 
-/** True when an existing open PR already carries an unmerged screen commit. */
-export function hasOpenScreenPr(openPrs: readonly { head?: { ref?: string } }[]): boolean;
+type OpenPr = {
+  number?: number;
+  head?: { ref?: string };
+  labels?: { name?: string }[];
+};
+
+/** True when an open screen PR exists that could still merge — a parked one never counts. */
+export function hasOpenScreenPr(openPrs: readonly OpenPr[]): boolean;
+
+/** The open screen PRs carrying `conflict-flagged`, `needs-eric` or `hold-merge`. */
+export function parkedScreenPrs<T extends OpenPr>(openPrs: readonly T[]): T[];

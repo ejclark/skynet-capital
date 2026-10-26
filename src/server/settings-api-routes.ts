@@ -1,6 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
-import { sessionNameCandidates } from "./account-forms.js";
 import type { Session } from "./auth/session.js";
 import { botSettingsView, serveBotSettings } from "./bot-settings-route.js";
 import { requesterFor, resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
@@ -244,7 +243,6 @@ export async function serveSettingsApi(
         ...body,
         ...(requesterId !== undefined ? { requesterId } : {}),
         ...(session ? { requesterEmail: session.email } : {}),
-        sessionNames: sessionNameCandidates(session),
         authConfigured,
       }),
     );

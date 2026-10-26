@@ -4,7 +4,6 @@ import type {
   UpdateProfileInput,
   UpdateProfileResult,
 } from "./account-service.js";
-import type { Session } from "./auth/session.js";
 
 /**
  * DAY-2 ACCOUNT MANAGEMENT's shared surface — the authorization rules live in
@@ -20,13 +19,4 @@ export interface AccountAdmin {
   readonly profileFor: (
     id: string,
   ) => { readonly displayName: string; readonly timezone?: string } | undefined;
-}
-
-/** The identity strings `resolveCurrentId` matches display names against — session name and
- *  email local-part, lowercased. A human rename must land on one of these (account-service.ts). */
-export function sessionNameCandidates(session: Session | undefined): string[] {
-  if (!session) return [];
-  const name = session.name?.toLowerCase().trim();
-  const local = session.email.split("@")[0]?.toLowerCase().trim();
-  return [...(name ? [name] : []), ...(local ? [local] : [])];
 }
