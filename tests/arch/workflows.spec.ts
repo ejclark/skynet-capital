@@ -349,15 +349,21 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
   });
 
   // #4351 (2026-09-30): a burst of issue writes spent the App's budget; both API calls 403'd and
-  // two green PRs sat unarmed. Every call the job makes waits out a rate limit instead of failing.
-  it("routes every GitHub call through the rate-limit retry helper", () => {
-    expect(job).toContain("- name: Rate-limit retry helper");
+  // two green PRs sat unarmed. #6093 (2026-10-26): a GraphQL internal error did the same. Every call
+  // the job makes goes through scripts/arm-merge.mjs, whose retries are specced in
+  // tests/scripts/arm-merge.spec.ts — so no bare `gh` call may creep back into the job.
+  it("routes every GitHub call through scripts/arm-merge.mjs", () => {
     const calls =
-      job.match(/(?:\$\(|^\s+)(?:"\$RUNNER_TEMP\/gh-retry\.sh" )?gh (?:api|pr merge)[^\n]*/gm) ??
+      job.match(/^\s+(?:run: |LABELS=\$\()?(?:node scripts\/arm-merge\.mjs [^\n]*|gh [^\n]*)/gm) ??
       [];
-    const outsideHelper = calls.filter((c) => !c.includes("rate_limit"));
-    expect(outsideHelper.length).toBeGreaterThanOrEqual(3);
-    for (const call of outsideHelper) expect(call).toContain('"$RUNNER_TEMP/gh-retry.sh" gh');
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    for (const call of calls) expect(call).toContain("node scripts/arm-merge.mjs");
+    expect(job).toContain('node scripts/arm-merge.mjs retry -- gh api "repos/');
+    expect(job).toContain(
+      'node scripts/arm-merge.mjs arm "${{ github.event.pull_request.number }}"',
+    );
+    // The script runs before `npm ci`, so Node must be set up before the first call.
+    expect(job.indexOf("- name: Set up Node")).toBeLessThan(job.indexOf("id: hold"));
   });
 
   it("arms only when that live read said unheld", () => {
@@ -394,69 +400,22 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
   });
 });
 
-// #4939 (retro #5589): the arm job's `gh pr merge --auto` answered "clean status", and the direct
-// merge fallback died on `GraphQL: Base branch was modified` because main moved in that second. No
-// retry existed, so a clean PR sat unarmed for 187 hours. The fallback now retries that one message
-// (three tries) and fails as before on anything else. These run the real loop from pipeline.yml
-// against a stub `gh-retry.sh`, so the behaviour is pinned, not just the text.
-describe("arm-auto-merge — the direct-merge fallback survives a base branch that moved", () => {
+// #4939 (retro #5589), #5932, #6093: the arm step's fallbacks — a direct merge when GitHub says the
+// PR is already clean/unstable or the base moved under the arm call, three tries on a moved base or
+// a GitHub hiccup, an immediate fail on anything else — moved out of inline bash into
+// scripts/arm-merge.mjs. Its behaviour is pinned by tests/scripts/arm-merge.spec.ts against a fake
+// `gh`; this pins only that the step still calls it.
+describe("arm-auto-merge — the arm step delegates to the specced script", () => {
   const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
   const armStart = pipeline.indexOf("- name: Arm auto-merge (or merge directly if already green)");
   const arm = pipeline.slice(armStart, pipeline.indexOf("\n  deploy:", armStart));
-  const loopStart = arm.indexOf("for try in 1 2 3; do");
-  const loop = arm.slice(loopStart, arm.indexOf("\n              done", loopStart) + 19);
 
-  it("wraps the direct squash merge in a three-try loop keyed on the base-moved message", () => {
-    expect(loopStart).toBeGreaterThan(-1);
-    expect(loop).toContain('gh-retry.sh" gh pr merge --squash "$PR"');
-    expect(loop).toContain('grep -qi "base branch was modified"');
-    expect(loop).toContain('[ "$try" -lt 3 ]');
-    // The loop sits on the already-green branch, not around the `--auto` call.
-    expect(loopStart).toBeGreaterThan(arm.indexOf("already green"));
-  });
-
-  // Stub gh-retry.sh: prints the scripted reply for call N (the last reply repeats) and counts calls.
-  const drive = (replies: Array<{ code: number; text: string }>) => {
-    const dir = mkdtempSync(join(tmpdir(), "arm-retry-"));
-    const last = replies[replies.length - 1] ?? { code: 0, text: "" };
-    const branches = replies
-      .map((r, i) => `[ "$n" -eq ${i + 1} ] && { echo ${JSON.stringify(r.text)}; exit ${r.code}; }`)
-      .join("\n");
-    writeFileSync(
-      join(dir, "gh-retry.sh"),
-      `#!/usr/bin/env bash\nn=$(( $(cat "${dir}/n" 2>/dev/null || echo 0) + 1 ))\necho $n > "${dir}/n"\n${branches}\necho ${JSON.stringify(last.text)}; exit ${last.code}\n`,
-      { mode: 0o755 },
+  it("runs scripts/arm-merge.mjs arm for this PR, and nothing else", () => {
+    expect(armStart).toBeGreaterThan(-1);
+    expect(arm).toMatch(
+      /run: node scripts\/arm-merge\.mjs arm "\$\{\{ github\.event\.pull_request\.number \}\}"\n/,
     );
-    const script = `sleep() { :; }\nPR=1\n${loop.replace(/^ {14}/gm, "")}`;
-    let code = 0;
-    try {
-      execFileSync("bash", ["-e", "-c", script], {
-        env: { ...process.env, RUNNER_TEMP: dir },
-        stdio: "pipe",
-      });
-    } catch (error) {
-      code = (error as { status?: number }).status ?? -1;
-    }
-    const calls = Number(readFileSync(join(dir, "n"), "utf8").trim());
-    rmSync(dir, { recursive: true, force: true });
-    return { code, calls };
-  };
-
-  const moved = { code: 1, text: "GraphQL: Base branch was modified" };
-
-  it("merges on the third try after the base moved twice", () => {
-    expect(drive([moved, moved, { code: 0, text: "merged" }])).toEqual({ code: 0, calls: 3 });
-  });
-
-  it("gives up after three tries and fails the step", () => {
-    expect(drive([moved])).toEqual({ code: 1, calls: 3 });
-  });
-
-  it("fails at once, with no retry, on any other error", () => {
-    expect(drive([{ code: 1, text: "GraphQL: Pull request is not mergeable" }])).toEqual({
-      code: 1,
-      calls: 1,
-    });
+    expect(arm).not.toContain("gh pr merge");
   });
 });
 
