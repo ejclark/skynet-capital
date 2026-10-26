@@ -135,6 +135,11 @@
     "mustBeSeenBy": "anyone signed in"
   },
   {
+    "screen": "/research ?section=coverage",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in (holdings and sector-fund numbers need an owned, linked account)"
+  },
+  {
     "screen": "/research ?section=playbooks (Playbook Store)",
     "verdict": "keep",
     "mustBeSeenBy": "member (Subscribe as needs an owned account)"

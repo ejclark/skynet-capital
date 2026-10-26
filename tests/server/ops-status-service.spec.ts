@@ -3,6 +3,8 @@ import {
   activitySignal,
   bridgeSignal,
   buildOpsStatus,
+  convictionCopiesSignal,
+  inlineConvictionCopies,
   personaGateSignal,
   resolveOpsStatusRepo,
 } from "../../src/server/ops-status-service.js";
@@ -165,6 +167,62 @@ describe("buildOpsStatus", () => {
     });
     expect(status.signals).toHaveLength(5);
     expect(status.signals.every((s) => s.verdict === "unknown")).toBe(true);
+  });
+});
+
+// #5482's last contract piece (dropping the inline conviction field and v4's presence bit) waits on
+// one number no lane can read from the live store: how many subscriptions still carry an inline copy.
+describe("the inline conviction copies row (#5482)", () => {
+  const sub = (playbookId: string, over: Record<string, unknown> = {}) =>
+    ({
+      accountId: "sauron",
+      playbookId,
+      mode: "standard",
+      enabled: true,
+      createdAt: NOW.toISOString(),
+      updatedAt: NOW.toISOString(),
+      ...over,
+    }) as never;
+  const copy = { conviction: { reason: "Still believe", checkOn: "2027-04-30" } };
+
+  it("names each subscription still carrying an inline copy, pointed or not", () => {
+    const state = {
+      sauron: [sub("CRWV-WHEEL", { convictionId: "ai-dip-2026-10" }), sub("SAURON", copy)],
+      banker: [sub("TACO-DJT", { ...copy, enabled: false })],
+    };
+    expect(inlineConvictionCopies(state)).toEqual(["sauron/SAURON", "banker/TACO-DJT"]);
+  });
+
+  it("reads ok at none, attention with the pairs named at any, unknown when unread", () => {
+    expect(convictionCopiesSignal([]).verdict).toBe("ok");
+    const some = convictionCopiesSignal(["sauron/SAURON"]);
+    expect(some.verdict).toBe("attention");
+    expect(some.detail).toContain("1 subscription(s)");
+    expect(some.detail).toContain("sauron/SAURON");
+    expect(convictionCopiesSignal(undefined).verdict).toBe("unknown");
+  });
+
+  it("joins the panel only when a store is wired, and a throwing read is unknown", async () => {
+    const inputs = {
+      now: () => NOW,
+      bridgeLastPollAt: () => undefined,
+      botsRunningSha: () => undefined,
+      personaGateVerdicts: () => undefined,
+      lastBotActivityAt: () => Promise.resolve(undefined),
+      repo: "x/y",
+    };
+    expect((await buildOpsStatus(inputs)).signals.map((s) => s.id)).not.toContain(
+      "conviction-copies",
+    );
+    const wired = await buildOpsStatus({ ...inputs, subscriptions: () => ({}) });
+    expect(wired.signals.find((s) => s.id === "conviction-copies")?.verdict).toBe("ok");
+    const broken = await buildOpsStatus({
+      ...inputs,
+      subscriptions: () => {
+        throw new Error("disk");
+      },
+    });
+    expect(broken.signals.find((s) => s.id === "conviction-copies")?.verdict).toBe("unknown");
   });
 });
 

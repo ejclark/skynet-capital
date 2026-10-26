@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { writeFileAtomicSync } from "../storage/atomic-write.js";
 import { deriveKey, type Envelope, open, seal } from "../storage/secure-envelope.js";
 import { useLiveGithubToken } from "./github-api.js";
 
@@ -68,8 +68,8 @@ export class GithubTokenStore {
     if (!this.key) {
       throw new Error("refusing to store the GitHub token unencrypted — set SKYNET_STORE_SECRET");
     }
-    mkdirSync(dirname(this.path), { recursive: true });
-    writeFileSync(this.path, JSON.stringify(seal(JSON.stringify(record), this.key)));
+    // tmp + rename: an OOM kill mid-write must not leave a torn token file (#4612 slice 9).
+    writeFileAtomicSync(this.path, JSON.stringify(seal(JSON.stringify(record), this.key)));
   }
 }
 

@@ -345,7 +345,9 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     flowchart and erDiagram (frontmatter `fontSize` is a no-op for flowchart text).
 14. **In a state diagram the removed path is a note, not an edge.** State diagrams cannot dash a
     transition · a before that lives only in the caption · `note left of <new state>` reading
-    "was: …"; the note's dashed link is the delta mark.
+    "was: …"; the note's dashed link is the delta mark. Write it in the block form (`note left of
+    X`, the text, `end note`): in the one-line form `note left of X: was: …` the second colon is a
+    parse error on 11.17.2.
 15. **A C4 context puts the system's boundary in the middle.** Layout follows declaration order ·
     relation labels drawn over other boxes · declare the boundaries left, centre, right in the
     order the edges leave the system; `Rel_L` / `Rel_R` / `Rel_U` / `Rel_D`.
