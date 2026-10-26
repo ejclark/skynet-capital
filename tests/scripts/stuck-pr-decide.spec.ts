@@ -1,7 +1,9 @@
 import { describe, expect, it } from "@rstest/core";
 import {
+  boardedBranches,
   DEFAULT_HOURS,
   describe as describeStuck,
+  exemptReason,
   isGhostSuite,
   judgePr,
   stuckLine,
@@ -249,5 +251,52 @@ describe("the digest line", () => {
 
   it("reports an empty list as healthy", () => {
     expect(stuckLine([])).toContain("none");
+  });
+});
+
+// 2026-10-26: #5381–#5383 (dependabot bumps to .github/workflows/**) were named "unarmed" beside
+// research PRs. A protected diff waits for Eric's merge by design and a boarded branch lands with
+// its platter — neither is stuck, and neither may ever be auto-armed.
+describe("exemptReason — protected and platter-boarded PRs are not stuck", () => {
+  const isProtected = (p: string) => p.startsWith(".github/workflows/");
+  const never = () => false;
+
+  it("WHEN the diff touches an envelope-protected path, names it", () => {
+    const why = exemptReason({
+      pr: { head: { ref: "dependabot/github_actions/x" } },
+      files: [".github/workflows/pipeline.yml"],
+      isProtected,
+      isBoarded: never,
+    });
+    expect(why).toContain("envelope-protected");
+    expect(why).toContain(".github/workflows/pipeline.yml");
+  });
+
+  it("WHEN an open platter's ledger names the branch, says it is boarded", () => {
+    const isBoarded = boardedBranches([
+      { head: { ref: "platter/2026-10-26" }, body: "| 1 | `feedback/60` | green | abc123 |" },
+      { head: { ref: "feedback/61" }, body: "names feedback/60 but is no platter" },
+    ]);
+    expect(isBoarded("feedback/60")).toBe(true);
+    expect(isBoarded("feedback/6005")).toBe(false);
+    expect(isBoarded("feedback/6")).toBe(false);
+    const why = exemptReason({
+      pr: { head: { ref: "feedback/60" } },
+      files: ["docs/x.md"],
+      isProtected,
+      isBoarded,
+    });
+    expect(why).toBe("boarded on an open platter");
+  });
+
+  it("WHEN neither holds, the PR is a candidate (null)", () => {
+    expect(
+      exemptReason({
+        pr: { head: { ref: "research/x" } },
+        files: ["docs/research/events/x.md"],
+        isProtected,
+        isBoarded: boardedBranches([]),
+      }),
+    ).toBeNull();
   });
 });

@@ -103,6 +103,7 @@ import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
+import { rearmStranded } from "./stranded-pr.mjs";
 import { endBuild, routeWake, wakeNext } from "./wake.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
@@ -1605,6 +1606,7 @@ function executeOne(i, stallRepairs = []) {
     console.log(`::notice::work-mode title → ${i.newTitle} (${i.reason})`);
     return `🪧 retitled #${i.issueNumber} — \`${i.title}\` → \`${i.newTitle}\``;
   }
+  if (i.kind === "rearm-stranded") return rearmStranded(i);
   if (i.kind === "flag-conflict-cap") {
     commentAndFlagConflictCap(i);
     console.log(`::warning::conflict repair cap reached — #${i.prNumber} \`${i.title}\``);
