@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
-import { overdueLoops, parseLoopList } from "../../scripts/loop-list-decide.mjs";
+import { buriedDates, overdueLoops, parseLoopList } from "../../scripts/loop-list-decide.mjs";
 
 // #4060 (slice 2 of #3955): WHEN the digest runs and a loop row's `Next check` date has passed
 // unscored, the system SHALL list that row as overdue. Driven two ways: the pure parser/decision,
@@ -145,5 +145,42 @@ describe("doctrine-scan.mjs --due carries overdue loop checks", () => {
       code = (error as { status: number }).status;
     }
     expect(code).toBe(2);
+  });
+});
+
+// #5724 retro: the Member studies row read "the next fixed-build control … due by 2026-10-17", so the
+// scan saw no date and the check never posted. The lint flags only a cell that HAS a date and buries
+// it — an event-triggered cell with no date ("on each sweep…") is a legitimate shape.
+describe("loop list — a Next check cell that buries its date", () => {
+  const row = (state: string, text: string, nextCheck: string | null = null) => ({
+    loop: "L",
+    issue: "#1",
+    state,
+    nextCheck,
+    nextCheckText: text,
+  });
+
+  it("flags a running row whose date sits after prose", () => {
+    expect(buriedDates([row("running", "the next control, due by 2026-10-17")])).toEqual([
+      { loop: "L", date: "2026-10-17" },
+    ]);
+  });
+
+  it("leaves a leading date, a dateless event trigger and an ended row alone", () => {
+    expect(
+      buriedDates([
+        row("running", "2026-11-09 — the next control", "2026-11-09"),
+        row("running", "on each sweep Eric names tickers for"),
+        row("closed", "none — ended 2026-10-26: held"),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("finds none in the live registry", () => {
+    const md = readFileSync(
+      new URL("../../docs/process/LEARNING-LOOP.md", import.meta.url),
+      "utf8",
+    );
+    expect(buriedDates(parseLoopList(md))).toEqual([]);
   });
 });

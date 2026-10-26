@@ -20,3 +20,6 @@ export function overdueLoops(state: {
   today: string;
   rows: LoopRow[] | null;
 }): Array<LoopRow & { due: true; reason: "loop-check-overdue"; nextDueDate: string }>;
+
+/** Running rows whose Next check cell carries a date it does not lead with — never scheduled. */
+export function buriedDates(rows: LoopRow[] | null): Array<{ loop: string; date: string }>;
