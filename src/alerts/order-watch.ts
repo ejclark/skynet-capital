@@ -36,7 +36,7 @@ function str(value: unknown): string | undefined {
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 
-function money(value: number): string {
+function usdWithCommas(value: number): string {
   return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
@@ -53,7 +53,7 @@ function sizeWords(status: string, payload: ActivityEvent["payload"]): string {
 function priceWords(status: string, payload: ActivityEvent["payload"]): string {
   const price = finiteOrUndefined(payload.price);
   const filled = status === "filled" || status === "partially_filled";
-  return price !== undefined && filled ? ` @ ${money(price)}` : "";
+  return price !== undefined && filled ? ` @ ${usdWithCommas(price)}` : "";
 }
 
 const BODY: Partial<Record<string, string>> = {

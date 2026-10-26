@@ -19,7 +19,12 @@ import { siblingPath } from "../storage/sibling-path.js";
  */
 export type PlayMilestoneKind = "started" | "passed" | "promoted" | "paused";
 
-const KINDS: readonly PlayMilestoneKind[] = ["started", "passed", "promoted", "paused"];
+const PLAY_MILESTONE_KINDS: readonly PlayMilestoneKind[] = [
+  "started",
+  "passed",
+  "promoted",
+  "paused",
+];
 
 export interface PlayMilestone {
   /** The idempotency key: one entry per key, ever. */
@@ -47,7 +52,7 @@ const isText = (v: unknown, max = 200): v is string =>
 function parseEntry(raw: unknown): PlayMilestone | undefined {
   if (typeof raw !== "object" || raw === null) return undefined;
   const r = raw as Record<string, unknown>;
-  const kind = KINDS.find((k) => k === r.kind);
+  const kind = PLAY_MILESTONE_KINDS.find((k) => k === r.kind);
   if (
     !(
       kind &&

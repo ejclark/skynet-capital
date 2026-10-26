@@ -1,5 +1,6 @@
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
 import type { ConvictionClaim } from "./conviction-record.js";
+import { money } from "./format-money.js";
 
 /**
  * SCORING A CLAIM AGAINST ITS OWN DATED FALSIFIER (#5482 slice 5, criterion 6). A claim carries the
@@ -74,8 +75,6 @@ export interface ScoreContext {
   /** A symbol's daily closes, oldest first, or nothing when the tape cannot be read. */
   readonly tape?: (symbol: string) => readonly TapeBar[] | undefined;
 }
-
-const money = (n: number): string => `$${n.toFixed(2)}`;
 
 const pending = (basis: string, dueOn?: string): ClaimScore => ({
   outcome: "pending",
