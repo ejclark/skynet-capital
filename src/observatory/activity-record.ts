@@ -1,3 +1,4 @@
+import type { JsonlTail } from "../storage/jsonl-store.js";
 import type { ActivityView } from "./participant-snapshot.js";
 
 /**
@@ -35,4 +36,9 @@ export interface ActivityStore {
    *  corroboration signal (e.g. "did this bot trade recently"); use `list` + `collapseActivity`
    *  when the caller needs an order's true latest fill state. */
   latest(participantId: string): Promise<TradeActivityRecord | undefined>;
+  /** Every participant file's lines appended since `from` (by file path), in file order — the
+   *  append-aware read `wire-feed-cache.ts` folds (#4458). Optional: without it a reader re-lists. */
+  sinceAll?(
+    from: ReadonlyMap<string, number>,
+  ): Promise<ReadonlyMap<string, JsonlTail<TradeActivityRecord>>>;
 }

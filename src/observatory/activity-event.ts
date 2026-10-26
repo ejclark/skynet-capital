@@ -3,6 +3,7 @@ import type { FeedbackLogEntry } from "../server/feedback-log.js";
 import type { FeedbackStatus } from "../server/feedback-status.js";
 import type { LadderProgressEntry, LadderProgressEvidence } from "../server/ladder-progress-log.js";
 import type { OrderAuditRecord } from "../server/order-audit-log.js";
+import type { JsonlTail } from "../storage/jsonl-store.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 
 /**
@@ -71,6 +72,11 @@ export interface ActivityEventBus {
   publish(event: ActivityEvent): Promise<void>;
   /** All events (order not guaranteed); one participant's when given. */
   list(participantId?: string): Promise<ActivityEvent[]>;
+  /** Every participant file's events appended since `from` (by file path), in file order — the
+   *  append-aware read `wire-feed-cache.ts` folds (#4458). Optional: without it a reader re-lists. */
+  sinceAll?(
+    from: ReadonlyMap<string, number>,
+  ): Promise<ReadonlyMap<string, JsonlTail<ActivityEvent>>>;
   /** Live fan-out only — call `list()` first for anything already published. */
   subscribe(listener: PublishedListener): ActivitySubscription;
 }
