@@ -283,18 +283,21 @@ numbers per side (`phone before 16.4px 1.06 screens`) and flags a miss, advisory
 "≤15 nodes" (#4550): [the drawn pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981857928)
 put 20 nodes at 12.9px, still readable, but 1.60 screens against 1.06 for the same story in 8. The
 count was standing in for the glance, and the glance is measured directly now. Then: plain words,
-not paths (`login canvas`, never `src/three/pieces/eye-shader.ts`), still on trial on #4550 with
-[its pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981860237); no SHAs,
-env vars, or CLI flags in labels; quote labels containing special characters.
+not paths (`login canvas`, never `src/three/pieces/eye-shader.ts`). When a builder needs the path,
+it goes in a table beside the picture and the label says what the thing does (rule 1, the same
+answer as for a sha). [The pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981860237)
+kept this one (#4550): paths widened the drawing 17% and took phone text from 14.2 px to 12.2 px,
+one more path from the floor. No SHAs, env vars, or CLI flags in labels; quote labels containing
+special characters.
 
 **Rules the design rounds found** (round 2, iterating the five #3778 pairs, and round 3, the
 Claude Design handoff on plan #3786; each is rule · tell · fix). A first draft is the right type with
 first-draft words; the third draft has fewer nodes, a title that states the claim, the old path drawn
 dotted, phone direction, and labels a friend with no context reads without stopping.
 
-1. **A handle is not a word.** Shas, versions and ids stay in the table beside the picture; a label
-   says what the handle means · `revert: b0a4c8a` tagged on every commit · `reverts alone`, the
-   ledger row keeps the sha.
+1. **A handle is not a word.** Shas, versions, ids and file paths stay in the table beside the
+   picture; a label says what the handle means · `revert: b0a4c8a` tagged on every commit ·
+   `reverts alone`, the ledger row keeps the sha.
 2. **A fork shape asks a question.** The text in a diamond ends in `?`; the exits carry the
    answers · a hexagon stating "parse it the way GitHub does" · `door{"parses like<br/>GitHub?"}`.
 3. **Two boxes per rank on a phone.** In `TD` no rank holds more than two boxes · three side by
