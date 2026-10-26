@@ -319,8 +319,9 @@ dotted, phone direction, and labels a friend with no context reads without stopp
 10. **One weapon per enemy: the type matches the story.** Flow → flowchart, count → erDiagram,
     lifecycle → stateDiagram-v2, order in time → sequence, containment → a box with boxes inside
     · a gitGraph for a story about a button · the decision table above.
-11. **Kurosawa mode: the look is a mode, switched whole.** A picture copies one named snippet
-    whole (house teal, or ink mode); never a hex chosen in flight, never two modes
+11. **Kurosawa mode: the look is a mode, switched whole.** A picture that wears a look at all (plain
+    is the default, *Dark mode* below) copies one named snippet whole (house teal, or ink mode);
+    never a hex chosen in flight, never two modes
     in one drawing · a one-off fill · the snippet, copied whole; the lint refuses a `classDef` hex
     outside a checked-in snippet.
 12. **The glint: one loud thing, and it is the decision.** Exactly one element carries the
@@ -357,7 +358,12 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     allows; a markdown string in a classic label needs the backtick form
     (`["\`**bold**<br/>fact\`"]`), a `@{ label: }` shape takes it bare.
 
-**Dark mode:** the default is NO `theme`, no `themeVariables`, no hex — GitHub picks light or dark
+**Dark mode:** the default is plain, for every picture: NO `theme`, no `themeVariables`, no hex,
+and no snippet unless the picture is a decision (the one exception, *ink mode* below). Settled by
+[a drawn pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981880259) on
+#4550: the same held-PR fork plain and in ink measured identical (19.9 px on a phone, 1.12 screens),
+so the look buys nothing on geometry and spends rule 12's one loud thing wherever it is worn.
+GitHub picks light or dark
 from the page, and a pinned theme freezes one of them (the lint fails `theme:` in frontmatter and
 in `%%{init}%%`, which is deprecated upstream anyway). Emphasis that survives both modes and a
 colourblind reader is *achromatic*: a thick edge (`==>`) for what is new, a dotted one (`-.->`) for
@@ -394,8 +400,9 @@ it, the house `removed` unchanged. Every class holds ≥ 4.5:1 text on fill and 
 both GitHub canvases (`tests/ui/mermaid-classdef.spec.ts` verifies every snippet on this page); the
 seal red's stroke is light because its fill and a dark stroke both sat under 3:1 against GitHub's
 dark canvas. **Scope:** decision pictures — a PR's opening frame or a held PR with a fork in it,
-where gold marks the one decision and red marks a defect beside it (rule 12); architecture and
-flow pictures keep the teal. A look is a mode, switched whole (rule 11): a picture uses the teal
+where gold marks the one decision and red marks a defect beside it (rule 12). A decision picture
+*may* wear it; it is never required. Architecture, dataflow and lifecycle pictures stay plain, and
+reach for the teal snippet only when a delta needs marking beyond edge weight. A look is a mode, switched whole (rule 11): a picture uses the teal
 snippet or this one, never both, and the lint refuses any hex outside either. The generated held-PR
 pictures (`scripts/platter-picture.mjs`) wear it.
 
