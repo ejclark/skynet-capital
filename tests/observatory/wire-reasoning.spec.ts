@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import type { EquitySample } from "../../src/observatory/history-store.js";
+import { wireTradeVitalsFor } from "../../src/observatory/vitals.js";
 import type { WireTradeRow } from "../../src/observatory/wire-data.js";
 import { attachWireReasoning } from "../../src/observatory/wire-reasoning.js";
 
@@ -173,7 +174,7 @@ describe("attachWireReasoning", () => {
     ];
     const withHistory = attachWireReasoning([row()], {
       findByOrderId: () => ({ record, intent: guardedIntent }),
-      historyByParticipant: new Map([["sauron", samples]]),
+      vitalsByParticipant: new Map([["sauron", wireTradeVitalsFor(samples)]]),
     });
     expect(withHistory[0]?.vitals?.lossHeadroom.measured).toBe(true);
 

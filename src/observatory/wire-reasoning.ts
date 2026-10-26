@@ -2,11 +2,10 @@ import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
 import { brokerWordsFor } from "./broker-words.js";
 import { guardDeltaFor } from "./guard-delta.js";
-import type { EquitySample } from "./history-store.js";
 import { optionContractLine } from "./option-contract-line.js";
 import { optionFillCost, optionFillCostWords } from "./option-fill-cost.js";
 import { withoutPlaybookNames } from "./playbook-name-redaction.js";
-import { type WireTradeVitals, wireTradeVitalsFor } from "./vitals.js";
+import type { WireTradeVitals } from "./vitals.js";
 import type { WireTradeRow } from "./wire-data.js";
 
 /**
@@ -79,9 +78,10 @@ export interface WireReasoningDeps {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
-  /** One participant's equity history, keyed by participant id — supplied pre-fetched so this
-   *  function stays synchronous and pure; the route layer owns the I/O. */
-  readonly historyByParticipant?: ReadonlyMap<string, readonly EquitySample[]>;
+  /** One participant's vitals as of any instant, keyed by participant id — built by the route
+   *  layer (`wireTradeVitalsFor` over a history, or `wireTradeVitalsFromDrawdown` over the Pulse
+   *  fold, #4619), so this function stays synchronous and pure and does no I/O. */
+  readonly vitalsByParticipant?: ReadonlyMap<string, (atIso: string) => WireTradeVitals>;
   /** Whether the viewer owns this account (`desk-owner-gate.ts`'s `ownsDesk`) — a row on any
    *  other account loses its playbook (#885). Absent, the viewer owns none. */
   readonly ownsAccount?: (participantId: string) => boolean;
@@ -161,24 +161,11 @@ export function attachWireReasoning(
   rows: readonly WireTradeRow[],
   deps: WireReasoningDeps,
 ): WireTradeWithReasoning[] {
-  // One vitals index per account, built on its first row: a page holds many rows per bot, and
-  // re-scanning a 180-day history per row was the Wire's whole 1.2 s (#4619).
-  const vitalsByParticipant = new Map<string, (atIso: string) => WireTradeVitals>();
-  const vitalsOf = (participantId: string) => {
-    const samples = deps.historyByParticipant?.get(participantId);
-    if (!samples) return undefined;
-    let vitals = vitalsByParticipant.get(participantId);
-    if (!vitals) {
-      vitals = wireTradeVitalsFor(samples);
-      vitalsByParticipant.set(participantId, vitals);
-    }
-    return vitals;
-  };
   return rows.map((row) => {
     if (row.kind !== "bot") return row;
     const reasoning = reasoningForOrder(row.orderId, deps);
     if (!reasoning) return row;
-    const vitals = vitalsOf(row.participantId);
+    const vitals = deps.vitalsByParticipant?.get(row.participantId);
     return {
       ...row,
       reasoning: deps.ownsAccount?.(row.participantId)
