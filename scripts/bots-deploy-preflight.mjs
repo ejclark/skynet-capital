@@ -14,10 +14,11 @@
 // reads env FLY_API_TOKEN, FORCE ('true'/'false'), DEPLOYED_SHA (may be empty), HEAD_SHA, and
 // fly.toml from the cwd; prints exactly two lines (`deploy`/`skip`, then the one-line reason) —
 // same shape as scripts/bot-relevant.mjs, so the workflow step's skip()/go() wiring is unchanged.
+// On an unforced deploy it also reads pipeline.yml's run history for HEAD_SHA (`gh api`, #6005).
 // A check that could not run (the volume gate with no listing to read) is named as one `·` note on
 // stderr — never stdout, which pipeline.yml parses with head/tail — so a fail-open is never quiet.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { classify } from "./bot-relevant.mjs";
 
 // The 2026-08-26 incident's own number: 41 same-day merges restarted the bots machine ~every 15
@@ -69,6 +70,70 @@ export function decide({ hasToken, cutoverPending, force, deployedSha, deployedA
     }
   }
   return null;
+}
+
+// #6005 (2026-10-26): while the bots could not boot (#6004), bots-catchup.yml re-dispatched the
+// pipeline 91+ times on ONE commit. A failed deploy rolls back, the rollback drops the GIT_SHA
+// stamp, so the machine always looks behind main and every 15-minute tick pulled the lever again —
+// a Fly release plus a rollback each time, two restarts of a machine that could not start. The
+// backoff is per target SHA: after this many failed bots deploys of the same commit, an unforced
+// preflight stops trying; a new commit on main is a new SHA with a clean record, so it tries again.
+export const BOTS_DEPLOY_FAILURE_LIMIT = 3;
+
+/**
+ * Pure. Consecutive failed bots-deploy attempts for one SHA, given the `release · deploy bots`
+ * job conclusions newest first. A success (a deploy, or a preflight skip) ends the streak; a
+ * cancelled, skipped or missing job was never an attempt and neither counts nor breaks it.
+ */
+export function failedStreak(conclusions) {
+  let streak = 0;
+  for (const c of conclusions) {
+    if (c === "success") break;
+    if (c === "failure" || c === "timed_out") streak += 1;
+  }
+  return streak;
+}
+
+/** Pure. A `skip` once the same SHA has failed `limit` deploys in a row; `null` otherwise. */
+export function backoff({ headSha, failures, limit = BOTS_DEPLOY_FAILURE_LIMIT }) {
+  if (failures < limit) return null;
+  return {
+    deploy: false,
+    reason:
+      `backoff: the last ${failures} bots deploys of ${headSha.slice(0, 7)} failed — ` +
+      "not retrying this commit; the next bot-relevant commit on main (or a manual " +
+      "force_bots_deploy) tries again",
+  };
+}
+
+/**
+ * The `release · deploy bots` conclusions of pipeline.yml's completed runs on `headSha`, newest
+ * first — read until the streak is settled (a success, or `limit` failures), at most 10 runs.
+ * Throws when `gh` cannot answer; the caller fails open.
+ */
+function deployHistory(headSha, limit) {
+  const repo = process.env.GITHUB_REPOSITORY || "{owner}/{repo}";
+  const gh = (path, jq) =>
+    execFileSync("gh", ["api", path, "--jq", jq], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  const runIds = gh(
+    `repos/${repo}/actions/workflows/pipeline.yml/runs?head_sha=${headSha}&status=completed&per_page=10`,
+    ".workflow_runs[].id",
+  )
+    .split("\n")
+    .filter(Boolean);
+  const conclusions = [];
+  for (const id of runIds) {
+    const c = gh(
+      `repos/${repo}/actions/runs/${id}/jobs?per_page=100`,
+      '.jobs[] | select(.name == "release · deploy bots") | .conclusion',
+    );
+    conclusions.push(c || null);
+    if (c === "success" || failedStreak(conclusions) >= limit) break;
+  }
+  return conclusions;
 }
 
 /** Pure. True when fly.toml still declares the `bots` process group (pre-cutover). */
@@ -140,6 +205,35 @@ if (process.argv[1]?.endsWith("bots-deploy-preflight.mjs")) {
         deploy: true,
         reason: `classify failed, failing open: ${err.message} (${since})`,
       };
+    }
+  }
+
+  // The failure backoff (#6005) runs only on an unforced would-deploy verdict: a forced dispatch is
+  // the human's lever (and the catch-up job's own dispatch, which it already decided to pull).
+  // BOTS_DEPLOY_HISTORY is the spec override — comma-separated job conclusions, newest first; the
+  // real caller asks the GitHub API, and without a token (pipeline.yml's deploy-bots job has none)
+  // the check names itself on stderr and fails open, exactly like the volume gate below.
+  if (verdict.deploy && !force) {
+    let history = process.env.BOTS_DEPLOY_HISTORY?.split(",").filter(Boolean);
+    if (history === undefined) {
+      try {
+        history = headSha ? deployHistory(headSha, BOTS_DEPLOY_FAILURE_LIMIT) : undefined;
+      } catch {
+        // Optional input: no gh/token here — never block a deploy on the check itself.
+        history = undefined;
+      }
+      if (history === undefined) {
+        const why = headSha ? "`gh api` could not read the run history" : "no HEAD_SHA";
+        console.error(`· failure backoff skipped (${why}) — UNKNOWN, failing open`);
+      }
+    }
+    const held = history && backoff({ headSha, failures: failedStreak(history) });
+    if (held) {
+      verdict = held;
+      // Said in the run summary too, not only the log — a held commit is a state someone should see.
+      if (process.env.GITHUB_STEP_SUMMARY) {
+        appendFileSync(process.env.GITHUB_STEP_SUMMARY, `**Bots deploy held** — ${held.reason}\n`);
+      }
     }
   }
 
