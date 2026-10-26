@@ -3,6 +3,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } fro
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // #5548: parallel worktree agents each ran a full verify, saturating a 4-core session until specs
 // timed out. WHEN two full verifies start in one checkout, THEN they SHALL run one after the other.
@@ -14,8 +15,10 @@ const HOOK = resolve(".husky/pre-push");
 
 function repo() {
   const dir = mkdtempSync(join(tmpdir(), "verify-locked-"));
+  // hermetic: under a git hook GIT_DIR outranks cwd, and the fixture would act on this repo
+  const base = hermeticGitEnv();
   const git = (...args: string[]) =>
-    execFileSync("git", args, { cwd: dir, encoding: "utf8" }).trim();
+    execFileSync("git", args, { cwd: dir, encoding: "utf8", env: base }).trim();
   git("init", "-q", "-b", "main");
   git("config", "user.email", "t@example.com");
   git("config", "user.name", "t");
@@ -31,7 +34,7 @@ function repo() {
   writeFileSync(join(dir, ".gitignore"), "");
   git("add", "-A");
   git("commit", "-qm", "init");
-  const env = { ...process.env, MARKER: marker, VERIFY_EXIT: "0", SKYNET_VERIFY_LOCKED: "" };
+  const env = { ...base, MARKER: marker, VERIFY_EXIT: "0", SKYNET_VERIFY_LOCKED: "" };
   const run = (args: string[] = [], extra: Record<string, string> = {}, input?: string) =>
     spawnSync("bash", ["scripts/verify-locked.sh", ...args], {
       cwd: dir,
