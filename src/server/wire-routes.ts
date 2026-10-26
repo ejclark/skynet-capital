@@ -27,6 +27,7 @@ import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js
 import { spreadLookup } from "../observatory/spread-activity.js";
 import { mergeLedgerIntoEvents } from "../observatory/trade-event-feed.js";
 import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.js";
+import type { WireFeed } from "../observatory/wire-feed-cache.js";
 import { wireJsonView } from "../observatory/wire-json-view.js";
 import { attachWireReasoning } from "../observatory/wire-reasoning.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
@@ -78,6 +79,13 @@ export interface WireRouteDeps {
    * to hold the log's full history.
    */
   readonly readAllFeedback?: () => Promise<readonly FeedbackLogEntry[]>;
+  /**
+   * The three reads above, folded once per process and then advanced by appended lines only
+   * (`wireFeedReader`, #4458). Wired, it replaces all three — they stay as the fallback, the path the
+   * in-memory and test deployments take — and every page matches what they would render, because it
+   * hands the same folds below the same inputs, reduced to the lines that can still decide a row.
+   */
+  readonly readWireFeed?: () => Promise<WireFeed>;
   readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
   /**
    * Recently merged pull requests — the feed's third kind (#784 slice 4), and the one source that is
@@ -234,6 +242,21 @@ async function assembleMilestones(
   return toMemberMilestones(collapseMilestoneEvents(all), participants).slice(0, limit);
 }
 
+/**
+ * The bus, the trade ledger and the feedback log — off the per-process fold when it is wired, else
+ * each read whole (the fallback; an unwired read is an empty leg, the honest empty state). All three
+ * in flight at once on the fallback, so a `no-store` page never pays for them in series.
+ */
+async function readFeed(config: WireRouteDeps): Promise<WireFeed> {
+  if (config.readWireFeed) return config.readWireFeed();
+  const [events, records, filings] = await Promise.all([
+    config.readAllActivityEvents ? config.readAllActivityEvents() : [],
+    config.readAllTradeActivity ? config.readAllTradeActivity() : [],
+    config.readAllFeedback ? config.readAllFeedback() : [],
+  ]);
+  return { events, records, filings };
+}
+
 async function assembleWire(
   config: WireRouteDeps,
   limit: number,
@@ -242,15 +265,8 @@ async function assembleWire(
   before?: string,
 ): Promise<AssembledWire> {
   const { participants } = config.hub.getState();
-  // Both in flight at once: two independent full-ledger reads, so awaiting them in series would
-  // pay for the union twice over on a `no-store` page. (Each is still a full read — a bounded read
-  // is a real design question for the feed redesign, #784 slice 3, not something to fake here.)
-  const [published, records] = await Promise.all([
-    config.readAllActivityEvents ? config.readAllActivityEvents() : [],
-    config.readAllTradeActivity ? config.readAllTradeActivity() : [],
-  ]);
+  const { events: published, records, filings } = await readFeed(config);
   const events = mergeLedgerIntoEvents(published, records);
-  const filings = config.readAllFeedback ? await config.readAllFeedback() : [];
   // `collapseFeedbackEvents` sorts newest-first before this is bounded — `list()`'s own order is
   // filesystem-dependent, so the page shown would otherwise be an arbitrary slice.
   // `published`, not `events`: the trade ledger's translated lines carry no feedback or development
