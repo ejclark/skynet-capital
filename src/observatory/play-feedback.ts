@@ -30,7 +30,7 @@ function esc(s: string): string {
   );
 }
 
-function money(n: number): string {
+function signedWholeDollars(n: number): string {
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
   return `${sign}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
 }
@@ -42,7 +42,7 @@ function row(o: PlayOutcome): string {
       <span class="pf-char">${esc(o.character)}</span>
       <span class="pf-play">${esc(o.play)}</span>
       <span class="pf-result">${RESULT_LABEL[o.result]}</span>
-      <span class="pf-pnl ${plCls}">${o.result === "live" ? "…" : money(o.pnl)}</span>
+      <span class="pf-pnl ${plCls}">${o.result === "live" ? "…" : signedWholeDollars(o.pnl)}</span>
       ${o.note ? `<span class="pf-note">${esc(o.note)}</span>` : ""}
     </li>`;
 }

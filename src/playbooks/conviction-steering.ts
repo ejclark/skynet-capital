@@ -3,6 +3,7 @@ import { nextSession } from "../domain/market-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
 import type { ClaimStudy } from "./claim-study.js";
+import { money } from "./format-money.js";
 
 /**
  * STEERING: A CONVICTION NARROWS THE SETTINGS OF THE PAIRS IT STEERS (#5482 slice 4, criteria 3 and
@@ -93,7 +94,6 @@ export interface ClaimRead {
 
 const MAX_QUIET_SESSIONS = 60;
 const refuse = (reason: string): SteeringResolution => ({ ok: false, reason });
-const money = (n: number): string => `$${n.toFixed(2)}`;
 const isCount = (n: number): boolean => Number.isInteger(n) && n >= 0;
 
 /** The claim a label names ("7" is the claim whose statement opens "7. "), or undefined. */
