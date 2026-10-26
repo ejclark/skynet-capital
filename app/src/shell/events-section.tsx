@@ -2,15 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactElement, useRef } from "react";
 import { MARKET_CLOSURES } from "../../../src/domain/market-calendar";
-import { type BookDesk, type BookEvent, bookEventsIn, nextOnBook } from "../live/book-events";
+import { type BookEvent, bookEventsIn, nextOnBook } from "../live/book-events";
 import { bookLanes, bookLens, countsAround } from "../live/book-lanes";
 import { useHorizonRange } from "../live/horizon-params";
 import { ALL_RANGE, type DayRange, inRange, rangeFor, stepAnchor } from "../live/horizon-range";
 import { useRefineSearch } from "../live/refine-search";
 import { DEFAULT_LENS, fetchResearchCalendar } from "../live/research";
+import { type SymbolDesk, symbolView } from "../live/symbol-book";
 import { BookLanesPicture } from "./book-lanes";
 import { BookRangeHead, rangeWords } from "./book-range-head";
 import { AgendaRow } from "./events-agenda";
+import { SymbolFoot, SymbolLead } from "./events-symbol-head";
 
 /**
  * EVENTS — the Profile page's calendar of what you hold (#3807 slice 2c; reshaped by #5074, the
@@ -36,6 +38,12 @@ import { AgendaRow } from "./events-agenda";
  * the event details and context"): a tap on a mark brings the list's head into view when it is off
  * screen — below the picture on a phone, scrolled past on a desk — and the day's rows step in one
  * after another. Reduced motion jumps instead of gliding and the rows simply appear.
+ *
+ * ONE SYMBOL (#6082; #5154 round 2's IA call: "build from a single symbol view"). `?symbol=` —
+ * the param the Ledger already narrows by — narrows the whole section to one ticker at the same
+ * address: the symbol's head (`events-symbol-head.tsx`: invested, P/L, the soonest action, each
+ * position's target, the recap) leads, and the lanes and the list keep that symbol's dates and the
+ * market-wide prints every position feels. A lane's name opens it; "All symbols ×" clears it.
  *
  * HONEST WHEN THIN: no open positions, nothing dated on what you hold, and a research payload that
  * did not arrive each say so in words; an empty range names the next date on what you hold and
@@ -164,8 +172,10 @@ export function EventsSection({
   day,
   onPickDay,
   accounts,
+  symbol,
+  onSymbol,
 }: {
-  readonly desks: readonly BookDesk[] | undefined;
+  readonly desks: readonly SymbolDesk[] | undefined;
   readonly desksLoading: boolean;
   readonly desksError: boolean;
   /** The picked day, `?events=` — undefined when none is. */
@@ -173,6 +183,10 @@ export function EventsSection({
   readonly onPickDay: (day: string | undefined) => void;
   /** Each desk's name, for a lane's detail when more than one book is in view. */
   readonly accounts?: ReadonlyMap<string, string>;
+  /** `?symbol=` — the one ticker the section is narrowed to; undefined shows every symbol. */
+  readonly symbol?: string | undefined;
+  /** Narrows to a symbol, or (undefined) brings every symbol back. */
+  readonly onSymbol?: (symbol: string | undefined) => void;
 }): ReactElement {
   const horizon = useHorizonRange();
   const research = useQuery({ queryKey: ["research-calendar"], queryFn: fetchResearchCalendar });
@@ -184,7 +198,8 @@ export function EventsSection({
 
   const events = research.data?.events ?? [];
   const calls = research.data?.calls ?? [];
-  const book = desks ?? [];
+  const { desks: book, book: one, named } = symbolView(desks, symbol);
+
   const join = (r: DayRange) =>
     bookEventsIn({ desks: book, events, calls, range: r, lens: horizon.lens });
   const everything = join(ALL_RANGE);
@@ -238,8 +253,9 @@ export function EventsSection({
       : onPickDay(undefined);
 
   return (
-    <section className="book-cal" aria-label="Events">
-      <h2 className="visually-hidden">Events</h2>
+    <section className="book-cal" aria-label={named}>
+      <h2 className="visually-hidden">{named}</h2>
+      <SymbolLead symbol={symbol} book={one} read={desks !== undefined} onSymbol={onSymbol} />
       <BookRangeHead
         lens={lens}
         range={range}
@@ -261,6 +277,7 @@ export function EventsSection({
           onPick={(date) => (date === picked ? clearPick() : pickDay(date))}
           onJump={horizon.setOn}
           onToday={() => horizon.setOn(undefined)}
+          onSymbol={symbol ? undefined : onSymbol}
         />
         <div className="book-agenda" ref={agenda}>
           <p className="agenda-head">
@@ -300,6 +317,7 @@ export function EventsSection({
           <AgendaFoot rows={rows.length} phrase={phrase} events={research.data?.events} />
         </div>
       </div>
+      <SymbolFoot book={one} />
     </section>
   );
 }

@@ -76,6 +76,9 @@ export interface Lane {
   readonly key: string;
   /** "NVDA", "CRWV $80 short put", "Market-wide". */
   readonly name: string;
+  /** The ticker the lane is about (an option's underlying) — what a tap on its name narrows Events
+   *  to (#6082); absent on the market lane. */
+  readonly symbol?: string;
   /** "130 shares", "29d", "2 contracts · 29d" — absent on the market lane. */
   readonly detail?: string;
   /** The days in the range this lane has something on, in date order. */
@@ -164,12 +167,14 @@ function laneOf(
   detail: string | undefined,
   events: readonly BookEvent[],
   range: DayRange,
+  symbol?: string,
 ): Lane {
   const marks = marksOf(events);
   const nextAfter = marks.find((m) => m.date > range.end);
   return {
     key,
     name,
+    ...(symbol ? { symbol } : {}),
     ...(detail ? { detail } : {}),
     marks: marks.filter((m) => inRange(m.date, range)),
     ...(nextAfter ? { nextAfter } : {}),
@@ -203,7 +208,9 @@ export function bookLanes({
   const perSlot = new Map<string, BookEvent[]>(slots.map((s) => [s.key, []]));
   for (const event of [...events.decide, ...events.held])
     for (const slot of slotsFor(event, slots)) perSlot.get(slot.key)?.push(event);
-  const lanes = slots.map((s) => laneOf(s.key, s.name, s.detail, perSlot.get(s.key) ?? [], range));
+  const lanes = slots.map((s) =>
+    laneOf(s.key, s.name, s.detail, perSlot.get(s.key) ?? [], range, s.underlying),
+  );
   const shown = lanes.filter((l) => l.marks.length > 0 || l.nextAfter);
   return {
     holdings: shown,

@@ -6,8 +6,11 @@
 // Frames: Events on October (the range's month, nothing on the book in it, each lane's next date
 // pinned at its edge), the same after one tap on the put's edge (November), the Overview's next-
 // date line, and November at 1280.
+// #6082 adds Events on one symbol (`?symbol=CRWV`, round 4's option C): the phone frame first, the
+// desktop after. Its recap is the real `symbolOutlook` over the checked-in research on that day.
 // Usage: npm run build --prefix app && npx tsx scripts/shoot/events-calendar.mjs [outdir]
 
+import { symbolOutlook } from "../../src/research/symbol-outlook.ts";
 import { accountsFixture } from "./accounts-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
@@ -80,7 +83,14 @@ const book = {
         total: "-$295",
         ret: "-116%",
         weight: 0.1,
-        more: { expiresInDays: 29, expiresIn: "29 days", breakeven: "$77.45" },
+        // The wheel opened it (the playbook-store's CRWV wheel) — what makes the shares read
+        // "no price target · the wheel holds" on Events for one symbol (#6082).
+        more: {
+          expiresInDays: 29,
+          expiresIn: "29 days",
+          breakeven: "$77.45",
+          playbookId: "wheel-put",
+        },
       }),
     ],
     decisions: [
@@ -136,7 +146,12 @@ const { page, origin, shoot, close } = await openShell({
   name: "events-calendar",
   viewport: { width: 390, height: 1040 },
   quality: 55,
-  stubs: { ...stubs, "/api/desk/bot-sauron": book, "/api/research/calendar": calendar },
+  stubs: {
+    ...stubs,
+    "/api/desk/bot-sauron": book,
+    "/api/research/calendar": calendar,
+    "/api/research/outlook": { outlooks: { CRWV: symbolOutlook("CRWV", "2026-10-08T19:00:00Z") } },
+  },
 });
 // The study's "today": Thu Oct 8, 2026, 3pm ET. Reduced motion, so no frame lands mid-fade.
 await page.clock.setFixedTime(new Date("2026-10-08T19:00:00Z"));
@@ -154,6 +169,12 @@ await shoot("events-calendar-november-phone");
 await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
 await shoot("events-calendar-november-list-phone");
 
+// Events on one symbol (#6082): CRWV's shares and sold put, the soonest action leading.
+await page.goto(`${events}&symbol=CRWV&span=quarter`);
+await page.locator(".sym-foot .recap, .sym-foot .recap-loading").first().waitFor();
+await page.evaluate(() => window.scrollTo(0, 0));
+await shoot("events-symbol-crwv-phone");
+
 await page.goto(`${origin}/app/accounts?account=bot-sauron`);
 await page.locator(".held-next").waitFor();
 await page.locator(".held-next").evaluate((el) => el.scrollIntoView({ block: "center" }));
@@ -163,5 +184,8 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${events}&span=month&on=2026-11-06`);
 await page.getByRole("heading", { name: "November 2026" }).waitFor();
 await shoot("events-calendar-november-desktop");
+await page.goto(`${events}&symbol=CRWV&span=quarter`);
+await page.locator(".sym-head").waitFor();
+await shoot("events-symbol-crwv-desktop");
 
 await close();

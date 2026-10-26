@@ -181,11 +181,13 @@ function LaneRow({
   frame,
   onPick,
   onJump,
+  onSymbol,
 }: {
   readonly lane: Lane;
   readonly frame: Frame;
   readonly onPick: (date: string) => void;
   readonly onJump: (date: string) => void;
+  readonly onSymbol?: ((symbol: string) => void) | undefined;
 }): ReactElement {
   // A holding's lane: every day on it is on what you hold, so each mark sits on a tile.
   const held = lane.key !== "market";
@@ -210,7 +212,19 @@ function LaneRow({
   return (
     <div className="lane" data-market={!held || undefined}>
       <div className="lane-head">
-        <span className="lane-name">{lane.name}</span>
+        {onSymbol && lane.symbol ? (
+          // The name opens Events on this one symbol (#6082) — the rich view, same address.
+          <button
+            type="button"
+            className="lane-name lane-name--open"
+            aria-label={`Open Events on ${lane.symbol} alone`}
+            onClick={() => onSymbol(lane.symbol as string)}
+          >
+            {lane.name}
+          </button>
+        ) : (
+          <span className="lane-name">{lane.name}</span>
+        )}
         {lane.detail ? <span className="lane-detail">{lane.detail}</span> : null}
       </div>
       {edge ? (
@@ -329,6 +343,7 @@ export function BookLanesPicture({
   onPick,
   onJump,
   onToday,
+  onSymbol,
 }: {
   readonly lanes: BookLanes;
   readonly lens: BookLens;
@@ -343,6 +358,8 @@ export function BookLanesPicture({
   readonly onPick: (date: string) => void;
   readonly onJump: (date: string) => void;
   readonly onToday: () => void;
+  /** A lane's name narrows Events to its symbol; absent where a lane's name is only a name. */
+  readonly onSymbol?: ((symbol: string) => void) | undefined;
 }): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
   const width = useWidth(ref);
@@ -379,7 +396,14 @@ export function BookLanesPicture({
   // A glyph is keyed on its tile only when a tile draws it — one pinned at an edge sits in a chip.
   const tiled = new Set(lanes.holdings.flatMap((l) => l.marks.map((m) => m.glyph)));
   const row = (lane: Lane) => (
-    <LaneRow key={lane.key} lane={lane} frame={frame} onPick={onPick} onJump={onJump} />
+    <LaneRow
+      key={lane.key}
+      lane={lane}
+      frame={frame}
+      onPick={onPick}
+      onJump={onJump}
+      onSymbol={onSymbol}
+    />
   );
   return (
     <figure className="lanes" aria-label={label}>
