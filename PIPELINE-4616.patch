@@ -1,0 +1,77 @@
+diff --git a/.github/workflows/pipeline.yml b/.github/workflows/pipeline.yml
+index cbb1493f..46b26d1b 100644
+--- a/.github/workflows/pipeline.yml
++++ b/.github/workflows/pipeline.yml
+@@ -433,10 +433,12 @@ jobs:
+   deploy:
+     name: release · deploy
+     # Merged commits are already verified (branch protection required `verify`), so this path
+-    # never re-runs the suite — it only ships. This job deploys the DASHBOARD app on EVERY push
+-    # on purpose: its durable state is volume-backed (restarts are harmless) and docs/research
+-    # merges need it (the /research shelf is read from the image at request time). The stateful
+-    # half — the bots app — deploys selectively in `deploy-bots` below.
++    # never re-runs the suite — it only ships. This job releases on every push but RESTARTS the
++    # DASHBOARD machine only when the push changed something the image ships (the `preflight` step,
++    # scripts/dashboard-deploy-preflight.mjs): ~50 deploys a day each restarted the one machine
++    # (10.8–28.7 s of held requests measured), and 57% changed nothing it reads (#4616, slice 4 of
++    # #4612). docs/research/** still deploys — the /research shelf is read from the image at request
++    # time. The stateful half — the bots app — deploys selectively in `deploy-bots` below.
+     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+     runs-on: ubuntu-latest
+     permissions:
+@@ -517,10 +519,29 @@ jobs:
+           # releases call that 403s under runner load; a pinned version downloads a fixed asset.
+           version: 0.4.99
+ 
++      - name: Preflight — does this push change what the dashboard runs?
++        # The decision (force/baseline/classify) lives in scripts/dashboard-deploy-preflight.mjs,
++        # spec-tested — this step does only the environmental lookup (the machine's stamped GIT_SHA)
++        # and translates the two-line verdict into $GITHUB_OUTPUT. Same ground-truth baseline as
++        # deploy-bots: the diff runs from what the machine ACTUALLY runs, so a skipped or failed run
++        # can never strand a runtime commit. Every ambiguity fails OPEN to deploying.
++        id: preflight
++        env:
++          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
++        run: |
++          MACHINE_JSON=$(flyctl machine list -a skynet-capital --json 2>/dev/null || true)
++          DEPLOYED_SHA=$(jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].config.env.GIT_SHA // empty' <<<"$MACHINE_JSON" 2>/dev/null || true)
++          VERDICT=$(DEPLOYED_SHA="$DEPLOYED_SHA" HEAD_SHA="$GITHUB_SHA" node scripts/dashboard-deploy-preflight.mjs)
++          echo "$VERDICT"
++          DECISION=$(head -n1 <<<"$VERDICT")
++          echo "deploy=$([ "$DECISION" = skip ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
++          echo "$DECISION: $(tail -n1 <<<"$VERDICT")" >> "$GITHUB_STEP_SUMMARY"
++
+       - name: Capture previous image
+         # A shim: scripts/fly-image-ref.mjs owns the decision and is specced. It prints NOTHING when
+         # there is no real image, so the rollback guards below can trust `!= ''` — the inline jq this
+         # replaced answered `null/null:null` on a null record and defeated exactly that guard (#671).
++        if: ${{ steps.preflight.outputs.deploy == 'true' }}
+         id: prev
+         continue-on-error: true
+         run: |
+@@ -537,11 +558,24 @@ jobs:
+         # closed socket on Fly's first app lookup (`api.machines.dev … : EOF`, six seconds in, no
+         # build started) failed the release and left `main` merged-but-undeployed. Connection-level
+         # failures only — an auth refusal, a build error or failed health checks still fail at once.
+-        run: node scripts/fly-deploy.mjs --remote-only
++        #
++        # GIT_SHA is stamped into the [env] block of the config in the workspace (the checkout is
++        # throwaway), the same mechanism deploy-bots uses and for the same reason: a line in the
++        # config file persists into `flyctl machine list --json`, the `--env` flag does not reliably.
++        # Inserted FIRST under `[env]` — TOML is order-sensitive, and the preflight above reads it.
++        # `[[http_service.checks]]` in fly.toml makes flyctl wait for the new machine to answer and
++        # fail this step when it never does, instead of calling a booted-but-broken release healthy.
++        if: ${{ steps.preflight.outputs.deploy == 'true' }}
++        run: |
++          sed -i "/^\[env\]/a\\
++            GIT_SHA = \"${{ github.sha }}\"" fly.toml
++          grep -A2 '^\[env\]' fly.toml
++          node scripts/fly-deploy.mjs --remote-only
+         env:
+           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+ 
+       - name: Smoke test the release
++        if: ${{ steps.preflight.outputs.deploy == 'true' }}
+         id: smoke
+         run: bash scripts/smoke.sh https://skynet-capital.fly.dev
+ 
