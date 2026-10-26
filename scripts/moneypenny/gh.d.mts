@@ -12,7 +12,12 @@ export function withRetry<T>(
     sleep?: (ms: number) => void;
   },
 ): T;
-export function ghRest(path: string, opts?: { token?: string }): unknown;
+export function ghRest(
+  path: string,
+  opts?: { token?: string; run?: (cmd: string, args: string[]) => string },
+): unknown;
+/** Append a failed curl's response body (GitHub's own reason) to its message (#6224). */
+export function withResponseBody<E>(err: E): E;
 /** Every page of a REST list; each page retried on a GitHub 5xx (#5918). */
 export function ghRestAll(
   path: string,
