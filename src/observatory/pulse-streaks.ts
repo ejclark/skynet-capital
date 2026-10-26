@@ -1,4 +1,5 @@
 import type { TradeStats } from "../trading/trade-stats.js";
+import { plural } from "../ui/plural.js";
 import {
   currentStreakIn,
   type DayChange,
@@ -43,8 +44,6 @@ export interface PulseStreakGroup {
   /** Rendered instead of the rows when there are none. Absence is said out loud, never as a zero. */
   readonly empty: string;
 }
-
-const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** A run's span and what it was worth — the dates alone never say what the streak paid or cost. */
 function runNote(streak: DayStreak): string {
