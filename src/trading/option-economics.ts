@@ -1,3 +1,4 @@
+import { type CoverLeg, coverNeeds } from "../domain/option-book.js";
 import type { PayoffCurve } from "./draft-order-preview.js";
 import { OPTION_MULTIPLIER, type OptionType, parseOccSymbol } from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
@@ -143,21 +144,23 @@ export function heldShares(
 
 /**
  * Shares of `underlying` still free to cover a NEW short call: held shares minus 100 for every
- * call already sold on it (a short call is a negative contract count). Counting all held shares
- * let a second covered call be written on shares the first already promised — a naked call in
- * all but name (#3729 step 4b, found while teaching the guidance the same rule).
+ * call already sold on it that no held long call caps. Counting all held shares let a second
+ * covered call be written on shares the first already promised — a naked call in all but name
+ * (#3729 step 4b); counting every sold call held shares back for a spread's short the long
+ * already covers (#4736). The bots' `coverNeeds` decides which calls are bare, so the ticket and
+ * the guards agree.
  */
 export function freeShares(
   context: { readonly positions: OptionTicketContext["positions"] },
   underlying: string,
 ): number {
-  const promised = context.positions
-    .filter((p) => p.quantity < 0)
-    .filter((p) => {
-      const parts = parseOccSymbol(p.symbol);
-      return parts?.underlying === underlying && parts.type === "call";
-    })
-    .reduce((n, p) => n - p.quantity * SHARES_PER_CONTRACT, 0);
+  const legs = context.positions.flatMap((p): CoverLeg[] => {
+    const parts = parseOccSymbol(p.symbol);
+    return parts?.underlying === underlying && p.quantity !== 0
+      ? [{ ...parts, contracts: p.quantity }]
+      : [];
+  });
+  const promised = coverNeeds(legs).sharesByUnderlying.get(underlying) ?? 0;
   return Math.max(0, heldShares(context, underlying) - promised);
 }
 
