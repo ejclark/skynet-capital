@@ -6,7 +6,7 @@ import {
   type ActivityEvent,
   activityEventFromEarnedMilestone,
   activityEventFromLadderEntry,
-  forVisibility,
+  PUBLIC_ONLY,
 } from "./activity-event.js";
 import { collapseActivity, type TradeActivityRecord } from "./activity-store.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
@@ -31,8 +31,6 @@ import type { ParticipantSnapshot } from "./participant-snapshot.js";
  * that proved the earn, and neither has a path from a client request to an event, so the rule holds
  * by construction rather than by a filter someone could forget.
  */
-
-const PUBLIC_ONLY = forVisibility(["public"]);
 
 /** One earn as the feed needs it — who, which milestone, the order that proved it, and when. */
 export interface MilestoneFeedItem {

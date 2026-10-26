@@ -31,7 +31,7 @@ function onSymbol(position: PositionView, symbol: string): boolean {
   return parseOccSymbol(position.symbol)?.underlying === symbol;
 }
 
-function row(position: PositionView): string {
+function holdingLine(position: PositionView): string {
   const side = position.quantity < 0 ? "short " : "";
   const count = Math.abs(position.quantity);
   const worth = `now worth ${signedUsd(position.marketValue)}`;
@@ -58,7 +58,7 @@ export function describeHolding(
   if (!(symbol && desk) || desk.error) return undefined;
   const held = desk.positions.filter((p) => p.quantity !== 0 && onSymbol(p, symbol));
   if (held.length === 0) return `they hold no open position on ${symbol}`;
-  const rows = held.slice(0, MAX_ROWS).map(row);
+  const rows = held.slice(0, MAX_ROWS).map(holdingLine);
   const more = held.length > MAX_ROWS ? `; and ${held.length - MAX_ROWS} more` : "";
   return `on ${symbol} they hold ${rows.join("; ")}${more}`;
 }

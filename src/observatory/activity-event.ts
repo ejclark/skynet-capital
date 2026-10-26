@@ -92,6 +92,13 @@ export function forVisibility(
   return (event) => allowed.has(event.visibility);
 }
 
+/** The public tier only — the one privacy rule every cross-member feed decoder applies
+ *  (`trade-`, `feedback-`, `development-` and `milestone-event-feed.ts`), and the same
+ *  `forVisibility` gate `desk-events-route.ts` applies to an owner's own stream. Belt and braces
+ *  beside each decoder's event-type check: an owner-only line never reaches a shared surface. One
+ *  definition, so the boundary changes in one place. */
+export const PUBLIC_ONLY = forVisibility(["public"]);
+
 /**
  * `order.filled` when the line reflects a completed fill, `order.updated` for every other lifecycle
  * line (new/partially_filled/canceled/…). Deliberately coarse for slice 1 (#1211 slicing sketch:
