@@ -268,7 +268,7 @@ if by 2026-11-19 three session-readied issues end `needs-eric`, closed `not_plan
 reverted build, narrow this back to his flip. **Run it by name:** `.claude/workflows/clear-path-flip.js`
 (`{issues: [...]}`) judges the four checks, sends each positive call to two independent refuters
 (envelope paths · the thread) and returns survivors; `node scripts/clear-path-post.mjs <result.json>`
-posts only those, adding `feedback` when missing — no lane pulls an issue without it. A `plan` issue has a second, equivalent door: a ready-shaped comment from
+posts only those, adding `feedback` to a non-plan issue that lacks it. A `plan` issue has a second, equivalent door: a ready-shaped comment from
 an OWNER/MEMBER/COLLABORATOR (`isReadySignal()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
