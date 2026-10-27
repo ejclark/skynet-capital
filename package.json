@@ -165,7 +165,7 @@
     "jscpd": "5.4.2",
     "jsdom": "30.1.3",
     "knip": "6.42.1",
-    "mermaid": "11.17.2",
+    "mermaid": "12.2.0",
     "npm-run-all2": "9.0.4",
     "playwright-core": "1.62.1",
     "semantic-release": "25.0.9",
