@@ -139,4 +139,23 @@ describe("R&D → Coverage", () => {
     mount();
     expect(await screen.findByText(/1 outside all of them \(EEM, Unclassified\)/)).toBeTruthy();
   });
+
+  it("says the account could not be read instead of drawing a zero (#6273)", async () => {
+    served = payload({
+      holdingsRead: false,
+      holdingsNote: "positions unreadable right now — your account couldn't be read",
+    });
+    mount();
+    expect(await screen.findByText(/your account couldn't be read/)).toBeTruthy();
+    expect(screen.queryByText(/0 of 11 sectors/)).toBeNull();
+    expect(screen.queryByText("you hold")).toBeNull();
+  });
+
+  it("caveats a partial count when one account could not be read", async () => {
+    served = payload({
+      holdingsNote: "1 of 2 accounts unreadable right now — counting the rest only",
+    });
+    mount();
+    expect(await screen.findByText(/counting the rest only/)).toBeTruthy();
+  });
 });

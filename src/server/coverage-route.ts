@@ -27,6 +27,22 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const NO_ACCOUNT_NOTE =
   "No market data — sector-fund prices load through your own linked account, and none is linked.";
 
+/**
+ * An owned account whose broker read failed sits on the hub as `degraded()` — `positions: []` plus
+ * an `error` — until a later read succeeds (`broker-sync.ts`). Its empty list is "unknown", not
+ * "holds nothing", so it never counts as a holdings read; the note says what could not be read
+ * (#6273, the same errored rows `networth-api-routes.ts` excludes from its aggregate).
+ */
+function unreadableNote(errored: number, owned: number): string | undefined {
+  if (errored === 0) return undefined;
+  if (errored < owned) {
+    return `${errored} of ${owned} accounts unreadable right now — counting the rest only`;
+  }
+  return owned === 1
+    ? "positions unreadable right now — your account couldn't be read"
+    : `positions unreadable right now — none of your ${owned} accounts could be read`;
+}
+
 /** Every sector fund's month through one owned client — or the note for why there are none. */
 async function sectorFunds(
   config: DashboardServerConfig,
@@ -65,12 +81,15 @@ export async function serveCoverageJson(
   const owned = config.hub.getState().participants.filter((p) => ownedIds.includes(p.id));
   const now = config.now?.() ?? new Date();
   const asOfIso = now.toISOString();
-  const held = owned.flatMap((p) => p.positions.map((pos) => pos.symbol));
+  const read = owned.filter((p) => !p.error);
+  const held = read.flatMap((p) => p.positions.map((pos) => pos.symbol));
+  const holdingsNote = unreadableNote(owned.length - read.length, owned.length);
   const view = coverageJsonView({
     asOfIso,
     map: shelfCoverage(asOfIso, held),
     upcoming: allEvents(asOfIso),
-    holdingsRead: owned.length > 0,
+    holdingsRead: read.length > 0,
+    ...(holdingsNote ? { holdingsNote } : {}),
     funds: await sectorFunds(config, ownedIds, now),
   });
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });

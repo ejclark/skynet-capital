@@ -122,6 +122,52 @@ describe("GET /api/research/coverage", () => {
     expect(sector(view, "Technology")?.fundLine?.ret).toBe("+1.0%");
   });
 
+  // #6273: a failed broker read sits on the hub as `degraded()` — no positions plus an error.
+  const unreadable = {
+    ...eric,
+    id: "human-eric-roth",
+    positions: [],
+    error: "broker read timed out after 8000ms",
+  };
+  const withHub = (participants: unknown[], owners: string[]) =>
+    configWith({
+      hub: { getState: () => ({ generatedAt: "t", participants, collisions: [] }) } as never,
+      resolveOwnerIds: () => owners,
+    });
+
+  it("never reads an unreadable account as holding nothing", async () => {
+    const { res, read } = fakeRes();
+    await serveCoverageJson(
+      res,
+      withHub([{ ...unreadable, id: "human-eric" }], ["human-eric"]),
+      session,
+    );
+    const view = read();
+    expect(view.holdingsRead).toBe(false);
+    expect(view.holdingsNote).toBe(
+      "positions unreadable right now — your account couldn't be read",
+    );
+  });
+
+  it("counts the readable accounts and says one could not be read", async () => {
+    const { res, read } = fakeRes();
+    await serveCoverageJson(
+      res,
+      withHub([eric, unreadable, other], ["human-eric", "human-eric-roth"]),
+      session,
+    );
+    const view = read();
+    expect(view.holdingsRead).toBe(true);
+    expect(sector(view, "Energy")?.held).toEqual(["XOM"]);
+    expect(view.holdingsNote).toBe("1 of 2 accounts unreadable right now — counting the rest only");
+  });
+
+  it("carries no note when every account read cleanly", async () => {
+    const { res, read } = fakeRes();
+    await serveCoverageJson(res, configWith(), session);
+    expect(read().holdingsNote).toBeUndefined();
+  });
+
   it("reads no holdings when no auth is configured", async () => {
     const { res, read } = fakeRes();
     await serveCoverageJson(res, configWith({ auth: undefined }), undefined);
