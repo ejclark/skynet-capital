@@ -153,4 +153,21 @@ describe("validateAffordability — no naked premium from this desk", () => {
     );
     expect(refusals.join(" ")).toContain("more than your available cash");
   });
+
+  // #6328: an assignment can drain broker cash below zero; a call the shares fully cover sets
+  // aside $0 and must not be judged against it.
+  it("passes a share-covered call on an account whose cash is negative", () => {
+    const shares = { symbol: "MSFT", quantity: 200, avgPrice: 400, marketValue: 85_000 };
+    for (const cash of [0, -550]) {
+      const refusals: string[] = [];
+      validateAffordability(
+        { ...request, code: "202" as const, strike: 445 },
+        context({ cash, positions: [shares] }),
+        5,
+        refusals,
+        [],
+      );
+      expect(refusals).toEqual([]);
+    }
+  });
 });
