@@ -122,7 +122,12 @@ ${inner}
  *  tiny, except /feedback's submit once image attachments ride along (feedback-routes.ts raises
  *  the cap there only). The chunks are kept as bytes and decoded once at the end (#6075): decoding
  *  each chunk on its own turned a multibyte character split across two TCP chunks into U+FFFD, and
- *  the cap counts UTF-8 bytes, not UTF-16 units, so it means what its name says. */
+ *  the cap counts UTF-8 bytes, not UTF-16 units, so it means what its name says.
+ *  Past the cap it stops retaining chunks but lets the stream drain to 'end' before rejecting —
+ *  never `req.destroy()` (#6291): destroying an incomplete request kills the socket, so the
+ *  caller's 413 was written to a dead connection and every real client saw a reset ("Failed to
+ *  fetch") instead. Same doctrine as bridge-http.ts `readBoundedBody`; the server's own
+ *  requestTimeout still bounds a body that never ends. */
 export function readBody(req: IncomingMessage, maxBytes = 1_000_000): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -135,13 +140,14 @@ export function readBody(req: IncomingMessage, maxBytes = 1_000_000): Promise<st
       if (bytes > maxBytes) {
         tooLarge = true;
         chunks.length = 0;
-        reject(new Error("body too large"));
-        req.destroy();
         return;
       }
       chunks.push(buf);
     });
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("end", () => {
+      if (tooLarge) reject(new Error("body too large"));
+      else resolve(Buffer.concat(chunks).toString("utf8"));
+    });
     req.on("error", reject);
   });
 }
