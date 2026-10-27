@@ -104,6 +104,35 @@ describe("migrateAuditToDecisionDb", () => {
     expect(await migrateAuditToDecisionDb(rotating, db)).toBe(1); // only the record past the watermark
   });
 
+  it("loses no archived row when a live cycle rotates a persona's file mid-backfill (#6290)", async () => {
+    // The boot backfill runs fire-and-forget while the first cycles record; one record that tips a
+    // persona's file past the cap rotates it under the backfill's feet. A row the backfill skips
+    // here is buried for good: the live row it raced is newer, and next boot's watermark starts there.
+    const rotating = new JsonlAuditStore(dir, { rotateAtBytes: 200 }); // ~97-byte rows
+    for (let at = 1; at <= 2; at++)
+      await rotating.record(decision({ at, personaId: "beta-scout" }));
+    for (let at = 1; at <= 3; at++) await rotating.record(decision({ at })); // sauron, past the cap
+    const live = decision({ at: 4 });
+    const racing: AuditStore = {
+      record: (entry) => rotating.record(entry),
+      list: () => rotating.list(),
+      async *stream() {
+        let first = true;
+        for await (const record of rotating.stream()) {
+          yield record;
+          if (!first) continue;
+          first = false;
+          db.record(live); // the live sink: the store write, then the JSONL append that rotates
+          await rotating.record(live);
+        }
+      },
+    };
+
+    await migrateAuditToDecisionDb(racing, db);
+    expect(db.listByPersona("sauron").map((r) => r.at)).toEqual([4, 3, 2, 1]);
+    expect(db.listByPersona("beta-scout").map((r) => r.at)).toEqual([2, 1]);
+  });
+
   it("returns 0 on an empty (or never-written) audit trail, writing nothing", async () => {
     const count = await migrateAuditToDecisionDb(audit, db);
     expect(count).toBe(0);

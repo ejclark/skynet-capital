@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from "node:fs";
-import { open, readdir, rename, rm, unlink } from "node:fs/promises";
+import { type FileHandle, open, readdir, rename, rm, unlink } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
@@ -19,6 +19,7 @@ import { createGzip } from "node:zlib";
 const STAMP = String.raw`\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z`;
 
 const stem = (file: string): string => basename(file, ".jsonl");
+const ARCHIVE = new RegExp(String.raw`\.${STAMP}\.jsonl(\.gz)?$`);
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Every closed archive of `file`, plain or gzipped, unsorted and unfiltered — empty if none. */
@@ -102,4 +103,67 @@ export async function rotateJsonlFile(file: string, now: Date = new Date()): Pro
     if (present.has(`${plain}.gz`)) await unlink(plain).catch(() => undefined);
     else await gzipInPlace(plain);
   }
+}
+
+/** A file opened for reading, beside its path — which says whether to gunzip, and names it in warnings. */
+export interface OpenJsonl {
+  readonly file: string;
+  readonly handle: FileHandle;
+}
+
+const openIfPresent = (file: string): Promise<FileHandle | undefined> =>
+  open(file, "r").catch(() => undefined);
+
+/**
+ * A listed archive, opened. A plain one can vanish between the listing and the open — its gzip
+ * finished and the plain copy was unlinked — and then its `.gz` holds the same rows, because the
+ * `.gz` lands by rename before the plain copy goes.
+ */
+async function openArchive(archive: string): Promise<OpenJsonl | undefined> {
+  const handle = await openIfPresent(archive);
+  if (handle) return { file: archive, handle };
+  if (archive.endsWith(".gz")) return undefined;
+  const gz = `${archive}.gz`;
+  const gzHandle = await openIfPresent(gz);
+  return gzHandle && { file: gz, handle: gzHandle };
+}
+
+/**
+ * `file`'s archives oldest-first, then `file` itself — every one already OPEN, so a rotation that
+ * lands while the caller reads cannot tear the set (#6290). The active file is opened BEFORE its
+ * archives are listed: a rotation after that open only renames an inode this set already holds,
+ * and every archive the listing then finds is older than it. Listing first and opening lazily
+ * (the old order) let a rotation swap the active file for a fresh one and land an archive the
+ * listing never saw — the boot backfill skipped those rows, and its watermark then buried them.
+ *
+ * The caller owns the handles and must close them. A missing active file (never written, or
+ * renamed away mid-gzip) just leaves it out; its rows are in the archive the listing finds.
+ */
+export async function openRotatedSet(file: string): Promise<OpenJsonl[]> {
+  const active = await openIfPresent(file);
+  const set: OpenJsonl[] = [];
+  for (const archive of await archivesOf(file)) {
+    const opened = await openArchive(archive);
+    if (opened) set.push(opened);
+    else
+      process.emitWarning(`[jsonl-rotation] archive ${archive} vanished before it could be read`);
+  }
+  if (active) set.push({ file, handle: active });
+  return set;
+}
+
+/**
+ * The active-file path of every key with a file under `dir`, sorted — including a key whose active
+ * file is momentarily absent because a rotation renamed it and has not appended the next row yet.
+ * A whole-store read hands each to `openRotatedSet` in turn.
+ */
+export async function activeFilesIn(dir: string): Promise<string[]> {
+  const names = await readdir(dir).catch(() => [] as string[]);
+  const stems = new Set<string>();
+  for (const name of names) {
+    const archive = ARCHIVE.exec(name);
+    if (archive) stems.add(name.slice(0, archive.index));
+    else if (name.endsWith(".jsonl")) stems.add(stem(name));
+  }
+  return [...stems].sort().map((s) => join(dir, `${s}.jsonl`));
 }
