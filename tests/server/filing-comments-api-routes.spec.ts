@@ -197,6 +197,21 @@ describe("serveFilingCommentsApi", () => {
     }
   });
 
+  it("names the length rule for a long comment, never calls it malformed (#6291)", async () => {
+    const { deps, issues } = depsWith();
+    const { res, out, json } = fakeRes();
+    await serveFilingCommentsApi(
+      postReq({ issueNumber: 42, text: "x".repeat(2_000) }),
+      res,
+      "/api/feedback/comments",
+      deps,
+      freshMember().session,
+    );
+    expect(out.status).toBe(200);
+    expect(json()).toEqual({ ok: false, error: "Keep it to 500 characters." });
+    expect(issues["42"]).toBeUndefined();
+  });
+
   it("strips bidi overrides and folds control characters to one line", async () => {
     const { deps, issues } = depsWith();
     await serveFilingCommentsApi(
