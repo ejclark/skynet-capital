@@ -1,13 +1,23 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, type ReadStream } from "node:fs";
 import { appendFile, mkdir, open, readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { promisify } from "node:util";
 import { createGunzip, gunzip } from "node:zlib";
-import { archivesOf, rotateJsonlFile, withoutGzippedTwins } from "./jsonl-rotation.js";
+import {
+  activeFilesIn,
+  type OpenJsonl,
+  openRotatedSet,
+  rotateJsonlFile,
+  withoutGzippedTwins,
+} from "./jsonl-rotation.js";
 
 const gunzipAsync = promisify(gunzip);
 const isGzipped = (file: string): boolean => file.endsWith(".gz");
+
+/** A file to read: a path on a plain store, already open on a rotating one (see `openRotatedSet`). */
+type JsonlSource = string | OpenJsonl;
+const pathOf = (source: JsonlSource): string => (typeof source === "string" ? source : source.file);
 
 /**
  * Shared file-level primitives for the "one append-only JSONL file per key under `dir`" pattern used
@@ -38,9 +48,10 @@ async function listJsonlFiles(dir: string): Promise<string[]> {
 }
 
 /** A whole JSONL file as text, gunzipped when it is a rotated `.gz` archive. */
-async function readJsonlText(file: string): Promise<string> {
-  if (!isGzipped(file)) return readFile(file, "utf8");
-  return (await gunzipAsync(await readFile(file))).toString("utf8");
+async function readJsonlText(source: JsonlSource): Promise<string> {
+  const bytes =
+    typeof source === "string" ? await readFile(source) : await source.handle.readFile();
+  return (isGzipped(pathOf(source)) ? await gunzipAsync(bytes) : bytes).toString("utf8");
 }
 
 /**
@@ -54,10 +65,11 @@ async function readJsonlText(file: string): Promise<string> {
  * `entries.push(...rows)` passes every row as an argument, and V8 throws RangeError past ~121k of
  * them. One history file that long made every boot exit 1 — a crash loop (#4612 slice 3, #4615).
  */
-async function readJsonlEntriesInto<T>(file: string, entries: T[]): Promise<void> {
+async function readJsonlEntriesInto<T>(source: JsonlSource, entries: T[]): Promise<void> {
+  const file = pathOf(source);
   let contents: string;
   try {
-    contents = await readJsonlText(file);
+    contents = await readJsonlText(source);
   } catch (e) {
     // A missing file is the normal empty case; a corrupt archive is history that can't be read.
     if (isGzipped(file)) process.emitWarning(`[jsonl-store] unreadable archive ${file}: ${e}`);
@@ -84,15 +96,22 @@ async function readJsonlEntriesInto<T>(file: string, entries: T[]): Promise<void
  * torn-line tolerance; a missing file yields nothing. A rotated `.gz` archive is gunzipped on the
  * way through, and a corrupt one ends with a warning after its last readable line.
  */
-async function* streamJsonlEntries<T>(file: string): AsyncGenerator<T> {
-  const input = createReadStream(file);
-  const opened = new Promise<boolean>((resolve) => {
-    input.once("open", () => resolve(true));
-    input.once("error", () => resolve(false));
-  });
-  if (!(await opened)) return;
-  const source = isGzipped(file) ? input.pipe(createGunzip()) : input;
-  const lines = createInterface({ input: source, crlfDelay: Number.POSITIVE_INFINITY });
+async function* streamJsonlEntries<T>(source: JsonlSource): AsyncGenerator<T> {
+  const file = pathOf(source);
+  let input: ReadStream;
+  if (typeof source === "string") {
+    input = createReadStream(source);
+    const opened = new Promise<boolean>((resolve) => {
+      input.once("open", () => resolve(true));
+      input.once("error", () => resolve(false));
+    });
+    if (!(await opened)) return;
+  } else {
+    // The handle's owner closes it; the stream only reads through it.
+    input = source.handle.createReadStream({ autoClose: false });
+  }
+  const decoded = isGzipped(file) ? input.pipe(createGunzip()) : input;
+  const lines = createInterface({ input: decoded, crlfDelay: Number.POSITIVE_INFINITY });
   try {
     for await (const line of lines) {
       if (line.length === 0) continue;
@@ -109,7 +128,7 @@ async function* streamJsonlEntries<T>(file: string): AsyncGenerator<T> {
     process.emitWarning(`[jsonl-store] unreadable archive ${file}: ${e}`);
   } finally {
     lines.close();
-    if (source !== input) source.destroy();
+    if (decoded !== input) decoded.destroy();
     input.destroy();
   }
 }
@@ -211,8 +230,9 @@ async function readJsonlEntriesSince<T>(file: string, offset: number): Promise<J
  *
  * With `rotateAtBytes`, a key's file is closed and gzipped once it reaches that size and a fresh
  * one started (`jsonl-rotation.ts`); `list`/`stream` read the archives oldest-first, then the
- * active file. `since`/`latest` read only the active file. Appends per key are serialized so a
- * rotation never races a write into the file being compressed.
+ * active file, opening them all before reading any so a rotation mid-read loses nothing (#6290).
+ * `since`/`latest` read only the active file. Appends per key are serialized so a rotation never
+ * races a write into the file being compressed.
  */
 export class JsonlKeyedStore<T> {
   private readonly tails = new Map<string, Promise<void>>();
@@ -248,25 +268,38 @@ export class JsonlKeyedStore<T> {
     await appendJsonlEntry(this.dir, file, entry);
   }
 
-  /** The files holding `key`'s entries, oldest first: its rotated archives (if any), then the active file. */
-  private async filesFor(key: string): Promise<string[]> {
-    const file = this.fileFor(key);
-    return this.opts.rotateAtBytes === undefined ? [file] : [...(await archivesOf(file)), file];
+  /**
+   * The files holding `key`'s entries (every key's, without one), oldest first per key. On a
+   * rotating store each key's set is opened as a unit just before it is read (`openRotatedSet`)
+   * and closed after, so a rotation landing mid-read can neither swap the active file out from
+   * under the reader nor land an archive it never visits.
+   */
+  private async *sources(key?: string): AsyncGenerator<JsonlSource> {
+    if (this.opts.rotateAtBytes === undefined) {
+      yield* key ? [this.fileFor(key)] : await listJsonlFiles(this.dir);
+      return;
+    }
+    for (const active of key ? [this.fileFor(key)] : await activeFilesIn(this.dir)) {
+      const set = await openRotatedSet(active);
+      try {
+        yield* set;
+      } finally {
+        await Promise.all(set.map((s) => s.handle.close().catch(() => undefined)));
+      }
+    }
   }
 
   async list(key?: string): Promise<T[]> {
-    const files = key ? await this.filesFor(key) : await listJsonlFiles(this.dir);
     const entries: T[] = [];
-    for (const file of files) {
-      await readJsonlEntriesInto(file, entries);
+    for await (const source of this.sources(key)) {
+      await readJsonlEntriesInto(source, entries);
     }
     return entries;
   }
 
   /** `list`, one entry at a time — for a reader that keeps only some rows (see `streamJsonlEntries`). */
   async *stream(key?: string): AsyncGenerator<T> {
-    const files = key ? await this.filesFor(key) : await listJsonlFiles(this.dir);
-    for (const file of files) yield* streamJsonlEntries<T>(file);
+    for await (const source of this.sources(key)) yield* streamJsonlEntries<T>(source);
   }
 
   /** The entries appended for `key` since byte `offset` (see `readJsonlEntriesSince`). */

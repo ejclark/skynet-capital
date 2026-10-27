@@ -1,5 +1,6 @@
 import {
   audit,
+  CONFLICT_MARKER,
   CONFLICT_REPAIR_CAP,
   owedAnswer,
   planStallFrom,
@@ -63,6 +64,20 @@ describe("readyPlanCandidate — the pure per-issue stall decision", () => {
     ];
     expect(readyPlanCandidate(planIssue(), unparked, false, NOW)?.hoursSinceReady).toBe(4);
   });
+
+  // #6287 — the clock counted only needs-eric / needs-info / next-slice removals as an unpark, so a
+  // plan unparked from needs-design or hold-merge read as stalled since its 480h-old flip.
+  it.each(["needs-design", "hold-merge", "needs-eric", "needs-info"])(
+    "restarts the clock when `%s` comes off after an old flip",
+    (label) => {
+      const timeline = [
+        labelEvent("ready", 480),
+        labelEvent(label, 470),
+        labelEvent(label, 5 / 60, "unlabeled"),
+      ];
+      expect(readyPlanCandidate(planIssue(), timeline, false, NOW)?.hoursSinceReady).toBe(0);
+    },
+  );
 
   it("is null once the lane took `ready` back after the latest flip — that answered it", () => {
     const withdrawn = [
@@ -189,6 +204,19 @@ describe("planStallFrom — the plan writer's flags and clears (#6042)", () => {
     ]);
   });
 
+  // #6287 — the push minutes after an unpark posted "Plan never claimed … 480h".
+  it.each(["needs-design", "hold-merge"])(
+    "sends no stall ping on the push right after `%s` comes off an old-flipped plan",
+    (label) => {
+      const timeline = [
+        labelEvent("ready", 480),
+        labelEvent(label, 470),
+        labelEvent(label, 5 / 60, "unlabeled"),
+      ];
+      expect(intents([plan(12, ["plan", "ready"])], timeline)).toEqual([]);
+    },
+  );
+
   it("keeps a plan's flag while it is still owed a feedback answer, so the two writers never fight", () => {
     const owed = plan(8, ["plan", "feedback", "ready", "stall-flagged"]);
     expect(run([owed], [labelEvent("ready", 180, "unlabeled")], [8]).staleFlags).toEqual([]);
@@ -285,6 +313,21 @@ describe("audit() — the plan-stall threshold and memory", () => {
     expect(intents[0]?.kind).toBe("flag-conflict-cap");
     expect(intents[0]?.prNumber).toBe(1373);
     expect(intents[0]?.body).toContain("needs-eric");
+  });
+
+  it("posts the cap once per head: the cap comment's own marker silences the next push", () => {
+    const [cap] = audit({
+      conflictedPRs: [{ title: "feat: x", number: 1373, headRefOid: "sha-n" }],
+      alreadyFlaggedPRs: [{ number: 1373, sha: "sha-n-minus-1", attempt: CONFLICT_REPAIR_CAP }],
+    });
+    const marker = CONFLICT_MARKER.exec(cap?.body ?? "");
+    expect(marker?.[1]).toBe("sha-n");
+    expect(Number(marker?.[2])).toBe(CONFLICT_REPAIR_CAP + 1);
+    const next = audit({
+      conflictedPRs: [{ title: "feat: x", number: 1373, headRefOid: "sha-n" }],
+      alreadyFlaggedPRs: [{ number: 1373, sha: "sha-n", attempt: CONFLICT_REPAIR_CAP + 1 }],
+    });
+    expect(next).toHaveLength(0);
   });
 
   it("still flags a brand-new conflict once, exactly as before", () => {

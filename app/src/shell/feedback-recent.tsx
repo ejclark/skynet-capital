@@ -140,6 +140,7 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
         <div className="fb-followup-body">
           <textarea
             rows={2}
+            maxLength={8000}
             value={details}
             placeholder="What changed, or what to add…"
             onChange={(e) => setDetails(e.target.value)}

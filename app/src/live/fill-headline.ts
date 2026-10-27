@@ -40,13 +40,22 @@ export function fillHeadline(order: SubmittedOrder, fill: DeskOrderEvent | undef
  * The done note's first sentence (#6257): "simulated fill" is a word the stream earns, exactly as
  * "filled" is in the headline — until a fill for this order arrives, the order is queued, and
  * outside the session the note names the open it waits for. A frame that carries no filled
- * quantity (a cancel, an echo) earns nothing.
+ * quantity earns nothing — and one whose status is terminal (canceled, rejected, expired) ends the
+ * wait: the note says so instead of "queued" (#6330), agreeing with the headline from that frame.
  */
+const TERMINAL = new Set(["canceled", "cancelled", "rejected", "expired"]);
+
 export function doneNote(fill: DeskOrderEvent | undefined, market: MarketSessionView): string {
   const filled =
     fill !== undefined &&
     (fill.eventType === "order.filled" || (numberField(fill.payload, "filledQuantity") ?? 0) > 0);
   if (filled) return "SIM account — simulated fill, real discipline.";
+  const status = typeof fill?.payload.status === "string" ? fill.payload.status : "";
+  if (TERMINAL.has(status)) {
+    const word =
+      status === "cancelled" ? "Canceled" : status.charAt(0).toUpperCase() + status.slice(1);
+    return `${word} at the paper broker — nothing filled.`;
+  }
   const open = waitsForOpen(market);
   return open
     ? `Queued — nothing fills before ${open}.`

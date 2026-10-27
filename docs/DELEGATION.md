@@ -38,7 +38,9 @@ into separate lint, typecheck and per-suite calls (#5191).
    primary's; **don't run `npm rebuild` in a worktree** — a package's lifecycle script writes
    in place, through the shared inode. **An isolated agent's first call is `bash scripts/wt-start.sh
    <branch> [--issue N]`** — fetch, checkout (resuming the branch if it exists, never discarding
-   work), worktree setup and one status line, in one call. Chained `git fetch && git checkout`
+   work), worktree setup and one status line, in one call. A dispatch that must start on today's
+   main — a governor athlete, whose slug repeats across cycles — adds `--fresh`, which refuses a
+   taken name and prints the next free `-N` one instead of resuming a stale branch (#6272). Chained `git fetch && git checkout`
    is refused by the worktree guard and plain `git` is rewritten by the rtk hook; a plain
    `bash scripts/…` call passes both (#5192). **After it: one plain command per call; no loops,
    variables or chains around git.** The guard refuses the compound form too — the 2026-10-11

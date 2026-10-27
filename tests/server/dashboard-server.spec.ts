@@ -165,6 +165,49 @@ describe("dashboard-server OAuth gate", () => {
     );
   });
 
+  describe("the sign-in hop and linked accounts (#6317)", () => {
+    const hop = async (
+      owned: readonly string[],
+      path = "/",
+    ): Promise<{ status: number; location: string | null }> => {
+      let result = { status: 0, location: null as string | null };
+      await withServer(
+        {
+          hub: new ObservatoryHub(board()),
+          ...(auth ? { auth } : {}),
+          resolveOwnerIds: () => owned,
+        },
+        async (base) => {
+          const res = await fetch(`${base}${path}`, {
+            headers: { cookie: validCookie() },
+            redirect: "manual",
+          });
+          result = { status: res.status, location: res.headers.get("location") };
+        },
+      );
+      return result;
+    };
+
+    it("sends a member with zero linked accounts to their Profile, which opens onboarding", async () => {
+      expect(await hop([])).toEqual({ status: 302, location: "/app/accounts" });
+    });
+
+    it("keeps a member with a linked account on today's path to the leaderboard", async () => {
+      expect(await hop(["human-eric"])).toEqual({ status: 302, location: "/app/" });
+    });
+
+    it("keeps a standings link on the leaderboard even with zero accounts", async () => {
+      expect(await hop([], "/?a=p1&b=p2")).toEqual({ status: 302, location: "/app/?a=p1&b=p2" });
+      expect(await hop([], "/?by=return")).toEqual({ status: 302, location: "/app/?by=return" });
+    });
+
+    it("never redirects a typed /app/leaderboard, accounts or not", async () => {
+      const typed = await hop([], "/app/leaderboard");
+      expect(typed.location).toBeNull();
+      expect(typed.status).not.toBe(302);
+    });
+  });
+
   it("redirects the /u portfolio index into app Settings (phase 9a)", async () => {
     const hub = new ObservatoryHub({
       generatedAt: "t",

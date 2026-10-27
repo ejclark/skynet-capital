@@ -11,7 +11,8 @@ interface IssueLike {
 export function parseArgs(argv: string[]): {
   cmd: string | undefined;
   positional: string[];
-  flags: Record<string, string | true>;
+  /** A value flag given last has no value: its key is present, set to undefined (#6285). */
+  flags: Record<string, string | true | undefined>;
 };
 export function csv(s: unknown): string[];
 export function titleWords(title: string): Set<string>;
@@ -30,6 +31,12 @@ export function commentWrite(args: {
   path: string;
   payload: { body: string };
 };
+/** #6285: update's comment write, decided (and a bad id refused) before any other write. */
+export function updateCommentOp(args: {
+  n: number;
+  flags: Record<string, string | true | undefined>;
+  read?: (file: string) => string;
+}): { method: "POST" | "PATCH"; path: string; payload: { body: string } } | null;
 export function boardStatus(issue: IssueLike): string;
 export function row(issue: IssueLike): string;
 export function nextLabels(current: string[], add?: string[], remove?: string[]): string[];

@@ -268,6 +268,25 @@ describe("the zero-account door", () => {
     ).toBeVisible();
   });
 
+  it("keeps the leaderboard one tap away, after the steps, while step 1 is open (#6317)", async () => {
+    // Sign-in now lands a member with no account here, so the race must not be a dead end.
+    mountAccounts("/accounts");
+    const board = await screen.findByRole("link", { name: "See the leaderboard ›" });
+    expect(board.getAttribute("href")).toMatch(/^\/leaderboard(\?|$)/);
+    // In #6271's order: step 1 · say hello · the leaderboard.
+    const hello = screen.getByRole("button", { name: "Say hello now ›" });
+    expect(hello.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it("drops the leaderboard line once an account is connected", async () => {
+    accounts = [ERIC];
+    mountAccounts("/accounts?section=milestones&chapter=onboarding");
+    expect(await screen.findByRole("link", { name: "Open Trade ›" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "See the leaderboard ›" })).toBeNull();
+  });
+
   it("opens steps 2 and 3 in full once the account is connected", async () => {
     accounts = [ERIC];
     mountAccounts("/accounts?section=milestones&chapter=onboarding");

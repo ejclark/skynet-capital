@@ -104,7 +104,8 @@ function ProfileForm({
           <p className="set-hint">A bot's name is its identity — renaming is remove + re-add.</p>
         ) : (
           <p className="set-hint">
-            Your name is how your sign-in finds this account — it must keep matching your session.
+            Shown on the board. Your sign-in finds this account by email, so renaming never unlinks
+            it. A name another account already uses is refused.
           </p>
         )}
       </div>

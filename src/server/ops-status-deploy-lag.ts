@@ -53,15 +53,31 @@ async function ghGet<T>(doFetch: DoFetch, token: string, url: string): Promise<T
 
 const RUNS_SCANNED = 20;
 
+/** Mirrors `botsReleaseOutcome()`: what one run did to the bots app — "landed", "rolled back", or
+ *  nothing (a preflight skip, a run that never reached the deploy, a smoke still running or
+ *  cancelled). A release whose smoke failed was rolled back, so the bots never ran it (#5955: a
+ *  stopped machine read "current" over a stack of rolled-back releases, #6050/#6053/#6276). */
+function botsReleaseOutcome(jobs: readonly GhJob[]): "landed" | "rolled back" | undefined {
+  const steps = jobs.find((j) => j.name === "release · deploy bots")?.steps ?? [];
+  const step = (name: string) => steps.find((s) => s.name === name)?.conclusion;
+  if (step("Deploy bots") !== "success") return undefined;
+  // Only a passed smoke is a landing: one still running (or cancelled) has proven nothing yet.
+  const smoke = step("Smoke test the bots release");
+  if (smoke === "failure") return "rolled back";
+  return smoke === "success" ? "landed" : undefined;
+}
+
 /** Mirrors `scanRunBaselines()`: walk recent `pipeline.yml` push-to-main runs, newest first,
  *  reading each run's JOB conclusions (not the run's own) until both baselines are found —
  *  `deploy-lag.mjs`'s header explains why the run-level status is the wrong signal after the
- *  deploy split. Returns `undefined` only when the run LIST itself couldn't be read. */
+ *  deploy split. The bots baseline is the newest release that passed smoke; `botsRolledBack`
+ *  counts the newer ones that failed it. Returns `undefined` only when the run LIST itself
+ *  couldn't be read. */
 async function scanBaselines(
   repo: string,
   token: string,
   doFetch: DoFetch,
-): Promise<{ released: string; botsReleased: string } | undefined> {
+): Promise<{ released: string; botsReleased: string; botsRolledBack: number } | undefined> {
   const runsBody = await ghGet<{ workflow_runs?: GhRun[] }>(
     doFetch,
     token,
@@ -71,6 +87,7 @@ async function scanBaselines(
   const runs = runsBody.workflow_runs ?? [];
   let released = "";
   let botsReleased: string | undefined;
+  let botsRolledBack = 0;
   for (const run of runs) {
     if (released && botsReleased !== undefined) break;
     const jobsBody = await ghGet<{ jobs?: GhJob[] }>(
@@ -83,10 +100,9 @@ async function scanBaselines(
       released = run.head_sha;
     }
     if (botsReleased === undefined) {
-      const step = jobs
-        .find((j) => j.name === "release · deploy bots")
-        ?.steps?.find((s) => s.name === "Deploy bots");
-      if (step?.conclusion === "success") botsReleased = run.head_sha;
+      const outcome = botsReleaseOutcome(jobs);
+      if (outcome === "landed") botsReleased = run.head_sha;
+      if (outcome === "rolled back") botsRolledBack++;
     }
   }
   if (!released) {
@@ -97,7 +113,7 @@ async function scanBaselines(
     );
     released = fallback?.workflow_runs?.[0]?.head_sha ?? "";
   }
-  return { released, botsReleased: botsReleased ?? "" };
+  return { released, botsReleased: botsReleased ?? "", botsRolledBack };
 }
 
 interface CompareBody {
@@ -182,12 +198,13 @@ export async function computeDeploySignals(
   // What the bots process SAYS it is running beats CI's record of what was last deployed to it —
   // a machine that rolled back after a successful deploy still reads "current" from the record
   // (#666). Falls back to the record when no sha was reported (an older bots build, or `GIT_SHA`
-  // dropped by a rollback), which is exactly the pre-existing behaviour.
+  // dropped by a rollback) — the record counts only a release that passed smoke, so a rollback
+  // the process can't name still reads stale rather than current (#6276).
   const botsBaseline = botsRunningSha ?? baselines.botsReleased;
   const changedBody = await fetchCompare(config.repo, config.token, doFetch, botsBaseline, head);
   const changed = changedBody?.files?.map((f) => f.filename);
   const bots = botsDeploySignal(
-    botsDeployLag(head, botsBaseline, changed),
+    botsDeployLag(head, botsBaseline, changed, baselines.botsRolledBack),
     actionsLink,
     botsRunningSha,
   );

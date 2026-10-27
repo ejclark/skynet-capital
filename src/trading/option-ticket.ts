@@ -1,5 +1,6 @@
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import { singleLegOdds } from "../options/single-leg-odds.js";
+import { validateDraftAccount } from "./draft-order-account.js";
 import { datedCurves, payoffCurve } from "./draft-order-preview.js";
 import {
   DEFAULT_OPTION_TIF,
@@ -310,6 +311,31 @@ function validateClose(
   }
 }
 
+/**
+ * JUDGED ON THE BOOK THE CLOSE LEAVES (#6277). Contract counts alone can't see that selling a long
+ * call takes away the cap a sold call rested on: once #6059 let freed shares back a new covered
+ * call, closing the long would leave calls naked. The close runs as a one-leg draft through the
+ * multi-leg desk's own account check, so both desks refuse the same book with the same words.
+ */
+function closeBookRefusals(
+  parts: NonNullable<ReturnType<typeof parseOccSymbol>>,
+  isShort: boolean,
+  closing: number,
+  context: OptionTicketContext,
+): readonly string[] {
+  const leg = {
+    id: "close",
+    underlying: parts.underlying,
+    optionType: parts.type,
+    strike: parts.strike,
+    expiration: parts.expiration,
+    action: isShort ? ("buy" as const) : ("sell" as const),
+    contracts: closing,
+  };
+  const draft = { phase: "drafting" as const, legs: [leg], refusals: [], nextLegId: 2 };
+  return validateDraftAccount(draft, context).refusals;
+}
+
 export interface CloseOrderChoice {
   /** Market (today's default) or limit — a limit close names the premium per share it will
    *  accept (#3407 P1 slice 3; closes were market-only before). */
@@ -337,6 +363,9 @@ export function previewOptionClose(
   gateNotes(context, refusals, warnings);
   if (!parts) refusals.push("That isn't an option contract symbol.");
   validateClose(heldContracts, closing, refusals, warnings);
+  if (parts && refusals.length === 0) {
+    refusals.push(...closeBookRefusals(parts, isShort, closing, context));
+  }
   if (orderType === "limit" && !(order.limitPrice && order.limitPrice > 0)) {
     refusals.push("A limit close needs a limit price — the premium per share you'll accept.");
   }

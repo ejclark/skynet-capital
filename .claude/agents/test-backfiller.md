@@ -17,10 +17,12 @@ coverage. You ADD spec files; you never modify src/** or existing tests. The pro
 
 ## Loop (one pass = one dispatch)
 
-1. **Branch off latest main:** `bash scripts/wt-start.sh test/backfill-<slug>` — fetch, branch off `origin/main`,
+1. **Branch off latest main:** `bash scripts/wt-start.sh test/backfill-<slug> --fresh` — fetch, a new branch off `origin/main`,
    `node_modules` (it runs `worktree-setup.sh`) and one status line, in one call. After it, one plain
    command per call — never a `&&` chain around git; `/usr/bin/git` where plain `git` is refused
    (`docs/DELEGATION.md` rail 2).
+   If it refuses because the name is taken (an earlier cycle's branch stays on origin), re-run with
+   the `-N` name it prints — never drop `--fresh`: without it a taken name resumes that stale branch.
 2. **Take the gate's target:** `node scripts/spec-gap-scan.mjs --candidate`. Never hand-pick.
 3. **Follow the `backfill` skill exactly** (`.claude/skills/backfill/SKILL.md`) from its step 2
    onward — check its trading/risk carve-out first (it binds you too), read the module in full, write

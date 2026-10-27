@@ -1,3 +1,7 @@
+import { spawnSync } from "node:child_process";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 import {
   boardStatus,
@@ -14,8 +18,11 @@ import {
   searchRemote,
   splitLabels,
   titleWords,
+  updateCommentOp,
   withFooter,
 } from "../../scripts/issues.mjs";
+
+const ISSUES = resolve("scripts/issues.mjs");
 
 // The issue CLI's pure core: the parts that decide whether a filing is refused, what the board
 // column reads, and which labels an edit leaves — proven without calling GitHub.
@@ -116,8 +123,61 @@ describe("issues cli: edits", () => {
   });
 
   it("refuses an --edit-comment that is not a comment id", () => {
-    expect(() => commentWrite({ n: 7, body: "x", editId: true })).toThrow(/comment id/);
+    expect(() => commentWrite({ n: 7, body: "x", editId: "" })).toThrow(/comment id/);
     expect(() => commentWrite({ n: 7, body: "x", editId: "abc" })).toThrow(/comment id/);
+  });
+
+  // #6285: what parseArgs really yields, not a hand-built flags object.
+  const opFor = (...argv: string[]) =>
+    updateCommentOp({ n: 7, flags: parseArgs(["update", "7", ...argv]).flags, read: () => "b" });
+
+  it("refuses a trailing --edit-comment with no id instead of posting a new comment", () => {
+    const flags = parseArgs(["update", "7", "--comment-file", "c.md", "--edit-comment"]).flags;
+    expect("edit-comment" in flags).toBe(true);
+    expect(() => opFor("--comment-file", "c.md", "--edit-comment")).toThrow(/comment id/);
+    expect(() =>
+      opFor("--comment-file", "c.md", "--edit-comment", "issuecomment-6074658599"),
+    ).toThrow(/comment id/);
+  });
+
+  it("plans the comment write from parsed flags: post, edit, or none", () => {
+    expect(opFor("--comment-file", "c.md")?.method).toBe("POST");
+    expect(opFor("--edit-comment", "42", "--comment-file", "c.md")?.path).toBe(
+      "issues/comments/42",
+    );
+    expect(opFor("--add", "bug")).toBeNull();
+    expect(() => opFor("--edit-comment", "42")).toThrow(/needs --comment-file/);
+  });
+
+  it("refuses a bad --edit-comment before the issue PATCH runs", () => {
+    const dir = mkdtempSync(join(tmpdir(), "issues-6285-"));
+    const log = join(dir, "curl.log");
+    // a stub curl: logs every call and answers like an issue read
+    writeFileSync(
+      join(dir, "curl"),
+      `#!/bin/sh\necho "$@" >> "${log}"\ncat >/dev/null\necho '{"number":7,"title":"t","state":"open","labels":[]}'\n`,
+    );
+    chmodSync(join(dir, "curl"), 0o755);
+    writeFileSync(join(dir, "c.md"), "block");
+    const argv = ["update", "7", "--close", "completed"];
+    const res = spawnSync(
+      process.execPath,
+      [
+        ISSUES,
+        ...argv,
+        "--edit-comment",
+        "issuecomment-6074658599",
+        "--comment-file",
+        join(dir, "c.md"),
+      ],
+      {
+        env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GH_TOKEN: "stub" },
+        encoding: "utf8",
+      },
+    );
+    expect(res.status).toBe(1);
+    expect(res.stderr).toMatch(/comment id/);
+    expect(existsSync(log) ? readFileSync(log, "utf8") : "").toBe("");
   });
 
   it("matches every word across title and body, and filters by label", () => {

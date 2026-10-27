@@ -16,10 +16,12 @@ screenshot against its vision passage. You do not choose the piece; the sheet's 
 
 ## Loop (one pass = one piece)
 
-1. **Branch off latest main** before editing: `bash scripts/wt-start.sh art/<piece-slug>` — fetch, branch off `origin/main`,
+1. **Branch off latest main** before editing: `bash scripts/wt-start.sh art/<piece-slug> --fresh` — fetch, a new branch off `origin/main`,
    `node_modules` (it runs `worktree-setup.sh`) and one status line, in one call. After it, one plain
    command per call — never a `&&` chain around git; `/usr/bin/git` where plain `git` is refused
    (`docs/DELEGATION.md` rail 2).
+   If it refuses because the name is taken (an earlier cycle's branch stays on origin), re-run with
+   the `-N` name it prints — never drop `--fresh`: without it a taken name resumes that stale branch.
 2. **Read the contract:** the piece's build-sheet entry — silhouette contract, dials, the `/vision`
    passage, the translation table, the bar. Then the kit you build from: `src/three/kit/profile.ts`
    (shape as pure data), `greebles.ts` (molecules), `materials.ts` (atoms), `rng.ts` (seeded — all

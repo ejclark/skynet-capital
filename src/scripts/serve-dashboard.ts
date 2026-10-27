@@ -86,6 +86,9 @@ const PORT = resolvePort(process.env);
 async function main(): Promise<void> {
   // First of all: a production boot with no sign-in must fail, not serve an open dashboard (#4621).
   assertProductionAccess(process.env);
+  // Every other boot-refusing check sits here too, before `bootTelemetry` claims the run marker: a
+  // bad value is a failed boot, never a phantom unclean-restart incident on the next one (#6292).
+  const publicUrl = publicOriginFrom(process.env);
   warnUnpinnedVolumes(process.env);
   assertDataRootMounted(process.env);
   // Before anything resolves a GitHub-backed feature: a token saved from Settings beats the host secret.
@@ -365,7 +368,6 @@ async function main(): Promise<void> {
     activity,
     feedbackLog,
   }).read;
-  const publicUrl = publicOriginFrom(process.env);
   const healthHistory = createBookHealthHistoryStore(process.env, (m) => console.error(m));
   const dashboardConfig: DashboardServerConfig = {
     hub,
