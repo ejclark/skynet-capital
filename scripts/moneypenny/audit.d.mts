@@ -112,7 +112,8 @@ export const CONFLICT_MARKER: RegExp;
 export function answered(issue?: AuditIssue): boolean;
 /** A `ready` feedback issue with no PR and no terminal label — what the stall audit pings (#5667). */
 export function owedAnswer(issue?: AuditIssue): boolean;
-/** When the issue last began waiting for an answer, from its REST timeline; `fallback` if never (#6042). */
+/** When the issue last began waiting for an answer — `ready`/`feedback` added, any parking label or
+ *  `next-slice` removed — from its REST timeline; `fallback` if never (#6042, #6287). */
 export function waitingSince(timeline?: TimelineEvent[], fallback?: string): string | undefined;
 /** The silent-feedback candidates, timed from `waitingSince`, minus `in-progress` and already-flagged. */
 export function silentFeedbackFrom(

@@ -57,13 +57,15 @@ export function owedAnswer(issue = {}) {
 
 /**
  * When this issue last BEGAN waiting for an answer (#6042): the latest `ready` or `feedback`
- * added, or `needs-eric` / `needs-info` / `next-slice` removed — each is the moment `owedAnswer`
- * can turn true. `fallback` (its `createdAt`) covers an issue whose timeline shows none of them.
+ * added, or a parking label (`PARKING_LABELS`) or `next-slice` removed — each is the moment the
+ * claim paths treat as an unpark. Every parking label counts (#6287): the plan clock missed
+ * `needs-design` / `hold-merge` removals, so an unparked plan read as stalled since its old flip.
+ * `fallback` (its `createdAt`) covers an issue whose timeline shows none of them.
  * Pure over the REST issue timeline.
  */
 export function waitingSince(timeline = [], fallback = undefined) {
   const added = [LABELS.ready.name, "feedback"];
-  const removed = [LABELS.needsEric.name, LABELS.needsInfo.name, LABELS.nextSlice.name];
+  const removed = [...PARKING_LABELS, LABELS.nextSlice.name];
   const starts = (timeline ?? [])
     .filter(
       (e) =>
