@@ -4,6 +4,7 @@ import {
   nextOpenLabel,
   sessionSentence,
   statusLineCue,
+  waitsForOpen,
 } from "../../src/live/market-session";
 
 // The topbar market clock (#3689 slice 1) — the regular session in ET, holidays and early
@@ -113,5 +114,25 @@ describe("statusLineCue", () => {
     for (const iso of ["2026-09-24T21:00:00Z", "2026-09-26T15:00:00Z", "2026-11-26T15:00:00Z"]) {
       expect(cue(iso)).toBe("Closed");
     }
+  });
+});
+
+// #6257: the open a ticket placed now waits for — undefined only while the session runs.
+describe("waitsForOpen", () => {
+  it("is undefined mid-session and in power hour", () => {
+    expect(waitsForOpen(marketSession(new Date("2026-10-27T15:00:00Z")))).toBeUndefined();
+    expect(waitsForOpen(marketSession(new Date("2026-10-27T19:30:00Z")))).toBeUndefined();
+  });
+
+  it("names today's open before the bell and the next session's after the close", () => {
+    expect(waitsForOpen(marketSession(new Date("2026-10-27T12:00:00Z")))).toBe(
+      "today's 9:30 ET open",
+    );
+    expect(waitsForOpen(marketSession(new Date("2026-10-27T00:00:00Z")))).toBe(
+      "the Tue 9:30 ET open",
+    );
+    expect(waitsForOpen(marketSession(new Date("2026-10-31T16:00:00Z")))).toBe(
+      "the Mon 9:30 ET open",
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { marketSession } from "../../app/src/live/market-session";
 import {
   buildDraft,
   ORDER_TYPE_LABELS,
@@ -5,6 +6,7 @@ import {
   orderTypeNote,
   priceFieldFor,
   type TicketFields,
+  tifNote,
 } from "../../app/src/live/ticket";
 
 /** The trade ticket's order-type model (#716 slice 1) — the only part of the gate that decides
@@ -42,19 +44,68 @@ describe("order type labels", () => {
   });
 });
 
+// The clock pinned (#6257): Tue 2026-10-27 11:00 ET mid-session; Mon 2026-10-26 8:00 p.m. ET after
+// the close; Tue 8:00 a.m. ET before the bell; Sat 2026-10-31 noon ET on a weekend.
+const OPEN = marketSession(new Date("2026-10-27T15:00:00Z"));
+const CLOSED = marketSession(new Date("2026-10-27T00:00:00Z"));
+const PRE = marketSession(new Date("2026-10-27T12:00:00Z"));
+const WEEKEND = marketSession(new Date("2026-10-31T16:00:00Z"));
+
 describe("orderTypeNote", () => {
   it("says out loud that a triggered stop fills at the market price", () => {
-    const note = orderTypeNote("stop");
+    const note = orderTypeNote("stop", OPEN);
     expect(note).toContain("market order");
     expect(note.toLowerCase()).toContain("past your stop");
   });
 
   it("says a limit order may never fill at all", () => {
-    expect(orderTypeNote("limit").toLowerCase()).toContain("or not at all");
+    expect(orderTypeNote("limit", OPEN).toLowerCase()).toContain("or not at all");
   });
 
-  it("keeps the market-order sentence about immediacy", () => {
-    expect(orderTypeNote("market").toLowerCase()).toContain("immediately");
+  it("keeps the market-order sentence about immediacy while the session runs", () => {
+    expect(orderTypeNote("market", OPEN).toLowerCase()).toContain("immediately");
+  });
+
+  // #6257: the form said "fills immediately" for the ~81% of the week the market is shut.
+  it("never says immediately while the market is closed, and names the open it waits for", () => {
+    for (const market of [CLOSED, PRE, WEEKEND]) {
+      for (const type of ["market", "limit", "stop"] as const) {
+        expect(orderTypeNote(type, market).toLowerCase()).not.toContain("immediately");
+      }
+    }
+    expect(orderTypeNote("market", CLOSED)).toBe(
+      "Market closed — this order waits for the Tue 9:30 ET open, then fills at the best price on offer.",
+    );
+    expect(orderTypeNote("market", WEEKEND)).toContain("the Mon 9:30 ET open");
+    expect(orderTypeNote("market", PRE)).toContain(
+      "Pre-market — this order waits for today's 9:30 ET open",
+    );
+  });
+
+  it("leads a priced order with the same wait, then keeps its own rule", () => {
+    const limit = orderTypeNote("limit", CLOSED);
+    expect(limit.startsWith("Market closed — nothing fills before the Tue 9:30 ET open.")).toBe(
+      true,
+    );
+    expect(limit).toContain("or not at all");
+    expect(orderTypeNote("stop", OPEN).startsWith("Stays dormant")).toBe(true);
+  });
+});
+
+describe("tifNote", () => {
+  it("ties a Day order to today's session while the market trades or before the bell", () => {
+    expect(tifNote("day", OPEN)).toContain("cancelled when today's session closes");
+    expect(tifNote("day", PRE)).toContain("cancelled when today's session closes");
+  });
+
+  it("ties a Day order placed after the close to the next session, never 'today's'", () => {
+    expect(tifNote("day", CLOSED)).toBe(
+      "Day: waits for the Tue 9:30 ET open; anything unfilled is cancelled when that session closes.",
+    );
+  });
+
+  it("says GTC the same whatever the clock", () => {
+    expect(tifNote("gtc", CLOSED)).toBe(tifNote("gtc", OPEN));
   });
 });
 

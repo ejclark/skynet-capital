@@ -1,6 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+import { parseOccSymbol } from "../../../src/trading/option-symbols";
+import { marketSession } from "../live/market-session";
 import type { PlayInfo, PlaysIndex } from "../live/options";
+import { type DeskOrderRow, fetchOrders } from "../live/orders";
+import { useNow } from "./market-session";
 
 /**
  * THE MILESTONE LAYER OF THE TRADE PAGE (#1461, slice 1) — the rail over the ticket.
@@ -37,6 +42,7 @@ export function MilestoneStrip({
   wheels,
   gate,
   nextUp,
+  linked,
 }: {
   readonly deskId: string;
   /** The rung the ticket is preset to (`?play=`). */
@@ -45,7 +51,11 @@ export function MilestoneStrip({
   readonly wheels: boolean;
   readonly gate?: PlaysIndex["gate"];
   readonly nextUp?: string;
+  /** Required, not defaulted (#6257): the trade page left it off and the strip said "nothing is
+   *  locked" right above "No accounts are linked". */
+  readonly linked: boolean;
 }): ReactElement {
+  const waiting = useQueuedRung(deskId, linked, nextUp);
   const earnedCount = plays.filter((p) => p.earned).length;
   const currentIndex = Math.max(
     0,
@@ -68,7 +78,9 @@ export function MilestoneStrip({
           <Rung key={p.code} deskId={deskId} play={p} current={p.code === current} />
         ))}
       </nav>
-      <p className="ladder-strip-status">{ladderStatus({ plays, wheels, gate, nextUp })}</p>
+      <p className="ladder-strip-status">
+        {ladderStatus({ plays, wheels, gate, nextUp, linked, waiting })}
+      </p>
     </section>
   );
 }
@@ -127,6 +139,34 @@ function Rung({
   );
 }
 
+/** The next rung, when a working order would earn it on its fill — only the share rungs, which a
+ *  plain stock fill earns (`src/domain/progression.ts`: buy → 101, sell → 102); an option rung
+ *  needs the ticket's own tag, which a working-orders row does not carry, so it never claims one. */
+export function queuedRung(
+  nextUp: string | undefined,
+  working: readonly DeskOrderRow[],
+): string | undefined {
+  const side = nextUp === "101" ? "buy" : nextUp === "102" ? "sell" : undefined;
+  if (!side) return undefined;
+  const queued = working.some((o) => o.side === side && parseOccSymbol(o.symbol) === undefined);
+  return queued ? nextUp : undefined;
+}
+
+/** The rung a working order is queued to earn while the market is shut (#6257) — the same
+ *  `desk-orders` read the working-orders list makes, so no second request. Read only when it could
+ *  matter: an account, a share rung next, and no session running. */
+function useQueuedRung(deskId: string, linked: boolean, nextUp?: string): string | undefined {
+  const state = marketSession(useNow()).state;
+  const shut = state === "closed" || state === "pre";
+  const orders = useQuery({
+    queryKey: ["desk-orders", deskId],
+    queryFn: () => fetchOrders(deskId),
+    enabled: linked && deskId !== "" && shut && (nextUp === "101" || nextUp === "102"),
+    staleTime: 10_000,
+  });
+  return shut && orders.data ? queuedRung(nextUp, orders.data.working) : undefined;
+}
+
 /** The M·02 gate note — the server's own sentence (`src/domain/progression.ts`
  *  `LADDER_GATE_NOTE`: "the moment you say hello to Moneypenny"). #1672 fixed this card once and
  *  it regressed to "after your first feedback filing"; the hello is the gate, a filing only also
@@ -150,12 +190,16 @@ export function ladderStatus({
   gate,
   nextUp,
   linked = true,
+  waiting,
 }: {
   readonly plays: readonly PlayInfo[];
   readonly wheels: boolean;
   readonly gate?: PlaysIndex["gate"];
   readonly nextUp?: string;
   readonly linked?: boolean;
+  /** The rung a queued order will earn at the open (`queuedRung`) — said instead of what opens
+   *  after it, since the member's next move is already made. */
+  readonly waiting?: string;
 }): ReactElement | string {
   if (!linked) return `Locked — ${LADDER_CARD_NO_ACCOUNT_NOTE}.`;
   if (gate) return gate.note;
@@ -169,7 +213,11 @@ export function ladderStatus({
       <b>
         {next.code} {next.name}
       </b>
-      {after?.opensAfter ? ` · then ${after.code} opens after ${after.opensAfter.code} fills` : ""}
+      {waiting === next.code
+        ? " · waiting for the open"
+        : after?.opensAfter
+          ? ` · then ${after.code} opens after ${after.opensAfter.code} fills`
+          : ""}
     </>
   );
 }
