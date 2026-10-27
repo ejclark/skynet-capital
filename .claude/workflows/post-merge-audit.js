@@ -66,8 +66,11 @@ const tierOf = (n, t) => {
   return 'standard'
 }
 
+// A cloud session clones ~50 commits deep, so a busy night's earlier merges fall outside it: on
+// 2026-10-27 three of four audit batches read 12 merged PRs as "not found on origin/main" until they
+// deepened by hand. Deepen first; "not found" then means the PR really did not land.
 const FIND = (n) =>
-  `Find PR #${n}'s change: \`git fetch -q origin main\`, then \`git log origin/main --oneline --grep "(#${n})"\` (squash merges carry "(#${n})" in the subject) and \`git show <sha>\`. ` +
+  `Find PR #${n}'s change: \`git fetch -q origin main\`; if \`git rev-parse --is-shallow-repository\` prints true, also \`git fetch -q --deepen=1000 origin main\`. Then \`git log origin/main --oneline --grep "(#${n})"\` (squash merges carry "(#${n})" in the subject) and \`git show <sha>\`. ` +
   `If no commit matches, read it over REST: \`curl -sS --fail -H "Authorization: Bearer $(gh auth token 2>/dev/null || echo $GH_TOKEN)" https://api.github.com/repos/ejclark/skynet-capital/pulls/${n}\` (and /files), or the GitHub MCP pull_request_read tool.`
 
 const FINDINGS_SCHEMA = {
