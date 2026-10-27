@@ -1,9 +1,12 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import type { ScoreLedgerEntry } from "../../src/playbooks/claim-score.js";
 import type { Conviction } from "../../src/playbooks/conviction-record.js";
 import { AI_DIP_2026_10 } from "../../src/playbooks/conviction-seeds.js";
-import { findForwardTest, fragmentRows, readsEvent } from "../../src/scripts/claim-scoring-run.js";
-import { main } from "../../src/scripts/claim-studies.js";
+import {
+  findForwardTest,
+  fragmentRows,
+  laneScores,
+  readsEvent,
+} from "../../src/scripts/claim-scoring-run.js";
 
 /** #5482 criterion 6 — a claim linked to a forward test finds the row its event lane registered: by
  *  the row's own id, or by the conviction proposal token the registration cites, and reads its
@@ -99,22 +102,41 @@ describe("readsEvent", () => {
   });
 });
 
-describe("research:claims --event", () => {
-  const ledgers = () =>
-    ["conviction-studies.json", "conviction-scores.json"].map((f) =>
-      readFileSync(join(process.cwd(), "src", "playbooks", f), "utf8"),
-    );
-
-  it("writes nothing when no stored conviction reads the event", async () => {
-    const before = ledgers();
-    expect(await main(["--event", "fomc-2026-12-09"])).toBe(0);
-    expect(ledgers()).toEqual(before);
+/** The event lane's write: one shared scores file, so a lane's PR may change a claim's line only
+ *  the once it decides it, never restamp or roll back what another pass decided. */
+describe("laneScores", () => {
+  const entry = (statement: string, outcome: "pass" | "fail" | "pending", basis = "b") => ({
+    statement,
+    score:
+      outcome === "pending"
+        ? { outcome, basis, dueOn: "2026-11-09" }
+        : { outcome, basis, dueOn: "2026-11-09", scoredOn: "2026-11-09" },
   });
 
-  it("refuses a missing event id instead of scoring everything", async () => {
-    const before = ledgers();
-    expect(await main(["--event"])).toBe(1);
-    expect(await main(["--event", "--dry"])).toBe(1);
-    expect(ledgers()).toEqual(before);
+  it("takes a claim this pass newly decides", () => {
+    const fresh = [entry("4.", "fail")];
+    expect(laneScores([entry("4.", "pending")], fresh)).toEqual(fresh);
+  });
+
+  it("keeps a decided score as filed: no new scored-on day, no flip", () => {
+    const filed = [entry("4.", "fail")];
+    const later: ScoreLedgerEntry[] = [
+      { statement: "4.", score: { ...entry("4.", "pass").score, scoredOn: "2026-11-25" } },
+    ];
+    expect(laneScores(filed, later)).toEqual(filed);
+  });
+
+  it("keeps a filed pending line rather than rewording it, and never undoes a decided one", () => {
+    const filed = [entry("1.", "pass"), entry("9.", "pending", "Not due: scored on 2026-11-17.")];
+    const stale = [
+      entry("1.", "pending"),
+      entry("9.", "pending", "Due 2026-11-17. P2 reads open."),
+    ];
+    expect(laneScores(filed, stale)).toEqual(filed);
+  });
+
+  it("follows the record's claims: a new claim is added, a re-read one starts fresh", () => {
+    const fresh = [entry("4.", "pending"), entry("13.", "pending")];
+    expect(laneScores([entry("4. (old words)", "fail")], fresh)).toEqual(fresh);
   });
 });

@@ -17,7 +17,8 @@
  * not a score: claim 7's cycle-phase floor band is CRWV-WHEEL's live strike ceiling
  * (`conviction-steering.ts`), and an unattended research PR must never move a pair's settings. A
  * score-only pass leaves `conviction-studies.json` untouched, so a `rerun` claim stays pending until
- * a full pass re-runs its study.
+ * a full pass re-runs its study, and it changes only the claims it newly decides (`laneScores`),
+ * so a lane's PR touches a claim's line once and two lanes stay on disjoint lines.
  *
  * For each claim it asks `planClaim` which house instrument (if any) measures what the claim
  * asserts, runs that instrument ONCE per symbol on the data the tape holds, and writes the verdict
@@ -57,8 +58,7 @@ import {
 } from "../playbooks/claim-study-runner.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
-import { readsEvent, scoreConviction } from "./claim-scoring-run.js";
-import { flag } from "./cli-flag.js";
+import { laneScores, readsEvent, scoreConviction } from "./claim-scoring-run.js";
 
 const run = promisify(execFile);
 const ROOT = process.cwd();
@@ -123,34 +123,83 @@ function describe(result: RunnerResult, conviction: Conviction): string[] {
   return lines;
 }
 
-type Selection =
-  | { readonly convictions: readonly Conviction[]; readonly scoreOnly: boolean }
-  | { readonly exit: number };
+export interface PassArgs {
+  readonly ids: readonly string[];
+  readonly dry: boolean;
+  /** `--event <id>`: only the convictions whose claims read that event's forward tests. */
+  readonly event?: string;
+  /** No study runs and the studies ledger is not written; `--event` implies it. */
+  readonly scoreOnly: boolean;
+  /** `--cap`, as typed: read only when studies run. */
+  readonly cap?: string;
+}
 
-/** Which convictions this pass reads, and whether it may run studies; or the exit code that ends
- *  it. `--event` keeps only the convictions whose claims read that event and implies scores only. */
-function select(argv: readonly string[]): Selection {
-  const event = flag(argv, "event");
-  if (argv.includes("--event") && (event === undefined || event.startsWith("--"))) {
-    console.error("--event needs an event id");
-    return { exit: 1 };
+const FLAGS = ["--dry", "--score-only", "--cap", "--event"] as const;
+const VALUED = new Set(["--cap", "--event"]);
+
+/**
+ * The pass's arguments, or what is wrong with them. Pure. `--event=<id>` reads as `--event <id>`.
+ * An unknown flag is refused, never skipped: a mistyped `--event` would otherwise fall through to a
+ * full pass that re-runs studies, which the event lane must never do.
+ */
+export function parseArgs(argv: readonly string[]): PassArgs | { readonly error: string } {
+  const words = argv.flatMap((a) => (/^--[a-z-]+=/.test(a) ? a.split(/=(.*)/s, 2) : [a]));
+  const ids: string[] = [];
+  const values = new Map<string, string>();
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i] ?? "";
+    if (!w.startsWith("--")) {
+      ids.push(w);
+      continue;
+    }
+    if (!(FLAGS as readonly string[]).includes(w)) {
+      return { error: `unknown flag ${w} (accepted: ${FLAGS.join(", ")})` };
+    }
+    if (!VALUED.has(w)) continue;
+    const value = words[i + 1];
+    if (value === undefined || value === "" || value.startsWith("--")) {
+      return { error: `${w} needs a value` };
+    }
+    values.set(w, value);
+    i++;
   }
-  const ids = argv.filter(
-    (a, i) => !a.startsWith("--") && argv[i - 1] !== "--cap" && argv[i - 1] !== "--event",
-  );
-  const named = ids.length > 0 ? ids.map((id) => CONVICTIONS.get(id)) : CONVICTIONS.all();
+  const event = values.get("--event");
+  const cap = values.get("--cap");
+  return {
+    ids,
+    dry: words.includes("--dry"),
+    ...(event === undefined ? {} : { event }),
+    scoreOnly: event !== undefined || words.includes("--score-only"),
+    ...(cap === undefined ? {} : { cap }),
+  };
+}
+
+/** The convictions this pass reads, or the exit code that ends it. */
+function select(args: PassArgs): readonly Conviction[] | number {
+  const named = args.ids.length > 0 ? args.ids.map((id) => CONVICTIONS.get(id)) : CONVICTIONS.all();
+  const missing = args.ids.filter((_, i) => named[i] === undefined);
+  if (missing.length > 0) {
+    console.error(`no such conviction: ${missing.join(", ")}`);
+    return 1;
+  }
   const found = named.filter((c): c is Conviction => c !== undefined);
-  if (found.length < named.length) {
-    console.error(`no such conviction: ${ids.join(", ")}`);
-    return { exit: 1 };
-  }
-  if (event === undefined) return { convictions: found, scoreOnly: argv.includes("--score-only") };
+  const { event } = args;
+  if (event === undefined) return found;
   const convictions = found.filter((c) => readsEvent(c, event));
   if (convictions.length === 0) {
     console.log(`no stored conviction scores from ${event}'s forward tests; nothing written`);
-    return { exit: 0 };
+    return 0;
   }
-  return { convictions, scoreOnly: true };
+  return convictions;
+}
+
+/** The study budget for this pass: the research dial, which `--cap` may only lower. */
+function budget(asked: string | undefined): number | undefined {
+  const dial = researchCapNow();
+  const cap = asked === undefined ? dial : Math.min(dial, Number(asked));
+  if (Number.isInteger(cap) && cap >= 0) return cap;
+  console.error(`--cap must be a whole number of runs, got ${asked}`);
+  return undefined;
 }
 
 /** Run one conviction's studies within what is left of the budget, and say what each claim got. */
@@ -178,25 +227,25 @@ async function study(
 }
 
 /** A ledger written with its convictions in id order, so a re-run diffs only what moved. */
-function writeLedger(path: string, ledger: Record<string, unknown>): void {
-  const sorted = Object.fromEntries(Object.entries(ledger).sort(([a], [b]) => a.localeCompare(b)));
+function writeSorted(path: string, record: Record<string, unknown>): void {
+  const sorted = Object.fromEntries(Object.entries(record).sort(([a], [b]) => a.localeCompare(b)));
   writeFileSync(path, `${JSON.stringify(sorted, null, 2)}\n`);
   console.log(`wrote ${path}`);
 }
 
 export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<number> {
-  const dry = argv.includes("--dry");
-  const selection = select(argv);
-  if ("exit" in selection) return selection.exit;
-  const { convictions, scoreOnly } = selection;
-
-  const dial = researchCapNow();
-  const asked = flag(argv, "cap");
-  const cap = asked === undefined ? dial : Math.min(dial, Number(asked));
-  if (!Number.isInteger(cap) || cap < 0) {
-    console.error(`--cap must be a whole number of runs, got ${asked}`);
+  const args = parseArgs(argv);
+  if ("error" in args) {
+    console.error(args.error);
     return 1;
   }
+  const convictions = select(args);
+  if (typeof convictions === "number") return convictions;
+  const { dry, scoreOnly } = args;
+  // A scores-only pass runs no study, so it never reads the dial: a dial it cannot read must not
+  // stop the event lane from scoring.
+  const cap = scoreOnly ? 0 : budget(args.cap);
+  if (cap === undefined) return 1;
 
   const deps: RunnerDeps = { dataDate, execute };
   let ledger = JSON.parse(readFileSync(LEDGER_PATH, "utf8")) as Record<string, unknown>;
@@ -222,12 +271,15 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     const scoring = await scoreConviction(conviction, studies);
     console.log("  scores:");
     for (const line of scoring.lines) console.log(line);
-    scores = { ...scores, [conviction.id]: scoring.entries };
+    const onFile = scores[conviction.id] ?? [];
+    // A scores-only pass changes only the claims it newly decides (`laneScores`).
+    const written = scoreOnly ? laneScores(onFile, scoring.entries) : scoring.entries;
+    scores = { ...scores, [conviction.id]: written };
   }
   if (!dry) {
     mkdirSync(join(ROOT, "src", "playbooks"), { recursive: true });
-    if (!scoreOnly) writeLedger(LEDGER_PATH, ledger);
-    writeLedger(SCORES_PATH, scores);
+    if (!scoreOnly) writeSorted(LEDGER_PATH, ledger);
+    writeSorted(SCORES_PATH, scores);
   }
   return 0;
 }

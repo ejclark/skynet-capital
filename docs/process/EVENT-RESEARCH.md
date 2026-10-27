@@ -276,10 +276,14 @@ close-out, run `npm run research:claims -- --event <your-event-id>` after the Ou
 written, and commit whatever it changed in the same PR. It picks only the convictions whose claims
 read your event; when none does it prints `nothing written` and you are done. It scores every claim
 of those convictions that is due (from your rows, and from the cached tape for a price check), and
-rewrites only `src/playbooks/conviction-scores.json`. It never re-runs a study, because a study's
+writes only `src/playbooks/conviction-scores.json`, changing only the claims it newly decides
+(pending to pass or fail; a decided score is final). It never re-runs a study, because a study's
 reading can set a pair's live narrowing; a claim scored by a re-run stays pending until a full
 `npm run research:claims`. Never hand-edit that file, and never edit the conviction doc or its
-record: the score is the command's, not yours.
+record: the score is the command's, not yours. **That file is shared** with every lane that scores
+a linked row, the one exception to one-file-per-owner here, and it is safe for the same reason
+appends are: each lane changes a different claim's entry, once. On a merge conflict in it, take
+`main`'s copy and run the command again.
 
 ## Deterministic screening (issue #724) — not every due pulse spends a session
 
