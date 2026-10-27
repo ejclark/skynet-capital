@@ -1,5 +1,6 @@
 import {
   audit,
+  CONFLICT_MARKER,
   CONFLICT_REPAIR_CAP,
   owedAnswer,
   planStallFrom,
@@ -285,6 +286,21 @@ describe("audit() — the plan-stall threshold and memory", () => {
     expect(intents[0]?.kind).toBe("flag-conflict-cap");
     expect(intents[0]?.prNumber).toBe(1373);
     expect(intents[0]?.body).toContain("needs-eric");
+  });
+
+  it("posts the cap once per head: the cap comment's own marker silences the next push", () => {
+    const [cap] = audit({
+      conflictedPRs: [{ title: "feat: x", number: 1373, headRefOid: "sha-n" }],
+      alreadyFlaggedPRs: [{ number: 1373, sha: "sha-n-minus-1", attempt: CONFLICT_REPAIR_CAP }],
+    });
+    const marker = CONFLICT_MARKER.exec(cap?.body ?? "");
+    expect(marker?.[1]).toBe("sha-n");
+    expect(Number(marker?.[2])).toBe(CONFLICT_REPAIR_CAP + 1);
+    const next = audit({
+      conflictedPRs: [{ title: "feat: x", number: 1373, headRefOid: "sha-n" }],
+      alreadyFlaggedPRs: [{ number: 1373, sha: "sha-n", attempt: CONFLICT_REPAIR_CAP + 1 }],
+    });
+    expect(next).toHaveLength(0);
   });
 
   it("still flags a brand-new conflict once, exactly as before", () => {

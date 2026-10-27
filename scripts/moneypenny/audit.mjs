@@ -255,9 +255,13 @@ export function audit(deps = {}) {
   //     conflicting again: re-dispatch, up to `CONFLICT_REPAIR_CAP` attempts.
   //   - the cap is spent → stop dispatching repairs and escalate to `needs-eric` instead, so a
   //     genuinely un-mergeable PR lands on his desk rather than looping Opus sessions forever.
+  //     The cap comment carries the marker too (attempt CAP+1, this head's sha), so the next push
+  //     reads "same sha → skip" instead of re-posting the cap on every merge to `main`
+  //     (#6010 review, 2026-10-26: it had no marker, so the last flag's sha never matched).
   // `executeOne`'s `commentAndFlagConflict` dispatches moneypenny-repair.yml's conflict-repair
   // session right after a `flag-conflict` intent runs — that session judges disjoint-vs-same-logic
-  // and either pushes a resolved merge commit or escalates to `needs-eric` itself; this comment is
+  // and either pushes a resolved merge commit or hands off (`needs-session` on an issue, or
+  // `needs-eric` for the irreversible class — the prompt's states a–c) itself; this comment is
   // the receipt that a repair was dispatched, not an ask.
   for (const c of conflictedPRs) {
     const prior = flaggedPRs.get(c.number);
@@ -267,7 +271,7 @@ export function audit(deps = {}) {
         prNumber: c.number,
         title: c.title,
         attempt: 1,
-        body: `⚠️ **Merge conflict** — this PR is now conflicted with \`main\` (no push to this branch caused it; \`main\` moved out from under it). Nothing else here watches for this — CI stays silent because no check ever ran against the conflict.\n\nA repair session has been dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n<!-- moneypenny:conflict sha=${c.headRefOid ?? "unknown"} attempt=1 -->\n\n${FOOTER}`,
+        body: `⚠️ **Merge conflict** — this PR is now conflicted with \`main\` (no push to this branch caused it; \`main\` moved out from under it). Nothing else here watches for this — CI stays silent because no check ever ran against the conflict.\n\nA repair session has been dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or hands it to a live session (\`needs-session\`, on an issue) with the delta to port if it isn't — \`needs-eric\` only for the irreversible class, or once ${CONFLICT_REPAIR_CAP} repairs have not held.\n\n<!-- moneypenny:conflict sha=${c.headRefOid ?? "unknown"} attempt=1 -->\n\n${FOOTER}`,
       });
       continue;
     }
@@ -279,7 +283,7 @@ export function audit(deps = {}) {
         prNumber: c.number,
         title: c.title,
         attempt: prior.attempt,
-        body: `🛑 **Merge conflict — repair cap reached** — this PR has been repaired ${prior.attempt} time(s) and has gone \`CONFLICTING\` against \`main\` again. Something about it is not resolving safely on its own, so this stops dispatching repair sessions and hands it to \`needs-eric\` instead of looping.\n\n${FOOTER}`,
+        body: `🛑 **Merge conflict — repair cap reached** — this PR has been repaired ${prior.attempt} time(s) and has gone \`CONFLICTING\` against \`main\` again. Something about it is not resolving safely on its own, so this stops dispatching repair sessions and hands it to \`needs-eric\` instead of looping.\n\n<!-- moneypenny:conflict sha=${c.headRefOid} attempt=${prior.attempt + 1} -->\n\n${FOOTER}`,
       });
       continue;
     }
@@ -289,7 +293,7 @@ export function audit(deps = {}) {
       prNumber: c.number,
       title: c.title,
       attempt,
-      body: `⚠️ **Merge conflict, again** — this PR was repaired once already and has gone \`CONFLICTING\` against \`main\` again since (attempt ${attempt}/${CONFLICT_REPAIR_CAP}). \`main\` moves every few minutes here, so one repair is not guaranteed to still apply by the time it lands.\n\nA repair session has been re-dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n<!-- moneypenny:conflict sha=${c.headRefOid} attempt=${attempt} -->\n\n${FOOTER}`,
+      body: `⚠️ **Merge conflict, again** — this PR was repaired once already and has gone \`CONFLICTING\` against \`main\` again since (attempt ${attempt}/${CONFLICT_REPAIR_CAP}). \`main\` moves every few minutes here, so one repair is not guaranteed to still apply by the time it lands.\n\nA repair session has been re-dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or hands it to a live session (\`needs-session\`, on an issue) with the delta to port if it isn't — \`needs-eric\` only for the irreversible class, or once ${CONFLICT_REPAIR_CAP} repairs have not held.\n\n<!-- moneypenny:conflict sha=${c.headRefOid} attempt=${attempt} -->\n\n${FOOTER}`,
     });
   }
   // #3960 criterion 4's write half: this push-driven audit IS "the next lane run", so it is where
