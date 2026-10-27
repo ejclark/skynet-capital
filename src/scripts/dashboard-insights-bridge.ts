@@ -39,6 +39,7 @@ import type { Participant } from "../participants/participant.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
+import { resolveBridgeAuth } from "../server/bridge-http.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import { pollSeedsFromEnv } from "../server/subscription-seed-store.js";
@@ -187,8 +188,10 @@ export function startInsightsBridge(
   // The drafts in a shadow test go out on every poll, read fresh like the subscriptions above.
   const authoredPlays = createAuthoredPlayStore(env, (message) => console.error(message));
   const memberConvictions = createMemberConvictionStore(env, (message) => console.error(message));
+  const bridgeAuth = resolveBridgeAuth(env);
   createInsightsListener({
     record: (entry) => insights.record(entry),
+    bridgeAuth,
     condScout: {
       accept: (snapshot) => {
         condScout = snapshot;
@@ -245,7 +248,8 @@ export function startInsightsBridge(
         }
       : {}),
   }).listen(insightsPort, () => {
-    console.log(`[insights-bridge] internal listener on port ${insightsPort} (private-net only)`);
+    const auth = bridgeAuth.acceptLegacy ? "provisioned secret, literal still accepted" : "literal";
+    console.log(`[insights-bridge] internal listener on port ${insightsPort} (auth: ${auth})`);
   });
   return {
     lastControlsPollAt: () => lastControlsPollAt,

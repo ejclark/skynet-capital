@@ -40,9 +40,29 @@ export interface InsightRecord {
  * JSON, not a credential. Because the two apps can run different commits after the split, treat
  * the header name, routes, and port as a frozen cross-app contract: evolve the wire
  * expand/contract (listener-first), never rename any of the three in a single commit.
+ *
+ * Off Fly there may be no private network, so the literal is no longer enough (#4621): a host sets
+ * `SKYNET_INSIGHTS_BRIDGE_SECRET` to the same random value on both apps, and the bots send it in
+ * this header instead (`insightsBridgeSecret`). The listener's side is `resolveBridgeAuth`
+ * (`bridge-http.ts`).
  */
 export const INSIGHTS_BRIDGE_SECRET_HEADER = "x-skynet-insights-secret";
 export const INSIGHTS_BRIDGE_SHARED_SECRET = "skynet-insights-bridge-v1";
+
+/** The provisioned bridge secret, set to one random value on both apps (#4621). */
+export const INSIGHTS_BRIDGE_SECRET_ENV = "SKYNET_INSIGHTS_BRIDGE_SECRET";
+
+/** The provisioned secret, trimmed — a pasted trailing newline would otherwise be an invalid
+ *  header on one side and stripped by Node on the other — or undefined when unset or blank. */
+export function provisionedBridgeSecret(env: NodeJS.ProcessEnv): string | undefined {
+  return env[INSIGHTS_BRIDGE_SECRET_ENV]?.trim() || undefined;
+}
+
+/** What a bots-side client puts in `INSIGHTS_BRIDGE_SECRET_HEADER`: the provisioned secret when
+ *  one is set, else the repo-public literal (unchanged behaviour for a host that never set one). */
+export function insightsBridgeSecret(env: NodeJS.ProcessEnv): string {
+  return provisionedBridgeSecret(env) ?? INSIGHTS_BRIDGE_SHARED_SECRET;
+}
 
 /** One bounded-fetch budget for every bridge client — a slow bridge must never stall a trade loop. */
 export const BRIDGE_REQUEST_TIMEOUT_MS = 2_000;
