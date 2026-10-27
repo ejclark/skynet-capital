@@ -333,6 +333,36 @@ describe("previewOptionClose — direction from the held sign", () => {
   });
 });
 
+// #6328: an assignment can drain broker cash below zero. A close sets nothing aside, so it leaves
+// that cash no worse and is never refused for it; an order that does set cash aside still is.
+describe("negative cash — a close is never refused for a $0 demand", () => {
+  const shares = { symbol: "MSFT", quantity: 300, avgPrice: 400, marketValue: 128_000 };
+  const shortCall = { symbol: "MSFT260918C00440000", quantity: -2, avgPrice: 5, marketValue: -900 };
+  const longCall = { symbol: "MSFT260918C00430000", quantity: 2, avgPrice: 8, marketValue: 1_800 };
+  const shortPut = { symbol: "MSFT260918P00420000", quantity: -1, avgPrice: 9, marketValue: -700 };
+  const closes = [
+    ["a short call buy-back", shortCall.symbol, [shares, shortCall]],
+    ["a long call close", longCall.symbol, [longCall]],
+    ["a short put buy-back", shortPut.symbol, [shortPut]],
+  ] as const;
+
+  for (const [name, symbol, positions] of closes) {
+    it(`passes ${name} at cash 0 and at cash -$7,400`, () => {
+      for (const cash of [0, -7_400]) {
+        const preview = previewOptionClose(symbol, context({ cash, positions: [...positions] }));
+        expect(preview.refusals).toEqual([]);
+        expect(preview.ok).toBe(true);
+      }
+    });
+  }
+
+  it("still refuses a cash-secured put, which does set cash aside", () => {
+    const preview = previewOptionOrder(csp, context({ cash: -7_400 }));
+    expect(preview.ok).toBe(false);
+    expect(preview.refusals.join(" ")).toContain("Cash-secured means the cash is there");
+  });
+});
+
 // #3729 step 4b: a covered call already open holds its 100 shares — a second call can't reuse them.
 describe("previewOptionOrder — shares already covering a call you sold", () => {
   const request = { ...csp, code: "202" as const, contracts: 2 };

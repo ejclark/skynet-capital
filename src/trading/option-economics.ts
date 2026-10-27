@@ -271,8 +271,10 @@ function validateCoveredCall(
     );
     return;
   }
+  // A call the shares fully cover sets aside nothing, so an account whose cash is negative is not
+  // short of it (#6328).
   const width = after.cash - before.cash;
-  if (width > context.cash) {
+  if (width > 0 && width > context.cash) {
     refusals.push(
       `Covered means the cover is paid for: with this call, the calls you've sold on ${underlying} outnumber the ${held} shares behind them, so a long call you hold has to cap one — that sets aside $${width.toLocaleString("en-US")} of strike width and you have $${Math.floor(context.cash).toLocaleString("en-US")}. Fewer contracts, or more cash. This desk never sells naked calls.`,
     );
