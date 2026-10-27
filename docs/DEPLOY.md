@@ -217,6 +217,13 @@ Docker → set the same env vars (Render injects `PORT`, which the server honors
   `SKYNET_PARTICIPANT_STORE`, … — the full list is `PERSISTED_STORES` and `OPT_IN_STORES`), and
   **set `SKYNET_DATA_ROOT`** to a directory on it — the stores in `DERIVED_STORES` resolve under it,
   and off Fly they otherwise fall back to a relative `data/`.
+- **Set `SKYNET_INSIGHTS_BRIDGE_SECRET` to one random value on both apps** (`openssl rand -hex
+  32`) — dashboard first, then bots. The bots reach the dashboard's bridge port (8788) with it; on
+  Fly that port sits on the private network, elsewhere it may not. Unset, both sides use a
+  repo-public literal, which is safe only on a private network. While it is set, the dashboard
+  still accepts the literal too, so the bots app can redeploy second without dropping the bridge;
+  the boot line reads `auth: provisioned secret, literal still accepted`, and one
+  `legacy bridge secret used` warning means the bots app has not picked the secret up yet (#4621).
 - **Check the release** with `scripts/smoke.sh https://<your host>`.
 
 ## After deploying

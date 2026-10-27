@@ -2,7 +2,7 @@ import { fetchJson } from "../http/fetch-json.js";
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
-  INSIGHTS_BRIDGE_SHARED_SECRET,
+  insightsBridgeSecret,
 } from "./insight-record.js";
 
 /**
@@ -29,6 +29,7 @@ export function resolveSnapshotReplication(
   options: { readonly timeoutMs?: number } = {},
 ): SnapshotReplication {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
+  const bridgeSecret = insightsBridgeSecret(env);
   if (!url) return { send: () => Promise.resolve() };
   const endpoint = `${url.replace(/\/+$/, "")}${route}`;
   const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
@@ -42,7 +43,7 @@ export function resolveSnapshotReplication(
         const response = await fetchJson(
           "POST",
           endpoint,
-          { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
+          { [INSIGHTS_BRIDGE_SECRET_HEADER]: bridgeSecret },
           snapshot,
           controller.signal,
         );
