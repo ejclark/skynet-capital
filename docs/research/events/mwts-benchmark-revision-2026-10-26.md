@@ -403,6 +403,7 @@ caution, not a signal. Receipt: the 2026-10-16 ledger row; new test `-5`.
 | 2026-10-06 | D-20 | **Deterministic screen (no Claude session).** Readings — VIX 15.5 (+1.0pt since last), band unchanged (low:15+), 53 adjacent event(s) tracked, new in corridor since last pulse: `aapl-2026-10-29-print`, `aapl-iphone-duo-launch-2026-10-23`, `amzn-2026-10-29-print`, `case-shiller-hpi-2026-10-27`, `dallas-fed-mfg-2026-10-26`, `dallas-fed-trimmed-mean-2026-10-29` +27 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-05 |
 | 2026-10-16 | D-10 | **Full session (VIX +4.5pt and the band change low:15+ -> low:0+ made it material). The 09-28 rehearsal ran on schedule, and it restated deep, not shallow.** *Date:* `census.gov/wholesale` (HTTP 200, 528,541 B) still reads "tentatively scheduled for release on October 26, 2026 at 10:00 a.m. EDT"; `census.gov/mtis` (HTTP 200, 684,894 B) now reads "Revisions to the Wholesale estimates will be released October 26, 2026, and will be reflected in the September 2026 MTIS release scheduled for November 17, 2026" and puts the retail half in the past tense; `calendar-listview.html` (84,747 B) still has no 2026-10-26 row (its only 10-26 hits are 2027). Stays `estimate`. `-1`'s question is answered yes by the [retail sibling's close-out](census-benchmark-revision-nsa-2026-09-28.md); the Outcome cell is left for this ledger's close-out. *Size:* that sibling's `RSAFSNA` 2026-07 went $784,610M -> $749,221M (-4.51%) and the [MTIS 10-15 close-out](mtis-2026-10-15.md) records retail June inventories +4.8% vs sales -3.4%. A +/-0.03 band on the 1.19 wholesale ratio is 2.5% wide; retail's June ratio moved about 8%. The 12-revision wholesale archive stays the only measured base rate, so `-3`'s 75% is now low-confidence and `-5` is registered. *Adjacency:* CPI 10-14 core +0.3% m/m vs ~0.2% expected per the [CPI ledger](cpi-2026-10-14.md); VIX 15.27 (10-13) -> 16.87 -> 16.46 (10-15, cdn.cboe.com) -> 19.99 (10-16, event-material-scan bar, cause not established here); FOMC 10-28 confirmed, blackout from 10-17; peers n/a, `symbols: []`. *Beyond horizon, not proposed:* the retail page's July-data MSRS revision notice for 2026-11-16 (low, over 30d out). 0 proposals; 10-26 holds 3 entries, all tracked. | **Amended: stand aside holds; "wide and shallow" becomes "wide, depth unmeasured".** | 2026-10-23 |
 | 2026-10-26 | D-0 | **Full session (interval-elapsed, event day). The revision published today, and it is deep and level-shifting: Aug inventories +4.27%, June I/S 1.19 -> 1.24.** *Date:* `census.gov/wholesale/current` (HTTP 200) is headed "FOR IMMEDIATE RELEASE: Monday, October 26, 2026" and the index page says the estimates "were released on our website on October 26, 2026"; status flipped `estimate` -> `CENSUS:`-confirmed in the event file, and the notice names the **2024 AIES only**. *Size, read from Census's own `revision1.xlsx` (SA, vs the 10-08 vintage):* Aug 2026 inventories **$964,199M -> $1,005,340M (+4.27%)**, Jul +4.22%, Jun **+4.42%**; sales -0.23% (Aug), so the ratio level shifts (**Jun 1.19 -> 1.24, Aug 1.18 -> 1.23**) while the m/m flow barely moves (Aug inventory change +$4.43B -> +$5.05B). SA inventories restated on **139** months (**126** on or before 2025-07, median **0.665%**, worst 3.61% at 2024-01); **38** months moved the ratio by 0.03+. *Tests (Outcome cells left to close-out; ALFRED/FRED had NOT ingested the vintage at 11:20 ET, FRED still equals the 10-23 vintage):* `-2` at the 126 floor exactly; **`-3` fails and its kill switch fires** (June ratio +0.05), so `wholesale-trade-2026-12-09`'s `-3` is void by its own terms - its owner's next pulse writes that; `-5` passes (>1.0%); `-4` open (SPY 10-26 intraday range ~0.8% at 11:13 ET, unfinished). *Nowcast:* Census's indicators page says the wholesale revision "will be reflected in" the **10-28 Advance Economic Indicators** - the open question answered yes. *Adjacency:* VIX 17.91 intraday (prior close 19.45; 16-Oct 19.99, peak 22.31); SPY 766.94, +0.91% intraday; FOMC 10-28 as tracked; peers n/a, `symbols: []`. All 10-28 / 11-09 / 11-17 follow-ons already on the calendar; 0 proposals. | **No change to stand-aside; "depth unmeasured" resolves to "deep" (+4.3% recent level).** | 2026-10-28 |
+| 2026-10-27 | D+1 | **Close-out (`event-passed-unscored`, inside `closeOutWithinDays: 6`; `symbols: []`, cache bust had no target).** Fresh reads: `census.gov/wholesale/current` (HTTP 200, 73,540 B) "FOR IMMEDIATE RELEASE: Monday, October 26, 2026", revisions "released on our website on October 26, 2026", 2024 AIES only; `census.gov/retail` (200, 744,308 B) "Notice of Revision" dated 09-28. SPY 10-26 range **0.796%** (H 767.73 / L 761.64 / C 765.37); VIX close 18.39 (10-23: 19.45). FRED not yet ingested (`WHLSLRIMSA` Aug 964,199; `WHLSLRIRSA` Aug 1.18). **`-1` pass, `-4` pass.** `-2`/`-3`/`-5` score by 11-02, past this window: left `_open_`, the D-0 row's readings are the evidence to re-check. No sweep in close-out mode; 0 proposals. | **None - stand aside holds, confirmed at close.** | - (closed; `## Outcome` below) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -422,3 +423,56 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.91,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","msft-2026-10-27-print","msft-def14a-2026-10-22","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","tic-shca-annual-final-2026-10-30","treasury-20y-bond-2026-10-21","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-pink-book-2026-10-30","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29"],"screenStreak":0,"blocked":[]} -->
+
+**Last assessed:** 2026-10-27
+<!-- probe-ref: {"symbols":{},"vix":18.39,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-10-28","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","eci-q3-2026-10-30","case-shiller-hpi-2026-10-27","consumer-confidence-2026-10-27","durable-goods-2026-10-27","new-home-sales-2026-10-27","fhfa-hpi-2026-10-27","msft-2026-10-27-print","dallas-fed-tssos-2026-10-27","treasury-5y-note-2026-10-27","treasury-buyback-20y30y-2026-10-27","goog-2026-10-28-print","meta-2026-10-28-print","housing-vacancies-q3-2026-10-28","treasury-2y-frn-2026-10-28","uk-autumn-budget-2026-10-28"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29"],"screenStreak":0,"blocked":[{"url":"https://alfred.stlouisfed.org","status":"not attempted (FRED serves the pre-revision vintage; ALFRED blocked on 09-22)","at":"2026-10-27"}]} -->
+
+## Outcome
+
+**Close-out (2026-10-27, D+1 - inside `closeOutWithinDays: 6`).** `symbols: []`, so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) had no target. Every figure
+below is a fresh fetch this session except where marked as the D-0 row's reading.
+
+### What printed
+
+- **The revision published on the announced day.** `census.gov/wholesale/current/index.html` (HTTP 200,
+  73,540 B) is headed "FOR IMMEDIATE RELEASE: Monday, October 26, 2026" and says the revised not adjusted and
+  adjusted estimates "were released on our website on October 26, 2026"; the notice names the **2024 AIES
+  only**, not "2023 and 2024" as the filed description had it. The `estimate` -> `CENSUS:`-confirmed flip was
+  already made in the event file on 10-26. The 10:00 a.m. EDT slot was announced, not independently timestamped.
+- **It was deep and level-shifting (D-0 row, from Census's own `revision1.xlsx`, SA vs the 10-08 vintage):**
+  August inventories $964,199M -> $1,005,340M (+4.27%); June I/S ratio 1.19 -> 1.24, August 1.18 -> 1.23;
+  sales -0.23% (Aug); the monthly *change* in inventories barely moved (+$4.43B -> +$5.05B). 139 SA inventory
+  months restated, 126 on or before 2025-07 (median 0.665%, worst 3.61% at 2024-01); 38 months moved the ratio
+  by 0.03+. Not re-derived today: FRED still serves the pre-revision vintage (`WHLSLRIMSA` Aug 964,199;
+  `WHLSLRIRSA` Aug 1.18), so a FRED/ALFRED diff is not yet possible.
+- **The retail rehearsal** (this ledger's `-1`) also happened as announced: `census.gov/retail` carries a
+  "Notice of Revision" for September 28, 2026.
+- **The tape was a coil, as the stance said.** SPY 2026-10-26: open 762.25, high 767.73, low 761.64, close
+  765.37 (+0.71% on the day), range **0.796%** against the pre-day-1 median of 0.795% and a 0.975% baseline.
+  VIX closed 18.39 (10-23: 19.45).
+
+### Stance vs outcome
+
+The stance was **stand aside**, with no entry ever licensed (`symbols: []`, no macro-keyed playbook, an
+estimate-then-confirmed date). It holds. What the ledger got right: a basis change rather than a print; a
+date that held despite "tentatively" and an absent calendar row; the pre-FOMC session shape. What it got
+wrong, and corrected in the 10-16 and 10-26 amendments: "wide and shallow". The archive's 0.126% median
+per month was the wrong anchor for this edition; the batched two-year restatement moved recent levels about
+4%. The practical caution is now measured: **level and ratio comparisons across 2026-10-26 compare two
+different series**, while month-over-month flow is nearly unchanged.
+
+### Forward tests
+
+| Test | Verdict | Where |
+|---|---|---|
+| `-1` retail rehearsal publishes 09-28 | **pass** | scored in the fragment, 2026-10-27 |
+| `-4` SPY 10-26 range < 0.975% | **pass** (0.796%) | scored in the fragment, 2026-10-27 |
+| `-2` >= 126 old inventory months restated | open, score by 2026-11-02 | D-0 reading: exactly 126, at the floor |
+| `-3` June ratio within 0.03 of 1.19 | open, score by 2026-11-02 | D-0 reading: 1.24, a kill; sibling `wholesale-trade-2026-12-09` `-3` voids by its own terms |
+| `-5` Aug inventories restated by >= 1.0% | open, score by 2026-11-02 | D-0 reading: +4.27%, a pass |
+
+`-2`, `-3` and `-5` score after this window's ceiling (named in `--due`'s `forwardTestsBeyondWindow`), so
+they are left `_open_` per #2988 rather than scored early. Their Outcome cells are filled by the
+`forward-test-due` re-dispatch on 2026-11-02, from the ALFRED/FRED vintage of the revised series, or from
+Census's `currentwhl.xlsx` if FRED still lags. No score will move a position: zero capital by design.
