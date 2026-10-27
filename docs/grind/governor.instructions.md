@@ -112,9 +112,11 @@ it yourself; nothing substitutes them for you.
    Any entry with `blocking: true` → report `status: "blocked"` with
    `target is envelope-protected` and stop. This is the check grind's step 0 could not do for you
    (see the calling convention above).
-5. **Branch and set up.** `bash scripts/wt-start.sh <prefix><slug>` (`<slug>` from the target's
-   basename, or the symbol's name for duplication) — fetch, branch off `origin/main`,
-   `node_modules` and one status line, in one call. After it, one plain command per call — never a
+5. **Branch and set up.** `bash scripts/wt-start.sh <prefix><slug> --fresh` (`<slug>` from the
+   target's basename, or the symbol's name for duplication) — fetch, a new branch off `origin/main`,
+   `node_modules` and one status line, in one call. Slugs repeat across cycles and athlete branches
+   stay on origin, so if it refuses because the name is taken, re-run with the `-N` name it prints;
+   never drop `--fresh`, which would resume that stale branch (#6272). After it, one plain command per call — never a
    `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md`
    rail 2). A later tool exiting 127 means this step was skipped or failed — read what it says
    rather than hand-rolling a `node_modules` workaround. The drill's own step 1 (branch and set

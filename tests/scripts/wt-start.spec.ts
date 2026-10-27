@@ -74,6 +74,9 @@ describe("wt-start — one call from a fresh worktree to the first edit", () => 
     git(["checkout", "-q", "-b", "feedback/7"], seed);
     commit(seed, "earlier.txt", "feat: earlier work");
     git(["push", "-q", "origin", "feedback/7"], seed);
+    // Another earlier branch, plus an earlier collision that already took its first suffix — only
+    // the --fresh specs touch these, so no other test leaves a local copy behind.
+    git(["push", "-q", "origin", "feedback/7:feedback/21", "feedback/7:feedback/21-2"], seed);
     git(["checkout", "-q", "main"], seed);
     git(["clone", "-q", origin, primary], root);
     git(["config", "user.email", "spec@example.com"], primary);
@@ -106,6 +109,57 @@ describe("wt-start — one call from a fresh worktree to the first edit", () => 
     expect(r.status, r.stderr).toBe(0);
     expect(git(["log", "-1", "--format=%s"], wt)).toBe("feat: earlier work");
     expect(r.stdout).toMatch(/feedback\/7 · base \w+ · 1 ahead, 1 behind origin\/main/);
+  });
+
+  describe("--fresh — a dispatch that must start on today's main (#6272)", () => {
+    // The #6272 failure: a governor athlete's slug repeats across cycles, and its old branch stays
+    // on origin. Without --fresh, wt-start resumes it (the test above), stale base and all.
+    it("refuses a branch that exists on origin, checks nothing out, and names the first free suffix", () => {
+      const wt = worktree();
+      const before = git(["symbolic-ref", "--short", "HEAD"], wt);
+      const r = run(wt, "feedback/21", "--fresh");
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("feedback/21 already exists on origin —");
+      expect(r.stderr).toContain("re-run as: bash scripts/wt-start.sh feedback/21-3 --fresh");
+      expect(r.stdout).toBe("");
+      expect(git(["symbolic-ref", "--short", "HEAD"], wt)).toBe(before);
+    });
+
+    it("refuses a branch that exists only locally — worktrees share the primary's branches", () => {
+      git(["branch", "feedback/19", "origin/main"], primary);
+      const r = run(worktree(), "feedback/19", "--fresh");
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("feedback/19 already exists locally —");
+      expect(r.stderr).toContain("bash scripts/wt-start.sh feedback/19-2 --fresh");
+    });
+
+    it("still skips a taken suffix when origin lists more heads than a pipe buffer holds", () => {
+      // The real origin's ~600 heads made `… | grep -q` SIGPIPE its writer, and pipefail read the
+      // taken feedback/…-2 as free. Thousands of heads sorting after it reproduce that here.
+      const sha = git(["rev-parse", "main"], origin);
+      const refs = ["feedback/23", "feedback/23-2"].concat(
+        Array.from({ length: 4000 }, (_, i) => `zz/bulk-padding-${i}`),
+      );
+      const r0 = spawnSync("git", ["update-ref", "--stdin"], {
+        cwd: origin,
+        env,
+        input: refs.map((ref) => `create refs/heads/${ref} ${sha}\n`).join(""),
+      });
+      expect(r0.status, String(r0.stderr)).toBe(0);
+      const r = run(worktree(), "feedback/23", "--fresh");
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("bash scripts/wt-start.sh feedback/23-3 --fresh");
+    });
+
+    it("creates a free name off origin/main, exactly as without the flag", () => {
+      const wt = worktree();
+      const r = run(wt, "--fresh", "feedback/21-3");
+      expect(r.status, r.stderr).toBe(0);
+      expect(git(["log", "-1", "--format=%s"], wt)).toBe("feat: later on main");
+      expect(r.stdout).toMatch(
+        /^wt-start: feedback\/21-3 · base \w+ · 0 ahead, 0 behind origin\/main/,
+      );
+    });
   });
 
   it("prints the issue's line before the status line when --issue is passed", () => {
