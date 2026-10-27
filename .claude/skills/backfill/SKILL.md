@@ -25,9 +25,10 @@ never re-derives the target from a fresh scan.
 
 ## Steps
 
-1. **In a worktree:** `bash scripts/wt-start.sh test/backfill-<slug>` — fetch, branch off `origin/main` and
+1. **In a worktree:** `bash scripts/wt-start.sh test/backfill-<slug> --fresh` — fetch, a new branch off `origin/main` and
    `node_modules` (it runs `worktree-setup.sh`; without it every later tool call exits 127), in one
-   call. **In the primary checkout** (`wt-start.sh` refuses there): `git fetch origin main`, then
+   call; if it refuses because the name is taken, re-run with the `-N` name it prints (never drop
+   `--fresh` — a taken name would resume that stale branch). **In the primary checkout** (`wt-start.sh` refuses there): `git fetch origin main`, then
    `git checkout -B test/backfill-<slug> origin/main` — two separate calls, never one `&&` chain
    (`docs/DELEGATION.md` rail 2). Skip only if the caller already did this on this branch.
 2. **Check the carve-out before reading anything** (Guardrails, first bullet). Then confirm the

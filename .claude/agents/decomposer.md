@@ -17,10 +17,12 @@ or redesign — you extract a cohesive seam into its own module and lock the win
 
 ## Loop (one pass = one PR)
 
-1. **Branch off latest main** before editing: `bash scripts/wt-start.sh refactor/decompose-<slug>` — fetch, branch off `origin/main`,
+1. **Branch off latest main** before editing: `bash scripts/wt-start.sh refactor/decompose-<slug> --fresh` — fetch, a new branch off `origin/main`,
    `node_modules` (it runs `worktree-setup.sh`) and one status line, in one call. After it, one plain
    command per call — never a `&&` chain around git; `/usr/bin/git` where plain `git` is refused
    (`docs/DELEGATION.md` rail 2).
+   If it refuses because the name is taken (an earlier cycle's branch stays on origin), re-run with
+   the `-N` name it prints — never drop `--fresh`: without it a taken name resumes that stale branch.
 2. **Pick the target:** `node scripts/arch-scan.mjs --candidate` → take `candidate.file`. It's the
    largest file over the 300 **code**-line cap (comments and blanks are free) that isn't already
    grandfathered — don't choose your own.

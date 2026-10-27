@@ -17,10 +17,12 @@ fix bugs, or redesign.
 
 ## Loop (one pass = one PR)
 
-1. **Branch off latest main:** `bash scripts/wt-start.sh refactor/dedupe-<symbol>` — fetch, branch off `origin/main`,
+1. **Branch off latest main:** `bash scripts/wt-start.sh refactor/dedupe-<symbol> --fresh` — fetch, a new branch off `origin/main`,
    `node_modules` (it runs `worktree-setup.sh`) and one status line, in one call. After it, one plain
    command per call — never a `&&` chain around git; `/usr/bin/git` where plain `git` is refused
    (`docs/DELEGATION.md` rail 2).
+   If it refuses because the name is taken (an earlier cycle's branch stays on origin), re-run with
+   the `-N` name it prints — never drop `--fresh`: without it a taken name resumes that stale branch.
 2. **Pick the target:** `node scripts/dupe-scan.mjs --candidate` → take `candidate`. Never choose your own.
 3. **Follow the `dedupe` skill exactly** (`.claude/skills/dedupe/SKILL.md`) — judge true-copy vs divergent
    vs false-positive first; consolidate into the natural home (`src/ui/` for design-system/render helpers —
