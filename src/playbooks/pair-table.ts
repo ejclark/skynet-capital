@@ -508,10 +508,24 @@ export function withPairNames(text: string): string {
   });
 }
 
-/** "✓ researched, weakened" — the status as a glyph plus words. */
-export function statusLabel(evidence: PairEvidence): string {
+/** The status as a glyph and its words, apart — the one rule both doors read (the Store's card and
+ *  the fit finder, #6275), so a row's mark can never differ between them. `stale` adds the shelf
+ *  date in words and leaves the glyph alone. */
+export function statusParts(
+  evidence: PairEvidence,
+  stale = false,
+): { readonly glyph: string; readonly word: string } {
   const { glyph, word } = EVIDENCE_STATUS[evidence.status];
+  const shelf = stale ? " · past its shelf date" : "";
   // A ✓ that misses the house bar never wears the ✓ (#5444): an open triangle, and the miss in words.
-  if (evidence.qualifier === "weakened") return `△ ${word}, below the house bar`;
-  return evidence.qualifier ? `${glyph} ${word}, ${evidence.qualifier}` : `${glyph} ${word}`;
+  if (evidence.qualifier === "weakened") {
+    return { glyph: "△", word: `${word}, below the house bar${shelf}` };
+  }
+  return { glyph, word: `${evidence.qualifier ? `${word}, ${evidence.qualifier}` : word}${shelf}` };
+}
+
+/** "△ researched, below the house bar" — the status as a glyph plus words. */
+export function statusLabel(evidence: PairEvidence, stale = false): string {
+  const { glyph, word } = statusParts(evidence, stale);
+  return `${glyph} ${word}`;
 }

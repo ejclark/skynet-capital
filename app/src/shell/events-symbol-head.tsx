@@ -21,7 +21,26 @@ import { SymbolRecapFor } from "./symbol-recap-for";
  * handles this information without text"). One outlined box, the same on the head and on every
  * row: ▲ a gain, ▼ a loss, nothing for flat — a shape, so hue never carries it alone (a standing
  * reader is red/green colourblind). A screen reader hears the words the box leaves out.
+ *
+ * A NET-SHORT SYMBOL (#6283): a wheel's first phase is a sold put and no shares, so the money in
+ * the symbol nets below zero. It prints with its sign, "-$550 in positions" — the cockpit head's
+ * own wording (`head-vitals.tsx`), so the symbols still add up to the figure printed above them —
+ * never "$550 invested" for what is a buy-back owed.
  */
+
+/** The money in the symbol, signed, and the word that is true of it. */
+function SymbolMoney({ invested }: { readonly invested: number }): ReactElement {
+  const short = Math.round(invested) < 0;
+  return (
+    <>
+      <b className="num">
+        {short ? "-" : ""}
+        {wholeDollars(invested)}
+      </b>{" "}
+      <span className="sym-word">{short ? "in positions" : "invested"}</span>
+    </>
+  );
+}
 
 /** The unrealized P/L as a ▲/▼ amount in one outlined box. */
 export function PlBox({ value }: { readonly value: number }): ReactElement {
@@ -56,8 +75,7 @@ export function SymbolHead({
         </button>
       </div>
       <p className="sym-money">
-        <b className="num">{wholeDollars(book.invested)}</b>{" "}
-        <span className="sym-word">invested</span> <PlBox value={book.pl} />
+        <SymbolMoney invested={book.invested} /> <PlBox value={book.pl} />
       </p>
       {book.soonest ? (
         <p className="sym-action">
