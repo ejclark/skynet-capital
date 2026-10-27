@@ -35,6 +35,7 @@
 // CLI prints carries the date and source it came from (`priceAsOf`), so a fallback is on the record.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { answeredTextFor, loadProposals, pendingFor } from "./conviction-proposals.mjs";
 import {
   applyScreen,
   computeAdjacentIds,
@@ -206,6 +207,12 @@ async function buildState(id, today, opts = {}) {
     },
     adjacentIds,
     adjacentStrongIds,
+    pendingProposals: pendingFor(
+      id,
+      today,
+      opts.proposals ?? loadProposals(),
+      answeredTextFor(id, { ledgerDir: LEDGER_DIR }),
+    ).map((p) => p.key),
   };
   // Provenance travels BESIDE the readings, never inside them: `market.symbols` stays a plain
   // symbol->number map, because applyScreen serializes `decision.readings` verbatim into the
@@ -276,6 +283,7 @@ async function runScreenDue() {
   const due = JSON.parse(readStdin() || "[]");
   const allEvents = loadEvents();
   const cadence = loadCadence();
+  const proposals = loadProposals();
   const stillDue = [];
   const screened = [];
   for (const item of due) {
@@ -287,6 +295,7 @@ async function runScreenDue() {
       const { state, ledgerPath, ledgerText, priceAsOf } = await buildState(item.id, today, {
         allEvents,
         cadence,
+        proposals,
       });
       const decision = decide(state);
       warnOnFallbackPrices(item.id, priceAsOf);

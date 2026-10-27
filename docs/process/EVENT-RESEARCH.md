@@ -169,6 +169,24 @@ exists only as `proposals/<your-id>.from-*.json`): read every proposal for your 
 a sibling lane's finding — then write the canonical `src/domain/market-events/<your-id>.json`
 yourself. The proposals become inert (the canonical file shadows them) and stay where they are.
 
+**Conviction proposals — answer every one for your event** (#5482 criterion 2). A conviction
+doc (`docs/research/convictions/*.md`) may not write your fragment, so it *proposes* forward-test
+rows for your event in its `## Forward tests to register` table. In any mode, run
+`node scripts/conviction-proposals.mjs --event=<your-event-id>`; each entry it prints is one
+proposal still waiting on you, with its token (e.g. `ai-dip-2026-10/P3`). Answer each in this same
+PR, one of two ways:
+
+- **Register it** — append the row to your own fragment like any registration (next free
+  `FT-<event-id>-<n>`, the score-by it names), and cite the token in the row, e.g. `registered from
+  conviction proposal ai-dip-2026-10/P3`. Measure anything the proposal leaves to you ("the lane
+  measures it at registration") before you write the row, from an instrument, never from memory.
+- **Decline it** — name the token in your ledger row with the one-line reason (it duplicates a
+  registered row, it can't be scored from any instrument here, its window has already opened).
+
+Either answer is final: the token in your fragment or ledger is what the reader looks for, so the
+proposal stops printing and stops making your pulses material. You never edit the conviction doc.
+A proposal whose score-by has passed drops out by itself.
+
 **Not every `interval-elapsed` pulse reaches a session** — see "Deterministic screening" below.
 
 ### `event-passed-unscored` → close-out
@@ -290,6 +308,7 @@ in that file's header):
 | New adjacent event | a **confirmed, high/critical-impact** calendar entry within 5 days of this event's date not seen in the last pulse's `adjacentStrongIds` | the same "corridor" framing the adjacency sweep already uses by hand — filtered (#2946): at 446 events a corridor averages ~30 adjacents but ~3 strong ones, so the unfiltered rule tripped on the calendar's own churn (5 screens in 13 days). Weaker adjacents are **named in the screen row** (recorded, not assessed), not paid for |
 | Staleness ceiling | every 3rd consecutive screen is forced material regardless of readings | an event can never coast on screens forever; a real session re-establishes the baseline at least that often |
 | No reference block | always material (`no-reference-baseline`) | nothing to diff against — the safe default, never a guess |
+| Conviction proposal | an unanswered proposal naming this event is material (`conviction-proposal:<token>`), whatever the tape did | only a session can register or decline it; a screen would leave it unread (AI-dip's six rows sat unread for 11 days through screens and full sessions alike, #5482) |
 | Probe fetch failure | always material (loud failure) | "broken ≠ quiet" — the same doctrine `event-scan.mjs` already enforces |
 
 **The honesty invariant.** A screened row is a mechanical check, never a verdict — it is worded
