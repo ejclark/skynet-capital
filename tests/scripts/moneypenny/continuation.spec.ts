@@ -5,6 +5,7 @@ import {
   type Decision,
   executeStopContinuation,
   nextSubIssue,
+  openPrsByIssue,
   pickContinuation,
   postContinuationReceipt,
   routeContinuation,
@@ -265,6 +266,27 @@ describe("criterion 9 — when a plan continues itself", () => {
     expect(
       derivePrIssues({ title: "feat(desk): roll call", body: "Part of #4450", headRef: "feat/x" }),
     ).toContain(4450);
+  });
+
+  it("a held platter is in flight only for what it closes, never its `Part of` items (#6282)", () => {
+    const platter = {
+      number: 950,
+      title: "chore(platter): 2026-10-27 (#4999)",
+      body: "## Summary\n- Closes #4246 — boarded as item 1.\n- Part of #4535 — boarded as item 2.",
+      head: { ref: "platter/2026-10-27" },
+    };
+    const slice = { number: 951, title: "feat(x)", body: "Part of #4450", head: { ref: "feat/x" } };
+    expect([...openPrsByIssue([platter, slice])]).toEqual([
+      [4246, 950],
+      [4450, 951],
+    ]);
+  });
+
+  it("the in-flight skip names the open PR, not a branch it may not be on", () => {
+    const d = decide({ openPlanPr: 950 });
+
+    expect(d.reason).toContain("open PR #950 still names #");
+    expect(d.reason).not.toContain("plan/");
   });
 
   it("stops at the dial's daily cap, counting only the last 24h", () => {
