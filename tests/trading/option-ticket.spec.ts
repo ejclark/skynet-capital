@@ -357,6 +357,43 @@ describe("previewOptionOrder — shares already covering a call you sold", () =>
     expect(freeShares({ positions: [shares, sold, one] }, "MSFT")).toBe(200);
   });
 
+  // #6289: a long call that caps a sold one frees its shares only at the strikes' width in cash.
+  describe("a held long call caps a call already sold, with no cash behind its width", () => {
+    const hundred = { ...shares, quantity: 100 };
+    const longCall = { symbol: "MSFT260918C00500000", quantity: 1, avgPrice: 2, marketValue: 0 };
+    const covered = { ...sold, quantity: -1 };
+    const book = context({
+      cash: 0,
+      optionsTradingLevel: 1,
+      positions: [hundred, longCall, covered],
+    });
+
+    it.each([
+      [445, 5_500],
+      [440, 6_000],
+    ])("refuses a second covered call at %i, naming the $%i width", (strike, width) => {
+      const preview = previewOptionOrder({ ...request, contracts: 1, strike }, book);
+      expect(preview.ok).toBe(false);
+      expect(preview.refusals.join(" ")).toContain(
+        `sets aside $${width.toLocaleString("en-US")} of strike width and you have $0`,
+      );
+    });
+
+    it("passes the same order once the cash for the width is there", () => {
+      const funded = { ...book, cash: 5_500 };
+      const preview = previewOptionOrder({ ...request, contracts: 1, strike: 445 }, funded);
+      expect(preview.ok).toBe(true);
+    });
+
+    it("charges no width when the shares cover the new call and the long caps nothing", () => {
+      const preview = previewOptionOrder(
+        { ...request, contracts: 1, strike: 445 },
+        { ...book, positions: [hundred, longCall] },
+      );
+      expect(preview.ok).toBe(true);
+    });
+  });
+
   it("ignores long calls, puts, and other stocks when counting what's promised", () => {
     const noise = [
       { symbol: "MSFT260918C00440000", quantity: 2, avgPrice: 5, marketValue: 0 },

@@ -1,4 +1,4 @@
-import { type CoverLeg, coverNeeds } from "../domain/option-book.js";
+import { type CoverLeg, coverNeeds, coverShortfall } from "../domain/option-book.js";
 import type { PayoffCurve } from "./draft-order-preview.js";
 import { OPTION_MULTIPLIER, type OptionType, parseOccSymbol } from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
@@ -148,18 +148,14 @@ export function heldShares(
  * covered call be written on shares the first already promised — a naked call in all but name
  * (#3729 step 4b); counting every sold call held shares back for a spread's short the long
  * already covers (#4736). The bots' `coverNeeds` decides which calls are bare, so the ticket and
- * the guards agree.
+ * the guards agree on shares. Shares only: a long call that caps a sold one frees its shares at
+ * the strikes' width in cash, which `validateCoveredCall` charges (#6289).
  */
 export function freeShares(
   context: { readonly positions: OptionTicketContext["positions"] },
   underlying: string,
 ): number {
-  const legs = context.positions.flatMap((p): CoverLeg[] => {
-    const parts = parseOccSymbol(p.symbol);
-    return parts?.underlying === underlying && p.quantity !== 0
-      ? [{ ...parts, contracts: p.quantity }]
-      : [];
-  });
+  const legs = optionLegsOn(context, underlying);
   const promised = coverNeeds(legs).sharesByUnderlying.get(underlying) ?? 0;
   return Math.max(0, heldShares(context, underlying) - promised);
 }
@@ -220,16 +216,7 @@ export function validateAffordability(
     return;
   }
   if (request.code === "202") {
-    const needed = request.contracts * SHARES_PER_CONTRACT;
-    const underlying = normalizeSymbol(request.underlying);
-    const held = heldShares(context, underlying);
-    const free = freeShares(context, underlying);
-    if (free < needed) {
-      const promised = held - free;
-      refusals.push(
-        `Covered means you hold the shares: ${request.contracts} contract${request.contracts === 1 ? "" : "s"} needs ${needed} shares of ${underlying} and you hold ${held}${promised > 0 ? `, ${promised} of them already covering calls you've sold` : ""}. This desk never sells naked calls.`,
-      );
-    }
+    validateCoveredCall(request, context, refusals);
     return;
   }
   // 301/302 — a bought option is paid for from cash.
@@ -245,4 +232,62 @@ export function validateAffordability(
       "The premium is more than your available cash — fewer contracts, or a cheaper strike.",
     );
   }
+}
+
+/**
+ * A covered call, JUDGED ON THE BOOK THE FILL LEAVES with the member's shares in view — the way the
+ * bots' `worsens` and the multi-leg `validateDraftAccount` judge an order. A sold call is covered by
+ * 100 shares or by a held long call at its strikes' width in cash; `coverShortfall` picks the best
+ * assignment of both. Refused when the fill leaves the book short of more shares than before, or
+ * needing more cash width than the account holds (#6289): freeing shares against a long call that
+ * caps a sold one is honest only if that cap's width is charged, or the desk opens a call credit
+ * spread on no cash and calls it a covered call. Past `coverShortfall`'s exact limit the shares are
+ * judged outright, as the guards do; the cash stays a delta, so a sold put's collateral the book
+ * already holds is never charged twice.
+ */
+function validateCoveredCall(
+  request: OptionTicketRequest,
+  context: OptionTicketContext,
+  refusals: string[],
+): void {
+  const needed = request.contracts * SHARES_PER_CONTRACT;
+  const underlying = normalizeSymbol(request.underlying);
+  const held = heldShares(context, underlying);
+  const legs = optionLegsOn(context, underlying);
+  const sold: CoverLeg = {
+    underlying,
+    type: "call",
+    strike: request.strike,
+    expiration: request.expiration,
+    contracts: -request.contracts,
+  };
+  const before = coverShortfall(legs, underlying, held);
+  const after = coverShortfall([...legs, sold], underlying, held);
+  const shortBefore = before.exact && after.exact ? before.shares : 0;
+  if (after.shares > shortBefore) {
+    const promised = held - freeShares(context, underlying);
+    refusals.push(
+      `Covered means you hold the shares: ${request.contracts} contract${request.contracts === 1 ? "" : "s"} needs ${needed} shares of ${underlying} and you hold ${held}${promised > 0 ? `, ${promised} of them already covering calls you've sold` : ""}. This desk never sells naked calls.`,
+    );
+    return;
+  }
+  const width = after.cash - before.cash;
+  if (width > context.cash) {
+    refusals.push(
+      `Covered means the cover is paid for: with this call, the calls you've sold on ${underlying} outnumber the ${held} shares behind them, so a long call you hold has to cap one — that sets aside $${width.toLocaleString("en-US")} of strike width and you have $${Math.floor(context.cash).toLocaleString("en-US")}. Fewer contracts, or more cash. This desk never sells naked calls.`,
+    );
+  }
+}
+
+/** Every option held on `underlying`, as the cover arithmetic reads it (contracts signed). */
+function optionLegsOn(
+  context: { readonly positions: OptionTicketContext["positions"] },
+  underlying: string,
+): CoverLeg[] {
+  return context.positions.flatMap((p): CoverLeg[] => {
+    const parts = parseOccSymbol(p.symbol);
+    return parts?.underlying === underlying && p.quantity !== 0
+      ? [{ ...parts, contracts: p.quantity }]
+      : [];
+  });
 }
