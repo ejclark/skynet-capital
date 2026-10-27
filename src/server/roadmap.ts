@@ -26,8 +26,10 @@
  * Read-only: one cached GET list on the token the feedback lane already holds
  * (`SKYNET_FEEDBACK_GITHUB_TOKEN`), five minutes like `feedback-status.ts`.
  */
+
+import { FEEDBACK_STATUS_LABEL, statusFromIssue } from "../domain/feedback-status.js";
 import { fetchJson } from "../http/fetch-json.js";
-import { FEEDBACK_STATUS_LABEL, labelNamesOf, statusFromIssue } from "./feedback-status.js";
+import { labelNamesOf } from "./feedback-status.js";
 import { githubHeaders } from "./github-api.js";
 import { trustedAuthor } from "./work-status.js";
 
@@ -48,7 +50,7 @@ const HORIZON_GLOSS: Record<Horizon, string> = {
  *  `PARKING_LABELS` in `scripts/moneypenny/labels.mjs` minus `hold-merge`, which only ever lands
  *  on a pull request. The item's own `status` still says WHICH kind of waiting it is — including
  *  `needs-design`, which the Feedback badge's own vocabulary predates and does not cover, so a
- *  row would otherwise read "In the queue" while sitting in Later. */
+ *  row would otherwise read "Filed — waiting to be picked" while sitting in Later. */
 const WAITING_LABELS = ["needs-eric", "needs-info", "needs-design"];
 const NEEDS_DESIGN_STATUS = "Waiting on a design pass";
 
@@ -68,7 +70,7 @@ interface RoadmapItem {
   /** The title as a quoted string, or a note that it is withheld (a non-member opened it). */
   readonly title: string;
   readonly horizon: Horizon;
-  /** The member-facing words, e.g. "In the queue", "Needs Eric's call", "Being built". */
+  /** The member-facing words, e.g. "Up next", "Needs Eric's call", "Being built". */
   readonly status: string;
   readonly labels: readonly string[];
   readonly url: string;
@@ -126,8 +128,9 @@ interface IssueJson {
 }
 
 /** Every open plan is open by definition of the query, so this is the open half of
- *  `statusFromIssue` (shared with the Feedback badge, so the two never disagree) plus the two
- *  labels that mapping predates: `in-progress` (#3960) and `needs-design` (2026-09-29). */
+ *  `statusFromIssue` (shared with the Feedback badge, so the two never disagree) plus two rules of
+ *  this view's own: `in-progress` outranks a waiting label here, as it does in `horizonOf`, and
+ *  `needs-design` (2026-09-29), which the shared mapping does not cover. */
 function statusWords(labels: readonly string[]): string {
   if (labels.includes("in-progress")) return "Being built";
   const status = statusFromIssue("open", labels);

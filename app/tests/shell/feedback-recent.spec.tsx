@@ -176,7 +176,13 @@ describe("RecentFeedback — the status track and its words", () => {
     render(<RecentFeedback recent={[filing({ status })]} followupEnabled={false} />);
 
   it.each([
-    ["open", "In the build queue", "Filed: done · Being built: not yet · Shipped: not yet"],
+    [
+      "open",
+      "Filed — waiting to be picked",
+      "Filed: done · Being built: not yet · Shipped: not yet",
+    ],
+    ["up-next", "Up next", "Filed: done · Being built: not yet · Shipped: not yet"],
+    ["building", "Being built", "Filed: done · Being built: underway · Shipped: not yet"],
     [
       "needs-info",
       "Waiting on your answer",

@@ -12,6 +12,7 @@
 //   node scripts/digest-scan.mjs --needs-you   # the "Needs you" list, from the assignment query
 //   node scripts/digest-scan.mjs --learning    # the unlearned-incident line for "Noise absorbed"
 //   node scripts/digest-scan.mjs --stuck       # the green-but-not-merging PR line (stuck-pr-scan.mjs)
+//   node scripts/digest-scan.mjs --member-filings  # the unseen-member-filings line (feedback-scan.mjs)
 //   ... --today=YYYY-MM-DD                     # deterministic date override for tests
 //
 // NEEDS YOU (#3818 criterion 12, #4293): the list is `plan().needsYou` from
@@ -116,6 +117,21 @@ export function learningLine({
   return `- Learning: ${runs}${aged}${open} — capsule closes draft their own entries (#4212).`;
 }
 
+/**
+ * The "Noise absorbed" line for member filings older than 24h with no state, from
+ * `feedback-scan.mjs --json`'s `unseen` (#6316). A count with the oldest few named — the clear-path
+ * judge runs on what it names, so it is a line, not a Needs-you item. Pure.
+ */
+export function memberFilingsLine(unseen) {
+  if (!unseen.length) return "- Member filings: none older than 24h without a state.";
+  const named = unseen
+    .slice(0, 5)
+    .map((u) => `#${u.number} ${Math.round((u.ageHours / 24) * 10) / 10}d`)
+    .join(", ");
+  const more = unseen.length > 5 ? `, +${unseen.length - 5} more` : "";
+  return `- Member filings: ${unseen.length} older than 24h with no state (${named}${more}) — nothing builds one until it is picked.`;
+}
+
 /** The newest committed digest's date, or `null` when none exists yet. Exported because it is the
  *  window boundary every other since-the-last-digest report shares (comms-scan.mjs) — a second copy
  *  of this rule is a second answer to "since when". */
@@ -199,6 +215,15 @@ async function main() {
       encoding: "utf8",
     });
     console.log(stuckLine(JSON.parse(out).stuck));
+    return;
+  }
+  if (has("member-filings")) {
+    const out = execFileSync("node", [join(ROOT, "scripts/feedback-scan.mjs"), "--json"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    console.log(memberFilingsLine(JSON.parse(out).unseen));
     return;
   }
   if (has("needs-you")) {

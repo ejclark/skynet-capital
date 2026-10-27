@@ -114,6 +114,7 @@ describe("the roadmap a member gets", () => {
         plan({ number: 5, labels: ["plan", "needs-info"] }),
         plan({ number: 4, labels: ["plan", "in-progress"] }),
         plan({ number: 2, labels: ["plan"] }),
+        plan({ number: 7, labels: ["plan", "ready"] }),
       ],
     ]);
 
@@ -124,11 +125,12 @@ describe("the roadmap a member gets", () => {
     expect(statusOf(3)).toBe("Needs Eric's call");
     expect(statusOf(5)).toBe("Needs your input");
     expect(statusOf(4)).toBe("Being built");
-    expect(statusOf(2)).toBe("In the queue");
+    expect(statusOf(2)).toBe("Filed — waiting to be picked");
+    expect(statusOf(7)).toBe("Up next");
   });
 
   // The Feedback badge's vocabulary predates `needs-design` (2026-09-29), so without this a row
-  // sat in Later — "waiting on a decision" — while its own status read "In the queue".
+  // sat in Later — "waiting on a decision" — while its own status read "Filed — waiting to be picked".
   it("says which kind of waiting a `needs-design` plan is in, and lets `needs-eric` outrank it", async () => {
     const roadmap = await read([
       [

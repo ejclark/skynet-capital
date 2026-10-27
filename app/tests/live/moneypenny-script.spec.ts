@@ -195,8 +195,10 @@ describe("filing helpers", () => {
     expect(filedLine(7, "Fix it")).not.toContain("open it here");
   });
 
-  it("the filing ops line is the same every time and never claims shipped", () => {
-    expect(OPS_LINE).toMatch(/on the build queue/);
+  // #6316: nothing builds a filing until `ready` lands, and none carries it the moment it's filed.
+  it("the filing ops line says filed and waiting — never on the build queue, never shipped", () => {
+    expect(OPS_LINE).toMatch(/filed · waiting to be picked/);
+    expect(OPS_LINE).not.toMatch(/on the build queue/);
     expect(OPS_LINE).not.toMatch(/shipped/);
   });
 

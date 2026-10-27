@@ -1,4 +1,4 @@
-import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-status.js";
+import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../domain/feedback-status.js";
 import type { PlayMilestone } from "../server/play-milestone-ledger.js";
 import { humanizeOptionSymbol } from "../trading/option-symbols.js";
 import { formatPrice } from "./desk-data.js";

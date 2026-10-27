@@ -163,7 +163,28 @@ describe("the member-facing status", () => {
 
   it("uses the Feedback badge's own words for a parked issue", async () => {
     expect((await read({ labels: [{ name: "needs-eric" }] })).status).toBe("Needs Eric's call");
-    expect((await read({ labels: [] })).status).toBe("In the queue");
+    expect((await read({ labels: [] })).status).toBe("Filed — waiting to be picked");
+  });
+
+  // #6316: her answer reads the same mapping as the Feedback row, so a ready filing is "Up next".
+  it("says 'Up next' for a ready issue, and 'Being built' once a PR for it is open", async () => {
+    expect((await read({ labels: [{ name: "ready" }] })).status).toBe("Up next");
+    const pr = {
+      event: "cross-referenced",
+      source: {
+        issue: {
+          number: 77,
+          state: "open",
+          pull_request: {},
+          author_association: "OWNER",
+          user: { login: "ejclark" },
+          repository: { full_name: REPO },
+        },
+      },
+    };
+    expect((await read({ labels: [{ name: "ready" }] }, [pr])).status).toBe(
+      "Being built — PR #77 open",
+    );
   });
 
   it("says 'Being built' for an in-progress issue with no PR yet", async () => {
@@ -205,7 +226,7 @@ describe("failure is said, never guessed", () => {
 
     expect(await reader([42])).toEqual([{ number: 42, available: false }]);
     fail = false;
-    expect(found((await reader([42]))[0]).status).toBe("In the queue");
+    expect(found((await reader([42]))[0]).status).toBe("Filed — waiting to be picked");
   });
 
   it("caches a real answer — a second question in five minutes costs no GitHub calls", async () => {

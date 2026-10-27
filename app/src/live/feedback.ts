@@ -1,3 +1,4 @@
+import type { FeedbackStatus } from "../../../src/domain/feedback-status";
 import { postJson } from "./post";
 
 /**
@@ -18,7 +19,9 @@ export interface RecentFiling {
   readonly kind: FeedbackKind;
   readonly filedAt: string;
   readonly url: string;
-  readonly status?: "open" | "needs-info" | "needs-eric" | "next-slice" | "shipped" | "not-built";
+  /** The server's one mapping (`statusFromIssue`); absent when the status fetch failed, so the
+   *  row shows no badge rather than a wrong one. */
+  readonly status?: FeedbackStatus;
 }
 
 /** One unclaimed community-track earn (#567), ready for its one-time fanfare — the fill-earned
