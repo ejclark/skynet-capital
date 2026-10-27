@@ -11,8 +11,11 @@
 #      events, classified as a crash/OOM signature, a deliberate halt, or a host problem.
 #   2. If the primary is `stopped` and carries no deliberate-halt marker: `fly machine start`, then a
 #      HOLD check, not a one-shot: still `started` after ~30s, the same bootedAt/pid in
-#      /data/health.json across two reads (a crash loop changes them), and the controls bridge armed
-#      (the same probes scripts/smoke-bots.sh uses: the health stamp, then the boot-log marker).
+#      /data/health.json across two reads (a crash loop changes them), no exit/start event in Fly's
+#      own record since the first read (a restarted process that has not stamped yet leaves the
+#      dead one's stamp on the volume, so the stamp alone misses it, #6281), and the controls bridge
+#      armed per that fresh stamp. Never the boot-log marker here: inside one process the marker and
+#      the stamp always agree, so the log can only add an OLD boot's "armed" line — a false OK (#6281).
 #   3. One paste-back line, last on stdout:
 #        BOTS-REVIVE: OK <sha> started <bootedAt>         — up, holding, bridge armed
 #        BOTS-REVIVE: CRASH <signature>                   — + the 10 most telling log lines
@@ -39,7 +42,6 @@ HOLD="${BOTS_HOLD_SECS:-30}"
 START_WAIT="${BOTS_START_WAIT_SECS:-90}"
 POLL="${BOTS_POLL_SECS:-5}"
 HEALTH_PATH="${BOTS_HEALTH_PATH:-/data/health.json}"   # = SKYNET_BOTS_HEALTH_PATH in fly.bots.toml
-ARMED_MARKER="[controls] bridge armed — controls fetched"   # = smoke-bots.sh
 PRIMARY_FILTER='[.[] | select((.config.standbys // []) | length == 0)]'   # = smoke-bots.sh
 CRASH_RE='heap out of memory|Reached heap limit|Out of memory: Killed|oom_killed=true|max restart count|Autonomous trading failed|exited( normally)? with code: [1-9]|exit_code=[1-9]|Error: |FATAL'
 HOST_RE='insufficient (memory|resources|capacity)|out of capacity|no capacity|host (is )?(unavailable|unreachable|down)|could not reserve|failed to (start|launch) (vm|machine)|volume .*(not found|unavailable|failed)'
@@ -71,6 +73,10 @@ telling_lines() {   # the 10 log lines most worth reading: crash lines first, el
 }
 health_read() {   # $1 = machine id → the health stamp JSON, or nothing
   "$FLY" machine exec "$1" "cat $HEALTH_PATH" -a "$APP" 2>/dev/null | jq -c 'select(.pid and .bootedAt)' 2>/dev/null
+}
+last_restart_at() {   # the primary's newest exit/start event timestamp (Fly's clock, so no skew), or 0
+  primary_json | jq -r '[(.events // [])[] | select(.type == "exit" or .type == "start" or .type == "restart")
+    | .timestamp // 0] | max // 0' 2>/dev/null || echo 0
 }
 
 # ── 1. Diagnose (read-only) ───────────────────────────────────────────────────────────────────────
@@ -126,6 +132,7 @@ fi
 # on the volume, so a started-from-stopped machine must show a bootedAt at or after this start).
 H1=""; waited=0
 while :; do
+  R1=$(last_restart_at)   # read BEFORE the stamp, so a restart racing the H1 read still counts
   H1=$(health_read "$ID")
   if [[ -n "$H1" ]]; then
     if [[ "$STATE" == "started" ]] \
@@ -147,16 +154,17 @@ sleep "$HOLD"
 STATE2=$(primary_json | jq -r '.state')
 H2=$(health_read "$ID")
 same=$(jq -n --argjson a "$H1" --argjson b "${H2:-null}" '$b != null and $a.pid == $b.pid and $a.bootedAt == $b.bootedAt')
-if [[ "$STATE2" != "started" || "$same" != "true" ]]; then
+R2=$(last_restart_at)
+if [[ "$STATE2" != "started" || "$same" != "true" || "$R2" != "$R1" ]]; then
   LOGS=$(logs_tail); SIG=$(signature_of "$LOGS")
-  say "did not hold: state=$STATE2, stamp $( [[ "$same" == true ]] && echo steady || echo 'changed or unreadable (restart)')"
+  say "did not hold: state=$STATE2, stamp $( [[ "$same" == true ]] && echo steady || echo 'changed or unreadable (restart)')$( [[ "$R2" != "$R1" ]] && echo ', Fly recorded a restart during the hold')"
   telling_lines "$LOGS" | sed 's/^/  │ /'
   finish "CRASH ${SIG:-restart-loop}" 1
 fi
 
 SHA=$(jq -r '.gitSha // empty' <<<"$H2"); [[ -n "$SHA" ]] || SHA=$(jq -r '.config.env.GIT_SHA // "unknown"' <<<"$(primary_json)")
 BOOTED=$(jq -r '.bootedAt' <<<"$H2")
-if jq -e '.bridge == "armed"' <<<"$H2" >/dev/null || logs_tail | grep -qF "$ARMED_MARKER"; then
+if jq -e '.bridge == "armed"' <<<"$H2" >/dev/null; then
   finish "OK ${SHA:0:12} started $BOOTED" 0
 fi
 say "process is up and steady, but the controls bridge is $(jq -r '.bridge' <<<"$H2") — Mission Control toggles are NOT reaching the fleet"

@@ -12,8 +12,11 @@ import { describe, expect, it } from "@rstest/core";
 const SCRIPT = resolve("scripts/bots-revive.sh");
 const TOKEN = "fo1_SECRET_TOKEN_MUST_NOT_LEAK";
 
-// Scenario files under $STUB: state (stopped|started), scenario (revive|crash|halt|noauth),
-// logs (what `fly logs -n` returns), pid (the stamp's pid, bumped per read in a crash loop).
+// Scenario files under $STUB: state (stopped|started), scenario (revive|crash|silentcrash|halt|
+// noauth), logs (what `fly logs -n` returns), pid (the stamp's pid, bumped per read in a crash
+// loop), bridge (the stamp's bridge field). silentcrash is #6281's window: the process dies and Fly
+// restarts it, but the new one has not stamped yet, so every read returns the dead one's stamp
+// unchanged — only Fly's own events (a later exit, appended after the first read) show the restart.
 const STUB_FLY = `#!/usr/bin/env bash
 S="$STUB"; echo "$*" >> "$S/calls"
 scenario=$(cat "$S/scenario"); state=$(cat "$S/state")
@@ -25,7 +28,7 @@ case "$1 $2" in
 [{"id":"standby1","state":"stopped","config":{"standbys":["8749d4c072d908"],"env":{}}},
  {"id":"8749d4c072d908","state":"$state","config":{"env":{"GIT_SHA":"0123456789abcdef"},"metadata":$meta},
   "events":[{"type":"exit","status":"stopped","source":"flyd","timestamp":1,
-             "request":{"exit_event":{"exit_code":$([[ $scenario == crash ]] && echo 134 || echo 0),"oom_killed":false,"requested_stop":$([[ $scenario == crash ]] && echo false || echo true)}}}]}]
+             "request":{"exit_event":{"exit_code":$([[ $scenario == crash ]] && echo 134 || echo 0),"oom_killed":false,"requested_stop":$([[ $scenario == crash ]] && echo false || echo true)}}}$(cat "$S/events" 2>/dev/null)]}]
 JSON
     ;;
   "machine status") echo "Machine ID: $3"; echo "State: $state" ;;
@@ -33,7 +36,8 @@ JSON
   "machine exec")
     [[ $state == started ]] || exit 1
     pid=$(cat "$S/pid"); [[ $scenario == crash ]] && echo $((pid + 1)) > "$S/pid"
-    echo "{\\"gitSha\\":\\"0123456789abcdef\\",\\"pid\\":$pid,\\"bootedAt\\":\\"$(cat "$S/booted")\\",\\"bridge\\":\\"armed\\",\\"updatedAt\\":\\"x\\"}"
+    [[ $scenario == silentcrash ]] && echo ',{"type":"exit","status":"stopped","source":"flyd","timestamp":2,"request":{"exit_event":{"exit_code":1}}},{"type":"start","status":"started","source":"flyd","timestamp":3}' > "$S/events"
+    echo "{\\"gitSha\\":\\"0123456789abcdef\\",\\"pid\\":$pid,\\"bootedAt\\":\\"$(cat "$S/booted")\\",\\"bridge\\":\\"$(cat "$S/bridge")\\",\\"updatedAt\\":\\"x\\"}"
     ;;
   "logs -a") cat "$S/logs" ;;
   *) echo "stub fly: unhandled $*" >&2; exit 2 ;;
@@ -50,8 +54,20 @@ const QUIET_LOGS = [
   "2026-10-26T15:00:01Z runner[8749d4c072d908] ord [info] Pulling container image",
   "2026-10-26T15:00:02Z runner[8749d4c072d908] ord [info] Configuring firecracker",
 ].join("\n");
+const BOOT_ERROR_LOGS = [
+  "2026-10-27T01:38:30Z app[8749d4c072d908] ord [info] [controls] bridge armed — controls fetched",
+  "2026-10-27T01:38:40Z app[8749d4c072d908] ord [info] Autonomous trading failed: Error: boom",
+].join("\n");
+const STALE_ARMED_LOGS = [
+  "2026-10-21T14:00:01Z app[8749d4c072d908] ord [info] [controls] bridge armed — controls fetched",
+  "2026-10-27T01:38:31Z app[8749d4c072d908] ord [warn] [controls] bridge configured but UNREACHABLE",
+].join("\n");
 
-function run(scenario: "revive" | "crash" | "halt" | "noauth", logs = QUIET_LOGS) {
+function run(
+  scenario: "revive" | "crash" | "silentcrash" | "halt" | "noauth",
+  logs = QUIET_LOGS,
+  bridge = "armed",
+) {
   const dir = mkdtempSync(join(tmpdir(), "bots-revive-"));
   const bin = join(dir, "bin");
   spawnSync("mkdir", ["-p", bin]);
@@ -61,6 +77,7 @@ function run(scenario: "revive" | "crash" | "halt" | "noauth", logs = QUIET_LOGS
   writeFileSync(join(dir, "state"), "stopped");
   writeFileSync(join(dir, "logs"), logs);
   writeFileSync(join(dir, "pid"), "42");
+  writeFileSync(join(dir, "bridge"), bridge);
   writeFileSync(join(dir, "booted"), "2020-01-01T00:00:00.000Z"); // the stale stamp on the volume
   writeFileSync(join(dir, "calls"), "");
   const res = spawnSync("bash", [SCRIPT], {
@@ -103,6 +120,24 @@ describe("bots-revive.sh", () => {
     expect(r.out).toContain("verdict: crash — heap-oom");
     expect(r.out).toContain("JavaScript heap out of memory");
     expect(r.out).toContain("changed or unreadable (restart)");
+  });
+
+  // #6281: the dead process's stamp sits on the volume until the restarted one writes, so two
+  // identical reads can straddle a crash. Fly's own exit/start events are what catch it.
+  it("calls a restart between the two reads a CRASH even when the stamp never changed", () => {
+    const r = run("silentcrash", BOOT_ERROR_LOGS);
+    expect(r.last).toBe("BOTS-REVIVE: CRASH boot-error");
+    expect(r.status).toBe(1);
+    expect(r.out).toContain("stamp steady, Fly recorded a restart during the hold");
+  });
+
+  // #6281: a quiet process keeps an OLD boot's "armed" line inside `fly logs -n`; the fresh stamp
+  // is the only witness for this process, so it alone decides.
+  it("pastes back UNARMED when the fresh stamp says unreachable, whatever old logs say", () => {
+    const r = run("revive", STALE_ARMED_LOGS, "unreachable");
+    expect(r.last).toMatch(/^BOTS-REVIVE: UNARMED 0123456789ab started /);
+    expect(r.status).toBe(5);
+    expect(r.out).toContain("controls bridge is unreachable");
   });
 
   it("leaves a machine marked as a deliberate halt stopped and says so", () => {
