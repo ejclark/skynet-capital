@@ -20,11 +20,24 @@
 // Low findings are returned unverified and labelled so, never silently dropped. Writes nothing to
 // GitHub; the session files confirmed findings as `bug` + `fast-track` (CLAUDE.md → A bug found
 // mid-build is the next pull).
+//
+// RISK ROUTING — the compute follows the blast radius (docs/COMPUTE.md floor table). A cheap triage
+// step lists each PR's files and asks envelope-scan whether any is protected; plain code below picks
+// the tier, so the routing is a rule, not a judgment:
+//   deep     money · P&L · state · auth · boot · bot paths (DEEP_ROOTS) or any envelope-protected
+//            path → review and refute on COMPUTE.md's top row ("rigorous review of subtle diffs")
+//   standard every other code or process change → the session's own model
+//   skip     docs-only (research ledgers, digests, proposal JSON the event scan validates in CI) →
+//            not reviewed, returned under `skipped` and logged, never dropped silently
+// Why: on 2026-10-27 a standard-tier pass over 73 merges confirmed 19 defects; a deep-tier pass over 5
+// of the same PRs confirmed 6 more it had missed — every one under src/trading, src/storage,
+// src/server or pipeline.yml. `args.deep` forces listed PRs to the deep tier.
 export const meta = {
   name: 'post-merge-audit',
   description: 'Correctness-review merged PRs against current main, refute each high/medium finding twice, return the confirmed findings',
-  whenToUse: 'After a batch of PRs auto-merged (a surge wave, a governor cycle, a burn-down) and nobody read them for correctness first. Args: {prs: [number, ...]}. Read-only on GitHub; the reproduce refuter writes a throwaway spec in an isolated worktree. Returns {confirmed, refuted, low, unreviewed}; file each confirmed finding as a bug + fast-track issue.',
+  whenToUse: 'After a batch of PRs auto-merged (a surge wave, a governor cycle, a burn-down) and nobody read them for correctness first. Args: {prs: [number, ...], deep?: [number, ...]}. Money/state/auth/envelope PRs route to the deep tier automatically; docs-only PRs are skipped and listed. Read-only on GitHub; the reproduce refuter writes a throwaway spec in an isolated worktree. Returns {confirmed, refuted, low, unreviewed, skipped}; file each confirmed finding as a bug + fast-track issue.',
   phases: [
+    { title: 'Triage', detail: 'list each PR\'s files and envelope status; route deep / standard / skip by rule' },
     { title: 'Review', detail: 'one correctness-only reviewer per merged PR, judged against current main' },
     { title: 'Refute', detail: 'two independent refuters per high/medium finding: trace the path, reproduce in a temp spec' },
   ],
@@ -33,6 +46,25 @@ export const meta = {
 const prs = (args?.prs ?? []).map(Number).filter((n) => Number.isInteger(n) && n > 0)
 if (!prs.length) throw new Error('post-merge-audit requires args.prs: a non-empty array of merged PR numbers')
 if (prs.length > 40) throw new Error(`post-merge-audit: ${prs.length} PRs is over the 40-PR cap — run it in batches`)
+const forcedDeep = new Set((args?.deep ?? []).map(Number))
+
+// Where a wrong line costs money, state or access. Grown from where the deep pass found what the
+// standard pass missed; widen it when a later audit finds the same gap elsewhere.
+const DEEP_ROOTS = [
+  'src/trading/', 'src/options/', 'src/risk/', 'src/math/', 'src/engine/', 'src/playbooks/',
+  'src/autonomous/', 'src/bots/', 'src/alpaca/', 'src/storage/', 'src/server/', 'src/scripts/',
+  'app/src/live/', '.github/workflows/', 'scripts/bots-',
+]
+const DOCS_ONLY = (f) => f.startsWith('docs/') || f.startsWith('src/domain/market-events/proposals/')
+const TIERS = {
+  deep: { review: { model: 'fable', effort: 'max' }, refute: { model: 'fable', effort: 'xhigh' } },
+  standard: { review: {}, refute: {} },
+}
+const tierOf = (n, t) => {
+  if (forcedDeep.has(n) || t.protected || t.files.some((f) => DEEP_ROOTS.some((r) => f.startsWith(r)))) return 'deep'
+  if (t.files.length && t.files.every(DOCS_ONLY)) return 'skip'
+  return 'standard'
+}
 
 const FIND = (n) =>
   `Find PR #${n}'s change: \`git fetch -q origin main\`, then \`git log origin/main --oneline --grep "(#${n})"\` (squash merges carry "(#${n})" in the subject) and \`git show <sha>\`. ` +
@@ -68,6 +100,21 @@ const VERDICT_SCHEMA = {
     evidence: { type: 'string', description: 'the trace, or the spec you ran and its output, in a few lines' },
   },
 }
+const TRIAGE_SCHEMA = {
+  type: 'object',
+  required: ['merged', 'files', 'protected'],
+  properties: {
+    merged: { type: 'boolean', description: 'true only if you found the change on origin/main' },
+    files: { type: 'array', items: { type: 'string' }, description: 'every repo-relative path the change touched' },
+    protected: { type: 'boolean', description: 'true if envelope-scan marked any of those paths protected' },
+  },
+}
+
+const triagePrompt = (n) => `List the files merged PR #${n} in ejclark/skynet-capital changed. No review, no opinions.
+
+${FIND(n)} Use \`git show --name-only --format= <sha>\` for the paths.
+
+Then run \`node scripts/envelope-scan.mjs --check <every path>\` from the repo root and set protected=true if any entry says "protected": true.`
 
 const reviewPrompt = (n) => `Review merged PR #${n} in ejclark/skynet-capital for CORRECTNESS ONLY: wrong results, crashes, broken contracts, regressions, a requirement in its linked issue the code does not meet. Not style, naming, structure, test coverage or debt — the fitness gates own those.
 
@@ -93,25 +140,32 @@ YOUR LENS — reproduce. You are in an isolated worktree. \`git fetch -q origin 
 
 const results = await pipeline(
   prs,
-  (n) => agent(reviewPrompt(n), { label: `review #${n}`, phase: 'Review', schema: FINDINGS_SCHEMA }),
-  async (review, n) => {
+  // Mechanical lookup — the tier is decided by tierOf below, never by this agent.
+  (n) => agent(triagePrompt(n), { label: `triage #${n}`, phase: 'Triage', schema: TRIAGE_SCHEMA, model: 'sonnet', effort: 'medium' }),
+  async (t, n) => {
+    if (t && !t.merged) return { pr: n, unreviewed: 'not found on origin/main' }
+    // A triage that died fails safe to deep: an unknown blast radius is never skipped.
+    const tier = t ? tierOf(n, t) : 'deep'
+    if (tier === 'skip') return { pr: n, skipped: `docs-only: ${t.files.join(', ')}` }
+    const dial = TIERS[tier]
+    const review = await agent(reviewPrompt(n), { label: `review #${n} (${tier})`, phase: 'Review', schema: FINDINGS_SCHEMA, ...dial.review })
     if (!review?.merged) return { pr: n, unreviewed: review ? 'not found on origin/main' : 'reviewer did not return' }
     const serious = review.findings.filter((f) => f.severity !== 'low')
-    const low = review.findings.filter((f) => f.severity === 'low').map((f) => ({ pr: n, ...f }))
+    const low = review.findings.filter((f) => f.severity === 'low').map((f) => ({ pr: n, tier, ...f }))
     const judged = await parallel(
       serious.map((f, i) => async () => {
         const [trace, repro] = await parallel([
-          () => agent(tracePrompt(n, f), { label: `trace #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA }),
-          () => agent(reproPrompt(n, f), { label: `repro #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, isolation: 'worktree' }),
+          () => agent(tracePrompt(n, f), { label: `trace #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, ...dial.refute }),
+          () => agent(reproPrompt(n, f), { label: `repro #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, isolation: 'worktree', ...dial.refute }),
         ])
         const votes = [
           trace ?? { refuted: true, evidence: 'trace refuter did not return' },
           repro ?? { refuted: true, evidence: 'repro refuter did not return' },
         ]
-        return { pr: n, ...f, confirmed: votes.every((v) => !v.refuted), trace: votes[0].evidence, repro: votes[1].evidence }
+        return { pr: n, tier, ...f, confirmed: votes.every((v) => !v.refuted), trace: votes[0].evidence, repro: votes[1].evidence }
       }),
     )
-    return { pr: n, judged: judged.filter(Boolean), low }
+    return { pr: n, tier, judged: judged.filter(Boolean), low }
   },
 )
 
@@ -122,8 +176,11 @@ const out = {
   refuted: judged.filter((f) => !f.confirmed).map(({ confirmed: _c, ...f }) => f),
   low: done.flatMap((r) => r.low ?? []),
   unreviewed: done.filter((r) => r.unreviewed).map((r) => ({ pr: r.pr, why: r.unreviewed })),
+  skipped: done.filter((r) => r.skipped).map((r) => ({ pr: r.pr, why: r.skipped })),
 }
 const lost = prs.length - done.length
 if (lost) log(`${lost} PR(s) dropped by a failed stage — re-run them`)
+const deep = done.filter((r) => r.tier === 'deep').map((r) => `#${r.pr}`)
+log(`routed: ${deep.length} deep (${deep.join(' ') || 'none'}) · ${done.filter((r) => r.tier === 'standard').length} standard · ${out.skipped.length} skipped docs-only`)
 log(`${out.confirmed.length} confirmed · ${out.refuted.length} refuted · ${out.low.length} low (unverified) · ${out.unreviewed.length} unreviewed`)
 return out
