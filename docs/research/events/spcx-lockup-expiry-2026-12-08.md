@@ -124,6 +124,7 @@ Registered forward tests: `docs/research/forward-tests/spcx-lockup-expiry-2026-1
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-10-20 | 49 | Initial. Read 424B4: Dec 8 = last stage of 180-day cohort, up to 797.6M sh (price test lapsed, high 125.33 vs 175.50 needed); founder + extended cohort (>60%) locked to 2027. Date flipped estimate→confirmed (SEC). Six prior stages: day returns +6.1/−4.1/−3.9/+0.4/−0.2/+1.3%. IV Dec-18 53%, no bump across Dec 8. Adjacency: Q3 results after close today, ~1.3B stage ~Oct 22 (proposed); VIX 17.7; FOMC 12-09, CPI 12-10, NDX/Russell/CR 12-11 inside D+3. | — (initial; stand aside) | 2026-10-27 (high:21+, 7d) |
+| 2026-10-27 | D-42 | **Deterministic screen (no Claude session).** Readings — SPCX $146.90 (-0.7% since last), VIX 18.4 (+0.7pt since last), band unchanged (high:21+), 32 adjacent event(s) tracked, new in corridor since last pulse: `uk-gdp-monthly-2026-12-11` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-03 |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -138,3 +139,6 @@ in the row instead (#2946): it can never become due, so a calendar file for it i
 prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted
 first), never from memory. After that the assessment is closed; the doc reopens only to score a
 registered forward test whose `Score by` has arrived (`forward-test-due`).
+
+**Last assessed:** 2026-10-27
+<!-- probe-ref: {"symbols":{"SPCX":146.9},"vix":18.39,"daysBand":"high:21+","adjacentIds":["cpi-2026-12-10","cr-expiry-2026-12-11","ecb-quiet-period-start-2026-12-09","eia-steo-2026-12-08","ercot-data-center-audit-filing-2026-12-10","eroc-lockup-expiry-2026-12-06","existing-home-sales-2026-12-09","fomc-2026-12-09","g20-sherpa-iv-miami-2026-12-10","government-funding-deadline-2026-12-11","intl-trade-full-report-2026-12-08","ism-services-2026-12-03","japan-balance-of-payments-2026-12-08","japan-cgpi-2026-12-10","jobs-2026-12-04","livingston-survey-2026-12-11","m3-full-report-2026-12-03","msft-annual-meeting-2026-12-08","mts-november-2026-12-10","ndx-annual-reconstitution-announcement-2026-12-11","pbls-lockup-expiry-2026-12-06","productivity-costs-q3-revised-2026-12-08","qss-q3-2026-12-10","russell-reconstitution-2026-12-11","sp-rebalance-proforma-2026-12-04","sp-rebalance-reference-close-2026-12-11","treasury-10y-note-2026-12-08","treasury-30y-bond-2026-12-10","treasury-3y-note-2026-12-07","treasury-coupon-announcement-2026-12-03","uk-gdp-monthly-2026-12-11","wholesale-trade-2026-12-09"],"adjacentStrongIds":["cpi-2026-12-10","fomc-2026-12-09","jobs-2026-12-04"],"screenStreak":1} -->
