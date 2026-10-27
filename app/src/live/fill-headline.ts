@@ -52,7 +52,8 @@ export function doneNote(fill: DeskOrderEvent | undefined, market: MarketSession
   if (filled) return "SIM account — simulated fill, real discipline.";
   const status = typeof fill?.payload.status === "string" ? fill.payload.status : "";
   if (TERMINAL.has(status)) {
-    const word = status === "cancelled" ? "Canceled" : status[0].toUpperCase() + status.slice(1);
+    const word =
+      status === "cancelled" ? "Canceled" : status.charAt(0).toUpperCase() + status.slice(1);
     return `${word} at the paper broker — nothing filled.`;
   }
   const open = waitsForOpen(market);
