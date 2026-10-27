@@ -38,10 +38,16 @@ const options = (book: SymbolBook): SymbolOption[] =>
 
 const optionName = (o: SymbolOption): string => `${occStrikeLabel(o.strike)} ${o.type}`;
 
-/** An option whose last day this event is (an expiry or a decision on it). */
+/** An option whose last day this event is (an expiry or a decision on it). The event's own `on`
+ *  names the contract — two options on the symbol can share a last day (a spread's two legs, two
+ *  accounts on one expiry), so the date alone would lend one contract's terms to the other (#6284).
+ *  A named contract the book does not hold says nothing; the date decides only when `on` is absent. */
 function expiringOn(event: BookEvent, book: SymbolBook): SymbolOption | undefined {
   const isExpiry = event.mark === "Expires" || /expires/i.test(event.what ?? "");
-  return isExpiry ? options(book).find((o) => o.expiry === event.date) : undefined;
+  if (!isExpiry) return undefined;
+  const { on } = event;
+  if (!on) return options(book).find((o) => o.expiry === event.date);
+  return book.rows.find((r) => r.key === `${on.deskId} ${on.symbol}`)?.option;
 }
 
 function printWhy(event: BookEvent, book: SymbolBook): string {
