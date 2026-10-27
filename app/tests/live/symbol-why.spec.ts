@@ -1,4 +1,5 @@
-import type { BookEvent } from "../../src/live/book-events";
+import { type BookEvent, bookEventsIn } from "../../src/live/book-events";
+import { ALL_RANGE } from "../../src/live/horizon-range";
 import { type SymbolBook, type SymbolDesk, symbolBook } from "../../src/live/symbol-book";
 import { expiryWhy, whyFor, whyOn } from "../../src/live/symbol-why";
 
@@ -92,5 +93,64 @@ describe("whyOn — each date says what it does to what you hold on the symbol",
 
   it("says nothing on every symbol's view", () => {
     expect(whyFor(undefined)(event({ date: "2026-11-06", tier: "market" }))).toBeUndefined();
+  });
+});
+
+/** Each expiry row through the real chain — the book's events, the symbol's book, the why. */
+const expiryWhys = (desks: readonly SymbolDesk[], symbol: string): Record<string, string> => {
+  const book = symbolBook(desks, symbol) as SymbolBook;
+  const { held } = bookEventsIn({ desks, events: [], calls: [], range: ALL_RANGE, lens: "month" });
+  return Object.fromEntries(
+    held.filter((e) => e.mark === "Expires").map((e) => [e.title, whyOn(e, book) ?? ""]),
+  );
+};
+
+const option = (symbol: string, quantity: string, costBasis: string) => ({
+  symbol,
+  quantity,
+  isOption: true,
+  value: "$0",
+  costBasis,
+  totalPlRaw: 0,
+});
+
+describe("whyOn — two options on the symbol expiring the same day each keep their own terms (#6284)", () => {
+  it("gives each leg of a vertical spread its own line", () => {
+    const spread: SymbolDesk = {
+      desk: {
+        id: "bot-a",
+        positions: [
+          option("NVDA261120C00180000", "1", "$900"),
+          option("NVDA261120C00190000", "-1", "-$400"),
+        ],
+      },
+    };
+    expect(expiryWhys([spread], "NVDA")).toEqual({
+      "NVDA $180 long call expires": "ends worth only what it is past $180",
+      "NVDA $190 short call expires": "below $190 keeps the $400; above sells 100 shares at $190",
+    });
+  });
+
+  it("gives each account's contract its own strike, premium and share count", () => {
+    const me: SymbolDesk = {
+      desk: { id: "me", positions: [option("CRWV261106P00080000", "-1", "-$255")] },
+    };
+    const bot: SymbolDesk = {
+      desk: { id: "bot-x", positions: [option("CRWV261106P00070000", "-2", "-$400")] },
+    };
+    expect(expiryWhys([me, bot], "CRWV")).toEqual({
+      "CRWV $80 short put expires": "above $80 keeps the $255; below buys 100 shares at $80",
+      "CRWV $70 short put expires": "above $70 keeps the $400; below buys 200 shares at $70",
+    });
+  });
+
+  it("says nothing when the event names a contract the symbol's book does not hold", () => {
+    const expiry = event({
+      date: "2026-11-06",
+      tier: "held",
+      mark: "Expires",
+      on: { deskId: "someone-else", symbol: PUT },
+    });
+    expect(whyOn(expiry, crwv)).toBeUndefined();
   });
 });

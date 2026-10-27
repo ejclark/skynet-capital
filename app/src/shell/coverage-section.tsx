@@ -95,8 +95,8 @@ function Summary({ data }: { readonly data: CoverageJson }): ReactElement {
                 outside.length > 0
                   ? ` · ${outside.length} outside all of them (${outside.join(", ")}, Unclassified)`
                   : ""
-              }`
-            : "no account of yours to read positions from yet"}
+              }${data.holdingsNote ? ` · ${data.holdingsNote}` : ""}`
+            : (data.holdingsNote ?? "no account of yours to read positions from yet")}
         </p>
         <p className="cov-key">
           ring = the list below, clockwise from the top · thick: names researched, a tick each ·
