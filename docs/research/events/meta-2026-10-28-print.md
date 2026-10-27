@@ -305,3 +305,66 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-20
 <!-- probe-ref: {"symbols":{"META":705.44},"vix":18.44,"daysBand":"critical:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","dallas-fed-mfg-2026-10-26","ecb-quiet-period-start-2026-10-21","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","opex-2026-10-16","pending-home-sales-2026-10-20","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":[],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-10-27, D+6 by calendar, three sessions into the reaction window).** Instrument cache
+busted first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), then
+`earnings-cycle.mjs META --bench QQQ --peers GOOG,MSFT,AMZN` and `intraday-edges.mjs META` re-run
+cold. **Instrument caveat:** the earnings list still stops at the 2026-07-29 print (n=57) even though
+price history runs to 2026-10-23 — the 10-21 print is not in it — so every figure below for *this*
+print is computed from Yahoo daily bars (`query1.finance.yahoo.com/v8/finance/chart`, re-read cold),
+not from the study; the historical-era tables reproduce the prior rows unchanged (S1 D-20 run-up
+P=0.3159, still not significant; modern gap deciles −10.98% / +16.42%).
+
+**What printed** (Meta's own release, read via a mirror — `investor.atmeta.com` returns 403 to plain
+fetches this window; secondary, `NEWS:`). Q3 revenue **$64.60B**, +26% y/y, against the **$61–64B**
+guide and ~$63.3B consensus. GAAP diluted EPS **$3.83**; **$7.40** excluding the **$9.89B** legal
+accrual for the 52-attorney-general settlement (the ≈$10B the 2026-08-26 disclosure registered).
+Q4 revenue guide **$73–76B**. 2026 total expenses raised to **$175–179B** to carry the charge; capex
+**$135–145B** (low end up from $130B). Reality Labs 2027 loss said to narrow to ~$15B.
+
+**The tape — stand-aside held, and the tail it stood aside from showed up.**
+
+| Window | META | QQQ | META − QQQ |
+|---|---|---|---|
+| Overnight gap, D close $697.52 → D+1 open $676.35 | **−3.04%** | −1.60% | −1.4pt |
+| Reaction day, D close → D+1 close $648.85 | **−6.98%** | −2.86% | −4.1pt |
+| Reaction-day fade, open → close | **−4.07%** | — | — |
+| D close → 10-26 close $630.56 (D+3) | **−9.60%** | −1.79% | −7.8pt |
+
+- **The call:** stand aside, S2 flat by 10-20, no position — no position was held, so nothing was lost.
+  The reaction day closed **−6.98%**, past the **4.9% / 6.2%** implied moves logged on 10-17/10-18, so
+  the option market under-priced the move once more (Meta moved more than implied in 7 of the 8 prints before
+  this one, per the 10-17 row's source).
+- **Where it sits against the record:** the overnight gap of −3.04% is an ordinary one, nowhere near
+  the modern-era p10 (**−10.98%**); the damage came *after* the open — a **−4.07%** fade, at the
+  modern-era fade p10 (**−4.12%**). After-hours first printed **+3–4%** on the revenue and guide
+  (secondary), then reversed on the call. The existing deciles are not repriced by one more print:
+  the gap-capture kill re-opens only on ≥3 new prints showing a repriced gap regime, and this adds
+  one that is ordinary on the gap.
+- **The cause is the capex and cash-flow read, not the EPS line** (secondaries: Yahoo Finance
+  2026-10-22, 24/7 Wall St., TheLec): a beat on revenue and guide, sold on the spending outlook and
+  negative free cash flow. A headline GAAP "miss" ($3.83 vs $5.70) coexisted with an ex-charge
+  "beat" ($7.40 vs ~$6.53); the stock followed neither. That is FT-1's claim — the miss carried no
+  information — in its narrow form.
+- **Beta again explains part of it:** QQQ fell −2.86% on the reaction day and −1.79% over the three
+  sessions, so about **41%** of D+1 and **19%** of the D+3 move is the index (the rest is META's);
+  VIX 16.68 → 19.03 on D+1 (10-21 → 10-22), 18.39 at the 10-26 close.
+- **What this does not change:** no stance moves. The post-print window is a stand-aside on evidence
+  (FT-4, 2026-09-08); this print's D+6 and D+21 windows are not scored here — D+6 is 10-29 at the
+  earliest — and no test was registered on them.
+
+**Forward tests.** `FT-meta-2026-10-28-print-1` scored **pass (narrow)** — its cell holds the
+evidence and the limit: every pre-print consensus read was ≥ $6.00 (lowest $6.11), but undated
+post-print articles cite $5.46 (LSEG) and $5.70, so "the street never marks the charge" is not
+shown in its strong form. No legacy `FT-N` row is about this event's close (FT-17's Oct 27–29
+compound window is a different, still-running test and is untouched).
+
+**Loop census** (docs/process/LEARNING-LOOP.md): the stage a person still had to do was *sense* —
+the earnings-cycle study's event list lags a printed quarter by days (SEC 8-K indexing), so the
+close-out re-derived the reaction by hand from price bars. A scored close-out should not need that;
+worth a `bottleneck` issue if the next two closed prints repeat it (one occurrence measured here).
+
+**Last assessed:** 2026-10-27
+<!-- probe-ref: {"symbols":{"META":630.56},"vix":18.39,"daysBand":"critical:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","apec-fmm-hong-kong-2026-10-20","dallas-fed-mfg-2026-10-26","ecb-quiet-period-start-2026-10-21","eurostat-hicp-final-2026-10-16","fomc-blackout-start-2026-10-17","housing-starts-2026-10-20","import-export-prices-2026-10-16","industrial-production-2026-10-16","japan-cpi-2026-10-23","jgb-20y-auction-2026-10-20","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-nm-privacy-penalty-ruling-2026-10-20","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nahb-hmi-2026-10-19","opex-2026-10-16","pending-home-sales-2026-10-20","tic-monthly-2026-10-16","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","treasury-primary-dealer-agenda-2026-10-16","uk-ashe-earnings-2026-10-22","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-labour-market-2026-10-20","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":[],"screenStreak":0} -->
