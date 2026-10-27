@@ -4,6 +4,7 @@
  * is a courtesy and the SERVICE is the gate, so nothing here decides anything.
  */
 
+import { type MarketSessionView, waitsForOpen } from "./market-session";
 import { postJson } from "./post";
 
 /** The order classes the desk can actually place today. Mirrors the server's `TicketOrderType`
@@ -107,11 +108,14 @@ export function tifLabel(tif: string | undefined): string | undefined {
   return TIF_LABELS[tif as TicketTimeInForce] ?? tif.toUpperCase();
 }
 
-/** One sentence on what the pick means, stated before the order is placed. */
-export function tifNote(tif: TicketTimeInForce): string {
-  return tif === "day"
-    ? "Day: anything unfilled is cancelled when today's session closes."
-    : "GTC: stays working across sessions until it fills or you cancel it.";
+/** One sentence on what the pick means, stated before the order is placed. After the close a Day
+ *  order belongs to the NEXT session, so "today's session" would name one it never trades in. */
+export function tifNote(tif: TicketTimeInForce, market: MarketSessionView): string {
+  if (tif === "gtc") return "GTC: stays working across sessions until it fills or you cancel it.";
+  const open = market.state === "closed" ? waitsForOpen(market) : undefined;
+  return open
+    ? `Day: waits for ${open}; anything unfilled is cancelled when that session closes.`
+    : "Day: anything unfilled is cancelled when today's session closes.";
 }
 
 /** The server echoes the type back as a plain string; anything unrecognized renders as itself
@@ -129,15 +133,25 @@ export function priceFieldFor(orderType: TicketOrderType): "limitPrice" | "stopP
 
 /** How this class actually fills, in one sentence, stated before the order is placed rather than
  *  discovered afterwards. Honesty first: the Stop-Market line leads with the cost of the guarantee
- *  it gives (it will fill — at an unknown price), not with the reassurance. */
-export function orderTypeNote(orderType: TicketOrderType): string {
+ *  it gives (it will fill — at an unknown price), not with the reassurance.
+ *
+ *  The market clock comes first (#6257): outside the regular session nothing fills, so a market
+ *  order never says "immediately" — it says which open it waits for — and the other classes lead
+ *  with the same fact before their own rule. The server says the same in the review's warning
+ *  (`src/trading/order-ticket.ts`); this says it before the member has to ask for a review. */
+export function orderTypeNote(orderType: TicketOrderType, market: MarketSessionView): string {
+  const open = waitsForOpen(market);
+  const lead = market.state === "pre" ? "Pre-market" : "Market closed";
+  if (orderType === "market") {
+    return open
+      ? `${lead} — this order waits for ${open}, then fills at the best price on offer.`
+      : "Fills immediately at the best price the market is currently offering.";
+  }
+  const wait = open ? `${lead} — nothing fills before ${open}. ` : "";
   if (orderType === "limit") {
-    return "Fills at your limit price or better, or not at all — a limit order can sit open indefinitely if the price never comes to you.";
+    return `${wait}Fills at your limit price or better, or not at all — a limit order can sit open indefinitely if the price never comes to you.`;
   }
-  if (orderType === "stop") {
-    return "Stays dormant until the stop price trades, then turns into a plain market order. It will fill — but at whatever the market is paying at that moment, which in a fast move can be well past your stop.";
-  }
-  return "Fills immediately at the best price the market is currently offering.";
+  return `${wait}Stays dormant until the stop price trades, then turns into a plain market order. It will fill — but at whatever the market is paying at that moment, which in a fast move can be well past your stop.`;
 }
 
 const parsePrice = (raw: string): number | undefined => {

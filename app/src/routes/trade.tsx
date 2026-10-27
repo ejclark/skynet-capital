@@ -382,6 +382,7 @@ function TradePage(): ReactElement {
             wheels={plays.data.wheels}
             gate={plays.data.gate}
             nextUp={plays.data.nextUp}
+            linked={plays.data.linked}
           />
           {guidanceLink}
         </div>

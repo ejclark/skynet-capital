@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
 import { type DeskOrderEvent, useOrderFill } from "../live/desk-events";
 import { fillHeadline } from "../live/fill-headline";
+import { marketSession } from "../live/market-session";
 import type { PlayInfo } from "../live/options";
 import { quoteQuery } from "../live/quote-query";
 import {
@@ -22,8 +23,9 @@ import {
   tifLabel,
 } from "../live/ticket";
 import { useFillFlare } from "./fill-flare";
-import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
+import { DisarmNote, DoneNote, GateHead, keepFocus } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
+import { useNow } from "./market-session";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
 import { SymbolField } from "./symbol-field";
@@ -143,10 +145,10 @@ function GateStatus({
       <>
         <GateHead tone="filled">{fillHeadline(state.result, fill)}</GateHead>
         <div className="gate-body">
-          <p className="gate-note">
-            SIM account — simulated fill, real discipline. Working orders below update now; the
-            blotter and timeline pick the fill up on the next read.
-          </p>
+          <DoneNote fill={fill}>
+            Working orders below update now; the blotter and timeline pick the fill up on the next
+            read.
+          </DoneNote>
         </div>
       </>
     );
@@ -236,6 +238,8 @@ export function TradeGate({
     setSeed({ symbol, bid, ask, mid: mid.mid });
     setFields((f) => ({ ...f, orderType: "limit", limitPrice: mid.mid?.toFixed(2) ?? "" }));
   }, [priced, mid, seed]);
+  /** The topbar's own clock (#6257): the order-type note says which open a closed market waits for. */
+  const market = marketSession(useNow());
   const symId = useId();
   const qtyId = useId();
   const sideId = useId();
@@ -394,7 +398,7 @@ export function TradeGate({
           {money(seed.ask)} ask. Edit it, or switch the order type to Market.
         </p>
       ) : null}
-      <p className="gate-note">{orderTypeNote(fields.orderType)}</p>
+      <p className="gate-note">{orderTypeNote(fields.orderType, market)}</p>
 
       {/* Instrument-agnostic (task 3a, unlike the options-chain-only earnings badge/wire-row) —
           this stock ticket gets its own compact "here's what you've done" strip, same relative

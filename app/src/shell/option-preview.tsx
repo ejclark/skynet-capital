@@ -6,7 +6,7 @@ import { daysToExpiry, expiresIn } from "../live/straddle";
 import type { TicketResult } from "../live/ticket";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
 import { signOf } from "../ui";
-import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
+import { DisarmNote, DoneNote, GateHead, keepFocus } from "./gate-frame";
 import { PayoffChart } from "./payoff-chart";
 
 /**
@@ -223,10 +223,7 @@ export function OptionGateStatus({
       <>
         <GateHead tone="filled">{fillHeadline(state.result, fill)}</GateHead>
         <div className="gate-body">
-          <p className="gate-note">
-            SIM account — simulated fill, real discipline. The blotter and timeline pick it up on
-            the next read.
-          </p>
+          <DoneNote fill={fill}>The blotter and timeline pick it up on the next read.</DoneNote>
         </div>
       </>
     );
