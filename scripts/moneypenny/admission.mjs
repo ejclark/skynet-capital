@@ -36,7 +36,8 @@
 // decides whether it may start NOW. A live session — the claim lanes ask through `gateAdmission`,
 // `/work-issues` through the read-only CLI at the foot of this file:
 //   node scripts/moneypenny/admission.mjs --check <n>   # {admit, reason, queuedBehind?}; exit 0 | 3
-//   (`--check` and `--next` also step past a plan whose state block names nothing to build, #5707)
+//   (`--check`, `--next` and `--queue` all step past a plan whose state block names nothing to
+//   build, #5707 — so the listing never names a row `--check` refuses, #6279)
 //   node scripts/moneypenny/admission.mjs --next        # the sweep's pick, same JSON; exit 0 | 3
 //   node scripts/moneypenny/admission.mjs --queue       # the Ready column, in pick order (JSON)
 // The CLI never comments and never labels. A session Eric starts by hand is the EXPEDITE class: it
@@ -537,10 +538,16 @@ export function runCli(argv = [], io = {}) {
     }
     // `--queue` and `--check` are /work-issues' reads — a live session, so `needs-session` is
     // its to build (#5236). `--next` mirrors the unattended sweep and keeps refusing it.
-    const rows = pullQueue(ready, { interactive: true }).map((i) => ({
-      number: i.number,
-      title: i.title ?? "",
-    }));
+    // A held plan (#5707) is dropped here too: `--check` refuses it, and /work-issues ends its pass
+    // on a refusal, so listing it would stop the pass before any row behind it is built (#6279).
+    // The hold read costs nothing on a non-plan row.
+    const rows = pullQueue(ready, { interactive: true })
+      .filter((i) => {
+        const hold = readHold(i);
+        if (hold) printErr(`::notice::--queue — skipping #${i.number}, ${hold}`);
+        return !hold;
+      })
+      .map((i) => ({ number: i.number, title: i.title ?? "" }));
     print(JSON.stringify(rows));
     return 0;
   }
