@@ -288,8 +288,15 @@ jobs:
           # once it did. A file has no such ceiling.
           DUE_FILE=$(mktemp)
           HEADS_FILE=$(mktemp)
-          node scripts/event-scan.mjs --due > "$DUE_FILE"
+          # Heads FIRST, then the scan on a fresh main (#6251). A queued dispatch checks out main as
+          # it was when dispatched; a research/<id> PR merging in the wait was in neither the old
+          # tree nor the live heads, so the event read as due again (35 of 146 legs, 22% of spend,
+          # 2026-10-23..26). In this order a PR merged before the head read is in the tree, and one
+          # still open is in the heads. Later steps run on this tree too: newer main, never older.
           gh pr list --state open --limit 100 --json headRefName | jq -c '[.[].headRefName]' > "$HEADS_FILE"
+          git fetch --quiet origin main
+          git checkout --quiet --detach origin/main
+          node scripts/event-scan.mjs --due > "$DUE_FILE"
           FILTERED=$(DUE_FILE="$DUE_FILE" HEADS_FILE="$HEADS_FILE" node -e '
             import("node:fs").then((fs) => {
               import("./scripts/moneypenny/index.mjs").then((m) => {
