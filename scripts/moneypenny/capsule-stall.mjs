@@ -19,7 +19,7 @@
 // a thin gather/act shell, so every branch is fixture-drivable.
 import { ghRest, ghRestAll, sh } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS } from "./labels.mjs";
-import { normalizeJobName } from "./repair.mjs";
+import { LOST_RUNNER, normalizeJobName } from "./repair.mjs";
 
 /** A capsule younger than this may still have its repair session running. */
 export const ORPHAN_AFTER_HOURS = 24;
@@ -36,18 +36,27 @@ const hours = (fromIso, nowMs) => Math.floor((nowMs - Date.parse(fromIso)) / 3_6
  * `issueBody` writes (`| **Workflow** | … |`, `| **Job** | \`…\` |`, `| **Failing step** | … |`);
  * the title is the fallback, since a long signature is clamped to 120 characters there and the table
  * never is. The step is what a green run has to have RUN to prove anything (#6076); a capsule that
- * never recorded one (`unknown`, or the title fallback) carries none.
+ * never recorded one (`unknown`, or the title fallback) carries none. A lost runner's row carries
+ * repair.mjs's `LOST_RUNNER` note after the name, which no real step does, so it comes off (#6274).
  */
 export function capsuleTarget(issue = {}) {
   const body = String(issue.body ?? "");
   const workflow = /^\| \*\*Workflow\*\* \| (.+?) \|$/m.exec(body)?.[1];
   const job = /^\| \*\*Job\*\* \| `(.+?)` \|$/m.exec(body)?.[1];
-  const step = /^\| \*\*Failing step\*\* \| (.+?) \|$/m.exec(body)?.[1];
+  const row = /^\| \*\*Failing step\*\* \| (.+?) \|$/m.exec(body)?.[1];
+  const step = row?.endsWith(LOST_RUNNER) ? row.slice(0, -LOST_RUNNER.length) : row;
   if (workflow && job)
     return step && step !== "unknown" ? { workflow, job, step } : { workflow, job };
   const m = /^\[ci\] (.+?) — (.+)$/.exec(String(issue.title ?? ""));
   return m && !m[2].endsWith("…") ? { workflow: m[1], job: m[2] } : null;
 }
+
+/**
+ * A step as a later run would name it. GitHub names an unnamed `uses:` step `Run owner/action@<ref>`,
+ * so a pin bump — often the very workflow fix a `needs-eric` capsule waits on — renames it; the
+ * `@<ref>` is dropped on both sides so the bumped step still counts as the one that failed (#6274).
+ */
+const stepKey = (name) => String(name ?? "").replace(/^(Run [^@\s]+)@\S+$/, "$1");
 
 /** GitHub's own bookkeeping steps — they run whether or not the job did any work. */
 const BOOKKEEPING = /^(Set up job|Complete job|Post .*)$/;
@@ -64,7 +73,7 @@ function legVerdict(leg, step) {
   if (leg?.conclusion !== "success") return null;
   const steps = leg.steps ?? [];
   if (step) {
-    const ran = steps.find((s) => s?.name === step)?.conclusion;
+    const ran = steps.find((s) => stepKey(s?.name) === stepKey(step))?.conclusion;
     if (ran === "failure") return "fail";
     return ran === "success" ? "pass" : null;
   }

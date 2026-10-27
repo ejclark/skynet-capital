@@ -379,6 +379,10 @@ function unfinishedStep(job) {
   return (job?.steps ?? []).find((s) => s.status && s.status !== "completed")?.name;
 }
 
+/** Appended to the Failing step row when the runner went away. `capsule-stall.mjs` strips it
+ *  before matching the step against a later run's — no real step carries it (#6274). */
+export const LOST_RUNNER = " (never finished — the runner went away mid-step)";
+
 /** What the fold says when the runner went away — read beside the log, never instead of it. */
 function lostRunnerNote(run, job, step) {
   return [
@@ -406,7 +410,7 @@ export function failuresFrom(run, jobs = [], logOf = () => "") {
       if (!lost) return { job: j.name, step, logTail: logOf(j.id) };
       return {
         job: j.name,
-        step: `${lost} (never finished — the runner went away mid-step)`,
+        step: `${lost}${LOST_RUNNER}`,
         logTail: `${logOf(j.id)}${lostRunnerNote(run, j, lost)}`,
       };
     });
