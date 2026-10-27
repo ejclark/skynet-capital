@@ -196,7 +196,8 @@ actually happened vs the stance, scored **from re-run instrument data, never fro
 tape**. Score any forward tests this event carried — its own fragment
 [`forward-tests/<event-id>.md`](../research/forward-tests.md) (fill the Outcome cell; a scored
 kill moves to the sweep doc's kill list), plus any legacy `FT-N` row about this event in
-`docs/research/forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the
+`docs/research/forward-tests/legacy.md`. Then pass your scores on to any conviction that reads
+them (*Conviction claims*, under the next mode). Once `## Outcome` exists the scanner goes silent on the
 event — with exactly one door back in: a registered forward test whose `Score by` has since arrived re-opens it
 as `forward-test-due` (#2884, the mode below). The assessment is closed for good; the *register*
 is not.
@@ -267,6 +268,18 @@ The scanner treats *any* non-open cell as scored, so all four end the re-dispatc
 Leaving the row `_open_` sends the same session back on the next tick — which is the intended
 pressure, not a bug. If a row genuinely needs a later date than it was registered with, write
 `unscoreable — settles <date>, <source>` rather than editing the `Score by` cell.
+
+**Conviction claims — pass your scores on** (#5482 criterion 6). A conviction's claim can be
+scored by a row in your fragment (a row registered from one of its proposals, or cited by id), and
+nothing else runs that scoring on a schedule. So whenever you score a row, in this mode or at
+close-out, run `npm run research:claims -- --event <your-event-id>` after the Outcome cells are
+written, and commit whatever it changed in the same PR. It picks only the convictions whose claims
+read your event; when none does it prints `nothing written` and you are done. It scores every claim
+of those convictions that is due (from your rows, and from the cached tape for a price check), and
+rewrites only `src/playbooks/conviction-scores.json`. It never re-runs a study, because a study's
+reading can set a pair's live narrowing; a claim scored by a re-run stays pending until a full
+`npm run research:claims`. Never hand-edit that file, and never edit the conviction doc or its
+record: the score is the command's, not yours.
 
 ## Deterministic screening (issue #724) — not every due pulse spends a session
 

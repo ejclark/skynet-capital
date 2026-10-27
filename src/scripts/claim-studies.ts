@@ -5,6 +5,19 @@
  *   npm run research:claims -- ai-dip-2026-10    # one
  *   npm run research:claims -- --dry             # plan only: what would run, what is offered
  *   npm run research:claims -- --cap 1           # run at most 1 instrument (can only lower the dial)
+ *   npm run research:claims -- --score-only      # score against the studies on file; run none
+ *   npm run research:claims -- --event <id>      # the event lane's door: see below
+ *
+ * THE EVENT LANE'S DOOR (#5482). Nothing ran this pass on a schedule, and by standing rule nothing
+ * here runs on a clock: a merge is the tick. The event lane is already re-dispatched the day a
+ * registered forward test is due (`forward-test-due`, EVENT-RESEARCH.md), and a conviction's
+ * proposals put a row on its claims' due days, so the session that scores a row runs this with
+ * `--event <its-event-id>`. That selects only the stored convictions whose claims read that event's
+ * forward tests (none: it writes nothing), and it implies `--score-only`, because a study re-run is
+ * not a score: claim 7's cycle-phase floor band is CRWV-WHEEL's live strike ceiling
+ * (`conviction-steering.ts`), and an unattended research PR must never move a pair's settings. A
+ * score-only pass leaves `conviction-studies.json` untouched, so a `rerun` claim stays pending until
+ * a full pass re-runs its study.
  *
  * For each claim it asks `planClaim` which house instrument (if any) measures what the claim
  * asserts, runs that instrument ONCE per symbol on the data the tape holds, and writes the verdict
@@ -34,6 +47,7 @@ import { researchCapNow } from "../../scripts/moneypenny/events.mjs";
 import { bars } from "../../scripts/research/market-data.mjs";
 import { premiumFit } from "../../scripts/research/premium-fit.mjs";
 import { claimLabel, type ScoreLedgerEntry } from "../playbooks/claim-score.js";
+import type { StudyLedgerEntry } from "../playbooks/claim-studies.js";
 import {
   type RunnerDeps,
   type RunnerResult,
@@ -43,7 +57,7 @@ import {
 } from "../playbooks/claim-study-runner.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
-import { scoreConviction } from "./claim-scoring-run.js";
+import { readsEvent, scoreConviction } from "./claim-scoring-run.js";
 import { flag } from "./cli-flag.js";
 
 const run = promisify(execFile);
@@ -109,14 +123,72 @@ function describe(result: RunnerResult, conviction: Conviction): string[] {
   return lines;
 }
 
+type Selection =
+  | { readonly convictions: readonly Conviction[]; readonly scoreOnly: boolean }
+  | { readonly exit: number };
+
+/** Which convictions this pass reads, and whether it may run studies; or the exit code that ends
+ *  it. `--event` keeps only the convictions whose claims read that event and implies scores only. */
+function select(argv: readonly string[]): Selection {
+  const event = flag(argv, "event");
+  if (argv.includes("--event") && (event === undefined || event.startsWith("--"))) {
+    console.error("--event needs an event id");
+    return { exit: 1 };
+  }
+  const ids = argv.filter(
+    (a, i) => !a.startsWith("--") && argv[i - 1] !== "--cap" && argv[i - 1] !== "--event",
+  );
+  const named = ids.length > 0 ? ids.map((id) => CONVICTIONS.get(id)) : CONVICTIONS.all();
+  const found = named.filter((c): c is Conviction => c !== undefined);
+  if (found.length < named.length) {
+    console.error(`no such conviction: ${ids.join(", ")}`);
+    return { exit: 1 };
+  }
+  if (event === undefined) return { convictions: found, scoreOnly: argv.includes("--score-only") };
+  const convictions = found.filter((c) => readsEvent(c, event));
+  if (convictions.length === 0) {
+    console.log(`no stored conviction scores from ${event}'s forward tests; nothing written`);
+    return { exit: 0 };
+  }
+  return { convictions, scoreOnly: true };
+}
+
+/** Run one conviction's studies within what is left of the budget, and say what each claim got. */
+async function study(
+  conviction: Conviction,
+  deps: RunnerDeps,
+  cap: number,
+  dry: boolean,
+): Promise<RunnerResult> {
+  const result = await runClaimStudies(conviction, deps, { cap, dry });
+  console.log(`${conviction.id} (${conviction.claims.length} claims)`);
+  for (const line of describe(result, conviction)) console.log(line);
+  result.entries.forEach((entry) => {
+    const n = conviction.claims.findIndex((c) => c.statement === entry.statement) + 1;
+    const s = entry.study;
+    const what =
+      s.disposition === "studied"
+        ? `${s.verdict.reading} (${s.verdict.confidence}) ${s.verdict.call}`
+        : s.disposition === "offer"
+          ? `offer to register a forward test, score by ${s.forwardTest.scoreBy}`
+          : "untestable, size zero";
+    console.log(`  claim ${labelOf(conviction, n)}: ${s.disposition} — ${what}`);
+  });
+  return result;
+}
+
+/** A ledger written with its convictions in id order, so a re-run diffs only what moved. */
+function writeLedger(path: string, ledger: Record<string, unknown>): void {
+  const sorted = Object.fromEntries(Object.entries(ledger).sort(([a], [b]) => a.localeCompare(b)));
+  writeFileSync(path, `${JSON.stringify(sorted, null, 2)}\n`);
+  console.log(`wrote ${path}`);
+}
+
 export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<number> {
   const dry = argv.includes("--dry");
-  const ids = argv.filter((a, i) => !a.startsWith("--") && argv[i - 1] !== "--cap");
-  const convictions = ids.length > 0 ? ids.map((id) => CONVICTIONS.get(id)) : CONVICTIONS.all();
-  if (convictions.some((c) => c === undefined)) {
-    console.error(`no such conviction: ${ids.join(", ")}`);
-    return 1;
-  }
+  const selection = select(argv);
+  if ("exit" in selection) return selection.exit;
+  const { convictions, scoreOnly } = selection;
 
   const dial = researchCapNow();
   const asked = flag(argv, "cap");
@@ -134,43 +206,28 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   >;
   let used = 0;
   for (const conviction of convictions) {
-    if (!conviction) continue;
-    // One pass shares the budget: what an earlier conviction used, a later one cannot.
-    const result = await runClaimStudies(conviction, deps, { cap: Math.max(0, cap - used), dry });
-    used += result.budget.used;
-    console.log(`${conviction.id} (${conviction.claims.length} claims)`);
-    for (const line of describe(result, conviction)) console.log(line);
-    result.entries.forEach((entry) => {
-      const n = conviction.claims.findIndex((c) => c.statement === entry.statement) + 1;
-      const s = entry.study;
-      const what =
-        s.disposition === "studied"
-          ? `${s.verdict.reading} (${s.verdict.confidence}) ${s.verdict.call}`
-          : s.disposition === "offer"
-            ? `offer to register a forward test, score by ${s.forwardTest.scoreBy}`
-            : "untestable, size zero";
-      console.log(`  claim ${labelOf(conviction, n)}: ${s.disposition} — ${what}`);
-    });
-    ledger = { ...ledger, [conviction.id]: result.entries };
+    let studies = (ledger[conviction.id] ?? []) as readonly StudyLedgerEntry[];
+    if (scoreOnly) {
+      // Score against the studies on file; the studies ledger is neither re-run nor rewritten.
+      console.log(`${conviction.id} (${conviction.claims.length} claims), scores only`);
+    } else {
+      // One pass shares the budget: what an earlier conviction used, a later one cannot.
+      const result = await study(conviction, deps, Math.max(0, cap - used), dry);
+      used += result.budget.used;
+      studies = result.entries;
+      ledger = { ...ledger, [conviction.id]: studies };
+    }
     // Scoring follows the studies: a re-run just written feeds the `rerun` check, and a claim whose
     // day has come is read against its falsifier. Nothing here sizes a trade or edits a pair.
-    const scoring = await scoreConviction(conviction, result.entries);
+    const scoring = await scoreConviction(conviction, studies);
     console.log("  scores:");
     for (const line of scoring.lines) console.log(line);
     scores = { ...scores, [conviction.id]: scoring.entries };
   }
   if (!dry) {
     mkdirSync(join(ROOT, "src", "playbooks"), { recursive: true });
-    const sorted = Object.fromEntries(
-      Object.entries(ledger).sort(([a], [b]) => a.localeCompare(b)),
-    );
-    writeFileSync(LEDGER_PATH, `${JSON.stringify(sorted, null, 2)}\n`);
-    console.log(`wrote ${LEDGER_PATH}`);
-    const sortedScores = Object.fromEntries(
-      Object.entries(scores).sort(([a], [b]) => a.localeCompare(b)),
-    );
-    writeFileSync(SCORES_PATH, `${JSON.stringify(sortedScores, null, 2)}\n`);
-    console.log(`wrote ${SCORES_PATH}`);
+    if (!scoreOnly) writeLedger(LEDGER_PATH, ledger);
+    writeLedger(SCORES_PATH, scores);
   }
   return 0;
 }

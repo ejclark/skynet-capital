@@ -1,4 +1,9 @@
-import { findForwardTest, fragmentRows } from "../../src/scripts/claim-scoring-run.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { Conviction } from "../../src/playbooks/conviction-record.js";
+import { AI_DIP_2026_10 } from "../../src/playbooks/conviction-seeds.js";
+import { findForwardTest, fragmentRows, readsEvent } from "../../src/scripts/claim-scoring-run.js";
+import { main } from "../../src/scripts/claim-studies.js";
 
 /** #5482 criterion 6 — a claim linked to a forward test finds the row its event lane registered: by
  *  the row's own id, or by the conviction proposal token the registration cites, and reads its
@@ -63,5 +68,53 @@ describe("findForwardTest", () => {
 
   it("finds nothing in an event with no fragment yet", () => {
     expect(findForwardTest(fragmentRows(""), "ai-dip-2026-10/P1")).toBeUndefined();
+  });
+});
+
+/** #5482 — the event lane's door into the scoring pass. The session that scores an event's forward
+ *  test runs `research:claims -- --event <id>`, which must pick exactly the convictions whose claims
+ *  read that event, and must never re-run a study (a re-run moves a live narrowing). */
+describe("readsEvent", () => {
+  it("finds AI-dip from every event its claims score from", () => {
+    for (const event of [
+      "crwv-2026-11-10-print",
+      "midterm-elections-2026-11-03",
+      "nvda-2026-11-18-print",
+    ]) {
+      expect(readsEvent(AI_DIP_2026_10, event)).toBe(true);
+    }
+  });
+
+  it("does not find it from an event no claim's check links, even one its doc mentions", () => {
+    expect(readsEvent(AI_DIP_2026_10, "fomc-2026-12-09")).toBe(false);
+    expect(readsEvent(AI_DIP_2026_10, "crwv-2026-11-10")).toBe(false);
+  });
+
+  it("reads only a forward-test check, never a price check on the same name", () => {
+    const priceOnly: Conviction = {
+      ...AI_DIP_2026_10,
+      claims: AI_DIP_2026_10.claims.filter((c) => c.check?.kind !== "forward-tests"),
+    };
+    expect(readsEvent(priceOnly, "crwv-2026-11-10-print")).toBe(false);
+  });
+});
+
+describe("research:claims --event", () => {
+  const ledgers = () =>
+    ["conviction-studies.json", "conviction-scores.json"].map((f) =>
+      readFileSync(join(process.cwd(), "src", "playbooks", f), "utf8"),
+    );
+
+  it("writes nothing when no stored conviction reads the event", async () => {
+    const before = ledgers();
+    expect(await main(["--event", "fomc-2026-12-09"])).toBe(0);
+    expect(ledgers()).toEqual(before);
+  });
+
+  it("refuses a missing event id instead of scoring everything", async () => {
+    const before = ledgers();
+    expect(await main(["--event"])).toBe(1);
+    expect(await main(["--event", "--dry"])).toBe(1);
+    expect(ledgers()).toEqual(before);
   });
 });

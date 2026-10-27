@@ -102,6 +102,17 @@ function forwardTestsReader(): (link: ForwardLink) => ForwardRow | undefined {
   };
 }
 
+/**
+ * Whether any of a conviction's claims scores from `event`'s forward tests. Pure. This is how the
+ * event lane finds the convictions its own scoring just moved (`npm run research:claims -- --event
+ * <id>`): the link on the claim's check, never the conviction doc's proposals table, because the
+ * check is what the scorer reads.
+ */
+export const readsEvent = (conviction: Conviction, event: string): boolean =>
+  conviction.claims.some(
+    (c) => c.check?.kind === "forward-tests" && c.check.tests.some((t) => t.event === event),
+  );
+
 export interface ConvictionScoring {
   readonly entries: readonly ScoreLedgerEntry[];
   readonly lines: readonly string[];
