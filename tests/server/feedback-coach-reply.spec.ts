@@ -228,6 +228,40 @@ describe("a brief cut short by a quote (#6205)", () => {
     expect(result.spec.readiness).toBe("spec-complete");
   });
 
+  // #6286: DRAFT_SCHEMA writes `details` before the spec fields, so the cap can land in `criteria`
+  // after the fold has already closed. The brief is whole; only the spec behind it was lost.
+  describe("when the token cap lands after the fold already closed", () => {
+    const capAfterFold =
+      '{"draft": {"title": "Add a dark mode toggle", "details": "- Add a toggle\\n\\n<details><summary><strong>The brief</strong></summary>\\n\\n**What**\\nA toggle.\\n\\n> I want dark mode\\n</details>", "area": "Activity", "criteria": ["When the member taps the toggle, the app shall swi';
+
+    it("adds no orphan close — the open and close counts stay equal", () => {
+      const result = parseCoachReply(capAfterFold, 2, "I want dark mode") as {
+        details: string;
+        cut?: boolean;
+      };
+
+      expect(result.cut).toBe(true);
+      expect(result.details.match(/<details[^>]*>/g)).toHaveLength(1);
+      expect(result.details.match(/<\/details>/g)).toHaveLength(1);
+      expect(result.details.trimEnd().endsWith("</details>")).toBe(true);
+    });
+
+    it("says the spec was cut, not the brief, and says it inside the fold", () => {
+      const { details } = parseCoachReply(capAfterFold, 2, "I want dark mode") as {
+        details: string;
+      };
+
+      expect(details).not.toContain("the rest of this brief was cut off");
+      expect(details).toContain("the brief above is complete");
+      expect(details.indexOf("the brief above is complete")).toBeLessThan(
+        details.indexOf("</details>"),
+      );
+      expect(details.indexOf("**In the member's own words**")).toBeLessThan(
+        details.indexOf("</details>"),
+      );
+    });
+  });
+
   it("keeps quotes out of the labels the prompt asks the model to copy", async () => {
     let sent: { system?: string } = {};
     const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
