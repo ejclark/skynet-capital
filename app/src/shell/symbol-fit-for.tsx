@@ -21,6 +21,11 @@ import { capitalized } from "./playbook-strategy-cards";
 
 const FOLDED = new Set<FitRow["status"]>(["stand-aside", "cant-run", "stale"]);
 
+/** Why a folded row is not to take, in its fewest words: a stale row's word leads with the verdict
+ *  it used to carry ("researched · past its shelf date"), so it is named by the shelf date. */
+const foldedWord = (row: FitRow): string =>
+  row.status === "stale" ? "past its shelf date" : (row.word.split(",")[0] ?? row.word);
+
 function Row({ row, symbol }: { readonly row: FitRow; readonly symbol: string }): ReactElement {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | undefined>();
@@ -115,7 +120,7 @@ export function SymbolFitFor({
       {folded.length > 0 ? (
         <details className="fit-folded">
           <summary>
-            {folded.length} not to take: {folded.map((row) => row.word.split(",")[0]).join(" · ")}
+            {folded.length} not to take: {folded.map(foldedWord).join(" · ")}
           </summary>
           <ul className="fit-list">
             {folded.map((row) => (

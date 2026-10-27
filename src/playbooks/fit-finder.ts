@@ -13,7 +13,8 @@
  * member and costs nothing per read. Paper only.
  *
  * A strategy that never trades one chosen ticker (Sauron's basket, the forced pick, the scout) has
- * no `act` line and is not a candidate here. The order is the answer: current ✓ first, then ◆ (an
+ * no `act` line and is not a candidate here. The order is the answer: current ✓ first (a clean ✓
+ * before a △ one below the house bar), then ◆ (an
  * owner's own conviction), then ~, then the tickers the house has not studied yet (askable), then ✗
  * and ⊘ — a refusal is a call, so it stays on the list with its reason, never silently dropped.
  */
@@ -28,6 +29,7 @@ import {
   STRATEGIES,
   type Strategy,
   type StrategyId,
+  statusParts,
 } from "./pair-table.js";
 
 /** Where a strategy stands on one ticker. `stale` is a ✓ past its shelf date; the rest are the
@@ -78,6 +80,9 @@ const FIT_STATUS_RANK: Readonly<Record<FitStatus, number>> = {
   "cant-run": 6,
 };
 
+/** A △ ✓ (below the house bar) still ranks with the ✓s, but after every clean one. */
+const rankOf = (row: FitRow): number => FIT_STATUS_RANK[row.status] + (row.glyph === "△" ? 0.5 : 0);
+
 const fill = (text: string, symbol: string): string => text.replaceAll("<SYM>", symbol);
 
 /** The row a strategy has no pair for on this ticker. */
@@ -116,14 +121,13 @@ function rowOf(base: Base, pair: Pair, asOfIso: string): FitRow {
   const { evidence } = pair;
   const stale = isStale(evidence, asOfIso);
   const status: FitStatus = stale ? "stale" : evidence.status;
-  const label = EVIDENCE_STATUS[evidence.status];
-  const word = stale ? "stale, due for re-research" : label.word;
   const until = evidence.status === "conviction" ? evidence.checkOn : evidence.shelfOn;
   return {
     ...base,
     status,
-    glyph: stale ? "△" : label.glyph,
-    word: evidence.qualifier && status === "researched" ? `${word}, ${evidence.qualifier}` : word,
+    // The Store card's own mark, glyph and words (#6275): a weakened ✓ wears △ on both doors, and a
+    // stale row says "past its shelf date" in words rather than borrowing △ for a second meaning.
+    ...statusParts(evidence, stale),
     reason:
       evidence.status === "cant-run" && evidence.reason
         ? `${evidence.call} ${evidence.reason}.`
@@ -155,6 +159,6 @@ export function fitFor(symbol: string, asOfIso: string): FitAnswer {
     });
   return {
     symbol: sym,
-    fits: fits.sort((a, b) => FIT_STATUS_RANK[a.status] - FIT_STATUS_RANK[b.status]),
+    fits: fits.sort((a, b) => rankOf(a) - rankOf(b)),
   };
 }

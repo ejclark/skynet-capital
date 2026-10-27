@@ -394,6 +394,54 @@ describe("previewOptionOrder — shares already covering a call you sold", () =>
     });
   });
 
+  // #6277: the open side trusts the long's cap, so the close side must re-check the book.
+  describe("closing the long call a sold call rested on", () => {
+    const capping = { symbol: "MSFT260918C00430000", quantity: 2, avgPrice: 9, marketValue: 1_800 };
+    const third = { symbol: "MSFT260918C00450000", quantity: -3, avgPrice: 4, marketValue: 0 };
+
+    it("refuses the close once freed shares cover a newer call (the audit's book)", () => {
+      const opened = previewOptionOrder(
+        { ...request, contracts: 3, strike: 450 },
+        context({ positions: [shares, sold, capping] }),
+      );
+      expect(opened.ok).toBe(true);
+      const close = previewOptionClose(
+        "MSFT260918C00430000",
+        context({ positions: [shares, sold, capping, third] }),
+      );
+      expect(close.ok).toBe(false);
+      expect(close.refusals.join(" ")).toContain(
+        "Selling a long call you hold leaves the call it capped uncovered",
+      );
+    });
+
+    it("refuses closing a debit spread's long call when no shares stand behind the short", () => {
+      const close = previewOptionClose(
+        "MSFT260918C00430000",
+        context({ positions: [sold, capping] }),
+      );
+      expect(close.ok).toBe(false);
+      expect(close.refusals.join(" ")).toContain("This desk never sells naked calls");
+    });
+
+    it("allows the close when held shares can take over the cover", () => {
+      const close = previewOptionClose(
+        "MSFT260918C00430000",
+        context({ positions: [shares, sold, capping] }),
+      );
+      expect(close.ok).toBe(true);
+      expect(close.refusals).toEqual([]);
+    });
+
+    it("allows buying back the sold call — that only ever frees cover", () => {
+      const close = previewOptionClose(
+        "MSFT260918C00440000",
+        context({ positions: [sold, capping] }),
+      );
+      expect(close.ok).toBe(true);
+    });
+  });
+
   it("ignores long calls, puts, and other stocks when counting what's promised", () => {
     const noise = [
       { symbol: "MSFT260918C00440000", quantity: 2, avgPrice: 5, marketValue: 0 },

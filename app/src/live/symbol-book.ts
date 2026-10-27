@@ -11,7 +11,8 @@ import { held } from "./quantity";
  *   invested  the symbol's positions at market value, summed — the cockpit head's own "invested"
  *             (`participantInvested`: a sold option's liability nets against it), so the symbols
  *             add up to the figure the head prints above them. Worded "Invested", never "In play"
- *             (Eric, round 4: "In play feels to cute, bound to cause confusion").
+ *             (Eric, round 4: "In play feels to cute, bound to cause confusion"). Signed: below
+ *             zero (a sold put alone) the head prints "-$550 in positions" (#6283).
  *   pl        unrealized P/L, the positions' `totalPlRaw` summed.
  *   rows      one per position: its name, its target and its own P/L.
  *   soonest   the first date something must be decided on the symbol — a decision card's `due`, else
