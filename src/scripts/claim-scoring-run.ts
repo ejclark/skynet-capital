@@ -102,6 +102,42 @@ function forwardTestsReader(): (link: ForwardLink) => ForwardRow | undefined {
   };
 }
 
+/**
+ * Whether any of a conviction's claims scores from `event`'s forward tests. Pure. This is how the
+ * event lane finds the convictions its own scoring just moved (`npm run research:claims -- --event
+ * <id>`): the link on the claim's check, never the conviction doc's proposals table, because the
+ * check is what the scorer reads.
+ */
+export const readsEvent = (conviction: Conviction, event: string): boolean =>
+  conviction.claims.some(
+    (c) => c.check?.kind === "forward-tests" && c.check.tests.some((t) => t.event === event),
+  );
+
+const decidedScore = (e: ScoreLedgerEntry | undefined): boolean =>
+  e?.score.outcome === "pass" || e?.score.outcome === "fail";
+
+/**
+ * The event lane's write: the scores on file, with only the claims this pass newly DECIDES taken
+ * from it (pending → pass or fail). A decided score is final, and a pending one keeps its line, so
+ * a lane's PR changes one claim's entry once, the day its falsifier is read. Pure.
+ *
+ * Why not the whole fresh array: the scores file is one file every lane that scores a linked row
+ * writes, against the event lane's one-file-per-owner rule (#1449). Rewriting every entry would
+ * restamp `scoredOn` on claims decided days ago, roll back a score a full pass merged after the
+ * lane's branch was cut, and turn two sibling lanes into a merge conflict over pending wording.
+ * Changing only what this pass decides keeps two lanes on disjoint lines, as appends are.
+ */
+export function laneScores(
+  onFile: readonly ScoreLedgerEntry[],
+  fresh: readonly ScoreLedgerEntry[],
+): readonly ScoreLedgerEntry[] {
+  const kept = new Map(onFile.map((e) => [e.statement, e]));
+  return fresh.map((e) => {
+    const old = kept.get(e.statement);
+    return old && (decidedScore(old) || !decidedScore(e)) ? old : e;
+  });
+}
+
 export interface ConvictionScoring {
   readonly entries: readonly ScoreLedgerEntry[];
   readonly lines: readonly string[];
