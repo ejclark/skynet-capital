@@ -75,4 +75,20 @@ describe("doneNote", () => {
     });
     expect(doneNote(cancelled, open)).not.toContain("simulated fill");
   });
+
+  // #6330: a terminal non-fill frame said "Queued" under a "canceled" headline.
+  it("names a terminal non-fill status instead of 'queued', agreeing with the headline", () => {
+    for (const status of ["canceled", "rejected", "expired"]) {
+      const terminal = frame({
+        eventType: "order.updated",
+        payload: { status, filledQuantity: 0 },
+      });
+      const note = doneNote(terminal, closed);
+      expect(note).not.toMatch(/Queued/);
+      expect(note.toLowerCase()).toContain(status);
+      expect(fillHeadline(order, terminal)).toContain(status);
+    }
+    const british = frame({ eventType: "order.updated", payload: { status: "cancelled" } });
+    expect(doneNote(british, open)).toBe("Canceled at the paper broker — nothing filled.");
+  });
 });

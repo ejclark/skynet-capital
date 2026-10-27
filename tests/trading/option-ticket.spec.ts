@@ -472,6 +472,35 @@ describe("previewOptionOrder — shares already covering a call you sold", () =>
     });
   });
 
+  // #6330: a long call could cap the new short, so the share rule never asked for shares at all.
+  it("refuses a covered call with no shares behind it, even when a held long call caps it", () => {
+    const longCall = { symbol: "MSFT260918C00500000", quantity: 1, avgPrice: 2, marketValue: 0 };
+    const capped = previewOptionOrder(
+      { ...request, contracts: 1, strike: 445 },
+      context({ positions: [longCall] }),
+    );
+    expect(capped.ok).toBe(false);
+    expect(capped.refusals.join(" ")).toContain("needs 100 shares of MSFT and you hold 0");
+    // Selling the very contract held long nets it away — a close, not a covered call.
+    const same = previewOptionOrder(
+      { ...request, contracts: 1, strike: 500 },
+      context({ positions: [longCall] }),
+    );
+    expect(same.ok).toBe(false);
+    expect(same.refusals.join(" ")).toContain("you hold 0");
+  });
+
+  // #6330: past the exact limit the fallback charged a cap's width the shares make unnecessary.
+  it("passes a share-covered call past the exact limit without charging a long call's width", () => {
+    const many = { ...shares, quantity: 1_300 };
+    const longs = { symbol: "MSFT260918C00500000", quantity: 13, avgPrice: 2, marketValue: 0 };
+    const preview = previewOptionOrder(
+      { ...request, contracts: 13, strike: 445 },
+      context({ cash: 0, positions: [many, longs] }),
+    );
+    expect(preview.refusals).toEqual([]);
+  });
+
   it("ignores long calls, puts, and other stocks when counting what's promised", () => {
     const noise = [
       { symbol: "MSFT260918C00440000", quantity: 2, avgPrice: 5, marketValue: 0 },
