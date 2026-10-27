@@ -51,6 +51,14 @@ describe("conviction proposals", () => {
     expect(pendingFor("crwv-print", "2026-10-27", proposals, declined)).toEqual([]);
   });
 
+  it("a longer token does not answer a shorter one (P10 is not P1)", () => {
+    const proposals = parseProposals("ai-dip", DOC);
+    const other = "| FT-crwv-print-4 | registered from conviction proposal ai-dip/P10 | … |";
+    expect(pendingFor("crwv-print", "2026-10-27", proposals, other).map((p) => p.key)).toEqual([
+      "ai-dip/P1",
+    ]);
+  });
+
   it("drops a proposal once its score-by date has passed", () => {
     const proposals = parseProposals("ai-dip", DOC);
     expect(pendingFor("midterms", "2026-11-09", proposals, "")).toHaveLength(1);

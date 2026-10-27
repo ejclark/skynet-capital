@@ -69,13 +69,16 @@ export function parseProposals(slug, text) {
 }
 
 /** The proposals for `eventId` still waiting on its lane. Pure: `answeredText` is the event's
- *  fragment plus its ledger, concatenated; a token anywhere in it is an answer. */
+ *  fragment plus its ledger, concatenated; a token anywhere in it is an answer — a whole token,
+ *  so `…/P1` is not answered by `…/P10`. */
 export function pendingFor(eventId, today, proposals, answeredText) {
+  const answered = (key) =>
+    new RegExp(`${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\d)`).test(answeredText);
   return proposals.filter(
     (p) =>
       p.fragment === eventId &&
       !(/^\d{4}-\d{2}-\d{2}$/.test(p.scoreBy) && p.scoreBy < today) &&
-      !answeredText.includes(p.key),
+      !answered(p.key),
   );
 }
 
