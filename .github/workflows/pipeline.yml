@@ -541,6 +541,7 @@ jobs:
         # `[[http_service.checks]]` in fly.toml makes flyctl wait for the new machine to answer and
         # fail this step when it never does, instead of calling a booted-but-broken release healthy.
         if: ${{ steps.preflight.outputs.deploy == 'true' }}
+        id: deploy
         run: |
           sed -i "/^\[env\]/a\\
             GIT_SHA = \"${{ github.sha }}\"" fly.toml
@@ -564,10 +565,14 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+      # A failed deploy rolls back exactly as a failed smoke does (#6293). A refused boot (#6039's
+      # production-access gate) never passes /pulse, so flyctl fails the deploy step, smoke is then
+      # skipped, and a smoke-only condition left the machine crash-looping on the refusing image.
+      # A deploy that succeeded, or never ran (preflight said no), never matches either clause.
       - name: Roll back to previous image
-        if: ${{ failure() && steps.smoke.conclusion == 'failure' && steps.prev.outputs.image != '' }}
+        if: ${{ failure() && (steps.deploy.conclusion == 'failure' || steps.smoke.conclusion == 'failure') && steps.prev.outputs.image != '' }}
         run: |
-          echo "smoke failed — rolling back to ${{ steps.prev.outputs.image }}"
+          echo "${{ steps.deploy.conclusion == 'failure' && 'deploy' || 'smoke' }} failed — rolling back to ${{ steps.prev.outputs.image }}"
           node scripts/fly-deploy.mjs -a skynet-capital --image "${{ steps.prev.outputs.image }}"
           bash scripts/smoke.sh https://skynet-capital.fly.dev
         env:

@@ -772,3 +772,59 @@ describe("moneypenny-events — build lanes push as the App, never the persisted
     });
   }
 });
+
+// #6293 (found 2026-10-27): #6039's production-access gate refuses a boot, flyctl fails the
+// `Deploy to Fly` step, `Smoke test the release` (no `if: always()`) is then skipped — and the
+// rollback keyed only on smoke never ran, leaving the one machine crash-looping. The condition is
+// read from the file and evaluated under each outcome GitHub can hand it, so the clause that must
+// never fire (a deploy that succeeded or never ran) is pinned beside the one that must.
+describe("deploy — a failed deploy step rolls back exactly as a failed smoke does", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const job = pipeline.slice(pipeline.indexOf("\n  deploy:"), pipeline.indexOf("\n  deploy-bots:"));
+  const step = (name: string) => {
+    const start = job.indexOf(`- name: ${name}`);
+    return job.slice(start, job.indexOf("\n      - name: ", start + 1));
+  };
+  const condition =
+    step("Roll back to previous image").match(/^\s+if: \$\{\{ (.+) \}\}$/m)?.[1] ?? "";
+
+  type Outcome = "success" | "failure" | "skipped";
+  // GitHub's expression grammar, for the subset this condition uses: failure(), step conclusions,
+  // a step output, ==, != and the boolean operators. Anything else throws, so a rewrite of the
+  // condition into a shape this cannot read fails the spec instead of passing it silently.
+  const rollsBack = (deploy: Outcome, smoke: Outcome, prevImage = "registry.fly.io/app:prev") => {
+    const anyFailed = deploy === "failure" || smoke === "failure";
+    const js = condition
+      .replace(/failure\(\)/g, String(anyFailed))
+      .replace(/steps\.deploy\.conclusion/g, JSON.stringify(deploy))
+      .replace(/steps\.smoke\.conclusion/g, JSON.stringify(smoke))
+      .replace(/steps\.prev\.outputs\.image/g, JSON.stringify(prevImage))
+      .replace(/'([^']*)'/g, (_m, s: string) => JSON.stringify(s))
+      .replace(/!=/g, "!==")
+      .replace(/([^!=])==([^=])/g, "$1===$2");
+    if (!/^[\s\w"./:()|&!=-]+$/.test(js)) throw new Error(`unreadable condition: ${js}`);
+    return new Function(`return (${js});`)() as boolean;
+  };
+
+  it("gives the deploy step the id the rollback reads", () => {
+    expect(step("Deploy to Fly")).toMatch(/^\s+id: deploy$/m);
+    expect(condition).not.toBe("");
+  });
+
+  it("rolls back when the deploy step fails and smoke is therefore skipped (a refused boot)", () => {
+    expect(rollsBack("failure", "skipped")).toBe(true);
+  });
+
+  it("still rolls back when the deploy succeeds and smoke fails", () => {
+    expect(rollsBack("success", "failure")).toBe(true);
+  });
+
+  it("never rolls back a deploy that succeeded, or one the preflight skipped", () => {
+    expect(rollsBack("success", "success")).toBe(false);
+    expect(rollsBack("skipped", "skipped")).toBe(false);
+  });
+
+  it("does not roll back when there is no previous image to go to", () => {
+    expect(rollsBack("failure", "skipped", "")).toBe(false);
+  });
+});
