@@ -14,7 +14,7 @@
 //
 // WHY A SEPARATE DECISION AND NOT JUST "RANK IT HIGHER". Continuing is only safe when the PREVIOUS
 // slice is provably finished, and "finished" is four facts, not one: the plan is pullable (not
-// parked, not `in-progress`), no PR is still open on `plan/<n>`, the run this lane last dispatched
+// parked, not `in-progress`), no open PR still names `#n`, the run this lane last dispatched
 // has concluded, and the state block MOVED (a build that ended without editing its own block did
 // not do the work the block describes). Rank order knows none of that. So this file asks those four
 // questions, and only then puts the plan at the head of the queue.
@@ -48,7 +48,7 @@ import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
 import { DEFAULT_MODEL } from "./model-tier.mjs";
 import { BLOCKER_READS, nextSubIssue } from "./pickup-hold.mjs";
-import { derivePrIssues } from "./pr-issues.mjs";
+import { derivePrIssues, keywordIssuesOf, laneClassOf } from "./pr-issues.mjs";
 import {
   allReceiptsOf,
   blockFingerprint,
@@ -208,7 +208,7 @@ export function continuationDecision(candidate = {}, { caps = {}, now = Date.now
   if (notPullable) return skip(notPullable);
   if (candidate.openPlanPr) {
     return skip(
-      `#${candidate.openPlanPr} is still open on \`plan/${plan.number}\` — one slice in flight per plan`,
+      `open PR #${candidate.openPlanPr} still names #${plan.number} — one slice in flight per plan`,
     );
   }
   const block = stateBlockOf(candidate.comments);
@@ -386,15 +386,20 @@ const restOr = (path, fallback) => {
  * mid-slice — two builds on one plan, both editing the same state block. The PR-names-the-issue
  * rules already cover every build path (`Closes #n`, `Part of #n`, a bare `#n` in the title, the
  * branch's own number), which is exactly the gap #4393 closed for the in-flight cap.
+ *
+ * A HELD PLATTER NAMES ONLY WHAT IT CLOSES (#6282). Since #6144 its body carries a `Part of #n`
+ * bullet per boarded item with work left, and the item's own PR is closed on boarding (#6266), so
+ * reading that bullet as "a build of #n" parked #n for the platter's whole hold — up to a digest
+ * week. `platterClosesByIssue`'s rule (#6193) applies instead: a `Closes #n` issue waits on the
+ * merge; a `Part of #n` issue still has work left, which a puller may take.
  */
 export function openPrsByIssue(openPrs = []) {
   const byIssue = new Map();
   for (const pr of openPrs) {
-    const named = derivePrIssues({
-      title: pr?.title,
-      body: pr?.body,
-      headRef: pr?.head?.ref,
-    });
+    const named =
+      laneClassOf(pr?.head?.ref) === "platter"
+        ? keywordIssuesOf(pr?.body ?? "").closes
+        : derivePrIssues({ title: pr?.title, body: pr?.body, headRef: pr?.head?.ref });
     for (const n of named) if (!byIssue.has(n)) byIssue.set(n, pr.number);
   }
   return byIssue;
