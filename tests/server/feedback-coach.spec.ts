@@ -293,6 +293,23 @@ describe("feedback coach", () => {
     expect(sent.messages[0]?.content).toBe("chart bad");
   });
 
+  it("logs one usage line per coach call", async () => {
+    const lines: string[] = [];
+    const coach = createFeedbackCoach({ apiKey: "k", logLine: (l) => lines.push(l) }, () =>
+      Promise.resolve({
+        status: 200,
+        body: {
+          content: [{ type: "text", text: '{"question": "where?"}' }],
+          usage: { input_tokens: 700, output_tokens: 12, cache_creation_input_tokens: 0 },
+        },
+      }),
+    );
+    await coach({ kind: "bug", messages: [{ role: "user", content: "hi" }] });
+    expect(lines).toEqual([
+      "claude-usage surface=feedback-coach model=claude-haiku-4-5 input=700 output=12 cache_read=0 cache_creation=0",
+    ]);
+  });
+
   it("reports an API failure honestly instead of pretending to coach", async () => {
     const coach = createFeedbackCoach({ apiKey: "k" }, () =>
       Promise.resolve({ status: 429, body: { error: { message: "rate limited" } } }),

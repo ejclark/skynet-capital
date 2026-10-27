@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -22,13 +22,24 @@ const cutTomlPath = join(tmpToml, "cut-over.toml");
 const preCutoverTomlPath = join(tmpToml, "pre-cutover.toml");
 writeFileSync(cutTomlPath, "dashboard = 1\n");
 writeFileSync(preCutoverTomlPath, "bots = 1\ndashboard = 1\n");
+// The failure backoff (#6005) asks the GitHub API for the SHA's deploy history; an empty
+// BOTS_DEPLOY_HISTORY stands in for "no prior attempts", and GITHUB_STEP_SUMMARY points at a temp
+// file so a CI run of this spec never writes into its own job summary.
+const summaryPath = join(tmpToml, "step-summary.md");
 
 afterAll(() => rmSync(tmpToml, { recursive: true, force: true }));
 
 const preflight = (env: Record<string, string>): { deploy: boolean; reason: string } => {
   const out = execFileSync("node", ["scripts/bots-deploy-preflight.mjs"], {
     encoding: "utf8",
-    env: { ...process.env, FLY_TOML_PATH: cutTomlPath, VOLUMES_JSON: VOLUMES_PRESENT, ...env },
+    env: {
+      ...process.env,
+      FLY_TOML_PATH: cutTomlPath,
+      VOLUMES_JSON: VOLUMES_PRESENT,
+      BOTS_DEPLOY_HISTORY: "",
+      GITHUB_STEP_SUMMARY: summaryPath,
+      ...env,
+    },
   });
   const [verdict, reason] = out.trim().split("\n");
   return { deploy: verdict === "deploy", reason: reason ?? "" };
@@ -194,7 +205,13 @@ describe("bots-deploy preflight — the volume gate (#1264 aftermath)", () => {
   const preflightStderr = (env: Record<string, string>) =>
     spawnSync(process.execPath, ["scripts/bots-deploy-preflight.mjs"], {
       encoding: "utf8",
-      env: { ...process.env, FLY_TOML_PATH: cutTomlPath, ...env },
+      env: {
+        ...process.env,
+        FLY_TOML_PATH: cutTomlPath,
+        BOTS_DEPLOY_HISTORY: "",
+        GITHUB_STEP_SUMMARY: summaryPath,
+        ...env,
+      },
     });
 
   it("names the skipped volume check when the listing is unreadable — stdout stays two lines", () => {
@@ -228,5 +245,91 @@ describe("bots-deploy preflight — the volume gate (#1264 aftermath)", () => {
     });
     expect(verdict.deploy).toBe(false);
     expect(verdict.reason).toContain("no bots-app Fly token");
+  });
+});
+
+describe("bots-deploy preflight — the per-SHA failure backoff (#6005)", () => {
+  // The incident: a rolled-back deploy drops the GIT_SHA stamp, so "no baseline" said deploy on
+  // every catch-up tick — 91 dispatches on one commit. HEAD_SHA is a full-length fake SHA.
+  const HEAD = "dd038433aaaabbbbccccddddeeeeffff00001111";
+  const UNSTAMPED = { ...BASE_ENV, DEPLOYED_SHA: "", HEAD_SHA: HEAD };
+
+  it("skips once the last 3 bots deploys of this SHA all failed, and says so in the summary", () => {
+    rmSync(summaryPath, { force: true });
+    const verdict = preflight({ ...UNSTAMPED, BOTS_DEPLOY_HISTORY: "failure,failure,failure" });
+    expect(verdict.deploy).toBe(false);
+    expect(verdict.reason).toContain("backoff: the last 3 bots deploys of dd03843 failed");
+    expect(verdict.reason).toContain("next bot-relevant commit on main");
+    expect(readFileSync(summaryPath, "utf8")).toContain("**Bots deploy held**");
+  });
+
+  it("still tries while the streak is under the limit", () => {
+    const verdict = preflight({ ...UNSTAMPED, BOTS_DEPLOY_HISTORY: "failure,failure" });
+    expect(verdict.deploy).toBe(true);
+    expect(verdict.reason).toContain("no GIT_SHA baseline");
+  });
+
+  it("a success ends the streak — older failures before it never count", () => {
+    const verdict = preflight({
+      ...UNSTAMPED,
+      BOTS_DEPLOY_HISTORY: "failure,success,failure,failure",
+    });
+    expect(verdict.deploy).toBe(true);
+  });
+
+  it("cancelled or skipped jobs were never attempts — they neither count nor break the streak", () => {
+    const verdict = preflight({
+      ...UNSTAMPED,
+      BOTS_DEPLOY_HISTORY: "failure,cancelled,failure,skipped,failure",
+    });
+    expect(verdict.deploy).toBe(false);
+    expect(verdict.reason).toContain("backoff");
+  });
+
+  it("a new commit is a clean record — no history for the new SHA, so it deploys", () => {
+    const verdict = preflight({ ...UNSTAMPED, HEAD_SHA: "f".repeat(40), BOTS_DEPLOY_HISTORY: "" });
+    expect(verdict.deploy).toBe(true);
+  });
+
+  it("never holds a forced dispatch — the manual lever always gets its try", () => {
+    const verdict = preflight({
+      ...UNSTAMPED,
+      FORCE: "true",
+      BOTS_DEPLOY_HISTORY: "failure,failure,failure,failure",
+    });
+    expect(verdict.deploy).toBe(true);
+    expect(verdict.reason).toBe("force_bots_deploy dispatch");
+  });
+
+  it("never consulted on a skip verdict — nothing to hold when nothing would deploy", () => {
+    const verdict = preflight({
+      ...BASE_ENV,
+      DEPLOYED_SHA: "HEAD",
+      HEAD_SHA: "HEAD",
+      BOTS_DEPLOY_HISTORY: "failure,failure,failure",
+    });
+    expect(verdict.reason).toContain("no changed paths");
+  });
+
+  it("fails open and names itself when the run history cannot be read", () => {
+    // No BOTS_DEPLOY_HISTORY override and PATH without gh — the pipeline's own token-less state.
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      ...UNSTAMPED,
+      FLY_TOML_PATH: cutTomlPath,
+      VOLUMES_JSON: VOLUMES_PRESENT,
+      GITHUB_STEP_SUMMARY: summaryPath,
+      PATH: tmpToml,
+    };
+    delete env.BOTS_DEPLOY_HISTORY;
+    const r = spawnSync(process.execPath, ["scripts/bots-deploy-preflight.mjs"], {
+      encoding: "utf8",
+      env,
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().split("\n")[0]).toBe("deploy");
+    expect(r.stderr).toContain(
+      "· failure backoff skipped (`gh api` could not read the run history) — UNKNOWN",
+    );
   });
 });

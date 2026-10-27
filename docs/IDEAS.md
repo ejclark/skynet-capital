@@ -224,31 +224,10 @@ picks it up starts from the fork, not the wish.
   cloud path), and three migration-relative comments. The docs half of each already shipped. These
   need an interactive session where Eric approves the edit.
   _(src: Claude · while: the model-fit audit build, batch grind)_
-- **No Claude call site reads `usage` or `stop_reason: "max_tokens"`.** The companion, the coach
-  and the eval judge never log `input_tokens` / `output_tokens` / `cache_read_input_tokens`, so the
-  cost of a prompt change, the cache hit rate and a truncated reply are all invisible. The
-  prompt-audit guide names token accounting as the prerequisite for measuring any cleanup. One
-  `usage` line per call in `src/http/anthropic-reply.ts` is enough to start.
-  _(src: Claude · while: the model-fit audit, finding F20)_
-- **The companion reads `stop_reason` for a refusal only — `max_tokens` and a mid-stream refusal's
-  partial are still unhandled.** (a) Neither leg reads `stop_reason: "max_tokens"`, so a truncated
-  reply finishes as done; the 4000 cap makes it rarer, not handled. (b) A refusal after partial text
-  keeps the partial on the rail with " — cut off"; the migration guide's rule is to discard it.
-  Discarding needs the rail (`app/src/live/moneypenny.ts`, the `failure` branch after the stream)
-  to tell a refusal from a transport error — today both arrive as one `onError` string.
-  _(src: Claude · while: the model-fit audit, batch companion-request — the streamed leg's refusal read)_
-- **Move the companion's exhaustion note to a mid-conversation `role: "system"` message on Sonnet
-  5.5.** Today `EXHAUSTED_NOTE` rides as a text block after the last tool_result. That is the
-  guide's fallback form, valid on Sonnet 5 and Haiku 4.5. But the system prompt's UNTRUSTED INPUT
-  rule tells the model that user-turn text is member data, so the note may steer weakly or be
-  narrated back to the member. Once `claude-sonnet-5-5` is on the companion allowlist (the platter
-  item), gate the system-message form by model the way `effortFor` gates effort.
-  _(src: Claude · while: the model-fit audit, batch companion-request — review of the append-only final leg)_
-- **Pin the companion-eval judge's effort instead of inheriting Sonnet 5.5's default.**
-  `src/evals/companion/judge.ts` sends no `output_config.effort`, so it grades at the API default,
-  and Sonnet 5.5's levels are recalibrated. A default change would shift grading with no diff. Pin
-  `effort: "high"` beside `format`, or sweep the 15 fixtures first and pick.
-  _(src: Claude · while: review of the model-fit structured-outputs batch)_
+- **Claude call-site follow-ups from the model-fit audit → #6080.** `max_tokens` handling, usage
+  logging, the exhaustion note as a system message on Sonnet 5.5 and the judge's pinned effort
+  all ship there; discarding a refusal's partial reply on the rail is its next slice.
+  _(src: Claude · while: the model-fit audit, 2026-10-04)_
 - **Backfill the event ledgers' Rules paragraph onto the current TEMPLATE.** 585 ledgers under
   `docs/research/events/` still say a dated adjacent event "gets proposed" with no horizon, and 543
   say the doc "goes quiet" after close-out. Both contradict `TEMPLATE.md` and the HORIZON LEASH in

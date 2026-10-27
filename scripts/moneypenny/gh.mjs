@@ -99,24 +99,58 @@ export function withRetry(
  * `JSON.parse` turns into an object with none of the fields the caller wanted — a silent empty
  * result, which is the exact failure `gatherDeps` is written to be loud about. Same lesson as
  * `ensureLabel` (docs/LESSONS.md, 2026-08-19).
+ *
+ * `--fail-with-body`, NOT BARE `--fail` (#6224). Bare `--fail` throws the response body away, so a
+ * 403 reached the log as `returned error: 403` and nothing else — rate limit or bad credential,
+ * nobody could tell, and `boardSyncSkip`'s rate-limit soft skip (#4438) never saw its phrase. Run
+ * 40421267754: two `sync project status` runs a second apart both died that way on one issue read.
+ * The exit status is the same 22; only the body survives, and `withResponseBody` puts it where
+ * every classifier reads. `run` is injected so that path is provable without a network call.
  */
-export function ghRest(path, { token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN } = {}) {
+export function ghRest(
+  path,
+  { token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN, run = sh } = {},
+) {
   const repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
   const url = path.startsWith("http")
     ? path
     : `https://api.github.com/repos/${repo}/${path.replace(/^\//, "")}`;
-  const out = sh("curl", [
-    "-sS",
-    "--fail",
-    "-H",
-    `Authorization: Bearer ${token ?? ""}`,
-    "-H",
-    "Accept: application/vnd.github+json",
-    "-H",
-    "User-Agent: skynet-moneypenny",
-    url,
-  ]);
+  let out;
+  try {
+    out = run("curl", [
+      "-sS",
+      "--fail-with-body",
+      "-H",
+      `Authorization: Bearer ${token ?? ""}`,
+      "-H",
+      "Accept: application/vnd.github+json",
+      "-H",
+      "User-Agent: skynet-moneypenny",
+      url,
+    ]);
+  } catch (err) {
+    throw withResponseBody(err);
+  }
   return JSON.parse(out || "null");
+}
+
+/**
+ * Append GitHub's own reason — the error body's `message`, else the raw body — to a failed curl's
+ * `message`, which `withRetry`, `boardSyncSkip` and every explainer already read. One line, capped,
+ * so a stray HTML error page cannot flood a log. Leaves `stderr`/`status` untouched: the
+ * `returned error: 5xx` wording the retry keys on is still exactly where it was.
+ */
+export function withResponseBody(err) {
+  const body = String(err?.stdout ?? "").trim();
+  if (!err || typeof err !== "object" || !body) return err;
+  let said = body;
+  try {
+    said = JSON.parse(body)?.message ?? body;
+  } catch {
+    // not JSON — keep the raw text
+  }
+  err.message = `${err.message}\nGitHub said: ${String(said).replace(/\s+/g, " ").slice(0, 300)}`;
+  return err;
 }
 
 /**

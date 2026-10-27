@@ -40,3 +40,7 @@ export function createRng(seed = 1337): Rng {
     chance: (p) => next() < p,
   };
 }
+
+/** One of `arr`, chosen by `rng` — consumes exactly one `next()`, so the sequence is unchanged. */
+export const pick = <T>(rng: Rng, arr: readonly T[]): T =>
+  arr[Math.floor(rng.next() * arr.length)] as T;

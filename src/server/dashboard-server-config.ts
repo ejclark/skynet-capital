@@ -3,19 +3,19 @@ import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { DecisionFunnel, RetrospectiveRecord } from "../autonomous/decision-db.js";
+import type { VerdictRunStart } from "../autonomous/decision-db-verdict-run.js";
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
 import type { SignalWindows } from "../autonomous/signal-windows.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
-import type { OrderIntent } from "../domain/types.js";
+import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
-import type { PulseHistoryFold } from "../observatory/pulse-history-fold.js";
 import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
 import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { WatchlistPort } from "../ports/watchlist.js";
@@ -145,9 +145,6 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).
    */
   readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
-  /** A participant's history as Pulse reads it — a live fold kept up to date by what was appended
-   *  (`pulse-history-cache.ts`, #4619). Omit and Pulse folds `readHistory` per request instead. */
-  readonly readPulseHistory?: (participantId: string) => Promise<PulseHistoryFold>;
   /** Re-reads this account from the broker before its desk renders, so the screen shows what Alpaca
    *  holds rather than only what the fill stream delivered. Rate-limited and failure-swallowing
    *  in `createBrokerSync`; omit (offline/tests) and the desk renders live memory as before. */
@@ -168,6 +165,14 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  `decision-db-week.ts`) — the Playbooks strip and lanes. Omit, or return undefined, to leave
    *  the heartbeat's `week` off: no strip is better than one drawing gaps nobody recorded. */
   readonly readCheckWeek?: (participantId: string) => CheckWeekRows | undefined;
+  /** When the run of a playbook's verdict holding at the pass `startAt` began (#4953,
+   *  `decision-db-verdict-run.ts`) — the Playbooks cards' exact "since". Omit and "since" reaches
+   *  only as far back as the passes `readDecisions` returned, said as "at least since". */
+  readonly readVerdictRunStart?: (
+    participantId: string,
+    startAt: number,
+    verdict: PlaybookVerdict,
+  ) => VerdictRunStart | undefined;
   /** Each house playbook's funnel over the last ten sessions (#4450 slice 5a, `playbook-funnel.ts`)
    *  — R&D → Playbooks' house metrics. Omit and the performance read carries `funnel: null`, so a
    *  card says nothing rather than ten sessions of zeros nobody recorded. */

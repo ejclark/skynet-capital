@@ -22,6 +22,7 @@ import {
   type RetrospectiveRecord,
 } from "../autonomous/decision-db.js";
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
+import type { VerdictRunStart } from "../autonomous/decision-db-verdict-run.js";
 import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { storeDecisionBatch } from "../autonomous/decision-wire.js";
@@ -32,12 +33,13 @@ import {
   buildSubscriptionsSnapshot,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
 } from "../autonomous/subscriptions-wire.js";
-import type { OrderIntent } from "../domain/types.js";
+import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { Participant } from "../participants/participant.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
+import { resolveBridgeAuth } from "../server/bridge-http.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import { pollSeedsFromEnv } from "../server/subscription-seed-store.js";
@@ -100,6 +102,12 @@ export interface InsightsBridgeHandle {
   readonly funnelFor?: (personaId: string) => DecisionFunnel;
   /** This week's checks, grouped answers and placed trades (#5073 slice 2) — same store. */
   readonly readCheckWeek?: (personaId: string) => CheckWeekRows | undefined;
+  /** When a playbook's current verdict began (#4953) — same store. */
+  readonly readVerdictRunStart?: (
+    personaId: string,
+    startAt: number,
+    verdict: PlaybookVerdict,
+  ) => VerdictRunStart | undefined;
   /** Each house playbook's funnel over the last ten sessions (#4450 slice 5a) — same store. */
   readonly readPlaybookFunnel?: () => PlaybookFunnelView;
   /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
@@ -180,8 +188,10 @@ export function startInsightsBridge(
   // The drafts in a shadow test go out on every poll, read fresh like the subscriptions above.
   const authoredPlays = createAuthoredPlayStore(env, (message) => console.error(message));
   const memberConvictions = createMemberConvictionStore(env, (message) => console.error(message));
+  const bridgeAuth = resolveBridgeAuth(env);
   createInsightsListener({
     record: (entry) => insights.record(entry),
+    bridgeAuth,
     condScout: {
       accept: (snapshot) => {
         condScout = snapshot;
@@ -238,7 +248,8 @@ export function startInsightsBridge(
         }
       : {}),
   }).listen(insightsPort, () => {
-    console.log(`[insights-bridge] internal listener on port ${insightsPort} (private-net only)`);
+    const auth = bridgeAuth.acceptLegacy ? "provisioned secret, literal still accepted" : "literal";
+    console.log(`[insights-bridge] internal listener on port ${insightsPort} (auth: ${auth})`);
   });
   return {
     lastControlsPollAt: () => lastControlsPollAt,
@@ -268,6 +279,10 @@ export function startInsightsBridge(
               ? decisionDb.checkWeek(personaId, window.from, window.to, WEEK_BUCKET_MS)
               : undefined;
           }),
+          // Not remembered: the key would carry the newest pass's instant, which moves every 15 s,
+          // and the heartbeat asks only for a run its 30-pass page could not see the end of.
+          readVerdictRunStart: (personaId: string, startAt: number, verdict: PlaybookVerdict) =>
+            decisionDb.verdictRunStart(personaId, startAt, verdict),
           // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
           // position, not one per cycle, so this is generous headroom at this app's trade volume
           // rather than the "growing feed" concern `listByPersona`'s own bound addresses.

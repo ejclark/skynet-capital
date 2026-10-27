@@ -4,9 +4,10 @@
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
 import { driftChoreFromRepo } from "./drift-chore.mjs";
-import { sh } from "./gh.mjs";
-import { FOOTER, LABELS } from "./labels.mjs";
+import { ghRestAll, sh } from "./gh.mjs";
+import { FOOTER, LABELS, PARKING_LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
+import { rearmIntents, strandedOrNone } from "./stranded-pr.mjs";
 import { loadWorkModeConfig, resolveWorkMode } from "./work-mode.mjs";
 import { workModeRetitle } from "./work-mode-title.mjs";
 
@@ -33,6 +34,9 @@ export function answered(issue = {}) {
   return Array.isArray(linked) && linked.length > 0;
 }
 
+const labelNames = (issue) =>
+  (issue?.labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
+
 /**
  * Is this a feedback issue owed an answer it has not had? `feedback`, never `ready`-less (a Backlog
  * issue waits on an explicit `ready`, so "no answer yet — re-apply `feedback`" was wrong advice to
@@ -41,7 +45,7 @@ export function answered(issue = {}) {
  * "never readied". Pure — `gatherAuditDeps` applies it to the open-issue read.
  */
 export function owedAnswer(issue = {}) {
-  const names = (issue.labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
+  const names = labelNames(issue);
   const spoke = [LABELS.needsEric.name, LABELS.needsInfo.name, LABELS.nextSlice.name];
   return (
     names.includes("feedback") &&
@@ -49,6 +53,70 @@ export function owedAnswer(issue = {}) {
     !answered(issue) &&
     !names.some((n) => spoke.includes(n))
   );
+}
+
+/**
+ * When this issue last BEGAN waiting for an answer (#6042): the latest `ready` or `feedback`
+ * added, or `needs-eric` / `needs-info` / `next-slice` removed — each is the moment `owedAnswer`
+ * can turn true. `fallback` (its `createdAt`) covers an issue whose timeline shows none of them.
+ * Pure over the REST issue timeline.
+ */
+export function waitingSince(timeline = [], fallback = undefined) {
+  const added = [LABELS.ready.name, "feedback"];
+  const removed = [LABELS.needsEric.name, LABELS.needsInfo.name, LABELS.nextSlice.name];
+  const starts = (timeline ?? [])
+    .filter(
+      (e) =>
+        (e?.event === "labeled" && added.includes(e.label?.name)) ||
+        (e?.event === "unlabeled" && removed.includes(e.label?.name)),
+    )
+    .map((e) => Date.parse(e.created_at))
+    .filter(Number.isFinite);
+  return starts.length ? new Date(Math.max(...starts)).toISOString() : fallback;
+}
+
+/**
+ * The silent-feedback candidates `audit()` thresholds: issues owed an answer, minus any marked
+ * `in-progress` (a build is running; if it dies, #3960 takes the label off and the issue is a
+ * candidate again on the next push) and any already flagged (their memory holds, so the timeline
+ * read would buy nothing). `timelineOf(n)` is the one network read, made only for what survives.
+ */
+export function silentFeedbackFrom(issues = [], timelineOf = () => [], nowMs = 0, flagged = []) {
+  return (issues ?? [])
+    .filter(owedAnswer)
+    .filter((i) => !labelNames(i).includes(LABELS.inProgress.name))
+    .filter((i) => !flagged.includes(i.number))
+    .map((i) => {
+      const since = waitingSince(timelineOf(i.number), i.createdAt ?? i.updatedAt);
+      const hoursWaiting = Math.floor((nowMs - Date.parse(since)) / 3_600_000);
+      return { title: i.title, number: i.number, hoursWaiting };
+    });
+}
+
+/** Flags the event-research and CI-capsule writers own: they gate paid repair work under a
+ *  protected prompt, so no clear here ever touches them (#6042). */
+const repairWriterFlag = (i) =>
+  labelNames(i).includes(LABELS.ciFailure.name) ||
+  String(i.title ?? "").startsWith("[event-research]");
+
+/**
+ * The silent-feedback writer's flags whose test no longer holds (#6042): `stall-flagged` on a
+ * `feedback` issue that is not owed an answer any more. Plan flags clear through `planStallFrom`,
+ * which owns their test; the repair writers' flags are never cleared.
+ */
+export function staleStallFlags(issues = []) {
+  return (issues ?? [])
+    .filter((i) => {
+      const names = labelNames(i);
+      return (
+        names.includes(LABELS.stall.name) &&
+        names.includes("feedback") &&
+        !names.includes(LABELS.plan.name) &&
+        !repairWriterFlag(i) &&
+        !owedAnswer(i)
+      );
+    })
+    .map((i) => ({ title: i.title, number: i.number }));
 }
 
 /**
@@ -113,23 +181,28 @@ export function audit(deps = {}) {
   // nothing at all. An over-escalation at least tells someone something; a dropped issue teaches a
   // member that filing feedback does nothing, which costs more than any false positive. Same
   // one-ping-per-stall memory as the check above.
+  //
+  // The clock is how long it has been WAITING, not how long ago it was filed (#6042): every one of
+  // the ten pings between #5680 and 2026-10-26 landed 3–26 min after an old issue was readied, on a
+  // build that was just starting, because `createdAt` made a 421h-old issue look 421h silent.
   for (const f of silentFeedback) {
-    if (f.hoursSinceFiled < silentAfterHours) continue;
+    if (f.hoursWaiting < silentAfterHours) continue;
     if (flagged.has(f.number)) continue;
     intents.push({
       kind: "flag-silent-feedback",
       issueNumber: f.number,
       title: f.title,
-      hoursSinceFiled: f.hoursSinceFiled,
-      body: `🔇 **No answer yet** — this was filed **${f.hoursSinceFiled}h** ago and has not reached a PR or a verdict. Every session must end somewhere a member can see: a PR, \`next-slice\`, \`needs-info\`, or \`needs-eric\`.\n\nRemove and re-add the \`ready\` label to retry the build (since #3912 \`ready\` starts it, not \`feedback\`) — the claim lease makes a re-label a safe retry, not a second build. If it is waiting on something, say so here so it stops looking dropped.\n\n${FOOTER}`,
+      hoursWaiting: f.hoursWaiting,
+      body: `🔇 **No answer yet** — this has waited **${f.hoursWaiting}h** since it was last readied or unparked, and has not reached a PR or a verdict. Every session must end somewhere a member can see: a PR, \`next-slice\`, \`needs-info\`, or \`needs-eric\`.\n\nRemove and re-add the \`ready\` label to retry the build (since #3912 \`ready\` starts it, not \`feedback\`) — the claim lease makes a re-label a safe retry, not a second build. If it is waiting on something, say so here so it stops looking dropped.\n\n${FOOTER}`,
     });
   }
   // #897 (closing #877's deferred slice 3): a `ready` comment on a plan issue that never got
   // claimed or built looks IDENTICAL to "nothing needed" from Eric's side — the trigger may have
   // missed, hit a label mismatch, or lost a claim race, and none of those leave a trace anywhere he
-  // looks. `readyPlans` arrives pre-filtered by `gatherAuditDeps` (via the pure `readyPlanCandidate`
-  // below) to issues that are plan-labeled, carry a ready-signal comment, have no live claim lease,
-  // and have no linked PR — this loop only applies the time threshold and the one-ping memory.
+  // looks. `readyPlans` arrives pre-filtered by `gatherAuditDeps` (via the pure `planStallFrom`
+  // below) to plans with a live ready-flip, no claim lease, and nothing that already spoke for them
+  // (a linked PR, `next-slice`, a parking label, `in-progress`), timed from the latest flip —
+  // this loop only applies the time threshold and the one-ping memory.
   for (const p of readyPlans) {
     if (p.hoursSinceReady < planStallAfterHours) continue;
     if (flagged.has(p.number)) continue;
@@ -138,7 +211,7 @@ export function audit(deps = {}) {
       issueNumber: p.number,
       title: p.title,
       hoursSinceReady: p.hoursSinceReady,
-      body: `⏳ **Plan never claimed** — a ready-flip comment landed **${p.hoursSinceReady}h** ago but nothing has claimed or built this plan issue since (no \`claim/plan-${p.number}\` lease, no linked PR). The trigger may have missed, hit a label mismatch, or lost a claim race.\n\nRe-post a ready comment (e.g. \`ready\`) to retry — the claim lease makes a re-trigger a safe retry, not a second build. If it is intentionally on hold, say so here so it stops looking dropped.\n\n${FOOTER}`,
+      body: `⏳ **Plan never claimed** — its latest ready-flip landed **${p.hoursSinceReady}h** ago but nothing has claimed or built this plan issue since (no \`claim/plan-${p.number}\` lease, no linked PR, no \`next-slice\`). The trigger may have missed, hit a label mismatch, or lost a claim race.\n\nRe-post a ready comment (e.g. \`ready\`) or re-add the \`ready\` label to retry — the claim lease makes a re-trigger a safe retry, not a second build. If it is intentionally on hold, say so here so it stops looking dropped.\n\n${FOOTER}`,
     });
   }
   // #3960 — a stale in-flight label. `staleInProgress` arrives as every open issue carrying
@@ -154,6 +227,15 @@ export function audit(deps = {}) {
       hoursQuiet: w.hoursQuiet,
       body: `Cleared \`${LABELS.inProgress.name}\`: no activity for ${inProgressStaleAfterHours}h. Re-apply it when work resumes.\n\n${FOOTER}`,
     });
+  }
+  // #6042 — a silent-feedback or plan-stall flag comes off once the issue is answered, so
+  // `stall-flagged` means "stalled now" to every reader. No comment: the PR or the label that
+  // answered it already spoke. It cannot loop: each writer re-flags only on its own test, which
+  // `staleStallFlags`/`planStallFrom` evaluate on flagged issues too, and that test turns true
+  // again only on a real event (a fresh flip or an unpark, which restarts its clock; a build that
+  // ended without a PR, which is worth its one ping) — never because the label came off.
+  for (const s of deps.staleStallFlags ?? []) {
+    intents.push({ kind: "clear-stall", issueNumber: s.number, title: s.title });
   }
   // #909 / #1403 — the one class nothing else was watching: a PR that went `CONFLICTING` against
   // `main` on some push has no CI signal, no failed run, nothing red. `main`'s own tick is exactly
@@ -220,33 +302,96 @@ export function audit(deps = {}) {
   // stamped. Decided in drift-chore.mjs (`driftChoreIntent`); the open ticket is its own memory.
   // Each is at most one intent, null when there is nothing to do.
   intents.push(...[workModeRetitle(deps.workMode), deps.driftChore].filter(Boolean));
+  // The stranded-PR act stage (stranded-pr.mjs): re-run a green PR's failed arm job, once per head.
+  // `halt` stops every lane, so it stops this too — re-arming lands work.
+  if (deps.workMode?.mode?.position !== "halt") intents.push(...rearmIntents(deps.stranded));
   return intents;
 }
 
 /**
+ * Has a plan already been spoken for, by labels alone (#6042)? Answered (closed, linked PR), handed
+ * on (`next-slice`), parked, or being built (`in-progress`) — a plan in any of these is not waiting
+ * on its trigger. The cheap half of the plan test, so a spoken-for plan costs no timeline read.
+ */
+export function planSpokenFor(issue = {}) {
+  const spoke = [LABELS.nextSlice.name, LABELS.inProgress.name, ...PARKING_LABELS];
+  return answered(issue) || labelNames(issue).some((n) => spoke.includes(n));
+}
+
+/**
+ * When a plan's LATEST ready-flip landed (#6042) — a ready-signal comment or `ready` added — in ms,
+ * or null when it has none, or the lane has since taken `ready` back (a "nothing to build" run
+ * answers the flip: #4808 on 2026-10-19). The first flip was the clock until #6042, which kept a
+ * plan worked through three slices looking 19 days stalled. Pure over the REST issue timeline.
+ */
+export function latestPlanFlip(timeline = []) {
+  let flip = -Infinity;
+  let withdrawn = -Infinity;
+  for (const e of timeline ?? []) {
+    const at = Date.parse(e?.created_at);
+    if (!Number.isFinite(at)) continue;
+    const readyLabel = e.label?.name === LABELS.ready.name;
+    if ((e.event === "commented" && isReadySignal(e.body)) || (e.event === "labeled" && readyLabel))
+      flip = Math.max(flip, at);
+    if (e.event === "unlabeled" && readyLabel) withdrawn = Math.max(withdrawn, at);
+  }
+  return flip > withdrawn ? flip : null;
+}
+
+/**
  * THE PLAN-STALL DECISION — pure, mirroring `isReadySignal`'s own fixture-drivable shape: given
- * one issue, its comments, and whether a claim lease is currently held, decide whether it belongs
- * in the stalled-plan candidate list, and if so how old its ready-flip is. No network, no clock
- * beyond the injected `nowMs` — the actual `gh` calls (comments, claim-ref lookup) stay in
+ * one issue, its REST timeline, and whether a claim lease is currently held, decide whether it
+ * belongs in the stalled-plan candidate list, and if so how long it has waited. No network, no
+ * clock beyond the injected `nowMs` — the actual `gh` calls (timeline, claim-ref lookup) stay in
  * `gatherAuditDeps`, same division of labor as `planReadyIntent` vs. `claimPlan`.
  *
- * Returns `null` for anything that is not a live candidate: not plan-labeled, already answered
- * (closed or has a linked PR), currently claimed, or carrying no ready-signal comment at all. The
- * TIME threshold is NOT applied here — that is `audit()`'s job, same split as `unclaimedIssues`
- * (quietDays) and `silentFeedback` (hoursSinceFiled).
+ * Returns `null` for anything that is not a live candidate: not plan-labeled, spoken for
+ * (`planSpokenFor`), currently claimed, or with no live ready-flip (`latestPlanFlip`). The clock
+ * is the later of that flip and the last unpark (`waitingSince`), the same wait the feedback check
+ * times. The TIME threshold is NOT applied here — that is `audit()`'s job.
  *
  * @returns {{ title: string, number: number, hoursSinceReady: number } | null}
  */
-export function readyPlanCandidate(issue, comments = [], hasClaim = false, nowMs = Date.now()) {
-  if (!hasPlanLabel(issue)) return null;
-  if (answered(issue)) return null;
-  if (hasClaim) return null;
-  // `gh issue view --json comments` lists comments oldest-first, so the first match here is the
-  // EARLIEST ready-flip — the age that matters, since that is how long the trigger has had to fire.
-  const readyComment = (comments ?? []).find((c) => isReadySignal(c?.body));
-  if (!readyComment) return null;
-  const hoursSinceReady = Math.floor((nowMs - Date.parse(readyComment.createdAt)) / 3_600_000);
+export function readyPlanCandidate(issue, timeline = [], hasClaim = false, nowMs = Date.now()) {
+  if (!hasPlanLabel(issue) || planSpokenFor(issue) || hasClaim) return null;
+  const flip = latestPlanFlip(timeline);
+  if (flip === null) return null;
+  const since = Math.max(flip, Date.parse(waitingSince(timeline)) || -Infinity);
+  const hoursSinceReady = Math.floor((nowMs - since) / 3_600_000);
   return { title: issue.title, number: issue.number, hoursSinceReady };
+}
+
+/**
+ * The plan-stall writer over every open issue (#6042): unflagged candidates to threshold, and
+ * flagged plans whose test no longer holds, each a `clear-stall`. Flagged plans are tested too —
+ * skipping them is what left #4808 flagged a week after `next-slice` answered it. A plan also owed a
+ * feedback answer keeps its flag (the silent-feedback check would re-ping it), and the repair
+ * writers' flags are never cleared. `timelineOf`/`claimOf` are the network reads, made only for a
+ * plan its labels have not already spoken for, and a claim read only for a live candidate.
+ */
+export function planStallFrom(
+  issues = [],
+  timelineOf = () => [],
+  claimOf = () => false,
+  nowMs = 0,
+  flagged = [],
+) {
+  const readyPlans = [];
+  const staleFlags = [];
+  for (const i of issues ?? []) {
+    if (!hasPlanLabel(i)) continue;
+    const live = planSpokenFor(i)
+      ? null
+      : readyPlanCandidate(i, timelineOf(i.number), false, nowMs);
+    const candidate = live && !claimOf(i.number) ? live : null;
+    const isFlagged = flagged.includes(i.number);
+    if (candidate && !isFlagged) readyPlans.push(candidate);
+    const stillWaiting = candidate || owedAnswer(i);
+    if (isFlagged && !stillWaiting && !repairWriterFlag(i)) {
+      staleFlags.push({ title: i.title, number: i.number });
+    }
+  }
+  return { readyPlans, staleFlags };
 }
 
 /**
@@ -305,7 +450,6 @@ export function gatherAuditDeps(nowMs) {
     }
   };
   const daysSince = (iso) => Math.floor((nowMs - Date.parse(iso)) / 86_400_000);
-  const hoursSince = (iso) => Math.floor((nowMs - Date.parse(iso)) / 3_600_000);
   /**
    * #1403 — the per-(PR, head sha) memory `audit()` needs to tell "still stuck on the same
    * conflict" from "repaired, then went dirty again": read back the sha/attempt the LAST
@@ -373,12 +517,14 @@ export function gatherAuditDeps(nowMs) {
   // BEFORE the branch and the build, so a session that dies at typecheck or PR-open leaves exactly
   // one comment and was invisible to this audit forever. Comments measure chatter; what a member
   // actually needs is an answer. So the signal is now the absence of one — no PR linked, and none
-  // of the terminal labels — however much the lane said along the way.
-  const silentFeedback = issues.filter(owedAnswer).map((i) => ({
-    title: i.title,
-    number: i.number,
-    hoursSinceFiled: hoursSince(i.createdAt ?? i.updatedAt),
-  }));
+  // of the terminal labels — however much the lane said along the way. Timed from when the issue
+  // began waiting (one timeline read per candidate, ~2 a push), not from `createdAt` (#6042).
+  const silentFeedback = silentFeedbackFrom(
+    issues,
+    (n) => ghRestAll(`issues/${n}/timeline`),
+    nowMs,
+    alreadyFlagged,
+  );
 
   // #3960: every open issue still marked in-flight, and how long it has been quiet. #4547 gave this
   // its own label-filtered read because `issues` was then the newest 100 of ~140 open — on
@@ -386,26 +532,16 @@ export function gatherAuditDeps(nowMs) {
   // ghosts. `issues` is now the whole open list, so the filter is safe again.
   const staleInProgress = staleInProgressFrom(issues, nowMs);
 
-  // #897: plan issues whose ready-flip may never have been claimed. Skip the (expensive-ish,
-  // per-issue) comment fetch entirely for anything the cheap in-memory checks already rule out —
-  // answered or already flagged — same "don't pay for what you don't need" discipline as the
-  // shipped sweep's REST-before-GraphQL check above.
-  const readyPlans = [];
-  for (const i of issues) {
-    if (!hasPlanLabel(i)) continue;
-    if (answered(i)) continue;
-    if (alreadyFlagged.includes(i.number)) continue;
-    if (hasPlanClaim(i.number)) continue;
-    const view = json(`gh issue view (comments, #${i.number})`, [
-      "issue",
-      "view",
-      String(i.number),
-      "--json",
-      "comments",
-    ]);
-    const candidate = readyPlanCandidate(i, view.comments, false, nowMs);
-    if (candidate) readyPlans.push(candidate);
-  }
+  // #897: plan issues whose ready-flip may never have been claimed, and (#6042) flagged plans whose
+  // test no longer holds. One REST timeline read per plan its labels have not already spoken for —
+  // it carries both the ready comments and the `ready` label events the clock needs.
+  const plans = planStallFrom(
+    issues,
+    (n) => ghRestAll(`issues/${n}/timeline`),
+    hasPlanClaim,
+    nowMs,
+    alreadyFlagged,
+  );
 
   // #909 — one call for every open PR's mergeability, same REST/GraphQL-cost discipline as the
   // rest of this file (one list call, not one lookup per PR). `mergeable` is GitHub's own
@@ -442,13 +578,15 @@ export function gatherAuditDeps(nowMs) {
   return {
     unclaimedIssues,
     silentFeedback,
-    readyPlans,
+    readyPlans: plans.readyPlans,
     conflictedPRs,
     staleInProgress,
+    staleStallFlags: [...staleStallFlags(issues), ...plans.staleFlags],
     alreadyFlagged,
     alreadyFlaggedPRs,
     workMode: workModeState(nowMs, json),
     driftChore: driftChoreFromRepo(issues),
+    stranded: strandedOrNone(nowMs),
   };
 }
 

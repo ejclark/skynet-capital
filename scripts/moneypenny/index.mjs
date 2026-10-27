@@ -88,7 +88,6 @@ import {
   boardedReason,
   ensureLabel,
   ensureVocabulary,
-  inFeedbackLane,
   issueNumberFromSlug,
   LABELS,
   labelNames,
@@ -103,6 +102,7 @@ import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
+import { rearmStranded } from "./stranded-pr.mjs";
 import { endBuild, routeWake, wakeNext } from "./wake.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
@@ -301,9 +301,10 @@ export function isClaimed(slug, nowMs = Date.now(), staleAfterMs = CLAIM_TTL_MS)
  *
  * Triggered on the `ready` label now, not `feedback` (#3818 consolidation, 2026-09-28) — see
  * `triageFeedbackDecision`'s header for why. `ready` is a general board-status label (plan issues
- * carry it too, flipped by an Eric comment, not a label event), so this guards on `feedback` also
- * being present rather than trusting the workflow's cheap `if:` alone — or `bug` (#5332,
- * `inFeedbackLane`), which takes `feedback` on a win (`adoptFeedbackLabel`).
+ * carry it too, flipped by an Eric comment, not a label event), so this guards on the issue not
+ * being a `plan` rather than trusting the workflow's cheap `if:` alone (`inFeedbackLane`). One
+ * claimed without `feedback` — a `bug` (#5332), an `enhancement` readied through the clear-path
+ * door — takes it on a win (`adoptFeedbackLabel`).
  *
  * #3960: also runs on an `unlabeled` event that clears the last parking label from a still-`ready`
  * issue (`feedbackReadyIntent`), and asks the admission gate (admission.mjs) before the lease — a
@@ -354,7 +355,8 @@ export function claimFeedback(
 }
 
 /**
- * A `bug` the lane claimed without `feedback` takes it here (#5332). The shipped sweep, the reply
+ * An issue the lane claimed without `feedback` takes it here (#5332: a `bug`; 2026-10-26: any
+ * `ready` non-`plan`, e.g. an `enhancement`). The shipped sweep, the reply
  * resume (`laneOf`) and `feedback-scan` all key on `feedback`, so one label write keeps every
  * downstream reader unchanged — instead of each learning `bug` and the sweep paying a second
  * GraphQL list per push. Best-effort like `setInProgress`: the lease already made the claim safe.
@@ -365,7 +367,7 @@ function adoptFeedbackLabel(issue) {
     sh("gh", ["issue", "edit", String(issue.number), "--add-label", LABELS.feedback.name]);
   } catch (err) {
     console.log(
-      `::warning::could not add \`${LABELS.feedback.name}\` to bug #${issue.number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
+      `::warning::could not add \`${LABELS.feedback.name}\` to #${issue.number}: ${String(err?.stderr || err?.message).slice(0, 200)}`,
     );
   }
 }
@@ -713,7 +715,7 @@ export function peekNext(deps = {}) {
     readHold: holdOf = (issue) => readPickupHold(issue),
   } = deps;
   const mode = readMode();
-  const ready = withoutOpenPr(readReady().filter(inALane), readPrIssues());
+  const ready = withoutOpenPr(readReady(), readPrIssues());
   // #3818 slice 8: a plan to continue counts as "something to claim" even when the rank-order pick
   // finds nothing — its own lease is what the sweep would otherwise step past for 2h.
   const pick =
@@ -741,7 +743,7 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   } = deps;
   const mode = readMode();
   const inFlight = inFlightOf();
-  let pool = withoutOpenPr(readReady().filter(inALane), readPrIssues());
+  let pool = withoutOpenPr(readReady(), readPrIssues());
   // Read once: the sweep's pick and the claim's own gate must count the same Waiting column. A
   // failed read leaves the claim's gate its own reader, which fails closed for a fresh plan only.
   const { openPlans, waiting } = waitingOrSkip(readPlans);
@@ -817,9 +819,6 @@ function rankPick(pool, inFlight, mode, waiting, holdOf) {
   const pickOf = (rest) => nextAdmissible(rest, inFlight, mode, waiting);
   return nextUnheld(pool, pickOf, holdOf, { who: "retry sweep" });
 }
-
-/** Does a build lane own this issue — a `plan`, or the feedback lane's own (`inFeedbackLane`)? */
-const inALane = (i) => labelNames(i.labels).includes(LABELS.plan.name) || inFeedbackLane(i);
 
 /** How many lease-held picks one sweep steps past before giving up for this tick. */
 export const SWEEP_HELD_SKIPS = 5;
@@ -1572,9 +1571,14 @@ function executeOne(i, stallRepairs = []) {
   if (i.kind === "flag-silent-feedback") {
     commentAndFlagStall(i);
     console.log(
-      `::warning::silent feedback — #${i.issueNumber} no receipt after ${i.hoursSinceFiled}h`,
+      `::warning::silent feedback — #${i.issueNumber} no answer after ${i.hoursWaiting}h waiting`,
     );
-    return `🔇 silent feedback — \`${i.title}\` no receipt after ${i.hoursSinceFiled}h (commented on #${i.issueNumber})`;
+    return `🔇 silent feedback — \`${i.title}\` no answer after ${i.hoursWaiting}h waiting (commented on #${i.issueNumber})`;
+  }
+  if (i.kind === "clear-stall") {
+    // #6042 — the answer already spoke, so no comment; the label's absence is the new state.
+    sh("gh", ["issue", "edit", String(i.issueNumber), "--remove-label", LABELS.stall.name]);
+    return `🧹 cleared \`${LABELS.stall.name}\` — \`${i.title}\` has its answer (#${i.issueNumber})`;
   }
   if (i.kind === "flag-plan-stall") {
     commentAndFlagStall(i);
@@ -1600,6 +1604,7 @@ function executeOne(i, stallRepairs = []) {
     console.log(`::notice::work-mode title → ${i.newTitle} (${i.reason})`);
     return `🪧 retitled #${i.issueNumber} — \`${i.title}\` → \`${i.newTitle}\``;
   }
+  if (i.kind === "rearm-stranded") return rearmStranded(i);
   if (i.kind === "flag-conflict-cap") {
     commentAndFlagConflictCap(i);
     console.log(`::warning::conflict repair cap reached — #${i.prNumber} \`${i.title}\``);

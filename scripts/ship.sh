@@ -54,13 +54,21 @@ repo() {
 
 # api METHOD PATH [JSON] → prints "<body>\n__SHIP_HTTP__<code>". Parse in the CALLER, never via a
 # global — this function runs inside $(...), a subshell, so any var it set would be lost on return.
+# The JSON goes to curl on stdin, never as an argument: Linux caps one argv string at 128 KiB, and
+# a platter ledger (~122 KB on #5852) died at curl's `-d` argument with "Argument list too long"
+# (#6212). The same cap is why every payload builder below reads its body from stdin, not sys.argv.
 api() {
-  curl -sS -X "$1" -w '\n__SHIP_HTTP__%{http_code}' \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Accept: application/vnd.github+json" \
-    -H "X-GitHub-Api-Version: 2022-11-28" \
-    -H "User-Agent: skynet-ship" \
-    ${3:+-H "Content-Type: application/json" -d "$3"} "$API/repos/$(repo)$2"
+  local args=(-sS -X "$1" -w '\n__SHIP_HTTP__%{http_code}'
+    -H "Authorization: Bearer $TOKEN"
+    -H "Accept: application/vnd.github+json"
+    -H "X-GitHub-Api-Version: 2022-11-28"
+    -H "User-Agent: skynet-ship")
+  if [ -n "${3:-}" ]; then
+    printf '%s' "$3" | curl "${args[@]}" -H "Content-Type: application/json" --data-binary @- \
+      "$API/repos/$(repo)$2"
+  else
+    curl "${args[@]}" "$API/repos/$(repo)$2"
+  fi
 }
 http_of() { printf '%s' "${1##*__SHIP_HTTP__}"; }              # code from an api() result
 body_of() { printf '%s' "${1%$'\n'__SHIP_HTTP__*}"; }         # body from an api() result
@@ -149,7 +157,7 @@ reverify_held() {
     real|pending) echo "ship: #$num's latest verify is a real run ($verdict)." ;;
     *)
       local marker='<!-- ship: re-verify, the draft run left verify skipped (#4168) -->' patch presp
-      patch="$(python3 -c "import json,sys; print(json.dumps({'body': sys.argv[1] + '\n\n' + sys.argv[2]}))" "$body" "$marker")"
+      patch="$(printf '%s' "$body" | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read() + '\n\n' + sys.argv[1]}))" "$marker")"
       presp="$(api PATCH "/pulls/$num" "$patch")"
       if [ "$(http_of "$presp")" = 200 ]; then
         echo "ship: #$num's latest verify was $verdict (a late draft run cancelled it) — fired an edited event so a real verify runs (#4168)."
@@ -496,8 +504,8 @@ EOF_SHOTS
   # `ready_for_review` event that follows the label carries it, so the job skips that one too, and
   # `verify` runs on it. The draft lives for about a second, inside this function — never lingers.
   # An unheld PR is opened ready, as always: a draft skips `verify` (docs/LESSONS.md 2026-08-14).
-  local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4],'draft':sys.argv[5]=='1'}))" \
-    "$title" "$branch" "$base" "$body" "$hold")"
+  local payload; payload="$(printf '%s' "$body" | python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.stdin.read(),'draft':sys.argv[4]=='1'}))" \
+    "$title" "$branch" "$base" "$hold")"
   echo "ship: opening PR over REST (core bucket)…"
   local resp http body opened_hits=""; resp="$(api POST "/pulls" "$payload")"
   http="$(http_of "$resp")"; body="$(body_of "$resp")"
@@ -751,6 +759,7 @@ cmd_merge() {
 #                                [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter board <item-branch> [--subject S] [--no-verify] [--closes …] [--part-of …]
 #   scripts/ship.sh platter ledger [--base <ref>] [--body]
+#   scripts/ship.sh platter sync
 #
 # `--closes` / `--part-of` name the issues the item finishes or advances; with neither, the item's
 # own PR's keywords are read, and a branch number alone is only ever `Part of` (#4562). They ride as
@@ -805,8 +814,30 @@ cmd_platter_ledger() {
   if [ "$body" = 1 ]; then platter_body; else platter_ledger_table; fi
 }
 
+# The boarded items: commits in the range that carry the Platter-Item trailer `board` writes, and
+# nothing else. The ledger, the picture's count and the Summary refs all read this one list, so an
+# item's row number is the same in all three. A bare `<base>..HEAD` is not enough on its own: from a
+# shallow or stale origin/main, the platter's catch-up merges drag main's history into the range —
+# #5852's ledger grew to 986 rows over 20 real items (#6252). Merges and main's commits carry no
+# trailer, so they never become rows; the range itself is checked against GitHub's own count before
+# a body is posted (platter_sync_body).
+platter_items_log() {
+  git log --reverse --no-merges --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" | python3 -c '
+import sys
+for record in sys.stdin.read().split("\x1e"):
+    body = record.split("\x00")[-1]
+    if any(line.strip().startswith("Platter-Item:") for line in body.splitlines()):
+        sys.stdout.write(record + "\x1e")
+'
+}
+
+platter_item_count() { platter_items_log | tr -cd '\036' | wc -c | tr -d ' '; }
+
 platter_ledger_table() {
-  git log --reverse --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" | python3 -c '
+  # Non-merge commits with no trailer are platter-side fixes (#5852's two hand reverts) — or, from a
+  # stale range, main's own. Either way they are not items, so they are counted, not given rows.
+  local others; others=$(( $(git rev-list --count --no-merges "$PLATTER_BASE..HEAD") - $(platter_item_count) ))
+  platter_items_log | python3 -c '
 import sys
 
 def cell(text):
@@ -838,6 +869,10 @@ print("| # | item | why | verify evidence | revert |")
 print("|---|---|---|---|---|")
 print("\n".join(rows) if rows else "| — | _nothing boarded yet_ | — | — | — |")
 '
+  if [ "$others" -gt 0 ]; then
+    printf '\n_Also on the branch, not items: %s commit(s) with no `Platter-Item:` trailer — `git log --no-merges %s..%s` lists them._\n' \
+      "$others" "$PLATTER_BASE" "$(git rev-parse --abbrev-ref HEAD)"
+  fi
 }
 
 # The PR body: ledger as the picture (docs/PICTURES.md prescribes a table for exactly this shape),
@@ -847,7 +882,7 @@ print("\n".join(rows) if rows else "| — | _nothing boarded yet_ | — | — | 
 # scripts/platter-picture.mjs so it never names a count the ledger does not hold; the after-landing
 # picture is `ship platter landed <pr>`, read from the log, in whichever ending is true.
 platter_picture() {
-  local count; count="$(git rev-list --count "$PLATTER_BASE..HEAD")"
+  local count; count="$(platter_item_count)"
   [ "$count" -ge 1 ] || count=1
   node "$(dirname "$0")/platter-picture.mjs" open --count "$count"
 }
@@ -855,8 +890,7 @@ platter_picture() {
 # The issues the boarded items close or are part of, one Summary bullet each (#4562). Read from the
 # same commits as the ledger, so dropping an item (re-opening without it) drops its close too.
 platter_summary_refs() {
-  git log --reverse --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" \
-    | node "$(dirname "$0")/platter-refs.mjs" summary
+  platter_items_log | node "$(dirname "$0")/platter-refs.mjs" summary
 }
 
 platter_body() {
@@ -993,7 +1027,7 @@ platter_board_item() {
 
 # The item's Platter-Closes / Platter-Refs trailer lines (#4562; scripts/platter-refs.mjs owns the
 # rules). With neither flag passed, the item's own PR is read — newest first, any state, since a
-# superseded item PR is closed once its content boards — best-effort: no PR, or no answer, leaves
+# superseded item PR is closed once its content boards (platter_close_item) — best-effort: no PR, or no answer, leaves
 # only what the branch and subject name, and those are only ever `Part of`.
 platter_item_refs() {
   local item="$1" subject="$2" closes="$3" partof="$4" closes_set="$5" partof_set="$6"
@@ -1015,27 +1049,105 @@ platter_item_refs() {
   node "$(dirname "$0")/platter-refs.mjs" "${args[@]}"
 }
 
-# Refresh the open platter PR's ledger. Best-effort by design: the commit is already made and
-# pushed, so a failed PATCH is a stale body to fix by hand, never a lost item.
+# The ledger's range must be the PR's own commits before a body is posted (#6252). A cloud session
+# clones 50 commits deep, so first deepen a shallow clone — otherwise main's history past the cut-off
+# reads as platter commits. Then wait for GitHub to see the pushed head, and compare its commit count
+# with the UNFILTERED range: the item rows are fewer by design (merges, hand reverts), so comparing
+# rows would refuse every real platter. A disagreement posts nothing — the old body stays up.
+PLATTER_SYNC_WAIT="${PLATTER_SYNC_WAIT:-5}"
+platter_range_check() {
+  local branch="$1" num="$2" resp http head want local_count gh_count tries=0
+  if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+    git fetch --quiet --unshallow origin main "$branch" ||
+      echo "ship platter: could not unshallow this clone — the range check below decides." >&2
+  fi
+  want="$(git rev-parse HEAD)"
+  while :; do
+    resp="$(api GET "/pulls/$num")" || true
+    http="$(http_of "$resp")"
+    if [ "$http" != 200 ]; then
+      echo "ship platter: GET pulls/$num returned HTTP ${http:-none} — the ledger was not refreshed." >&2; return 1
+    fi
+    read -r head gh_count < <(body_of "$resp" | python3 -c 'import sys,json; r=json.load(sys.stdin); print(r["head"]["sha"], r["commits"])')
+    [ "$head" = "$want" ] && break
+    tries=$((tries + 1))
+    if [ "$tries" -ge 6 ]; then
+      echo "ship platter: #$num's head is still ${head:0:7}, not the pushed ${want:0:7} — the ledger was not refreshed." >&2
+      echo "  Once GitHub catches up: scripts/ship.sh platter sync" >&2
+      return 1
+    fi
+    sleep "$PLATTER_SYNC_WAIT"
+  done
+  local_count="$(git rev-list --count "$PLATTER_BASE..HEAD")"
+  if [ "$local_count" != "$gh_count" ]; then
+    echo "ship platter: the ledger's range $PLATTER_BASE..HEAD holds $local_count commits, but GitHub says #$num has $gh_count —" >&2
+    echo "  $PLATTER_BASE is stale or shallow here, so the ledger would list commits that are not the platter's." >&2
+    echo "  Fix the clone, then re-sync: git fetch --unshallow origin main || git fetch origin main; scripts/ship.sh platter sync" >&2
+    return 1
+  fi
+}
+
+# Close the boarded item's own PR with a pointer to the platter (#6253). Left open it stays held, so
+# assignments.mjs criterion 4 keeps it on Eric's list beside the platter — two of his four held-PR
+# assignments on 2026-10-26 were items already boarded, one click read as three. Closed, criterion 2
+# unassigns it on the next sweep. Runs after the push, so the pointer names a sha that exists on the
+# remote; its `Closes #N` refs already rode the commit as Platter-Closes trailers. Best-effort per
+# step, but a failure returns non-zero with the PR named, so the board ends red on a stated cause.
+# The comment carries the Claude Code footer: claude.yml wakes on any member comment without it.
+platter_close_item() {
+  local item="$1" branch="$2" sha="$3" owner resp http platter num payload
+  owner="$(repo)"; owner="${owner%%/*}"
+  resp="$(api GET "/pulls?state=open&head=$owner:$branch")" || true
+  http="$(http_of "$resp")"
+  [ "$http" = 200 ] && platter="$(body_of "$resp" | python3 -c 'import sys,json; r=json.load(sys.stdin); print(r[0]["number"] if r else "")')"
+  resp="$(api GET "/pulls?state=open&head=$owner:$item")" || true
+  http="$(http_of "$resp")"
+  if [ "$http" != 200 ]; then
+    echo "ship platter: GET $item's PR returned HTTP ${http:-none} — close it by hand if one is open." >&2; return 1
+  fi
+  num="$(body_of "$resp" | python3 -c 'import sys,json; r=json.load(sys.stdin); print(r[0]["number"] if r else "")')"
+  [ -n "$num" ] || { echo "ship platter: $item has no open PR — nothing to close."; return 0; }
+  local where="\`$branch\`"; [ -z "$platter" ] || where="#$platter"
+  payload="$(printf 'Boarded onto %s as `%s`; lands with it. Closing this PR so the platter'"'"'s merge is the one click — its content and any `Closes #N` travel on the platter.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_' \
+    "$where" "$sha" \
+    | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read()}))")"
+  resp="$(api POST "/issues/$num/comments" "$payload")" || true
+  [ "$(http_of "$resp")" = 201 ] || echo "ship platter: the pointer comment on #$num did not post — closing anyway." >&2
+  resp="$(api PATCH "/pulls/$num" '{"state":"closed"}')" || true
+  http="$(http_of "$resp")"
+  if [ "$http" = 200 ]; then
+    echo "ship platter: closed #$num — its content rides the platter."
+  else
+    echo "ship platter: PATCH state returned HTTP ${http:-none} — close #$num by hand; it is boarded." >&2
+    return 1
+  fi
+}
+
+# Refresh the open platter PR's ledger. The commit is already made and pushed, so a failure here is
+# a stale body to fix by hand, never a lost item — but it returns non-zero with that said plainly,
+# so the board ends red on a named cause rather than on a bare curl error (#6212).
 platter_sync_body() {
   local branch="$1" owner resp http body num newbody payload
   owner="$(repo)"; owner="${owner%%/*}"
-  resp="$(api GET "/pulls?state=open&head=$owner:$branch")"
+  resp="$(api GET "/pulls?state=open&head=$owner:$branch")" || true
   http="$(http_of "$resp")"; body="$(body_of "$resp")"
   if [ "$http" != 200 ]; then
-    echo "ship platter: GET pulls returned HTTP $http — refresh the ledger by hand." >&2; return 0
+    echo "ship platter: GET pulls returned HTTP ${http:-none} — refresh the ledger by hand." >&2; return 1
   fi
   num="$(printf '%s' "$body" | python3 -c 'import sys,json; r=json.load(sys.stdin); print(r[0]["number"] if r else "")')"
   if [ -z "$num" ]; then
-    echo "ship platter: no open PR for $branch — open one with 'ship platter open'." >&2; return 0
+    echo "ship platter: no open PR for $branch — open one with 'ship platter open'." >&2; return 1
   fi
+  platter_range_check "$branch" "$num" || return 1
   newbody="$(platter_body)"
-  payload="$(python3 -c "import json,sys; print(json.dumps({'body': sys.argv[1]}))" "$newbody")"
-  resp="$(api PATCH "/pulls/$num" "$payload")"; http="$(http_of "$resp")"
+  payload="$(printf '%s' "$newbody" | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read()}))")"
+  resp="$(api PATCH "/pulls/$num" "$payload")" || true
+  http="$(http_of "$resp")"
   if [ "$http" = 200 ]; then
     echo "ship platter: ledger refreshed on #$num."
   else
-    echo "ship platter: PATCH body returned HTTP $http — refresh #$num's ledger by hand." >&2
+    echo "ship platter: PATCH body returned HTTP ${http:-none} — refresh #$num's ledger by hand." >&2
+    return 1
   fi
 }
 
@@ -1070,6 +1182,7 @@ cmd_platter_open() {
   # by construction (this branch was cut from a freshly fetched origin/main seconds ago).
   cmd_open "chore(platter): protected-path changes — ${name#platter/}" \
     --body-file "$bodyfile" --hold --no-verify
+  platter_close_item "$item" "$name" "$(git rev-parse --short HEAD)" || exit 1
 }
 
 cmd_platter_board() {
@@ -1103,9 +1216,27 @@ cmd_platter_board() {
     exit 1
   fi
   platter_board_item "$item" "$subject" "$verify" "$closes" "$partof" "$closes_set" "$partof_set"
+  local sha; sha="$(git rev-parse --short HEAD)"
   echo "ship platter: pushing ${branch}…"
   cmd_push "$branch"
-  platter_sync_body "$branch"
+  local failed=0
+  platter_sync_body "$branch" || {
+    echo "ship platter: $item boarded and pushed, but the PR body sync FAILED — the ledger is stale (see above)." >&2
+    failed=1
+  }
+  platter_close_item "$item" "$branch" "$sha" || failed=1
+  [ "$failed" = 0 ] || exit 1
+}
+
+cmd_platter_sync() {
+  local branch; branch="$(git rev-parse --abbrev-ref HEAD)"
+  case "$branch" in platter/*) ;; *)
+    echo "ship platter sync: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
+    exit 1 ;;
+  esac
+  git fetch --quiet origin main || {
+    echo "ship platter: cannot fetch origin/main to read the ledger's range" >&2; exit 1; }
+  platter_sync_body "$branch" || exit 1
 }
 
 cmd_platter() {
@@ -1114,12 +1245,17 @@ cmd_platter() {
     open) cmd_platter_open "$@" ;;
     board) cmd_platter_board "$@" ;;
     ledger) cmd_platter_ledger "$@" ;;
+    # re-post the checked-out platter's body without boarding — the recovery after a refused sync.
+    sync) cmd_platter_sync ;;
     # the record after landing, from the first-parent log, in whichever ending is true (merge commit
     # or squash) — posted as a comment on the landed PR by whoever reports it (the digest, a session).
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
-    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
   esac
 }
+
+# Sourced (a spec driving api() or platter_sync_body against a stub curl), stop at the definitions.
+[ "${BASH_SOURCE[0]}" = "$0" ] || return 0
 
 case "${1:-}" in
   open) shift; cmd_open "$@" ;;

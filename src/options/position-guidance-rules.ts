@@ -31,9 +31,9 @@ export const MAX_SPREAD_OF_MID = 0.15;
 export const MIN_BID = 0.1;
 
 /** RICHNESS, while IV history is short: implied ÷ realized. ≥ this, premium pays for the movement. */
-export const RICH_IV_TO_RV = 1.2;
+const RICH_IV_TO_RV = 1.2;
 /** Below 1, the market charges less than the stock actually moves — selling it is underpaid. */
-export const CHEAP_IV_TO_RV = 1.0;
+const CHEAP_IV_TO_RV = 1.0;
 
 /** In session, a strike quoted longer ago than this is not a price anyone can sell at. */
 export const QUOTE_STALE_MS = 15 * 60 * 1000;
@@ -42,7 +42,7 @@ export const QUOTE_STALE_MS = 15 * 60 * 1000;
 export const MIN_OPEN_INTEREST = 100;
 
 /** Richness compares like with like: IV from the expiry nearest this many days, not the nearest weekly. */
-export const RICHNESS_TARGET_DAYS = 25;
+const RICHNESS_TARGET_DAYS = 25;
 
 /** Feed-delta vs our-delta disagreement worth flagging as a data-quality problem. */
 export const DELTA_TOLERANCE = 0.05;

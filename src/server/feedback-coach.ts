@@ -21,7 +21,7 @@
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { anthropicApiError } from "../http/anthropic-reply.js";
+import { anthropicApiError, logAnthropicUsage, usageOf } from "../http/anthropic-reply.js";
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
 import { AREA_PROMPT_CLAUSE, FEEDBACK_AREAS } from "./feedback-areas.js";
 import {
@@ -60,13 +60,18 @@ export type CoachTurn = (input: CoachInput) => Promise<CoachResult>;
 
 // Hard rails, tuned for pennies: few short rounds, small replies, bounded input. The member's
 // text is DATA to organize — the system prompt says so, and the server enforces the shape.
+//
+// Quoted text in the prompt is curly (“done”), never a bare `"`: the model copies these labels into
+// "details", and under the enforced schema a bare quote there CLOSES the JSON string — the decoder
+// carries on with valid JSON and the rest of the brief is silently gone (#6007 → #6205). The
+// `"key": …` quotes below are the JSON shapes themselves and stay straight.
 const SYSTEM_PROMPT = `You are the feedback coach for Skynet Capital, a friends-and-family options paper-trading league app. A signed-in member is drafting feedback; your job is to turn their raw note into a specific, actionable report a build session can work from.
 
 That last clause is the whole job. Downstream, a draft you mark spec-complete is treated as the specification and built unattended. A vague one costs the member their feature. Ask the questions now.
 
 THE COMPLETENESS BAR — do not mark a draft spec-complete until you hold every item for the kind:
-- bug: what happened · where in the app · what they expected instead · steps to reproduce (or an explicit "couldn't reproduce reliably")
-- feature: the problem in their own words · what "done" looks like to them · where in the app it lives
+- bug: what happened · where in the app · what they expected instead · steps to reproduce (or an explicit “couldn't reproduce reliably”)
+- feature: the problem in their own words · what “done” looks like to them · where in the app it lives
 - idea: the idea · what it would make better · what they would SEE if it existed
 
 The member may attach up to 3 screenshots to their opening note. When one is present, look at it: a
@@ -80,15 +85,15 @@ Rules:
 - SIZE DISCIPLINE. Your whole reply must fit in one short response, so keep "details" under 1200 characters, each criterion to one line, and at most four criteria. A reply that runs long is cut off mid-write: an over-long draft is a lost draft, not a thorough one.
 - Reply in exactly one of these JSON shapes (the API enforces the schema; these lines say what each field means):
   {"question": "<your one question>"}
-  {"draft": {"title": "<imperative summary of the ask, max 80 chars — never "Fix bug" or "Improvement">", "details": "<the capsule, exactly as specified below>", ${AREA_PROMPT_CLAUSE}"criteria": ["<observable acceptance criterion, EARS-lite: 'When <trigger>, the app shall <response>' or 'The app shall <requirement>'>"], "assumptions": ["<anything you had to assume because it was never answered — empty when the bar was fully met>"], "outOfScope": ["<anything the member explicitly did NOT ask for that a builder might otherwise add>"], "readiness": "spec-complete" | "partial", "needsEric": "<one sentence naming why this needs the owner, or omit entirely>"}}
+  {"draft": {"title": "<imperative summary of the ask, max 80 chars — never “Fix bug” or “Improvement”>", "details": "<the capsule, exactly as specified below>", ${AREA_PROMPT_CLAUSE}"criteria": ["<observable acceptance criterion, EARS-lite: 'When <trigger>, the app shall <response>' or 'The app shall <requirement>'>"], "assumptions": ["<anything you had to assume because it was never answered — empty when the bar was fully met>"], "outOfScope": ["<anything the member explicitly did NOT ask for that a builder might otherwise add>"], "readiness": "spec-complete" | "partial", "needsEric": "<one sentence naming why this needs the owner, or omit entirely>"}}
 
 The draft's "details" is a CAPSULE — it becomes a GitHub issue two audiences read at once: a human deciding in ten seconds whether to care, and a build session that has nothing but this text. Its shape is fixed:
 1. Two to four markdown bullets, each ONE short line (max 120 chars): what they want, why it matters, and — for a bug — what they saw vs. expected.
 2. Then the whole brief inside a single fold, opened exactly like this:
 <details><summary><strong>The brief</strong></summary>
-Short bolded labels with the detail under them — What / Where / Expected vs. actual for bugs; What / Why / What "done" looks like for features and ideas. Close with the member's own words once, as a blockquote.
+Short bolded labels with the detail under them — What / Where / Expected vs. actual for bugs; What / Why / What “done” looks like for features and ideas. Close with the member's own words once, as a blockquote.
 </details>
-Rules for the capsule: never repeat the same sentence or paragraph twice anywhere in it; no walls of prose above the fold; put repeated key/value facts (area, device, browser) in a small markdown table; only facts the member gave — never invent details, and name what is unknown instead of guessing.
+Rules for the capsule: inside "details" use curly quotes (“like this”) or none — never a bare double quote; never repeat the same sentence or paragraph twice anywhere in it; no walls of prose above the fold; put repeated key/value facts (area, device, browser) in a small markdown table; only facts the member gave — never invent details, and name what is unknown instead of guessing.
 
 The remaining draft fields are the BUILD SPEC — the machine-readable contract, not prose:
 - "readiness" is your honest verdict, never optimism: "spec-complete" ONLY when every bar item is held. Otherwise "partial", with the gaps listed under "assumptions". A truthful "partial" is a good outcome; a false "spec-complete" ships the wrong thing.
@@ -138,6 +143,8 @@ const COACH_REPLY_SCHEMA = {
 
 interface CoachConfig {
   readonly apiKey: string;
+  /** The server log — each coach call writes one usage line here (#6080). */
+  readonly logLine?: (line: string) => void;
 }
 
 type DoFetch = typeof fetchJson;
@@ -215,9 +222,15 @@ export function createFeedbackCoach(config: CoachConfig, doFetch: DoFetch = fetc
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : "coach unreachable" };
     }
+    logAnthropicUsage("feedback-coach", MODEL, usageOf(res.body), config.logLine);
     const reply = replyText(res);
     if (!reply.text) return { ok: false, error: reply.error ?? "" };
-    const result = parseCoachReply(reply.text, userRounds);
+    // The member's own turns ride along so a brief that comes back cut still files their words.
+    const memberWords = input.messages
+      .filter((m) => m.role === "user")
+      .map((m) => m.content.trim())
+      .join("\n\n");
+    const result = parseCoachReply(reply.text, userRounds, memberWords);
     // A model that re-asks the question it just asked is stalled, not conversing — end the loop
     // with the member's own words in the form rather than sending them round again. No
     // retry call: another API round-trip per stall would be a per-use spend change, not a bug fix.
@@ -230,10 +243,11 @@ export function createFeedbackCoach(config: CoachConfig, doFetch: DoFetch = fetc
 /** Env factory — `undefined` (inert) until ANTHROPIC_API_KEY is set. */
 export function resolveFeedbackCoach(
   env: Readonly<Record<string, string | undefined>>,
+  logLine?: (line: string) => void,
 ): CoachTurn | undefined {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) return undefined;
-  return createFeedbackCoach({ apiKey });
+  return createFeedbackCoach({ apiKey, ...(logLine ? { logLine } : {}) });
 }
 
 // Coach-specific burst throttle: a conversation is several turns, so the cap is looser than the

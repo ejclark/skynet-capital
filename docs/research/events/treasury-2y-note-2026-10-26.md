@@ -345,3 +345,87 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":18.24,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","msft-2026-10-27-print","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-20y-bond-2026-10-21","treasury-2y-frn-2026-10-28","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","meta-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-27, D+1 — inside `closeOutWithinDays`).** Rates mode runs no symbol instrument (`symbols: []`
+by design, so no `earnings-cycle`/`intraday-edges` cache to bust); "re-run data" here means every number below was
+re-fetched direct from a Treasury primary today and the auction-day statistics were **recomputed from scratch** over
+the full par-curve record (2023-01-03 → 2026-10-26, 953 sessions) and all 46 nominal 2Y auctions, not carried from
+the 09-05 initial research. **Source caveat:** fiscaldata's `auctions_query` had not yet populated the 10-26 result,
+so the print is read from treasurydirect.gov's auctioned-securities record (`TA_WS/securities/auctioned`, stamped
+2026-10-26T13:03:17 ET, minutes after the 1:00 PM close); competitive-base shares are this session's arithmetic on its
+par-awarded fields. The results PDF (`R_20261026_3.pdf`, HTTP 200) is an image-only file and was not text-read.
+
+**The headline verdict: the registered test passed — the 2Y closed −1bp on auction day, the D−2 slot behaved like
+its seven predecessors, and the print itself was an in-band, mid-pack sale with a dealer takedown on the weak side.**
+
+| Reading | Value | Source (fetched 2026-10-27) |
+|---|---|---|
+| 2Y CMT, 10-23 → 10-26 | **4.69 → 4.68 (−1bp)** | home.treasury.gov par CSV |
+| 10Y CMT, same days | 5.00 → 5.00 (0bp) | same |
+| Path into the sale | 2Y 4.81 (10-21) → 4.65 (10-22, −16bp) → 4.69 (10-23, +4bp) → 4.68 | same |
+| VIX close | **18.39** (10-26), vs 19.45 on 10-23 | Yahoo `^VIX` |
+| Offered / CUSIP | $69.0001B, 91282CRU7, new issue, single-price | treasurydirect auctioned record |
+| High yield · median · low | **4.708%** · 4.655% · 4.580%; 80.83% allotted at the high | same |
+| Stop-out vs 09-22 | 4.708% vs 4.787% (−7.9bp) | same + `auctions_query` |
+| Bid-to-cover | **2.59** | same |
+| Competitive base | indirect **45.68%** · direct **41.32%** · dealer **13.00%** (end-user 87.00%) | same, computed |
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-treasury-2y-note-2026-10-26-1` (an FOMC-eve 2Y sale does not produce the auction-day rally) | 10-26 close-to-close 2Y CMT move **greater than −6.0bp**; kill at −6.0bp or worse | **−1bp** (4.69 → 4.68); void clauses ($69B, auction date, FOMC 10-27/28) all held | **PASS** |
+
+**Reading the pass honestly.** The test carried its base rate on its face: an **86%** pass rate in the D−2 slot
+(6 of 7) against 44% (12 of 27) far from FOMC weeks, so a pass was the expected result and adds little by itself.
+What the recomputation adds: the slot is now **n=8** — moves −1, −10, 0, 0, −4, 0, −2, **−1** — mean **−2.25bp**,
+median −1bp, five of eight at 0 or −1bp, pass count 7 of 8. The far-from-FOMC population is unchanged at **−6.07bp**
+(t = −4.91, n=27, reproduced to the digit), and the all-auction mean over 46 sales is **−4.63bp** (t = −4.72), with the
+10Y at −0.91bp (t = −1.13) — the tenor-specific finding stands. The slot-versus-far gap is still **not significant**:
+two-sided permutation, 200,000 draws, difference of means **3.82bp, p = 0.120** at n=8 (the same method returns the
+original **0.167** at n=7, so the two are comparable). Direction is consistent, the sample is thin, and no pin
+mechanism is established. **One caveat this slot's history could not sample, now sampled once:** VIX ran 18–19 into
+this sale (every prior D−2 slot sold in a lower-VIX tape) and the 2Y had already repriced −16bp on 10-22; the pass
+came anyway, in a tape where a larger move had an available explanation. That is one observation and is not read as
+evidence that risk-off tapes leave the pin intact. The **pre-FOMC reading instruction holds**: a flat 2Y on auction
+day at D−2 is the expected tape, not a failed sale. Nothing in this event was ever a position (`symbols: []`).
+
+**The print, graded on the yardstick the ledger chose (dealer takedown), not the one it retired.** Dealer takedown
+**13.00%** is above the 2025-04+ p75 of **12.3%** — **weak on the letter**, and the **second consecutive 2Y sale**
+above it (09-22: 13.19%). Bid-to-cover **2.59** is inside the $69B-era band (2.41–2.81), below its median (2.64) and
+above its p25 (2.57): ordinary, not a stress print. The tail (median-to-high) was 5.3bp. Indirect fell to **45.68%**
+(09-22: 57.79%) while direct rose to **41.32%** (29.02%): the substitution leg 5 predicted, with end-user share steady
+at 87.00% (09-22: 86.81%), so the indirect fall is a channel rotation and not a loss of buyers — and the dealer
+residual, the one bucket that is not a reclassification, moved 0.19pp. Stated plainly: weak on dealer takedown by
+the doc's own line, unremarkable on cover, and the move on the day was the small one the stance predicted. No
+when-issued level was sourced (Treasury publishes none), so no tail against WI is claimed. Whether two 2Y dealer
+takedowns above p75 is a trend (n=2, against a 17-print regime that includes a 24.1% outlier) is open; the next 2Y
+sales are 11-23 and 12-28, and the 2027-01-25 sale is the next D−2 sample if the FOMC calendar holds
+(`fomc-2027-01-27`).
+
+**Kill switches, closed out.** (1) the −6.0bp-or-worse close: **not fired**. (2) size change: not fired, $69B held.
+(3) dealer above 12.3%: fired 09-26 on the 09-22 print and **fired again on the letter today** (13.00%) — read as the
+caution already attached to it, not a stance change. (4) bid-to-cover outside 2.41–2.81: **not fired** (2.59).
+(5) FOMC and auction dates: unchanged and confirmed.
+
+**Adjacency sweep (close-out, brief).** `--on-date=2026-10-26` lists this event, `dallas-fed-mfg-2026-10-26` and
+`mwts-benchmark-revision-2026-10-26` — all tracked. October FOMC pricing (Kalshi `KXFEDDECISION-26OCT`, fetched direct
+today): Hold bid/ask **0.92/0.93**, Hike-25 0.07/0.08 — ~92.5% hold, unchanged from the 10-26 row's ~93.5%; December
+Hike-25 0.71/0.74, Hold 0.23/0.24 — a live hike, as before. D+1 is the 5Y (`treasury-5y-note-2026-10-27`, tracked, on
+this announcement), with the 2Y FRN 10-28 and the 7Y 10-29 behind it; the FOMC is tomorrow. A web search was not run;
+earlier rows in this ledger recorded such searches returning only other years' items. **No new dated adjacency to
+propose; nothing seen beyond the horizon to note.**
+
+**Honest limits.** One auction is one observation and one forward test; the pass was the likelier result, and the
+slot's n=8 does not clear significance (p = 0.120). The 10-23 → 10-26 move is a **daily close-to-close** change on a
+CMT series rounded to 1bp: it cannot show an intraday concession before the 1:00 PM award or a post-award reaction,
+and says nothing about causation. Competitive-base shares are this session's own arithmetic on treasurydirect's
+par-awarded fields, not a published figure, and the PDF was not text-verified. The horizon calls at the top of this
+document were written on 2026-09-05 and were superseded by the later ledger rows; this close-out scores the registered
+test and the kill switches, not those stale rows a second time. This document goes quiet from here —
+`scripts/event-scan.mjs` will not surface it again.
+
+**Last assessed:** 2026-10-27 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":18.39,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-20y-bond-2026-10-21","treasury-2y-frn-2026-10-28","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->

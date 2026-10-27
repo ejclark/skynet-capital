@@ -10,6 +10,7 @@ import { JsonlHistoryStore } from "../../src/observatory/history-store.js";
 import { InMemoryHistoryStore } from "../../src/observatory/in-memory-history-store.js";
 import { pulseHistoryReader } from "../../src/observatory/pulse-history-cache.js";
 import { PulseHistoryFold } from "../../src/observatory/pulse-history-fold.js";
+import { lossHeadroomGauges, wireTradeVitalsFromDrawdown } from "../../src/observatory/vitals.js";
 
 /** `days` of five-minute samples for one desk — production's grid — from a fixed-seed walk. */
 function history(days: number, { from = "2026-04-01T00:00:00.000Z", seed = 11 } = {}) {
@@ -44,6 +45,9 @@ const figures = (fold: PulseHistoryFold) => ({
   doubled: fold.doubled,
   changes: fold.dailyChanges(),
   curve: fold.curve(),
+  // The drawdown as of an instant inside the fold and one past it — the Wire's gauge input.
+  drawdownMidway: fold.drawdownPctAt("2026-04-02T12:00:00.000Z"),
+  drawdownNow: fold.drawdownPctAt("2027-01-01T00:00:00.000Z"),
 });
 
 describe("PulseHistoryFold — the same figures the per-request scans made", () => {
@@ -99,6 +103,24 @@ describe("PulseHistoryFold — the same figures the per-request scans made", () 
     const parts = new PulseHistoryFold();
     for (const s of sorted) parts.add(s);
     expect(figures(parts)).toEqual(figures(fold));
+  });
+
+  it("gives the Wire's loss-headroom gauge as of any instant, as the sorted scan did", () => {
+    const scan = lossHeadroomGauges(samples);
+    const held = wireTradeVitalsFromDrawdown((at) => fold.drawdownPctAt(at));
+    const instants = [
+      "2026-03-31T23:59:59.999Z", // before any sample
+      sorted[0]?.at, // one sample: not yet measured
+      "2026-04-01T00:02:00.000Z", // between the first two
+      sorted[1]?.at,
+      ...sorted.filter((_, i) => i % 97 === 0).map((s) => s.at),
+      // A trade's instant written without milliseconds cuts by code unit in both.
+      ...sorted.filter((_, i) => i % 1_009 === 0).map((s) => s.at.replace(".000Z", "Z")),
+      "2027-01-01T00:00:00.000Z", // after every sample
+    ].filter((at): at is string => at !== undefined);
+    for (const at of instants) expect(held(at).lossHeadroom).toEqual(scan(at));
+    expect(held(sorted[0]?.at ?? "").lossHeadroom.measured).toBe(false);
+    expect(held("2027-01-01T00:00:00.000Z").lossHeadroom.measured).toBe(true);
   });
 });
 

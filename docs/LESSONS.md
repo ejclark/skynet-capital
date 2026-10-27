@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `sync project status` red on main: keep github's reason when a rest read fails, so a rate limit skips the board sync
+- **SHA:** 872cb69   **DATE:** 2026-10-26   **STATUS:** closed
+- **COVERS:** 09e8710 3c47942
+- **SIGNAL:** 2 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [40421267754](https://github.com/ejclark/skynet-capital/actions/runs/40421267754) at 2026-10-26T23:39:48Z. Repair capsule #6224 filed 2026-10-26T23:40:27Z, closed 15m later by #6227.
+- **ROOT CAUSE:** Runs 40421267754 and 40421270593 started within two seconds of each other. Both `sync project status` jobs failed reading issue #4619 with `curl: (22) The requested URL returned error: 403`. Earlier and later runs with the same `PROJECTS_PAT` were green, and the two concurrent hits look like a burst (secondary) rate limit. The log cannot prove that, and that missing evidence is the bug. `ghRest` called curl with bare `--fail`, which throws away the response body. GitHub's explanation was lost, and #4438's soft skip, which keys on the rate-limit phrase, had nothing to match. So a display-only job reddened `main` and opened a repair issue.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/ghrest-error-body.spec.ts` (#6227).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### The learning-loop checks posted to a log nobody read, so five sat 4–16 days past due and one never posted at all
 - **SHA:** n/a   **DATE:** 2026-10-26   **STATUS:** closed
 - **SIGNAL:** on 2026-10-26 the registry (`docs/process/LEARNING-LOOP.md` → *Loops running now*) held five rows whose checks `loop-check.mjs` had posted to #5724 on 10-18 and 10-22, with output, falsifier and a "settle it" line, and not one had moved. Their dates ran 10-10 to 10-21, so they were 5 to 16 days past due. A sixth row, Member studies, read "the next fixed-build control … due by 2026-10-17" and never posted, because the scan only reads a date that *leads* its cell. Nothing alarmed; a surge-pass sweep found it by reading the tracker.

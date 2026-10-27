@@ -154,6 +154,7 @@ peak. Three forward tests register against the print (fragment
 | 2026-10-11 | D-15 | **Initial research banked (above). Date promoted `estimate` → `confirmed`** on `FRB:` after two direct primary reads (release table row `October \| Monday, October 26`; September report `Next release: Monday, October 26`), canonical `dallas-fed-mfg-2026-10-26.json` written over the 09-15 proposal. **September print (09-29 close-out of the sibling ledger):** headline **9.8**, raw materials **52.2**, finished goods 27.6, wages **27.4**, employment 15.1, future GBA **20.8**, window `Sept. 15–23`. **Adjacency sweep.** *Peers:* none (`symbols: []`); Empire State and Philly Fed print 10-15, inside the October window. *Macro:* ISM Manufacturing Sep **54.5** (Prices **77.9**, +6.8); Chicago PMI **58.8** (+11.7, Prices Paid −3.7); September payrolls **+29k**; August core PCE **3.0%** vs 3.3%; the FOMC ledger puts Oct 28 at hold ~84% / hike ~16%, Dec hike ~75%. *Volatility:* VIX **14.84** (10-09 close) vs 16.07 at the sibling's last read, −1.23 — Yahoo, own pull. *Geopolitical:* Brent **$104.72** (10-09), up from $100.20 (10-07); +4.1% on 10-08. *Event tape:* no consensus at D-15 and, on the pattern, none until release week. **Adjacency proposals: none** — `--on-date=2026-10-26` shows this entry, `mwts-benchmark-revision-2026-10-26` and `treasury-2y-note-2026-10-26`, all tracked; `dallas-fed-tssos-2026-10-27` is already a standing proposal. Regional Fed surveys from Kansas City and Richmond are untracked, `low`, and second-order to this series — named, not proposed. | — (stance set) | 2026-10-26 print is the next date; in practice the next assessment is the close-out within 6 days (`low:15+` band would otherwise pulse every 30 days) |
 | 2026-10-18 | D-8 | **Pulse (full session).** Date re-read direct: dallasfed.org release table still `October \| Monday, October 26`. *Macro:* Sep CPI (10-14, secondary: XTB/TheStreet) headline +0.6% m/m, 3.7% y/y vs 3.6% exp; core +0.3% m/m, 2.6% y/y vs 2.5% exp. Beige Book (10-14, via investinglive): Dallas district names **diesel** the lead cost factor, mentions 21 vs 2 last report. Empire State (10-15) **+25.5** vs +10.25 exp, prices paid 59.5 (−4); Philly Fed **+20.9** vs +28.4 exp, prices paid 43.2 (−5) — activity firm, input prices off the boil regionally. *FOMC:* Oct 28 hike odds ~25% CME (10-15), Kalshi 33%, Polymarket peak ~47.5% (secondary reports) — the ≥40% kill switch tripped on one venue, not on CME. *Volatility:* VIX **19.99** (10-16 close, +21.45% on the day; TheStreet) vs 14.84 at the last row, **+5.15 — regime shift**, AI-infrastructure selling. *Geopolitical:* Brent settled **$109.86** (10-16, +3.7%, highest since May 19) vs $104.72; Iran/Hormuz attacks plus a Russian refinery outage. *Tape:* no consensus yet. **Adjacency proposals: none** — `--on-date=2026-10-26` shows three tracked entries; ten newly tracked corridor events are all already on the calendar. Kansas City/Richmond surveys remain untracked, low, second-order. | Minor: prices-first reading order **reinforced** (Brent, diesel, hot core CPI); call unchanged — stand aside, never a trade | Close-out within 6 days of 2026-10-26 (`low:0+`, 7-day pulse otherwise) |
 | 2026-10-26 | D-0 | **Pulse (full session, run ~11:15 ET, 45 min after the release).** **The print is out** (dallasfed.org/research/surveys/tmos/2026/2610, direct fetch, summarizing reader): headline **13.4** (Sep 9.8), raw-materials prices **55.3** (+3.1; series avg 28.1), wages **20.8** (−6.6 from 27.4), future GBA **38.1** (+17.3 from 20.8), `Data were collected October 13-21`, 64 of 114 responded. Against the reading order: prices leg held, wages reverted toward the ~21 average, the outlook break fully reversed. FT-1/2/3 look like passes on their face, but **none is scored here** — score-by is 10-27 and scoring belongs to the close-out, from the full report. **Adjacency sweep.** *Peers:* none (`symbols: []`); the Texas services survey prints 10-27 (tracked). *Macro:* nothing new since 10-18 beyond the FOMC sibling ledger (10-22: no change 94% / hike 6% on Polymarket; not re-read today). *Volatility:* VIX **17.95** (10-26 intraday, Yahoo) vs 19.99 at the last row (−2.04; 19.45 on 10-23). *Geopolitical:* Brent **$110.06** (10-26 intraday) after $116.72 on 10-23 (−5.7% today), vs $109.86 at the last row. *Event tape:* SPY 10:30–11:15 ET **+0.31%** (764.79 → 767.16, partial hour, Yahoo 15m bars), inside the p90 (0.464%); the hour is unfinished, so the null is adjudicated at close-out only. **Adjacency proposals: none** — `--on-date=2026-10-27` lists 12 entries, all tracked incl. `dallas-fed-tssos-2026-10-27`; newly tracked corridor entries (MSFT/GOOG/META/AMZN prints, SPCX lockup) are already on the calendar. | — (print observed; call unchanged — stand aside, never a trade) | Close-out (`event-passed-unscored`) within 6 days; FT-1 to FT-3 scored then |
+| 2026-10-26 | D+1 close-out | **Close-out (run 2026-10-27).** Full report re-read direct (`/tmos/2026/2610`, HTTP 200, 61,425 bytes): headline 13.4, raw materials 55.3, wages 20.8, future GBA 38.1; scored below in `## Outcome`. FT-1/2/3 all **passed**. *Release hour* (Yahoo 15m, 10:30–11:30 ET): SPY **+0.265%** (inside p90 0.464%), QQQ **+0.665%** (0.025pp over p90 0.640%, but Brent fell 5.5% the same Monday — cause not attributed). *Vol/oil:* VIX 18.39 (10-26 close), Brent $110.48. **Adjacency proposals: none** — `--on-date=2026-10-27` events are all tracked. | — (call unchanged — stand aside, never a trade) | Closed; assessment ends here |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -171,3 +172,70 @@ same PR. Close-out fills `## Outcome` from re-run data, never from memory.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.95,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","msft-2026-10-27-print","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-20y-bond-2026-10-21","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","meta-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-10-27, D+1 — inside the `closeOutWithinDays: 6` window).** `symbols: []` by design,
+so `earnings-cycle` / `intraday-edges` have no target; the cache-bust command was run anyway per the
+lane's instruction and nothing here reads it. "Re-run instrument data" is the Dallas Fed's own October
+report fetched direct this session — `dallasfed.org/research/surveys/tmos/2026/2610`, desktop-UA curl,
+**HTTP 200, 61,425 bytes** — plus own Yahoo 15-minute SPY/QQQ bars and daily VIX/Brent closes pulled
+today. Nothing is copied from the 10-26 pulse row.
+
+### What printed
+
+| Line | Oct (this print) | Sep | Change |
+|---|---|---|---|
+| General business activity (headline) | **13.4** | 9.8 | +3.6 |
+| Prices paid for raw materials | **55.3** | 52.2 | +3.1 (series avg 28.1) |
+| Prices received for finished goods | 29.9 | 27.6 | +2.3 |
+| Wages and benefits | **20.8** | 27.4 | −6.6 (series avg 21.1) |
+| Employment | 11.6 | 15.1 | −3.5 |
+| Company outlook (current) | 16.1 | 8.7 | +7.4 |
+| Future general business activity | **38.1** | 20.8 | +17.3 |
+| Future production | 39.4 | 40.3 | −0.9 |
+
+Dallas Fed's words (fetched 2026-10-27): *"Data were collected October 13-21, and 64 of the 114 Texas
+manufacturers surveyed submitted responses."* The report states *"Next release: Monday, November 30"*,
+the date the filed `dallas-fed-mfg-2026-11-30` entry already carries.
+
+### Forward tests, scored
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| FT-…-1 (window Oct 13–21, both edges exact; registered 88%) | exact match | **October 13-21** verbatim | **PASSED** |
+| FT-…-2 (raw-materials prices ≥ 45.0; registered 85%) | at or above 45.0 | **55.3** | **PASSED** |
+| FT-…-3 (headline > 0.0; registered 72%) | positive sign | **13.4** | **PASSED** |
+
+**FT-1 is now 4-for-4 on the release −13 / −5 rule** (July, August, September, October), the first
+live out-of-sample pass after the pre-stated promotion count of 3. A dating-method result, never a
+trading signal. **FT-2 and FT-3 passed with room** — raw materials 10.3 points above the kill line
+(78th straight positive month), headline 13.4 above September's 9.8 — but both were high-probability,
+zero-capital calls; passing them earns the reading order a fourth month of survival, not an edge.
+
+### The stance vs the tape
+
+- **Reading order: prices → wages → outlook → headline.** Prices held (55.3), wages reverted to the
+  21.1 average (September's 27.4 was the outlier, as the 10-11 leg-4 "mixed" label left open), and the
+  outlook break fully reversed (+17.3 to 38.1, above August's 37.2). The order did what it was built
+  for: the live information was in the lines it ranked first and second.
+- **Release hour — the kill switch did not trip.** Re-run on Yahoo 15m bars, 10:30 open to 11:30 ET
+  (bars 10:30–11:15): SPY **+0.265%** vs its p90 0.464%; QQQ **+0.665%** vs its p90 0.640% — QQQ
+  cleared the threshold by 0.025pp. The switch needs *both* a move above p90 *and* a session wrap
+  naming this survey as the cause; the second leg is unmet. A web search for a 10-26 wrap found none,
+  and the Monday tape had a larger visible driver: Brent **$116.72 → $110.48** (−5.3% close to close),
+  VIX 19.45 → 18.39, SPY +0.72% / QQQ +1.11% from Friday's close to Monday's. One QQQ hour over a p90
+  is what a null predicts ~10% of the time; **n=1 does not move the leg-6 null** (52.5 / 55.5, n=21).
+  The 21-release measurement is not re-run; this observation is recorded as n=22 for QQQ-above-p90
+  only, not as a new percentile.
+- **Call unchanged:** stand aside, never a trade. Estimates stayed estimates; nothing here is action.
+
+### Loop census
+
+Sense (report fetch, bar pull) and verify (cache-bust, lint) ran unattended. The stage a person would
+still have to do is **decide**: whether a hot-QQQ release hour counts as the survey's doing needs a
+session-wrap source, and none is machine-readable — there is no deterministic attribution check, only
+the n=21 null.
+
+**Last assessed:** 2026-10-27
+<!-- probe-ref: {"symbols":{},"vix":18.39,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","meta-2026-10-28-print","msft-2026-10-27-print","msft-def14a-2026-10-22","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-20y-bond-2026-10-21","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","meta-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0,"blocked":[]} -->

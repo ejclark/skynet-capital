@@ -156,6 +156,9 @@ function tripReasons(event, probeRef, market, adjacentStrongIds, band) {
  * research never seeded one) is treated as "material" — `no-reference-baseline` — the safe default:
  * with nothing to diff against, a probe cannot honestly call anything quiet. That one full session
  * seeds the block for every screen after it.
+ *
+ * `state.pendingProposals` (optional, conviction-proposal tokens such as `ai-dip-2026-10/P3`) each
+ * add a `conviction-proposal:<token>` reason — see scripts/conviction-proposals.mjs.
  */
 export function decide(state) {
   const { event, today, cadence, ledger, market = {}, adjacentIds = [], adjacentStrongIds } = state;
@@ -168,7 +171,12 @@ export function decide(state) {
   const missing = ledger?.probeRefMalformed
     ? "malformed-reference-baseline"
     : "no-reference-baseline";
-  const reasons = probeRef ? tripReasons(event, probeRef, market, strong, band) : [missing];
+  const reasons = [
+    ...(probeRef ? tripReasons(event, probeRef, market, strong, band) : [missing]),
+    // An unanswered conviction proposal (scripts/conviction-proposals.mjs) is material whatever the
+    // tape did: only a session can register or decline it, and a screen would leave it unread.
+    ...(state.pendingProposals ?? []).map((key) => `conviction-proposal:${key}`),
+  ];
 
   const verdict = reasons.length ? "material" : "screen";
   const screenStreak = verdict === "screen" ? (probeRef?.screenStreak ?? 0) + 1 : 0;

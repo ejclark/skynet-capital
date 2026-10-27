@@ -38,6 +38,7 @@
 // specced from data in tests/scripts/moneypenny/relay.spec.ts.
 import { ghRestAll, sh, sleepSync, withRetry } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS, labelNames } from "./labels.mjs";
+import { keywordIssuesOf } from "./pr-issues.mjs";
 
 /** The labels that each mean "a remainder is written on this issue and nobody has built it".
  *  `needs-session` is here for the same reason as `next-slice`: it names WHO can pick the remainder
@@ -111,7 +112,76 @@ export function notRelayableReason(issue, { relayFrom = RELAY_FROM, backfill = f
   if (!backfill && closedAt.slice(0, 10) < relayFrom) {
     return `#${n} closed ${closedAt.slice(0, 10)}, before the relay watermark ${relayFrom} — run \`--backfill\` to include it`;
   }
+  const builtBy = finalSliceBy(issue);
+  if (builtBy) {
+    return `#${n} was closed by #${builtBy}, a merged PR that says it closes #${n} — the remainder is what it built`;
+  }
   return null;
+}
+
+/** How long after a PR merges the issue it closes may close and still count as closed BY it.
+ *  GitHub's own close lands in about a second (#5214: merged 10:01:41, closed 10:01:42); ten
+ *  minutes absorbs a slow webhook without letting a much later manual close borrow the PR. */
+export const CLOSE_WINDOW_MS = 10 * 60 * 1000;
+
+/** A comment that states work still to do. Loose on purpose: a false match costs one relay issue
+ *  someone closes, a miss costs a remainder nobody can see — the asymmetry the relay exists for. */
+const REMAINDER_TEXT =
+  /\b(?:remain(?:s|ing|der)|next slice|slice \d+ (?:is )?(?:left|next)|left to (?:build|do)|still to (?:build|do)|not (?:yet )?built)\b/i;
+
+/**
+ * WAS THE REMAINDER BUILT BY THE PR THAT CLOSED THE ISSUE? Returns that PR's number, or null.
+ *
+ * #6014 (2026-10-26): #6012 merged with "Closes #5214", and #6012 WAS #5214's remainder — the
+ * session that built it took the last slice and left `next-slice` on the issue. The relay filed a
+ * capture for work that had shipped a minute earlier, and it took a judge and two refuters to prove
+ * it false. The house contract already says how to tell: a build PR says `Closes #n` only on the
+ * FINAL slice and `Part of #n` on any earlier one (.github/prompts/feedback-build.md, step 5). So a
+ * merged PR whose body closes `#n`, merging just before `#n` closed, IS the remainder landing.
+ *
+ * WHY OBSERVE, NOT "THE BUILDER CLEARS IT". docs/MONEYPENNY.md asks the shipping session to remove
+ * `needs-session`; #5214 is that rule not being remembered, and five build paths would each have
+ * to remember it. Reading the PR covers every path at once — pr-issues.mjs's "observe, don't
+ * remember" (#4393), pointed at the close instead of the open.
+ *
+ * Three things keep it relaying, and each is the falsifier of "the PR built it":
+ *   - No such PR — a plain manual close, or a close long after the merge (`CLOSE_WINDOW_MS`).
+ *   - The closing PR's own body states work still to do. #6210 closed #6080 while saying "Next
+ *     slice (from #6208): discard a partial reply…" — a superseding PR carried `Closes` forward
+ *     from one that was not the last slice, and its relay (#6214) was a true one.
+ *   - A comment written after the PR opened that states work still to do: the session that shipped
+ *     a non-final slice with `Closes` by mistake writes its remainder then. A pickup comment written
+ *     BEFORE the PR opened ("picking up slice 2") is the claim, not a remainder, so it never counts.
+ *     The relay's own receipt is excluded so a re-read stays stable.
+ *
+ * Pure: reads `issue.timeline` (REST timeline rows, trimmed by `gatherRelayDeps`). No timeline —
+ * every fixture before this rule — means nothing to observe, and the relay behaves as it did.
+ */
+export function finalSliceBy(issue) {
+  const timeline = issue?.timeline;
+  if (!Array.isArray(timeline)) return null;
+  const n = issue.number;
+  const closedMs = Date.parse(String(issue.closedAt ?? ""));
+  if (!Number.isFinite(closedMs)) return null;
+  const closer = timeline.find((row) => {
+    const pr = row?.source?.issue;
+    if (row?.event !== "cross-referenced" || !pr?.pull_request) return false;
+    const mergedMs = Date.parse(String(pr.pull_request.merged_at ?? ""));
+    if (!Number.isFinite(mergedMs) || mergedMs > closedMs + 1000) return false;
+    if (closedMs - mergedMs > CLOSE_WINDOW_MS) return false;
+    return keywordIssuesOf(pr.body ?? "").closes.includes(n);
+  });
+  if (!closer) return null;
+  if (REMAINDER_TEXT.test(String(closer.source.issue.body ?? ""))) return null;
+  const openedMs = Date.parse(String(closer.created_at ?? ""));
+  const restated = timeline.some(
+    (row) =>
+      row?.event === "commented" &&
+      Date.parse(String(row.created_at ?? "")) > openedMs &&
+      !String(row.body ?? "").includes("**Remainder relayed**") &&
+      REMAINDER_TEXT.test(String(row.body ?? "")),
+  );
+  return restated ? null : closer.source.issue.number;
 }
 
 /**
@@ -239,6 +309,8 @@ export function gatherRelayDeps({
   read = ghRestAll,
   labels = REMAINDER_LABELS,
   sleep = sleepSync,
+  relayFrom = RELAY_FROM,
+  backfill = false,
 } = {}) {
   const byNumber = new Map();
   for (const label of labels) {
@@ -255,8 +327,36 @@ export function gatherRelayDeps({
       });
     }
   }
+  // The timeline only for an issue every cheaper rule would relay — one page per real candidate,
+  // which on a normal push is none. `finalSliceBy` reads it.
+  for (const issue of byNumber.values()) {
+    if (notRelayableReason(issue, { relayFrom, backfill })) continue;
+    const rows = withRetry(() => read(`issues/${issue.number}/timeline`), {
+      sleep,
+    });
+    issue.timeline = rows.map(trimTimelineRow);
+  }
   return [...byNumber.values()];
 }
+
+/** Only the fields `finalSliceBy` reads — a timeline row carries a whole actor and issue object. */
+const trimTimelineRow = (row) => {
+  const pr = row?.source?.issue;
+  return {
+    event: row?.event,
+    created_at: row?.created_at,
+    body: row?.event === "commented" ? row.body : undefined,
+    source: pr
+      ? {
+          issue: {
+            number: pr.number,
+            body: pr.body,
+            pull_request: pr.pull_request ? { merged_at: pr.pull_request.merged_at } : undefined,
+          },
+        }
+      : undefined,
+  };
+};
 
 /**
  * Carry out one relay: open the issue, receipt the source, then take the remainder label off.
@@ -305,7 +405,7 @@ function main(argv = process.argv.slice(2)) {
   const limitArg = argv.indexOf("--limit");
   const relayCap = limitArg >= 0 ? Number(argv[limitArg + 1]) : Number.POSITIVE_INFINITY;
   const intents = routeRelay({
-    closedWithRemainder: gatherRelayDeps(),
+    closedWithRemainder: gatherRelayDeps({ backfill }),
     openIssueTitles: ghRestAll("issues?state=open").map((i) => i.title),
     backfill,
     relayCap,

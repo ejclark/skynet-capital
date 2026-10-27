@@ -92,12 +92,14 @@ export function lossHeadroomGauges(
       else hi = mid;
     }
     // equityDrawdown's own null: fewer than two samples measure nothing.
-    if (lo < 2) return unmeasured("Loss headroom", "not yet measured");
-    return headroomGauge((ddPctUpTo[lo - 1] as number) / 100);
+    return headroomGauge(lo < 2 ? null : (ddPctUpTo[lo - 1] as number));
   };
 }
 
-function headroomGauge(ddFraction: number): VitalGauge {
+/** The gauge for a drawdown in percent; null — under two samples — is the honest empty state. */
+function headroomGauge(ddPct: number | null): VitalGauge {
+  if (ddPct === null) return unmeasured("Loss headroom", "not yet measured");
+  const ddFraction = ddPct / 100;
   const cap = RESTRICT_DRAWDOWN_PCT;
   const fraction = Math.max(0, Math.min(1, 1 - ddFraction / cap));
   return {
@@ -132,4 +134,18 @@ export function wireTradeVitalsFor(
 ): (atIso: string) => WireTradeVitals {
   const headroom = lossHeadroomGauges(samples);
   return (atIso) => ({ lossHeadroom: headroom(atIso), ...unmeasuredVitals() });
+}
+
+/**
+ * `wireTradeVitalsFor` off a drawdown already kept as of every instant — the Pulse history fold's
+ * `drawdownPctAt`, which the server keeps up to date in memory — so the Wire reads no samples at
+ * all. Reading each page bot's whole history per request was +186 ms of `/api/wire` (#4619).
+ */
+export function wireTradeVitalsFromDrawdown(
+  drawdownPctAt: (atIso: string) => number | null,
+): (atIso: string) => WireTradeVitals {
+  return (atIso) => ({
+    lossHeadroom: headroomGauge(drawdownPctAt(atIso)),
+    ...unmeasuredVitals(),
+  });
 }

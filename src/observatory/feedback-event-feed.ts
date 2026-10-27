@@ -4,7 +4,7 @@ import {
   type ActivityEvent,
   activityEventFromFeedbackEntry,
   activityEventFromFeedbackStatus,
-  forVisibility,
+  PUBLIC_ONLY,
 } from "./activity-event.js";
 
 /**
@@ -30,10 +30,6 @@ import {
  *   reason spelled out in `trade-event-feed.ts`'s header: identity, not grouping, is what a
  *   per-thing fold keys on.
  */
-
-/** Only the public tier reaches the cross-member pulse — the same gate the trade feed applies, and
- *  belt-and-braces beside the event-type checks below. */
-const PUBLIC_ONLY = forVisibility(["public"]);
 
 /** One filing as the pulse needs it. `status` is OPTIONAL and stays absent when nothing has
  *  observed one: a filing nobody has polled is honestly "state unknown", never "In the queue"

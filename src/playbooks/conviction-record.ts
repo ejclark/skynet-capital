@@ -3,6 +3,7 @@ import {
   CONVICTION_ID_MAX,
   isCalendarDay,
 } from "../subscriptions/subscription-state.js";
+import { blank } from "./claim-blank.js";
 import { type ClaimScore, checkProblems, type FalsifierCheck } from "./claim-score.js";
 import type { ClaimStudy } from "./claim-study.js";
 import { narrowingProblems, type PairNarrowings, type SteerBounds } from "./conviction-steering.js";
@@ -115,8 +116,6 @@ export interface Conviction {
 }
 
 const DAY_IN_TEXT = /\d{4}-\d{2}-\d{2}/g;
-
-const blank = (value: string): boolean => value.trim().length === 0;
 
 /** True when the falsifier names a real calendar day in its own words. */
 function namesADay(text: string): boolean {

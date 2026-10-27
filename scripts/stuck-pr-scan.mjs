@@ -19,8 +19,16 @@
 // threshold cannot have been green that long, so it costs nothing. No token or no network is a clean
 // no-op (exit 0, "unknown" under --count) — never a flaky gate.
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { breachOf } from "./envelope-scan.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
-import { DEFAULT_HOURS, describe, judgePr } from "./stuck-pr-decide.mjs";
+import {
+  boardedBranches,
+  DEFAULT_HOURS,
+  describe,
+  exemptReason,
+  judgePr,
+} from "./stuck-pr-decide.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -49,10 +57,15 @@ async function api(path) {
   return res.json();
 }
 
-/** Every stuck open PR, newest facts only: one list call, then 2–3 calls per PR old enough to matter. */
+/** Every stuck open PR, newest facts only: one list call, then 2–3 calls per PR old enough to matter,
+ *  plus one file list per PR judged stuck — an envelope-protected or platter-boarded diff is left to
+ *  Eric's merge on purpose, so it is not stuck (#5381–#5383, 2026-10-26). */
 async function scan() {
   const open = await api("pulls?state=open&per_page=100");
   const cutoff = Date.now() - hours * 3.6e6;
+  const rules = JSON.parse(readFileSync("envelope.json", "utf8")).protected ?? [];
+  const isProtected = (path) => breachOf(path, rules) !== null;
+  const isBoarded = boardedBranches(open);
   const stuck = [];
   for (const listed of open) {
     if (listed.draft || Date.parse(listed.created_at) > cutoff) continue;
@@ -69,7 +82,10 @@ async function scan() {
       suites: suites.check_suites ?? [],
       hours,
     });
-    if (verdict) stuck.push({ ...verdict, title: pr.title, url: pr.html_url, branch: pr.head.ref });
+    if (!verdict) continue;
+    const files = (await api(`pulls/${listed.number}/files?per_page=100`)).map((f) => f.filename);
+    if (exemptReason({ pr, files, isProtected, isBoarded })) continue;
+    stuck.push({ ...verdict, title: pr.title, url: pr.html_url, branch: pr.head.ref });
   }
   return stuck;
 }

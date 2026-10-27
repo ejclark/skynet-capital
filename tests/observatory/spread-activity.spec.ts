@@ -3,7 +3,7 @@ import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
 import { deskActivityView } from "../../src/observatory/desk-json-view.js";
-import { spreadLookup } from "../../src/observatory/spread-activity.js";
+import { rememberSpreadLegs, spreadLookup } from "../../src/observatory/spread-activity.js";
 import { anOptionIntent } from "../support/builders.js";
 
 /** A bot's spread on Activity (#4650): the account reports its fills one per leg, under each leg's
@@ -257,5 +257,56 @@ describe("deskActivityView — a spread's legs beneath one row", () => {
     });
     deskActivityView([lowFill, highFill], undefined, { spreadOf: lookup });
     expect(reads).toBe(1);
+  });
+});
+
+describe("rememberSpreadLegs — the Wire's leg hop, remembered once matched (#4458)", () => {
+  const counting = (legs: Record<string, OptionOrderLeg>) => {
+    const asked: string[] = [];
+    const find = (id: string) => {
+      asked.push(id);
+      return legs[id];
+    };
+    return { asked, find };
+  };
+
+  it("asks the store for a matched leg once, however many requests ask after", () => {
+    const store = counting(LEGS);
+    const find = rememberSpreadLegs(store.find);
+
+    expect(find("leg-low")).toEqual(LEGS["leg-low"]);
+    expect(find("leg-low")).toEqual(LEGS["leg-low"]);
+
+    expect(store.asked).toEqual(["leg-low"]);
+  });
+
+  it("asks again after a miss, so a leg a late settlement records is found on the next request", () => {
+    const legs: Record<string, OptionOrderLeg> = {};
+    const store = counting(legs);
+    const find = rememberSpreadLegs(store.find);
+
+    expect(find("leg-high")).toBeUndefined();
+    legs["leg-high"] = LEGS["leg-high"] as OptionOrderLeg;
+
+    expect(find("leg-high")).toEqual(LEGS["leg-high"]);
+    expect(store.asked).toEqual(["leg-high", "leg-high"]);
+  });
+
+  it("still reads the spread's own decision per lookup, so a net that lands later shows", () => {
+    const decisions: string[] = [];
+    const remembered = rememberSpreadLegs((id) => LEGS[id]);
+    const lookup = () =>
+      spreadLookup({
+        findSpreadLeg: remembered,
+        findByOrderId: (id) => {
+          decisions.push(id);
+          return findByOrderId(id);
+        },
+      });
+
+    lookup()("leg-low");
+    lookup()("leg-low");
+
+    expect(decisions).toEqual(["mleg-1", "mleg-1"]);
   });
 });

@@ -51,3 +51,14 @@ export function judgePr(input: {
 }): Stuck | null;
 export function describe(stuck: Stuck): string;
 export function stuckLine(stuck: Stuck[] | null): string;
+/** Is this branch named in an open `platter/` PR's ledger? Built once from the open PR list. */
+export function boardedBranches(
+  openPrs?: { head?: { ref?: string }; body?: string | null }[],
+): (ref: string) => boolean;
+/** Why a stuck PR is left to Eric's merge (envelope-protected or platter-boarded), or null. */
+export function exemptReason(input: {
+  pr: { head?: { ref?: string } };
+  files?: string[];
+  isProtected: (path: string) => boolean;
+  isBoarded: (ref: string) => boolean;
+}): string | null;

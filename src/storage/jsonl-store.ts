@@ -274,6 +274,28 @@ export class JsonlKeyedStore<T> {
     return readJsonlEntriesSince<T>(this.fileFor(key), offset);
   }
 
+  /**
+   * `since` across every file under `dir` at once, keyed by file path — for a fold over the whole
+   * store, which cannot go through `since(key)` because the key → file name mapping is one-way
+   * (#4458). A file absent from `from` (new since the last call) reads from 0; a file gone from
+   * `dir` is simply absent from the answer. Listing the directory is a `readdir`, not a read.
+   *
+   * Refused on a rotating store: `since` reads only the active file, so a rotation would silently
+   * drop the archived lines from a fold that never re-reads them. Whoever turns rotation on for a
+   * store with a whole-store fold has to teach that fold to stream the archives first.
+   */
+  async sinceAll(from: ReadonlyMap<string, number>): Promise<Map<string, JsonlTail<T>>> {
+    if (this.opts.rotateAtBytes !== undefined) {
+      throw new Error(`[jsonl-store] sinceAll is not supported on a rotating store (${this.dir})`);
+    }
+    const tails = new Map<string, JsonlTail<T>>();
+    for (const file of await listJsonlFiles(this.dir)) {
+      if (isGzipped(file)) continue;
+      tails.set(file, await readJsonlEntriesSince<T>(file, from.get(file) ?? 0));
+    }
+    return tails;
+  }
+
   /** The newest entry appended for `key`, without reading the rest of its file (#4612 slice 7). */
   latest(key: string): Promise<T | undefined> {
     return readLastJsonlEntry<T>(this.fileFor(key));

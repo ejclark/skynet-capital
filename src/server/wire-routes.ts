@@ -24,9 +24,16 @@ import {
   toMemberMilestones,
 } from "../observatory/milestone-event-feed.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import type { PulseHistoryFold } from "../observatory/pulse-history-fold.js";
 import { spreadLookup } from "../observatory/spread-activity.js";
 import { mergeLedgerIntoEvents } from "../observatory/trade-event-feed.js";
+import {
+  type WireTradeVitals,
+  wireTradeVitalsFor,
+  wireTradeVitalsFromDrawdown,
+} from "../observatory/vitals.js";
 import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.js";
+import type { WireFeed } from "../observatory/wire-feed-cache.js";
 import { wireJsonView } from "../observatory/wire-json-view.js";
 import { attachWireReasoning } from "../observatory/wire-reasoning.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
@@ -78,6 +85,13 @@ export interface WireRouteDeps {
    * to hold the log's full history.
    */
   readonly readAllFeedback?: () => Promise<readonly FeedbackLogEntry[]>;
+  /**
+   * The three reads above, folded once per process and then advanced by appended lines only
+   * (`wireFeedReader`, #4458). Wired, it replaces all three — they stay as the fallback, the path the
+   * in-memory and test deployments take — and every page matches what they would render, because it
+   * hands the same folds below the same inputs, reduced to the lines that can still decide a row.
+   */
+  readonly readWireFeed?: () => Promise<WireFeed>;
   readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
   /**
    * Recently merged pull requests — the feed's third kind (#784 slice 4), and the one source that is
@@ -124,9 +138,15 @@ export interface WireRouteDeps {
    * per leg. Omit and a bot's spread legs render as the separate fills they always did.
    */
   readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
-  /** One participant's equity history — the "Loss headroom" gauge's input. Omit and every gauge
-   *  renders its honest "not yet measured" state instead of guessing. */
+  /** One participant's equity history — the "Loss headroom" gauge's input when `readPulseHistory`
+   *  is not wired. Omit both and every gauge renders its honest "not yet measured" state instead
+   *  of guessing. */
   readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
+  /** A participant's history as Pulse reads it — a live fold kept up to date by what was appended
+   *  (`pulse-history-cache.ts`, #4619). Preferred over `readHistory` for the gauge: it answers the
+   *  drawdown as of any instant without reading a sample. Omit and Pulse folds `readHistory` per
+   *  request instead. */
+  readonly readPulseHistory?: (participantId: string) => Promise<PulseHistoryFold>;
 }
 
 /**
@@ -234,6 +254,21 @@ async function assembleMilestones(
   return toMemberMilestones(collapseMilestoneEvents(all), participants).slice(0, limit);
 }
 
+/**
+ * The bus, the trade ledger and the feedback log — off the per-process fold when it is wired, else
+ * each read whole (the fallback; an unwired read is an empty leg, the honest empty state). All three
+ * in flight at once on the fallback, so a `no-store` page never pays for them in series.
+ */
+async function readFeed(config: WireRouteDeps): Promise<WireFeed> {
+  if (config.readWireFeed) return config.readWireFeed();
+  const [events, records, filings] = await Promise.all([
+    config.readAllActivityEvents ? config.readAllActivityEvents() : [],
+    config.readAllTradeActivity ? config.readAllTradeActivity() : [],
+    config.readAllFeedback ? config.readAllFeedback() : [],
+  ]);
+  return { events, records, filings };
+}
+
 async function assembleWire(
   config: WireRouteDeps,
   limit: number,
@@ -242,15 +277,8 @@ async function assembleWire(
   before?: string,
 ): Promise<AssembledWire> {
   const { participants } = config.hub.getState();
-  // Both in flight at once: two independent full-ledger reads, so awaiting them in series would
-  // pay for the union twice over on a `no-store` page. (Each is still a full read — a bounded read
-  // is a real design question for the feed redesign, #784 slice 3, not something to fake here.)
-  const [published, records] = await Promise.all([
-    config.readAllActivityEvents ? config.readAllActivityEvents() : [],
-    config.readAllTradeActivity ? config.readAllTradeActivity() : [],
-  ]);
+  const { events: published, records, filings } = await readFeed(config);
   const events = mergeLedgerIntoEvents(published, records);
-  const filings = config.readAllFeedback ? await config.readAllFeedback() : [];
   // `collapseFeedbackEvents` sorts newest-first before this is bounded — `list()`'s own order is
   // filesystem-dependent, so the page shown would otherwise be an arbitrary slice.
   // `published`, not `events`: the trade ledger's translated lines carry no feedback or development
@@ -279,18 +307,15 @@ async function assembleWire(
   const botParticipantIds = [
     ...new Set(page.rows.filter((r) => r.kind === "bot").map((r) => r.participantId)),
   ];
-  const historyByParticipant = config.readHistory
+  const vitalsOf = vitalsReader(config);
+  const vitalsByParticipant = vitalsOf
     ? new Map(
-        await Promise.all(
-          botParticipantIds.map(
-            async (id) => [id, await config.readHistory?.(id)] as [string, readonly EquitySample[]],
-          ),
-        ),
+        await Promise.all(botParticipantIds.map(async (id) => [id, await vitalsOf(id)] as const)),
       )
     : undefined;
   const rows = attachWireReasoning(page.rows, {
     ...(config.findByOrderId ? { findByOrderId: config.findByOrderId } : {}),
-    ...(historyByParticipant ? { historyByParticipant } : {}),
+    ...(vitalsByParticipant ? { vitalsByParticipant } : {}),
     ...(ownsAccount ? { ownsAccount } : {}),
   });
 
@@ -302,6 +327,26 @@ async function assembleWire(
     ...(milestones ? { milestones } : {}),
     ...(config.readPlayMilestones ? { plays: config.readPlayMilestones().slice(-limit) } : {}),
   };
+}
+
+/**
+ * One account's vitals as of any instant, or undefined when neither history read is wired. The
+ * Pulse fold comes first: it is already in memory and answers the drawdown without reading a
+ * sample, where `readHistory` re-reads the account's whole history on every request (+186 ms of
+ * `/api/wire` at 180 days, #4619). Both give the same gauge for every row.
+ */
+function vitalsReader(
+  config: WireRouteDeps,
+): ((participantId: string) => Promise<(atIso: string) => WireTradeVitals>) | undefined {
+  const { readPulseHistory, readHistory } = config;
+  if (readPulseHistory) {
+    return async (id) => {
+      const fold = await readPulseHistory(id);
+      return wireTradeVitalsFromDrawdown((atIso) => fold.drawdownPctAt(atIso));
+    };
+  }
+  if (readHistory) return async (id) => wireTradeVitalsFor(await readHistory(id));
+  return undefined;
 }
 
 /**

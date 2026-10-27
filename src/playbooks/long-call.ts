@@ -23,6 +23,7 @@ import {
 } from "../options/contract-picker.js";
 import { humanizeOptionSymbol, OPTION_MULTIPLIER } from "../trading/option-symbols.js";
 import { expiryInside, inQuietPeriod, type Steering } from "./conviction-steering.js";
+import { money } from "./format-money.js";
 import { EXIT_DTE, longCallExit } from "./long-call-rules.js";
 import { optionCloseIntent, optionOpenIntent } from "./option-intent.js";
 import { pairFor } from "./pair-table.js";
@@ -134,8 +135,6 @@ const contractsOf = (held: readonly HeldContract[]): number =>
 const averageCost = (held: readonly HeldContract[]): number =>
   held.reduce((sum, c) => sum + c.avgPrice * c.quantity, 0) / Math.max(1, contractsOf(held));
 
-const cents = (x: number): string => `$${x.toFixed(2)}`;
-
 /** Why a held call is sold now, or `undefined` while it should be held. */
 function exitCause(
   contract: HeldContract,
@@ -173,7 +172,7 @@ function closeIntents(symbol: string, context: MarketContext, held: readonly Hel
     const name = humanizeOptionSymbol(contract.occSymbol);
     const why =
       cause === "profit"
-        ? `it is worth ${cents(bid)} a share, at least double the ${cents(contract.avgPrice)} paid`
+        ? `it is worth ${money(bid)} a share, at least double the ${money(contract.avgPrice)} paid`
         : `${EXIT_DTE} days or fewer are left, and time decay speeds up from here`;
     const intent = optionCloseIntent({
       underlying: symbol,
@@ -183,7 +182,7 @@ function closeIntents(symbol: string, context: MarketContext, held: readonly Hel
       band: { low: bid, high: ask, at: quotedAt },
       strategy: `${longCallTag(symbol)}-close`,
       reason: `Selling the ${name} back: ${why}.`,
-      expectation: `The calls are sold near ${cents(limitPrice)} a share and the cash returns to the budget.`,
+      expectation: `The calls are sold near ${money(limitPrice)} a share and the cash returns to the budget.`,
       selection: { rule: "long-call-close", phase: cause, towardNatural },
     });
     if (intent) out.push(intent);
@@ -273,11 +272,11 @@ function openIntent(
     limitPrice,
     band: { low: bid, high: ask, at: quotedAt },
     strategy: longCallTag(symbol),
-    reason: `Buying ${name} calls for about ${cents(limitPrice)} a share ($${cost} a contract), held through earnings. ${setting.bet}`,
+    reason: `Buying ${name} calls for about ${money(limitPrice)} a share ($${cost} a contract), held through earnings. ${setting.bet}`,
     expectation: `${symbol} rises before ${expiration}: the calls are sold at double their cost, or with ${EXIT_DTE} days left. The most each contract can lose is the $${cost} paid for it.`,
     forecast: {
       direction: "up",
-      invalidator: `${symbol} is below ${cents(spot)} with ${EXIT_DTE} days left on the ${name}`,
+      invalidator: `${symbol} is below ${money(spot)} with ${EXIT_DTE} days left on the ${name}`,
     },
     selection: {
       rule: "long-call-by-delta",
