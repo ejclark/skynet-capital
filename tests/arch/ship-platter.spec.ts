@@ -198,6 +198,91 @@ describe("ship platter — the ledger is a pure function of the boarded commits"
   });
 });
 
+// #6252: #5852's ledger listed 986 rows over 20 real items. The platter's catch-up merges pull main
+// into the branch, and from a stale or shallow origin/main the range `<base>..HEAD` held all of it —
+// so main's commits became rows and the picture said "986 protected changes". Here `seed` stands in
+// for that stale base: main's two commits sit inside the range, exactly as they did on #5852.
+describe("ship platter — only boarded items become rows, whatever else the range holds (#6252)", () => {
+  let dir: string;
+  let seed: string;
+  const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
+  const git = (args: string[]) =>
+    execFileSync("git", args, { cwd: dir, encoding: "utf8", env, stdio: "pipe" });
+  const ledger = (args: string[]) =>
+    execFileSync("bash", [resolve("scripts/ship.sh"), "platter", "ledger", ...args], {
+      cwd: dir,
+      encoding: "utf8",
+      env,
+      stdio: "pipe",
+    });
+  const commit = (file: string, subject: string, trailers: string[] = [], text = file) => {
+    writeFileSync(join(dir, file), `${text}\n`);
+    git(["add", "-A"]);
+    git(["commit", "-q", "-m", subject, ...(trailers.length ? ["-m", trailers.join("\n")] : [])]);
+  };
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "ship-platter-range-"));
+    git(["init", "-q", "-b", "main", "."]);
+    git(["config", "user.email", "spec@example.com"]);
+    git(["config", "user.name", "spec"]);
+    commit("seed.txt", "chore: seed");
+    seed = git(["rev-parse", "HEAD"]).trim();
+    git(["checkout", "-q", "-b", "platter/2026-10-19"]);
+    commit("a.txt", "fix(ci): item one", [
+      "Platter-Item: fix/one",
+      "Platter-Verify: verify green 2026-10-19T10:00Z",
+      "Platter-Paths: none",
+    ]);
+    git(["checkout", "-q", "main"]);
+    commit("m1.txt", "docs(research): a main close-out");
+    commit("m2.txt", "docs(research): another main close-out");
+    git(["checkout", "-q", "platter/2026-10-19"]);
+    git(["merge", "-q", "--no-edit", "main"]); // the catch-up merge
+    commit("b.txt", "fix(ci): item two", [
+      "Platter-Item: fix/two",
+      "Platter-Verify: verify green 2026-10-26T10:00Z",
+      "Platter-Paths: none",
+      "Platter-Closes: #7",
+    ]);
+    commit("a.txt", "revert: unboard part of item one by hand", [], "reverted"); // no trailer
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("gives a row to each Platter-Item commit and to nothing else", () => {
+    const table = ledger(["--base", seed]);
+    const rows = table.split("\n").filter((l) => /^\| \d+ \|/.test(l));
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toContain("`fix/one`");
+    expect(rows[1]).toContain("`fix/two`");
+    expect(table).not.toContain("close-out");
+    expect(table).not.toMatch(/\| `—` \|/);
+  });
+
+  it("counts the trailer-less commits it left out, rather than hiding them", () => {
+    // stale base: two main commits + the hand revert; correct base (main): the revert alone.
+    expect(ledger(["--base", seed])).toContain("not items: 3 commit(s)");
+    expect(ledger(["--base", "main"])).toContain("not items: 1 commit(s)");
+  });
+
+  it("draws the picture from the item count, not the range's commit count", () => {
+    const body = ledger(["--base", seed, "--body"]);
+    expect(body).toContain("**2 protected changes**");
+    expect(body).toContain("**main: 2 commits**");
+  });
+
+  it("numbers the Summary's items the way the ledger does", () => {
+    expect(ledger(["--base", seed, "--body"])).toContain("- Closes #7 — boarded as item 2.");
+  });
+
+  it("still composes a body that passes ship checkbody", () => {
+    const file = join(dir, "body.md");
+    writeFileSync(file, ledger(["--base", seed, "--body"]));
+    const { code } = run(["checkbody", file]);
+    expect(code).toBe(0);
+  });
+});
+
 describe("ship platter — refusals that keep the platter an assembly point, not a workspace", () => {
   // This refusal depends on the CURRENT branch, so it runs in its own repo on `main`. Against
   // process.cwd() it went red the first time a platter was actually opened (2026-09-05): `platter
@@ -362,6 +447,7 @@ case "$method $url" in
   "GET "*"state=all"*) out='[{"number":42,"body":""}]'; code=200 ;;
   "GET "*"platter/"*) out='[{"number":7}]'; code=200 ;;
   "GET "*"fix/item"*) out="$ITEM_PRS"; code=200 ;;
+  "GET "*"/pulls/7") out='{"commits":1,"head":{"sha":"'"$(git rev-parse HEAD)"'"}}'; code=200 ;;
   "POST "*) out='{}'; code=201 ;;
   *) out='{}'; code=200 ;;
 esac

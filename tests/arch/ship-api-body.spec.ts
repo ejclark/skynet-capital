@@ -15,23 +15,28 @@ import { hermeticGitEnv } from "../support/hermetic-git.js";
 describe("ship api() — a body past the 128 KiB argv cap still sends", () => {
   let dir: string;
   const BIG = 200_000; // comfortably past 131,072
-  const env = (patchCode = "200") =>
+  let head: string;
+  const env = (patchCode = "200", extra: Record<string, string> = {}) =>
     hermeticGitEnv({
       GH_TOKEN: "test-token-never-used",
       PATH: `${join(dir, "bin")}:${process.env.PATH ?? ""}`,
       STUB_DIR: dir,
       STUB_PATCH_CODE: patchCode,
+      STUB_PR_COMMITS: "1",
+      STUB_PR_HEAD: head ?? "",
+      PLATTER_SYNC_WAIT: "0",
+      ...extra,
     });
 
   /** Source ship.sh, swap the ledger for a BIG-char body, and run the platter body sync. */
-  const sync = (patchCode?: string) => {
+  const sync = (patchCode?: string, extra?: Record<string, string>) => {
     const script = `source "${resolve("scripts/ship.sh")}"
 platter_body() { head -c ${BIG} /dev/zero | tr '\\0' x; }
 platter_sync_body platter/2026-10-26`;
     try {
       const out = execFileSync("bash", ["-c", script], {
         cwd: dir,
-        env: env(patchCode),
+        env: env(patchCode, extra),
         stdio: "pipe",
       });
       return { code: 0, stdout: out.toString(), stderr: "" };
@@ -49,7 +54,8 @@ platter_sync_body platter/2026-10-26`;
     dir = mkdtempSync(join(tmpdir(), "ship-api-body-"));
     mkdirSync(join(dir, "bin"));
     // A curl that records its argv and whatever arrived on stdin, then answers like GitHub: the open
-    // PR list for a GET, and STUB_PATCH_CODE for the PATCH.
+    // PR list for a GET of the list, the PR's head and commit count for a GET of the PR itself, and
+    // STUB_PATCH_CODE for the PATCH.
     writeFileSync(
       join(dir, "bin", "curl"),
       `#!/bin/bash
@@ -57,7 +63,11 @@ printf '%s\\n' "$@" >> "$STUB_DIR/argv.log"
 method=GET; prev=""
 for a in "$@"; do [ "$prev" = "-X" ] && method="$a"; prev="$a"; done
 case " $* " in *" --data-binary @- "*) cat > "$STUB_DIR/stdin.json" ;; esac
-if [ "$method" = GET ]; then printf '[{"number":42}]\\n__SHIP_HTTP__200'
+url="\${@: -1}"
+if [ "$method" = GET ]; then case "$url" in
+  */pulls/42) printf '{"commits":%s,"head":{"sha":"%s"}}\\n__SHIP_HTTP__200' "$STUB_PR_COMMITS" "$STUB_PR_HEAD" ;;
+  *) printf '[{"number":42}]\\n__SHIP_HTTP__200' ;;
+esac
 else printf '{}\\n__SHIP_HTTP__%s' "$STUB_PATCH_CODE"; fi
 `,
     );
@@ -65,7 +75,14 @@ else printf '{}\\n__SHIP_HTTP__%s' "$STUB_PATCH_CODE"; fi
     const git = (args: string[]) =>
       execFileSync("git", args, { cwd: dir, env: env(), stdio: "pipe" });
     git(["init", "-q", "-b", "main", "."]);
+    git(["config", "user.email", "spec@example.com"]);
+    git(["config", "user.name", "spec"]);
     git(["remote", "add", "origin", "https://github.com/acme/widgets.git"]);
+    // main at the seed, the platter one commit ahead — the range GitHub's stub agrees with.
+    git(["commit", "-q", "--allow-empty", "-m", "chore: seed"]);
+    git(["update-ref", "refs/remotes/origin/main", "HEAD"]);
+    git(["commit", "-q", "--allow-empty", "-m", "fix: an item"]);
+    head = git(["rev-parse", "HEAD"]).toString().trim();
   });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -92,6 +109,86 @@ else printf '{}\\n__SHIP_HTTP__%s' "$STUB_PATCH_CODE"; fi
     expect(code).toBe(1);
     expect(stderr).toContain("PATCH body returned HTTP 422");
     expect(stderr).toContain("refresh #42's ledger by hand");
+  });
+});
+
+// #6252: from a shallow or stale origin/main, the range the ledger reads swallowed main's history —
+// #5852's body listed 986 rows over 25 real commits. The sync now refuses to post a body whose
+// range disagrees with GitHub's own count, so the stale ledger stays up rather than a wrong one.
+describe("ship platter sync — the ledger's range must match the PR's own commits", () => {
+  let dir: string;
+  let head: string;
+  const run = (extra: Record<string, string>) => {
+    const env = hermeticGitEnv({
+      GH_TOKEN: "test-token-never-used",
+      PATH: `${join(dir, "bin")}:${process.env.PATH ?? ""}`,
+      STUB_DIR: dir,
+      STUB_PATCH_CODE: "200",
+      STUB_PR_COMMITS: "1",
+      STUB_PR_HEAD: head,
+      PLATTER_SYNC_WAIT: "0",
+      ...extra,
+    });
+    const script = `source "${resolve("scripts/ship.sh")}"
+platter_sync_body platter/2026-10-26`;
+    try {
+      execFileSync("bash", ["-c", script], { cwd: dir, env, stdio: "pipe" });
+      return { code: 0, stderr: "" };
+    } catch (error) {
+      const e = error as { status?: number; stderr?: Buffer };
+      return { code: e.status ?? -1, stderr: e.stderr?.toString() ?? "" };
+    }
+  };
+  const patched = () => readFileSync(join(dir, "argv.log"), "utf8").includes("PATCH");
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "ship-sync-range-"));
+    mkdirSync(join(dir, "bin"));
+    writeFileSync(
+      join(dir, "bin", "curl"),
+      `#!/bin/bash
+printf '%s\\n' "$@" >> "$STUB_DIR/argv.log"
+url="\${@: -1}"
+case "$url" in
+  */pulls/42) printf '{"commits":%s,"head":{"sha":"%s"}}\\n__SHIP_HTTP__200' "$STUB_PR_COMMITS" "$STUB_PR_HEAD" ;;
+  *pulls\\?*) printf '[{"number":42}]\\n__SHIP_HTTP__200' ;;
+  *) cat > /dev/null; printf '{}\\n__SHIP_HTTP__200' ;;
+esac
+`,
+    );
+    chmodSync(join(dir, "bin", "curl"), 0o755);
+    const env = hermeticGitEnv({});
+    const git = (args: string[]) =>
+      execFileSync("git", args, { cwd: dir, env, stdio: "pipe" }).toString().trim();
+    git(["init", "-q", "-b", "main", "."]);
+    git(["config", "user.email", "spec@example.com"]);
+    git(["config", "user.name", "spec"]);
+    git(["remote", "add", "origin", "https://github.com/acme/widgets.git"]);
+    git(["commit", "-q", "--allow-empty", "-m", "chore: seed"]);
+    git(["update-ref", "refs/remotes/origin/main", "HEAD"]);
+    git(["commit", "-q", "--allow-empty", "-m", "fix: an item"]);
+    head = git(["rev-parse", "HEAD"]);
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("posts when the range and GitHub agree", () => {
+    expect(run({}).code).toBe(0);
+    expect(patched()).toBe(true);
+  });
+
+  it("refuses, posting nothing, when GitHub counts a different number of commits", () => {
+    const { code, stderr } = run({ STUB_PR_COMMITS: "25" });
+    expect(code).toBe(1);
+    expect(stderr).toContain("holds 1 commits, but GitHub says #42 has 25");
+    expect(stderr).toContain("scripts/ship.sh platter sync");
+    expect(patched()).toBe(false);
+  });
+
+  it("refuses, posting nothing, while GitHub has not yet seen the pushed head", () => {
+    const { code, stderr } = run({ STUB_PR_HEAD: "0".repeat(40) });
+    expect(code).toBe(1);
+    expect(stderr).toContain("not the pushed");
+    expect(patched()).toBe(false);
   });
 });
 
