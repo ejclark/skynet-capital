@@ -55,6 +55,14 @@ and the first button, never the rail. They skip anything that names a concept th
    visitor opens the sign-in page, the app shall show a way to sign in at every width.** Judge:
    can this reader tell how to get in, in ten seconds? _(The first page this member ever saw; a
    spectacle surface, so the phone frame checks its honest fallback, not a curated layout.)_
+0b. `/` — the sign-in hop: with no linked account it lands on Profile with the Onboarding chapter
+   open — step 1 (connect Alpaca) first, then "Say hello now", then "Not ready to connect yet?
+   See the leaderboard ›". **WHEN a signed-in session with zero linked accounts arrives on the
+   sign-in hop, the app shall open its Profile on the onboarding chapter, with a link to the
+   leaderboard.** _Fixed — #6317 (#6271 outcome 1): sign-in used to land here on the standings,
+   with no way in to connect._ A member with an account, and a typed `/app/leaderboard`, keep
+   the leaderboard. Judge: can this reader tell what to do first, and where the race is, in ten
+   seconds?
 1. `/app/` — the league table, ranked rows; the topbar's Profile tab is one tap away and lands on
    the Profile page, which opens on the connect guide for a member with no account. **WHEN a
    signed-in member with no linked account opens the app, the app shall keep a one-tap way into

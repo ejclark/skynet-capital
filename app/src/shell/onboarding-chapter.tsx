@@ -188,6 +188,23 @@ function HeldStep({
   );
 }
 
+/**
+ * THE WAY OUT (#6317): a member with no account now starts here from sign-in instead of on the
+ * leaderboard, so the race stays one tap away — after the held steps, in the order #6271 set for
+ * the 390px landing (step 1 · say hello · the leaderboard). Only while step 1 is open; once an
+ * account is linked, sign-in lands on the leaderboard again.
+ */
+function LookAround(): ReactElement {
+  return (
+    <p className="ob-look-around">
+      Not ready to connect yet?{" "}
+      <Link to="/leaderboard" search={{ by: "equity" }}>
+        See the leaderboard ›
+      </Link>
+    </p>
+  );
+}
+
 function Step({
   step,
   active,
@@ -269,6 +286,7 @@ export function OnboardingChapter({
             ),
           )}
         </ol>
+        {holding ? <LookAround /> : null}
       </MilestonePanel>
     </>
   );
