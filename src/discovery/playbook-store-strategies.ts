@@ -73,9 +73,7 @@ function rowOf(pair: Pair, asOfIso: string): PairRowEntry {
     ...pair.evidence,
     id: pair.id,
     symbols: pair.symbols,
-    statusLabel: stale
-      ? `${statusLabel(pair.evidence)} · past its shelf date`
-      : statusLabel(pair.evidence),
+    statusLabel: statusLabel(pair.evidence, stale),
     stale,
     ...(href ? { studyHref: href } : {}),
     ...(plainCall ? { plainCall } : {}),
