@@ -109,6 +109,21 @@ describe("SymbolFitFor", () => {
     expect(folded).toHaveTextContent("The TACO event play");
   });
 
+  it("names a stale verdict by its shelf date in the counted line, never by the verdict it used to carry", async () => {
+    const stale = row({
+      strategy: "pre-print-run-up",
+      name: "the pre-print run-up",
+      status: "stale",
+      glyph: "△",
+      word: "researched, below the house bar · past its shelf date",
+    });
+    stub(200, { symbol: "AMZN", fits: [...FITS, stale] });
+    mount();
+    expect(
+      await screen.findByText("2 not to take: can't run · past its shelf date"),
+    ).toBeInTheDocument();
+  });
+
   it("files the one research request for a strategy with no row, once", async () => {
     stub(200, { symbol: "AMZN", fits: FITS });
     mount();
