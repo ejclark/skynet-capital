@@ -54,8 +54,10 @@ export interface CoverageJson {
   readonly byMacroOnly: number;
   /** Sector names with no coverage of any kind, in row order. */
   readonly gaps: readonly string[];
-  /** True when the viewer has at least one account to read positions from. */
+  /** True when at least one of the viewer's accounts was read cleanly — an errored read never counts. */
   readonly holdingsRead: boolean;
+  /** Present when one or more of the viewer's accounts could not be read: why a count is partial or absent. */
+  readonly holdingsNote?: string;
   readonly heldSectorCount: number;
   /** The 11 GICS sectors in H's order: deepest first, then most names, then most macro reports. */
   readonly sectors: readonly CoverageRowJson[];
@@ -75,6 +77,7 @@ export interface CoverageViewInputs {
     readonly symbols: readonly string[];
   }[];
   readonly holdingsRead: boolean;
+  readonly holdingsNote?: string;
   /** Per fund ticker, or a note saying why there is no market data at all. */
   readonly funds: { readonly byFund: ReadonlyMap<string, FundStats> } | { readonly note: string };
 }
@@ -149,6 +152,7 @@ export function coverageJsonView(inputs: CoverageViewInputs): CoverageJson {
     ).length,
     gaps: ordered.filter((s) => s.depth === "gap").map((s) => s.sector),
     holdingsRead: inputs.holdingsRead,
+    ...(inputs.holdingsNote ? { holdingsNote: inputs.holdingsNote } : {}),
     heldSectorCount: inputs.map.sectors.filter((s) => s.held.length > 0).length,
     sectors: ordered.map(row),
     unclassified: row(inputs.map.unclassified),
