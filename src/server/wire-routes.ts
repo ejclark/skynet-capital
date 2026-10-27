@@ -24,8 +24,14 @@ import {
   toMemberMilestones,
 } from "../observatory/milestone-event-feed.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import type { PulseHistoryFold } from "../observatory/pulse-history-fold.js";
 import { spreadLookup } from "../observatory/spread-activity.js";
 import { mergeLedgerIntoEvents } from "../observatory/trade-event-feed.js";
+import {
+  type WireTradeVitals,
+  wireTradeVitalsFor,
+  wireTradeVitalsFromDrawdown,
+} from "../observatory/vitals.js";
 import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.js";
 import type { WireFeed } from "../observatory/wire-feed-cache.js";
 import { wireJsonView } from "../observatory/wire-json-view.js";
@@ -132,9 +138,15 @@ export interface WireRouteDeps {
    * per leg. Omit and a bot's spread legs render as the separate fills they always did.
    */
   readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
-  /** One participant's equity history — the "Loss headroom" gauge's input. Omit and every gauge
-   *  renders its honest "not yet measured" state instead of guessing. */
+  /** One participant's equity history — the "Loss headroom" gauge's input when `readPulseHistory`
+   *  is not wired. Omit both and every gauge renders its honest "not yet measured" state instead
+   *  of guessing. */
   readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
+  /** A participant's history as Pulse reads it — a live fold kept up to date by what was appended
+   *  (`pulse-history-cache.ts`, #4619). Preferred over `readHistory` for the gauge: it answers the
+   *  drawdown as of any instant without reading a sample. Omit and Pulse folds `readHistory` per
+   *  request instead. */
+  readonly readPulseHistory?: (participantId: string) => Promise<PulseHistoryFold>;
 }
 
 /**
@@ -295,18 +307,15 @@ async function assembleWire(
   const botParticipantIds = [
     ...new Set(page.rows.filter((r) => r.kind === "bot").map((r) => r.participantId)),
   ];
-  const historyByParticipant = config.readHistory
+  const vitalsOf = vitalsReader(config);
+  const vitalsByParticipant = vitalsOf
     ? new Map(
-        await Promise.all(
-          botParticipantIds.map(
-            async (id) => [id, await config.readHistory?.(id)] as [string, readonly EquitySample[]],
-          ),
-        ),
+        await Promise.all(botParticipantIds.map(async (id) => [id, await vitalsOf(id)] as const)),
       )
     : undefined;
   const rows = attachWireReasoning(page.rows, {
     ...(config.findByOrderId ? { findByOrderId: config.findByOrderId } : {}),
-    ...(historyByParticipant ? { historyByParticipant } : {}),
+    ...(vitalsByParticipant ? { vitalsByParticipant } : {}),
     ...(ownsAccount ? { ownsAccount } : {}),
   });
 
@@ -318,6 +327,26 @@ async function assembleWire(
     ...(milestones ? { milestones } : {}),
     ...(config.readPlayMilestones ? { plays: config.readPlayMilestones().slice(-limit) } : {}),
   };
+}
+
+/**
+ * One account's vitals as of any instant, or undefined when neither history read is wired. The
+ * Pulse fold comes first: it is already in memory and answers the drawdown without reading a
+ * sample, where `readHistory` re-reads the account's whole history on every request (+186 ms of
+ * `/api/wire` at 180 days, #4619). Both give the same gauge for every row.
+ */
+function vitalsReader(
+  config: WireRouteDeps,
+): ((participantId: string) => Promise<(atIso: string) => WireTradeVitals>) | undefined {
+  const { readPulseHistory, readHistory } = config;
+  if (readPulseHistory) {
+    return async (id) => {
+      const fold = await readPulseHistory(id);
+      return wireTradeVitalsFromDrawdown((atIso) => fold.drawdownPctAt(atIso));
+    };
+  }
+  if (readHistory) return async (id) => wireTradeVitalsFor(await readHistory(id));
+  return undefined;
 }
 
 /**

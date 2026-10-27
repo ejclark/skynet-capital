@@ -59,6 +59,13 @@ export class PulseHistoryFold {
   ddAbs = 0;
   /** The first sample at or above 2× the seed, or null — `doubledAtOf`. */
   doubled: EquitySample | null = null;
+  /** The second sample's instant: before it, a drawdown measures nothing. */
+  private secondAt: string | null = null;
+  /** Each time `ddPct` grew, the sample's instant and the new worst — so the drawdown as of any
+   *  past instant is one binary search, which is the Wire's loss-headroom gauge (#4619). It grows
+   *  only on a new worst dip, so it stays small next to the samples it replaces. */
+  private readonly ddStepAt: string[] = [];
+  private readonly ddStepPct: number[] = [];
   /** The last sample of each market day, oldest first — `dailyChangesOf`'s input. */
   private readonly closes: DayClose[] = [];
   private readonly dayOf: (iso: string) => string;
@@ -93,13 +100,18 @@ export class PulseHistoryFold {
     }
     this.last = s;
     this.count += 1;
+    if (this.count === 2) this.secondAt = s.at;
     if (s.equity < this.low) this.low = s.equity;
     if (s.equity > this.high) this.high = s.equity;
     if (s.equity > this.peak) this.peak = s.equity;
     const dipAbs = this.peak - s.equity;
     const dipPct = this.peak > 0 ? (dipAbs / this.peak) * 100 : 0;
     if (dipAbs > this.ddAbs) this.ddAbs = dipAbs;
-    if (dipPct > this.ddPct) this.ddPct = dipPct;
+    if (dipPct > this.ddPct) {
+      this.ddPct = dipPct;
+      this.ddStepAt.push(s.at);
+      this.ddStepPct.push(dipPct);
+    }
     const seed = this.first.equity;
     if (!this.doubled && seed > 0 && s.equity >= seed * 2) this.doubled = s;
     const day = this.dayOf(s.at);
@@ -117,6 +129,24 @@ export class PulseHistoryFold {
   /** `equityDrawdownOf` over everything folded: null under two samples. */
   drawdown(): { peak: number; ddPct: number; ddAbs: number } | null {
     return this.count < 2 ? null : { peak: this.peak, ddPct: this.ddPct, ddAbs: this.ddAbs };
+  }
+
+  /**
+   * The worst peak-to-trough dip, in percent, across every sample at or before `atIso`, or null
+   * under two such samples — `lossHeadroomGauges`' figure without its sorted copy of the samples.
+   * The cut compares code units, as that one does, so a sample is in or out the same way in both.
+   */
+  drawdownPctAt(atIso: string): number | null {
+    if (this.secondAt === null || this.secondAt > atIso) return null;
+    // How many steps sit at or before `atIso` — the first index whose instant is past it.
+    let lo = 0;
+    let hi = this.ddStepAt.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if ((this.ddStepAt[mid] as string) <= atIso) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo === 0 ? 0 : (this.ddStepPct[lo - 1] as number);
   }
 
   /** `dailyChangesOf` over everything folded. */

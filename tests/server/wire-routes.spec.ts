@@ -11,6 +11,7 @@ import {
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
+import { PulseHistoryFold } from "../../src/observatory/pulse-history-fold.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
@@ -670,6 +671,42 @@ describe("serveWireJson", () => {
       );
       const withoutHistoryTrades = JSON.parse(withoutHistory.out.body).wire.trades;
       expect(withoutHistoryTrades[0].vitals).toBeUndefined();
+    });
+
+    it("reads the gauge off the Pulse fold, never the whole history, when both are wired (#4619)", async () => {
+      const samples = [
+        { at: "2026-08-19T00:00:00.000Z", equity: 100_000 },
+        { at: "2026-08-19T01:00:00.000Z", equity: 99_000 },
+        { at: "2026-08-19T14:30:00.000Z", equity: 99_500 },
+      ].map((s) => ({ ...s, participantId: "sauron", cash: 0, realizedPl: 0 }));
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve([record({ orderId: "ord-bot" })]),
+        findByOrderId: () => ({ record: decision, intent }),
+        readHistory: () => Promise.resolve(samples),
+      };
+      const fromHistory = capture();
+      await serveWireJson(fromHistory.res, "/api/wire", deps, false);
+
+      let wholeReads = 0;
+      const fromFold = capture();
+      await serveWireJson(
+        fromFold.res,
+        "/api/wire",
+        {
+          ...deps,
+          readHistory: () => {
+            wholeReads += 1;
+            return Promise.resolve(samples);
+          },
+          readPulseHistory: () => Promise.resolve(PulseHistoryFold.of(samples)),
+        },
+        false,
+      );
+      const gauge = (body: string) => JSON.parse(body).wire.trades[0].vitals.lossHeadroom;
+      expect(gauge(fromFold.out.body)).toEqual(gauge(fromHistory.out.body));
+      expect(gauge(fromFold.out.body).detailText).toBe("1.0% of 5.0% cap");
+      expect(wholeReads).toBe(0);
     });
   });
 });

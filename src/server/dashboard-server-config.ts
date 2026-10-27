@@ -16,7 +16,6 @@ import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
-import type { PulseHistoryFold } from "../observatory/pulse-history-fold.js";
 import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
 import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { WatchlistPort } from "../ports/watchlist.js";
@@ -146,9 +145,6 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).
    */
   readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
-  /** A participant's history as Pulse reads it — a live fold kept up to date by what was appended
-   *  (`pulse-history-cache.ts`, #4619). Omit and Pulse folds `readHistory` per request instead. */
-  readonly readPulseHistory?: (participantId: string) => Promise<PulseHistoryFold>;
   /** Re-reads this account from the broker before its desk renders, so the screen shows what Alpaca
    *  holds rather than only what the fill stream delivered. Rate-limited and failure-swallowing
    *  in `createBrokerSync`; omit (offline/tests) and the desk renders live memory as before. */
