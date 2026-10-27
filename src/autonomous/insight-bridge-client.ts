@@ -2,8 +2,8 @@ import { fetchJson } from "../http/fetch-json.js";
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
-  INSIGHTS_BRIDGE_SHARED_SECRET,
   type InsightRecord,
+  insightsBridgeSecret,
 } from "./insight-record.js";
 
 /** The `bots` process's whole surface for the interim insight bridge — one narrow function, so
@@ -39,6 +39,7 @@ export function resolveInsightBridge(
   options: { readonly timeoutMs?: number } = {},
 ): InsightBridgeClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
+  const bridgeSecret = insightsBridgeSecret(env);
   if (!url) {
     return NOOP_CLIENT;
   }
@@ -53,7 +54,7 @@ export function resolveInsightBridge(
           const response = await fetchJson(
             "POST",
             endpoint,
-            { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
+            { [INSIGHTS_BRIDGE_SECRET_HEADER]: bridgeSecret },
             entry,
             controller.signal,
           );
