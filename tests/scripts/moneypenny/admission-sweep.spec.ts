@@ -1,3 +1,4 @@
+import { openPrsByIssue } from "../../../scripts/moneypenny/continuation.mjs";
 import {
   type ClaimCtx,
   claimNext,
@@ -261,6 +262,19 @@ describe("the sweep skips an issue an open PR already names", () => {
     const pool = [at(1, 1), at(2, 2)];
     expect(withoutOpenPr(pool, new Map([[2, 9]])).map((i) => i.number)).toEqual([1]);
     expect(withoutOpenPr(pool)).toEqual(pool);
+  });
+
+  // #6282: since #6144 a held platter's body carries a `Part of #n` bullet per boarded item with
+  // work left; read as "a build of #n", it parked #4535 for the platter's whole hold.
+  it("a held platter's `Part of #n` bullet leaves #n in the pool; its `Closes #n` does not", () => {
+    const platter = {
+      number: 950,
+      title: "chore(platter): 2026-10-27",
+      body: "## Summary\n- Closes #4246 — boarded as item 1.\n- Part of #4535 — boarded as item 2.",
+      head: { ref: "platter/2026-10-27" },
+    };
+    const pool = [at(4246, 1), at(4535, 2)];
+    expect(withoutOpenPr(pool, openPrsByIssue([platter])).map((i) => i.number)).toEqual([4535]);
   });
 });
 
