@@ -246,6 +246,64 @@ describe("JsonlKeyedStore", () => {
     });
   });
 
+  describe("when a rotation lands while a rotating store is being read (#6290)", () => {
+    // Four 26-byte rows against a 40-byte cap: `[1,2]` rotates into an archive, `[3,4]` is the
+    // active file, already past the cap — so the next append rotates it.
+    const cap = 40;
+    const seed = async (store: JsonlKeyedStore<Entry>, key: string): Promise<void> => {
+      for (let value = 1; value <= 4; value++) await store.append(key, { key, value });
+    };
+    const original = (key: string): Entry[] => [1, 2, 3, 4].map((value) => ({ key, value }));
+    const readRacingAppend = async (
+      reader: AsyncIterable<Entry>,
+      racer: () => Promise<void>,
+    ): Promise<Entry[]> => {
+      const seen: Entry[] = [];
+      for await (const entry of reader) {
+        seen.push(entry);
+        if (seen.length === 1) await racer(); // rotates mid-read, after the read has begun
+      }
+      return seen;
+    };
+
+    it("still yields every row the key held when its stream began, in write order", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir), { rotateAtBytes: cap });
+      await seed(store, "alpha");
+
+      const seen = await readRacingAppend(store.stream("alpha"), () =>
+        store.append("alpha", { key: "alpha", value: 5 }),
+      );
+
+      expect(seen).toEqual(original("alpha"));
+      expect(await store.list("alpha")).toEqual([...original("alpha"), { key: "alpha", value: 5 }]);
+    });
+
+    it("keeps a key it has not reached yet whole when that key rotates first", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir), { rotateAtBytes: cap });
+      await seed(store, "alpha");
+      await seed(store, "beta");
+
+      const seen = await readRacingAppend(store.stream(), () =>
+        store.append("beta", { key: "beta", value: 5 }),
+      );
+
+      // beta's newest row may or may not be read — it landed after the read began — but none of
+      // the rows beta held before it may go missing, and the order holds.
+      expect(seen.filter((e) => e.value <= 4)).toEqual([...original("alpha"), ...original("beta")]);
+    });
+
+    it("reads a key whose active file a rotation has renamed away but not yet replaced", async () => {
+      writeFileSync(
+        join(dir, "alpha.2026-10-27T12-00-00-000Z.jsonl"),
+        '{"key":"alpha","value":1}\n',
+      );
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir), { rotateAtBytes: cap });
+
+      expect(await store.list()).toEqual([{ key: "alpha", value: 1 }]);
+      expect(await store.list("alpha")).toEqual([{ key: "alpha", value: 1 }]);
+    });
+  });
+
   describe("when reading every file's appended lines at once (#4458)", () => {
     it("reads each file from 0 the first time, keyed by file path", async () => {
       const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
