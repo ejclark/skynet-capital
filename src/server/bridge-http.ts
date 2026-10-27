@@ -3,11 +3,63 @@
  * reader, a JSON responder, and the whole fail-closed POST shape. Split out so the listener stays
  * under its line cap as routes are added (#3651 slice 7a added `/cond-scout`).
  */
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
+  INSIGHTS_BRIDGE_SECRET_ENV,
   INSIGHTS_BRIDGE_SECRET_HEADER,
   INSIGHTS_BRIDGE_SHARED_SECRET,
 } from "../autonomous/insight-record.js";
+
+/**
+ * What the listener accepts in `INSIGHTS_BRIDGE_SECRET_HEADER` (#4621). `secret` is the provisioned
+ * `SKYNET_INSIGHTS_BRIDGE_SECRET`, or the repo-public literal on a host that never set one.
+ * `acceptLegacy` is the expand half of the listener-first rollout: the dashboard and bots apps
+ * deploy separately, so a staged secret reaches one before the other, and the bots still sending
+ * the literal must not lose the bridge meanwhile. The first use of the literal while a secret is
+ * set warns (`[insights-listener] legacy bridge secret used`), and the contract (stop accepting it once
+ * both apps run with the secret) is a follow-up on #4621. Until then, the secret only guards a host
+ * on which the literal is also refused.
+ */
+export interface BridgeAuth {
+  readonly secret: string;
+  readonly acceptLegacy: boolean;
+}
+
+/** The literal alone — the behaviour of every listener before #4621, and of one with no secret. */
+export const LEGACY_BRIDGE_AUTH: BridgeAuth = {
+  secret: INSIGHTS_BRIDGE_SHARED_SECRET,
+  acceptLegacy: false,
+};
+
+export function resolveBridgeAuth(env: NodeJS.ProcessEnv): BridgeAuth {
+  const secret = env[INSIGHTS_BRIDGE_SECRET_ENV];
+  return secret ? { secret, acceptLegacy: true } : LEGACY_BRIDGE_AUTH;
+}
+
+/** Hashing first makes the compare constant-time whatever the header's length. */
+function sameSecret(given: string, expected: string): boolean {
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(digest(given), digest(expected));
+}
+
+/** Once per listener, not per request — the bots poll every 30 s. */
+const legacyWarned = new WeakSet<BridgeAuth>();
+
+/** True when the request carries an accepted bridge secret. A repeated or missing header fails. */
+export function bridgeAuthorized(req: IncomingMessage, auth: BridgeAuth): boolean {
+  const given = req.headers[INSIGHTS_BRIDGE_SECRET_HEADER];
+  if (typeof given !== "string") return false;
+  if (sameSecret(given, auth.secret)) return true;
+  if (!(auth.acceptLegacy && sameSecret(given, INSIGHTS_BRIDGE_SHARED_SECRET))) return false;
+  if (!legacyWarned.has(auth)) {
+    legacyWarned.add(auth);
+    process.emitWarning(
+      "[insights-listener] legacy bridge secret used — the bots app has no SKYNET_INSIGHTS_BRIDGE_SECRET yet",
+    );
+  }
+  return true;
+}
 
 /**
  * One insight record, JSON-encoded, is a few hundred bytes at most. 16 KB is generous headroom
@@ -83,13 +135,14 @@ export async function handleBridgePost<T>(
     readonly invalid: string;
     readonly accept?: (value: T) => Record<string, unknown>;
   },
+  auth: BridgeAuth = LEGACY_BRIDGE_AUTH,
 ): Promise<void> {
   if (req.method !== "POST") {
     res.setHeader("allow", "POST");
     respond(res, 405, { error: "method not allowed" });
     return;
   }
-  if (req.headers[INSIGHTS_BRIDGE_SECRET_HEADER] !== INSIGHTS_BRIDGE_SHARED_SECRET) {
+  if (!bridgeAuthorized(req, auth)) {
     respond(res, 401, { error: "unauthorized" });
     return;
   }

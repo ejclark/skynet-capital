@@ -20,7 +20,7 @@ import { controlsPollRosterHeaders, type HouseRosterReport } from "./house-roste
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
-  INSIGHTS_BRIDGE_SHARED_SECRET,
+  insightsBridgeSecret,
 } from "./insight-record.js";
 import { parseSubscriptionsSnapshot, type SubscriptionsSnapshot } from "./subscriptions-wire.js";
 
@@ -138,6 +138,7 @@ export function resolveBotControls(
   options: { readonly timeoutMs?: number } = {},
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
+  const bridgeSecret = insightsBridgeSecret(env);
   if (!url) return DISABLED_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}${CONTROLS_BRIDGE_PATH}`;
   const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
@@ -161,7 +162,7 @@ export function resolveBotControls(
           "GET",
           endpoint,
           {
-            [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET,
+            [INSIGHTS_BRIDGE_SECRET_HEADER]: bridgeSecret,
             ...selfReport,
             ...controlsPollGateHeaders(
               gateVerdicts.size > 0 ? [...gateVerdicts.values()] : undefined,

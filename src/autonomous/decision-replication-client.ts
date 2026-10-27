@@ -16,7 +16,7 @@ import {
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
-  INSIGHTS_BRIDGE_SHARED_SECRET,
+  insightsBridgeSecret,
 } from "./insight-record.js";
 
 /**
@@ -135,6 +135,7 @@ export function resolveDecisionReplication(
   options: { readonly timeoutMs?: number } = {},
 ): DecisionReplicationClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
+  const bridgeSecret = insightsBridgeSecret(env);
   if (!url) return NOOP_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}/decisions`;
   const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
@@ -160,7 +161,7 @@ export function resolveDecisionReplication(
         const response = await fetchJson(
           "POST",
           endpoint,
-          { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
+          { [INSIGHTS_BRIDGE_SECRET_HEADER]: bridgeSecret },
           { kind, personaId, records, ...riders },
           controller.signal,
         );
