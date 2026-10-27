@@ -1,4 +1,8 @@
 import type { ReactElement } from "react";
+import type { DeskOrderEvent } from "../live/desk-events";
+import { doneNote } from "../live/fill-headline";
+import { marketSession } from "../live/market-session";
+import { useNow } from "./market-session";
 
 /**
  * The pre-trade gate's shared frame (#738 phase 10b) — the merge-box status head and the
@@ -42,6 +46,27 @@ export function DisarmNote(): ReactElement {
     <p className="gate-note">
       Editing the order re-arms this gate, which re-checks your paper account's buying power and
       positions at submit — approval never outlives the thing it approved.
+    </p>
+  );
+}
+
+/** The done state's note (#6257): queued until the stream carries a fill for this order, with the
+ *  open it waits for when the market is closed — "simulated fill" only once one exists. `children`
+ *  is the ticket's own trailing sentence (where the order shows up next). */
+export function DoneNote({
+  fill,
+  now,
+  children,
+}: {
+  readonly fill?: DeskOrderEvent;
+  /** Pins the clock in specs; the wall clock otherwise. */
+  readonly now?: Date;
+  readonly children: string;
+}): ReactElement {
+  const ticking = useNow();
+  return (
+    <p className="gate-note">
+      {doneNote(fill, marketSession(now ?? ticking))} {children}
     </p>
   );
 }

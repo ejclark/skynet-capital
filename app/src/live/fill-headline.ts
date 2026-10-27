@@ -1,4 +1,5 @@
 import type { DeskOrderEvent } from "./desk-events";
+import { type MarketSessionView, waitsForOpen } from "./market-session";
 import { money, tifLabel } from "./ticket";
 
 /**
@@ -33,4 +34,21 @@ export function fillHeadline(order: SubmittedOrder, fill: DeskOrderEvent | undef
   const symbol = typeof fill.payload.symbol === "string" ? fill.payload.symbol : order.symbol;
   const size = quantity !== undefined ? `${quantity} ` : "";
   return `Order ${order.orderId} ${word} — ${size}${symbol}${price !== undefined ? ` @ ${money(price)}` : ""}`;
+}
+
+/**
+ * The done note's first sentence (#6257): "simulated fill" is a word the stream earns, exactly as
+ * "filled" is in the headline — until a fill for this order arrives, the order is queued, and
+ * outside the session the note names the open it waits for. A frame that carries no filled
+ * quantity (a cancel, an echo) earns nothing.
+ */
+export function doneNote(fill: DeskOrderEvent | undefined, market: MarketSessionView): string {
+  const filled =
+    fill !== undefined &&
+    (fill.eventType === "order.filled" || (numberField(fill.payload, "filledQuantity") ?? 0) > 0);
+  if (filled) return "SIM account — simulated fill, real discipline.";
+  const open = waitsForOpen(market);
+  return open
+    ? `Queued — nothing fills before ${open}.`
+    : "Queued at the paper broker — the fill lands here the moment it reports one.";
 }

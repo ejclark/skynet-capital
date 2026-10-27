@@ -129,6 +129,15 @@ export function marketSession(now: Date = new Date()): MarketSessionView {
   };
 }
 
+/** The open an order placed now waits for — "the Tue 9:30 ET open", or "today's 9:30 ET open"
+ *  before the bell — and undefined while the regular session is running. The trade form's notes
+ *  read it so a ticket never promises an immediate fill the market is closed to give (#6257). */
+export function waitsForOpen(view: MarketSessionView): string | undefined {
+  if (view.state === "open" || view.state === "power") return undefined;
+  if (view.state === "pre") return "today's 9:30 ET open";
+  return view.nextOpen ? `the ${view.nextOpen} ET open` : "the next session's open";
+}
+
 /** "1h 28m", "42m", "6h" — the compact duration the widget prints. */
 export function formatMinutes(total: number): string {
   const h = Math.floor(total / 60);
