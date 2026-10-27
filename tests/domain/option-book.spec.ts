@@ -355,6 +355,15 @@ describe("coverShortfall — the best assignment, against the shares actually fr
       exact: false,
     });
   });
+
+  // #6330: the fallback was shares-blind — it charged every cap's width even where free shares
+  // could cover the call, which the exact search never does.
+  it("past the limit, lets free shares take over the widest call caps instead of charging them", () => {
+    const legs = [call(300, 13), call(250, -13)];
+    expect(coverShortfall(legs, "NVDA", 0)).toEqual({ shares: 0, cash: 13 * 5_000, exact: false });
+    expect(coverShortfall(legs, "NVDA", 1_300)).toEqual({ shares: 0, cash: 0, exact: false });
+    expect(coverShortfall(legs, "NVDA", 450)).toEqual({ shares: 0, cash: 9 * 5_000, exact: false });
+  });
 });
 
 // #4736: the desk and the bots' budgets read `coverNeeds`' greedy pairing; the guards read

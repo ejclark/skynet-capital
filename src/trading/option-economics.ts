@@ -264,7 +264,10 @@ function validateCoveredCall(
   const before = coverShortfall(legs, underlying, held);
   const after = coverShortfall([...legs, sold], underlying, held);
   const shortBefore = before.exact && after.exact ? before.shares : 0;
-  if (after.shares > shortBefore) {
+  // The shares themselves, whatever a held long call could cap (#6330): a sold call with no shares
+  // behind it is a call credit spread — a level-3 play — not a covered call, and a sell of the very
+  // contract held long is a close, which the close path judges.
+  if (held < needed || after.shares > shortBefore) {
     const promised = held - freeShares(context, underlying);
     refusals.push(
       `Covered means you hold the shares: ${request.contracts} contract${request.contracts === 1 ? "" : "s"} needs ${needed} shares of ${underlying} and you hold ${held}${promised > 0 ? `, ${promised} of them already covering calls you've sold` : ""}. This desk never sells naked calls.`,
