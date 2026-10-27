@@ -204,6 +204,15 @@ describe("event-material-scan decide()", () => {
     });
     expect(out.readings.screenStreak).toBe(0);
   });
+
+  it("an unanswered conviction proposal is material on an otherwise quiet pulse (#5482)", () => {
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
+      pendingProposals: ["ai-dip-2026-10/P6"],
+    });
+    expect(verdict).toBe(1);
+    expect(out.reasons).toEqual(["conviction-proposal:ai-dip-2026-10/P6"]);
+  });
 });
 
 describe("event-material-scan applyScreen()", () => {
