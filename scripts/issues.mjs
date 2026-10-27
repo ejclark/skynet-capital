@@ -119,10 +119,25 @@ export const withFooter = (body) =>
 export function commentWrite({ n, body, editId }) {
   const payload = { body: withFooter(body) };
   if (editId === undefined) return { method: "POST", path: `issues/${n}/comments`, payload };
-  // a bare `--edit-comment` parses as `true`, which Number() would read as id 1
+  // digits only: `true` would Number() to 1, and the `issuecomment-…` anchor form is not an id
   const id = /^\d+$/.test(String(editId)) ? Number(editId) : 0;
   if (!(id > 0)) throw new Error(`--edit-comment needs a comment id, got "${editId}"`);
   return { method: "PATCH", path: `issues/comments/${id}`, payload };
+}
+
+/**
+ * `update`'s comment write, decided before any other write (#6285). The key's presence is the
+ * signal, not its value: a trailing `--edit-comment` (an empty unquoted `$ID`) parses to undefined,
+ * and reading that as "no edit" posted a second comment where an edit was asked for. A bad id
+ * throws here, so it can never land after the issue PATCH already closed or relabelled the issue.
+ */
+export function updateCommentOp({ n, flags, read = readBody }) {
+  const editing = "edit-comment" in flags;
+  if (editing && !flags["comment-file"])
+    throw new Error("--edit-comment needs --comment-file (the new body)");
+  if (!flags["comment-file"]) return null;
+  const editId = editing ? (flags["edit-comment"] ?? "") : undefined;
+  return commentWrite({ n, body: read(flags["comment-file"]), editId });
 }
 
 const labelNames = (issue) => (issue.labels ?? []).map((l) => (typeof l === "string" ? l : l.name));
@@ -367,8 +382,7 @@ function link({ positional }) {
 function update({ positional, flags }) {
   const n = Number(positional[0]);
   if (!n) throw new Error("update needs an issue number");
-  if (flags["edit-comment"] !== undefined && !flags["comment-file"])
-    throw new Error("--edit-comment needs --comment-file (the new body)");
+  const commentOp = updateCommentOp({ n, flags });
   const current = ghRest(`issues/${n}`);
   const patch = {};
   if (flags.title) patch.title = flags.title;
@@ -385,11 +399,7 @@ function update({ positional, flags }) {
   if (flags.close) Object.assign(patch, { state: "closed", state_reason: flags.close });
   if (flags.reopen) patch.state = "open";
   const issue = Object.keys(patch).length ? ghWrite("PATCH", `issues/${n}`, patch) : current;
-  if (flags["comment-file"]) {
-    const editId = flags["edit-comment"];
-    const op = commentWrite({ n, body: readBody(flags["comment-file"]), editId });
-    ghWrite(op.method, op.path, op.payload);
-  }
+  if (commentOp) ghWrite(commentOp.method, commentOp.path, commentOp.payload);
   const blockers = csv(flags["blocked-by"]).map((b) => ghRest(`issues/${Number(b)}`));
   for (const op of followUps({ child: issue, blockers })) ghWrite(op.method, op.path, op.payload);
   for (const b of blockers)
