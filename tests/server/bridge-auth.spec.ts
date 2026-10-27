@@ -54,7 +54,16 @@ describe("insightsBridgeSecret (what the bots send)", () => {
     expect(insightsBridgeSecret({ SKYNET_INSIGHTS_BRIDGE_SECRET: SECRET })).toBe(SECRET);
   });
 
-  it("falls back to the literal when it is unset or empty", () => {
+  it("trims a pasted trailing newline, on both sides", () => {
+    const pasted = { SKYNET_INSIGHTS_BRIDGE_SECRET: `${SECRET}\n` };
+    expect(insightsBridgeSecret(pasted)).toBe(SECRET);
+    expect(resolveBridgeAuth(pasted).secret).toBe(SECRET);
+  });
+
+  it("falls back to the literal when it is unset or blank", () => {
+    expect(insightsBridgeSecret({ SKYNET_INSIGHTS_BRIDGE_SECRET: "  " })).toBe(
+      INSIGHTS_BRIDGE_SHARED_SECRET,
+    );
     expect(insightsBridgeSecret({})).toBe(INSIGHTS_BRIDGE_SHARED_SECRET);
     expect(insightsBridgeSecret({ SKYNET_INSIGHTS_BRIDGE_SECRET: "" })).toBe(
       INSIGHTS_BRIDGE_SHARED_SECRET,

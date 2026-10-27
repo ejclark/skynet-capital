@@ -6,9 +6,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
-  INSIGHTS_BRIDGE_SECRET_ENV,
   INSIGHTS_BRIDGE_SECRET_HEADER,
   INSIGHTS_BRIDGE_SHARED_SECRET,
+  provisionedBridgeSecret,
 } from "../autonomous/insight-record.js";
 
 /**
@@ -33,7 +33,7 @@ export const LEGACY_BRIDGE_AUTH: BridgeAuth = {
 };
 
 export function resolveBridgeAuth(env: NodeJS.ProcessEnv): BridgeAuth {
-  const secret = env[INSIGHTS_BRIDGE_SECRET_ENV];
+  const secret = provisionedBridgeSecret(env);
   return secret ? { secret, acceptLegacy: true } : LEGACY_BRIDGE_AUTH;
 }
 
