@@ -1,6 +1,11 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { loadProposals, parseProposals, pendingFor } from "../../scripts/conviction-proposals.mjs";
+import {
+  citesToken,
+  loadProposals,
+  parseProposals,
+  pendingFor,
+} from "../../scripts/conviction-proposals.mjs";
 
 // The hand-off from a conviction's proposed forward tests to the event lane that owns each row
 // (#5482 criterion 2). A proposal is answered by its token in the lane's own fragment or ledger.
@@ -57,6 +62,13 @@ describe("conviction proposals", () => {
     expect(pendingFor("crwv-print", "2026-10-27", proposals, other).map((p) => p.key)).toEqual([
       "ai-dip/P1",
     ]);
+  });
+
+  it("a token is cited whole at both ends: another slug or a suffix is not it", () => {
+    expect(citesToken("ai-dip/P1", "from conviction proposal `ai-dip/P1`.")).toBe(true);
+    expect(citesToken("ai-dip/P1", "from conviction proposal xai-dip/P1")).toBe(false);
+    expect(citesToken("ai-dip/P1", "from conviction proposal old-ai-dip/P1")).toBe(false);
+    expect(citesToken("ai-dip/P1", "from conviction proposal ai-dip/P1b")).toBe(false);
   });
 
   it("drops a proposal once its score-by date has passed", () => {

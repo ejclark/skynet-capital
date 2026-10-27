@@ -96,6 +96,18 @@ const AI_DIP_STATED: Conviction = {
       falsifier:
         "CRWV's close from the day after the ~11-09 print to 5 sessions later is positive.",
       scoreBy: "2026-11-25",
+      // P1 predicts the bleed, and its kill switch is this falsifier word for word.
+      check: {
+        kind: "forward-tests",
+        tests: [
+          {
+            event: "crwv-2026-11-10-print",
+            ref: "ai-dip-2026-10/P1",
+            onPass: "pass",
+            onKill: "fail",
+          },
+        ],
+      },
     },
     {
       tag: "underrated",
@@ -115,6 +127,19 @@ const AI_DIP_STATED: Conviction = {
       falsifier:
         "The AI-infrastructure basket beats QQQ from close 11-03 to close 11-06 by more than its own 3-session 75th pct.",
       scoreBy: "2026-11-09",
+      // Inverted on purpose: P6's prediction IS this falsifier (the call is "don't size on it, the
+      // selloff hasn't been political"), so P6 passing fails the claim and P6 killed holds it.
+      check: {
+        kind: "forward-tests",
+        tests: [
+          {
+            event: "midterm-elections-2026-11-03",
+            ref: "ai-dip-2026-10/P6",
+            onPass: "fail",
+            onKill: "pass",
+          },
+        ],
+      },
     },
     {
       tag: "underrated",
@@ -125,6 +150,17 @@ const AI_DIP_STATED: Conviction = {
       falsifier:
         "Close D-20 to print-day close is negative this print (FT-nvda-2026-11-18-print-3).",
       scoreBy: "2026-11-30",
+      check: {
+        kind: "forward-tests",
+        tests: [
+          {
+            event: "nvda-2026-11-18-print",
+            ref: "FT-nvda-2026-11-18-print-3",
+            onPass: "pass",
+            onKill: "fail",
+          },
+        ],
+      },
     },
     {
       tag: "underrated",
@@ -179,6 +215,19 @@ const AI_DIP_STATED: Conviction = {
       falsifier:
         "The ~11-09 print and the next 2 all move less than their priced straddle, the first read by 2026-11-17.",
       scoreBy: "2026-11-17",
+      // P2 reads the first of the three prints: a move past the straddle means the falsifier can no
+      // longer land, but a move inside it is one of three, so it decides nothing alone.
+      check: {
+        kind: "forward-tests",
+        tests: [
+          {
+            event: "crwv-2026-11-10-print",
+            ref: "ai-dip-2026-10/P2",
+            onPass: "pass",
+            onKill: "pending",
+          },
+        ],
+      },
     },
     // Re-stated 2026-10-18 (the call sheet's "Re-stated" block): four more claims, all size zero.
     {
