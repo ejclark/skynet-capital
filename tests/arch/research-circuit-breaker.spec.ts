@@ -24,7 +24,8 @@ import {
 //   - FAIL HARD, not fail-slow — once tripped, dispatch stays false regardless of what the spend
 //     query would say, because isBreakerTripped short-circuits before recentResearchSpend ever
 //     runs. There is no code path in this file that re-opens a trip on its own.
-//   - a query failure (label check or spend fetch) throws rather than reading as "clear" or "$0".
+//   - a query failure (label check or spend fetch) throws rather than reading as "clear" or "$0" —
+//     after a GitHub 5xx has had its retries (#5354), never before them and never instead of them.
 
 const CONFIG = {
   maxSpendUsd: 100,
@@ -32,6 +33,9 @@ const CONFIG = {
   trackingIssue: 2946,
   trippedLabel: "research-circuit-breaker-tripped",
 };
+
+/** The breaker's label read: REST `gh api repos/…/issues/N`, never GraphQL `issue view`. */
+const ISSUE_READ = "api repos/{owner}/{repo}/issues/2946";
 
 /** A fake `exec` keyed by the first two CLI args (e.g. "issue view") — returns canned output or
  *  throws, so a spec can script exactly what each `gh` call sees without a real process. */
@@ -45,6 +49,22 @@ function fakeExec(script: Record<string, string | Error>) {
     return hit;
   };
 }
+
+/** The retry backoff, made instant — a spec waits on nothing. */
+const noSleep = () => {
+  /* no backoff in a spec */
+};
+
+/** What `execFileSync` throws when `gh` exits on GitHub's own 500 — the text the run logged. */
+const github500 = (url: string) =>
+  Object.assign(
+    new Error(
+      `Command failed: gh\nfailed to get jobs: HTTP 500: 500 Internal Server Error (${url})`,
+    ),
+    {
+      stderr: `HTTP 500: 500 Internal Server Error (${url})`,
+    },
+  );
 
 describe("circuit breaker config — fail closed", () => {
   it("refuses when the config file is missing", () => {
@@ -92,7 +112,7 @@ describe("circuit breaker config — fail closed", () => {
 describe("isBreakerTripped", () => {
   it("is true when the tracking issue carries the tripped label", () => {
     const exec = fakeExec({
-      "issue view": JSON.stringify({
+      [ISSUE_READ]: JSON.stringify({
         labels: [{ name: "research-circuit-breaker-tripped" }, { name: "bottleneck" }],
       }),
     });
@@ -100,25 +120,52 @@ describe("isBreakerTripped", () => {
   });
 
   it("is false when the label is absent, even with other labels present", () => {
-    const exec = fakeExec({ "issue view": JSON.stringify({ labels: [{ name: "bottleneck" }] }) });
+    const exec = fakeExec({ [ISSUE_READ]: JSON.stringify({ labels: [{ name: "bottleneck" }] }) });
     expect(isBreakerTripped({ ...CONFIG, exec })).toBe(false);
   });
 
   it("is false when there are no labels at all", () => {
-    const exec = fakeExec({ "issue view": JSON.stringify({ labels: [] }) });
+    const exec = fakeExec({ [ISSUE_READ]: JSON.stringify({ labels: [] }) });
     expect(isBreakerTripped({ ...CONFIG, exec })).toBe(false);
   });
 
   // FAIL CLOSED — an unreadable state must never read as "clear".
   it("throws, never reads clear, when the gh query itself fails", () => {
-    const exec = fakeExec({ "issue view": new Error("HTTP 502") });
-    expect(() => isBreakerTripped({ ...CONFIG, exec })).toThrow(
+    let calls = 0;
+    const exec = (_cmd: string, _args: readonly string[]) => {
+      calls += 1;
+      throw new Error("HTTP 502");
+    };
+    expect(() => isBreakerTripped({ ...CONFIG, exec, sleep: noSleep })).toThrow(
       /could not check circuit breaker state/,
     );
+    expect(calls).toBe(3); // a 5xx is retried before the refusal, never instead of it
+  });
+
+  it("reads the label through a GitHub 5xx that clears on the next try", () => {
+    let calls = 0;
+    const exec = (_cmd: string, _args: readonly string[]) => {
+      calls += 1;
+      if (calls === 1) throw github500("https://api.github.com/graphql");
+      return JSON.stringify({ labels: [{ name: CONFIG.trippedLabel }] });
+    };
+    expect(isBreakerTripped({ ...CONFIG, exec, sleep: noSleep })).toBe(true);
+  });
+
+  it("refuses at once on a 4xx — a retry would only repeat it", () => {
+    let calls = 0;
+    const exec = (_cmd: string, _args: readonly string[]) => {
+      calls += 1;
+      throw new Error("HTTP 404: Not Found");
+    };
+    expect(() => isBreakerTripped({ ...CONFIG, exec, sleep: noSleep })).toThrow(
+      /could not check circuit breaker state/,
+    );
+    expect(calls).toBe(1);
   });
 
   it("throws on unparseable output rather than defaulting to clear", () => {
-    const exec = fakeExec({ "issue view": "not json" });
+    const exec = fakeExec({ [ISSUE_READ]: "not json" });
     expect(() => isBreakerTripped({ ...CONFIG, exec })).toThrow(/unparseable/);
   });
 });
@@ -239,6 +286,57 @@ describe("recentResearchSpend", () => {
       );
     });
 
+    // #5354 (2026-10-14): run 38494372525's combined log AND its job list each answered one
+    // HTTP 500, a second apart, and the tick refused and went red. Minutes later the same log read
+    // fine. One retry of either call was all it needed.
+    it("reads through a GitHub 500 on the combined log and on the job list", () => {
+      const url = "https://api.github.com/repos/o/r/actions/runs/1/jobs?per_page=100";
+      let logCalls = 0;
+      let jobCalls = 0;
+      const custom = (_cmd: string, args: readonly string[]) => {
+        if (args[1] === "list") return runList;
+        if (isCombinedLog(args)) {
+          logCalls += 1;
+          if (logCalls === 1) throw github500(url);
+          return "::notice::cost — event=alpha usd=4.00 turns=1\n";
+        }
+        jobCalls += 1;
+        throw new Error(`unexpected call: ${args.join(" ")}`); // the retry, not the fallback, answers
+      };
+      expect(recentResearchSpend({ windowHours: 24, exec: custom, sleep: noSleep })).toBe(4);
+      expect([logCalls, jobCalls]).toEqual([2, 0]);
+    });
+
+    it("reads the job list through a GitHub 500 once the combined log has a missing job", () => {
+      let jobCalls = 0;
+      const jobList = () => {
+        jobCalls += 1;
+        if (jobCalls === 1) throw github500("https://api.github.com/repos/o/r/actions/runs/1");
+        return jobsOf([
+          { databaseId: 10, name: "research due events (alpha)", conclusion: "success" },
+        ]);
+      };
+      const custom = (_cmd: string, args: readonly string[]) => {
+        if (args[1] === "list") return runList;
+        if (isCombinedLog(args)) throw new Error("log not found: 9");
+        if (args.includes("--json")) return jobList();
+        if (args.at(-1) === "10") return "::notice::cost — event=alpha usd=1.50 turns=1\n";
+        throw new Error(`unexpected call: ${args.join(" ")}`);
+      };
+      expect(recentResearchSpend({ windowHours: 24, exec: custom, sleep: noSleep })).toBe(1.5);
+      expect(jobCalls).toBe(2);
+    });
+
+    it("still refuses when GitHub keeps answering 500 past the retries", () => {
+      const custom = (_cmd: string, args: readonly string[]) => {
+        if (args[1] === "list") return runList;
+        throw github500("https://api.github.com/repos/o/r/actions/runs/1/jobs?per_page=100");
+      };
+      expect(() => recentResearchSpend({ windowHours: 24, exec: custom, sleep: noSleep })).toThrow(
+        /could not read run 1's log \(.*HTTP 500/s,
+      );
+    });
+
     it("refuses when the job list itself is unparseable", () => {
       const custom = (_cmd: string, args: readonly string[]) => {
         if (args[1] === "list") return runList;
@@ -283,7 +381,8 @@ describe("tripBreaker", () => {
 describe("checkCircuitBreaker — the orchestrator", () => {
   it("dispatches when spend is under the threshold", () => {
     const custom = (_cmd: string, args: readonly string[]) => {
-      if (args[0] === "issue" && args[1] === "view") return JSON.stringify({ labels: [] });
+      if (args[0] === "api" && /\/issues\/\d+$/.test(String(args[1])))
+        return JSON.stringify({ labels: [] });
       if (args[0] === "run" && args[1] === "list") return "[]";
       throw new Error(`unexpected: ${args.join(" ")}`);
     };
@@ -296,7 +395,7 @@ describe("checkCircuitBreaker — the orchestrator", () => {
   it("short-circuits on an existing trip — never queries spend, never re-trips", () => {
     let spendQueried = false;
     const custom = (_cmd: string, args: readonly string[]) => {
-      if (args[0] === "issue" && args[1] === "view")
+      if (args[0] === "api" && /\/issues\/\d+$/.test(String(args[1])))
         return JSON.stringify({ labels: [{ name: CONFIG.trippedLabel }] });
       if (args[0] === "run") {
         spendQueried = true;
@@ -315,7 +414,8 @@ describe("checkCircuitBreaker — the orchestrator", () => {
     const calls: (readonly string[])[] = [];
     const custom = (_cmd: string, args: readonly string[]) => {
       calls.push(args);
-      if (args[0] === "issue" && args[1] === "view") return JSON.stringify({ labels: [] });
+      if (args[0] === "api" && /\/issues\/\d+$/.test(String(args[1])))
+        return JSON.stringify({ labels: [] });
       if (args[0] === "run" && args[1] === "list")
         return JSON.stringify([{ databaseId: 1, createdAt: nowIso, status: "completed" }]);
       if (args[0] === "run" && args[1] === "view")

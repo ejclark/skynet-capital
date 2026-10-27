@@ -6,7 +6,7 @@
 //
 // PURE HALF: `surfaceOf`, `admitBuild`, `nextAdmissible`, `queueNote`, `isDuplicateQueueNote` — no
 // network, no clock. IMPURE HALF: `readInFlight` and `gateAdmission`, every read injectable so a
-// spec drives them without a fake `gh` (tests/scripts/moneypenny/admission.spec.ts).
+// spec drives them without a fake `gh` (tests/scripts/moneypenny/admission-*.spec.ts).
 //
 // THE RULES, in the order they are asked (the first refusal wins):
 //   1. `halt` refuses everything — even `fast-track`. A brake is a brake (work-mode.mjs ACTOR_RULES:
@@ -36,6 +36,7 @@
 // decides whether it may start NOW. A live session — the claim lanes ask through `gateAdmission`,
 // `/work-issues` through the read-only CLI at the foot of this file:
 //   node scripts/moneypenny/admission.mjs --check <n>   # {admit, reason, queuedBehind?}; exit 0 | 3
+//   (`--check` and `--next` also step past a plan whose state block names nothing to build, #5707)
 //   node scripts/moneypenny/admission.mjs --next        # the sweep's pick, same JSON; exit 0 | 3
 //   node scripts/moneypenny/admission.mjs --queue       # the Ready column, in pick order (JSON)
 // The CLI never comments and never labels. A session Eric starts by hand is the EXPEDITE class: it
@@ -43,7 +44,16 @@
 import { classOf } from "../rank.mjs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRestAll, sh } from "./gh.mjs";
-import { FOOTER, LABELS, labelNames, notPullableReason, pullable } from "./labels.mjs";
+import {
+  boardedReason,
+  FOOTER,
+  LABELS,
+  labelNames,
+  notPullableReason,
+  pullable,
+} from "./labels.mjs";
+import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
+import { platterClosesByIssue } from "./pr-issues.mjs";
 import { isStartedPlan, statusForIssue, subIssueCounts, WAITING } from "./projects.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
@@ -86,6 +96,32 @@ export function isFreshPlan(issue) {
 }
 
 /**
+ * DOES THIS STARTED PLAN HOLD ONE OF THE CAP'S SEATS? Only while a lane could pull its next work
+ * (2026-10-18 loop census). The cap's decision is unchanged — "finish one before starting a new
+ * plan", `startedPlanCap` 4 — but it counted every Waiting plan, and 9 of the 10 Waiting that day
+ * had nothing any lane could pull: their open sub-issues were unready sub-plans or unlabelled
+ * stories, or (#3959) every sub-issue was closed. Nothing could finish them, so every fresh plan
+ * was refused, a P1 among them — and #5494 held a seat against its own sub-plan #5482. A plan
+ * nobody can work is waiting on someone to ready its remainder, not on a builder.
+ *
+ * Pullable = the plan carries `ready` itself (its next slice is the plan lane's), or one of its
+ * open sub-issues carries `ready` and is not itself a plan. A row `readOpenPlans` could not enrich
+ * with its sub-issues (`openSubIssues` absent) keeps its seat — the old count, never a looser one.
+ */
+export function holdsCapSeat(plan) {
+  const subs = plan?.openSubIssues;
+  if (!Array.isArray(subs)) return true;
+  if (hasLabel(plan, LABELS.ready.name)) return true;
+  return subs.some((s) => hasLabel(s, LABELS.ready.name) && !hasLabel(s, LABELS.plan.name));
+}
+
+/** The parent issue's number from a REST row's `parent_issue_url`, or null. */
+export function parentNumberOf(issue) {
+  const m = /\/issues\/(\d+)$/.exec(String(issue?.parent_issue_url ?? ""));
+  return m ? Number(m[1]) : null;
+}
+
+/**
  * The open plans the board shows in **Waiting** — the same `statusForIssue` the board's columns
  * come from, so the cap and the column a human reads never disagree (the in-flight cap's rule:
  * `normal.inFlightCap` 3 is the board's own WIP limit). A blocked plan reads Blocked, not
@@ -93,7 +129,7 @@ export function isFreshPlan(issue) {
  */
 export function waitingPlans(openPlans = []) {
   return (openPlans ?? []).filter((p) => {
-    if (!p) return false;
+    if (!(p && holdsCapSeat(p))) return false;
     const labels = labelNames(p.labels);
     const column = statusForIssue({
       state: String(p.state ?? "open").toLowerCase(),
@@ -128,7 +164,17 @@ export function admitBuild({ issue, inFlight = [], mode, waiting }) {
     return { admit: false, reason: `queued: ${others.length} of ${cap} in flight` };
   }
   const planCap = mode?.caps?.startedPlanCap;
-  if (Array.isArray(waiting) && Number.isInteger(planCap) && !fastTrack && isFreshPlan(issue)) {
+  // A fresh plan whose parent holds a seat IS that parent's remaining work — refusing it refuses
+  // the very finishing the cap asks for (#5482 under #5494, 2026-10-18).
+  const parent = parentNumberOf(issue);
+  const finishing = parent !== null && (waiting ?? []).some((w) => w?.number === parent);
+  if (
+    Array.isArray(waiting) &&
+    Number.isInteger(planCap) &&
+    !fastTrack &&
+    !finishing &&
+    isFreshPlan(issue)
+  ) {
     const idle = waiting.filter((i) => i && i.number !== issue?.number);
     if (idle.length >= planCap) {
       return {
@@ -164,9 +210,9 @@ const rankOf = (i) => classOf({ labels: labelNames(i.labels) });
  * bugs found mid-build are the next pull) — then oldest by `createdAt`, then lowest number.
  * Oldest-first alone picked a P3 idea (#784) over P0 work on the sweep's first live tick.
  */
-export function pullQueue(readyIssues = []) {
+export function pullQueue(readyIssues = [], opts) {
   return (readyIssues ?? [])
-    .filter((i) => i && pullable(i))
+    .filter((i) => i && pullable(i, opts))
     .map((i) => ({ i, r: rankOf(i) }))
     .sort(
       (a, b) =>
@@ -199,8 +245,8 @@ export function nextAdmissible(readyIssues = [], inFlight = [], mode, waiting) {
  *
  * @returns {{ admit: boolean, reason: string, queuedBehind?: number }}
  */
-export function checkAdmission({ issue, inFlight = [], mode, waiting }) {
-  const notPullable = notPullableReason(issue);
+export function checkAdmission({ issue, inFlight = [], mode, waiting, interactive = false }) {
+  const notPullable = notPullableReason(issue, { interactive });
   if (notPullable) return { admit: false, reason: `not pullable: ${notPullable}` };
   return admitBuild({ issue, inFlight, mode, waiting });
 }
@@ -253,6 +299,7 @@ export function readOpenIssues(label, exec = sh) {
       labels: r.labels ?? [],
       createdAt: r.created_at,
       issue_dependencies_summary: r.issue_dependencies_summary, // the pull rule's blocker count
+      parent_issue_url: r.parent_issue_url, // the cap's "finishing a started plan" exemption
       sub_issues_summary: r.sub_issues_summary, // the started-plan cap's "has it started?"
       user: r.user ? { login: r.user.login } : undefined, // the Blocked rule's callout check
     }));
@@ -274,8 +321,32 @@ export function readOpenPlans(readAll = ghRestAll) {
       labels: r.labels ?? [],
       createdAt: r.created_at,
       sub_issues_summary: r.sub_issues_summary,
+      parent_issue_url: r.parent_issue_url,
       user: r.user ? { login: r.user.login } : undefined,
-    }));
+    }))
+    .map((plan) => withOpenSubIssues(plan, readAll));
+}
+
+/**
+ * Attach a started plan's open sub-issues (number + labels) — what `holdsCapSeat` reads. One REST
+ * read per started plan with open sub-issues (about ten), none for the rest; a started plan with
+ * no open sub-issue gets `[]` for free. A failed read leaves the row un-enriched, which keeps its
+ * seat: the cap never loosens on a read it could not make.
+ */
+function withOpenSubIssues(plan, readAll) {
+  const subIssues = subIssueCounts(plan);
+  if (!isStartedPlan({ labels: labelNames(plan.labels), subIssues })) return plan;
+  if (subIssues.total - subIssues.completed <= 0) return { ...plan, openSubIssues: [] };
+  try {
+    const rows = readAll(`issues/${plan.number}/sub_issues`);
+    const open = rows.filter((r) => r && String(r.state ?? "open").toLowerCase() === "open");
+    return {
+      ...plan,
+      openSubIssues: open.map((r) => ({ number: r.number, labels: r.labels ?? [] })),
+    };
+  } catch {
+    return plan;
+  }
 }
 
 /**
@@ -295,8 +366,19 @@ export function startedPlanInputs(issue, openPlans = []) {
 /** Every open issue carrying `in-progress` — the list the cap and the fence count. */
 export const readInFlight = (exec = sh) => readOpenIssues(LABELS.inProgress.name, exec);
 
+/** Oldest-first `{ body }` comments over REST — `gh issue view` is GraphQL, refused in a cloud
+ *  session (2026-10-18). `--jq` prints one JSON object per line, across every page. */
 const readComments = (n) =>
-  JSON.parse(sh("gh", ["issue", "view", String(n), "--json", "comments"]) || "{}").comments ?? [];
+  sh("gh", [
+    "api",
+    "--paginate",
+    `repos/{owner}/{repo}/issues/${n}/comments?per_page=100`,
+    "--jq",
+    ".[] | {body, createdAt: .created_at}",
+  ])
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l));
 
 const postComment = (n, body) => sh("gh", ["issue", "comment", String(n), "--body", body]);
 
@@ -363,6 +445,43 @@ export function gateAdmission(issue, deps = {}) {
   return verdict;
 }
 
+/**
+ * THE FRESH RE-READ (#5266). A `ready` label event carries the issue as it stood the instant the
+ * label landed; a blocked-by link added a second later is not in it, so #5262 and #5317 were both
+ * claimed while blocked. A claim asks the one pull rule again over a fresh REST row before
+ * admission. An unreadable row refuses — fail closed, as the in-flight read does; the retry sweep
+ * reads fresh rows and tries again on a later tick.
+ *
+ * @returns {string | null} why the issue may not be pulled now, or null when it may
+ */
+export function recheckPullable(issue, read = readIssue, boarded = readBoarded) {
+  let fresh;
+  try {
+    fresh = read(issue.number);
+  } catch (err) {
+    return `queued: #${issue.number} could not be re-read — ${String(err?.message).slice(0, 200)}`;
+  }
+  // The platter read comes last, so an issue the labels already refuse costs no PR list.
+  return notPullableReason({ ...issue, ...fresh }) ?? boardedReason(issue.number, boarded());
+}
+
+/**
+ * Issue → the open platter PR that closes it (#6191, `platterClosesByIssue`). Both claim lanes ask
+ * it after their label checks pass. FAIL-OPEN to an empty map, as the sweep's own open-PR read is
+ * (`readOpenPrIssues`, index.mjs): a failed read costs at most one empty build, which is smaller
+ * than refusing every claim on a GitHub blip.
+ */
+export function readBoarded(list = () => ghRestAll("pulls?state=open"), log = console.log) {
+  try {
+    return platterClosesByIssue(list());
+  } catch (err) {
+    log(
+      `::warning::the open platters could not be read — not screening for boarded issues: ${String(err?.message).slice(0, 200)}`,
+    );
+    return new Map();
+  }
+}
+
 // ── the CLI (#4393 slice 3) — read-only; never comments, never labels ────────────────────────────
 
 /** One issue over REST (core bucket). A PR number throws: a PR is never pulled. */
@@ -398,6 +517,7 @@ export function runCli(argv = [], io = {}) {
     readReady = () => readOpenIssues(LABELS.ready.name),
     readIssue: issueOf = (n) => readIssue(n),
     readPlans = () => readOpenPlans(),
+    readHold = (issue) => readPickupHold(issue, { log: printErr }),
     print = (line) => console.log(line),
     printErr = (line) => console.error(line),
   } = io;
@@ -415,7 +535,12 @@ export function runCli(argv = [], io = {}) {
       printErr(`the open \`ready\` issues could not be read: ${err?.message ?? err}`);
       return 3;
     }
-    const rows = pullQueue(ready).map((i) => ({ number: i.number, title: i.title ?? "" }));
+    // `--queue` and `--check` are /work-issues' reads — a live session, so `needs-session` is
+    // its to build (#5236). `--next` mirrors the unattended sweep and keeps refusing it.
+    const rows = pullQueue(ready, { interactive: true }).map((i) => ({
+      number: i.number,
+      title: i.title ?? "",
+    }));
     print(JSON.stringify(rows));
     return 0;
   }
@@ -445,7 +570,8 @@ export function runCli(argv = [], io = {}) {
     } catch (err) {
       return refuse("the open plans could not be read", err);
     }
-    const pick = nextAdmissible(ready, inFlight, mode, waiting);
+    const pickOf = (rest) => nextAdmissible(rest, inFlight, mode, waiting);
+    const { pick } = nextUnheld(ready, pickOf, readHold, { log: printErr });
     if (!pick) {
       const why = `nothing admissible (${pullQueue(ready).length} pullable, ${inFlight.length} in flight, ${waiting.length} plans waiting, work-mode=${mode.position})`;
       return out({ admit: false, reason: why });
@@ -458,15 +584,29 @@ export function runCli(argv = [], io = {}) {
   } catch (err) {
     return refuse(`#${n} could not be read`, err);
   }
-  const verdict = checkAdmission({ issue, inFlight, mode });
-  if (!(verdict.admit && isFreshPlan(issue))) return out({ number: n, ...verdict });
   let gated;
   try {
-    gated = startedPlanInputs(issue, readPlans());
+    gated = checkOne(issue, { inFlight, mode, readPlans, readHold });
   } catch (err) {
     return refuse("the open plans could not be read", err);
   }
-  return out({ number: n, ...checkAdmission({ inFlight, mode, ...gated }) });
+  return out({ number: n, ...gated });
+}
+
+/**
+ * `--check`'s verdict for one issue: the pull rule and the gate, the started-plan cap for a fresh
+ * plan, then — only when all of that admits — the #5707 hold: the sweep steps past a plan whose
+ * state block names nothing to build, and a live session asking about it gets the same answer
+ * (Eric's 2026-10-19 pass admitted #4450 here). Throws when the open plans cannot be read.
+ */
+function checkOne(issue, { inFlight, mode, readPlans, readHold }) {
+  let verdict = checkAdmission({ issue, inFlight, mode, interactive: true });
+  if (verdict.admit && isFreshPlan(issue)) {
+    const gated = startedPlanInputs(issue, readPlans());
+    verdict = checkAdmission({ inFlight, mode, interactive: true, ...gated });
+  }
+  const hold = verdict.admit ? readHold(issue) : null;
+  return hold ? { admit: false, reason: `not buildable now: ${hold}` } : verdict;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`)

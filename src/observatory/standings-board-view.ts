@@ -1,4 +1,6 @@
 import type { FieldTone } from "../universe/world-patch.js";
+import type { CapitalFlow } from "./capital-flow.js";
+import { type FlowMark, flowMark } from "./capital-flow-mark.js";
 import type { DashboardData } from "./dashboard-data.js";
 import {
   participantInvested,
@@ -6,7 +8,7 @@ import {
   participantUnrealized,
 } from "./participant-card.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
-import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
+import { formatCurrency, formatSigned, formatSignedPercent, plClass } from "./render-atoms.js";
 import { cohortStats } from "./standings-cohort.js";
 import type { LeaderMetric } from "./standings-metric.js";
 import {
@@ -59,6 +61,8 @@ interface BoardViewRow {
   readonly tone: FieldTone;
   readonly bar: number;
   readonly sortValue: number;
+  /** A recorded capital flow, named (#4563). Absent — not empty — on a row with none. */
+  readonly flow?: FlowMark;
 }
 
 /** One keyed display block (cohort card / match bar / versus line), same shape as a `field` op. */
@@ -78,17 +82,29 @@ export interface StandingsBoardView {
  * by the SAME helpers `standingsFieldOps` uses, and the blocks carry the SAME keys the `field` ops
  * address — so a client renders this once and then applies ops verbatim, never re-deriving a
  * number (the doctrine at the top of this file, extended over JSON).
+ *
+ * `flowsFor` reads the capital-flow ledger (#4563): a row with a recorded top-up or reset carries a
+ * mark saying so. The mark never moves a row's value, rank or place — the record says what
+ * happened and does not judge it.
  */
-export function standingsBoardView(data: DashboardData, metric: LeaderMetric): StandingsBoardView {
+export function standingsBoardView(
+  data: DashboardData,
+  metric: LeaderMetric,
+  flowsFor?: (participantId: string) => readonly CapitalFlow[],
+): StandingsBoardView {
   const byId = new Map(data.participants.map((p) => [p.id, p]));
   const humans = cohortStats(data.participants, "human", "Humans");
   const bots = cohortStats(data.participants, "bot", "Bots");
   return {
-    rows: rowViews(data, metric).map((row) => ({
-      ...row,
-      name: byId.get(row.key)?.displayName ?? row.key,
-      kind: byId.get(row.key)?.kind === "bot" ? "bot" : "human",
-    })),
+    rows: rowViews(data, metric).map((row) => {
+      const flow = flowMark(flowsFor?.(row.key) ?? []);
+      return {
+        ...row,
+        name: byId.get(row.key)?.displayName ?? row.key,
+        kind: byId.get(row.key)?.kind === "bot" ? "bot" : "human",
+        ...(flow ? { flow } : {}),
+      };
+    }),
     blocks: {
       "cohort:human": cohortView(humans),
       "cohort:bot": cohortView(bots),
@@ -153,7 +169,7 @@ function compareSide(snapshot: ParticipantSnapshot): CompareSide {
     unrealizedTone: plClass(pl),
     realized: snapshot.realizedPl === undefined ? "—" : formatSigned(snapshot.realizedPl),
     realizedTone: plClass(snapshot.realizedPl ?? 0),
-    returnPct: pct(returned),
+    returnPct: formatSignedPercent(returned),
     returnTone: plClass(returned),
   };
 }
@@ -186,7 +202,12 @@ export function standingsCompareView(
       ...(a.realizedPl === undefined || b.realizedPl === undefined
         ? []
         : [compareDelta("Realized", a.realizedPl, b.realizedPl, formatSigned)]),
-      compareDelta("Return", participantReturnPct(a), participantReturnPct(b), pct),
+      compareDelta(
+        "Open-position return",
+        participantReturnPct(a),
+        participantReturnPct(b),
+        formatSignedPercent,
+      ),
     ],
     holdings: holdingsUnion(a, b).map(({ symbol, aValue: av, bValue: bv }) => ({
       symbol,

@@ -1,3 +1,4 @@
+import { EXIT_DTE, TAKE_PROFIT } from "../playbooks/long-call-rules.js";
 import { humanizeOptionSymbol, parseOccSymbol } from "../trading/option-symbols.js";
 import type { PositionView } from "./broker-positions.js";
 import type { ConsiderationChip } from "./considerations-view.js";
@@ -9,7 +10,7 @@ import { formatCurrency, formatSigned, plClass } from "./render-atoms.js";
 /**
  * NEEDS A DECISION (#3689 slice 7): the Overview's attention layer, one card at a time. It
  * replaces the considerations rail. Each decision says, in plain words:
- *  - what kind it is: AT RISK (loss meaning only), LOCK IN PROFIT, or IDEA,
+ *  - what kind it is: AT RISK (loss meaning only), LOCK IN PROFIT, TIME STOP, or IDEA,
  *  - a title that states the call, a short caption with the one number that matters, and a longer
  *    caption plus "clocks" (expiry, size) behind the details toggle,
  *  - why, in Moneypenny's voice (mono, ✦-prefixed). Rule-generated from the position's own numbers
@@ -20,13 +21,20 @@ import { formatCurrency, formatSigned, plClass } from "./render-atoms.js";
  *    The client adds the live spot from the option book it already reads,
  *  - when it has one, the day it's due (#3977 slice 4), so the market calendar can mark it.
  *
+ * A member's own LONG CALL hears the house's long-call bot's two exit rules (#5709), read from that
+ * playbook's constants, never copied: once it is worth `TAKE_PROFIT`× its cost the lock-in card
+ * names the take-profit, and inside `EXIT_DTE` days a call between the bands gets a TIME STOP card
+ * of its own (an at-risk or lock-in card that close to expiry says it in the caption). TIME STOP is
+ * its own kind rather than an AT RISK title because AT RISK means a loss, and the call may be up.
+ * The rule is offered, never applied: the card still only drafts.
+ *
  * Ordered by money at stake (the position's market value), so the card most worth a member's
  * attention comes first. Pure: the clock and the desk id are passed in.
  */
 
 type Tone = "pos" | "neg" | "flat";
 
-type DecisionKind = "at-risk" | "lock-in" | "idea";
+type DecisionKind = "at-risk" | "lock-in" | "time-stop" | "idea";
 
 interface DecisionAction {
   readonly label: string;
@@ -112,18 +120,41 @@ const expiryDay = (iso: string) =>
 
 type Held = PositionView & { readonly plain: PlainPosition };
 
-/** AT RISK below −10% from cost, LOCK IN PROFIT above the bar for its instrument, else nothing. */
-function classify(ret: number, option: boolean): "at-risk" | "lock-in" | undefined {
+/** A call the member bought: the one holding the house's long-call bot has exit rules for. */
+const isLongCall = (p: Held): boolean =>
+  p.quantity > 0 && parseOccSymbol(p.symbol)?.type === "call";
+
+/** A long call with the bot's time stop reached: `EXIT_DTE` days or fewer left. */
+const inTimeStop = (p: Held): boolean =>
+  isLongCall(p) && p.plain.expiresInDays !== undefined && p.plain.expiresInDays <= EXIT_DTE;
+
+/** A long call worth the bot's take-profit multiple of what it cost. */
+const atTakeProfit = (p: Held, basis: number): boolean =>
+  isLongCall(p) && Math.abs(p.marketValue) >= TAKE_PROFIT * basis;
+
+/** AT RISK below −10% from cost, LOCK IN PROFIT above the bar for its instrument, TIME STOP for a
+ *  long call between those inside the bot's exit window, else nothing. */
+function classify(
+  ret: number,
+  option: boolean,
+  timeStop: boolean,
+): Exclude<DecisionKind, "idea"> | undefined {
   if (ret <= AT_RISK_RETURN_PCT) return "at-risk";
-  return ret >= (option ? LOCK_IN_OPTION_PCT : LOCK_IN_SHARE_PCT) ? "lock-in" : undefined;
+  if (ret >= (option ? LOCK_IN_OPTION_PCT : LOCK_IN_SHARE_PCT)) return "lock-in";
+  return timeStop ? "time-stop" : undefined;
 }
+
+/** "40 days" or "no time", as the copy says how long is left. */
+const timeLeft = (p: Held): string => (p.plain.expiresInDays === 0 ? "no time" : p.plain.expiresIn);
 
 /** The short caption and, for an option, the outcome-range numbers. */
 function facts(p: Held): { captionShort: string; range?: DecisionRange } {
   const occ = parseOccSymbol(p.symbol);
   if (!occ) {
     const mark = p.quantity !== 0 ? p.marketValue / p.quantity : 0;
-    return { captionShort: `Bought at ${formatPrice(p.avgPrice)}; now ${formatPrice(mark)}.` };
+    return {
+      captionShort: `Bought at ${formatPrice(p.avgPrice)}; now ${formatPrice(mark)}.`,
+    };
   }
   const side = p.quantity > 0 ? "long" : "short";
   const premium = p.avgPrice / 100;
@@ -134,7 +165,10 @@ function facts(p: Held): { captionShort: string; range?: DecisionRange } {
     side === "long"
       ? `Needs ${occ.underlying} ${above ? "above" : "below"} ${formatPrice(breakeven)} by ${by} to profit.`
       : `Keeps the premium if ${occ.underlying} stays ${above ? "below" : "above"} ${formatPrice(occ.strike)} through ${by}.`;
-  return { captionShort, range: { type: occ.type, side, strike: occ.strike, breakeven } };
+  return {
+    captionShort,
+    range: { type: occ.type, side, strike: occ.strike, breakeven },
+  };
 }
 
 function clocksFor(p: Held, option: boolean): string[] {
@@ -181,6 +215,11 @@ function copyFor(
   basis: number,
 ): { title: string; caption: string; why: string; learn?: DecisionLearn } {
   const display = humanizeOptionSymbol(p.symbol);
+  const sold = p.plain.expiresInDays !== undefined && p.quantity < 0;
+  if (kind === "lock-in" && sold) return soldWinnerCopy(p, display, pl, basis);
+  if (kind === "time-stop") return timeStopCopy(p, display, ret);
+  if (kind === "lock-in" && atTakeProfit(p, basis))
+    return takeProfitCopy(p, display, ret, pl, basis);
   if (kind === "lock-in") {
     return {
       title: `Up ${ret.toFixed(0)}%: consider locking some of it in`,
@@ -191,7 +230,8 @@ function copyFor(
   }
   const days = p.plain.expiresInDays;
   const late = days !== undefined && days <= DECAY_WINDOW_DAYS;
-  const left = days === 0 ? "no time" : p.plain.expiresIn;
+  const left = timeLeft(p);
+  if (sold) return soldCopy(p, display, pl, basis, late, left);
   return {
     title: late
       ? `Down ${Math.abs(ret).toFixed(0)}% with ${left} left`
@@ -204,8 +244,111 @@ function copyFor(
     ...(late
       ? { learn: { term: "timeDecay", label: "What is time decay?" } as const }
       : days !== undefined
-        ? { learn: { term: "breakeven", label: "What is a breakeven?" } as const }
+        ? {
+            learn: {
+              term: "breakeven",
+              label: "What is a breakeven?",
+            } as const,
+          }
         : {}),
+  };
+}
+
+/**
+ * A long call between the bands with the bot's time stop reached (#5709): Eric's NVDA calls, held
+ * through a run-up and its pullback, bled time value with no card at all until ±10–50%. The house's
+ * long-call bot sells at `EXIT_DTE` days left whatever the return; the member hears the same rule.
+ */
+function timeStopCopy(
+  p: Held,
+  display: string,
+  ret: number,
+): { title: string; caption: string; why: string; learn: DecisionLearn } {
+  const left = timeLeft(p);
+  const stock = parseOccSymbol(p.symbol)?.underlying ?? p.symbol;
+  const move =
+    Math.round(ret) === 0
+      ? "is about even with what it cost"
+      : `is ${ret > 0 ? "up" : "down"} ${Math.abs(ret).toFixed(0)}% from what it cost`;
+  return {
+    title: `${left.charAt(0).toUpperCase()}${left.slice(1)} left: the house sells its own calls at ${EXIT_DTE} days`,
+    caption: `${display} ${move}, with ${left} left. The house's long-call bot sells its calls once ${EXIT_DTE} days are left, before time decay speeds up.`,
+    why: `✦ from here each day costs this call a little more, even if ${stock} doesn't move. the house's rule says sell now; you can sell, roll it to a later date, or say why you're holding.`,
+    learn: { term: "timeDecay", label: "What is time decay?" },
+  };
+}
+
+/**
+ * A long call worth `TAKE_PROFIT`× what it cost (#5709): the lock-in card names the house's
+ * take-profit rule beside its +50% bar, and celebrates the win with why taking it is right — a
+ * run-up can pull back while time keeps costing the call. The multiple is the position's own.
+ */
+function takeProfitCopy(
+  p: Held,
+  display: string,
+  ret: number,
+  pl: number,
+  basis: number,
+): { title: string; caption: string; why: string; learn: DecisionLearn } {
+  const multiple = Math.abs(p.marketValue) / basis;
+  return {
+    title: `Up ${ret.toFixed(0)}%: worth ${multiple.toFixed(1)}× what you paid`,
+    caption: `${display} has made ${formatCurrency(pl)} on ${formatCurrency(basis)}. The house's long-call bot sells its calls once they're worth ${TAKE_PROFIT}× what they cost, and this one is there.`,
+    why: `✦ this is the win the rule waits for. a run-up can pull back while time keeps costing the call, so selling at ${TAKE_PROFIT}× banks it and frees the cash for the next trade.`,
+    learn: { term: "lockedIn", label: "What does “locked in” mean?" },
+  };
+}
+
+/** An AT RISK or plain LOCK IN card on a long call inside the time stop still names it, in the
+ *  caption: the title already says the loss or the gain, and the clock says the expiry. A
+ *  take-profit card has already named the bot's sale. */
+function withTimeStop(p: Held, kind: DecisionKind, basis: number, caption: string): string {
+  if (kind === "time-stop" || !inTimeStop(p) || atTakeProfit(p, basis)) return caption;
+  return `${caption} It has ${timeLeft(p)} left, and the house's long-call bot sells its calls once ${EXIT_DTE} days are left.`;
+}
+
+/**
+ * A SOLD option that's AT RISK (#4947). The member was paid the premium up front, so "from what
+ * you paid" is false (a $263 put now $555 to buy back read "Down 111% from what you paid"), and
+ * the last three weeks' decay works FOR a seller, not against. The numbers that matter are what
+ * came in and what closing costs now.
+ */
+function soldCopy(
+  p: Held,
+  display: string,
+  pl: number,
+  collected: number,
+  late: boolean,
+  left: string,
+): { title: string; caption: string; why: string; learn: DecisionLearn } {
+  const buyBack = formatCurrency(Math.abs(p.marketValue));
+  return {
+    title: `Collected ${formatCurrency(collected)}; buying back costs ${buyBack}`,
+    caption: `${display} brought in ${formatCurrency(collected)}. Buying it back now costs ${buyBack}, ${formatCurrency(Math.abs(pl))} more than that. Worst case from here: ${p.plain.worst}.`,
+    why: late
+      ? `✦ each day that passes works for a seller, but this one has moved against you. with ${left} left, decide on purpose: buy it back, or say why you're holding.`
+      : "✦ closing this now costs more than it brought in. worth deciding on purpose: buy it back, or say why you're holding.",
+    learn: { term: "breakeven", label: "What is a breakeven?" },
+  };
+}
+
+/**
+ * A SOLD option in the LOCK IN PROFIT band (#4947). Same seller's numbers as `soldCopy` — what came
+ * in and what closing costs — because "has made $163 on $263" is a buyer's sentence: the $263 was
+ * paid to the member, not spent by them. Buying back now keeps the difference.
+ */
+function soldWinnerCopy(
+  p: Held,
+  display: string,
+  pl: number,
+  collected: number,
+): { title: string; caption: string; why: string; learn: DecisionLearn } {
+  const buyBack = formatCurrency(Math.abs(p.marketValue));
+  return {
+    title: `Collected ${formatCurrency(collected)}; buying back costs ${buyBack}`,
+    caption: `${display} brought in ${formatCurrency(collected)}. Buying it back now costs ${buyBack}, which keeps ${formatCurrency(pl)} of it.`,
+    why: "✦ most of the premium is already yours on paper. buying it back now locks that in and ends the risk; holding on chases what's left.",
+    learn: { term: "lockedIn", label: "What does “locked in” mean?" },
   };
 }
 
@@ -224,15 +367,22 @@ function dueFor(p: Held): DecisionDue | undefined {
     };
   }
   if (occ)
-    return { at: occ.expiration, reason: "expiry", label: `Expires ${expiryDay(occ.expiration)}` };
+    return {
+      at: occ.expiration,
+      reason: "expiry",
+      label: `Expires ${expiryDay(occ.expiration)}`,
+    };
   return undefined;
 }
 
+/** An option opens Trade on the HELD contract — the Orders pane with its Close / Roll row marked,
+ *  the same `section=orders&manage=<OCC>` hand-off as the app's `manageSearch` (#4947). A strike
+ *  and expiry preset would seed a new order instead. Shares open on their ticker. */
 function tradeHref(deskId: string, symbol: string): string {
   const desk = encodeURIComponent(deskId);
   const occ = parseOccSymbol(symbol);
   return occ
-    ? `/app/trade?desk=${desk}&symbol=${occ.underlying}&strike=${occ.strike}&exp=${occ.expiration}`
+    ? `/app/trade?desk=${desk}&symbol=${occ.underlying}&section=orders&manage=${symbol}`
     : `/app/trade?desk=${desk}&symbol=${encodeURIComponent(symbol)}`;
 }
 
@@ -242,10 +392,14 @@ function holdingDecision(deskId: string, p: Held): Decision | undefined {
   const pl = unrealizedPl(p);
   const ret = (pl / basis) * 100;
   const option = parseOccSymbol(p.symbol) !== undefined;
-  const kind = classify(ret, option);
+  const kind = classify(ret, option, inTimeStop(p));
   if (!kind) return undefined;
   const { captionShort, range } = facts(p);
   const due = dueFor(p);
+  const copy = {
+    ...copyFor(kind, p, ret, pl, basis),
+    ...(kind === "at-risk" ? earningsCopy(p) : undefined),
+  };
   return {
     id: `${kind}-${p.symbol}`,
     kind,
@@ -255,11 +409,14 @@ function holdingDecision(deskId: string, p: Held): Decision | undefined {
     pl: `${formatSigned(pl)} · ${ret >= 0 ? "+" : "−"}${Math.abs(ret).toFixed(1)}%`,
     plTone: plClass(pl),
     captionShort,
-    ...copyFor(kind, p, ret, pl, basis),
-    ...(kind === "at-risk" ? earningsCopy(p) : undefined),
+    ...copy,
+    caption: withTimeStop(p, kind, basis, copy.caption),
     clocks: clocksFor(p, option),
     primary: { label: "Review on Trade ↗", href: tradeHref(deskId, p.symbol) },
-    secondary: { label: "Show in table", href: `#pos-${encodeURIComponent(p.symbol)}` },
+    secondary: {
+      label: "Show in table",
+      href: `#pos-${encodeURIComponent(p.symbol)}`,
+    },
     stakeRaw: Math.abs(p.marketValue),
     ...(range ? { range } : {}),
     ...(due ? { due } : {}),

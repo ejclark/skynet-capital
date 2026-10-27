@@ -1,4 +1,5 @@
 import type { ServerResponse } from "node:http";
+import { DAY_MS } from "../domain/time.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { sendJson } from "./page-shell.js";
@@ -6,7 +7,6 @@ import { sendJson } from "./page-shell.js";
 /** The lookback window's ceiling in calendar days (~5 years) and its default (~6 months). */
 const MAX_DAYS = 1825;
 const DEFAULT_DAYS = 180;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The chart section's data (#2017 cockpit plan, Phase 1 chart build-out): daily OHLC+volume bars

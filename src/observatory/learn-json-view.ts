@@ -14,8 +14,9 @@ import type { AcademyProgress } from "../server/progression-service.js";
  * MILESTONES AS DATA — `/api/learn`, the JSON twin behind the shell's
  * journey. The honesty rule is inherited whole (Eric, 2026-08-25: progress a user can claim with
  * zero proof is worthless): a milestone is EARNED only by a real filled order, and the proof —
- * fill date + order id — rides every earned row. Level 100 opens from the start; each higher
- * course unlocks when the one below completes.
+ * fill date + order id — rides every earned row. A course's lock follows the desk's
+ * (`progression-service-support.ts`'s `openLevels`): wheels off locks nothing; wheels on, level 100
+ * opens from the start and each higher course when the one below completes or a rung opens.
  *
  * Since 8b the celebration and the comprehension gate render IN the shell, so this view carries
  * them whole — with one hard rule: the check ships its questions and options only. The answer
@@ -29,6 +30,9 @@ interface MilestoneView {
   readonly title: string;
   readonly detail: string;
   readonly points: number;
+  /** The rung's ladder code (`tradeType`) — how the shell pairs a milestone with its play on
+   *  `/api/trade/plays` by name, never by position (#5242). */
+  readonly code?: string;
   /** The ticket pre-set to this play, when the milestone IS a trade. */
   readonly ticket?: string;
   /** The proof: present exactly when a real filled order earned it. */
@@ -161,7 +165,7 @@ export function learnJsonView(progress?: AcademyProgress): LearnView {
           detail: m.detail,
           points: m.points,
           // In-shell since 10b: the shell ticket speaks ?play=, so the milestone lands there.
-          ...(m.tradeType ? { ticket: `/app/trade?play=${m.tradeType}` } : {}),
+          ...(m.tradeType ? { code: m.tradeType, ticket: `/app/trade?play=${m.tradeType}` } : {}),
           ...(earned ? { earned: { on: earned.at.slice(0, 10), orderId: earned.orderId } } : {}),
         };
       });

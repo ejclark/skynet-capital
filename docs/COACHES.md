@@ -1,6 +1,6 @@
 # The coaching staff — detect-and-correct loops against slop
 
-> Anything below that touches GitHub issue/PR orchestration now operates under **Moneypenny's**
+> Anything below that touches GitHub issue/PR orchestration operates under **Moneypenny's**
 > mandate — see [`docs/MONEYPENNY.md`](MONEYPENNY.md). The dispatch policy and roles below are
 > unchanged; she is the address Eric directs orchestration asks to, and she routes to these
 > mechanisms rather than replacing them.
@@ -19,7 +19,7 @@ seats with distinct jobs:
   from scoring.
 - **Offensive coordinator.** Scales up systems where a **constraint** binds (Theory of Constraints:
   *elevate*). Owns capability plays: the single-runner pipeline (GHA-minutes constraint), the local
-  verify gate (review-trust constraint), Babylon MCP (domain-knowledge constraint), the local dev loop
+  verify gate (review-trust constraint), context7 three.js docs (domain-knowledge constraint), the local dev loop
   (iteration-speed constraint). Offense moves the ceiling; each play is triggered by a *measured*
   constraint, never speculation — same discipline as run-scale infra.
 
@@ -116,10 +116,13 @@ tells of a gate that has outlived its convention: **carve-outs accumulate** (fiv
 rationale into docstrings to dodge it). Two PRs the same morning, converging from two threads:
 #1722 (issue #1713) turned the line cap off and made `arch-scan` the **single** size cap, counted
 in code lines, still advisory; this note's PR takes `noExcessiveCognitiveComplexity` to a
-**warning** — visible in every lint run, never red. (The same PR also switched off commitlint's
-`body-max-line-length`; Eric reversed that within the hour — the conventional-commit rules are
-a contract the release tooling and every reader of `git log` depend on, not a taste gate, and
-a 101-char body line is the author's to wrap. Restored in the follow-up PR. The lesson for the
+**warning** — visible in every lint run, never red. (Commitlint's `body-max-line-length` stays
+blocking: the conventional-commit rules are a contract the release tooling and every reader of
+`git log` depend on, not a taste gate. A long body line is fixed, never waived —
+`.husky/commit-msg` runs `scripts/commit-msg-reflow.mjs` to wrap it before commitlint reads it
+(Eric, 2026-09-06: *"wouldn't scripting a rule to codify validation on a pre-commit automatically
+prevent this problem 100% of the time?"*). Switching it off as a taste gate was the
+misclassification Eric reversed: #1727, restored by #1729. The lesson for the
 classification below: "debt-class" is a property of what the gate *measures* — file size and
 complexity are shape, a commit's format is an interface.) The classification rule for the next
 one: a blocking gate must
@@ -142,17 +145,17 @@ collisions this fix did not cause and wasn't scoped to repair. `forward-test-id-
 at that measured `7`, not a fabricated `0` — the honest number, ratcheted down as those rows get
 renumbered, exactly as `clone-budget.json` starts non-zero rather than claiming clean.
 
-**Second instance — the code-map freshness check (2026-09-30, #4074).** The last blocking piece of
-the doc-rot coach, "structural graph freshness", failed any PR once `main` ran 50 commits past the
-`docs/STRUCTURE-graph.md` snapshot — an ambient property of `main`, not of the diff, and `main` now
-moves ~50 commits a day, so 3 of one session's 5 PRs carried an unrelated ~1,000-line refresh
-(#3830, #3984, #4070). Its "correctness, not hygiene" claim didn't survive a read: blast-radius
-queries (`graphify affected`) read the live, git-ignored `graphify-out/`, never the committed
-snapshot, so a stale map is navigation debt. Demoted to advisory (still printed on every `npm test`).
-The same read found the measurement broken: `graph:refresh` stamps the PR branch's sha, which
-squash-merge drops, so on `main` the check read UNKNOWN; it now measures from the commit that landed
-the snapshot. Falsifier: the map ≥ 500 commits behind and unrefreshed by 2026-10-31 → give the
-refresh an owner (a scheduled refresh is envelope-class, Eric's call), not a red.
+**Second instance — the code-map freshness check (2026-09-30, #4074).** The doc-rot coach's
+"structural graph freshness" check is advisory (still printed on every `npm test`): it measures an
+ambient property of `main` — whether `main` has run 50 commits past the `docs/STRUCTURE-graph.md`
+snapshot — not the diff, and `main` moves ~50 commits a day, so blocking on it put an unrelated
+~1,000-line refresh on 3 of one session's 5 PRs (#3830, #3984, #4070). A stale map is navigation
+debt, not a correctness fault: blast-radius queries (`graphify affected`) read the live,
+git-ignored `graphify-out/`, never the committed snapshot. The check measures from the commit that
+landed the snapshot, because `graph:refresh` stamps the PR branch's sha, which squash-merge drops,
+and a check keyed on that sha reads UNKNOWN on `main`. Falsifier: the map ≥ 500 commits behind and
+unrefreshed by 2026-10-31 → give the refresh an owner (a scheduled refresh is envelope-class,
+Eric's call), not a red.
 
 **Corollary — know who the convention is for.** EARS is a *developer* convention: it lives in
 dev-facing intake (the PR template, plans, the `/ears` drill). User-facing intake (the issue
@@ -181,15 +184,32 @@ job name with a matrix leg's values stripped (#3913): keying on the leg made one
 issues, so the leg is now a row in the body and never part of the key. Workflow-file repairs may be
 opened but never auto-merged — that carve-out is unchanged.
 
+**The failure that is green has its own eye** (2026-10-16, docs/LESSONS.md "A green, armed PR sat
+blocked for 5 days…"). Every net above fires on red; a PR that is green and not merging raises
+nothing, and two fortnight-apart incidents (29 hours, then 135) were found by luck.
+`scripts/stuck-pr-scan.mjs` (`npm run pr:stuck`) names every open PR green longer than a healthy merge
+takes (3 h) that is armed-and-`blocked`, never armed, or headless behind a check suite that ran no job
+— with the ghost suite named and the one-line clear. It rides `scripts/ship.sh` beside
+`incident-scan.mjs` and gives the digest a `--stuck` line; REST core only, advisory. A diff in
+envelope.json's protected class, or a branch already boarded on an open platter, is not stuck — it
+waits for Eric's merge by design — so the scan skips both.
+**Its act stage closes the loop** (2026-10-26, #6093/#6019/#5940): Moneypenny's push-driven audit
+(`scripts/moneypenny/stranded-pr.mjs`) re-runs an `unarmed` PR's failed `arm auto-merge` job — the
+pipeline's own arm path, which re-checks `hold-merge` and the envelope — once per head sha, with a
+`<!-- moneypenny:rearm sha= -->` marker comment as memory. It never arms directly; a second failure
+on the same head is real and stays in the scan's report.
+
 **The lesson drains from the capsule's close, not from a session's choice** (#4212, #4056 slice 7).
 When a `ci-failure` capsule closes as completed, the events router (`issues: closed`) runs
 `scripts/moneypenny/lesson-draft.mjs`: it reads the capsule's failing runs and the merged PR that
 closed it, and opens a PR adding the LESSONS entry — the fix PR's `### Why` as ROOT CAUSE, the specs
 it touched as PREVENTION, every failing sha in `COVERS`. A capsule closed by hand gets the skeleton
-as a comment instead, never a ledger PR that would mark its runs learned with nothing learned.
-`/retro` still deepens an entry when a class recurs; it is no longer the only way one lands. The
-digest carries the residue as one line (`digest-scan.mjs --learning`) under Noise absorbed, never
-under Needs you.
+as a comment instead, never a ledger PR that would mark its runs learned with nothing learned —
+plus one `feedback` issue asking for its `/retro` (#5728, deduped, Backlog — never `ready`), because
+a comment on a closed issue was read by nobody. `/retro` deepens an entry when a class recurs. The digest carries the residue as one line
+(`digest-scan.mjs --learning`) under Noise absorbed, never under Needs you — including what aged
+out of the scan's window unlearned (`AGED-OUT UNLEARNED`, the band just past it, report-only), so a
+falling count can't pass expiry off as learning.
 
 
 Two rules fall out, both paid for the hard way (see the ledger):
@@ -245,12 +265,13 @@ the #3754 platter promise showed what a prose-only status costs.
 
 | Coach | Eye (eval + budget) | Drill (skill) | Athlete (agent) | Status |
 |---|---|---|---|---|
-| **Agent surface** (a skill whose frontmatter name is not its directory, an agent without a description or `Use when`, a hook wired to an event Claude Code does not fire — each silent at runtime) | `scripts/agent-surface-scan.mjs` + `tests/arch/agent-surface.spec.ts` (advisory in `npm test`; `npm run agent-surface:scan`; hook events read from `docs/vendor/claude-code/hooks.md`, never memory; no vendored doc → UNKNOWN, exit 2) | fix the file; `/charter` for an agent, the skill's own `Use when` for a skill | none (recruit on recurrence #3) | ✅ live |
-| **Config/capability drift** (capabilities nothing routes to, owner claims that contradict CLAUDE.md, recurring corrections that want a template) | `scripts/config-audit.mjs` + `tests/arch/config-audit.spec.ts` (advisory in `npm test`; proposals only, writes nothing; `npm run config:audit`; the secretary digest carries its four sections) | a human approves each proposal from the digest (`/secretary`) | none — proposals are a human's by construction | ✅ live |
-| **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts`. Since #1713 it is the codebase's only size cap and counts **code lines** (`scripts/code-lines.mjs`): 300 across `src`, `app/src`, `scripts`, 500 in `tests` — Biome's `noExcessiveLinesPerFile` is off, having charged full price for `//` lines while collapsing template literals to one | `/decompose` | `decomposer` | ✅ live |
-| **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` | `/dedupe` | `ui-librarian` | ✅ live |
-| **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
-| **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` | `/bury` (judge: un-export / delete / justify-ignore) | `mortician` (recruited on recurrence #3, per the rule of three; preloads `/bury`) | ✅ live |
+| **Agent surface** (a skill whose frontmatter name is not its directory, an agent without a description or `Use when`, a hook wired to an event Claude Code does not fire — each silent at runtime; and, as notes only, history in a rule file — `scripts/instructions/history.mjs`, the rule `docs/ENGINEERING.md` → *Instruction files*) | `scripts/agent-surface-scan.mjs` + `tests/arch/agent-surface.spec.ts` (advisory in `npm test`; `npm run agent-surface:scan`; hook events read from `docs/vendor/claude-code/hooks.md`, never memory; no vendored doc → UNKNOWN, exit 2) | fix the file; `/charter` for an agent, the skill's own `Use when` for a skill | none (recruit on recurrence #3) | ✅ live |
+| **Config/capability drift** (capabilities nothing routes to, owner claims that contradict CLAUDE.md, recurring corrections that want a template) | `scripts/config-audit.mjs` + `tests/arch/config-audit.spec.ts` (advisory in `npm test`; proposals only, writes nothing; `npm run config:audit`; the secretary digest carries its five sections — ⑤, product/UX loop freshness, is lane work and lands in Noise absorbed, `tests/arch/config-audit-loop-freshness.spec.ts`) | a human approves each proposal from the digest (`/secretary`) | none — proposals are a human's by construction | ✅ live |
+| **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts`. It is the codebase's only size cap (#1713) and counts **code lines** (`scripts/code-lines.mjs`): 300 across `src`, `app/src`, `scripts`, 500 in `tests` — Biome's `noExcessiveLinesPerFile` is off: it charged full price for `//` lines while collapsing template literals to one | `/decompose` | `decomposer` | ✅ live |
+| **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` — two scopes, two budgets: root `src/**/*.ts` (`duplicateDefs`) and the React shell `app/src/**/*.{ts,tsx}` (`appDuplicateDefs`, counted within the app; baseline 92 on 2026-10-14) | `/dedupe` | `ui-librarian` | ✅ live |
+| **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` (root `src`, `clones`) + `.jscpd.app.json` (`app/src` .ts/.tsx/.css, `appClones`; baseline 70 on 2026-10-14 — 36 of them CSS) + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
+| **CSS literals** (type, spacing, radius and letter-spacing written as raw px/rem/em in `app/src/styles` instead of the `theme.css` ladders; `var()` fallbacks that name no token or disagree with it — the token layer covers ~99% of colour and almost nothing else) | `scripts/css-literal-scan.mjs` + `css-literal-budget.json` + `tests/arch/css-literal.spec.ts` (advisory budget check; the fixture specs are blocking; `npm run css-literal:scan`, `--json`, `--candidate` names the file with the most literals that already equal a token). Baseline 2026-10-14: raw font-size 637 (318 equal a `--text-*`), spacing 1,570 (676 equal a `--space-*`), radius 260 and letter-spacing 128 (no token yet, so no equals count), 3 dangling `var()`, 2 mismatched fallbacks | swap the literal for its ladder token (the equals count first: no taste call), fix the fallback, then `--update`; a family's first token seeds its equals key with `--update` | none yet (recruit on recurrence #3) | ✅ live |
+| **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` — `knip.json` has two workspaces: `.` (`deadCode`) and `app` (`appDeadCode`; entries are the file routes and app specs, `main.tsx` comes from knip's rsbuild plugin; baseline 92 on 2026-10-14) | `/bury` (judge: un-export / delete / justify-ignore) | `mortician` (recruited on recurrence #3, per the rule of three; preloads `/bury`) | ✅ live |
 | **Dep-graph** (cycles/orphans/layering) | `scripts/dep-graph-scan.mjs` (dependency-cruiser, adopted) + `.dependency-cruiser.cjs` + `dep-graph-budget.json` + `tests/arch/dep-graph.spec.ts` | judge: break cycle / wire-or-delete orphan / restore layer direction (`/decompose` when a cycle wants a split) | none yet (recruit on recurrence #3) | ✅ live |
 | **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | `/backfill` (BDD specs per ENGINEERING.md) | `test-backfiller` (preloads `/backfill`) | ✅ live |
 | **Unlearned incidents** (detection lag) | `scripts/incident-scan.mjs` + `incident-budget.json` + `tests/arch/lessons.spec.ts` (offline half: ledger integrity; remote half: failed `main` runs with no lesson) | `/retro` | **Moneypenny (repair)** — `.github/workflows/moneypenny-repair.yml` + `scripts/moneypenny/repair.mjs` (event-driven, not dispatched by the governor; formerly "CI Medic") | ✅ live |
@@ -258,11 +279,12 @@ the #3754 platter promise showed what a prose-only status costs.
 | **Forward-test id collisions** (two `docs/research/forward-tests/*.md` rows sharing one `FT-...` id — the event-research lane's concurrent-sessions race) | `scripts/forward-test-id-scan.mjs` + `forward-test-id-budget.json` + `tests/arch/forward-test-id.spec.ts` (pure text-file check, no token/network, always runnable); its `--contract` mode is the BLOCKING placement gate (`tests/arch/forward-tests-fragments.spec.ts`: one fragment per event, no rows in the index — #1449) | renumber the colliding row, then ratchet; new registrations use `.github/prompts/event-research.md`'s event-namespaced `FT-<event-id>-<n>` scheme so this never fires on a fresh id again | none yet (recruit on recurrence #3) | ✅ live |
 | **Journey coverage** (a living screen no member journey step visits at phone width; a screen the code has that `docs/members/triage.json` never judged) | `scripts/crawl/coverage.mjs --json` + `scripts/crawl/coverage-budget.mjs` + `journey-coverage-budget.json` + `tests/arch/journey-coverage.spec.ts` — the unjudged half BLOCKS (triage is the contract other lanes read); the gap count is advisory, ratchet-down | add a phone journey step that visits the screen, or re-judge it in triage, then `--update` | none yet (recruit on recurrence #3) | ✅ live |
 | **PR provenance** (a merged PR that names no issue and is no machine lane's — invisible to the Orchestration board, so the in-flight cap cannot count it; #4393 criterion 8) | `scripts/pr-provenance-scan.mjs` + `pr-provenance-budget.json` + `tests/arch/pr-provenance.spec.ts` (advisory, ratchet-down; the rule is `namesNoIssue` in `scripts/moneypenny/pr-issues.mjs`; `ship.sh open` runs its `--pr` mode before the push) | name the issue in the PR body (`Part of #<n>`), or file one first for a fan-out | none yet (recruit on recurrence #3) | ✅ live |
-| **Doc rot** (docs that no longer describe reality: dead file refs, missing npm scripts, stale structural map) | `scripts/doc-rot-scan.mjs` + `doc-rot-budget.json` + `tests/arch/doc-rot.spec.ts` (semantic-claim rot stays with the config-audit — honestly out of a deterministic eye's reach) | fix doc to match reality, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
+| **Doc rot** (instruction files — `CLAUDE.md`, `.claude/**`, lane prompts, `docs/**` minus the ledgers, one scope in `scripts/instructions/scope.mjs` — that no longer describe reality: dead file refs and line cites, missing npm scripts, model IDs no code runs, stale structural map) | `scripts/doc-rot-scan.mjs` + `doc-rot-budget.json` + `tests/arch/doc-rot.spec.ts` (semantic-claim rot is honestly out of a deterministic eye's reach: owner claims that contradict CLAUDE.md stay with the config-audit, and the instruction-drift sweep under special teams reads for files that disagree, stale facts and rules written as history) | fix doc to match reality, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
+| **UI catalog freshness** (`app/src/ui/CATALOG.md`, the agent-facing index of primitives and of shell modules with 5+ importers, out of step with the code) | `scripts/ui-catalog.mjs --check` + `tests/arch/ui-catalog.spec.ts` (advisory in `npm test`, like the structural map: call-site line numbers move on unrelated edits) | `npm run ui:catalog`, commit the result | none (recruit on recurrence #3) | ✅ live |
 | **Comment bloat** (narration comments — bare issue/PR refs, "used by X", "added for Y" — that `docs/ENGINEERING.md` → *WHY earns its place* rules out; git blame/the PR already carry that history) | `scripts/comment-bloat-scan.mjs` + `comment-bloat-budget.json` + `tests/arch/comment-bloat.spec.ts` (flags candidates only — WHY-vs-narration judgment stays with review, same honesty limit as doc-rot's semantic half) | `/code-review`/`/simplify` checklist: keep only if non-obvious WHY, else delete, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Mermaid skill drift** (the /mermaid skill telling sessions less than github.com draws: cards still calling GitHub's version unknown or deferring features at or below the pin, syntax-table encodings the card's "Emphasis without hue" section never names with no recorded decision, registered diagram types with no card) | `scripts/mermaid-skill-scan.mjs` + `mermaid-skill-budget.json` + `.claude/skills/mermaid/encodings-ledger.json` + `tests/arch/mermaid-skill.spec.ts` (lexicon-based for encodings — a row named without any encoding term is honestly out of reach; widen the lexicon on a miss) | reword to the pin / name it in the emphasis section or record a ledger decision / write the card, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Workflow structure** (duplicate keys, dangling step/needs refs) | `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` | fix the file, diff it against the last-good version | Moneypenny's repair lane files it when a run reports zero jobs | ✅ live |
-| **PR merge conflicts** (a PR goes `CONFLICTING` against `main` with no CI signal at all) | `moneypenny.mjs`'s (formerly `postmaster.mjs`) push-driven audit (#909) — `gh pr list`'s `mergeable` field, one-ping-per-PR via `conflict-flagged` | judge disjoint-vs-same-logic; merge `main` in and push a resolved merge commit, or `needs-eric` | Moneypenny detects + dispatches; her repair lane's `workflow_dispatch` entry point repairs it (`.github/prompts/moneypenny-conflict-repair.md`) | ✅ live |
+| **PR merge conflicts** (a PR goes `CONFLICTING` against `main` with no CI signal at all) | `scripts/moneypenny/audit.mjs`'s push-driven audit (#909) — `gh pr list`'s `mergeable` field, one ping per (PR, head sha) via `conflict-flagged` and its marker comment, up to `CONFLICT_REPAIR_CAP` (3) repairs, then `needs-eric` (#1403) | judge disjoint-vs-same-logic; merge `main` in and push a resolved merge commit; a same-logic conflict hands off to a live session (`needs-session` on an issue — a machine-lane PR closes and regenerates instead); `needs-eric` only for the irreversible class | Moneypenny detects + dispatches; her repair lane's `workflow_dispatch` entry point repairs it (`.github/prompts/moneypenny-conflict-repair.md`) | ✅ live |
 | **Inline-JS defects** (`<script>` syntax) | extract + `node --check` per page — *not built* | — | — | ⬜ queued |
 | Code review | *(adopted)* | `/code-review` | — | ✅ bundled |
 | Security review | *(adopted)* | `/security-review` | — | ✅ bundled |
@@ -283,15 +305,25 @@ Not every play is a down-in/down-out defensive loop. Special teams are situation
   `/grind` fan-out's input, if a sweep ever turns up several instances at once); `--strict` exits
   1, for a future promotion to the defensive roster if repeated sweeps keep finding real bugs
   (the rule of three, same as any other eye). Built: `scripts/layout-resize-scan.mjs`.
+- **Instruction-drift sweep** — the semantic half of doc rot.
+  `node scripts/instruction-drift-scan.mjs --due` exits 1 once instruction files have changed and
+  the last run is a week old (`--release` at a model release: every file), and `/grind` over
+  [`grind/instruction-drift.instructions.md`](grind/instruction-drift.instructions.md) reads them
+  for files that disagree, stale facts and rules written as history, each finding put to a
+  refuter before it lands. The push tick's audit files one `needs-session` ticket when it falls
+  due and closes it once a run records the stamp (`scripts/moneypenny/drift-chore.mjs`); the chore
+  edits `.claude/**`, so a live session runs it.
 - **Migrations** — one-shot tool/platform upgrades (e.g. Biome 2.x): run the migrator, triage fallout with judgment, land as one PR.
 - **Incident response** — rollback drills, post-deploy failure handling (the pipeline's smoke → rollback is the mechanized first responder).
 - **Release verification** — periodic prod screenshot/probe beyond the smoke test.
 - **Config audit digest** — rides the secretary digest Routine (docs/ROUTINES.md): the digest's
   session runs `node scripts/config-audit.mjs` and folds any non-empty section into the digest's
-  Needs-you tier. Deliberately claude.ai-side, not a periodic GitHub Actions workflow: the audit's
+  Needs-you tier — except ⑤, product/UX loop freshness (the 2026-10-18 loop census: the crawl,
+  its judge pass, coverage, the scenario headline), which is lane work and lands in Noise
+  absorbed. Deliberately claude.ai-side, not a periodic GitHub Actions workflow: the audit's
   most interesting check (recurring-intent clustering) reads `data/duel-log.jsonl`, which is
   `.gitignore`d machine-local session history a GHA runner's fresh checkout can never see — a
-  workflow would silently run three of four checks forever. (Honest limit: a fresh Routine session
+  workflow would silently run four of five checks forever. (Honest limit: a fresh Routine session
   without that history degrades the same way — the script returns the other checks and claims
   nothing false — so the clustering check only bites in sessions on a long-lived checkout.) Still
   evidence-triggered and human-gated: the script writes nothing, opens nothing, and the digest

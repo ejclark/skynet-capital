@@ -1,6 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PERSISTED_STORES } from "../../src/runtime/volume-guard.js";
+import {
+  DEFAULT_ROOT_ON_FLY,
+  DERIVED_STORES,
+  OPT_IN_STORES,
+  PERSISTED_STORES,
+} from "../../src/runtime/volume-guard.js";
 
 // Volume-persistence gate — the mechanical answer to "will this store survive a deploy?".
 //
@@ -33,6 +38,12 @@ const EPHEMERAL: Readonly<Record<string, string>> = {
   // alongside the other stores in `[env]`), not this lane's to self-authorize.
   SKYNET_COMMUNITY_PROGRESSION_FILE:
     "claim-state only, not earned truth; loses at most a repeat celebration on deploy",
+};
+
+/** Path-shaped `SKYNET_*` reads that are not data this server writes, each with the reason. */
+const NOT_A_STORE: Readonly<Record<string, string>> = {
+  SKYNET_HALT_FILE: "the kill switch: an operator touches it, the bots only test it exists",
+  SKYNET_RESEARCH_DIR: "read-only research shelf; points the suite at a frozen fixture",
 };
 
 function tsFiles(dir: string): string[] {
@@ -88,6 +99,25 @@ describe("volume persistence", () => {
     expect(stores.size).toBeGreaterThanOrEqual(8);
   });
 
+  it("declares every path-shaped env var the server reads, defaulted or opt-in (#4621)", () => {
+    const pattern = /(?:process\.)?env\.(SKYNET_[A-Z0-9_]*(?:DIR|FILE|STORE|PATH))\b/g;
+    const read = new Set<string>();
+    for (const file of tsFiles(SRC)) {
+      for (const [, name] of readFileSync(file, "utf8").matchAll(pattern)) read.add(name as string);
+    }
+    expect(read.size).toBeGreaterThanOrEqual(20); // the scan must not go blind
+    const undeclared = [...read].filter(
+      (n) => !(n in PERSISTED_STORES || OPT_IN_STORES.includes(n) || n in NOT_A_STORE),
+    );
+    expect(
+      undeclared,
+      "read from src/ but declared nowhere: add to PERSISTED_STORES (it has a data/ default), " +
+        "OPT_IN_STORES (no default, dark when unset) or NOT_A_STORE with the reason",
+    ).toEqual([]);
+    const stale = OPT_IN_STORES.filter((n) => !read.has(n));
+    expect(stale, "in OPT_IN_STORES but no longer read in src/ — remove").toEqual([]);
+  });
+
   it("mounts a volume the stores can be pinned to", () => {
     expect(mount).toBe("/data");
   });
@@ -128,4 +158,63 @@ describe("volume persistence", () => {
       );
     },
   );
+
+  // Derived stores (#4604): a new store resolves `storePath(env, "SKYNET_X")` under one root, so
+  // the gate proves the ROOT is the mount — by reading fly.toml, never by asking for a new line.
+  describe("derived stores", () => {
+    const derived: Readonly<Record<string, string>> = DERIVED_STORES;
+
+    it("roots them at the volume fly.toml mounts", () => {
+      expect(DEFAULT_ROOT_ON_FLY).toBe(mount);
+      const override = env.get("SKYNET_DATA_ROOT");
+      if (override !== undefined) {
+        expect(
+          override === mount || override.startsWith(`${mount}/`),
+          `SKYNET_DATA_ROOT = "${override}" is not under ${mount}`,
+        ).toBe(true);
+      }
+    });
+
+    it("keeps an explicit pin for a derived store on the volume too", () => {
+      for (const name of Object.keys(derived)) {
+        const value = env.get(name);
+        if (value === undefined) continue;
+        expect(value.startsWith(`${mount}/`), `${name} = "${value}" is not under ${mount}`).toBe(
+          true,
+        );
+      }
+    });
+
+    it("gives each one a unique name and var that no other store already uses", () => {
+      const names = Object.values(derived);
+      expect(new Set(names).size, "two derived stores share a name").toBe(names.length);
+      const taken = new Set(Object.values(PERSISTED_STORES).map((p) => p.split("/")[1]));
+      for (const [envVar, name] of Object.entries(derived)) {
+        expect(
+          /^[a-z0-9][a-z0-9._-]*$/.test(name),
+          `${envVar} → "${name}" is not a bare name`,
+        ).toBe(true);
+        expect(taken.has(name), `${envVar} → "${name}" collides with a PERSISTED_STORES path`).toBe(
+          false,
+        );
+        expect(envVar in PERSISTED_STORES || OPT_IN_STORES.includes(envVar), envVar).toBe(false);
+        expect(envVar in NOT_A_STORE || envVar in EPHEMERAL, envVar).toBe(false);
+      }
+    });
+
+    it("resolves the root only through volume-guard.ts, so no store can skip the registry", () => {
+      // `storePath` takes a key of DERIVED_STORES, so the type system enforces registration; a
+      // hand-rolled `join(dataRoot(env), …)` would not, so it is refused here.
+      const allowed = new Set([
+        join(SRC, "runtime", "volume-guard.ts"),
+        join(SRC, "server", "store-sizes.ts"),
+      ]);
+      const bypass = tsFiles(SRC).filter(
+        (file) =>
+          !allowed.has(file) &&
+          /\b(?:dataRoot|resolveStorePath)\(|SKYNET_DATA_ROOT/.test(readFileSync(file, "utf8")),
+      );
+      expect(bypass, 'use storePath(env, "SKYNET_X") with a DERIVED_STORES entry').toEqual([]);
+    });
+  });
 });

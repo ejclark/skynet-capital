@@ -33,7 +33,7 @@ export const GLOSSARY = {
   timeDecay: {
     label: "Time decay",
     plain:
-      "What your options lose each day if prices don't move. Every option is worth a little less as expiry nears.",
+      "What time does to your options each day if prices don't move. Every option is worth a little less as expiry nears, so one you bought loses money and one you sold earns it.",
     jargon: "theta (Θ)",
   },
   marketExposure: {
@@ -126,6 +126,11 @@ export const GLOSSARY = {
     label: "Max drawdown",
     plain:
       "The deepest fall from a peak your account has recorded. It's the drop you'd have had to sit through, not a loss you booked.",
+  },
+  projection: {
+    label: "Model projects",
+    plain:
+      "What the guidance model expects this position to total by its next date, and how sure it is. It's a projection, never a fact, and it reads — until the model has one for the position.",
   },
   delta: {
     label: "Move per $1",

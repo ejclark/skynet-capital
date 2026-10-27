@@ -8,7 +8,9 @@ import { InMemoryBroker } from "../adapters/in-memory-broker.js";
 import { ReplayEventStream } from "../adapters/replay-event-stream.js";
 import { AutonomousTrader } from "../autonomous/autonomous-trader.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
+import { signalWindows } from "../autonomous/signal-windows.js";
 import { enabledBotIds } from "../bots/bot-registry.js";
+import { envHardcoreControls } from "../personas/registry.js";
 import { readOfflineEvents } from "../runtime/data-source.js";
 import { resolveRoster } from "./autonomous-live-wiring.js";
 import { auditStore, decisionSink, logResult } from "./autonomous-sinks.js";
@@ -18,13 +20,13 @@ const OFFLINE_STARTING_CASH = 1_000_000;
 /** Replay fixtures against in-memory brokers, no keys, always "open." */
 export function runOffline(): void {
   const enabled = new Set(enabledBotIds(process.env));
-  const personas = resolveRoster(enabled).personas;
+  const personas = resolveRoster(enabled, envHardcoreControls(process.env)).personas;
   if (personas.length === 0) {
     console.error(`No enabled personas. Wanted: ${[...enabled].join(", ")}`);
     process.exit(1);
   }
   const risk = { maxPositionPct: Number(process.env.SKYNET_MAX_POSITION_PCT ?? "0.03") };
-  const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
+  const tracker = new MomentumTracker(signalWindows(process.env).momentum);
 
   const audit = auditStore(process.env);
   const onDecision = decisionSink(audit);

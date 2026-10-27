@@ -1,0 +1,33 @@
+{
+  "title": "Canary — what does this role already know?",
+  "description": "docs/members/study/roles/canary.md. Any knowledge, or any context of kind 'other', fails the round.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["knowledge", "context"],
+  "properties": {
+    "knowledge": {
+      "type": "string",
+      "description": "Everything you know about this app, its recent changes, or its owner's complaints. An empty string if you know nothing."
+    },
+    "context": {
+      "type": "array",
+      "description": "Every instruction, note, file or context block you were given besides your role prompt and this question — one entry each. An empty array if there were none.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "first_line"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["account-identity", "environment", "harness", "other"],
+            "description": "account-identity: only the signed-in account's email, for attribution. environment: only the working directory, platform, shell, OS, date or model. harness: only the tool's own general instructions about calling tools or formatting answers — nothing about any app, project, repository, product or person. other: anything else at all — project or repo notes, a CLAUDE.md, memories, product details, people's complaints, tasks."
+          },
+          "first_line": {
+            "type": "string",
+            "description": "Its first line, quoted."
+          }
+        }
+      }
+    }
+  }
+}

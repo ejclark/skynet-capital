@@ -1,4 +1,9 @@
-import { isSameMarketDay, MARKET_TIMEZONE, marketDayKey } from "../../src/domain/market-day.js";
+import {
+  isSameMarketDay,
+  MARKET_TIMEZONE,
+  marketDayKey,
+  marketDayKeyer,
+} from "../../src/domain/market-day.js";
 
 describe("marketDayKey", () => {
   it("keys a 3:55pm ET close to that trading day, not the next one", () => {
@@ -65,6 +70,73 @@ describe("marketDayKey", () => {
       marketDayKey(iso),
     );
     expect([...keys].sort()).toEqual(["2026-08-31", "2026-09-01"]);
+  });
+});
+
+describe("marketDayKeyer — a walk over a history in time order", () => {
+  const FIVE_MIN = 300_000;
+  /** Every five minutes for three days either side of `centre` (UTC ms). */
+  const walk = (centre: number): string[] =>
+    Array.from({ length: (6 * 86_400_000) / FIVE_MIN }, (_, i) =>
+      new Date(centre - 3 * 86_400_000 + i * FIVE_MIN).toISOString(),
+    );
+  /** Deterministic shuffle — out-of-order input must still answer correctly. */
+  const shuffled = (xs: readonly string[]): string[] => {
+    const out = [...xs];
+    let seed = 7;
+    for (let i = out.length - 1; i > 0; i--) {
+      seed = (seed * 1103515245 + 12345) % 2 ** 31;
+      const j = seed % (i + 1);
+      [out[i], out[j]] = [out[j] as string, out[i] as string];
+    }
+    return out;
+  };
+
+  // New York's two clock changes, a half-hour offset whose midnight falls mid-hour in UTC, and a
+  // zone whose clock moves by thirty minutes.
+  const cases: [string, string, number][] = [
+    ["New York, spring forward", "America/New_York", Date.UTC(2026, 2, 8, 7)],
+    ["New York, fall back", "America/New_York", Date.UTC(2026, 10, 1, 6)],
+    ["Kolkata, +5:30", "Asia/Kolkata", Date.UTC(2026, 6, 1)],
+    ["Lord Howe, a thirty-minute clock change", "Australia/Lord_Howe", Date.UTC(2026, 3, 4, 15)],
+  ];
+  for (const [label, zone, centre] of cases) {
+    it(`gives marketDayKey's answer for every instant — ${label}`, () => {
+      const instants = walk(centre);
+      for (const order of [instants, shuffled(instants)]) {
+        const keyOf = marketDayKeyer(zone);
+        const mismatches = order.filter((iso) => keyOf(iso) !== marketDayKey(iso, zone));
+        expect(mismatches).toEqual([]);
+      }
+    });
+  }
+
+  it("formats twice an hour, not once per sample, over five-minute samples (#4612 slice 7)", () => {
+    // Why formatting is the cost worth cutting: the marketDayKeyer doc comment.
+    const Real = Intl.DateTimeFormat;
+    let calls = 0;
+    Intl.DateTimeFormat = class extends Real {
+      constructor(...args: ConstructorParameters<typeof Real>) {
+        super(...args);
+        const format = super.format;
+        Object.defineProperty(this, "format", {
+          value: (date?: Date | number) => {
+            calls += 1;
+            return format(date);
+          },
+        });
+      }
+    } as typeof Real;
+    try {
+      // A zone no other spec asks for, so the shared cache builds it through the counting class.
+      const keyOf = marketDayKeyer("America/Halifax");
+      const instants = walk(Date.UTC(2026, 6, 1));
+      for (const iso of instants) keyOf(iso);
+      expect(calls).toBeGreaterThan(0);
+      expect(calls).toBeLessThanOrEqual((instants.length / 12) * 2 + 2 * 6);
+    } finally {
+      Intl.DateTimeFormat = Real;
+    }
   });
 });
 

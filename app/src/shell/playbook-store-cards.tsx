@@ -1,42 +1,27 @@
-import type { ReactElement } from "react";
+import { Fragment, type ReactElement } from "react";
+import { type WindowPlan, windowPlan } from "../live/playbook-rule";
 import type {
   BotsOnlyGateView,
   DelegationGateView,
+  PairRowView,
   PlaybookStoreCardView,
 } from "../live/playbook-store";
+import { PairEvidence, readyPair } from "./playbook-evidence";
 import {
   AccountPlaybookMetrics,
   HousePlaybookMetrics,
   type MetricsScope,
 } from "./playbook-metrics";
+import { SteeredBy } from "./playbook-steered-by";
 import { SubscribeForm } from "./playbook-subscribe-form";
-import { SubscriptionRow } from "./playbook-subscription-row";
+import { WindowTimeline } from "./playbook-window";
 
 /**
- * THE PLAYBOOK STORE's cards (issue #885), moved here whole from the retired desk route
- * `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623). One card per house playbook.
- * The account is a parameter of the action, never a page of its own.
- *
- * Two orders, by what the owner came to do (#4649, mobile-first):
- *  - A card the selected account is SUBSCRIBED to leads with that subscription: state, mode,
- *    capital, symbols, with Pause, Edit and Unsubscribe beside it. The rules, evidence and metrics
- *    follow (`playbook-subscription-row.tsx`).
- *  - A card it is not subscribed to reads first and acts last: rules, evidence, metrics, then the
- *    Subscribe form or the door that holds it.
- *
- * No cross-account visibility: `canManage` (from the server) is the only signal a viewer gets about
- * whether the selected account is theirs — without it the catalog renders with no controls and no
- * capital figures.
- *
- * TWO DOORS can hold a new subscription, checked in the server's order:
- *  - Bots only for now (#4610): on a human account the Subscribe control is drawn disabled under
- *    `BOTS_ONLY_NOTE`. That is not a fog, because nothing earnable opens it (`docs/FOG-OF-WAR.md`),
- *    so it names no rung.
- *  - The delegation fog (#1707): with training wheels on and rung 102 unearned, the control is
- *    drawn disabled under the sentence naming the rung that opens it.
- * Everything a member needs to judge a playbook (what it does, when it enters, both exits, how to
- * leave) stays readable behind either door. Rendering only: the server refuses a held subscribe
- * regardless, and unsubscribe, pause and resume are never gated on either side.
+ * THE PLAYBOOK STORE's pair rows (issue #885; by strategy since #4469 slice 3b), moved here whole
+ * from the desk route `/u/$id/playbooks` when the Store became R&D → Playbooks (#3623; that
+ * address now holds the bot's own Playbooks section, #5073). A
+ * strategy card (`playbook-strategy-cards.tsx`) holds one row per pair. The account is a parameter
+ * of the action, never a page of its own.
  */
 
 /**
@@ -69,18 +54,24 @@ function SubscribeDoor({
   );
 }
 
-/** What sits at the end of a card the selected account is not subscribed to. */
+/** What sits under a pair the selected account is not subscribed to. */
 function NewSubscription({
   accountId,
   card,
   delegation,
   botsOnly,
+  refusal,
+  needsConviction,
   onChanged,
 }: {
   readonly accountId: string;
   readonly card: PlaybookStoreCardView;
   readonly delegation: DelegationGateView;
   readonly botsOnly?: BotsOnlyGateView;
+  /** The study does not back this pair: Subscribe asks for the owner's conviction first. */
+  readonly needsConviction?: boolean;
+  /** Why the server would refuse a new subscription to this pair (criterion 9) — said in words. */
+  readonly refusal?: string;
   readonly onChanged: () => void;
 }): ReactElement {
   if (botsOnly?.locked) {
@@ -97,7 +88,22 @@ function NewSubscription({
       />
     );
   }
-  return <SubscribeForm accountId={accountId} card={card} onSaved={onChanged} />;
+  // ⊘ is "can't", the pair table's can't run and the heartbeat's Can't fire: a dash here put a
+  // second glyph on a can't-run row beside its "⊘ can't run" (#5093).
+  if (refusal) {
+    return <SubscribeDoor glyph="⊘" note={refusal} title="This pair takes no new subscription" />;
+  }
+  return (
+    <details className="pb-subscribe-disclosure">
+      <summary>Subscribe</summary>
+      <SubscribeForm
+        accountId={accountId}
+        card={card}
+        needsConviction={needsConviction === true}
+        onSaved={onChanged}
+      />
+    </details>
+  );
 }
 
 const pct = (fraction: number): string => `${(fraction * 100).toFixed(1)}%`;
@@ -106,18 +112,27 @@ const pct = (fraction: number): string => `${(fraction * 100).toFixed(1)}%`;
  * The facts the probe derives from the playbook's own code — window, target exposure per mode, and
  * the traits it proved — ported from the retired Plays cards (#3623) so they can never drift from
  * what the playbook does. A tactical playbook has no window, so it shows none rather than a false
- * "0%, no window" row; its rules are the Enter / Exit / Hold copy below.
+ * "0%, no window" row; its rules are the Enter / Exit / Hold copy below. A window drawn as a line
+ * (#5432) is not said again as a sentence.
  */
-function PlaybookFacts({ card }: { readonly card: PlaybookStoreCardView }): ReactElement | null {
+function PlaybookFacts({
+  card,
+  drawn,
+}: {
+  readonly card: PlaybookStoreCardView;
+  readonly drawn: boolean;
+}): ReactElement | null {
   if (!(card.window && card.size) && card.traits.length === 0) return null;
   return (
     <>
       {card.window && card.size ? (
         <dl className="pb-card-facts">
-          <div>
-            <dt>Window</dt>
-            <dd className="num">{card.window}</dd>
-          </div>
+          {drawn ? null : (
+            <div>
+              <dt>Window</dt>
+              <dd className="num">{card.window}</dd>
+            </div>
+          )}
           <div>
             <dt>Target exposure</dt>
             <dd className="num">
@@ -157,54 +172,55 @@ function subscriberLine(count: number): string {
   return `${count} active ${count === 1 ? "subscriber" : "subscribers"}`;
 }
 
-export function PlaybookCard({
-  accountId,
-  card,
-  canManage,
-  delegation,
-  botsOnly,
-  onChanged,
-  accountName,
-  metrics,
-  house,
-}: {
-  readonly accountId: string;
-  readonly card: PlaybookStoreCardView;
-  readonly canManage: boolean;
-  readonly delegation: DelegationGateView;
-  /** Bots only for now (#4610) — absent reads as open (a server from before the rule). */
-  readonly botsOnly?: BotsOnlyGateView;
-  readonly onChanged: () => void;
-  readonly accountName: string;
-  /** The selected account's own numbers on this playbook (#3665) — absent when none is managed. */
-  readonly metrics?: MetricsScope;
-  /** Every account's numbers on this playbook (#3665 slice 4) — a separate block, never summed. */
-  readonly house?: MetricsScope;
-}): ReactElement {
-  const subscribed = canManage && card.subscription !== undefined;
+/** The ticker a row is headed by: its one ticker, or what a basket and a no-ticker pick read as.
+ *  A playbook that sends no order and claims no names reads the bots' ten (`scansNames`). */
+export function pairTitle(symbols: readonly string[], scansNames = false): string {
+  if (symbols.length === 1) return symbols[0] ?? "";
+  if (symbols.length === 0) return scansNames ? "The bots' ten names" : "Picked on the day";
+  return `${symbols.length} names`;
+}
+
+/** What the evidence says beyond the status word: how sure, which exit it was measured at, and the
+ *  dates it holds for. Absolute dates only — a relative one is wrong tomorrow (`docs/IA.md` §2). */
+function evidenceFacts(pair: PairRowView): string[] {
+  return [
+    ...(pair.confidence ? [`${pair.confidence} confidence`] : []),
+    ...(pair.measuredExit ? [`measured at the ${pair.measuredExit} exit`] : []),
+    ...(pair.shelfOn ? [`verdict holds to ${pair.shelfOn}`] : []),
+    ...(pair.checkOn ? [`conviction checked ${pair.checkOn}`] : []),
+  ];
+}
+
+/** A pre-earnings pair's window laid on its ticker's next report, when there is one to draw: a
+ *  single ticker, a window with one span, and a report on file (`windowPlan`). */
+function drawnWindow(card: PlaybookStoreCardView): WindowPlan | undefined {
+  const [symbol] = card.symbols;
+  if (card.symbols.length !== 1 || !symbol) return undefined;
+  return windowPlan(symbol, card.window, new Date().toISOString());
+}
+
+/** The pair's rule: a pre-earnings pair draws it as one line (#5432) in place of the Enter / Exit /
+ *  Hold rows; its own labelled notes still follow. Anything else says its rule in the rows. */
+function PairRule({ card }: { readonly card: PlaybookStoreCardView }): ReactElement {
+  const plan = drawnWindow(card);
+  const notes = card.notes?.map((note) => (
+    <Fragment key={note.label}>
+      <dt>{note.label}</dt>
+      <dd>{note.text}</dd>
+    </Fragment>
+  ));
+  if (plan) {
+    return (
+      <>
+        <WindowTimeline plan={plan} {...(card.stretches ? { stretches: card.stretches } : {})} />
+        <PlaybookFacts card={card} drawn />
+        {card.notes?.length ? <dl className="pb-card-triggers">{notes}</dl> : null}
+      </>
+    );
+  }
   return (
-    <section className="pb-card" data-subscribed={subscribed || undefined}>
-      <h2 className="pb-card-h">
-        <span className="pb-card-id">{card.id}</span>{" "}
-        <span className="num pb-card-symbols">{card.symbols.join(" · ")}</span>
-      </h2>
-      {subscribed ? (
-        // An existing subscription keeps every exit it had, on every account — pausing and
-        // leaving are never gated. Behind the fog an edit may only lower exposure; the server
-        // refuses anything that delegates more.
-        <SubscriptionRow
-          accountId={accountId}
-          card={card}
-          human={botsOnly?.locked === true}
-          reduceOnly={delegation.locked}
-          onChanged={onChanged}
-        />
-      ) : null}
-      {card.subscribers !== undefined ? (
-        <p className="pb-card-subscribers">{subscriberLine(card.subscribers)}</p>
-      ) : null}
-      <p className="pb-card-description">{card.description}</p>
-      <PlaybookFacts card={card} />
+    <>
+      <PlaybookFacts card={card} drawn={false} />
       <dl className="pb-card-triggers">
         <dt>Enter</dt>
         <dd>{card.enter}</dd>
@@ -214,22 +230,155 @@ export function PlaybookCard({
         <dd>{card.exitCutLosses}</dd>
         <dt>Hold</dt>
         <dd>{card.hold}</dd>
+        {notes}
       </dl>
-      <footer className="pb-card-evidence">
-        <span className="num">{card.evidence}</span>
-        {card.evidenceHref ? <a href={card.evidenceHref}>the study behind it →</a> : null}
-      </footer>
-      {metrics ? <AccountPlaybookMetrics accountName={accountName} scope={metrics} /> : null}
-      {house ? <HousePlaybookMetrics scope={house} /> : null}
-      {canManage && !subscribed ? (
-        <NewSubscription
-          accountId={accountId}
-          card={card}
-          delegation={delegation}
-          {...(botsOnly ? { botsOnly } : {})}
-          onChanged={onChanged}
+    </>
+  );
+}
+
+/** What a row says under its head: a ready row reads as a call (#5444); a row that can't run or
+ *  isn't studied keeps its own words. Then any hand-off or refusal note the server sent. */
+function PairWords({
+  pair,
+  reportKeyed,
+}: {
+  readonly pair: PairRowView;
+  readonly reportKeyed: boolean;
+}): ReactElement {
+  // A stale ✓ is not a call to act on: it keeps its words and dates, never a present-tense sentence.
+  const ready = readyPair(pair);
+  const facts = ready ? [] : evidenceFacts(pair);
+  return (
+    <>
+      {ready ? (
+        <PairEvidence pair={pair} reportKeyed={reportKeyed} />
+      ) : (
+        <p className="pb-pair-call">{pair.call}</p>
+      )}
+      {pair.reason ? <p className="pb-pair-note">Can't run: {pair.reason}.</p> : null}
+      {facts.length > 0 ? <p className="pb-pair-facts">{facts.join(" · ")}</p> : null}
+      {!ready && pair.number ? <p className="pb-pair-facts">{pair.number}</p> : null}
+      {pair.handOff ? <p className="pb-pair-note">{pair.handOff}.</p> : null}
+      {pair.notTrading ? <p className="pb-pair-note">{pair.notTrading}</p> : null}
+    </>
+  );
+}
+
+/** "3 active subscribers · its study →" — the count, never who, and the way to the study. */
+function CountLine({
+  subscribers,
+  studyHref,
+}: {
+  readonly subscribers?: number;
+  readonly studyHref?: string;
+}): ReactElement | null {
+  if (subscribers === undefined && !studyHref) return null;
+  return (
+    <p className="pb-card-subscribers">
+      {subscribers !== undefined ? subscriberLine(subscribers) : null}
+      {subscribers !== undefined && studyHref ? " · " : null}
+      {studyHref ? <a href={studyHref}>its study →</a> : null}
+    </p>
+  );
+}
+
+/**
+ * One pair on a strategy card (#4469 slice 3b): a strategy on a ticker, headed by the ticker and its
+ * evidence as a glyph AND a word. Rows read by what the owner came to do, as `PlaybookCard` did:
+ * the evidence first, then why it cannot be subscribed (visible words, never a tooltip — a phone has
+ * no hover) or the door to subscribe, then the rules and the record.
+ *
+ * No cross-account visibility: `canManage` (from the server) is the only signal a viewer gets about
+ * whether the selected account is theirs — without it the rows render with no controls and no
+ * capital figures.
+ *
+ * TWO DOORS can hold a new subscription, checked in the server's order:
+ *  - Bots only for now (#4610): on a human account the Subscribe control is drawn disabled under
+ *    `BOTS_ONLY_NOTE`. That is not a fog, because nothing earnable opens it (`docs/FOG-OF-WAR.md`),
+ *    so it names no rung.
+ *  - The delegation fog (#1707): with training wheels on and rung 102 unearned, the control is
+ *    drawn disabled under the sentence naming the rung that opens it.
+ * A pair the code would refuse (criterion 9) draws the same disabled control under the server's own
+ * sentence. Everything a member needs to judge a pair (what it does, when it enters, both exits)
+ * stays readable behind any of them. Rendering only: the server refuses a held subscribe regardless,
+ * and unsubscribe, pause and resume are never gated on either side.
+ */
+export function PairRow({
+  accountId,
+  card,
+  pair,
+  canManage,
+  delegation,
+  botsOnly,
+  onChanged,
+  accountName,
+  metrics,
+  house,
+  reportKeyed = true,
+}: {
+  readonly accountId: string;
+  /** The pair's rules and numbers, joined on `pair.id`. */
+  readonly card: PlaybookStoreCardView;
+  readonly pair: PairRowView;
+  /** Its strategy is timed to the earnings report, so R&D's call on the report is its forecast. */
+  readonly reportKeyed?: boolean;
+  readonly canManage: boolean;
+  readonly delegation: DelegationGateView;
+  /** Bots only for now (#4610) — absent reads as open (a server from before the rule). */
+  readonly botsOnly?: BotsOnlyGateView;
+  readonly onChanged: () => void;
+  readonly accountName: string;
+  /** The selected account's own numbers on this pair (#3665) — absent when none is managed. */
+  readonly metrics?: MetricsScope;
+  /** Every account's numbers on this pair (#3665 slice 4) — a separate block, never summed. */
+  readonly house?: MetricsScope;
+}): ReactElement {
+  const subscribed = canManage && pair.subscription !== undefined;
+  return (
+    <div className="pb-pair" data-subscribed={subscribed || undefined} data-status={pair.status}>
+      {/* The evidence, then how it trades: one column on a phone, side by side on a wide card. */}
+      <div className="pb-pair-evidence">
+        <h3 className="pb-pair-h">
+          <span className="num pb-pair-ticker">
+            {pairTitle(pair.symbols, card.movesNoCapital === true)}
+          </span>{" "}
+          <span className="pb-pair-status">{pair.statusLabel}</span>
+        </h3>
+        {pair.symbols.length > 1 ? (
+          <p className="num pb-card-symbols">{pair.symbols.join(" · ")}</p>
+        ) : null}
+        <PairWords pair={pair} reportKeyed={reportKeyed} />
+        {pair.steeredBy ? <SteeredBy view={pair.steeredBy} /> : null}
+        <CountLine
+          {...(card.subscribers !== undefined ? { subscribers: card.subscribers } : {})}
+          {...(pair.studyHref ? { studyHref: pair.studyHref } : {})}
         />
-      ) : null}
-    </section>
+        {canManage && !subscribed ? (
+          <NewSubscription
+            accountId={accountId}
+            card={card}
+            delegation={delegation}
+            {...(botsOnly ? { botsOnly } : {})}
+            {...(pair.subscribeRefusal ? { refusal: pair.subscribeRefusal } : {})}
+            {...(pair.needsConviction ? { needsConviction: true } : {})}
+            onChanged={onChanged}
+          />
+        ) : null}
+      </div>
+      <details className="pb-pair-rules" open>
+        <summary>How it trades</summary>
+        <p className="pb-card-description">{card.description}</p>
+        {pair.researchSignal ? <p className="pb-pair-signal">{pair.researchSignal}</p> : null}
+        <PairRule card={card} />
+        {/* The study's repo path leaves the member view (#5444): "its study →" carries it. */}
+        {card.evidenceHref && card.evidenceHref !== pair.studyHref ? (
+          <footer className="pb-card-evidence">
+            <a href={card.evidenceHref}>the study behind it →</a>
+          </footer>
+        ) : null}
+        {metrics ? <AccountPlaybookMetrics accountName={accountName} scope={metrics} /> : null}
+        {house ? <HousePlaybookMetrics scope={house} /> : null}
+      </details>
+    </div>
   );
 }

@@ -117,7 +117,7 @@ describe("outlookPick", () => {
 });
 
 describe("the Outlook pane's placement", () => {
-  const trade = readFileSync("app/src/routes/trade.tsx", "utf8");
+  const trade = readFileSync("app/src/shell/trade-bench.tsx", "utf8");
 
   it("is an auxiliary bench entry — shown only when asked, never auto-docked", () => {
     expect(trade).toContain('id === "chain" || id === "guidance" || id === "outlook"');

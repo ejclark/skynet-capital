@@ -4,6 +4,7 @@ import type { OrderForecast, OrderStatus, PlaybookMode } from "../domain/types.j
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
 import { type ExpectancyCI, expectancyBootstrapCI } from "../trading/expectancy-ci.js";
+import { brokerWordsFor } from "./broker-words.js";
 import { formatPrice } from "./desk-data.js";
 import { guardDeltaFor } from "./guard-delta.js";
 import { optionContractLine } from "./option-contract-line.js";
@@ -37,6 +38,11 @@ interface CycleOutcomeView {
   readonly resultStatus?: string;
   /** The result in words when its status alone would mislead — a limit that never filled. */
   readonly resultLabel?: string;
+  /** What the broker said about an order that never traded ("limit $2.10 not reached in 15s;
+   *  canceled"), as stored (`decision-db-results.ts`, `brokerWordsFor`) — said in place of
+   *  `resultLabel`, never beside it. The owner's alone: a broker's message can name the account's
+   *  specifics (`desk-owner-gate.ts`). Absent on a fill, when it said nothing, or on an older record. */
+  readonly brokerReason?: string;
   /** An option order's contracts and limit, in one line (`optionContractLine`); absent for shares. */
   readonly contract?: string;
   /** `10 @ $176.10` for shares; for an option, the dollars that moved and how they add up
@@ -79,6 +85,8 @@ export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
   "call-not-covered": "not enough free shares to cover the sold call",
   "uncovers-short-call": "selling these shares would leave a sold call uncovered",
   "collateral-reserved": "that cash is set aside to secure a sold put",
+  unsubscribed:
+    "not from a subscribed playbook — a bot opens a position only through a playbook it is subscribed to and has on",
 };
 
 /** A result that is neither a fill nor a rejection, in words — a limit order's two other endings. */
@@ -107,6 +115,9 @@ interface RefusedIntentView {
   readonly side: string;
   readonly quantity: number;
   readonly strategy?: string;
+  /** The play that proposed it — the owner's alone (#885); a non-owner's copy loses it, and the
+   *  gate redacts it out of `reason` (#4442). */
+  readonly playbookId?: string;
   readonly reason: string;
   readonly expectation?: string;
   readonly guardReason?: string;
@@ -192,6 +203,7 @@ function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutco
   const guardDelta = guardDeltaFor(record, outcome.intent);
   const contract = optionContractLine(outcome.intent);
   const resultLabel = resultLabelFor(outcome);
+  const brokerReason = brokerWordsFor(outcome.result);
   return {
     symbol: outcome.intent.symbol,
     side: outcome.intent.side,
@@ -207,6 +219,7 @@ function outcomeView(record: DecisionRecord, outcome: IntentOutcome): CycleOutco
     action: outcome.action,
     ...(outcome.result ? { resultStatus: outcome.result.status } : {}),
     ...(resultLabel ? { resultLabel } : {}),
+    ...(brokerReason ? { brokerReason } : {}),
     ...(contract ? { contract } : {}),
     ...fillOf(outcome),
     ...(record.context?.momentum?.[outcome.intent.symbol] !== undefined
@@ -246,6 +259,7 @@ function refusedIntentsFor(
       side: r.intent.side,
       quantity: r.intent.quantity,
       ...(r.intent.strategy ? { strategy: r.intent.strategy } : {}),
+      ...(r.intent.playbookId ? { playbookId: r.intent.playbookId } : {}),
       reason: r.intent.reason,
       ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
       ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),

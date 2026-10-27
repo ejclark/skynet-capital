@@ -1,9 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { ROLL_UNAVAILABLE_REASON } from "../../../src/trading/order-ticket";
 import type { DeskPosition } from "../../src/live/desk";
 import { BlotterRow } from "../../src/shell/blotter-row";
+
+/**
+ * One desk row (#738 phase 2c; ranked columns #5071). WHEN its chevron is opened, THE row SHALL
+ * show, in place under it, what its columns leave out: the plain words, cost, expiry, best / worst,
+ * the next event, the buys that make up the position (each closable on its own, #3186 slice 1) and
+ * the position's own Close. One disclosure per row: the symbol-header lots accordion and the action
+ * column retired into it so the closed row fits beside the tower.
+ */
 
 // The row's Guidance link (#3729 step 4) is a router Link; no router here, so render its href.
 rstest.mock("@tanstack/react-router", () => ({
@@ -56,60 +64,67 @@ const inTable = (row: React.ReactElement) => {
   );
 };
 
+const opener = (display = "SPY") => screen.getByRole("button", { name: `Detail for ${display}` });
+const opened = () => document.querySelector(".row-open") as HTMLElement;
+
 describe("BlotterRow", () => {
-  it("shows the symbol and the always-visible columns", () => {
+  it("shows the position in its columns", () => {
     render(inTable(<BlotterRow position={position()} deskId="sauron" />));
 
     expect(screen.getByText("SPY")).toBeInTheDocument();
-    expect(screen.getByText("199")).toBeInTheDocument();
+    expect(screen.getByText("$100,495")).toBeInTheDocument();
     expect(screen.getByText("+$985")).toBeInTheDocument();
   });
 
-  it("starts collapsed — no detail grid until expanded", () => {
+  it("starts closed — nothing opened until the chevron is", () => {
     render(inTable(<BlotterRow position={position()} deskId="sauron" />));
 
-    expect(screen.getByRole("button", { name: /Detail for/ })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-    expect(screen.queryByText("Cost / share")).not.toBeInTheDocument();
+    expect(opener()).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Cost basis")).not.toBeInTheDocument();
   });
 
-  it("reveals the detail grid when the expand chevron is clicked", () => {
+  it("opens in place under the row when the chevron is clicked", () => {
     render(inTable(<BlotterRow position={position()} deskId="sauron" />));
 
-    fireEvent.click(screen.getByRole("button", { name: /Detail for/ }));
+    fireEvent.click(opener());
 
-    // The fold carries what the narrow table hides (#3689 slice 6).
+    // The fold carries what the columns leave out (#3689 slice 6, #5071).
     expect(screen.getByText("Cost basis")).toBeInTheDocument();
-    expect(screen.getByText("Best / worst case")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Detail for/ })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
+    expect(screen.getByRole("button", { name: "Best / worst case" })).toBeInTheDocument();
+    expect(opener()).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("collapses again on a second click of the same chevron", () => {
+  it("closes again on a second click of the same chevron", () => {
     render(inTable(<BlotterRow position={position()} deskId="sauron" />));
-    const chevron = screen.getByRole("button", { name: /Detail for/ });
 
-    fireEvent.click(chevron);
-    fireEvent.click(chevron);
+    fireEvent.click(opener());
+    fireEvent.click(opener());
 
-    expect(screen.queryByText("Cost / share")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cost basis")).not.toBeInTheDocument();
   });
 
-  it("shows no lots trigger when the position carries no lots", () => {
+  it("shows no buys when the position carries none", () => {
     render(inTable(<BlotterRow position={position()} deskId="sauron" />));
-    expect(screen.queryByRole("button", { name: /buys for SPY/ })).not.toBeInTheDocument();
+    fireEvent.click(opener());
+    expect(screen.queryByRole("region", { name: /buys? for SPY/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 
-  it("renders no detail line when the position carries none — nothing to say beats a static label", () => {
-    render(inTable(<BlotterRow position={position({ detail: "" })} deskId="sauron" />));
-    expect(screen.queryByText("199 sh")).not.toBeInTheDocument();
+  it("keeps a short stock's Close off with its reason as text, never a sell (#5086)", () => {
+    render(inTable(<BlotterRow position={position({ quantity: "-1,000" })} deskId="sauron" />));
+    fireEvent.click(opener());
+
+    const close = screen.getByRole("button", { name: "Close" });
+    expect(close).toBeDisabled();
+    // Visible words, not a title a phone cannot hover — the Roll pattern (#3807 slice 2e).
+    expect(close).not.toHaveAttribute("title");
+    expect(close).toHaveAccessibleDescription(/short 1,000 shares/);
+    expect(within(opened()).getByText(/a sell would add to the short/i)).toBeVisible();
+    fireEvent.click(close);
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
   });
 
-  describe("lot breakdown (#3186 slice 1)", () => {
+  describe("the buys, opened in the row (#3186 slice 1)", () => {
     const lots = position({
       lots: [
         {
@@ -143,36 +158,31 @@ describe("BlotterRow", () => {
       ],
     });
 
-    it("starts with the lot rows collapsed", () => {
+    it("keeps the buys closed with the row", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
       expect(screen.queryByText("$49,995")).not.toBeInTheDocument();
     });
 
-    it("renders no visible 'lots' label — the whole symbol header is the trigger", () => {
+    it("lists each buy when the row opens: when, how many at what, worth now, P/L since", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
-      expect(screen.queryByText(/lots/i)).not.toBeInTheDocument();
-    });
+      fireEvent.click(opener());
 
-    it("reveals lot rows sharing the parent's exact columns when the trigger is clicked", () => {
-      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
-
-      fireEvent.click(screen.getByRole("button", { name: /2 buys for SPY/ }));
-
-      // Each lot's own value in the parent's Value column (#3689 slice 6 retired cost basis there).
-      expect(screen.getByText("$49,995")).toBeInTheDocument();
-      expect(screen.getByText("$50,500")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Close all" })).toBeInTheDocument();
-      // A lot row trades the symbol column for its opened-at date — no "Lot ·" label filler,
-      // no raw fill history (BUY/SELL): only what's still on the ledger, header-aligned.
-      expect(screen.getByText("2026-08-28 14:00 UTC")).toBeInTheDocument();
-      expect(screen.queryByText(/Lot ·/)).not.toBeInTheDocument();
+      const buys = screen.getByRole("region", { name: "2 buys for SPY" });
+      const items = within(buys).getAllByRole("listitem");
+      expect(items).toHaveLength(2);
+      expect(items[0]).toHaveTextContent("2026-08-28 14:00 UTC");
+      expect(items[0]).toHaveTextContent("99 shares at $495.00");
+      expect(items[0]).toHaveTextContent("$49,995");
+      expect(items[0]).toHaveTextContent("+$990 (+2.0%)");
+      expect(within(buys).getByText("$50,500")).toBeInTheDocument();
+      // Only what's still on the ledger: no raw fill history (BUY/SELL), no "lots" jargon.
       expect(screen.queryByText("BUY")).not.toBeInTheDocument();
+      expect(screen.queryByText(/lots/i)).not.toBeInTheDocument();
+      // The position's own close says it closes every buy.
+      expect(screen.getByRole("button", { name: "Close all" })).toBeInTheDocument();
     });
 
-    it("sums the visible lot columns back to the parent row", () => {
-      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
-      fireEvent.click(screen.getByRole("button", { name: /2 buys for SPY/ }));
-
+    it("sums the buys back to the position", () => {
       const sum = (a: string, b: string) =>
         Number(a.replace(/[^0-9.-]/g, "")) + Number(b.replace(/[^0-9.-]/g, ""));
 
@@ -181,28 +191,84 @@ describe("BlotterRow", () => {
       expect(sum(lots.lots?.[0]?.totalPl ?? "0", lots.lots?.[1]?.totalPl ?? "0")).toBe(995);
     });
 
-    it("opens a lot-scoped close panel from Close this buy, independent of the other lot", () => {
-      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
-      fireEvent.click(screen.getByRole("button", { name: /2 buys for SPY/ }));
-
-      const closeLotButtons = screen.getAllByRole("button", { name: "Close this buy" });
-      expect(closeLotButtons).toHaveLength(2);
-      fireEvent.click(closeLotButtons[0] as HTMLElement);
-
-      // The close panel scopes to the first lot's own 99 shares, not the full 199.
-      expect(screen.getByRole("spinbutton")).toHaveValue(99);
-      expect(closeLotButtons[1]).toHaveAttribute("aria-expanded", "false");
+    // #6169: after a partial sell the buys can sit off Alpaca's averaged basis; say why in words.
+    it("says in words why the buys don't add up to the row, when the server sends the line", () => {
+      const note =
+        "Alpaca averages these 199 shares at $500.05 ($99,510); each buy below keeps its own " +
+        "price ($99,500), so the buys' P/L totals +$10 against the row's. Sold + held P/L is " +
+        "the same either way.";
+      render(
+        inTable(
+          <BlotterRow position={{ ...lots, basisGap: -10, basisNote: note }} deskId="sauron" />,
+        ),
+      );
+      fireEvent.click(opener());
+      const buys = screen.getByRole("region", { name: "2 buys for SPY" });
+      expect(within(buys).getByText(note)).toBeVisible();
     });
 
-    it("renders no Roll button on a stock's lots — rolling only exists for options", () => {
+    it("adds no line when the buys and the row agree", () => {
       render(inTable(<BlotterRow position={lots} deskId="sauron" />));
-      fireEvent.click(screen.getByRole("button", { name: /2 buys for SPY/ }));
+      fireEvent.click(opener());
+      expect(screen.queryByText(/Alpaca averages/)).not.toBeInTheDocument();
+    });
+
+    it("opens a buy-scoped close panel from Close this buy, independent of the other buy", () => {
+      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
+      fireEvent.click(opener());
+
+      const closeBuy = screen.getByRole("button", { name: "Close this buy" });
+      const sellNewer = screen.getByRole("button", { name: "Sell 100 shares (oldest buys first)" });
+      fireEvent.click(closeBuy);
+
+      // The close panel scopes to the first buy's own 99 shares, not the full 199.
+      expect(screen.getByRole("spinbutton")).toHaveValue(99);
+      expect(sellNewer).toHaveAttribute("aria-expanded", "false");
+    });
+
+    // #5959: a sell names no buy, and the ledger pairs it with the oldest first — so only the
+    // oldest buy's sell closes that buy. A newer one says what its order does instead.
+    it("promises Close this buy only on the oldest buy; a newer one says it sells oldest first", () => {
+      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
+      fireEvent.click(opener());
+
+      expect(screen.getAllByRole("button", { name: "Close this buy" })).toHaveLength(1);
+      fireEvent.click(screen.getByRole("button", { name: "Sell 100 shares (oldest buys first)" }));
+
+      expect(screen.getByRole("spinbutton")).toHaveValue(100);
+      expect(screen.getByRole("button", { name: "Sell 100" })).toBeInTheDocument();
+      // The only "Close all" left is the row's own, which does close every buy.
+      expect(screen.getAllByRole("button", { name: "Close all" })).toHaveLength(1);
+    });
+
+    // #5091: each buy closes as a sell of its own size, so under a short position "Close this buy"
+    // would add to the short. Whatever the buys say, the row's refusal holds for every one of them,
+    // described by the same visible reason as the row's own Close.
+    it("keeps every Close this buy off on a short stock, with the row's reason", () => {
+      render(inTable(<BlotterRow position={{ ...lots, quantity: "-199" }} deskId="sauron" />));
+      fireEvent.click(opener());
+
+      const closeBuy = screen.getAllByRole("button", { name: "Close this buy" });
+      expect(closeBuy).toHaveLength(2);
+      for (const button of closeBuy) {
+        expect(button).toBeDisabled();
+        expect(button).toHaveAccessibleDescription(/short 199 shares/);
+        expect(button).not.toHaveAttribute("title");
+        fireEvent.click(button);
+      }
+      expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Close" })).toBeDisabled();
+    });
+
+    it("renders no Roll on a stock's buys — rolling only exists for options", () => {
+      render(inTable(<BlotterRow position={lots} deskId="sauron" />));
+      fireEvent.click(opener());
 
       expect(screen.queryByRole("button", { name: /Roll/ })).not.toBeInTheDocument();
     });
   });
 
-  describe("lot breakdown on an option position", () => {
+  describe("the buys of an option position", () => {
     const optionLots = position({
       symbol: "NVDA261218C00130000",
       display: "NVDA Dec 18 130 Call",
@@ -227,7 +293,7 @@ describe("BlotterRow", () => {
 
     it("renders Roll disabled with the reason, never a silent no-op button", () => {
       render(inTable(<BlotterRow position={optionLots} deskId="sauron" />));
-      fireEvent.click(screen.getByRole("button", { name: /1 buy for NVDA Dec 18 130 Call/ }));
+      fireEvent.click(opener("NVDA Dec 18 130 Call"));
 
       const rollButtons = screen.getAllByRole("button", { name: "Roll" });
       expect(rollButtons).toHaveLength(1);
@@ -240,10 +306,16 @@ describe("BlotterRow", () => {
         expect(button).not.toHaveAttribute("title");
       }
     });
+
+    it("counts contracts, not shares", () => {
+      render(inTable(<BlotterRow position={optionLots} deskId="sauron" />));
+      fireEvent.click(opener("NVDA Dec 18 130 Call"));
+      expect(opened()).toHaveTextContent("2 contracts at $5.00");
+    });
   });
 });
 
-describe("BlotterRow plain columns (#3689 slice 6)", () => {
+describe("BlotterRow — the opened row's plain figures (#3689 slice 6)", () => {
   const put = {
     symbol: "TSLA261017P00400000",
     display: "TSLA Oct 17 400 Put",
@@ -271,33 +343,44 @@ describe("BlotterRow plain columns (#3689 slice 6)", () => {
   };
 
   it("says what the position bets on, when it expires, and its best and worst case", () => {
-    render(inTable(<BlotterRow position={put} deskId="eric" decay="−$64/day" />));
-    expect(screen.getByText("Put option · profits if TSLA falls")).toBeInTheDocument();
-    expect(screen.getByText("24 days")).toBeInTheDocument();
-    expect(screen.getByText("−$64/day")).toHaveClass("tone-neg");
-    expect(screen.getByText("$385.90")).toBeInTheDocument();
-    expect(screen.getByText("+$308,720")).toHaveClass("tone-pos");
-    expect(screen.getByText("−$11,280")).toHaveClass("tone-neg");
+    render(inTable(<BlotterRow position={put} deskId="eric" />));
+    fireEvent.click(opener("TSLA Oct 17 400 Put"));
+    const open = within(opened());
+    expect(open.getByText("Put option · profits if TSLA falls")).toBeInTheDocument();
+    expect(open.getByText("24 days")).toBeInTheDocument();
+    expect(open.getByText("+$308,720")).toHaveClass("tone-pos");
+    expect(open.getByText("−$11,280")).toHaveClass("tone-neg");
   });
 
-  it("reads '—' for decay when the feed hasn't quoted the contract, never a made-up zero", () => {
-    render(inTable(<BlotterRow position={put} deskId="eric" />));
-    const decayCell = screen.getByText("24 days").closest("td")?.nextElementSibling;
-    expect(decayCell).toHaveTextContent("—");
+  it("says when the stock's own event lands before expiry, in words as well as tone", () => {
+    render(
+      inTable(
+        <BlotterRow
+          position={{
+            ...put,
+            nextEvent: {
+              label: "Earnings Oct 15",
+              at: "2026-10-15",
+              beforeExpiry: true,
+              scope: "stock",
+            },
+          }}
+          deskId="eric"
+        />,
+      ),
+    );
+    fireEvent.click(opener("TSLA Oct 17 400 Put"));
+    const event = opened().querySelector(".pos-more-event dd") as HTMLElement;
+    // The date glued to its month, so a wrap never splits "Oct / 15".
+    expect(event.querySelector(".next-event-label")?.textContent).toBe("Earnings Oct 15");
+    expect(event.querySelector(".next-event-when")).toHaveTextContent("before expiry");
   });
 });
 
 describe("the Guidance link (#3729 step 4)", () => {
   it("links a stock row to its guidance with the symbol and account, never the stake", () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <table>
-          <tbody>
-            <BlotterRow position={position({ symbol: "CRWV" })} deskId="desk-1" />
-          </tbody>
-        </table>
-      </QueryClientProvider>,
-    );
+    render(inTable(<BlotterRow position={position({ symbol: "CRWV" })} deskId="desk-1" />));
+    fireEvent.click(opener());
     const href = screen.getByRole("link", { name: "Guidance" }).getAttribute("href") ?? "";
     expect(href).toBe("/trade?desk=desk-1&symbol=CRWV&section=guidance");
   });

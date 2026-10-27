@@ -15,16 +15,23 @@ export interface TradeUpdateMessage {
     readonly price?: string | number;
     readonly qty?: string | number;
     readonly timestamp?: string;
-    readonly order?: {
-      readonly id?: string;
-      readonly symbol?: string;
-      readonly side?: string;
-      readonly qty?: string;
-      readonly status?: string;
-      readonly filled_qty?: string;
-      readonly filled_avg_price?: string;
-    };
+    readonly order?: TradeUpdateOrder;
   };
+}
+
+/** The order object a trade update carries — the REST order's shape, only the fields we read. */
+interface TradeUpdateOrder {
+  readonly id?: string;
+  /** Empty on a multi-leg (`mleg`) parent: its contracts are the `legs`. */
+  readonly symbol?: string;
+  readonly side?: string;
+  readonly qty?: string;
+  readonly status?: string;
+  readonly filled_qty?: string;
+  readonly filled_avg_price?: string;
+  readonly order_class?: string;
+  /** An `mleg` parent's legs, each a full order under its own id and contract. */
+  readonly legs?: readonly TradeUpdateOrder[] | null;
 }
 
 function toNumber(value: string | number | undefined): number {
@@ -118,4 +125,45 @@ export function activityFromMessage(
     at: data.timestamp ?? new Date().toISOString(),
     source: "stream",
   };
+}
+
+/**
+ * Every journal line one trade update carries. A plain order is one line (`activityFromMessage`).
+ * A multi-leg spread arrives as ONE update whose parent order has no symbol, so the single-line
+ * mapper drops it; here it becomes one line per leg, under the leg's own id and contract — the
+ * shape the broker's own reads give a spread, which `spread-activity.ts` folds back into one row —
+ * each tagged with its parent so the capital-flow watch can tell a spread happened (#4563).
+ */
+export function activitiesFromMessage(
+  message: TradeUpdateMessage,
+  participantId: string,
+): TradeActivityRecord[] {
+  const order = message.data?.order;
+  if (message.stream !== "trade_updates" || !order?.id || order.order_class !== "mleg") {
+    const record = activityFromMessage(message, participantId);
+    return record ? [record] : [];
+  }
+  const parentOrderId = order.id;
+  const at = message.data?.timestamp ?? new Date().toISOString();
+  const lines: TradeActivityRecord[] = [];
+  for (const leg of order.legs ?? []) {
+    if (!(leg.id && leg.symbol) || (leg.side !== "buy" && leg.side !== "sell")) continue;
+    const quantity = firstFinite(leg.qty, leg.filled_qty);
+    if (quantity === undefined || quantity <= 0) continue;
+    const price = firstFinite(leg.filled_avg_price);
+    lines.push({
+      orderId: leg.id,
+      participantId,
+      symbol: leg.symbol,
+      side: leg.side,
+      quantity,
+      filledQuantity: Math.max(0, firstFinite(leg.filled_qty) ?? 0),
+      ...(price !== undefined && price > 0 ? { price } : {}),
+      status: leg.status ?? order.status ?? message.data?.event ?? "unknown",
+      at,
+      source: "stream",
+      parentOrderId,
+    });
+  }
+  return lines;
 }

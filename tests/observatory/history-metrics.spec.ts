@@ -1,3 +1,4 @@
+import { DAY_MS } from "../../src/domain/time.js";
 import {
   biggestSingleDayGain,
   dailyChanges,
@@ -7,7 +8,6 @@ import {
 import {
   aggregateDoubling,
   changeOver,
-  DAY_MS,
   doubledAt,
   firstAccountToDouble,
   firstAccountToFiftyPercent,

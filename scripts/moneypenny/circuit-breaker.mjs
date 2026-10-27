@@ -26,6 +26,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { sleepSync, withRetry } from "./gh.mjs";
 
 const CONFIG_FILE = join(process.cwd(), "research-circuit-breaker.json");
 
@@ -74,15 +75,31 @@ function defaultExec(cmd, args, opts) {
   return execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, ...opts });
 }
 
+/** Every READ below goes through here: a GitHub 5xx gets two more tries with backoff before the
+ *  fail-closed refusal fires (#5354, 2026-10-14: one `HTTP 500` on `gh run view --log`, then
+ *  another on its jobs fallback a second later, turned a `route` tick red and filed a repair
+ *  issue — the same run's log read fine minutes after). Still fail-closed: a 5xx that outlasts the
+ *  retries, and any 4xx or "log not found" at once, throws exactly as before. Writes (the trip)
+ *  are not retried — a repeated `issue comment` would double-post. */
+const ghRead = (exec, args, sleep) => withRetry(() => exec("gh", args), { sleep });
+
 /** Is the breaker CURRENTLY tripped? Reads a GitHub issue label, never a committed file (#915).
  *  Fail-closed: a query failure (network, auth, the issue itself missing) refuses to dispatch —
  *  the same "broken must never read as clear" doctrine as the config load above. This is
  *  deliberately the FIRST thing checked: if already tripped, nothing else in this file needs to
  *  run at all — no spend query, no log fetch, just an immediate no. */
-export function isBreakerTripped({ trackingIssue, trippedLabel, exec = defaultExec }) {
+export function isBreakerTripped({
+  trackingIssue,
+  trippedLabel,
+  exec = defaultExec,
+  sleep = sleepSync,
+}) {
   let out;
   try {
-    out = exec("gh", ["issue", "view", String(trackingIssue), "--json", "labels"]);
+    // REST, not `gh issue view` (GraphQL): a Claude Code cloud session gets a 403 on GraphQL, so
+    // the breaker read as tripped in every cloud session (2026-10-18). Same `{ labels }` shape.
+    const path = `repos/{owner}/{repo}/issues/${trackingIssue}`;
+    out = ghRead(exec, ["api", path, "--jq", "{labels: [.labels[] | {name}]}"], sleep);
   } catch (err) {
     throw new Error(
       `moneypenny: could not check circuit breaker state on issue #${trackingIssue} (${err.message}). ` +
@@ -94,7 +111,7 @@ export function isBreakerTripped({ trackingIssue, trippedLabel, exec = defaultEx
     labels = JSON.parse(out).labels;
   } catch {
     throw new Error(
-      `moneypenny: 'gh issue view ${trackingIssue}' returned unparseable output. Refusing to ` +
+      `moneypenny: the read of issue #${trackingIssue} returned unparseable output. Refusing to ` +
         "dispatch while the breaker's own state is unreadable — see issue #2946.",
     );
   }
@@ -113,19 +130,23 @@ export function isBreakerTripped({ trackingIssue, trippedLabel, exec = defaultEx
  *  read-only safety check, not speculative polling — the free-diagnostics-first doctrine
  *  (CLAUDE.md) governs probes that COULD avoid spending the resource; there is no cheaper way to
  *  learn what a session actually cost than reading what it reported. */
-export function recentResearchSpend({ windowHours, exec = defaultExec }) {
+export function recentResearchSpend({ windowHours, exec = defaultExec, sleep = sleepSync }) {
   const sinceIso = new Date(Date.now() - windowHours * 3_600_000).toISOString();
   let runsOut;
   try {
-    runsOut = exec("gh", [
-      "run",
-      "list",
-      "--workflow=moneypenny-events.yml",
-      "--json",
-      "databaseId,createdAt,status",
-      "--limit",
-      "50",
-    ]);
+    runsOut = ghRead(
+      exec,
+      [
+        "run",
+        "list",
+        "--workflow=moneypenny-events.yml",
+        "--json",
+        "databaseId,createdAt,status",
+        "--limit",
+        "50",
+      ],
+      sleep,
+    );
   } catch (err) {
     throw new Error(
       `moneypenny: 'gh run list' failed (${err.message}) — refusing to dispatch with unreadable spend.`,
@@ -146,9 +167,9 @@ export function recentResearchSpend({ windowHours, exec = defaultExec }) {
   for (const run of inWindow) {
     let log;
     try {
-      log = exec("gh", ["run", "view", String(run.databaseId), "--log"]);
+      log = ghRead(exec, ["run", "view", String(run.databaseId), "--log"], sleep);
     } catch (err) {
-      log = costLegLogs(run.databaseId, err, exec);
+      log = costLegLogs(run.databaseId, err, exec, sleep);
     }
     for (const m of log.matchAll(COST_LINE)) {
       const usd = Number(m[1]);
@@ -171,7 +192,7 @@ const COST_JOB_PREFIX = "research due events";
  *  Anything else stays fail-closed: a research leg that ran but whose log can't be read, or a
  *  job list that can't be read, still refuses, because an undercounted total is worse than a
  *  loud refusal (this check exists to stop a runaway). */
-function costLegLogs(runId, cause, exec) {
+function costLegLogs(runId, cause, exec, sleep) {
   const refuse = (detail) =>
     new Error(
       `moneypenny: could not read run ${runId}'s log (${detail}) — refusing to ` +
@@ -179,7 +200,7 @@ function costLegLogs(runId, cause, exec) {
     );
   let jobs;
   try {
-    jobs = JSON.parse(exec("gh", ["run", "view", String(runId), "--json", "jobs"])).jobs;
+    jobs = JSON.parse(ghRead(exec, ["run", "view", String(runId), "--json", "jobs"], sleep)).jobs;
   } catch {
     throw refuse(cause.message);
   }
@@ -190,7 +211,8 @@ function costLegLogs(runId, cause, exec) {
   return legs
     .map((leg) => {
       try {
-        return exec("gh", ["run", "view", String(runId), "--log", "--job", String(leg.databaseId)]);
+        const args = ["run", "view", String(runId), "--log", "--job", String(leg.databaseId)];
+        return ghRead(exec, args, sleep);
       } catch (err) {
         throw refuse(`${cause.message}; job ${leg.databaseId}: ${err.message}`);
       }
@@ -245,16 +267,20 @@ export function tripBreaker({
  *  when the breaker's own machinery (config, GH queries) is itself broken, per the fail-closed
  *  doctrine above. Checks the label FIRST and returns immediately if already tripped, so a repeat
  *  tick after a trip costs one cheap label read, never a spend query. */
-export function checkCircuitBreaker({ config = loadBreakerConfig(), exec = defaultExec } = {}) {
+export function checkCircuitBreaker({
+  config = loadBreakerConfig(),
+  exec = defaultExec,
+  sleep = sleepSync,
+} = {}) {
   const { maxSpendUsd, windowHours, trackingIssue, trippedLabel } = config;
 
-  if (isBreakerTripped({ trackingIssue, trippedLabel, exec }))
+  if (isBreakerTripped({ trackingIssue, trippedLabel, exec, sleep }))
     return {
       dispatch: false,
       reason: `circuit breaker already tripped on issue #${trackingIssue}`,
     };
 
-  const spentUsd = recentResearchSpend({ windowHours, exec });
+  const spentUsd = recentResearchSpend({ windowHours, exec, sleep });
   if (spentUsd > maxSpendUsd) {
     tripBreaker({ trackingIssue, trippedLabel, spentUsd, maxSpendUsd, windowHours, exec });
     return {

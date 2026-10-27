@@ -39,9 +39,17 @@ export interface WireTradeVitals {
 export interface WireTrade {
   readonly key: string;
   readonly side: "buy" | "sell";
+  /** The broker's own symbol — a ticker, an OCC contract, or none (`""`) for a bot's spread. */
   readonly symbol: string;
+  /** What the row names, as the account's Activity does: a ticker, a contract or a spread in words
+   *  (#4650). Absent from a server older than that, where the row falls back to `symbol`. */
+  readonly display?: string;
+  /** Whole spreads on a spread's row; shares or contracts filled on any other. */
   readonly quantity: number;
+  /** Per share — a spread's net per share. */
   readonly price: string;
+  /** A bot's spread only: its net cash, once ("$335.00 paid"). */
+  readonly net?: string;
   readonly who: string;
   readonly whoId: string;
   readonly kind: "human" | "bot";
@@ -111,6 +119,26 @@ export interface WireMilestoneItem {
   readonly at: string;
 }
 
+/** One authored-play milestone (#5457 slice 5, #809 slice 6) — the fifth kind, members only. The
+ *  server words it (`play-feed-words.ts`): the row only displays. */
+export interface WirePlayItem {
+  readonly key: string;
+  readonly icon: string;
+  /** The event, as the row's leading word ("Testing" · "Passed" · "Trading" · "Paused"). */
+  readonly kindLabel: string;
+  /** The bot that runs the play. */
+  readonly who: string;
+  readonly whoId: string;
+  /** The sentence after the name. */
+  readonly text: string;
+  readonly symbol: string;
+  /** Ticker plus the standing "SIM · unvalidated" labels. */
+  readonly meta: string;
+  /** A pass or a first promotion: celebrated with the accent rule. */
+  readonly cheer: boolean;
+  readonly at: string;
+}
+
 export interface WireFeed {
   readonly trades: readonly WireTrade[];
   readonly pnl: readonly WirePnl[];
@@ -125,6 +153,9 @@ export interface WireFeed {
    *  slice 5, which reads as off for the reason `developmentEnabled` does. */
   readonly milestonesEnabled?: boolean;
   readonly milestones?: readonly WireMilestoneItem[];
+  /** False for a read with no session and where no ledger is wired; absent on an older server. */
+  readonly playsEnabled?: boolean;
+  readonly plays?: readonly WirePlayItem[];
   /** Present only when the trade page was full — the `before` cursor for the next `/api/wire`
    *  request, read off the server's `Link: rel="next"` header (GitHub's own pagination
    *  convention, `src/server/pagination.ts`). Absent means there are no older trades to fetch. */

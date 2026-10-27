@@ -5,8 +5,12 @@
  * and one-and-a-bit trades; nothing downstream can say "your win rate" until those fills are
  * matched into closed round trips. Every serious journal does this, and does it with **FIFO lot
  * matching** — first shares in are the first shares out — because that is the industry (and IRS)
- * default, so a number computed here reconciles with a brokerage statement instead of quietly
- * disagreeing with it.
+ * default. Each lot keeps its own fill price.
+ *
+ * That does NOT always match Alpaca's position (#6169): its `avg_entry_price` averages same-day buys
+ * and runs a compressed FIFO overnight, so after a partial sell the open lots' basis can differ from
+ * the position's cost basis. Realized + unrealized P/L is the same either way; only the split moves.
+ * `desk-json-view.ts`'s `basisGap` measures the difference and says it on screen.
  *
  * Honesty invariants (asserted by specs):
  *  - a fill with no recorded fill price cannot produce a P/L, so it is **excluded and counted**
@@ -36,6 +40,7 @@
  */
 
 import type { PlaybookMode } from "../domain/types.js";
+import type { Initiator } from "./initiator.js";
 import { isOccSymbol } from "./option-symbols.js";
 
 /** One executed fill — the narrow shape round-tripping needs, independent of any broker payload. */
@@ -69,6 +74,9 @@ export interface TradeFill {
   readonly playbookId?: string;
   /** The mode the playbook ran in. Meaningless without `playbookId`. */
   readonly playbookMode?: PlaybookMode;
+  /** Who started the order (#4450 slice 4, `initiator.ts`) — joined in beside `playbookId`, and
+   *  absent wherever no bot decision accounts for the fill. */
+  readonly initiator?: Initiator;
   /**
    * The broker order id — carried from the CLOSING fill (unlike `playbookId`, which rides the
    * opening lot). Used by `desk-json-view.ts` to join realized P/L back onto the activity row
@@ -112,8 +120,13 @@ export interface RoundTrip {
    *  whichever playbook opened it, not whatever later closed it. */
   readonly playbookId?: string;
   readonly playbookMode?: PlaybookMode;
+  /** Who started the OPENING order, like `playbookId` — see `TradeFill.initiator`. */
+  readonly initiator?: Initiator;
   /** The closing order's broker id — from the CLOSING fill, used to join P/L to activity rows. */
   readonly orderId?: string;
+  /** The OPENING order's broker id (#5317) — so the ledger can pair a sale with the buy it closed.
+   *  Absent when the opening fill carried none. */
+  readonly entryOrderId?: string;
   /** Carried from the opening fill's `TradeFill.entryIntentId` (#2287 PR 7) — see that field. */
   readonly entryIntentId?: number;
 }
@@ -130,8 +143,11 @@ export interface OpenLot {
   /** Carried from the opening fill (#885) — see `RoundTrip.playbookId`. */
   readonly playbookId?: string;
   readonly playbookMode?: PlaybookMode;
+  readonly initiator?: Initiator;
   /** Carried from the opening fill's `TradeFill.entryIntentId` (#2287 PR 7) — see that field. */
   readonly entryIntentId?: number;
+  /** The opening order's broker id (#5317) — see `RoundTrip.entryOrderId`. */
+  readonly entryOrderId?: string;
 }
 
 export interface RoundTripLedger {
@@ -165,8 +181,11 @@ interface Lot {
   /** Carried from the opening fill (#885) — see `RoundTrip.playbookId`. */
   playbookId?: string;
   playbookMode?: PlaybookMode;
+  initiator?: Initiator;
   /** Carried from the opening fill (#2287 PR 7) — see `RoundTrip.entryIntentId`. */
   entryIntentId?: number;
+  /** The opening fill's order id (#5317) — see `RoundTrip.entryOrderId`. */
+  entryOrderId?: string;
 }
 
 function isUsable(fill: TradeFill): boolean {
@@ -184,19 +203,36 @@ function holdMs(openedAt: string, closedAt: string): number {
  *  what lets one lot queue serve both directions instead of a parallel short-lot structure. */
 type LotDirection = "long" | "short";
 
-/** The attribution fields shared by `Lot`/`OpenLot`/`RoundTrip` — playbook (#885) and entry-intent
- *  (#2287 PR 7) — pulled out so `matchSymbol` doesn't spend its own cognitive-complexity budget on
- *  optional-field spreads. */
+/** The attribution fields shared by `Lot`/`OpenLot`/`RoundTrip` — playbook (#885), initiator
+ *  (#4450) and entry-intent (#2287 PR 7) — pulled out so `matchSymbol` doesn't spend its own
+ *  cognitive-complexity budget on optional-field spreads. */
 function attributionOf(source: {
   readonly playbookId?: string;
   readonly playbookMode?: PlaybookMode;
+  readonly initiator?: Initiator;
   readonly entryIntentId?: number;
-}): Pick<Lot, "playbookId" | "playbookMode" | "entryIntentId"> {
+}): Pick<Lot, "playbookId" | "playbookMode" | "initiator" | "entryIntentId"> {
   return {
     ...(source.playbookId ? { playbookId: source.playbookId } : {}),
     ...(source.playbookMode ? { playbookMode: source.playbookMode } : {}),
+    ...(source.initiator ? { initiator: source.initiator } : {}),
     ...(source.entryIntentId !== undefined ? { entryIntentId: source.entryIntentId } : {}),
   };
+}
+
+/** A fill's leftover quantity, opening a lot that remembers its order (#5317). */
+function lotFrom(fill: TradeFill, quantity: number, price: number): Lot {
+  return {
+    quantity,
+    price,
+    at: fill.at,
+    ...attributionOf(fill),
+    ...(fill.orderId ? { entryOrderId: fill.orderId } : {}),
+  };
+}
+
+function entryOf(lot: Lot): { entryOrderId?: string } {
+  return lot.entryOrderId ? { entryOrderId: lot.entryOrderId } : {};
 }
 
 function tripFrom(
@@ -225,6 +261,7 @@ function tripFrom(
     ...(short ? { short: true } : {}),
     ...attributionOf(lot),
     ...(fill.orderId ? { orderId: fill.orderId } : {}),
+    ...entryOf(lot),
   };
 }
 
@@ -298,7 +335,7 @@ function matchSymbol(
     // Flat, so this fill sets the direction; otherwise it is adding to the leg already open.
     if (lots.length === 0) direction = fill.side === "buy" ? "long" : "short";
     if (fill.side === "sell") written += remaining;
-    lots.push({ quantity: remaining, price, at: fill.at, ...attributionOf(fill) });
+    lots.push(lotFrom(fill, remaining, price));
   }
 
   for (const lot of lots) {
@@ -309,6 +346,7 @@ function matchSymbol(
       at: lot.at,
       ...(direction === "short" ? { short: true } : {}),
       ...attributionOf(lot),
+      ...entryOf(lot),
     });
   }
   return { unmatchedSells, written };

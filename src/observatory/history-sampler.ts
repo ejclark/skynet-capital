@@ -32,6 +32,9 @@ export interface HistorySamplerOptions {
    * sampling stays independent of who celebrates.
    */
   readonly onTransitions?: (transitions: readonly WorldTransition[]) => void;
+  /** Every sample as it is taken — the capital-flow watch's feed (#4563). Optional, like
+   *  `onTransitions`, so sampling stays independent of who reads the samples. */
+  readonly onSample?: (sample: EquitySample) => void;
   /** Seeded from the boot samples so transitions never span a restart. */
   readonly baseline?: TransitionBaseline;
 }
@@ -50,6 +53,7 @@ export function startHistorySampler(opts: HistorySamplerOptions): () => void {
     const transitions: WorldTransition[] = [];
     for (const sample of sampleAll(opts.getState(), at)) {
       transitions.push(...baseline.advance(sample));
+      opts.onSample?.(sample);
       // Fire-and-forget: a sample write failure must never disrupt the live server.
       void opts.store.save(sample).catch(() => {
         /* fire-and-forget: sampling must never break the request path */

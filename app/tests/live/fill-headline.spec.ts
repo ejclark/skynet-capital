@@ -1,4 +1,5 @@
-import { fillHeadline } from "../../src/live/fill-headline";
+import { doneNote, fillHeadline } from "../../src/live/fill-headline";
+import { marketSession } from "../../src/live/market-session";
 
 /**
  * The ticket's done headline (#3407 P4 slice 2): the broker's echo until the desk's own stream
@@ -43,5 +44,35 @@ describe("fillHeadline", () => {
 
   it("ignores another order's frame", () => {
     expect(fillHeadline(order, frame({ orderId: "o-2" }))).toBe("Order o-1 accepted — NVDA · GTC");
+  });
+});
+
+// #6257: the done note said "simulated fill" before any fill existed.
+describe("doneNote", () => {
+  const open = marketSession(new Date("2026-10-27T15:00:00Z")); // Tue 11:00 ET
+  const closed = marketSession(new Date("2026-10-27T00:00:00Z")); // Mon 8:00 p.m. ET
+
+  it("says queued, with the open it waits for, while the market is closed and nothing filled", () => {
+    expect(doneNote(undefined, closed)).toBe("Queued — nothing fills before the Tue 9:30 ET open.");
+  });
+
+  it("says queued, never 'simulated fill', in session before the stream carries a fill", () => {
+    const note = doneNote(undefined, open);
+    expect(note).toMatch(/^Queued/);
+    expect(note).not.toContain("simulated fill");
+  });
+
+  it("earns 'simulated fill' only from a frame that carries one", () => {
+    expect(doneNote(frame(), open)).toBe("SIM account — simulated fill, real discipline.");
+    const partial = frame({
+      eventType: "order.updated",
+      payload: { status: "partially_filled", filledQuantity: 2 },
+    });
+    expect(doneNote(partial, open)).toContain("simulated fill");
+    const cancelled = frame({
+      eventType: "order.canceled",
+      payload: { status: "canceled", filledQuantity: 0 },
+    });
+    expect(doneNote(cancelled, open)).not.toContain("simulated fill");
   });
 });

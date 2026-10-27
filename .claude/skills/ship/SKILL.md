@@ -74,6 +74,7 @@ costs Eric a separate hand-merge.
 scripts/ship.sh platter open <item-branch>   # cut platter/<date> off main, board item 1, open it HELD
 scripts/ship.sh platter board <item-branch>  # board the next item; push; refresh the PR's ledger
 scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body), read from git
+scripts/ship.sh platter sync                 # re-post the ledger; refuses if the range ≠ GitHub's count
 ```
 
 - **One commit per item, merged with "Create a merge commit"** — that is what keeps `git revert

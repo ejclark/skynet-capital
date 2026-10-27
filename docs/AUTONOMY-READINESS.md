@@ -1,6 +1,8 @@
 # Autonomy readiness — evals as the gate to autonomous trading
 
-**Status:** plan (not yet built). **Hard gate:** no persona trades autonomously until it passes this
+**Status:** built — the eval harness (`src/evals/`, `npm run eval:persona` / `eval:safety`) and the
+readiness gate (`assessReadiness`, `src/autonomous/readiness.ts`) ship; this doc stays the rubric they
+implement. **Hard gate:** no persona trades autonomously until it passes this
 readiness eval **and** Eric enables it (irreversible class — see `CLAUDE.md` → hard boundaries).
 
 This doc is the "comprehensive plan in place" that must precede enabling autonomous trades. It also

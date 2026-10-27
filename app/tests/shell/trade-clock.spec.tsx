@@ -13,16 +13,17 @@ import userEvent from "@testing-library/user-event";
 import { horizonSearch } from "../../src/live/horizon-params";
 import * as actualResearch from "../../src/live/research" with { rstest: "importActual" };
 import type { ResearchCalendarData } from "../../src/live/research";
-import { CockpitClock } from "../../src/shell/cockpit-clock";
+import { EventsSection } from "../../src/shell/events-section";
 import { TradeClock } from "../../src/shell/trade-clock";
 
 /**
- * The market calendar's head on Trade (#3807 slice 3b-2): the Profile page's head, with its line
- * scoped to the ticket's symbol — ◆ "on <SYM>" and ○ "market-wide" — and its range the ROOT
- * `?on=&span=`, so a week stepped to on the Profile page is the week Trade opens on. Two routes
+ * The market calendar's head on Trade (#3807 slice 3b-2): R&D's head row, with its line scoped to
+ * the ticket's symbol — ⬢ "on <SYM>" and ○ "market-wide" — and its range the ROOT `?on=&span=`,
+ * so a week stepped to on the Profile page's Events (#5074) is the week Trade opens on. Two routes
  * over one real memory-history router whose root retains the range exactly as `__root.tsx` does;
  * the research corpus is a fixture (META prints Oct 28, the Fed decides Oct 28, the jobs report
- * lands Oct 2, a Treasury sale and an AAPL launch sit in the week of Oct 19 and are neither).
+ * lands Oct 2, a Treasury sale and an AAPL launch sit in the week of Oct 19 and are neither; CRWV's
+ * Nov 10 print is a cadence estimate).
  */
 
 const event = (id: string, title: string, date: string, symbols: string[] = [], kind?: string) => ({
@@ -40,6 +41,10 @@ const RESEARCH: ResearchCalendarData = {
     event("aapl-iphone-duo-launch-2026-10-23", "iPhone Duo goes on sale", "2026-10-23", ["AAPL"]),
     event("fomc-2026-10-28", "FOMC rate decision", "2026-10-28"),
     event("meta-2026-10-28-print", "META earnings print", "2026-10-28", ["META"], "earnings"),
+    {
+      ...event("crwv-2026-11-10-print", "CRWV earnings print", "2026-11-10", ["CRWV"], "earnings"),
+      estimated: true,
+    },
   ],
   closures: [],
   calls: [],
@@ -64,7 +69,16 @@ function mount(initialPath: string) {
   const accounts = createRoute({
     getParentRoute: () => rootRoute,
     path: "/accounts",
-    component: () => <CockpitClock />,
+    // The Profile page's one range control is its Events section's head (#5074).
+    component: () => (
+      <EventsSection
+        desks={[]}
+        desksLoading={false}
+        desksError={false}
+        day={undefined}
+        onPickDay={() => undefined}
+      />
+    ),
   });
   const trade = createRoute({
     getParentRoute: () => rootRoute,
@@ -89,20 +103,28 @@ function mount(initialPath: string) {
   return router;
 }
 
-/** The head's events line, once the corpus has loaded. */
+/** The drawn tier glyphs (`LaneGlyphIcon`, an SVG with no text), read back as the shapes they draw. */
+const DRAWN: Record<string, string> = { confirmed: "⬢", estimated: "⬡", market: "○" };
+
+/** The head's events line, once the corpus has loaded, each drawn glyph read as its shape. */
 async function line(): Promise<string> {
   const head = await screen.findByRole("region", { name: "Market calendar" });
   await waitFor(() =>
     expect(head.querySelector(".held-events")?.textContent).not.toMatch(/Reading the calendar/),
   );
-  return head.querySelector(".held-events")?.textContent ?? "";
+  const copy = head.querySelector(".held-events")?.cloneNode(true) as HTMLElement | undefined;
+  for (const svg of copy?.querySelectorAll("svg.lane-glyph") ?? []) {
+    const kind = /lane-glyph--(\w+)/.exec(svg.getAttribute("class") ?? "")?.[1] ?? "";
+    svg.replaceWith(DRAWN[kind] ?? `?${kind}`);
+  }
+  return copy?.textContent ?? "";
 }
 
 describe("TradeClock — the line, scoped to the ticket's symbol", () => {
   it("names the symbol's own dated event, then the market-wide print, each a glyph and a word", async () => {
     mount("/trade?symbol=META&on=2026-10-26");
     const text = await line();
-    expect(text).toBe("◆ on META: Earnings Wed Oct 28 · ○ market-wide: Fed meeting Wed Oct 28");
+    expect(text).toBe("⬢ on META: Earnings Wed Oct 28 · ○ market-wide: Fed meeting Wed Oct 28");
     const head = screen.getByRole("region", { name: "Market calendar" });
     expect(within(head).getByText("Oct 26 – Nov 1")).toBeInTheDocument();
   });
@@ -112,6 +134,11 @@ describe("TradeClock — the line, scoped to the ticket's symbol", () => {
     expect(await line()).toBe(
       "Nothing dated on EEM Oct 26 – Nov 1 · ○ market-wide: Fed meeting Wed Oct 28",
     );
+  });
+
+  it("draws the symbol's tier hollow when its only dated event is an estimate — never ◆ or ◇ (#5093)", async () => {
+    mount("/trade?symbol=CRWV&on=2026-11-09");
+    expect(await line()).toBe("⬡ on CRWV: Earnings Tue Nov 10");
   });
 
   it("reads market-wide only before a symbol is picked", async () => {
@@ -133,7 +160,7 @@ describe("TradeClock — one range with the Profile page, never an expiration", 
     await user.click(await screen.findByRole("button", { name: "Next week" }));
     await waitFor(() => expect(router.state.location.search).toMatchObject({ on: "2026-10-26" }));
     await router.navigate({ to: "/trade", search: { symbol: "META" } as never });
-    expect(await line()).toMatch(/^◆ on META: Earnings Wed Oct 28/);
+    expect(await line()).toMatch(/^⬢ on META: Earnings Wed Oct 28/);
     expect(router.state.location.search).toMatchObject({ on: "2026-10-26", symbol: "META" });
   });
 

@@ -71,6 +71,153 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"META's 2-trading-day excess return vs QQQ around the New Mexico privacy-penalty ruling stays within +/-4%, whatever figure the judge sets" (FT-meta-nm-privacy-penalty-ruling-2026-10-20-1)** — added 2026-10-23 from the [meta-nm-privacy-penalty-ruling-2026-10-20 close-out](events/meta-nm-privacy-penalty-ruling-2026-10-20.md). Registered 2026-10-03 off the unconfounded 10-01 hearing day (+0.1%/+0.4%). The ruling came on 10-21 at **$25B** (past the stance's $20B line) and META 10-20 to 10-22 returned -6.54% vs QQQ -1.83% (**-4.71pt**). Confounded: Meta's Q3 print was after the close the same day (the registration read a stale 10-28 estimate), so this kills the rule as written, not the ruling's isolated price effect. Do not re-register a price-window test around a legal ruling that falls inside a print week; separate the two first, and do not read a hearing day's muted tape as a prior for the number.
+
+- **"The seven-day ECB quiet window carries no `^STOXX50E` close-to-close move >= 1.50% (2x the 0.75% baseline), extrapolated from 13 windows in 2025-26" (FT-ecb-quiet-period-start-2026-10-21-1)** — added 2026-10-22 from the [ecb-quiet-period-start-2026-10-21 close-out](events/ecb-quiet-period-start-2026-10-21.md). Registered 2026-09-05 (0 of 54 trimmed sessions at 2x; 11 of 13 prior windows would have passed). The 10-22 session, day two of the window, closed **-1.94%** on an equity-wide risk-off tape (`^GDAXI` -1.07%, EUR/USD flat); no cause was sourced. Do not register a no-large-move threshold on a quiet window from a thin-tail count: the null is a statement about the 2025 sample, not a property of the gate. The topic-scope test (FT-2) passed and is not retired.
+
+- **"A publisher's skipped GDPNow posting date means no GDPNow vintage exists for that release" (FT-industrial-production-2026-10-16-1)** — added 2026-10-22 from the [industrial-production-2026-10-16 close-out](events/industrial-production-2026-10-16.md). Registered 2026-09-06 from `PostedUpdates` (10-15 and 10-20, no 10-16). The model's own history carries a 10-16 row (GDP 3.643 → 3.566): it re-estimates on every release date and only *posts* on some. Do not infer "no vintage" from the posting schedule; read `TrackingHistory`/`ContribHistory` for the date.
+
+- **"A retail-free G.17 opex Friday ranges under the unconditional 2014-05+ p75 (1.325%) of SPY's close" (FT-industrial-production-2026-10-16-3)** — added 2026-10-22 from the same close-out. Registered 2026-09-06 at class range 0.6602% (p=0.0775); 10-16 ranged **1.652%** on a VIX 16.46 → 19.99 chip/AI sell-off unrelated to the print (gap +0.19%). Do not register an unconditional range bar for a low-impact print; condition on the VIX level or skip the test.
+
+- **"On a zero-rate-move month the foreign long-term Treasury valuation change prints *below* the full-sample intercept (+0.081% of the prior month's base) because the last-12-month residual drift (−0.215pp) persists" (FT-tic-monthly-2026-10-16-2)** — added 2026-10-22 from the
+  [tic-monthly-2026-10-16 close-out](events/tic-monthly-2026-10-16.md). Registered 2026-09-08 on August's Δ10Y = 0.0bp. August printed
+  **+0.131%** (+$10.2bn on a $7,783.3bn base) — above the line by 0.05pp, ~0.2σ of the model's residual sd. Do not re-register a
+  directional drift test on this model off the trailing-residual average: it described the past and missed the one month built
+  to measure it. The one-factor model itself passed its band test (FT-1) and is not retired.
+
+- **"A hot ISM Services Prices print does not produce a hawkish yield day — `^TNX` is not up by more than its own median
+  |move|" (FT-ism-services-2026-11-04-1)** — added 2026-10-16 from the
+  [ism-services-2026-11-04 pulse](events/ism-services-2026-11-04.md). Registered 2026-09-08 at n=9 as the narrow successor to a
+  voided test. On the 2026-10-05 print (Prices **74.0**) `^TNX` closed **+0.644%** vs the 0.627% bar — a kill by 0.017pp,
+  ~3.4bp of yield. Do not re-register "no ordering" for this release off a median-|move| threshold on one day: the margin is
+  inside the noise of how the median is estimated (0.627 → 0.638 as sessions were added). The surviving question is the
+  ordering across releases (Spearman +0.225 at n=10, insignificant), which needs the 11-04 print, not a threshold.
+
+- **"A proportional restatement of retail cancels in the total business inventories/sales ratio, so the restated June ratio stays
+  within 0.01 of its pre-restatement print" (FT-mtis-2026-10-15-2)** — added 2026-10-16 from the
+  [mtis-2026-10-15 close-out](events/mtis-2026-10-15.md). Registered 2026-09-06: June 2026 re-prints at 1.29–1.31
+  (was 1.30). It re-printed **1.33**: the AIES restatement moved retail inventories **+4.8%** and retail sales
+  **−3.4%** — opposite signs, ~8pp of asymmetry — so the weight coincidence (retail 30.4% of inventories, 31.5% of
+  sales) that makes a *proportional* move cancel was irrelevant. Do not carry any pre-2026-10-15 total-business
+  ratio level (1.28 trough, 1.30 June, percentile ranks) across the restated basis; re-derive levels from the
+  post-restatement series.
+
+- **"A ±5-point window around the prior month's value is a sharp test that the Empire State headline is
+  unforecastable" (FT-empire-state-mfg-2026-10-15-2)** — added 2026-10-16 from the
+  [empire-state-mfg-2026-10-15 close-out](events/empire-state-mfg-2026-10-15.md). Registered 2026-09-08:
+  the October headline prints outside 15.6–25.6 (±5 of August's 20.6), registered 64%. It printed **25.5**,
+  inside the window by 0.1, after a +17.9 September-to-October swing (92nd percentile of 303 monthly
+  moves). The window compares two months that straddle a swing, so it scores a coincidence of landing
+  spot, not the volatility. Do not re-register a "differs from t−2 by more than N" test for a diffusion
+  index; condition on the one-month move (e.g. |Δ| above the 11.2 median) instead.
+
+- **"A WPSR sign-match test (commercial-crude draw/build vs WTI close-to-close) generalizes as `print ignored` on a dense macro morning" (FT-eia-weekly-petroleum-status-2026-10-15-2)** — added 2026-10-16 from the [eia-weekly-petroleum-status-2026-10-15 close-out](events/eia-weekly-petroleum-status-2026-10-15.md). Registered 2026-09-30; the 10-15 print was an -8.557 mb draw and WTI closed +3.0%, a matched pair. WTI's rally was already in by 11:55 ET (about +0.3% across the 12:00 release), so the sign rule misattributes a session move to the print. Do not re-register a daily-close sign test for a mid-day release; use the bars either side of the release time.
+
+- **"The 09-10 operation's 23-issue spread is a regime change in how the long end buys"
+  (FT-treasury-buyback-10y20y-2026-10-15-4)** — added 2026-10-16 from the
+  [treasury-buyback-10y20y-2026-10-15 close-out](events/treasury-buyback-10y20y-2026-10-15.md). The
+  10Y-20Y operation accepted **3 of 42** issues ($5.580B of $6.000B in one line) on 6.81x cover, the
+  kill clause (*5 or fewer*). Breadth follows a thin book (1.75x → 23 issues), not a regime; do not
+  re-register an issue-count call without conditioning on the offer book.
+
+- **"The eligible CUSIP count is point-predictable from the 20Y-exclusion rule"
+  (FT-treasury-buyback-10y20y-2026-10-15-1)** — added 2026-10-16 (scored KILL 2026-09-15, omitted from
+  this list then). The list printed 40, not 39, and has since printed 41 and 42: it is not monotone
+  (CUSIP churn in and out). The mechanism passes without a count (`FT-…-3`, three operations); do not
+  re-register a count.
+
+- **"The September PPI's core 12-month rise is a soft-base artifact, so read the core y/y into a soft base month as mechanical"
+  (FT-ppi-2026-10-15-1)** — added 2026-10-16 from the
+  [ppi-2026-10-15 close-out](events/ppi-2026-10-15.md). Registered 2026-09-15: core-ex-trade-services
+  12-month ≥ 4.8% on a m/m ≤ +0.4%. The 10-15 release printed **5.0% on +0.5% m/m** (final demand
+  +1.3% m/m, 6.3% y/y, the largest advance since March 2022; gasoline +20.3%). The base-month identity
+  was accurate to ~0.1pp but the rise was earned. What survives: the identity as arithmetic. Do not
+  re-propose a "mechanical lift" read of a core y/y in a month where energy or transport is already
+  running hot; check the m/m first.
+
+- **"A chair-less, contested standing committee still files its quarterly report" (FT-unsc-iran-panel-mandate-expiry-2026-09-26-2)** — added 2026-10-15 from the [unsc-iran-panel-mandate-expiry-2026-09-26 forward-test scoring](events/unsc-iran-panel-mandate-expiry-2026-09-26.md). Registered 2026-09-04 on a Secretariat cycle table listing 12 March and 9 June 2026 as 1737 Committee report dates. Security Council Report shows those were briefings: China and Russia objected to the draft 90-day report in March, June and September, so no report was presented. Do not read a mandate-cycle table's occurrence dates as delivery of a document; check that a report was adopted, not that a meeting was held.
+
+- **"A Social Security COLA projection that needs September to accelerate is running hot; fade it toward the
+  last locked month's y/y" (FT-ssa-cola-2027-2026-10-14-1)** — added 2026-10-15 from the
+  [ssa-cola-2027-2026-10-14 close-out](events/ssa-cola-2027-2026-10-14.md). Registered 2026-09-04 as
+  "COLA lands at 3.5% or below", re-centred to 3.5% on 09-30 after August CPI-W printed 3.522%. SSA
+  announced **3.6%** on 10-14: September CPI-W ran **+3.9% y/y** against the ≈3.58% that 3.5% needed
+  (press-reported; bls.gov and ssa.gov 403 to this lane). What survives: the CPI-W-ratio identity and the
+  FT-2 date coupling (announced the same day as the September CPI). Do not re-propose a "hold the last
+  locked month" neutral path for the final leg of a three-month average, and do not fade an advocacy-group
+  estimate off two of three months.
+
+- **"A calendar-tagged `Bund 30 Y` second line on a multi-ISIN auction is genuinely 30-year paper"
+  (FT-bund-30y-auction-2026-10-14-5)** — added 2026-10-15 from the
+  [bund-30y-auction-2026-10-14 close-out](events/bund-30y-auction-2026-10-14.md). Registered
+  2026-09-30 on the Finanzagentur press release's `Bund 15/20/30 R` footnote. The 10-08 notice named
+  **DE000BU2T000, a 2047 (20-year) bond**, the same outcome as 09-16. Only EUR 747m of the EUR 2.5bn
+  was 30-year paper. Do not size or band a "two 30Y lines" auction off the website calendar's generic
+  `Bund 30 Y` label; read the tenor off the announcement notice.
+
+- **"A Bobl vintage's softening demand shows as a rising yield and an allotment inside the recent-regime
+  band" (FT-bobl-5y-auction-2026-10-13-1, -2)** — added 2026-10-14 from the
+  [bobl-5y-auction-2026-10-13 close-out](events/bobl-5y-auction-2026-10-13.md). Registered 2026-09-30
+  on DE000BU25075's four taps (yield 2.89% to 3.28%) and a 2026-only allotment band of EUR 3,676–3,907m
+  (n = 7). The 10-13 reopening allotted **EUR 3,352m** (bids 3,607, bid-to-offer 0.72x, retention
+  33.0%) and printed **3.22%**, 6bp *under* the prior tap. Demand broke the band downward while the
+  yield eased. What survives: the 12-01 taper is untested (FT-3, open). Do not re-propose a
+  demand-softening-means-rising-yield read off one vintage's auction-day yields, which mostly track
+  the market level on each date; the allotment band needs at least the 11-03 tap before re-use.
+
+- **"TLT has decayed to ~0.73–0.80× of its trailing-20 volume on a Columbus Day closure, so long Treasuries
+  are no longer the thin leg" (FT-sifma-bond-market-closure-2026-10-12-2)** — added 2026-10-13 from the
+  [sifma-bond-market-closure-2026-10-12 close-out](events/sifma-bond-market-closure-2026-10-12.md).
+  Registered on a 2014–2025 era split (n=12) that put TLT's median at 0.730×; the 2026-10-12 session printed
+  **0.311×** (15.35M vs a 49.30M median), against a 0.60× line. SPY ran 0.420× the same day, so part of the
+  thinning was market-wide, but the claim itself failed. Do not carry a TLT Columbus/closure depth guard
+  above ~0.5× without conditioning on the equity control; the companion LQD guard (FT-1, 0.206×) passed.
+
+- **"The full wholesale report revises the advance inventories m/m by 0.1pp or less" as a flat one-month
+  bet (FT-wholesale-trade-2026-10-08-3)** — added 2026-10-09 from the
+  [wholesale-trade-2026-10-08 close-out](events/wholesale-trade-2026-10-08.md). Registered on a 6-of-8
+  modal bound (75%) with no August pair in the sample; August 2026 printed **+0.7% advance → +0.5% full**,
+  a **−0.2pp** revision, the first miss of that bound (sample now 9 pairs: ≤0.1pp **6 of 9**, max still
+  0.3pp). It landed in the last cycle before the 2026-10-26 AIES restatement, where the same revision also
+  moved GDPNow's inventories line −0.0952pp; do not re-register the 0.1pp bound as exceptionless, and do
+  not read it as a regime without a second pre-benchmark edition.
+
+- **A 30Y reopening's bid-to-cover band as "yield-insensitive", registered as 2.30–2.52 on evidence that
+  stopped at a 5.058% clearing yield (FT-treasury-30y-bond-2026-10-08-1)** — added 2026-10-09 from the
+  [treasury-30y-bond-2026-10-08 close-out](events/treasury-30y-bond-2026-10-08.md). The 2026-10-08 second
+  reopening cleared **2.54** at **5.618%**, the first second reopening of 19 cycles outside the band and
+  the second print in a row above it (09-10 R1: 2.61 at 5.308%). The two band breaks are the two
+  highest-yield prints in the modern $22B series, and across its 22 prints corr(yield, bid-to-cover) is
+  +0.413. Do not re-register a pooled band, or a "steadiest leg" claim, without conditioning on clearing
+  yield or restricting it to the yield range the evidence covers. The companion mean-reversion fit
+  (FT-3, passed on its threshold) lost its support in the same print: corr(R1,R2) −0.506 → −0.070.
+
+- **"A $4B-or-larger buyback fills on cover ≥ 2.50x" as a two-sided 20Y-30Y call
+  (FT-treasury-buyback-20y30y-2026-10-08-3)** — added 2026-10-09 from the
+  [treasury-buyback-20y30y-2026-10-08 close-out](events/treasury-buyback-20y30y-2026-10-08.md). The
+  operation filled its `$6.000B` cap in full on cover **2.481x** (`$14.886B` offered), the row's own
+  kill clause (*cover below 2.50x with a full fill*). The sub-2.56x record at caps ≥ $4B goes from 0 of 19
+  to 1 of 20; do not re-register the floor as exceptionless, and do not set a threshold finer than the
+  1.74x–2.48x gap this bucket has observed.
+
+- **"The 09-24 under-fill is the new normal for the 20Y-30Y bucket" (FT-treasury-buyback-20y30y-2026-10-08-4)**
+  — added 2026-10-09 from the same close-out. Registered at D-7 on one in-bucket print (`$10.468B` book,
+  68.0%); the 10-08 book was `$14.886B` (+42% in two weeks) and the cap filled at 100%. One offer book
+  is not a regime; do not re-register a regime call on a single operation's book.
+
+- **"Capital goods is the largest-magnitude import end-use mover" as a one-month bet on a 2026 regime
+  (FT-intl-trade-full-report-2026-10-06-3)** — added 2026-10-07 from the
+  [intl-trade-full-report-2026-10-06 close-out](events/intl-trade-full-report-2026-10-06.md). Registered
+  on a 71% in-regime base rate (5 of the last 7 months); August 2026 data printed industrial supplies
+  **+$9,130M** (crude oil +$3,324M, nonmonetary gold +$3,104M) over capital goods **+$6,152M**, and the
+  AI-hardware trio (computers, accessories, semiconductors) netted only **+$351M** against 102% of the
+  move in July. A "largest of six" claim inherits the volatility of the two commodity-driven lines
+  (crude, gold) that can swamp any single month; do not re-register it as a one-month test without
+  conditioning on them. The stance's own two-print version stays open until the 11-04 report.
+
+- **"Duration discount": MRVL underperforming NVDA over the three weeks after the 9/14 AI-pacing shock (FT-mrvl-investor-day-2026-10-06-3)** — added 2026-10-07 from the
+  [mrvl-investor-day-2026-10-06 close-out](events/mrvl-investor-day-2026-10-06.md). Registered on one shock day plus one quarter of cross-section: the complex sorted by how back-loaded each name's disclosed revenue was. Over close 2026-09-15 → close 2026-10-06 MRVL returned **+29.46%** against NVDA's **+12.76%** (Yahoo adjusted daily bars, cache busted), the opposite ordering. The row itself named beta as an unresolved confound; the window confirms it dominates. Do not re-register a relative-return ordering built on a single-day sort of a high-beta name against a low-beta one without a beta-adjusted benchmark.
+
 - **Services wage stickiness at t+1 as a ≥-series-average test, registered High on a 95% base rate
   (FT-dallas-fed-tssos-2026-09-29-1)** — added 2026-10-06 from the
   [dallas-fed-tssos-2026-09-29 forward-test scoring](events/dallas-fed-tssos-2026-09-29.md). The
@@ -804,6 +951,27 @@ robust, alpha fragile — is the finding.
   Gulf repair off a first estimate: the next ledger carrying a press repair window should register
   the fast-restart branch as the base case until the line's own history (restored in three days in
   April, in about twelve here) says otherwise.
+
+- **ASHE's April pay growth lands within the monthly AWE gap range, i.e. 2.0–4.0% (FT-uk-ashe-earnings-2026-10-22-1)** — added 2026-10-23 from the
+  [uk-ashe-earnings-2026-10-22 close-out](events/uk-ashe-earnings-2026-10-22.md). Registered 2026-10-16 on a
+  four-edition ASHE−AWE gap of −1.4 to +0.5pp (2022–2025) applied to April 2026 AWE regular pay of +3.4%, with
+  a kill at 4.5% or higher. ONS printed **+5.8%** (£811.20 vs £766.60) on 2026-10-22 while AWE for the same
+  April still read +3.4%: a gap of **+2.4pp**, outside the range. **What it does and does not refute:** the
+  date, the three-bulletin release and the stand-aside (no tracked symbol) are untouched. What breaks is the
+  assumption that a four-point gap range transfers to the next edition. Do not re-propose a fixed ASHE
+  headline band built from the monthly series without a longer gap history, or a reason the 2026 gap was
+  special (sample size, NLW bunching and the median-vs-mean difference are untested candidates).
+
+- **A UMich final lands within 1.0 point of its preliminary after a second loaded back half
+  (FT-umich-sentiment-final-2026-10-23-1)** — added 2026-10-25 from the
+  [umich-sentiment-final-2026-10-23 close-out](events/umich-sentiment-final-2026-10-23.md). Registered
+  2026-10-09 on a 48.0% base rate of \|Δ\| ≥ 1.0 (n=25) plus September's +0.3, with a kill at \|Δ\| ≥ 1.0.
+  The October prelim printed **46.3** and the publisher's final **48.0**: \|Δ\| = **1.7**, upward, through a
+  window that held a hot CPI (3.7% y/y) and Brent running to $109. **What it does and does not refute:**
+  the 48% base rate and "direction is not called" stand. What breaks is reading September's +0.3 as
+  evidence that back-half event load stops moving the final: two consecutive finals, one +0.3 and one
+  +1.7, are consistent with a coin flip on size. Do not re-propose a small-revision call for a UMich final
+  on event-load grounds; n=1 killed on its first test, the mirror of the FT-55 kill above.
 
 ## Portfolio-level critique — what no single-symbol view sees
 

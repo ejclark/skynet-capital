@@ -4,6 +4,7 @@ import {
   nextPrint,
   PRINT_WINDOWS,
   recentPrint,
+  sessionsUntil,
   UPCOMING_PRINTS,
 } from "../domain/earnings-calendar.js";
 import { escapeHtml } from "../ui/escape-html.js";
@@ -59,7 +60,9 @@ export function earningsProximity(
     if (days <= PRINT_WINDOWS.entryFlatDays) {
       return { print: next, days, nearness: "flat-zone" };
     }
-    if (days <= PRINT_WINDOWS.deadZoneDays) {
+    // S1's dead zone counts trading sessions, as S1 does — the badge says "dead" exactly when S1 is
+    // flat. The day count it prints stays calendar days: that is what "in 6 days" means to a reader.
+    if (sessionsUntil(asOfIso, next.date) <= PRINT_WINDOWS.deadZoneSessions) {
       return { print: next, days, nearness: "dead-zone" };
     }
   }

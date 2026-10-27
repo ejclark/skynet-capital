@@ -1,3 +1,4 @@
+import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import type { ConsiderationChip } from "../../src/observatory/considerations-view.js";
 import { decisionsFor } from "../../src/observatory/decisions-view.js";
 import { plainPosition } from "../../src/observatory/position-plain.js";
@@ -18,7 +19,7 @@ const idea: ConsiderationChip = {
   delta: "D-20 to D-6",
   deltaTone: "flat",
   reason: "Long into the earnings print, out before the number lands.",
-  action: { label: "View playbook", href: "/app/research?section=playbooks" },
+  action: { label: "View playbook", href: "/app/research?section=playbooks&account=eric" },
 };
 
 describe("decisionsFor", () => {
@@ -29,13 +30,14 @@ describe("decisionsFor", () => {
       kind: "at-risk",
       title: "Down 55% from what you paid",
       captionShort: "Needs TSLA below $385.90 by Oct 17 to profit.",
-      pl: "-$6,240 · −55.3%",
+      pl: "−$6,240 · −55.3%",
       plTone: "neg",
       // the next headline macro print before expiry rides along as a clock (#3689 follow-up)
       clocks: ["Expires in 24 days", "Jobs report Oct 2", "8 contracts · worth $5,040"],
       primary: {
         label: "Review on Trade ↗",
-        href: "/app/trade?desk=eric&symbol=TSLA&strike=400&exp=2026-10-17",
+        // the held contract, never a new-order preset (#4947)
+        href: "/app/trade?desk=eric&symbol=TSLA&section=orders&manage=TSLA261017P00400000",
       },
       range: { type: "put", side: "long", strike: 400, breakeven: 385.9 },
     });
@@ -47,6 +49,48 @@ describe("decisionsFor", () => {
     expect(d?.title).toBe("Down 60% with 16 days left");
     expect(d?.why).toMatch(/last three weeks/);
     expect(d?.learn?.term).toBe("timeDecay");
+  });
+
+  describe("a sold option (#4947): the member was paid, so the copy is a seller's", () => {
+    it("states what came in and what buying back costs, never 'from what you paid'", () => {
+      // 1 AMD Nov 20 $150 put sold for $263, now $555 to buy back (−111% of the premium).
+      const [d] = decisionsFor("eric", [held("AMD261120P00150000", -1, 263, -555)], []);
+      expect(d).toMatchObject({
+        kind: "at-risk",
+        title: "Collected $263; buying back costs $555",
+        caption: expect.stringContaining("Buying it back now costs $555, $292 more than that."),
+        primary: {
+          label: "Review on Trade ↗",
+          href: "/app/trade?desk=eric&symbol=AMD&section=orders&manage=AMD261120P00150000",
+        },
+        range: { type: "put", side: "short", strike: 150 },
+      });
+      expect(`${d?.title} ${d?.caption} ${d?.why}`).not.toMatch(/what you paid|it cost|from cost/);
+    });
+
+    it("never says time works against it in the last three weeks", () => {
+      // 2 NVDA Oct 9 $180 calls sold for $300, now $900 to buy back, 16 days left.
+      const [d] = decisionsFor("eric", [held("NVDA261009C00180000", -2, 300, -900)], []);
+      expect(d?.title).toBe("Collected $600; buying back costs $900");
+      expect(d?.why).not.toMatch(/working against|loses value fastest/);
+      expect(d?.why).toMatch(/works for a seller/);
+      expect(d?.learn?.term).not.toBe("timeDecay");
+      expect(d?.primary.href).toBe(
+        "/app/trade?desk=eric&symbol=NVDA&section=orders&manage=NVDA261009C00180000",
+      );
+    });
+
+    it("keeps the seller's numbers when it's a winner worth locking in", () => {
+      // 1 AMD Nov 20 $150 put sold for $263, now $100 to buy back (+62% of the premium).
+      const [d] = decisionsFor("eric", [held("AMD261120P00150000", -1, 263, -100)], []);
+      expect(d).toMatchObject({
+        kind: "lock-in",
+        title: "Collected $263; buying back costs $100",
+        caption: expect.stringContaining("Buying it back now costs $100, which keeps $163 of it."),
+        learn: { term: "lockedIn" },
+      });
+      expect(`${d?.title} ${d?.caption}`).not.toMatch(/has made|Up \d+%/);
+    });
   });
 
   it("suggests locking in a big winner, with a lower bar for shares than options", () => {
@@ -67,11 +111,22 @@ describe("decisionsFor", () => {
     });
 
     it("is the stock's own print for shares, flagged when the date is an estimate", () => {
-      const [d] = decisionsFor("eric", [held("MSFT", 10, 300, 3900)], []);
-      expect(d?.due).toEqual({
-        at: "2026-10-27",
+      // a pinned table: the real one refreshes itself every weekday (#4479)
+      const book: EarningsPrint[] = [
+        { symbol: "GOOG", date: "2026-10-28", status: "confirmed", source: "IR: fixture" },
+        { symbol: "NVDA", date: "2026-11-18", status: "estimate", source: "EST: fixture" },
+      ];
+      const pinned = (symbol: string) => {
+        const p = { symbol, quantity: 10, avgPrice: 300, marketValue: 3900 };
+        return { ...p, plain: plainPosition(p, now, book) };
+      };
+      const [goog] = decisionsFor("eric", [pinned("GOOG")], []);
+      expect(goog?.due).toEqual({ at: "2026-10-28", reason: "event", label: "Earnings Oct 28" });
+      const [nvda] = decisionsFor("eric", [pinned("NVDA")], []);
+      expect(nvda?.due).toEqual({
+        at: "2026-11-18",
         reason: "event",
-        label: "Earnings Oct 27",
+        label: "Earnings Nov 18",
         estimated: true,
       });
     });
@@ -80,6 +135,58 @@ describe("decisionsFor", () => {
       const ds = decisionsFor("eric", [held("SPY", 10, 700, 5000)], [idea]);
       expect(ds.map((d) => d.kind)).toEqual(["at-risk", "idea"]);
       expect(ds.every((d) => d.due === undefined)).toBe(true);
+    });
+  });
+
+  describe("a long call hears the house's long-call bot's exit rules (#5709)", () => {
+    it("raises a TIME STOP card between the bands once 45 days or fewer are left", () => {
+      // 4 NVDA Nov 6 $190 calls (44 days left), paid $12.00, now $13.20 (+10%)
+      const [d] = decisionsFor("eric", [held("NVDA261106C00190000", 4, 1200, 4 * 1320)], []);
+      expect(d).toMatchObject({
+        kind: "time-stop",
+        title: "44 days left: the house sells its own calls at 45 days",
+        caption: expect.stringContaining("is up 10% from what it cost, with 44 days left."),
+        learn: { term: "timeDecay" },
+        primary: { href: expect.stringContaining("manage=NVDA261106C00190000") },
+      });
+      expect(d?.why).toMatch(/^✦ .*say why you're holding\.$/);
+    });
+
+    it("stays quiet on the same call with more than 45 days left", () => {
+      // Dec 18: 86 days left, +10%
+      expect(decisionsFor("eric", [held("NVDA261218C00190000", 4, 1200, 4 * 1320)], [])).toEqual(
+        [],
+      );
+    });
+
+    it("keeps a loss's card AT RISK, and names the time stop in its caption", () => {
+      // 30 days left, −30%: still a loss card first (AT RISK means a loss; a time stop may not be)
+      const [d] = decisionsFor("eric", [held("NVDA261023C00190000", 1, 1000, 700)], []);
+      expect(d?.kind).toBe("at-risk");
+      expect(d?.caption).toMatch(/long-call bot sells its calls once 45 days are left\.$/);
+    });
+
+    it("names the take-profit rule on a lock-in card once the call is worth double its cost", () => {
+      // 2 NVDA Dec 18 $130 calls, paid $5.00, now $12.00 (2.4×, +140%)
+      const [d] = decisionsFor("eric", [held("NVDA261218C00130000", 2, 500, 2 * 1200)], []);
+      expect(d).toMatchObject({
+        kind: "lock-in",
+        title: "Up 140%: worth 2.4× what you paid",
+        caption: expect.stringContaining(
+          "once they're worth 2× what they cost, and this one is there.",
+        ),
+        learn: { term: "lockedIn" },
+      });
+      expect(d?.why).toMatch(/banks it and frees the cash for the next trade/);
+    });
+
+    it("keeps the plain lock-in copy below double, and never applies the rules to puts or sold calls", () => {
+      const [up60] = decisionsFor("eric", [held("NVDA261218C00130000", 1, 500, 800)], []);
+      expect(up60?.title).toBe("Up 60%: consider locking some of it in");
+      // a long put at 44 days, +10%: the bot's rules are for calls
+      expect(decisionsFor("eric", [held("NVDA261106P00190000", 1, 1200, 1320)], [])).toEqual([]);
+      // a sold call at 44 days, a little in profit: the seller's copy, no time stop
+      expect(decisionsFor("eric", [held("NVDA261106C00190000", -1, 1200, -1100)], [])).toEqual([]);
     });
   });
 

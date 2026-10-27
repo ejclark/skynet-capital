@@ -229,21 +229,48 @@ describe("applyGuards", () => {
       expect(approved).toEqual([]);
     });
 
-    it("ignores a disabled subscription — treated as no subscription at all", () => {
+    it("holds a paused subscription to its own allocation — never the wider house cap (#4651)", () => {
+      // A paused playbook's roster entry places only exits and a covered call, so no buy of its
+      // reaches the guards; should one ever arrive, its paused terms still bind it, as they bind
+      // the covered call it may sell. (Before #4651 a disabled row was ignored here, which sized
+      // this buy at 20% of equity and refused that covered call as unallocated.)
       const context = aContext({ EEM: { last: 100 } });
       const portfolio = aPortfolio({ cash: 1_000_000 });
+      const intents = [
+        { ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: "standard" as const },
+      ];
 
-      const [approved] = applyGuards(
-        [{ ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: "standard" }],
-        portfolio,
-        context,
-        { maxPositionPct: 0.2, subscriptions: [{ ...subscription, enabled: false }] },
-      );
+      const [paused] = applyGuards(intents, portfolio, context, {
+        maxPositionPct: 0.2,
+        subscriptions: [{ ...subscription, enabled: false }],
+      });
+      const [running] = applyGuards(intents, portfolio, context, {
+        maxPositionPct: 0.2,
+        subscriptions: [subscription],
+      });
 
-      // Falls back to the ordinary 20%-of-equity cap, same as the un-subscribed case.
       const eemAsk = context.quotes.EEM?.ask ?? 0;
-      expect((approved?.quantity ?? 0) * eemAsk).toBeGreaterThan(5_000);
-      expect((approved?.quantity ?? 0) * eemAsk).toBeLessThanOrEqual(200_000);
+      expect((paused?.quantity ?? 0) * eemAsk).toBeGreaterThan(0);
+      expect((paused?.quantity ?? 0) * eemAsk).toBeLessThanOrEqual(5_000);
+      expect(paused).toEqual(running);
+    });
+
+    it("prefers the enabled subscription when a paused row names the same playbook", () => {
+      const context = aContext({ EEM: { last: 100 } });
+      const portfolio = aPortfolio({ cash: 1_000_000 });
+      const intents = [
+        { ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: "standard" as const },
+      ];
+      const wide = { ...subscription, capitalAllocated: 50_000 };
+
+      const [both] = applyGuards(intents, portfolio, context, {
+        maxPositionPct: 1,
+        subscriptions: [{ ...subscription, enabled: false }, wide],
+      });
+
+      const eemAsk = context.quotes.EEM?.ask ?? 0;
+      expect((both?.quantity ?? 0) * eemAsk).toBeGreaterThan(5_000);
+      expect((both?.quantity ?? 0) * eemAsk).toBeLessThanOrEqual(50_000);
     });
 
     it("leaves an intent with no playbookId, or a playbookId with no matching subscription, unaffected", () => {
@@ -463,6 +490,54 @@ describe("applyGuards", () => {
         discipline,
       });
       expect(approved).toHaveLength(1);
+    });
+
+    // #4807 slice 5: S2 refuses inside the symbol's protected window — the one the research summary
+    // draws as ■ Protected — which runs through the session AFTER the print, where an after-close
+    // print's reaction lands. Exits always run.
+    describe("S2 reads the protected window", () => {
+      const guard = (asOf: string, intents = [buy("EEM", 10)], d: typeof discipline = discipline) =>
+        applyGuards(
+          intents,
+          aPortfolio({ cash: 10_000, positions: [aPosition({ symbol: "EEM", quantity: 30 })] }),
+          at(asOf),
+          { maxPositionPct: 1, discipline: d },
+        );
+      const widened = {
+        calendar,
+        facts: new Map([
+          [
+            "EEM",
+            {
+              symbol: "EEM",
+              printReaction: { sessionsAfter: 2, fact: "t", source: "t", falsifier: "t" },
+            },
+          ],
+        ]),
+      };
+
+      it("refuses a buy on the session after the print, and lets it through the session after that", () => {
+        expect(guard("2026-08-27T15:00:00.000Z")).toEqual([]); // D+1, Thu
+        expect(guard("2026-08-28T15:00:00.000Z")).toHaveLength(1); // D+2, Fri
+      });
+
+      it("starts entryFlatDays calendar days before the print", () => {
+        expect(guard("2026-08-24T15:00:00.000Z")).toEqual([]); // D-2
+        expect(guard("2026-08-21T15:00:00.000Z")).toHaveLength(1); // D-5, Fri
+      });
+
+      it("a symbol's facts file widens the tail by the sessions it names", () => {
+        expect(guard("2026-08-28T15:00:00.000Z", undefined, widened)).toEqual([]);
+        expect(guard("2026-08-31T15:00:00.000Z", undefined, widened)).toHaveLength(1); // Mon
+      });
+
+      it("lets an exit run on every protected day", () => {
+        for (const day of ["24", "25", "26", "27"]) {
+          expect(guard(`2026-08-${day}T15:00:00.000Z`, [sell("EEM", 30)])).toMatchObject([
+            { side: "sell", quantity: 30 },
+          ]);
+        }
+      });
     });
 
     it("E1 drops a non-urgent buy before 10:00 ET", () => {

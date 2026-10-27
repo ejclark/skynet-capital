@@ -12,6 +12,8 @@
  * dated observation that proves it wrong.
  */
 
+import type { SymbolOutlook } from "../research/symbol-outlook-shape.js";
+
 /** Graded exactly like the research call sheet. Low is a stand-aside, never a small bet. */
 export type Confidence = "high" | "medium" | "low" | "none";
 
@@ -23,7 +25,7 @@ export type PulseStatus = "fresh" | "aging" | "stale";
  * server measures each input against its live source and hands the status in; the engine only
  * applies the demotion each status carries (see `applyPulse` in `position-guidance-rules.ts`).
  */
-export type PulseInputId = "spot" | "chain" | "research" | "earnings-date" | "filings" | "session";
+type PulseInputId = "spot" | "chain" | "research" | "earnings-date" | "filings" | "session";
 
 export interface PulseItem {
   readonly id: PulseInputId;
@@ -68,6 +70,10 @@ export interface GuidanceStake {
    *  against these shares. Forward guidance only (#3968): this shapes what's shown, not a new
    *  buy-back/roll verdict the way `openCalls` gets from "Calls you've sold". */
   readonly longOption?: HeldLongOption;
+  /** Long calls the member's own account holds on this stock — what "Calls you hold" judges
+   *  (#5709). Like `openCalls`: read in the browser from the linked account, never parsed from
+   *  typed-in or stored input, so a what-if stake can't forge a position. */
+  readonly heldCalls?: readonly HeldLongOption[];
 }
 
 /** One covered call the member has already sold and still holds open. */
@@ -138,12 +144,17 @@ export interface GuidanceCatalyst {
 }
 
 /** What the symbol's research ledger currently licenses on the buy side. */
-export interface LedgerStance {
+interface LedgerStance {
   /** Does any house playbook license a buy right now? (CRWV: no — S1 is kill-listed.) */
   readonly buySignal: boolean;
   readonly buyConfidence: Confidence;
   /** The ledger's one-line stance, quoted — "Stand aside · S2 · E1 — no buy signal exists". */
   readonly stance: string;
+  /**
+   * What the ledger says would change its Today call — its words, and the date it was last
+   * assessed (#5720). The server reads it; absent when the ledger states none.
+   */
+  readonly provesWrong?: { readonly quote: string; readonly asOf?: string };
   readonly source: string;
 }
 
@@ -175,6 +186,12 @@ export interface GuidanceInputs {
   readonly printEvidence?: string;
   readonly catalysts: readonly GuidanceCatalyst[];
   readonly ledger?: LedgerStance;
+  /**
+   * The symbol's summary (#4807): the house call on owning the shares, its until-date and the dated
+   * windows ahead — rendered by the Guidance tab's recap card exactly as the server computed it.
+   * Display only: the levers read the ledger and the pulse, never this.
+   */
+  readonly outlook?: SymbolOutlook;
   readonly pulse: readonly PulseItem[];
   /** Risk-free rate for the odds; defaults to 0 like the rest of `src/options/`. */
   readonly rate?: number;
@@ -187,12 +204,12 @@ export interface GuidanceInputs {
  */
 export type GuidanceMarket = Omit<GuidanceInputs, "stake">;
 
-export type Lever = "shares" | "covered-calls" | "cash-secured-puts";
-export type SharesCall = "BUY" | "HOLD" | "SELL" | "DECIDE" | "STAND ASIDE" | "NO ANSWER";
-export type OptionCall = "WRITE" | "WAIT" | "NOT AVAILABLE" | "NO ANSWER";
+type Lever = "shares" | "covered-calls" | "cash-secured-puts";
+type SharesCall = "BUY" | "HOLD" | "SELL" | "DECIDE" | "STAND ASIDE" | "NO ANSWER";
+type OptionCall = "WRITE" | "WAIT" | "NOT AVAILABLE" | "NO ANSWER";
 
 /** Every reason names the rule that produced it, so the "why" is templated and auditable. */
-export type RuleId =
+type RuleId =
   | "DTE-PRINT"
   | "DTE-FLOOR"
   | "STRIKE-BASIS"
@@ -206,7 +223,9 @@ export type RuleId =
   | "COVERAGE"
   | "SIZE"
   | "PULSE"
-  | "MANAGE";
+  | "MANAGE"
+  | "EXIT-PROFIT"
+  | "EXIT-TIME";
 
 export interface GuidanceReason {
   readonly rule: RuleId;
@@ -227,7 +246,7 @@ export interface LeverCall {
   readonly atOpen: boolean;
 }
 
-export type DteVerdict = "in" | "too-short" | "after-decision" | "spans-print";
+type DteVerdict = "in" | "too-short" | "after-decision" | "spans-print";
 
 export interface DteMark {
   readonly expiration: string;
@@ -303,6 +322,8 @@ export interface PositionGuidance {
   readonly assumptions: readonly string[];
   /** One call per covered call already open — empty when none is. */
   readonly manage: readonly ManageCall[];
+  /** One call per long call the member holds (#5709) — empty when none, and for a held put. */
+  readonly longCalls: readonly LongCallCall[];
   readonly disclosure: string;
 }
 
@@ -340,4 +361,26 @@ export interface ManageCall {
   readonly kept?: number;
   /** ROLL only: the call to sell in its place, and the net per share (+ credit, − cost). */
   readonly rollTo?: { readonly strike: number; readonly expiration: string; readonly net: number };
+}
+
+/** What the house's long-call exit rules say about a call the member bought. */
+type LongCallVerdict = "TAKE PROFIT" | "TIME STOP" | "HOLD" | "NO ANSWER";
+
+export interface LongCallCall {
+  readonly strike: number;
+  readonly expiration: string;
+  readonly contracts: number;
+  /** Calendar days from today's ET date to expiry. */
+  readonly dte: number;
+  readonly call: LongCallVerdict;
+  readonly confidence: Confidence;
+  /** At most three, most important first. */
+  readonly reasons: readonly GuidanceReason[];
+  readonly provesWrong: string;
+  /** The day the next rule falls due, and which. */
+  readonly until?: { readonly date: string; readonly why: string };
+  /** Market closed: a plan for the next open, never an instruction for now. */
+  readonly atOpen: boolean;
+  /** The bid as a multiple of what was paid (2 = double), when both are known. */
+  readonly multiple?: number;
 }

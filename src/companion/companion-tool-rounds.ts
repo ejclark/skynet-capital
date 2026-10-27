@@ -1,4 +1,4 @@
-import { anthropicApiError } from "../http/anthropic-reply.js";
+import { anthropicApiError, logAnthropicUsage, usageOf } from "../http/anthropic-reply.js";
 import type { fetchJson, JsonResponse } from "../http/fetch-json.js";
 import type { CompanionHandlers } from "./companion-chat.js";
 import { effortFor, MAX_TOKENS_PER_REPLY, MAX_TOOL_ROUNDS } from "./companion-limits.js";
@@ -27,6 +27,11 @@ export const BUDGET_SPENT_MESSAGE =
 
 export const REFUSAL_MESSAGE =
   "That one's outside what I can help with here — ask it another way, or ask me about your desk or the app.";
+
+/** A reply that stopped on `max_tokens` (#6080). The rail shows it after "i couldn't answer that
+ *  just now:" when nothing streamed, and marks any partial line cut off instead. */
+export const TRUNCATED_MESSAGE =
+  "my reply ran past its length limit and was cut off — ask for a narrower piece of it.";
 
 export type DoFetch = typeof fetchJson;
 export type Headers = Readonly<Record<string, string>>;
@@ -97,9 +102,11 @@ export async function runToolRounds(
   handlers: CompanionHandlers,
 ): Promise<ToolRoundOutcome> {
   let working = [...initial];
-  const deps: CompanionDeskDeps = handlers.onHandoff
-    ? { ...deskDeps, onDraft: handlers.onHandoff }
-    : deskDeps;
+  const deps: CompanionDeskDeps = {
+    ...deskDeps,
+    ...(handlers.onHandoff ? { onDraft: handlers.onHandoff } : {}),
+    ...(handlers.onConvictionDraft ? { onConvictionDraft: handlers.onConvictionDraft } : {}),
+  };
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     if (handlers.budget && !handlers.budget()) {
       if (round === 0) {
@@ -159,9 +166,20 @@ async function oneRound(
     handlers.onError(reply.error ?? "companion error");
     return { kind: "error" };
   }
+  logAnthropicUsage("companion-tool-round", model, usageOf(res.body), handlers.onUsage);
   // Branch on stop_reason before reading content: a decline is a 200 with empty or partial content.
-  if ((res.body as { stop_reason?: string }).stop_reason === "refusal") {
+  const stopReason = (res.body as { stop_reason?: string }).stop_reason;
+  if (stopReason === "refusal") {
     handlers.onError(REFUSAL_MESSAGE);
+    return { kind: "error" };
+  }
+  // A cut-off reply is not an answer, and a cut-off tool_use's input may be half-written — run no
+  // tool. Any partial text still shows, then the error marks it cut off on the rail; a thinking-only
+  // truncation (no text at all) reads as the honest message instead of a blank, "finished" reply.
+  if (stopReason === "max_tokens") {
+    const partial = textOf(reply.content);
+    if (partial) handlers.onText(partial);
+    handlers.onError(TRUNCATED_MESSAGE);
     return { kind: "error" };
   }
   const toolUses = toolUsesOf(reply.content);

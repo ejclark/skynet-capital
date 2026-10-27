@@ -1,10 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
-import { sessionNameCandidates } from "./account-forms.js";
 import type { Session } from "./auth/session.js";
+import { botSettingsView, serveBotSettings } from "./bot-settings-route.js";
 import { requesterFor, resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
+import { controlsChanges, recordControlsChange } from "./settings-change-log.js";
 
 /**
  * THE SETTINGS API — the React shell's account settings, as three endpoints.
@@ -18,6 +19,8 @@ import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-s
  *                                 is verified by the SERVICE, never trusted from the client.
  *   POST /api/settings/rotate   → rotateCredentials (8a): replace, never reveal.
  *   POST /api/settings/bot-control → the own-bot switch (9b): ownership-tier, see serveBotControl.
+ *   POST /api/settings/bot-settings → the bot's hardcore build and forced-pick count, same tier
+ *                                 (#4535 slice 3b, `bot-settings-route.ts`).
  *
  * Same posture as trade-api-routes.ts: bodies must be application/json (closes cookie-carried
  * cross-site form posts), strict shape gate (400, never coerce), size-capped (413), identity from
@@ -109,6 +112,8 @@ function serveSettingsIndex(
       hostConfigured: roster.has(id),
       profile: profile ?? null,
       ...(kind === "bot" && fleet ? { suspended: fleet.bots[id]?.suspended === true } : {}),
+      // The bot's own settings and their change log (#4535 slice 3b), same tier as the switch.
+      ...(kind === "bot" && fleet ? { settings: botSettingsView(config, id, session?.email) } : {}),
     };
   });
   sendJson(res, 200, {
@@ -146,7 +151,14 @@ async function serveBotControl(
     return;
   }
   const suspended = action === "suspend";
-  config.controls.store.setBot(id, { suspended }, session?.email ?? "unknown", new Date());
+  const editor = session?.email ?? "unknown";
+  const at = config.now?.() ?? new Date();
+  const prev = config.controls.store.load().bots[id] ?? {};
+  config.controls.store.setBot(id, { suspended }, editor, at);
+  const { store, changes } = config.controls;
+  recordControlsChange(changes, id, controlsChanges(prev, { ...prev, suspended }, editor, at), () =>
+    store.setBot(id, { suspended: prev.suspended === true }, editor, at),
+  );
   sendJson(res, 200, { ok: true, suspended });
 }
 
@@ -202,6 +214,10 @@ export async function serveSettingsApi(
     await serveBotControl(req, res, config, session);
     return true;
   }
+  if (path === "/api/settings/bot-settings") {
+    await serveBotSettings(req, res, config, session);
+    return true;
+  }
   if (path !== "/api/settings/profile" && path !== "/api/settings/remove") return false;
 
   const raw = await readJsonPost(req, res, SETTINGS_BODY_CAP_BYTES);
@@ -227,7 +243,6 @@ export async function serveSettingsApi(
         ...body,
         ...(requesterId !== undefined ? { requesterId } : {}),
         ...(session ? { requesterEmail: session.email } : {}),
-        sessionNames: sessionNameCandidates(session),
         authConfigured,
       }),
     );

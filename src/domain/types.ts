@@ -129,13 +129,15 @@ export type PlaybookMode = "conservative" | "standard" | "aggressive";
 export const PLAYBOOK_MODES: readonly PlaybookMode[] = ["conservative", "standard", "aggressive"];
 
 /** What one playbook concluded on one decision pass (#3687). `tactical` marks a rule-chain
- *  playbook, which has no single book-level state — only that it was consulted. */
-export type PlaybookVerdictState = "long" | "flat" | "no-window" | "tactical";
+ *  playbook, which has no single book-level state — only that it was consulted. `observing` marks a
+ *  dark playbook (`observeOnly`, #5489): it read the tape and placed nothing, by construction. */
+export type PlaybookVerdictState = "long" | "flat" | "no-window" | "tactical" | "observing";
 export const PLAYBOOK_VERDICT_STATES: readonly PlaybookVerdictState[] = [
   "long",
   "flat",
   "no-window",
   "tactical",
+  "observing",
 ];
 
 export interface PlaybookVerdict {
@@ -153,11 +155,17 @@ export type OptionEffect = "open" | "close";
 export const OPTION_EFFECTS: readonly OptionEffect[] = ["open", "close"];
 
 /** The structures a bot may send — a closed set the wire validates and the dashboard words. */
-export type OptionStructure = "cash-secured-put" | "covered-call" | "call-debit-spread" | "close";
+export type OptionStructure =
+  | "cash-secured-put"
+  | "covered-call"
+  | "call-debit-spread"
+  | "long-call"
+  | "close";
 export const OPTION_STRUCTURES: readonly OptionStructure[] = [
   "cash-secured-put",
   "covered-call",
   "call-debit-spread",
+  "long-call",
   "close",
 ];
 
@@ -290,6 +298,11 @@ export interface OrderForecast {
    *  full-exit trade with no remaining position is a falsifiable prediction about what happens
    *  next. */
   readonly invalidator: string;
+  /** What would retire the PLAYBOOK that placed this order — its own dated falsifier, not this
+   *  order's ("The playbook retires if its net P/L is below 0 on 2027-01-29 …"). Its owner's alone
+   *  (#885, #5043): every non-owner strip removes it beside the strategy tag, while `invalidator`
+   *  stays everyone's, so `invalidator` must never carry it. Absent on a play that states none. */
+  readonly retireRule?: string;
 }
 
 /**
@@ -338,6 +351,51 @@ export interface PlaybookSubscription {
    * today.
    */
   readonly compoundAllocation?: boolean;
+  /**
+   * A pointer at a conviction record (#5482 slice 2, `playbooks/conviction-record.ts`): one view
+   * that steers several pairs, checked on one date (`conviction-store.ts` `statedCheck`). It is a
+   * subscription's whole conviction: an owner's own reason and day live as their view on the pair
+   * (`subscriptions/pair-conviction.ts`), and a pointer the bots cannot use runs the pair exits-only
+   * (`steeredBy`). Behavioral only on a `subscriptions.v3` snapshot or later, the first whose
+   * version names it.
+   *
+   * There is no inline conviction beside it any more (#5482, the contract step's last piece): the
+   * `{reason, checkOn}` a subscription once carried (#4469 slice 3c) moved onto views, the live
+   * count read none on 2026-10-26, and a stored copy is now dropped on read
+   * (`subscription-state.ts`).
+   */
+  readonly convictionId?: string;
+  /**
+   * The play's target weight, lean range and band (#5483 slice 3, criterion 13): how much of its
+   * budget the owner wants deployed at center, how far that may lean, and how far the actual share
+   * may drift before it is flagged. Optional and additive; observe-only today, so it changes
+   * nothing a bot trades and sits outside the wire's version (`subscriptions-wire.ts`). It may
+   * only narrow the playbook's own bounds (`playbooks/play-target.ts`).
+   */
+  readonly playTarget?: PlayTarget;
+}
+
+/**
+ * Fractions of the play's budget, `0.7` = 70%. Only `weight` is required; a missing lean or band
+ * takes the house default, clipped to the playbook's bounds (`resolvePlayTarget`).
+ */
+export interface PlayTarget {
+  /** Share of the budget deployed at center. */
+  readonly weight: number;
+  /** The range the weight may lean within; contains `weight`. */
+  readonly lean?: { readonly min: number; readonly max: number };
+  /** Drift, in points of share, past which the reading is a signal (soft) and then a gate (hard). */
+  readonly band?: { readonly signal: number; readonly gate: number };
+}
+
+/** An owner's conviction on one pair, as the subscribe and conviction forms state it: why they hold
+ *  it, and the market day it is checked. Written as their own view on the pair, never onto the
+ *  subscription (`subscriptions/pair-conviction.ts`), and read back the same way (`asOwnConviction`). */
+export interface SubscriptionConviction {
+  /** In the owner's words; never empty. */
+  readonly reason: string;
+  /** `YYYY-MM-DD`: the day its net P/L and its strategy's retire test are read (criterion 12). */
+  readonly checkOn: string;
 }
 
 /** `unfilled`: was live, ended with nothing filled. `working`: still live at the broker, so it may
@@ -383,4 +441,8 @@ export interface OrderResult {
    *  a leg's fill can find this result's order even when it lands after the result was written.
    *  Absent on a one-leg order. */
   readonly legOrders?: readonly OptionLegOrder[];
+  /** A share order that partly filled while the broker still holds the rest (#4787): the result
+   *  records what filled (#4655), and the order is followed to its end — its settlement carries
+   *  the final quantity. Absent on an order the broker has finished. */
+  readonly open?: true;
 }

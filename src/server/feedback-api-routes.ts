@@ -43,7 +43,10 @@ function parseCommunityAckIds(raw: string): readonly string[] | undefined {
 
 /** Screenshots ride the same POST as base64 — the legacy form's exact allowance. */
 const SUBMIT_CAP_BYTES = 8_000_000;
-const FOLLOWUP_CAP_BYTES = 8_000;
+/** The longest follow-up, in characters — the textarea in feedback-recent.tsx carries the same. */
+const FOLLOWUP_MAX_CHARS = 8_000;
+/** UTF-8 bytes (#6075): an 8,000-character follow-up can be up to 24,000 bytes plus its JSON. */
+const FOLLOWUP_CAP_BYTES = 40_000;
 
 async function serveIndex(
   res: ServerResponse,
@@ -183,7 +186,16 @@ async function serveFollowup(
   }
   const body = parseJsonRecord(raw);
   const issueNumber = body && typeof body.issueNumber === "number" ? body.issueNumber : Number.NaN;
-  const details = body ? (boundedString(body.details, 8_000) ?? "") : "";
+  // Over-long is refused by name before the `?? ""` fallback — otherwise it collapses to "" and
+  // the member hears "Add a few words", the opposite of what happened (#6291).
+  if (typeof body?.details === "string" && body.details.length > FOLLOWUP_MAX_CHARS) {
+    sendJson(res, 200, {
+      ok: false,
+      error: `Keep a follow-up to ${FOLLOWUP_MAX_CHARS.toLocaleString("en-US")} characters.`,
+    });
+    return;
+  }
+  const details = body ? (boundedString(body.details, FOLLOWUP_MAX_CHARS) ?? "") : "";
   const owned = await config.readFeedback(opaqueMemberId(session.email));
   if (!(Number.isInteger(issueNumber) && owned.some((e) => e.issueNumber === issueNumber))) {
     sendJson(res, 200, { ok: false, error: "That doesn't look like one of your own filings." });

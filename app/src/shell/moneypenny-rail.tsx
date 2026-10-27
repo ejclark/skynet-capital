@@ -1,8 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import type { KeyboardEvent, ReactElement, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
+import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
+import { CONVICTION_CHIPS } from "../live/moneypenny-conviction";
+import { linkPieces } from "../live/moneypenny-links";
 import { chipsFor } from "../live/moneypenny-script";
+import { usePhoneWidth } from "./use-media";
 
 /**
  * THE MONEYPENNY RAIL (design handoff 2026-09-03, §6; P1/P2 of `docs/research/moneypenny-chat-ux.md`)
@@ -18,42 +23,58 @@ import { chipsFor } from "../live/moneypenny-script";
  * companion is told the UI carries is rendered here, under the composer.
  *
  * Rendering only. What she says and when anything files is `live/moneypenny.ts`; this component
- * has two side effects of its own: after a filing it invalidates the queries that carry the
- * feedback gate (the ladder, the desk's plays, the onboarding milestone, the filings list), and
- * the copy control writes the formatted thread to the clipboard.
+ * has three side effects of its own: after a filing it invalidates the queries that carry the
+ * feedback gate (the ladder, the desk's plays, the onboarding milestone, the filings list), after a
+ * view is saved from her card it invalidates the member's convictions list (#5482 criterion 9),
+ * and the copy control writes the formatted thread to the clipboard. A parked view swaps the
+ * chips for its card's three exits (`moneypenny-conviction.ts`).
  * @category feedback
  */
 
-const URL_RE =
-  /(https?:\/\/[^\s”"'<>)]+|(?<![\w/])\/(?:trade|learn|onboarding|playbooks|feedback|settings)(?:[/?#][^\s”"'<>)]*)?)/g;
+/** A place she names, as a link (#5238): an in-app navigation, so the thread survives the move.
+ *  At ≤860 the rail covers the page, so the tap closes it and the place shows; wider, the rail
+ *  stays open beside it. A modified click (new tab, new window) keeps the browser's own handling
+ *  — the `href` is the real URL — and with no router mounted the plain href is the whole link. */
+function PlaceLink({ path, text }: { readonly path: string; readonly text: string }): ReactElement {
+  const router = useRouter({ warn: false });
+  const closeRail = useMoneypenny((s) => s.closeRail);
+  const phone = usePhoneWidth();
+  const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (phone) closeRail();
+    if (!router) return;
+    e.preventDefault();
+    // "Open-position return" while the board is already showing re-ranks it in place — the member keeps
+    // their spot; any other page opens at its top, as a new view should.
+    const samePage = router.state.location.pathname === path.split(/[?#]/)[0];
+    void (samePage
+      ? router.navigate({ href: path, resetScroll: false })
+      : router.navigate({ href: path }));
+  };
+  return (
+    <a className="mp-place" href={`/app${path}`} onClick={onClick}>
+      {text}
+    </a>
+  );
+}
 
-/** Her lines can carry a link — the issue she just filed, a ticket's review screen — so http(s)
- *  URLs and the app's own routes become anchors; everything else stays text. */
+/** Her lines can carry links — a place in the app she names, the issue she just filed — and
+ *  `linkPieces` decides which words are which; everything else stays text. */
 function linkify(text: string): readonly ReactNode[] {
-  const nodes: ReactNode[] = [];
   let offset = 0;
-  for (const part of text.split(URL_RE)) {
-    if (part === undefined) continue;
-    const external = /^https?:\/\//.test(part);
-    const internal =
-      !external && /^\/(trade|learn|onboarding|playbooks|feedback|settings)/.test(part);
+  return linkPieces(text).map((p) => {
     // keyed by where the piece starts in the line — stable, and unique within one message
-    nodes.push(
-      external || internal ? (
-        <a
-          key={offset}
-          href={part}
-          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        >
-          {part}
+    const key = offset;
+    offset += p.text.length;
+    if (p.kind === "place") return <PlaceLink key={key} path={p.path} text={p.text} />;
+    if (p.kind === "url")
+      return (
+        <a key={key} href={p.href} target="_blank" rel="noopener noreferrer">
+          {p.text}
         </a>
-      ) : (
-        part
-      ),
-    );
-    offset += part.length;
-  }
-  return nodes;
+      );
+    return p.text;
+  });
 }
 
 function Message({ m }: { readonly m: MpMessage }): ReactElement {
@@ -69,6 +90,8 @@ export function MoneypennyRail(): ReactElement | null {
   const streaming = useMoneypenny((s) => s.streaming);
   const flow = useMoneypenny((s) => s.flow);
   const draft = useMoneypenny((s) => s.draft);
+  const conviction = useMoneypenny((s) => s.conviction);
+  const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const connected = useMoneypenny((s) => s.connected);
   const firstTradeDone = useMoneypenny((s) => s.firstTradeDone);
   const disclosure = useMoneypenny((s) => s.disclosure);
@@ -79,7 +102,10 @@ export function MoneypennyRail(): ReactElement | null {
   const [text, setText] = useState("");
   const [copied, setCopied] = useState(false);
   const list = useRef<HTMLDivElement>(null);
+  const atEnd = useRef(true);
   const queryClient = useQueryClient();
+  const busy = typing || streaming;
+  const chipsShown = !busy && (flow === "idle" || draft !== undefined || conviction !== undefined);
 
   // Follow the thread: every append scrolls the list to its end.
   // biome-ignore lint/correctness/useExhaustiveDependencies: messages/typing ARE the trigger
@@ -88,11 +114,31 @@ export function MoneypennyRail(): ReactElement | null {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, typing]);
 
+  // The chips come back when `streaming` ends — a render where neither trigger above changes —
+  // and shorten the list from below, hiding her last line (#5182). Re-pin before paint, but only
+  // if the member was already at the end: one who scrolled up to read stays where they were.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: chipsShown IS the trigger
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (el && atEnd.current) el.scrollTop = el.scrollHeight;
+  }, [chipsShown]);
+  const onScroll = () => {
+    const el = list.current;
+    // a couple of px of slack: fractional layouts rarely land the end on an exact zero
+    if (el) atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 2;
+  };
+
   useEffect(() => {
     if (filedSeq === 0) return;
     for (const key of ["feedback", "learn", "plays", "onboarding"])
       void queryClient.invalidateQueries({ queryKey: [key] });
   }, [filedSeq, queryClient]);
+
+  // A view saved from her card shows on R&D → Playbooks without a reload.
+  useEffect(() => {
+    if (convictionSeq === 0) return;
+    void queryClient.invalidateQueries({ queryKey: myConvictionsKey });
+  }, [convictionSeq, queryClient]);
 
   // Escape closes the rail — the one dismissal that works everywhere, mobile included.
   useEffect(() => {
@@ -106,7 +152,6 @@ export function MoneypennyRail(): ReactElement | null {
 
   if (!open) return null;
 
-  const busy = typing || streaming;
   const submit = () => {
     const note = text.trim();
     if (!note || busy) return;
@@ -120,14 +165,15 @@ export function MoneypennyRail(): ReactElement | null {
       submit();
     }
   };
-  const chips =
-    !busy && (flow === "idle" || draft)
-      ? chipsFor({
+  const chips = !chipsShown
+    ? []
+    : conviction
+      ? CONVICTION_CHIPS
+      : chipsFor({
           draft: draft !== undefined,
           connected: connected === true,
           firstTradeDone: firstTradeDone === true,
-        })
-      : [];
+        });
   // Best-effort: a clipboard failure (no permission, no secure context) costs nothing but the
   // "Copied" confirmation — the member's thread was never at risk of being lost by trying.
   const copyThread = () => {
@@ -180,7 +226,7 @@ export function MoneypennyRail(): ReactElement | null {
           ×
         </button>
       </div>
-      <div className="mp-list" ref={list} aria-live="polite">
+      <div className="mp-list" ref={list} aria-live="polite" onScroll={onScroll}>
         {messages.map((m, i) => {
           const day = dayOf(m.at);
           const prev = i > 0 ? dayOf(messages[i - 1]?.at) : undefined;

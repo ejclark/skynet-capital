@@ -35,6 +35,296 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `sync project status` red on main: keep github's reason when a rest read fails, so a rate limit skips the board sync
+- **SHA:** 872cb69   **DATE:** 2026-10-26   **STATUS:** closed
+- **COVERS:** 09e8710 3c47942
+- **SIGNAL:** 2 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [40421267754](https://github.com/ejclark/skynet-capital/actions/runs/40421267754) at 2026-10-26T23:39:48Z. Repair capsule #6224 filed 2026-10-26T23:40:27Z, closed 15m later by #6227.
+- **ROOT CAUSE:** Runs 40421267754 and 40421270593 started within two seconds of each other. Both `sync project status` jobs failed reading issue #4619 with `curl: (22) The requested URL returned error: 403`. Earlier and later runs with the same `PROJECTS_PAT` were green, and the two concurrent hits look like a burst (secondary) rate limit. The log cannot prove that, and that missing evidence is the bug. `ghRest` called curl with bare `--fail`, which throws away the response body. GitHub's explanation was lost, and #4438's soft skip, which keys on the rate-limit phrase, had nothing to match. So a display-only job reddened `main` and opened a repair issue.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/ghrest-error-body.spec.ts` (#6227).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### The learning-loop checks posted to a log nobody read, so five sat 4–16 days past due and one never posted at all
+- **SHA:** n/a   **DATE:** 2026-10-26   **STATUS:** closed
+- **SIGNAL:** on 2026-10-26 the registry (`docs/process/LEARNING-LOOP.md` → *Loops running now*) held five rows whose checks `loop-check.mjs` had posted to #5724 on 10-18 and 10-22, with output, falsifier and a "settle it" line, and not one had moved. Their dates ran 10-10 to 10-21, so they were 5 to 16 days past due. A sixth row, Member studies, read "the next fixed-build control … due by 2026-10-17" and never posted, because the scan only reads a date that *leads* its cell. Nothing alarmed; a surge-pass sweep found it by reading the tracker.
+- **ROOT CAUSE:** the loop was automated through *sense* and the measuring half of *act*, and then stopped (`LEARNING-LOOP.md` → *The loop census*: sense · decide · act · verify · remember). `loop-check.mjs` says plainly that it never decides; it handed the decision to "the owner" by posting to a standing log. A log is a place things go, not a queue anyone pulls from, so nobody's pull ever reached the decision. The buried date is the same gap one level down: a cell format only a person could read, checked only by a person.
+- **PREVENTION:** script + gate. (1) **The decide step is routed:** on the push tick, a posted check whose row still carries the same date 3 days later opens or updates ONE `feedback` issue (found by a marker, filed `ready` under the small-ask rule, never `needs-eric`). It lists each row with its post, and its EARS criteria forbid ending a loop whose owning issue is open. Its first test was today's five rows, read from #5724's real comments in a dry run (`--registry`); specs in `tests/scripts/loop-check.spec.ts`, including the issue-lint pass. (2) **The lint:** `buriedDates()` flags a running row whose Next check cell carries a date without leading with it, warns on every tick, and fails a live spec over the registry. A dateless event trigger ("on each sweep…") stays legal. (3) This PR settled the six rows: each got a recorded verdict and a later date, or an end (Lane work leaves Needs-you, owner closed).
+- **SIDE QUESTS:** the same "post to a log, hope someone reads it" shape exists wherever a lane's output is a comment on a tracker issue rather than an item in a queue. The 2026-10-18 loop census counted the stages a person still does; re-run it against this fix → `docs/process/LEARNING-LOOP.md` census, next pass.
+### A debounce skip counted as proof — the capsule erosion check cleared `needs-eric` from a deploy that never ran
+- **SHA:** n/a   **DATE:** 2026-10-26   **STATUS:** closed
+- **SIGNAL:** none fired. On 2026-10-25T02:18Z the `--audit` tick removed `needs-eric` from #5955 (bots down since ~10-22) as "passed on the last 3 pushes"; two of the three runs (40153426584, 40152637913) were preflight debounce skips that never deployed, and the job failed again minutes later. Recurrences then piled up as `Failed again` comments with no label, no orphan flag and no repair until Eric re-applied the label by hand on 10-26T11:40Z — ~33 hours.
+- **ROOT CAUSE:** three predicates in `scripts/moneypenny/capsule-stall.mjs` each trusted a proxy. (1) `jobPassed` read the job's conclusion, and a job whose preflight skips every real step still concludes `success` — the capsule's own `Failing step` row (here `Smoke test the bots release`) was never consulted. (2) The orphan check skipped any capsule carrying the eroded marker, forever, so a recurrence after a false clear could never re-arm it. (3) `hasLinkedPr` counted any merged PR that mentioned the capsule — mention-only #5982 (merged 10-23) kept #5955 "linked" through every later recurrence.
+- **PREVENTION:** script — the erosion check now reads the capsule's failing step and counts a run only when that step ran green in every leg (skips leave the run out, paging up to 20 completed pushes; a failure ends the streak); a trusted `Failed again` after the eroded comment lifts the orphan suppression; a merged PR counts only if it merged after the latest recurrence. Fixtures built from jobs 121050112951, 121048415887 and 121047616850 in `tests/scripts/moneypenny/capsule-stall.spec.ts` (#6076).
+- **SIDE QUESTS:** none — the general shape ("`success` is not the same as *did the work*") is worth checking wherever else a job conclusion stands in for an outcome; the deploy smoke step is the honest signal for the deploy jobs.
+
+---
+
+### The bots app sat down for four days while 76 merges went red and the deploy dashboard said it was current
+- **SHA:** n/a   **DATE:** 2026-10-26   **STATUS:** closed
+- **COVERS:** 163a218 d350ff4 b40f9be 400be19 94ccff6 3c13340 3b0f6e1 02a5a16 4ed776e 355bf2f 212d1e1 565c554 31c8fdf 105bd00 166b804 18f73da 595a2c4 ddb4b92 f8dcf38 a73b7e6 baf8c08 dd03843 aa617c9 d70330b 9a5be05 be71581 2841b21 1c4ae80 ecef393 813aaf5 3d4cad8 3752f76 6c50c86 0b8928a fd1a643 9ec3e2d 964fc38 4a70bdf 8c87887 89a7651 64a14f2 50806c8 fee38c2 e7e8b04 d657687 73b9c9e 59867ef 648d8a4 791b129 3242624 3530d12 56203e0 88925b3 b4ad1ba 9ca4ca0 a996bb9 47f941d 1be2ad5 4f1582b a5f2609 554c188 ea64873 1a2fa27 e18616f 7c2a5c7 a2d3e5a dd4769a 14389ca aad790a 68fa154 d3460d0 1fe18ce cb247aa b8ee234 86a31bf efeadc0
+- **SIGNAL:** every push to `main` from 2026-10-22 17:24Z (`163a218`, run [39822385658](https://github.com/ejclark/skynet-capital/actions/runs/39822385658)) to `efeadc0` on 2026-10-26 failed `release · deploy bots`: 74 on `Smoke test the bots release` ("machine never reached started … AND the controls bridge never armed"), two (`3b0f6e1`, `02a5a16`) on `Deploy bots` with a 404 for the reused web image's manifest. Detection of the failure was minutes: capsule #5955 opened 17:31Z, root-caused to "machine `stopped`, not a code bug" by 17:39Z. Detection of the *outage* was the gap. #5955 waited on one `needs-eric` question for three days, the erosion check took the label off on 10-25 02:18Z over runs that never deployed (#6076), and `deploy-lag` reported the bots app current all along because it counted a green `Deploy bots` step even after smoke rolled it back. A session re-applied the label by hand on 10-26 11:40Z. Lag from first-detectable to a working alarm: about four days.
+- **ROOT CAUSE:** three mechanisms, one per layer. *The crash:* the boot backfill loaded the whole, never-rotated audit JSONL into one array, so the heap ran out within seconds of start, and Fly stopped the machine after the restart loop. The rollback image crashed the same way, because the cause was data growth, not a commit (#6004, merged 10-25 02:09Z). *The deploy path:* flyctl reports a machine that lands `stopped` as "a good state", so a rollback onto a stopped machine is green and restores nothing; whether a deploy may start a stopped primary is the open question on #5955. The machine was stopped again by 10-25 12:30Z, after #6004, with no app output in the log buffer, so the second stop has no named cause yet. *The blindness:* the three nets that should have shouted all read a proxy. `deploy-lag` read the deploy step, not smoke. The erosion check read "job success", which a preflight skip also produces. Catch-up read "bots behind main" and redeployed every 15 minutes (91 dispatches on `dd03843`), adding a release plus a rollback per tick to a machine that could not start. What else crosses this system: every lane that reads a bots release's *step* conclusion instead of its *serving* state.
+- **PREVENTION:** script, four landed or in flight, plus one decision that stays Eric's. (1) #6004: the backfill streams the log, with specs that it never calls `list()` when the store can stream. (2) #6050 + #6053: `deploy-lag` never counts a bots release whose smoke failed or is still running. (3) #6076, landed — see *A debounce skip counted as proof* above: the erosion check counts a run only when the failing step ran green, and a recurrence re-arms the orphan alarm. (4) #6005 (fast-track, building): catch-up skips after 3 failed deploys of the same sha. Still open: #6006 (cap the audit log on the 1 GB volume) and #5955's question (may a deploy start a stopped primary); #6097 hands Eric a one-paste revive script for the stopped machine meanwhile. **The outage itself is not over:** this entry banks the lesson for the shas above, and the push that closes #5955 adds its own shas to this COVERS line.
+- **SIDE QUESTS:** the two `Deploy bots` 404s mean the bots job reused a web image digest the registry no longer held; inside this outage nobody traced it. If it recurs on a healthy fleet, it is a race between the web release's rollback and the bots job's digest read → docs/IDEAS.md on recurrence, not now.
+
+---
+
+### Three one-off infra failures in the Claude-lane window: a lost runner and two flyctl downloads
+- **SHA:** n/a   **DATE:** 2026-10-26   **STATUS:** closed
+- **COVERS:** f38a3ca 2302c7b 10e496a
+- **SIGNAL:** one line per cause:
+  - `f38a3ca` (10-26, run 40304642365): the `uk-gilt-auction-long-2026-11-10` research leg ran 50 minutes, then GitHub concluded it `failure` with the step frozen `in_progress`; the only annotation is "The hosted runner lost communication with the server". Three sibling legs finished green in about 3 minutes each. Capsule #6033.
+  - `10e496a` (10-12) and `2302c7b` (10-26): `Bots deploy catch-up` failed in `Set up flyctl` before flyctl ran ("Unexpected HTTP response: 500" on the first). The version is already pinned (`0.4.99`), so this is the asset download, not the "latest" lookup the 2026-09-06 setup-flyctl entry fixed.
+- **ROOT CAUSE:** GitHub's hosted runner and GitHub's release-asset host, both outside the repo. Nothing in the diff for either sha touched the failing step.
+- **PREVENTION:** ledger-only, by design. The research leg is re-picked on the next tick (the event stays due), and #6036 (`89a7651`) now names the step a lost runner left unfinished, so the next capsule says "runner lost" on its own instead of needing a session to read the annotations. Catch-up re-runs every 15 minutes, so a failed download costs one tick. A retry wrapper would cost more than the tick it saves.
+- **SIDE QUESTS:** none.
+
+---
+
+### The human-directed Claude lane armed on Moneypenny's own comments, and the action refused the bot twice
+- **SHA:** n/a   **DATE:** 2026-10-19   **STATUS:** closed
+- **COVERS:** 93200e8 f56688d
+- **RECURS:** Moneypenny's dispatch token was rejected by the action because `skynet-envoy` was not in `allowed_bots`
+- **SIGNAL:** two `Claude` workflow runs on `issue_comment`, `f56688d` (2026-10-05, run 37271070737) and `93200e8` (2026-10-19, run 39220064498), both triggered by `skynet-envoy[bot]`. The `armed?` gate passed and the `claude` job died in seconds on "Workflow initiated by non-human actor: skynet-envoy (type: Bot)". No capsule followed either; the failure surfaced only in this scan.
+- **ROOT CAUSE:** `claude.yml` is the *human-directed* lane, and its gate decides "human" from `author_association` plus the absence of the `[Claude Code](https://claude` footer. It never reads `github.event.sender.type`. A Moneypenny comment without that footer link therefore reads as a member's comment, and the action's own bot refusal becomes the only filter, which shows up as a red run. The refusal is the right outcome; the red is the defect.
+- **PREVENTION:** ledger-only for now, with the gate fix named. The one-line fix is `github.event.sender.type != 'Bot'` in the `armed?` job's `if:`. It edits a workflow file, so it boards the next protected-path platter rather than this ledger-only PR. Cost of waiting: one red run per footer-less bot comment, about one every two weeks.
+- **SIDE QUESTS:** the gate fix → docs/IDEAS.md (platter candidate).
+
+---
+
+### Production down ~20 minutes, bots blocked ~2 days: both Fly volumes sat on an unreachable host
+- **SHA:** n/a   **DATE:** 2026-10-16   **STATUS:** closed
+- **COVERS:** c7e5587 9a897de d1d1ed9 597dbb6 4c80963 a806ec9 4d1bd3b 72c80dd
+- **SIGNAL:** `release · deploy` failed on seven merges from 2026-10-16 18:59Z (`c7e5587`, run [38951606211](https://github.com/ejclark/skynet-capital/actions/runs/38951606211)): "machine 'e8205e5fe93638' requires manual intervention … its volume 'vol_458exw282gpjg7j4' is on an unreachable host". Capsule #5519 opened 19:03Z; the host came back and every Pipeline from 19:19Z deployed green. `release · deploy bots` then failed the same way on `72c80dd` (22:23Z, volume `vol_r1j5x5ke9g1dmxzr`); capsule #5577 opened 22:26Z. Both capsules asked Eric "wait, or restore the snapshot?", both were closed by hand with no merged PR, and #5577 stayed open with `needs-eric` for about two days after the bots deploys were green again (found by the 2026-10-18 loop census).
+- **ROOT CAUSE:** a Fly host outage. A machine pinned to a volume cannot be moved while the volume's host is unreachable, so every deploy fails until the host returns or the volume is restored from a snapshot onto a new host. The repo's part was in the reading, not the failure. The deploy retry loop first classified the error by grepping for `502` and matched `image size: 502 MB` (#5521, `a806ec9`, merged mid-outage). The capsules had no way to notice that their question had answered itself.
+- **PREVENTION:** script, landed. (1) #5735 (merged 2026-10-18 18:10Z, the same day the census found #5577): the capsule check clears `needs-eric` once the failing job is green, and flags orphaned capsules. Its first live firing was #5955 on 10-25; #6076 fixes how it counts a "pass" (see the bots entry above). (2) #5521: the transient-error classifier no longer reads an image size as an HTTP status. No prevention for the host outage itself: a single-volume app on one host is the deliberate cost of the current Fly plan, and recovery took ~20 minutes for the web app with no data lost.
+- **SIDE QUESTS:** none.
+
+---
+
+### Four web release failures on 2026-10-03: a boot that never bound, an OOM, and a closed Fly socket
+- **SHA:** n/a   **DATE:** 2026-10-03   **STATUS:** closed
+- **COVERS:** b8d7837 3cb5c40 94b2fda 5d0654d
+- **SIGNAL:** one line per sha:
+  - `b8d7837` (02:44Z) and `3cb5c40` (02:59Z): `Smoke test the release` timed out six times, `curl: (28) … 0 bytes received`, and the release rolled back. Capsule #4516 opened 02:50Z.
+  - `94b2fda` (03:50Z): `Deploy to Fly` died six seconds in on flyctl's first Machines-API call, `Get "https://api.machines.dev/v1/apps/skynet-capital": EOF`. Nothing was built or released. Capsule #4523.
+  - `5d0654d` (04:13Z): smoke timed out again with the same `0 bytes` signature, after #4518 and #4519 had merged; the rollback image then passed smoke on its first attempt. No capsule followed, because repair triage run 37096076377 logged `moneypenny-repair quiet on #4523 — already escalated to Eric` and treated this as the open capsule's recurrence.
+- **ROOT CAUSE:** two causes. (1) The dashboard awaited `buildDashboardData` before `.listen()`, and that build read every participant's broker account under `Promise.all` with no `AbortSignal`. One stalled read meant the listener never bound, and research pages could also OOM-kill the process. Fixed by #4518 (`e80d6b4`, bound the boot broker read) and #4519 (`3be1f71`, stop research pages OOM-killing the dashboard). (2) `flyctl deploy` ran once with no retry, so one closed socket failed the release; #4525 (`1411ebf`, workflow file, merged by Eric 10-04) retries a transient Fly API error. `5d0654d` is the gap between them: its smoke still failed on cause (1) while the repair lane muted itself on cause (2)'s capsule.
+- **PREVENTION:** script, landed in #4518, #4519 and #4525, each with its own capsule. The rollback was the net for all four, and `main` served the last good image throughout. The repair lane's "quiet on an escalated capsule" rule is right for a recurrence of the *same* signature. Here a different failing step (`Smoke test` vs `Deploy to Fly`) was folded into an open capsule about the other one, because `signature()` in `scripts/moneypenny/repair.mjs` keys on workflow + job and leaves the step out. Ledger-only for that half: it cost one unlabelled recurrence whose fix had already merged.
+- **SIDE QUESTS:** should a capsule that carries `needs-eric` still post a "failed again" line when the failing *step* differs from the one it was filed for? The step is already in the comment text; the lane just stays quiet on it → docs/IDEAS.md if a different-step recurrence hides a real fault again.
+
+---
+
+### The other failed runs from 2026-10-01 to 10-05: each already had a capsule and a merged fix
+- **SHA:** n/a   **DATE:** 2026-10-05   **STATUS:** closed
+- **COVERS:** 61fc007 ffa1cc2 922e777 03db4a2 ad87de7 3ee4225
+- **SIGNAL:** one line per cause, each with its capsule and merged fix:
+  - `61fc007` (10-05 19:23Z → 21:04Z): GitHub runner outage. Every Events, Claude and Repair job queued and was cancelled with "The job was not acquired by Runner of type hosted even after multiple attempts". Capsule #4656 → fix #4657 (`ffa1cc2`): the repair lane reports a runner outage as one, not as a rejected workflow file.
+  - `ffa1cc2` and `922e777` (10-05 21:25Z, 21:37Z): `route › List due events` refused every tick because `gh run view --log` fails a whole run when one job (the outage's cancelled `route`) has no log, and the spend breaker read that as "spend unknown". Capsule #4658 → fix #4659 (`362d028`).
+  - `03db4a2` (10-05 23:25Z): `sync project status` died on GraphQL's status-less internal error. Capsule #4675 → fix #4676 (`d455dd4`): retry it.
+  - `ad87de7` (10-01 06:25Z): `sync project status` asked GraphQL about the whole board to sync one issue and ran out of the hour. Capsule #4439 → fix #4440 (`7213c65`).
+  - `3ee4225` (10-02 21:02Z): a `Claude` lane session hit its 80-turn cap ("Reached maximum number of turns (80)"). The cap is the designed stop, not a fault.
+- **ROOT CAUSE:** none new. Every line maps to a capsule that closed on a merged fix within the hour, or to a designed limit. They were unlearned only because each capsule's fix PR banked no ledger entry naming the failing sha. #4668's capsule-closure draft now does that for each new capsule.
+- **PREVENTION:** ledger-only, by design: each cause's prevention is the merged fix named on its line. A lesson per run would be ceremony with no new mechanism behind it.
+- **SIDE QUESTS:** none.
+
+---
+
+### `route` red on main: retry each ghRestAll page on a github 5xx
+- **SHA:** 7b8ca01   **DATE:** 2026-10-20   **STATUS:** closed
+- **COVERS:** f7efc4d
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [39441832513](https://github.com/ejclark/skynet-capital/actions/runs/39441832513) at 2026-10-20T14:43:25Z. Repair capsule #5918 filed 2026-10-20T14:45:13Z, closed 14m later by #5919.
+- **ROOT CAUSE:** `route --audit` died on `curl: (22) The requested URL returned error: 500` from `issues?state=open&per_page=100&page=2` (`openIssues` → `gatherDeps`). GitHub's 500 is transient, but the repo's handling of it was ours to fix. #5354 already taught `isTransientGhError` curl's wording of a 5xx. The retry itself, though, was added caller by caller: #5354 wrapped the relay's read. projects-reconcile wrapped its own read. Every other `ghRestAll` caller got one attempt, including `openIssues`, `rank.mjs`, `assignments` and `continuation`. This is the third time that pattern has bitten, so the retry moves to where the pages are read. Retrying each page also beats wrapping the whole list, because a r…
+- **PREVENTION:** spec — `tests/scripts/moneypenny/gh.spec.ts` (#5919).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### `sync project status` red on main: add new issues to the board without gh's owner lookup
+- **SHA:** 8046b4e   **DATE:** 2026-10-19   **STATUS:** closed
+- **COVERS:** 3c7fd3e
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [39184644834](https://github.com/ejclark/skynet-capital/actions/runs/39184644834) at 2026-10-19T01:16:57Z. Repair capsule #5792 filed 2026-10-19T01:17:34Z, closed 15m later by #5799.
+- **ROOT CAUSE:** Every `gh project <cmd> --owner` call first runs gh's owner lookup. That lookup turns any unexpected error into `unknown owner type`, which hides the real cause from the retry. #4933 moved the per-run reads off it, but kept `item-add` on the theory that it rarely runs. In fact every new issue's first sync runs it. Run 39184644834 (for #5791) failed exactly there, and the script's own probe showed the token was fine.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/projects-owner-lookup.spec.ts` (#5799).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### A green, armed PR sat blocked for 5 days behind a check suite that never ran a job
+- **SHA:** n/a   **DATE:** 2026-10-16   **STATUS:** closed
+- **RECURS:** The arm job refused the one pull-request action ship.sh fires on purpose, so a finished PR sat green for 29 hours
+- **SIGNAL:** none fired — again. #5221 (opened 2026-10-11 06:16Z by the feedback lane) had `verify` and `integration tests` green at 06:21Z and auto-merge armed by `skynet-envoy[bot]` at 06:21:49Z, yet `mergeable_state` read `blocked` until a merge commit from a real identity landed on 2026-10-16 and it merged inside 10 minutes. 135 hours; the retro that should have caught it (the 29-hour entry's own side quest 2, "we have no net for a green PR that stops moving") was written two weeks earlier and not built. Live today, before this fix: #4855 (222 h) and #5389 (57 h) in the same state, and #4939 (187 h) green and never armed.
+- **ROOT CAUSE:** **not the same mechanism as the 29-hour entry — the same blind spot.** That entry's arm job refused the `edited` action; here the arm job did its work (run 38117526631: `verify`, `integration tests`, `arm auto-merge` all `success`, auto-merge enabled 06:21:49Z), and `edited` is in the allowlist on `main` (`a75e022`, #4548). What is different about #5221's head `dfb603b0` is a *third* `github-actions` check suite holding **zero check runs**: Pipeline run 38117526811, `event: pull_request`, `triggering_actor: github-actions[bot]`, created the same second as the good run. It was `action_required` when seen (the bare-GITHUB_TOKEN approval gate, docs/LESSONS.md 2026-08-17) and reads `failure` now; #4855's is `startup_failure`, #5389's `cancelled`. The sender is `github-actions[bot]` because the lane's second push — the commit that files the screenshots under `docs/shots/pr-<n>/`, which can only happen *after* the PR number exists — is authored and pushed as `github-actions[bot]` (all three heads), and the build jobs check out with the default `persist-credentials`, so the checkout's `GITHUB_TOKEN` header beats the App token on `git push` (the #3334 mechanism, already fixed in `moneypenny-repair.yml` and never carried over to `moneypenny-events.yml`, whose workflow grants `contents: write`). **Established:** the ghost suite on every stuck head; commit authorship; the checkout default. **Inferred, not observed:** that the persisted header is the push credential (REST cannot show a push's credential) — hence the falsifier below. Evidence it is the discriminator and not noise: of 144 PRs that merged within hours, 0 carried a ghost suite; of the PRs that sat for days with green required checks, every one did (#5221, #4877, and the two live ones). The required checks match by name and the ghost holds none, so *why* GitHub then reports `blocked` is not visible through REST — the correlation is the finding, the kernel of the mechanism is GitHub's. A second, unrelated arm failure turned up in the same sweep: #4939's arm job ran, `gh pr merge --auto` answered "clean status", and the direct-merge fallback died on `GraphQL: Base branch was modified` (main moved in that second) — no retry, so the PR sits unarmed forever.
+- **PREVENTION:** script, wired into the path every change takes — `scripts/stuck-pr-scan.mjs` (+ pure `stuck-pr-decide.mjs`, 15 specs in `tests/scripts/stuck-pr-decide.spec.ts`, `npm run pr:stuck`). It reads the open PRs over REST core and names every one green longer than 3 h (a healthy merge takes minutes: 144 of 144 sampled fast PRs merged inside 3 h) that is `blocked` while armed, never armed, or headless behind a ghost suite — with the ghost named and the one-line clear (`gh api -X PUT repos/{owner}/{repo}/pulls/<n>/update-branch`, which pushes a merge commit as the App; what cleared #5221). `scripts/ship.sh` runs it beside `incident-scan.mjs`, so the next stall surfaces at the next PR any session opens — hours, not days — and `digest-scan.mjs --stuck` gives the secretary a headline line. Its first run found #4855, #5389 and #4939. **The root-cause fix is in protected files and is NOT applied here** — it boards the platter (PR body carries both diffs):
+  1. `.github/workflows/moneypenny-events.yml`, the `actions/checkout` step of `build-events` (line ~572), `build-feedback` (~720) and `build-plan` (~835): add `persist-credentials: false` under `fetch-depth: 0` — the repair lane's fix (#3334); `claude-code-action` already gets `github_token: ${{ steps.app-token.outputs.token }}`, so pushes then go out as `skynet-envoy[bot]`, which GitHub does not hold for approval.
+  2. `.github/workflows/pipeline.yml`, step "Arm auto-merge (or merge directly if already green)": retry the direct merge when main moved under it — replace the single `"$RUNNER_TEMP/gh-retry.sh" gh pr merge --squash "$PR"` with `for try in 1 2 3; do if MERGE_OUT=$("$RUNNER_TEMP/gh-retry.sh" gh pr merge --squash "$PR" 2>&1); then echo "$MERGE_OUT"; break; fi; echo "$MERGE_OUT" >&2; { echo "$MERGE_OUT" | grep -qi "base branch was modified" && [ "$try" -lt 3 ]; } || exit 1; sleep 5; done`.
+  **Falsifier:** fourteen days after item 1 lands (by 2026-11-06 if it boards the next platter), `npm run pr:stuck` should show no `blocked`/`headless` PR from a `feedback/*` or `plan/*` branch. One that does means the push credential was not the persisted header — look next at the PR-body edit that pins the screenshot URLs (a `gh pr edit` under `GITHUB_TOKEN` is also an `edited` event sent by `github-actions[bot]`), and set `GH_TOKEN` to the App token for it.
+- **SIDE QUESTS:** (1) `docs/shots/pr-<n>/` forces a second push after the PR exists on every lane PR with a picture; a stable id known before opening (the issue number the branch is already named for) would remove the second push, and the ghost with it → docs/IDEAS.md. (2) The ghost suite exists on every `github-actions[bot]`-sent `pull_request` event repo-wide; a gate in `tests/arch/workflows.spec.ts` that every checkout in a job holding a push-capable App token sets `persist-credentials: false` would make #3334's fix a rule instead of a per-file memory → docs/IDEAS.md. (3) #4939 needs arming by hand (`scripts/ship.sh automerge 4939`), and #4855 / #5389 need an `update-branch` call — each is a one-liner the new scan prints.
+
+---
+
+### `route` red on main: retry a github 500 on the spend breaker's and relay's reads
+- **SHA:** a990afa   **DATE:** 2026-10-14   **STATUS:** closed
+- **COVERS:** bb6d999 143153d
+- **SIGNAL:** 2 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [38495812047](https://github.com/ejclark/skynet-capital/actions/runs/38495812047) at 2026-10-14T01:27:19Z. Repair capsule #5354 filed 2026-10-14T01:33:38Z, closed 13m later by #5355.
+- **ROOT CAUSE:** Two `route` ticks went red on `main` within six minutes, both on a single GitHub-side 500: **Run 38495812047** (this issue): `checkCircuitBreaker` read run 38494372525's log, got `HTTP 500`, fell back to the job list, got another `HTTP 500` a second later, and refused. I read that same log locally minutes later and it came back fine (308 KB, exit 0). Not a breaker bug and not a runaway, just two unretried reads. **Run 38496303201**: the relay's closed-issue read (`ghRestAll`, i.e. curl) got `curl: (22) The requested URL returned error: 500`. `isTransientGhError` only knew gh's `HTTP 5xx` wording, so even a `withRetry`-wrapped `ghRest` read got one attempt. projects.mjs had already found thi…
+- **PREVENTION:** spec — `tests/arch/research-circuit-breaker.spec.ts`, `tests/scripts/moneypenny/gh.spec.ts`, `tests/scripts/moneypenny/relay.spec.ts` (#5355).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### Two visual PRs red on their first CI run: Linux-only baselines, and four builds on one surface
+- **SHA:** n/a   **DATE:** 2026-10-10   **STATUS:** closed
+- **SIGNAL:** Eric, on #5080: "fails CI out of the gate too. red flag for avoidable process
+  friction, possible process thrashing."
+  - **What happened:** #5079's first two runs (16:26, 16:47) and #5080's first run (17:00, red at
+    17:05) failed `integration tests` on `matches the known-good page screenshot` only — no logic
+    failure among them. #5079 was re-baselined by hand (902daaed, 17:21); #5064 earlier the same
+    day took two hand re-baseline commits (68348966, f3b51581).
+  - **Detection lag:** each red was seen within minutes, but the class — a visual PR's first run
+    failing on its own new pictures — was paid at least three times in one day before anyone named
+    it. Eric named it; nothing counts first-run reds.
+- **ROOT CAUSE:** three mechanisms.
+  1. Screenshot baselines are `*-chromium-linux.png` only and builders run on macOS, so `ship.sh`
+     skips the local Playwright run (2026-10-02, PR #4519). A visual PR meets its new pictures
+     first in CI, and the way back was six manual steps: download `playwright-report`, decode the
+     zip embedded in its `index.html`, map each attachment to a baseline path, read each diff, copy
+     each actual, commit.
+  2. Four builds ran in parallel on one surface, the profile page (#5078, #5079, #5080, #5081 — all
+     four edited `app/src/routes/accounts.tsx`, three the profile head `cockpit-head.tsx`). Each
+     head change moved the same page screenshots, so whichever merged second failed on pictures it
+     never drew: #5079 moved five page shots (four of them 51px shorter), #5080 moved the same
+     five (four of them 1px taller) plus two more, and the code collided (#5079 against #5078).
+  3. (Found in review, after #5080 merged.) `captureWholeFrame` (`e2e/determinism.ts`) asserted
+     the frame and then the top bar's market clock, both hard, so a red frame hid its clock. #5080's
+     first red run (38069939238) showed six frames and one clock; the re-baseline of those seven
+     (91c38a4) went red on the six clocks it had hidden (run 38072789546), and a16511d paid the
+     second round trip. The script reads only what a run compared, so it could not have caught it.
+- **PREVENTION:**
+  1. **Script (rank 1):** `scripts/rebaseline-from-ci.mjs <pr>` finds the PR's failed `integration
+     tests` run, decodes the report, saves expected/actual/diff side by side and lists them — a
+     dry run by default, ending in a reminder to read every diff. `--run <id> --apply --commit`
+     copies the actuals and makes one commit. It refuses any failure that is not a pixel mismatch
+     and any snapshot with no baseline yet (`tests/scripts/rebaseline-from-ci.spec.ts`).
+  2. **`ship.sh` line:** off Linux, a diff under `app/src/` or `e2e/` prints that command with the
+     new PR's number as soon as it opens (`tests/arch/ship.spec.ts`).
+  3. **Doctrine:** `docs/DELEGATION.md` rail 7 — one build per surface at a time (WIP 1 per
+     surface); a later build on a busy surface is linked `--blocked-by` the first
+     (`scripts/issues.mjs update` now takes it), and every puller waits. Echoed in
+     `.claude/skills/steer/SKILL.md`'s read-back and `docs/ENGINEERING.md`.
+  4. **Soft frame shot:** `captureWholeFrame` now asserts the frame with `expect.soft`, so every
+     run compares both pictures and one dry run lists both. The test still fails on either.
+     The review also tightened the script: a logic failure on ANY attempt refuses the test (not
+     only the last one), a snapshot CI reported missing is refused even if a file has appeared
+     locally since, and `--apply` refuses a run that did not test the PR's head (a dry run on one
+     still lists it, read only).
+- **SIDE QUESTS:** a CI job that re-baselines on a label would remove the round trip entirely (CI
+  already holds the actuals), but it lives in `.github/workflows/` — protected by `envelope.json` —
+  so it boards the platter as a proposal only (→ docs/IDEAS.md). No workflow file was touched here.
+
+---
+
+### A member study's census reported done after operating none of its controls
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study's full round (#4943).
+  - **What the census is:** the step that operates every control on the area once and frames each
+    result, so the blind experts review the whole area, not a hand-picked sample.
+  - **What happened:** it operated 0 of 856 controls, and preflight still marked it done.
+  - **How it was caught:** by reading the experts' inputs after the round, which showed sign-in
+    doors instead of the profile. No gate fired.
+- **ROOT CAUSE:** a world change (#4998) made every fresh page load clear the member's session, and
+  the census opens each control on a fresh load. `openComposed` never passed the world's sign-in
+  step back to its caller. The census measured "did each step run", not "did it reach the screen it
+  was meant to".
+- **PREVENTION:** gate (#5008): sign-in is passed through, a census reaching under 80% of its
+  controls stops the round before any expert runs, and an expert batch with no frames refuses to
+  start.
+- **SIDE QUESTS:** the same "ran, so done" shape exists anywhere a step is checked for having run
+  rather than for its output (README Lessons, the oracle audit row: the answer grader was trusted
+  until two auditors read its fails).
+
+---
+
+### Stub-only dry runs passed a study harness that failed its first real call three ways
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study's first real thin slice (#4943).
+  - **Earlier:** the round had passed a full end-to-end dry run of 54 sessions on stand-in answers (#4985, #4986).
+  - **Then it stopped three times before any member ran:**
+    1. at the canary in 0.6s ("no result event");
+    2. at task writing, after four blind rewrites;
+    3. at the canary again, on CLI boilerplate.
+  - **Detection lag:** none past the first real call. The thin slice exists for exactly this.
+- **ROOT CAUSE:** stubs answer at the result-parsing layer. So the dry run proved the plumbing and never the contract with the real `claude -p`. Three things lay outside that contract test:
+  1. **Schema validity:** a `$schema` 2020-12 key the CLI's validator rejects, reported only on a stderr the code discarded.
+  2. **Real model behaviour against a blind lint:** the lint hid every word, so the author could not learn which everyday word was also an on-screen label.
+  3. **Context the CLI injects even under `--safe-mode`:** the account email, the environment block and tool-use instructions, worded differently on every call.
+- **PREVENTION:** doctrine: `docs/members/study/README.md` → Lessons: no full round before a real thin slice completes. Stubs prove plumbing, never the CLI contract. Each gap was also fixed where it lives:
+  - schemas carry no draft key, and stderr is kept (#4988);
+  - lint names screen labels and reads only what members read (#4989);
+  - the canary classifies context by kind (#4988, #4990).
+  - A planted note still fails the canary in a real call.
+- **SIDE QUESTS:** the native `<select>` blind spot and the test world's placeholder pages, both found by the same thin slice, are being fixed in the recorder and the world (README Lessons).
+
+---
+
+### An athlete's `npm ci` emptied the primary checkout's install through the worktree symlink
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The primary checkout's `node_modules` and `app/node_modules` were found empty (0 entries each) while reading a slice-2 athlete's report for #4943. Timeline (UTC):
+  - 05:38 — the first detectable moment: a fix-track athlete ran a plain `npm ci` inside its isolated worktree.
+  - 05:39 — another athlete noticed the primary was empty, installed its own copy and carried on.
+  - ~06:33 — the foreground session saw it, ~55 min after the cause.
+  - Meanwhile every worktree linked to the primary, and the primary itself, had no install. Restored with `npm ci` + `npm ci --prefix app` from the lockfiles.
+- **ROOT CAUSE:** `scripts/worktree-setup.sh` gave each isolated worktree a *symlink* to the primary checkout's `node_modules`, extended to `app/node_modules` the same morning (#4954).
+  - Git isolation is not filesystem isolation: the link made one shared, mutable install look private.
+  - `npm ci` deletes `node_modules` first, so run in a linked worktree it deleted the primary's install through the link.
+  - What else crosses this system: the primary checkout (dev server, husky hooks, Eric's terminal), every other session's linked worktrees, and the workflow agents that run without isolation and so use the primary as their working directory.
+  - The second failure is detection. The athlete that saw the empty install treated it as its own environment quirk and worked around it, so a shared outage stayed silent for most of an hour.
+- **PREVENTION:** script — `scripts/worktree-setup.sh` now gives each worktree a copy-on-write *clone* (APFS `cp -c`, `--reflink` elsewhere, ~5s), never a link, and converts any old link it finds.
+  - Tested by running `npm ci` and `npm ci --prefix app` inside a set-up worktree: the primary kept all 416 + 79 packages.
+  - Doctrine for the detection half: `docs/DELEGATION.md` rail 2 now says an athlete that finds shared state broken (the primary's install, `main`'s build) stops and reports it, never repairs around it silently.
+- **SIDE QUESTS:** → docs/IDEAS.md: other shared mutable state an unisolated workflow agent can clobber in the primary (`app/dist` used by the shoot scripts, the primary's branch); worktrees left by older sessions still carry links until their next setup run.
+
+---
+
+### A filter chip jumped the Profile page to the top — Trade's 2026-09-22 fix stayed per call site
+- **SHA:** n/a   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** The profile member study (#4943) caught a chip tap scrolling the page to the top ~300ms later, the filter's debounce. Detection lag: the same symptom was reported and fixed on Trade on 2026-09-22 ("the same effect as extreme content shift"); every other page with a filter, lens or calendar range kept it for ~17 days.
+- **ROOT CAUSE:** TanStack Router resets the window's scroll after every navigation unless the call says `resetScroll: false` (router-core: `resetScroll ?? true`), a same-page search refinement included. The 2026-09-22 fix wrote `resetScroll: false` into Trade's own calls; nothing named the class, so the Profile page's filter, the positions lens, the calendar range, R&D's filter, both Activity filters and the milestone cards each still reset.
+- **PREVENTION:** gate (rank 1) — `tests/arch/same-page-scroll.spec.ts` reads every `navigate({...})` and `<Link search=…>` under `app/src` that targets the page it's on, and fails one that resets the scroll unless its ledger says why (a section or account switch, a jump to a ticket). The fix is one helper, `useRefineSearch()` (`app/src/live/refine-search.ts`), every refinement routed through it; `app/tests/live/refine-search.spec.tsx` asserts the outcome (#4944).
+- **SIDE QUESTS:** whether section and account switches, and the leaderboard's compare toggles, should also keep the scroll is a design call held by #4943, not this fix.
+
+---
+
+### The member journeys and the crawl passed every profile screen Eric found broken on 2026-10-08
+- **SHA:** a8587fd   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** Eric, using the profile on 2026-10-08, found screens broken on which no member journey failed and no crawl row was flagged. A human was the only detector. Detection lag: the harness landed 2026-09-26 (#3801, `a8587fd`; phone checks and coverage in #3830) as the verification for plan #3807, which closed on its green 2026-09-29. That is 9 days from the close (12 from the landing), and in that time no journey failed and no crawl row flagged those screens (journeys with a `known_gap` pass by design through `test.fail`, `e2e/journeys.spec.ts:47`). His individual findings are sealed outside the repo for a blind study (#4943), so this entry names the class only.
+- **ROOT CAUSE:** the harness checks that things *exist*, never that a member can *use* them. Each check, confirmed in code at `origin/main` 2026-10-09: (1) `e2e/journeys.spec.ts:48` reloads the page for every step, so a journey is a set of separate cold loads and nothing a member did earlier is still on screen; (2) `scripts/crawl/steps.mjs:68` waits for Playwright's `visible`, which is true for an element scrolled far off-screen, not "in the viewport"; (3) a step's act is its last line and nothing looks after it (`journeys.spec.ts:53`), and the crawl takes its frame *before* the act (`scripts/crawl/run.mjs:147` frame vs `:175` act), so what a press does is never seen; (4) the one human-like check, the `judge` column, never ran: `run.mjs:104` writes `pending (grind)` and all 54 rows of `docs/members/friction-ledger.md` still say so; (5) `scripts/crawl/phone.mjs:33-35` treats `overflow-x: auto` as contained, so a box that scrolls sideways on a phone is never reported; (6) coverage counts *visits*, not interactions (`scripts/crawl/coverage.mjs:277-291`, `visitsOf`): a screen a step only loaded reads `covered`; (7) the crawl fixture cannot draw an at-risk card: the cutoff is −10% (`src/observatory/decisions-view.ts:99`, `considerations-view.ts:43`) and every linked member's position in the fixture is up. *What else crosses this system?* The green read as "verified" in three places: the journeys, the coverage report, and the closure of the plan the crawl was built to check.
+- **PREVENTION:** ledger-only until #4943 lands (then script, rank 1). Nothing is mechanized yet. The profile member study, plan #4943, replaces "does it exist" with "can a member do it". Its recorder keeps the page alive between actions. It records scrolling, sideways overflow at page *and* container level, layout shift and navigations away. It grades success from a fact the member reports or an answer seen in the viewport, never from a route. That covers causes 1–6 as a class rather than one line at a time. The fixture gap (7) is the study's world-building slice. This lesson is the ledger half and changes no code. Whether the harness lines above get patched or retired follows the study's readout, which stops for Eric's call.
+- **SIDE QUESTS:** a ledger column that promises a check no lane schedules is a quiet false pass; `coverage.mjs`'s `covered` reads as "tested" when it means "visited" (→ docs/IDEAS.md).
+
+---
+
+### `sync project status` red on main: read board fields without gh's owner lookup
+- **SHA:** b95b1d5   **DATE:** 2026-10-09   **STATUS:** closed
+- **COVERS:** 49eb85d
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [37881706331](https://github.com/ejclark/skynet-capital/actions/runs/37881706331) at 2026-10-09T03:58:25Z. Repair capsule #4933 filed 2026-10-09T03:59:11Z, closed 10m later by #4937.
+- **ROOT CAUSE:** `sync project status` went red on `main` (run 37881706331): `gh project field-list 2 --owner ejclark` failed three times in ~8s with `unknown owner type`, while a direct GraphQL call on the same token succeeded seconds later. A parallel run four seconds later went green. So the token was fine; the failure was in gh's own owner lookup. That string comes from gh's `UserOrgOwner` query (cli/cli `queries.go`, `OwnerIDAndType`). It asks for **both** `user(login)` and `organization(login)` and expects the org half to fail with exactly `NOT_FOUND`. Any other error shape on either half becomes `unknown owner type`, with GitHub's real message thrown away. Every `gh project --owner` call pays for thi…
+- **PREVENTION:** spec — `tests/scripts/moneypenny/projects-owner-lookup.spec.ts` (#4937).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### `release · deploy bots` red on main: retry a registry 404 once fly's api has found the image
+- **SHA:** f72d873   **DATE:** 2026-10-06   **STATUS:** closed
+- **COVERS:** 43d3f5c
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `release · deploy bots` on `main`, the first [37476037256](https://github.com/ejclark/skynet-capital/actions/runs/37476037256) at 2026-10-06T14:05:19Z. Repair capsule #4796 filed 2026-10-06T14:09:06Z, closed 11m later by #4798.
+- **ROOT CAUSE:** Run 37476037256 left `main` (43d3f5c1) merged but the bots app undeployed. The bots job reuses the image the dashboard job pushed about 60 seconds earlier. flyctl's API lookup answered `image found`, then the machine's host got `MANIFEST_UNKNOWN` (404) for that same digest. flyctl retried 8 times in 16 seconds, all 404, and the job went red. Meanwhile: the dashboard machines were already running that exact digest (its build log exports `sha256:f6d11748…`); the identical cross-app pull worked 17 minutes earlier (run 37473717369) and in every bots deploy before it. No issue on record mentions `MANIFEST_UNKNOWN`. So this is Fly's registry catching up, not a bad reference. A 404 is also what a…
+- **PREVENTION:** spec — `tests/scripts/fly-deploy.spec.ts` (#4798).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `release · deploy` red on main: drop local claim lease tags around semantic-release's tag fetch and push
 - **SHA:** 394888f   **DATE:** 2026-10-06   **STATUS:** closed
 - **COVERS:** 77a5842
@@ -42,6 +332,23 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 - **ROOT CAUSE:** Claim leases live at `refs/tags/claim/<slug>`, and semantic-release moves every tag. A lease re-taken while the job installed made `git fetch --tags` refuse to clobber the runner's stale copy, failing the release and leaving `main` merged-but-undeployed. The release runner never needs a local lease.
 - **PREVENTION:** spec — `tests/scripts/release-lease-tags.spec.ts` (#4720).
 - **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### The dashboard took the bots' one Alpaca price-feed connection, so Sauron never traded
+- **SHA:** b668953d   **DATE:** 2026-10-09   **STATUS:** closed
+- **SIGNAL:** Eric asked "no trades made today?" on 2026-10-08 21:14 CT. The bots app had logged a bare `[market-data] error` / `closed` loop for days; #4774 (2026-10-05) saw the same drop and added a reconnect without finding the cause. Detection lag: the opener landed 2026-07-24 (`4ac30090`, `participants[0]`) and was latent until a held position made the dashboard stream start; observable from at least 2026-10-05; root cause named 2026-10-09 02:33Z, minutes after #4865 made the socket log Alpaca's refusal (`406 connection limit exceeded`).
+- **ROOT CAUSE:** Alpaca allows one market-data websocket per paper account. Three files open one; the dashboard's held-symbol stream used `participants[0]`, and `loadParticipants` lists bots first, so it opened on Sauron's key and evicted the bots app's socket. No ticks → no eval cycle → no trades, in live mode. The rule was already written in `src/server/quote-stream-hub.ts`'s header and `docs/architecture/runtime-api.md` — for the quote hub only; nobody enumerated the *other* consumers of that one connection ("what else crosses this system?"). The socket also swallowed its failure reason, which is why #4774 treated a symptom.
+- **PREVENTION:** gate (rank 1) — `tests/arch/market-data-owners.spec.ts` lists every file that constructs `AlpacaMarketDataStream` with whose credential it uses; a new opener fails CI until its owner is stated, and the dashboard stream is pinned off `participants[0]`. Detection: `market-data-stream.ts` now logs close code/reason, the runtime error, and Alpaca's `T:"error"` frame (#4865). Fix: `heldPriceStreamPlan` (#4872).
+- **CORRECTION (2026-10-09 open):** the first fix (#4872, a member's key) failed — Alpaca's limit is per **user login** per endpoint, not per paper account (docs → streaming-market-data → Connection limit), so every key under one login shares the socket. The dashboard now opens no held-symbol socket at all. Lesson inside the lesson: the per-account assumption was flagged as a risk and shipped unverified; a two-line docs read would have settled it.
+- **SIDE QUESTS:** a market-hours "feed down for N minutes" alert would have caught this on day one instead of by a human noticing no trades (#4864 slice 3, → docs/IDEAS.md). The local Alpaca MCP also returned 401 the same evening — likely a separate stale local key, unverified.
+
+### A smoke test of a new claim path took a real lease and labelled a real issue
+- **SHA:** n/a   **DATE:** 2026-10-05   **STATUS:** closed
+- **SIGNAL:** immediate, and only because the run's own `::notice::` said "resuming feedback #4299 … building in this run" — a line that can only print if the lease was actually taken. Checked within a minute: `refs/tags/claim/feedback-4299` existed on the repo and #4299 (a `plan` sub-issue, whose number the new fixture had borrowed) carried `in-progress`. Both reverted with `--release feedback-4299`; nothing else had read either.
+- **ROOT CAUSE:** a build session (#3959 slice 1) smoke-tested its new `--claim-feedback-reply` flag by hand against a fixture payload, to prove the CLI wiring. The claim flags are the lane's *impure* half — they take the lease and write labels — and a session in this repo runs with the App installation token already exported as `GH_TOKEN`, so every write succeeded against the live repo exactly as a workflow run's would. The three earlier smoke tests in the same session were refusals, which return before any write, so the pattern looked safe right up to the one call that was admitted. CLAUDE.md's "never spend a state-destroying action as a probe" names this class; the diagnostic looked free because the refusing cases were.
+- **PREVENTION:** gate (rank 1) — `scripts/hooks/guard-bash.mjs` now refuses `scripts/moneypenny/index.mjs --claim-{feedback,plan,next}…` before it runs, naming the spec and the workflow as the places that path belongs. `--check-claim`, `--peek-next`, `--release`, `--model-tier` and `--dry-run` stay hand-runnable on purpose: they read, or they repair. 2 specs in `tests/scripts/guard-bash.spec.ts` pin both halves.
+- **SIDE QUESTS:** the smoke test was answering a real question the specs could not — "does `main`'s own event-file plumbing reach this flag?" `--dry-run` answers it for `route()` but not for a `runCliFlag` branch; a `--dry-run`-respecting claim path would make that probe genuinely free. Not built here (→ docs/IDEAS.md).
 
 ---
 
@@ -55,11 +362,11 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 ---
 
 ### The arm job refused the one pull-request action ship.sh fires on purpose, so a finished PR sat green for 29 hours
-- **SHA:** n/a   **DATE:** 2026-10-02   **STATUS:** open
+- **SHA:** a75e022   **DATE:** 2026-10-02   **STATUS:** closed
 - **SIGNAL:** none fired. PR #4449 — the fifth and final slice of plan #3665 — was merged only because a build session was dispatched at the plan that owned it, 29 hours after its checks went green. No red check, no notification, no stale-PR sweep caught it: the PR was `MERGEABLE`, `CLEAN`, not a draft, unlabelled, both required checks passing. The absence of a signal IS the finding here — every net we have watches for red, and this failure mode is green.
 - **ROOT CAUSE:** `pipeline.yml` triggers on `[opened, synchronize, reopened, ready_for_review, edited]`; the `arm auto-merge` job armed on `["opened","reopened","ready_for_review","synchronize"]`. The set difference is one action, `edited` — and pull-request runs are `cancel-in-progress` per branch, so when an `edited` event lands seconds after `opened`, it cancels the `opened` run and the only run that reaches the arm job is the single action the job refused to arm on. `edited` is not exotic: `types:` carries it so a corrected PR *title* can re-run commitlint (no other event fires), and `scripts/ship.sh` **fires one deliberately** as #4168's recovery path when a late draft run cancelled the real `verify`. The repo's own fix for one stranding bug hands a PR straight into this one. Both runs on #4449 sit on head sha `25de3c0f`, which is what rules out `synchronize`; the PR was opened ready (no `hold-merge`), which rules out `ready_for_review`; `edited` is what is left.
-- **PREVENTION:** gate — `tests/arch/workflows.spec.ts` → "can arm on every pull_request action this workflow triggers on": every action in `types:` must appear in the arm allowlist unless named in a `deliberatelyUnarmable` list (empty today, and an entry there costs a deliberate line with a reason). Plus `edited` added to the allowlist. **Not landed yet** — `.github/workflows/**` is protected and the App token has no `workflows` permission, so GitHub rejects the push; the verified diff and a one-paste command are on #4477, which stays `open` here until that merges. The ledger entry is the half that survives regardless: **an unarmed green PR is not waiting on anything, it is stranded** — check `arm auto-merge`'s conclusion before assuming a quiet PR is in flight.
-- **SIDE QUESTS:** two generalizations worth their own look, both → docs/IDEAS.md. (1) Any allowlist that must mirror a list elsewhere in the same file is a drift waiting to happen; `workflow-lint.mjs` could check the class rather than this one instance. (2) We have no net for a green PR that stops moving — #4351 is the same symptom from a rate-limit cause, so this is now twice. A sweep over open PRs whose checks are green and whose auto-merge is unarmed would have caught both in minutes instead of a day.
+- **PREVENTION:** gate — `tests/arch/workflows.spec.ts` → "can arm on every pull_request action this workflow triggers on": every action in `types:` must appear in the arm allowlist unless named in a `deliberatelyUnarmable` list (empty today, and an entry there costs a deliberate line with a reason). Plus `edited` added to the allowlist. **Landed** — #4477 boarded platter #4548 (`a75e022`, 2026-10-04): `edited` is in the arm allowlist and the spec is on `main` (verified 2026-10-16, `.github/workflows/pipeline.yml` and `tests/arch/workflows.spec.ts` both carry it). This entry stayed `STATUS: open` from the 2nd to the 16th with the fix already merged, so `incident-scan.mjs` named it on every `ship.sh` run and in every digest for two weeks (a stale status, not a missing fix — the platter landing did not touch the ledger). The ledger entry is the half that survives regardless: **an unarmed green PR is not waiting on anything, it is stranded** — check `arm auto-merge`'s conclusion before assuming a quiet PR is in flight.
+- **SIDE QUESTS:** two generalizations worth their own look, both → docs/IDEAS.md. (1) Any allowlist that must mirror a list elsewhere in the same file is a drift waiting to happen; `workflow-lint.mjs` could check the class rather than this one instance. (2) We have no net for a green PR that stops moving — #4351 is the same symptom from a rate-limit cause, so this is now twice. A sweep over open PRs whose checks are green and whose auto-merge is unarmed would have caught both in minutes instead of a day. **Built 2026-10-16** as `scripts/stuck-pr-scan.mjs` (see the entry "A green, armed PR sat blocked for 5 days behind a check suite that never ran a job") — and its first live scan found #4939 unarmed for 187 hours.
 
 ### A mount declared before its volume existed turned 16 consecutive merges to main red
 - **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed

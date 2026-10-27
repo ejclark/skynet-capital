@@ -28,6 +28,7 @@ describe("dockerignore — research shelf ships to prod", () => {
       "docs/research/events/crwv-2026-11-10-print.md",
       "docs/research/nvda-aug-2026-print.md",
       "docs/research/multi-symbol-sweep.md",
+      "docs/research/convictions/ai-dip-2026-10.md",
       "docs/research/forward-tests.md",
       "docs/research/forward-tests/legacy.md",
       "docs/research/forward-tests/fomc-2026-10-28.md",

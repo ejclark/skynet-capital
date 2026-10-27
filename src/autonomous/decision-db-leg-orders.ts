@@ -11,7 +11,8 @@ import type { OptionLegIntent, OrderResult, Side } from "../domain/types.js";
  * NOT EXISTS reaches a database that already exists. Keyed by the leg's own id, so a replayed
  * record maps nothing twice. Written from the result's leg order ids (`OrderResult.legOrders`,
  * whatever the order became) on both the bots and the app side, because both stores are filled by
- * `record`/`recordBatch` from the same `DecisionRecord`.
+ * `record`/`recordBatch` from the same `DecisionRecord` — and from a late settlement's leg ids, for a
+ * spread recorded `working` before the broker's answer listed its legs (`decision-db-settlements.ts`).
  */
 const LEG_ORDERS_SQL = `
   CREATE TABLE IF NOT EXISTS option_order_legs (
@@ -37,7 +38,10 @@ export interface LegOrders {
    *  fill that lands after the result was written still joins. A contract the order's legs never
    *  named, or an id that is the order's own, maps nothing: an id is only ever joined to a leg the
    *  decision itself placed. */
-  write(result: OrderResult | undefined, legs: readonly OptionLegIntent[]): void;
+  write(
+    result: Pick<OrderResult, "orderId" | "legOrders"> | undefined,
+    legs: readonly OptionLegIntent[],
+  ): void;
   /** Intent id → OCC symbol → leg order id, for every option intent of one decision. */
   forDecision(decisionId: number): ReadonlyMap<number, ReadonlyMap<string, string>>;
   find(legOrderId: string): OptionOrderLeg | undefined;

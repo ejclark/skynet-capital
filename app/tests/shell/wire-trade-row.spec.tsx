@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { orderTime } from "../../src/live/order-facts";
 import type { WireTrade } from "../../src/live/wire";
 import { TradeRow } from "../../src/shell/wire-trade-row";
 
@@ -118,8 +119,43 @@ describe("TradeRow", () => {
     expect(bars[1]).not.toHaveAttribute("aria-valuenow");
   });
 
+  // #4650 — an option reads as the account's Activity reads it: the contract in words, never the
+  // broker's OCC string; a bot's spread is one row, its per-share net beside its cash once.
+  it("names a contract in words rather than its broker symbol", () => {
+    renderRow({ symbol: "CRWV261106P00085000", display: "CRWV $85 PUT · 6 NOV 26" });
+    expect(screen.getByText("CRWV $85 PUT · 6 NOV 26")).toBeInTheDocument();
+    expect(screen.queryByText("CRWV261106P00085000")).not.toBeInTheDocument();
+  });
+
+  it("shows a spread once, in words, with its net cash beside its per-share price", () => {
+    renderRow({
+      symbol: "",
+      display: "NVDA $185/$200 CALL SPREAD · 13 NOV 26",
+      quantity: 1,
+      price: "$3.35",
+      net: "$335.00 paid",
+    });
+    expect(screen.getByText("NVDA $185/$200 CALL SPREAD · 13 NOV 26")).toBeInTheDocument();
+    expect(screen.getByText("$3.35")).toBeInTheDocument();
+    expect(screen.getByText("net $335.00 paid")).toBeInTheDocument();
+  });
+
   it("never lets a human trade's row claim reasoning that isn't there", () => {
     renderRow({ kind: "human", who: "Eric", whoId: "eric" });
     expect(screen.getByRole("button")).toBeDisabled();
+  });
+  // #5257 / #5104: the day's divider carries the date, so the row keeps only its time — and on the
+  // account cards' clock, so one fill shows one time on both screens.
+  it("shows the fill's time as the account card's clock writes it, never the date", () => {
+    const at = "2026-10-06T14:31:00.000Z";
+    const { container } = renderRow({ at, when: "Oct 6, 2:31p" });
+    const when = container.querySelector(".wire-when");
+    expect(when?.textContent).toBe(orderTime({ at }));
+    expect(when?.textContent).toBe("10:31 AM ET");
+  });
+
+  it("falls back to the server's own words when the row carries no instant", () => {
+    const { container } = renderRow({ at: undefined as unknown as string, when: "2:30p" });
+    expect(container.querySelector(".wire-when")?.textContent).toBe("2:30p");
   });
 });

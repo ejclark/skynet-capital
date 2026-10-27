@@ -42,8 +42,8 @@ fails costs them more trust than a control that is greyed with a reason.
   your account — Sauron is not yours to trade" at the top of the ticket.
 - **5 (fixed in 2d)** — promises that did not exist: "click a symbol for its fill timeline" (gone);
   Thesis markers linked `#act-<id>` anchors that existed only on `/accounts` (they now open the
-  page's own Activity at the order's row); `/u/:id` had no Activity (it has one now,
-  `app/src/routes/u.$id.activity.tsx`).
+  page's own Ledger at the order's row); `/u/:id` had no list of its orders (it has its Ledger
+  now, `app/src/routes/u.$id.ledger.tsx`).
 - **6 (fixed in 2a/2d)** — the rail always said "← Leaderboard"; the page now has its own head
   (`app/src/shell/account-head.tsx`) and the topbar's Leaderboard tab is the way back.
 - **8 (fixed, #3807 slices 2e and 3b-4)** — Thesis Subscribe's reason lived only in `title` and
@@ -64,26 +64,26 @@ fails costs them more trust than a control that is greyed with a reason.
 3. `/app/u/sauron` — the footer reads only "as of <time>"; the retired fill-timeline promise is
    gone. **WHEN the page promises an interaction, the app shall have a target for it.** _Fixed —
    dead end 5 (#3807 slice 2d)._ Judge: can this reader tell what to do next in ten seconds?
-4. `/app/u/sauron/decisions` — Heartbeat: is the bot alive, what each playbook concluded on its
-   last pass, the passes that placed no trade. **WHEN a viewer reads a bot's passes, the app shall
-   name them Heartbeat, as the Profile page does, and gloss its own words where they appear.**
-   Judge: does a first-time reader understand "past the guards"?
+4. `/app/u/sauron/playbooks` — Playbooks: is the bot checking the market (the strip on top), one
+   card per playbook with its state and its week drawn as a lane on the strip's clock (▲/▼ where
+   it traded, "none missed" counted from the week), and every check folded behind the strip
+   (#5073). **WHEN a viewer reads a bot's checks, the app shall name the section Playbooks, as the
+   Profile page does, and gloss its own words where they appear.** Judge: does a first-time reader
+   understand "past the guards"?
 5. `/app/u/sauron/thesis` — the thesis, its markers, a disabled Subscribe cluster, each reason in
    a sentence under the buttons. **WHEN a control is disabled, the app shall show its reason as
    visible text, not only in a title.** _Fixed — #3807 slice 2e._ Judge: does this reader know why
    Subscribe is off?
-6. `/app/u/sauron` — the page's head: Overview · Activity · Pulse · Heartbeat · Thesis — the
+6. `/app/u/sauron` — the page's head: Overview · Ledger · Pulse · Playbooks · Thesis — the
    switch, not "← Leaderboard". **WHEN a viewer is on an account's page, the app shall offer that
-   account's activity beside its heartbeat.** _Fixed — dead end 5 (#3807 slice 2d)._ Judge: can
+   account's ledger beside its playbooks.** _Fixed — dead end 5 (#3807 slice 2d)._ Judge: can
    this reader find what the bot actually did?
-7. `/app/u/sauron/activity` — Sauron's Activity: every order it placed, newest first — what, at
-   what price, and why. **WHEN a viewer opens a bot's Activity, the app shall list every order it
-   placed, newest first.** Judge: can this reader find what the bot actually did? _(Added
-   2026-09-29, #3816 slice 9.)_
+7. `/app/u/sauron/ledger` — Sauron's Ledger: every order it placed, newest first — what, at
+   what price, and why. **WHEN a viewer opens a bot's Ledger, the app shall list every order it
+   placed, newest first.** Judge: can this reader find what the bot actually did?
 8. `/app/u/sauron/pulse` — Sauron's Pulse: the equity curve, streaks, and realized P/L by week —
    how bad the bad week was. **WHEN a viewer asks how a bot's week went, the app shall show its
-   realized P/L by week.** Judge: can this reader tell how the bot's week went? _(Added
-   2026-09-29, #3816 slice 9.)_
+   realized P/L by week.** Judge: can this reader tell how the bot's week went?
 
 Journey map: [`maps.md`](maps.md#bot-watcher). Findings: [`friction-ledger.md`](friction-ledger.md).
 

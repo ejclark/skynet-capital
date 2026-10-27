@@ -15,6 +15,10 @@ export interface AdmissionIssue {
   issue_dependencies_summary?: { blocked_by?: number };
   /** GitHub's sub-issue counts; the started-plan cap reads `completed` (#4393 criterion 6). */
   sub_issues_summary?: { total?: number; completed?: number };
+  /** The parent issue's API URL — the cap's "finishing a started plan" exemption reads it. */
+  parent_issue_url?: string;
+  /** A started plan's open sub-issues, attached by `readOpenPlans` — what `holdsCapSeat` reads. */
+  openSubIssues?: ReadonlyArray<{ number: number; labels?: readonly Label[] }>;
   user?: { login?: string };
 }
 
@@ -39,6 +43,8 @@ export interface AdmissionDeps {
   comments?: (n: number) => Array<{ body?: string }>;
   comment?: (n: number, body: string) => unknown;
   log?: (line: string) => void;
+  /** #6191: issue → the open platter that closes it; the claim lanes read GitHub without it. */
+  readBoarded?: () => ReadonlyMap<number, number>;
 }
 
 export const QUEUE_MARKER: string;
@@ -51,11 +57,16 @@ export function admitBuild(opts: {
   mode: AdmissionMode;
   /** The board's Waiting column (`waitingPlans`); the started-plan cap is skipped without it. */
   waiting?: readonly AdmissionIssue[];
+  interactive?: boolean;
 }): AdmissionVerdict;
 /** A `plan` issue with no closed sub-issue and no `next-slice` — the only kind the plan cap refuses. */
 export function isFreshPlan(issue: AdmissionIssue | undefined): boolean;
 /** The open plans the board shows in Waiting (same `statusForIssue` as the column). */
 export function waitingPlans<T extends AdmissionIssue>(openPlans?: readonly T[]): T[];
+/** A started plan holds a cap seat only while a lane could pull its next work (2026-10-18). */
+export function holdsCapSeat(plan: AdmissionIssue | undefined): boolean;
+/** The parent issue's number from `parent_issue_url`, or null. */
+export function parentNumberOf(issue: AdmissionIssue | undefined): number | null;
 /** Every open `plan` issue over REST, paginated. */
 export function readOpenPlans(readAll?: (path: string) => unknown[]): AdmissionIssue[];
 /** The Waiting list, and the issue with its sub-issue counts filled from the plan list. */
@@ -64,7 +75,10 @@ export function startedPlanInputs(
   openPlans?: readonly AdmissionIssue[],
 ): { issue: AdmissionIssue; waiting: AdmissionIssue[] };
 /** The pullable issues (`pullable`, labels.mjs) in pick order: fast-track, rank class, oldest. */
-export function pullQueue<T extends AdmissionIssue>(readyIssues: readonly T[]): T[];
+export function pullQueue<T extends AdmissionIssue>(
+  readyIssues: readonly T[],
+  opts?: { interactive?: boolean },
+): T[];
 /** The first `pullQueue` issue the gate admits now, or null (#4393: pullable issues only). */
 export function nextAdmissible<T extends AdmissionIssue>(
   readyIssues: readonly T[],
@@ -96,6 +110,7 @@ export function checkAdmission(opts: {
   inFlight?: readonly AdmissionIssue[];
   mode: AdmissionMode;
   waiting?: readonly AdmissionIssue[];
+  interactive?: boolean;
 }): AdmissionVerdict;
 /** One issue over REST; throws on a PR number or an unreadable row. */
 export function readIssue(
@@ -103,12 +118,25 @@ export function readIssue(
   exec?: (cmd: string, args: string[]) => string,
 ): Required<Pick<AdmissionIssue, "number" | "title" | "state" | "body" | "labels">> &
   AdmissionIssue;
+/** #5266: the pull rule again over a fresh read — a blocker linked after the payload; fails closed. */
+export function recheckPullable(
+  issue: AdmissionIssue,
+  read?: (n: number) => AdmissionIssue,
+  boarded?: () => ReadonlyMap<number, number>,
+): string | null;
+/** #6191: issue → the open platter that closes it, from the open PRs; fail-open to an empty map. */
+export function readBoarded(
+  list?: () => ReadonlyArray<{ number?: number; body?: string | null; head?: { ref?: string } }>,
+  log?: (line: string) => void,
+): Map<number, number>;
 export interface AdmissionCliIO {
   readMode?: AdmissionDeps["readMode"];
   readInFlight?: () => AdmissionIssue[];
   readReady?: () => AdmissionIssue[];
   readIssue?: (n: number) => AdmissionIssue;
   readPlans?: () => AdmissionIssue[];
+  /** Why a plan has nothing to build (#5707, `readPickupHold`); inject it, or plans read GitHub. */
+  readHold?: (issue: AdmissionIssue) => string | null;
   print?: (line: string) => void;
   printErr?: (line: string) => void;
 }

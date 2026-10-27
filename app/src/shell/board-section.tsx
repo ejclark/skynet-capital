@@ -30,8 +30,11 @@ import {
   toggleSymbolScope,
   unsearchedSymbols,
 } from "../live/research";
+import { FilterChip } from "../ui";
 import { EventHorizon } from "./event-horizon";
 import { FacetRow } from "./facet-row";
+import { SymbolFitFor } from "./symbol-fit-for";
+import { SymbolRecapFor } from "./symbol-recap-for";
 
 /**
  * RESEARCH'S "BOARD" SECTION (#738 phase 6c originally; split out of `research.tsx` into its own
@@ -186,18 +189,21 @@ export function CallBoard({
                   </a>
                   <span className="rx-call-text">{row.call}</span>
                   <span className="rx-call-meta">
-                    <span className="rx-chip" title="horizon">
+                    <span className="rx-chip" title={`horizon: ${row.horizon}`}>
                       {row.horizon}
                     </span>
                     {row.confidence ? (
-                      <span className="rx-chip rx-conf" title="stated confidence">
+                      <span
+                        className="rx-chip rx-conf"
+                        title={`stated confidence: ${row.confidence}`}
+                      >
                         {row.confidence}
                       </span>
                     ) : null}
                     {age ? (
                       <span
                         className={`rx-chip rx-assessed num${age.stale ? " rx-stale" : ""}`}
-                        title="ledger's last assessment date"
+                        title={`ledger's last assessment date: ${call.lastAssessed}${age.stale ? ` · stale (${age.days}d)` : ""}`}
                       >
                         assessed {call.lastAssessed}
                         {age.stale ? ` · stale (${age.days}d)` : ""}
@@ -356,11 +362,10 @@ export function ResearchFilters({
             const selected = scope.includes(entry.symbol);
             return (
               <span key={entry.symbol} className="rx-symbol-wrap">
-                <button
-                  type="button"
+                <FilterChip
                   className="rx-symbol"
-                  aria-pressed={selected}
-                  onClick={() => toggleSymbol(entry.symbol)}
+                  pressed={selected}
+                  onPress={() => toggleSymbol(entry.symbol)}
                 >
                   <span className="rx-symbol-name">{entry.symbol}</span>
                   {entry.next ? (
@@ -368,7 +373,7 @@ export function ResearchFilters({
                   ) : (
                     <span className="rx-symbol-next">no dated event</span>
                   )}
-                </button>
+                </FilterChip>
               </span>
             );
           })}
@@ -377,6 +382,9 @@ export function ResearchFilters({
     </>
   );
 }
+
+/** How many scoped symbols lead with a recap — a watchlist of twenty is a list, not twenty cards. */
+const RECAPS_SHOWN = 3;
 
 /** R&D's grid, from the calendar's slice (#3977 slice 5) — or, on a server from before it, the
  *  shelf. The day lens never lacks a row (`callForLens` falls back to the headline), so the calls
@@ -592,6 +600,14 @@ export function useBoardView({
           </p>
         </header>
         <ResearchFilters data={data} query={query} onChange={setFilter} />
+        {/* The by-symbol view (#4807 slice 4): naming a symbol in the filter — a chip, or sym: —
+            leads with its recap before the calls and documents it scopes. */}
+        {filter.symbols.slice(0, RECAPS_SHOWN).map((sym) => (
+          <SymbolRecapFor key={sym} symbol={sym} />
+        ))}
+        {/* The fit finder (#4469 slice 4): which strategies the named symbol fits — one symbol,
+            the first, so the panel never doubles the recap list. */}
+        {filter.symbols[0] ? <SymbolFitFor symbol={filter.symbols[0]} /> : null}
         <CallBoard
           data={data}
           filter={filter}

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { gitSince } from "../../scripts/comms-scan.mjs";
 
 /**
  * The landing meter (#456) — the picture-first redesign's own scoreboard.
@@ -140,5 +141,29 @@ describe("the landing meter — the table the digest folds in", () => {
     expect(lines[0]).toContain("| PR | picture | lane |");
     expect(lines[2]).toContain("| #601 |");
     expect(lines.filter((l) => l.startsWith("| #"))).toHaveLength(7);
+  });
+});
+
+describe("the landing meter — a window that starts at an exact moment (#5056)", () => {
+  it("keeps a date's meaning: merged after the end of that day", () => {
+    expect(gitSince("2026-10-09")).toBe("2026-10-09T23:59:59Z");
+  });
+
+  it("takes an instant with a zone, so a page answered at 16:42 starts the next reel at 16:42", () => {
+    expect(gitSince("2026-10-10T16:42:00-05:00")).toBe("2026-10-10T21:42:00Z");
+    expect(gitSince("2026-10-10T21:42:07.123Z")).toBe("2026-10-10T21:42:07Z");
+  });
+
+  it("refuses a time with no zone, which git would read in whatever zone the runner is in", () => {
+    expect(() => gitSince("2026-10-10T16:42:00")).toThrow(/ISO instant with a zone/);
+  });
+
+  it("refuses an impossible instant on the command line before reading anything", () => {
+    expect(() =>
+      execFileSync("node", ["scripts/comms-scan.mjs", "--since=2026-10-10T25:99Z", "--offline"], {
+        cwd: process.cwd(),
+        stdio: "pipe",
+      }),
+    ).toThrow();
   });
 });

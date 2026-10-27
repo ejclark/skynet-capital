@@ -32,6 +32,16 @@
   line-height: 1.5;
 }
 
+/* What the playbook trades on, as research runs it (#4808): a quoted rule, set off by its edge. */
+.pb-pair-signal {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .pb-card-triggers {
   margin: 0;
   display: grid;
@@ -212,9 +222,8 @@
   flex: 1;
 }
 
-/* The symbols filter (#4649): chips from the card's own basket, many on at once. Pressed carries a
-   ✓ in a fixed slot as well as the accent border, so the state is never hue alone (the chart
-   studies' idiom, chart-section.css). */
+/* The symbols filter (#4649): `FilterChip`s from the card's own basket, many on at once; the ✓ and
+   the pressed ring are filter-chip.css's. */
 .pb-symbols {
   margin: 0;
   padding: 0;
@@ -236,30 +245,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.pb-symbols .railctl {
-  width: auto;
-  padding: 5px 10px 5px 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-
-.pb-symbols .railctl::before {
-  content: "";
-  display: inline-block;
-  width: 1.1em;
-  text-align: center;
-}
-
-.pb-symbols .railctl[aria-pressed="true"] {
-  border-color: var(--accent);
-}
-
-.pb-symbols .railctl[aria-pressed="true"]::before {
-  content: "✓";
 }
 
 .pb-symbols-hint {
@@ -286,28 +271,6 @@
   font-size: 12.5px;
   font-weight: 400;
   color: var(--muted);
-}
-
-/* "Subscribe as" in the Playbooks section's own head (#3807 slice 2a — it left the rail with the
-   rail): a labelled row of chips under the heading, wrapping at a phone's width. */
-.pb-subscribe {
-  border: 0;
-  margin: 0 0 12px;
-  padding: 0;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-.pb-subscribe .rail-label {
-  margin: 0 8px 0 0;
-  padding: 0;
-  float: left;
-}
-.pb-subscribe .railctl {
-  width: auto;
-  white-space: nowrap;
 }
 
 /* The selected account's own numbers on this playbook (#3665 slice 3). Its own bordered block, so
@@ -365,8 +328,363 @@
   grid-column: 1 / -1;
 }
 
+/* Who started the bots' closed trades (#4450 slice 4): one cell per initiator — stacked at phone
+   width, three across once there is room. Rows differ by their words, never hue. It lives on the
+   book's Balance section now (#5493 slice 3); `balance.css` sets its margin there. */
+.pb-initiators {
+  margin: 0 0 12px;
+}
+
+.pb-initiators-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
 .pb-metrics-empty {
   margin: 0;
   font-size: 12px;
+  color: var(--muted);
+}
+
+/* The Store by strategy (#4469 slice 3b). A strategy card holds the owner's own pairs first, the
+   strategy in one line, then a row per ticker. A row is set off by a hairline, never a second
+   card, so a phone scrolls one card per strategy. The status word rides with its glyph; nothing
+   here means anything by hue (a standing reader is red/green colorblind). */
+.pb-yours {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pb-yours-h {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.pb-pairs {
+  display: flex;
+  flex-direction: column;
+}
+
+.pb-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.pb-pair-h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.pb-pair-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pb-pair-call,
+.pb-pair-note,
+.pb-pair-facts {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.pb-pair-note,
+.pb-pair-facts {
+  color: var(--muted);
+}
+
+.pb-pair-facts a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.pb-pair-rules > summary,
+.pb-subscribe-disclosure > summary,
+.pb-folded > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 0;
+}
+
+.pb-pair-rules[open] > summary {
+  margin-bottom: 6px;
+}
+
+.pb-pair-rules[open],
+.pb-subscribe-disclosure[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pb-folded {
+  border-top: 1px solid var(--border);
+}
+
+/* The ticker picker (#4469 slice 3b part 2, `shell/playbook-ticker-picker.tsx`): one button on a
+   strategy card opens a bottom sheet over every ticker the strategy runs on. A native modal pinned
+   to the bottom edge, as the calendar sheet is (`calendar-head.css`); no padding on the dialog's
+   own box, so a tap that lands on it (not a child) is the backdrop — the one tap that closes it. */
+.pb-strategy .pb-pick-open {
+  width: auto;
+  align-self: flex-start;
+  min-height: 44px;
+}
+
+.pb-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85dvh;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: var(--bg);
+  color: var(--text);
+  overflow: auto;
+}
+
+.pb-sheet[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.pb-sheet::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+
+.pb-sheet-grip {
+  width: 40px;
+  height: 4px;
+  margin: 8px auto 2px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.pb-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 16px 12px;
+}
+
+.pb-sheet-h {
+  margin: 0;
+  font-size: 15px;
+}
+
+.pb-sheet-back {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pb-sheet-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pb-sheet-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* A row you can take is a full-width button (≥44px to hit); one you cannot is the same button,
+   dimmed and struck from the tab order, with its reason in words beneath — never a tooltip. */
+.pb-sheet-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pb-sheet-pick:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.pb-add-ticker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.pb-add-ticker-row {
+  display: flex;
+  gap: 8px;
+}
+
+.pb-add-ticker-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  text-transform: uppercase;
+}
+
+.pb-add-ticker-row .btn {
+  width: auto;
+  white-space: nowrap;
+}
+
+.pb-sheet-done {
+  margin: 0 16px calc(16px + env(safe-area-inset-bottom));
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pb-sheet[open] {
+    animation: pb-sheet-rise 180ms ease-out;
+  }
+}
+
+@keyframes pb-sheet-rise {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+/* A cleared preflight reads as a full sentence led by ✓, a refused one by –: the glyph and the
+   words carry it, so this only sets the weight. */
+.pb-preflight {
+  font-weight: 600;
+}
+
+/* An owner's conviction and a strategy's allocation (#4469 slice 3c part 3b). Each is a status line
+   in the owner's block with one control under it, and a form that opens in place — the same shape
+   Edit uses, so a phone scrolls one block, not a second surface. The ◆ / ◇ glyph and the words
+   carry the state; nothing here means anything by hue. */
+.pb-conviction,
+.pb-allocation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pb-conviction-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.pb-conviction-fields legend {
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.pb-conviction-fields textarea {
+  resize: vertical;
+}
+
+/* "Steered by" on a pair row, with the view's scorecard (#5482 slice 5). Each outcome is a glyph AND
+   a word; hue never carries it alone (docs/BRAND.md → Accessibility). */
+.pb-steered {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.pb-steered > summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.pb-steered-view {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.pb-steered-count {
+  white-space: nowrap;
+}
+
+.pb-steered-claims {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.pb-steered-claim {
+  display: grid;
+  grid-template-columns: 3.4em 1fr;
+  column-gap: 8px;
+}
+
+.pb-steered-claim > .pb-steered-mark {
+  font-weight: 600;
+}
+
+.pb-steered-claim p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.pb-steered-claim .pb-steered-says {
+  color: var(--fg);
+}
+
+.pb-steered-note {
+  margin: 6px 0 0;
   color: var(--muted);
 }

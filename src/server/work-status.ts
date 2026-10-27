@@ -33,7 +33,7 @@ const COMMENT_CHARS = 500;
 const COMMENTS_KEPT = 5;
 const LABELS_KEPT = 12;
 const TIMELINE_PAGES = 3;
-const CACHE_TTL_MS = 5 * 60_000;
+const WORK_STATUS_CACHE_TTL_MS = 5 * 60_000;
 export const MAX_ISSUES_PER_LOOKUP = 5;
 
 export const QUOTED_NOTE =
@@ -247,7 +247,7 @@ export function createWorkStatusReader(
     return Promise.all(
       wanted.map(async (n) => {
         const hit = cache.get(n);
-        if (hit && now - hit.at <= CACHE_TTL_MS) return hit.value;
+        if (hit && now - hit.at <= WORK_STATUS_CACHE_TTL_MS) return hit.value;
         try {
           const value = await readOne(n);
           // Only a real answer is cached — a GitHub blip retries on the next question.

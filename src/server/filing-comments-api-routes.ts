@@ -18,7 +18,8 @@ import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-s
  *
  * Never GitHub: see `filing-comments-form.ts` for why the deps carry no issue client at all.
  */
-const SUBMIT_CAP_BYTES = 2_048;
+/** UTF-8 bytes (#6075): a 1,500-character comment can be up to 4,500 bytes plus its JSON. */
+const SUBMIT_CAP_BYTES = 8_192;
 
 async function serveSubmit(
   req: IncomingMessage,
@@ -48,8 +49,9 @@ async function serveSubmit(
     sendJson(res, 200, removeFilingComment(issueNumber, removeId, authorId, deps));
     return;
   }
-  // Form-bounds only — submitFilingComment owns the real length rule.
-  const text = boundedString(body?.text, 1_500);
+  // Shape only — submitFilingComment owns the length rule, so an over-long comment hears "Keep it
+  // to N characters", never "malformed" (#6291); SUBMIT_CAP_BYTES already bounds the size.
+  const text = typeof body?.text === "string" ? body.text : undefined;
   if (text === undefined) {
     sendJson(res, 400, { ok: false, error: "malformed comment body" });
     return;

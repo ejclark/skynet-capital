@@ -1,5 +1,7 @@
 import type { ReactElement } from "react";
+import { marketSession } from "../live/market-session";
 import { TIF_LABELS, type TicketTimeInForce, tifNote } from "../live/ticket";
+import { useNow } from "./market-session";
 
 /**
  * TIME IN FORCE (#3407 P1 slice 2; parity study row 13) — Day / GTC as one segmented control on
@@ -15,13 +17,18 @@ export function TimeInForceField({
   fallback,
   value,
   onChange,
+  now,
 }: {
   /** What the server will send when the member hasn't picked. */
   readonly fallback: TicketTimeInForce;
   readonly value: TicketTimeInForce | undefined;
   readonly onChange: (next: TicketTimeInForce) => void;
+  /** Pins the market clock in specs; the wall clock otherwise — a Day order placed after the
+   *  close belongs to the next session, and the note says so (#6257). */
+  readonly now?: Date;
 }): ReactElement {
   const effective = value ?? fallback;
+  const ticking = useNow();
   return (
     <fieldset className="ticket-nav-group tif-field">
       <legend className="ticket-nav-label">Time in force</legend>
@@ -37,7 +44,7 @@ export function TimeInForceField({
           </button>
         ))}
       </div>
-      <span className="seg-why">{tifNote(effective)}</span>
+      <span className="seg-why">{tifNote(effective, marketSession(now ?? ticking))}</span>
     </fieldset>
   );
 }

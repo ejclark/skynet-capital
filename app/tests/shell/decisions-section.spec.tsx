@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { DecisionCycle } from "../../src/live/desk";
 import { CycleRow, GUARDS_GLOSS } from "../../src/shell/decisions-section";
 
@@ -81,6 +81,33 @@ describe("CycleRow", () => {
     expect(screen.getByText("S2-NVDA · aggressive")).toBeInTheDocument();
   });
 
+  // #4469 criterion 14: the owner reads "the wheel on CRWV", never `CRWV-WHEEL`.
+  it("names a pair in its chip and its reason by what it does, never by its id", () => {
+    render(
+      <CycleRow
+        cycle={cycle({
+          outcomes: [
+            {
+              symbol: "NVDA",
+              side: "buy",
+              quantity: 10,
+              action: "placed",
+              reason: "S1-NVDA window open (standard): buy the run-up",
+              playbook: "S1-NVDA",
+              playbookMode: "standard",
+            },
+          ],
+        })}
+      />,
+    );
+    open();
+    expect(screen.getByText("the pre-print run-up on NVDA · standard")).toBeInTheDocument();
+    expect(
+      screen.getByText("“The pre-print run-up on NVDA window open (standard): buy the run-up”"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/S1-NVDA/)).not.toBeInTheDocument();
+  });
+
   // #885: "at this time, we do not show what playbooks others are using".
   it("draws no playbook chip on a bot the viewer does not own", () => {
     render(
@@ -104,6 +131,46 @@ describe("CycleRow", () => {
     open();
     expect(screen.getByText("“panic fade”")).toBeInTheDocument();
     expect(screen.queryByText(/S2-NVDA/)).not.toBeInTheDocument();
+  });
+
+  // #5043: the playbook's retire rule rides its own field, beside the order's own falsifier, and
+  // only on the owner's view (the server withholds it from anyone else as well).
+  describe("a playbook's retire rule", () => {
+    const wheelCycle = cycle({
+      outcomes: [
+        {
+          symbol: "CRWV",
+          side: "sell",
+          quantity: 1,
+          action: "placed",
+          reason: "a cash-secured put",
+          expectation: "CRWV stays above $80 to 2026-11-06",
+          forecast: {
+            direction: "up",
+            invalidator: "CRWV settles below $80 on 2026-11-06",
+            retireRule: "The playbook retires if its net P/L is below 0 on 2027-01-29.",
+          },
+        },
+      ],
+    });
+
+    it("follows the order's own falsifier on the owner's view", () => {
+      render(<CycleRow cycle={wheelCycle} />);
+      open();
+      expect(screen.getByText(/proves it wrong: CRWV settles below \$80/)).toBeInTheDocument();
+      // The order's falsifier ends before the playbook's sentence starts — never a run-on.
+      expect(screen.getByText(/proves it wrong/).closest("p")).toHaveTextContent(
+        "Expected: CRWV stays above $80 to 2026-11-06 — proves it wrong: CRWV settles below $80 " +
+          "on 2026-11-06. The playbook retires if its net P/L is below 0 on 2027-01-29.",
+      );
+    });
+
+    it("is never drawn on a bot the viewer does not own", () => {
+      render(<CycleRow showPlaybooks={false} cycle={wheelCycle} />);
+      open();
+      expect(screen.getByText(/proves it wrong: CRWV settles below \$80/)).toBeInTheDocument();
+      expect(screen.queryByText(/retires/)).not.toBeInTheDocument();
+    });
   });
 
   it("renders guardDelta as its own line when the outcome was clamped", () => {
@@ -153,6 +220,95 @@ describe("CycleRow", () => {
     expect(screen.getByText("limit not reached — canceled")).toBeInTheDocument();
     expect(screen.queryByText("SELL 1 CRWV")).not.toBeInTheDocument();
     expect(screen.queryByText("unfilled")).not.toBeInTheDocument();
+  });
+
+  // #4650: what the broker said about the result, beside the label — the owner's alone.
+  // #4650: an order that never traded is told ONCE, in the broker's words, in place of the generic
+  // label — on the owner's view only, and never added to a fill.
+  describe("the broker's words on a result", () => {
+    const notTraded = (status: string, brokerReason?: string) =>
+      cycle({
+        outcomes: [
+          {
+            symbol: "CRWV",
+            side: "sell",
+            quantity: 1,
+            action: "rejected",
+            reason: "sell a put a month out",
+            contract: "SELL 1 CRWV $85 PUT · 6 NOV 26 · limit $2.10",
+            resultStatus: status,
+            ...(status === "unfilled" ? { resultLabel: "limit not reached — canceled" } : {}),
+            ...(brokerReason ? { brokerReason } : {}),
+          },
+        ],
+      });
+    const said = (container: HTMLElement) =>
+      container.querySelectorAll(".cycle-fill, .cycle-broker");
+
+    it("says once, in the broker's words, why an order never traded", () => {
+      const { container } = render(
+        <CycleRow cycle={notTraded("unfilled", "limit $2.10 not reached in 15s; canceled")} />,
+      );
+      open();
+      expect(
+        screen.getByText("not filled — broker: limit $2.10 not reached in 15s; canceled"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("limit not reached — canceled")).not.toBeInTheDocument();
+      expect(said(container)).toHaveLength(1);
+    });
+
+    it("reads the same way for a rejection", () => {
+      const { container } = render(
+        <CycleRow cycle={notTraded("rejected", "insufficient buying power")} />,
+      );
+      open();
+      expect(
+        screen.getByText("not filled — broker: insufficient buying power"),
+      ).toBeInTheDocument();
+      expect(said(container)).toHaveLength(1);
+    });
+
+    it("adds nothing to a fill, whatever words arrive with it", () => {
+      render(
+        <CycleRow
+          cycle={cycle({
+            outcomes: [
+              {
+                symbol: "CRWV",
+                side: "sell",
+                quantity: 2,
+                action: "placed",
+                reason: "sell puts a month out",
+                fill: "1 @ $2.12",
+                resultStatus: "filled",
+                brokerReason: "partial fill; remainder canceled",
+              },
+            ],
+          })}
+        />,
+      );
+      open();
+      expect(screen.getByText("1 @ $2.12")).toBeInTheDocument();
+      expect(screen.queryByText(/broker/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/partial fill/)).not.toBeInTheDocument();
+    });
+
+    it("keeps the generic label on a non-owner's view, and when the broker said nothing", () => {
+      render(
+        <CycleRow
+          cycle={notTraded("unfilled", "limit $2.10 not reached in 15s; canceled")}
+          showPlaybooks={false}
+        />,
+      );
+      open();
+      expect(screen.getByText("limit not reached — canceled")).toBeInTheDocument();
+      expect(screen.queryByText(/broker/)).not.toBeInTheDocument();
+      cleanup();
+      render(<CycleRow cycle={notTraded("unfilled")} />);
+      open();
+      expect(screen.getByText("limit not reached — canceled")).toBeInTheDocument();
+      expect(screen.queryByText(/broker/)).not.toBeInTheDocument();
+    });
   });
 
   it("keeps a part-filled order's 'may still fill' warning beside its fill", () => {

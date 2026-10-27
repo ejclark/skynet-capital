@@ -15,23 +15,47 @@ export interface PlaybookTraitView {
   readonly claim: string;
 }
 
+/** A study's measured moves before its past reports — mirrors `PrintStretches` in
+ *  `src/playbooks/playbook.ts`. Trading days before the report; `from` > `to`, 0 = report day. */
+export interface PrintStretchesView {
+  readonly source: string;
+  readonly era: string;
+  readonly reports: number;
+  readonly stretches: readonly {
+    readonly from: number;
+    readonly to: number;
+    readonly meanPct: number;
+    readonly rose: number;
+  }[];
+}
+
 export interface PlaybookStoreCardView {
   readonly id: string;
   readonly symbol: string;
   /** The whole basket; `symbol` is its first entry. */
   readonly symbols: readonly string[];
+  /** The names the symbol chips choose among when the playbook claims no basket (`symbols` is
+   *  empty): the shadow scout's ten (#4535 slice 3a). */
+  readonly pickFrom?: readonly string[];
+  /** It sends no order to a broker: no budget, mode or compounding to set, and none shown. */
+  readonly movesNoCapital?: true;
   /** The registry's citation, and its research-doc route when it names one (#3623). */
   readonly evidence: string;
   readonly evidenceHref?: string;
   /** The probe's date window and per-mode target exposure — absent for a tactical playbook. */
   readonly window?: string;
   readonly size?: Readonly<Record<PlaybookMode, number>>;
+  /** The study's move in each stretch before a report (#5432) — sent only with `window`. */
+  readonly stretches?: PrintStretchesView;
   readonly traits: readonly PlaybookTraitView[];
   readonly description: string;
   readonly enter: string;
   readonly exitTakeProfit: string;
   readonly exitCutLosses: string;
   readonly hold: string;
+  /** Labelled rows drawn after Hold, in order — absent on a card that needs none. Mirrors
+   *  `PlaybookCardNote` in `src/discovery/playbook-store.ts`. */
+  readonly notes?: readonly { readonly label: string; readonly text: string }[];
   readonly metrics: readonly never[];
   /** Enabled subscriptions to this playbook across every account (#3970) — a bare count, never
    *  who. Absent when the deployment has no subscription store wired. */
@@ -51,6 +75,19 @@ export interface SubscriptionView {
   /** Owner opt-in to compound this subscription's budget with its own realized P/L (issue
    *  #3527 slice 3) — absent means off, the flat-budget default. */
   readonly compoundAllocation?: boolean;
+  /** The owner's conviction on this pair (#4469 slice 3c): why, and the market day it is checked.
+   *  Absent = none stated. A failed check stops the pair's NEW entries; exits never stop. */
+  readonly conviction?: ConvictionView;
+  /** The conviction view this subscription points at (#5482). A pointed subscription carries no
+   *  `conviction`: its check is the view's, read from the row's `steeredBy` when the ids match. */
+  readonly convictionId?: string;
+}
+
+/** An owner's conviction — mirrors `SubscriptionConviction` in `src/domain/types.ts`. */
+export interface ConvictionView {
+  readonly reason: string;
+  /** `YYYY-MM-DD`. */
+  readonly checkOn: string;
 }
 
 /** The delegation fog (#1707) — mirrors `DelegationGateView`. The server owns the copy. */
@@ -68,8 +105,134 @@ export interface BotsOnlyGateView {
   readonly note: string;
 }
 
+/** How a pair's evidence reads — mirrors `EvidenceStatus` in `src/playbooks/pair-table.ts`. */
+export type PairStatus =
+  | "researched"
+  | "conviction"
+  | "screened"
+  | "stand-aside"
+  | "not-studied"
+  | "cant-run";
+
+/** A claim's outcome against its own dated falsifier — mirrors `ClaimOutcome` in
+ *  `src/playbooks/claim-score.ts` (#5482 slice 5). */
+export type ClaimOutcome = "pass" | "fail" | "pending" | "untestable";
+
+/** A conviction view that steers a pair, and its claims' scorecard — mirrors `SteeredByView` in
+ *  `src/observatory/steered-by-view.ts`. */
+export interface SteeredByView {
+  readonly convictionId: string;
+  readonly title: string;
+  readonly owner: string;
+  readonly checkOn: string;
+  readonly scorecard: {
+    readonly pass: number;
+    readonly fail: number;
+    readonly pending: number;
+    readonly untestable: number;
+  };
+  readonly claims: readonly {
+    readonly label: string;
+    readonly statement: string;
+    readonly outcome: ClaimOutcome;
+    readonly dueOn?: string;
+    readonly scoredOn?: string;
+    readonly basis: string;
+    readonly backsThisPair: boolean;
+  }[];
+}
+
+/** One pair (a strategy on a ticker) on a strategy card — mirrors `PairRowView` in
+ *  `src/observatory/playbook-store-json-view.ts`. `id` is the playbook id every subscription and
+ *  write keys on (criterion 8): the client looks it up in `cards`, never builds or splits it. */
+export interface PairRowView {
+  readonly id: string;
+  readonly symbols: readonly string[];
+  readonly status: PairStatus;
+  /** "✓ researched, weakened" — glyph plus words, "· past its shelf date" once stale. */
+  readonly statusLabel: string;
+  readonly stale: boolean;
+  readonly call: string;
+  readonly confidence?: "high" | "medium" | "low";
+  readonly measuredExit?: string;
+  readonly number?: string;
+  readonly verdictOn?: string;
+  readonly shelfOn?: string;
+  readonly checkOn?: string;
+  readonly reason?: string;
+  readonly studyHref?: string;
+  readonly subscription?: SubscriptionView;
+  /** Why a NEW subscription would be refused, in the server's own sentence (criterion 9). */
+  readonly subscribeRefusal?: string;
+  /** The study does not back this pair, but its strategy runs on conviction: a NEW subscription
+   *  needs the owner's reason and check day (criterion 2). `subscribeRefusal` assumes they are given. */
+  readonly needsConviction?: true;
+  /** "the call spread trades NVDA on this bot; the run-up yields it" — a hand-off, not a refusal. */
+  readonly handOff?: string;
+  /** "not trading — the call spread owns NVDA" — the bots skip this held pair. */
+  readonly notTrading?: string;
+  /** The conviction view that steers this pair, with its scorecard (#5482 slice 5). */
+  readonly steeredBy?: SteeredByView;
+  /** A ✓ that is not a clean ✓: below the house bar, or another pair's verdict borrowed. */
+  readonly qualifier?: "weakened" | "borrowed";
+  /** "Buy NVDA's run-up before its earnings report" — the call in plain words, no date (#5444). */
+  readonly plainCall?: string;
+  /** "Research signal: …" or "No research signal (unvalidated): …" — what it trades on (#4808). */
+  readonly researchSignal?: string;
+  /** The study's record in plain words, with the count it rests on when it is one (#5444). */
+  readonly past?: PastRecordView;
+  /** R&D's call for this ticker's next earnings report — mirrors `PairForecast` (#5444). */
+  readonly forecast?: PairForecastView;
+  /** Enabled subscriptions to this pair across every account — a bare count (#3970). */
+  readonly subscribers?: number;
+}
+
+/** Mirrors `PastRecord` in `src/playbooks/pair-table.ts`. */
+export interface PastRecordView {
+  readonly line: string;
+  readonly up?: number;
+  readonly of?: number;
+  readonly era?: string;
+}
+
+/** Mirrors `PairForecast` in `src/server/pair-forecast.ts`: absent `call` = no call yet. */
+export interface PairForecastView {
+  readonly reportOn: string;
+  readonly dateSet: boolean;
+  readonly call?: string;
+  readonly confidence?: string;
+  readonly wrongIf?: string;
+  readonly href?: string;
+}
+
+/** One strategy and the pairs it runs on, ✓ first — mirrors `StrategyCardView`. */
+export interface StrategyCardView {
+  readonly strategy: string;
+  /** Read as "<name> on <TICKER>": lower-case, with its article ("the wheel"). */
+  readonly name: string;
+  readonly instrument: "shares" | "options";
+  readonly summary: string;
+  /** The name in plain words, under it on the list and the card (#5445). */
+  readonly line?: string;
+  /** It sends no order to a broker, so the card takes no allocation (#4535 slice 3a). */
+  readonly movesNoCapital?: true;
+  readonly pairs: readonly PairRowView[];
+  /** The account's allocation for this strategy, once its owner sets one (#4469 slice 3c). */
+  readonly allocation?: StrategyAllocationView;
+}
+
+/** What the account gives one strategy, and what its tickers' budgets add up to inside it. */
+export interface StrategyAllocationView {
+  readonly capitalAllocated: number;
+  /** The budgets set on this strategy's pairs, on or paused; compounded gains ride on top. */
+  readonly budgeted: number;
+}
+
 export interface PlaybookStoreView {
   readonly cards: readonly PlaybookStoreCardView[];
+  /** One card per strategy, a row per pair — what the Store draws (#4469 slice 3b). `cards` stays
+   *  beside it as the rules and numbers each row joins on its pair id. */
+  readonly strategies: readonly StrategyCardView[];
   readonly capitalUnderManagement: number;
   readonly canManage: boolean;
   readonly delegation: DelegationGateView;
@@ -95,10 +258,29 @@ export const subscribeRequest = (input: {
   readonly id: string;
   readonly playbookId: string;
   readonly mode: PlaybookMode;
-  readonly capitalAllocated: number;
+  /** Absent only for a playbook that moves no capital (`PlaybookStoreCardView.movesNoCapital`). */
+  readonly capitalAllocated?: number;
   readonly symbols?: readonly string[];
   readonly compoundAllocation?: boolean;
+  /** Required by a pair the study does not back (`PairRowView.needsConviction`). */
+  readonly conviction?: ConvictionView;
 }): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/subscribe", input);
+
+/** State a conviction on a pair the account holds, or set its next check day: the whole conviction
+ *  each time (#4469 slice 3c). The server refuses a check day that is not still to come. */
+export const convictionRequest = (input: {
+  readonly id: string;
+  readonly playbookId: string;
+  readonly conviction: ConvictionView;
+}): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/conviction", input);
+
+/** What the account gives one strategy; `capitalAllocated: null` clears it. The server refuses an
+ *  allocation below the budgets already set inside it. */
+export const allocationRequest = (input: {
+  readonly id: string;
+  readonly strategy: string;
+  readonly capitalAllocated: number | null;
+}): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/allocation", input);
 
 /** Re-tune an existing subscription without touching whether it runs (#4649). Every field is the
  *  whole new value: `capitalAllocated: null` is uncapped, `symbols: []` is the whole basket. */
@@ -121,3 +303,39 @@ export const setSubscriptionEnabledRequest = (input: {
   readonly playbookId: string;
   readonly enabled: boolean;
 }): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/set-enabled", input);
+
+/** What the Store's preflight says about a NEW subscription at this budget (criterion 9) — mirrors
+ *  `src/server/subscriptions-preflight-route.ts`. Never a write: Subscribe says the same sentence. */
+export type PreflightAnswer =
+  | {
+      readonly ok: true;
+      /** The pair sells options: its contract is priced from a live chain, so out of session there
+       *  is no cash to show and the answer says it is judged at the open. */
+      readonly options?: true;
+      /** What one contract ties up right now, and the share of the budget that leaves idle. */
+      readonly oneContractCash?: number;
+      readonly idleShare?: number;
+    }
+  | { readonly ok: false; readonly error: string };
+
+/** Ask what Subscribe would say, before submitting. A read the owner taps for, not one the page
+ *  makes: the live half spends broker calls. */
+export async function preflightRequest(input: {
+  readonly id: string;
+  readonly playbookId: string;
+  readonly mode: PlaybookMode;
+  readonly capitalAllocated: number;
+  /** The form has a conviction filled in, which a pair needing one is judged as having. */
+  readonly conviction?: boolean;
+}): Promise<PreflightAnswer> {
+  const query = new URLSearchParams({
+    id: input.id,
+    playbookId: input.playbookId,
+    mode: input.mode,
+    capital: String(input.capitalAllocated),
+    ...(input.conviction ? { conviction: "1" } : {}),
+  });
+  const res = await fetch(`/api/playbook-store/preflight?${query}`, { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`preflight ${res.status}`);
+  return (await res.json()) as PreflightAnswer;
+}

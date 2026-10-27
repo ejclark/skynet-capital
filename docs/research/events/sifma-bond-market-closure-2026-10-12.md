@@ -415,6 +415,7 @@ means nothing can act on any of it.
 | 2026-09-05 | 37 | **Initial research.** Shape reproduces from **four** primaries: SIFMA US 2026 card `Columbus Day` / `Monday, October 12, 2026` with an **empty** note paragraph (full closure); NYSE grid nine holidays/yr 2026–2028, **zero** `Columbus`/`October 12` strings in 133 cells; **new** — `federalreserve.gov` K.8 and `frbservices.org` both list `Columbus Day \| October 12` for 2026–2030, sourcing the federal-holiday leg. Annual fixture (2027: `Monday, October 11, 2027`). **All three SIFMA panels dark, two reasons**: US/UK `Columbus Day`, **Japan `Health and Sports Day`** — a calendar coincidence, unlike 11-11's currency-scope propagation. **Measured (Yahoo daily bars w/ volume, ratio = session vol ÷ trailing-20 median):** Columbus n=24/33 — LQD **0.395×**, TLT **0.481×**, IEF 0.565×, SHY 0.767×, SPY **0.712×**; paired gaps TLT **−0.346** (21/24, p=0.0003), LQD −0.329, IEF −0.196, **SHY −0.051 (p=0.84 — the effect is concentrated, not universal)**. Sibling's Columbus figures reproduce to 3dp. **Placebo corrected**: all-**Monday** TLT gap **−0.004** (n=1,105), not the all-Wednesday +0.039 the sibling used — effect survives a matched control. **Headline: the inherited magnitude decayed.** Era split (12/12): TLT **0.235× → 0.730×** (2025: **0.976×**), gap −0.416 → −0.140; **LQD deepened 0.505× → 0.282×**, gap **−0.549**, 12/12 and **10/10** last decade (p=0.002); IEF 0.521× → 0.593×. 2026 guard = credit ~0.28×, IEF ~0.57×, TLT ~0.73–0.80×. **72h-gap test inverted**: TLT next-session \|move\| **0.824×** after Columbus vs **1.107×** after Veterans (baseline 0.995×) — the longer cash gap is the quieter one; deferred repricing refuted again. No Friday front-load (D-1 gap +0.075, p=0.541) where Veterans has +0.239 (16/18). Direction flat: SPY up **20/33 (60.6%)**, p=0.296. Adjacency — peers n/a (`symbols: []`); macro: **nothing at D-1**, auction week 10-06/07/08 + FOMC minutes 10-07 before, **confirmed** high `cpi-2026-10-14` at **D+2**, `retail-sales`/`ppi` 10-15, opex 10-16, blackout 10-17 → **this is the clean instance; 11-11 was contaminated by a D-1 CPI**; VIX **14.53** (^VIX 2026-09-04); geopolitical/policy: `imf-world-bank-annual-meetings-2026-10-12` opens same day (Bangkok) + `g20-fmcbg-bangkok-2026-10-15` — a reading trap, unpriceable by cash Treasuries until 10-13. CME + treasurydirect not attempted; no Fedwire sentence extractable from either Fed page — futures/settlement legs unstated. No new dated adjacent event discovered; no calendar proposal. | Initial stance set: **stand aside**, and **correct rather than inherit** the sibling's execution guard — the depth risk is in credit, not long Treasuries. Registers **FT-sifma-bond-market-closure-2026-10-12-1**, **-2** (which contradicts the sibling on purpose) and **-3**. | 2026-10-05 |
 | 2026-09-28 | 14 | **Pulse check, no stance change.** Cadence band **transitioned low:15+ → low:0+** as daysUntil crossed 15 — the band-transition trigger for this session (`assessment-cadence.json`). Macro since 09-05, both closed out on their own ledgers: Fed **hiked 25bp to 3.75–4.00%** on 09-16 (unanimous, first hike in 3 years, SEP 2026 median hawkish-surprised to 4.1%) and Aug core CPI printed **+0.3%** on 09-11 (a tenth hot vs the 65%-priced 0.2%). Neither touches `symbols: []` or a calendar-keyed playbook — stand-aside unaffected. VIX **14.53 → 14.87** (2026-09-25 close), +0.34pt, no regime shift (<3pt threshold). Corridor (±5d of 10-12) recomputed from the calendar directly: **34** adjacent ids, strong set unchanged at **cpi-2026-10-14** / **retail-sales-2026-10-15** (both already confirmed high, no new confirmed high/critical entry — no material trigger on that check). New same-date sibling **pjm-iras-ferc-deadline-2026-10-12** (medium, estimate, FERC ER26-3515) joined the calendar since the last row; already canonical, nothing to propose. `--on-date=2026-10-12` re-checked: still 3 entries, none new. SIFMA/NYSE schedule **not re-fetched this pulse** — no signal of a revision; standing on the 09-05 primaries. | None — stand aside on the date holds; execution guard unchanged (credit ~0.28×, IEF ~0.57×, TLT ~0.73–0.80×). | 2026-10-05 |
 | 2026-10-05 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 15.3 (+0.4pt since last), band unchanged (low:0+), 38 adjacent event(s) tracked, new in corridor since last pulse: `bobl-5y-auction-2026-10-13`, `eia-weekly-petroleum-status-2026-10-15`, `iea-omr-2026-10-14`, `uk-monthly-gdp-2026-10-15` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-12 |
+| 2026-10-12 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 14.8 (-0.5pt since last), band unchanged (low:0+), 40 adjacent event(s) tracked, new in corridor since last pulse: `opec-momr-2026-10-13`, `warsh-imf-fireside-2026-10-15` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-19 |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -429,3 +430,79 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-05
 <!-- probe-ref: {"symbols":{},"vix":15.31,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-12
+<!-- probe-ref: {"symbols":{},"vix":14.84,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-10-13, D+1).** Scored from daily bars pulled fresh from the same Yahoo chart endpoint
+`scripts/research/market-data.mjs` uses (volume field read directly, cache busted first:
+`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), plus 5-minute SPY bars to
+confirm the equity session. Volume ratio = session volume ÷ the median volume of the 20 sessions before it
+(2026-09-14 → 2026-10-09). The date label stays **estimate** in the header; this lane does not self-confirm.
+
+| Measure | 2026-10-12 | Line | Result |
+|---|---|---|---|
+| **LQD volume ratio** | **0.206×** (6.98M vs 33.85M median) | ≤ 0.50× | **FT-1 pass** |
+| **TLT volume ratio** | **0.311×** (15.35M vs 49.30M median) | > 0.60× | **FT-2 kill** |
+| SPY volume ratio (control) | 0.420× (18.64M vs 44.42M median) | — | thin too |
+| TLT / LQD vs SPY | 0.311 / 0.206 vs 0.420 | kill switch: ≥ SPY | not fired; gaps −0.109 / −0.214 |
+| SPY session | 79 five-minute bars, 09:30 → 16:00 ET | full session | no closure or early close |
+| VIX close | 15.21 (14.84 on 10-09) | ≥ 3pt from 14.53 | not fired |
+| 10-12 close-to-close | LQD +0.166%, TLT +0.090%, SPY −0.060% | — | ordinary |
+| **FT-3** (TLT 10-13 \|move\| ≤ 1.5×) | session not yet traded | settles 10-20 | **still open**, below |
+
+**What happened vs the stance.** The date and the credit leg held; the Treasury leg did not.
+
+- **The credit guard worked, with room to spare.** LQD printed **0.206×**, below even the modern median
+  the stance used (0.282×) and level with the thinnest of the last ten Columbus ratios quoted in leg 6
+  (lowest 0.20). The execution advice — size credit ETFs as if a quarter of normal depth is there — was right.
+- **The "TLT has decayed to ~0.73–0.80×" claim was wrong for 2026.** TLT printed **0.311×**, nowhere near
+  the 0.60× line and below every Columbus ratio in the quoted last five (0.37 – 0.98). The sibling ledger's
+  pooled "bond ETFs at roughly half depth" guard (0.46×–0.49×) was closer than this ledger's correction;
+  the actual print was thinner than either. One observation does not re-fit the era split, but it does
+  withdraw the "TLT is no longer the thin one" line from the 2026 guard.
+- **The equity control was also thin, which blunts the attribution.** SPY ran **0.420×** against its quoted
+  last five (0.75 / 0.78 / 0.94 / 0.82 / 1.12), so 2026 was a quiet day for everything, not only the bond
+  ETFs. The paired gaps still came out negative (TLT −0.109, LQD −0.214) and the `≥ SPY` kill switch did
+  not fire, but the TLT gap is smaller than the −0.140 quoted for the modern era. A thin SPY plausibly
+  means part of the 0.311× is a federal-holiday or low-participation effect rather than the cash-bond
+  closure alone. Consolidated daily volume read about six hours after the close and could be revised
+  slightly; the margins here (0.311 vs 0.60, 0.206 vs 0.50) are far beyond any such revision.
+- **No stance kill switch fired.** No SIFMA revision was observed (the SIFMA page was not re-fetched this run), NYSE traded a full session,
+  `cpi-2026-10-14` is still dated 10-14, VIX moved +0.7 points, and no holiday-keyed playbook exists.
+- **The tape was ordinary.** No directional call existed and none was needed; every close-to-close move
+  was under 0.2%.
+
+**FT-3 is left open on purpose.** It scores TLT's 2026-10-13 move, and that session had not traded when
+this ran (02:33 UTC on 10-13); filling the cell now would be falsification, and an `unscoreable` verdict
+would end the re-dispatch that exists to catch it. The scanner re-opens it as `forward-test-due` on
+2026-10-20. Baselines are pinned here so nothing depends on a cache: TLT closed **78.05** on 10-12 and
+**77.98** on 10-09; the 1.5× line is measured against the median |close-to-close| of the 20 sessions
+ending 2026-10-12.
+
+**FT-3 scored (2026-10-20, `forward-test-due`).** TLT's 2026-10-13 session — the first after the 72-hour
+closure gap — closed **78.37** against 78.05 on 10-12: **+0.410%**, a |move| of **1.06×** the median
+|close-to-close| (0.387%) of the 20 sessions ending 2026-10-12 (2026-09-15 → 2026-10-12), under the 1.5× line
+(0.580%). Daily bars re-pulled fresh from the Yahoo chart endpoint with the instrument cache busted; the
+adjusted-close series gives 1.04×. **FT-3 pass** — the cash-bond closure did not defer price discovery into
+the next session. The evidence was never the hit rate (base rate ≈ 67%) but the inverted Columbus-vs-Veterans
+ordering, which one ordinary day neither strengthens nor weakens; the sibling
+[11-11 ledger](sifma-bond-market-closure-2026-11-11.md) is free to read it as one more Columbus observation.
+For the record, the 10-12 TLT volume now reads 15.44M (15.35M at close-out, a 0.6% consolidation revision),
+so the FT-2 ratio of 0.311× is unchanged to three places. The assessment, stance and other verdicts above are
+untouched.
+
+Forward tests: `FT-sifma-bond-market-closure-2026-10-12-1` **pass**, `-2` **kill**, `-3` **pass** (scored 2026-10-20, above), all in
+[`forward-tests/sifma-bond-market-closure-2026-10-12.md`](../forward-tests/sifma-bond-market-closure-2026-10-12.md).
+The `-2` kill moves to the [sweep doc's kill list](../multi-symbol-sweep.md). The annual fixture continues at
+[sifma-bond-holiday-close-2027-10-11](sifma-bond-holiday-close-2027-10-11.md), and the sibling
+[sifma-bond-market-closure-2026-11-11](sifma-bond-market-closure-2026-11-11.md) should read this print before
+its own FT-1 (TLT below 0.80×) scores.
+
+**Last assessed:** 2026-10-13
+<!-- probe-ref: {"symbols":{},"vix":15.21,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-20
+<!-- probe-ref: {"symbols":{},"vix":18.44,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","consumer-credit-2026-10-07","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","fomc-minutes-2026-10-07","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->

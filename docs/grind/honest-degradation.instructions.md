@@ -1,6 +1,7 @@
 ---
 name: honest-degradation
 description: make one eye degrade honestly — a missing or unreadable input is a named state it prints, never a silent pass
+model: opus
 effort: high
 isolation: worktree
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
@@ -10,8 +11,9 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
 `node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/honest-degradation.instructions.md`.
-`effort: high` because every site is a judgment (is this input optional, required, or
-fixture-only?) and a wrong call either manufactures a red or preserves a silent pass.
+`model: opus` and `effort: high` because every site is a judgment (is this input optional, required, or
+fixture-only?) and a wrong call either manufactures a red or preserves a silent pass —
+`docs/COMPUTE.md`'s floor table puts judgment at `opus`/`high`.
 `isolation: worktree` because the chore edits code and a spec and commits.
 
 Items are eye scripts (`"scripts/journey-scan.mjs"`), one per item, grouped so a script and its
@@ -31,8 +33,9 @@ reader can tell which.
 
 ## Steps
 
-1. `git fetch origin main && git checkout -B eyes/honest-<basename> origin/main`, then
-   `bash scripts/worktree-setup.sh`.
+1. `bash scripts/wt-start.sh eyes/honest-<basename>` — fetch, branch off `origin/main`,
+   `node_modules` and one status line, in one call. After it, one plain command per call — never a
+   `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md` rail 2).
 2. Read the whole script, then every `catch {` and every `if (!existsSync(...)) return` in it.
    For each site write down which case it is:
    - **(a) Optional input.** The check still means what it says without this input (a digest dir

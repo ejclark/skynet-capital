@@ -1,5 +1,4 @@
 import { RESTRICT_DRAWDOWN_PCT } from "../risk/risk-ladder.js";
-import { equityDrawdown } from "./equity-sparkline.js";
 import type { EquitySample } from "./history-store.js";
 
 /**
@@ -53,11 +52,54 @@ function unmeasured(label: string, word: string): VitalGauge {
  * breaker's own reading.
  */
 export function lossHeadroomGauge(samples: readonly EquitySample[], atIso: string): VitalGauge {
-  const upToDecision = samples.filter((s) => s.at <= atIso);
-  const dd = equityDrawdown(upToDecision);
-  if (!dd) return unmeasured("Loss headroom", "not yet measured");
+  return lossHeadroomGauges(samples)(atIso);
+}
 
-  const ddFraction = dd.ddPct / 100;
+/**
+ * `lossHeadroomGauge` for many decisions over one history: the samples are sorted once and the
+ * running drawdown kept per prefix, so each decision is a binary search rather than a filter and
+ * a sort of every sample. The Wire asks once per bot row, and at 180 days of five-minute history
+ * (~61k samples) that per-row re-scan made `/api/wire` take ~1.2 s and +71 MB (#4619).
+ *
+ * Same numbers as filtering then `equityDrawdown`: the sort is by code unit — the very comparison
+ * the "up to and including `atIso`" cut makes — so the samples at or before `atIso` are exactly a
+ * prefix, ties keep their stored order (a stable sort either way), and for the one shape every
+ * stored `at` has (`toISOString()`) code-unit order is the `localeCompare` order `equityDrawdown`
+ * sorts by.
+ */
+export function lossHeadroomGauges(
+  samples: readonly EquitySample[],
+): (atIso: string) => VitalGauge {
+  const sorted = [...samples].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  // ddPctUpTo[i]: the worst peak-to-trough dip, in percent, across sorted[0..i] — equityDrawdownOf's
+  // running fold, kept at every step instead of only the last.
+  const ddPctUpTo = new Float64Array(sorted.length);
+  let peak = Number.NEGATIVE_INFINITY;
+  let worst = 0;
+  sorted.forEach((s, i) => {
+    if (s.equity > peak) peak = s.equity;
+    const dipPct = peak > 0 ? ((peak - s.equity) / peak) * 100 : 0;
+    if (dipPct > worst) worst = dipPct;
+    ddPctUpTo[i] = worst;
+  });
+  return (atIso) => {
+    // How many samples sit at or before `atIso` — the first index whose `at` is past it.
+    let lo = 0;
+    let hi = sorted.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if ((sorted[mid] as EquitySample).at <= atIso) lo = mid + 1;
+      else hi = mid;
+    }
+    // equityDrawdown's own null: fewer than two samples measure nothing.
+    return headroomGauge(lo < 2 ? null : (ddPctUpTo[lo - 1] as number));
+  };
+}
+
+/** The gauge for a drawdown in percent; null — under two samples — is the honest empty state. */
+function headroomGauge(ddPct: number | null): VitalGauge {
+  if (ddPct === null) return unmeasured("Loss headroom", "not yet measured");
+  const ddFraction = ddPct / 100;
   const cap = RESTRICT_DRAWDOWN_PCT;
   const fraction = Math.max(0, Math.min(1, 1 - ddFraction / cap));
   return {
@@ -83,5 +125,27 @@ export function unmeasuredVitals(): Omit<WireTradeVitals, "lossHeadroom"> {
 
 /** The full four-gauge block for one decision, `lossHeadroom` live, the rest honestly empty. */
 export function wireTradeVitals(samples: readonly EquitySample[], atIso: string): WireTradeVitals {
-  return { lossHeadroom: lossHeadroomGauge(samples, atIso), ...unmeasuredVitals() };
+  return wireTradeVitalsFor(samples)(atIso);
+}
+
+/** `wireTradeVitals` for every decision on one history — sorted once (`lossHeadroomGauges`). */
+export function wireTradeVitalsFor(
+  samples: readonly EquitySample[],
+): (atIso: string) => WireTradeVitals {
+  const headroom = lossHeadroomGauges(samples);
+  return (atIso) => ({ lossHeadroom: headroom(atIso), ...unmeasuredVitals() });
+}
+
+/**
+ * `wireTradeVitalsFor` off a drawdown already kept as of every instant — the Pulse history fold's
+ * `drawdownPctAt`, which the server keeps up to date in memory — so the Wire reads no samples at
+ * all. Reading each page bot's whole history per request was +186 ms of `/api/wire` (#4619).
+ */
+export function wireTradeVitalsFromDrawdown(
+  drawdownPctAt: (atIso: string) => number | null,
+): (atIso: string) => WireTradeVitals {
+  return (atIso) => ({
+    lossHeadroom: headroomGauge(drawdownPctAt(atIso)),
+    ...unmeasuredVitals(),
+  });
 }

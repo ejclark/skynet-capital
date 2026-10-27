@@ -28,6 +28,7 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 const EVENTS_DIR = join(ROOT, "docs", "research", "events");
 const WEEKS_DIR = join(ROOT, "docs", "research", "weeks");
+const CONVICTIONS_DIR = join(ROOT, "docs", "research", "convictions");
 const BUDGET_FILE = join(ROOT, "research-budget.json");
 const SKIP = new Set(["TEMPLATE.md", "README.md"]);
 
@@ -48,10 +49,15 @@ export const MAX_HEADER_CHARS = 2400;
  * only stops a structural fact from reading as drift.
  */
 export const MAX_WEEK_HEADER_CHARS = 8000;
+/** A conviction's call sheet carries one row per CLAIM (#5482), so it grows the same way. */
+export const MAX_CONVICTION_HEADER_CHARS = 8000;
 /** One short line per signal, the same ceiling ship.sh checkbody puts on PR summary bullets. */
 export const MAX_BULLET = 160;
 /** An append-only ledger row is a note to the next session, not an essay. Advisory only. */
 export const MAX_LEDGER_ROW = 1200;
+
+/** The day the lint runs, as the date the scheduled-ledger count is measured from. */
+const utcToday = () => new Date().toISOString().slice(0, 10);
 
 const cellsOf = (line) =>
   line
@@ -132,6 +138,38 @@ function checkColumns(cols, problems) {
       "horizon table has no `Proves it wrong` column — every call carries a dated falsifier",
     );
   return { callAt, confAt, wrongAt };
+}
+
+/**
+ * The ledger's own call word and until-date (#4807 slice 2): `**Call:** hold until 2026-11-09`,
+ * read by src/server/research-event-calls.ts `callLineOf` into the symbol summary. ADVISORY ONLY —
+ * about 700 ledgers predate it, so a missing line is counted, never failed (the Buy-signal line
+ * above is the gated one). A line that is present but malformed is a note: the summary would
+ * ignore a word or date it cannot place and fall back to its conservative roll-up.
+ */
+export const CALL_VERBS = ["buy", "hold", "trim", "sell", "wait"];
+const CALL_LINE_ANY = /^\s*(?:[-*]\s+)?\*\*Call:\*\*\s*(.*)$/im;
+const CALL_LINE_OK = new RegExp(
+  `^(${CALL_VERBS.join("|")})\\b(?:\\s+until\\s+(\\d{4}-\\d{2}-\\d{2}))?`,
+  "i",
+);
+const isRealDay = (d) => new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+
+/** "stated" · "missing" (an upcoming event's ledger without the line) · "n/a" (past or undated). */
+function checkCallLine(md, header, today, notes) {
+  const rest = CALL_LINE_ANY.exec(header)?.[1];
+  if (rest !== undefined) {
+    const ok = CALL_LINE_OK.exec(rest.trim());
+    if (!ok)
+      notes.push(
+        `\`**Call:**\` says "${rest.trim().slice(0, 30)}" — expected ${CALL_VERBS.join(" · ")}, then "until YYYY-MM-DD"`,
+      );
+    else if (!ok[2]) notes.push("`**Call:**` states no `until YYYY-MM-DD` — how long it holds");
+    else if (!isRealDay(ok[2])) notes.push(`\`**Call:**\` until-date ${ok[2]} is not a real day`);
+    return "stated";
+  }
+  const date = /^\*\*Kind:\*\*.*?\*\*Date:\*\*\s*(\d{4}-\d{2}-\d{2})/im.exec(md)?.[1];
+  return date && date >= today ? "missing" : "n/a";
 }
 
 /** Strip authoring emphasis — a cell carries text, not markup. */
@@ -220,7 +258,10 @@ function collectNotes(md, header, notes, maxHeader = MAX_HEADER_CHARS) {
  * Lint one research document. Returns { problems, notes } — problems fail the gate (the structure
  * a reader and the /research page both depend on), notes inform (prose that has drifted long).
  */
-export function lintResearchDoc(md, { name = "doc", maxHeaderChars = MAX_HEADER_CHARS } = {}) {
+export function lintResearchDoc(
+  md,
+  { name = "doc", maxHeaderChars = MAX_HEADER_CHARS, today = utcToday() } = {},
+) {
   const problems = [];
   const notes = [];
   checkHeaderLines(md, problems);
@@ -232,7 +273,7 @@ export function lintResearchDoc(md, { name = "doc", maxHeaderChars = MAX_HEADER_
       "no decision header — add `## At a glance` (TL;DR + horizon table + signals). Without it " +
         "the /research page has nothing to promote and a reader lands on the method wall",
     );
-    return { name, problems, notes };
+    return { name, problems, notes, callLine: "n/a" };
   }
 
   if (!/\*\*TL;DR\.?\*\*/i.test(header))
@@ -250,12 +291,13 @@ export function lintResearchDoc(md, { name = "doc", maxHeaderChars = MAX_HEADER_
     problems.push("decision header has no **Signals & conditions** — the buy/sell/hold triggers");
   checkBuySignal(md, header, problems);
 
+  const callLine = checkCallLine(md, header, today, notes);
   collectNotes(md, header, notes, maxHeaderChars);
-  return { name, problems, notes };
+  return { name, problems, notes, callLine };
 }
 
 function mdFilesIn(dir) {
-  // Reached only for the weekly studies (the ledger dir is checked up front, exit 2). Optional:
+  // Reached only for the optional dirs (the ledger dir is checked up front, exit 2). Optional:
   // the ledger verdict still means what it says without them, so it is named, not failed.
   if (!existsSync(dir)) {
     console.error(`· no research dir at ${dir} — its documents were not checked`);
@@ -268,13 +310,15 @@ function mdFilesIn(dir) {
 
 /**
  * Every gated research document: the event ledgers, plus the weekly studies under
- * `docs/research/weeks/` (#1716 — same `## The call` contract, so the same eye reads both). Each
- * result carries its own path so `--candidate` can point at a real file in either directory.
+ * `docs/research/weeks/` (#1716) and the convictions under `docs/research/convictions/` (#5482: a
+ * member's view as one call-sheet row per claim). Same `## The call` contract, so the same eye
+ * reads all three. Each result carries its own path so `--candidate` can point at a real file.
  */
 function auditAll() {
   const dirs = [
     { dir: EVENTS_DIR, prefix: "", maxHeaderChars: MAX_HEADER_CHARS },
     { dir: WEEKS_DIR, prefix: "weeks/", maxHeaderChars: MAX_WEEK_HEADER_CHARS },
+    { dir: CONVICTIONS_DIR, prefix: "convictions/", maxHeaderChars: MAX_CONVICTION_HEADER_CHARS },
   ];
   return dirs.flatMap(({ dir, prefix, maxHeaderChars }) =>
     mdFilesIn(dir).map((f) => ({
@@ -300,8 +344,14 @@ function emitJson(payload, code) {
 
 if (process.argv.includes("--stdin")) {
   const md = readFileSync(0, "utf8");
-  const { problems, notes } = lintResearchDoc(md, { name: "stdin" });
-  emitJson({ problems, notes }, problems.length ? 1 : 0);
+  const todayArg = /^--today=(\d{4}-\d{2}-\d{2})$/.exec(
+    process.argv.find((a) => a.startsWith("--today=")) ?? "",
+  )?.[1];
+  const { problems, notes, callLine } = lintResearchDoc(md, {
+    name: "stdin",
+    ...(todayArg ? { today: todayArg } : {}),
+  });
+  emitJson({ problems, notes, callLine }, problems.length ? 1 : 0);
 }
 
 // The ledgers are what this eye exists to read: with no dir, "0 documents, 0 debt" is a pass over
@@ -314,9 +364,11 @@ if (!existsSync(EVENTS_DIR)) {
 const results = auditAll();
 const failing = results.filter((r) => r.problems.length > 0);
 const debt = failing.length;
+// Event ledgers only (weekly studies and convictions carry no event to hold a call until).
+const unstated = results.filter((r) => r.callLine === "missing" && !r.name.includes("/"));
 
 if (process.argv.includes("--json")) {
-  emitJson({ debt, results }, 0);
+  emitJson({ debt, results, unstatedCalls: unstated.map((r) => r.name) }, 0);
 }
 
 if (process.argv.includes("--candidate")) {
@@ -334,18 +386,30 @@ const budget = existsSync(BUDGET_FILE) ? JSON.parse(readFileSync(BUDGET_FILE, "u
 
 if (process.argv.includes("--update")) {
   const prev = Number.isFinite(budget.uncalledLedgers) ? budget.uncalledLedgers : debt;
-  const next = { uncalledLedgers: Math.min(prev, debt) };
+  const prevCalls = Number.isFinite(budget.unstatedCalls) ? budget.unstatedCalls : unstated.length;
+  const next = {
+    uncalledLedgers: Math.min(prev, debt),
+    unstatedCalls: Math.min(prevCalls, unstated.length),
+  };
   writeFileSync(BUDGET_FILE, `${JSON.stringify(next, null, 2)}\n`);
   console.log(
-    `research-budget.json updated — uncalledLedgers=${next.uncalledLedgers} (only lowers).`,
+    `research-budget.json updated — uncalledLedgers=${next.uncalledLedgers}, ` +
+      `unstatedCalls=${next.unstatedCalls} (both only lower).`,
   );
   process.exit(0);
 }
 
-console.log("🔬 Research lint — the decision-header contract on ledgers and weekly studies\n");
+console.log(
+  "🔬 Research lint — the decision-header contract on ledgers, weekly studies, convictions\n",
+);
 console.log(`  documents: ${results.length} · without a usable call sheet: ${debt}`);
 const noted = results.filter((r) => r.notes.length > 0).length;
-console.log(`  advisory notes on ${noted} document(s)\n`);
+console.log(`  advisory notes on ${noted} document(s)`);
+// Advisory ratchet (#4807 slice 2): counted against the recorded number, never an exit code.
+const recorded = Number.isFinite(budget.unstatedCalls) ? ` (recorded ${budget.unstatedCalls})` : "";
+console.log(
+  `  upcoming-event ledgers without a \`**Call:** <verb> until <date>\` line: ${unstated.length}${recorded}\n`,
+);
 for (const r of failing.slice(0, 8)) {
   console.log(`  ✗ ${r.name}`);
   for (const p of r.problems.slice(0, 3)) console.log(`      ${p}`);

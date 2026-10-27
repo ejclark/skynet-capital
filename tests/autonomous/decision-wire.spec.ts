@@ -29,6 +29,12 @@ const OPTION_REFUSALS = [
   "collateral-reserved",
 ] as const;
 
+/** Reasons taught to the dashboard after the option guards, before any bot sends them — the
+ *  subscribed-only rule (#4642 slice 10). An older dashboard has never heard of these either. */
+const LATER_REFUSALS = ["unsubscribed"] as const;
+/** Every reason a v1 dashboard never knew. */
+const V2_ONLY_REFUSALS: readonly string[] = [...OPTION_REFUSALS, ...LATER_REFUSALS];
+
 const validRecord = () => ({
   at: 1_700_000_000_000,
   personaId: "sauron",
@@ -80,11 +86,13 @@ describe("parseDecisionRecord", () => {
       expect(parsed?.playbookVerdicts).toEqual([verdict]);
     });
 
-    it("omits the field when absent or empty", () => {
+    it("omits the field when absent", () => {
       expect(parseDecisionRecord(validRecord())).not.toHaveProperty("playbookVerdicts");
-      expect(parseDecisionRecord({ ...validRecord(), playbookVerdicts: [] })).not.toHaveProperty(
-        "playbookVerdicts",
-      );
+    });
+
+    it("keeps an explicit empty list — a pass that ran no playbook (#4773)", () => {
+      const parsed = parseDecisionRecord({ ...validRecord(), playbookVerdicts: [] });
+      expect(parsed?.playbookVerdicts).toEqual([]);
     });
 
     it("fails the whole record closed on one malformed verdict", () => {
@@ -168,6 +176,26 @@ describe("parseDecisionBatch", () => {
     const reasons = batch?.records[0]?.refusals?.map((r) => r.reason);
     expect(reasons).toEqual(GUARD_REFUSAL_REASONS);
     expect(reasons).toEqual(expect.arrayContaining([...OPTION_REFUSALS]));
+  });
+
+  // #4642 slice 10 ships app-first: the dashboard keeps a refusal of an open that came from no
+  // subscribed playbook before any bot names one. Without this, the record is dropped whole.
+  it("keeps a buy refused as not from a subscribed playbook, reason and all", () => {
+    const record = {
+      ...validRecord(),
+      guardedIntents: [],
+      outcomes: [],
+      refusals: [{ intent: rawIntent, reason: "unsubscribed" }],
+    };
+
+    const batch = parseDecisionBatch({
+      kind: DECISION_BATCH_KIND_V2,
+      personaId: "sauron",
+      records: [record],
+    });
+
+    expect(batch?.records[0]?.refusals).toEqual([{ intent: rawIntent, reason: "unsubscribed" }]);
+    expect(recordWireKind(record as DecisionRecord)).toBe(DECISION_BATCH_KIND_V2);
   });
 
   it("rejects a batch mixing another persona's record into this envelope", () => {
@@ -266,9 +294,9 @@ describe("recordWireKind — v2 only when an older dashboard would misread the r
     [
       "every legacy refusal",
       legacy({
-        refusals: GUARD_REFUSAL_REASONS.filter(
-          (r) => !(OPTION_REFUSALS as readonly string[]).includes(r),
-        ).map((reason) => ({ intent: shares, reason })),
+        refusals: GUARD_REFUSAL_REASONS.filter((r) => !V2_ONLY_REFUSALS.includes(r)).map(
+          (reason) => ({ intent: shares, reason }),
+        ),
       }),
     ],
     [
@@ -322,6 +350,10 @@ describe("recordWireKind — v2 only when an older dashboard would misread the r
     [
       "an option intent that was refused",
       legacy({ refusals: [{ intent: sold, reason: "no-quote" }] }),
+    ],
+    [
+      "a share buy refused as not from a subscribed playbook",
+      legacy({ refusals: [{ intent: shares, reason: "unsubscribed" }] }),
     ],
   ])("sends %s alone on decision.v2", (_name, record) => {
     expect(recordWireKind(record)).toBe(DECISION_BATCH_KIND_V2);

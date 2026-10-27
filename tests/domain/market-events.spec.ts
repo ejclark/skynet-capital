@@ -37,6 +37,21 @@ describe("market events", () => {
       expect(nvda?.symbols).toEqual(["NVDA"]);
     });
 
+    it("keeps a moved print on the ledger it was opened under, so research never dangles", () => {
+      // META was estimated 10-28 and its ledger opened as meta-2026-10-28-print; IR then said 10-21
+      const [meta] = earningsAsEvents([
+        {
+          symbol: "META",
+          date: "2026-10-21",
+          status: "confirmed",
+          source: "IR: test",
+          ledgerId: "meta-2026-10-28-print",
+        },
+      ]);
+      expect(meta?.id).toBe("meta-2026-10-28-print");
+      expect(meta?.date).toBe("2026-10-21");
+    });
+
     it("passes status and source through untouched — the confirmed/estimate asymmetry survives", () => {
       const [nvda, mrvl] = earningsAsEvents(prints);
       expect(nvda?.status).toBe("confirmed");

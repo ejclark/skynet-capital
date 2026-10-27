@@ -14,20 +14,39 @@
  *   SKYNET_MAX_POSITION_PCT  per-position cap as a fraction of equity (default: 0.03)
  *   SKYNET_MOMENTUM_WINDOW   ticks in the momentum window (default: 20)
  *   SKYNET_PLAYBOOKS         playbook roster, "id:mode" pairs (e.g. "S1-NVDA:standard,G1-GOOG:conservative").
- *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only.
- *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3"). 0/unset (default) = dark. When
- *                            armed, and nothing organic trades on a given day, forces up to N small,
- *                            honestly-labeled BETA-SCOUT picks from whatever signal already exists —
- *                            see src/playbooks/beta-scout.ts. "3+stage" also lets the scout stage
- *                            its picks after the close for Alpaca's next open (holiday-aware) —
- *                            see autonomous-scout-staging.ts. Flip via autonomy-ops only.
- *   SKYNET_HARDCORE_BOTS     comma-separated persona ids to run in HARDCORE research mode (Eric,
- *                            2026-08-20): loosened thresholds, tranche scale-in/out, momentum
- *                            scalps, 90s cooldown, every trade carrying strategy + expectation —
- *                            volume as research data. Unset (default) = dark. Currently: sauron.
- *                            Flip via autonomy-ops only.
+ *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only. Since
+ *                            #4642 slice 10 it opens nothing on its own: a bot opens a position only
+ *                            through a playbook it is subscribed to in the Store (exits always run).
+ *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3") — NO LONGER OBEYED (#4535
+ *                            slice 4c-2). The bots only report it, so the dashboard can copy it into
+ *                            the first bot's stored settings once (slice 4c-1). The forced-pick count
+ *                            is the owner's stored `betaPicks` for that bot (Settings card, read every
+ *                            scan, slice 2b), 0 with none; after-close staging is its stored
+ *                            `betaStage` (read every staging pass, slice 4b), off with none. When
+ *                            armed, and nothing organic trades on a given day, the scout forces up to
+ *                            N small, honestly-labeled BETA-SCOUT picks from whatever signal already
+ *                            exists — see src/playbooks/beta-scout.ts — and only while the first bot
+ *                            is subscribed to BETA-SCOUT in the Store: armed AND subscribed. Staging
+ *                            places the picks after the close for Alpaca's next open (holiday-aware) —
+ *                            see autonomous-scout-staging.ts.
+ *   SKYNET_HARDCORE_BOTS     persona ids for HARDCORE research mode (Eric, 2026-08-20) — NO LONGER
+ *                            OBEYED (#4535 slice 4c-2); reported for the same one-time copy. The
+ *                            owner's per-bot switch decides, read at every `/controls` poll: loosened
+ *                            thresholds, tranche scale-in/out, momentum scalps, 90s cooldown, every
+ *                            trade carrying strategy + expectation — volume as research data. The
+ *                            build, its cooldown and its readiness gate swap together with no restart
+ *                            (slice 2c). A bot with no stored switch is standard. Currently: sauron.
+ *   SKYNET_COND_SCOUT_UNIVERSE  the shadow scout's names — NO LONGER OBEYED (slice 4c-2); the host
+ *                            bot's COND-SCOUT subscription decides (autonomous-cond-scout.ts).
  */
 import { existsSync } from "node:fs";
+import type { TraderTuning } from "../autonomous/autonomous-trader.js";
+import {
+  type ControlsState,
+  effectiveBetaPicks,
+  effectiveBetaStage,
+  effectiveMode,
+} from "../autonomous/bot-controls.js";
 import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
 import {
   armMomentumPersistence,
@@ -35,28 +54,46 @@ import {
   restoreBotsState,
   scoutStateStore,
 } from "../autonomous/bots-state-db.js";
+import { followBotsStream } from "../autonomous/bots-stream.js";
+import { createCycleWatch } from "../autonomous/cycle-watch.js";
 import type { DecisionDb } from "../autonomous/decision-db.js";
 import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
 import { houseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
-import { LiveCycleRunner } from "../autonomous/live-cycle.js";
+import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { scoutSignalsFrom } from "../autonomous/scout-stand-down.js";
+import { signalWindows } from "../autonomous/signal-windows.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
+import {
+  acceptAndKeep,
+  applyBootSubscriptions,
+  subscriptionsCache,
+} from "../autonomous/subscriptions-cache.js";
 import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import { guardAccountCollisions } from "../bots/account-guard.js";
 import { botTradingClient } from "../bots/bot-broker.js";
 import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
+import { BOTS_UNIVERSE as UNIVERSE } from "../domain/bots-universe.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { SYMBOL_FACTS } from "../domain/symbol-facts.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { parseBetaForcing } from "../playbooks/beta-scout.js";
+import { parseCondScoutUniverse } from "../playbooks/cond-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
+import { authoredPlaysHolder } from "./autonomous-authored-plays.js";
+import { authoredShadowWiring } from "./autonomous-authored-shadow.js";
 import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { bridgeReplication } from "./autonomous-bridge-replication.js";
 import { armCondScout } from "./autonomous-cond-scout.js";
+import { convictionsHolder } from "./autonomous-convictions.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
+import { ignoredEnvSettings } from "./autonomous-env-ignored.js";
+import { watchHardcore } from "./autonomous-hardcore-live.js";
+import { intradayBarsFeed } from "./autonomous-intraday-bars.js";
 import {
   type BotRoster,
   bootMissionControl,
@@ -76,13 +113,17 @@ import {
   BotOptionLevels,
   sweepOrphanOptionOrders,
 } from "./autonomous-option-wiring.js";
-import { announceRoster, announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
+import {
+  announceRoster,
+  announceScout,
+  armScoutStaging,
+  scoutSkipSymbols,
+  watchScoutPicks,
+  watchScoutStaging,
+} from "./autonomous-scout-staging.js";
+import { resumeWorkingOrders, settlementBook } from "./autonomous-settlement-wiring.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
-// The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
-// claims (CRWV, MRVL). A symbol absent here has no quote, so a persona simply never sees it —
-// adding a claim to the Prospector without adding it here is a silent no-op.
-const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"];
 const LIVE_EVAL_INTERVAL_MS = 15_000;
 const NEWS_POLL_MS = 60_000;
 
@@ -130,16 +171,36 @@ async function runLive(): Promise<void> {
   // The hook below therefore PARKS the boot fetch's own snapshot instead of dropping it, and the
   // roster replays it the moment it exists: a member's saved subscriptions are in force from this
   // process's first cycle, not 30s into it.
+  // The members' draft playbooks in a shadow test (#5457 slice 2): parked here until the runner exists.
+  const authoredShadow = authoredShadowWiring();
+  // The plays a member PROMOTED (#5457 slice 3): specs the roster builds compile for their own author's bot.
+  const promotedPlays = authoredPlaysHolder();
+  // The views members handed to their bots (#5482 slice 6c): records each bot's pointers resolve to.
+  const memberConvictions = convictionsHolder();
   let subscriptionSync: SubscriptionSync | undefined;
   let parkedSubscriptions: SubscriptionsSnapshot | undefined;
+  // Every applied snapshot is kept on the volume once it exists (below), so a boot without the
+  // dashboard trades the last subscriptions received rather than none (#4642 slice 10 review).
+  let keptSubscriptions = subscriptionsCache(undefined);
+  // Set once the scout's host roster exists: refreshes it when the owner changes the forced picks.
+  let onScoutPicksPolled: (() => void) | undefined;
+  // Set once the traders exist: swaps a bot's build when the owner flips its hardcore setting.
+  let onHardcorePolled: ((state: ControlsState) => void) | undefined;
   const { controls, bootControls, health } = await bootMissionControl(
-    (state) => void credentials.reconcile(state),
+    (state) => {
+      void credentials.reconcile(state);
+      onScoutPicksPolled?.();
+      onHardcorePolled?.(state);
+    },
     undefined,
     (cursor) => replication.onPoll(cursor),
     (snapshot) => {
-      if (subscriptionSync) subscriptionSync.accept(snapshot);
+      if (subscriptionSync) acceptAndKeep(subscriptionSync, keptSubscriptions, snapshot);
       else parkedSubscriptions = snapshot;
     },
+    (orders) => authoredShadow.accept(orders),
+    (wire) => promotedPlays.accept(wire),
+    (wire) => memberConvictions.accept(wire),
   );
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
@@ -185,23 +246,26 @@ async function runLive(): Promise<void> {
   const dataCreds = bots[0]?.credentials;
   if (!dataCreds) process.exit(1);
   dataCredsPersonaId = bots[0]?.persona.id;
-  // The live path (and ONLY the live path) runs the S2/E1 trade discipline: flat through every
-  // print, defer non-urgent entries past the open. Deliberately absent from the offline replay
-  // and from every eval — see TradeDiscipline in engine/guards.ts for why leaking it into the
-  // eval path would silently re-score readiness.
+  // The live path (and ONLY the live path) runs the S2/E1 trade discipline: no new entries in a
+  // symbol's protected window around its print (the same window its research summary shows,
+  // widened by its facts file), defer non-urgent entries past the open. Deliberately absent from
+  // the offline replay and from every eval — see TradeDiscipline in engine/guards.ts for why
+  // leaking it into the eval path would silently re-score readiness.
   const risk = {
     maxPositionPct: Number(process.env.SKYNET_MAX_POSITION_PCT ?? "0.03"),
-    discipline: { calendar: UPCOMING_PRINTS },
+    discipline: { calendar: UPCOMING_PRINTS, facts: SYMBOL_FACTS },
   };
   const playbookRoster = enabledPlaybooks(process.env);
   announceRoster(playbookRoster);
-  const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
-  const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
+  const windows = signalWindows(process.env);
+  const tracker = new MomentumTracker(windows.momentum);
+  const sentiment = new SentimentTracker(windows.sentiment);
   const universeSet = new Set(UNIVERSE);
 
   // Durable momentum/sentiment/cooldowns (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set, and
   // stamped on /data/health.json so the next deploy PROVES restore by being read (issue #1181).
   const botsStateDb = seedBotsState(process.env);
+  keptSubscriptions = subscriptionsCache(botsStateDb);
   health.restored(restoreBotsState(botsStateDb, tracker, sentiment, bots));
 
   // Constructed before the boot-time reconcile() below, so a credential rotated while this
@@ -221,9 +285,7 @@ async function runLive(): Promise<void> {
 
   const pollNews = async () => {
     try {
-      for (const article of await getNews(UNIVERSE)) {
-        sentiment.ingest(article, universeSet);
-      }
+      sentiment.ingestAll(await getNews(UNIVERSE), universeSet);
       persistSentiment(botsStateDb, sentiment);
     } catch (error) {
       console.error("[news] poll failed:", error);
@@ -246,6 +308,10 @@ async function runLive(): Promise<void> {
       .catch((error) => console.warn("[decision-db] JSONL migration failed (non-fatal):", error));
   }
   const onDecision = decisionSink(audit, decisionDb);
+  // A `working` order's late fill, beside its decision — and where the forced pick reads what its
+  // working buys filled before it sells one.
+  const settlements = settlementBook(decisionDb);
+  const onSettled = settlements.onSettled;
   const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
   const safety = new SafetyController();
@@ -261,15 +327,51 @@ async function runLive(): Promise<void> {
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
   seedDailyLossBaseline(await optionLevels.readAtBoot(bots), safety); // one read: baseline + levels
-  const botRosters = buildBotRosters(bots, playbookRoster, process.env); // issue #885
-  // #4535 slice 1b: tell the dashboard the env house roster so it can seed each bot's own
-  // subscriptions from it (uncapped, behaviour-preserving) — rides the next `/controls` poll.
+  const botRosters = buildBotRosters(
+    bots,
+    playbookRoster,
+    process.env,
+    promotedPlays.rosterFor,
+    memberConvictions.lookupFor,
+  ); // issue #885
+  // The env's forced-pick arming — parsed only to be reported below (the bots no longer obey it,
+  // #4535 slice 4c-2); the bot it runs on, the first, carries the stored count on its roster.
+  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  // Tell the dashboard the env house roster (#4535 slice 1b) and the env's other behaviour settings
+  // (slice 4c), so it can copy each into the bots' own stored settings once — behaviour-preserving,
+  // ahead of the bots no longer reading the env. Rides the next `/controls` poll.
   controls.reportHouseRoster(
     houseRosterReport(
       bots.map((bot) => bot.persona.id),
       playbookRoster.enabled,
+      {
+        hardcore: [...hardcoreRoster.envIds],
+        betaPicks: betaForcing.maxPicks,
+        betaStage: betaForcing.stageAfterClose,
+        condScoutUniverse: parseCondScoutUniverse(process.env.SKYNET_COND_SCOUT_UNIVERSE),
+      },
     ),
   );
+  // ...and its count is the owner's setting for that bot (Settings card, read every scan — #4535
+  // slice 2b); none stored is 0 and dark.
+  const scoutHostId = botRosters[0]?.bot.persona.id;
+  for (const line of ignoredEnvSettings(bootControls, {
+    hardcore: hardcoreRoster.envIds,
+    betaPicks: betaForcing.maxPicks,
+    betaStage: betaForcing.stageAfterClose,
+    hostId: scoutHostId,
+  })) {
+    console.warn(line);
+  }
+  const scoutPicks = () =>
+    effectiveBetaPicks(scoutHostId ? controls.betaPicks(scoutHostId) : undefined);
+  // ...and whether it stages after the close is the owner's switch for that bot, read every staging
+  // pass (#4535 slice 4b); none stored is off.
+  const scoutStages = () =>
+    effectiveBetaStage(scoutHostId ? controls.betaStage(scoutHostId) : undefined, scoutPicks());
+  // The 5-minute bars the dark dip-to-bounce playbooks record their would-be orders from (#5489):
+  // Alpaca's data host on the shared data credential, fetched only once a playbook asks for a name.
+  const intradayBars = intradayBarsFeed(currentCredentials);
   // What one bot trades under — at boot and on every swap: its roster, its own options level, and
   // (decision store on) its realized P/L per playbook.
   const rosterFor = (r: BotRoster) =>
@@ -278,6 +380,32 @@ async function runLive(): Promise<void> {
       optionLevels.risk(r.bot.persona.id, risk),
       decisionDb &&
         ((playbookId: string) => decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId)),
+      {
+        runsScout: scoutPicks() > 0 && r.bot.persona.id === scoutHostId,
+        intradayBars: intradayBars.barsOf,
+        // An unsubscribed playbook keeps its exits while it still owns an open position (#5609).
+        ...(decisionDb
+          ? {
+              placedBy: (playbookId: string) =>
+                decisionDb.symbolsPlacedByPlaybook(r.bot.persona.id, playbookId),
+            }
+          : {}),
+        // A conviction's check reads the pair's history off the decision store (#4469 criterion 12).
+        ...(decisionDb
+          ? {
+              ledgerOf: (playbookId: string, putStrategy: string | undefined) => {
+                const puts = putStrategy
+                  ? decisionDb.putOutcomesForPlaybook(r.bot.persona.id, playbookId, putStrategy)
+                  : { closed: 0, assigned: 0 };
+                return {
+                  realizedPl: decisionDb.realizedPlForPlaybook(r.bot.persona.id, playbookId),
+                  putsClosed: puts.closed,
+                  putsAssigned: puts.assigned,
+                };
+              },
+            }
+          : {}),
+      },
     );
   const traders: LiveBot[] = botRosters.map((botRoster) =>
     buildLiveBot(botRoster.bot, {
@@ -291,23 +419,73 @@ async function runLive(): Promise<void> {
       bootControls,
       ...(botsStateDb ? { botsStateDb } : {}),
       ...(botActivityBus ? { activityBus: botActivityBus } : {}),
+      onSettled,
     }),
   );
   botRosters.forEach(({ bot }, i) => {
     const broker = traders[i]?.broker;
     if (broker instanceof SwappableBotBroker) brokerHolders.set(bot.persona.id, broker);
   });
+  // The stream follows what the rosters trade and the bots hold (#4777): the ten names, plus a
+  // playbook's own tickers, re-subscribed in place on every swap below — never a restart.
+  const botsStream = followBotsStream({
+    stream: marketDataStream,
+    tracker,
+    universe: UNIVERSE,
+    rosters: () => botRosters,
+    wanted: authoredShadow.symbols, // a draft in its shadow test is priced too (#5457)
+    log: console.log,
+  });
+  authoredShadow.onChange(() => botsStream.refresh());
+  botsStream.refresh();
   // ONE swap path (Store change, options-level change), so every later read sees what is traded.
-  const swapIn = (i: number, next: BotRoster) => {
+  const swapIn = (i: number, next: BotRoster, tuning?: TraderTuning) => {
     botRosters[i] = next;
-    traders[i]?.trader.swapRoster(rosterFor(next));
+    traders[i]?.trader.swapRoster({ ...rosterFor(next), ...(tuning ? { tuning } : {}) });
+    botsStream.refresh();
   };
   optionLevels.follow(botRosters, swapIn);
+  const scoutPicksPolled = watchScoutPicks(scoutPicks, () => {
+    const host = botRosters[0];
+    if (host) swapIn(0, host);
+  });
+  // No broker on the host = no staging poll below, so a flip there is not announced as armed.
+  const scoutStagingPolled = traders[0]?.broker ? watchScoutStaging(scoutStages) : () => undefined;
+  onScoutPicksPolled = () => {
+    scoutPicksPolled();
+    scoutStagingPolled();
+  };
+  // The owner's hardcore switch, live (#4535 slice 2c): the persona, its order cooldown and the
+  // mode its readiness gate allows swap together, between cycles — no restart.
+  onHardcorePolled = watchHardcore({
+    ids: botRosters.map((r) => r.bot.persona.id),
+    initial: hardcoreRoster.hardcore,
+    wantedMode: (id) => effectiveMode(bootControls, id, mode),
+    report: controls.reportPersonaGate,
+    apply: (id, persona, tuning) => {
+      const i = botRosters.findIndex((r) => r.bot.persona.id === id);
+      const current = botRosters[i];
+      if (!current) return;
+      swapIn(
+        i,
+        resolveBotRoster(
+          { ...current.bot, persona },
+          playbookRoster.enabled,
+          current.subscriptions,
+          promotedPlays.rosterFor(id),
+          memberConvictions.lookupFor(id),
+        ),
+        tuning,
+      );
+    },
+  });
   // Boot-time correction (mirrors mergeRoster's "store overrides stale env" precedent): a
   // rotation that landed while this process was down is caught here, using the snapshot
   // bootMissionControl already fetched, rather than waiting up to 30s for the next live poll.
   // The shared data connections above are already wired, so this catches them too.
   await credentials.reconcile(bootControls);
+  // Orders an earlier run left working go back to the settle loop first: the sweep below may end them.
+  resumeWorkingOrders(brokerHolders, decisionDb, { scoutHost: botRosters[0]?.bot.persona.id });
   await sweepOrphanOptionOrders(brokerHolders); // our own stamped orders only, before any cycle
   // Expiries and assignments close option round trips no fill ever closes (#4642 slice 8).
   armOptionLifecycleSweep(brokerHolders, decisionDb);
@@ -318,12 +496,15 @@ async function runLive(): Promise<void> {
   // Persona (which the contract requires to be pure — "same inputs, same intents"); this is
   // stateful orchestration, same category as smoke-trade.ts, run directly against a broker so
   // its picks still flow through the SAME guards (S2/E1, position cap) and audit trail as every
-  // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off).
-  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
-  const betaForcingMaxPicks = betaForcing.maxPicks;
+  // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off), which stops new picks only:
+  // the picks it holds are still sold on the next trading day. Armed, it still opens only while its
+  // host bot is subscribed to BETA-SCOUT (#4642 slice 10).
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
-  announceScout(betaForcing, traders[0]?.personaName);
-  const managedSymbols = new Set((botRosters[0]?.enabled ?? []).flatMap((e) => e.playbook.symbols)); // traders[0]'s account
+  announceScout(
+    { maxPicks: scoutPicks(), stageAfterClose: scoutStages() },
+    traders[0]?.personaName,
+  );
+  const managedSymbols = scoutSkipSymbols(botRosters[0]); // traders[0]'s account
 
   // --- the Playbook Store bridge (issue #3595): a member's subscribe/allocate/toggle reaches
   // these already-running traders on the next `/controls` poll, in place, through `swapIn`.
@@ -331,15 +512,23 @@ async function runLive(): Promise<void> {
     bots: botRosters.map((botRoster, i) => ({
       personaId: botRoster.bot.persona.id,
       applySubscriptions: (subscriptions) =>
-        swapIn(i, resolveBotRoster(botRoster.bot, playbookRoster.enabled, subscriptions)),
+        swapIn(
+          i,
+          resolveBotRoster(
+            // The bot as it is now: a hardcore flip replaces its persona (slice 2c).
+            botRosters[i]?.bot ?? botRoster.bot,
+            playbookRoster.enabled,
+            subscriptions,
+            promotedPlays.rosterFor(botRoster.bot.persona.id),
+            memberConvictions.lookupFor(botRoster.bot.persona.id),
+          ),
+        ),
     })),
     onApplied: (version, at) => {
       // The scout skips symbols a bot's own playbooks manage. Mutated in place rather than
       // rebuilt: `buildScoutDeps` below closes over THIS set, so a replacement would never be seen.
       managedSymbols.clear();
-      for (const entry of botRosters[0]?.enabled ?? []) {
-        for (const symbol of entry.playbook.symbols) managedSymbols.add(symbol);
-      }
+      for (const symbol of scoutSkipSymbols(botRosters[0])) managedSymbols.add(symbol);
       console.log(
         `[playbooks] Playbook Store subscriptions applied in place — version ${version}, stamped ${new Date(at).toISOString()}; no restart`,
       );
@@ -354,8 +543,28 @@ async function runLive(): Promise<void> {
         error,
       ),
   });
-  // Whatever the boot fetch already carried, applied now that there is a roster to apply it to.
-  if (parkedSubscriptions) subscriptionSync.accept(parkedSubscriptions);
+  // A promoted play or a member's view that arrives (or leaves) without a subscription change still
+  // reaches the rosters in force: each is rebuilt from its own subscriptions, its author's compiled
+  // plays and the conviction records its pointers resolve to.
+  const rebuildRosters = () => {
+    botRosters.forEach((r, i) => {
+      swapIn(
+        i,
+        resolveBotRoster(
+          r.bot,
+          playbookRoster.enabled,
+          r.subscriptions,
+          promotedPlays.rosterFor(r.bot.persona.id),
+          memberConvictions.lookupFor(r.bot.persona.id),
+        ),
+      );
+    });
+  };
+  promotedPlays.onChange(rebuildRosters);
+  memberConvictions.onChange(rebuildRosters);
+  // Whatever the boot fetch already carried — else the last subscriptions kept — applied now that
+  // there is a roster to apply it to.
+  applyBootSubscriptions(subscriptionSync, keptSubscriptions, parkedSubscriptions);
 
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
   // fully spec'd in tests/autonomous/live-cycle.spec.ts. Everything below is wiring: real
@@ -365,27 +574,52 @@ async function runLive(): Promise<void> {
     safety,
     blockedReason,
     ...(botsStateDb ? { scoutState: scoutStateStore(botsStateDb) } : {}),
-    scout: buildScoutDeps(betaForcingMaxPicks, scoutBroker, {
+    scout: buildScoutDeps(scoutPicks, scoutBroker, {
       universe: UNIVERSE,
       managedSymbols,
       risk,
       mode,
+      subscriptions: () => botRosters[0]?.subscriptions ?? [],
+      ...(botRosters[0] ? { hostId: botRosters[0].bot.persona.id } : {}),
+      settlementOf: settlements.settlementOf,
+      // A compounding BETA-SCOUT cap reads what the scout itself realized: its decisions are filed
+      // under its own persona id, never the host's.
+      // It reads the house funnel too: a session where a playbook raised its signal gets no
+      // forced pick, once a playbook has placed an order (#4450 slice 6a).
+      ...(decisionDb
+        ? {
+            realizedPlForPlaybook: (playbookId: string) =>
+              decisionDb.realizedPlForPlaybook(BETA_SCOUT_PERSONA_ID, playbookId),
+            signalledOn: scoutSignalsFrom((from, to) => decisionDb.playbookFunnel(from, to)),
+          }
+        : {}),
     }),
     onResult: logResult,
     onDecision,
     onEquityReadError: (error) => console.error("[equity] read failed:", error),
+    onPortfolios: (portfolios) => {
+      botsStream.observeHoldings(portfolios);
+      authoredShadow.observe(
+        botRosters.map((r) => r.bot.persona.id),
+        portfolios,
+      );
+    },
     onEvalError: (personaName, error) => console.error(`[eval] ${personaName} failed:`, error),
     onBetaScoutError: (error) => console.error("[beta-scout] cycle failed:", error),
     onScoutHalted: (reason) => console.warn(`[beta-scout] skipped — halted: ${reason}`),
+    onScoutWarn: (line) => console.warn(line),
     onScoutObserve: (intent) =>
       console.log(
         `[beta-scout] would ${intent.side} ${intent.quantity} ${intent.symbol} (observe mode)`,
       ),
   });
 
-  // COND-SCOUT (#3651): shadow probes only, dark unless SKYNET_COND_SCOUT_UNIVERSE is set.
+  // COND-SCOUT (#3651): shadow probes only. Its names are the host bot's COND-SCOUT subscription,
+  // read every check (#4535 slice 2a); SKYNET_COND_SCOUT_UNIVERSE serves a host with none.
   const condScoutPass = armCondScout(process.env, {
     streamed: UNIVERSE,
+    hostSubscriptions: () =>
+      botRosters.find((r) => r.bot.persona.id === dataCredsPersonaId)?.subscriptions ?? [],
     credentials: currentCredentials,
     risk,
     blockedReason,
@@ -393,6 +627,14 @@ async function runLive(): Promise<void> {
     onDecision,
     ...(dataCredsPersonaId ? { hostPersonaId: dataCredsPersonaId } : {}),
     publish: replication.publishCondScout,
+  });
+
+  // Members' drafts in a shadow test (#5457 slice 2): would-be trades on a ledger only, no broker held.
+  const authoredShadowPass = authoredShadow.arm({
+    risk,
+    blockedReason,
+    botsStateDb,
+    publish: replication.publishAuthoredShadow,
   });
 
   armMomentumPersistence(botsStateDb, tracker);
@@ -406,19 +648,36 @@ async function runLive(): Promise<void> {
     lastEval = now;
     evaluating = true;
     const context = contextNow();
-    await runner.runCycle(context);
+    void intradayBars.refresh(); // never awaited: a slow bar read can't stall a cycle, it lands next one
+    // guard() never rethrows, so a failed cycle can no longer latch `evaluating` forever (#4995).
+    await cycleWatch.guard(() => runner.runCycle(context));
     void condScoutPass(context); // never awaited: the shadow scout can't stall a real cycle
+    authoredShadowPass(context); // after the real cycle; synchronous, never throws, holds no broker
     evaluating = false;
   };
-  // After-close staging (Eric, 2026-09-04) — dark unless SKYNET_BETA_FORCING carries "+stage".
-  if (betaForcing.stageAfterClose && scoutBroker) {
-    armScoutStaging({ clock: marketClock, runner, context: contextNow, log: console.log });
+  // Halts, stalls and a market-hours heartbeat, in the logs (#4995) — a quiet bot is now legible.
+  const cycleWatch = createCycleWatch({
+    isMarketOpen: () => marketClock.isOpen(),
+    blockedReason,
+    log: console.log,
+  });
+  setInterval(() => cycleWatch.tick(), 60_000);
+  // After-close staging (Eric, 2026-09-04) — each pass reads the owner's switch, else the env's
+  // "+stage" (#4535 slice 4b), so the poll always runs and is dark while staging is off.
+  if (scoutBroker) {
+    armScoutStaging({
+      clock: marketClock,
+      runner,
+      context: contextNow,
+      enabled: scoutStages,
+      log: console.log,
+    });
   }
 
   marketDataStream.start();
 
   console.log(
-    `Autonomous trading started [live] — bots: ${bots.map((b) => b.persona.name).join(", ")}; universe: ${UNIVERSE.join(", ")}; maxPosition ${(risk.maxPositionPct * 100).toFixed(1)}%; market ${marketClock.isOpen() ? "OPEN" : "closed"}.`,
+    `Autonomous trading started [live] — bots: ${bots.map((b) => b.persona.name).join(", ")}; streaming: ${botsStream.symbols().join(", ")}; maxPosition ${(risk.maxPositionPct * 100).toFixed(1)}%; market ${marketClock.isOpen() ? "OPEN" : "closed"}.`,
   );
 }
 

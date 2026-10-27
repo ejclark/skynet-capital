@@ -148,27 +148,40 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
     const baseRisk = { maxPositionPct: 0.03 };
     const context = aContext({ NVDA: { last: 100 } });
     const portfolio = aPortfolio({ cash: 1_000_000 });
-    const sized = (subs: readonly PlaybookSubscription[]) =>
-      applyGuardsWithVerdicts(
+    /** The guards a bot trades under. `subscribedOnly: false` is the env roster as it sized before
+     *  only subscribed playbooks could open (#4642 slice 10). */
+    const sized = (subs: readonly PlaybookSubscription[], subscribedOnly = true) => {
+      const { subscribedOnly: _rule, ...ruleOff } = tradingRoster(
+        resolveBotRoster(bot, house, subs),
+        baseRisk,
+      ).risk;
+      return applyGuardsWithVerdicts(
         [intent],
         portfolio,
         context,
-        tradingRoster(resolveBotRoster(bot, house, subs), baseRisk).risk,
+        subscribedOnly ? { ...ruleOff, subscribedOnly: true } : ruleOff,
       );
+    };
+    const seeded = () => seedFromHouseRoster({}, EMPTY_SEED_MARKERS, report, AT).state[BOT] ?? [];
 
-    it("equals today's env-roster sizing exactly", () => {
-      const before = sized([]);
-      const after = sized(seedFromHouseRoster({}, EMPTY_SEED_MARKERS, report, AT).state[BOT] ?? []);
+    it("equals the env roster's sizing exactly", () => {
+      const before = sized([], false);
+      const after = sized(seeded());
 
       expect(after).toEqual(before);
       expect(after.approved[0]?.quantity).toBeGreaterThan(0);
+    });
+
+    // #4642 slice 10: the subscription is the grant. Unseeded, the env roster alone opens nothing.
+    it("is what lets the env roster's playbook open at all", () => {
+      expect(sized([]).refused).toEqual([{ intent, reason: "unsubscribed" }]);
     });
 
     it("is genuinely uncapped — a capped subscription to the same playbook would clamp harder", () => {
       const capped = sized([ownSub({ playbookId: "S1-NVDA", capitalAllocated: 500 })]);
 
       expect(capped.approved[0]?.quantity).toBeLessThanOrEqual(5); // $500 at an ask just over $100
-      expect(sized([]).approved[0]?.quantity).toBeGreaterThan(5);
+      expect(sized(seeded()).approved[0]?.quantity).toBeGreaterThan(5);
     });
   });
 
@@ -190,7 +203,7 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
         AT,
       );
 
-      expect(empty).toEqual({ state: {}, markers: EMPTY_SEED_MARKERS, seeded: [] });
+      expect(empty).toEqual({ state: {}, markers: EMPTY_SEED_MARKERS, seeded: [], added: [] });
     });
   });
 
@@ -211,10 +224,10 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
     });
 
     it("seeds on the first report and is a no-op on every poll after", () => {
-      expect(seeder.seed(report, AT)).toEqual([BOT]);
+      expect(seeder.seed(report, AT)).toEqual({ added: [BOT], markedOnly: [] });
       const afterFirst = store.load();
 
-      expect(seeder.seed(report, LATER)).toEqual([]);
+      expect(seeder.seed(report, LATER)).toEqual({ added: [], markedOnly: [] });
       expect(store.load()).toEqual(afterFirst);
     });
 
@@ -222,7 +235,7 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
       seeder.seed(report, AT);
       store.unsubscribe(BOT, "S1-NVDA");
 
-      expect(seeder.seed(report, LATER)).toEqual([]);
+      expect(seeder.seed(report, LATER)).toEqual({ added: [], markedOnly: [] });
       expect(store.load()[BOT]?.map((s) => s.playbookId)).toEqual(["G1-GOOG", "TACO-DJT"]);
     });
 
@@ -230,7 +243,7 @@ describe("seeding a house bot's subscriptions from the env roster", () => {
       seeder.seed(report, AT);
       for (const entry of house) store.unsubscribe(BOT, entry.playbook.id);
 
-      expect(seeder.seed(report, LATER)).toEqual([]);
+      expect(seeder.seed(report, LATER)).toEqual({ added: [], markedOnly: [] });
       expect(store.load()[BOT]).toBeUndefined();
     });
 
@@ -252,10 +265,17 @@ describe("the house-roster report on the /controls poll", () => {
     expect(parseControlsPollRoster(headers)).toEqual(report);
   });
 
-  it("sends no header when there is nothing to seed", () => {
+  it("sends no header when no bot is wired", () => {
     expect(controlsPollRosterHeaders(undefined)).toEqual({});
-    expect(controlsPollRosterHeaders(houseRosterReport([BOT], []))).toEqual({});
     expect(controlsPollRosterHeaders(houseRosterReport([], house))).toEqual({});
+  });
+
+  // #4535 slice 4c: the app takes the forced pick's host from `accounts[0]`, so the accounts must
+  // reach it with no env roster at all — and an empty roster then seeds nothing (above).
+  it("sends the accounts on their own when the env roster is empty", () => {
+    const headers = controlsPollRosterHeaders(houseRosterReport([BOT], []));
+
+    expect(parseControlsPollRoster(headers)).toEqual({ accounts: [BOT], roster: [] });
   });
 
   it.each([
@@ -265,7 +285,7 @@ describe("the house-roster report on the /controls poll", () => {
       "a blank account id",
       { accounts: [""], roster: [{ playbookId: "S1-NVDA", mode: "standard" }] },
     ],
-    ["an empty roster", { accounts: [BOT], roster: [] }],
+    ["no accounts", { accounts: [], roster: [{ playbookId: "S1-NVDA", mode: "standard" }] }],
   ])("reads %s as not reported, never as a partial roster", (_label, payload) => {
     const raw =
       typeof payload === "string"

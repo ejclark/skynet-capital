@@ -1,0 +1,200 @@
+// A world's book as the server's own config (#4943 slice 2) — the seams the real route handlers
+// read through (`DashboardServerConfig`), each answered from memory instead of a broker, a JSONL
+// ledger or SQLite. The route handlers, their gates and the builders behind them are untouched,
+// so "who may see a bot's playbooks" (#885) is decided by `ownsDesk` exactly as in production —
+// the world only says which member owns which account.
+//
+// Market data (quotes, chains, greeks, bars — the SPY benchmark included) comes from market.mjs's
+// client over the world's `market` input; the broker's account, history and order list from the
+// book. The services production always wires behind sign-in (the feed, feedback, the Council,
+// account management, the fleet panel) come from league-services.mjs. Seams left unwired on
+// purpose answer as production does when they are absent ("not available"): the COND-SCOUT probe
+// ledger, the order audit log (so a human row's origin reads `unknown`), the bot
+// funnel/expectancy, the alert store, and the fund owner's stores (shell-artifacts.mjs says so).
+// The 3M and 1Y windows read the same month the world holds — its history is a month long.
+
+import {
+  regularSessionOpen,
+  sessionBounds,
+  sessionWeek,
+} from "../../../src/domain/market-session.ts";
+import { checkWeekWindow, WEEK_BUCKET_MS } from "../../../src/observatory/check-week-view.ts";
+import { INSTANT } from "./instant.mjs";
+import { leagueServices } from "./league-services.mjs";
+import { marketClient } from "./market.mjs";
+
+const AT = new Date(INSTANT);
+
+/** Alpaca's history periods, newest point last; a window is the tail of the month we hold. */
+const PERIOD_POINTS = { "1W": 6, "1M": 23, "3M": 23, "1A": 23 };
+
+/** The broker's portfolio-history shape over the last `n` samples of one account's history. */
+function portfolioHistory(samples, n) {
+  const tail = samples.slice(-n);
+  const base = tail[0]?.equity ?? null;
+  return {
+    timestamp: tail.map((s) => Math.floor(Date.parse(s.at) / 1000)),
+    equity: tail.map((s) => s.equity),
+    profit_loss: tail.map((s) => (base === null ? null : s.equity - base)),
+    profit_loss_pct: tail.map((s) => (base ? (s.equity - base) / base : null)),
+    base_value: base,
+  };
+}
+
+/** The slice of the trading client the net-worth and equity-curve routes call. */
+function tradingClient(book, id) {
+  const samples = book.history[id] ?? [];
+  if (samples.length === 0) return undefined;
+  return {
+    isMarketOpen: async () => regularSessionOpen(AT),
+    // The broker's order list is the ledger's filled orders, newest first — none working.
+    listOrders: async () =>
+      [...(book.activity[id] ?? [])]
+        .sort((a, b) => (a.at < b.at ? 1 : -1))
+        .map((f) => ({
+          id: f.orderId,
+          symbol: f.symbol,
+          qty: String(f.quantity),
+          side: f.side,
+          status: "filled",
+          type: "limit",
+          limit_price: String(f.price),
+          time_in_force: "day",
+          filled_qty: String(f.filledQuantity),
+          filled_avg_price: String(f.price),
+          submitted_at: f.at,
+          filled_at: f.at,
+        })),
+    getAccount: async () => ({ last_equity: String(book.lastEquity[id] ?? "") }),
+    getPortfolioHistory: async (period) => portfolioHistory(samples, PERIOD_POINTS[period] ?? 23),
+    getPortfolioHistoryByRange: async () => portfolioHistory(samples, samples.length),
+  };
+}
+
+/** The decision store's order-id index over every bot record. */
+function orderIndex(book) {
+  const byOrder = new Map();
+  for (const records of Object.values(book.decisions)) {
+    for (const record of records) {
+      for (const outcome of record.outcomes) {
+        const orderId = outcome.result?.orderId;
+        if (orderId) byOrder.set(orderId, { record, intent: outcome.intent });
+      }
+    }
+  }
+  return byOrder;
+}
+
+/** Newest-first records strictly older than `before`, at most `limit` — the store's keyset page. */
+function pageOf(records, page = {}) {
+  const older = page.before === undefined ? records : records.filter((r) => r.at < page.before);
+  return page.limit === undefined ? older : older.slice(0, page.limit);
+}
+
+/**
+ * One bot's week as the decision store's three reads answer it (`decision-db-week.ts`), over the
+ * book's records (#5208): every check in the week's window oldest first, verdicts counted per
+ * half-hour bucket, the placed trades. Production's bridge reads it whenever the store is open, so
+ * a world without it drew the Playbooks section with no lanes.
+ */
+/**
+ * The checks a bot that declares its cadence made between its notable passes (#5223): the store holds
+ * only the passes a member would look at (~15), but a running bot checks every ~15s, so read alone
+ * the week strip drew gaps no input declared. Every session of the week, from its open to its close
+ * — never past the bot's newest recorded pass, so the heartbeat (which reads that pass) and the
+ * strip agree, and a bot that stopped still shows the gap after it. Each check says what the
+ * newest notable pass before it said; before the week's first one it says nothing.
+ */
+function cadenceChecks(records, cadenceMs, window) {
+  const newest = Math.max(...records.map((r) => r.at));
+  const said = records
+    .filter((r) => r.playbookVerdicts)
+    .sort((a, b) => a.at - b.at)
+    .map((r) => ({ at: r.at, verdicts: r.playbookVerdicts }));
+  const out = [];
+  for (const date of sessionWeek(AT)) {
+    const { openAt, closeAt } = sessionBounds(date);
+    const end = Math.min(closeAt, newest + 1, window.to);
+    for (let at = Math.max(openAt, window.from); at < end; at += cadenceMs) {
+      const last = said.findLast((p) => p.at <= at);
+      out.push({ at, playbookVerdicts: last?.verdicts ?? [], outcomes: [] });
+    }
+  }
+  return out;
+}
+
+function checkWeek(records, cadenceMs) {
+  const window = checkWeekWindow(AT);
+  if (!window) return undefined;
+  const inWeek = records
+    .filter((r) => r.at >= window.from && r.at < window.to)
+    .sort((a, b) => a.at - b.at);
+  const notable = new Set(inWeek.map((r) => r.at));
+  const filler =
+    cadenceMs && records.length > 0
+      ? cadenceChecks(records, cadenceMs, window).filter((c) => !notable.has(c.at))
+      : [];
+  const asked = [...inWeek, ...filler].sort((a, b) => a.at - b.at);
+  const verdicts = new Map();
+  for (const r of asked) {
+    const bucket = Math.floor(r.at / WEEK_BUCKET_MS);
+    for (const v of r.playbookVerdicts ?? []) {
+      const key = `${bucket}|${v.playbookId}|${v.mode}|${v.state}`;
+      const row = verdicts.get(key) ?? { bucket, ...v, n: 0 };
+      verdicts.set(key, { ...row, n: row.n + 1 });
+    }
+  }
+  const trades = inWeek.flatMap((r) =>
+    r.outcomes
+      .filter((o) => o.action === "placed")
+      .map(({ intent }) => ({
+        at: r.at,
+        symbol: intent.symbol,
+        side: intent.side === "sell" ? "sell" : "buy",
+        ...(intent.playbookId ? { playbookId: intent.playbookId } : {}),
+        ...(intent.playbookMode ? { mode: intent.playbookMode } : {}),
+      })),
+  );
+  return { checks: asked.map((r) => r.at), verdicts: [...verdicts.values()], trades };
+}
+
+/** The world's server config. `auth` is configured, so every ownership gate is live. */
+export function serverConfig(book) {
+  const owners = new Map(book.members.map((m) => [m.email, m.owns]));
+  const byOrder = orderIndex(book);
+  return {
+    hub: {
+      getState: () => ({
+        generatedAt: book.generatedAt,
+        participants: book.participants,
+        collisions: [],
+      }),
+      // The composer reads state once per request; nothing ticks, so nothing is ever published.
+      subscribe: () => () => undefined,
+    },
+    auth: {},
+    now: () => new Date(AT),
+    resolveOwnerIds: (email) => owners.get(email) ?? [],
+    resolveOwnerId: (email) => owners.get(email)?.[0],
+    rosterIds: () => new Set(book.participants.map((p) => p.id)),
+    readTradeActivity: async (id) => book.activity[id] ?? [],
+    readDecisions: async (id, page) => pageOf(book.decisions[id] ?? [], page),
+    readCheckWeek: (id) => checkWeek(book.decisions[id] ?? [], book.cadenceMs?.[id]),
+    findByOrderId: (orderId) => byOrder.get(orderId),
+    readHistory: async (id) => book.history[id] ?? [],
+    // No account has set a per-playbook allocation yet (#4469): the store's empty state.
+    subscriptions: {
+      load: () => book.subscriptions,
+      loadIfReadable: () => book.subscriptions,
+      loadAllocations: () => ({}),
+    },
+    tradingClientFor: (id) => tradingClient(book, id),
+    optionsClientFor: () => marketClient(book.market),
+    ...leagueServices(book),
+  };
+}
+
+/** The session a viewer's requests carry — what the auth gate hands every route. */
+export function sessionFor(email) {
+  return { email, provider: "google", exp: 0 };
+}

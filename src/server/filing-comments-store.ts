@@ -1,5 +1,6 @@
 import { JsonFileStore } from "../storage/json-file-store.js";
 import { isRecord } from "../storage/parse-guards.js";
+import { siblingPath } from "../storage/sibling-path.js";
 
 /**
  * COMMENTS ON ANOTHER MEMBER'S FILING — issue #2224 shape 3, with its guard. A member can weigh in
@@ -110,9 +111,7 @@ export class FilingCommentsStore {
 /** A sibling of the already-pinned controls file — no new env var, no `fly.toml` change
  *  (envelope-protected), the same move `councilFilePathFrom` makes. */
 export function filingCommentsFilePathFrom(controlsFilePath: string): string {
-  const lastSlash = Math.max(controlsFilePath.lastIndexOf("/"), controlsFilePath.lastIndexOf("\\"));
-  const dir = lastSlash >= 0 ? controlsFilePath.slice(0, lastSlash + 1) : "";
-  return `${dir}filing-comments.json`;
+  return siblingPath(controlsFilePath, "filing-comments.json");
 }
 
 export function createFilingCommentsStore(

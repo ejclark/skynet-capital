@@ -255,24 +255,30 @@ describe("no expiry at all — the brake holds, the throttle and the surge do no
   });
 });
 
-/** A fake `exec` that returns canned output or throws, recording the args it saw. */
-function fakeExec(result: string | Error) {
+/** A fake `exec` that returns canned output or throws, recording the args it saw. An array is one
+ *  answer per call, in order (the issue read, then the comments read). */
+function fakeExec(result: string | Error | string[]) {
   const calls: string[][] = [];
   const exec = (_cmd: string, args: readonly string[]) => {
     calls.push([...args]);
     if (result instanceof Error) throw result;
-    return result;
+    return Array.isArray(result) ? (result[calls.length - 1] ?? "") : result;
   };
   return { exec, calls };
 }
 
-describe("readWorkMode — one gh call, never a throw on a bad read", () => {
-  it("reads the tracking issue's labels and comments in one call", () => {
-    const { exec, calls } = fakeExec(
-      JSON.stringify({ labels: [label("conserve")], comments: [until("2026-10-06")] }),
-    );
+describe("readWorkMode — REST reads, never a throw on a bad read", () => {
+  it("reads the tracking issue's labels, then its comments, over REST (no GraphQL)", () => {
+    const { exec, calls } = fakeExec([
+      JSON.stringify({ labels: [label("conserve")] }),
+      `${JSON.stringify({ body: "older note" })}\n${JSON.stringify(until("2026-10-06"))}\n`,
+    ]);
     const mode = readWorkMode(exec, CONFIG, NOW);
-    expect(calls).toEqual([["issue", "view", "4153", "--json", "labels,comments"]]);
+    expect(calls.map((a) => a.slice(0, 3))).toEqual([
+      ["api", "repos/{owner}/{repo}/issues/4153", "--jq"],
+      ["api", "--paginate", "repos/{owner}/{repo}/issues/4153/comments?per_page=100"],
+    ]);
+    expect(calls.flat()).not.toContain("view");
     expect(mode.position).toBe("conserve");
     expect(mode.until).toBe("2026-10-06");
   });
@@ -414,6 +420,15 @@ describe("the committed work-mode.json", () => {
   // #3960 slice 4, the third pair of this shape: the dial's `normal` number must equal whatever the
   // consumer already did, or "normal changes nothing" stops being true. grind.js's MAX_ITEMS is its
   // own sanity ceiling, so a `normal` grindWidth below it would silently narrow every grind run.
+  // #4437: surge's research cap was a guess until a week of ::notice::cost lines priced a tick —
+  // ~$1.01 a session, linear, so 2x normal is ~$12 a tick and 3x (~$18) would cross the spend
+  // breaker's $15/4h line on one tick alone. Pinned as a ratio so a lane PR cannot quietly raise it.
+  it("keeps surge's research cap at the measured 2x normal (#4437)", () => {
+    expect(committed.positions.surge.researchPerTick).toBe(
+      2 * committed.positions.normal.researchPerTick,
+    );
+  });
+
   it("keeps normal's grind width equal to grind.js's MAX_ITEMS, so normal changes nothing", () => {
     const grind = readFileSync(".claude/workflows/grind.js", "utf8");
     const maxItems = Number(grind.match(/const MAX_ITEMS = (\d+)/)?.[1]);

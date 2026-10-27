@@ -14,118 +14,87 @@
 // record goes into a real (in-memory) decision store, which maps the leg ids; `deskActivityView`
 // folds the two leg lines through that map; `reasoningForOrder` attaches the spread's decision.
 //
+// LATE FILLS (#4650): `--working` and `--late` rerun the same two trades as orders recorded
+// `working` — the cancel not confirmed, the spread's legs not yet listed — first as the store holds
+// them before the settle loop sees the broker end them, then after it reports each one's fill. Both
+// read every payload back through the real store, which is where a settlement is read in place of
+// the `working` result. Frames are named `working-*` / `late-*`.
+//
+// THE WIRE AND THE THESIS (#4650): `--wire` serves the same fills through the REAL `/api/wire` and
+// `/api/desk/:id/thesis` routes over the same store — the league feed's spread row and the Thesis
+// drawer's spread marker, each folded from the two leg lines and carrying the spread's why. Frames
+// are named `wire-*` / `thesis-*`.
+//
+// THE EXPIRY (#4650): `--expired` lets the dashboard's REAL half-hourly sweep read the broker's report
+// that the sold put expired, into a ledger holding what the stream journaled, then serves Activity
+// from the REAL `/api/desk/:id/activity` route over that ledger. The EXPIRED row, its day and the
+// premium it keeps are what the automatic path writes, not fixture text. Frames: `expired-*`.
+//
 // JPEG ≤100KB. Usage: npm run build --prefix app && npx tsx scripts/shoot/option-fill.mjs [outdir]
+//   [--working | --late | --wire | --expired]
 import { openDecisionDb } from "../../src/autonomous/decision-db.ts";
+import { InMemoryActivityStore } from "../../src/observatory/activity-store.ts";
 import { decisionCyclesView } from "../../src/observatory/decision-json-view.ts";
 import { deskActivityView } from "../../src/observatory/desk-json-view.ts";
 import { spreadLookup } from "../../src/observatory/spread-activity.ts";
 import { reasoningForOrder } from "../../src/observatory/wire-reasoning.ts";
+import { lifecycleSweepPass } from "../../src/scripts/dashboard-option-lifecycle.ts";
+import { serveDeskJson } from "../../src/server/desk-json-routes.ts";
+import { serveWireJson } from "../../src/server/wire-routes.ts";
 import { humanizeOptionSymbol } from "../../src/trading/option-symbols.ts";
+import { AT, filledRecord, HIGH, LOW, PUT, sold, spread } from "./option-fill-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
-const PUT = "CRWV261113P00085000";
-const LOW = "NVDA261113C00185000";
-const HIGH = "NVDA261113C00200000";
-const RETIRE =
-  "the play retires if its net P/L is below 0 on 2027-01-29 or more than 1 in 3 sold puts finish in the money";
+const SCENARIO = process.argv.includes("--late")
+  ? "late"
+  : process.argv.includes("--working")
+    ? "working"
+    : process.argv.includes("--wire")
+      ? "wire"
+      : process.argv.includes("--expired")
+        ? "expired"
+        : "filled";
 
-const sold = {
-  symbol: "CRWV",
-  side: "sell",
-  quantity: 1,
-  type: "limit",
-  playbookId: "CRWV-WHEEL",
-  playbookMode: "standard",
-  clientOrderId: "sk1-sauron-CRWV-mgf2a-0",
-  reason:
-    "Selling one cash-secured CRWV $85 PUT · 13 NOV 26 for about $2.10 a share ($210 for the contract): $8,500 stays set aside in case CRWV finishes below $85 and the shares are put to the bot. Run on its owner's conviction — our study found CRWV's option premium underpays its moves.",
-  expectation:
-    "CRWV stays above $85 to 2026-11-13: the put expires and the premium is kept. Below it, the bot buys 100 shares at $85 and sells covered calls on them next.",
-  forecast: {
-    direction: "up",
-    invalidator: `CRWV settles below $85 on 2026-11-13 — the wheel buys 100 shares at $85; ${RETIRE}`,
-  },
-  option: {
-    effect: "open",
-    structure: "cash-secured-put",
-    legs: [{ occSymbol: PUT, side: "sell", ratio: 1 }],
-    limitPrice: 2.1,
-    band: { low: 2.0, high: 2.2, at: "2026-10-07T14:30:00Z" },
-  },
+/** The same two trades recorded `working`: neither cancel confirmed, the spread's legs unlisted. */
+const workingRecord = {
+  ...filledRecord,
+  outcomes: filledRecord.outcomes.map(({ intent, action, result }) => ({
+    intent,
+    action,
+    result: { intent, status: "working", orderId: result.orderId },
+  })),
 };
-
-const spread = {
-  symbol: "NVDA",
-  side: "buy",
-  quantity: 1,
-  type: "limit",
-  playbookId: "NVDA-CALL-SPREAD",
-  playbookMode: "standard",
-  clientOrderId: "sk1-sauron-NVDA-mgf2a-1",
-  strategy: "nvda-spread-open",
-  reason:
-    "Buying one NVDA $185/$200 CALL SPREAD · 13 NOV 26 for about $3.40 a share — the options form of S1-NVDA's pre-earnings run-up. The most it can lose is that $340 debit.",
-  expectation:
-    "NVDA keeps rising into the print: above $200 at expiry the spread is worth $1,500. It is sold back five sessions before the print whatever it is worth then.",
-  forecast: {
-    direction: "up",
-    invalidator:
-      "NVDA's D-20→D-5 return ≤ 0 on 2 of the next 3 prints, or this spread exits below its cost",
+/** What the settle loop reports once the broker has ended each one (`optionSettlementOf`). */
+const settlements = [
+  {
+    orderId: "opt-put-1",
+    clientOrderId: sold.clientOrderId,
+    status: "filled",
+    filledQuantity: 1,
+    filledPrice: 2.12,
+    legs: [{ occSymbol: PUT, filledQuantity: 1, filledPrice: 2.12 }],
+    settledAt: "2026-10-07T14:31:00Z",
   },
-  option: {
-    effect: "open",
-    structure: "call-debit-spread",
+  {
+    orderId: "opt-spread-1",
+    clientOrderId: spread.clientOrderId,
+    status: "filled",
+    filledQuantity: 1,
+    filledPrice: 3.35,
     legs: [
-      { occSymbol: LOW, side: "buy", ratio: 1 },
-      { occSymbol: HIGH, side: "sell", ratio: 1 },
+      { occSymbol: LOW, orderId: "opt-spread-leg-185", filledQuantity: 1, filledPrice: 5.1 },
+      { occSymbol: HIGH, orderId: "opt-spread-leg-200", filledQuantity: 1, filledPrice: 1.75 },
     ],
-    limitPrice: 3.4,
-    band: { low: 3.2, high: 3.6, at: "2026-10-07T14:30:00Z" },
+    settledAt: "2026-10-07T14:31:00Z",
   },
-};
+];
 
-const AT = Date.parse("2026-10-07T14:30:00Z");
-const record = {
-  at: AT,
-  personaId: "bot-sauron",
-  mode: "live",
-  rawIntents: [sold, spread],
-  guardedIntents: [sold, spread],
-  outcomes: [
-    {
-      intent: sold,
-      action: "placed",
-      result: {
-        intent: sold,
-        status: "filled",
-        orderId: "opt-put-1",
-        filledQuantity: 1,
-        filledPrice: 2.12,
-        legFills: [{ occSymbol: PUT, filledQuantity: 1, filledPrice: 2.12 }],
-      },
-    },
-    {
-      intent: spread,
-      action: "placed",
-      result: {
-        intent: spread,
-        status: "filled",
-        orderId: "opt-spread-1",
-        filledQuantity: 1,
-        filledPrice: 3.35,
-        legFills: [
-          { occSymbol: LOW, filledQuantity: 1, filledPrice: 5.1 },
-          { occSymbol: HIGH, filledQuantity: 1, filledPrice: 1.75 },
-        ],
-        // Each leg's own broker order id — what the account's two fills carry.
-        legOrders: [
-          { occSymbol: LOW, orderId: "opt-spread-leg-185" },
-          { occSymbol: HIGH, orderId: "opt-spread-leg-200" },
-        ],
-      },
-    },
-  ],
-};
+const store = openDecisionDb(":memory:");
+const AS_WRITTEN = SCENARIO !== "working" && SCENARIO !== "late";
+store.record(AS_WRITTEN ? filledRecord : workingRecord);
+if (SCENARIO === "late") store.recordSettlements(settlements);
+// The default frames read the fixture as written; the late-fill ones read it back through the store.
+const record = AS_WRITTEN ? filledRecord : store.listByPersona("bot-sauron", { limit: 1 })[0];
 
 // The sold put's Activity row, with the decision the real join attaches to it.
 const findByOrderId = (orderId) => {
@@ -147,8 +116,6 @@ const putRow = {
   reasoning: reasoningForOrder("opt-put-1", { findByOrderId }),
 };
 // The spread's two leg fills, as the account's ledger holds them — and the row the server makes.
-const store = openDecisionDb(":memory:");
-store.record(record);
 const legLine = (orderId, symbol, side, price) => ({
   orderId,
   participantId: "bot-sauron",
@@ -177,9 +144,17 @@ const spreadRows = deskActivityView(
   ...row,
   reasoning: reasoningForOrder(row.orderId, { findByOrderId: (id) => store.findByOrderId(id) }),
 }));
+const routePayloads =
+  SCENARIO === "wire"
+    ? await wireAndThesis()
+    : SCENARIO === "expired"
+      ? { "/api/desk/bot-sauron/activity": await afterTheExpiry() }
+      : {};
 store.close();
-if (spreadRows.length !== 1 || spreadRows[0].legs?.length !== 2) {
-  throw new Error("the spread's two leg fills did not fold into one row");
+const folded = spreadRows.length === 1 && spreadRows[0].legs?.length === 2;
+// Recorded `working` with no legs listed, the two fills join nothing until the settlement lands.
+if (folded !== (SCENARIO !== "working")) {
+  throw new Error(`the spread's leg fills ${folded ? "folded" : "did not fold"} (${SCENARIO})`);
 }
 
 const shareRow = {
@@ -223,6 +198,122 @@ const heartbeat = {
   },
 };
 
+/** One filled line of the activity ledger, as the trade_updates stream journals it. */
+function ledgerLine(orderId, participantId, symbol, side, quantity, price, at) {
+  const filled = { filledQuantity: quantity, price, status: "filled", at, source: "stream" };
+  return { orderId, participantId, symbol, side, quantity, ...filled };
+}
+
+/** A real route's JSON body, answered into a fake response. */
+async function answer(serve) {
+  let body = "";
+  const res = { writeHead: () => res, end: (text) => (body = text ?? "") };
+  await serve(res);
+  return JSON.parse(body);
+}
+
+/** `/api/desk/bot-sauron/activity` once the dashboard's sweep has run (#4650): the ledger holds the
+ *  sold put and a share buy as the stream journaled them, the broker then reports the put expired on
+ *  its expiration day, and the real sweep pass and the real route do the rest. */
+async function afterTheExpiry() {
+  const ledger = new InMemoryActivityStore();
+  for (const line of [
+    ledgerLine("opt-put-1", "bot-sauron", PUT, "sell", 1, 2.12, "2026-10-07T14:30:12Z"),
+    ledgerLine("shr-1", "bot-sauron", "NVDA", "buy", 4, 181.4, "2026-10-06T15:02:00Z"),
+  ]) {
+    await ledger.record(line);
+  }
+  const expired = { id: "20261113000000000::7d3e", activity_type: "OPEXP", symbol: PUT, qty: "1" };
+  const broker = {
+    readOptionLifecycleActivitiesAfter: async () => ({
+      ok: true,
+      rows: [{ ...expired, date: "2026-11-13" }],
+    }),
+  };
+  const credentials = { apiKey: "fixture", apiSecret: "fixture" };
+  await lifecycleSweepPass({
+    participants: () => [{ id: "bot-sauron", displayName: "Sauron", kind: "bot", credentials }],
+    optionsClientFor: () => broker,
+    store: ledger,
+  })();
+  const snapshot = { id: "bot-sauron", displayName: "Sauron", kind: "bot", cash: 0, equity: 0 };
+  const config = {
+    hub: {
+      getState: () => ({
+        generatedAt: "2026-11-14T15:00:00Z",
+        participants: [{ ...snapshot, positions: [] }],
+        collisions: [],
+      }),
+    },
+    readTradeActivity: (id) => ledger.list(id),
+  };
+  const path = "/api/desk/bot-sauron/activity";
+  const body = await answer((res) => serveDeskJson(res, path, path, config));
+  // The frame proves the close: the expiry's row, named as one, keeping the whole premium.
+  const closed = (r) => r.lifecycle === "OPEXP" && r.realizedPl === "+$212";
+  if (!body.activity.some(closed)) {
+    throw new Error("the sweep did not close the sold put on Activity");
+  }
+  return body;
+}
+
+/** `/api/wire` and `/api/desk/bot-sauron/thesis`, answered by the real routes over the store — the
+ *  ledger is the account's own lines: the spread's two legs, the sold put, a share buy, and a member's
+ *  trade beside them on the league feed. */
+async function wireAndThesis() {
+  const sauronLedger = [
+    ledgerLine("opt-spread-leg-185", "bot-sauron", LOW, "buy", 1, 5.1, "2026-10-07T14:30:15Z"),
+    ledgerLine("opt-spread-leg-200", "bot-sauron", HIGH, "sell", 1, 1.75, "2026-10-07T14:30:15Z"),
+    ledgerLine("opt-put-1", "bot-sauron", PUT, "sell", 1, 2.12, "2026-10-07T14:30:12Z"),
+    ledgerLine("shr-1", "bot-sauron", "NVDA", "buy", 4, 181.4, "2026-10-06T15:02:00Z"),
+  ];
+  const ledger = [
+    ledgerLine("eric-1", "human-eric", "AAPL", "buy", 10, 227.35, "2026-10-07T14:41:00Z"),
+    ...sauronLedger,
+  ];
+  // Six weeks of equity, deterministic, so the drawer's chart (and with it the markers) renders.
+  const history = Array.from({ length: 30 }, (_, i) => ({
+    at: new Date(Date.parse("2026-09-08T20:00:00Z") + i * 86_400_000).toISOString(),
+    participantId: "bot-sauron",
+    equity: 100_000 * (1 + 0.0009 * i + Math.sin(i / 2) * 0.003),
+    cash: 60_000,
+    realizedPl: 0,
+  }));
+  const participants = [
+    {
+      id: "bot-sauron",
+      displayName: "Sauron",
+      kind: "bot",
+      personaId: "sauron",
+      cash: 0,
+      equity: 0,
+      positions: [],
+    },
+    { id: "human-eric", displayName: "Eric", kind: "human", cash: 0, equity: 0, positions: [] },
+  ];
+  const config = {
+    hub: {
+      getState: () => ({ generatedAt: "2026-10-07T15:00:00Z", participants, collisions: [] }),
+    },
+    readAllTradeActivity: async () => ledger,
+    readTradeActivity: async (id) => ledger.filter((line) => line.participantId === id),
+    readDecisions: async () => [record],
+    readHistory: async (id) => (id === "bot-sauron" ? history : []),
+    findByOrderId: (id) => store.findByOrderId(id),
+    findSpreadLeg: (id) => store.findSpreadLeg(id),
+  };
+  const wire = await answer((res) => serveWireJson(res, "/api/wire", config, true, () => true));
+  const thesisPath = "/api/desk/bot-sauron/thesis";
+  const thesis = await answer((res) => serveDeskJson(res, thesisPath, thesisPath, config));
+  // The frames prove the fold: one spread row on the feed, one spread marker in the drawer.
+  const spreadTrades = wire.wire.trades.filter((t) => t.net);
+  const spreadMarkers = thesis.thesis.markers.filter((m) => m.label.includes("SPREAD"));
+  if (spreadTrades.length !== 1 || !spreadTrades[0].reasoning || spreadMarkers.length !== 1) {
+    throw new Error("the spread did not fold into one Wire row and one Thesis marker with its why");
+  }
+  return { "/api/wire": wire, [thesisPath]: thesis };
+}
+
 const { page, origin, shoot, close } = await openShell({
   name: "option-fill",
   stubs: {
@@ -239,8 +330,92 @@ const { page, origin, shoot, close } = await openShell({
       kind: "bot",
       ...decisionCyclesView([record], { homePersonaId: "bot-sauron" }),
     },
+    ...routePayloads,
   },
 });
+
+// The league feed's spread row, opened to its why; then the Thesis drawer's spread marker.
+if (SCENARIO === "wire") {
+  for (const [tag, viewport] of [
+    ["phone", { width: 390, height: 844 }],
+    ["desktop", { width: 1280, height: 900 }],
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${origin}/app/activity`);
+    const row = page.locator(".wire-trade", { hasText: "CALL SPREAD" });
+    await row.waitFor();
+    await row.locator(".wire-trade-row").click();
+    await page.waitForTimeout(400);
+    await row.evaluate((el) => {
+      el.scrollIntoView({ block: "start" });
+      window.scrollBy(0, -150); // clear the sticky header and the session bar
+    });
+    await shoot(`wire-spread-${tag}`);
+
+    await page.goto(`${origin}/app/u/bot-sauron/thesis`);
+    const marker = page.locator(".thesis-marker", { hasText: "CALL SPREAD" });
+    await marker.waitFor();
+    await marker.getByRole("button", { name: "Why?" }).click();
+    await page.waitForTimeout(400);
+    // The opened marker's why at the frame's foot, the chart its numbers sit on above it.
+    await marker.evaluate((el) => {
+      el.scrollIntoView({ block: "end" });
+      window.scrollBy(0, 24);
+    });
+    await shoot(`thesis-spread-marker-${tag}`);
+  }
+  await close();
+  process.exit(0);
+}
+
+// After the expiry: the put's report row at the top of the account's Activity, at the blotter's own
+// scroll position — the honest first view, where the day, the contract and the EXPIRED chip must
+// read together at 390. The kept premium is a wide-screen column (`col-detail`), so the desktop
+// frame is the one that shows the +$212.
+if (SCENARIO === "expired") {
+  for (const [tag, viewport] of [
+    ["phone", { width: 390, height: 844 }],
+    ["desktop", { width: 1280, height: 900 }],
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${origin}/app/u/bot-sauron/activity`);
+    const row = page.locator("tr", { has: page.locator(".tl-lifecycle", { hasText: "EXPIRED" }) });
+    await row.waitFor();
+    await page.waitForTimeout(600);
+    await row.evaluate((el) => {
+      el.scrollIntoView({ block: "start" });
+      window.scrollBy(0, -220); // the sticky header, and the table's own header row above it
+    });
+    await shoot(`expired-activity-${tag}`);
+  }
+  await close();
+  process.exit(0);
+}
+
+// Before the settle loop: the pass still says the orders may fill, the legs are loose fills.
+if (SCENARIO === "working") {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${origin}/app/u/bot-sauron/decisions#cycle-${AT}`);
+  await page
+    .getByText(/may still fill/)
+    .first()
+    .scrollIntoViewIfNeeded();
+  await shoot("working-heartbeat-phone");
+  await page.goto(`${origin}/app/u/bot-sauron/activity`);
+  const first = page.locator("#act-opt-spread-leg-200");
+  await first.waitFor();
+  await page.waitForTimeout(600);
+  await first.evaluate((row) => {
+    row.scrollIntoView({ block: "start", inline: "start" });
+    const scroller = row.closest(".blotter-scroll");
+    if (scroller) scroller.scrollLeft = 0;
+    window.scrollBy(0, -150);
+  });
+  await shoot("working-activity-phone");
+  await close();
+  process.exit(0);
+}
+const prefix = SCENARIO === "late" ? "late-" : "";
 
 for (const [tag, viewport] of [
   ["phone", { width: 390, height: 844 }],
@@ -263,13 +438,13 @@ for (const [tag, viewport] of [
   await spreadRow.waitFor();
   await page.waitForTimeout(600);
   await toTop(spreadRow);
-  await shoot(`activity-spread-legs-${tag}`);
+  await shoot(`${prefix}activity-spread-legs-${tag}`);
   // Opened: the decision that placed it — its playbook down to what would prove it wrong, which at
   // 390 needs the panel at the top of the frame (the legs are the frame above).
   const spreadWhy = page.getByRole("button", { name: /Why NVDA \$185\/\$200 CALL SPREAD/ });
   await spreadWhy.click();
   await toTop(tag === "phone" ? page.locator("tr.row-why") : spreadRow);
-  await shoot(`activity-spread-why-${tag}`);
+  if (!prefix) await shoot(`activity-spread-why-${tag}`);
   await spreadWhy.click();
 
   await page.getByRole("button", { name: /Why CRWV \$85 PUT/ }).click();
@@ -278,12 +453,12 @@ for (const [tag, viewport] of [
     row.scrollIntoView({ block: "start" });
     window.scrollBy(0, -150); // clear the sticky header
   });
-  await shoot(`activity-option-fill-${tag}`);
+  await shoot(`${prefix}activity-option-fill-${tag}`);
 
   // Arriving from the row's "the whole pass" link opens that round with its trades included.
   await page.goto(`${origin}/app/u/bot-sauron/decisions#cycle-${AT}`);
   await page.getByText(/received — 1 contract/).scrollIntoViewIfNeeded();
-  await shoot(`heartbeat-option-fill-${tag}`);
+  await shoot(`${prefix}heartbeat-option-fill-${tag}`);
 }
 
 await close();

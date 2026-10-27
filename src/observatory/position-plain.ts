@@ -1,3 +1,5 @@
+import { type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { DAY_MS } from "../domain/time.js";
 import { OPTION_MULTIPLIER, parseOccSymbol } from "../trading/option-symbols.js";
 import type { PositionView } from "./broker-positions.js";
 import { formatPrice } from "./desk-data.js";
@@ -37,7 +39,6 @@ export interface PlainPosition {
   readonly nextPrint: NextPrint;
 }
 
-const DAY_MS = 86_400_000;
 const UNLIMITED = "unlimited";
 
 /** Calendar days from `now`'s New York date to the expiry date. */
@@ -57,12 +58,20 @@ function expiresInLabel(days: number): string {
 const gain = (x: number) => `+${formatCurrency(x)}`;
 const loss = (x: number) => `−${formatCurrency(Math.abs(x))}`;
 
-export function plainPosition(position: PositionView, now: Date): PlainPosition {
+export function plainPosition(
+  position: PositionView,
+  now: Date,
+  /** The earnings table to read — the checked-in one unless a spec pins its own. */
+  prints: readonly EarningsPrint[] = UPCOMING_PRINTS,
+): PlainPosition {
   const parts = parseOccSymbol(position.symbol);
   const underlying = parts?.underlying ?? position.symbol;
   const asOf = now.toISOString();
-  const event = nextEventFor(underlying, parts?.expiration, asOf);
-  const facts = { ...plainFacts(position, parts, now), nextPrint: nextPrintFor(underlying, asOf) };
+  const event = nextEventFor(underlying, parts?.expiration, asOf, undefined, prints);
+  const facts = {
+    ...plainFacts(position, parts, now),
+    nextPrint: nextPrintFor(underlying, asOf, prints),
+  };
   return event ? { ...facts, nextEvent: event } : facts;
 }
 

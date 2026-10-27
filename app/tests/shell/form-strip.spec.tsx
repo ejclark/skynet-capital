@@ -55,10 +55,26 @@ describe("FormStrip", () => {
     const win = await screen.findByRole("link", {
       name: "Closed 9/22, win: TSLA Oct 17 400 Put, +$696. Open this trade",
     });
-    expect(win).toHaveAttribute("href", "/accounts?account=human-eric&section=activity#act-o3");
+    expect(win).toHaveAttribute("href", "/accounts?account=human-eric&section=ledger#act-o3");
     expect(win).toHaveTextContent("✓");
     expect(screen.getByRole("link", { name: /Closed 9\/17, loss/ })).toHaveTextContent("✕");
     expect(screen.getByText("2 wins in a row")).toBeInTheDocument();
+  });
+
+  it("says in words, not only in a hover popover, that its squares open trades (#5046)", async () => {
+    mount({
+      available: true,
+      activity: [
+        close("o2", "pos", "+$120", "2026-09-19T15:00:00"),
+        close("o1", "neg", "-$310", "2026-09-17T15:00:00"),
+      ],
+    });
+    expect(await screen.findByText("Each square opens its trade")).toBeInTheDocument();
+  });
+
+  it("names the one square as the one when there is a single close", async () => {
+    mount({ available: true, activity: [close("o1", "pos", "+$120", "2026-09-19T15:00:00")] });
+    expect(await screen.findByText("The square opens its trade")).toBeInTheDocument();
   });
 
   it("renders nothing before the first close", async () => {

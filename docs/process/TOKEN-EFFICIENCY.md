@@ -20,14 +20,14 @@ never floor-lowering.
 |---|---|---|---|---|
 | 1 | ~~Gate event-research pulses on material change~~ **done 2026-08-28** | free win | largest — the lane is ~41% of all commits and ~9 of 30 recent pulse rows were "no change" full sessions | A deterministic pre-filter (like `digest-scan --due`) that no-ops a pulse when nothing tracked moved: `scripts/event-material-scan.mjs --screen-due` (#724), run before any session spawns. Built for the **late-October cliff** (~6 critical prints + FOMC/CPI hit daily cadence at once ≈ 20+ sessions/day on the pre-gate design) |
 | 2 | **Protect the prompt cache in every session** | free win | 2.5–3.7× on agent-loop cost at 81–90% hit rates (Anthropic's measurement) | Pick model + effort at the top of a session and don't touch them mid-task; `/clear` between unrelated tasks; `/rewind` over `/compact` when abandoning a path. Invalidator catalogue below |
-| 3 | **Compress CLAUDE.md (26.3KB → ~14–16KB)** | free win | ~2,500–3,000 tokens × *every* session and *every* CI lane run, zero information loss | Every trimmed item already has an on-demand home (skills, `docs/`). Details below; CLAUDE.md is Eric's file, so this ships as a reviewed proposal |
+| 3 | ~~Compress CLAUDE.md (26.3KB → ~14–16KB)~~ **done 2026-08-28** | free win | ~2,500–3,000 tokens × *every* session and *every* CI lane run, zero information loss | #723 moved every trimmed item to its on-demand home (the ship skill, `docs/ENGINEERING.md`, `EVENT-RESEARCH.md`): 26.3KB → 21.7KB, zero rule loss. Map below; CLAUDE.md is Eric's file, so a compression ships as a reviewed proposal |
 | 4 | ~~Debounce the `claude.yml` comment lane~~ **withdrawn 2026-08-28** | — | comment-per-session cost is real, but the retrigger-on-new/edited-comment + cancel-in-progress IS Eric's steering directive (2026-08-20, in the workflow's own header) — the discarded partial work is the designed price of "any comment steers" | No change without Eric; the open question (should steering debounce rapid-fire edits?) is his, banked here |
 | 5 | ~~Pin model + turn caps on CI lanes~~ **done 2026-08-28** | hygiene | bounded worst case, deliberate routing | Every claude-code-action lane now passes `--model`; `claude.yml` and the research jobs also cap `--max-turns`. The pins are full model IDs, so revisit them at each model release |
-| 6 | **Route structure questions to Graphify, not file reads** | free win | file reads dominate context (docs' own finding); one query replaces a grep + N candidate reads | `graphify explain/affected/query` before reading; snapshot refresh now verified working (this PR) |
+| 6 | **Route structure questions to Graphify, not file reads** | free win | file reads dominate context (docs' own finding); one query replaces a grep + N candidate reads | `graphify explain/affected/query` before reading; the committed snapshot refreshes by hand, `npm run graph:refresh` ([`docs/GRAPHIFY.md`](../GRAPHIFY.md)) |
 | 7 | **Effort-tier the fan-outs we already run** | tradeoff | research-type effort curves are nearly flat: `medium` matched `high`'s accuracy for noticeably less in Anthropic's runs (curves are per model — re-sweep after a model change rather than carrying a level over) | Keep verify/judge stages at `xhigh`; run mechanical read/extract stages at `high` or below. Never silently — floors still apply |
 
-Ranked by ceiling; apply free wins first (2 and 6 are pure habit and start today; 3 is one PR,
-listed under **Follow-up slices**; 1 and 5 are done; 4 is withdrawn as written — see its row).
+Ranked by ceiling; apply free wins first (2 and 6 are pure habit and start today; 1, 3 and 5 are
+done; 4 is withdrawn as written — see its row).
 
 ## Where the tokens actually go
 
@@ -61,7 +61,7 @@ decides whether everything else bills at ≤10% or at 100%.
 
 The cache is a strict prefix match, keyed per model **and** per effort level; a hit bills at
 2.5–10% of the input rate across the current tiers (lowest on the top tiers — per-model rates live
-in the claude-api skill's `shared/models.md`, not here)
+in the claude-api skill's shared/models.md, not here)
 ([prompt-caching](../vendor/claude-code/prompt-caching.md)).
 
 - **Set model and effort at the top of a session; change them only at task boundaries.** `/model`,
@@ -77,6 +77,9 @@ in the claude-api skill's `shared/models.md`, not here)
   reads and returns a summary (docs' worked example: 6,100 tokens read → 420 returned). A fork
   (`/subtask`) reuses the parent's cache; a fresh subagent starts cold. Keep fan-out siblings
   homogeneous (same model/effort/tools) so they share one prefix cache.
+- **Read a workflow run with `node scripts/wf-read.mjs`, never a parser written on the spot.** Each
+  hand-rolled read of `journal.jsonl` or a task's `.output` lands its raw dump in the dearest
+  context in the repo and rides along for every later turn (#5194: 71 such calls in three days).
 - **Watch it:** `/usage` (behavior flags fire at ≥10% of recent usage — long context, cache misses),
   `/context` (what's eating the window), `/insights` (HTML patterns report). On the statusline,
   `cache_creation` staying high turn after turn means something is churning the prefix.
@@ -152,7 +155,8 @@ entirely out of the startup index; subagent description budget warns at 15k toke
    diff-based preflight after the 08-26 restart storm; the dashboard has none).
 5. **Banked, don't re-litigate**: GraphQL-bucket burn → `/ship` REST; empty Routine firings (~130)
    → event-driven Moneypenny; the $0.88 tool-less session → `--allowedTools`; metered-spend
-   self-escalation → `envelope.json` on feedback-coach limits; Haiku-on-flat-rate as a *cost* play → no
+   self-escalation → `envelope.json` on the feedback coach's model dial
+   (`src/server/feedback-coach-model.ts`); Haiku-on-flat-rate as a *cost* play → no
    (thrift buys nothing on the flat-rate lane); the feedback lane's tier is set for fit and wall-clock by
    `scripts/moneypenny/model-tier.mjs` (the issue's spec block, never its length — `docs/COMPUTE.md`).
 
@@ -186,7 +190,8 @@ entirely out of the startup index; subagent description budget warns at 15k toke
 
 1. ~~**Event-lane material-change gate**~~ — done 2026-08-28: `scripts/event-material-scan.mjs --screen-due`
    (#724) screens interval-elapsed pulses before any session spawns.
-2. **CLAUDE.md compression** — proposal PR against the map above; Eric reviews (his file).
+2. ~~**CLAUDE.md compression**~~ — done 2026-08-28 (#723): 26.3KB → 21.7KB by relocation against the
+   map above, zero rule loss.
 3. ~~**Model pinning + `--max-turns` on `build-events` and `claude.yml`**~~ — done 2026-08-28
    (steering behavior untouched — see the withdrawal above).
 4. **Dashboard deploy preflight** — skip deploy when the diff is docs-only.
@@ -197,6 +202,6 @@ entirely out of the startup index; subagent description budget warns at 15k toke
 
 _Provenance: Eric's ask + gist pointer (allisoneer's `fetch_claude_docs.py`), 2026-08-28. Method:
 four-agent fan-out (two doc miners over the 138-page mirror, two repo auditors), synthesized against
-`shared/cost-optimization.md` (the claude-api skill's measured lever framework). Full agent reports
+shared/cost-optimization.md (the claude-api skill's measured lever framework). Full agent reports
 in the session transcript; numbers above are point-in-time — re-audit after the October calendar
 turns over._

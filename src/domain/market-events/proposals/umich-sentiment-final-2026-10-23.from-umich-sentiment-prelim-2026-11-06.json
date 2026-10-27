@@ -1,0 +1,11 @@
+{
+  "id": "umich-sentiment-final-2026-10-23",
+  "kind": "macro-print",
+  "title": "University of Michigan consumer sentiment — final (Oct 2026), the baseline the Nov 6 preliminary is measured against",
+  "date": "2026-10-23",
+  "status": "estimate",
+  "source": "EST: the publisher's own `2026 Release Dates` document, data.sca.isr.umich.edu/fetchdoc.php?docid=79628 (HTTP 200, 132,710 bytes, PDF text layer inflated direct 2026-10-07), whose text reads verbatim \"October 23\" / \"October Final\". Corroborated by `2026 Interview Dates`, fetchdoc.php?docid=79629 (HTTP 200, 89,846 bytes, same session), whose October row reads verbatim \"September 22 IW Begins / October 5 Prelim Ends / October 19 IW Ends\" and whose November row opens its window on 2026-10-20, the Tuesday before this release. Filed `estimate` on this lane's no-self-confirm limit ONLY; its own never-assessed lane can promote it off the same two fetches, exactly as umich-sentiment-final-2026-09-25 did. No clock time appears in either document, so 10:00 ET would be customary, not sourced. Proposed 2026-10-07 by umich-sentiment-prelim-2026-11-06's initial research",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED 2026-10-07 by the umich-sentiment-prelim-2026-11-06 never-assessed initial research, at D-16 of its own print. WHY IT HAS STANDING: the 11-06 prelim's month-over-month change, and its p90 6.60-point kill bar, are measured against OCTOBER'S FINAL, a number the calendar does not otherwise own. Filed `low` to match umich-sentiment-final-2026-09-25 and umich-sentiment-final-2026-11-20 (same series, same tier). The October PRELIM (2026-10-09, D-2) is deliberately NOT proposed: FT-53 already keys on it and it needs no new ledger to be scored. Read-it-do-not-trade-it: `symbols: []`, `estimate` date."
+}

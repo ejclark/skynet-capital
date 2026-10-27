@@ -1,3 +1,4 @@
+import { rstest } from "@rstest/core";
 import {
   AlpacaMarketDataStream,
   type MarketDataStreamConfig,
@@ -11,7 +12,8 @@ import type { ObservatoryEvent } from "../../src/observatory/events.js";
  * the frames it sends and the events/statuses it reports — never through internals.
  */
 
-type SocketListener = (event: { data?: unknown }) => void;
+type SocketEvent = { data?: unknown; code?: number; reason?: string; message?: string };
+type SocketListener = (event: SocketEvent) => void;
 
 /** A fake global WebSocket: records the url and sent frames, lets specs emit server events. */
 class FakeSocket {
@@ -41,7 +43,7 @@ class FakeSocket {
     this.emit("close");
   }
 
-  emit(type: string, event: { data?: unknown } = {}): void {
+  emit(type: string, event: SocketEvent = {}): void {
     for (const listener of this.listeners.get(type) ?? []) {
       listener(event);
     }
@@ -51,11 +53,14 @@ class FakeSocket {
 const realWebSocket = globalThis.WebSocket;
 
 beforeEach(() => {
+  // Fake timers so a reconnect a spec's close schedules never fires a real socket after it ends.
+  rstest.useFakeTimers();
   FakeSocket.instances = [];
   Reflect.set(globalThis, "WebSocket", FakeSocket);
 });
 
 afterEach(() => {
+  rstest.useRealTimers();
   Reflect.set(globalThis, "WebSocket", realWebSocket);
 });
 
@@ -226,6 +231,30 @@ describe("AlpacaMarketDataStream", () => {
 
       expect(statuses).toContain("error");
     });
+
+    it("says why a socket errored when the runtime reports a reason (#4864)", () => {
+      const { socket, statuses } = startStream();
+
+      socket.emit("error", { message: "Unexpected server response: 429" });
+
+      expect(statuses).toContain("error — Unexpected server response: 429");
+    });
+
+    it("reports a close's code and reason", () => {
+      const { socket, statuses } = startStream();
+
+      socket.emit("close", { code: 1008, reason: "connection limit exceeded" });
+
+      expect(statuses).toContain("closed — code 1008: connection limit exceeded");
+    });
+
+    it("reports Alpaca's in-band refusal frame instead of swallowing it", () => {
+      const { socket, statuses } = startStream();
+
+      socket.emit("message", frame([{ T: "error", code: 406, msg: "connection limit exceeded" }]));
+
+      expect(statuses).toContain("rejected — 406 connection limit exceeded");
+    });
   });
 
   describe("replaceCredentials", () => {
@@ -384,6 +413,81 @@ describe("AlpacaMarketDataStream", () => {
       stream.resubscribe(["AAPL"]);
 
       expect(socket.sent).toHaveLength(before);
+    });
+  });
+
+  describe("when the socket drops on its own", () => {
+    it("reconnects after a backoff, and the new socket re-authenticates and resubscribes", () => {
+      const { socket, statuses } = startStream();
+      socket.emit("error");
+      socket.emit("close");
+
+      expect(statuses).toContain("reconnecting in 1s");
+      expect(FakeSocket.instances).toHaveLength(1);
+
+      rstest.advanceTimersByTime(1000);
+      const next = FakeSocket.instances[1];
+      if (!next) throw new Error("no reconnect socket");
+      next.emit("open");
+      next.emit("message", frame(AUTHENTICATED));
+
+      expect(JSON.parse(next.sent[0] ?? "")).toMatchObject({ action: "auth" });
+      expect(JSON.parse(next.sent[1] ?? "")).toEqual({
+        action: "subscribe",
+        trades: ["NVDA", "SPY"],
+      });
+    });
+
+    it("doubles the backoff on each failed attempt, capped at a minute", () => {
+      const { statuses } = startStream();
+      for (let i = 0; i < 8; i += 1) {
+        FakeSocket.instances[FakeSocket.instances.length - 1]?.emit("close");
+        rstest.runOnlyPendingTimers();
+      }
+
+      expect(statuses.filter((s) => s.startsWith("reconnecting"))).toEqual([
+        "reconnecting in 1s",
+        "reconnecting in 2s",
+        "reconnecting in 4s",
+        "reconnecting in 8s",
+        "reconnecting in 16s",
+        "reconnecting in 32s",
+        "reconnecting in 60s",
+        "reconnecting in 60s",
+      ]);
+    });
+
+    it("resets the backoff once a reconnect authenticates", () => {
+      const { socket, statuses } = startStream();
+      socket.emit("close");
+      rstest.runOnlyPendingTimers();
+      const second = FakeSocket.instances[1];
+      second?.emit("message", frame(AUTHENTICATED));
+      second?.emit("close");
+
+      expect(statuses.filter((s) => s.startsWith("reconnecting"))).toEqual([
+        "reconnecting in 1s",
+        "reconnecting in 1s",
+      ]);
+    });
+  });
+
+  describe("when closed on purpose", () => {
+    it("stop() never reconnects, and cancels a reconnect already pending", () => {
+      const { stream, socket } = startStream();
+      socket.emit("close");
+      stream.stop();
+      rstest.runAllTimers();
+
+      expect(FakeSocket.instances).toHaveLength(1);
+    });
+
+    it("a credential swap opens exactly one new socket — the retired one's close does not add a second", () => {
+      const { stream } = startStream();
+      stream.replaceCredentials("new-key", "new-secret");
+      rstest.runAllTimers();
+
+      expect(FakeSocket.instances).toHaveLength(2);
     });
   });
 });

@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
-import type { PlaybookMetricsView } from "../live/playbook-performance";
+import type { PlaybookFunnelRowView, PlaybookMetricsView } from "../live/playbook-performance";
 import { money } from "../live/ticket";
+import { EnvPill, signedPercent } from "../ui";
 import { signedMoney } from "./option-preview";
 
 /**
@@ -19,7 +20,18 @@ import { signedMoney } from "./option-preview";
 
 export type MetricsScope =
   | { readonly kind: "unreadable" }
-  | { readonly kind: "read"; readonly row?: PlaybookMetricsView };
+  | {
+      readonly kind: "read";
+      readonly row?: PlaybookMetricsView;
+      /** House only: how this playbook's checks turned into orders (#4450 slices 5a–5b). */
+      readonly funnel?: FunnelScope;
+    };
+
+/** The window's length in sessions, and this playbook's row — absent when no bot checked it. */
+export interface FunnelScope {
+  readonly sessions: number;
+  readonly row?: PlaybookFunnelRowView;
+}
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -33,7 +45,7 @@ export function holdLabel(ms: number | null | undefined): string {
 }
 
 const signedPct = (value: number | null): string =>
-  value === null ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+  value === null ? "—" : signedPercent(value, 1);
 
 /** "3 long · 1 short", "2 call · 2 put" — only the parts that happened, so a stock-only playbook
  *  never reads "0 call · 0 put". */
@@ -96,6 +108,69 @@ function Metrics({ row }: { readonly row: PlaybookMetricsView }): ReactElement {
   );
 }
 
+const plural = (n: number, one: string, many = `${one}s`) =>
+  `${n.toLocaleString()} ${n === 1 ? one : many}`;
+
+/**
+ * HOW CHECKS BECAME ORDERS (#4450 slices 5a–5b, EARS 5) — one line under the house numbers: across
+ * every bot, how often this playbook was checked in the last ten sessions, how often it raised its
+ * declared signal, how many orders it asked for, how many a guard refused, how many the broker took
+ * and filled. Eric's brief was that nearly every bot trade looked forced; the closed-trade numbers
+ * above can't say whether a quiet playbook never saw its signal, saw it and never asked, or asked
+ * and was stopped. This can, and names the guard that stopped it most.
+ *
+ * The signals stage is printed only where a check measures the playbook's declared signal (#4808,
+ * `research-signals.ts`). Elsewhere the chain skips it and the sub-line says why in words — a "0
+ * signals" there would claim the playbook looked and found nothing.
+ */
+const SIGNAL_NOTE: Readonly<Record<"unmeasured" | "none", string>> = {
+  unmeasured: "its signal is measured by research runs, not by a check",
+  none: "declares no research signal",
+};
+
+function FunnelLine({ funnel }: { readonly funnel: FunnelScope }): ReactElement {
+  const { row, sessions } = funnel;
+  const window = `Last ${sessions} sessions`;
+  if (!row) {
+    return <p className="pb-metrics-empty">{window}: no bot checked this playbook.</p>;
+  }
+  const { checks, signals, asked, refused, placed, filled } = row.totals;
+  const counted = row.passSignal === "counted" && typeof signals === "number";
+  const stages = [
+    plural(checks, "check"),
+    ...(counted ? [signals === 0 ? "no signals" : plural(signals, "signal")] : []),
+    ...(asked === 0
+      ? ["no orders asked for"]
+      : [
+          `${plural(asked, "order")} asked for`,
+          `${refused} refused`,
+          `${placed} placed`,
+          `${filled} filled`,
+        ]),
+  ];
+  const top = row.refusals[0];
+  const notes = [
+    counted && typeof row.signalledOn === "number"
+      ? `signal on ${row.signalledOn} of ${sessions} sessions`
+      : row.passSignal === "unmeasured" || row.passSignal === "none"
+        ? SIGNAL_NOTE[row.passSignal]
+        : null,
+    `asked on ${row.askedOn} of ${sessions} sessions`,
+    top ? `most refused: ${top.label}` : null,
+  ].filter((note): note is string => note !== null);
+  return (
+    <dl className="pb-metrics-grid pb-funnel">
+      <div className="pb-metrics-wide">
+        <dt>{window}, every bot</dt>
+        {/* Words, not the tiles' monospace: a chain wraps at 390px, and a run of trailing zeros
+            after "no orders" would be noise, not news. */}
+        <dd>{stages.join(" → ")}</dd>
+        <dd className="pb-metrics-sub">{notes.join(" · ")}</dd>
+      </div>
+    </dl>
+  );
+}
+
 export function AccountPlaybookMetrics({
   accountName,
   scope,
@@ -106,7 +181,7 @@ export function AccountPlaybookMetrics({
   return (
     <section className="pb-metrics" aria-label={`${accountName} on this playbook`}>
       <h3 className="pb-metrics-h">
-        {accountName} on this playbook <span className="env-pill">SIM</span>
+        {accountName} on this playbook <EnvPill />
       </h3>
       {scope.kind === "unreadable" ? (
         <p className="pb-metrics-empty">This account's trade history isn't readable right now.</p>
@@ -127,7 +202,7 @@ export function HousePlaybookMetrics({ scope }: { readonly scope: MetricsScope }
   return (
     <section className="pb-metrics pb-metrics-house" aria-label="House — every account">
       <h3 className="pb-metrics-h">
-        House — every account <span className="env-pill">SIM</span>
+        House — every account <EnvPill />
       </h3>
       {scope.kind === "unreadable" ? (
         <p className="pb-metrics-empty">The house-wide trade history isn't readable right now.</p>
@@ -138,6 +213,7 @@ export function HousePlaybookMetrics({ scope }: { readonly scope: MetricsScope }
           No account has closed a trade on this playbook yet — nothing to measure.
         </p>
       )}
+      {scope.kind === "read" && scope.funnel ? <FunnelLine funnel={scope.funnel} /> : null}
     </section>
   );
 }

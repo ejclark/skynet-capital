@@ -5,7 +5,12 @@ import { useState } from "react";
 import { fetchJoin } from "../live/join";
 import { localSessionSuffix } from "../live/market-hours";
 import { meetMoneypenny } from "../live/moneypenny";
-import { fetchOnboarding, type Onboarding, type OnboardingStep } from "../live/onboarding";
+import {
+  fetchOnboarding,
+  type Onboarding,
+  type OnboardingStep,
+  type OnboardingStepId,
+} from "../live/onboarding";
 import { AlpacaGuide } from "./alpaca-guide";
 import { MilestonePanel } from "./milestone-panel";
 
@@ -22,6 +27,8 @@ import { MilestonePanel } from "./milestone-panel";
  *   2. meet Moneypenny — opens her rail with the intro; her first reply is the step (the
  *      engagement track's own milestone; a filed issue is a separate, harder achievement)
  *   3. make the first trade — rung 101 on the desk, with the session hours in the viewer's zone
+ *
+ * Until step 1 is done, steps 2 and 3 are one counted line each (`HeldStep`, #5256).
  *
  * Step 2's button is the one way into her intro — the old `?moneypenny=intro` deep link had no
  * producer and was retired (#3816 slice 8). This chapter is the task checklist only —
@@ -89,10 +96,13 @@ function AlreadyOnTheBoard(): ReactElement {
 function ConnectStep({
   step,
   data,
+  count,
   onJoined,
 }: {
   readonly step: OnboardingStep;
   readonly data: Onboarding;
+  /** "Step 1 of 3" while the later steps are held — the count their lines carry too (#5256). */
+  readonly count?: string;
   readonly onJoined: () => void;
 }): ReactElement {
   // Open by default while there's nothing connected; an admin can reopen it afterwards to add
@@ -105,6 +115,7 @@ function ConnectStep({
       <div className="ob-step-head">
         <StepGlyph done={step.done} active={!step.done} />
         <div className="ob-step-body">
+          {count ? <div className="ob-held-count num">{count}</div> : null}
           <div className="ob-step-title">{step.title}</div>
           <div className="ob-step-detail">{step.detail}</div>
           {step.done ? null : <AlreadyOnTheBoard />}
@@ -126,6 +137,53 @@ function ConnectStep({
           <AlpacaGuide join={join.data} onJoined={onJoined} />
         </div>
       ) : null}
+    </li>
+  );
+}
+
+/** Why a held step waits, said on its line. Step 2 is only ordered — her ✦ panel opens without an
+ *  account, so the line offers it quietly; step 3 needs an account to fill an order on. */
+export const HELD_REASON: Record<Exclude<OnboardingStepId, "connect">, string> = {
+  "first-message": "Next, after step 1",
+  "first-trade": "Needs a connected account",
+};
+
+/**
+ * ONE STEP AT A TIME (#5256, Eric's Build pick on #5162 round 1: "the fog of war pattern to retain
+ * focus through account setup; nothing meaningful can happen until after that point"). Until step 1
+ * is done, each later step is one line — visible, named, counted ("Step 3 of 3"), its action
+ * withheld — so the only filled button on the page is step 1's. Run through docs/FOG-OF-WAR.md's
+ * tree it is a labelled door, not a fog: nothing is withheld that the member could do yet (an order
+ * needs an account to go to), and Moneypenny's step stays open — her line keeps a
+ * quiet way in, so the hold orders that step and never locks it. A done step says so on its line.
+ */
+function HeldStep({
+  step,
+  n,
+  total,
+}: {
+  readonly step: OnboardingStep;
+  readonly n: number;
+  readonly total: number;
+}): ReactElement {
+  const id = step.id as Exclude<OnboardingStepId, "connect">;
+  return (
+    <li className={`ob-step ob-step-held${step.done ? " ob-step-done" : ""}`}>
+      <div className="ob-step-head">
+        <StepGlyph done={step.done} active={false} />
+        <div className="ob-step-body">
+          <span className="ob-held-count num">
+            Step {n} of {total}
+          </span>{" "}
+          <span className="ob-step-title">{step.title}</span>
+          <span className="ob-held-why"> · {step.done ? "Done" : HELD_REASON[id]}</span>
+        </div>
+        {id === "first-message" && !step.done ? (
+          <button type="button" className="ob-held-link" onClick={() => void meetMoneypenny()}>
+            Say hello now ›
+          </button>
+        ) : null}
+      </div>
     </li>
   );
 }
@@ -168,6 +226,8 @@ export function OnboardingChapter({
   const data = onboarding.data;
   const name = data.account?.displayName ?? data.viewerName;
   const firstOpen = data.steps.findIndex((s) => !s.done);
+  // Until the account is connected, steps 2–3 wait as one line each (#5256).
+  const holding = data.steps.some((s) => s.id === "connect" && !s.done);
   return (
     <>
       <header className="page-header">
@@ -196,11 +256,14 @@ export function OnboardingChapter({
                 key={step.id}
                 step={step}
                 data={data}
+                count={holding ? `Step ${i + 1} of ${data.steps.length}` : undefined}
                 onJoined={() => {
                   void onboarding.refetch();
                   onJoined?.();
                 }}
               />
+            ) : holding ? (
+              <HeldStep key={step.id} step={step} n={i + 1} total={data.steps.length} />
             ) : (
               <Step key={step.id} step={step} active={i === firstOpen} />
             ),

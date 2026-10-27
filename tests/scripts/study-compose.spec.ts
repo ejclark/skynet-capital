@@ -1,0 +1,334 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "@rstest/core";
+import { guardNetwork } from "../../scripts/study/no-network.mjs";
+import { serverRead } from "../../scripts/study/server-reads.mjs";
+import { buildBook } from "../../scripts/study/worlds/book.mjs";
+import { loadInput } from "../../scripts/study/worlds/inputs.mjs";
+import {
+  INSTANT,
+  msOf,
+  pinProcessClock,
+  resolveTokens,
+} from "../../scripts/study/worlds/instant.mjs";
+import { marketClient } from "../../scripts/study/worlds/market.mjs";
+import { serverConfig, sessionFor } from "../../scripts/study/worlds/server-config.mjs";
+import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.js";
+import { CRWV_WHEEL } from "../../src/playbooks/registry.js";
+import { createBoardChannel } from "../../src/server/board-patch-routes.js";
+
+/**
+ * The study composer's own logic (#4943 slice 2): how an input file becomes a book, how the book
+ * answers the server's seams, and the two promises a composed world makes — the same world hashes
+ * identically however it was composed, and it carries nothing written after its instant.
+ */
+
+const DAY = INSTANT.slice(0, 10);
+
+describe("resolveTokens", () => {
+  it("walks arrays and objects, resolving every token and keeping every other value", () => {
+    expect(resolveTokens({ a: ["@now", 3, null], b: { at: "@-1h", day: "2026-11-06" } })).toEqual({
+      a: ["2026-10-08T19:00:00.000Z", 3, null],
+      b: { at: "2026-10-08T18:00:00.000Z", day: "2026-11-06" },
+    });
+  });
+});
+
+describe("loadInput layering", () => {
+  const bad = loadInput("profile-bad-day") as {
+    participants: { id: string; cash: number }[];
+    bot: { passes: { at: string; wheelSale?: unknown }[] };
+    corpus: { commit: string };
+  };
+
+  it("replaces a base participant's fields by id and keeps the rest of the base", () => {
+    expect(bad.participants.find((p) => p.id === "sauron")?.cash).toBe(998512);
+    expect(bad.participants.map((p) => p.id)).toEqual(
+      (loadInput("profile-today") as { participants: { id: string }[] }).participants.map(
+        (p) => p.id,
+      ),
+    );
+    expect(bad.corpus.commit).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  it("cuts the bot's passes to those before `passesBefore` and puts the prepended pass first", () => {
+    const [first, ...rest] = bad.bot.passes;
+    expect(first?.at).toBe("@-2d 09:35");
+    expect(rest.every((p) => msOf(p.at) < msOf("@-2d 09:35"))).toBe(true);
+    expect(bad.bot.passes.some((p) => p.wheelSale)).toBe(false);
+  });
+
+  it("swaps the member list wholesale", () => {
+    const none = loadInput("no-account") as { members: { email: string; owns: string[] }[] };
+    expect(none.members.find((m) => m.email.startsWith("casey"))?.owns).toEqual([]);
+  });
+});
+
+describe("buildBook", () => {
+  const today = buildBook("profile-today");
+
+  it("derives every equity from cash plus market value, and ends the history on it", () => {
+    for (const p of today.participants) {
+      const held = p.positions.reduce((s, x) => s + x.marketValue, 0);
+      expect(p.equity).toBeCloseTo(p.cash + held, 6);
+      const history = today.history[p.id] ?? [];
+      if (history.length > 0) expect(history[history.length - 1]?.equity).toBe(p.equity);
+    }
+  });
+
+  it("keeps the decision store newest first and stamps the book at the instant", () => {
+    const at = (today.decisions.sauron ?? []).map((r) => r.at);
+    expect(at).toEqual([...at].sort((a, b) => b - a));
+    expect(today.generatedAt).toBe(new Date(INSTANT).toISOString());
+  });
+
+  it("records each pass's verdicts as the playbooks gave them at that pass, never typed", () => {
+    const wheel = (book: ReturnType<typeof buildBook>) =>
+      book.decisions.sauron?.[0]?.playbookVerdicts?.find((v) => v.playbookId === "CRWV-WHEEL");
+    // Each pass's verdict is the live playbook's own answer at that pass's time.
+    for (const book of [today, buildBook("profile-bad-day")]) {
+      const pass = book.decisions.sauron?.[0];
+      const asOf = new Date(pass?.at ?? 0).toISOString();
+      expect(wheel(book)?.state).toBe(CRWV_WHEEL.desiredState(asOf, UPCOMING_PRINTS));
+    }
+  });
+});
+
+describe("serverConfig over a book", () => {
+  const book = buildBook("profile-bad-day");
+  const config = serverConfig(book);
+
+  it("pages the decision store by keyset, newest first", async () => {
+    const all = await config.readDecisions("sauron");
+    const page = await config.readDecisions("sauron", { limit: 2 });
+    expect(page).toEqual(all.slice(0, 2));
+    const older = await config.readDecisions("sauron", { before: all[0]?.at });
+    expect(older).toEqual(all.slice(1));
+  });
+
+  it("finds a placed order's decision by its order id", () => {
+    expect(config.findByOrderId("sauron-nvda-4")?.record.at).toBe(msOf("@-2d 09:35"));
+    expect(config.findByOrderId("nope")).toBeUndefined();
+  });
+
+  it("answers the broker's history as the tail of the book's month, ending on equity", async () => {
+    const client = config.tradingClientFor("sauron");
+    const week = await client?.getPortfolioHistory("1W");
+    const sauron = book.participants.find((p) => p.id === "sauron");
+    expect(week?.equity).toHaveLength(6);
+    expect(week?.equity.at(-1)).toBe(sauron?.equity);
+    expect(week?.profit_loss[0]).toBe(0);
+    expect(week?.base_value).toBe(week?.equity[0]);
+    expect(config.tradingClientFor("nobody")).toBeUndefined();
+  });
+
+  it("reads its clock and the session from the instant, not the wall", async () => {
+    expect(config.now().toISOString()).toBe(new Date(INSTANT).toISOString());
+    expect(await config.tradingClientFor("sauron")?.isMarketOpen()).toBe(true);
+  });
+});
+
+describe("marketClient", () => {
+  const market = marketClient(buildBook("profile-today").market);
+
+  it("lays a 13-strike ladder around spot, priced before the instant", async () => {
+    const spot = (await market.getUnderlyingPrice("NVDA")) ?? 0;
+    const rows = await market.getChain("NVDA", "2026-11-20", "put");
+    expect(rows).toHaveLength(13);
+    expect(rows[6]?.strike).toBe(Math.round(spot / 5) * 5);
+    expect(rows.every((r) => r.bid < r.ask && Date.parse(r.quotedAt) < Date.parse(INSTANT))).toBe(
+      true,
+    );
+    expect(await market.getChain("ZZZZ", "2026-11-20", "put")).toEqual([]);
+  });
+
+  it("walks weekday bars up to the previous close, oldest first", async () => {
+    const bars = (await market.getBars("CRWV")) ?? [];
+    const days = bars.map((b) => b.t.slice(0, 10));
+    expect(days).toEqual([...days].sort());
+    expect((days.at(-1) ?? DAY) < DAY).toBe(true);
+    expect(bars.every((b) => ![0, 6].includes(new Date(b.t).getUTCDay()))).toBe(true);
+    expect(await market.getBars("ZZZZ")).toBeUndefined();
+  });
+
+  it("lists expirations on or after a day", async () => {
+    expect(await market.getExpirations("NVDA", "2026-10-10", 2)).toEqual([
+      "2026-10-16",
+      "2026-10-23",
+    ]);
+  });
+});
+
+describe("guardNetwork", () => {
+  it("answers what the world holds, refuses and records everything else", async () => {
+    const real = globalThis.fetch;
+    try {
+      const log = guardNetwork((url) => (url === "https://held/" ? { ok: 1 } : undefined));
+      expect(await (await fetch("https://held/")).json()).toEqual({ ok: 1 });
+      await expect(fetch("https://elsewhere/")).rejects.toThrow(/no network/);
+      expect(log).toEqual({ answered: ["https://held/"], refused: ["https://elsewhere/"] });
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});
+
+describe("serverRead", () => {
+  const book = buildBook("profile-bad-day");
+  const config = serverConfig(book);
+  const session = sessionFor("eric@study.world");
+
+  it("answers a GET through the real handlers, parsed", async () => {
+    const read = await serverRead("/api/desk/sauron", config, createBoardChannel(), session);
+    expect(read?.status).toBe(200);
+    expect(read?.body).toMatchObject({ desk: { id: "sauron" } });
+  });
+
+  // The pages one tap from the profile, answered as production answers them behind sign-in —
+  // never as a deployment with the service switched off (the thin slice's world holes).
+  const read = async (url: string, as = session) =>
+    (await serverRead(url, config, createBoardChannel(), as))?.body as Record<string, unknown>;
+
+  it("serves the Activity feed and an empty Council, both switched on", async () => {
+    const wire = (await read("/api/wire")).wire as { trades: unknown[]; feedbackEnabled: boolean };
+    expect(wire.trades.length).toBeGreaterThan(0);
+    expect(wire.feedbackEnabled).toBe(true);
+    expect(await read("/api/council")).toMatchObject({ enabled: true, entries: [] });
+  });
+
+  it("wires account management, and answers the owner's cards as a non-owner", async () => {
+    expect(await read("/api/settings")).toMatchObject({ authConfigured: true, adminWired: true });
+    expect(await read("/api/admin/invite")).toEqual({ owner: false });
+    expect(await read("/api/controls")).toEqual({ owner: false });
+  });
+
+  it("serves the fleet panel: the bots process polls whether or not a bot decided", async () => {
+    const ops = (await read("/api/ops-status")) as {
+      available: boolean;
+      status: { degraded: boolean; signals: { id: string; verdict: string }[] };
+    };
+    expect(ops.available).toBe(true);
+    expect(ops.status.degraded).toBe(false);
+    const verdict = (id: string) => ops.status.signals.find((s) => s.id === id)?.verdict;
+    expect(verdict("deploy-app")).toBe("ok");
+    // A stopped bot is a quiet bot, never a downed process: the poll is alive on every world.
+    expect(verdict("bridge")).toBe("ok");
+    expect(verdict("persona-gate")).toBe("ok");
+  });
+
+  it("refuses a member's option fill the book has no order audit for, never a bot's", async () => {
+    type Audit = () => Promise<unknown[]>;
+    expect(await (config.readAllOrderAudit as Audit)()).toEqual([]);
+    const human = book.participants.find((p) => p.kind === "human")?.id ?? "";
+    const withPut = structuredClone(book);
+    withPut.activity[human] = [
+      { orderId: "put-1", symbol: "CRWV261106P00080000", at: "2026-10-08T15:00:00Z" },
+    ];
+    const audit = serverConfig(withPut).readAllOrderAudit as Audit;
+    await expect(audit()).rejects.toThrow(/member's option fill/);
+  });
+
+  it("is undefined for a path no handler claims", async () => {
+    expect(await serverRead("/api/no-such-read", config, createBoardChannel(), session)).toBe(
+      undefined,
+    );
+  });
+});
+
+// The reads a redesign frame makes are wired as production wires them (#5208): a linked member's
+// journey, and the bot's week under its heartbeat.
+describe("profile-today's reads, as production answers them", () => {
+  const book = buildBook("profile-today");
+  const config = serverConfig(book);
+  const read = async (url: string, email = "eric@study.world") =>
+    (await serverRead(url, config, createBoardChannel(), sessionFor(email)))?.body as Record<
+      string,
+      unknown
+    >;
+
+  it("answers each linked member's journey as linked", async () => {
+    expect(await read("/api/learn")).toMatchObject({ linked: true });
+    expect(await read("/api/learn", "jordan@study.world")).toMatchObject({ linked: true });
+  });
+
+  it("serves the bot's heartbeat with its week, a lane per answering playbook", async () => {
+    // The heartbeat route reads the wall clock for "now", as compose's pinned child does.
+    const unpin = pinProcessClock();
+    try {
+      const body = (await read("/api/desk/sauron/heartbeat")) as {
+        heartbeat: { week?: { lanes: unknown[]; trades: unknown[] } };
+      };
+      expect(body.heartbeat.week?.lanes.length).toBeGreaterThan(0);
+      expect(body.heartbeat.week?.trades.length).toBeGreaterThan(0);
+    } finally {
+      unpin();
+    }
+  });
+
+  it("refuses a journey over a member's option fill the book has no audit for", async () => {
+    const withPut = structuredClone(book);
+    withPut.activity.eric = [
+      { orderId: "put-1", symbol: "CRWV261106P00080000", at: "2026-10-08T15:00:00Z" },
+    ];
+    const progression = serverConfig(withPut).progression as { view(id: string): Promise<unknown> };
+    await expect(progression.view("eric")).rejects.toThrow(/member's option fill/);
+  });
+});
+
+describe("a composed world", () => {
+  type Manifest = { payloads: { world: string; viewer: string; key: string; sha256: string }[] };
+  // Each run directory holds a whole composed world (~56MB), so every one this block makes is
+  // removed in afterAll — pass or fail — or a busy box fills its disk (#5583). The compose script
+  // only writes inside the directory it is handed, so the spec, which makes it, owns its cleanup.
+  const made: string[] = [];
+  const compose = (...names: string[]) => {
+    const dir = mkdtempSync(join(tmpdir(), "study-compose-"));
+    made.push(dir);
+    const out = spawnSync("npx", ["tsx", "scripts/study/worlds/compose.mjs", dir, ...names], {
+      encoding: "utf8",
+    });
+    if (out.status !== 0) throw new Error(`compose exited ${out.status}: ${out.stderr}`);
+    return dir;
+  };
+  afterAll(() => {
+    for (const dir of made) rmSync(dir, { recursive: true, force: true });
+  });
+  const hashes = (dir: string, world: string) => {
+    const m = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as Manifest;
+    return Object.fromEntries(
+      m.payloads.filter((r) => r.world === world).map((r) => [`${r.viewer} ${r.key}`, r.sha256]),
+    );
+  };
+  // One compose alone, one after another world: a world must not see what an earlier one cached.
+  let alone = "";
+  let after = "";
+  beforeAll(() => {
+    alone = compose("profile-bad-day");
+    after = compose("profile-today", "profile-bad-day");
+  }, 120_000);
+
+  it("hashes identically composed alone and after another world", () => {
+    const a = hashes(alone, "profile-bad-day");
+    expect(Object.keys(a).length).toBeGreaterThan(100);
+    expect(hashes(after, "profile-bad-day")).toEqual(a);
+  });
+
+  it("writes the world's known artifacts beside the run, declared rows first", () => {
+    const known = JSON.parse(
+      readFileSync(join(alone, "profile-bad-day-artifacts.json"), "utf8"),
+    ) as { route: string; source: string }[];
+    expect(known.length).toBeGreaterThan(0);
+    expect(known.every((a) => a.source === "declared" || a.source === "compose")).toBe(true);
+    expect(known.map((a) => a.route)).toContain("/login");
+  });
+
+  it("serves no research assessed after its instant", () => {
+    const eric = JSON.parse(readFileSync(join(alone, "profile-bad-day", "eric.json"), "utf8"));
+    const shelf = JSON.stringify(eric["/api/research"].body);
+    const assessed = [...shelf.matchAll(/"lastAssessed":"(\d{4}-\d{2}-\d{2})"/g)].map((m) => m[1]);
+    expect(assessed.length).toBeGreaterThan(0);
+    expect(assessed.filter((d) => (d ?? "") > DAY)).toEqual([]);
+  });
+});

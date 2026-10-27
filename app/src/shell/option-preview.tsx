@@ -5,7 +5,8 @@ import type { OptionPreview } from "../live/options";
 import { daysToExpiry, expiresIn } from "../live/straddle";
 import type { TicketResult } from "../live/ticket";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
-import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
+import { signOf } from "../ui";
+import { DisarmNote, DoneNote, GateHead, keepFocus } from "./gate-frame";
 import { PayoffChart } from "./payoff-chart";
 
 /**
@@ -74,9 +75,12 @@ export function percent(fraction: number): string {
 }
 
 /** A signed dollar figure — the sign is a word-level cue, never a hue (a standing reader is
- *  red/green colourblind), so the plus is written out. */
+ *  red/green colourblind), so the plus is written out and a loss carries the real minus (#5204). */
 export function signedMoney(value: number): string {
-  return value > 0 ? `+${money(value)}` : money(value);
+  // Signed from the cent it prints, like `signedPercent`: float drift (-1e-17) or a sub-cent move
+  // reads "$0.00", never "−$0.00" claiming a loss the figure does not show.
+  const cents = Math.round(value * 100) / 100;
+  return `${signOf(cents)}${money(Math.abs(cents))}`;
 }
 
 /** The contract's quoted greeks in the desk's own units, "—" where the feed had none. */
@@ -219,10 +223,7 @@ export function OptionGateStatus({
       <>
         <GateHead tone="filled">{fillHeadline(state.result, fill)}</GateHead>
         <div className="gate-body">
-          <p className="gate-note">
-            SIM account — simulated fill, real discipline. The blotter and timeline pick it up on
-            the next read.
-          </p>
+          <DoneNote fill={fill}>The blotter and timeline pick it up on the next read.</DoneNote>
         </div>
       </>
     );

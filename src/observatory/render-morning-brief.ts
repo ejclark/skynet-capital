@@ -17,9 +17,12 @@ function playbookSection(brief: MorningBrief): string {
     return `  ${p.id} (${p.mode}) — ${state} today\n    ${p.thesis}\n    evidence: ${p.evidence}`;
   });
   const warning = brief.rejectedPlaybookTokens.length
-    ? `\n  ⚠ SKYNET_PLAYBOOKS has unrecognized token(s): ${brief.rejectedPlaybookTokens.join(", ")}`
+    ? `\n  ⚠ SKYNET_PLAYBOOKS has refused token(s) — unrecognized, malformed or repeated: ${brief.rejectedPlaybookTokens.join(", ")}`
     : "";
-  return `PLAYBOOKS\n${lines.join("\n") || "  (none enabled)"}${warning}`;
+  const paused = brief.pausedPlaybookIds.length
+    ? `\n  paused on every bot (opens nothing new): ${brief.pausedPlaybookIds.join(", ")}`
+    : "";
+  return `PLAYBOOKS\n${lines.join("\n") || "  (none enabled)"}${paused}${warning}`;
 }
 
 function calendarSection(brief: MorningBrief): string {

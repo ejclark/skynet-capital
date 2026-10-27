@@ -9,9 +9,12 @@
  */
 
 import { join } from "node:path";
+import { buildAuthoredPlaysWire } from "../autonomous/authored-plays-wire.js";
+import { buildShadowOrders, type ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
 import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
+import { buildConvictionsWire } from "../autonomous/convictions-wire.js";
 import {
   type DecisionDb,
   type DecisionFunnel,
@@ -19,16 +22,29 @@ import {
   type RetrospectiveRecord,
 } from "../autonomous/decision-db.js";
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
+import type { VerdictRunStart } from "../autonomous/decision-db-verdict-run.js";
+import type { CheckWeekRows } from "../autonomous/decision-db-week.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import { storeDecisionBatch } from "../autonomous/decision-wire.js";
+import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
-import { buildSubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
-import type { OrderIntent } from "../domain/types.js";
+import { type PlaybookFunnelView, readHouseFunnel } from "../autonomous/playbook-funnel.js";
+import {
+  buildSubscriptionsSnapshot,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
+} from "../autonomous/subscriptions-wire.js";
+import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
+import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { Participant } from "../participants/participant.js";
+import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
+import { resolveBridgeAuth } from "../server/bridge-http.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
-import { createSubscriptionSeederFromEnv } from "../server/subscription-seed-store.js";
-import { createSubscriptionStore } from "../server/subscription-store.js";
+import { createMemberConvictionStore } from "../server/member-conviction-store.js";
+import { pollSeedsFromEnv } from "../server/subscription-seed-store.js";
+import { createSubscriptionStore, type SubscriptionStore } from "../server/subscription-store.js";
+import { memoPerKey } from "../storage/ttl-memo.js";
 
 /**
  * Opens the app-side decision store — this listener's own copy of what `bots` replicates over
@@ -76,16 +92,35 @@ export interface InsightsBridgeHandle {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** Which personas decided these orders, ids only — the Decisions tab's cross-persona join
+   *  without a decision record per order (#4612 slice 7). */
+  readonly personasOfOrders?: (orderIds: readonly string[]) => string[];
   /** A spread leg's order id → its spread — the same store, filled by the same replicated
    *  records, so a leg resolves the moment its decision has landed. */
   readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
   /** The decision funnel (PR 7b, #2287) — same store, same dark-when-unset posture. */
   readonly funnelFor?: (personaId: string) => DecisionFunnel;
+  /** This week's checks, grouped answers and placed trades (#5073 slice 2) — same store. */
+  readonly readCheckWeek?: (personaId: string) => CheckWeekRows | undefined;
+  /** When a playbook's current verdict began (#4953) — same store. */
+  readonly readVerdictRunStart?: (
+    personaId: string,
+    startAt: number,
+    verdict: PlaybookVerdict,
+  ) => VerdictRunStart | undefined;
+  /** Each house playbook's funnel over the last ten sessions (#4450 slice 5a) — same store. */
+  readonly readPlaybookFunnel?: () => PlaybookFunnelView;
   /** Every closed position the retrospective writer has recorded (PR 7c, #2287) — same store,
    *  same dark-when-unset posture. */
   readonly listRetrospectives?: (personaId: string) => readonly RetrospectiveRecord[];
   /** COND-SCOUT's latest snapshot (#3651 slice 7a) — memory only, refilled by the next poll. */
   readonly readCondScout: () => CondScoutSnapshot | undefined;
+  /** The bots' latest report on the members' playbooks in a shadow test (#5457 slice 2) — memory
+   *  only, refilled by the next poll, so a redeploy of this app reads "no report yet" for ~30s. */
+  readonly readAuthoredShadow: () => ShadowReport | undefined;
+  /** The bots app's env house roster as its most recent poll reported it (#4650) — re-read from
+   *  every poll like `botsGate`, so a bots build that stops reporting stops being quoted. */
+  readonly readHouseRoster: () => HouseRosterReport | undefined;
 }
 
 export interface CredentialsBridgeDeps {
@@ -93,6 +128,27 @@ export interface CredentialsBridgeDeps {
   readonly knownPersonaIds: readonly string[];
   /** The live roster resolver every other credential seam in this app already uses. */
   readonly findParticipant: (id: string) => Participant | undefined;
+}
+
+const FUNNEL_TTL_MS = 30_000;
+/** A bot's week of checks (#5073 slice 2) is re-read at most this often per bot — every viewer of
+ *  the Playbooks section polls it every 30s. Short enough that the newest check it holds is never
+ *  older than the strip's own two-minute "no check" window: 15s here plus replication's ~45s. */
+const CHECK_WEEK_TTL_MS = 15_000;
+/** The house playbook funnel is re-read at most once a minute: one grouped read over every bot's
+ *  last ten sessions, behind a card nobody can tell is a minute old. */
+const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
+
+/** The Playbook Store as the bots receive it on every poll: `subscriptions.v4`, with each
+ *  subscription's pointer at a conviction record in the version (#5482 contract piece 4). Its
+ *  inline-copy bit is frozen at `false` since the field was retired (`subscriptions-wire.ts`). */
+export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
+  return buildSubscriptionsSnapshot(
+    store.load(),
+    at,
+    store.loadAllocations(),
+    SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
+  );
 }
 
 /** Start the internal insights listener; logs the port it bound once it's up. */
@@ -106,31 +162,55 @@ export function startInsightsBridge(
   const botCredentialsSecret = env.SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET;
   const fingerprintSalt = env.SKYNET_STORE_SECRET;
   const decisionDb = seedAppDecisionDb(env);
+  // One key: the window is "the last ten sessions as of now", so the memo only bounds how often.
+  const houseFunnel = decisionDb
+    ? memoPerKey(PLAYBOOK_FUNNEL_TTL_MS, () =>
+        readHouseFunnel((from, to) => decisionDb.playbookFunnel(from, to)),
+      )
+    : undefined;
   // Read fresh on every poll, exactly like `botControls.load()` below — one small synchronous
   // read of the same file the Playbook Store just wrote, so a subscribe reaches the bots process
   // on the next poll with nothing to invalidate (issue #3595). Its own store instance rather than
   // a threaded-through one: `SKYNET_SUBSCRIPTIONS_FILE` already pins the path on this app, and
   // `JsonFileStore` holds no state between reads.
   const subscriptions = createSubscriptionStore(env, (message) => console.error(message));
-  // #4535 slice 1b: seeds each house bot's subscriptions once from the bots app's reported env
-  // roster (uncapped, behaviour-preserving). Runs before the response reads the store, so the
-  // poll that carries the first report already gets the seeded snapshot back.
-  const seeder = createSubscriptionSeederFromEnv(env, (message) => console.error(message));
+  // Seeds bot accounts' subscriptions once each, from what the poll reports: #4535 slice 1b's env
+  // roster (uncapped, behaviour-preserving), then #4642 slice 9b's own-rules playbook (`SAURON` on
+  // `sauron` — standard, uncapped, unfiltered, so only the label on his orders changes). Runs before
+  // the response reads the store, so the poll that seeds already gets the seeded snapshot back.
+  const seed = pollSeedsFromEnv(env, (message) => console.error(message));
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
   let botsGate: readonly PersonaGateVerdict[] | undefined;
+  let houseRoster: HouseRosterReport | undefined;
   let condScout: CondScoutSnapshot | undefined;
+  let authoredShadow: ShadowReport | undefined;
+  // The drafts in a shadow test go out on every poll, read fresh like the subscriptions above.
+  const authoredPlays = createAuthoredPlayStore(env, (message) => console.error(message));
+  const memberConvictions = createMemberConvictionStore(env, (message) => console.error(message));
+  const bridgeAuth = resolveBridgeAuth(env);
   createInsightsListener({
     record: (entry) => insights.record(entry),
+    bridgeAuth,
     condScout: {
       accept: (snapshot) => {
         condScout = snapshot;
       },
     },
+    authoredShadow: {
+      accept: (report) => {
+        authoredShadow = report;
+      },
+    },
+    authoredShadowOrders: () => buildShadowOrders(authoredPlays.load(), Date.now()),
+    // The plays a member promoted: specs only, read fresh like the subscriptions they ride beside.
+    authoredPlays: () => buildAuthoredPlaysWire(authoredPlays.load(), Date.now()),
+    // The views members handed to their bots (#5482 slice 6c), read fresh beside the plays.
+    convictions: () => buildConvictionsWire(memberConvictions.handedOver(), Date.now()),
     ...(decisionDb
       ? {
           decisionsCursor: () => decisionDb.maxAtAll(),
-          decisions: { recordBatch: (batch) => decisionDb.recordBatch(batch.records) },
+          decisions: { recordBatch: (batch) => storeDecisionBatch(decisionDb, batch) },
         }
       : {}),
     // The bots process polls Mission Control state over the same private-net bridge. Stamps a
@@ -146,19 +226,17 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
-    subscriptions: () => buildSubscriptionsSnapshot(subscriptions.load(), Date.now()),
+    // v4 (#5482 contract piece 4) fingerprints each subscription's pointer, and a bit for an
+    // inline copy now frozen at `false` (the field is retired): the bots read pointers only. Sent only once the
+    // bots that read v4 (#5989) were deployed: a bots build that predates it reads v4 as "not
+    // reported" and keeps the roster it had. v1 to v3 stay readable by the bots for a rollback.
+    subscriptions: () => subscriptionsOnTheWire(subscriptions),
     onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;
       botsGate = report.gate;
-      if (report.houseRoster) {
-        const seeded = seeder.seed(report.houseRoster);
-        if (seeded.length > 0) {
-          console.log(
-            `[subscriptions] seeded from the bots app's SKYNET_PLAYBOOKS roster (uncapped): ${seeded.join(", ")}`,
-          );
-        }
-      }
+      houseRoster = report.houseRoster;
+      for (const line of seed(report)) console.log(line);
     },
     ...(credentialsDeps && botCredentialsSecret
       ? {
@@ -170,13 +248,16 @@ export function startInsightsBridge(
         }
       : {}),
   }).listen(insightsPort, () => {
-    console.log(`[insights-bridge] internal listener on port ${insightsPort} (private-net only)`);
+    const auth = bridgeAuth.acceptLegacy ? "provisioned secret, literal still accepted" : "literal";
+    console.log(`[insights-bridge] internal listener on port ${insightsPort} (auth: ${auth})`);
   });
   return {
     lastControlsPollAt: () => lastControlsPollAt,
     botsRunningSha: () => botsRunningSha,
     botsGate: () => botsGate,
     readCondScout: () => condScout,
+    readAuthoredShadow: () => authoredShadow,
+    readHouseRoster: () => houseRoster,
     ...(decisionDb
       ? {
           readDecisions: async (personaId, page) =>
@@ -185,8 +266,23 @@ export function startInsightsBridge(
               ...(page?.before !== undefined ? { beforeAt: page.before } : {}),
             }),
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
+          personasOfOrders: (orderIds: readonly string[]) => decisionDb.personasOfOrders(orderIds),
           findSpreadLeg: (legOrderId: string) => decisionDb.findSpreadLeg(legOrderId),
-          funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
+          // Remembered for 30 s: a grouped scan of the persona's whole history (~190 ms at 180
+          // days) that no viewer can tell is half a minute old (#4612 slice 7).
+          funnelFor: memoPerKey(FUNNEL_TTL_MS, (personaId: string) =>
+            decisionDb.funnelFor(personaId),
+          ),
+          readCheckWeek: memoPerKey(CHECK_WEEK_TTL_MS, (personaId: string) => {
+            const window = checkWeekWindow(new Date());
+            return window
+              ? decisionDb.checkWeek(personaId, window.from, window.to, WEEK_BUCKET_MS)
+              : undefined;
+          }),
+          // Not remembered: the key would carry the newest pass's instant, which moves every 15 s,
+          // and the heartbeat asks only for a run its 30-pass page could not see the end of.
+          readVerdictRunStart: (personaId: string, startAt: number, verdict: PlaybookVerdict) =>
+            decisionDb.verdictRunStart(personaId, startAt, verdict),
           // Bounded to the store's own max page (100) — retrospectives accrue one per CLOSED
           // position, not one per cycle, so this is generous headroom at this app's trade volume
           // rather than the "growing feed" concern `listByPersona`'s own bound addresses.
@@ -194,5 +290,6 @@ export function startInsightsBridge(
             decisionDb.listRetrospectives(personaId, { limit: 100 }),
         }
       : {}),
+    ...(houseFunnel ? { readPlaybookFunnel: () => houseFunnel("house") } : {}),
   };
 }

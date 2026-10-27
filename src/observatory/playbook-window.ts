@@ -1,6 +1,7 @@
 import { type EarningsPrint, nextPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { marketDayKey } from "../domain/market-day.js";
 import type { PlaybookVerdictState } from "../domain/types.js";
-import type { Playbook } from "../playbooks/playbook.js";
+import { type Playbook, readsLiveSignals } from "../playbooks/playbook.js";
 
 /**
  * WHAT AN ARMED PLAYBOOK IS ACTUALLY WAITING FOR (#4450 slice 1, completing criterion 1: "an armed
@@ -34,6 +35,17 @@ export interface PlaybookWindowRead {
   readonly nextEntry: string | null;
   /** Why it is where it is, in one sentence a member can act on. */
   readonly reason: string;
+  /** Set when its window would be open TODAY if these estimated print dates were confirmed: the
+   *  window is due and only the company's date is missing (#4479 slice 2). The roll call shows such
+   *  a playbook as waiting on a confirmed date, not waiting for its window. */
+  readonly unconfirmed?: readonly UnconfirmedPrint[];
+}
+
+/** An estimated print date that is all that stands between a playbook and an open window. */
+export interface UnconfirmedPrint {
+  readonly symbol: string;
+  /** `YYYY-MM-DD` of the estimate. */
+  readonly date: string;
 }
 
 /** How far ahead `nextEntry` looks. A quarter covers the earnings cadence every date-keyed
@@ -51,10 +63,10 @@ function isoDayOffset(from: Date, days: number): string {
 }
 
 /** Whether a day-by-day scan can answer "when does this playbook next open?" at all. An
- *  event-keyed playbook's window turns on an outside signal and a rule-chain playbook has no window
- *  to date, so asking either answers a question it does not have. */
+ *  event-keyed playbook's window turns on an outside signal, and a rule-chain playbook or a persona's
+ *  own rules have no window to date, so asking any of them answers a question it does not have. */
 function windowIsDatable(playbook: Playbook): boolean {
-  return playbook.keyedOn !== "event" && !playbook.tactics;
+  return playbook.keyedOn !== "event" && !readsLiveSignals(playbook);
 }
 
 /** The first day inside the horizon on which this playbook's own rule says "long". `events` is
@@ -73,6 +85,30 @@ function nextEntryDate(
   return null;
 }
 
+/** The first New York market day, from today on, on which the rule says "long" at the scan's
+ *  clock — skipping a scan instant already behind `now`, so a day whose window has closed by now is
+ *  never named as the day it would open. */
+function laterEntryDate(
+  playbook: Playbook,
+  now: Date,
+  calendar: readonly EarningsPrint[],
+): string | null {
+  const today = new Date(`${marketDayKey(now.toISOString())}T00:00:00Z`);
+  for (let day = 0; day <= NEXT_ENTRY_HORIZON_DAYS; day++) {
+    const date = isoDayOffset(today, day);
+    const at = `${date}${SCAN_TIME_UTC}`;
+    if (Date.parse(at) <= now.getTime()) continue;
+    if (playbook.desiredState(at, calendar, []) === "long") return date;
+  }
+  return null;
+}
+
+/** A calendar diagnosis: the sentence, and the estimates holding an otherwise-open window. */
+interface CalendarCause {
+  readonly reason: string;
+  readonly unconfirmed?: readonly UnconfirmedPrint[];
+}
+
 /**
  * Why a date-keyed playbook has no entry day ahead of it, read off the calendar it is keyed to. The
  * two causes read very differently: a symbol with no print date at all is waiting on research,
@@ -84,7 +120,7 @@ function calendarCause(
   playbook: Playbook,
   now: Date,
   calendar: readonly EarningsPrint[],
-): string | undefined {
+): CalendarCause | undefined {
   const asOf = now.toISOString();
   const prints = playbook.symbols.map((symbol) => ({
     symbol,
@@ -93,26 +129,87 @@ function calendarCause(
   if (prints.length === 0) return undefined;
   if (prints.every((p) => !p.print)) {
     const names = prints.map((p) => p.symbol).join(", ");
-    return `On, but no print date is on the calendar for ${names}, so no window can open yet.`;
+    return {
+      reason: `On, but no print date is on the calendar for ${names}, so no window can open yet.`,
+    };
   }
   // Every symbol must be dated AND unconfirmed for the estimate to be the whole cause: a basket
   // mixing an undated symbol with an estimated one would report a cause leaving the undated one
   // out, which is the half-truth the undiagnosable case exists to avoid.
   if (prints.every((p) => p.print && p.print.status !== "confirmed")) {
+    const held = estimateHold(playbook, now, calendar);
+    if (held) return held;
     const named = prints.map((p) => `${p.symbol} (${p.print?.date})`).join(", ");
-    return `On, but the next print date for ${named} is an estimate — only a confirmed date opens a position.`;
+    return {
+      reason: `On, but the next print date for ${named} is an estimate — only a confirmed date opens a position.`,
+    };
   }
   return undefined;
 }
 
+/**
+ * What the estimate is actually costing (#4479 slice 2): ask the playbook again with its own
+ * symbols' estimates read as confirmed. A window that would be open today is HELD by the estimate;
+ * one that would open later is waiting for it, and gets the day. Nothing either way — the estimate
+ * sits inside the dead zone, or past the horizon — and the plain estimate sentence stands.
+ *
+ * Asked, never counted: the issue's first sketch drew the line at "within 25 days of the print",
+ * but S1-NVDA's D-20 is twenty TRADING SESSIONS (#4776), about four calendar weeks, so a day count
+ * would call it "waiting" for the first days its window is due. A fixed number would also be a
+ * fourth print-proximity horizon, which `PRINT_WINDOWS` exists to prevent.
+ */
+function estimateHold(
+  playbook: Playbook,
+  now: Date,
+  calendar: readonly EarningsPrint[],
+): CalendarCause | undefined {
+  const mine = new Set(playbook.symbols);
+  const asIfConfirmed = calendar.map((p) =>
+    mine.has(p.symbol) && p.status === "estimate" ? { ...p, status: "confirmed" as const } : p,
+  );
+  // "Open now" is asked AT now, never at the scan's fixed clock: at 9:30 PM ET the UTC date is
+  // already tomorrow, and a print-day rule that went flat at 15:45 ET is not open at 4 PM.
+  const openNow = playbook.desiredState(now.toISOString(), asIfConfirmed, []) === "long";
+  const wouldOpen = openNow
+    ? marketDayKey(now.toISOString())
+    : laterEntryDate(playbook, now, asIfConfirmed);
+  if (!wouldOpen) return undefined;
+  // The estimates the window would open on: each symbol's next print as of that moment.
+  const asOf = openNow ? now.toISOString() : `${wouldOpen}${SCAN_TIME_UTC}`;
+  const unconfirmed = playbook.symbols.flatMap((symbol): UnconfirmedPrint[] => {
+    const print = nextPrint(symbol, asOf, calendar);
+    return print && print.status !== "confirmed" ? [{ symbol, date: print.date }] : [];
+  });
+  if (unconfirmed.length === 0) return undefined;
+  const named = unconfirmed.map((p) => `${p.symbol}'s ${p.date}`).join(", ");
+  const one = unconfirmed.length === 1;
+  const prints = one ? "print is still an estimate" : "prints are still estimates";
+  if (openNow) {
+    return {
+      reason: `On, but ${named} ${prints} — its window would be open now if ${one ? "that date were" : "those dates were"} confirmed, and only a confirmed date opens a position.`,
+      unconfirmed,
+    };
+  }
+  return {
+    reason: `On, but ${named} ${prints} — once ${one ? "it is" : "they are"} confirmed, its window would open ${wouldOpen}.`,
+  };
+}
+
 /** Why an armed playbook between windows has nothing ahead of it. */
-function waitingReason(playbook: Playbook, now: Date, calendar: readonly EarningsPrint[]): string {
+function waitingReason(
+  playbook: Playbook,
+  now: Date,
+  calendar: readonly EarningsPrint[],
+): CalendarCause {
   if (!windowIsDatable(playbook)) {
-    return "On, watching for the signal its rule opens on — there is no date to wait for.";
+    return {
+      reason: "On, watching for the signal its rule opens on — there is no date to wait for.",
+    };
   }
   return (
-    (playbook.keyedOn === "earnings" ? calendarCause(playbook, now, calendar) : undefined) ??
-    `On, with no day inside the next ${NEXT_ENTRY_HORIZON_DAYS} days on which its rule would open a position.`
+    (playbook.keyedOn === "earnings" ? calendarCause(playbook, now, calendar) : undefined) ?? {
+      reason: `On, with no day inside the next ${NEXT_ENTRY_HORIZON_DAYS} days on which its rule would open a position.`,
+    }
   );
 }
 
@@ -134,6 +231,12 @@ export function readPlaybookWindow(
         "On, reading live price and sentiment every pass — there is no date window to wait for.",
     };
   }
+  if (state === "observing") {
+    return {
+      nextEntry: null,
+      reason: `On, observe-only — it records what it would buy and sell in ${names} and places nothing.`,
+    };
+  }
   if (state === "long") {
     return { nextEntry: null, reason: `On, and its window is open — it wants to hold ${names}.` };
   }
@@ -144,10 +247,6 @@ export function readPlaybookWindow(
     };
   }
   const nextEntry = windowIsDatable(playbook) ? nextEntryDate(playbook, now, calendar) : null;
-  return {
-    nextEntry,
-    reason: nextEntry
-      ? "On and waiting for its own window to open."
-      : waitingReason(playbook, now, calendar),
-  };
+  if (nextEntry) return { nextEntry, reason: "On and waiting for its own window to open." };
+  return { nextEntry, ...waitingReason(playbook, now, calendar) };
 }

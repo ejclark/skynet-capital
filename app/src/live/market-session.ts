@@ -62,13 +62,39 @@ function addDays(date: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** "Mon 9:30" for the first trading day strictly after `date` (two weeks covers any holiday run). */
-function nextOpenAfter(date: string): string {
+/** The first trading day strictly after `date` (two weeks covers any holiday run), or "". */
+function tradingDayAfter(date: string): string {
   for (let i = 1; i <= 14; i += 1) {
     const d = addDays(date, i);
-    if (!isMarketClosed(d)) return `${DAYS[new Date(`${d}T00:00:00Z`).getUTCDay()]} 9:30`;
+    if (!isMarketClosed(d)) return d;
   }
   return "";
+}
+
+const dayOf = (date: string) => DAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
+
+/** "Mon 9:30" for the first trading day strictly after `date`. */
+function nextOpenAfter(date: string): string {
+  const d = tradingDayAfter(date);
+  return d ? `${dayOf(d)} 9:30` : "";
+}
+
+/** The first trading day strictly after today in New York (`YYYY-MM-DD`): the session a row's
+ *  "Not now" waits out (#5070), so a mark set aside on a Thursday afternoon is back after
+ *  Friday's close, never an hour later at Thursday's. */
+export function nextSessionAfterToday(now: Date = new Date()): string {
+  return tradingDayAfter(easternParts(now).date);
+}
+
+/** The New York calendar day (`YYYY-MM-DD`) an instant falls on — the day the market reads it as. */
+export function marketDayOf(now: Date): string {
+  return easternParts(now).date;
+}
+
+/** Whether `date`'s close (4:00, or 1:00 on an early close) has passed at `now`. */
+export function closeHasPassed(date: string, now: Date = new Date()): boolean {
+  const e = easternParts(now);
+  return e.date > date || (e.date === date && e.minutes >= closeFor(date));
 }
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -103,6 +129,15 @@ export function marketSession(now: Date = new Date()): MarketSessionView {
   };
 }
 
+/** The open an order placed now waits for — "the Tue 9:30 ET open", or "today's 9:30 ET open"
+ *  before the bell — and undefined while the regular session is running. The trade form's notes
+ *  read it so a ticket never promises an immediate fill the market is closed to give (#6257). */
+export function waitsForOpen(view: MarketSessionView): string | undefined {
+  if (view.state === "open" || view.state === "power") return undefined;
+  if (view.state === "pre") return "today's 9:30 ET open";
+  return view.nextOpen ? `the ${view.nextOpen} ET open` : "the next session's open";
+}
+
 /** "1h 28m", "42m", "6h" — the compact duration the widget prints. */
 export function formatMinutes(total: number): string {
   const h = Math.floor(total / 60);
@@ -124,4 +159,54 @@ export function sessionSentence(view: MarketSessionView): string {
     case "closed":
       return view.nextOpen ? `Market closed, opens ${view.nextOpen} ET` : "Market closed";
   }
+}
+
+/**
+ * The market's word when a fleet alarm has the phone bar (#5064's review). At ≤700px the alarm
+ * outranks the clock and the folded widget steps aside, but "not open yet" and "closed" must never
+ * be told apart by a ring's colour alone — a standing reader is red/green colourblind
+ * (docs/BRAND.md → Accessibility). So each state keeps one short word of its own beside the alarm.
+ * Before the bell it is the open's TIME, not a countdown: one fixed width, so the line never grows
+ * past the bar at 1 a.m. ("Opens 8h 30m"), and the countdown is one tap down with the rest.
+ */
+export function statusLineCue(view: MarketSessionView): string {
+  switch (view.state) {
+    case "open":
+    case "power":
+      return "Open";
+    case "pre":
+      return "Opens 9:30";
+    case "closed":
+      return "Closed";
+  }
+}
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/**
+ * "Fri Sep 25 · 9:30 ET" — the next session's open, for the opened clock's "Next open" row. Before
+ * the bell on a trading day it is today's ("Today · 9:30 ET"); otherwise the first trading day
+ * after today, holidays skipped by the exchange's own calendar.
+ */
+export function nextOpenLabel(now: Date = new Date()): string {
+  const { date, minutes } = easternParts(now);
+  if (!isMarketClosed(date) && minutes < OPEN) return "Today · 9:30 ET";
+  const d = tradingDayAfter(date);
+  if (!d) return "";
+  const month = Number(d.slice(5, 7));
+  const day = Number(d.slice(8, 10));
+  return `${dayOf(d)} ${MONTHS[month - 1]} ${day} · 9:30 ET`;
 }

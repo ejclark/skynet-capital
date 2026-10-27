@@ -8,30 +8,41 @@
  * The house-wide env roster is a fallback on its way out — bot behaviour becomes the bot's own
  * subscriptions (plan #4535).
  */
-import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
-import { TACO_TIMING, tacoWindow } from "../news/taco-signal.js";
-import { HARDCORE_SAURON_CONFIG } from "../personas/sauron-hardcore.js";
-import { CRWV_WHEEL } from "./crwv-wheel.js";
-import { NVDA_CALL_SPREAD } from "./nvda-call-spread.js";
-import {
-  type EnabledPlaybook,
-  type Playbook,
-  POST_PRINT_FLAT_DAYS,
-  printWindow,
-} from "./playbook.js";
-import type { TacticalRule } from "./tactical-playbook.js";
+import { TACO_TIMING } from "../news/taco-signal.js";
+import { BETA_SCOUT } from "./beta-scout.js";
+import { callSpread } from "./call-spread.js";
+import { COND_SCOUT } from "./cond-scout.js";
+import { dipBounce } from "./dip-bounce-play.js";
+import { longCall } from "./long-call.js";
+import type { EnabledPlaybook, Playbook } from "./playbook.js";
+import { SAURON } from "./sauron-rules.js";
+import { eventPlay, prePrintRunUp } from "./templates.js";
+import { type WheelSetting, wheel } from "./wheel.js";
 
 /**
  * S1-NVDA — the positioning bid, NVDA only (demoted from all-symbols by the eight-symbol
  * sweep: it failed its controls on six of eight peers). Long from D-20, flat at D-5 — the
- * final week is NVDA's dead zone (D-5→D −0.77%, 50% win).
+ * final week is NVDA's dead zone (D-5→D −0.77%, 50% win). D-numbers are TRADING SESSIONS, as the
+ * research counts them and NVDA-CALL-SPREAD trades them (#4776); a date confirmed inside the
+ * window opens it on the next cycle, wherever that lands.
  */
-export const S1_NVDA: Playbook = {
-  id: "S1-NVDA",
-  symbols: ["NVDA"],
+export const S1_NVDA: Playbook = prePrintRunUp({
+  symbol: "NVDA",
+  window: { unit: "sessions", enter: 20, exit: { kind: "before", count: 5 } },
   thesis: "pre-print positioning bid, exited before the dead final week",
   evidence: "docs/research/nvda-earnings-cycle.md F1-F2: +9.08% mean D-20→D-5 era, 14/14, P=0.004",
+  // F2's table, modern era: the win rates 93% / 79% / 50% of n = 14 are 13, 11 and 7 reports.
+  stretches: {
+    source: "docs/research/nvda-earnings-cycle.md F2",
+    era: "2023–26",
+    reports: 14,
+    stretches: [
+      { from: 20, to: 10, meanPct: 6.3, rose: 13 },
+      { from: 10, to: 5, meanPct: 3.61, rose: 11 },
+      { from: 5, to: 0, meanPct: -0.77, rose: 7 },
+    ],
+  },
   size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
   // #3194 step 5b-i: the first opt-in to the mixed-signals detector, OBSERVE-ONLY — a reading is
   // logged and never reaches this playbook's intents. S1 is a trend-with-the-bid play (news and
@@ -39,55 +50,27 @@ export const S1_NVDA: Playbook = {
   // it also carries the strongest evidence line of the roster. Pausing entries on a reading is
   // step 5b-ii, gated on the detector's falsifier (30 observations or 2026-11-30).
   mixedSignals: { action: "observe" },
-  keyedOn: "earnings",
-  desiredState(asOfIso, calendar) {
-    if (recentPrint("NVDA", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
-      return "flat";
-    }
-    const w = printWindow("NVDA", asOfIso, calendar);
-    if (!w) {
-      return "no-window";
-    }
-    if (w.days >= 6 && w.days <= 20) {
-      // Date policy: only a confirmed IR date opens the window; an estimate stays dark.
-      return w.confirmed ? "long" : "no-window";
-    }
-    // Inside D-5 (or past the print): whatever we hold, we should not — the play is over.
-    return w.days <= 5 ? "flat" : "no-window";
-  },
-};
+});
 
 /**
  * G1-GOOG — the sweep's sole surviving pre-print long outside NVDA, with a deliberately
  * different exit: hold to the CLOSE of day D (GOOG's final week is not dead money), still
  * never holding the print itself (release is after the close; we exit at ~15:45 ET with a
- * hard next-day failsafe).
+ * hard next-day failsafe). Opens no earlier than D-20 in TRADING SESSIONS, the unit its research
+ * ledger counts in (#4776).
  */
-export const G1_GOOG: Playbook = {
-  id: "G1-GOOG",
-  symbols: ["GOOG"],
+export const G1_GOOG: Playbook = prePrintRunUp({
+  symbol: "GOOG",
+  window: {
+    unit: "sessions",
+    enter: 20,
+    exit: { kind: "print-day-close", etCutoff: "15:45" },
+  },
   thesis: "pre-print run-up held to the close of print day, flat before the release",
   evidence:
     "docs/research/multi-symbol-sweep.md G1: pooled 37/43 positive, p=0.0008 at measured base; net-of-QQQ positive all eras",
   size: { conservative: 0.01, standard: 0.015, aggressive: 0.02 },
-  keyedOn: "earnings",
-  desiredState(asOfIso, calendar) {
-    if (recentPrint("GOOG", asOfIso, POST_PRINT_FLAT_DAYS, calendar)) {
-      return "flat"; // failsafe: the close exit was missed — exit on the first post-print cycle
-    }
-    const w = printWindow("GOOG", asOfIso, calendar);
-    if (!w) {
-      return "no-window";
-    }
-    if (w.days === 0) {
-      // Print day: ride to the close, exit before it (release is after hours).
-      return etTimeOf(asOfIso) >= "15:45" ? "flat" : w.confirmed ? "long" : "flat";
-    }
-    return w.days <= 20 && w.confirmed ? "long" : "no-window";
-  },
-};
-
-const TACO_SYMBOL = "DJT";
+});
 
 /**
  * TACO-DJT — the event-driven counterpart to the two date-keyed plays above ("TACO
@@ -119,9 +102,12 @@ const TACO_SYMBOL = "DJT";
  * next name's evidence: add it to `TACO_DJT.symbols` if it should share this play's window/sizing,
  * or register a separate `TACO-<SYMBOL>` playbook if it deserves its own.
  */
-export const TACO_DJT: Playbook = {
-  id: "TACO-DJT",
-  symbols: [TACO_SYMBOL],
+export const TACO_DJT: Playbook = eventPlay({
+  symbol: "DJT",
+  // At least one event exists but none is still live → flat, the same post-event hygiene S1/G1
+  // apply after a print. `holdMinutes` is the total life; the 15-minute entry window inside it
+  // (`TACO_TIMING.entryMinutes`) is not a separate state, since `desiredState` is holdings-blind.
+  holdMinutes: TACO_TIMING.holdMinutes,
   thesis:
     `decisive entry within ${TACO_TIMING.entryMinutes}m of a Trump-linked pump story, decisive ` +
     `exit by ${TACO_TIMING.holdMinutes}m before the "no substance" reversion`,
@@ -133,117 +119,131 @@ export const TACO_DJT: Playbook = {
   // Below S1-NVDA (0.01-0.03) and G1-GOOG (0.01-0.02): an unvalidated, event-driven play sized
   // more cautiously than the evidence-backed date-keyed ones until a backtest earns it more.
   size: { conservative: 0.005, standard: 0.01, aggressive: 0.015 },
-  keyedOn: "event",
-  desiredState(asOfIso, _calendar, events = []) {
-    const own = events.filter((event) => event.symbol === TACO_SYMBOL);
-    if (own.length === 0) {
-      // Never signaled: correctly dark, exactly like a date-keyed play with no upcoming print.
-      return "no-window";
-    }
-    const stillLive = own.some((event) => {
-      const window = tacoWindow(event, asOfIso);
-      return window === "enter" || window === "hold";
-    });
-    // At least one event exists but none is still live: converge to flat — the same post-event
-    // hygiene S1/G1 apply after a print, so a position never silently rides past its window.
-    return stillLive ? "long" : "flat";
-  },
-};
-
-/** The production watch list `SauronHardcorePersona.decide()` actually sees today (its own loop
- *  is `Object.keys(context.quotes)` — whatever is live, not a fixed list). `run-autonomous.ts`'s
- *  own `UNIVERSE` constant is what makes that dynamic list, in practice, exactly this one — a
- *  fixed basket here is the honest static translation, not a behavior change. Declared locally
- *  rather than imported from `scripts/` (a backwards dependency this file never takes). */
-const HC_SAURON_UNIVERSE = [
-  "AAPL",
-  "MSFT",
-  "NVDA",
-  "GOOGL",
-  "AMZN",
-  "META",
-  "AVGO",
-  "TSLA",
-  "CRWV",
-  "MRVL",
-];
-
-/** Hardcore Sauron's exact thresholds (`HARDCORE_SAURON_CONFIG`), translated into the tactic
- *  chain's four generic kinds, in the same priority order `SauronHardcorePersona.decideSymbol`
- *  checks them — stop, fade, claim, scalp. `tests/playbooks/tactical-playbook.spec.ts`'s parity
- *  suite proves this exact translation matches the persona intent-for-intent. */
-const HC_SAURON_TACTICS: readonly TacticalRule[] = [
-  { kind: "momentum-stop", momentumAtOrBelow: HARDCORE_SAURON_CONFIG.stopMomentum },
-  {
-    kind: "sentiment-fade",
-    sentimentAtOrAbove: HARDCORE_SAURON_CONFIG.euphoriaSentiment,
-    momentumAtOrBelow: HARDCORE_SAURON_CONFIG.rolloverMomentumMax,
-    exitFraction: HARDCORE_SAURON_CONFIG.exitFraction,
-    dustNotional: HARDCORE_SAURON_CONFIG.dustNotional,
-  },
-  {
-    kind: "sentiment-claim",
-    sentimentAtOrBelow: HARDCORE_SAURON_CONFIG.panicSentiment,
-    momentumAtOrAbove: HARDCORE_SAURON_CONFIG.reboundMomentumMin,
-    trancheNotional: HARDCORE_SAURON_CONFIG.trancheNotional,
-    maxConviction: HARDCORE_SAURON_CONFIG.maxConviction,
-    maxTrancheValue:
-      HARDCORE_SAURON_CONFIG.trancheNotional * HARDCORE_SAURON_CONFIG.maxTranchesPerSymbol,
-  },
-  {
-    kind: "momentum-scalp",
-    momentumAtOrAbove: HARDCORE_SAURON_CONFIG.scalpEntryMomentum,
-    sentimentAbove: HARDCORE_SAURON_CONFIG.panicSentiment,
-    sentimentBelow: HARDCORE_SAURON_CONFIG.euphoriaSentiment,
-    notional: HARDCORE_SAURON_CONFIG.scalpNotional,
-    maxTrancheValue:
-      HARDCORE_SAURON_CONFIG.trancheNotional * HARDCORE_SAURON_CONFIG.maxTranchesPerSymbol,
-  },
-];
+});
 
 /**
- * HC-SAURON (issue #3527 plan, slice 3) — hardcore Sauron's exact behavior, re-expressed as
- * configuration on the tactical rule chain (`tactical-playbook.ts`) instead of the bespoke
- * `SauronHardcorePersona` class. `desiredState`/`size` are present only to satisfy `Playbook`'s
- * shape — a tactical playbook's `tactics` field is what the engine actually reads
- * (`playbookIntents`); those two fields go uncalled and their values carry no meaning.
- *
- * HONESTY GAP — READ BEFORE ENABLING, same posture as TACO-DJT's own gap above. This playbook is
- * REGISTERED but the live hardcore roster (`SKYNET_HARDCORE_BOTS`) still arms
- * `SauronHardcorePersona`, not this definition — naming "HC-SAURON" in `SKYNET_PLAYBOOKS` and
- * subscribing capital to it runs a SECOND, independent instance of the same logic alongside the
- * persona, never a replacement. The actual cutover (retiring the persona, pointing
- * `SKYNET_HARDCORE_BOTS` at this playbook instead) is deferred to its own slice, gated on this
- * definition's characterization tests staying green.
+ * NVDA-CALL-SPREAD (#4642 slice 6) — S1-NVDA's pre-earnings run-up as a call debit spread, the
+ * loss capped at the debit paid. The window is the run-up's own, in trading sessions: long from
+ * D-20, out from D-5 (`docs/research/nvda-earnings-cycle.md` F1–F2). "NVIDIA" is the company's
+ * own styling, kept so the copy its orders carry reads as it always has.
  */
-export const HC_SAURON: Playbook = {
-  id: "HC-SAURON",
-  symbols: HC_SAURON_UNIVERSE,
+export const NVDA_CALL_SPREAD: Playbook = callSpread({
+  symbol: "NVDA",
+  company: "NVIDIA",
+  enter: 20,
+  exit: 5,
   thesis:
-    "Impose order on the market's chaos — hardcore research mode: the same eye, faster hands; " +
-    "small tranches probe every extreme and every run, and each order carries its thesis.",
+    "S1-NVDA's pre-earnings run-up as a call debit spread — the loss capped at the debit paid; " +
+    "opens only on a confirmed print date, out five sessions before it.",
   evidence:
-    "src/personas/sauron-hardcore.ts (Eric, 2026-08-20) — trade volume as research data, not " +
-    "P/L; not yet a docs/research/ backtest of its own.",
-  // Unused — a tactical playbook's sizing lives entirely in `tactics`, never `playbook.size`.
-  size: { conservative: 0, standard: 0, aggressive: 0 },
-  // Unused — a tactical playbook's condition lives entirely in `tactics`, never `desiredState`.
-  desiredState: () => "no-window",
-  tactics: HC_SAURON_TACTICS,
+    "docs/research/nvda-earnings-cycle.md F1-F2 — the run-up into a print, 15 of 15 positive " +
+    "since 2023 (P=0.0032, docs/research/events/nvda-2026-11-18-print.md); D-5→D a coin flip",
+});
+
+/**
+ * CRWV-WHEEL (#4642 slice 5) — the wheel on CRWV, RUN AGAINST OUR OWN STUDY, ON PURPOSE.
+ * `docs/research/crwv-premium-fit.md` found CRWV's premium cheap on 2026-10-02 (implied at the 6th
+ * percentile of what CRWV went on to move) and fair on its 10-16 re-run (63rd; Δ0.20 puts priced
+ * 20.1% to assign against 24.8% delivered), and calls "stand aside" on both. The play exists because
+ * its owner holds the opposite conviction, so it
+ * carries the study's numbers and a dated falsifier on every order rather than pretending to an
+ * edge. Its pair row is a ◆ conviction checked on 2027-01-29, and that row, not this file, is where
+ * the order copy's citation and retire date come from (#4469 slice 2c); every put's Why states the
+ * data, then the owner's bet as what the market has wrong (#5326).
+ */
+/** CRWV's wheel words, before its 2026-10-16 conviction settings — the classic month-out, one-contract
+ *  wheel the specs keep measuring the template on. */
+export const CRWV_WHEEL_SETTING: WheelSetting = {
+  symbol: "CRWV",
+  thesis:
+    "Sell a cash-secured CRWV put about a month out; if assigned, sell covered calls on the shares " +
+    "— run on its owner's conviction, against our own study of CRWV's premium.",
+  findings:
+    "AGAINST this play (re-run 2026-10-16): implied 93.2%, at the 63rd percentile of CRWV's " +
+    "next-30-day moves and 0.6 points under their mean; Δ0.20 puts priced 20.1% to assign vs 24.8% " +
+    "delivered.",
+  dataShows:
+    "Our study of CRWV, re-run 2026-10-16: options price its next month to swing at a 93.2%-a-year " +
+    "pace, about what its months have gone on to swing (0.6 points under the past year's average). " +
+    "Puts priced at a 20% chance of being assigned would have been assigned 25% of the time in " +
+    "CRWV's own price history.",
+  bet:
+    "So the premium is fair, not rich: the study finds no edge in selling it and says stand aside. " +
+    "Its owner runs this against the study, betting the market overprices CRWV's downside after the " +
+    "drop, and accepts the shares if a put is assigned.",
 };
 
-/** The option plays live in their own files (`crwv-wheel.ts`, `nvda-call-spread.ts`); re-exported
- *  here because the Store catalog and the roll call read the house roster off what this module
- *  exports. Neither is on any default roster: an owner subscribes their own bot to one in the Store. */
-export { CRWV_WHEEL, NVDA_CALL_SPREAD };
+export const CRWV_WHEEL: Playbook = wheel({
+  ...CRWV_WHEEL_SETTING,
+  thesis:
+    "Sell cash-secured CRWV puts 14 to 45 days out near 0.15 delta, as many as the budget secures; " +
+    "if assigned, sell covered calls on the shares — run on its owner's conviction, against our own " +
+    "study of CRWV's premium.",
+  // Eric, 2026-10-16: "cash secured puts are a safer bet to be aggressive on.. the premiums drive
+  // cost basis down.. most likely worst case is to own stock and tie up capital until the next
+  // upswing". So: sold from 14 days out (the month-out rule left it dark before every print), aimed
+  // at 0.15 delta (about the $48–52 floor band, `docs/research/cycle-phase-crwv-nvda-2026-10.md`),
+  // and as many contracts as the budget secures, up to the mode's count.
+  minDte: 14,
+  putDelta: 0.15,
+  // Ten at most even when aggressive: assigned shares ride the print when no print-clean call exists,
+  // and the cycle study puts the low after the print, so part of the budget waits for 11-18.
+  putContracts: { conservative: 3, standard: 6, aggressive: 10 },
+});
+
+/**
+ * CRWV-LONG-CALL (#5482) — calls about four to six months out, held through CRWV's prints, on its
+ * owner's 2026-10-16 conviction that CRWV recovers well above today's price over 3 to 6 months. No
+ * study measures the play itself; the pair row is a ◆ conviction checked on 2027-01-29.
+ */
+export const CRWV_LONG_CALL: Playbook = longCall({
+  symbol: "CRWV",
+  thesis:
+    "Buy CRWV calls four to six months out near 0.60 delta and hold them through earnings; sell at " +
+    "double the cost or with 45 days left — run on its owner's conviction.",
+  bet:
+    "Its owner's view (2026-10-16): CRWV's selloff with the AI names is temporary, demand and its " +
+    "backlog hold, and it recovers well above today's price over the next 3 to 6 months. No study " +
+    "has tested this play; it is checked on 2027-01-29.",
+});
+
+/**
+ * MU-DIP-BOUNCE and NBIS-DIP-BOUNCE (#5489 slice 2) — buy a dip two ranges below session VWAP, sell
+ * one range higher, DARK on both: the study (`docs/research/intraday-dip-bounce-2026-10.md`) calls
+ * MU "build it dark; size zero" and NBIS "observe beside MU", both at low confidence over one
+ * 58-session regime. They record a verdict and place nothing (`observeOnly`); going live is slice 4,
+ * after 30 observed days. CRWV, AMD and NVDA are the study's "don't", so they have no pair.
+ */
+export const MU_DIP_BOUNCE: Playbook = dipBounce({
+  id: "MU-DIP-BOUNCE",
+  symbol: "MU",
+  finding: "+0.39% per $1k buy after 5 bps/side, day-clustered t 5.3 over 117 buys",
+});
+
+export const NBIS_DIP_BOUNCE: Playbook = dipBounce({
+  id: "NBIS-DIP-BOUNCE",
+  symbol: "NBIS",
+  finding: "+0.62% per $1k buy after 5 bps/side, t 2.2 — under the 45-test bar of about 3.5",
+});
+
+/** Sauron's own rules and the forced daily pick live in their own files (`sauron-rules.ts`,
+ *  `beta-scout.ts`); re-exported here because the Store catalog and the roll call read the house
+ *  roster off what this module exports. None of the option plays, nor these, is on any default
+ *  roster: an owner subscribes their own bot to one in the Store. */
+export { BETA_SCOUT, COND_SCOUT, SAURON };
 
 const ROSTER: readonly Playbook[] = [
   S1_NVDA,
   G1_GOOG,
   TACO_DJT,
-  HC_SAURON,
   CRWV_WHEEL,
+  CRWV_LONG_CALL,
   NVDA_CALL_SPREAD,
+  SAURON,
+  BETA_SCOUT,
+  COND_SCOUT,
+  MU_DIP_BOUNCE,
+  NBIS_DIP_BOUNCE,
 ];
 
 /**
@@ -254,8 +254,6 @@ const ROSTER: readonly Playbook[] = [
  */
 export const PLAYBOOK_WIRING_GAPS: Readonly<Record<string, string>> = {
   "TACO-DJT": "No news feed is wired to it yet, so its trigger never arrives.",
-  "HC-SAURON":
-    "Arming it would run a second copy beside the Sauron persona, not replace it (#4227).",
 };
 
 /** Every house playbook, in roster order. The roll call needs the definitions, not just the ids:
@@ -270,6 +268,10 @@ const MODES = new Set<string>(["conservative", "standard", "aggressive"]);
  * Parse SKYNET_PLAYBOOKS ("id:mode,id:mode"; mode defaults to standard). Unknown ids and
  * malformed modes are refused loudly via the returned `rejected` list — a typo that silently
  * enabled nothing would look exactly like a quiet market.
+ *
+ * A playbook runs once (#4651): the first token naming an id wins, and every later one is refused
+ * as `"<token> (repeated)"`, so the boot lines, the morning brief and the house-roster report all
+ * name what was actually dropped — "SAURON,SAURON:aggressive" arms SAURON:standard alone.
  */
 export function enabledPlaybooks(env: Readonly<Record<string, string | undefined>>): {
   readonly enabled: EnabledPlaybook[];
@@ -292,6 +294,10 @@ export function enabledPlaybooks(env: Readonly<Record<string, string | undefined
       rejected.push(token);
       continue;
     }
+    if (enabled.some((e) => e.playbook.id === playbook.id)) {
+      rejected.push(`${token} (repeated)`);
+      continue;
+    }
     enabled.push({ playbook, mode });
   }
   return { enabled, rejected };
@@ -307,7 +313,7 @@ export function findPlaybook(id: string): Playbook | undefined {
  *  #2224 shape 1's slicing sketch item 3). Deliberately unfiltered by `SKYNET_PLAYBOOKS`: naming
  *  which house play your bot's stance backs is a declaration, not an enable switch, so a play
  *  still registered but not live this week is still nameable. Council's tag selector shows one
- *  symbol per play; a basket playbook's first symbol stands in (HC-SAURON's ten-symbol universe
+ *  symbol per play; a basket playbook's first symbol stands in (SAURON's ten-symbol universe
  *  included) — widening the tag itself to a full basket is a Council-UI decision for whenever
  *  showing more than one symbol per play actually matters there. */
 export function playbookRoster(): readonly { readonly id: string; readonly symbol: string }[] {

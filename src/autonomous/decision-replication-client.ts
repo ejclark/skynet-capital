@@ -1,3 +1,4 @@
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import { fetchJson } from "../http/fetch-json.js";
 import type { DecisionDb } from "./decision-db.js";
 import type { DecisionRecord } from "./decision-record.js";
@@ -8,9 +9,14 @@ import {
   recordWireKind,
 } from "./decision-wire.js";
 import {
+  type LifecycleReports,
+  MAX_LIFECYCLE_PER_BATCH,
+  reportsByPersona,
+} from "./decision-wire-lifecycle.js";
+import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
-  INSIGHTS_BRIDGE_SHARED_SECRET,
+  insightsBridgeSecret,
 } from "./insight-record.js";
 
 /**
@@ -71,6 +77,43 @@ export interface DecisionReplicationClient {
  *  job on the ascending leg. */
 const LIVE_PREVIEW_BATCH = 20;
 
+/**
+ * The newest late settlements (#4650), resent on the first batch of every poll. A settlement lands
+ * long after its record was sent, and the receiver keeps the first copy of each record, so it
+ * travels on its own field (`DecisionBatch.settlements`) — idempotent on receipt, like the preview
+ * leg. Settlements are rare (an order whose cancel was not confirmed, a share order queued for the
+ * open), so the newest 50 cover days of them; a few hundred bytes each over the private bridge.
+ */
+const SETTLEMENTS_PER_POLL = 50;
+
+/**
+ * The settlement BACKLOG leg: everything stored after a locally tracked cursor, in bounded pages on
+ * a POST of their own (settlements, no records), so none is ever left behind — a burst after a
+ * restart, a dashboard outage, a refused batch. Unlike the decisions' ascending leg, the cursor
+ * moves only when the dashboard accepted the page: a settlement is never resent by anything else
+ * once it falls out of the newest few. It starts at 0 each boot, so a restart resends every one
+ * once; receipt is idempotent by order id.
+ */
+const SETTLEMENT_BACKLOG_PAGE = MAX_DECISION_BATCH;
+
+/**
+ * The LIFECYCLE leg (#4650): the broker's option expiry and assignment reports, which close a
+ * contract no order ever fills. The settlement backlog's shape exactly — every report stored after
+ * a locally tracked cursor, in pages on a POST of their own (reports, no records, so a dashboard
+ * that predates the field refuses the page instead of accepting it and dropping them), the cursor
+ * moving only once the dashboard accepted the page, and starting at 0 each boot, so a restart
+ * resends every report once; receipt is idempotent by (persona, activity id). Unlike settlements
+ * there is no newest-few resend beside it: nothing else ever carries a report, and the order one
+ * arrives in changes no score (`storeDecisionBatch`), so the backlog alone delivers each one.
+ */
+const LIFECYCLE_PAGE = MAX_LIFECYCLE_PER_BATCH;
+
+/** What a backlog POST carries instead of this poll's settlement rider. */
+interface BacklogPage {
+  readonly settlements?: readonly OrderSettlement[];
+  readonly lifecycle?: readonly LifecycleReports[];
+}
+
 const NOOP_CLIENT: DecisionReplicationClient = {
   replicate: async () => {
     /* disabled — no bridge URL or no local decision store */
@@ -86,32 +129,49 @@ const NOOP_CLIENT: DecisionReplicationClient = {
 export function resolveDecisionReplication(
   env: NodeJS.ProcessEnv,
   getDecisionDb: () => DecisionDb | undefined,
+  /** The per-POST budget; prod always takes the shared `BRIDGE_REQUEST_TIMEOUT_MS`. A spec that
+   *  runs a real listener on the same event loop as a loaded full suite passes a generous one, so
+   *  a starved loop is not mistaken for an unreachable bridge (#4978, #5823). */
+  options: { readonly timeoutMs?: number } = {},
 ): DecisionReplicationClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
+  const bridgeSecret = insightsBridgeSecret(env);
   if (!url) return NOOP_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}/decisions`;
+  const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
 
+  // This poll's settlements, sent once on its first batch — whichever persona's that is.
+  let unsentSettlements: readonly OrderSettlement[] = [];
+
+  /** One POST; true when the dashboard accepted it. A backlog page goes alone; a record batch
+   *  takes this poll's settlements, once. */
   const sendOne = async (
     personaId: string,
     kind: string,
     records: readonly DecisionRecord[],
-  ): Promise<void> => {
+    backlog?: BacklogPage,
+  ): Promise<boolean> => {
+    const riders =
+      backlog ?? (unsentSettlements.length > 0 ? { settlements: unsentSettlements } : {});
+    if (!backlog) unsentSettlements = [];
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await fetchJson(
           "POST",
           endpoint,
-          { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
-          { kind, personaId, records },
+          { [INSIGHTS_BRIDGE_SECRET_HEADER]: bridgeSecret },
+          { kind, personaId, records, ...riders },
           controller.signal,
         );
         if (response.status < 200 || response.status >= 300) {
           process.emitWarning(
             `[decision-replication] ${personaId} batch rejected (${response.status}) — will resend`,
           );
+          return false;
         }
+        return true;
       } finally {
         clearTimeout(timer);
       }
@@ -121,6 +181,7 @@ export function resolveDecisionReplication(
       process.emitWarning(
         `[decision-replication] ${personaId} unreachable — will resend: ${String(error)}`,
       );
+      return false;
     }
   };
 
@@ -142,11 +203,29 @@ export function resolveDecisionReplication(
   // preview leg's first send lands. Lives for this process's lifetime; a restart starts a
   // persona back at 0, resending its full known history — safe (idempotent on receipt) and rare.
   const ascendingCursor: Record<string, number> = {};
+  // The settlement backlog's cursor — see `SETTLEMENT_BACKLOG_PAGE`.
+  let settlementCursor = 0;
+  // The lifecycle leg's cursor, the store's own row order — see `LIFECYCLE_PAGE`.
+  let lifecycleCursor = 0;
+
+  // The lifecycle leg — see `LIFECYCLE_PAGE`. Each group names its own persona, so the envelope's
+  // is the first report's: a report can exist before its bot has decided anything.
+  const sendLifecycle = async (decisionDb: DecisionDb): Promise<void> => {
+    const reports = decisionDb.lifecycleSince(lifecycleCursor, LIFECYCLE_PAGE);
+    const [first] = reports;
+    const last = reports.at(-1);
+    if (!(first && last)) return;
+    const lifecycle = reportsByPersona(reports);
+    if (await sendOne(first.personaId, DECISION_BATCH_KIND_V2, [], { lifecycle })) {
+      lifecycleCursor = last.seq;
+    }
+  };
 
   return {
     replicate: async (_cursor) => {
       const decisionDb = getDecisionDb();
       if (!decisionDb) return;
+      unsentSettlements = decisionDb.recentSettlements(SETTLEMENTS_PER_POLL);
       const localMax = decisionDb.maxAtAll();
       for (const personaId of Object.keys(localMax)) {
         const after = ascendingCursor[personaId] ?? 0;
@@ -161,6 +240,20 @@ export function resolveDecisionReplication(
         const preview = decisionDb.listByPersona(personaId, { limit: LIVE_PREVIEW_BATCH });
         if (preview.length > 0) await sendAll(personaId, preview);
       }
+
+      // The settlement backlog — see `SETTLEMENT_BACKLOG_PAGE`. Any persona's envelope will do:
+      // a settlement is keyed by its order id, never by who placed it.
+      const host = Object.keys(localMax)[0];
+      const backlog = decisionDb.settlementsSince(settlementCursor, SETTLEMENT_BACKLOG_PAGE);
+      const last = backlog.at(-1);
+      if (host && last) {
+        const settlements = backlog.map((s) => s.settlement);
+        if (await sendOne(host, DECISION_BATCH_KIND_V2, [], { settlements })) {
+          settlementCursor = last.seq;
+        }
+      }
+
+      await sendLifecycle(decisionDb);
     },
   };
 }

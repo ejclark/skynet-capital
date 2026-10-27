@@ -523,6 +523,7 @@ out-of-sample point neither switch named:
 | 2026-10-01 | D-5 | **Deterministic screen (no Claude session).** Readings — VIX 16.3 (+0.3pt since last), band unchanged (medium:0+), 35 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-03 |
 | 2026-10-03 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 15.3 (-1.0pt since last), band unchanged (medium:0+), 35 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-05 |
 | 2026-10-05 | D-1 | **Pre-announcement pulse — fetched 2026-10-05 01:09 UTC = 2026-10-04 21:09 ET (Sunday evening), before this operation's own 11:00am ET Monday announcement.** Confirmed the 10-05 preliminary announcement has **not yet posted**: `treasurydirect.gov/instit/annceresult/press/preanre/2026/BBPA_20261006174000.pdf` returns HTTP 404, against the identical URL pattern resolving HTTP 200 for the 10-01 operation's own preliminary PDF fetched the same session — a timing gap, not a blocked source; `FT-…-1`'s eligible list and `FT-…-2`/`-3`'s maximum are still ~14 hours out at fetch time. Schedule PDF re-fetched: **byte-identical** (HTTP 200, 89,250 bytes, md5 `c49a5351bf2d31a367817abc62be51bd`) — this row's terms unchanged. **New operation data since 09-29** (`fiscaldata` `buybacks_operations`, pulled direct): **2026-10-01 10Y-20Y** (the raised $6B-cap bucket) offered **$46.391B** — an order of magnitude above this bucket's prior high (~$10.5B, 09-10) — cover **7.73x**, accepted the full **$6.000B = 100%** (2 of 41 eligible). The cover rule's third post-raise test, its first at high cover: fills exactly as predicted, does not touch the 2.56x boundary this doc's falsifier watches. (09-29 TIPS 1Y-10Y also ran — offered $3.981B, accepted $605M/$750M cap = 80.7%, cover 5.31x — outside this doc's nominal-coupon universe, noted for completeness only.) **Macro:** the **2026-10-02 jobs report missed badly** — nonfarm payrolls **+29K vs ~84K consensus**, unemployment to **4.2%** (closed out at [`jobs-2026-10-02.md`](jobs-2026-10-02.md), cited not re-derived); ISM Manufacturing (10-01) printed 54.5 vs 54.8, immaterial. **Rates** (Treasury par CSV direct, latest close **2026-10-02** — Monday has not yet printed at fetch time): 2Y **4.83** · 3Y **4.96** · 5Y 5.06 · 10Y 5.28 · 30Y 5.63, vs 2Y 4.92 / 3Y 5.01 / 10Y 5.24 / 30Y 5.56 on 09-28 — a bull move at this operation's own tenor (2Y **-9bp**, 3Y **-5bp**) against continued cheapening further out (10Y +4bp, 30Y +7bp), consistent with the weak payroll print. **Volatility:** VIX **15.31** (10-02 close, unchanged from the 10-03 screen's reading — no Monday close exists yet at fetch time). **Cadence band unchanged (medium:0+).** **Adjacency — peers:** n/a (`symbols: []`). **Adjacency — calendar:** re-ran `computeAdjacentIds` (the exact function the deterministic screen uses) and `--on-date` for the full corridor; six new files landed since 09-29 (`bobl-5y-auction-2026-10-13`, `dallas-fed-trimmed-mean-2026-10-29`, `eia-weekly-petroleum-status-2026-10-15`, `iea-omr-2026-10-14`, `meta-nm-privacy-penalty-ruling-2026-10-20`, `uk-monthly-gdp-2026-10-15`) — **none** inside this event's ±5-day corridor (10-01→10-11); 35 tracked entries unchanged, 3 confirmed-strong unchanged (`ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`). **Nothing new proposed.** All three forward tests (`FT-…-1/2/3`) remain open/pending — none scoreable at this pulse. | No change in direction (read-not-trade, stand aside) — the cover rule gets a third confirmation at high cover; this pulse's one gap is timing, not information: it ran before the operation's own 10-05 announcement/eligible list posted | 2026-10-07 (medium, D-1 → the 0+/2d band; the operation itself passes 2026-10-06, so the scanner's next dispatch is most likely `event-passed-unscored`) |
+| 2026-10-07 | D+1 | **Close-out.** Primary re-pulled (`fiscaldata` `buybacks_operations` + BBPA/BBA/BBR XML, HTTP 200): max **$4.000B** (as announced 10-05), offered **$14.763B** (all-time high, cover **3.69x**), accepted **$1.327B = 33.2%**, **12 of 33** eligible. 10-05 list: all six 3Y notes issued 2025-10-15 → 2026-03-16 present, all six issued after absent. FT-1 **pass**, FT-2 **pass**, FT-3 **void** (cover above 2.56x). The cover rule's high side leaked again in the belly: two straight 2Y-3Y operations at cover 3.12x / 3.69x filled 57% / 33%. 2Y **4.79** · 3Y **4.88** on 10-06 (-5bp / -9bp on the day, not isolable from the same-day 3Y auction); VIX **15.01**. Detail in `## Outcome`. | Closed — read-not-trade stance held; no new test registered (terminal) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -546,3 +547,105 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-05
 <!-- probe-ref: {"symbols":{},"vix":15.31,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0} -->
+
+## Outcome
+
+**Assessed 2026-10-07 (D+1, inside the 6-day close-out window).** `rates` event, `symbols: []` — no
+`earnings-cycle`/`intraday-edges` target applies, so the instrument caches were busted (`rm -rf`) and
+nothing needed re-running; recorded rather than skipped. Every number below is a fresh pull this
+session, never carried from a prior row: `api.fiscaldata.treasury.gov` `buybacks_operations` (plain
+curl, HTTP 200, 227 rows, all operations) and `buybacks_security_details`; the operation's own
+`BBPA_` / `BBA_` / `BBR_20261006174000.xml` from treasurydirect.gov (HTTP 200 each); Treasury par
+curve CSV and Yahoo `^VIX` daily closes. Date and cap were `estimate` until the 10-05 announcement;
+the primary now confirms both (announced 2026-10-05 11:00am ET, operation 2026-10-06 1:40–2:00pm ET,
+settled 2026-10-07, maximum $4.000B).
+
+### The operation, re-pulled from the primary
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$4,000,000,000** |
+| Announced maturity range | 2028-10-15 – 2029-09-30 (differs from the tentative schedule's 10/07/2028 – 10/06/2029, as at every prior operation) |
+| Total par offered | **$14,763,000,000** — highest this bucket has drawn (prior high $12.464B, 2026-07-09) |
+| Total par accepted | **$1,327,000,000** |
+| Cover (offered ÷ max) | **3.69x** |
+| Fill (accepted ÷ max) | **33.2%** |
+| Issues | **12 accepted of 33 eligible** (model 34; expected range 32–34 — inside it) |
+
+Accepted par by CUSIP sums to $1.327B exactly: five of the six 3-Year notes issued 2025-10-15 →
+2026-03-16 took **$739M (56%)** of it (91282CPC9 $250M, CPK1 $250M, CQE4 $209M, CQA2 $20M, CPP0 $10M);
+the largest single other line was 91282CEB3 (1.875% 2029-02-28) at $200M. 21 of the 33 eligible
+issues took nothing.
+
+### Forward tests scored
+
+- **`FT-treasury-buyback-2y3y-2026-10-06-1`** — **PASS.** The 10-05 preliminary list (33 CUSIPs,
+  identical to the final and results lists) contains **all six** of 91282CPC9, 91282CPK1, 91282CPP0,
+  91282CPT2, 91282CQA2, 91282CQE4 and **none** of 91282CQJ3, 91282CQR5, 91282CQV6, 91282CQZ7,
+  91282CRG8, 91282CRL7. The first-coupon rule is now **10 of 10** with zero false positives; the
+  September 3-Year (91282CRL7) was not buyable on the day its own auction ran. The eligible count
+  (33) was deliberately not part of the test and landed inside the 32–34 recorded expectation.
+  The `treasury-buyback-20y30y-2026-10-08` entry rests on the same coupon clause; nothing here
+  breaks it, so no flag is owed there.
+- **`FT-treasury-buyback-2y3y-2026-10-06-2`** — **PASS.** Predicted accepted par below $2.79B;
+  actual **$1.327B**. Announced maximum was $4B, so the void clause did not apply. At this cap the
+  bucket now stands at **1 of 9** full fills (accepted mean **$2.086B**, median **$2.267B**); only
+  2025-03-11 has ever cleared $2.79B, still. The complement, the parent
+  `FT-treasury-3y-note-2026-10-06-2` (≥ $2.79B), is therefore wrong by construction — **scoring it
+  is its own fragment owner's job, not this file's**; the number it needs is the one above.
+- **`FT-treasury-buyback-2y3y-2026-10-06-3`** — **VOID, on its own pre-registered clause** (*"Void
+  … if cover comes in at or above 2.56x"*). Cover printed **3.69x**; the condition was never met,
+  so the rule was not tested in the zone it predicted (the maximum was $4B, so the second void
+  clause did not apply either). No credit taken. **The finding it surfaces is below.**
+
+### The finding: cover is necessary, not sufficient — in the belly it is the price, not the book
+
+Recomputed over all nominal liquidity-support operations at caps above $100M with cover ≥ 1.2x
+(the same restriction as registration; fill ≤ cover arithmetically): **cover ≥ 2.5x → full fill
+64 of 74 (86%); cover < 2.5x → 1 of 21 (5%)**. Restricted to caps ≥ $4B: **cover ≥ 2.56x → 14 of 20
+filled; cover < 2.56x → 0 of 19**. The low side of the rule has held for every operation on the
+tape; the high side is leaky and **leakier in the belly**. Of the 13 belly operations (2Y-7Y) at
+cover ≥ 2.5x, the three most recent misses at 2Y-3Y/3Y-5Y read 3.12x → 57%, 2.54x → 47% and
+3.69x → 33%. This operation drew the most offers the bucket has ever seen and bought the second
+least. A thick book that is priced rich is a book Treasury declines — fill looks set by cover **and**
+the price Treasury will pay, and cover alone only rules out the thin-book case. (The price side is an
+inference from the shape of the misses; this session did not pull offer-level prices to prove it.)
+The registered falsifier (a full fill on cover below 2.56x) did not and could not fire here. The
+rule survives as a **one-sided floor**; reading it as a fill forecast above the line is what this
+operation refutes.
+
+### Kill switches, adjudicated against the close-out data
+
+- **Any 3-Year note whose first coupon has not paid appearing on the list** — **did not fire.**
+- **The operation accepting ≥ $2.79B** — **did not fire** ($1.327B).
+- **The 10-05 announcement printing a maximum other than $4B** — **did not fire** ($4.000B).
+- **A second consecutive sub-$5B offer total** — **did not fire** ($14.763B, an all-time high).
+- **The cover-below-2.56x-fills-the-cap falsifier** — **did not fire**; no operation on the tape has.
+- **The 1:40–2:00pm ET window moving 2-3Y yields >3bp with no auction/minutes explanation** —
+  **not adjudicable, not attempted.** Daily closes only: 2Y **4.84 → 4.79** (-5bp) and 3Y
+  **4.97 → 4.88** (-9bp) on 10-06, but the same-day 3-Year auction (1pm ET close) sits forty
+  minutes before the window and the front end was also trading the 10-02 jobs miss; a 20-minute
+  window cannot be separated from either by daily data. No attribution is claimed to the operation.
+- **2Y-3Y frequency or a >$4B front-end cap at the 2026-11-04 refunding** — **outside this event's
+  window**; `treasury-refunding-2026-11-04` is already a tracked calendar entry and inherits it.
+
+### Tape, for the record (no attribution claimed)
+
+Treasury par curve, 10-06 close (10-05): 2Y **4.79** (4.84), 3Y **4.88** (4.97), 5Y **5.03**
+(5.06), 7Y **5.15** (5.19), 10Y **5.27** (5.31). VIX **15.01** (10-06 close) vs **15.52** (10-05),
+-0.5pt; no regime shift. 10-07 (today) carries FOMC minutes, the 10-Year auction and consumer credit
+and has not closed. Adjacency: the corridor is unchanged from the 10-05 row (same 35 tracked ids; the
+three confirmed-strong ones — ISM manufacturing 10-01, jobs 10-02, ISM services 10-05 — have all
+passed). No calendar proposal is made: nothing dated and new appeared inside the horizon.
+
+### What this closes
+
+No new forward test is registered: the close-out is terminal for this document, so a prediction
+filed here would have no session left to score it. The stance (**read it, do not trade it**) held on
+every number it committed to; the one thing worth carrying forward is the amended reading of the
+cover rule above, which applies to the next operation in any bucket printing cover ≥ 2.5x at a
+$4B cap — `treasury-buyback-20y30y-2026-10-08` is the next scheduled. Paper-only, educational;
+`symbols: []`, no trade implication.
+
+**Last assessed:** 2026-10-07
+<!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","intl-trade-full-report-2026-10-06","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0} -->

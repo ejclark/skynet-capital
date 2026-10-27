@@ -1,6 +1,7 @@
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OptionLegIntent, OrderIntent, Side } from "../domain/types.js";
+import type { OptionLifecycleType } from "../trading/option-lifecycle.js";
 import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { formatPrice } from "./desk-data.js";
@@ -11,6 +12,7 @@ import {
   optionFillCostWords,
   optionLegCost,
 } from "./option-fill-cost.js";
+import { lifecycleTypeOf } from "./option-lifecycle-activity.js";
 import { type OrderOrigin, type OrderOriginIndex, orderOrigin } from "./order-origin.js";
 import { formatSigned, plClass } from "./render-atoms.js";
 
@@ -39,6 +41,9 @@ import { formatSigned, plClass } from "./render-atoms.js";
 /** The spread a leg order belongs to, as the decision that placed it describes it. */
 interface SpreadFacts {
   readonly orderId: string;
+  /** The stock the spread is on, as its decision named it — what a symbol filter matches, since the
+   *  row's own broker symbol is none. */
+  readonly underlying: string;
   readonly display: string;
   readonly side: Side;
   /** Every leg the decision placed — a spread's result is only ever read off all of them. */
@@ -71,6 +76,7 @@ function spreadFacts(parentOrderId: string, deps: SpreadLookupDeps): SpreadFacts
   const net = optionFillCost(intent, record.outcomes.find((o) => o.intent === intent)?.result);
   return {
     orderId: parentOrderId,
+    underlying: intent.symbol,
     display:
       spreadContractName(option.legs.map((leg) => leg.occSymbol)) ??
       `${intent.symbol} option spread`,
@@ -95,31 +101,60 @@ export function spreadLookup(deps: SpreadLookupDeps): SpreadOf {
   };
 }
 
-interface SpreadLegLine {
-  readonly record: TradeActivityRecord;
+/**
+ * `findSpreadLeg`, remembering every hit for the process (#4458 AC 10). The Wire asks it once per
+ * option fill on every `no-store` request; the leg table is insert-only (`INSERT OR IGNORE`, keyed by
+ * the leg's own id — `decision-db-leg-orders.ts`), so an answer once found never changes. A miss is
+ * not remembered: a spread recorded `working` gets its legs from a late settlement, and the next
+ * request must see them. The spread's own decision stays a per-request read (`spreadLookup`), because
+ * its net appears only once the fill is confirmed.
+ */
+export function rememberSpreadLegs(
+  findSpreadLeg: (legOrderId: string) => OptionOrderLeg | undefined,
+): (legOrderId: string) => OptionOrderLeg | undefined {
+  const found = new Map<string, OptionOrderLeg>();
+  return (legOrderId) => {
+    const held = found.get(legOrderId);
+    if (held) return held;
+    const leg = findSpreadLeg(legOrderId);
+    if (leg) found.set(legOrderId, leg);
+    return leg;
+  };
+}
+
+/** What the fold reads off one fill line — a ledger record, or a fill off the Wire's event feed. */
+interface FillLine {
+  readonly orderId: string;
+  readonly symbol: string;
+  readonly side: string;
+  readonly at: string;
+}
+
+interface SpreadLegLine<R extends FillLine = TradeActivityRecord> {
+  readonly record: R;
   readonly ratio: number;
 }
 
-export type ActivityItem =
-  | { readonly kind: "order"; readonly at: string; readonly record: TradeActivityRecord }
+export type ActivityItem<R extends FillLine = TradeActivityRecord> =
+  | { readonly kind: "order"; readonly at: string; readonly record: R }
   | {
       readonly kind: "spread";
       readonly at: string;
       readonly spread: SpreadFacts;
-      readonly legs: readonly SpreadLegLine[];
+      readonly legs: readonly SpreadLegLine<R>[];
     };
 
-interface SpreadGroup {
+interface SpreadGroup<R extends FillLine> {
   readonly spread: SpreadFacts;
-  readonly legs: SpreadLegLine[];
+  readonly legs: SpreadLegLine<R>[];
 }
 
 /** Every leg line of the ledger, grouped by the spread it belongs to. */
-function spreadGroups(
-  sortedDesc: readonly TradeActivityRecord[],
+function spreadGroups<R extends FillLine>(
+  sortedDesc: readonly R[],
   spreadOf: SpreadOf,
-): Map<string, SpreadGroup> {
-  const groups = new Map<string, SpreadGroup>();
+): Map<string, SpreadGroup<R>> {
+  const groups = new Map<string, SpreadGroup<R>>();
   for (const record of sortedDesc) {
     if (!isOccSymbol(record.symbol)) continue;
     const match = spreadOf(record.orderId);
@@ -138,14 +173,14 @@ function spreadGroups(
  * spread's own order id is folded in too, so the spread is never listed twice. No `spreadOf`, or no
  * spread in the ledger, returns one item per line in the same order.
  */
-export function foldSpreadLegs(
-  sortedDesc: readonly TradeActivityRecord[],
+export function foldSpreadLegs<R extends FillLine = TradeActivityRecord>(
+  sortedDesc: readonly R[],
   spreadOf?: SpreadOf,
-): ActivityItem[] {
-  const groups = spreadOf ? spreadGroups(sortedDesc, spreadOf) : new Map<string, SpreadGroup>();
+): ActivityItem<R>[] {
+  const groups = spreadOf ? spreadGroups(sortedDesc, spreadOf) : new Map<string, SpreadGroup<R>>();
   const legOf = new Map<string, string>();
   for (const [id, group] of groups) for (const leg of group.legs) legOf.set(leg.record.orderId, id);
-  const items: ActivityItem[] = [];
+  const items: ActivityItem<R>[] = [];
   const placed = new Set<string>();
   for (const record of sortedDesc) {
     const id =
@@ -161,6 +196,12 @@ export function foldSpreadLegs(
     items.push({ kind: "spread", at: record.at, spread: group.spread, legs });
   }
   return items;
+}
+
+/** A spread's net cash in words, `"$335.00 paid"` — the one figure both Activity's spread row and
+ *  the Wire's carry beside its per-share price. */
+export function spreadNetWords(net: OptionFillCost): string {
+  return `${formatPrice(net.dollars)} ${net.direction}`;
 }
 
 /** One order's line on Activity: every row's own fields, and every leg's — so anything that lists
@@ -179,6 +220,9 @@ export interface DeskActivityLine {
   readonly at: string;
   readonly backfilled: boolean;
   readonly origin: OrderOrigin;
+  /** An expiry, assignment, exercise or share settlement the broker reported, not an order: the row
+   *  names this in place of a side (#4650). `side` stays as written, for the filters and the P/L. */
+  readonly lifecycle?: OptionLifecycleType;
 }
 
 /** One leg beneath its spread's row, with what it alone paid or received and how it adds up —
@@ -211,7 +255,13 @@ export function orderLineFields(
     at: record.at,
     backfilled: record.source === "backfill",
     origin: orderOrigin(record, origins),
+    ...lifecycleField(record),
   };
+}
+
+function lifecycleField(record: TradeActivityRecord): { lifecycle?: OptionLifecycleType } {
+  const lifecycle = lifecycleTypeOf(record);
+  return lifecycle ? { lifecycle } : {};
 }
 
 function legEvent(record: TradeActivityRecord, origins: OrderOriginIndex): DeskActivityLeg {
@@ -300,7 +350,7 @@ export function spreadActivityEvent(
     backfilled: legs.some((leg) => leg.record.source === "backfill"),
     origin,
     ...spreadResult(item, realizedByOrder),
-    ...(spread.net ? { net: `${formatPrice(spread.net.dollars)} ${spread.net.direction}` } : {}),
+    ...(spread.net ? { net: spreadNetWords(spread.net) } : {}),
     legs: legs.map((leg) => legEvent(leg.record, origins)),
   };
 }

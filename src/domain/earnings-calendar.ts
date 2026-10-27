@@ -20,12 +20,16 @@
  *     one hop removed from them. Both are "confirmed" for playbook purposes; the prefix is what
  *     makes an audit able to tell how confident to be without re-deriving it.
  *
- * Day math is calendar-day distance on UTC dates. Over weekends this errs toward going flat a
- * day or two early — deliberately the safe direction; do not "fix" it with trading-day math
- * without also bringing a holiday calendar.
+ * TWO CLOCKS, ON PURPOSE. The house pre-print windows (S1-NVDA, G1-GOOG, NVDA-CALL-SPREAD) count
+ * TRADING SESSIONS (`sessionsUntil`), because their research does: the instrument indexes trading
+ * bars, so its D-20 is the 20th session, not the 20th calendar day (#4776 — calendar math had S1
+ * opening six sessions late and leaving two late). Weekends and exchange holidays come from
+ * `market-calendar.ts`. The safety guards (S2's entry guard, post-print hygiene) and member-authored
+ * plays keep calendar days (`daysUntil`): the guards err toward flat that way, and an authored
+ * play's form declares days as its unit.
  */
 
-import { nextSession } from "./market-calendar.js";
+import { nextSession, sessionsBetween } from "./market-calendar.js";
 import { marketDayKey } from "./market-day.js";
 
 type PrintDateStatus = "confirmed" | "estimate";
@@ -42,23 +46,35 @@ export interface EarningsPrint {
    * 11-10, aggregators say 11-16 → Nov 9–16). A reader that must avoid the print keys on `start`.
    */
   readonly window?: { readonly start: string; readonly end: string };
+  /**
+   * The research id this print was first opened under, kept when IR moves the date off the
+   * estimate it was keyed to (META: estimated 10-28, IR said 10-21). Without it the event id
+   * (`<sym>-<date>-print`) changes with the date and the ledger, its forward tests and the
+   * guidance pane's research stop finding each other. Unset means the default id (`printEventId`).
+   */
+  readonly ledgerId?: string;
 }
+
+/** A print's event id — its ledger's slug under `docs/research/events/`. Stable across a date move. */
+export const printEventId = (p: Pick<EarningsPrint, "symbol" | "date" | "ledgerId">): string =>
+  p.ledgerId ?? `${p.symbol.toLowerCase()}-${p.date}-print`;
 
 /**
  * The three print-proximity windows the house already trades on, gathered here so a READER (a
  * view, a report) never has to invent a fourth number to describe them.
  *
- *   - `entryFlatDays`     — S2's entry guard: don't OPEN a buy with a print this close (`engine/guards.ts`).
+ *   - `entryFlatDays`     — the protected window's lead-in: no new entry this many calendar days
+ *                           before the print's first possible day (`protected-window.ts`).
  *   - `postPrintFlatDays` — post-print hygiene: a position that somehow survived its print is
  *                           exited within this many days (`playbooks/registry.ts`).
- *   - `deadZoneDays`      — S1's dead zone: inside this, the pre-print positioning bid is over
- *                           (docs/research/nvda-earnings-cycle.md — D-5→D is NVDA's dead week).
+ *   - `deadZoneSessions`  — S1's dead zone, in TRADING SESSIONS: inside this, the pre-print
+ *                           positioning bid is over (docs/research/nvda-earnings-cycle.md — D-5→D
+ *                           is NVDA's dead week). The other two are calendar days.
  *
- * WHY THESE MIRROR RATHER THAN DRIVE. `engine/guards.ts` and `playbooks/**` still hold their own
- * literals and these are copies — written when both were envelope-protected. They are open now
- * (`envelope.json` `$openOnPurpose`, #928), so rewiring them to import from here is an ordinary
- * follow-up, not a gated call. Until then copies drift, so `tests/domain/earnings-calendar.spec.ts`
- * PINS each value to the behaviour it claims: change a guard's number without changing this one
+ * `entryFlatDays` DRIVES: the protected window (`protected-window.ts`, #4807 slice 5) reads it, and
+ * S2, the wheel and the symbol summary all read that window. The other two still MIRROR literals
+ * in `playbooks/**` (`POST_PRINT_FLAT_DAYS`, S1's settings), so `tests/domain/earnings-calendar.spec.ts`
+ * PINS each value to the behaviour it claims: change a playbook's number without changing this one
  * and the suite goes red.
  *
  * These are TRADING-DISCIPLINE numbers. A display that wants a proximity horizon reads one of
@@ -67,7 +83,7 @@ export interface EarningsPrint {
 export const PRINT_WINDOWS = {
   entryFlatDays: 2,
   postPrintFlatDays: 3,
-  deadZoneDays: 5,
+  deadZoneSessions: 5,
 } as const;
 
 /**
@@ -106,11 +122,46 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
     status: "estimate",
     source: "NEWS: Broadcom PR 2026-08-03 — Wed Sep 2 AMC; IR fetch blocked 2026-08-17",
   },
-  { symbol: "MSFT", date: "2026-10-27", status: "estimate", source: "8-K cadence" },
-  { symbol: "GOOG", date: "2026-10-28", status: "estimate", source: "8-K cadence" },
-  { symbol: "META", date: "2026-10-28", status: "estimate", source: "8-K cadence" },
-  { symbol: "AMZN", date: "2026-10-29", status: "estimate", source: "8-K cadence" },
-  { symbol: "AAPL", date: "2026-10-29", status: "estimate", source: "8-K cadence" },
+  {
+    // Confirmed 2026-10-18 from the research lane's first-hand IR reads (#4479 is the automation).
+    symbol: "MSFT",
+    date: "2026-10-28",
+    status: "confirmed",
+    source:
+      "IR: Microsoft press release 2026-10-07 — FY27 Q1 results after the close Wed Oct 28, webcast 2:30pm PT; IR upcoming-events page read direct 2026-10-13",
+    ledgerId: "msft-2026-10-27-print",
+  },
+  {
+    symbol: "GOOG",
+    date: "2026-10-28",
+    status: "confirmed",
+    source:
+      'CAL: Nasdaq earnings date (api.nasdaq.com/api/analyst/GOOG/earnings-date) says "expected", Zacks\' confirmed-date wording, checked 2026-10-19 — after market close',
+  },
+  {
+    symbol: "META",
+    date: "2026-10-21",
+    status: "confirmed",
+    source:
+      'IR: investor.atmeta.com "Meta to Announce Third Quarter 2026 Results" (2026-10-12) — after the close Wed Oct 21, call 1:30pm PT; read first-hand 2026-10-15',
+    ledgerId: "meta-2026-10-28-print",
+  },
+  {
+    symbol: "AMZN",
+    date: "2026-10-29",
+    status: "confirmed",
+    source:
+      'IR: press.aboutamazon.com "Amazon.com to Webcast Third Quarter 2026 Financial Results Conference Call" (2026-10-15) — call Thu Oct 29 2:00pm PT; read first-hand 2026-10-17',
+  },
+  {
+    symbol: "AAPL",
+    date: "2026-11-02",
+    status: "estimate",
+    source:
+      "8-K cadence · CAL: Nasdaq calls 2026-11-02 the company's date (checked 2026-10-19) — a move off 2026-10-29, so held as an estimate until an IR read",
+    window: { start: "2026-10-29", end: "2026-11-02" },
+    ledgerId: "aapl-2026-10-29-print",
+  },
   {
     symbol: "CRWV",
     date: "2026-11-10",
@@ -160,6 +211,15 @@ const dateOf = (iso: string): string => iso.slice(0, 10);
 export function daysUntil(asOfIso: string, date: string): number {
   const ms = Date.parse(`${date}T00:00:00Z`) - Date.parse(`${dateOf(asOfIso)}T00:00:00Z`);
   return Math.round(ms / 86_400_000);
+}
+
+/**
+ * Trading sessions from `asOfIso`'s ET market day to `date`: 0 on `date` itself, 20 on the session
+ * the research calls D-20. A weekend or holiday reads as the session before it — Saturday after
+ * D-20 is still D-20 — which is how NVDA-CALL-SPREAD's date comparisons place it too.
+ */
+export function sessionsUntil(asOfIso: string, date: string): number {
+  return sessionsBetween(marketDayKey(asOfIso), date);
 }
 
 /** The symbol's next upcoming print (today counts as upcoming — the print is after the close). */
@@ -219,21 +279,6 @@ export function nextPrintRisk(
   return prints
     .filter((p) => p.symbol === symbol && daysUntil(asOfIso, printSpan(p).end) >= 0)
     .sort((a, b) => printSpan(a).start.localeCompare(printSpan(b).start))[0];
-}
-
-/**
- * The print that may land inside the next `days` calendar days, if any — the S2 question.
- * Estimates count from the START of their window and stay counted to its end (they widen the
- * flat window; see the date policy above). A confirmed print reads exactly as its one date.
- */
-export function printWithin(
-  symbol: string,
-  asOfIso: string,
-  days: number,
-  prints: readonly EarningsPrint[] = UPCOMING_PRINTS,
-): EarningsPrint | undefined {
-  const next = nextPrintRisk(symbol, asOfIso, prints);
-  return next && daysUntil(asOfIso, printSpan(next).start) <= days ? next : undefined;
 }
 
 /** The days an option on `print.symbol` must not be open across — see `optionPrintBlackout`. */

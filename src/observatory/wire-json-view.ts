@@ -1,10 +1,14 @@
 import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-status.js";
+import type { PlayMilestone } from "../server/play-milestone-ledger.js";
+import { humanizeOptionSymbol } from "../trading/option-symbols.js";
 import { formatPrice } from "./desk-data.js";
 import type { DevelopmentFeedItem } from "./development-event-feed.js";
 import type { FeedbackFeedItem } from "./feedback-event-feed.js";
 import { FEEDBACK_KIND_ICON, FEEDBACK_KIND_WORD } from "./feedback-view.js";
 import type { MemberMilestone } from "./milestone-event-feed.js";
+import { playRowWords } from "./play-feed-words.js";
 import { formatActivityTime, formatSigned, plClass } from "./render-atoms.js";
+import { spreadNetWords } from "./spread-activity.js";
 import type { WireTradeVitals } from "./vitals.js";
 import type { WirePnlRow } from "./wire-data.js";
 import type { WireTradeReasoning, WireTradeWithReasoning } from "./wire-reasoning.js";
@@ -25,9 +29,18 @@ import type { WireTradeReasoning, WireTradeWithReasoning } from "./wire-reasonin
 interface WireTradeView {
   readonly key: string;
   readonly side: "buy" | "sell";
+  /** The broker's own symbol — a ticker, an OCC contract, or none (`""`) for a bot's spread. */
   readonly symbol: string;
+  /** What the row names, as the account's Activity names it: a ticker, a contract in words, or a
+   *  spread in words (`spread-activity.ts`). */
+  readonly display: string;
+  /** Whole spreads on a spread's row; shares or contracts filled on any other. */
   readonly quantity: number;
+  /** Per share — a spread's net per share. */
   readonly price: string;
+  /** A spread's net cash, once (`"$335.00 paid"`) — absent on every other row, and on a spread
+   *  whose fill the decision never confirmed. */
+  readonly net?: string;
   readonly who: string;
   readonly whoId: string;
   readonly kind: "human" | "bot";
@@ -101,6 +114,23 @@ interface WireMilestoneView {
   readonly at: string;
 }
 
+/** One authored-play milestone as the feed renders it (#5457 slice 5) — the fifth kind. The wording
+ *  (and its honesty rules) is `play-feed-words.ts`. */
+interface WirePlayView {
+  readonly key: string;
+  readonly icon: string;
+  readonly kindLabel: string;
+  /** The bot that runs the play. */
+  readonly who: string;
+  readonly whoId: string;
+  /** The sentence after the name. */
+  readonly text: string;
+  readonly symbol: string;
+  readonly meta: string;
+  readonly cheer: boolean;
+  readonly at: string;
+}
+
 export interface WireView {
   readonly trades: readonly WireTradeView[];
   readonly pnl: readonly WirePnlView[];
@@ -114,6 +144,10 @@ export interface WireView {
    *  let an empty list imply nobody has earned anything. */
   readonly milestonesEnabled: boolean;
   readonly milestones: readonly WireMilestoneView[];
+  /** False for anyone not signed in, and where no ledger is wired — members see the fifth kind, a
+   *  pre-auth read never does (the invite gate), and the page says why rather than imply none. */
+  readonly playsEnabled: boolean;
+  readonly plays: readonly WirePlayView[];
 }
 
 /** A filing whose payload named a kind this app doesn't file — the row still belongs on the
@@ -149,6 +183,10 @@ export function wireJsonView(
   /** The fourth kind (#784 slice 5) — absent, not empty, when a milestone source is unwired, for the
    *  reason `development` is. */
   milestones?: readonly MemberMilestone[],
+  /** The fifth kind (#5457 slice 5) — members only, so the caller passes it solely to a signed-in
+   *  read; absent, not empty, otherwise. The names map a bot's account to the participant the row is
+   *  about; a row whose bot is not on the roster is dropped rather than shown nameless. */
+  plays?: { readonly items: readonly PlayMilestone[]; readonly names: ReadonlyMap<string, string> },
 ): WireView {
   return {
     trades: trades.map((row, index) => ({
@@ -157,8 +195,10 @@ export function wireJsonView(
       key: `${row.participantId}:${row.at}:${row.symbol}:${index}`,
       side: row.side,
       symbol: row.symbol,
+      display: row.spread?.display ?? humanizeOptionSymbol(row.symbol),
       quantity: row.quantity,
       price: row.price !== undefined ? formatPrice(row.price) : "—",
+      ...(row.spread?.net ? { net: spreadNetWords(row.spread.net) } : {}),
       who: row.participantName,
       whoId: row.participantId,
       kind: row.kind,
@@ -189,7 +229,9 @@ export function wireJsonView(
         ...(item.status
           ? { status: FEEDBACK_STATUS_LABEL[item.status], statusKey: item.status }
           : {}),
-        meta: `#${item.issueNumber} · ${new Date(item.filedAt).toLocaleDateString()}`,
+        // The number only — the feed's day divider states the date (#5257), in New York time where
+        // this server's own `toLocaleDateString()` would have written its zone's day.
+        meta: `#${item.issueNumber}`,
         at: item.filedAt,
       })),
     developmentEnabled: development !== undefined,
@@ -204,7 +246,7 @@ export function wireJsonView(
         title: item.title,
         url: item.url,
         ...(item.author ? { author: item.author } : {}),
-        meta: `#${item.pullRequest} · ${new Date(item.mergedAt).toLocaleDateString()}`,
+        meta: `#${item.pullRequest}`,
         at: item.mergedAt,
       })),
     milestonesEnabled: milestones !== undefined,
@@ -218,8 +260,30 @@ export function wireJsonView(
         whoId: item.participantId,
         title: item.title,
         ...(item.points !== undefined ? { points: item.points } : {}),
-        meta: `${item.points !== undefined ? `+${item.points} pts · ` : ""}${new Date(item.at).toLocaleDateString()}`,
+        meta: item.points !== undefined ? `+${item.points} pts` : "",
         at: item.at,
       })),
+    playsEnabled: plays !== undefined,
+    plays: [...(plays?.items ?? [])]
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .flatMap((item) => {
+        const who = plays?.names.get(item.accountId);
+        if (!who) return [];
+        const words = playRowWords(item);
+        return [
+          {
+            key: `play:${item.key}`,
+            icon: words.icon,
+            kindLabel: words.kindLabel,
+            who,
+            whoId: item.accountId,
+            text: words.text,
+            symbol: item.symbol,
+            meta: words.meta,
+            cheer: words.cheer,
+            at: item.at,
+          },
+        ];
+      }),
   };
 }

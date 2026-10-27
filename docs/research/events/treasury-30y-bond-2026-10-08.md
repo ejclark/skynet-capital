@@ -319,14 +319,104 @@ expectation about *how* the print will miss.
 | 2026-10-01 | D-7 | **Full session (3rd consecutive screen hit the staleness ceiling; cadence band transitioned medium:8+ → medium:0+, 7d → 2d interval).** **FOMC hiked, not held:** the 2026-09-16 statement (federalreserve.gov, primary, direct) raised the target range **25bp to 3.75%–4.00%**, citing inflation that "remains elevated" alongside solid growth — the meeting the 09-15 row only flagged as upcoming is now itself the macro surprise behind the continued long-end selloff rather than a mere drift. **Par curve (home.treasury.gov daily-rates CSV, raw bytes parsed by direct curl this session — not the HTML TextView, which an earlier same-session fetch through an AI summarizer silently misread the "2 Mo" column as "2 Yr"; naming the near-miss so it isn't repeated):** 2026-09-30 close — 2Y **4.88** · 10Y **5.29** · 20Y **5.68** · **30Y 5.64**, 2s30s **76bp**. Against the last full session's 09-14 baseline (2Y 4.65 · 10Y 4.97 · 20Y 5.37 · 30Y 5.34, 2s30s 69bp): 2Y **+23bp**, 30Y **+30bp**, 2s30s **+7bp** — a continued, mild bear-steepening, not the sharp flattening the 09-04→09-14 leg showed. **The 30Y's 5.64% is a fresh cycle high**, above both the 09-10 R1's 5.308% clearing yield and the 08-17 new-issue cycle-high close of 5.31% this doc has tracked throughout. **VIX (FRED `VIXCLS`, raw CSV)** ran 17.71 (09-16, day after the hike) down to a 14.21 low (09-22) and back to **16.04 (09-29 close, latest available)** — rangebound, consistent with the last screen's 16.07 reading, not a regime break. **MOVE: blocked again this session** (stooq `^move`, the same JS-challenge blind spot the probe-ref has carried since 09-15; not substituted). **Brent — a source-convention caveat, stated plainly rather than papered over:** FRED's `DCOILBRENTEU` (EIA Brent-Europe spot) read **$130.80 (09-15) → $113.96 (09-29)**, down ~13%, but this is a different quote convention than the **front-month $109.24 (09-15)** the last full session cited, so the two are not directly comparable and no single series was re-sourced on both dates this pulse; directionally both agree oil backed off its mid-September highs by month-end rather than extending further, the opposite of what the 09-15 row flagged. OPEC+/JMMC meet 10-04, still ahead in the corridor. **This event's own 10-01 announcement — checked, not found as of this session's fetch.** `auctions_query` filtered on CUSIP 912810UW6 still returns only the two completed legs (08-13 new issue, 09-10 R1) with no forward-looking row, so that endpoint appears to carry completed results only and its silence is not informative either way; the Treasury press-release index showed no 10-01 auction release as of fetch; the tentative schedule PDF re-fetched this session is **byte-identical at 17,195 bytes** to the 09-05 pull and never carried a size figure to begin with. Status stays `estimate` — recorded as a gap in this session's own reach, the same class of blind spot already named for stooq and bls.gov, **not** as the kill switch's "announcement away from $22B" firing, which would require seeing a published size that disagrees and none was found at all. **FT-4's own promised free early read came due and passed.** `buybacks_security_details` for the **2026-09-24** 20Y–30Y operation (35 eligible CUSIPs, `buybacks_operations` confirms $4.078B accepted against $10.468B offered, 12 of 35 issues filled — consistent with leg 6's ~2.5x-the-old-cap read) **excludes 912810UW6 entirely** and tops out at **912810UR7 (2056-02-15)** exactly as predicted — a third operation corroborating the on-the-run/first-coupon exclusion without yet being FT-4's scored event (the 10-07 list for the 10-08 operation itself remains the score). Adjacency — **peers:** n/a (`symbols: []`). **Macro:** the FOMC hike, above. **Volatility:** VIX rangebound, above; MOVE unavailable. **Geopolitical:** Brent off its mid-September highs by the 09-29 close (source caveat above); OPEC+/JMMC 10-04 still ahead. **Event tape:** FT-4's intermediate read, above. **No new dated adjacency found this sweep** — `ism-manufacturing-2026-10-01` (today) is already a tracked calendar entry, and the corridor otherwise matches the 09-29 screen's 24 ids, carried forward unchanged. | — (no change: still stand-aside, `symbols: []`, date still `estimate`; the FOMC hike and the continued long-end selloff to a fresh cycle high reinforce the guard-shaped stance rather than contradicting it — no kill switch fired, since each one keys on the 10-08 print itself, the 10-07 CUSIP list, or a confirmed announcement away from $22B, never on the run-up) | 2026-10-03 (medium, 0+d band: every 2d) |
 | 2026-10-03 | D-5 | **Deterministic screen (no Claude session).** Readings — VIX 15.3 (-0.7pt since last), band unchanged (medium:0+), 25 adjacent event(s) tracked, new in corridor since last pulse: `bobl-5y-auction-2026-10-13` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-05 |
 | 2026-10-05 | D-3 | **Deterministic screen (no Claude session).** Readings — VIX 15.3 (+0.0pt since last), band unchanged (medium:0+), 25 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-07 |
+| 2026-10-07 | D-1 | **Full session (cadence band medium:0+, 2d interval). Neither the 10-01 session nor the 10-03/10-05 screens could read MOVE (stooq JS-challenged), so the vol regime below went unrecorded for 14 days.** **(1) The size null held — read from fiscaldata, not yet from the press release.** `auctions_query` now carries the forward row for 912810UW6: `29-Year 10-Month`, offering **$22,000,000,000**, auction 10-08, issue 10-15 (plain curl, HTTP 200) — the 10-01 gap the last full row recorded is closed. The same pull shows the 10-06 3Y at $58B and the 10-07 10Y (91282CRF0) at $39B, matching the sibling ledger's nulls. **No kill switch fired; FT-1/FT-3 are not void** (their void clause is a size other than $22B). Status stays `estimate`: this lane never self-confirms, and the primary that would confirm is the 10-01 Treasury announcement itself, which this session did not re-fetch. **(2) MOVE broke regime — the 09-15 row's "3-month high at 83.90" was the first step, not the top.** Yahoo `^MOVE` (secondary; stooq stays JS-challenged; Yahoo reproduces the ledger's own 73.10 on 09-04 and 83.90 on 09-14 exactly, so the series is the same one): 78.56 (09-22) → **95.45 (09-23)** → 104.58 (09-24) → 101.82 → 106.60 → 110.45 → 108.13 → 107.29 → **113.60 (10-05)** → **105.20 (10-06)**, i.e. **ten consecutive sessions ≥ 95, eight of them ≥ 101**, about +21 points above the 09-14 reading. VIX did not follow: **15.01** (10-06 close) against 15.31 at the last full row, so this is rates vol, not equity vol. **The obvious worry — that the registered band and the mean-reversion fit were calibrated in a calm-rates world — is testable from data already in hand, so it was tested instead of carried as a caveat:** across all **57** nominal 30Y auctions since 2022 (≥ $15B, `auctions_query`), bid-to-cover against the prior session's MOVE has **corr −0.009**; the **33** printed with MOVE ≥ 100 averaged **2.399** against **2.390** for the 24 below 100 (ranges 2.24–2.64 vs 2.27–2.66); and the **12** second reopenings that printed with MOVE ≥ 103 (2022-04 → 2025-04, MOVE 103–161) all cleared **2.30–2.52**. Honest limit: the high-MOVE sample is 2022–25 and mixes issue sizes; it shows vol level has not moved this auction's demand ratio, not that nothing can. **FT-1's band and FT-3's reversion expectation are unchanged by it.** **(3) A first read of dealer behaviour in the new regime, and it is stress-shaped.** The **10-01** 10Y–20Y buyback (`buybacks_operations`) drew **$46.391B offered** across 41 eligible issues and accepted **$6.000B in 2 issues** — the hard cap, **7.7:1** — against **$10.489B offered** on the 09-10 op of the same sector (2.0:1 against a $6B ceiling, the op that did not fill). Offer volume rose **4.4x in three weeks**; Treasury's purchase rose 1.16x. The 09-24 20Y–30Y op (the FT-4 early read) was **$10.468B offered / $4.078B accepted**. **(4) The 3Y on 10-06 is the first long-enough read of an auction inside the new vol:** bid-to-cover **2.62** at **4.932%** vs the last 13 3Ys' mean **2.652** (σ 0.076, 2.54–2.85) — inside the range, 0.4σ under the mean; indirect **57.59%** (lowest of the last five 3Ys, 62–68% before) and dealer **10.74%**; yield **+45.8bp** vs 4.474% on 09-08. Orderly, not a failure: an in-range ratio on a weaker composition. **(5) FT-4's void clause was checked, not assumed:** the buyback schedule PDF re-fetched direct is **89,250 bytes, md5 c49a5351bf2d31a367817abc62be51bd, "For Publication September 9, 2026"** — byte-identical to the 09-15 pull, so the 10-08 operation's sector, date and 10/09/2046–10/08/2056 range are unrevised and FT-4 stands live. `buybacks_operations` has **no 10-08 row yet** (expected — the preliminary list publishes 10-07 11:00am ET, after this session's data), so the **0/20** on-the-run eligibility record is unchanged and 912810UW6 remains un-listed in the **09-24** list recorded 10-01. Adjacency — **peers:** n/a (`symbols: []`). **Macro:** 10-01 row's FOMC hike (3.75–4.00%) is the standing backdrop; **FOMC minutes (Sep 15–16)** and the 10-07 **10Y reopening** print **after** this session's data, so neither is assessed here; ECB account and JGB 30Y (¥600bn) are same-day 10-08 supply/records; CPI + Beige Book **10-14**. **Volatility:** (2) above. **Geopolitical:** Brent front-month (Yahoo `BZ=F`) **$101.55** (10-07) vs **$109.24** (09-15), −7.0%, (the 10-01 row's EIA-spot $113.96 is a different convention and not comparable); OPEC+ 10-04 passed without a primary-sourced move recorded here — a gap, not an all-clear. **Event tape:** par curve 10-06 — 2Y **4.79** · 10Y **5.27** · 20Y **5.68** · **30Y 5.64**, **2s30s 85bp** vs 76bp on 09-30 (+9bp steepening, 2Y −9bp / 30Y flat); `^TYX` **5.641** (10-06), 30Y high close in the span **5.66 (10-05)**. **Corridor 25 → 26 ids; new: `opec-momr-2026-10-13`** (recorded, not assessed — low-impact, already tracked). **No new dated adjacency proposed:** `event-scan --on-date` for 10-07 and 10-08 returned only entries already on the calendar. | **— (no change: stand-aside holds, `symbols: []`, date `estimate`.** The one new regime fact (MOVE 105–114) was tested against the registered band and does not move it; the call sheet's "do not carry naked duration through the 10-14/10-28 stack" is reinforced, not changed) | 2026-10-08 (medium, 0+d band: 10-08 is the event; close-out follows) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
-</content>
-</invoke>
+
+## Outcome
+
+**Assessed 2026-10-09 (D+1), inside the 6-day close-out window.** `symbols: []`, so no symbol-keyed
+instrument applies; the cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) was run anyway and had nothing to clear. Everything below was
+pulled this session, not recalled. Primaries: `api.fiscaldata.treasury.gov` (`auctions_query`,
+`buybacks_operations`, `buybacks_security_details`) and `home.treasury.gov`'s Daily Par Yield Curve CSV,
+all plain curl, HTTP 200. Secondary: Yahoo Finance for `^MOVE`, `^VIX`, `^TYX` and `BZ=F` (stooq stays
+JS-challenged). **Blocked, recorded not substituted:** the 10-07 preliminary-announcement PDF and XML
+(`BBPA_20261008174000.*`) — the guessed treasury.gov and treasurydirect.gov paths returned 404, so FT-4
+is scored from the operation's published eligible list instead (see its row). The event date stays
+`estimate`: nothing here is an `IR:`/`BLS:`/`FED:` source, and this lane does not self-confirm.
+
+### The print — it broke the band upward, which the registered risk had pointed the other way
+
+| Field (CUSIP 912810UW6, `29-Year 10-Month`) | 2026-10-08 | 09-10 R1 | 08-13 new issue |
+|---|---|---|---|
+| Offered / total accepted | $22.0B / **$22.523B** (incl. $0.523B SOMA) | $22.0B / $22.000B | $25.0B / $31.324B (incl. $6.324B SOMA) |
+| Bid-to-cover | **2.54** | 2.61 | 2.39 |
+| High yield | **5.618%** | 5.308% | 5.216% |
+| Indirect / direct / dealer (of competitive) | **72.3% / 20.9% / 6.8%** | 79.5% / 18.3% / 2.2% | 66.8% / 21.6% / 11.5% |
+
+- **Size and mechanics held.** The offering was the $22.0B null the whole ledger chained to, so no void
+  clause fired. Total tendered $56.436B.
+- **Demand was firm, not weak.** 2.54 is the highest second-reopening bid-to-cover of 19 complete cycles
+  (prior max 2.52). Composition: indirect 72.3% is 8th-highest of 58 nominal 30Y auctions since 2022;
+  dealer 6.8% is the 3rd-lowest, behind only 09-10 (2.2%) and one 5.9% print. The two weakest-looking
+  readings the kill switches named (bid-to-cover under 2.30, indirect in the low 60s) were not close.
+- **The 2.61 was not purely auction-specific.** The 09-15 ledger read 2.610 as a one-off because the 20Y
+  five sessions later printed 52.5% indirect / 16.9% dealer. Since then the 10-07 9-Year 10-Month
+  reopening cleared 2.77 at 5.300% on **80.3% indirect / 2.5% dealer**, and this auction repeated the
+  light-dealer shape at lesser strength. Three of the last four long-end prints share it; the 20Y
+  (10-21) is the next clean counter-test. A read on three prints, not a regime.
+- **No tail claim.** Treasury does not publish the when-issued yield, so stop-versus-WI is not in the
+  primary and this section makes none. The 5.618% clearing yield sits between the 10-07 par close
+  (30Y 5.67) and the 10-08 par close (5.60), but a constant-maturity par yield is not the auction's
+  high yield and the comparison is not a tail.
+
+### Forward tests — scored from the re-run data (rows in the fragment carry the full receipts)
+
+| Row | Verdict | One line |
+|---|---|---|
+| FT-1 — bid-to-cover inside 2.30–2.52 | **kill** | 2.54 is +2.29σ over the prior 20; first R2 outside the band in 19 cycles |
+| FT-2 — buyback cannot bid for the bond (original) | **VOID** | the 09-09 schedule moved the cap, firing its own clause; recorded 09-15 |
+| FT-3 — 10-08 clears below 2.610 | **pass** (on the letter) | 2.54 is below 2.610 — but the 2.309 point estimate missed by +0.231 (4.4 residual σ) |
+| FT-4 — 912810UW6 not on the eligible list, top is 912810UR7 | **pass**, main and secondary | absent from all 34 eligible issues; top is 912810UR7 (2056-02-15); record now 0/21 |
+
+**Two readings the scores should not be rounded off.**
+
+- **FT-3 passed, the model behind it did not.** Adding this cycle takes corr(R1,R2) from **−0.506**
+  (18 cycles) to **−0.070** (19), slope −0.450 → −0.058. The mean-reversion story the 09-15 row called this
+  ledger's third refuted intuition is not supported on its first out-of-sample test; do not cite −0.506 as a
+  standing relation. With R2 only 0.07 below R1, persistence describes this cycle better than reversion.
+- **The yield-insensitivity premise of FT-1 had a ceiling nobody wrote down.** The evidence behind the
+  2.30–2.52 band ran to a 5.058% clearing yield. The two prints above 2.52 are the two highest-yield
+  prints in the series (5.308%, 5.618%), and across the 22 modern $22B reopenings corr(yield, bid-to-cover)
+  is **+0.413**. That is a hypothesis — higher yields pulling in end investors — not a finding, and it is
+  scoreable on the next long-end reopening (30Y 11-12, estimate-dated).
+
+### Kill-switch scoring, against the stance exactly as pre-registered
+
+- **"912810UW6 on the 10-07 preliminary list"** — did **not** fire; absent from the operation's eligible list.
+- **"A confirmed-weak print"** (bid-to-cover under 2.30, or indirect in the low 60s) — did **not** fire.
+- **"A 10-01 announcement away from $22B"** — did **not** fire (fiscaldata offering $22.0B).
+- **"The 09-10 first reopening printing outside 2.30–2.52"** — fired 09-15, already re-derived there.
+- **"A superseded buyback schedule"** — fired 09-09; voided FT-2, re-registered as FT-4.
+- **"The 11-04 refunding dropping the unchanged-sizes language"** — outside this window; still pending.
+- **Stance: "no new duration-sensitive positions"** — held. Zero capital was deployed at any point in this
+  ledger's life, so there is no position to score; the guard-shaped stance's cost was zero and the miss it
+  guarded against (a weak print) did not arrive.
+
+### The tape around the print
+
+- **The rally was curve-wide, not an auction signature.** Par curve 10-07 → 10-08: 30Y 5.67 → **5.60**
+  (−7bp), 20Y 5.71 → 5.64 (−7), 10Y 5.28 → 5.22 (−6), 2Y 4.77 → 4.75 (−2). The 10Y fell by about as much
+  as the 30Y, and the 10Y's own auction was the day before.
+- **Rates vol eased but stayed high.** MOVE **100.70** (10-08) after 102.56 (10-07) and the 113.60 peak on
+  10-05 (secondary, Yahoo `^MOVE`). The 09-15 note's worry that the band was calibrated in a calm-rates
+  world is now one print more informed: the first R2 to break the band printed at MOVE ~102.6, in the
+  regime the 10-07 row had tested, and broke it *upward*.
+- **Equity vol and oil.** VIX 15.41 (10-08); Brent front-month $104.28 (10-08) after $100.20 (10-07), still
+  below the $109.24 of 09-15.
+
+### Honest limits
+
+Bid-to-cover is a demand proxy; the tail is unavailable. n=19 cycles spans one issuance regime. FT-4 is
+scored from the operation's published eligible list rather than the preliminary PDF it named, and the FAQ
+clauses are inherited text. The yield-sensitivity reading rests on 22 prints with two high-yield outliers
+and is a hypothesis. Nothing here forecasts a yield; every claim is about demand mechanics and a published
+eligibility rule.
 
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:8+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":1} -->
@@ -342,3 +432,9 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-05
 <!-- probe-ref: {"symbols":{},"vix":15.31,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":2} -->
+
+**Last assessed:** 2026-10-07
+<!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"medium:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":0,"blocked":[{"url":"https://home.treasury.gov/system/files/221/BBPA_20261008174000.pdf","status":"404","at":"2026-10-09"},{"url":"https://www.treasurydirect.gov/xml/BBPA_20261008174000.xml","status":"404","at":"2026-10-09"}]} -->

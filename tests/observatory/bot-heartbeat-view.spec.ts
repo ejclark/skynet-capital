@@ -5,10 +5,19 @@ import {
   PASS_CADENCE_MS,
   playbookRollCall,
   STALE_AFTER_MS,
+  unmanagedHoldings,
 } from "../../src/observatory/bot-heartbeat-view.js";
+import { UNMOVED_CONVICTION_NOTE } from "../../src/observatory/playbook-store-json-view.js";
+import { lookupConviction } from "../../src/playbooks/conviction-store.js";
+import { findPair, type Pair } from "../../src/playbooks/pair-table.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
 
 const NOW = new Date("2026-09-24T15:00:00Z");
+const pair = (id: string): Pair => {
+  const found = findPair(id);
+  if (!found) throw new Error(`no pair ${id}`);
+  return found;
+};
 const pass = (
   agoMs: number,
   verdicts?: readonly PlaybookVerdict[],
@@ -42,10 +51,52 @@ describe("botHeartbeatView — silence has three causes, and they never read ali
     expect(botHeartbeatView([pass(STALE_AFTER_MS)], NOW, true).state).toBe("beating");
   });
 
-  it("reads market-closed, never stale, however old the last pass is", () => {
+  it("reads market-closed overnight when the bot passed during the last session", () => {
     const view = botHeartbeatView([pass(16 * 60 * 60_000)], NOW, false);
     expect(view.state).toBe("market-closed");
     expect(view.lastPassAt).toBe(new Date(NOW.getTime() - 16 * 60 * 60_000).toISOString());
+  });
+
+  // #4949: a closed market explains silence back to the last session's open, no further — a bot
+  // that sat out a whole session has stopped, and "market closed · idle" hid it until the next open.
+  describe("closed market — did the bot pass at all last session?", () => {
+    const at = (iso: string): DecisionRecord => ({ ...pass(0), at: Date.parse(iso) });
+    const saturday = new Date("2026-09-26T15:00:00Z"); // 11:00 ET; last session Fri Sep 25
+
+    it("stays market-closed when the newest pass fell inside the last session", () => {
+      const lastMinute = at("2026-09-25T19:59:45Z"); // Fri 3:59:45 PM ET
+      expect(botHeartbeatView([lastMinute], saturday, false).state).toBe("market-closed");
+      const atTheOpen = at("2026-09-25T13:30:00Z"); // Fri 9:30 AM ET
+      expect(botHeartbeatView([atTheOpen], saturday, false).state).toBe("market-closed");
+    });
+
+    it("goes stale when the newest pass predates the last session's open", () => {
+      const thursday = at("2026-09-24T19:59:45Z"); // Thu 3:59:45 PM ET — none all Friday
+      expect(botHeartbeatView([thursday], saturday, false).state).toBe("stale");
+      const preMarket = at("2026-09-25T13:29:00Z"); // Fri 9:29 AM ET, then silence
+      expect(botHeartbeatView([preMarket], saturday, false).state).toBe("stale");
+    });
+
+    it("judges the morning before the open against the previous session, not today's", () => {
+      const mondayEarly = new Date("2026-09-28T12:00:00Z"); // Mon 8:00 AM ET
+      const friday = at("2026-09-25T18:00:00Z");
+      expect(botHeartbeatView([friday], mondayEarly, false).state).toBe("market-closed");
+    });
+
+    it("reads the exchange calendar — an early close counts, a holiday is skipped", () => {
+      // Fri Nov 27 closes at 1:00 PM ET (EST — 9:30 AM is 14:30Z); Thu Nov 26 is Thanksgiving.
+      const afterEarlyClose = new Date("2026-11-27T19:00:00Z"); // 2:00 PM ET
+      expect(botHeartbeatView([at("2026-11-27T14:30:00Z")], afterEarlyClose, false).state).toBe(
+        "market-closed",
+      );
+      expect(botHeartbeatView([at("2026-11-25T20:00:00Z")], afterEarlyClose, false).state).toBe(
+        "stale",
+      );
+      const thanksgiving = new Date("2026-11-26T17:00:00Z"); // the holiday; last session Wed
+      expect(botHeartbeatView([at("2026-11-25T15:00:00Z")], thanksgiving, false).state).toBe(
+        "market-closed",
+      );
+    });
   });
 
   it("says no-record, with nulls rather than zeros, for a bot that never recorded a pass", () => {
@@ -85,6 +136,69 @@ describe("botHeartbeatView — per-playbook verdicts", () => {
     expect(view.playbooks?.[0]?.sinceIsLowerBound).toBe(true);
   });
 
+  it("WHEN the store can date a run the page could not see the end of, 'since' is exact (#4953)", () => {
+    const asked: [PlaybookVerdict, number][] = [];
+    const twoHoursAgo = NOW.getTime() - 2 * 3_600_000;
+    const view = botHeartbeatView(
+      [pass(0, [s1("long")]), pass(15_000, [s1("long")])],
+      NOW,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      (verdict, startAt) => {
+        asked.push([verdict, startAt]);
+        return { at: twoHoursAgo, reachesOldest: false };
+      },
+    );
+    expect(asked).toEqual([[s1("long"), NOW.getTime()]]);
+    expect(view.playbooks?.[0]).toMatchObject({
+      since: new Date(twoHoursAgo).toISOString(),
+      sinceIsLowerBound: false,
+    });
+  });
+
+  it("asks the store nothing for a run that breaks inside the page — it is already exact", () => {
+    let asked = 0;
+    const view = botHeartbeatView(
+      [pass(0, [s1("long")]), pass(15_000, [s1("flat")])],
+      NOW,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      () => {
+        asked++;
+        return { at: 0, reachesOldest: false };
+      },
+    );
+    expect(asked).toBe(0);
+    expect(view.playbooks?.[0]).toMatchObject({
+      since: NOW.toISOString(),
+      sinceIsLowerBound: false,
+    });
+  });
+
+  it("keeps 'at least since' when the run reaches the first recorded pass, or the store cannot say", () => {
+    const records = [pass(0, [s1("long")]), pass(15_000, [s1("long")])];
+    const first = NOW.getTime() - 86_400_000;
+    const reaches = botHeartbeatView(records, NOW, true, undefined, undefined, undefined, () => ({
+      at: first,
+      reachesOldest: true,
+    }));
+    expect(reaches.playbooks?.[0]).toMatchObject({
+      since: new Date(first).toISOString(),
+      sinceIsLowerBound: true,
+    });
+    const silent = botHeartbeatView(records, NOW, true, undefined, undefined, undefined, () => {
+      return undefined;
+    });
+    expect(silent.playbooks?.[0]).toMatchObject({
+      since: new Date(NOW.getTime() - 15_000).toISOString(),
+      sinceIsLowerBound: true,
+    });
+  });
+
   it("reads verdicts from the newest pass that has them, skipping a halted one", () => {
     const view = botHeartbeatView(
       [pass(0, undefined, "manual"), pass(15_000, [s1("flat")])],
@@ -105,6 +219,13 @@ describe("botHeartbeatView — per-playbook verdicts", () => {
       ["standard", false],
       ["aggressive", true],
     ]);
+  });
+
+  it("WHEN the newest pass ran no playbook, stops there — never reaching back past a pause (#4773)", () => {
+    const records = [pass(0, []), pass(15_000, [s1("long")])];
+    const view = botHeartbeatView(records, NOW, true);
+    expect(view.playbooks).toEqual([]);
+    expect(view.rollCall.find((l) => l.playbookId === "S1-NVDA")?.status).not.toBe("armed");
   });
 
   it("is null, not empty, when no pass on hand carries verdicts", () => {
@@ -169,9 +290,261 @@ describe("playbookRollCall — every house playbook is accounted for, never sile
     expect(line?.nextEntry).toBeUndefined();
   });
 
+  /** #4479 slice 2: the window read's estimate hold rides the line, so the card can say the
+   *  playbook is waiting on a confirmed date rather than waiting for its window. */
+  it("carries the estimate holding an armed playbook's window onto its line", () => {
+    const held: Playbook = {
+      ...play("S1-NVDA"),
+      keyedOn: "earnings",
+      // Long whenever any NVDA print is confirmed; the only one here is an estimate.
+      desiredState: (_asOf, calendar) =>
+        calendar.some((p) => p.symbol === "NVDA" && p.status === "confirmed")
+          ? "long"
+          : "no-window",
+    };
+    const calendar = [
+      { symbol: "NVDA", date: "2026-09-30", status: "estimate" as const, source: "cadence" },
+    ];
+    const line = playbookRollCall([s1("no-window")], NOW, [held], {}, calendar)[0];
+    expect(line).toMatchObject({
+      playbookId: "S1-NVDA",
+      status: "armed",
+      unconfirmed: [{ symbol: "NVDA", date: "2026-09-30" }],
+    });
+    expect(line?.nextEntry).toBeUndefined();
+  });
+
   it("lists the whole house roster off when no pass has recorded verdicts", () => {
     const view = botHeartbeatView([pass(20_000)], NOW, true);
     expect(view.rollCall.length).toBeGreaterThan(0);
     expect(view.rollCall.every((l) => l.status !== "armed")).toBe(true);
+  });
+});
+
+/** #4650 — the roll call read only the bot's passes, so a playbook PAUSED in the Store (no verdict,
+ *  exits still running) read "Off", the same as one nobody subscribed to, and a fresh subscription
+ *  read "Off" until the bot's next pass. The subscriptions now say which is which. */
+describe("playbookRollCall — reads the bot's own subscriptions", () => {
+  const play = (id: string, whenOff?: string): Playbook => ({
+    id,
+    symbols: [id.split("-")[1] ?? "TST"],
+    thesis: "a spec",
+    evidence: "a spec",
+    size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+    desiredState: () => "no-window",
+    ...(whenOff ? { whenOff } : {}),
+  });
+  const house = [
+    play("S1-NVDA"),
+    play("G1-GOOG"),
+    play("TACO-DJT"),
+    play("CRWV-WHEEL"),
+    play("BETA-SCOUT", "runs on one bot only"),
+  ];
+  const gaps = { "TACO-DJT": "no feed" };
+  const sub = (playbookId: string, enabled = true) => ({ playbookId, enabled });
+  const lineFor = (
+    id: string,
+    verdicts: readonly PlaybookVerdict[] | null,
+    roster?: Parameters<typeof playbookRollCall>[5],
+  ) => playbookRollCall(verdicts, NOW, house, gaps, [], roster).find((l) => l.playbookId === id);
+
+  it("WHEN a playbook is paused in the Store, reads Paused — never Off — and says what still runs", () => {
+    const line = lineFor("CRWV-WHEEL", null, { subscriptions: [sub("CRWV-WHEEL", false)] });
+    expect(line).toMatchObject({ status: "paused" });
+    expect(line?.reason).toMatch(/opens nothing new/);
+    expect(line?.reason).toMatch(/sells on its own exit rules/);
+    expect(line?.reason).toMatch(/covered calls on shares it was assigned/);
+  });
+
+  it("keeps it Paused when the newest pass, recorded before the pause, still ran it", () => {
+    const ranBefore: PlaybookVerdict = { playbookId: "S1-NVDA", mode: "standard", state: "long" };
+    const line = lineFor("S1-NVDA", [ranBefore], { subscriptions: [sub("S1-NVDA", false)] });
+    expect(line).toMatchObject({ status: "paused" });
+    expect(line?.mode).toBeUndefined(); // the stale pass's mode is not quoted as if it ran
+  });
+
+  it("WHEN subscribed and on with no pass yet, says it starts on the bot's next pass", () => {
+    const line = lineFor("G1-GOOG", [s1("long")], { subscriptions: [sub("G1-GOOG")] });
+    expect(line).toMatchObject({ status: "starting" });
+    expect(line?.reason).toMatch(/starts on the bot's next pass/);
+    // Once a pass runs it, it is simply On.
+    const ran: PlaybookVerdict = { playbookId: "G1-GOOG", mode: "standard", state: "flat" };
+    expect(lineFor("G1-GOOG", [ran], { subscriptions: [sub("G1-GOOG")] })?.status).toBe("armed");
+  });
+
+  it("keeps a playbook's own off-reason when a subscription alone never makes it run", () => {
+    const line = lineFor("BETA-SCOUT", null, { subscriptions: [sub("BETA-SCOUT")] });
+    expect(line).toEqual({
+      playbookId: "BETA-SCOUT",
+      status: "off",
+      reason: "runs on one bot only",
+    });
+  });
+
+  it("still calls a wiring gap Can't fire, subscribed, paused or not", () => {
+    for (const enabled of [true, false]) {
+      const line = lineFor("TACO-DJT", null, { subscriptions: [sub("TACO-DJT", enabled)] });
+      expect(line).toEqual({ playbookId: "TACO-DJT", status: "blocked", reason: "no feed" });
+    }
+  });
+
+  it("lists a subscription no house playbook answers to, and says nothing on the bot runs it", () => {
+    const roster = { subscriptions: [sub("U-gone", false), sub("U-stale")] };
+    const lines = playbookRollCall(null, NOW, house, gaps, [], roster);
+    expect(lines.map((l) => l.playbookId).slice(-2)).toEqual(["U-gone", "U-stale"]);
+    for (const line of lines.slice(-2)) {
+      expect(line).toMatchObject({ status: "off" });
+      expect(line.reason).toMatch(/find no playbook by this id/);
+    }
+  });
+
+  it("WHEN a second option pair holds a ticker another owns, says it is not trading — never starting", () => {
+    const wheelNvda: Pair = { ...pair("CRWV-WHEEL"), id: "NVDA-WHEEL", symbols: ["NVDA"] };
+    const lookup = (id: string) => (id === wheelNvda.id ? wheelNvda : findPair(id));
+    const withWheel = [...house, play("NVDA-WHEEL")];
+    const roll = (roster: NonNullable<Parameters<typeof playbookRollCall>[5]>) =>
+      playbookRollCall(null, NOW, withWheel, gaps, [], roster, lookup).find(
+        (l) => l.playbookId === "NVDA-WHEEL",
+      );
+    const subscribed = roll({ subscriptions: [sub("NVDA-CALL-SPREAD"), sub("NVDA-WHEEL")] });
+    expect(subscribed).toMatchObject({ status: "off" });
+    expect(subscribed?.reason).toMatch(/^Not trading — the call spread owns NVDA\. /);
+    // The bots app's own roster owns it just the same, with no subscription behind it.
+    const envOwned = roll({ subscriptions: [sub("NVDA-WHEEL")], envNamed: ["NVDA-CALL-SPREAD"] });
+    expect(envOwned?.reason).toMatch(/^Not trading — the call spread owns NVDA/);
+    // The first in the bot's order is not the one skipped.
+    expect(
+      playbookRollCall(
+        null,
+        NOW,
+        withWheel,
+        gaps,
+        [],
+        { subscriptions: [sub("NVDA-WHEEL")] },
+        lookup,
+      ).find((l) => l.playbookId === "NVDA-WHEEL"),
+    ).toMatchObject({ status: "starting" });
+  });
+
+  it("WHEN the bots app's own setting names one this bot holds no subscription to, says its exits still run", () => {
+    const roster = { subscriptions: [sub("S1-NVDA")], envNamed: ["S1-NVDA", "G1-GOOG"] };
+    const line = lineFor("G1-GOOG", null, roster);
+    expect(line).toMatchObject({ status: "off" });
+    expect(line?.reason).toMatch(/opens nothing and its exit rules still sell what it holds/);
+    // Named there AND subscribed is an ordinary subscription.
+    expect(lineFor("S1-NVDA", null, roster)?.status).toBe("starting");
+  });
+
+  /** #5482 — the bots run a subscribed pair exits-only when its conviction cannot steer it, and an
+   *  exits-only pair records no verdict, so "starting" was a promise nothing kept. */
+  it("WHEN a ◆ pair is subscribed with no conviction view, says it opens nothing new — never starting", () => {
+    const line = lineFor("CRWV-WHEEL", null, { subscriptions: [sub("CRWV-WHEEL")] });
+    expect(line).toEqual({
+      playbookId: "CRWV-WHEEL",
+      status: "off",
+      reason: UNMOVED_CONVICTION_NOTE,
+    });
+  });
+
+  it("WHEN a pair points at a view the bot does not hold, says why it opens nothing new", () => {
+    const pointed = { ...sub("CRWV-WHEEL"), convictionId: "gone-2026-10" };
+    const line = lineFor("CRWV-WHEEL", null, {
+      subscriptions: [pointed],
+      convictionOf: () => undefined,
+    });
+    expect(line).toMatchObject({ status: "off" });
+    expect(line?.reason).toBe(
+      `Opening nothing new: its conviction view can't steer it (points at conviction "gone-2026-10", which these bots do not hold). Exits still run.`,
+    );
+  });
+
+  it("WHEN a pair points at a view that steers it, still says it starts on the next pass", () => {
+    const seeded = lookupConviction("ai-dip-2026-10");
+    if (!seeded) throw new Error("no seeded AI-dip view");
+    const held = { ...seeded, narrowings: [] };
+    const pointed = { ...sub("CRWV-WHEEL"), convictionId: held.id };
+    const roster = {
+      subscriptions: [pointed],
+      convictionOf: (id: string) => (id === held.id ? held : undefined),
+    };
+    expect(lineFor("CRWV-WHEEL", null, roster)?.status).toBe("starting");
+    // A paused one stays Paused: it runs exits only whatever its conviction says.
+    const paused = { ...roster, subscriptions: [{ ...pointed, enabled: false }] };
+    expect(lineFor("CRWV-WHEEL", null, paused)?.status).toBe("paused");
+  });
+
+  it("judges from the passes alone when the subscriptions could not be read", () => {
+    expect(lineFor("CRWV-WHEEL", null)).toMatchObject({ status: "off" });
+    expect(lineFor("CRWV-WHEEL", null)?.reason).not.toMatch(/Paused|exit rules/);
+  });
+
+  it("rides the heartbeat: botHeartbeatView passes the roster to the roll call", () => {
+    const view = botHeartbeatView([pass(20_000)], NOW, true, undefined, {
+      subscriptions: [sub("CRWV-WHEEL", false)],
+    });
+    expect(view.rollCall.find((l) => l.playbookId === "CRWV-WHEEL")?.status).toBe("paused");
+  });
+});
+
+/** #4777 AC7 — a lot the stream keeps priced but nothing on the bot will ever sell is said out
+ *  loud, never left silently frozen on the book. */
+describe("unmanagedHoldings — a held lot no rule on this bot will exit", () => {
+  const lot = (symbol: string, quantity = 10) => ({ symbol, quantity });
+  const g1 = (state: PlaybookVerdict["state"]): PlaybookVerdict => ({
+    playbookId: "G1-GOOG",
+    mode: "standard",
+    state,
+  });
+
+  it("WHEN G1-GOOG is unsubscribed while its bot holds GOOG, names GOOG unmanaged", () => {
+    const holdings = { positions: [lot("GOOG"), lot("NVDA")], subscribedIds: [] };
+    expect(unmanagedHoldings(holdings, [s1("long")])).toEqual(["GOOG"]);
+    // A bot that runs no playbook at all records no verdicts — the lot is still named.
+    expect(unmanagedHoldings(holdings, null)).toEqual(["GOOG"]);
+  });
+
+  it("leaves GOOG managed while G1-GOOG runs, and while it is merely PAUSED (no verdict, exits still run)", () => {
+    expect(
+      unmanagedHoldings({ positions: [lot("GOOG")], subscribedIds: [] }, [g1("long")]),
+    ).toEqual([]);
+    expect(
+      unmanagedHoldings({ positions: [lot("GOOG")], subscribedIds: ["G1-GOOG"] }, null),
+    ).toEqual([]);
+  });
+
+  /** #4650 — a playbook the bots app's own setting names, with no subscription, opens nothing but
+   *  still runs its exits, so the roll call cannot also say nothing sells its lot. */
+  it("leaves GOOG managed while G1-GOOG runs exits only from the bots app's own setting", () => {
+    const holdings = { positions: [lot("GOOG")], subscribedIds: [] };
+    expect(unmanagedHoldings(holdings, null, undefined, ["G1-GOOG"])).toEqual([]);
+    const view = botHeartbeatView([pass(20_000)], NOW, true, holdings, {
+      subscriptions: [],
+      envNamed: ["G1-GOOG"],
+    });
+    expect(view.unmanaged).toEqual([]);
+  });
+
+  it("never flags the ten names the base persona trades, an option contract, or a closed line", () => {
+    const holdings = {
+      positions: [lot("NVDA"), lot("CRWV261120P00080000", -1), lot("GOOG", 0)],
+      subscribedIds: [],
+    };
+    expect(unmanagedHoldings(holdings, null)).toEqual([]);
+  });
+
+  it("makes no claim when the bot runs a playbook whose basket this process cannot read", () => {
+    const holdings = { positions: [lot("GOOG")], subscribedIds: ["U-eric-custom"] };
+    expect(unmanagedHoldings(holdings, null)).toBeNull();
+  });
+
+  it("rides the heartbeat only when the dashboard could read the bot's book", () => {
+    const records = [pass(20_000, [s1("long")])];
+    expect(botHeartbeatView(records, NOW, true).unmanaged).toBeUndefined();
+    const view = botHeartbeatView(records, NOW, true, {
+      positions: [lot("GOOG")],
+      subscribedIds: [],
+    });
+    expect(view.unmanaged).toEqual(["GOOG"]);
   });
 });

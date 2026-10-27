@@ -1,3 +1,4 @@
+import { freeShares } from "../../src/trading/option-economics.js";
 import {
   type OptionTicketContext,
   previewOptionClose,
@@ -344,6 +345,101 @@ describe("previewOptionOrder — shares already covering a call you sold", () =>
     expect(preview.refusals.join(" ")).toContain(
       "you hold 300, 200 of them already covering calls you've sold",
     );
+  });
+
+  it("holds no shares back for a sold call a held long call already caps (#4736)", () => {
+    // Long the 430s under the sold 440s: a debit spread, so all 300 shares stay free.
+    const capping = { symbol: "MSFT260918C00430000", quantity: 2, avgPrice: 9, marketValue: 0 };
+    const preview = previewOptionOrder(request, context({ positions: [shares, sold, capping] }));
+    expect(preview.refusals.join(" ")).not.toContain("Covered means");
+    // One long caps one short: the second sold call still holds its 100 shares.
+    const one = { ...capping, quantity: 1 };
+    expect(freeShares({ positions: [shares, sold, one] }, "MSFT")).toBe(200);
+  });
+
+  // #6289: a long call that caps a sold one frees its shares only at the strikes' width in cash.
+  describe("a held long call caps a call already sold, with no cash behind its width", () => {
+    const hundred = { ...shares, quantity: 100 };
+    const longCall = { symbol: "MSFT260918C00500000", quantity: 1, avgPrice: 2, marketValue: 0 };
+    const covered = { ...sold, quantity: -1 };
+    const book = context({
+      cash: 0,
+      optionsTradingLevel: 1,
+      positions: [hundred, longCall, covered],
+    });
+
+    it.each([
+      [445, 5_500],
+      [440, 6_000],
+    ])("refuses a second covered call at %i, naming the $%i width", (strike, width) => {
+      const preview = previewOptionOrder({ ...request, contracts: 1, strike }, book);
+      expect(preview.ok).toBe(false);
+      expect(preview.refusals.join(" ")).toContain(
+        `sets aside $${width.toLocaleString("en-US")} of strike width and you have $0`,
+      );
+    });
+
+    it("passes the same order once the cash for the width is there", () => {
+      const funded = { ...book, cash: 5_500 };
+      const preview = previewOptionOrder({ ...request, contracts: 1, strike: 445 }, funded);
+      expect(preview.ok).toBe(true);
+    });
+
+    it("charges no width when the shares cover the new call and the long caps nothing", () => {
+      const preview = previewOptionOrder(
+        { ...request, contracts: 1, strike: 445 },
+        { ...book, positions: [hundred, longCall] },
+      );
+      expect(preview.ok).toBe(true);
+    });
+  });
+
+  // #6277: the open side trusts the long's cap, so the close side must re-check the book.
+  describe("closing the long call a sold call rested on", () => {
+    const capping = { symbol: "MSFT260918C00430000", quantity: 2, avgPrice: 9, marketValue: 1_800 };
+    const third = { symbol: "MSFT260918C00450000", quantity: -3, avgPrice: 4, marketValue: 0 };
+
+    it("refuses the close once freed shares cover a newer call (the audit's book)", () => {
+      const opened = previewOptionOrder(
+        { ...request, contracts: 3, strike: 450 },
+        context({ positions: [shares, sold, capping] }),
+      );
+      expect(opened.ok).toBe(true);
+      const close = previewOptionClose(
+        "MSFT260918C00430000",
+        context({ positions: [shares, sold, capping, third] }),
+      );
+      expect(close.ok).toBe(false);
+      expect(close.refusals.join(" ")).toContain(
+        "Selling a long call you hold leaves the call it capped uncovered",
+      );
+    });
+
+    it("refuses closing a debit spread's long call when no shares stand behind the short", () => {
+      const close = previewOptionClose(
+        "MSFT260918C00430000",
+        context({ positions: [sold, capping] }),
+      );
+      expect(close.ok).toBe(false);
+      expect(close.refusals.join(" ")).toContain("This desk never sells naked calls");
+    });
+
+    it("allows the close when held shares can take over the cover", () => {
+      const close = previewOptionClose(
+        "MSFT260918C00430000",
+        context({ positions: [shares, sold, capping] }),
+      );
+      expect(close.ok).toBe(true);
+      expect(close.refusals).toEqual([]);
+    });
+
+    it("allows buying back the sold call — that only ever frees cover", () => {
+      const close = previewOptionClose(
+        "MSFT260918C00440000",
+        context({ positions: [sold, capping] }),
+      );
+      expect(close.ok).toBe(true);
+    });
   });
 
   it("ignores long calls, puts, and other stocks when counting what's promised", () => {

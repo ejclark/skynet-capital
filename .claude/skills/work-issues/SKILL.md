@@ -26,7 +26,9 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    nothing else, as JSON, in the order the gate would pick (#4393 criterion 10). It filters every
    open `ready` issue through `pullable()` (`scripts/moneypenny/labels.mjs`): open, labelled
    `ready`, `isBuildable` (none of `needs-eric` / `needs-info` / `needs-design` / `hold-merge`),
-   not `in-progress`, and not blocked by an open issue (GitHub's `blocked-by` link). That is the same predicate both Moneypenny claim lanes and her retry
+   not `in-progress`, and not blocked by an open issue (GitHub's `blocked-by` link). One label
+   reads differently here: `needs-session` — a lane handed the remainder to a live session, which
+   this pass is — so `--queue` and `--check` admit it while the unattended lanes refuse it (#5236). That is the same predicate both Moneypenny claim lanes and her retry
    sweep ask, so this pass and her lanes can never disagree about what is pullable. A Backlog issue
    (no `ready`) is never pulled here, however buildable it looks — getting it `ready` is a triage
    call, not this pass's. An issue with an open PR naming it is already `in-progress` (the PR
@@ -87,7 +89,8 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    `needs-info` or `needs-eric`; the stall audit only catches one forgotten for 6h. A `needs-eric` item doesn't block
    the rest of the queue; it just stops competing for the same PR slot. **On a `plan` issue, every
    outcome is an edit to its state block** (the slice's new state, the next pickup line, one dated
-   log line) and never a new status comment; the one-line reason for a non-PR outcome goes in the
+   log line), made with `npm run issues -- update N --edit-comment <id> --comment-file f` so it
+   keeps the footer the comment gate skips on (#4537), and never a new status comment; the one-line reason for a non-PR outcome goes in the
    log line.
 8. **REPEAT.** Re-run QUEUE and ADMIT against the new `origin/main` before picking the next issue — same
    re-derivation discipline as `/governor`'s cycle boundary, so two picks never race the same file.

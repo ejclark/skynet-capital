@@ -1,0 +1,10 @@
+{
+  "path": ["app/src"],
+  "format": ["typescript", "tsx", "css"],
+  "ignore": ["**/*.spec.ts", "**/*.spec.tsx", "**/*.d.ts", "**/*.gen.ts"],
+  "minTokens": 50,
+  "reporters": ["json"],
+  "absolute": false,
+  "gitignore": true,
+  "threshold": 100
+}

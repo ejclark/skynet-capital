@@ -7,25 +7,47 @@
  * preserved verbatim so no rule changes which declaration wins. Add a new sheet in alphabetical
  * position unless it deliberately needs to override a later one.
  */
+@import "./account-ledger.css";
+@import "./ledger-cards.css";
+/* right after ledger-cards.css, not alphabetical: the deep dive reuses the cards' row classes. */
+@import "./order-deep-dive.css";
+/* after the deep dive: the opened order reuses its "Full detail ›" door. */
+@import "./opened-order.css";
 @import "./admin.css";
 @import "./alpaca-guide.css";
 @import "./bench.css";
 @import "./board.css";
 @import "./chart-section.css";
 @import "./cockpit.css";
+/* right after cockpit.css: it sizes the head's rows and the switch's buttons cockpit.css draws */
+@import "./profile-head.css";
 @import "./compare.css";
-/* after wire.css's `.council-*` rules by specificity, not order: every rule here is scoped under
- * `.council-mine`, so the alphabetical seat is safe (#3963). */
-@import "./council-line.css";
-@import "./decision-pager.css";
+@import "./decision-card.css";
+@import "./position-guidance.css";
+@import "./position-picture.css";
+@import "./position-act.css";
+@import "./position-page.css";
+@import "./position-playbook-tag.css";
 @import "./decisions.css";
 @import "./desk.css";
+/* right after desk.css, not alphabetical: its rules were desk.css's own tail until #5022 shared them
+ * with the Activity table, so they keep their place in the cascade. */
+@import "./landing.css";
+/* after desk.css, not alphabetical: it narrows the blotter's cells for the positions table. */
+@import "./positions-columns.css";
+/* after desk.css, not alphabetical: FilterChip's rules were desk.css's `.filter-chip` until #5365. */
+@import "./filter-chip.css";
 @import "./draft-builder.css";
 @import "./order-event-line.css";
 @import "./feedback.css";
 @import "./form-strip.css";
 @import "./gate.css";
 @import "./heartbeat.css";
+/* after heartbeat.css, not alphabetical: the Playbooks section reuses its `.hb-*` log and link. */
+@import "./bot-playbooks.css";
+@import "./week-lanes.css";
+/* after desk.css and bot-playbooks.css: an opened card shows the phone position card at any width. */
+@import "./playbook-open.css";
 @import "./shadow-probes.css";
 @import "./glossary.css";
 @import "./hero-chart.css";
@@ -35,6 +57,7 @@
 @import "./league-card.css";
 @import "./learn.css";
 @import "./market-session.css";
+@import "./member-menu.css";
 @import "./milestone-panel.css";
 @import "./milestones.css";
 @import "./money-strip.css";
@@ -46,24 +69,42 @@
 @import "./level-up.css";
 @import "./onboarding.css";
 @import "./overview-grid.css";
+@import "./saved-positions.css";
 @import "./sauron-card.css";
 @import "./tower-column.css";
 @import "./playbook-store.css";
+/* after playbook-store.css: the list, the + panel, the evidence and the wide layout build on its
+   cards; the wide layout (in playbook-evidence.css) comes last so it overrides the phone rules. */
+@import "./playbook-author.css";
+@import "./conviction-form.css";
+@import "./playbook-list.css";
+@import "./playbook-subscribe-bots.css";
+@import "./playbook-evidence.css";
+/* after playbook-store.css: the Balance section's closed-trades block reuses its `.pb-metrics*`. */
+@import "./balance.css";
 @import "./positions-lens.css";
 @import "./profile.css";
 @import "./pulse.css";
 @import "./standing-line.css";
 @import "./stage-controls.css";
 @import "./research.css";
+@import "./coverage.css";
 @import "./event-horizon.css";
-/* after event-horizon.css on purpose: it re-lays the calendar head's parts out for the cockpit */
+/* after event-horizon.css on purpose: it re-lays the calendar head's parts out for Trade's row */
 @import "./calendar-head.css";
 @import "./vantage.css";
 @import "./events-section.css";
+@import "./book-calendar.css";
 @import "./route-error.css";
+@import "./session-status.css";
+/* right before settings.css, not alphabetical: its `.set-ok` / `.set-err` rules were settings.css's
+ * own until InlineResult took them, so they keep their place in the cascade. */
+@import "./inline-result.css";
 @import "./settings.css";
 @import "./shell.css";
 @import "./spread-legs.css";
+/* after spread-legs.css: the Ledger's entry groups sit beside a spread's leg rows. */
+@import "./ledger-table.css";
 @import "./status.css";
 @import "./symbol-field.css";
 @import "./theme.css";

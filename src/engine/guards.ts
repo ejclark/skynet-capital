@@ -1,7 +1,9 @@
-import { type EarningsPrint, etTimeOf, printWithin } from "../domain/earnings-calendar.js";
+import { type EarningsPrint, etTimeOf } from "../domain/earnings-calendar.js";
 import { bookNeeds, opensRisk } from "../domain/option-book.js";
 import { isBareContractOrder, optionOrderProblems } from "../domain/option-order.js";
 import { computeEquity, heldQuantity } from "../domain/portfolio.js";
+import { protectedWindowOn } from "../domain/protected-window.js";
+import type { SymbolFacts } from "../domain/symbol-facts.js";
 import type {
   MarketContext,
   OrderIntent,
@@ -13,6 +15,8 @@ import { contractMultiplier } from "../trading/option-symbols.js";
 import {
   claim,
   committedToPlaybook,
+  type OpenBuy,
+  openBuysSpend,
   openLedger,
   soldShares,
   spendableCash,
@@ -21,6 +25,7 @@ import {
   worsens,
 } from "./guard-batch.js";
 import { clampOption, type OptionBatch } from "./option-guards.js";
+import { refusedAsUnsubscribed } from "./subscribed-only.js";
 
 /**
  * Risk guardrails, applied by the engine to every persona's raw intents.
@@ -45,8 +50,11 @@ import { clampOption, type OptionBatch } from "./option-guards.js";
 interface TradeDiscipline {
   /** The forward print calendar (S2). Estimates count — they widen the flat window. */
   readonly calendar: readonly EarningsPrint[];
-  /** S2: refuse buys when a print is within this many calendar days (default 2 = flat by D-1). */
-  readonly printFlatDays?: number;
+  /**
+   * Per-symbol facts (`SYMBOL_FACTS`), handed in so this file stays pure. A fact may widen a
+   * symbol's protected window past the session after its print; absent = the house default.
+   */
+  readonly facts?: ReadonlyMap<string, SymbolFacts>;
   /**
    * E1: drop non-`urgent` buys before this ET wall-clock time ("HH:MM", default "10:00").
    * Dropping IS deferring here: the live loop re-evaluates on every market event, so a
@@ -99,6 +107,13 @@ export interface RiskConfig {
   readonly optionsLevel?: number;
   /** Oldest feed stamp an option quote may carry. Default `QUOTE_STALE_MS` (15 min). */
   readonly optionQuoteMaxAgeMs?: number;
+  /**
+   * Only a subscribed playbook may open a position (#4642 slice 10, `subscribed-only.ts`): an
+   * opening intent whose `playbookId` names no enabled subscription in `subscriptions` is refused
+   * `unsubscribed`. Exits always pass. Set by the live bots' roster (`tradingRoster`) and the forced
+   * daily pick; absent everywhere else (evals, the readiness gate), which behave exactly as before.
+   */
+  readonly subscribedOnly?: true;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -115,7 +130,8 @@ export type GuardRefusalReason =
   /** The graduated risk ladder's BLOCK rung (opens only — see `applyGuards`'s own comment on why
    *  gating opens alone is sufficient). */
   | "ladder-block"
-  /** S2: a print falls inside the flat window and the intent didn't claim `allowThroughPrint`. */
+  /** S2: the symbol is inside its protected window (`domain/protected-window.ts`) and the intent
+   *  didn't claim `allowThroughPrint`. */
   | "s2-print"
   /** E1: before the configured open-deferral time and the intent didn't claim `urgent`. */
   | "e1-open"
@@ -152,7 +168,10 @@ export type GuardRefusalReason =
   /** Selling these shares would leave a sold call uncovered. */
   | "uncovers-short-call"
   /** The cash this buy needs is set aside to secure a sold put. */
-  | "collateral-reserved";
+  | "collateral-reserved"
+  /** An order that would open a position, from no playbook the bot is subscribed to and has on
+   *  (#4642 slice 10, `subscribed-only.ts`). Never an exit. */
+  | "unsubscribed";
 
 /** The single source of truth for the reason literals above — so a validator crossing a process
  *  boundary (`decision-wire-parts.ts`, on the bots↔app replication bridge) can check a foreign
@@ -178,6 +197,7 @@ export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "call-not-covered",
   "uncovers-short-call",
   "collateral-reserved",
+  "unsubscribed",
 ];
 
 /** One raw intent the guards refused outright this cycle — the persona's own ask, unfiltered,
@@ -200,7 +220,10 @@ type DisciplineOutcome =
   | { readonly ok: false; readonly reason: "s2-print" | "e1-open" };
 
 /**
- * S2 (never hold the print) + E1 (don't trade the open), entry side. The S2 exit side
+ * S2 (never hold the print) + E1 (don't trade the open), entry side. S2 refuses an open while the
+ * symbol is inside its protected window — the same window the symbol summary draws as ■ Protected
+ * (#4807 slice 5), so the card's "no new entries" is what this guard does: from
+ * `PRINT_WINDOWS.entryFlatDays` before the print through the session after it. The S2 exit side
  * (flattening an EXISTING position before a print) is an action, not a clamp — it belongs to the
  * playbook engine, which owns exits.
  */
@@ -209,13 +232,13 @@ function clampDiscipline(
   context: MarketContext,
   discipline: TradeDiscipline,
 ): DisciplineOutcome {
-  const print = printWithin(
+  const window = protectedWindowOn(
     intent.symbol,
     context.asOf,
-    discipline.printFlatDays ?? 2,
     discipline.calendar,
+    discipline.facts?.get(intent.symbol),
   );
-  if (print && !intent.allowThroughPrint) {
+  if (window && !intent.allowThroughPrint) {
     return { ok: false, reason: "s2-print" }; // don't open what you'd be forced to flatten before the print.
   }
   const openUntil = discipline.deferOpenUntilEt ?? "10:00";
@@ -406,6 +429,12 @@ function clampOne(
     : clampSell(intent, portfolio, batch);
 }
 
+/** Share orders still open at the broker this cycle — see `applyGuardsWithVerdicts`. */
+export interface OpenAtBroker {
+  readonly sells?: ReadonlyMap<string, number>;
+  readonly buys?: readonly OpenBuy[];
+}
+
 /**
  * Apply all guards to a batch of intents against a single portfolio snapshot, and say why for
  * every one that didn't survive — the data `docs/plans/where-are-we-documenting-*.md`'s "guard
@@ -413,28 +442,42 @@ function clampOne(
  * portfolio for the cycle; the one intra-cycle interaction they track is the batch ledger
  * (`guard-batch.ts`) — so a sold put and a share buy in one cycle cannot spend the same cash twice.
  *
- * `openSells` is what sell orders still open at the broker will take, per symbol (#4678): a new
- * sell is sized against the shares they leave, and refused `nothing-held` when they leave none.
- * Empty for a broker with nothing open, which sizes exactly as before.
+ * `open` is what share orders still open at the broker hold. Its `sells` take shares, per symbol
+ * (#4678): a new sell is sized against the shares they leave, and refused `nothing-held` when they
+ * leave none. Its `buys` will spend cash (#4735, `openBuysSpend`): a new buy is sized against what
+ * they leave. Absent or empty for a broker with nothing open, which sizes exactly as before.
  */
 export function applyGuardsWithVerdicts(
   intents: readonly OrderIntent[],
   portfolio: Portfolio,
   context: MarketContext,
   config: RiskConfig = DEFAULT_RISK_CONFIG,
-  openSells?: ReadonlyMap<string, number>,
+  open: OpenAtBroker = {},
 ): GuardResult {
   const approved: OrderIntent[] = [];
   const refused: GuardRefusal[] = [];
   const ladderBlocks = config.accountTier !== undefined && blocksRiskIncrease(config.accountTier);
   const book = bookNeeds(portfolio);
-  const batch: OptionBatch = { ledger: openLedger(intents, book, portfolio, openSells), book };
+  // An open no subscribed playbook placed is refused before anything sizes it, so the batch ledger
+  // never counts it either. With the rule off, or every open subscribed, this is exactly the batch
+  // as handed in.
+  const unsubscribed = (intent: OrderIntent) => refusedAsUnsubscribed(intent, config);
+  const sized = intents.filter((intent) => !unsubscribed(intent));
+  const openSpend = openBuysSpend(open.buys ?? [], portfolio, context);
+  const ledger = openLedger(sized, book, portfolio, open.sells, openSpend);
+  const batch: OptionBatch = { ledger, book };
   for (const intent of intents) {
     // Shape first, permanently: a share-shaped order naming a contract is never a way to trade one
     // (a contract only trades as a priced limit through `option`), and a malformed option order is
     // never sized at all — the same rule the builder and the wire parser use.
     if (isBareContractOrder(intent) || (intent.option && optionOrderProblems(intent).length > 0)) {
       refused.push({ intent, reason: "option-shape" });
+      continue;
+    }
+    // Then who may open at all (#4642 slice 10): only a playbook the account is subscribed to.
+    // Exits never reach this refusal (`subscribed-only.ts`).
+    if (unsubscribed(intent)) {
+      refused.push({ intent, reason: "unsubscribed" });
       continue;
     }
     // Whether this order ADDS risk: a share buy, or any option open (a sold put is a sell that opens

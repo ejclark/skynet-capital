@@ -4,6 +4,8 @@ import {
 } from "../../src/autonomous/subscription-sync.js";
 import {
   buildSubscriptionsSnapshot,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
   type SubscriptionsSnapshot,
 } from "../../src/autonomous/subscriptions-wire.js";
 import type { PlaybookSubscription } from "../../src/domain/types.js";
@@ -140,5 +142,30 @@ describe("createSubscriptionSync", () => {
     expect(sync.accept(snapshot({ sauron: [sub()] }))).toBe("applied");
     expect(errors).toEqual(["sauron"]);
     expect(healthy.applied).toEqual([[]]);
+  });
+});
+
+describe("the retired inline conviction on the swap (#5482, the contract step's last piece)", () => {
+  // A record an older build wrote, still carrying the field no build reads any more.
+  const withCopy = (): PlaybookSubscription =>
+    ({
+      ...sub(),
+      conviction: { reason: "my call", checkOn: "2027-01-29" },
+    }) as PlaybookSubscription;
+
+  it("a snapshot that only adds one is not a swap, on any kind: no version covers it now", () => {
+    for (const kind of [SUBSCRIPTIONS_SNAPSHOT_KIND_V2, SUBSCRIPTIONS_SNAPSHOT_KIND_V4] as const) {
+      const sauron = recorder("sauron");
+      const sync = createSubscriptionSync({ bots: [sauron.bot] });
+      sync.accept(buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, kind));
+      const next = buildSubscriptionsSnapshot(
+        { sauron: [withCopy()] },
+        AT + 1_000,
+        undefined,
+        kind,
+      );
+      expect(sync.accept(next)).toBe("unchanged");
+      expect(sauron.applied).toHaveLength(1);
+    }
   });
 });

@@ -9,9 +9,17 @@ import { execFileSync } from "node:child_process";
  * regardless of blast radius. Only malicious/destructive/insecure changes and actual behavioral
  * regressions (typecheck, lint, the real test suite, envelope.spec.ts) still hard-gate CI.
  */
-export function advisoryScan(script: string, env?: NodeJS.ProcessEnv): void {
+export function advisoryScan(
+  script: string,
+  env?: NodeJS.ProcessEnv,
+  args: readonly string[] = [],
+): void {
   try {
-    execFileSync("node", [script], { cwd: process.cwd(), stdio: "pipe", env: env ?? process.env });
+    execFileSync("node", [script, ...args], {
+      cwd: process.cwd(),
+      stdio: "pipe",
+      env: env ?? process.env,
+    });
   } catch (err) {
     const e = err as { stdout?: Buffer; stderr?: Buffer };
     process.stderr.write(

@@ -1,5 +1,6 @@
 import { MARKET_TIMEZONE, marketDayKey } from "../domain/market-day.js";
 import { cycleOfExpiration } from "./expiration-cycle.js";
+import { INITIATORS, type Initiator } from "./initiator.js";
 import { parseOccSymbol } from "./option-symbols.js";
 import type { RoundTrip } from "./round-trips.js";
 
@@ -213,6 +214,42 @@ export function statsByPlaybook(trips: readonly RoundTrip[]): PlaybookStats[] {
   return [...groups.entries()]
     .map(([playbookId, group]) => ({ playbookId, ...tradeStats(group) }))
     .sort((a, b) => b.netRealized - a.netRealized);
+}
+
+/** One initiator's closed trades — the full `TradeStats` family (#4450 slice 4, EARS 4). */
+export interface InitiatorStats extends TradeStats {
+  readonly initiator: Initiator;
+}
+
+/** Closed trips by who started them, plus the trips no bot decision accounts for. */
+export interface InitiatorSplit {
+  /** Always all three, in `INITIATORS` order — zero playbook trades is the answer the brief asked
+   *  for, so it is a row reading 0, never a row that went missing. */
+  readonly rows: readonly InitiatorStats[];
+  /** Trips with no initiator: counted, never folded into any of the three. */
+  readonly untraced: number;
+}
+
+/**
+ * Groups closed trips by `RoundTrip.initiator`, the split beside `statsByPlaybook`'s: that one
+ * answers "which playbook", this one "a playbook at all, the forced pick, or the bot's own rules".
+ * The forced pick has its own playbook id, so neither grouping ever pools it with a playbook's
+ * evidence-backed record (`beta-scout.ts`: "THE LINE THIS MUST NEVER BLUR").
+ */
+export function statsByInitiator(trips: readonly RoundTrip[]): InitiatorSplit {
+  const groups = new Map<Initiator, RoundTrip[]>(INITIATORS.map((i) => [i, []]));
+  let untraced = 0;
+  for (const trip of trips) {
+    if (trip.initiator) groups.get(trip.initiator)?.push(trip);
+    else untraced += 1;
+  }
+  return {
+    rows: INITIATORS.map((initiator) => ({
+      initiator,
+      ...tradeStats(groups.get(initiator) ?? []),
+    })),
+    untraced,
+  };
 }
 
 /** One calendar day of realized P/L — the input to the history view's day strip. */

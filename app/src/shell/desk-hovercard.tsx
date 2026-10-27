@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useRef, useState } from "react";
 import { fetchDesk } from "../live/desk";
+import { KindChip } from "../ui";
 
 /**
  * THE DESK HOVERCARD (#738 phase 4e) — GitHub's hovercard pattern on the Field ladder: rest on a
@@ -85,13 +86,13 @@ export function DeskHoverName({
     >
       <Link to="/u/$id" params={{ id }} className="rank-name">
         {name}
-        <span className={`chip chip-${kind}`}>{kind === "bot" ? "BOT" : "HUMAN"}</span>
+        <KindChip kind={kind} />
       </Link>
       {open ? (
         <div className="hovercard" role="tooltip">
           <p className="hovercard-head">
             <strong>{name}</strong>
-            <span className={`chip chip-${kind}`}>{kind === "bot" ? "BOT" : "HUMAN"}</span>
+            <KindChip kind={kind} />
           </p>
           <CardBody id={id} />
           <p className="hovercard-foot">Click through for the full account</p>

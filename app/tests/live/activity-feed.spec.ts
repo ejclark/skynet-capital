@@ -11,6 +11,7 @@ import type {
   WireDevelopmentItem,
   WireFeedbackItem,
   WireMilestoneItem,
+  WirePlayItem,
   WireTrade,
 } from "../../src/live/wire";
 
@@ -43,7 +44,7 @@ const filing = (over: Partial<WireFeedbackItem> = {}): WireFeedbackItem => ({
   kindLabel: "Idea",
   title: "One feed, not three widgets",
   url: "https://github.com/ejclark/skynet-capital/issues/4271",
-  meta: "#4271 · 10/1/2026",
+  meta: "#4271",
   at: "2026-10-01T12:00:00.000Z",
   ...over,
 });
@@ -55,7 +56,7 @@ const merge = (over: Partial<WireDevelopmentItem> = {}): WireDevelopmentItem => 
   title: "development events for merged PRs",
   url: "https://github.com/ejclark/skynet-capital/pull/4272",
   author: "claude",
-  meta: "#4272 · 10/2/2026",
+  meta: "#4272",
   at: "2026-10-02T12:00:00.000Z",
   ...over,
 });
@@ -247,6 +248,22 @@ describe("a bare search term", () => {
     expect(keys(show(feed, "#4271"))).toEqual(["filing:4271"]);
     expect(keys(show(feed, "4271"))).toEqual(["filing:4271"]);
   });
+
+  // #4650 — a bot's spread has no broker symbol of its own, so its row is found by the words it
+  // shows; a contract is found by those words or by the OCC string a member might paste.
+  it("matches an option by the words its row shows, as well as its broker symbol", () => {
+    const options = buildActivityFeed(
+      [
+        trade({ key: "t-spread", symbol: "", display: "NVDA $185/$200 CALL SPREAD · 13 NOV 26" }),
+        trade({ key: "t-put", symbol: "CRWV261106P00085000", display: "CRWV $85 PUT · 6 NOV 26" }),
+      ],
+      [],
+    );
+    expect(keys(show(options, "nvda"))).toEqual(["t-spread"]);
+    expect(keys(show(options, "spread"))).toEqual(["t-spread"]);
+    expect(keys(show(options, "put"))).toEqual(["t-put"]);
+    expect(keys(show(options, "crwv261106p00085000"))).toEqual(["t-put"]);
+  });
 });
 
 describe("toggleActivityQualifier", () => {
@@ -303,7 +320,7 @@ describe("the milestone kind", () => {
     whoId: "eric",
     title: "Buy your first stock",
     points: 25,
-    meta: "+25 pts · 10/2/2026",
+    meta: "+25 pts",
     at: "2026-10-02T09:00:00.000Z",
     ...over,
   });
@@ -353,5 +370,52 @@ describe("the milestone kind", () => {
 
   it("pressing Milestones clears a trade facet rather than stranding it in the query", () => {
     expect(toggleActivityQualifier("is:buy NVDA", "is:milestone")).toBe("NVDA is:milestone");
+  });
+});
+
+// The fifth kind (#5457 slice 5): a member's authored playbook, members only.
+const play = (over: Partial<WirePlayItem> = {}): WirePlayItem => ({
+  key: "play:U-sauron-nvda:passed:1",
+  icon: "✅",
+  kindLabel: "Passed",
+  who: "Sauron",
+  whoId: "sauron",
+  text: "got “NVDA run-up, tighter” through its shadow test after 10 shadow sessions",
+  symbol: "NVDA",
+  meta: "NVDA · SIM · unvalidated",
+  cheer: true,
+  at: "2026-10-05T12:00:00.000Z",
+  ...over,
+});
+
+describe("playbooks as the fifth kind", () => {
+  const withPlay = buildActivityFeed(
+    [trade({ key: "t-1", at: "2026-10-01T09:00:00.000Z" })],
+    [],
+    [],
+    [],
+    [play()],
+  );
+  const ids = (items: readonly ActivityFeedItem[]) => items.map((i) => i.key);
+  const only = (query: string) =>
+    ids(withPlay.filter((i) => matchesActivity(i, parseActivityQuery(query))));
+
+  it("interleaves with the other kinds by instant", () => {
+    expect(ids(withPlay)).toEqual(["play:U-sauron-nvda:passed:1", "t-1"]);
+  });
+
+  it("is:playbook keeps the play and drops the trade; is:trade drops the play", () => {
+    expect(only("is:playbook")).toEqual(["play:U-sauron-nvda:passed:1"]);
+    expect(only("is:trade")).toEqual(["t-1"]);
+  });
+
+  it("matches a bare term by the play's words, its ticker or the bot", () => {
+    expect(only("run-up")).toEqual(["play:U-sauron-nvda:passed:1"]);
+    expect(only("nvda")).toContain("play:U-sauron-nvda:passed:1");
+  });
+
+  it("pressing Playbooks clears a trade facet rather than stranding it", () => {
+    expect(toggleActivityQualifier("is:buy NVDA", "is:playbook")).toBe("NVDA is:playbook");
+    expect(kindInScope(parseActivityQuery("is:playbook"), "trade")).toBe(false);
   });
 });

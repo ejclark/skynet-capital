@@ -117,9 +117,10 @@
 
 /* Phone (#3689 slice 8, handoff 3b): the compact money card. The bar stays with its amounts under
    the cash line; the greeks keep their plain labels (still one tap from the glossary) and drop the
-   sentence under each. */
+   sentence under each. A sold option's liability stays: the bar can't draw it, so at phone width
+   that line is the only place the strip owns up to it (#4948). */
 @media (max-width: 700px) {
-  .money-legend,
+  .money-legend > li:not(.money-legend-sold),
   .money-greek .money-note {
     display: none;
   }

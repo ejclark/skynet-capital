@@ -21,7 +21,12 @@ owner — the only one who walks the app as someone other than Eric), and Eric, 
    carries its falsifier. The file is theirs to edit (below).
 2. **What they own** — the fixture participant (or none), rungs earned, accounts, device.
 3. **What they are trying to do** — goals, ranked; **needs in their words**.
-4. **How they decide** — by outcome or by mechanism; what they read first; what they skip.
+4. **How they decide** — by outcome or by mechanism; what they read first; what they skip; and
+   their **attention**: *focused* (reads a page through) or *easily distracted* (anything on screen
+   that isn't the task pulls them off it). Eric, 2026-10-14: *"I feel I have A.D.H.D. and am easily
+   distracted"*, and *"my brother DEFINITELY has ADHD too.. so that is a good attribute to factor
+   into personas in our user studies that help shape designs"* — so a study tests a design against
+   distraction, not only against the owner.
 5. **What frustrates them** — the dead ends they meet, each tagged with its number below; a fixed
    one keeps its line, marked fixed.
 6. **Journeys** — numbered; each step is `goto` · what they see · an **EARS acceptance line**
@@ -110,12 +115,21 @@ ratchet never fires (a promise with no target is `{ "text": "<the promise>", "ab
   `scripts/crawl/README.md`. The judge line is graded afterwards by a session running
   `docs/grind/journey-judge.instructions.md` over the frames — never by a model call inside the crawl.
 
+## Market scenarios — `scenarios.md` and `tests/scenarios/`
+
+A journey proves a member can reach a screen; a **scenario** proves the app says the right thing
+when a real market situation arrives (a pullback, a winner with no exit plan). Each scenario is a
+section of [`scenarios.md`](scenarios.md) and a spec in `tests/scenarios/`, run by `npm test`
+against the pure decision engines, so no live quote is needed. Known gaps are `it.fails` — the
+same ratchet as `known_gap`. A member adds one by writing the situation in their own words; a
+session turns it into acceptance lines.
+
 ## Which screens the journeys must reach — `triage.json` and `coverage.md`
 
 [`triage.json`](triage.json) holds one verdict per screen (a page, or one `?section=` of it):
 `keep` · `fold` · `retire` · `redirect-only` · `undecided`, with who must see it and, for a
-redirect or an open question, where it goes. It came from the route triage of 2026-09-26,
-refreshed after #3814, and is **hand-maintained** — change a verdict here, never in the report.
+redirect or an open question, where it goes. It is **hand-maintained** — change a verdict here,
+never in the report.
 `npm run crawl:coverage` joins it with every screen the code has and every journey step, and writes
 [`coverage.md`](coverage.md): how many living screens a phone step visits, and the gaps. A dead
 screen (`retire`, `redirect-only`) gets no phone work and is never a gap; a new screen with no
@@ -149,11 +163,11 @@ money strip, the positions blotter — became one sentence, "Net worth is unreac
 The route's own header promises "one unreachable account never blanks the rest"; a thrown
 `TypeError` escaped that guard. Root cause: `FixtureTradingTransport` matched `/v2/account` as a
 prefix, so `/v2/account/portfolio/history` was answered with the account payload — no `equity`
-series — and the route walked it as a history. The transport now matches each route exactly
-(sub-paths 404, the contract the options endpoints already held offline), the route treats a
-non-history shape as a failed read ("—" windows, no high line), and the three pinned steps
-(`eric` j1 s2 · j3 s1, `returning-trader` j1 s2) run as passing acceptance tests — the first
-`known_gap` the ratchet released.
+series — and the route walked it as a history. The transport matches each route exactly
+(sub-paths 404, the contract the options endpoints hold offline), the route treats a
+non-history shape as a failed read ("—" windows, no high line), and the three steps
+(`eric` j1 s2 · j3 s1, `returning-trader` j1 s2) carry no `known_gap` and run as passing
+acceptance tests.
 
 ## How a member edits their own file
 

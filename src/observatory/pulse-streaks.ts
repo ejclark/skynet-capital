@@ -1,5 +1,12 @@
 import type { TradeStats } from "../trading/trade-stats.js";
-import { currentStreakIn, type DayStreak, dailyChanges, longestStreakIn } from "./day-trophies.js";
+import { plural } from "../ui/plural.js";
+import {
+  currentStreakIn,
+  type DayChange,
+  type DayStreak,
+  dailyChangesOf,
+  longestStreakIn,
+} from "./day-trophies.js";
 import { formatPctOrDash } from "./desk-data.js";
 import type { EquitySample } from "./history-store.js";
 import { formatSigned } from "./render-atoms.js";
@@ -38,8 +45,6 @@ export interface PulseStreakGroup {
   readonly empty: string;
 }
 
-const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" : "s"}`;
-
 /** A run's span and what it was worth — the dates alone never say what the streak paid or cost. */
 function runNote(streak: DayStreak): string {
   return `${streak.from} → ${streak.to} · ${formatSigned(streak.abs)} · ${formatPctOrDash(streak.pct, true)}`;
@@ -55,9 +60,8 @@ function dayRow(label: string, streak: DayStreak | null): PulseStreakRow | null 
   };
 }
 
-/** The three day rows share one keying of the history: each sample is put in its day once. */
-function dayRows(samples: readonly EquitySample[], timezone: string | undefined): PulseStreakRow[] {
-  const changes = dailyChanges(samples, timezone);
+/** The three day rows, read off one list of day-over-day changes. */
+function dayRows(changes: readonly DayChange[]): PulseStreakRow[] {
   const current = currentStreakIn(changes);
   return [
     dayRow(current?.direction === "red" ? "Running red" : "Running green", current),
@@ -97,18 +101,30 @@ function tradeRows(stats: TradeStats): PulseStreakRow[] {
   return rows;
 }
 
-/** Both run families for one desk, each group carrying its own empty state. */
+/**
+ * Both run families for one desk, each group carrying its own empty state. `samples` must already
+ * be in ascending `at` order (#4612 slice 7); a reader that already holds the day changes calls
+ * `pulseStreaksFrom` instead.
+ */
 export function pulseStreaks(
   samples: readonly EquitySample[],
   stats: TradeStats,
   timezone?: string,
+): PulseStreakGroup[] {
+  return pulseStreaksFrom(dailyChangesOf(samples, timezone), stats);
+}
+
+/** `pulseStreaks` from day-over-day changes already in hand — `PulseHistoryFold.dailyChanges`. */
+export function pulseStreaksFrom(
+  changes: readonly DayChange[],
+  stats: TradeStats,
 ): PulseStreakGroup[] {
   return [
     {
       title: "Trading-day runs",
       caption:
         "Recorded equity, day over day. A closed market has no sample, so weekends and holidays never break a run; totals include unrealized moves.",
-      rows: dayRows(samples, timezone),
+      rows: dayRows(changes),
       empty:
         "Needs two recorded days with a move between them — no day is back-filled or flattened.",
     },

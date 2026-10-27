@@ -1,6 +1,6 @@
 # Event research — the assessment discipline behind the market-event calendar
 
-The foresight loop: an event lands in the calendar (`src/domain/market-events.ts`, or a print in
+The foresight loop: an event lands in the calendar (`src/domain/market-events/<id>.json`, or a print in
 `src/domain/earnings-calendar.ts`) → initial research asks *what is likely to happen and how will
 the market react* → periodic reassessments hunt new information and adjust the stance — at a
 frequency that ramps with impact × time-to-event (`assessment-cadence.json`) — until the
@@ -47,9 +47,10 @@ fragment stay on disk as the record. Mark, don't delete — the shape every cale
 - **You cannot retire someone else's file.** Found a duplicate you don't own? Note it in your ledger
   and say so on the survivor's issue — the owner's next pulse writes the field. That is one more
   pulse, not thirty.
-- **The old `(DUPLICATE of …)` title annotation is replaced by the field.** It retired nothing, and
-  it blinded the detector: annotating one pair dropped its title-overlap score from 0.857 to 0.400.
-- **`--validate` now warns on same-date title overlap ≥ 45%** (advisory, never red — ISM and S&P
+- **The field, never a `(DUPLICATE of …)` title annotation.** An annotation retires nothing, and
+  the detector strips it before scoring (unstripped, annotating one pair dropped its title-overlap
+  score from 0.857 to 0.400).
+- **`--validate` warns on same-date title overlap ≥ 42%** (advisory, never red — ISM and S&P
   Global publish near-identical titles on the same day and are genuinely different publishers). A
   warning is a prompt to read two titles, not a verdict; `supersededBy` is the part that binds.
 - **Both of those run after the duplicate exists. `--on-date` runs before it does** (#3361) — see
@@ -68,12 +69,42 @@ kill switches, and the first ledger row. Open with an `## At a glance` decision 
 horizon table + signal conditions) — the `/research` page promotes it above the document; it is a
 faithful surfacing of the stance below, never a new claim (see the TEMPLATE). Instruments by kind:
 
-- **earnings / symbol-keyed** — `node scripts/research/earnings-cycle.mjs <SYM> --bench QQQ
+- **earnings / symbol-keyed** — first read what the house already knows: `npm run research:dossier
+  -- <SYM>` (`npm ci --ignore-scripts` once if `node_modules` is missing; about a minute). It lists
+  the current stance, the bots' live pairs on the name and the conviction claims steering them,
+  every open forward test naming it (the unowned legacy rows included) and its kill-list entries.
+  Never register a forward test it already lists, and when your call bears on a pair or a claim it
+  lists, name it (2026-10-18 audit: the same CRWV test was filed twice, and one finding was
+  "discovered" three times, because nothing joined these). Then
+  `node scripts/research/earnings-cycle.mjs <SYM> --bench QQQ
   --peers <PEERS>` + `node scripts/research/intraday-edges.mjs <SYM>`, read against the house
   playbooks (S1/S2/E1/S3/S4 + G1) and the kill list in
   [`multi-symbol-sweep.md`](../research/multi-symbol-sweep.md) — never re-propose a killed
   hypothesis without new prints. For a full workup, the `symbol-sweep` workflow adds the
   red-team pass.
+- **ipo-listing** — an IPO prices; first trade is the next session (#5912 slice 3; filed by `npm
+  run research:lockups`). An `estimate` comes from the public S-1 weeks before pricing, dated by
+  base rates its `source` states; it is not a date to act on, and the 424B4 retires it with a
+  dated, `confirmed` twin (`supersededBy`) — so register no forward test on an estimate's id,
+  which would block that retirement until scored. Read the S-1 for what the listing phase needs:
+  the price range against the last private mark, the primary/secondary split, and the lock-up
+  clause (its early-release triggers date the lockup entry beside it). The standing call is no
+  position on day 1 ([`anthropic-ipo.md`](../research/anthropic-ipo.md)); the close-out records
+  the day-1 close against the offer price.
+- **lockup-expiry** — an IPO's insider shares unlock (#5912; filed by `npm run research:lockups`).
+  An entry whose `source` opens `EST: S-1` was estimated before pricing and waits for the 424B4
+  like its listing above. Otherwise, first re-read the lock-up clause in the 424B4 the `source`
+  cites: an `estimate` entry quotes an
+  early-release trigger (an earnings release, a closing-price test, staged tranches), and the
+  initial research's job is to name the earliest date it can actually fire. If that settles one
+  date, promote the entry with an `SEC:` source that says so. Then the three reads the playbook
+  needs: **supply** — unlocking shares as % of float and in days of average volume; **price** — the
+  run-up since the IPO price (the literature's pullback is larger after a big run-up); **options**
+  — put IV against realized vol and the skew into the date (a known catalyst is usually priced).
+  The default call is "stand aside": the lockup study ([`ipo-lockup-expiry.md`](../research/ipo-lockup-expiry.md),
+  #5912 slice 2) found the unlock drag was a 2019–21 effect, flat since 2022, and no trade shape
+  paid at a realistic option price. Log the three reads as the study's forward test; never a
+  position on the listing day.
 - **macro-print / sector / geopolitical** — sourced web research (primary sources over
   aggregators; the seeding of this calendar caught an aggregator publishing a wrong CPI date —
   cite the primary and the check date). Establish: consensus expectation, the whisper if
@@ -138,6 +169,24 @@ exists only as `proposals/<your-id>.from-*.json`): read every proposal for your 
 a sibling lane's finding — then write the canonical `src/domain/market-events/<your-id>.json`
 yourself. The proposals become inert (the canonical file shadows them) and stay where they are.
 
+**Conviction proposals — answer every one for your event** (#5482 criterion 2). A conviction
+doc (`docs/research/convictions/*.md`) may not write your fragment, so it *proposes* forward-test
+rows for your event in its `## Forward tests to register` table. In any mode, run
+`node scripts/conviction-proposals.mjs --event=<your-event-id>`; each entry it prints is one
+proposal still waiting on you, with its token (e.g. `ai-dip-2026-10/P3`). Answer each in this same
+PR, one of two ways:
+
+- **Register it** — append the row to your own fragment like any registration (next free
+  `FT-<event-id>-<n>`, the score-by it names), and cite the token in the row, e.g. `registered from
+  conviction proposal ai-dip-2026-10/P3`. Measure anything the proposal leaves to you ("the lane
+  measures it at registration") before you write the row, from an instrument, never from memory.
+- **Decline it** — name the token in your ledger row with the one-line reason (it duplicates a
+  registered row, it can't be scored from any instrument here, its window has already opened).
+
+Either answer is final: the token in your fragment or ledger is what the reader looks for, so the
+proposal stops printing and stops making your pulses material. You never edit the conviction doc.
+A proposal whose score-by has passed drops out by itself.
+
 **Not every `interval-elapsed` pulse reaches a session** — see "Deterministic screening" below.
 
 ### `event-passed-unscored` → close-out
@@ -147,8 +196,8 @@ actually happened vs the stance, scored **from re-run instrument data, never fro
 tape**. Score any forward tests this event carried — its own fragment
 [`forward-tests/<event-id>.md`](../research/forward-tests.md) (fill the Outcome cell; a scored
 kill moves to the sweep doc's kill list), plus any legacy `FT-N` row about this event in
-`forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the event — with
-exactly one door back in: a registered forward test whose `Score by` has since arrived re-opens it
+`docs/research/forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the
+event — with exactly one door back in: a registered forward test whose `Score by` has since arrived re-opens it
 as `forward-test-due` (#2884, the mode below). The assessment is closed for good; the *register*
 is not.
 
@@ -158,17 +207,18 @@ before its stated window closes is falsification, so a session dispatched before
 forward tests are scoreable can only re-read state and leave. Measured on `gastech-2026-09-14`:
 **three dispatches in 38 minutes**, no new information available to any of them, because each
 research PR's own merge re-triggered the push-driven sweep and the `research/<event-id>` branch key
-only dedupes while that PR is still *open*. `scripts/event-scan.mjs` now reads the event's own
+only dedupes while that PR is still *open*. `scripts/event-scan.mjs` reads the event's own
 fragment (`scripts/forward-test-pending.mjs` — pure text, no network, no `npm ci`) and **holds the
 close-out until the latest unscored score-by**, reporting `close-out-held-for-forward-test` with
 that date on the human report. The wait is **clamped to `closeOutWithinDays`**: a test scoring after
 the ceiling is a *structural* conflict, not a timing one — the event would age out of its close-out
 window entirely — so the scanner dispatches immediately and names the test in `--due`'s
-`forwardTestsBeyondWindow`, and the session records those rows unscoreable at close-out on purpose,
-exactly as before. An unreadable row, a missing fragment, or an already-scored row all behave
-exactly as they did: **every ambiguity resolves toward dispatching**, because a wrong hold loses an
+`forwardTestsBeyondWindow`, and the session records those rows unscoreable at close-out on purpose.
+An unreadable row, a missing fragment, or an already-scored row holds nothing — the close-out
+dispatches: **every ambiguity resolves toward dispatching**, because a wrong hold loses an
 outcome record permanently while a wrong dispatch only costs a session. Legacy `FT-N` rows in
-`forward-tests/legacy.md` are *not* consulted — legacy ids carry no event namespace to match on.
+`docs/research/forward-tests/legacy.md` are *not* consulted — legacy ids carry no event namespace
+to match on.
 
 **Registering a forward test** (initial research, or a stance change mid-run) appends one row to
 `docs/research/forward-tests/<event-id>.md` — this event's own fragment, id `FT-<event-id>-<n>`
@@ -183,9 +233,9 @@ falsification pressure, and it is the reason #2884 is not a registration gate.
 
 **Closing is not resolving.** The close-out above writes `## Outcome` and the scanner goes quiet —
 but a forward test is deliberately allowed to key on data that does not exist yet, and about a
-quarter of honest registrations score *past* `closeOutWithinDays`. Those rows used to have no
-second net at all (`scripts/forward-test-id-scan.mjs` reads ids, never the `Score by` column), so
-they sat `_open_` forever while being cited in stance notes as predictions that would settle.
+quarter of honest registrations score *past* `closeOutWithinDays`. Without this mode those rows
+have no second net (`scripts/forward-test-id-scan.mjs` reads ids, never the `Score by` column), so
+they sit `_open_` forever while being cited in stance notes as predictions that would settle.
 Measured 2026-09-20: **21 events · 31 rows** permanently orphaned that way, 6 of them already
 decided by the tape and unrecorded, and the number only ever went up. The separation is the one
 every forecasting platform already makes — Good Judgment Open resolves on when events occurred,
@@ -223,10 +273,10 @@ pressure, not a bug. If a row genuinely needs a later date than it was registere
 `scripts/event-scan.mjs` decides **when** a pulse is due; `scripts/event-material-scan.mjs`
 decides **whether it needs a Claude session at all**, for `interval-elapsed` pulses only (a
 `never-assessed` initial research and an `event-passed-unscored` close-out are never screened —
-both always dispatch, same as before this existed). It runs between the two in
-`.github/workflows/moneypenny-events.yml`'s `route` job: a screen writes its own ledger row and commits
-it directly, without spending a session; anything else falls through to the full pulse-check
-protocol above, unchanged.
+both always dispatch). It runs between the two in
+`.github/workflows/moneypenny-events.yml`'s `route` job: a screen writes its own ledger row and lands
+it via a PR, never a direct push to `main`, without spending a session; anything else falls through
+to the full pulse-check protocol above.
 
 **The reference block.** Every ledger's header carries a machine-readable line right after
 `**Last assessed:**`:
@@ -258,6 +308,7 @@ in that file's header):
 | New adjacent event | a **confirmed, high/critical-impact** calendar entry within 5 days of this event's date not seen in the last pulse's `adjacentStrongIds` | the same "corridor" framing the adjacency sweep already uses by hand — filtered (#2946): at 446 events a corridor averages ~30 adjacents but ~3 strong ones, so the unfiltered rule tripped on the calendar's own churn (5 screens in 13 days). Weaker adjacents are **named in the screen row** (recorded, not assessed), not paid for |
 | Staleness ceiling | every 3rd consecutive screen is forced material regardless of readings | an event can never coast on screens forever; a real session re-establishes the baseline at least that often |
 | No reference block | always material (`no-reference-baseline`) | nothing to diff against — the safe default, never a guess |
+| Conviction proposal | an unanswered proposal naming this event is material (`conviction-proposal:<token>`), whatever the tape did | only a session can register or decline it; a screen would leave it unread (AI-dip's six rows sat unread for 11 days through screens and full sessions alike, #5482) |
 | Probe fetch failure | always material (loud failure) | "broken ≠ quiet" — the same doctrine `event-scan.mjs` already enforces |
 
 **The honesty invariant.** A screened row is a mechanical check, never a verdict — it is worded
@@ -360,14 +411,14 @@ research; non-negotiable"*).
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here
 
       - name: Restore npm cache
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.npm
           key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -376,9 +427,18 @@ research; non-negotiable"*).
 
       - run: npm ci
 
+      # The App token, never GITHUB_TOKEN: a PR opened with GITHUB_TOKEN emits no
+      # `pull_request` event, so `verify` never runs (this file's header, PR #371).
+      - id: app-token
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      # No `gh pr merge` here: pipeline.yml's `arm auto-merge` job is the only arming path (#4094).
       - name: Compose the open week's study, and open a PR if it moved
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           npm run research:week
@@ -399,21 +459,53 @@ research; non-negotiable"*).
           git checkout -b "$BRANCH"
           git add docs/research/weeks
           git commit -m "docs(research): recompose the open week's study from the ledgers in range"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           git push origin "$BRANCH"
           gh pr create --base main --head "$BRANCH" \
             --title "docs(research): recompose the open week's study from the ledgers in range" \
             --body "Composed by \`npm run research:week\` on the merge tick. Every cell is a ledger's own \`This week\` row, quoted — this study makes no call of its own. Contract: docs/process/EVENT-RESEARCH.md → *The weekly study genre*."
-          gh pr merge --squash --auto "$BRANCH"
 ```
 
 If he would rather have the literal Sunday clock the brief named, the same job takes
 `on: schedule: - cron: "0 16 * * 0"` (12:00 ET during EDT; 17:00 UTC once EST starts — a fixed cron
 cannot follow the offset, which is a third reason the tick is the better shape here). It would be
-the only cron in the repo, and it would compose each week from Sunday's ledger set alone.
+the repo's second cron, beside `bots-catchup.yml`'s deploy catch-up, and it would compose each week
+from Sunday's ledger set alone.
+
+## Signal runs — the second door (#4808 slice 2)
+
+Calendar events are one source of research; the other is **what a playbook declares it trades on**
+(`src/playbooks/research-signals.ts`). `npm run research:signals` lists the instrument runs owed
+today: every declared signal × the tickers of its playbook's pair, on the signal's own cadence
+(weekly, or after each confirmed report), and nothing no playbook declares. One command on one
+ticker is one run even when two playbooks name it. The count a tick hands out answers to the same
+ceiling as the event lane (`research-dispatch-budget.json` through the work spigot's dial); the rest
+is deferred, not dropped. Last-run records are one file each under `docs/research/signal-runs/`,
+written by `npm run research:signals -- --record "<command>"`. The scheduler runs nothing and spends
+no tokens; wiring a workflow step that runs the owed commands is a protected-path change and boards
+the platter separately.
+
+## Candidate playbooks — the third door (#4808 slice 3)
+
+A new signal idea enters as a **candidate** (`src/playbooks/candidates.ts`), never as a playbook: it
+has no window, no sizing and no order path, so nothing can trade or suggest it, and its Store card
+says its back-test status in words. Before its first run it declares the five research steps the
+2026-10-07 sweep's eight refutations each lacked: a fixed threshold · a power estimate · a control ·
+a confound filter clean of reports on both sides · date-clustered, factor-netted grouping sized to
+the latest era. The verdict (`scripts/research/backtest-verdict-math.mjs`) judges power first, from
+the cluster count alone, so a thin sample is `underpowered` — it goes to `next-slice` and never to
+the kill list; a killed candidate is dated and its id must be on the kill list in
+`docs/research/multi-symbol-sweep.md` before `npm test` passes. Candidate 1 (options volume at the
+Bollinger edge) has its two inputs as instruments: `option-volume.mjs` (OCC's free daily volume) and
+`bollinger-touch.mjs` (the price-only control). Its ~500-stock run came back `underpowered` on
+2026-10-18 (376 independent days of 1,298 needed;
+[`optvol-bollinger-backtest-2026-10.md`](../research/optvol-bollinger-backtest-2026-10.md)), so a
+powered re-run waits on the OCC archive (#4832).
 
 ## The decision header is gated (`npm run research:lint`)
 
-The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.
+The gate reads `docs/research/events/`, `docs/research/weeks/` and `docs/research/convictions/` —
+one contract, one eye.
 A weekly study's call sheet keys by name rather than by horizon, so the four-horizon rule does not
 apply to it (the lint already skips that check for a by-name table) and its advisory header budget is
 wider, because a by-name sheet grows with the roster rather than with an author's prose.
@@ -432,7 +524,7 @@ What it checks, and what it deliberately does not:
 | an `## At a glance` (or study `## The call`) section exists | a signal bullet past 160 chars |
 | a **TL;DR.** paragraph and a **Signals & conditions** list | a falsifier naming no date or number |
 | a table with `Call` · `Confidence` · `Proves it wrong` columns | an assessment row past ~1,200 chars |
-| all four horizons present, each with a graded, non-empty call | |
+| all four horizons present, each with a graded, non-empty call | a `**Call:** <buy\|hold\|trim\|sell\|wait> until <date>` line missing on an upcoming event's ledger, or malformed (#4807) |
 | an earnings ledger's `**Buy signal:**` bullet, yes or no — the line position guidance reads | |
 
 Structure fails; prose length only informs. That split is on purpose — `docs/IDEAS.md` banks the
@@ -468,7 +560,7 @@ rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges
   is falsification and never happens (the forward-tests rule, verbatim).
 - **Estimates only widen caution.** A cadence estimate may pull an assessment earlier or extend a
   flat window; it never licenses an entry.
-- **Source prefixes are the audit trail** — see the header of `market-events.ts`. `--validate`
+- **Source prefixes are the audit trail** — see the header of `market-events-data.ts`. `--validate`
   enforces them in CI.
 - **Blocked sources are recorded, never substituted silently.** When a fetch of a cited source
   fails — egress block, 403, 5xx — the ledger's `probe-ref.blocked` array gets a

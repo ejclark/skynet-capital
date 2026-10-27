@@ -224,6 +224,13 @@ export const LABELS = {
     color: "5319e7",
     description: "CI failures are piling up and the repair lane is not running",
   },
+  // Owned by the dashboard server's run marker (#4618): it files one when a boot finds the last run
+  // ended without its clean shutdown (an OOM kill, a crash). Closed once `/retro` banks the lesson.
+  incident: {
+    name: "incident",
+    color: "b60205",
+    description: "Production stopped uncleanly: an OOM kill or crash, awaiting a /retro",
+  },
 };
 
 /** The labels this file applies and therefore guarantees. The rest are registered for lookup. */
@@ -281,9 +288,22 @@ export const parkedReason = (number, labels = []) =>
  * Pure: accepts a REST row, an event payload's issue, or `gh issue view` JSON (state `OPEN`).
  * A missing `state` counts as open — the same reading the claim lanes already gave it.
  *
+ * `needs-session` (#5236) refuses only the AUTOMATED pullers: it marks a remainder a lane handed to
+ * an interactive session, so an unattended build re-pulling it ships nothing (#5214 was claimed
+ * twice after the hand-off). It is not a parking label — `/work-issues` IS the interactive session,
+ * so its CLI passes `{ interactive: true }` and still sees the issue, and `ready` + `needs-session`
+ * stays a legal pair rather than one `feedback-guard.mjs` would have to report.
+ *
+ * BOARDED ON A HELD PLATTER (#6191): `boardedOn` maps an issue to the open platter PR whose body
+ * closes it (`platterClosesByIssue`, pr-issues.mjs). Its last item is built and waits only on
+ * Eric's merge, so a pull ships nothing (#5837 ran three empty builds against #5852). The map is
+ * read by the caller, so this rule stays pure; a caller that passes none skips the check.
+ *
+ * @param {{ interactive?: boolean, boardedOn?: Map<number, number> }} [opts] `interactive: true`
+ * only from a live session's pull
  * @returns {string | null} why the issue may not be pulled, or null when it may
  */
-export function notPullableReason(issue) {
+export function notPullableReason(issue, { interactive = false, boardedOn } = {}) {
   if (!issue) return "no issue to pull";
   const n = issue.number;
   if (issue.state && String(issue.state).toLowerCase() !== "open") return `#${n} is not open`;
@@ -295,6 +315,11 @@ export function notPullableReason(issue) {
   if (names.includes(LABELS.inProgress.name)) {
     return `#${n} is already \`in-progress\` — another session or lane is building it`;
   }
+  if (!interactive && names.includes(LABELS.needsSession.name)) {
+    return `#${n} carries \`needs-session\` — its remainder waits on an interactive session (/work-issues), not a lane`;
+  }
+  const boarded = boardedReason(n, boardedOn);
+  if (boarded) return boarded;
   const blockers = openBlockers(issue);
   if (blockers > 0) {
     return `#${n} is blocked by ${blockers} open issue${blockers === 1 ? "" : "s"} — it starts when they close`;
@@ -313,8 +338,29 @@ export function notPullableReason(issue) {
  */
 const openBlockers = (issue) => Number(issue?.issue_dependencies_summary?.blocked_by) || 0;
 
+/** Why issue `n` may not be pulled because an open platter closes it, or null (#6191). */
+export function boardedReason(n, boardedOn) {
+  const platter = boardedOn?.get?.(n);
+  if (!platter) return null;
+  return `#${n} is boarded on held platter #${platter} — nothing is left to build; the platter's merge closes it`;
+}
+
 /** Is this issue in the board's Ready column — may an automated puller start it? (#4393) */
-export const pullable = (issue) => notPullableReason(issue) === null;
+export const pullable = (issue, opts) => notPullableReason(issue, opts) === null;
+
+/**
+ * WHICH ISSUES THE FEEDBACK LANE BUILDS: every one that is not a `plan` (2026-10-26). There are
+ * two build lanes, so `ready` + not-`plan` is the feedback lane's whole share of the pull rule —
+ * anything narrower lets `pullable()` call an issue Ready that no lane will build. That gap opened
+ * twice as an allowlist: #5332 added `bug` after #5164/#5165/#5175/#5266 sat ready 2–3 days, then
+ * #4953/#4201 (`ready` + `enhancement`, readied through the clear-path door) sat admitted and
+ * unclaimed until someone hand-added `feedback`. `ready` takes triage permission to apply, the same
+ * bar `feedback` meets, so it is authorization enough. A `bug` + `plan` stays the plan lane's —
+ * both claim steps run on one `ready` event, so letting each lane see it would start two builds.
+ */
+export function inFeedbackLane(issue) {
+  return !labelNames(issue?.labels).includes(LABELS.plan.name);
+}
 
 /**
  * Which issue a claim-lease slug names — `feedback-1234` / `plan-1234` → 1234, anything else →

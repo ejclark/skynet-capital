@@ -19,6 +19,9 @@ export interface AccountDecisionsDeps {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
+  /** Preferred over `findByOrderId` when wired: persona ids for a batch of orders without
+   *  assembling a decision record per order. */
+  readonly personasOfOrders?: (orderIds: readonly string[]) => readonly string[];
 }
 
 /**
@@ -59,11 +62,13 @@ export async function readAccountDecisions(
  *  activity rows for the same order, and `findByOrderId` is a synchronous SQLite call (#4612
  *  slice 7, defect #9: "~10x faster" over unique ids on a 70-day ledger). */
 async function foreignPersonas(accountId: string, deps: AccountDecisionsDeps): Promise<string[]> {
-  if (!(deps.findByOrderId && deps.readTradeActivity)) return [];
+  if (!((deps.personasOfOrders || deps.findByOrderId) && deps.readTradeActivity)) return [];
+  const orderIds = [...new Set((await deps.readTradeActivity(accountId)).map((t) => t.orderId))];
+  if (deps.personasOfOrders)
+    return deps.personasOfOrders(orderIds).filter((id) => id !== accountId);
   const found = new Set<string>();
-  const orderIds = new Set((await deps.readTradeActivity(accountId)).map((t) => t.orderId));
   for (const orderId of orderIds) {
-    const personaId = deps.findByOrderId(orderId)?.record.personaId;
+    const personaId = deps.findByOrderId?.(orderId)?.record.personaId;
     if (personaId && personaId !== accountId) found.add(personaId);
   }
   return [...found];

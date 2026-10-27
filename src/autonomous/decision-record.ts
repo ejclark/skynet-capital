@@ -1,3 +1,4 @@
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import type { MarketContext, OrderIntent, OrderResult, PlaybookVerdict } from "../domain/types.js";
 import type { GuardRefusal } from "../engine/guards.js";
 
@@ -59,10 +60,20 @@ export interface DecisionRecord {
    * consulted), on a persona with no playbooks, and on records written before this existed.
    */
   readonly playbookVerdicts?: readonly PlaybookVerdict[];
+  /**
+   * What the dark playbooks on this persona would have done, newly or differently from the last
+   * pass that said it (#5489) — would-be orders and the late-recovery level, in a type that is not
+   * an order. Kept in the decision store beside the verdicts so the observed days can be scored;
+   * absent when nothing moved, and never on the wire. Optional for the usual reason: records
+   * written before this existed have none.
+   */
+  readonly playbookObservations?: readonly PlaybookObservation[];
 }
 
 /** A place to persist decision records. Implementations must never throw on the write path. */
 export interface AuditStore {
   record(entry: DecisionRecord): Promise<void>;
   list(personaId?: string): Promise<DecisionRecord[]>;
+  /** `list` one record at a time, for a reader that must not hold the whole trail (the boot backfill). */
+  stream?(personaId?: string): AsyncIterable<DecisionRecord>;
 }

@@ -130,3 +130,109 @@ describe("playbookStoreView", () => {
     });
   });
 });
+
+describe("the Store by strategy, joined to the viewer's own account (#4469 slice 3a)", () => {
+  const TODAY = "2026-10-07T15:00:00.000Z";
+  const PAST_SHELF = "2027-04-01T15:00:00.000Z";
+  // Eric's two live subscriptions, as the plan's call 1 names them.
+  const erics = [
+    sub({ playbookId: "S1-NVDA", capitalAllocated: 50_000, compoundAllocation: true }),
+    sub({ playbookId: "CRWV-WHEEL", mode: "aggressive", capitalAllocated: 75_000 }),
+  ];
+  const rowsOf = (view: ReturnType<typeof playbookStoreView>) =>
+    new Map(view.strategies.flatMap((card) => card.pairs).map((row) => [row.id, row]));
+
+  it("joins each subscription onto its pair's row, and keeps it there past the shelf date", () => {
+    for (const asOf of [TODAY, PAST_SHELF]) {
+      const rows = rowsOf(playbookStoreView(erics, false, [], false, asOf));
+      expect(rows.get("S1-NVDA")?.subscription, asOf).toEqual({
+        mode: "standard",
+        capitalAllocated: 50_000,
+        enabled: true,
+        compoundAllocation: true,
+      });
+      expect(rows.get("CRWV-WHEEL")?.subscription, asOf).toEqual({
+        mode: "aggressive",
+        capitalAllocated: 75_000,
+        enabled: true,
+      });
+      expect(rows.get("S1-NVDA")?.subscribeRefusal, asOf).toBeUndefined();
+      expect(rows.get("CRWV-WHEEL")?.subscribeRefusal, asOf).toBeUndefined();
+    }
+  });
+
+  it("keeps the per-playbook cards beside it for one release", () => {
+    const view = playbookStoreView(erics, false, [], false, TODAY);
+    expect(view.cards.find((card) => card.id === "CRWV-WHEEL")?.subscription?.mode).toBe(
+      "aggressive",
+    );
+  });
+
+  it("shows why an unsubscribed row would be refused — a stale ✓, once its shelf date passes", () => {
+    const rows = rowsOf(playbookStoreView(erics, false, [], false, PAST_SHELF));
+    expect(rows.get("G1-GOOG")?.subscribeRefusal).toMatch(/ran past its shelf date \(2027-03-31\)/);
+    expect(
+      rowsOf(playbookStoreView(erics, false, [], false, TODAY)).get("G1-GOOG"),
+    ).not.toHaveProperty("subscribeRefusal");
+  });
+
+  it("draws today's hand-off on the run-up when the call spread is subscribed on the same bot", () => {
+    const rows = rowsOf(
+      playbookStoreView(
+        [sub({ playbookId: "S1-NVDA" }), sub({ playbookId: "NVDA-CALL-SPREAD" })],
+        false,
+        [],
+        false,
+        TODAY,
+      ),
+    );
+    expect(rows.get("S1-NVDA")?.handOff).toBe(
+      "The call spread trades NVDA on this bot; the pre-print run-up yields it.",
+    );
+    expect(rows.get("NVDA-CALL-SPREAD")?.handOff).toBeUndefined();
+  });
+
+  it("gives a viewer who doesn't manage the account the bare rows", () => {
+    for (const row of playbookStoreView(undefined, false, [], false, TODAY).strategies.flatMap(
+      (card) => card.pairs,
+    )) {
+      expect(row).not.toHaveProperty("subscription");
+      expect(row).not.toHaveProperty("subscribeRefusal");
+    }
+  });
+  it("marks the pairs a conviction steers with its scorecard, for every viewer, and no others (#5482 slice 5)", () => {
+    for (const viewer of [undefined, [sub({ playbookId: "CRWV-WHEEL" })]]) {
+      const rows = new Map(
+        playbookStoreView(viewer, false, [], false, TODAY).strategies.flatMap((card) =>
+          card.pairs.map((row) => [row.id, row] as const),
+        ),
+      );
+      const steered = rows.get("CRWV-LONG-CALL")?.steeredBy;
+      expect(steered).toMatchObject({
+        convictionId: "ai-dip-2026-10",
+        title: "AI-dip view",
+        checkOn: "2027-01-29",
+      });
+      expect(steered?.scorecard.untestable).toBe(6);
+      expect(steered?.claims).toHaveLength(14);
+      expect(rows.get("CRWV-WHEEL")?.steeredBy?.convictionId).toBe("ai-dip-2026-10");
+      // S1-NVDA is claim 5's study, cited and not steered.
+      expect(rows.get("S1-NVDA")).not.toHaveProperty("steeredBy");
+    }
+  });
+
+  it("says which claims each steered pair's fence rests on", () => {
+    const rows = new Map(
+      playbookStoreView(undefined, false, [], false, TODAY).strategies.flatMap((card) =>
+        card.pairs.map((row) => [row.id, row] as const),
+      ),
+    );
+    const backing = (id: string) =>
+      rows
+        .get(id)
+        ?.steeredBy?.claims.filter((c) => c.backsThisPair)
+        .map((c) => c.label);
+    expect(backing("CRWV-WHEEL")).toEqual(["1", "2a", "7"]);
+    expect(backing("CRWV-LONG-CALL")).toEqual(["2b", "8", "9"]);
+  });
+});

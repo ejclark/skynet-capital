@@ -2,10 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { liftHorizonTokens } from "../live/horizon-params";
-import { DEFAULT_LENS } from "../live/research";
+import { useRefineSearch } from "../live/refine-search";
+import { DEFAULT_LENS, parseResearchQuery, toggleSectorScope } from "../live/research";
 import { useBoardView } from "../shell/board-section";
+import { CoverageSection } from "../shell/coverage-section";
 import { PageFrame } from "../shell/frame";
-import { PlaybooksSection, SubscribeAs, usePlaybooksSection } from "../shell/playbooks-section";
+import { PlaybooksSection, usePlaybooksSection } from "../shell/playbooks-section";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 
@@ -19,8 +21,8 @@ import { type PageSection, resolveSection } from "../shell/sections";
  * SECTIONS (#3333 slice 9; #3623): the same `SectionSwitch`/`sections.ts` mechanism
  * `accounts.tsx`/`activity.tsx`/`settings.tsx`/`trade.tsx` already use, URL-stateful via
  * `?section=`. "Playbooks" (`playbooks-section.tsx`) is the catalog plus subscribe. Each section
- * keeps its own controls in its own head (the market calendar for Board, the "Subscribe as" account
- * row for Playbooks) — the section switch leads the stage, per the frame's "higher dimensions
+ * keeps its own controls in its own head (the market calendar for Board; Playbooks subscribes from
+ * a + on each play, #5442) — the section switch leads the stage, per the frame's "higher dimensions
  * steer lower ones" rule. This file stays thin
  * route glue; each section's own markup, queries, and helpers live in its own `shell/*.tsx` file
  * (the arch fitness gate's cap forced the split).
@@ -31,7 +33,7 @@ import { type PageSection, resolveSection } from "../shell/sections";
  * box is lifted out of `q` into those params below.
  */
 
-type ResearchSection = "board" | "playbooks";
+type ResearchSection = "board" | "coverage" | "playbooks";
 
 /*
  * R&D (#3623, Eric 2026-09-23: "rename this to R & D") — "Playbooks" is the one home for house
@@ -39,30 +41,35 @@ type ResearchSection = "board" | "playbooks";
  * retired (its evidence line, window, exposure and traits now ride on the Playbooks cards), and so
  * is Collections (its ideas are banked in `docs/PATTERNS.md` → discovery); an old `?section=plays`
  * or `?section=collections` link lands on Playbooks.
+ *
+ * "Coverage" (#3811 slice 3, `coverage-section.tsx`) sits beside Board because the two are a pair:
+ * the Board's calendar answers WHEN, Coverage answers WHERE across the 11 GICS sectors, and a tap
+ * on a sector lands back on the Board with a `sector:` token in its query.
  */
 const SECTIONS: readonly PageSection<ResearchSection>[] = [
   { id: "board", label: "Board" },
+  { id: "coverage", label: "Coverage" },
   { id: "playbooks", label: "Playbooks" },
 ];
 
 function ResearchPage(): ReactElement {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  const refine = useRefineSearch<typeof search>();
   const section = resolveSection(SECTIONS, search.section);
 
-  // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace.
+  // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace, and
+  // the page keeps its place (#4944).
   const [query, setQuery] = useState(search.q ?? "");
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
   const setFilter = (next: string) => {
     setQuery(next);
     clearTimeout(urlTimer.current);
-    urlTimer.current = setTimeout(() => {
-      void navigate({
-        search: (prev) => ({ ...prev, q: next.trim() === "" ? undefined : next }),
-        replace: true,
-      });
-    }, 300);
+    urlTimer.current = setTimeout(
+      () => refine((prev) => ({ ...prev, q: next.trim() === "" ? undefined : next })),
+      300,
+    );
   };
 
   // ONE MODEL, TWO CARRIERS (#3807 slice 2·1): an `on:` / `lens:` token typed into the box is
@@ -73,22 +80,29 @@ function ResearchPage(): ReactElement {
     const lifted = liftHorizonTokens(search.q ?? "");
     if (lifted.on === undefined && lifted.lens === undefined) return;
     setQuery(lifted.rest);
-    void navigate({
-      search: (prev) => ({
-        ...prev,
-        q: lifted.rest === "" ? undefined : lifted.rest,
-        ...(lifted.on ? { on: lifted.on } : {}),
-        ...(lifted.lens ? { span: lifted.lens === DEFAULT_LENS ? undefined : lifted.lens } : {}),
-      }),
-      replace: true,
-    });
-  }, [search.q, navigate]);
+    refine((prev) => ({
+      ...prev,
+      q: lifted.rest === "" ? undefined : lifted.rest,
+      ...(lifted.on ? { on: lifted.on } : {}),
+      ...(lifted.lens ? { span: lifted.lens === DEFAULT_LENS ? undefined : lifted.lens } : {}),
+    }));
+  }, [search.q, refine]);
 
   const board = useBoardView({ active: section === "board", query, setFilter });
 
   const playbooks = usePlaybooksSection(section === "playbooks", search.account);
-  const onSelectAccount = (id: string | undefined) =>
-    void navigate({ search: (prev) => ({ ...prev, account: id }), replace: true });
+
+  // A sector tap from Coverage SETS the scope (a second tap on the same sector from the map must
+  // not clear what it just asked for), then opens the Board with the filter in place at once.
+  const scopedSector = parseResearchQuery(query).sector;
+  const onPickSector = (sector: string) => {
+    const next = scopedSector === sector ? query : toggleSectorScope(query, sector);
+    clearTimeout(urlTimer.current);
+    setQuery(next);
+    void navigate({
+      search: (prev) => ({ ...prev, section: undefined, q: next.trim() === "" ? undefined : next }),
+    });
+  };
 
   const onSelectSection = (next: ResearchSection) =>
     void navigate({
@@ -97,8 +111,8 @@ function ResearchPage(): ReactElement {
     });
 
   // THE RAIL LEFT THE FRAME (#3807 slice 2a): the section switch is the controls row at the top of
-  // the stage; the Board's calendar is the band head that leads its content (`board.band`), and
-  // "Subscribe as" sits in the Playbooks section's own head.
+  // the stage; the Board's calendar is the band head that leads its content (`board.band`). Playbooks
+  // has no head control since #5442: a bot subscribes from the + on a play.
   return (
     <PageFrame
       controls={<SectionSwitch sections={SECTIONS} current={section} onSelect={onSelectSection} />}
@@ -108,18 +122,16 @@ function ResearchPage(): ReactElement {
           {board.band}
           {board.body}
         </>
+      ) : section === "coverage" ? (
+        <CoverageSection scoped={scopedSector} onPick={onPickSector} />
       ) : section === "playbooks" ? (
         <PlaybooksSection
           store={playbooks.store}
           accountId={search.account}
           accountName={playbooks.accounts.find((a) => a.id === search.account)?.name}
-          subscribeAs={
-            <SubscribeAs
-              accounts={playbooks.accounts}
-              currentId={search.account}
-              onSelect={onSelectAccount}
-            />
-          }
+          accounts={playbooks.accounts}
+          accountsReady={playbooks.accountsReady}
+          {...(search.strategy ? { initialPick: search.strategy } : {})}
         />
       ) : null}
     </PageFrame>
@@ -141,6 +153,8 @@ export const Route = createFileRoute("/research")({
         ? { section: search.section as ResearchSection }
         : {}),
     ...(facet(search.account) ? { account: facet(search.account) } : {}),
+    // The fit finder's link (#4469 slice 4): the strategy card to open on Playbooks.
+    ...(facet(search.strategy) ? { strategy: facet(search.strategy) } : {}),
   }),
   component: ResearchPage,
 });

@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import {
   buildSubscriptionsSnapshot,
   parseSubscriptionsSnapshot,
   SUBSCRIPTIONS_SNAPSHOT_KIND,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
   subscriptionsVersion,
 } from "../../src/autonomous/subscriptions-wire.js";
 import type { PlaybookSubscription } from "../../src/domain/types.js";
@@ -115,7 +117,7 @@ describe("parseSubscriptionsSnapshot refuses anything it cannot fully reproduce"
   });
 
   it("refuses an unknown kind rather than reinterpreting it", () => {
-    expect(parseSubscriptionsSnapshot({ ...good, kind: "subscriptions.v2" })).toBeUndefined();
+    expect(parseSubscriptionsSnapshot({ ...good, kind: "subscriptions.v3" })).toBeUndefined();
     expect(parseSubscriptionsSnapshot({ ...good, kind: undefined })).toBeUndefined();
   });
 
@@ -171,5 +173,125 @@ describe("parseSubscriptionsSnapshot refuses anything it cannot fully reproduce"
         accounts: { sauron: manySubs },
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("carried, not behavioral on v1 (#4469 slice 3c part 1)", () => {
+  const allocations = {
+    sauron: { wheel: { capitalAllocated: 75_000, updatedAt: "2026-10-07T00:00:00.000Z" } },
+  };
+
+  it("the version does not move for a newer build's field, or the allocations", () => {
+    const plain = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT);
+    const carried = buildSubscriptionsSnapshot(
+      { sauron: [{ ...sub(), window: { from: "D-20" } } as PlaybookSubscription] },
+      AT,
+      allocations,
+    );
+    expect(carried.version).toBe(plain.version);
+  });
+
+  it("the allocations survive the bridge to the bots", () => {
+    const snapshot = buildSubscriptionsSnapshot(
+      { sauron: [sub()] },
+      AT,
+      allocations,
+      SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
+    );
+    const parsed = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
+    expect(parsed?.allocations).toEqual(allocations);
+  });
+
+  it("leaves the allocations off a snapshot that has none — the wire is unchanged for today's store", () => {
+    expect(buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, {})).not.toHaveProperty(
+      "allocations",
+    );
+  });
+
+  it("garbled allocations never sink a snapshot: the roster still applies, the allocations drop", () => {
+    const snapshot = {
+      ...buildSubscriptionsSnapshot({ sauron: [sub()] }, AT),
+      allocations: "junk",
+    };
+    const parsed = parseSubscriptionsSnapshot(snapshot);
+    expect(parsed?.accounts).toEqual({ sauron: [sub()] });
+    expect(parsed).not.toHaveProperty("allocations");
+  });
+});
+
+/**
+ * `subscriptions.v2` (#4469 slice 3c part 2): the one wire change that added a behavioral field, a
+ * subscription's inline conviction. That field is retired (#5482, the contract step's last piece),
+ * so its term is frozen at `null`, what a subscription with none always hashed to.
+ */
+describe("subscriptions.v2 — the retired conviction's term, frozen", () => {
+  const V2 = SUBSCRIPTIONS_SNAPSHOT_KIND_V2;
+  const v2 = (state: SubscriptionsState) => subscriptionsVersion(state, V2);
+
+  it("moves for nothing new: timestamps, a newer build's field and allocations still do not", () => {
+    const base = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, V2);
+    const carried = buildSubscriptionsSnapshot(
+      {
+        sauron: [
+          {
+            ...sub({ updatedAt: "2026-10-09T09:30:00.000Z" }),
+            window: { from: "D-20" },
+          } as PlaybookSubscription,
+        ],
+      },
+      AT + 60_000,
+      { sauron: { wheel: { capitalAllocated: 75_000, updatedAt: "2026-10-09T00:00:00.000Z" } } },
+      V2,
+    );
+    expect(carried.version).toBe(base.version);
+  });
+
+  it("every v1 field still moves it", () => {
+    const base = v2({ sauron: [sub()] });
+    for (const change of [
+      { mode: "aggressive" as const },
+      { capitalAllocated: 6_000 },
+      { enabled: false },
+      { symbols: ["NVDA"] },
+      { compoundAllocation: true },
+    ]) {
+      expect(v2({ sauron: [sub(change)] })).not.toBe(base);
+    }
+  });
+
+  it("round trips as v2", () => {
+    const snapshot = buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, V2);
+    const parsed = parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)));
+    expect(parsed?.kind).toBe(V2);
+    expect(parsed?.accounts).toEqual({ sauron: [sub()] });
+  });
+
+  it("is read from this build on, while the app still sends v1 — expand first", () => {
+    expect(buildSubscriptionsSnapshot({ sauron: [sub()] }, AT).kind).toBe(
+      SUBSCRIPTIONS_SNAPSHOT_KIND,
+    );
+  });
+
+  it("refuses a v2 payload whose version was computed the v1 way", () => {
+    const snapshot = {
+      ...buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, V2),
+      version: subscriptionsVersion({ sauron: [sub()] }),
+    };
+    expect(parseSubscriptionsSnapshot(JSON.parse(JSON.stringify(snapshot)))).toBeUndefined();
+  });
+
+  it("reads an older app's v2 snapshot that carried a conviction as not reported", () => {
+    // That app hashed the words and day; this build drops them and cannot reproduce its version.
+    const sent = JSON.parse(
+      JSON.stringify(buildSubscriptionsSnapshot({ sauron: [sub()] }, AT, undefined, V2)),
+    );
+    const conviction = { reason: "Eric's call", checkOn: "2027-01-29" };
+    sent.accounts.sauron[0].conviction = conviction;
+    const v1 = ["S1-NVDA", "standard", 5_000, true, null, false];
+    sent.version = createHash("sha256")
+      .update(JSON.stringify([["sauron", [[...v1, [conviction.reason, conviction.checkOn]]]]]))
+      .digest("hex")
+      .slice(0, 16);
+    expect(parseSubscriptionsSnapshot(sent)).toBeUndefined();
   });
 });

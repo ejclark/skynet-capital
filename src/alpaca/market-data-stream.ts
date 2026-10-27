@@ -6,6 +6,9 @@ import {
   quoteTickFromMessage,
 } from "./market-data-stream-events.js";
 
+/** Ceiling on the reconnect backoff — a minute of missed ticks is the worst gap an outage costs. */
+const MAX_RECONNECT_DELAY_MS = 60_000;
+
 export interface MarketDataStreamConfig {
   readonly apiKey: string;
   readonly apiSecret: string;
@@ -47,6 +50,13 @@ export class AlpacaMarketDataStream {
   /** True between the broker's `authenticated` ack and the socket closing — the only window in
    *  which a subscribe/unsubscribe frame means anything. */
   private authenticated = false;
+  // Confirmed live 2026-10-06: the bots app's socket died ~60s after boot (error → closed, never
+  // authenticated) and nothing reopened it, so no tick arrived, maybeEvaluate never ran, and every
+  // subscribed playbook sat silent through the open. An unexpected close of the CURRENT socket now
+  // schedules a reconnect with capped exponential backoff (1s → 60s), reset by a successful auth;
+  // stop() and a credential swap retire the socket first, so their close never reconnects.
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private reconnectAttempts = 0;
 
   constructor(config: MarketDataStreamConfig) {
     this.config = config;
@@ -79,6 +89,7 @@ export class AlpacaMarketDataStream {
   }
 
   start(): void {
+    this.clearReconnect();
     this.started = true;
     this.authenticated = false;
     const feed = this.config.feed ?? "iex";
@@ -91,20 +102,42 @@ export class AlpacaMarketDataStream {
       );
     });
     socket.addEventListener("message", (event) => this.onMessage(event.data));
-    socket.addEventListener("close", () => {
+    socket.addEventListener("close", (event) => {
       // A closed socket can carry no subscription, so a resubscribe across the gap must record
       // the set rather than send a frame into a dead connection — the next handshake sends it.
-      this.authenticated = false;
-      this.config.onStatus?.("closed");
+      const current = this.socket === socket;
+      if (current) this.authenticated = false;
+      this.config.onStatus?.(withDetail("closed", closeDetail(event)));
+      if (current) this.scheduleReconnect();
     });
-    socket.addEventListener("error", () => {
-      this.authenticated = false;
-      this.config.onStatus?.("error");
+    socket.addEventListener("error", (event) => {
+      if (this.socket === socket) this.authenticated = false;
+      this.config.onStatus?.(withDetail("error", errorDetail(event)));
     });
   }
 
+  /** Close on purpose: retires the socket before closing it, so its close never reconnects. */
   stop(): void {
-    this.socket?.close();
+    this.clearReconnect();
+    const socket = this.socket;
+    this.socket = undefined;
+    this.authenticated = false;
+    socket?.close();
+  }
+
+  private scheduleReconnect(): void {
+    const delayMs = Math.min(MAX_RECONNECT_DELAY_MS, 1000 * 2 ** this.reconnectAttempts);
+    this.reconnectAttempts += 1;
+    this.config.onStatus?.(`reconnecting in ${delayMs / 1000}s`);
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      this.start();
+    }, delayMs);
+  }
+
+  private clearReconnect(): void {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
   }
 
   private onMessage(raw: unknown): void {
@@ -118,9 +151,17 @@ export class AlpacaMarketDataStream {
     }
 
     for (const message of messages) {
+      if (message.T === "error") {
+        // Alpaca's in-band refusal (#4864): `{T:"error", code:406, msg:"connection limit
+        // exceeded"}` and friends. Unlogged, a refused feed read as a bare "error"/"closed" loop.
+        const { code, msg } = message as { code?: unknown; msg?: unknown };
+        this.config.onStatus?.(withDetail("rejected", [code, msg].filter(Boolean).join(" ")));
+        continue;
+      }
       if (message.T === "success" && "msg" in message) {
         if ((message as { msg?: string }).msg === "authenticated") {
           this.authenticated = true;
+          this.reconnectAttempts = 0;
           this.subscribe();
           this.config.onStatus?.("authenticated");
         }
@@ -155,4 +196,24 @@ export class AlpacaMarketDataStream {
       }),
     );
   }
+}
+
+/** `status` alone, or `status — detail` when the socket said why (#4864). */
+function withDetail(status: string, detail: string): string {
+  return detail ? `${status} — ${detail}` : status;
+}
+
+/** A close's code and reason (a refused upgrade reads 1006; Alpaca's own refusals carry a reason). */
+function closeDetail(event: unknown): string {
+  const { code, reason } = (event ?? {}) as { code?: unknown; reason?: unknown };
+  if (typeof code !== "number") return "";
+  return typeof reason === "string" && reason ? `code ${code}: ${reason}` : `code ${code}`;
+}
+
+/** Node's WebSocket error event carries the failure as `message` or a nested `error` (e.g. an
+ *  HTTP status on a rejected upgrade); a browser's carries neither, and the status stays bare. */
+function errorDetail(event: unknown): string {
+  const { message, error } = (event ?? {}) as { message?: unknown; error?: unknown };
+  if (typeof message === "string" && message) return message;
+  return error instanceof Error ? error.message : "";
 }

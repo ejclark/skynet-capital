@@ -72,10 +72,19 @@ function atRiskChip(position: PositionForConsiderations): ConsiderationChip | un
   };
 }
 
+/** Whose ideas these are (#4950): the account the idea's link opens the store for, and the playbooks
+ *  it already subscribes to (on or paused) — never pitched back to it. The caller passes an empty
+ *  set wherever it may not read them (a non-owner's view, `desk-json-routes.ts`). */
+export interface ConsiderationsAccount {
+  readonly id: string;
+  readonly subscribed: ReadonlySet<string>;
+}
+
 function opportunityChip(
   entry: PlaybookStoreEntry,
   symbol: string,
   window: string,
+  accountId: string,
 ): ConsiderationChip {
   return {
     id: `opportunity-${entry.id}-${symbol}`,
@@ -90,8 +99,9 @@ function opportunityChip(
     action: {
       label: "View playbook",
       // R&D → Playbooks is the one home for playbooks (#3623); the Plays section this used to
-      // link to is retired.
-      href: "/app/research?section=playbooks",
+      // link to is retired. The account rides along so the store opens on the one holding the
+      // symbol, not whichever account it last showed (#4950; `heartbeat.tsx` links the same way).
+      href: `/app/research?section=playbooks&account=${encodeURIComponent(accountId)}`,
     },
   };
 }
@@ -100,21 +110,23 @@ function opportunityChip(
  *  playbook symbol the account already holds. A playbook the account doesn't hold at all isn't a
  *  "consideration" for this account; the full catalog is R&D → Playbooks' job. Tactical playbooks
  *  (no window) are left out, as the retired Plays catalog left them out: a ten-name research basket
- *  would otherwise chip every big-tech holding with the same suggestion. */
+ *  would otherwise chip every big-tech holding with the same suggestion. Nor is a playbook the
+ *  account already subscribes to an idea — it already runs it (#4950). */
 export function considerationsFor(
   positions: readonly PositionForConsiderations[],
   catalog: readonly PlaybookStoreEntry[],
+  account: ConsiderationsAccount,
 ): ConsiderationChip[] {
   const heldSymbols = new Set(positions.map((p) => p.symbol));
   const atRisk = positions
     .map(atRiskChip)
     .filter((chip): chip is ConsiderationChip => chip !== undefined);
   const opportunities = catalog.flatMap((entry) =>
-    entry.window === undefined
+    entry.window === undefined || account.subscribed.has(entry.id)
       ? []
       : entry.symbols
           .filter((symbol) => heldSymbols.has(symbol))
-          .map((symbol) => opportunityChip(entry, symbol, entry.window ?? "")),
+          .map((symbol) => opportunityChip(entry, symbol, entry.window ?? "", account.id)),
   );
   return [...atRisk, ...opportunities];
 }

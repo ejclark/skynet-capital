@@ -5,6 +5,7 @@ import type {
   OptionLifecycleType,
 } from "../trading/option-lifecycle.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
+import { SETTLED_JOIN } from "./decision-db-settlements.js";
 import {
   type OptionLegFillRow,
   type OptionLifecycleRow,
@@ -21,7 +22,8 @@ import type { RetrospectiveInsert } from "./decision-retrospectives.js";
  * `option_lifecycle` is a side table, never `ALTER TABLE` (the store's house rule, see
  * `decision-db-options.ts`): one row per broker activity, keyed by the broker's own activity id, so
  * re-reading the same page of activities records nothing twice. The bots process feeds it
- * (`sweepOptionLifecycle`); every report is kept, but only an expiry or an assignment closes a
+ * (`sweepOptionLifecycle`) and sends each row on to the dashboard's copy (`since`, #4650), where
+ * the same write stores it; every report is kept, but only an expiry or an assignment closes a
  * contract here — an exercise or the share trade an assignment settles is never scored on a guess.
  */
 const OPTION_LIFECYCLE_SQL = `
@@ -40,11 +42,31 @@ const OPTION_LIFECYCLE_SQL = `
 
 export interface OptionLedger {
   /** Recomputes one (persona, underlying)'s option round trips and writes the new ones. Safe to
-   *  call again on the same state — the trips already written are skipped by key. */
-  rescore(personaId: string, underlying: string): void;
+   *  call again on the same state — the trips already written are skipped by key. `rebuild`
+   *  replaces them all instead: a late fill that lands behind trips already written re-pairs them
+   *  (#4650), and the old rows must not stay beside the new. The caller holds a transaction. */
+  rescore(personaId: string, underlying: string, rebuild?: boolean): void;
+  /** Whether a trip on this underlying already closed after `at` — a decision from `at` landing
+   *  now is behind it, and must rebuild the ledger rather than add to it (#4775). */
+  scoredAfter(personaId: string, underlying: string, at: number): boolean;
   /** Stores the activities not seen before and rescores each underlying they touch. Returns how
    *  many were new. */
   recordLifecycle(personaId: string, activities: readonly NormalizedLifecycleActivity[]): number;
+  /** Every report stored after `afterSeq`, in the order stored, bounded — the backlog the bots
+   *  drain to the dashboard's copy (`decision-replication-client.ts`). */
+  since(afterSeq: number, limit: number): SequencedLifecycle[];
+}
+
+/**
+ * One stored report and its place in the order the store kept them. The place is the table's
+ * implicit `rowid` — it has no sequence column, and gaining one would mean `ALTER TABLE`. Nothing
+ * ever deletes from it, so the rowids run in insertion order with no gaps a `VACUUM` could renumber.
+ * Price and side are not kept here (nothing scores them), so a report read back carries neither.
+ */
+export interface SequencedLifecycle {
+  readonly seq: number;
+  readonly personaId: string;
+  readonly activity: NormalizedLifecycleActivity;
 }
 
 interface LegRow {
@@ -90,19 +112,24 @@ export function openOptionLedger(
   write: (personaId: string, insert: RetrospectiveInsert) => void,
 ): OptionLedger {
   db.exec(OPTION_LIFECYCLE_SQL);
+  // An order recorded `working` that the broker filled later is read through its settlement
+  // (`SETTLED_JOIN`): its fill, each leg's, and the broker id the decision may never have learned.
   const selectLegs = db.prepare(`
-    SELECT i.id AS intent_id, i.order_id AS order_id, i.reason AS reason,
+    SELECT i.id AS intent_id, COALESCE(i.order_id, s.order_id) AS order_id, i.reason AS reason,
            i.momentum AS momentum, i.sentiment AS sentiment,
-           i.filled_quantity AS order_filled, i.filled_price AS order_price,
+           COALESCE(s.filled_quantity, i.filled_quantity) AS order_filled,
+           COALESCE(s.filled_price, i.filled_price) AS order_price,
            l.occ_symbol AS occ_symbol, l.side AS side, l.ratio AS ratio,
-           l.filled_quantity AS filled_quantity, l.filled_price AS filled_price,
+           COALESCE(sl.filled_quantity, l.filled_quantity) AS filled_quantity,
+           COALESCE(sl.filled_price, l.filled_price) AS filled_price,
            (SELECT COUNT(*) FROM intent_option_legs n WHERE n.intent_id = i.id) AS leg_count,
            d.at AS at
     FROM intent_option_legs l
     JOIN intents i ON i.id = l.intent_id
-    JOIN decisions d ON d.id = i.decision_id
-    WHERE d.persona_id = ? AND i.symbol = ? AND i.result_status = 'filled'
-      AND i.order_id IS NOT NULL
+    JOIN decisions d ON d.id = i.decision_id ${SETTLED_JOIN}
+    LEFT JOIN order_settlement_legs sl ON sl.order_id = s.order_id AND sl.occ_symbol = l.occ_symbol
+    WHERE d.persona_id = ? AND i.symbol = ? AND COALESCE(s.status, i.result_status) = 'filled'
+      AND COALESCE(i.order_id, s.order_id) IS NOT NULL
     ORDER BY d.at ASC, i.id ASC, l.leg_index ASC
   `);
   const selectLifecycle = db.prepare(
@@ -115,13 +142,29 @@ export function openOptionLedger(
     FROM retrospectives r JOIN intents i ON i.id = r.entry_intent_id
     WHERE r.persona_id = ? AND i.symbol = ?
   `);
+  // Every option trip on one underlying — by its entry intent, since a trip's own symbol is its
+  // contracts.
+  const deleteTrips = db.prepare(`
+    DELETE FROM retrospectives WHERE persona_id = ? AND entry_intent_id IN (
+      SELECT i.id FROM intents i JOIN intent_options o ON o.intent_id = i.id WHERE i.symbol = ?)
+  `);
+  const selectScoredAfter = db.prepare(`
+    SELECT 1 FROM retrospectives r
+    JOIN intents i ON i.id = r.entry_intent_id JOIN intent_options o ON o.intent_id = i.id
+    WHERE r.persona_id = ? AND i.symbol = ? AND r.at > ? LIMIT 1
+  `);
   const insertLifecycle = db.prepare(`
     INSERT OR IGNORE INTO option_lifecycle
       (persona_id, activity_id, type, symbol, underlying, quantity, at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
+  const selectSince = db.prepare(`
+    SELECT rowid AS seq, persona_id, activity_id, type, symbol, quantity, at
+    FROM option_lifecycle WHERE rowid > ? ORDER BY rowid LIMIT ?
+  `);
 
-  function rescore(personaId: string, underlying: string): void {
+  function rescore(personaId: string, underlying: string, rebuild = false): void {
+    if (rebuild) deleteTrips.run(personaId, underlying);
     const legs = (selectLegs.all(personaId, underlying) as unknown as LegRow[]).map(legFillRow);
     const lifecycle = (
       selectLifecycle.all(personaId, underlying) as {
@@ -145,6 +188,8 @@ export function openOptionLedger(
 
   return {
     rescore,
+    scoredAfter: (personaId, underlying, at) =>
+      selectScoredAfter.get(personaId, underlying, at) !== undefined,
     recordLifecycle(personaId, activities) {
       const touched = new Set<string>();
       let added = 0;
@@ -166,6 +211,28 @@ export function openOptionLedger(
       }
       for (const underlying of touched) rescore(personaId, underlying);
       return added;
+    },
+    since(afterSeq, limit) {
+      const rows = selectSince.all(afterSeq, limit) as {
+        seq: number;
+        persona_id: string;
+        activity_id: string;
+        type: OptionLifecycleType;
+        symbol: string;
+        quantity: number;
+        at: number;
+      }[];
+      return rows.map((r) => ({
+        seq: r.seq,
+        personaId: r.persona_id,
+        activity: {
+          id: r.activity_id,
+          type: r.type,
+          symbol: r.symbol,
+          quantity: r.quantity,
+          at: new Date(r.at).toISOString(),
+        },
+      }));
     },
   };
 }

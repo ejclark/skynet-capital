@@ -56,6 +56,50 @@ describe("visibleOutcome — the pure silent-stall decision", () => {
   });
 });
 
+// #3959 slice 1 — a reply-resumed run starts on an issue that ALREADY holds a receipt, a question
+// and an answer, so "more than one comment" would vouch for a session that said nothing at all.
+// `since` moves the starting line to the reply that woke the lane.
+describe("visibleOutcome — the resumed run's baseline (`since`)", () => {
+  const reply = "2026-10-05T02:00:00Z";
+  const resumed = (comments: Array<{ createdAt: string }>) =>
+    issue({ since: reply, comments, commentCount: comments.length });
+
+  it("is silent when the reply is still the newest comment, however many came before it", () => {
+    const history = [
+      { createdAt: "2026-10-01T00:00:00Z" },
+      { createdAt: "2026-10-02T00:00:00Z" },
+      { createdAt: reply },
+    ];
+    expect(visibleOutcome(resumed(history), false)).toBe(false);
+  });
+
+  it("is still silent when only the resumed run's receipt landed — the same `>1` as a fresh run", () => {
+    const receiptOnly = [{ createdAt: reply }, { createdAt: "2026-10-05T02:00:30Z" }];
+    expect(visibleOutcome(resumed(receiptOnly), false)).toBe(false);
+  });
+
+  it("is visible once the resumed session says something beyond its receipt", () => {
+    const andMore = [
+      { createdAt: reply },
+      { createdAt: "2026-10-05T02:00:30Z" },
+      { createdAt: "2026-10-05T02:05:00Z" },
+    ];
+    expect(visibleOutcome(resumed(andMore), false)).toBe(true);
+  });
+
+  it("still honours the PR and terminal-label signals on a resumed run", () => {
+    expect(visibleOutcome(resumed([{ createdAt: reply }]), true)).toBe(true);
+    const parked = issue({ since: reply, comments: [{ createdAt: reply }] });
+    expect(visibleOutcome({ ...parked, labels: [{ name: "next-slice" }] }, false)).toBe(true);
+  });
+
+  it("falls back to the count rule when `since` is absent or unparseable", () => {
+    expect(visibleOutcome(issue({ commentCount: 2, since: "" }), false)).toBe(true);
+    expect(visibleOutcome(issue({ commentCount: 2, since: "not a date" }), false)).toBe(true);
+    expect(visibleOutcome(issue({ commentCount: 1, since: undefined }), false)).toBe(false);
+  });
+});
+
 // #1357 — the same guard step also answers a second, independent question on the happy path: when a
 // build Slices because the remainder lives under `.claude/` (harness-protected for an unattended
 // lane), WHO can pick it up? Nothing listened for that hand-off before — #1352's sat 52 idle

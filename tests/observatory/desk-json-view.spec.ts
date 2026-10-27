@@ -57,6 +57,52 @@ describe("deskView", () => {
     expect(aapl?.totalPl.startsWith("+") || aapl?.totalPl.startsWith("-")).toBe(true);
   });
 
+  // #5059 (Eric's row spec, #5037): a sold option's return is measured against the premium it
+  // collected, as a broker's statement prints it. Over a negative cost basis it read "—", so the
+  // phone card's second line had a total and no return. The profile world's put: $255 in, $550
+  // to buy back.
+  it("measures a sold option's return against the premium collected", () => {
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: "CRWV261106P00080000", quantity: -1, avgPrice: 255, marketValue: -550 },
+        ],
+      }),
+    );
+    expect(view.positions[0]).toMatchObject({
+      totalPl: "−$295",
+      totalTone: "neg",
+      returnPct: "-116%",
+    });
+  });
+
+  // Past ±100% the hundredths are noise, and on the phone card they push the size line onto a
+  // second row (#5059). Under it they stay: "+3.63%".
+  it("rounds a return past 100% to the whole percent", () => {
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: "AMD261120C00180000", quantity: 2, avgPrice: 200, marketValue: 1_024 },
+        ],
+      }),
+    );
+    expect(view.positions[0]?.returnPct).toBe("+156%");
+  });
+
+  it("keeps a bought position's return against what it cost", () => {
+    const view = deskView(snapshot());
+    expect(view.positions[0]?.returnPct).toBe(
+      `+${((42_930 / (200 * 189.2) - 1) * 100).toFixed(2)}%`,
+    );
+  });
+
+  it("reads a position with no cost basis as having no return, never a made-up one", () => {
+    const view = deskView(
+      snapshot({ positions: [{ symbol: "AAPL", quantity: 10, avgPrice: 0, marketValue: 2_300 }] }),
+    );
+    expect(view.positions[0]?.returnPct).toBe("—");
+  });
+
   it("keeps an errored account honest — zeros stay absent, the error rides along", () => {
     const view = deskView(snapshot({ positions: [], error: "account unreachable" }));
     expect(view.error).toBe("account unreachable");
@@ -126,6 +172,26 @@ describe("deskView allocation (#3689 slice 5)", () => {
     // The short still counts toward exposure: 100 − 10 shares.
     expect(allocation.shareCount).toBe(90);
   });
+
+  // #4964: the map scales each weight by `sharesPct + optionsPct`, so weights must share the
+  // bar's long-only base. Over net invested, the stock below read 1,000% beside a -900 sold put.
+  it("weighs each position against what's held, so a sold option can't inflate the rest", () => {
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: "AAPL", quantity: 10, avgPrice: 100, marketValue: 1_000 },
+          { symbol: "TSLA261017P00400000", quantity: -1, avgPrice: 9, marketValue: -900 },
+        ],
+        cash: 9_000,
+      }),
+    );
+    const [aapl, put] = view.positions;
+    expect(aapl?.weightPct).toBeCloseTo(100, 10);
+    expect(put?.weightPct).toBe(0);
+    // Stock's share of the whole account, as the map computes it: 1,000 of 10,000.
+    const investedShare = view.allocation.sharesPct + view.allocation.optionsPct;
+    expect(((aapl?.weightPct ?? 0) / 100) * investedShare).toBeCloseTo(10, 10);
+  });
 });
 
 describe("deskView lots", () => {
@@ -159,6 +225,83 @@ describe("deskView lots", () => {
     expect(sumOf("totalPl")).toBeCloseTo(aapl?.totalPlRaw ?? Number.NaN, 0);
   });
 
+  // #6169: the row's basis is Alpaca's `avg_entry_price` (same-day buys averaged, compressed FIFO
+  // overnight); the buys keep their own fill prices and a sell relieves the oldest first. Buy 56 @
+  // $210 and 22 @ $213, sell 22: Alpaca holds 56 @ $210.846… = $11,807; the buys hold 34 @ $210 +
+  // 22 @ $213 = $11,826. Overnight the day's buys compress to one lot at that same average before
+  // the sell, so it lands on the same figures.
+  describe("partition against the row, with and without a partial sell", () => {
+    const avg = (56 * 210 + 22 * 213) / 78;
+    const afterSell = (at: string) => ({
+      position: snapshot({
+        positions: [{ symbol: "AAPL", quantity: 56, avgPrice: avg, marketValue: 56 * 215 }],
+      }),
+      open: [
+        { symbol: "AAPL", quantity: 34, price: 210, at },
+        { symbol: "AAPL", quantity: 22, price: 213, at },
+      ],
+    });
+    const fixtures = [
+      {
+        name: "no sell",
+        position: snapshot(),
+        open: [
+          { symbol: "AAPL", quantity: 100, price: 180, at: "2026-09-10T14:00:00Z" },
+          { symbol: "AAPL", quantity: 100, price: 198.4, at: "2026-09-15T14:00:00Z" },
+        ],
+        gap: 0,
+      },
+      {
+        name: "a same-day partial sell",
+        ...afterSell("2026-10-26T14:00:00Z"),
+        gap: 11_826 - 56 * avg,
+      },
+      {
+        name: "an overnight partial sell",
+        ...afterSell("2026-10-23T14:00:00Z"),
+        gap: 11_826 - 56 * avg,
+      },
+    ];
+    const raw = (text: string) => Number(text.replace(/−/g, "-").replace(/[^0-9.-]/g, ""));
+
+    for (const { name, position, open, gap } of fixtures) {
+      it(`sums the buys to the row, cost basis off by basisGap — ${name}`, () => {
+        const row = deskView(position, ledgerWith(open)).positions[0];
+        const lots = row?.lots ?? [];
+        const sumOf = (field: "quantity" | "costBasis" | "value" | "totalPl") =>
+          lots.reduce((sum, lot) => sum + raw(lot[field]), 0);
+
+        expect(row?.basisGap).toBeCloseTo(gap, 6);
+        expect(sumOf("quantity")).toBe(raw(row?.quantity ?? ""));
+        expect(sumOf("value")).toBeCloseTo(raw(row?.value ?? ""), 0);
+        // Whole-dollar display: each lot rounds on its own, so allow a dollar per lot.
+        expect(
+          Math.abs(sumOf("costBasis") - (raw(row?.costBasis ?? "") + gap)),
+        ).toBeLessThanOrEqual(lots.length);
+        expect(
+          Math.abs(sumOf("totalPl") - ((row?.totalPlRaw ?? Number.NaN) - gap)),
+        ).toBeLessThanOrEqual(lots.length);
+      });
+    }
+
+    it("says the gap in words — both figures, the signed difference, and why", () => {
+      const { position, open } = afterSell("2026-10-26T14:00:00Z");
+      const row = deskView(position, ledgerWith(open)).positions[0];
+      expect(row?.basisNote).toBe(
+        "Alpaca averages these 56 shares at $210.85 ($11,807); each buy below keeps its own price " +
+          "($11,826), so the buys' P/L totals −$19 against the row's. Sold + held P/L is the same " +
+          "either way.",
+      );
+      // The row keeps Alpaca's figures.
+      expect(row?.costBasis).toBe("$11,807");
+    });
+
+    it("adds no line when the gap rounds under a dollar", () => {
+      const row = deskView(snapshot(), ledgerWith(fixtures[0]?.open ?? [])).positions[0];
+      expect(row?.basisNote).toBeUndefined();
+    });
+  });
+
   it("shows only whole-dollar cost basis on a lot, never cents", () => {
     const ledger = ledgerWith([
       { symbol: "AAPL", quantity: 200, price: 189.2, at: "2026-09-10T14:00:00Z" },
@@ -180,6 +323,19 @@ describe("deskView lots", () => {
       { symbol: "AAPL", quantity: 200, price: 189.2, at: "2026-09-10T14:00:00Z", short: true },
     ]);
     expect(deskView(snapshot(), ledger).positions[0]?.lots).toBeUndefined();
+  });
+
+  // #5091: a cut-off fill window can leave only buys on the ledger under a position that is now
+  // short. Their sizes match the short's in absolute terms, but they are not its buys — listed,
+  // each would offer "Close this buy", a sell that adds to the short.
+  it("omits lots when buys sum to a short position's size — the sign has to match too", () => {
+    const short = snapshot({
+      positions: [{ symbol: "TSLA", quantity: -100, avgPrice: 400, marketValue: -40_000 }],
+    });
+    const ledger = ledgerWith([
+      { symbol: "TSLA", quantity: 100, price: 380, at: "2026-09-10T14:00:00Z" },
+    ]);
+    expect(deskView(short, ledger).positions[0]?.lots).toBeUndefined();
   });
 
   it("omits lots for a symbol the ledger never opened", () => {
@@ -257,7 +413,7 @@ describe("deskActivityView", () => {
     it("pages with an exclusive before cursor, newest first", () => {
       const first = deskActivityPage(lines, undefined, { limit: 2 });
       expect(first.activity.map((e) => e.orderId)).toEqual(["ord-4", "ord-3"]);
-      expect(first.nextCursor).toBe("2026-08-28T14:03:00Z");
+      expect(first.nextCursor).toBe("2026-08-28T14:03:00Z|ord-3"); // time|id (#4802)
 
       const next = deskActivityPage(lines, undefined, { limit: 2, before: first.nextCursor });
       expect(next.activity.map((e) => e.orderId)).toEqual(["ord-2", "ord-1"]);

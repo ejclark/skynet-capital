@@ -256,7 +256,8 @@ describe("AlpacaBrokerAdapter", () => {
       });
     }
 
-    // #4655 EARS 1: a partial fill is a fill of what filled, never of what was asked.
+    // #4655 EARS 1: a partial fill is a fill of what filled, never of what was asked — and while
+    // the broker still holds the rest it is `open`, followed to its end (#4787).
     it("reports a partial fill as filled with the quantity and price the broker confirmed", async () => {
       const adapter = adapterWith(
         {
@@ -285,6 +286,7 @@ describe("AlpacaBrokerAdapter", () => {
         filledQuantity: 40,
         filledPrice: 42.15,
         orderId: "o1",
+        open: true,
       });
     });
 
@@ -500,6 +502,33 @@ describe("AlpacaBrokerAdapter", () => {
         { symbol: "NVDA", side: "buy", quantity: 10 },
         { symbol: "CRWV", side: "sell", quantity: 30 },
         { symbol: "AMD", side: "buy", quantity: 0 },
+      ]);
+    });
+
+    // #4735: a limit buy's limit is what it will spend per share; a market buy carries none.
+    it("carries an open limit order's limit price", async () => {
+      const adapter = adapterWith({
+        [OPEN_PATH]: {
+          status: 200,
+          body: [
+            {
+              id: "1",
+              symbol: "NVDA",
+              qty: "10",
+              side: "buy",
+              type: "limit",
+              limit_price: "120.5",
+              status: "new",
+              filled_qty: "4",
+            },
+            { id: "2", symbol: "AMD", qty: "5", side: "buy", limit_price: null, status: "new" },
+          ],
+        },
+      });
+
+      expect(await adapter.openShareOrders()).toEqual([
+        { symbol: "NVDA", side: "buy", quantity: 6, limitPrice: 120.5 },
+        { symbol: "AMD", side: "buy", quantity: 5 },
       ]);
     });
 

@@ -1,5 +1,7 @@
 import { fetchJson } from "../http/fetch-json.js";
 import { isRecord } from "../storage/parse-guards.js";
+import { type AuthoredPlaysWire, parseAuthoredPlaysWire } from "./authored-plays-wire.js";
+import { parseShadowOrders, type ShadowOrders } from "./authored-shadow-wire.js";
 import {
   CONTROLS_BRIDGE_PATH,
   type ControlsState,
@@ -12,12 +14,13 @@ import {
   controlsPollHeaders,
   type PersonaGateVerdict,
 } from "./controls-poll-wire.js";
+import { type ConvictionsWire, parseConvictionsWire } from "./convictions-wire.js";
 import { parseDecisionsCursor } from "./decision-wire.js";
 import { controlsPollRosterHeaders, type HouseRosterReport } from "./house-roster-wire.js";
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
-  INSIGHTS_BRIDGE_SHARED_SECRET,
+  insightsBridgeSecret,
 } from "./insight-record.js";
 import { parseSubscriptionsSnapshot, type SubscriptionsSnapshot } from "./subscriptions-wire.js";
 
@@ -38,6 +41,12 @@ export interface BotControlsClient {
   stop(): void;
   /** The dynamic check for the `blockedReason` seam. Non-null = do not trade this bot. */
   suspendedReason(botId: string): string | null;
+  /** The owner's stored forced-pick count for this bot, as of the last poll (#4535 slice 2b);
+   *  undefined = none stored, so the env count stands. Read at every scout scan, never cached. */
+  betaPicks(botId: string): number | undefined;
+  /** The owner's stored after-close staging flag for this bot, as of the last poll (#4535 slice
+   *  4b); undefined = none stored, so the env's `+stage` stands. Read at every staging pass. */
+  betaStage(botId: string): boolean | undefined;
   /**
    * Records one persona's boot-time readiness-gate verdict (#666) — merged by id and reported on
    * every subsequent poll, so the ops-status panel can show which personas are live vs pinned to
@@ -58,11 +67,33 @@ export interface BotControlsClient {
 
 const POLL_MS = 30_000;
 
+/** Parse one field of a poll body and hand it to its hook when it parsed. A hook that throws never
+ *  fails the poll it rides on, nor the hooks after it. `unreadable` hears a field that was sent but
+ *  did not parse, where keeping the last value quietly would hide that it is going stale. */
+function relay<T>(
+  body: unknown,
+  field: string,
+  parse: (raw: unknown) => T | undefined,
+  hook: ((value: T) => void) | undefined,
+  unreadable?: () => void,
+): void {
+  try {
+    const raw = isRecord(body) ? body[field] : undefined;
+    const value = parse(raw);
+    if (value !== undefined) hook?.(value);
+    else if (raw !== undefined) unreadable?.();
+  } catch {
+    /* never let a downstream hook fail the poll it rides on */
+  }
+}
+
 const DISABLED_CLIENT: BotControlsClient = {
   fetchOnce: async () => null,
   start: () => undefined,
   stop: () => undefined,
   suspendedReason: () => null,
+  betaPicks: () => undefined,
+  betaStage: () => undefined,
   reportPersonaGate: () => undefined,
   reportHouseRoster: () => undefined,
   enabled: false,
@@ -86,10 +117,31 @@ export function resolveBotControls(
    *  `parseSubscriptionsSnapshot`, simply never fires this — which leaves the fleet on the last
    *  roster it received, never on a partial one. */
   onSubscriptions?: (snapshot: SubscriptionsSnapshot) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of shadow tests
+   *  (`authored-shadow-wire.ts`, #5457 slice 2) — the whole set every time, so a play taken out of
+   *  its test simply stops appearing. Parsed from the RAW body like the two above. An app that
+   *  predates the field never fires this, and the bots keep the tests they have. */
+  onAuthoredShadow?: (orders: ShadowOrders) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of PROMOTED plays
+   *  (`authored-plays-wire.ts`, #5457 slice 3) — specs only, whole every time. It fires BEFORE the
+   *  subscriptions hook on the same poll, so a roster the subscription swap builds already sees
+   *  the plays. An app that predates the field never fires this. */
+  onAuthoredPlays?: (wire: AuthoredPlaysWire) => void,
+  /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of the members'
+   *  handed-over convictions (`convictions-wire.ts`, #5482 slice 6c) — records only, whole every
+   *  time. It fires BEFORE the subscriptions hook on the same poll, so a roster the subscription
+   *  swap builds already resolves a pointer at one. An app that predates the field never fires it. */
+  onConvictions?: (wire: ConvictionsWire) => void,
+  /** The per-fetch budget; prod always takes the shared `BRIDGE_REQUEST_TIMEOUT_MS`. A spec that
+   *  runs the bridge on the same event loop as a loaded full suite passes a generous one, so a
+   *  starved loop is not mistaken for an unreachable bridge (#4978). */
+  options: { readonly timeoutMs?: number } = {},
 ): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
+  const bridgeSecret = insightsBridgeSecret(env);
   if (!url) return DISABLED_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}${CONTROLS_BRIDGE_PATH}`;
+  const timeoutMs = options.timeoutMs ?? BRIDGE_REQUEST_TIMEOUT_MS;
   // This process's own word about which commit it is running, stamped onto every poll so the
   // owner's ops-status panel can answer "on what commit?" without a Fly credential (#666).
   const selfReport = controlsPollHeaders(env.GIT_SHA);
@@ -104,13 +156,13 @@ export function resolveBotControls(
   const fetchOnce = async (): Promise<ControlsState | null> => {
     try {
       const controller = new AbortController();
-      const abort = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
+      const abort = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await fetchJson(
           "GET",
           endpoint,
           {
-            [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET,
+            [INSIGHTS_BRIDGE_SECRET_HEADER]: bridgeSecret,
             ...selfReport,
             ...controlsPollGateHeaders(
               gateVerdicts.size > 0 ? [...gateVerdicts.values()] : undefined,
@@ -130,19 +182,18 @@ export function resolveBotControls(
             /* never let a downstream hook fail the poll it rides on */
           }
         }
-        try {
-          const rawCursor = isRecord(response.body) ? response.body.decisionsCursor : undefined;
-          onDecisionsCursor?.(parseDecisionsCursor(rawCursor));
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
-        try {
-          const rawSubs = isRecord(response.body) ? response.body.subscriptions : undefined;
-          const snapshot = parseSubscriptionsSnapshot(rawSubs);
-          if (snapshot) onSubscriptions?.(snapshot);
-        } catch {
-          /* never let a downstream hook fail the poll it rides on */
-        }
+        // Each additive field, parsed from the RAW body and relayed to its hook. The order is load-
+        // bearing: convictions and plays land before the subscriptions whose rosters resolve them.
+        const body = response.body;
+        relay(body, "decisionsCursor", parseDecisionsCursor, onDecisionsCursor);
+        relay(body, "convictions", parseConvictionsWire, onConvictions, () =>
+          process.emitWarning(
+            "[playbooks] the dashboard's members' convictions did not read whole — the bots keep steering by the last set they read",
+          ),
+        );
+        relay(body, "authoredPlays", parseAuthoredPlaysWire, onAuthoredPlays);
+        relay(body, "subscriptions", parseSubscriptionsSnapshot, onSubscriptions);
+        relay(body, "authoredShadow", parseShadowOrders, onAuthoredShadow);
         return parsed;
       } finally {
         clearTimeout(abort);
@@ -165,6 +216,8 @@ export function resolveBotControls(
       timer = undefined;
     },
     suspendedReason: (botId) => suspendedReason(snapshot, botId),
+    betaPicks: (botId) => snapshot.bots[botId]?.betaPicks,
+    betaStage: (botId) => snapshot.bots[botId]?.betaStage,
     reportPersonaGate: (verdict) => {
       gateVerdicts.set(verdict.id, verdict);
     },

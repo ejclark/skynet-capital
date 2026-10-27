@@ -1,12 +1,15 @@
 import { create } from "zustand";
 import {
   ackMoneypennyMessage,
+  type ChatConvictionDraft,
   type CompanionDraft,
   fetchCompanionIndex,
   streamCompanionTurn,
 } from "./companion";
 import { marketIsOpen } from "./market-hours";
+import { answerFor, convictionCardText, createConvictionLane } from "./moneypenny-conviction";
 import { createFilingLane, NEVER_MIND, SEND_AS_IS } from "./moneypenny-filing";
+import { plainLine } from "./moneypenny-links";
 import {
   answerFailed,
   DRAFT_DROPPED,
@@ -48,9 +51,12 @@ export interface MpMessage {
  *  member wipes it with a fresh conversation (NN/g's baseline chatbot guideline: chat content
  *  should be savable, not only discardable). Her own lines and system lines already carry their
  *  speaker inline ("Moneypenny · ", "sauron·ops · "); only a member's own line needs one added, so
- *  a pasted transcript reads the same as the rail itself, never doubled. */
+ *  a pasted transcript reads the same as the rail itself, never doubled. Her links paste as the
+ *  words she linked (`[open Trade](/trade)` → "open Trade"), the way the rail shows them. */
 export function formatTranscript(messages: readonly MpMessage[]): string {
-  return messages.map((m) => (m.role === "user" ? `You: ${m.text}` : m.text)).join("\n\n");
+  return messages
+    .map((m) => (m.role === "user" ? `You: ${m.text}` : plainLine(m.text)))
+    .join("\n\n");
 }
 
 const sleep = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
@@ -75,6 +81,11 @@ export interface MoneypennyState extends Persisted {
   readonly messaged?: boolean;
   /** A filing she drafted, parked until the member says send — in memory only, never persisted. */
   readonly draft?: CompanionDraft;
+  /** A view she drafted (#5482 criterion 9), parked until the member taps one of its three exits —
+   *  in memory only, never persisted, like `draft`. */
+  readonly conviction?: ChatConvictionDraft;
+  /** Bumps on every saved view — the rail refreshes the Playbooks screen's list on it. */
+  readonly convictionSeq: number;
   /** Bumps on every successful filing — the rail invalidates the gate-bearing queries on it. */
   readonly filedSeq: number;
   /** Open the rail; with `intro`, play her intro script once per member (the `introDone` flag). */
@@ -127,7 +138,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
     const member = ob?.viewerId ?? "anon";
     if (get().member !== member) {
       forgetOthers(member);
-      set({ ...load(member), member, draft: undefined });
+      set({ ...load(member), member, draft: undefined, conviction: undefined });
     }
     set({
       connected: ob?.account !== undefined,
@@ -194,8 +205,12 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
           show();
         },
         (draft) => {
-          set({ draft, kind: draft.kind });
+          set({ draft, kind: draft.kind, conviction: undefined });
           append("draft", [draftCard(draft)]);
+        },
+        (conviction) => {
+          set({ conviction, draft: undefined });
+          append("draft", [convictionCardText(conviction)]);
         },
       );
     } catch (err) {
@@ -225,12 +240,49 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
     beat: () => sleep(timing.opsMs),
   });
 
+  /** The view lane — the only thing here that saves or hands over a view (`moneypenny-conviction.ts`). */
+  const views = createConvictionLane({
+    say,
+    saved: () => set({ convictionSeq: get().convictionSeq + 1 }),
+  });
+
+  /** A parked card's exits. A view: one of its three exact answers acts on it. A filing draft:
+   *  "send" files it, "never mind" drops it. Anything else leaves either parked and is a normal
+   *  message (false). */
+  const answeredParked = async (note: string): Promise<boolean> => {
+    const { conviction, draft } = get();
+    const answer = conviction ? answerFor(note) : undefined;
+    if (conviction && answer) {
+      // Busy while the save and hand-over run, so the composer and chips wait and her answer
+      // never lands inside another turn.
+      set({ conviction: undefined, streaming: true });
+      try {
+        await views.act(answer, conviction);
+      } finally {
+        set({ streaming: false });
+      }
+      return true;
+    }
+    if (draft && SEND_AS_IS.test(note)) {
+      await lane.sendDraft(draft);
+      return true;
+    }
+    if (draft && NEVER_MIND.test(note)) {
+      set({ draft: undefined });
+      save({ flow: "idle" });
+      await say([DRAFT_DROPPED]);
+      return true;
+    }
+    return false;
+  };
+
   return {
     ...EMPTY,
     open: false,
     typing: false,
     streaming: false,
     filedSeq: 0,
+    convictionSeq: 0,
 
     openRail: async (opts) => {
       set({ open: true });
@@ -261,21 +313,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
         set({ messaged: true });
         append("sys", [MESSAGE_OPS_LINE]);
       }
-      const { draft } = get();
-      // A parked draft: "send" files it, "never mind" drops it, anything else leaves it parked
-      // and is a normal message.
-      if (draft) {
-        if (SEND_AS_IS.test(note)) {
-          await lane.sendDraft(draft);
-          return true;
-        }
-        if (NEVER_MIND.test(note)) {
-          set({ draft: undefined });
-          save({ flow: "idle" });
-          await say([DRAFT_DROPPED]);
-          return true;
-        }
-      }
+      if (await answeredParked(note)) return true;
       let { flow } = get();
       // The setup offer waits on a yes or a no — a real question typed instead is just a question.
       if (flow === "setup" && !isSetupAnswer(note)) {
@@ -301,6 +339,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       set({
         ...EMPTY,
         draft: undefined,
+        conviction: undefined,
         typing: false,
         streaming: false,
         companionEnabled: undefined,

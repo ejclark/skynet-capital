@@ -1,8 +1,8 @@
 import {
   type ActivityEvent,
   activityEventFromMergedPullRequest,
-  forVisibility,
   type MergedPullRequestInfo,
+  PUBLIC_ONLY,
 } from "./activity-event.js";
 
 /**
@@ -27,10 +27,6 @@ import {
  *   status changes after it is written; a merged PR is merged, once, forever. So the fold is a
  *   deduplication by identity rather than a most-progressed-wins contest.
  */
-
-/** Only the public tier reaches the cross-member feed — the same gate the other two decoders apply,
- *  belt-and-braces beside the event-type check. */
-const PUBLIC_ONLY = forVisibility(["public"]);
 
 /** One merge as the feed needs it. `author` is OPTIONAL and stays absent when the payload carried
  *  none: an unattributed merge is honest, and a row that names the wrong person is not. */

@@ -6,8 +6,13 @@ import type {
   Position,
 } from "../../src/domain/types.js";
 import { applyGuardsWithVerdicts } from "../../src/engine/guards.js";
+import type { Persona } from "../../src/personas/persona.js";
 import { hygieneDemand, hygieneIntents } from "../../src/playbooks/option-hygiene.js";
 import type { EnabledPlaybook, Playbook } from "../../src/playbooks/playbook.js";
+import { CRWV_WHEEL, enabledPlaybooks } from "../../src/playbooks/registry.js";
+import { withOptionSafety } from "../../src/playbooks/with-option-safety.js";
+import { withPlaybooks } from "../../src/playbooks/with-playbooks.js";
+import { resolveBotRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import { aContext, anOptionQuote, aPortfolio, withOptionQuotes } from "../support/builders.js";
 
 // Expiry hygiene. CRWV's Nov 6 contracts fall due at T-2 = Wed Nov 4; CRWV's print blackout runs
@@ -178,6 +183,51 @@ describe("expiry hygiene — shorts", () => {
     expect(hygieneIntents(context, book, [], CALENDAR)).toMatchObject([
       { side: "buy", strategy: "expiry-hygiene" },
     ]);
+  });
+
+  // #4651: a paused wheel opens nothing new, so a short put — whose assignment would buy new shares
+  // — is bought back at T-2. The wheel never closes its own put, so hygiene is its one closer:
+  // exactly one close, through the whole composed persona the live bot runs.
+  it("buys back a paused wheel's short put at T-2, exactly once — never before, never twice", () => {
+    const paused: readonly EnabledPlaybook[] = [
+      { playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true },
+    ];
+    const quiet: Persona = { id: "sauron", name: "Sauron", thesis: "test", decide: () => [] };
+    const bot = withOptionSafety(withPlaybooks(quiet, paused, CALENDAR), paused, CALENDAR);
+    const book = holding(contract(PUT_NOV6, -1, { avgPrice: 2.1 }));
+    expect(bot.decide(quoted(T3, [PUT_NOV6, 0.3, 0.4]), book)).toEqual([]);
+    expect(bot.decide(quoted(T2, [PUT_NOV6, 0.3, 0.4]), book)).toMatchObject([
+      { side: "buy", strategy: "expiry-hygiene", option: { effect: "close" } },
+    ]);
+  });
+
+  // Review of #4642 slice 10, finding 8: a wheel named in SKYNET_PLAYBOOKS with no subscription may
+  // open nothing, yet it stayed a running entry — so hygiene kept its short put to assignment, which
+  // would buy 100 shares no subscription stood behind. It now resolves exits-only, as a paused one.
+  it("buys back the short put of a wheel named only in SKYNET_PLAYBOOKS, as a paused one", () => {
+    const quiet: Persona = { id: "sauron", name: "Sauron", thesis: "test", decide: () => [] };
+    const warn = rstest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const roster = resolveBotRoster(
+      { persona: quiet, credentials: { apiKey: "k", apiSecret: "s" } },
+      enabledPlaybooks({ SKYNET_PLAYBOOKS: "CRWV-WHEEL" }).enabled,
+      [],
+    );
+    warn.mockRestore();
+    const book = holding(contract(PUT_NOV6, -1, { avgPrice: 2.1 }));
+    expect(
+      hygieneIntents(quoted(T2, [PUT_NOV6, 0.3, 0.4]), book, roster.enabled, CALENDAR),
+    ).toMatchObject([{ side: "buy", strategy: "expiry-hygiene", option: { effect: "close" } }]);
+  });
+
+  // A paused wheel keeps its covered call into call-away: that is how its assigned shares leave.
+  it("keeps a paused wheel's covered call into assignment at T-2, as when it runs", () => {
+    const book = holding({ symbol: "CRWV", quantity: 100, avgPrice: 80 }, contract(CALL_95, -1));
+    const context = quoted(T2, [CALL_95, 1, 1.2]);
+    const paused: readonly EnabledPlaybook[] = [
+      { playbook: WHEEL, mode: "standard", exitsOnly: true },
+    ];
+    expect(hygieneIntents(context, book, paused, CALENDAR)).toEqual([]);
+    expect(hygieneIntents(context, book, wheel, CALENDAR)).toEqual([]);
   });
 
   it("closes a short that spans a print two sessions before the blackout, whatever its owner holds", () => {

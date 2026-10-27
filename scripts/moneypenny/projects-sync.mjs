@@ -60,9 +60,10 @@ import {
 const OWNER = "ejclark";
 const PROJECT_NUMBER = 2; // created by projects-setup.mjs's first live run (2026-09-27)
 
-// `gh project item-list` defaults to 30 rows and the board passed that on its first backfill, so
-// every lookup here asks for far more than the board will plausibly hold; `resolveBoardItem` throws
-// rather than guess if the list ever does come back truncated (#3954).
+// `gh project item-list` defaulted to 30 rows and the board passed that on its first backfill, so
+// every whole-board read asks for far more than the board will plausibly hold (the page cap in
+// `readBoardItemsFromGh`, #4760); `resolveBoardItem` throws rather than guess if the list ever does
+// come back truncated (#3954).
 const ITEM_LIST_LIMIT = 1000;
 
 /**
@@ -117,10 +118,6 @@ function ghProject(args) {
   });
 }
 
-function ghProjectJson(args) {
-  return JSON.parse(ghProject([...args, "--format", "json"]));
-}
-
 function findField(fieldList, name) {
   return fieldList.find((f) => f.name === name);
 }
@@ -129,29 +126,147 @@ function optionByName(field, name) {
   return (field.options ?? []).find((o) => o.name === name);
 }
 
-function readItemsFromGh() {
-  const raw = ghProjectJson([
-    "item-list",
-    String(PROJECT_NUMBER),
-    "--owner",
-    OWNER,
-    "--limit",
-    String(ITEM_LIST_LIMIT),
+// #4760 — THE SWEEP'S BOARD READ ASKS ONLY FOR WHAT THE SWEEP READS. `gh project item-list` asked
+// `fieldValues(first:100)` under every card, and GraphQL prices a connection by the `first` of
+// everything nested in it — ~310 points a sweep at ~565 cards (measured 2026-10-25: back-to-back
+// sweeps 4998 → 4688). board-sync.yml sweeps on every push to main, so 9 pushes spent Eric's hour:
+// 47 of 143 sweeps refused on 2026-10-19/20, and every per-issue sync behind them skipped. 138 of
+// those 143 sweeps wrote nothing. The consumers read four things — `id`, `content.url`, `status`
+// and `totalCount` — so this asks for exactly those, with Status as one `fieldValueByName` object
+// rather than a connection: `items(first:100)` is the only connection, 1 point per page by GitHub's
+// formula. `rateLimit` rides in the same request so every sweep logs what it really spent — that
+// logged number is the issue's After line, and the first live run is the test of the estimate.
+//
+// ARCHIVED CARDS ARE DROPPED here, as `item-list` dropped them, so `resolveBoardItem`'s archived
+// message stays reachable. They leave `totalCount` too — otherwise `boardItemsOrThrow` would read
+// every archived card as truncation. A page cap stops a runaway cursor; a capped read still counts
+// more than it returns, so the truncation guards refuse it instead of reporting a half board.
+const BOARD_ITEMS_QUERY = `query($owner:String!,$project:Int!,$after:String){
+  user(login:$owner){ projectV2(number:$project){
+    items(first:100, after:$after){ totalCount pageInfo{ hasNextPage endCursor }
+      nodes{ id isArchived
+        content{ __typename ... on Issue{ url } ... on PullRequest{ url } }
+        status: fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
+      } }
+  } }
+  rateLimit{ cost remaining resetAt }
+}`;
+
+/**
+ * Every card on the board as `{items:[{id, status?, content:{type, url?}}], totalCount}` — the
+ * shape `gh project item-list --format json` returned, at ~1 point per 100 cards (#4760). `gh` and
+ * `log` injected so the argv, the pagination and the archived filter are provable without a network.
+ */
+export function readBoardItemsFromGh({
+  gh = (argv) => runGh("`gh api graphql` (board items)", argv),
+  log = console.log,
+  maxPages = Math.ceil(ITEM_LIST_LIMIT / 100),
+} = {}) {
+  const items = [];
+  let reported;
+  let archived = 0;
+  let cost = 0;
+  let remaining;
+  let pages = 0;
+  let after;
+  while (pages < maxPages) {
+    const argv = [
+      "api",
+      "graphql",
+      "-f",
+      `query=${BOARD_ITEMS_QUERY}`,
+      "-F",
+      `owner=${OWNER}`,
+      "-F",
+      `project=${PROJECT_NUMBER}`,
+    ];
+    if (after) argv.push("-f", `after=${after}`);
+    const data = JSON.parse(gh(argv) || "null")?.data;
+    const page = data?.user?.projectV2?.items;
+    if (!page) throw new Error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
+    pages += 1;
+    reported = page.totalCount;
+    cost += data.rateLimit?.cost ?? 0;
+    remaining = data.rateLimit?.remaining ?? remaining;
+    for (const node of page.nodes ?? []) {
+      if (!node?.id) continue;
+      if (node.isArchived) {
+        archived += 1;
+        continue;
+      }
+      const { __typename, url } = node.content ?? {};
+      items.push({
+        id: node.id,
+        ...(node.status?.name ? { status: node.status.name } : {}),
+        content: __typename ? { type: __typename, ...(url ? { url } : {}) } : null,
+      });
+    }
+    if (!(page.pageInfo?.hasNextPage && page.pageInfo.endCursor)) break;
+    after = page.pageInfo.endCursor;
+  }
+  log(
+    `board read: ${items.length} item(s) in ${pages} page(s), ${cost} graphql point(s) spent, ` +
+      `${remaining ?? "?"} left (#4760)`,
+  );
+  const totalCount = typeof reported === "number" ? reported - archived : items.length;
+  return { items, totalCount };
+}
+
+// #4933 — THE PER-RUN READS SKIP gh's OWNER LOOKUP. Every `gh project <cmd> --owner ejclark` first
+// runs gh's `UserOrgOwner` query, which asks for BOTH `user(login)` and `organization(login)` and
+// counts on the org half failing with exactly `NOT_FOUND`; any other error shape on either half
+// becomes `unknown owner type` (cli/cli queries.go, `OwnerIDAndType`). So each call paid a second
+// query whose only job is to rediscover a hard-coded constant, through the one path that destroys
+// GitHub's error. Run 37881706331 lost `field-list` there three times in ~8s while a plain GraphQL
+// probe on the same token succeeded. Asked of `user(login)` directly, a GitHub fault keeps its own
+// words, which `isTransientGhError` already retries (#4675's "Something went wrong" included).
+// A token blind to the board gets `projectV2: null` + NOT_FOUND and gh exits non-zero — still loud.
+// `item-add` left it in #5792 (see `addIssueToBoardFromGh`) — every brand-new issue's first sync
+// runs it, so "rarely runs" was never true of the add — and `item-list` in #4760
+// (`readBoardItemsFromGh`), for its price rather than its owner lookup.
+const PROJECT_SHAPE_QUERY = `query($owner:String!,$project:Int!){
+  user(login:$owner){ projectV2(number:$project){ id number
+    fields(first:100){ nodes{
+      __typename
+      ... on ProjectV2FieldCommon{ id name }
+      ... on ProjectV2SingleSelectField{ options{ id name } }
+    } }
+  } }
+}`;
+
+/**
+ * The project's id and its fields, shaped like `gh project list` / `field-list` rows, in one
+ * GraphQL call with no owner lookup (#4933). `gh` injected so the argv and the fail-closed parse
+ * are provable without a network call.
+ */
+export function readProjectShapeFromGh({
+  gh = (argv) => runGh("`gh api graphql` (project fields)", argv),
+} = {}) {
+  const out = gh([
+    "api",
+    "graphql",
+    "-f",
+    `query=${PROJECT_SHAPE_QUERY}`,
+    "-F",
+    `owner=${OWNER}`,
+    "-F",
+    `project=${PROJECT_NUMBER}`,
   ]);
-  const items = Array.isArray(raw) ? raw : (raw.items ?? []);
-  return { items, totalCount: raw?.totalCount };
+  const node = JSON.parse(out || "null")?.data?.user?.projectV2;
+  if (!node?.id) throw new Error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
+  const fields = (node.fields?.nodes ?? [])
+    .filter((f) => f?.id && f?.name)
+    .map(({ __typename, id, name, options }) => ({
+      id,
+      name,
+      type: __typename,
+      ...(options ? { options } : {}),
+    }));
+  return { project: { id: node.id, number: node.number }, fields };
 }
 
 function readFieldsFromGh() {
-  const fields = ghProjectJson([
-    "field-list",
-    String(PROJECT_NUMBER),
-    "--owner",
-    OWNER,
-    "--limit",
-    "100",
-  ]);
-  return Array.isArray(fields) ? fields : (fields.fields ?? []);
+  return readProjectShapeFromGh().fields;
 }
 
 // The one question the events lane actually has — "which item does THIS issue already have on the
@@ -220,11 +335,46 @@ export function readIssueItemsFromGh(
 }
 
 function readProjectFromGh() {
-  const projects = ghProjectJson(["list", "--owner", OWNER, "--limit", "100"]);
-  const projectList = Array.isArray(projects) ? projects : (projects.projects ?? []);
-  const project = projectList.find((p) => p.number === PROJECT_NUMBER);
-  if (!project) throw new Error(`project #${PROJECT_NUMBER} not found under ${OWNER}`);
-  return project;
+  return readProjectShapeFromGh().project;
+}
+
+// #5792 — THE ADD SKIPS gh's OWNER LOOKUP TOO. Run 39184644834 lost `gh project item-add 2 --owner
+// ejclark` for brand-new #5791 to the same masked `unknown owner type` #4933 took off the reads,
+// while the GraphQL probe on the same token succeeded. `item-add` is a thin wrapper over this one
+// mutation; asked directly with ids we already hold (the board's from `board.project()`, the issue's
+// `node_id` from its REST read), a GitHub fault keeps its own words for `isTransientGhError`, and a
+// second add still answers `Content already exists in this project` for `resolveBoardItem`.
+const ADD_ITEM_MUTATION = `mutation($project:ID!,$content:ID!){
+  addProjectV2ItemById(input:{projectId:$project,contentId:$content}){ item{ id } }
+}`;
+
+/**
+ * Put one issue on the board by id, shaped like the `item-list` row `findBoardItem` matches on, so
+ * `noteAdded` keeps a cached list honest. `gh` injected so the argv and the fail-closed parse are
+ * provable without a network call.
+ */
+export function addIssueToBoardFromGh(
+  { projectId, issue },
+  { gh = (argv) => runGh("`gh api graphql` (addProjectV2ItemById)", argv) } = {},
+) {
+  if (!projectId) throw new Error(`no project id for #${PROJECT_NUMBER} — cannot add to the board`);
+  if (!issue?.node_id) {
+    throw new Error(`issue ${issue?.html_url ?? "?"} has no node_id — cannot add it to the board`);
+  }
+  const out = gh([
+    "api",
+    "graphql",
+    "-f",
+    `query=${ADD_ITEM_MUTATION}`,
+    "-F",
+    `project=${projectId}`,
+    "-F",
+    `content=${issue.node_id}`,
+  ]);
+  const id = JSON.parse(out || "null")?.data?.addProjectV2ItemById?.item?.id;
+  if (!id)
+    throw new Error(`adding ${issue.html_url} to project #${PROJECT_NUMBER} returned no item`);
+  return { id, content: { type: "Issue", url: issue.html_url } };
 }
 
 /**
@@ -243,7 +393,7 @@ function readProjectFromGh() {
  * fresh context per issue — the default when `syncIssue` is given no `board`.
  */
 export function createBoardContext({
-  readItems = readItemsFromGh,
+  readItems = readBoardItemsFromGh,
   readFields = readFieldsFromGh,
   readProject = readProjectFromGh,
   readIssueItems = readIssueItemsFromGh,
@@ -384,15 +534,7 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
   const { item, added } = resolveBoardItem({
     issueUrl: issue.html_url,
     cachedItems: board.itemsFor(issue),
-    addItem: () =>
-      ghProjectJson([
-        "item-add",
-        String(PROJECT_NUMBER),
-        "--owner",
-        OWNER,
-        "--url",
-        issue.html_url,
-      ]),
+    addItem: () => addIssueToBoardFromGh({ projectId: board.project().id, issue }),
     listItems: () => board.items({ refresh: true }),
   });
   if (added) board.noteAdded(item);

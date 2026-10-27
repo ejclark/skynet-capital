@@ -38,7 +38,7 @@ full card per type.
 | A backlog snapshot (a digest) | `kanban` | generated from labels, never hand-kept |
 | The system, its containers, its components | `C4Context` → `C4Container` → `C4Component` | boundaries; `Rel` labels carry the technology |
 | A schema or a type change | `erDiagram` / `classDiagram` | cardinality glyphs; before/after namespaces |
-| A module split (decompose) | `treeView-beta` or `classDiagram` | the tree the PR adds or moves |
+| A module split (decompose) | `classDiagram` (`treeView-beta` draws black on GitHub's dark canvas — not shippable yet, `/mermaid` → config-on-github) | the tree the PR adds or moves |
 | Requirements ↔ specs ↔ PRs | `requirementDiagram` | `satisfies` / `verifies` per EARS line |
 | Where tokens, money or requests split | `sankey-beta` | generated from a ledger |
 | Layers or regions where position means something | `block-beta` | columns; the region a change touches |
@@ -61,6 +61,7 @@ Each is a row above and a card in `/mermaid`.
 |---|---|---|
 | new in this change | thick edge `==>`, or `subgraph "this PR"` | a green fill |
 | removed / the old path | dotted edge `-.->` | a red fill |
+| a live path (anything that runs) | animate every live edge: `a e1@--> b` then `e1@{ animate: true }` — dotted removed paths stay still, so motion says "this runs" | one animated edge among many |
 | changed | `classDef changed stroke-width:3px` (no colour) | a hue shift |
 | a fork | a diamond `{ }` | — |
 | a store / a document / a person | `@{ shape: cyl }` / `@{ shape: doc }` / `@{ shape: person }` | — |
@@ -69,12 +70,12 @@ Each is a row above and a card in `/mermaid`.
 ## Mermaid that renders on GitHub — any type 11.17.2 draws, and every block is parsed
 
 GitHub renders Mermaid natively in PR bodies, issues and `.md` files — on **Mermaid 11.17.2**
-(read from github.com's production renderer bundle, 2026-09-25; upstream is 12.0.0). **The gate is
+(read from github.com's production renderer bundle, 2026-09-25; upstream is on 12.x). **The gate is
 the parser, not a type list:** `npm run mermaid:lint` parses every ```` ```mermaid ```` block with
 that exact pinned version (`scripts/mermaid-lint.mjs`), and `ship.sh checkbody`, `issue:lint` and
-the CI corpus scan all run it — so a diagram that passes here draws there, and the fear that
-motivated the old "stable types only" rule (a syntax error as the opening frame) is caught before
-push. The type menu is therefore everything 11.17.2 draws: `flowchart`, `sequenceDiagram`,
+the CI corpus scan all run it — so a diagram that passes here draws there, and a syntax error can
+never be the opening frame: it is caught before push. The type menu is therefore everything
+11.17.2 draws: `flowchart`, `sequenceDiagram`,
 `stateDiagram-v2`, `erDiagram`, `classDiagram`, `gitGraph`, `quadrantChart`, `requirementDiagram`,
 `timeline`, `mindmap`, `kanban`, `pie`, `gantt`, and the beta family (`xychart-beta`, `sankey-beta`,
 `block-beta`, `architecture-beta`, `radar-beta`, `treemap-beta`, `packet-beta`, `C4Context` and
@@ -102,8 +103,10 @@ config:
 ---
 flowchart TD
     body@{ shape: doc, label: "**PR body, a diagram**<br/>any type GitHub draws" }
-    body ==> door{"`**parses like<br/>GitHub?**<br/>same build, 11.17.2`"}
-    door ==> draws@{ shape: dbl-circ, label: "**GitHub draws it**<br/>light and dark" }
+    body e1@==> door{"`**parses like<br/>GitHub?**<br/>same build, 11.17.2`"}
+    door e2@==> draws@{ shape: dbl-circ, label: "**GitHub draws it**<br/>light and dark" }
+    e1@{ animate: true }
+    e2@{ animate: true }
     door ==x stop["`**push refused**<br/>the line named,<br/>fixed first`"]
     body -.-> red["`**went straight<br/>through**<br/>a red box<br/>as the frame`"]
     class body,draws,stop paper
@@ -140,13 +143,19 @@ config:
 ---
 flowchart TD
     body@{ shape: doc, label: "PR body<br/>with a diagram" }
-    body ==> door{"parses like<br/>GitHub?"}
+    body e1@==> door{"parses like<br/>GitHub?"}
     subgraph checks ["what the door checks, in order"]
         direction TB
-        v["the same Mermaid<br/>GitHub runs, 11.17.2"] --> ty["a type GitHub<br/>draws, not 12-only"] --> th["no pinned theme,<br/>both canvases"] --> ic["no icon pack,<br/>it draws a ?"] --> hx["every colour from<br/>a checked-in snippet"]
+        v["the same Mermaid<br/>GitHub runs, 11.17.2"] e2@--> ty["a type GitHub<br/>draws, not 12-only"] e3@--> th["no pinned theme,<br/>both canvases"] e4@--> ic["no icon pack,<br/>it draws a ?"] e5@--> hx["every colour from<br/>a checked-in snippet"]
     end
     door -.- checks
-    door ==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
+    door e6@==> draws@{ shape: dbl-circ, label: "pushed,<br/>GitHub draws it" }
+    e1@{ animate: true }
+    e2@{ animate: true }
+    e3@{ animate: true }
+    e4@{ animate: true }
+    e5@{ animate: true }
+    e6@{ animate: true }
     door ==x stop["push refused,<br/>the line and<br/>the token named"]
     subgraph was ["what it replaced"]
         direction LR
@@ -208,9 +217,13 @@ config:
 flowchart TD
     items@{ shape: docs, label: "**three protected changes**<br/>one commit each,<br/>each verified green" }
     pr@{ shape: stadium, label: "**one held PR**<br/>one click by Eric,<br/>never auto-merged" }
-    items ==> pr ==> button{"`**which button lands it?**<br/>the click decides<br/>what can be undone`"}
-    button ==>|Create a merge commit| merged@{ shape: cyl, label: "**main: three commits**<br/>any one item<br/>reverts alone" }
-    button -->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>reverts only as<br/>a block, #3754" }
+    items e1@==> pr e2@==> button{"`**which button lands it?**<br/>the click decides<br/>what can be undone`"}
+    button e3@==>|Create a merge commit| merged@{ shape: cyl, label: "**main: three commits**<br/>any one item<br/>reverts alone" }
+    button e4@-->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>reverts only as<br/>a block, #3754" }
+    e1@{ animate: true }
+    e2@{ animate: true }
+    e3@{ animate: true }
+    e4@{ animate: true }
     class items,pr,merged paper
     class button gold
     class squashed defect
@@ -263,20 +276,28 @@ quadrantChart
 ````
 _A call sheet as a picture: confidence × edge; never a P/L claim (`BRAND.md`)._
 
-**The legibility budget** (the first two clauses are on trial — #4550; their drawn pairs and the
-measured phone numbers are on #3778, and this line changes to match whichever version wins):
-≤15 nodes; plain words, not paths (`login canvas`, never
-`src/three/pieces/eye-shader.ts`); no SHAs, env vars, or CLI flags in labels; quote labels
-containing special characters. The real reading condition is a phone at 390px.
+**The legibility budget** (the real reading condition is a phone at 390px): **a picture fits one
+phone screen and its text clears 12px**. At 390px wide the drawing is no taller than one 844px
+screen, and 390 ÷ drawing width × font is at least 12px; `npm run shoot:mermaid-pairs` prints both
+numbers per side (`phone before 16.4px 1.06 screens`) and flags a miss, advisory. This replaced
+"≤15 nodes" (#4550): [the drawn pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981857928)
+put 20 nodes at 12.9px, still readable, but 1.60 screens against 1.06 for the same story in 8. The
+count was standing in for the glance, and the glance is measured directly now. Then: plain words,
+not paths (`login canvas`, never `src/three/pieces/eye-shader.ts`). When a builder needs the path,
+it goes in a table beside the picture and the label says what the thing does (rule 1, the same
+answer as for a sha). [The pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981860237)
+kept this one (#4550): paths widened the drawing 17% and took phone text from 14.2 px to 12.2 px,
+one more path from the floor. No SHAs, env vars, or CLI flags in labels; quote labels containing
+special characters.
 
 **Rules the design rounds found** (round 2, iterating the five #3778 pairs, and round 3, the
 Claude Design handoff on plan #3786; each is rule · tell · fix). A first draft is the right type with
 first-draft words; the third draft has fewer nodes, a title that states the claim, the old path drawn
 dotted, phone direction, and labels a friend with no context reads without stopping.
 
-1. **A handle is not a word.** Shas, versions and ids stay in the table beside the picture; a label
-   says what the handle means · `revert: b0a4c8a` tagged on every commit · `reverts alone`, the
-   ledger row keeps the sha.
+1. **A handle is not a word.** Shas, versions, ids and file paths stay in the table beside the
+   picture; a label says what the handle means · `revert: b0a4c8a` tagged on every commit ·
+   `reverts alone`, the ledger row keeps the sha.
 2. **A fork shape asks a question.** The text in a diamond ends in `?`; the exits carry the
    answers · a hexagon stating "parse it the way GitHub does" · `door{"parses like<br/>GitHub?"}`.
 3. **Two boxes per rank on a phone.** In `TD` no rank holds more than two boxes · three side by
@@ -306,8 +327,9 @@ dotted, phone direction, and labels a friend with no context reads without stopp
 10. **One weapon per enemy: the type matches the story.** Flow → flowchart, count → erDiagram,
     lifecycle → stateDiagram-v2, order in time → sequence, containment → a box with boxes inside
     · a gitGraph for a story about a button · the decision table above.
-11. **Kurosawa mode: the look is a mode, switched whole.** A picture copies one named snippet
-    whole (house teal, or ink mode once promoted); never a hex chosen in flight, never two modes
+11. **Kurosawa mode: the look is a mode, switched whole.** A picture that wears a look at all (plain
+    is the default, *Dark mode* below) copies one named snippet whole (house teal, or ink mode);
+    never a hex chosen in flight, never two modes
     in one drawing · a one-off fill · the snippet, copied whole; the lint refuses a `classDef` hex
     outside a checked-in snippet.
 12. **The glint: one loud thing, and it is the decision.** Exactly one element carries the
@@ -315,14 +337,17 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     defect beside the decision · three coloured boxes · the fork gets the accent, the rest is paper.
 13. **Narrow the drawing first; then the font.** Text on a phone is 390 ÷ drawing width × font,
     and `npm run shoot:mermaid-pairs` prints that number per side on every shot line (`phone before
-    15.7px, after 15.6px`), flagging anything under 12 px · 10.6 px effective on a 720 px drawing ·
+    15.7px …, after 15.6px …`, the screen count beside each), flagging anything under 12 px · 10.6 px
+    effective on a 720 px drawing ·
     lines of about 16 characters,
     `config: flowchart: { nodeSpacing: 24, rankSpacing: 36, padding: 10 }`, and
     `classDef default font-size:20px,font-family:Verdana`, the one font lever that works on
     flowchart and erDiagram (frontmatter `fontSize` is a no-op for flowchart text).
 14. **In a state diagram the removed path is a note, not an edge.** State diagrams cannot dash a
     transition · a before that lives only in the caption · `note left of <new state>` reading
-    "was: …"; the note's dashed link is the delta mark.
+    "was: …"; the note's dashed link is the delta mark. Write it in the block form (`note left of
+    X`, the text, `end note`): in the one-line form `note left of X: was: …` the second colon is a
+    parse error on 11.17.2.
 15. **A C4 context puts the system's boundary in the middle.** Layout follows declaration order ·
     relation labels drawn over other boxes · declare the boundaries left, centre, right in the
     order the edges leave the system; `Rel_L` / `Rel_R` / `Rel_U` / `Rel_D`.
@@ -344,7 +369,12 @@ dotted, phone direction, and labels a friend with no context reads without stopp
     allows; a markdown string in a classic label needs the backtick form
     (`["\`**bold**<br/>fact\`"]`), a `@{ label: }` shape takes it bare.
 
-**Dark mode:** the default is NO `theme`, no `themeVariables`, no hex — GitHub picks light or dark
+**Dark mode:** the default is plain, for every picture: NO `theme`, no `themeVariables`, no hex,
+and no snippet unless the picture is a decision (the one exception, *ink mode* below). Settled by
+[a drawn pair](https://github.com/ejclark/skynet-capital/issues/3778#issuecomment-5981880259) on
+#4550: the same held-PR fork plain and in ink measured identical (19.9 px on a phone, 1.12 screens),
+so the look buys nothing on geometry and spends rule 12's one loud thing wherever it is worn.
+GitHub picks light or dark
 from the page, and a pinned theme freezes one of them (the lint fails `theme:` in frontmatter and
 in `%%{init}%%`, which is deprecated upstream anyway). Emphasis that survives both modes and a
 colourblind reader is *achromatic*: a thick edge (`==>`) for what is new, a dotted one (`-.->`) for
@@ -353,17 +383,18 @@ a colour alone (`BRAND.md` → *Accessibility*). Brand-styled mermaid is allowed
 contrast-verified snippet checked in here, never improvised per-PR (hand-picked hex that looks
 right in one theme breaks in the other — that exact drift already shipped once).
 
-**The one sanctioned colour snippet** (promised here on 2026-08-20, checked in 2026-09-25 — verified
-by `tests/ui/mermaid-classdef.spec.ts` against both of GitHub's canvases with the same formula the
-app's tokens pass): the fill and the text are fixed together, so their 7.4:1 never depends on the
+**The one sanctioned colour snippet** (verified by `tests/ui/mermaid-classdef.spec.ts` against both
+of GitHub's canvases with the same formula the app's tokens pass): the fill and the text are fixed together, so their 7.4:1 never depends on the
 theme; the 3px stroke carries the boundary in light mode and the fill carries it in dark; `removed`
 and `changed` live in the stroke alone. Copy it whole; never pick a hex in flight.
 
 ```mermaid
 flowchart LR
-    a[existing step] ==> b[new step]:::new
+    a[existing step] e1@==> b[new step]:::new
     a -.-> c[old step]:::removed
-    b --> d[adjusted step]:::changed
+    b e2@--> d[adjusted step]:::changed
+    e1@{ animate: true }
+    e2@{ animate: true }
     classDef new fill:#35D0BA,color:#04302B,stroke:#04302B,stroke-width:3px
     classDef removed stroke:#5A6B7B,stroke-width:2px,stroke-dasharray:6 4
     classDef changed stroke:#0E9F8C,stroke-width:3px
@@ -380,16 +411,20 @@ it, the house `removed` unchanged. Every class holds ≥ 4.5:1 text on fill and 
 both GitHub canvases (`tests/ui/mermaid-classdef.spec.ts` verifies every snippet on this page); the
 seal red's stroke is light because its fill and a dark stroke both sat under 3:1 against GitHub's
 dark canvas. **Scope:** decision pictures — a PR's opening frame or a held PR with a fork in it,
-where gold marks the one decision and red marks a defect beside it (rule 12); architecture and
-flow pictures keep the teal. A look is a mode, switched whole (rule 11): a picture uses the teal
+where gold marks the one decision and red marks a defect beside it (rule 12). A decision picture
+*may* wear it; it is never required. Architecture, dataflow and lifecycle pictures stay plain, and
+reach for the teal snippet only when a delta needs marking beyond edge weight. A look is a mode, switched whole (rule 11): a picture uses the teal
 snippet or this one, never both, and the lint refuses any hex outside either. The generated held-PR
 pictures (`scripts/platter-picture.mjs`) wear it.
 
 ```mermaid
 flowchart TD
-    a["what exists"]:::paper ==> b{"the decision?"}:::gold
-    b ==> c["done"]:::paper
-    b --> d["the defect beside it"]:::defect
+    a["what exists"]:::paper e1@==> b{"the decision?"}:::gold
+    b e2@==> c["done"]:::paper
+    b e3@--> d["the defect beside it"]:::defect
+    e1@{ animate: true }
+    e2@{ animate: true }
+    e3@{ animate: true }
     a -.-> e["the old path"]:::removed
     classDef paper fill:#F4EFE6,color:#141210,stroke:#141210,stroke-width:3px
     classDef gold fill:#E0A33A,color:#1A1300,stroke:#1A1300,stroke-width:3px
@@ -426,8 +461,8 @@ flowchart TD
   shoot:login`, `shoot:feedback`, `shoot:onboarding`, …), each just fixtures and frames over the
   shared harness in `scripts/shoot/lib.mjs` + `shell.mjs`. The harness carries the JPEG quality
   ceiling, so fix size problems there, not by hand-recompressing.
-- **A new `/app/*` surface needs a script, not a waiver.** Copy the shortest existing one
-  (`scripts/shoot/feedback.mjs`, ~50 lines), swap the stubs and the frames, add its `shoot:<name>`
+- **A new `/app/*` surface needs a script, not a waiver.** Copy an existing one
+  (`scripts/shoot/feedback.mjs`, ~115 lines), swap the stubs and the frames, add its `shoot:<name>`
   npm script. #1308 and #1312 both shipped with "Picture: waived" because no script existed for the
   surface they changed — that is the cost this harness was built to remove (#1327).
 - **Before/after pairs of diagrams: `npm run shoot:mermaid-pairs -- <pairs.json> <outdir>`.** Use
@@ -435,7 +470,8 @@ flowchart TD
   as the diagram it should have been, a showcase contender for a colleague. It renders each pair
   with the pinned Mermaid (GitHub's version) on GitHub's own light and dark canvases, lints every
   diagram first (a failure is a "Did not render" panel, never an empty box), crops to the frame
-  and writes a `<id>.json` sidecar (caption, alt text, bytes, dimensions, lint) to build the
+  and writes a `<id>.json` sidecar (caption, alt text, bytes, dimensions, lint, and per side the
+  phone text size and screen count of the legibility budget) to build the
   gallery comment from. Scale 1 fits the 100KB budget; `--scale 1.5` is the crisp shareable set;
   `--layout stacked` is the phone read. **The pairs file for a showcase lives on its issue, not in
   the tree** — the only committed one is the spec fixture, `tests/fixtures/mermaid-pairs/example.json`.
@@ -467,9 +503,9 @@ though the PR body itself can't carry it.
 
 GitHub renders `> [!NOTE]` `> [!TIP]` `> [!IMPORTANT]` `> [!WARNING]` `> [!CAUTION]` as colored
 callouts. They break when indented or nested inside `<details>` — always top-level. Budget: **one
-per PR**, and `WARNING`/`CAUTION` are *reserved* for the irreversible class (workflow files,
-credentials, spend, outward-facing). On a carve-out PR the WARNING comes **before** any
-accomplishment framing — blast radius first is the honest inversion of fanfare-first.
+per PR**, and `WARNING`/`CAUTION` are *reserved* for the irreversible class (the list is
+`envelope.json` — `node scripts/envelope-scan.mjs --check <paths>` answers it). On a carve-out PR
+the WARNING comes **before** any accomplishment framing — blast radius first is the honest inversion of fanfare-first.
 
 ## The honesty rules — what no gate can replace
 
@@ -487,13 +523,14 @@ The repo's hard invariant — *never let a flourish imply something false* — a
    about the diff. Match picture weight to change weight — or waive.
 5. **What lands, at the moment it is read:** a picture of a mechanism draws what the code and
    the platform actually do, as of when the reader sees it. A PR's opening picture draws the
-   choice; what landed is a second picture, generated after, in whichever ending is true. The
-   held-PR starter drew a merge commit for platters that squashed (#3754) until the design rounds
-   redrew it as the choice at open time and the record after landing; where a picture is
-   generated from the data beside it, it cannot drift.
+   choice; what landed is a second picture, generated after, in whichever ending is true: a
+   starter that draws one ending for a mechanism the button decides is false whenever the other
+   button lands it (the held PR, #3754); where a picture is generated from the data beside it, it
+   cannot drift.
 6. **Better is measured, on two axes, before a redraw ships** (Eric, 2026-09-26: "interrogate
    the decision to objectively measure better or worse"). The mechanical axis is rule 13's number,
-   printed by the pair renderer for the old and the new drawing side by side; the second look may
+   printed by the pair renderer for the old and the new drawing side by side, with the screen count
+beside it; the second look may
    not cost the first read. The reading axis is a blind read: a zero-context reader (a fresh
    subagent, given only the render and no caption) writes the argument in one sentence, what
    changed versus what it replaced, and what slowed it; the redraw passes when the sentence

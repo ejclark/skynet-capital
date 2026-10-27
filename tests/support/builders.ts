@@ -3,6 +3,7 @@ import type {
   OptionContractQuote,
   OptionOrderIntent,
   OrderIntent,
+  PlaybookSubscription,
   Portfolio,
   Position,
   Quote,
@@ -39,6 +40,24 @@ export function aPortfolio(overrides: Partial<Portfolio> = {}): Portfolio {
   return {
     cash: overrides.cash ?? 5_000_000,
     positions: overrides.positions ?? [],
+  };
+}
+
+/** A bot's subscription to one playbook: on, standard and uncapped unless overridden — the shape
+ *  that changes nothing about sizing, only who may open (#4642 slice 10). */
+export function aSubscription(
+  accountId: string,
+  playbookId: string,
+  overrides: Partial<PlaybookSubscription> = {},
+): PlaybookSubscription {
+  return {
+    accountId,
+    playbookId,
+    mode: "standard",
+    enabled: true,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    ...overrides,
   };
 }
 

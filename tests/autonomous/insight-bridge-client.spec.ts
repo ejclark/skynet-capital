@@ -6,6 +6,7 @@ import {
   type InsightRecord,
 } from "../../src/autonomous/insight-record.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 
 const record: InsightRecord = {
   at: 1,
@@ -31,9 +32,12 @@ describe("resolveInsightBridge", () => {
     await new Promise<void>((resolve) => server.listen(0, resolve));
     const { port } = server.address() as AddressInfo;
     try {
-      const bridge = resolveInsightBridge({
-        SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}`,
-      });
+      const bridge = resolveInsightBridge(
+        {
+          SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}`,
+        },
+        LOADED_SUITE_BRIDGE_BUDGET,
+      );
       await bridge.recordInsight(record);
       expect(received).toEqual([record]);
     } finally {
@@ -53,9 +57,12 @@ describe("resolveInsightBridge", () => {
     await new Promise<void>((resolve) => server.listen(0, resolve));
     const { port } = server.address() as AddressInfo;
     try {
-      const bridge = resolveInsightBridge({
-        SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}`,
-      });
+      const bridge = resolveInsightBridge(
+        {
+          SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}`,
+        },
+        LOADED_SUITE_BRIDGE_BUDGET,
+      );
       await bridge.recordInsight(record);
       expect(capturedHeader).toBe(INSIGHTS_BRIDGE_SHARED_SECRET);
     } finally {
@@ -82,9 +89,12 @@ describe("resolveInsightBridge", () => {
     await new Promise<void>((resolve) => server.listen(0, resolve));
     const { port } = server.address() as AddressInfo;
     try {
-      const bridge = resolveInsightBridge({
-        SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}`,
-      });
+      const bridge = resolveInsightBridge(
+        {
+          SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}`,
+        },
+        LOADED_SUITE_BRIDGE_BUDGET,
+      );
       await expect(bridge.recordInsight(record)).resolves.toBeUndefined();
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));

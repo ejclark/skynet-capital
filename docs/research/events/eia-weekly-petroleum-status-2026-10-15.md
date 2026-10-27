@@ -282,6 +282,7 @@ Two predictions with score-by dates are registered in
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-09-30 | D-15 | **Initial research** at the outermost `low` band. Canonical `src/domain/market-events/eia-weekly-petroleum-status-2026-10-15.json` written from the one proposal naming this id (`from-eia-weekly-petroleum-status-2026-09-30`, filed 2026-09-15); its Columbus Day date evidence re-verified unchanged (HTTP 200, same verbatim schedule row). **Load-bearing update #1 — the turnaround is now measured, not projected:** EIA's own history (`wpuleus3`, fetched direct) shows utilization already at **94.0%** (wk ending 09-18) from the 97.8% base, a live **-3.8pt** move. Extending the seasonal to this print's window (wk nearest Oct 9, 1993-2025): **32/33** years print below 96.0, **27/33** keep declining from a comparable mid-September point (median **-3.2**). Two convergent-but-not-identical estimates: 94.0 - 3.2 = **90.8**; y/y spread (2025 target 85.7 + narrowed +1.0 y/y at mid-Sept) = **86.7**; matched-profile 8-year cohort = **92.95**. Honest band **86.7-93.0**, registered directionally (continued decline) rather than to one level, medium confidence. **Load-bearing update #2 — the proposer's own hook is weaker at D-15:** the Saudi East-West pipeline has been restarting since **~2026-09-22** (Reuters/Bloomberg/AGBI/Hydrocarbon Processing/OilPrice.com, all re-checked); Brent has fallen from the proposer's 106-109 range to **~96-97** intraday on the restart plus OPEC/IEA 2026 demand-forecast cuts — at or below the $97.92 level the pipeline's own ledger registered as its own kill switch (that ledger's call, not this one's). **New finding — distillate breaks the coin-flip pattern:** 0/10 builds 2016-2025 in this specific window (vs the 09-30 sibling's 4/10 three weeks earlier); 2026 distillate **-12.7% y/y** despite two straight small builds. Crude 7/10 builds, gasoline 5/10 — no claim made on either. **Sweep:** 32 adjacents / 2 strong (`cpi-2026-10-14`, `retail-sales-2026-10-15`), matching the Saudi ledger's own latest pulse; nothing new proposed. **Live:** VIX 16.04 (09-29 16:15 ET), WTI 89.40, Brent 96.28, HO 4.543, RB 3.119 (~22:36 ET 09-29 Globex), XLE 61.54, USO 143.35 (09-29 close). STEO landing page re-confirmed "September 2026" still current (no October edition); the petroleum.php 404 every sibling records persists. | **Opening stance: stand aside**, with one directional number to read (utilization, likely continued decline, 86.7-93.0 band) and an honest correction away from the proposer's supply-shock framing toward a mostly-unwound premium. `FT-…-1` (utilization continues below 94.0%) and `FT-…-2` (the print does not set the price) registered, both scoring 2026-10-15 | `interval-elapsed` pulse ~2026-10-07 (`low` band tightens to 7 days inside D-15); close-out 2026-10-16 → 2026-10-21 (`closeOutWithinDays` 6), both forward tests scoring 2026-10-15, inside the window |
+| 2026-10-07 | D-8 | **Pulse check (full session — band moved low:15+ → low:0+; `symbols: []`).** **(1) Turnaround confirmed deeper:** WPSR 09-30 (wk ending 09-25; EIA Table 9, direct) utilization **92.5%** (prior 94.0; y/y 91.4), so 97.8→96.8→94.0→**92.5**; kill 1 (≥94.0) and kill 2 (<86.7 early) not fired. Re-based estimate from 92.5 (wk nearest 09-25→10-09, 1993-2025): median Δ **-1.8** (26/33 fell; 32/33 print <96.0) → **90.7**; y/y method (2025 wk 10-10 = 85.7, +1.1 spread) → **86.8**. Band narrows to **86.8-90.7** (was 86.7-93.0): top end gone, directional FT-1 unchanged. Also SPR 283.8mb (-0.8), distillate 105.2mb (-14.9% y/y, -2.3mb w/w), jet -1.9mb. **(2) New hook, bears on the stock lines not utilization:** G7/IEA agreed 10-02 to release 100mb of crude/diesel over four months (diesel within ~20 days; no US split published) — expect SPR/exports noise in the 10-15 stock lines, not a utilization effect. **(3) Brent (BZ=F) 100.3-101.6, not the ~96-97 the initial row cited** (09-30 settle 103.5; source mismatch recorded, not rewritten); Houthi/Khurais strike 10-04 contested; Hormuz flows above pre-war. **(4) Macro:** Sep payrolls +29K vs ~90K, unemployment 4.2%, stocks up 10-02, hike odds eased; VIX **15.01** (10-06; -1.0 vs 16.04). Beyond-horizon/in-calendar: IEA release tail (~10-22), nothing proposed. Estimate widens caution only. | None — stand aside holds | 2026-10-14 |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -292,3 +293,57 @@ every row; a dated adjacent event found gets proposed as a new
 same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome`
 below from re-run instrument data (cache busted first), never from memory — after which this doc
 goes quiet.
+
+**Last assessed:** 2026-10-07
+<!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-16, D+1 — inside the `closeOutWithinDays: 6` window).** A sector print with no
+instrument attached (`symbols: []` by design), so `earnings-cycle`/`intraday-edges` have no target;
+the cache was busted first anyway. Inputs, all fetched direct today: EIA's weekly-history downloads
+(`WPULEUS3w.xls`, `WCESTUS1w.xls`, `WDISTUS1w.xls`, `WGTSTUS1w.xls`, all HTTP 200, parsed with `xlrd`),
+WPSR Tables 4 and 9 as CSV (`ir.eia.gov/wpsr/table{4,9}.csv`, HTTP 200, both headed week ending
+**10/9/26**), and Yahoo daily and 5-minute bars for `CL=F`, `BZ=F`, `^VIX`. The report for the week
+ending **2026-10-09** published; the schedule row (`Thursday 12:00 p.m.`) is the estimate-labelled
+date this ledger carried, and nothing in the data contradicts it.
+
+**Verdict: the utilization direction call passes by its letter but not its spirit, and the
+"print is not the price-setter" call is killed by its letter — with an intraday tell that it was
+right in substance.**
+
+### Forward tests scored
+
+| Test | Registered | Result | Verdict |
+|---|---|---|---|
+| `FT-eia-weekly-petroleum-status-2026-10-15-1` (turnaround keeps deepening) | Utilization **< 94.0%** for the week ending 10-09 | EIA Table 9: **93.5%** (prior 92.7, then 92.5; 2025 same week 85.7). Path 97.8 → 96.8 → 94.0 → 92.5 → 92.7 → **93.5** | **PASS** on the registered line, by 0.5pt. Flagged: the decline **troughed at 92.5 (wk ending 09-25) and has rebounded two weeks running**, so "continued decline" is not what happened; only the sub-94.0 level held. The 10-07 narrowed band (86.8-90.7) and even the original band top (93.0) were too low; kill 2 (< 86.7) did not fire |
+| `FT-eia-weekly-petroleum-status-2026-10-15-2` (print not the price-setter, observation #3) | Commercial-crude sign **does not match** WTI close-to-close sign | EIA Table 4: commercial crude ex-SPR **415.577 Mbbl, -8.557 w/w — a DRAW** (Cushing +1.862; Gulf Coast -9.239). `CL=F` closed **97.97** on 10-15 vs **95.09** on 10-14 (**+3.0%**). Draw + WTI up is a **matched** pair | **KILL** — the registered sign rule fires |
+
+**Reading the kill honestly.** The sign test is mechanical and it fired, so the row is a kill and not
+a void. The tape says the print was still not the cause: `CL=F` 5-minute bars on 10-15 read **93.61**
+at 08:30 ET (the CPI-day data cluster) and **96.29** by 11:55 — most of the day's rally was already
+in before the 12:00 release — then **96.30** at 12:00, **96.55** at 12:10 and **96.52** at 13:00, a
+move of about +0.3% across the print itself. The sign rule is a coarse instrument: it credits the
+print with whatever the full session did. What the three observations in this series (09-16 pass,
+09-30 pass, 10-15 kill) now support: the print is *rarely* the price-setter, not *never*, and a
+sign-match on a rally that began before 12:00 is a coincidence of sign, not a reaction. Not re-scored
+on intraday data — the registered cell stays a kill.
+
+### What else the data says (descriptive, not a forward test)
+
+- **Crude -8.6 mb draw is large** in a week utilization rose and refiner crude inputs ticked up to
+  16.6 mb/d, so the draw is not a refinery-throughput story (its cause is not in the tables read here). Distillate **102.611 mb
+  (-2.527 w/w, -12.3% y/y)** drew again — the 0/10-builds seasonal from the initial research held.
+- **SPR flat at about 283.0 mb** (total incl. SPR 1,506.999 less ex-SPR 1,224.016 = 282.983, same as the
+  prior week): the G7/IEA 100 mb release has not reached the weekly SPR line yet.
+- **The Saudi hook reversed.** Brent (`BZ=F`) read **105.92** on 10-15, not the ~96-97 the initial
+  research cited and not the ~100 of the 10-07 row — the "mostly-deflated premium" framing did not
+  hold into the print. `saudi-east-west-pipeline-repair-window-close-2026-10-15` carries that thread.
+- **Context:** VIX 16.46 (10-15 close; 10-14 16.87); WTI 97.97. The stance was stand-aside with no
+  energy exposure, so no P&L attaches to either result.
+
+Both registered forward tests are now scored. Per this lane's contract this ledger goes quiet — there
+is no `forward-test-due` door back in for this event.
+
+**Last assessed:** 2026-10-16
+<!-- probe-ref: {"symbols":{},"vix":16.46,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","housing-starts-2026-10-20","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-20y-auction-2026-10-20","jgb-5y-auction-2026-10-14","meta-nm-privacy-penalty-ruling-2026-10-20","mtis-2026-10-15","nahb-hmi-2026-10-19","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","pending-home-sales-2026-10-20","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","ssa-cola-2027-2026-10-14","tic-monthly-2026-10-16","treasury-buyback-10y20y-2026-10-15","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-labour-market-2026-10-20","uk-monthly-gdp-2026-10-15"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->

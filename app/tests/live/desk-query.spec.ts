@@ -105,3 +105,89 @@ describe("event:before-expiry", () => {
     expect(clearChips("msft event:before-expiry")).toBe("msft");
   });
 });
+
+// Today's change versus lifetime (#5042). Members tapped "Losing" for what is down TODAY; the chip
+// filtered on lifetime P/L and came back empty while MSFT was −$76 on the day (+$414 overall).
+describe("day:<0 / day:>0 — today's change, apart from pl: (lifetime against cost)", () => {
+  const msft = pos({
+    symbol: "MSFT",
+    display: "MSFT",
+    dayPl: "−$76",
+    dayTone: "neg",
+    totalPl: "+$414",
+    totalPlRaw: 414,
+    totalTone: "pos",
+  });
+  const crwv = pos({
+    symbol: "CRWV",
+    display: "CRWV",
+    dayPl: "+$31",
+    dayTone: "pos",
+    totalPl: "−$412",
+    totalPlRaw: -412,
+    totalTone: "neg",
+  });
+  const unpriced = pos({ symbol: "AAPL", display: "AAPL", dayTone: "flat", totalPlRaw: 0 });
+  const book = [msft, crwv, unpriced];
+  const keep = (q: string) => book.filter((p) => matchesFilter(p, parseDeskQuery(q)));
+
+  it("keeps what is down today even when it is above cost", () => {
+    expect(keep("day:<0")).toEqual([msft]);
+    expect(keep("pl:<0"), "the lifetime filter is a different question").toEqual([crwv]);
+  });
+
+  it("keeps what is up today, and a flat or unpriced day matches neither", () => {
+    expect(keep("day:>0")).toEqual([crwv]);
+    expect(keep("day:<0")).not.toContain(unpriced);
+    expect(keep("day:>0")).not.toContain(unpriced);
+  });
+
+  it("stacks with the lifetime pair: down today but above cost", () => {
+    expect(keep("day:<0 pl:>0")).toEqual([msft]);
+    expect(keep("day:<0 pl:<0")).toEqual([]);
+  });
+
+  it("makes day:>0 and day:<0 replace each other, and leaves pl: alone", () => {
+    expect(toggleQualifier("day:>0", "day:<0")).toBe("day:<0");
+    expect(toggleQualifier("pl:>0", "day:<0")).toBe("pl:>0 day:<0");
+    expect(toggleQualifier("day:<0 pl:>0", "pl:<0")).toBe("day:<0 pl:<0");
+  });
+
+  it("clears with All, keeping the search words", () => {
+    expect(clearChips("msft day:<0 pl:<0")).toBe("msft");
+  });
+});
+
+// The marks as a filter and the "Worth a look first" sort (#5070, round 2 of #5037): the sort
+// orders the list and the marks narrow it, and both are tokens in the one query model.
+describe("sort:look and is:review / is:consider / is:onplan", () => {
+  it("reads sort:look as the sort, never as a search word", () => {
+    const f = parseDeskQuery("sort:look");
+    expect(f.sortLook).toBe(true);
+    expect(f.terms).toEqual([]);
+    expect(matchesFilter(shares, f)).toBe(true);
+  });
+
+  it("keeps only the rows whose mark matches, and a row with no mark shown matches none", () => {
+    const f = parseDeskQuery("is:review");
+    expect(f.mark).toBe("review");
+    expect(matchesFilter(shares, f, "review")).toBe(true);
+    expect(matchesFilter(shares, f, "onplan")).toBe(false);
+    expect(matchesFilter(shares, f, undefined)).toBe(false);
+    expect(matchesFilter(shares, parseDeskQuery("is:onplan"), "onplan")).toBe(true);
+    expect(matchesFilter(shares, parseDeskQuery("is:consider"), "review")).toBe(false);
+  });
+
+  it("makes the three marks replace one another, and stack with the kinds and the sort", () => {
+    expect(toggleQualifier("is:review", "is:onplan")).toBe("is:onplan");
+    expect(toggleQualifier("is:option sort:look", "is:review")).toBe(
+      "is:option sort:look is:review",
+    );
+    expect(toggleQualifier("is:review sort:look", "sort:look")).toBe("is:review");
+  });
+
+  it("clears the marks with the chips — All means every position — and leaves the sort", () => {
+    expect(clearChips("is:option is:review sort:look")).toBe("sort:look");
+    expect(clearChips("nvda is:onplan")).toBe("nvda");
+  });
+});

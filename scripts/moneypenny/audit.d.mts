@@ -8,10 +8,17 @@ export interface AuditIssue {
   state?: string;
   closedByPullRequests?: unknown[];
   linkedPullRequests?: unknown[];
-}
-export interface AuditComment {
-  body?: unknown;
+  labels?: readonly ({ name?: string } | string)[];
   createdAt?: string;
+  updatedAt?: string;
+}
+/** One REST issue-timeline event, as far as `waitingSince` reads it (#6042). */
+export interface TimelineEvent {
+  event?: string;
+  created_at?: string;
+  label?: { name?: string };
+  /** A `commented` event's text — the plan-stall clock reads ready-flips from it. */
+  body?: unknown;
 }
 export interface UnclaimedIssue {
   title: string;
@@ -21,7 +28,13 @@ export interface UnclaimedIssue {
 export interface SilentFeedbackIssue {
   title: string;
   number: number;
-  hoursSinceFiled: number;
+  /** Whole hours since the issue last began waiting for an answer (#6042), not since it was filed. */
+  hoursWaiting: number;
+}
+/** A silent-feedback or plan-stall flag whose test no longer holds — a `clear-stall` target (#6042). */
+export interface StaleStallFlag {
+  title: string;
+  number: number;
 }
 export interface ReadyPlanCandidate {
   title: string;
@@ -51,11 +64,16 @@ export interface AuditDeps {
   /** The work spigot's dial and the title it currently shows (#3960 criterion 4) — null when it
    *  could not be read, which skips the title sync without touching the other checks. */
   workMode?: WorkModeState | null;
+  /** The instruction-drift chore's ticket intent (#5729), from `driftChoreIntent` — null for none. */
+  driftChore?: AuditIntent | null;
+  /** Green, unarmed PRs whose arm job failed — the re-arm act stage (stranded-pr.mjs). */
+  stranded?: import("./stranded-pr.mjs").StrandedPr[];
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];
   conflictedPRs?: ConflictedPR[];
   staleInProgress?: InProgressIssue[];
+  staleStallFlags?: StaleStallFlag[];
   alreadyFlagged?: number[];
   alreadyFlaggedPRs?: (number | AlreadyFlaggedPR)[];
   staleAfterDays?: number;
@@ -78,7 +96,7 @@ export interface AuditIntent {
   /** Why that position resolved, carried from the dial's reader for the run receipt. */
   reason?: string;
   quietDays?: number;
-  hoursSinceFiled?: number;
+  hoursWaiting?: number;
   hoursSinceReady?: number;
   /** How long a `clear-in-progress` intent's issue had been quiet (#3960). */
   hoursQuiet?: number;
@@ -92,15 +110,40 @@ export const CONFLICT_MARKER: RegExp;
 
 /** Did this issue get an ANSWER — closed, or linked to a PR? */
 export function answered(issue?: AuditIssue): boolean;
+/** A `ready` feedback issue with no PR and no terminal label — what the stall audit pings (#5667). */
+export function owedAnswer(issue?: AuditIssue): boolean;
+/** When the issue last began waiting for an answer, from its REST timeline; `fallback` if never (#6042). */
+export function waitingSince(timeline?: TimelineEvent[], fallback?: string): string | undefined;
+/** The silent-feedback candidates, timed from `waitingSince`, minus `in-progress` and already-flagged. */
+export function silentFeedbackFrom(
+  issues?: AuditIssue[],
+  timelineOf?: (n: number | undefined) => TimelineEvent[],
+  nowMs?: number,
+  flagged?: number[],
+): SilentFeedbackIssue[];
+/** Silent-feedback `stall-flagged` issues no longer owed an answer — each gets one `clear-stall`. */
+export function staleStallFlags(issues?: AuditIssue[]): StaleStallFlag[];
 /** The pure stall/silent-feedback/plan-stall audit: dependencies in, flag intents out. */
 export function audit(deps?: AuditDeps): AuditIntent[];
-/** The pure per-issue plan-stall decision — is this a live candidate, and if so how old? */
+/** A plan answered, handed on, parked or in build, by labels alone — no read needed (#6042). */
+export function planSpokenFor(issue?: AuditIssue): boolean;
+/** The latest ready-flip (comment or `ready` added) in ms; null if none or `ready` was taken back. */
+export function latestPlanFlip(timeline?: TimelineEvent[]): number | null;
+/** The pure per-issue plan-stall decision — is this a live candidate, and if so how long waiting? */
 export function readyPlanCandidate(
   issue: AuditIssue,
-  comments?: AuditComment[],
+  timeline?: TimelineEvent[],
   hasClaim?: boolean,
   nowMs?: number,
 ): ReadyPlanCandidate | null;
+/** The plan-stall writer: unflagged candidates to threshold, and flagged plans to clear (#6042). */
+export function planStallFrom(
+  issues?: AuditIssue[],
+  timelineOf?: (n: number | undefined) => TimelineEvent[],
+  claimOf?: (n: number | undefined) => boolean,
+  nowMs?: number,
+  flagged?: number[],
+): { readyPlans: ReadyPlanCandidate[]; staleFlags: StaleStallFlag[] };
 /** The open issues carrying `in-progress`, each with whole hours since `updatedAt` (#3960). */
 export function staleInProgressFrom(
   issues?: { title: string; number: number; updatedAt: string; labels?: { name: string }[] }[],

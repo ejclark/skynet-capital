@@ -1,12 +1,16 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { pointedView } from "../live/playbook-rule";
 import {
   type PlaybookStoreCardView,
+  type SteeredByView,
   type SubscriptionView,
   type SubscriptionWriteResult,
   setSubscriptionEnabledRequest,
   unsubscribeRequest,
 } from "../live/playbook-store";
+import { InlineResult } from "../ui";
+import { ConvictionPanel } from "./playbook-conviction";
 import { SubscribeForm } from "./playbook-subscribe-form";
 
 /**
@@ -14,7 +18,7 @@ import { SubscribeForm } from "./playbook-subscribe-form";
  * #4642's phone order: on or paused · mode · capital · symbols · Pause and Edit, then the rules.
  * An owner who opens a bot's playbooks is asking "what is it running?", so the answer leads.
  *
- * The state is a glyph AND a word: ● On, ○ Paused, ◌ Saved, never trades. Never hue alone, because
+ * The state is a glyph AND a word: ● On, ‖ Paused, ◌ Saved, never trades. Never hue alone, because
  * a standing reader is red/green colourblind.
  *
  * A human account's subscription saved before #4610 is listed honestly. It never traded, because
@@ -27,7 +31,16 @@ function subscriptionFacts(
   sub: SubscriptionView,
   basket: readonly string[],
   human: boolean,
+  movesNoCapital = false,
 ): string[] {
+  // A playbook that sends no order has no mode that matters and no money to show: it says what it
+  // does, then which names it reads.
+  if (movesNoCapital) {
+    return [
+      "places no orders",
+      sub.symbols?.length ? `names: ${sub.symbols.join(", ")}` : `all ${basket.length} names`,
+    ];
+  }
   const symbols = sub.symbols?.length
     ? [`new entries: ${sub.symbols.join(", ")}`]
     : basket.length > 1
@@ -43,11 +56,27 @@ function subscriptionFacts(
   ];
 }
 
+/**
+ * What Pause does, said under a paused bot subscription (#4651). One rule: Pause stops a playbook
+ * opening anything new; its ownership and its exits are unchanged. It still sells on its own exit
+ * rules (S1-NVDA still exits before a print); the expiry safety closes its options before they
+ * expire, except a covered call, kept so assigned shares can be called away; and its names stay
+ * its own, so the bot's own rules stay off them until it is unsubscribed. Since #4642 slice 10 only
+ * a subscribed playbook that is on opens anything, which is what makes this true of SAURON paused
+ * on Sauron's own account too: his rules then only sell (his card's Pause row says so).
+ */
+export const PAUSED_NOTE =
+  "Paused: it opens nothing new and keeps managing what it holds — it sells on its own exit rules " +
+  "and closes any option before it expires, except a covered call, kept so the shares can be " +
+  "called away (a wheel still sells covered calls on shares it was assigned). Its names stay its " +
+  "own until you unsubscribe. Only a playbook the bot is subscribed to and has on opens anything " +
+  "new on it, apart from that covered call.";
+
 function stateOf(sub: SubscriptionView, human: boolean) {
   if (human) return { glyph: "◌", word: "Saved, never trades", key: "idle" };
   return sub.enabled
     ? { glyph: "●", word: "On", key: "on" }
-    : { glyph: "○", word: "Paused", key: "paused" };
+    : { glyph: "‖", word: "Paused", key: "paused" };
 }
 
 export function SubscriptionRow({
@@ -55,6 +84,8 @@ export function SubscriptionRow({
   card,
   human,
   reduceOnly,
+  runsOnConviction = false,
+  steeredBy,
   onChanged,
 }: {
   readonly accountId: string;
@@ -64,6 +95,12 @@ export function SubscriptionRow({
   /** The viewer's delegation fog is down: Edit still opens, but only to LOWER exposure — the
    *  server refuses an edit that delegates more, exactly as it refuses a subscribe. */
   readonly reduceOnly: boolean;
+  /** The pair runs as its owner's conviction (a ◆ row, or one the study does not back), so the
+   *  conviction and its check day are drawn and can be re-dated here. Any pair that already holds a
+   *  conviction shows it, whatever its evidence says. */
+  readonly runsOnConviction?: boolean;
+  /** The conviction view the row shows as steering its pair (#5482). */
+  readonly steeredBy?: SteeredByView;
   readonly onChanged: () => void;
 }): ReactElement | null {
   const sub = card.subscription;
@@ -87,6 +124,8 @@ export function SubscriptionRow({
   };
   const ref = { id: accountId, playbookId: card.id };
   const state = stateOf(sub, human);
+  const pointed = sub.convictionId !== undefined;
+  const view = pointedView(sub, steeredBy);
 
   return (
     <div className="pb-subscription" data-state={state.key}>
@@ -94,10 +133,26 @@ export function SubscriptionRow({
         <b className="pb-status-state">
           <span aria-hidden="true">{state.glyph}</span> {state.word}
         </b>
-        {subscriptionFacts(sub, card.symbols, human).map((fact) => (
+        {subscriptionFacts(
+          sub,
+          card.pickFrom ?? card.symbols,
+          human,
+          card.movesNoCapital === true,
+        ).map((fact) => (
           <span key={fact}> · {fact}</span>
         ))}
       </p>
+      {!(human || sub.enabled) ? <p className="pb-form-note">{PAUSED_NOTE}</p> : null}
+      {!human && (runsOnConviction || sub.conviction || pointed) ? (
+        <ConvictionPanel
+          accountId={accountId}
+          playbookId={card.id}
+          {...(sub.conviction ? { conviction: sub.conviction } : {})}
+          {...(view ? { steeredBy: view } : {})}
+          pointed={pointed}
+          onChanged={onChanged}
+        />
+      ) : null}
       {editing ? (
         <SubscribeForm
           accountId={accountId}
@@ -142,7 +197,11 @@ export function SubscriptionRow({
           </button>
         </div>
       )}
-      {error ? <span className="set-err">{error}</span> : null}
+      {error ? (
+        <InlineResult as="span" tone="err">
+          {error}
+        </InlineResult>
+      ) : null}
     </div>
   );
 }

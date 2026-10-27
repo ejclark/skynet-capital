@@ -318,7 +318,15 @@ export function isAlreadyOnBoardError(text) {
 // GitHub exposes the remaining quota for free (`ghRateLimit`), so a sweep can refuse to start
 // instead of failing into it. The other half is `resolveBoardItem`'s `cachedItems` below — reading
 // the per-run constants ONCE is what takes the sweep off the ceiling in the first place.
-export const RATE_LIMIT_EXHAUSTED = /API rate limit (?:already )?exceeded/i;
+//
+// #6224 — GitHub's SECONDARY limit (a burst of concurrent calls, not the hourly window) words its
+// refusal differently: "You have exceeded a secondary rate limit". Run 40421267754's two `sync
+// project status` runs a second apart both took a bare 403 on one REST issue read; once `ghRest`
+// kept the body, that is the sentence a burst carries. It is still a rate limit — the soft skip,
+// the throttle ladder and the sweep abort all want it — so it joins the phrase rather than a twin.
+export const RATE_LIMIT_EXHAUSTED = /API rate limit (?:already )?exceeded|secondary rate limit/i;
+
+const SECONDARY_RATE_LIMIT = /secondary rate limit/i;
 
 /** Is this `gh` failure "the hourly API budget for this token is spent", rather than a code fault? */
 export function isRateLimitExhausted(text) {
@@ -476,7 +484,12 @@ export function runThroughRateLimit({
 // never on the step: a wrong owner, a missing project or a bad field id still exits non-zero.
 
 /** "the board catches up at …" — the reset is the moment the next event's sync can succeed. */
-function catchUpPhrase(reset, now) {
+function catchUpPhrase(reset, now, text = "") {
+  // A burst limit has no reset stamp of its own; the GraphQL hour's would be a true fact that
+  // answers the wrong question.
+  if (SECONDARY_RATE_LIMIT.test(text)) {
+    return "A secondary (burst) limit clears within minutes; the next issue event re-syncs the board.";
+  }
   if (typeof reset !== "number" || !Number.isFinite(reset)) {
     return "GitHub did not report a reset time; the hourly GraphQL window rolls over within the hour.";
   }
@@ -495,8 +508,8 @@ export function boardSyncSkip({ issueNumber, error, budget = {}, now = Date.now(
   if (!isRateLimitExhausted(text)) return null;
   return (
     `::warning title=Board sync skipped (rate limit)::issue #${issueNumber} was not synced to the ` +
-    `board — GitHub refused the GraphQL call for its rate limit, and the board is a display, not a ` +
-    `control (#4438). ${catchUpPhrase(budget.reset, now)} Cause: ${text}`
+    `board — GitHub refused the call for its rate limit, and the board is a display, not a ` +
+    `control (#4438). ${catchUpPhrase(budget.reset, now, text)} Cause: ${text}`
   );
 }
 

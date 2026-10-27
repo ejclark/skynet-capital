@@ -1,7 +1,43 @@
 /* Working orders (#3407 P1 slice 2) — the list under the ticket. Same small-text register and
  * `.wr-*` frame as the who-else-traded row; own file so the addition doesn't push `ticket.css`
- * or `wire-row.css` over the line cap. State is a word + glyph on every row (a standing reader is
- * red/green colourblind); the settled list reads subdued by weight, never by hue alone. */
+ * over the line cap. State is a word + glyph on every row (a standing reader is red/green
+ * colourblind); the settled list reads subdued by weight, never by hue alone. */
+
+/* THE ORDERS PANE FRAME — `.wr-panel` / `.wr-h` / `.wr-list` / `.wr-more`. These were born in
+ * `wire-row.css` (the who-else-traded row, #2017). #3467 (4b841996, 2026-09-21) retired that row
+ * and deleted its sheet, but four panes had borrowed the frame and kept the classes: Working orders
+ * (`working-orders.tsx`), Alerts (`desk-alerts.tsx`), Expiries and assignments
+ * (`option-lifecycle-card.tsx`) and Your recent orders (`recent-orders-strip.tsx`). For three weeks
+ * they rendered as browser-default h3s and indented bullet lists. The rules below are restored
+ * verbatim from the deleted sheet — only the four classes still in use — so the look is the one
+ * already shipped, not a new call. They live here because this file owns the Orders pane and its
+ * first card; `tests/arch/wr-frame.spec.ts` fails if a `.wr-*` class is used without a rule again. */
+/* No max-width, as shipped (#3407 P0, study §3.2 item 9): the frame takes its container's width —
+   the ticket's `.gate-panel` for the recent-orders strip, `.orders-section` for the other three. */
+.wr-panel {
+  margin: var(--space-3) 0 0;
+}
+.wr-h {
+  margin: 0 0 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wr-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wr-more {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
 .wo-row {
   display: flex;
   flex-wrap: wrap;

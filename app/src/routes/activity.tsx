@@ -12,19 +12,19 @@ import {
   parseActivityQuery,
   toggleActivityQualifier,
 } from "../live/activity-feed";
-import { fetchCouncil } from "../live/council";
 import { fetchFilingComments } from "../live/filing-comments";
+import { useRefineSearch } from "../live/refine-search";
 import { fetchWire, type WireFeed, type WireTrade } from "../live/wire";
-import { CouncilCompose } from "../shell/council-compose";
+import { ActivityDays } from "../shell/activity-days";
 import { FilingOnramp } from "../shell/filing-onramp";
 import { PageFrame } from "../shell/frame";
 import { PnlStrip } from "../shell/pnl-strip";
-import { SectionSwitch } from "../shell/section-switch";
-import { type PageSection, resolveSection } from "../shell/sections";
 import { DevelopmentRow } from "../shell/wire-development-row";
 import { FilingRow } from "../shell/wire-filing-row";
 import { MilestoneRow } from "../shell/wire-milestone-row";
+import { PlayRow } from "../shell/wire-play-row";
 import { TradeRow } from "../shell/wire-trade-row";
+import { FilterChip, InlineResult } from "../ui";
 
 /**
  * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse in
@@ -47,13 +47,14 @@ import { TradeRow } from "../shell/wire-trade-row";
  *     the shape was built to pass.
  *   - Booked P&L is a STRIP, not a section: a standing snapshot, always true, never paged to
  *     (#784's criterion — "never a fourth item competing for the same section concept").
- *   - The Council stays a SECTION: a composer plus this week's lines is not a record of something
- *     that happened, so it is not a kind of event and does not belong in the feed.
- * Two sections remain, and the one that is current renders ALONE at every width — Settings' own use
- * of the same switch, and the shape Eric asked for on 2026-09-06 after #1749 shipped the "beside"
- * version ("the whole page just feels like a hot mess"). Mobile-first (`CLAUDE.md`): the feed is
+ *   - The Council was the one SECTION beside the feed, and it is retired (#5992, Eric, 2026-10-24:
+ *     a weekly market call "encourages people to think they can time the market"). A thesis now
+ *     lives in playbook authoring, where it is shadow-tested before it trades — so the page is one
+ *     feed with no section switch, and `?section=council` lands on that feed. Mobile-first
+ *     (`CLAUDE.md`): the feed is
  * curated at 390px — one row per event, the kind word at the left edge — and a wider viewport gives
- * the same rows more room, never new concepts.
+ * the same rows more room, never new concepts. Each day opens with a centred divider and the rows
+ * keep only their time (#5257, `shell/activity-days.tsx`).
  */
 
 /** The chip groups, in the order the controls row reads them. Kind leads, because it decides which
@@ -63,6 +64,7 @@ const KIND_CHIPS = [
   ["is:feedback", "Ideas"],
   ["is:development", "Builds"],
   ["is:milestone", "Milestones"],
+  ["is:playbook", "Playbooks"],
 ] as const;
 const SIDE_CHIPS = [
   ["is:buy", "Buys"],
@@ -74,28 +76,18 @@ const DESK_CHIPS = [
 ] as const;
 const FILING_CHIPS = [["show:shipped", "Include shipped"]] as const;
 
-type ActivitySection = "feed" | "council";
-
-const SECTIONS: readonly PageSection<ActivitySection>[] = [
-  { id: "feed", label: "Activity" },
-  { id: "council", label: "The Council" },
-];
-
-/** The controls row (#3807 slice 2a — the rail left the frame): the page's sections first, then —
- *  only while the feed is the current one — its filter groups, the same one-model qualifiers the bar
- *  accepts as text. A group whose kind the filter has already excluded is not rendered: a "Buys"
- *  chip beside a list narrowed to filings would be a control with nothing to do, the same reason the
- *  whole row hides when the page has paged away from the feed. The `<hr />` keeps the two roles
- *  apart at every width, where the row hides the group labels. */
+/** The controls row (#3807 slice 2a — the rail left the frame): the feed's filter groups, the same
+ *  one-model qualifiers the bar accepts as text. A group whose kind the filter has already excluded
+ *  is not rendered: a "Buys" chip beside a list narrowed to filings would be a control with nothing
+ *  to do. */
 function WireControls({
   query,
   filter,
   feedbackEnabled,
   developmentEnabled,
   milestonesEnabled,
+  playsEnabled,
   onChange,
-  section,
-  onSection,
 }: {
   readonly query: string;
   readonly filter: ActivityFilter;
@@ -106,23 +98,20 @@ function WireControls({
   readonly feedbackEnabled: boolean;
   readonly developmentEnabled: boolean;
   readonly milestonesEnabled: boolean;
+  readonly playsEnabled: boolean;
   readonly onChange: (next: string) => void;
-  readonly section: ActivitySection;
-  readonly onSection: (next: ActivitySection) => void;
 }): ReactElement {
   const group = (label: string, chips: readonly (readonly [string, string])[]) => (
     <>
       <p className="rail-label">{label}</p>
       {chips.map(([qualifier, text]) => (
-        <button
+        <FilterChip
           key={qualifier}
-          type="button"
-          className="railctl"
-          aria-pressed={filter.qualifiers.includes(qualifier as ActivityQualifier)}
-          onClick={() => onChange(toggleActivityQualifier(query, qualifier as ActivityQualifier))}
+          pressed={filter.qualifiers.includes(qualifier as ActivityQualifier)}
+          onPress={() => onChange(toggleActivityQualifier(query, qualifier as ActivityQualifier))}
         >
           {text}
-        </button>
+        </FilterChip>
       ))}
     </>
   );
@@ -131,22 +120,17 @@ function WireControls({
     "is:feedback": feedbackEnabled,
     "is:development": developmentEnabled,
     "is:milestone": milestonesEnabled,
+    "is:playbook": playsEnabled,
   };
   const kinds = KIND_CHIPS.filter(([qualifier]) => wired[qualifier]);
   const tradesInScope = kindInScope(filter, "trade");
   const filings = feedbackEnabled && filingsInScope(filter);
   return (
     <>
-      <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
-      {section === "feed" ? (
-        <>
-          <hr />
-          {kinds.length > 1 ? group("Kind", kinds) : null}
-          {tradesInScope ? group("Side", SIDE_CHIPS) : null}
-          {tradesInScope ? group("Desks", DESK_CHIPS) : null}
-          {filings ? group("Filings", FILING_CHIPS) : null}
-        </>
-      ) : null}
+      {kinds.length > 1 ? group("Kind", kinds) : null}
+      {tradesInScope ? group("Side", SIDE_CHIPS) : null}
+      {tradesInScope ? group("Desks", DESK_CHIPS) : null}
+      {filings ? group("Filings", FILING_CHIPS) : null}
     </>
   );
 }
@@ -175,51 +159,6 @@ function WireFilterBar({
         />
       </div>
     </div>
-  );
-}
-
-/** THE COUNCIL (issue #2224 shape 1) — one line per member per week, visible inside the gate
- *  (`docs/THE-GAME.md:117`: "the argument is the product"). This is the league's shared view:
- *  everyone's lines. The composer itself is `shell/council-compose.tsx` since #3963, because the
- *  member's own line also renders beside their standing on the Profile Overview and it is ONE
- *  record — same endpoint, same `["council"]` query key, no copy to drift. */
-function CouncilSection(): ReactElement {
-  const queryClient = useQueryClient();
-  const council = useQuery({ queryKey: ["council"], queryFn: fetchCouncil });
-
-  if (council.isPending) return <p className="note">Tuning in…</p>;
-  if (council.isError || !council.data) return <p className="note">The Council is unreachable.</p>;
-  const data = council.data;
-  if (!data.enabled) {
-    return <p className="note">The Council isn't switched on yet in this deployment.</p>;
-  }
-
-  return (
-    <section className="wire-panel">
-      <h2 className="wire-h">The Council</h2>
-      <p className="note">
-        One line, once a week: your thesis and your bot's stance. Visible to the whole league — the
-        argument is the product.
-      </p>
-      <CouncilCompose
-        week={data}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["council"] })}
-      />
-      {data.entries.length === 0 ? (
-        <p className="note">Nobody's spoken yet this week — be the first.</p>
-      ) : (
-        <ul className="wire-fdbk council-entries">
-          {data.entries.map((entry) => (
-            <li key={entry.id}>
-              <span>{entry.text}</span>
-              {entry.playbookId ? (
-                <span className="council-play-tag">{entry.playbookId}</span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }
 
@@ -258,6 +197,7 @@ function FeedSection({
     wire.feedbackEnabled ? wire.feedback : [],
     wire.developmentEnabled ? (wire.development ?? []) : [],
     wire.milestonesEnabled ? (wire.milestones ?? []) : [],
+    wire.playsEnabled ? (wire.plays ?? []) : [],
   );
   const shown = items.filter((item) => matchesActivity(item, filter));
   return (
@@ -271,13 +211,15 @@ function FeedSection({
             : "Nothing here matches this filter."}
         </p>
       ) : (
-        <ul className="wire-feed">
-          {shown.map((item) => {
+        <ActivityDays
+          items={shown}
+          renderItem={(item) => {
             if (item.kind === "trade") return <TradeRow key={item.key} trade={item.trade} />;
             if (item.kind === "development") {
               return <DevelopmentRow key={item.key} merge={item.merge} />;
             }
             if (item.kind === "milestone") return <MilestoneRow key={item.key} earn={item.earn} />;
+            if (item.kind === "play") return <PlayRow key={item.key} play={item.play} />;
             return (
               <FilingRow
                 key={item.key}
@@ -288,8 +230,8 @@ function FeedSection({
                 }
               />
             );
-          })}
-        </ul>
+          }}
+        />
       )}
       {onLoadMore ? (
         <button
@@ -301,7 +243,9 @@ function FeedSection({
           {loadingMore ? "Loading…" : "Load older trades"}
         </button>
       ) : null}
-      {loadMoreError ? <p className="set-err">Couldn't load older trades — try again.</p> : null}
+      {loadMoreError ? (
+        <InlineResult tone="err">Couldn't load older trades — try again.</InlineResult>
+      ) : null}
       {/* Two honesty seams the three-widget page also carried, and the feed owes a reader both: an
           unwired lane is a deployment fact rather than "nobody has filed", and a wired-but-empty one
           is an invitation rather than a gap. Neither is the feed's own empty state, which is about
@@ -336,8 +280,8 @@ function FeedSection({
 }
 
 function WirePage(): ReactElement {
-  const { q, section: asked } = Route.useSearch();
-  const navigate = Route.useNavigate();
+  const { q } = Route.useSearch();
+  const refine = useRefineSearch<ReturnType<typeof readSearch>>();
   const wire = useQuery({
     queryKey: ["wire"],
     queryFn: () => fetchWire(),
@@ -367,26 +311,19 @@ function WirePage(): ReactElement {
       .catch(() => setLoadMoreError(true))
       .finally(() => setLoadingMore(false));
   };
-  // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace.
+  // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace, and
+  // the page keeps its place (#4944).
   const [query, setQuery] = useState(q ?? "");
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(urlTimer.current), []);
   const setFilter = (next: string) => {
     setQuery(next);
     clearTimeout(urlTimer.current);
-    urlTimer.current = setTimeout(() => {
-      void navigate({
-        search: (prev) => ({ ...prev, q: next.trim() === "" ? undefined : next }),
-        replace: true,
-      });
-    }, 300);
+    urlTimer.current = setTimeout(
+      () => refine((prev) => ({ ...prev, q: next.trim() === "" ? undefined : next })),
+      300,
+    );
   };
-  const section = resolveSection(SECTIONS, asked);
-  const setSection = (next: ActivitySection) =>
-    void navigate({
-      search: (prev) => ({ ...prev, section: next === "feed" ? undefined : next }),
-      replace: true,
-    });
 
   if (wire.isPending)
     return (
@@ -414,9 +351,8 @@ function WirePage(): ReactElement {
           feedbackEnabled={feed.feedbackEnabled}
           developmentEnabled={Boolean(feed.developmentEnabled)}
           milestonesEnabled={Boolean(feed.milestonesEnabled)}
+          playsEnabled={Boolean(feed.playsEnabled)}
           onChange={setFilter}
-          section={section}
-          onSection={setSection}
         />
       }
     >
@@ -427,36 +363,27 @@ function WirePage(): ReactElement {
           pulse of the whole league, one feed.
         </p>
       </header>
-      {section === "feed" ? (
-        <>
-          <PnlStrip rows={feed.pnl} />
-          <FeedSection
-            wire={feedWithOlder}
-            filter={filter}
-            query={query}
-            onChange={setFilter}
-            onLoadMore={cursor ? loadMore : undefined}
-            loadingMore={loadingMore}
-            loadMoreError={loadMoreError}
-          />
-        </>
-      ) : (
-        <CouncilSection />
-      )}
+      <PnlStrip rows={feed.pnl} />
+      <FeedSection
+        wire={feedWithOlder}
+        filter={filter}
+        query={query}
+        onChange={setFilter}
+        onLoadMore={cursor ? loadMore : undefined}
+        loadingMore={loadingMore}
+        loadMoreError={loadMoreError}
+      />
     </PageFrame>
   );
 }
 
 /**
- * `?section=pnl` and `?section=pulse` are LEGACY (#784 slice 3 folded both into the feed), and a
- * bookmark on either must not strand: `pnl` lands on the feed with the strip right there, and
- * `pulse` lands on the feed pre-filtered to filings, which is the thing that URL was asking for.
- * An unknown value falls through to the feed via `resolveSection`, never a blank stage.
+ * Every `?section=` is LEGACY, and a bookmark on one must not strand: `pnl` (#784 slice 3) lands on
+ * the feed with the strip right there, `pulse` lands on the feed pre-filtered to filings, which is
+ * the thing that URL was asking for, and `council` (#5992) — like any unknown value — is dropped,
+ * so it lands on the plain feed, never a blank stage.
  */
-function readSearch(search: Record<string, unknown>): {
-  readonly q?: string;
-  readonly section?: ActivitySection;
-} {
+function readSearch(search: Record<string, unknown>): { readonly q?: string } {
   const asked = typeof search.section === "string" ? search.section : undefined;
   const q =
     typeof search.q === "string" && search.q.length > 0 && search.q.length <= 200
@@ -464,10 +391,7 @@ function readSearch(search: Record<string, unknown>): {
       : asked === "pulse"
         ? "is:feedback"
         : undefined;
-  return {
-    ...(q ? { q } : {}),
-    ...(SECTIONS.some((s) => s.id === asked) ? { section: asked as ActivitySection } : {}),
-  };
+  return q ? { q } : {};
 }
 
 export const Route = createFileRoute("/activity")({

@@ -6,11 +6,16 @@ import {
 } from "../../src/discovery/playbook-probe.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
 import {
+  BETA_SCOUT,
+  COND_SCOUT,
+  CRWV_LONG_CALL,
   CRWV_WHEEL,
   G1_GOOG,
-  HC_SAURON,
+  MU_DIP_BOUNCE,
+  NBIS_DIP_BOUNCE,
   NVDA_CALL_SPREAD,
   S1_NVDA,
+  SAURON,
   TACO_DJT,
 } from "../../src/playbooks/registry.js";
 
@@ -31,11 +36,16 @@ describe("housePlaybooks", () => {
   it("reads the roster off what the registry exports, id-sorted", () => {
     expect(housePlaybooks().map((p) => p.id)).toEqual(
       [
+        BETA_SCOUT.id,
+        COND_SCOUT.id,
+        CRWV_LONG_CALL.id,
         CRWV_WHEEL.id,
         G1_GOOG.id,
-        HC_SAURON.id,
+        MU_DIP_BOUNCE.id,
+        NBIS_DIP_BOUNCE.id,
         NVDA_CALL_SPREAD.id,
         S1_NVDA.id,
+        SAURON.id,
         TACO_DJT.id,
       ].sort(),
     );
@@ -50,15 +60,14 @@ describe("probeWindow", () => {
   it("walks S1's real window off the play — long in the run-up, never through the print", () => {
     const probe = probeWindow(S1_NVDA);
 
-    expect(probe.longDays[0]).toBe(20);
-    expect(probe.longDays[probe.longDays.length - 1]).toBe(6);
+    expect(probe.longSessions).toEqual([20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6]);
     expect(probe.holdsThePrint).toBe(false);
   });
 
   it("catches G1's different exit — long right up to the close of print day, still flat for it", () => {
     const probe = probeWindow(G1_GOOG);
 
-    expect(probe.longDays[probe.longDays.length - 1]).toBe(0);
+    expect(probe.longSessions[probe.longSessions.length - 1]).toBe(0);
     expect(probe.holdsThePrint).toBe(false);
   });
 
@@ -76,28 +85,30 @@ describe("probeWindow", () => {
   });
 
   it("finds no window at all for a play that never wants to be long", () => {
-    expect(probeWindow(stub()).longDays).toEqual([]);
+    expect(probeWindow(stub()).longSessions).toEqual([]);
   });
 });
 
 describe("spanOf", () => {
-  it("names a contiguous window by its ends", () => {
-    expect(spanOf(probeWindow(S1_NVDA))).toBe("D-20 to D-6");
+  it("names a contiguous window by its ends, in trading sessions", () => {
+    expect(spanOf(probeWindow(S1_NVDA))).toBe("20 to 6 sessions before the print");
   });
 
-  it("says 'to the close of day D' when the window runs to the release", () => {
-    expect(spanOf(probeWindow(G1_GOOG))).toBe("D-20 to the close of day D");
+  it("says 'to the close of print day' when the window runs to the release", () => {
+    expect(spanOf(probeWindow(G1_GOOG))).toBe(
+      "20 sessions before the print to the close of print day",
+    );
   });
 
-  it("spells a window with a hole in it day by day rather than smoothing it into a lie", () => {
-    // Long only on the 10th, 20th and 30th of the probe month — D-20, D-10 and D-0, with gaps.
+  it("spells a window with a hole in it session by session rather than smoothing it into a lie", () => {
+    // Long only on 09-01, 09-16 and 09-30 — sessions 20, 10 and 0 before the 09-30 probe print
+    // (Labor Day, 09-07, is not a session).
+    const days = new Set(["2026-09-01", "2026-09-16", "2026-09-30"]);
     const holed = probeWindow(
-      stub({
-        desiredState: (asOf) => (asOf.slice(8, 10).endsWith("0") ? "long" : "no-window"),
-      }),
+      stub({ desiredState: (asOf) => (days.has(asOf.slice(0, 10)) ? "long" : "no-window") }),
     );
 
-    expect(spanOf(holed)).toBe("on D-20, D-10, D-0");
+    expect(spanOf(holed)).toBe("on sessions 20, 10, 0 before the print");
   });
 
   it("says so out loud when there is no window", () => {

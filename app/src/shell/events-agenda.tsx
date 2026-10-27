@@ -1,32 +1,24 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import type { CSSProperties, ReactElement } from "react";
 import { type BookEvent, dayLabel, describeTouch } from "../live/book-events";
+import { glyphOf } from "../live/book-lanes";
+import { LaneGlyphIcon } from "./book-lanes";
 
 /**
- * THE AGENDA (#3807 slice 2c): one row per event on the book in the range — the date, the tier as
- * a glyph AND a word (hue never alone, docs/BRAND.md → Accessibility), the title as visible text,
- * the ledger's call when one exists, and the held position it lands on. ONE link per row, and it
- * goes to a PLACE, never a filter: the position's own row on the Overview (`#pos-<symbol>`) —
- * for a market-wide print, the position it is the next event for — or, when it is nobody's next
- * event, that day on R&D (its ledger when the event is researched).
+ * THE AGENDA (#3807 slice 2c): one row per event on the book in the range — the date, the glyph
+ * the lanes picture draws for it (#5074: ⧗ ⬢ ⬡ ○, one shape language above and below) with the
+ * tier in a word (hue never alone, docs/BRAND.md → Accessibility), the title as visible text, the
+ * ledger's call when one exists, and the held position it lands on. ONE link per row, and it goes
+ * to a PLACE, never a filter: the position's own row on the Overview (`#pos-<symbol>`) — for a
+ * market-wide print, the position it is the next event for — or, when it is nobody's next event,
+ * that day on R&D (its ledger when the event is researched).
  */
 
-export const TIER = {
-  decide: { glyph: "▲", word: "decide by" },
-  held: { glyph: "◆", word: "on what you hold" },
-  market: { glyph: "○", word: "market-wide" },
-} as const;
-
-export function TierMark({ tier }: { readonly tier: BookEvent["tier"] }): ReactElement {
-  return (
-    <span className={`book-tier book-tier-${tier}`}>
-      <i className="book-glyph" aria-hidden="true">
-        {TIER[tier].glyph}
-      </i>{" "}
-      {TIER[tier].word}
-    </span>
-  );
-}
+const TIER_WORD: Record<BookEvent["tier"], string> = {
+  decide: "decide by",
+  held: "on what you hold",
+  market: "market-wide",
+};
 
 function RowLink({ event }: { readonly event: BookEvent }): ReactElement {
   const [first, ...more] = event.touches;
@@ -62,12 +54,30 @@ function RowLink({ event }: { readonly event: BookEvent }): ReactElement {
   );
 }
 
-export function AgendaRow({ event }: { readonly event: BookEvent }): ReactElement {
+export function AgendaRow({
+  event,
+  order = 0,
+  why,
+}: {
+  readonly event: BookEvent;
+  /** On Events narrowed to one symbol (#6082): what this date does to what you hold on it. */
+  readonly why?: string | undefined;
+  /** Its place in the list — each row steps in a beat after the one above. */
+  readonly order?: number;
+}): ReactElement {
   return (
-    <li className="agenda-row" data-tier={event.tier}>
+    <li
+      className="agenda-row"
+      data-tier={event.tier}
+      style={{ "--i": Math.min(order, 8) } as CSSProperties}
+    >
       <span className="agenda-when num">{dayLabel(event.date)}</span>
-      <TierMark tier={event.tier} />
+      <span className="agenda-glyph">
+        <LaneGlyphIcon glyph={glyphOf(event)} />
+      </span>
       <span className="agenda-title">{event.title}</span>
+      {why ? <span className="agenda-why">{why}</span> : null}
+      <span className={`book-tier book-tier-${event.tier}`}>{TIER_WORD[event.tier]}</span>
       {event.call ? (
         <span className="agenda-call">
           The call ({event.call.horizon.toLowerCase()}): {event.call.call}

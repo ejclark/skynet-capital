@@ -24,12 +24,13 @@ test.describe("research", () => {
   test("renders the playbooks section", async ({ page }) => {
     await page.goto("/app/research?section=playbooks");
     await expect(page.getByRole("heading", { level: 1, name: "Playbooks" })).toBeVisible();
-    // The account picker — the store's "subscribe as" moved here from the desk (#3625), and from
-    // the rail into the Playbooks section's own head when the rail left the frame (#3807 slice 2a).
-    await expect(page.getByRole("group", { name: "Subscribe as" })).toBeVisible();
+    // The head is the mission line and the list of the plays (#5494 step 1); the "Subscribe as"
+    // picker left it — a bot subscribes from the + on a play (#5442).
     await expect(
-      page.locator("main .pb-subscribe").getByRole("button", { name: "Catalog only" }),
+      page.getByText("Create scenarios, develop strategies, track results."),
     ).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "The playbooks" })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Subscribe as" })).toHaveCount(0);
   });
 
   test("matches the known-good page screenshot", async ({ page }) => {
@@ -39,8 +40,9 @@ test.describe("research", () => {
     // what's shown once it resolves (dayLensFog(plays.data)) — screenshotting before it settles
     // races the render, not a flaky page. captureWholeFrame's networkidle wait covers this.
     await expect(page.getByRole("heading", { level: 1, name: "R&D" })).toBeVisible();
-    // No live-status wait here: /research never opens the board's live channel, so the status
-    // pill stays "connecting…" permanently on this route — that's real, static, current behavior.
+    // No live-status wait here: /research never opens the board's live channel, so the Live stream
+    // row stays "connecting…" on this route — real, static behavior, and folded out of the frame
+    // behind the top bar's status line anyway (its panel opens only on a tap).
     await captureWholeFrame(page, "research-page.png");
   });
 });

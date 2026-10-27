@@ -41,6 +41,9 @@ down and draw more pictures... I want some god damn pictures to hang on the frid
 - Fixture participant **`human-eric`** — `fixtures/offline/participants.json`: display name
   "Eric", kind human, timezone **America/Chicago**, account `sim-eric` / **SIM-HUMAN-ERIC**, cash
   $61,200.00 of $102,300.00 portfolio value, status ACTIVE, **one position: EEM** (shares).
+- Clock: **America/Chicago** · en-US — the fixture's own timezone, in US English. A study world
+  renders the times its page formats on this clock, and so does every member whose file names no
+  clock of their own (`scripts/study/clock.mjs`, #5009).
 - The crawl signs in as `crawl@example.test`, linked to `human-eric` by
   `scripts/crawl/fixtures/owner-links.json` (the same owner-link shape the volume uses).
 - Rungs: whatever the offline fixture's fills earn — the ladder is read from the server, never
@@ -64,6 +67,11 @@ estate."* Then: *"Where my head goes with reach and design.. this can serve mult
 calendar to have a glance at what events are happening in various time frames.. which can help
 influence playbooks to consider, strategies to try, decisions to execute."*
 
+And the plan he wants for a winner (2026-10-18, on NVDA calls): *"I would like to develop a
+strategy to effectively cycle capital out of position. Doing this effectively would've set me up to
+have a lot of capital for the current situation to buy CRWV cash secured PUTs at an extreme low
+ahead of earnings"* — taking profit is not the end of a trade but the funding of the next one.
+
 ## 4. How he decides
 
 - **By outcome, with his eyes.** *"My gut tells me we can get rid of the left navigation on all
@@ -83,15 +91,36 @@ influence playbooks to consider, strategies to try, decisions to execute."*
   data points to make an informed decision; the fork erodes into a clear/linear path."*
 - **Wants freshness stated** (2026-09-25, on guidance): *"a sanity/pulse check against live
   information sources to ensure we're not acting on cached/stale information."*
+- **Attention: easily distracted** (2026-10-14): *"I feel I have A.D.H.D. and am easily distracted
+  thus will tend to prefer simple and elegant design that is free of distraction making it easier
+  to remain focused and on task."* A page that shows only the task's part keeps him on it; one that
+  shows everything invites feedback on what isn't in play (*"it's easy to spend time giving feedback
+  on things out of scope for the task at hand"*).
 - **Reads first:** the picture, the standing, what needs him. **Skips:** a wall of text, a menu of
   coined names (2026-09-25: *"another cute word you keep using that i've told you to stop because
   it's confusing"*), a mechanism he would have to arbitrate.
+- **Reads an option as its mechanics** (#5160, 2026-10-11/12): he sells cash-secured puts and reads
+  them as strike, breakeven, in or out of the money, with the premium as the profit — *"I don't like
+  "wrong if" - right/wrong don't matter. in the money (ITM) is what matters as that's when the
+  reserved cash is used to buy stocks"*; *"Max profit for Cash secured is the premium."*
+- **Reads a trade's history as one transaction, newest first, strategy before reasons** (#5160,
+  2026-10-12/14): *"I like having these transactions associated"*; *"I feel like the latest event
+  (sold) should be listed first"*; *"Which strategy triggered the trade feels like the first
+  information to show, followed up by the why"* — and the why must be substantiated: *"I don't like
+  that the why is "trust me bro"."*
 - _hypothesis — on a phone he reads only what is above the fold of the first screen and acts on at
   most one thing. Proves it wrong: a phone-session reaction after 2026-09-26 that cites something
   two screens down._
 - _hypothesis — a "wait" call satisfies him only when it names the date it reopens; an open-ended
   wait reads as the app having no opinion. Proves it wrong: him accepting an undated "wait" on the
   live route without asking when._
+
+- **Wants the system to decide more of his calls over time** (2026-10-18): *"In theory, If we are
+  fully aligned (ongoing goal that we will never fully reach), you would be equipped to make 100% of
+  decisions/judgement calls on my behalf."* So every question to him carries a predicted answer,
+  scored when he replies (`docs/process/ALIGNMENT.md`). And he dials effort as a count: *"commanding
+  x number of iterations is a normalized way to instruct the degree of effort, account of resources
+  (tokens) to apply towards an experiment, effort, goal."*
 
 ## 5. What frustrates him
 
@@ -110,11 +139,28 @@ is still open is its step's `known_gap` in `e2e/journeys/eric.journey.json`):
 - **8 (fixed)** — a docked Trade had no entry to the Chain, and a greyed control's reason was a
   tooltip he cannot hover on a phone.
 - **Not one of the eight, and the one that matters most to him:** every decision surface is
-  per position. The calendar's head sits in the cockpit (j1 s3). Even so, the split of his
+  per position. The calendar of what he holds is a cockpit section (Events, j1 s3b). Even so, the split of his
   money (`app/src/shell/money-strip.tsx`) has no target to be measured against, a "wait"
   (`src/options/position-guidance-rules.ts`, `CALL_WORDS.WAIT`) has no book-level home and no
-  reopen date, and "Lock in profit" is a decision-card kind (`app/src/shell/decision-pager.tsx`),
+  reopen date, and "Lock in profit" is a decision kind (`lock-in`, `app/src/live/desk.ts`),
   not a rung celebrated beside its explanation.
+
+- **2026-10-08 — his own walk of the profile, in his words.** Kept out of this file until the blind
+  member study (#4943) had been graded, so no member card could carry it; the study then found all
+  twelve of its items without seeing them (`docs/members/study/profile-2026-10/readout.md`).
+  The bugs in it were fixed at once (#4944–#4951); the placement questions come back as shapes.
+
+  > 1. the popover to see the playbook settings/configuration is useful but in a weird spot
+  > 2. the controls for the calendar are disconnected with the content it controls. These controls show up for MOST of the tabs, but not all. These controls don't even drive content on many of these views. Architecture/design smell.
+  >    1. cash ready to use - this information is directly association to the total networth - it lets you know how much of your capital is on the sidelines/idle
+  > 3. content shift between tabs - this is a smell that reflects poor design choices
+  >    1. activity list- the playbook triggering trade execution is important information to capture at the line item level on the list
+  >       1. the information is a wall of text, not friendly for human readability
+  > 4. Needs a decision - the concept and design of the section feels good, but the experience is disjointed because the information is detached from the position. I feel integrating the guidance to be inline with positions could enhance useability to be more intuitive.
+  >    1. The"needs a decision" feedback/guidance to sell after a price drop which feels 1-dimensional/amature/rookie-like. CRWV is a highly volitile stock that just had pullback - guidance to abandon position feels short sighted and prone to lose money. We should be paying more attention tt to the cycle ranges, bolingerband, moving averages, greeks, volume and sentiment to provide this type of guidance.
+  >    2. Horizontal scroll on this section is terrible ux
+  >    3. guidance - clicking on this button navigates to a new page and requires scrolling through a lot of content to find the guidance section - it's  completely disorienting; terrible ux. Guidance should be provided inline with the position.
+  > 5. Trade filters -clicking on these forces the page to scroll to the top, severing/breaking user flow - terrible ux
 
 ## 6. Journeys
 
@@ -123,25 +169,26 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 
 ### j1 — the Monday read
 
-1. `/app/accounts` — the cockpit opens on his account: the switcher, Overview · Activity. **WHEN
-   the owner opens Profile, the app shall open his own account's cockpit on Overview.** Judge: can
-   this reader tell what to do next in ten seconds?
+1. `/app/accounts` — the cockpit opens on his account: the account's name (its menu holds the
+   switcher), Overview · Balance · Ledger · Events. **WHEN the owner opens Profile, the app shall
+   open his own account's cockpit on Overview.** Judge: can this reader tell what to do next in
+   ten seconds?
 2. `/app/accounts` — his standing (Net worth · Eric, the value) and the money strip; the return
    windows read "—" on desktop (the offline fixture keeps no history) and the phone shows the
    value's one line. **WHEN the owner opens the cockpit, the app shall show the book's standing
    and what needs a decision above the fold, even when one feed cannot be read.** Judge: can this
    reader tell what to do next in ten seconds?
-3. `/app/accounts` — the market calendar's head under the section switch (the week's range, the
-   arrows, the lens row) and, under the net-worth card, the events on what he holds: this week
-   nothing dated on EEM, the market-wide print beside it. **WHEN the owner reads the book on a
-   Monday, the app shall show the week's events that touch the tickers held, on the same page.**
-   _Fixed by #3807 slice 2·1 — the head and the held-events line; the grid is phase 3's popover.
-   The check is the calendar's own "Week" lens button, exactly — the blotter's "Expiring within
-   3 weeks" view tab is not a calendar._ Judge: does this reader know what is happening this
+3. `/app/accounts` — no calendar in the head on the Overview (#5074: the range heads Events
+   alone); under the net-worth card one line names the next date on what he holds, or says
+   nothing on EEM is dated, with Events one link away. **WHEN the owner reads the book on a
+   Monday, the app shall name the next date that touches the tickers held on the same page, with
+   the range's events one tap away.** Judge: does this reader know what is happening this
    week to what they hold? He taps **Events** in the section switch.
 
-3b. `/app/accounts?section=events` — one tap from the Overview: the month grid beside the agenda
-   (beneath it on the phone); the held line says nothing is dated on EEM this week, the
+3b. `/app/accounts?section=events` — one tap from the Overview: the range as its head (arrows,
+   the range in words, Week · Month · Quarter each counting the dates on what he holds) over one
+   lane per position and a market-wide lane, the list of dates beside the lanes at desktop and
+   beneath them on the phone; the lanes say nothing on EEM is dated, the
    market-wide prints are listed by day, and each row carries one link — to the EEM row when the
    print is EEM's next event, else to that day on R&D. **WHEN the owner opens Events on his book,
    the app shall list the range's events on what he holds and the market-wide prints by day, each
@@ -157,12 +204,12 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    to execute if my convictions hold"*): the verdict in one line, then the evidence; "← Research"
    goes back to the board. **WHEN the owner opens a study from R&D, the app shall show its verdict
    first and a way back to the board.** Judge: can this reader tell what to do about it, in ten
-   seconds? _(Added 2026-09-29, #3816 slice 9.)_
+   seconds?
 
 ### j2 — take profit or hold
 
-1. `/app/u/human-eric` — the desk's blotter: EEM, Guidance on the row (desktop); the EEM card
-   (phone); he taps it. **WHEN the owner asks whether to take profit on a position, the app shall
+1. `/app/u/human-eric` — the desk's blotter: EEM, its guidance line under the row, whose Guidance
+   opens in place (desktop); the EEM card (phone); he taps it. **WHEN the owner asks whether to take profit on a position, the app shall
    offer that position's guidance from the blotter.** Judge: can this reader tell which position to
    act on? _(The cockpit's own blotter is the intended door.)_
 2. `/app/trade?desk=human-eric&symbol=EEM&section=guidance` — the Guidance pane for EEM. Offline:
@@ -201,19 +248,19 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
 
 ### j5 — the phone check (every step at 390×844, touch)
 
-1. `/app/accounts` — the switcher, sections as a row. **WHEN the owner opens the cockpit on a
+1. `/app/accounts` — the account's name (its menu holds the switcher), sections as a row that
+   fits, More ▾ for the rest. **WHEN the owner opens the cockpit on a
    phone, the app shall show the account and the section switch above the fold.** Judge: can this
    reader tell what to do next in ten seconds?
 2. `/app/trade?…&section=guidance` — the Guidance pane alone, the pane switch across the top.
    **WHEN the guidance renders on a phone, the app shall show the pane alone with the pane switch
    visible.** Judge: can this reader tell whether to act, without scrolling?
-3. `/app/research` — the calendar in the phone strip, the fog notice beside the day lens. **WHEN
-   R&D renders on a phone, the app shall keep the range control and its fog notice visible without
-   hover.** Judge: can this reader change the week from here?
+3. `/app/research` — the calendar's chip naming the range; one tap opens the head and the month
+   grid in a sheet, the fog notice beside the day lens. **WHEN R&D renders on a phone, the app
+   shall keep the range control one tap away and its fog notice visible without hover.** Judge:
+   can this reader change the week from here?
 
 ### j6 — the owner's settings
-
-_(Added 2026-09-29, #3816 slice 9.)_
 
 1. `/app/settings` — Settings opens on Preferences: density and theme (dark · light), applied to
    this browser at once. **WHEN the owner opens Settings, the app shall open on Preferences with
@@ -226,6 +273,10 @@ _(Added 2026-09-29, #3816 slice 9.)_
    invited friend among them), and the field to invite someone — the owner tier's one tool here
    (§2). **WHEN the owner opens the guest list, the app shall show who is invited and a way to
    invite someone.** Judge: can this reader tell who can sign in?
+
+**His market scenarios** (2026-10-18) — CRWV after a pullback, and NVDA long calls held with no
+exit plan — are run as acceptance tests in [`scenarios.md`](scenarios.md) (`tests/scenarios/`), not
+as journeys: they test what the guidance says, which the crawl cannot reach offline.
 
 Journey map: [`maps.md`](maps.md#eric) (generated by the crawl). Findings: [`friction-ledger.md`](friction-ledger.md).
 
@@ -248,7 +299,10 @@ One line each; routed to `docs/IDEAS.md` or a `feedback` issue by the plan's sli
   narrows guidance's entries and "until" lines to that range; a burning day is one that touches a
   ticker held. _(src: Eric · while: j1 s2)_
 - **"Since you last looked" at book level** — the guidance tab's own diff line
-  (`app/src/shell/guidance-view.tsx:173`) for the whole book, first thing on a Monday. _(src: Eric
+  (`app/src/shell/guidance-view.tsx:183`) for the whole book, first thing on a Monday. _(src: Eric
   · while: j1 s1)_
 - **A phone cockpit that is one decision** — above the fold on 390: standing, the one thing that
   needs him, one button. _(src: Eric · while: j5 s1)_
+- **One exit rule book for bots and members** — the long-call playbook's exit (double the cost, or
+  45 days left) offered when a member buys a call, carried on the position until it fires, and the
+  freed cash shown against the puts he named a price for. _(src: Eric · while: scenarios.md 2)_

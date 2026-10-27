@@ -1,0 +1,290 @@
+/* THE DESK TABLE'S RANKED COLUMNS (#5071; round 2 of #5037, Q2 R2): `shell/position-columns.tsx`.
+ * Which columns stand is decided by the TABLE'S OWN WIDTH — a container query on its scroll box
+ * (`.blotter-scroll`, named `blotter` in desk.css) — never the window: beside the tower the stage
+ * is ~806px of a 1280 window, and Moneypenny's rail takes 440px the window's width doesn't know
+ * about. Six columns fit 806 with no sideways scroll; narrower, the lowest-ranked step into the
+ * opened row, wider, the next ones join:
+ *
+ *   width of the box   columns
+ *   < 640              Position · Value · P/L · open           (θ · Δ and Model projects open in the row)
+ *   ≥ 640              + θ · Δ 150
+ *   ≥ 760              + Model projects 140                    (six: 1280 beside the tower)
+ *   ≥ 960              + Next event 150
+ *   ≥ 1100             + Best / worst 130
+ *
+ * Position takes what the fixed widths leave (236 at 806; never under ~190). A figure whose column
+ * is showing hides in the opened row (`.pos-more-*`), so a row never says the same thing twice.
+ *
+ * A column steps aside by going to ZERO WIDTH, never `display: none`: a hidden `<col>` leaves the
+ * table's column model, and the full-width rows under each position (`colSpan` = every column)
+ * then span past the last real column — the browser invents columns for them and shares Position's
+ * room with those (Position fell to ~80px at 1280 in this PR's first build). So the column stays,
+ * 0px wide, its cell unpadded and invisible (out of the accessibility tree too) and its content —
+ * always one `.pos-cell` — not laid out.
+ */
+
+/* Too narrow for any table — an account's page at 1280 with the rail open hands its book ~374px
+ * beside the character card — the book reads as the phone's cards, which were drawn for that
+ * width, rather than a table scrolling inside its box. The window rule (≤700, desk.css) still
+ * decides a phone; this one catches a narrow book on a wide window. */
+.pos-blotter {
+  container: pos-blotter / inline-size;
+}
+@container pos-blotter (max-width: 539px) {
+  .pos-blotter .blotter-card {
+    display: none;
+  }
+  .pos-blotter .pos-cards {
+    display: grid;
+  }
+}
+
+.pos-table col.pos-col-value,
+.pos-table col.pos-col-pl {
+  width: 118px;
+}
+.pos-table col.pos-col-open {
+  width: 44px;
+}
+
+/* The narrowest set first: the four ranked-out columns at zero width; each step adds one back. */
+.pos-table col.pos-col-greeks,
+.pos-table col.pos-col-model,
+.pos-table col.pos-col-event,
+.pos-table col.pos-col-best {
+  width: 0;
+}
+.pos-table th.pos-col-greeks,
+.pos-table td.pos-col-greeks,
+.pos-table th.pos-col-model,
+.pos-table td.pos-col-model,
+.pos-table th.pos-col-event,
+.pos-table td.pos-col-event,
+.pos-table th.pos-col-best,
+.pos-table td.pos-col-best {
+  padding-inline: 0;
+  visibility: hidden;
+}
+.pos-table .pos-col-greeks > .pos-cell,
+.pos-table .pos-col-model > .pos-cell,
+.pos-table .pos-col-event > .pos-cell,
+.pos-table .pos-col-best > .pos-cell {
+  display: none;
+}
+@container blotter (min-width: 640px) {
+  .pos-table col.pos-col-greeks {
+    width: 150px;
+  }
+  .pos-table th.pos-col-greeks,
+  .pos-table td.pos-col-greeks {
+    padding-inline: 12px;
+    visibility: visible;
+  }
+  .pos-table .pos-col-greeks > .pos-cell {
+    display: block;
+  }
+  .pos-open .pos-more-greeks {
+    display: none;
+  }
+}
+@container blotter (min-width: 760px) {
+  .pos-table col.pos-col-model {
+    width: 140px;
+  }
+  .pos-table th.pos-col-model,
+  .pos-table td.pos-col-model {
+    padding-inline: 12px;
+    visibility: visible;
+  }
+  .pos-table .pos-col-model > .pos-cell {
+    display: block;
+  }
+  .pos-open .pos-more-model {
+    display: none;
+  }
+}
+@container blotter (min-width: 960px) {
+  .pos-table col.pos-col-event {
+    width: 150px;
+  }
+  .pos-table th.pos-col-event,
+  .pos-table td.pos-col-event {
+    padding-inline: 12px;
+    visibility: visible;
+  }
+  .pos-table .pos-col-event > .pos-cell {
+    display: block;
+  }
+  .pos-open .pos-more-event {
+    display: none;
+  }
+}
+@container blotter (min-width: 1100px) {
+  .pos-table col.pos-col-best {
+    width: 130px;
+  }
+  .pos-table th.pos-col-best,
+  .pos-table td.pos-col-best {
+    padding-inline: 12px;
+    visibility: visible;
+  }
+  .pos-table .pos-col-best > .pos-cell {
+    display: block;
+  }
+  .pos-open .pos-more-best {
+    display: none;
+  }
+}
+
+/* ---- the header: one word over another, as each cell stacks its two figures (#5076) ---- */
+.pos-table th {
+  vertical-align: bottom;
+}
+.pos-th-word {
+  display: block;
+}
+.pos-th-under {
+  font-size: 10px;
+  font-weight: 500;
+}
+/* θ and Δ stay lower-case Greek, as the cells write them (uppercase would print Θ). */
+.pos-table th.pos-col-greeks {
+  text-transform: none;
+}
+
+/* ---- the cells: the phone card's row spec as two-line pairs ---- */
+.pos-table td {
+  vertical-align: middle;
+}
+.pos-table .pos-card-name,
+.pos-table .pos-card-sub {
+  display: block;
+}
+.pos-table .pos-card-name {
+  font-size: 13px;
+}
+.pos-table .pos-card-sub {
+  margin-top: 2px;
+}
+/* θ over Δ, one per line; the phone's " · " between them is not needed. */
+.pos-table .pos-greek,
+.pos-open-grid .pos-greek {
+  display: block;
+}
+.pos-table .pos-greek-sep,
+.pos-open-grid .pos-greek-sep {
+  display: none;
+}
+.pos-fig {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* The P/L is the boldest figure on the row: it matters more than today's (Eric, #5037). */
+.pos-fig--pl {
+  font-size: 14px;
+  font-weight: 700;
+}
+.pos-fig-under {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+}
+.pos-table td.pos-col-open {
+  padding-left: 4px;
+  padding-right: 10px;
+  text-align: right;
+}
+.pos-table .expand-btn {
+  width: 28px;
+  height: 28px;
+}
+.pos-table .expand-btn svg {
+  transition: transform 0.15s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pos-table .expand-btn svg {
+    transition: none;
+  }
+}
+/* The opened row keeps its own row's ground, under its guidance line. */
+.pos-table tr.row-opened > td {
+  background: color-mix(in srgb, var(--surface-2) 55%, var(--surface));
+}
+
+/* ---- a row, opened (`shell/position-row-open.tsx`) ---- */
+.pos-table tr.row-open > td {
+  background: var(--surface-2);
+  font-size: 12px;
+}
+/* Held to the visible table, like the guidance line (position-guidance.css): if the box is ever
+   narrower than the table's minimum, the opened row still reads without scrolling sideways. */
+.pos-open {
+  position: sticky;
+  left: 12px;
+  width: calc(100cqw - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0;
+}
+.pos-open-plain {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.pos-open-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  padding: 0;
+}
+.pos-open-title {
+  margin: 0 0 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+.pos-buys-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* One buy a line, wrapping rather than ever pushing past the table's edge. */
+.pos-buy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.pos-buy-when {
+  flex: 1 1 150px;
+}
+.pos-buy-size,
+.pos-buy-value,
+.pos-buy-pl {
+  white-space: nowrap;
+}
+.pos-buy-acts,
+.pos-open-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pos-buy-acts {
+  margin-left: auto;
+}
+.pos-buy-close {
+  flex-basis: 100%;
+}
+/* `.btn`'s `width: 100%` (gate.css) would stretch a button over its whole row; the extra
+   specificity, not source order, is what keeps it to its label (the #4945 lesson). */
+.pos-buy-acts .btn,
+.pos-open-acts .btn {
+  width: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

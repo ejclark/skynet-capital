@@ -63,6 +63,8 @@ earned after the policy proves out over reps.
    constraints. Exception: isolate a rep in its own PR when it is
    unusually large or risky enough that independent revert matters more than the savings.
    On a failure report: surface it to the human head coach verbatim; do not retry in-cycle.
+   Once the cycle PR has merged, sweep the athletes' worktrees: `npm run worktree:sweep -- --apply
+   --only <athlete worktree>` for each (docs/DELEGATION.md, rail 2) — the dry run first if unsure.
 6. **RETRO.** One line, at cycle close, never per-athlete: did anything recur across this cycle's
    dispatches, cost more than expected, or surface a pattern worth a new athlete? Log it to
    `docs/IDEAS.md` (`(src: Claude · while: governor cycle <n>)`); nothing to note → say nothing — this
@@ -118,8 +120,9 @@ copy tweak is not the irreversible class.
 Auto-merge adds tempo, not trust: every auto-merged PR still passes typecheck · lint · full tests ·
 integration tests · commitlint (the ratchet scans report, advisory), and post-merge the pipeline
 smoke-tests prod and rolls back on failure.
-Native auto-merge (not an in-CI REST merge) is deliberate: a GITHUB_TOKEN merge would not trigger the
-`push`→`main` deploy job, so the merge must be a first-class GitHub merge.
+Native auto-merge armed with the App's token (a direct squash with that same token when GitHub reports
+the PR already green) is deliberate: a GITHUB_TOKEN merge would not trigger the `push`→`main` deploy
+job, so the merge must be a first-class GitHub merge.
 
 ## Boundaries
 

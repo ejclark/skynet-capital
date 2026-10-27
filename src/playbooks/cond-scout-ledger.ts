@@ -15,10 +15,10 @@
  * Pure and clock-free: every function takes the quote and the time it acts on. Persistence and
  * the live-cycle wiring are slice 2b's; guards run there, on the intent `probeIntent` builds.
  */
+
+import { DAY_MS } from "../domain/time.js";
 import type { OrderIntent, Quote } from "../domain/types.js";
 import { COND_SCOUT_ID, type ConditionHypothesis, type ConditionReading } from "./cond-scout.js";
-
-const DAY_MS = 86_400_000;
 
 /** Shadow capital per probe, in dollars — small and fixed, so one probe's ROI is comparable with
  *  the next and none can dominate the book. */

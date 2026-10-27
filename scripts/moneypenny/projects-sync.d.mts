@@ -45,6 +45,25 @@ export function readIssueItemsFromGh(
   deps?: { gh?: (argv: string[]) => string },
 ): BoardItem[];
 
+/** Every card's id, url and Status in one paginated GraphQL read, ~1 point per 100 cards (#4760). */
+export function readBoardItemsFromGh(deps?: {
+  gh?: (argv: string[]) => string;
+  log?: (line: string) => void;
+  maxPages?: number;
+}): Required<BoardItemPage>;
+
+/** The project's id and fields in one GraphQL call that skips gh's owner lookup (#4933). */
+export function readProjectShapeFromGh(deps?: { gh?: (argv: string[]) => string }): {
+  project: { id: string; number: number };
+  fields: { id: string; name: string; type?: string; options?: { id: string; name: string }[] }[];
+};
+
+/** Add one issue to the board by id — `addProjectV2ItemById`, no gh owner lookup (#5792). */
+export function addIssueToBoardFromGh(
+  target: { projectId: string; issue: SyncIssueRef & { node_id?: string } },
+  deps?: { gh?: (argv: string[]) => string },
+): BoardItem;
+
 export function readIssue(
   issueNumber: string,
   deps?: { read?: (path: string) => unknown; sleep?: (ms: number) => void },

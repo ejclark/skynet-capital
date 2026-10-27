@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import {
   bareCalls,
   bookNeeds,
@@ -84,6 +85,20 @@ describe("coverNeeds — one-to-one cap assignment", () => {
     expect(needs([call(250, 1, NOV), call(240, -1, DEC)]).sharesByUnderlying).toEqual({
       NVDA: 100,
     });
+  });
+
+  it("serves the later-expiring short first, so an earlier one never takes the only long it could use", () => {
+    // Nov short first took the Dec $250 (the cheaper cap) and left the Dec short bare; Dec first
+    // takes the $250, and the Nov $260 caps the Nov short (#4736).
+    const legs = [call(240, -1, NOV), call(240, -1, DEC), call(250, 1, DEC), call(260, 1, NOV)];
+    expect(needs(legs)).toEqual({
+      cash: 3_000,
+      cashByUnderlying: { NVDA: 3_000 },
+      sharesByUnderlying: {},
+    });
+    expect(needs([put(90, -1, NOV), put(90, -1, DEC), put(80, 1, NOV), put(85, 1, DEC)]).cash).toBe(
+      1_500,
+    );
   });
 
   it("splits a two-contract long across two one-contract shorts", () => {
@@ -339,5 +354,34 @@ describe("coverShortfall — the best assignment, against the shares actually fr
       cash: 13 * 8_500,
       exact: false,
     });
+  });
+});
+
+// #4736: the desk and the bots' budgets read `coverNeeds`' greedy pairing; the guards read
+// `coverShortfall`'s exact search. Over any book of mixed expiries, the greedy pairing must leave
+// bare exactly the sold calls the exact search does — and, being one valid assignment, never need
+// less cash than the best one.
+describe("coverNeeds against coverShortfall — random mixed-expiry books", () => {
+  const aLeg = fc.record({
+    type: fc.constantFrom("call" as const, "put" as const),
+    strike: fc.constantFrom(230, 240, 250, 260),
+    expiration: fc.constantFrom("2026-10-30", NOV, DEC),
+    contracts: fc.integer({ min: -3, max: 3 }).filter((n) => n !== 0),
+  });
+  const aBook = fc
+    .array(aLeg, { maxLength: 6 })
+    .map((legs) => legs.map((leg): CoverLeg => ({ ...leg, underlying: "NVDA" })));
+
+  it("leaves bare exactly the calls the exact search does, and never under-reserves cash", () => {
+    fc.assert(
+      fc.property(aBook, (legs) => {
+        const exact = coverShortfall(legs, "NVDA", 0);
+        fc.pre(exact.exact);
+        const greedy = coverNeeds(legs);
+        expect(greedy.sharesByUnderlying.get("NVDA") ?? 0).toBe(exact.shares);
+        expect(greedy.cash).toBeGreaterThanOrEqual(exact.cash);
+      }),
+      { numRuns: 2_000 },
+    );
   });
 });

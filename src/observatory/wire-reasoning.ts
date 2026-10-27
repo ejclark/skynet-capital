@@ -1,10 +1,11 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
+import { brokerWordsFor } from "./broker-words.js";
 import { guardDeltaFor } from "./guard-delta.js";
-import type { EquitySample } from "./history-store.js";
 import { optionContractLine } from "./option-contract-line.js";
 import { optionFillCost, optionFillCostWords } from "./option-fill-cost.js";
-import { type WireTradeVitals, wireTradeVitals } from "./vitals.js";
+import { withoutPlaybookNames } from "./playbook-name-redaction.js";
+import type { WireTradeVitals } from "./vitals.js";
 import type { WireTradeRow } from "./wire-data.js";
 
 /**
@@ -16,13 +17,16 @@ import type { WireTradeRow } from "./wire-data.js";
  * the order id, never the wire row's `participantId`.
  *
  * Deliberately never copies `outcome.result.status` onto the member surface: it is a snapshot from
- * the moment of submit — an order logged `"working"` that Alpaca fills or cancels later stays
- * `"working"` forever in that field (and before #4655 an accepted order read `"filled"` with no
- * price) — copying it would move a stale answer here. Only `reason`,
+ * the moment of submit — an order logged `"working"` stays `"working"` until the bot's settle loop
+ * sees the broker end it and the store reads its settlement in its place (#4650), which a restart
+ * or a dark store can delay (and before #4655 an accepted order read `"filled"` with no price) —
+ * so the broker's own ledger row stays the source of the status here. Only `reason`,
  * `strategy`, `expectation`, and the raw→guarded clamp ("guard-delta") are honest at any time —
- * and an option order's dollar cost, which is read only off a `filled` result: the order flow
- * writes that status once the broker has ended the order (`alpaca-option-result.ts`), so it can
- * never move again.
+ * and an option order's dollar cost, which is read only off a `filled` result: written once the
+ * broker has ended the order (`alpaca-option-result.ts`, or a late settlement), so it can never
+ * move again. What the broker said about the result rides only where the order never traded
+ * (`brokerWordsFor`): that answer is written once the order has ended, and a fill's or a working
+ * order's words would only restate the row's own status.
  */
 
 export interface WireTradeReasoning {
@@ -54,6 +58,13 @@ export interface WireTradeReasoning {
   readonly cost?: string;
   /** What would prove the trade wrong, in the playbook's own words (`OrderForecast.invalidator`). */
   readonly invalidator?: string;
+  /** What would retire the playbook itself (`OrderForecast.retireRule`) — its own falsifier, not
+   *  this order's, so the owner's alone like the playbook it names (#5043). */
+  readonly retireRule?: string;
+  /** What the broker said about an order that never traded, as the decision stored it — "limit
+   *  $2.10 not reached in 15s; canceled", a rejection's cause (`brokerWordsFor`). The owner's alone
+   *  (`withoutOwnerReasoning`). */
+  readonly brokerReason?: string;
 }
 
 export interface WireTradeWithReasoning extends WireTradeRow {
@@ -67,9 +78,37 @@ export interface WireReasoningDeps {
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
-  /** One participant's equity history, keyed by participant id — supplied pre-fetched so this
-   *  function stays synchronous and pure; the route layer owns the I/O. */
-  readonly historyByParticipant?: ReadonlyMap<string, readonly EquitySample[]>;
+  /** One participant's vitals as of any instant, keyed by participant id — built by the route
+   *  layer (`wireTradeVitalsFor` over a history, or `wireTradeVitalsFromDrawdown` over the Pulse
+   *  fold, #4619), so this function stays synchronous and pure and does no I/O. */
+  readonly vitalsByParticipant?: ReadonlyMap<string, (atIso: string) => WireTradeVitals>;
+  /** Whether the viewer owns this account (`desk-owner-gate.ts`'s `ownsDesk`) — a row on any
+   *  other account loses its playbook (#885). Absent, the viewer owns none. */
+  readonly ownsAccount?: (participantId: string) => boolean;
+}
+
+/** A fill's attached decision as a viewer who does not own the account reads it: without its
+ *  `playbookId`/`playbookMode` (#885: "we do not show what playbooks others are using"), without
+ *  the intent's `strategy` tag — a playbook's own slug (`crwv-wheel-put`), so it names the playbook
+ *  by inference (#4971) — without the playbook's retire rule, its own falsifier (#5043), and
+ *  without what the broker said about the order, which can name the account's specifics. The why,
+ *  the persona and the order's own words — its own falsifier among them — all stay. */
+export function withoutOwnerReasoning(
+  reasoning: WireTradeReasoning,
+): Omit<
+  WireTradeReasoning,
+  "playbookId" | "playbookMode" | "strategy" | "brokerReason" | "retireRule"
+> {
+  const {
+    playbookId: _p,
+    playbookMode: _m,
+    strategy: _s,
+    brokerReason: _b,
+    retireRule: _r,
+    ...rest
+  } = reasoning;
+  // The reason's own words name the play as built ("S1-NVDA window open …", #4442).
+  return withoutPlaybookNames(rest, reasoning);
 }
 
 /** The exact-order-id reasoning join, standalone — shared by `attachWireReasoning` (per wire row)
@@ -87,8 +126,11 @@ export function reasoningForOrder(
   const guardDelta = guardDeltaFor(record, intent);
   const contract = optionContractLine(intent);
   // The store hands back the outcome's own intent, so its result is found by identity.
-  const cost = optionFillCost(intent, record.outcomes.find((o) => o.intent === intent)?.result);
+  const result = record.outcomes.find((o) => o.intent === intent)?.result;
+  const cost = optionFillCost(intent, result);
+  const brokerReason = brokerWordsFor(result);
   const invalidator = intent.forecast?.invalidator;
+  const retireRule = intent.forecast?.retireRule;
   // The round's own id is its timestamp, formatted exactly as `decisionCyclesView` formats it —
   // the two must match character for character or the link from a fill lands on no row.
   const cycleAt = Number.isFinite(record.at) ? new Date(record.at).toISOString() : undefined;
@@ -106,12 +148,15 @@ export function reasoningForOrder(
     ...(contract ? { contract } : {}),
     ...(cost ? { cost: optionFillCostWords(cost) } : {}),
     ...(invalidator ? { invalidator } : {}),
+    ...(retireRule ? { retireRule } : {}),
+    ...(brokerReason ? { brokerReason } : {}),
   };
 }
 
 /** Enriches every BOT row with reasoning/vitals when a decision is found; human rows and
  *  unresolved bot rows pass through unchanged (both fields simply absent — an honest omission,
- *  never a placeholder object). */
+ *  never a placeholder object). The Wire lists every account's fills, so a row's playbook, its
+ *  strategy tag and the broker's words ride only to that account's owner (`ownsAccount`). */
 export function attachWireReasoning(
   rows: readonly WireTradeRow[],
   deps: WireReasoningDeps,
@@ -120,11 +165,13 @@ export function attachWireReasoning(
     if (row.kind !== "bot") return row;
     const reasoning = reasoningForOrder(row.orderId, deps);
     if (!reasoning) return row;
-    const samples = deps.historyByParticipant?.get(row.participantId);
+    const vitals = deps.vitalsByParticipant?.get(row.participantId);
     return {
       ...row,
-      reasoning,
-      ...(samples ? { vitals: wireTradeVitals(samples, row.at) } : {}),
+      reasoning: deps.ownsAccount?.(row.participantId)
+        ? reasoning
+        : withoutOwnerReasoning(reasoning),
+      ...(vitals ? { vitals: vitals(row.at) } : {}),
     };
   });
 }

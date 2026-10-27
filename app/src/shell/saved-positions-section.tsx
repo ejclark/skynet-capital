@@ -71,11 +71,11 @@ function AddPositionForm({ onAdded }: { readonly onAdded: () => void }): ReactEl
             id="saved-position-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="My Fidelity calls"
+            placeholder="My Fidelity shares"
           />
         </div>
       </div>
-      <GuidanceStakeForm stake={stake} onChange={setStake} />
+      <GuidanceStakeForm stake={stake} onChange={setStake} storage="account" />
       {error ? (
         <p className="guidance-notice" role="alert">
           {error}
@@ -176,11 +176,13 @@ function ImportFromAccount({ onAdded }: { readonly onAdded: () => void }): React
             disabled={stockSymbols.length === 0}
           >
             <option value="">
-              {desk.isPending && accountId
-                ? "Reading positions…"
-                : stockSymbols.length === 0
-                  ? "No stock positions there"
-                  : "Choose a position…"}
+              {accountId === ""
+                ? "Pick an account first"
+                : desk.isPending
+                  ? "Reading positions…"
+                  : stockSymbols.length === 0
+                    ? "No stock positions there"
+                    : "Choose a position…"}
             </option>
             {stockSymbols.map((s) => (
               <option key={s} value={s}>

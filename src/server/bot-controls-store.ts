@@ -34,6 +34,21 @@ export class BotControlsStore {
     return this.file.load();
   }
 
+  /** The state, or `undefined` when the file is there but did not read whole — for an unattended
+   *  writer, which must never write over a file it could not read (`subscription-seed-store.ts`). */
+  loadIfReadable(): ControlsState | undefined {
+    return this.file.loadIfReadable();
+  }
+
+  /** Replace some bots' entries WITHOUT stamping the audit line: a one-time copy of the bots app's
+   *  own settings (`env-settings-seed.ts`) is not an owner's edit. The change log records it. */
+  seedBots(bots: Readonly<Record<string, BotControls>>): ControlsState {
+    const state = this.load();
+    const next: ControlsState = { ...state, bots: { ...state.bots, ...bots } };
+    this.file.write(next);
+    return next;
+  }
+
   /** Merge a per-bot patch (undefined fields untouched) and stamp the audit line. */
   setBot(botId: string, patch: BotControls, updatedBy: string, at = new Date()): ControlsState {
     const state = this.load();
@@ -45,6 +60,20 @@ export class BotControlsStore {
     };
     this.file.write(next);
     return next;
+  }
+
+  /** Replace one bot's whole entry — the way to CLEAR a field (back to its env fallback), which a
+   *  merge-patch cannot express (#4535 slice 3b). */
+  replaceBot(botId: string, next: BotControls, updatedBy: string, at = new Date()): ControlsState {
+    const state = this.load();
+    const written: ControlsState = {
+      ...state,
+      bots: { ...state.bots, [botId]: next },
+      updatedAt: at.toISOString(),
+      updatedBy,
+    };
+    this.file.write(written);
+    return written;
   }
 
   setAllSuspended(allSuspended: boolean, updatedBy: string, at = new Date()): ControlsState {

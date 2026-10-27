@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { type ControlAction, type Fleet, fetchControls, postControlAction } from "../live/controls";
+import { InlineResult } from "../ui";
 
 /**
  * MISSION CONTROL IN THE SHELL (#738 phase 8c) — the owner's switchboard for the autonomous
@@ -63,7 +64,11 @@ export function MissionControl(): ReactElement | null {
         are independent of this page — the readiness gate, risk guards, circuit breakers and the
         host kill switch all still apply.
       </p>
-      {note ? <p className={note.ok ? "set-ok" : "set-err"}>{note.message}</p> : null}
+      {note ? (
+        <InlineResult tone={note.ok ? "ok" : "err"} live={false}>
+          {note.message}
+        </InlineResult>
+      ) : null}
       {fleet.allSuspended ? (
         <div className="mc-stop">
           <p className="mc-stop-line">

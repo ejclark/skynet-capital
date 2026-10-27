@@ -10,6 +10,21 @@ export const sh = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20, ...opts }).trim();
 
 /**
+ * A REST token for a CLI a live session runs by hand: GH_TOKEN, GITHUB_TOKEN, else the gh login —
+ * the same fallback scripts/ship.sh uses. Sets GH_TOKEN, so `ghRest` and any child process see it.
+ * CI always has a token, so this changes nothing there; a session without one used to get a 401
+ * from `curl --fail` on the first read (#5056: the read-back's commands run in Eric's session).
+ */
+export function ensureGhToken({ run = sh } = {}) {
+  if (process.env.GH_TOKEN || process.env.GITHUB_TOKEN) return;
+  try {
+    process.env.GH_TOKEN = run("gh", ["auth", "token"]);
+  } catch {
+    throw new Error("no GH_TOKEN, GITHUB_TOKEN or `gh auth token` — sign in with `gh auth login`");
+  }
+}
+
+/**
  * Is this `gh`/network failure the kind a second try fixes? GitHub's own 5xx (2026-09-05: one
  * `HTTP 504: Gateway Timeout` from graphql killed a whole Moneypenny route run and dispatched a
  * repair session for it), a reset or a timeout — never a 4xx, which a retry only repeats.
@@ -19,9 +34,14 @@ export const sh = (cmd, args, opts = {}) =>
  * reporting this issue.` — GitHub's server-side fault, one red among ~40 green runs of the same
  * job that evening — and got exactly one attempt because nothing here said "5xx". Matched on
  * GitHub's fixed wording, which no 4xx or validation error uses.
+ *
+ * #5354: `ghRest` is curl, and curl says a 5xx in its own words — `curl: (22) The requested URL
+ * returned error: 500`. projects.mjs learned that for its one read (#4182, `CURL_SERVER_ERROR`),
+ * but every other `withRetry(() => ghRest…)` still got one attempt, and a `route` tick died on a
+ * single 500 from the relay's closed-issue read (run 38496303201, 2026-10-14). Only 5xx, as there.
  */
 const TRANSIENT_GH_ERROR =
-  /HTTP 5\d\d|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Something went wrong while executing your query/i;
+  /HTTP 5\d\d|returned error: 5\d\d\b|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Something went wrong while executing your query/i;
 
 export const isTransientGhError = (text) => TRANSIENT_GH_ERROR.test(String(text ?? ""));
 
@@ -79,24 +99,58 @@ export function withRetry(
  * `JSON.parse` turns into an object with none of the fields the caller wanted — a silent empty
  * result, which is the exact failure `gatherDeps` is written to be loud about. Same lesson as
  * `ensureLabel` (docs/LESSONS.md, 2026-08-19).
+ *
+ * `--fail-with-body`, NOT BARE `--fail` (#6224). Bare `--fail` throws the response body away, so a
+ * 403 reached the log as `returned error: 403` and nothing else — rate limit or bad credential,
+ * nobody could tell, and `boardSyncSkip`'s rate-limit soft skip (#4438) never saw its phrase. Run
+ * 40421267754: two `sync project status` runs a second apart both died that way on one issue read.
+ * The exit status is the same 22; only the body survives, and `withResponseBody` puts it where
+ * every classifier reads. `run` is injected so that path is provable without a network call.
  */
-export function ghRest(path, { token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN } = {}) {
+export function ghRest(
+  path,
+  { token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN, run = sh } = {},
+) {
   const repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
   const url = path.startsWith("http")
     ? path
     : `https://api.github.com/repos/${repo}/${path.replace(/^\//, "")}`;
-  const out = sh("curl", [
-    "-sS",
-    "--fail",
-    "-H",
-    `Authorization: Bearer ${token ?? ""}`,
-    "-H",
-    "Accept: application/vnd.github+json",
-    "-H",
-    "User-Agent: skynet-moneypenny",
-    url,
-  ]);
+  let out;
+  try {
+    out = run("curl", [
+      "-sS",
+      "--fail-with-body",
+      "-H",
+      `Authorization: Bearer ${token ?? ""}`,
+      "-H",
+      "Accept: application/vnd.github+json",
+      "-H",
+      "User-Agent: skynet-moneypenny",
+      url,
+    ]);
+  } catch (err) {
+    throw withResponseBody(err);
+  }
   return JSON.parse(out || "null");
+}
+
+/**
+ * Append GitHub's own reason — the error body's `message`, else the raw body — to a failed curl's
+ * `message`, which `withRetry`, `boardSyncSkip` and every explainer already read. One line, capped,
+ * so a stray HTML error page cannot flood a log. Leaves `stderr`/`status` untouched: the
+ * `returned error: 5xx` wording the retry keys on is still exactly where it was.
+ */
+export function withResponseBody(err) {
+  const body = String(err?.stdout ?? "").trim();
+  if (!err || typeof err !== "object" || !body) return err;
+  let said = body;
+  try {
+    said = JSON.parse(body)?.message ?? body;
+  } catch {
+    // not JSON — keep the raw text
+  }
+  err.message = `${err.message}\nGitHub said: ${String(said).replace(/\s+/g, " ").slice(0, 300)}`;
+  return err;
 }
 
 /**
@@ -190,12 +244,22 @@ export function ghRateLimit({ readRest = ghRest, readGraphql = ghGraphqlBudget, 
  * LOUD ON THE CEILING, never a silent stop. Running out of pages mid-list is the same class of bug
  * as the one this fixes, so `maxPages` throws rather than returning what it happened to collect —
  * `gatherDeps`'s fail-closed doctrine, applied to pagination.
+ *
+ * EVERY PAGE GETS `withRetry` (#5918). Fail-closed made one 5xx on ANY page fatal to the whole
+ * list, and the retry lived caller by caller: #5354 wrapped the relay's read, projects-reconcile
+ * wrapped its own, and the ~20 others got one attempt — until `route --audit` died on a single
+ * `returned error: 500` from page 2 of the open-issue read (run 39441832513, 2026-10-20). Retrying
+ * here, per page, covers every caller at once and never re-fetches the pages already in hand.
  */
-export function ghRestAll(path, { perPage = 100, maxPages = 20, ...opts } = {}) {
+export function ghRestAll(
+  path,
+  { perPage = 100, maxPages = 20, read = ghRest, sleep = sleepSync, ...opts } = {},
+) {
   const sep = path.includes("?") ? "&" : "?";
   const all = [];
   for (let page = 1; page <= maxPages; page++) {
-    const batch = ghRest(`${path}${sep}per_page=${perPage}&page=${page}`, opts);
+    const url = `${path}${sep}per_page=${perPage}&page=${page}`;
+    const batch = withRetry(() => read(url, opts), { sleep });
     if (!Array.isArray(batch)) throw new Error(`ghRestAll: ${path} did not return a list.`);
     all.push(...batch);
     if (batch.length < perPage) return all;

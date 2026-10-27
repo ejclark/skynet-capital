@@ -1,3 +1,4 @@
+import type { JsonlTail } from "../storage/jsonl-store.js";
 import type { ActivityView } from "./participant-snapshot.js";
 
 /**
@@ -19,6 +20,10 @@ export interface TradeActivityRecord extends ActivityView {
   readonly participantId: string;
   readonly side: "buy" | "sell";
   readonly source: ActivitySource;
+  /** Set on a multi-leg (`mleg`) spread's leg lines: the parent order the broker took as one. The
+   *  hub folds no spread fill until the next broker sync, so the capital-flow watch reads this to
+   *  leave a window with a spread in it alone (#4563). */
+  readonly parentOrderId?: string;
 }
 
 /** Where trade activity is kept. Interface-first (like `HistoryStore`) so tests stay I/O-free. */
@@ -31,4 +36,9 @@ export interface ActivityStore {
    *  corroboration signal (e.g. "did this bot trade recently"); use `list` + `collapseActivity`
    *  when the caller needs an order's true latest fill state. */
   latest(participantId: string): Promise<TradeActivityRecord | undefined>;
+  /** Every participant file's lines appended since `from` (by file path), in file order — the
+   *  append-aware read `wire-feed-cache.ts` folds (#4458). Optional: without it a reader re-lists. */
+  sinceAll?(
+    from: ReadonlyMap<string, number>,
+  ): Promise<ReadonlyMap<string, JsonlTail<TradeActivityRecord>>>;
 }

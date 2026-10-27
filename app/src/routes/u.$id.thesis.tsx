@@ -2,8 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { fetchDesk } from "../live/desk";
-import { AccountPage } from "../shell/account-head";
-import { PageFrame } from "../shell/frame";
 import { ThesisDrawer } from "../shell/thesis-drawer";
 
 /** THE THESIS DRAWER (#3186 slice 4a) — a section of the any-account page (#3807 slice 2d), under
@@ -12,22 +10,14 @@ function ThesisPage(): ReactElement {
   const { id } = Route.useParams();
   const desk = useQuery({ queryKey: ["desk", id], queryFn: () => fetchDesk(id) });
 
-  if (desk.isPending)
-    return (
-      <PageFrame>
-        <p className="note">Reading the account…</p>
-      </PageFrame>
-    );
-  if (desk.isError)
-    return (
-      <PageFrame>
-        <p className="note">This account is unreachable.</p>
-      </PageFrame>
-    );
+  // The frame and head are the layout's (`u.$id.tsx`, #4951), which renders this section only
+  // once the shared desk read has data, so these guards narrow the type and never show.
+  if (desk.isPending) return <p className="note">Reading the account…</p>;
+  if (desk.isError) return <p className="note">This account is unreachable.</p>;
 
   const d = desk.data.desk;
   return (
-    <AccountPage desk={d}>
+    <>
       <header className="page-header">
         <h2>Thesis</h2>
         <p>The standing call, the track record, and an honest health read.</p>
@@ -37,7 +27,7 @@ function ThesisPage(): ReactElement {
       ) : (
         <ThesisDrawer id={d.id} activity="page" />
       )}
-    </AccountPage>
+    </>
   );
 }
 

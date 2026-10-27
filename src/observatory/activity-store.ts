@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
-import { JsonlKeyedStore } from "../storage/jsonl-store.js";
+import { JsonlKeyedStore, type JsonlTail } from "../storage/jsonl-store.js";
 import type { ActivitySource, ActivityStore, TradeActivityRecord } from "./activity-record.js";
 import { InMemoryActivityStore } from "./in-memory-activity-store.js";
 import type { ActivityView } from "./participant-snapshot.js";
@@ -51,6 +51,12 @@ export class JsonlActivityStore implements ActivityStore {
 
   latest(participantId: string): Promise<TradeActivityRecord | undefined> {
     return this.store.latest(participantId);
+  }
+
+  sinceAll(
+    from: ReadonlyMap<string, number>,
+  ): Promise<ReadonlyMap<string, JsonlTail<TradeActivityRecord>>> {
+    return this.store.sinceAll(from);
   }
 }
 

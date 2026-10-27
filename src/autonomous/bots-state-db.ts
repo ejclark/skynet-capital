@@ -2,8 +2,10 @@ import { DatabaseSync } from "node:sqlite";
 import type { SentimentTracker } from "../news/sentiment-tracker.js";
 import type { ShadowClose, ShadowProbe, ShadowSnapshot } from "../playbooks/cond-scout-ledger.js";
 import type { ProbeRetro } from "../playbooks/cond-scout-retro.js";
+import { type AuthoredShadowStore, reviveRun } from "./authored-shadow-runner.js";
 import type { CondScoutStore } from "./cond-scout-runner.js";
 import type { MomentumTracker } from "./momentum-tracker.js";
+import { parseOwned, type ScoutLot } from "./scout-lots.js";
 
 /**
  * Durable current-state storage for the bots process, on the dedicated volume
@@ -26,12 +28,19 @@ export interface BotsStateDb {
   /** Every symbol's persisted sentiment-window scores, keyed by symbol. */
   loadSentiment(): Record<string, number[]>;
   saveSentiment(symbol: string, scores: readonly number[]): void;
+  /** The news articles the sentiment windows already counted, oldest first (#4781). */
+  loadSeenNews(): string[];
+  saveSeenNews(keys: readonly string[]): void;
   /** One persona's persisted per-symbol cooldown clocks. */
   loadCooldowns(personaId: string): Map<string, number>;
   saveCooldown(personaId: string, symbol: string, at: number): void;
   /** The beta scout's day-state (`live-cycle.ts`), or undefined before its first save. */
   loadScoutState(): ScoutState | undefined;
   saveScoutState(state: ScoutState): void;
+  /** The last Playbook Store subscriptions snapshot the bots applied, as stored JSON (unvalidated:
+   *  `subscriptions-cache.ts` parses it), or undefined before the first save. */
+  loadSubscriptions(): unknown;
+  saveSubscriptions(snapshot: unknown): void;
   /** COND-SCOUT's shadow ledger (#3651): the probes still open, oldest first. */
   loadShadowProbes(): ShadowProbe[];
   saveShadowProbe(probe: ShadowProbe): void;
@@ -45,6 +54,10 @@ export interface BotsStateDb {
   saveShadowRetro(retro: ProbeRetro): void;
   /** The newest retros first. */
   listShadowRetros(limit: number): ProbeRetro[];
+  /** The shadow tests of members' draft playbooks (#5457 slice 2), one ledger per play, as stored JSON. */
+  loadAuthoredShadow(): unknown[];
+  saveAuthoredShadow(playId: string, run: unknown): void;
+  deleteAuthoredShadow(playId: string): void;
   close(): void;
 }
 
@@ -59,8 +72,12 @@ export interface ScoutState {
   readonly day: string;
   readonly ranToday: boolean;
   readonly firedOrganicallyToday: boolean;
-  /** Symbols the scout opened and still owns — exited at the next day rollover. */
-  readonly ownedSymbols: readonly string[];
+  /** The scout's own lots — a placed buy and its shares — each sold on the first session after its
+   *  own (`scout-lots.ts`). */
+  readonly ownedLots: readonly ScoutLot[];
+  /** Read only: bare symbols a state saved before lots carried a quantity still names. Never sold
+   *  by the scout; the runner says so once and drops them. */
+  readonly legacySymbols?: readonly string[];
 }
 
 export function openBotsStateDb(path: string): BotsStateDb {
@@ -68,6 +85,10 @@ export function openBotsStateDb(path: string): BotsStateDb {
   db.exec(`
     CREATE TABLE IF NOT EXISTS momentum (symbol TEXT PRIMARY KEY, prices_json TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sentiment (symbol TEXT PRIMARY KEY, scores_json TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS news_seen (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      keys_json TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS cooldowns (
       persona_id TEXT NOT NULL,
       symbol TEXT NOT NULL,
@@ -94,12 +115,23 @@ export function openBotsStateDb(path: string): BotsStateDb {
       snapshot_json TEXT NOT NULL,
       PRIMARY KEY (probe_id, at)
     );
+    CREATE TABLE IF NOT EXISTS subscriptions_cache (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      snapshot_json TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS cond_scout_retros (
       probe_id TEXT PRIMARY KEY,
       closed_at INTEGER NOT NULL,
       retro_json TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS authored_shadow (
+      play_id TEXT PRIMARY KEY,
+      run_json TEXT NOT NULL
+    );
   `);
+  const upsertSubscriptions = db.prepare(
+    "INSERT INTO subscriptions_cache (id, snapshot_json) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET snapshot_json = excluded.snapshot_json",
+  );
   const upsertScoutState = db.prepare(
     "INSERT INTO scout_state (id, day, ran_today, fired_organically_today, owned_json) VALUES (1, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET day = excluded.day, ran_today = excluded.ran_today, fired_organically_today = excluded.fired_organically_today, owned_json = excluded.owned_json",
   );
@@ -109,6 +141,9 @@ export function openBotsStateDb(path: string): BotsStateDb {
   );
   const upsertSentiment = db.prepare(
     "INSERT INTO sentiment (symbol, scores_json) VALUES (?, ?) ON CONFLICT(symbol) DO UPDATE SET scores_json = excluded.scores_json",
+  );
+  const upsertSeenNews = db.prepare(
+    "INSERT INTO news_seen (id, keys_json) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET keys_json = excluded.keys_json",
   );
   const upsertCooldown = db.prepare(
     "INSERT INTO cooldowns (persona_id, symbol, at) VALUES (?, ?, ?) ON CONFLICT(persona_id, symbol) DO UPDATE SET at = excluded.at",
@@ -122,6 +157,9 @@ export function openBotsStateDb(path: string): BotsStateDb {
   );
   const upsertRetro = db.prepare(
     "INSERT INTO cond_scout_retros (probe_id, closed_at, retro_json) VALUES (?, ?, ?) ON CONFLICT(probe_id) DO UPDATE SET retro_json = excluded.retro_json",
+  );
+  const upsertAuthoredShadow = db.prepare(
+    "INSERT INTO authored_shadow (play_id, run_json) VALUES (?, ?) ON CONFLICT(play_id) DO UPDATE SET run_json = excluded.run_json",
   );
   const closeProbe = db.prepare(
     "UPDATE cond_scout_probes SET closed_at = ?, close_json = ? WHERE id = ?",
@@ -172,6 +210,23 @@ export function openBotsStateDb(path: string): BotsStateDb {
           .all(limit) as { retro_json: string }[]
       ).map((row) => JSON.parse(row.retro_json));
     },
+    loadAuthoredShadow(): unknown[] {
+      return (
+        db.prepare("SELECT run_json FROM authored_shadow").all() as { run_json: string }[]
+      ).flatMap((row) => {
+        try {
+          return [JSON.parse(row.run_json)];
+        } catch {
+          return []; // a torn row is a test that starts over, never a failed boot
+        }
+      });
+    },
+    saveAuthoredShadow(playId, run) {
+      upsertAuthoredShadow.run(playId, JSON.stringify(run));
+    },
+    deleteAuthoredShadow(playId) {
+      db.prepare("DELETE FROM authored_shadow WHERE play_id = ?").run(playId);
+    },
     loadMomentum(): Record<string, number[]> {
       const out: Record<string, number[]> = {};
       for (const row of db.prepare("SELECT symbol, prices_json FROM momentum").all() as {
@@ -198,6 +253,15 @@ export function openBotsStateDb(path: string): BotsStateDb {
     saveSentiment(symbol, scores) {
       upsertSentiment.run(symbol, JSON.stringify(scores));
     },
+    loadSeenNews(): string[] {
+      const row = db.prepare("SELECT keys_json FROM news_seen WHERE id = 1").get() as
+        | { keys_json: string }
+        | undefined;
+      return row ? JSON.parse(row.keys_json) : [];
+    },
+    saveSeenNews(keys) {
+      upsertSeenNews.run(JSON.stringify(keys));
+    },
     loadCooldowns(personaId): Map<string, number> {
       const out = new Map<string, number>();
       for (const row of db
@@ -219,19 +283,30 @@ export function openBotsStateDb(path: string): BotsStateDb {
         | { day: string; ran_today: number; fired_organically_today: number; owned_json: string }
         | undefined;
       if (!row) return undefined;
+      const { lots, legacySymbols } = parseOwned(JSON.parse(row.owned_json));
       return {
         day: row.day,
         ranToday: row.ran_today === 1,
         firedOrganicallyToday: row.fired_organically_today === 1,
-        ownedSymbols: JSON.parse(row.owned_json),
+        ownedLots: lots,
+        ...(legacySymbols.length > 0 ? { legacySymbols } : {}),
       };
+    },
+    loadSubscriptions(): unknown {
+      const row = db.prepare("SELECT snapshot_json FROM subscriptions_cache WHERE id = 1").get() as
+        | { snapshot_json: string }
+        | undefined;
+      return row ? JSON.parse(row.snapshot_json) : undefined;
+    },
+    saveSubscriptions(snapshot) {
+      upsertSubscriptions.run(JSON.stringify(snapshot));
     },
     saveScoutState(state) {
       upsertScoutState.run(
         state.day,
         state.ranToday ? 1 : 0,
         state.firedOrganicallyToday ? 1 : 0,
-        JSON.stringify(state.ownedSymbols),
+        JSON.stringify(state.ownedLots),
       );
     },
     close() {
@@ -261,6 +336,16 @@ export function condScoutStore(db: BotsStateDb | undefined): CondScoutStore | un
     snapshotsFor: (probeId) => db.listShadowSnapshots(probeId),
     saveRetro: (retro) => db.saveShadowRetro(retro),
     recentRetros: (limit) => db.listShadowRetros(limit),
+  };
+}
+
+/** The shadow runner's store (#5457 slice 2), bound to a DB — undefined when durability is dark. */
+export function authoredShadowStore(db: BotsStateDb | undefined): AuthoredShadowStore | undefined {
+  if (!db) return undefined;
+  return {
+    loadAll: () => db.loadAuthoredShadow().flatMap((raw) => reviveRun(raw) ?? []),
+    save: (run) => db.saveAuthoredShadow(run.id, run),
+    remove: (id) => db.deleteAuthoredShadow(id),
   };
 }
 
@@ -306,7 +391,7 @@ export function restoreBotsState(
   const momentum = db.loadMomentum();
   const sentimentScores = db.loadSentiment();
   tracker.restore(momentum);
-  sentiment.restore(sentimentScores);
+  sentiment.restore(sentimentScores, db.loadSeenNews());
   return {
     momentumSymbols: nonEmpty(momentum),
     sentimentSymbols: nonEmpty(sentimentScores),
@@ -319,6 +404,7 @@ export function persistSentiment(db: BotsStateDb | undefined, sentiment: Sentime
   for (const [symbol, scores] of Object.entries(sentiment.snapshot())) {
     db.saveSentiment(symbol, scores);
   }
+  db.saveSeenNews(sentiment.seenArticles());
 }
 
 // Momentum persists on a fixed interval, not per-tick — price ticks arrive far more often than a

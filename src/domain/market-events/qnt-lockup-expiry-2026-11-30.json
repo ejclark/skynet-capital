@@ -1,0 +1,11 @@
+{
+  "id": "qnt-lockup-expiry-2026-11-30",
+  "kind": "lockup-expiry",
+  "title": "QNT IPO lockup ends — Quantinuum, 180 days after its 2026-06-03 prospectus",
+  "date": "2026-11-30",
+  "status": "confirmed",
+  "source": "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/2110105/000162828026041003/quantinuum-424b4.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-06-03 (read from its cover); 180 days after it is 2026-11-30. Lock-up clause: \"Our directors and executive officers, and holders of 1% or more of our issued and outstanding shares of capital stock or other securities convertible into or exchangeable for shares of our capital stock outstanding upon consummation of this offering, entered into lock-up agreements with the underwriters prior to the…\"",
+  "impact": "medium",
+  "symbols": ["QNT"],
+  "notes": "$1.7B offering. Insiders may sell from the next session; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then."
+}

@@ -6,7 +6,7 @@ import type { ResearchEvent } from "./research";
  * EVENTS ON THE TICKET'S SYMBOL (#3807 slice 3b-2): the market calendar's line on Trade, joined to
  * the ONE name the ticket is on rather than to a book. The same corpus the Profile page's Events
  * section reads (`/api/research/calendar` — every dated event, earnings prints included; `book-events.ts`),
- * in the same two tiers the net-worth card's line draws (`held-events.ts`):
+ * in two tiers, as the Events section words them:
  *
  *   on <SYM>     an event naming the symbol — its earnings print, a launch, a court date
  *   market-wide  the headline macro prints every position feels — the Fed decision, CPI, the jobs
@@ -24,6 +24,8 @@ export interface SymbolEvent {
   readonly noun: string;
   /** `YYYY-MM-DD`. */
   readonly date: string;
+  /** True when the date is a cadence estimate, not a confirmed day (#5510) — the line draws ⬡. */
+  readonly estimated?: boolean;
 }
 
 export interface SymbolEvents {
@@ -59,7 +61,12 @@ export function symbolEventsIn(
   for (const event of events) {
     if (!inRange(event.date, range)) continue;
     if (symbol !== "" && event.symbols.includes(symbol)) {
-      on.push({ id: event.id, noun: stockNoun(event), date: event.date });
+      on.push({
+        id: event.id,
+        noun: stockNoun(event),
+        date: event.date,
+        ...(event.estimated ? { estimated: true } : {}),
+      });
     } else if (isHeadlineMacro(event)) {
       const noun = MACRO_NOUN.find(([prefix]) => event.id.startsWith(prefix))?.[1] ?? event.title;
       market.push({ id: event.id, noun, date: event.date });

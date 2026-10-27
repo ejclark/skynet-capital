@@ -1,0 +1,11 @@
+{
+  "id": "csqr-lockup-expiry-2027-01-11",
+  "kind": "lockup-expiry",
+  "title": "CSQR IPO lockup ends — Csquare, 180 days after its 2026-07-15 prospectus",
+  "date": "2027-01-11",
+  "status": "confirmed",
+  "source": "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/2105398/000110465926084293/tm264837-15_424b4.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-07-15 (read from its cover); 180 days after it is 2027-01-11. Lock-up clause: \"See \" Executive Compensation— ​ Executive Compensation Tables—Outstanding Equity Awards .\" Lock-up Agreements We, Brookfield and all of our directors and executive officers, who collectively hold substantially all of our issued and outstanding common stock, have agreed not to sell any common stock or securities conv…\"",
+  "impact": "medium",
+  "symbols": ["CSQR"],
+  "notes": "$1.1B offering. Insiders may sell from the next session; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then."
+}

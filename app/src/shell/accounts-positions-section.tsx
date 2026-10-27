@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { DeskSnapshot } from "../live/desk";
+import { KindChip } from "../ui";
 import { NewTradeCard, PositionsBlotter } from "./positions-blotter";
 import { useLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
@@ -14,37 +15,41 @@ import { PositionsTable } from "./positions-table";
  * moved up into the Overview's portrait frame (#3725), so it is not repeated under the blotter.
  */
 
+/** A row's way to its full page and back (#5070 slice 6, `use-position-page.ts`). */
+export interface FullPageLinks {
+  readonly openRow?: string | undefined;
+  readonly onFullPage?: (symbol: string) => void;
+}
+
 function SingleAccountPositions({
   desk,
   query,
   onFilterChange,
+  fullPage,
 }: {
   readonly desk: DeskSnapshot;
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  readonly fullPage?: FullPageLinks | undefined;
 }): ReactElement {
   const { desk: d } = desk;
   const [lens, setLens] = useLens();
-  return (
-    <>
-      {d.error ? (
-        <p className="note-stop">Account unreachable — positions can't be read right now.</p>
-      ) : (
-        <>
-          <PositionsBlotter
-            deskId={d.id}
-            positions={d.positions}
-            query={query}
-            onFilterChange={onFilterChange}
-            lens={lens}
-            onLensChange={setLens}
-            {...(d.allocation ? { allocation: d.allocation } : {})}
-            decisions={d.decisions ?? []}
-          />
-          <NewTradeCard deskId={d.id} />
-        </>
-      )}
-    </>
+  return d.error ? (
+    <p className="note-stop">Account unreachable — positions can't be read right now.</p>
+  ) : (
+    <PositionsBlotter
+      deskId={d.id}
+      positions={d.positions}
+      query={query}
+      onFilterChange={onFilterChange}
+      lens={lens}
+      onLensChange={setLens}
+      {...(d.allocation ? { allocation: d.allocation } : {})}
+      decisions={d.decisions ?? []}
+      {...fullPage}
+    >
+      <NewTradeCard deskId={d.id} />
+    </PositionsBlotter>
   );
 }
 
@@ -53,25 +58,31 @@ export function AccountsPositionsSection({
   desks,
   query,
   onFilterChange,
+  fullPage,
 }: {
   readonly desks: readonly DeskSnapshot[];
   readonly query: string;
   readonly onFilterChange: (next: string) => void;
+  readonly fullPage?: FullPageLinks;
 }): ReactElement {
   if (desks.length === 1) {
     const only = desks[0];
     if (!only) return <p className="note">No account selected.</p>;
-    return <SingleAccountPositions desk={only} query={query} onFilterChange={onFilterChange} />;
+    return (
+      <SingleAccountPositions
+        desk={only}
+        query={query}
+        onFilterChange={onFilterChange}
+        fullPage={fullPage}
+      />
+    );
   }
   return (
     <>
       {desks.map((d) => (
         <section key={d.desk.id} className="accounts-group">
           <h2 className="accounts-group-head">
-            {d.desk.name}{" "}
-            <span className={`chip chip-${d.desk.kind}`}>
-              {d.desk.kind === "bot" ? "BOT" : "HUMAN"}
-            </span>
+            {d.desk.name} <KindChip kind={d.desk.kind} />
           </h2>
           <PositionsTable
             positions={d.desk.positions}

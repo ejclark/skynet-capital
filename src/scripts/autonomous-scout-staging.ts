@@ -1,7 +1,9 @@
 /**
  * After-close scout staging for `run-autonomous.ts` (Eric, 2026-09-04: "configuration that
  * nudges sauron to put in an after hours trade that is staged to be executed when the market
- * opens"). Armed by `SKYNET_BETA_FORCING=<n>+stage` (see `parseBetaForcing`); dark otherwise.
+ * opens"). Armed by the host bot owner's after-close staging switch on its Settings card, read at
+ * every pass (#4535 slice 4b), else by `SKYNET_BETA_FORCING=<n>+stage` (see `parseBetaForcing`);
+ * dark otherwise — and dark whenever the forced-pick count is 0.
  *
  * Mechanics, all borrowed rather than invented:
  *  - "When is the next session?" is Alpaca's `next_open` from `/v2/clock` — holiday-aware by
@@ -18,6 +20,8 @@
  * again next poll, the same "empty scan does not spend the day" rule the in-hours scout has.
  */
 import type { MarketContext } from "../domain/types.js";
+import type { EnabledPlaybook } from "../playbooks/playbook.js";
+import { managedSymbols } from "../playbooks/with-playbooks.js";
 import type { MarketClock } from "./autonomous-market-clock.js";
 
 export const SCOUT_STAGING_POLL_MS = 5 * 60_000;
@@ -27,6 +31,8 @@ export interface ScoutStagingDeps {
   readonly runner: { stageScout(context: MarketContext, sessionDay: string): Promise<number> };
   /** The same context the in-hours cycle would evaluate — momentum + sentiment overlay, now. */
   readonly context: () => MarketContext;
+  /** Read at every pass, so the owner's switch applies from the next close with no restart. */
+  readonly enabled: () => boolean;
   readonly log?: (line: string) => void;
   readonly warn?: (line: string, error: unknown) => void;
 }
@@ -39,9 +45,10 @@ export function sessionDayOf(nextOpen: string | undefined): string | undefined {
   return day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : undefined;
 }
 
-/** One staging attempt: no-op while the market is open or the clock has no `next_open` yet. */
+/** One staging attempt: no-op while the market is open, staging is off, or the clock has no
+ *  `next_open` yet. */
 export async function stageOnce(deps: ScoutStagingDeps): Promise<number> {
-  if (deps.clock.isOpen()) return 0;
+  if (deps.clock.isOpen() || !deps.enabled()) return 0;
   const nextOpen = deps.clock.nextOpen();
   const sessionDay = sessionDayOf(nextOpen);
   if (!(nextOpen && sessionDay)) return 0;
@@ -76,7 +83,8 @@ export function armScoutStaging(
 
 /** The boot announcement for the scout — armed loudly (with the staging mode when on), a set
  *  knob with no account to run on warned, dark silently. Lives here, not in run-autonomous.ts,
- *  to keep that file under its line cap. */
+ *  to keep that file under its line cap. Armed is half of it since #4642 slice 10: the line says
+ *  the other half, the BETA-SCOUT subscription, so the log never reads as "it will trade". */
 export function announceScout(
   betaForcing: { readonly maxPicks: number; readonly stageAfterClose: boolean },
   accountName: string | undefined,
@@ -84,12 +92,74 @@ export function announceScout(
 ): void {
   if (betaForcing.maxPicks <= 0) return;
   if (!accountName) {
-    log.warn("[beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.");
+    log.warn("[beta-scout] forced picks set but no bot account available — staying dark.");
     return;
   }
   log.log(
-    `[beta-scout] armed: up to ${betaForcing.maxPicks} forced pick(s)/day when nothing organic fires, on ${accountName}'s account${betaForcing.stageAfterClose ? "; after the close, picks stage for Alpaca's next open" : ""}.`,
+    `[beta-scout] armed: up to ${betaForcing.maxPicks} forced pick(s)/day when nothing organic fires, on ${accountName}'s account while it is subscribed to BETA-SCOUT${betaForcing.stageAfterClose ? "; after the close, picks stage for Alpaca's next open" : ""}.`,
   );
+}
+
+/**
+ * The poll-time half of the owner's live forced-pick count (#4535 slice 2b): call the returned
+ * function after every `/controls` poll. The scout itself reads the count at each scan, so this only
+ * has to refresh what the count also shows — the host's roster, where the scout rides along for the
+ * roll call only while it is armed — and say so in the log. Quiet while the count holds still; a
+ * failed `apply` is not recorded as seen, so the next poll tries again.
+ */
+export function watchScoutPicks(
+  read: () => number,
+  apply: () => void,
+  log: (line: string) => void = console.log,
+): () => void {
+  let seen = read();
+  return () => {
+    const now = read();
+    if (now === seen) return;
+    apply();
+    log(
+      `[beta-scout] forced picks per day ${seen} → ${now} (the owner's setting; applied with no restart)`,
+    );
+    seen = now;
+  };
+}
+
+/**
+ * The poll-time log of the owner's after-close staging switch (#4535 slice 4b): call the returned
+ * function after every `/controls` poll. The staging pass reads the switch itself, so this only says
+ * so in the log — in the boot line's own words, so a read of the logs at the next close can tell
+ * which way the bots took it. Quiet while it holds still.
+ */
+export function watchScoutStaging(
+  read: () => boolean,
+  log: (line: string) => void = console.log,
+): () => void {
+  let seen = read();
+  return () => {
+    const now = read();
+    if (now === seen) return;
+    seen = now;
+    log(
+      now
+        ? "[beta-scout] armed: after the close, picks stage for Alpaca's next open (the owner's setting; applied with no restart)"
+        : "[beta-scout] after-close staging off — picks wait for market hours (the owner's setting; applied with no restart)",
+    );
+  };
+}
+
+/** The names the beta scout leaves to a bot's playbooks: `managedSymbols`, the very set
+ *  `withPlaybooks` takes from the bot's persona. A bot subscribed to its OWN rules (Sauron to
+ *  SAURON) therefore keeps the scout on the same names as before it subscribed — those orders are
+ *  still his reflexes — while every other playbook's symbols stay skipped. No roster, no skips. */
+export function scoutSkipSymbols(
+  roster:
+    | {
+        readonly bot: { readonly persona: { readonly id: string } };
+        readonly enabled: readonly EnabledPlaybook[];
+      }
+    | undefined,
+): Set<string> {
+  return roster ? managedSymbols(roster.bot.persona.id, roster.enabled) : new Set();
 }
 
 /** The playbook roster's boot lines — refused tokens loudly, the armed set once. Moved here from
@@ -105,7 +175,9 @@ export function announceRoster(
   log: { log(line: string): void; error(line: string): void } = console,
 ): void {
   for (const bad of roster.rejected) {
-    log.error(`[playbooks] REFUSED unknown/malformed token "${bad}" in SKYNET_PLAYBOOKS`);
+    log.error(
+      `[playbooks] REFUSED token "${bad}" in SKYNET_PLAYBOOKS — unknown, malformed or repeated`,
+    );
   }
   if (roster.enabled.length > 0) {
     log.log(

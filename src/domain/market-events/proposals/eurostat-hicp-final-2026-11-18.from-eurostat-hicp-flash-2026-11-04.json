@@ -1,0 +1,11 @@
+{
+  "id": "eurostat-hicp-final-2026-11-18",
+  "kind": "macro-print",
+  "title": "Eurostat euro-area HICP, complete October 2026 data — the component detail behind the 11-04 flash",
+  "date": "2026-11-18",
+  "status": "estimate",
+  "source": "EST: ECB statistical release calendar (ecb.europa.eu/press/calendars/statscal/ges/html/sthicp.en.html, fetched direct 2026-10-20) lists '18/11/2026 12:00 — Complete release — Oct-2026'; Eurostat's own page for the September complete release (2-16102026-ap) names only the 4 November flash, so this date rests on the ECB calendar alone, whose 16/10 row for September was met exactly. Filed estimate per this lane's no-self-confirm limit and the missing confirmed-prefix slot for a non-US statistical agency. Checked 2026-10-20",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during eurostat-hicp-flash-2026-11-04's initial-research adjacency sweep (2026-10-20); D+14 from that flash and 29 days out, inside the horizon (allImpactsWithinDays 30). It is a receipt on the 11-04 flash like its siblings eurostat-hicp-final-2026-09-17 and eurostat-hicp-final-2026-10-16: it confirms or revises the flash's headline/services/core, lands the day FOMC minutes (10-27/28 meeting) and the NVDA print fall (11-18), and is the last full euro inflation datum before the 12-17 ECB decision. Impact LOW and symbols empty, deliberately: no house playbook is rates-keyed. It widens caution and licenses nothing."
+}

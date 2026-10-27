@@ -32,7 +32,7 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
       "ℹ️  In-app feedback is off (no SKYNET_FEEDBACK_GITHUB_TOKEN) — the /feedback form renders but submissions won't file issues.",
     );
   }
-  const feedbackCoach = resolveFeedbackCoach(env);
+  const feedbackCoach = resolveFeedbackCoach(env, (line) => console.log(line));
   if (!feedbackCoach) {
     console.warn(
       "ℹ️  The feedback coach is off (no ANTHROPIC_API_KEY) — the plain /feedback form still works.",
@@ -42,8 +42,9 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
   const feedbackLog = createFeedbackLogStore(env);
   // Live status for those filings — GitHub itself, never a local store.
   const feedbackStatus = resolveFeedbackStatus(env);
-  // A member adding more to a filing they already own, and the re-trigger that comes with it.
-  const feedbackFollowup = resolveFeedbackFollowup(env);
+  // A member adding more to a filing they already own, and the build restart that comes with it
+  // when it is in Ready — a filing left without `ready` by a failed restart is logged here.
+  const feedbackFollowup = resolveFeedbackFollowup(env, (line) => console.warn(line));
   // The community milestone track — own store, own derivation; never the trade ladder's.
   const communityProgression = createCommunityProgressionService({
     readFeedback: (id) => feedbackLog.list(id),

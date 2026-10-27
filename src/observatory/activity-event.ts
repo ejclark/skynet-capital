@@ -3,6 +3,7 @@ import type { FeedbackLogEntry } from "../server/feedback-log.js";
 import type { FeedbackStatus } from "../server/feedback-status.js";
 import type { LadderProgressEntry, LadderProgressEvidence } from "../server/ladder-progress-log.js";
 import type { OrderAuditRecord } from "../server/order-audit-log.js";
+import type { JsonlTail } from "../storage/jsonl-store.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 
 /**
@@ -19,18 +20,18 @@ export type ActivityVisibility = "public" | "owner-only" | "admin-only";
 /** Did the action this event describes succeed? A ledger line about a *state* (a fill landed, an
  *  order reached a status) is always `"success"` — the record itself is the successful observation;
  *  a failed attempt would be a different event entirely (e.g. `order.rejected`), not this one. */
-export type ActivityOutcome = "success" | "failure" | "error";
+type ActivityOutcome = "success" | "failure" | "error";
 
 /** Who acted. `kind`/`email` are omitted rather than guessed when the source record doesn't carry
  *  them — a capsule names what it doesn't know instead of inventing it. */
-export interface ActivityActor {
+interface ActivityActor {
   readonly participantId: string;
   readonly kind?: "human" | "bot" | "system";
   readonly email?: string;
 }
 
 /** What the action was about. */
-export interface ActivityTarget {
+interface ActivityTarget {
   readonly kind: string;
   readonly id: string;
 }
@@ -71,6 +72,11 @@ export interface ActivityEventBus {
   publish(event: ActivityEvent): Promise<void>;
   /** All events (order not guaranteed); one participant's when given. */
   list(participantId?: string): Promise<ActivityEvent[]>;
+  /** Every participant file's events appended since `from` (by file path), in file order — the
+   *  append-aware read `wire-feed-cache.ts` folds (#4458). Optional: without it a reader re-lists. */
+  sinceAll?(
+    from: ReadonlyMap<string, number>,
+  ): Promise<ReadonlyMap<string, JsonlTail<ActivityEvent>>>;
   /** Live fan-out only — call `list()` first for anything already published. */
   subscribe(listener: PublishedListener): ActivitySubscription;
 }
@@ -85,6 +91,13 @@ export function forVisibility(
   const allowed = new Set(tiers);
   return (event) => allowed.has(event.visibility);
 }
+
+/** The public tier only — the one privacy rule every cross-member feed decoder applies
+ *  (`trade-`, `feedback-`, `development-` and `milestone-event-feed.ts`), and the same
+ *  `forVisibility` gate `desk-events-route.ts` applies to an owner's own stream. Belt and braces
+ *  beside each decoder's event-type check: an owner-only line never reaches a shared surface. One
+ *  definition, so the boundary changes in one place. */
+export const PUBLIC_ONLY = forVisibility(["public"]);
 
 /**
  * `order.filled` when the line reflects a completed fill, `order.updated` for every other lifecycle

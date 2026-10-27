@@ -299,6 +299,7 @@ from ordinary sessions on both gap and range, and what 2026-10-06 actually carri
 | 2026-09-22 | D-14 | **Pulse. No kill switch fired; date, funding and playbook checks all reconfirm the D-31 stance, and the corridor more than doubled as the calendar filled in around it.** Census `calendar-listview.html` re-fetched direct today (own fetch, independent of any sibling ledger): the row reads "October 6, 2026 \| 8:30 AM \| August 2026 data" unchanged against the full 2026 grid, no `Suspended` marker. `docs/plans/trade-playbooks.md` re-checked: still S1/S2/E1/S3/S4/G1, all earnings-cycle-keyed — no macro-keyed playbook exists, so kill switch 5 (deadline 2026-10-01, 9 days out) has not fired and has 9 days left to before it resolves permanently. Government funding remains resolved-averted (PL 119-103 through 2026-12-11, cross-checked against `advance-economic-indicators-2026-09-30`'s own 09-22 pulse), so no publication risk on this edition; the exposed edition stays 2026-12-08. **Volatility:** VIX **14.53** (09-04 baseline) → **14.87** (2026-09-21 close, sourced from the sibling ledger's same-week fetch) — +0.34, well under the 3-point regime-move screen. **Macro:** FOMC delivered its priced hawkish hike 09-16/17 with no channel into the trade line (per the sibling's Leg 2: GDP + personal-income vintages carry PCE, not net exports); no CPI or jobs print since 09-05 has touched this series; GDPNow Q3 last read **5.080%** (09-17 vintage) with net exports **−1.3783pp**, flat off the 09-16 reading — not yet this report's vintage. **Adjacency sweep — peers:** n/a, `symbols: []`. **Corridor 14 → 33** ids within 5 days of 10-06 as the calendar filled in since 09-05 (additions include `boj-tankan-2026-10-01`, `boj-summary-of-opinions-2026-10-01`, `construction-spending-2026-10-01`, `eurostat-hicp-flash-2026-10-01`, `pmms-2026-10-01`, `sp-global-manufacturing-pmi-2026-10-01`, `sp-global-pmi-commodity-price-supply-2026-10-01`, `uk-electricity-vat-zero-rate-2026-10-01`, `boe-dmp-2026-10-02`, `google-adtech-final-judgment-2026-10-02`, `m3-full-report-2026-10-02`, `opec-plus-meeting-2026-10-04`, `sp-global-services-pmi-2026-10-05`, `amzn-prime-big-deal-days-2026-10-06`, `eia-steo-2026-10-06`, `jgb-10y-auction-2026-10-06`, `consumer-credit-2026-10-07`, `jgb-30y-auction-2026-10-08`, `wholesale-trade-2026-10-08`) — three are confirmed high-impact strong adjacents (`ism-manufacturing-2026-10-01`, `jobs-2026-10-02`, `ism-services-2026-10-05`), none macro-keyed, none change the read. **No new dated event proposed** — the sweep surfaced nothing not already canonical. **Event tape:** no August-reference consensus exists yet at D-14. The three registered forward tests (`-1` revision <$1.0B, `-2` net-exports move <0.10pp, `-3` capital goods largest end-use mover) remain open, score-by 2026-10-06. | **No stance change — stand aside holds.** All five kill switches remain unfired; switch 5's window (macro-keyed playbook by 2026-10-01) is the only one close to closing, and closing it shut would only remove a hypothetical, not change the read. | 2026-09-29 (low, 0+ band: every 7d) |
 | 2026-09-29 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 16.1 (+1.2pt since last), band unchanged (low:0+), 35 adjacent event(s) tracked, new in corridor since last pulse: `sudan-sanctions-regime-expiry-2026-10-09` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-06 |
 | 2026-10-06 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 15.5 (-0.6pt since last), band unchanged (low:0+), 35 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-13 |
+| 2026-10-07 | D+1 | **Close-out.** Report published 08:30 ET 2026-10-06 as scheduled (CB 26-160 / BEA 26-44): August deficit **$105.6B**, +$12.7B from July's revised $92.8B. **FT-1 pass** (July capital goods revised +$10M), **FT-2 pass** (GDPNow net exports −0.0857pp, solo vintage), **FT-3 kill** (industrial supplies +$9,130M beat capital goods +$6,152M). No stance kill switch fired; regime switch is 1 of 2 misses, 11-04 decides. Detail in `## Outcome`. | — (close-out; stance held) | — |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -316,3 +317,60 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-06
 <!-- probe-ref: {"symbols":{},"vix":15.52,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-10-07, day after the print).** Macro-print mode runs no `earnings-cycle` /
+`intraday-edges` instrument (`symbols: []` by design), so the cache-bust target is empty and every
+figure below is read from files fetched direct this session, never from memory. Primaries: the
+**FT-900 itself** ("U.S. International Trade in Goods and Services, August 2026", CB 26-160 / BEA
+26-44, "FOR RELEASE AT 8:30 AM EDT, TUESDAY, OCTOBER 6, 2026", `ft900.pdf`), its **Exhibit 8**
+(`ft900xlsx.zip`), and the Atlanta Fed's `GDPTrackingModelDataAndForecasts.xlsx`. The tape (SPY/QQQ
+session class) was **not** re-measured: Yahoo answered 429 and Stooq a JavaScript challenge from this
+runner (recorded in the probe-ref `blocked` array) — no test registered one, by design. For the same
+reason the probe-ref's VIX (15.52) and adjacent-id list are **carried from the 10-06 screen, not
+re-measured today**.
+
+**What printed — a wider deficit led by industrial supplies, not by AI hardware.**
+
+| Measure | Aug | Jul (revised) | Change |
+|---|---|---|---|
+| Goods & services deficit | **$105.6B** | $92.8B | +$12.7B (+13.7%) |
+| Exports / Imports | $315.2B / **$420.8B** | — | +$4.5B / **+$17.2B** |
+| Capital goods ex-auto (Census basis) | **$146,427M** | $140,274M (pub. $140,264M) | **+$6,152M** |
+| Industrial supplies & materials | $62,665M | $53,535M | **+$9,130M** (crude +$3,324M, gold +$3,104M) |
+
+**Forward tests — three scored, none open.**
+
+| Test | Registered | Result | Verdict |
+|---|---|---|---|
+| `FT-intl-trade-full-report-2026-10-06-1` | July capital goods revised by <$1.0B | **+$10M** | **pass** — the 71st vintage; never $1B in 71 |
+| `FT-intl-trade-full-report-2026-10-06-2` | GDPNow net exports moves <0.10pp on the solo 10-06 vintage | **−0.0857pp** (−2.5995 → −2.6852) | **pass** — and the advance report had moved it −1.2303pp on 09-30 |
+| `FT-intl-trade-full-report-2026-10-06-3` | Capital goods is the largest-\|change\| major import end-use line | industrial supplies **+9,130** > capital goods **+6,152** | **kill** — single observation |
+
+**Stance vs outcome.** The stance held on every leg that could be measured. Leg 2 (the inherited switch
+cannot fire) is now 71/71. Leg 3 (the advance report carries the trade information; the full report is a
+rounding correction) holds: GDPNow's trade line moved 7% as much on 10-06 as on 09-30, and total GDPNow
+3.781% → 3.684%. Leg 6 (AI-hardware attribution as a **2026 regime**) took its first miss: capital goods
+still rose, but computers (−$440M) and accessories (−$1,597M) fell and semiconductors added +$2,388M, so
+the July trio netted **+$351M — 5.7% of the move against 102% in July**; the rise came from other
+industrial machinery (+$1,316M), civilian aircraft (+$885M), telecom (+$658M) and medical equipment
+(+$507M). One miss is what the stance's own two-print switch allows; the **11-04** report (September data)
+is the second leg and belongs to [`intl-trade-full-report-2026-11-04`](intl-trade-full-report-2026-11-04.md).
+
+**Kill switches.** (1) July capital goods revised ≥$1.0B — **not fired** (+$10M). (2) GDPNow net exports
+≥0.30pp on the solo vintage — **not fired** (0.0857pp). (3) Capital goods not the largest mover in **both**
+10-06 and 11-04 — **1 of 2** (10-06 missed). (4) Census moves or suspends the slot — **not fired**, the
+release landed on schedule. (5) A macro-keyed playbook before 2026-10-01 — **not fired**
+(`docs/plans/trade-playbooks.md` is still S1/S2/E1/S3/S4/G1, all earnings-cycle-keyed; last touched #4536).
+
+**Notes for the next owner.** (a) The FT-900's own next-release box now reads "Wednesday, November 4,
+2026" — a Census/BEA primary for the sibling 11-04 entry; this lane may not flip another event's file,
+so the 11-04 owner can cite it. (b) The Atlanta Fed moved the GDPNow workbook again, to
+`/-/media/Project/Atlanta/FRBA/Documents/research-and-data/data/gdpnow/` — the `cqer/researchcq/...`
+paths now serve a 404 page under HTTP 200. (c) `ContribArchives` stops at 2026-07-28 (it only refreshes
+after a quarter closes); the live quarter reads from `Contributions` / `ChangeInContributions`. (d) Beyond
+the horizon: nothing new proposed — the 11-04 and 12-08 editions are already on the calendar.
+
+**Last assessed:** 2026-10-07
+<!-- probe-ref: {"symbols":{},"vix":15.52,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","apple-eu-dma-terms-2026-10-01","boe-dmp-2026-10-02","boj-summary-of-opinions-2026-10-01","boj-tankan-2026-10-01","construction-spending-2026-10-01","consumer-credit-2026-10-07","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pmms-2026-10-01","sp-global-manufacturing-pmi-2026-10-01","sp-global-pmi-commodity-price-supply-2026-10-01","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-10y20y-2026-10-01","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","treasury-coupon-announcement-2026-10-01","uk-electricity-vat-zero-rate-2026-10-01","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0,"blocked":[{"url":"https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX","status":429,"at":"2026-10-07"},{"url":"https://stooq.com/q/d/l/?s=^vix&i=d","status":200,"at":"2026-10-07"}]} -->

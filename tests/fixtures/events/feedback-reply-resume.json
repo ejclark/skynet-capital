@@ -1,0 +1,17 @@
+{
+  "payload": {
+    "action": "created",
+    "issue": {
+      "number": 4299,
+      "state": "open",
+      "labels": [{ "name": "feedback" }, { "name": "ready" }, { "name": "needs-info" }],
+      "body": "| **Surface** | the observatory leaderboard |\n\nA member's ask the lane stopped to question."
+    },
+    "comment": {
+      "id": 5875226690,
+      "created_at": "2026-10-05T02:00:00Z",
+      "author_association": "MEMBER",
+      "body": "the weekly one — sorry, I meant the leaderboard on the observatory page, not the bot card."
+    }
+  }
+}

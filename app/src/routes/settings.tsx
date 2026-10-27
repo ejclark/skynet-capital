@@ -14,13 +14,21 @@ import {
 } from "../live/settings";
 import { AccountSwitcher } from "../shell/account-switcher";
 import { AccountOwnershipLine, GuestListCard, UnclaimedAccountsCard } from "../shell/admin-cards";
+import { BotSettingsPanel } from "../shell/bot-settings";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
+import { GithubTokenCard } from "../shell/github-token-card";
 import { MissionControl, MissionControlLink } from "../shell/mission-control";
 import { PreferencesCard } from "../shell/preferences-card";
 import { ProfileRail } from "../shell/profile-rail";
 import { resolveSection } from "../shell/sections";
-import { SETTINGS_SECTIONS, type SettingsSection, SettingsToc } from "../shell/settings-toc";
+import {
+  OWNER_SECTIONS,
+  SETTINGS_SECTIONS,
+  type SettingsSection,
+  SettingsToc,
+} from "../shell/settings-toc";
+import { InlineResult, KindChip } from "../ui";
 
 /**
  * SETTINGS (#738 phase 5c) — the catalog's Settings patterns on the member's own accounts:
@@ -37,9 +45,9 @@ function ResultLine({
 }): ReactElement | null {
   if (!result) return null;
   return result.ok ? (
-    <p className="set-ok">Saved — {result.displayName} is up to date.</p>
+    <InlineResult tone="ok">Saved — {result.displayName} is up to date.</InlineResult>
   ) : (
-    <p className="set-err">{result.error}</p>
+    <InlineResult tone="err">{result.error}</InlineResult>
   );
 }
 
@@ -96,7 +104,8 @@ function ProfileForm({
           <p className="set-hint">A bot's name is its identity — renaming is remove + re-add.</p>
         ) : (
           <p className="set-hint">
-            Your name is how your sign-in finds this account — it must keep matching your session.
+            Shown on the board. Your sign-in finds this account by email, so renaming never unlinks
+            it. A name another account already uses is refused.
           </p>
         )}
       </div>
@@ -203,9 +212,9 @@ function RotateSection({ account }: { readonly account: OwnedAccount }): ReactEl
             {busy ? "Verifying against Alpaca…" : "Verify & replace key"}
           </button>
           {result?.ok ? (
-            <p className="set-ok">
+            <InlineResult tone="ok">
               Key replaced — {result.displayName} streams on the new credential.
-            </p>
+            </InlineResult>
           ) : (
             <ResultLine result={result} />
           )}
@@ -283,9 +292,7 @@ function AccountCard({
     <section className="set-card">
       <h2 className="set-card-h">
         {account.name}
-        <span className={`chip chip-${account.kind}`}>
-          {account.kind === "bot" ? "BOT" : "HUMAN"}
-        </span>
+        <KindChip kind={account.kind} />
       </h2>
       <AccountOwnershipLine accountId={account.id} onChanged={onChanged} />
       {account.hostConfigured ? (
@@ -296,12 +303,14 @@ function AccountCard({
             one self-service fix, below.
           </p>
           <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
+          <BotSettingsPanel account={account} onChanged={onChanged} />
           <RotateSection account={account} />
         </>
       ) : (
         <>
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
           <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
+          <BotSettingsPanel account={account} onChanged={onChanged} />
           {account.kind === "bot" ? <MissionControlLink /> : null}
           <RotateSection account={account} />
           <DangerZone account={account} onRemoved={onChanged} />
@@ -339,10 +348,11 @@ function SettingsPage(): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const guestList = useQuery({ queryKey: ["admin-invite"], queryFn: fetchGuestList });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["settings"] });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  // The section lives in the URL (#1740), so a link can land on the card it is talking about.
+  // The section lives in the URL (#1740), so a link can land on the card it is talking about — and
+  // the account too (#5072): the Profile head's "<name>'s settings" opens on that account's card.
+  const { section: asked, account: askedAccount } = Route.useSearch();
+  const [selectedId, setSelectedId] = useState<string | null>(askedAccount ?? null);
   const navigate = Route.useNavigate();
-  const asked = Route.useSearch().section;
   const setSection = (next: SettingsSection) =>
     void navigate({ search: next === "preferences" ? {} : { section: next }, replace: true });
 
@@ -363,10 +373,10 @@ function SettingsPage(): ReactElement {
   const first = accounts[0];
   const selected = accounts.find((a) => a.id === selectedId) ?? first;
   const isOwner = guestList.data?.owner === true;
-  // Resolved against what this viewer can actually see: `?section=guests` on a non-owner falls
-  // back to the first section rather than stranding them on an empty stage.
+  // Resolved against what this viewer can actually see: an owner section (`?section=guests`) on a
+  // non-owner falls back to the first section rather than stranding them on an empty stage.
   const section = resolveSection(
-    SETTINGS_SECTIONS.filter((s) => s.id !== "guests" || isOwner),
+    SETTINGS_SECTIONS.filter((s) => isOwner || !OWNER_SECTIONS.has(s.id)),
     asked,
   );
   return (
@@ -375,7 +385,7 @@ function SettingsPage(): ReactElement {
         <>
           <ProfileRail current="settings" />
           <hr />
-          <SettingsToc current={section} showGuests={isOwner} onSelect={setSection} />
+          <SettingsToc current={section} isOwner={isOwner} onSelect={setSection} />
         </>
       }
     >
@@ -429,6 +439,7 @@ function SettingsPage(): ReactElement {
         )
       ) : null}
       {section === "guests" ? <GuestListCard /> : null}
+      {section === "github" ? <GithubTokenCard /> : null}
     </SettingsFrame>
   );
 }
@@ -437,6 +448,12 @@ export const Route = createFileRoute("/settings")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(typeof search.section === "string" && SETTINGS_SECTIONS.some((s) => s.id === search.section)
       ? { section: search.section as SettingsSection }
+      : {}),
+    // Which account's card opens first; an id the session does not own falls back to the first.
+    ...(typeof search.account === "string" &&
+    search.account.length > 0 &&
+    search.account.length <= 100
+      ? { account: search.account }
       : {}),
   }),
   component: SettingsPage,

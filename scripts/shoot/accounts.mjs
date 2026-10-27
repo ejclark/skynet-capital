@@ -1,13 +1,26 @@
 // Visual harness for /app/accounts (#2321) — the Cockpit: sticky net-worth header + horizontal
 // section switch + scrollable section detail. PHONE FIRST (docs/PICTURES.md → "Trading surfaces
 // shoot the phone frame first"): the 390px frame proves the curation, the desktop frame proves it
-// expanded. JPEG ≤100KB. The `accounts-head-*` frames (#3807 slice 2·1) are the market calendar's
-// head in the cockpit head with the events on what the book holds; the run also prints the stuck
-// chrome at 390, the number the head's placement is judged by. The `events-*` frames (slice 2c)
-// are the Events section: a book with a held event, and one with nothing dated on it.
+// expanded. JPEG ≤100KB. The `accounts-head-*` frames (#3807 slice 2·1) are the cockpit head —
+// no calendar in it since #5074 — with the next date on what the book holds under the net-worth
+// card; the run also prints the stuck chrome at 390. The `events-*` frames (slice 2c, #5074) are
+// the Events section, its range as its head over the lanes: a book with a held event, one with
+// nothing dated on it, and (#5045) an empty default week naming the next event on the book, then
+// the range that one tap lands on. `events-calendar.mjs` shoots the round-2 study's book.
 // Usage: npm run build --prefix app && npm run shoot:accounts [outdir]
 
 import { join } from "node:path";
+import { ericActivity, sauronActivity } from "./accounts-activity-fixture.mjs";
+import { ericDesk } from "./accounts-eric-desk-fixture.mjs";
+import {
+  sauronAllPasses,
+  sauronNoTrades,
+  sauronProbes,
+  sauronRollCall,
+  sauronVerdict,
+} from "./accounts-heartbeat-fixture.mjs";
+import { ericEquityCurve, ericPulse, sauronPulse, spyBars } from "./accounts-pulse-fixture.mjs";
+import { sauronDesk } from "./accounts-sauron-desk-fixture.mjs";
 import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
 
@@ -42,17 +55,17 @@ const win = (label, value, tone, note, partial = false, vs = undefined) => ({
 });
 
 const ericStats = {
-  value: "$1,047,832.14",
+  value: "$1,047,832",
   valueKnown: true,
-  dayChange: "+$2,418.67",
+  dayChange: "+$2,419 · +0.23%",
   dayTone: "pos",
   dayKnown: true,
-  cash: "$847,200.00",
+  cash: "$847,200",
   cashKnown: true,
-  bookedPl: "+$12,480.00",
+  bookedPl: "+$12,480",
   bookedTone: "pos",
   bookedKnown: true,
-  onPaper: "+$47,832.14",
+  onPaper: "+$47,832",
   onPaperTone: "pos",
   onPaperKnown: true,
   positionCount: 6,
@@ -68,18 +81,18 @@ const ericStats = {
 };
 
 const sauronStats = {
-  value: "$512,406.88",
+  value: "$512,407",
   valueKnown: true,
-  dayChange: "-$1,102.33",
+  dayChange: "-$1,102 · -0.21%",
   dayTone: "neg",
   dayKnown: true,
-  cash: "$201,400.00",
+  cash: "$201,400",
   cashKnown: true,
   positionCount: 3,
   bookedPl: "—",
   bookedTone: "flat",
   bookedKnown: false,
-  onPaper: "+$22,106.00",
+  onPaper: "+$22,106",
   onPaperTone: "pos",
   onPaperKnown: true,
   windows: [
@@ -91,18 +104,18 @@ const sauronStats = {
 };
 
 const totalStats = {
-  value: "$1,560,239.02",
+  value: "$1,560,239",
   valueKnown: true,
-  dayChange: "+$1,316.34",
+  dayChange: "+$1,316 · +0.08%",
   dayTone: "pos",
   dayKnown: true,
-  cash: "$1,048,600.00",
+  cash: "$1,048,600",
   cashKnown: true,
   positionCount: 9,
   bookedPl: "—",
   bookedTone: "flat",
   bookedKnown: false,
-  onPaper: "+$22,106.00",
+  onPaper: "+$22,106",
   onPaperTone: "pos",
   onPaperKnown: true,
   windows: [
@@ -122,6 +135,7 @@ const networth = {
       kind: "human",
       ...ericStats,
       idle: "81% idle",
+      invested: "$200,632",
       idlePct: 80.9,
     },
     {
@@ -130,10 +144,11 @@ const networth = {
       kind: "bot",
       ...sauronStats,
       idle: "39% idle",
+      invested: "$311,007",
       idlePct: 39.3,
     },
   ],
-  total: { ...totalStats, idle: "67% idle", idlePct: 67.2 },
+  total: { ...totalStats, idle: "67% idle", idlePct: 67.2, invested: "$511,639" },
 };
 
 // The same book at a new all-time high (#3689 slice 10): the ceremony's frame swaps this in.
@@ -142,7 +157,7 @@ const networthAtHigh = {
   accounts: [
     {
       ...networth.accounts[0],
-      value: "$1,051,200.00",
+      value: "$1,051,200",
       allTimeHigh: { value: "$1,051,200", at: "9/23", aboveNow: 0 },
       toNewHigh: undefined,
     },
@@ -150,699 +165,6 @@ const networthAtHigh = {
   ],
 };
 let atHigh = false;
-
-// Desk snapshots — the Positions section's blotter. Real tickers, honest P/L tones.
-const pos = (
-  symbol,
-  display,
-  detail,
-  isOption,
-  quantity,
-  costPerShare,
-  price,
-  costBasis,
-  value,
-  dayPl,
-  dayPct,
-  dayTone,
-  totalPl,
-  totalPlRaw,
-  returnPct,
-  totalTone,
-  weightPct,
-  lots,
-) => ({
-  symbol,
-  display,
-  detail,
-  isOption,
-  quantity,
-  costPerShare,
-  price,
-  costBasis,
-  value,
-  dayPl,
-  dayPct,
-  dayTone,
-  totalPl,
-  totalPlRaw,
-  returnPct,
-  totalTone,
-  weightPct,
-  ...(lots ? { lots } : {}),
-});
-
-// Considerations rail (#3186 slice 3) — one at-risk chip (a losing options lot) and one
-// opportunity chip (a house play matching a held symbol), so the screenshot proves both kinds.
-// Needs a decision (#3689 slice 7), as decisions-view.ts writes them: most money at stake first.
-const ericDecisions = [
-  {
-    id: "at-risk-NVDA260918C00180000",
-    kind: "at-risk",
-    symbol: "NVDA260918C00180000",
-    display: "NVDA Sep 18 180 Call",
-    plainName: "Call option · profits if NVDA rises",
-    pl: "-$310 · −12.2%",
-    plTone: "neg",
-    // the IV-crush card: a long call holding through its own print (#3689 follow-up)
-    title: "Earnings on Aug 26 could shrink this call even if NVDA rises",
-    captionShort: "Needs NVDA above $185.10 by Sep 18 to profit.",
-    caption:
-      "NVDA Sep 18 180 Call has lost $310 of the $2,540 it cost. Worst case from here: −$2,540.",
-    why: "✦ options cost more before earnings. the day after, that extra drains away (iv crush), so a right call can still lose. decide before the print, not after.",
-    clocks: ["Expires in 25 days", "Earnings Aug 26", "3 contracts · worth $2,226"],
-    learn: { term: "ivCrush", label: "What is IV crush?" },
-    primary: {
-      label: "Review on Trade ↗",
-      href: "/app/trade?desk=human-eric&symbol=NVDA&strike=180&exp=2026-09-18",
-    },
-    secondary: { label: "Show in table", href: "#pos-NVDA260918C00180000" },
-    stakeRaw: 2226,
-    range: { type: "call", side: "long", strike: 180, breakeven: 185.1 },
-  },
-  {
-    id: "lock-in-AAPL",
-    kind: "lock-in",
-    symbol: "AAPL",
-    display: "AAPL",
-    plainName: "Shares · profits if AAPL rises",
-    pl: "+$10,520 · +26.5%",
-    plTone: "pos",
-    title: "Up 27%: consider locking some of it in",
-    captionShort: "Bought at $198.50; now $251.10.",
-    // #3977 slice 4: the stock's own print, a cadence estimate in `earnings-calendar.ts`, so the
-    // Events section's ▲ day says "estimated date" in words.
-    due: { at: "2026-10-29", reason: "event", label: "Earnings Oct 29", estimated: true },
-    caption: "AAPL has made $10,520 on $39,700. Closing some of it now locks that part in.",
-    why: "✦ winners can give it back. closing part turns what's on paper into what's locked in, and the rest keeps running.",
-    clocks: ["200 shares · worth $50,220"],
-    primary: { label: "Review on Trade ↗", href: "/app/trade?desk=human-eric&symbol=AAPL" },
-    secondary: { label: "Show in table", href: "#pos-AAPL" },
-    stakeRaw: 50220,
-  },
-];
-
-const ericConsiderations = [
-  {
-    id: "at-risk-NVDA260918C00180000",
-    kind: "at-risk",
-    symbol: "NVDA260918C00180000",
-    display: "NVDA Sep 18 180 Call",
-    notional: "$2,226",
-    delta: "-$310",
-    deltaTone: "neg",
-    reason: "NVDA Sep 18 180 Call is down 12.2% from cost.",
-    action: { label: "View position", href: "?section=positions#pos-NVDA260918C00180000" },
-  },
-  {
-    id: "opportunity-aapl-earnings",
-    kind: "opportunity",
-    symbol: "AAPL",
-    display: "AAPL",
-    notional: "—",
-    delta: "D-20 to D-6",
-    deltaTone: "flat",
-    reason: "Long AAPL into the earnings print — out of the market by the time the number lands.",
-    action: { label: "View playbook", href: "/app/research?section=playbooks" },
-  },
-];
-
-const ericDesk = {
-  generatedAt: "2026-09-11T00:00:00Z",
-  desk: {
-    id: "human-eric",
-    name: "Eric",
-    kind: "human",
-    considerations: ericConsiderations,
-    decisions: ericDecisions,
-    // Where the money is (#3689 slice 5): long shares, long options, cash — adding to 100%.
-    allocation: {
-      shares: "$198,386",
-      options: "$2,226",
-      cash: "$847,200",
-      sharesPct: 18.93,
-      optionsPct: 0.21,
-      cashPct: 80.86,
-      cashShare: "80.9%",
-      shareCount: 300,
-    },
-    positions: [
-      pos(
-        "NVDA",
-        "NVDA",
-        "Nvidia",
-        false,
-        "100",
-        "$172.40",
-        "$181.32",
-        "$17,240",
-        "$18,132.00",
-        "+$892.00",
-        "+5.2%",
-        "pos",
-        "+$892.00",
-        892.0,
-        "+5.17%",
-        "pos",
-        1.7,
-      ),
-      pos(
-        "AAPL",
-        "AAPL",
-        "Apple",
-        false,
-        "200",
-        "$198.50",
-        "$201.10",
-        "$39,700",
-        "$40,220.00",
-        "+$520.00",
-        "+1.3%",
-        "pos",
-        "+$520.00",
-        520.0,
-        "+1.31%",
-        "pos",
-        3.8,
-      ),
-      pos(
-        "NVDA260918C00180000",
-        "NVDA Sep 18 180 Call",
-        "Nvidia",
-        true,
-        "3",
-        "$5.10",
-        "$7.42",
-        "$1,530",
-        "$2,226.00",
-        "+$696.00",
-        "+45.5%",
-        "pos",
-        "+$696.00",
-        696.0,
-        "+45.49%",
-        "pos",
-        0.2,
-        // Two lots (#3186 slice 1) summing exactly to the parent: 2 @ $5.00 + 1 @ $5.30 = $1,530.
-        [
-          {
-            lotId: "NVDA260918C00180000-0-a",
-            openedAt: "2026-09-08 14:12 UTC",
-            quantity: "2",
-            costPerShare: "$5.00",
-            price: "$7.42",
-            costBasis: "$1,000",
-            value: "$1,484",
-            dayPl: "+$34",
-            dayTone: "pos",
-            totalPl: "+$484",
-            returnPct: "+48.40%",
-            totalTone: "pos",
-          },
-          {
-            lotId: "NVDA260918C00180000-1-b",
-            openedAt: "2026-09-10 18:41 UTC",
-            quantity: "1",
-            costPerShare: "$5.30",
-            price: "$7.42",
-            costBasis: "$530",
-            value: "$742",
-            dayPl: "+$17",
-            dayTone: "pos",
-            totalPl: "+$212",
-            returnPct: "+40.00%",
-            totalTone: "pos",
-          },
-        ],
-      ),
-    ],
-    tiles: {
-      openPositions: 6,
-      invested: "$200,612.14",
-      investedRaw: 200612.14,
-      dayPl: "+$2,418.67",
-      dayTone: "pos",
-      dayPlRaw: 2418.67,
-      unrealized: "+$47,832.14",
-      unrealizedNote: "6 open positions",
-      unrealizedTone: "pos",
-      unrealizedRaw: 47832.14,
-      cash: "$847,200.00",
-      cashRaw: 847200.0,
-    },
-  },
-};
-
-// Plain words per position (#3689 slice 6), as the server's position-plain.ts writes them.
-const PLAIN = {
-  NVDA: {
-    plainName: "Shares · profits if NVDA rises",
-    expiresIn: "no expiry",
-    breakeven: "$172.40",
-    best: "unlimited",
-    worst: "−$17,240",
-    // NVDA's Aug 26 print is behind the fixture's date, so the next headline macro print stands in
-    // (`src/domain/market-events/fomc-2026-10-28.json`).
-    nextEvent: {
-      label: "Fed meeting Oct 28",
-      at: "2026-10-28",
-      beforeExpiry: false,
-      scope: "market",
-    },
-  },
-  AAPL: {
-    plainName: "Shares · profits if AAPL rises",
-    expiresIn: "no expiry",
-    breakeven: "$198.50",
-    best: "unlimited",
-    worst: "−$39,700",
-    // AAPL's Oct 29 print (`src/domain/earnings-calendar.ts`) is inside the 60-day share horizon.
-    nextEvent: { label: "Earnings Oct 29", at: "2026-10-29", beforeExpiry: false, scope: "stock" },
-    nextPrint: { status: "estimate", at: "2026-10-29", label: "Earnings Oct 29 (estimated)" },
-  },
-  NVDA260918C00180000: {
-    plainName: "Call option · profits if NVDA rises",
-    expiresIn: "25 days",
-    expiresInDays: 25,
-    breakeven: "$185.10",
-    best: "unlimited",
-    worst: "−$1,530",
-    nextEvent: { label: "Earnings Aug 26", at: "2026-08-26", beforeExpiry: true, scope: "stock" },
-    // NVDA's Aug 26 print is behind the fixture's date and the table has no next one yet.
-    nextPrint: { status: "unknown", label: "Next earnings date not known yet" },
-  },
-};
-ericDesk.desk.positions = ericDesk.desk.positions.map((p) => ({ ...p, ...PLAIN[p.symbol] }));
-
-const sauronDesk = {
-  generatedAt: "2026-09-11T00:00:00Z",
-  // A persona-mapped bot, so the world projection gives it a landmark: the Overview's portrait (#3725).
-  landmark: { power: 0.62, health: 0.15 },
-  desk: {
-    id: "bot-sauron",
-    name: "Sauron",
-    kind: "bot",
-    considerations: [],
-    decisions: ericDecisions.slice(0, 1),
-    allocation: {
-      shares: "$17,010",
-      options: "$0",
-      cash: "$983,040",
-      sharesPct: 1.7,
-      optionsPct: 0,
-      cashPct: 98.3,
-      cashShare: "98.3%",
-      shareCount: 50,
-    },
-    positions: [
-      pos(
-        "TSLA",
-        "TSLA",
-        "Tesla",
-        false,
-        "50",
-        "$340.20",
-        "$338.00",
-        "$17,010",
-        "$16,900.00",
-        "-$110.00",
-        "-0.6%",
-        "neg",
-        "-$110.00",
-        -110.0,
-        "-0.65%",
-        "neg",
-        3.3,
-      ),
-      pos(
-        "SPY",
-        "SPY",
-        "S&P 500 ETF",
-        false,
-        "100",
-        "$510.30",
-        "$514.80",
-        "$51,030",
-        "$51,480.00",
-        "+$450.00",
-        "+0.9%",
-        "pos",
-        "+$450.00",
-        450.0,
-        "+0.88%",
-        "pos",
-        10.0,
-      ),
-    ],
-    tiles: {
-      openPositions: 3,
-      invested: "$310,940.88",
-      investedRaw: 310940.88,
-      dayPl: "-$1,102.33",
-      dayTone: "neg",
-      dayPlRaw: -1102.33,
-      unrealized: "+$12,406.88",
-      unrealizedNote: "3 open positions",
-      unrealizedTone: "pos",
-      unrealizedRaw: 12406.88,
-      cash: "$201,400.00",
-      cashRaw: 201400.0,
-    },
-  },
-};
-
-// Activity ledger — the Activity section's timeline. Two events, newest first.
-const ericActivity = {
-  available: true,
-  activity: [
-    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
-    {
-      orderId: "ord-c7",
-      symbol: "MSFT",
-      display: "MSFT",
-      side: "sell",
-      quantity: 1,
-      filled: 1,
-      price: "$1.00",
-      status: "filled",
-      at: "2026-09-22T19:10:00Z",
-      backfilled: false,
-      origin: "desk",
-      realizedPl: "+$1,240",
-      returnPct: "+6.2%",
-      realizedTone: "pos",
-    },
-    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
-    {
-      orderId: "ord-c6",
-      symbol: "AMD260918C00150000",
-      display: "AMD Sep 18 150 Call",
-      side: "sell",
-      quantity: 1,
-      filled: 1,
-      price: "$1.00",
-      status: "filled",
-      at: "2026-09-19T17:02:00Z",
-      backfilled: false,
-      origin: "desk",
-      realizedPl: "+$410",
-      returnPct: "+18.3%",
-      realizedTone: "pos",
-    },
-    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
-    {
-      orderId: "ord-c5",
-      symbol: "GOOGL",
-      display: "GOOGL",
-      side: "sell",
-      quantity: 1,
-      filled: 1,
-      price: "$1.00",
-      status: "filled",
-      at: "2026-09-17T14:45:00Z",
-      backfilled: false,
-      origin: "desk",
-      realizedPl: "+$365",
-      returnPct: "+2.1%",
-      realizedTone: "pos",
-    },
-    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
-    {
-      orderId: "ord-c4",
-      symbol: "META",
-      display: "META",
-      side: "sell",
-      quantity: 1,
-      filled: 1,
-      price: "$1.00",
-      status: "filled",
-      at: "2026-09-15T15:30:00Z",
-      backfilled: false,
-      origin: "desk",
-      realizedPl: "+$880",
-      returnPct: "+4.4%",
-      realizedTone: "pos",
-    },
-    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
-    {
-      orderId: "ord-c3",
-      symbol: "TSLA260912P00380000",
-      display: "TSLA Sep 12 380 Put",
-      side: "sell",
-      quantity: 1,
-      filled: 1,
-      price: "$1.00",
-      status: "filled",
-      at: "2026-09-12T16:20:00Z",
-      backfilled: false,
-      origin: "desk",
-      realizedPl: "-$620",
-      returnPct: "-41.0%",
-      realizedTone: "neg",
-    },
-    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
-    {
-      orderId: "ord-c2",
-      symbol: "AMZN",
-      display: "AMZN",
-      side: "sell",
-      quantity: 1,
-      filled: 1,
-      price: "$1.00",
-      status: "filled",
-      at: "2026-09-08T18:05:00Z",
-      backfilled: false,
-      origin: "desk",
-      realizedPl: "+$210",
-      returnPct: "+1.3%",
-      realizedTone: "pos",
-    },
-    // A closing fill (#3689 Form strip): the round-trip matcher's realized P/L rides on it.
-    {
-      orderId: "ord-c1",
-      symbol: "NFLX",
-      display: "NFLX",
-      side: "sell",
-      quantity: 1,
-      filled: 1,
-      price: "$1.00",
-      status: "filled",
-      at: "2026-09-04T19:40:00Z",
-      backfilled: false,
-      origin: "desk",
-      realizedPl: "-$145",
-      returnPct: "-0.9%",
-      realizedTone: "neg",
-    },
-    {
-      orderId: "ord-001",
-      symbol: "NVDA260918C00180000",
-      display: "NVDA Sep 18 180 Call",
-      side: "buy",
-      quantity: 3,
-      filled: 3,
-      price: "$5.10",
-      status: "filled",
-      at: "2026-09-10T18:41:00Z",
-      backfilled: false,
-      origin: "desk",
-    },
-    {
-      orderId: "ord-002",
-      symbol: "AAPL",
-      display: "AAPL",
-      side: "buy",
-      quantity: 200,
-      filled: 200,
-      price: "$198.50",
-      status: "filled",
-      at: "2026-09-09T15:20:00Z",
-      backfilled: false,
-      origin: "desk",
-    },
-  ],
-};
-
-// Beta-scout's forced picks as they read live (#3687 slice 4): placed on Sauron's broker, decided
-// under "beta-scout" — the row opens to that decision, reason verbatim from the production trail.
-const scoutReason = (sentiment, strength) =>
-  `BETA-PHASE FORCED PICK — no organic trade fired today, so this was chosen from whatever signal already existed, not a conviction call: sentiment=${sentiment} momentum=-0.001 (combined strength ${strength}, ranked among 2 forced picks). Do not read this as playbook-evidence performance.`;
-const scoutFill = (orderId, symbol, quantity, price, sentiment, strength) => ({
-  orderId,
-  symbol,
-  display: symbol,
-  side: "buy",
-  quantity,
-  filled: quantity,
-  price,
-  status: "filled",
-  at: "2026-09-23T19:02:00Z",
-  backfilled: false,
-  origin: "unknown",
-  reasoning: {
-    reason: scoutReason(sentiment, strength),
-    personaId: "beta-scout",
-    playbookId: "BETA-SCOUT",
-    playbookMode: "conservative",
-    // The round this fill came out of, and its funnel (#3961) — what lets the why name how much
-    // the pass weighed and link to the whole thing on Heartbeat.
-    cycleAt: "2026-09-23T19:02:00.000Z",
-    rawCount: 3,
-    guardedCount: 2,
-  },
-});
-const sauronActivity = {
-  available: true,
-  activity: [
-    scoutFill("ord-s3", "MSFT", 9, "$428.10", "0.60", "0.601"),
-    scoutFill("ord-s2", "AMZN", 18, "$231.44", "0.50", "0.501"),
-    {
-      orderId: "ord-s1",
-      symbol: "TSLA",
-      display: "TSLA",
-      side: "buy",
-      quantity: 50,
-      filled: 50,
-      price: "$340.20",
-      status: "filled",
-      at: "2026-09-10T16:05:00Z",
-      backfilled: false,
-      origin: "alpaca-direct",
-    },
-  ],
-};
-
-// Hero chart (#3186 slice 2) — a month of Eric's equity curve ending near the "1M +3.4%" window
-// pill above, and SPY's own daily closes over the same span for the benchmark overlay. Both are
-// deterministic (no randomness) so the screenshot is reproducible.
-function dailyPoints(days, endReturn, jitter) {
-  return Array.from({ length: days }, (_, i) => {
-    const t = i / (days - 1);
-    const value = endReturn * t + Math.sin(i / 2) * jitter;
-    const day = new Date(Date.UTC(2026, 7, 12 + i));
-    return { day, value };
-  });
-}
-const ericCurve = dailyPoints(23, 0.034, 0.004);
-const spyCurve = dailyPoints(23, 0.018, 0.003);
-
-const ericEquityCurve = {
-  range: "1M",
-  points: ericCurve.map((p) => ({ t: p.day.toISOString(), value: p.value })),
-};
-
-// The Pulse payload the net-worth card's standing line reads (#3964). Only the three headline tiles
-// matter to the card, but the shape is the server's whole `DeskPulseView` so the frame proves the
-// selection, not a trimmed stub.
-//
-// The record counts `ericActivity`'s own seven closes, so the numbers agree with the Form strip
-// squares directly above them in the same frame: 5W · 2L → 71.4%, and $3,105 won ÷ $765 lost →
-// 4.06×. The drawdown is NOT derived — `equityDrawdown` measures the deepest dip from a running
-// peak, and `ericCurve` (a 23-day rise with 0.4% noise) barely dips at all, so a figure taken from
-// it would be too small to prove the row renders a real percentage. 0.32% is the gap to the same
-// $1,051,200 all-time high the card's meter draws beside it, which is a different measure but not
-// a contradictory one at this scale — a stand-in, not a claim about the curve.
-//
-const ericPulse = {
-  pulse: {
-    curve: null,
-    weeks: [],
-    race: null,
-    streaks: [],
-    tiles: [
-      {
-        key: "equity",
-        label: "Equity",
-        value: "$1,047,832.14",
-        note: "cash $847,200.00",
-        known: true,
-      },
-      {
-        key: "netRealized",
-        label: "Net realized",
-        value: "+$2,340.00",
-        note: "booked, not on paper",
-        known: true,
-        tone: "pos",
-      },
-      { key: "winRate", label: "Win rate", value: "71.4%", note: "5W · 2L", known: true },
-      {
-        key: "profitFactor",
-        label: "Profit factor",
-        value: "4.06×",
-        note: "wins ÷ losses; above 1× is paying",
-        known: true,
-      },
-      {
-        key: "maxDrawdown",
-        label: "Max drawdown",
-        value: "0.32%",
-        note: "from peak $1,051,200.00",
-        known: true,
-        tone: "neg",
-      },
-    ],
-  },
-};
-
-// Sauron's card reads "locked in —" because nothing has closed on it (`sauronStats.bookedKnown` is
-// false, and `sauronNoTrades` is the decisions payload), so its Pulse must say the same: no record
-// yet. This is the fixture that proves the other half of the row — with every headline fact
-// unknown, the standing line renders NOTHING rather than three bare dashes a member would read as
-// a record. Two accounts on one page, both frames honest.
-const sauronPulse = {
-  pulse: {
-    curve: null,
-    weeks: [],
-    race: null,
-    streaks: [],
-    tiles: [
-      {
-        key: "equity",
-        label: "Equity",
-        value: "$512,406.88",
-        note: "cash $201,400.00",
-        known: true,
-      },
-      {
-        key: "netRealized",
-        label: "Net realized",
-        value: "+$0.00",
-        note: "needs a closed trade",
-        known: false,
-      },
-      {
-        key: "winRate",
-        label: "Win rate",
-        value: "—",
-        note: "needs a closed trade",
-        known: false,
-      },
-      {
-        key: "profitFactor",
-        label: "Profit factor",
-        value: "—",
-        note: "nothing lost yet",
-        known: false,
-      },
-      {
-        key: "maxDrawdown",
-        label: "Max drawdown",
-        value: "—",
-        note: "needs two equity samples",
-        known: false,
-      },
-    ],
-  },
-};
-
-const spyBars = {
-  symbol: "SPY",
-  bars: spyCurve.map((p) => {
-    const close = 560 * (1 + p.value);
-    return { t: p.day.toISOString(), o: close, h: close, l: close, c: close, v: 0 };
-  }),
-};
 
 // The league (#3689 slice 4, 1M since its follow-up): a 9-entry field ranked by this month's return,
 // where Eric owns himself (#3) and Sauron (#9). The card highlights both, ⋯-skips to Sauron, and
@@ -880,227 +202,39 @@ const board = {
 
 // The bot heartbeat (#3687 slice 3). The topbar market clock reads the real time, so the fixture
 // follows it: a live loop mid-session when the market is open, an idle one otherwise — a frame
-// saying "Beating" beside "Opens in 2h" would picture a state the server can never return.
+// saying "Running" beside "Opens in 2h" would picture a state the server can never return.
 const etNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
 const etMinutes = etNow.getHours() * 60 + etNow.getMinutes();
 const sessionOpen = etNow.getDay() % 6 !== 0 && etMinutes >= 570 && etMinutes < 960;
-// The Heartbeat tab's no-trade log (#3687 slice 4): an idle stretch, a pass the risk guards
-// refused, and a halted one — the passes that never became an Activity row.
-const sauronNoTrades = {
-  available: true,
-  kind: "bot",
-  cycles: [
-    {
-      at: "2026-09-23T18:59:00Z",
-      quietSince: "2026-09-23T18:22:00Z",
-      mode: "live",
-      status: "quiet",
-      headline: "no signals fired for 148 cycles — watching",
-      rawCount: 0,
-      guardedCount: 0,
-      outcomes: [],
-    },
-    {
-      at: "2026-09-23T18:21:00Z",
-      mode: "live",
-      status: "refused",
-      headline: "refused by S2 — earnings print inside the hold",
-      rawCount: 1,
-      guardedCount: 0,
-      outcomes: [],
-      refusedIntents: [
-        {
-          symbol: "NVDA",
-          side: "buy",
-          quantity: 40,
-          strategy: "sauron-panic-claim",
-          reason: "panic -0.82 exhausting, rebound momentum turning",
-        },
-      ],
-    },
-    {
-      at: "2026-09-23T14:05:00Z",
-      mode: "live",
-      status: "halted",
-      headline: "halted: daily-loss breaker",
-      rawCount: 0,
-      guardedCount: 0,
-      outcomes: [],
-      halted: "daily-loss breaker",
-    },
-  ],
-};
-// The same log with the traded rounds included (#3961) — the round behind the MSFT fill above, and
-// the whole reason the toggle exists: one order placed, a sibling the broker rejected, and an idea
-// the position cap refused, none of which had anywhere to render while traded passes were hidden.
-const sauronAllPasses = {
-  available: true,
-  kind: "bot",
-  cycles: [
-    {
-      at: "2026-09-23T19:02:00.000Z",
-      mode: "live",
-      status: "placed",
-      headline: "1 placed · 1 rejected · 1 refused by guards",
-      rawCount: 3,
-      guardedCount: 2,
-      outcomes: [
-        {
-          symbol: "MSFT",
-          side: "buy",
-          quantity: 9,
-          strategy: "beta-scout-forced-pick",
-          reason: "forced pick — highest combined strength of 2 candidates (sentiment 0.60)",
-          action: "placed",
-          fill: "9 @ $428.10",
-          activityAnchor: "act-ord-s3",
-          momentum: -0.001,
-          sentiment: 0.6,
-        },
-        {
-          symbol: "AMZN",
-          side: "buy",
-          quantity: 18,
-          reason: "second forced pick — sentiment 0.50",
-          action: "rejected",
-          resultStatus: "rejected: insufficient buying power",
-        },
-      ],
-      refusedIntents: [
-        {
-          symbol: "NVDA",
-          side: "buy",
-          quantity: 40,
-          strategy: "sauron-panic-claim",
-          reason: "panic -0.82 exhausting, rebound momentum turning",
-          guardReason: "the per-position cap left no room",
-        },
-      ],
-    },
-    ...sauronNoTrades.cycles,
-  ],
-};
 // `stubBody` sees only the pathname, so the trades filter can't be read off the query string here:
 // the frame that pictures the toggle on flips this immediately before ticking the box, and the
 // component's own refetch (a new react-query key) picks up the wider payload.
 let tradedPassesIncluded = false;
-// COND-SCOUT's shadow probes on the Heartbeat (#3651 slice 7b) — illustrative ledger: one bet with
-// enough closes for a verdict (its band spans zero), one still unproven, two probes open.
-const probesNow = Date.now();
-const probeDay = 86_400_000;
-const sauronProbes = {
-  available: true,
-  simulated: true,
-  at: probesNow,
-  open: [
-    {
-      id: "NVDA@1",
-      symbol: "NVDA",
-      hypothesis: "trend-continuation",
-      openedAt: probesNow - 2.1 * probeDay,
-      expiresAt: probesNow + 11.9 * probeDay,
-      entryPrice: 182.4,
-      stopPrice: 173.28,
-      notional: 1459.2,
-      markRoi: 0.018,
-    },
-    {
-      id: "MSFT@2",
-      symbol: "MSFT",
-      hypothesis: "oversold-rebound",
-      openedAt: probesNow - 1.2 * probeDay,
-      expiresAt: probesNow + 3.8 * probeDay,
-      entryPrice: 468.1,
-      stopPrice: 444.7,
-      notional: 1404.3,
-      markRoi: -0.006,
-    },
-  ],
-  retros: [
-    {
-      probeId: "GOOGL@3",
-      symbol: "GOOGL",
-      hypothesis: "oversold-rebound",
-      reason: "horizon",
-      closedAt: probesNow - 1 * probeDay,
-      daysHeld: 5,
-      roi: 0.024,
-      roiPerDay: 0.0048,
-      directionRight: true,
-      soonerWasBetter: true,
-      earlierExits: [],
-      laterExits: [{ label: "1 week", roi: 0.031 }, { label: "3 weeks" }, { label: "1 month" }],
-      market: { symbol: "SPY", roi: 0.013, excess: 0.011 },
-    },
-    {
-      probeId: "TSLA@4",
-      symbol: "TSLA",
-      hypothesis: "trend-continuation",
-      reason: "invalidated",
-      closedAt: probesNow - 3 * probeDay,
-      daysHeld: 3.4,
-      roi: -0.052,
-      roiPerDay: -0.0153,
-      directionRight: false,
-      soonerWasBetter: false,
-      earlierExits: [],
-      laterExits: [{ label: "2 months" }, { label: "6 months" }, { label: "10 months" }],
-      market: { symbol: "SPY", roi: 0.008, excess: -0.06 },
-    },
-  ],
-  verdicts: [
-    {
-      hypothesis: "oversold-rebound",
-      closes: 11,
-      winRate: 0.636,
-      meanRoi: 0.009,
-      band: { ci: { low: -0.6, high: 2.3 } },
-      meanExcessVsMarket: 0.004,
-      outliers: [],
-      call: "no edge shown",
-      callWithoutOutliers: "no edge shown",
-    },
-    {
-      hypothesis: "trend-continuation",
-      closes: 3,
-      winRate: 0.333,
-      meanRoi: -0.011,
-      band: { ci: null },
-      meanExcessVsMarket: -0.019,
-      outliers: [],
-      call: "unproven",
-      callWithoutOutliers: "unproven",
-    },
-  ],
-};
 
+// A bot that sat out the whole last session (#4949) — the closed-market stale the server returns
+// once the newest pass predates that session's open. Its own frames, then back to the live loop.
+let sauronSatOut = false;
 const sauronHeartbeat = () => {
-  const lastAgo = sessionOpen ? 22_000 : 16 * 3_600_000;
+  const lastAgo = sauronSatOut ? 3 * 86_400_000 : sessionOpen ? 20_000 : 16 * 3_600_000;
+  const today = new Date(Date.now() - lastAgo - 5 * 3_600_000).toISOString();
   return {
     available: true,
     heartbeat: {
-      state: sessionOpen ? "beating" : "market-closed",
-      marketOpen: sessionOpen,
+      state: sauronSatOut ? "stale" : sessionOpen ? "beating" : "market-closed",
+      marketOpen: sauronSatOut ? false : sessionOpen,
       lastPassAt: new Date(Date.now() - lastAgo).toISOString(),
       sinceLastPassMs: lastAgo,
       cadenceMs: 15_000,
       staleAfterMs: 120_000,
       playbooks: [
-        {
-          playbookId: "HC-SAURON",
-          mode: "standard",
-          state: "tactical",
-          since: new Date(Date.now() - lastAgo - 2 * 3_600_000).toISOString(),
-          sinceIsLowerBound: false,
-        },
-        {
-          playbookId: "S1-NVDA",
-          mode: "standard",
-          state: "no-window",
-          since: "2026-09-22T13:30:00Z",
-          sinceIsLowerBound: true,
-        },
+        sauronVerdict("SAURON", "aggressive", "tactical", today),
+        sauronVerdict("CRWV-WHEEL", "aggressive", "no-window", today),
+        sauronVerdict("S1-NVDA", "standard", "no-window", "2026-09-22T13:30:00Z", true),
+        sauronVerdict("NVDA-CALL-SPREAD", "aggressive", "no-window", "2026-10-05T13:30:00Z"),
+        sauronVerdict("G1-GOOG", "standard", "no-window", "2026-09-29T13:30:00Z"),
+        sauronVerdict("TACO-DJT", "standard", "no-window", today),
       ],
+      rollCall: sauronRollCall,
     },
   };
 };
@@ -1155,26 +289,6 @@ const research = {
   ledgers: [],
 };
 
-// The Council's week (#3963): the member's own line, which the Overview now carries beside the
-// standing. `entries` stays the league's read on Activity → Council, so only `mine` shows here.
-const council = {
-  enabled: true,
-  week: "2026-W40",
-  mine: {
-    id: "a1b2c3d4e5",
-    text: "Holding the NVDA call through the print — the skew is still call-heavy.",
-    at: "2026-09-28T14:00:00.000Z",
-  },
-  entries: [
-    {
-      id: "a1b2c3d4e5",
-      text: "Holding the NVDA call through the print — the skew is still call-heavy.",
-      at: "2026-09-28T14:00:00.000Z",
-    },
-  ],
-  plays: [{ id: "S1-NVDA", symbol: "NVDA" }],
-};
-
 const { page, origin, out, close } = await openShell({
   name: "accounts",
   stubs: {
@@ -1183,7 +297,6 @@ const { page, origin, out, close } = await openShell({
     "/api/research": research,
     // The calendar-only slice (#4204) the Events section and the cockpit head now read.
     "/api/research/calendar": research,
-    "/api/council": council,
     // The netted option book the Money strip reads its plain greeks from: the NVDA call, 3 contracts.
     "/api/trade/option-positions": {
       available: true,
@@ -1237,6 +350,26 @@ await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-summary-phone");
 
+// The head, Level 2 (#5072): Sauron's Overview at landing — the account row with the bot's status
+// as a plain link, one vitals line (net worth · today · cash), the switch with "More ▾" — then the
+// menu under the name, then More opened. (Milestones taking More's slot is `shoot:milestones`'s:
+// this harness stubs no milestones.)
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await page.locator(".head-vitals .head-worth").waitFor();
+await page.locator(".head-account .hb-line").waitFor();
+await page.waitForLoadState("networkidle");
+await shootCockpit("head-bot-phone");
+await page.getByRole("button", { name: /^Account: / }).click();
+await page.getByRole("navigation", { name: "Account menu" }).waitFor();
+await shootCockpit("head-menu-phone");
+await page.keyboard.press("Escape");
+await page.getByRole("button", { name: "More sections" }).click();
+await page.locator(".cockpit-nav-more-list").waitFor();
+await shootCockpit("head-more-phone");
+await page.goto(`${origin}/app/accounts`);
+await page.getByText("Net worth · Eric").waitFor();
+await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
+
 // The standing line (#3964): the member's own record inside the net-worth card — win rate, profit
 // factor, max drawdown, then the link to the rest of this account's Pulse. Its own frame at 390
 // because unlike the card's footer this row does NOT hide at phone width, and that is the claim
@@ -1246,14 +379,13 @@ await page.waitForTimeout(150);
 await shootCockpit("accounts-standing-phone");
 await page.evaluate(() => window.scrollTo(0, 0));
 
-// The cockpit clock (#3807 slice 2·1): the market calendar's head under the section switch —
-// OUTSIDE the sticky block at 390 — and, under the net-worth card, the events on what this book
-// holds in the head's range: the week of Oct 26 carries AAPL's print (held) and the Fed decision
-// (market-wide). The stuck chrome is measured here because the panel's falsifier is a number: the
-// topbar plus the sticky head, once the page has scrolled, must not grow with the row (>253px).
+// The cockpit head with no calendar in it (#5074) and, under the net-worth card, the next date on
+// what this book holds — it reads no range, so the week in the URL changes nothing here. The stuck
+// chrome is measured because the head's height is judged by a number: the topbar plus the sticky
+// head, once the page has scrolled.
 await page.goto(`${origin}/app/accounts?on=2026-10-26&span=week`);
 await page.getByText("Net worth · Eric").waitFor();
-await page.locator(".held-events").waitFor();
+await page.locator(".held-next").waitFor();
 await shootCockpit("accounts-head-phone");
 await page.evaluate(() => window.scrollTo(0, 900));
 await page.waitForTimeout(150);
@@ -1268,10 +400,8 @@ const stuck = await page.evaluate(() =>
   ),
 );
 console.log(`stuck chrome at 390 (topbar + cockpit head, scrolled): ${stuck}px`);
-// The events line under the net-worth card, scrolled into the frame's lower third: on a phone the
-// calendar row is outside the sticky block, so this frame shows the line and the head frame above
-// shows the row — two frames, one surface at 390.
-await page.locator(".held-events").scrollIntoViewIfNeeded();
+// The next-date line under the net-worth card, scrolled into the frame's lower third.
+await page.locator(".held-next").scrollIntoViewIfNeeded();
 await page.evaluate(() => window.scrollBy(0, 200));
 await page.waitForTimeout(150);
 await shootCockpit("accounts-held-phone");
@@ -1288,18 +418,11 @@ await page.screenshot({
 });
 console.log(`shot ${join(out, "accounts-phone-full.jpg")}`);
 
-// Your council line (#3963): under the card that carries the league standing, the member's own
-// line for the week with the composer to edit it — the write the IA put beside the standing
-// (docs/IA.md §5.7). Everyone else's stays on Activity → Council, the link under it.
-await page.locator(".council-mine").scrollIntoViewIfNeeded();
-await page.waitForTimeout(150);
-await shootCockpit("accounts-council-phone");
-await page.evaluate(() => window.scrollTo(0, 0));
-
-// Needs a decision (#3689 slice 7): the card with its details open, scrolled into view.
-await page.locator(".decisions").scrollIntoViewIfNeeded();
-await page.getByRole("button", { name: /Why, and details/ }).click();
-await shootCockpit("accounts-decision-phone");
+// The guidance line on every row (#5070; the "Needs a decision" pager it replaced retired): the
+// first card's guidance opened in place, with Not now and its return condition.
+await page.locator(".pos-cards .pos-guide-call").first().scrollIntoViewIfNeeded();
+await page.locator(".pos-cards .pos-guide-call").first().click();
+await shootCockpit("accounts-guidance-phone");
 
 // Positions at phone width (#3689 slice 8): one card per position, not the wide table. The lot
 // breakdown lives in the wide table, so its frame moved to the desktop pass below.
@@ -1309,7 +432,7 @@ await shootCockpit("accounts-positions-phone");
 
 // Activity section — the order timeline below the sticky header. Waits on the Symbol column
 // (always visible) rather than Status, which lives in a `col-detail` cell hidden at phone width.
-await page.goto(`${origin}/app/accounts?section=activity`);
+await page.goto(`${origin}/app/accounts?section=ledger`);
 await page.getByText("AAPL").first().waitFor();
 await shootCockpit("accounts-activity-phone");
 
@@ -1323,8 +446,8 @@ await shootCockpit("accounts-all-summary-phone");
 // so the held line says so in words and the market-wide prints still show.
 await page.goto(`${origin}/app/accounts?section=events&on=2026-10-15&span=month`);
 await page.getByText("AAPL earnings print").waitFor();
-// #3977 slice 4: the grid's ▲ on the day AAPL's decision is due, with the agenda's first rows.
-await page.locator(".book-events .eh-legend").evaluate((el) => el.scrollIntoView({ block: "end" }));
+// The lanes' ▲ on the day AAPL's decision is due (#3977 slice 4, drawn as lanes by #5074).
+await page.locator(".lanes-key").evaluate((el) => el.scrollIntoView({ block: "end" }));
 await shootCockpit("events-marks-phone");
 // At 390 the agenda sits beneath the grid: the frame ends on its footer so the rows are the picture.
 await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
@@ -1335,6 +458,16 @@ await page.goto(
 await page.getByText("Nothing dated on what you hold").waitFor();
 await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
 await shootCockpit("events-empty-phone");
+// #5045: the default week (no `span`) of Oct 5 holds nothing on Eric's book, so the section names
+// the next event on what he holds — AAPL's launch day, Oct 23 — and one tap moves the range there.
+await page.goto(`${origin}/app/accounts?section=events&on=2026-10-05`);
+await page.locator(".book-next-jump").waitFor();
+await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
+await shootCockpit("events-next-phone");
+await page.locator(".book-next-jump").click();
+await page.locator(".agenda-row[data-tier='held']").first().waitFor();
+await page.locator(".agenda-foot").evaluate((el) => el.scrollIntoView({ block: "end" }));
+await shootCockpit("events-next-landed-phone");
 
 // --- DESKTOP (1280px) ---
 await page.setViewportSize({ width: 1280, height: 900 });
@@ -1351,20 +484,26 @@ await shootCockpit("events-empty-desktop");
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
-await page.locator(".decisions").waitFor();
+await page.locator(".blotter .row-guide").first().waitFor();
 await page.locator(".standing-line").waitFor();
 await shootCockpit("accounts-summary-desktop");
 
-// The cockpit clock at 1280 (#3807 slice 2·1): the head as the sticky block's last row, the
-// events on what this book holds under the net-worth card.
+// The head at 1280 (#5072): every section fits, your own after a hairline; the room adds the bot's
+// last check, today's percent and the cash amount — never a new concept.
+await page.goto(`${origin}/app/accounts?account=bot-sauron`);
+await page.locator(".head-account .hb-line").waitFor();
+await shootCockpit("head-bot-desktop");
+
+// The cockpit head at 1280 with no calendar in it (#5074), the next date on what this book holds
+// under the net-worth card.
 await page.goto(`${origin}/app/accounts?on=2026-10-26&span=week`);
 await page.getByText("Net worth · Eric").waitFor();
-await page.locator(".held-events").waitFor();
+await page.locator(".held-next").waitFor();
 await shootCockpit("accounts-head-desktop");
 
 // Lot breakdown (#3186 slice 1) in the wide table: the NVDA call's two buys, each with its own
-// Close this buy / Roll actions.
-await page.getByRole("button", { name: /buys for NVDA Sep 18 180 Call/ }).click();
+// Close this buy / Roll actions — in the row's opened detail since the ranked columns (#5071).
+await page.getByRole("button", { name: "Detail for NVDA Sep 18 180 Call" }).click();
 await page.getByText("$1,484").waitFor();
 await shootCockpit("accounts-positions-lots-desktop");
 
@@ -1395,23 +534,10 @@ await page.locator(".league-card").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
 await shootCockpit("accounts-wide-desktop");
 
-// The council line expanded (#3963): the wide screen adds room in the standing's own column — the
-// same card, same record, no new concepts (CLAUDE.md → mobile-first).
-await page.locator(".council-mine").scrollIntoViewIfNeeded();
-await page.waitForTimeout(150);
-await shootCockpit("accounts-council-desktop");
-await page.evaluate(() => window.scrollTo(0, 0));
-
-// Needs a decision at 1600 (#3689 slice 7): the at-risk card, details open, range bar with "now".
-await page.locator(".decisions").scrollIntoViewIfNeeded();
-await page.getByRole("button", { name: /Why, and details/ }).click();
+// The guidance line at 1600 (#5070): a full-width row under each position in the table.
+await page.locator(".blotter .row-guide").first().scrollIntoViewIfNeeded();
 await page.mouse.move(0, 0);
-await shootCockpit("accounts-decision-desktop");
-// The card's lesson opened in place (#3689 follow-up): "What is IV crush?" as a glossary popover.
-await page.evaluate(() => window.scrollBy(0, 320));
-await page.locator(".decision-learn button").hover();
-await shootCockpit("accounts-decision-learn-desktop");
-await page.mouse.move(0, 0);
+await shootCockpit("accounts-guidance-desktop");
 
 // Map lens (#3689 slice 9, handoff 3c): the treemap with the options strip and the stacked
 // decisions column; then the Runway (slice 10's lens, built alongside).
@@ -1425,12 +551,13 @@ await page.goto(`${origin}/app/accounts?lens=runway`);
 await page.locator(".runway").scrollIntoViewIfNeeded();
 await shootCockpit("accounts-runway-desktop");
 await page.goto(`${origin}/app/accounts`);
-await page.locator(".decisions").waitFor();
+await page.locator(".blotter .row-guide").first().waitFor();
 
-// The positions table at 1600 (#3689 slice 6): plain names, expiry in days, decay, breakeven,
-// best / worst case, with the Breakeven glossary open.
+// The positions table at 1600 (#3689 slice 6; ranked columns #5071): the row spec's two-line
+// cells, θ · Δ, Model projects, next event and best / worst case, with the Model projects glossary
+// open (breakeven moved into the Position cell, so its header glossary is gone).
 await page.locator(".blotter-card").first().scrollIntoViewIfNeeded();
-await page.getByRole("button", { name: "Breakeven" }).hover();
+await page.getByRole("button", { name: "Model projects" }).hover();
 await page.getByRole("tooltip").waitFor();
 await shootCockpit("accounts-table-desktop");
 
@@ -1443,47 +570,89 @@ await page.waitForTimeout(400);
 await shootCockpit("accounts-new-high-desktop");
 atHigh = false;
 
-// The bot heartbeat (#3687 slice 3): the Heartbeat section at phone width, then the header chip
-// opened on the desktop Activity tab — the glance that rides every tab.
+// A bot's Playbooks (#5073 — Heartbeat merged in as its top strip): the bot's checks, the counted
+// line, then one card per playbook — phone first. Then one card opened in place, the check log
+// unfolded from the strip, the same log with the traded rounds included (#3961), COND-SCOUT's
+// shadow probes, the head line on another section, a bot that sat out a session, and the bench.
+// The stage fades in on every navigation (`motion.css`, stage-enter): a frame taken the moment its
+// element attaches pictures the page half-dimmed. And the cockpit head is sticky at 390 too, so a
+// scrolled frame puts its subject just under the head, never behind it.
+const settle = () => page.waitForTimeout(450);
+const underHead = (selector, gap = 8) =>
+  page.evaluate(
+    ([sel, pad]) => {
+      const el = document.querySelector(sel);
+      const sticky = document.querySelector(".cockpit-head")?.getBoundingClientRect().bottom ?? 0;
+      if (el) window.scrollBy(0, el.getBoundingClientRect().top - sticky - pad);
+    },
+    [selector, gap],
+  );
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
-await page.locator(".hb-section").waitFor();
-await shootCockpit("accounts-heartbeat-phone");
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=playbooks`);
+await page.locator(".pbb-cards").waitFor();
+await settle();
+await shootCockpit("accounts-playbooks-phone");
+// One card opened in place: the rest of its reason, its mode and since, the way to change it.
+await page.getByText("S1-NVDA", { exact: true }).click();
+await page.locator(".pbb-card details[open] .pbb-open").waitFor();
+await underHead(".pbb-card:has(details[open])", 150);
+await settle();
+await shootCockpit("accounts-playbooks-open-phone");
+// The footer: the playbook that is off, opened to why, beside the way to change it.
+await page.getByText("S1-NVDA", { exact: true }).click();
+await page.locator(".pbb-off summary").click();
+await underHead(".pbb-foot", 260);
+await settle();
+await shootCockpit("accounts-playbooks-off-phone");
 // COND-SCOUT's shadow probes (#3651 slice 7b), scrolled so the card's title and its "Simulated"
 // banner clear the sticky header — the banner is the claim this frame has to prove.
-await page.evaluate(() => {
-  const card = document.querySelector(".sp-card");
-  const sticky = document.querySelector(".cockpit-head")?.getBoundingClientRect().bottom ?? 0;
-  if (card) window.scrollBy(0, card.getBoundingClientRect().top - sticky - 8);
-});
-await shootCockpit("accounts-heartbeat-probes-phone");
-// The no-trade log below the verdicts, scrolled into view (#3687 slice 4).
-await page.locator(".hb-log .cycles").scrollIntoViewIfNeeded();
-await shootCockpit("accounts-heartbeat-log-phone");
-// The same log with the traded rounds included (#3961) — the pass behind a fill, opened: its
+await underHead(".sp-card");
+await shootCockpit("accounts-playbooks-probes-phone");
+// The check log, unfolded from the strip — what an old `?section=heartbeat` link lands on.
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
+await page.locator(".pbb-log .cycles").waitFor();
+await underHead(".pbb-strip");
+await settle();
+await shootCockpit("accounts-playbooks-log-phone");
+// The same log with the traded rounds included (#3961) — the check behind a fill, opened: its
 // placed and rejected orders, the idea the guards refused, and the ideas → past-the-guards count.
 tradedPassesIncluded = true;
-await page.getByRole("checkbox", { name: /Include the passes that placed a trade/ }).check();
+await page.getByRole("checkbox", { name: /Include the checks that placed a trade/ }).check();
 await page.locator(".cycle-placed").waitFor();
 await page.locator(".cycle-placed .cycle-row").click();
 await page.locator(".cycle-placed .cycle-body").waitFor();
-await page.locator(".cycle-placed").scrollIntoViewIfNeeded();
-await shootCockpit("accounts-heartbeat-traded-round-phone");
+await underHead(".cycle-placed");
+await shootCockpit("accounts-playbooks-traded-round-phone");
 tradedPassesIncluded = false;
+// The head line on another section — "● Running · 7 playbooks ›", the way in from anywhere.
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
+await page.locator(".hb-line").waitFor();
+await settle();
+await shootCockpit("accounts-head-line-phone");
+// A bot that made no check all last session (#4949): "Not checking · no check last session",
+// never "idle" — the strip's heavier border and its plain-words definition.
+sauronSatOut = true;
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=playbooks`);
+await page.locator(".pbb-strip[data-state='stale']").waitFor();
+await settle();
+await shootCockpit("accounts-playbooks-stale-phone");
+sauronSatOut = false;
+// The bench: the fact takes its own column and the mode rides beside the state word.
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
-await page.locator(".hb-chip").click();
-await page.locator(".hb-pop").waitFor();
-await shootCockpit("accounts-heartbeat-chip-desktop");
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=heartbeat`);
-await page.locator(".hb-log .cycles").waitFor();
-await shootCockpit("accounts-heartbeat-log-desktop");
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=playbooks`);
+await page.locator(".pbb-cards").waitFor();
+await settle();
+await shootCockpit("accounts-playbooks-desktop");
+await page.getByRole("button", { name: /Every check/ }).click();
+await page.locator(".pbb-log .cycles").waitFor();
+await settle();
+await shootCockpit("accounts-playbooks-log-desktop");
 await page.locator(".sp-card").scrollIntoViewIfNeeded();
-await shootCockpit("accounts-heartbeat-probes-desktop");
+await shootCockpit("accounts-playbooks-probes-desktop");
 
 // Decisions folded into Activity (#3687 slice 4): a beta-scout trade opened to its decision.
 await page.setViewportSize({ width: 390, height: 844 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-phone");
@@ -1497,7 +666,7 @@ await page.locator(".blotter-scroll").evaluate((el) => {
 });
 await shootCockpit("accounts-activity-round-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.goto(`${origin}/app/accounts?account=bot-sauron&section=activity`);
+await page.goto(`${origin}/app/accounts?account=bot-sauron&section=ledger`);
 await page.getByRole("button", { name: "Why MSFT was bought" }).click();
 await page.locator(".row-why").waitFor();
 await shootCockpit("accounts-activity-why-desktop");

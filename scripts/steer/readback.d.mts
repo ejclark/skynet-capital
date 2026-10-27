@@ -1,0 +1,76 @@
+// Type surface for scripts/steer/readback.mjs (see scripts/moneypenny/index.d.mts).
+import type { DesignRoundData, TouchPointData } from "./render.mjs";
+
+export type ReadbackAction =
+  | { kind: "comment"; issue: number; body: string; why: string }
+  | { kind: "labels"; issue: number; add: string[]; remove: string[]; why: string }
+  | {
+      kind: "issue";
+      title: string;
+      body: string;
+      labels: string[];
+      why: string;
+      issue?: undefined;
+    };
+
+export interface ReadbackPlan {
+  round: string;
+  done: boolean;
+  openedAt: string | null;
+  doneAt: string | null;
+  activeMinutes: number;
+  actions: ReadbackAction[];
+  rollover: { key: string; issue: number; kind: string; why: string }[];
+  defaults: { key: string; issue: number; default: string }[];
+  followUps: { kind: string; issue: number; key: string; why: string }[];
+  /** A problems question's answer: what the next round draws. Nothing is filed from it. */
+  nextRound: { issue: number; key: string; pick: string | null; instruction: string }[];
+  /** Comments whose anchor is not a shown decision: the session answers them on the page. */
+  unplacedComments: PageComment[];
+  /** Each opening question (marks.mjs): when he pressed "Show what Claude found", or null. */
+  reveals: { issue: number; key: string; revealAt: string | null }[];
+  /** "Notes about the page:" with each note quoted under where he left it; "" for none. */
+  pageNotes: string;
+  /** One per note about the page: `commons.mjs add --kind process --what … --where …`. */
+  processLines: { what: string; where: string }[];
+  /** Outcomes he added to a scope (outcomes.mjs), word for word, for the session to classify. */
+  outcomesAdded: { issue: number; key: string; text: string; at: string }[];
+  commands?: string[][];
+}
+
+/** A comment Eric sent to Claude on the page: its anchor (a decision key or `d-<key>` element id). */
+export interface PageComment {
+  anchorKey: string;
+  text: string;
+  at?: string;
+}
+
+export const DEFAULT_APPLIED: string;
+/** How the page's Done comment starts: the read-back's trigger, dropped from the quotes. */
+export const DONE_TRIGGER: string;
+export const DRAWING: string;
+export const ROUND_DRAWING: string;
+export function readback(
+  tp: TouchPointData | DesignRoundData,
+  records: Record<string, unknown>,
+  comments?: PageComment[],
+): ReadbackPlan;
+export function anchorDecision(
+  anchor: string,
+  decisions: TouchPointData["decisions"],
+): { d: TouchPointData["decisions"][number]; opt: string | null } | null;
+export function commentsBlock(list: (PageComment & { opt?: string | null })[] | undefined): string;
+export function readComments(file: string): PageComment[];
+/** The next round's instruction after a problems question is read back (round 0). */
+export function nextRoundInstruction(
+  d: TouchPointData["decisions"][number],
+  r: {
+    pick?: string | null;
+    react?: Record<string, string>;
+    pins?: Record<string, unknown>;
+    pinNotes?: Record<string, unknown>;
+  },
+  /** `pinClauses(d, r)` (pins.mjs), when the caller already has it; computed when left out. */
+  pins?: string,
+): string;
+export function commandsFor(plan: ReadbackPlan, dir: string): string[][];

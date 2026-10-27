@@ -1,3 +1,4 @@
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import type { MarketContext, OrderIntent, OrderResult, Portfolio } from "../domain/types.js";
 import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG, type RiskConfig } from "../engine/guards.js";
 import type { Persona } from "../personas/persona.js";
@@ -9,6 +10,13 @@ import { actionFor, DEFAULT_OPTION_COOLDOWN_MS, readCycleOptions } from "./optio
 
 /** How the trader acts on its decisions. `observe` decides + logs but places NO orders. */
 export type TraderMode = "observe" | "live";
+
+/** The two knobs that belong to a persona's build rather than its roster: the mode its readiness
+ *  gate allows, and the gap between its orders in one symbol (absent = the default 5 minutes). */
+export interface TraderTuning {
+  readonly mode: TraderMode;
+  readonly cooldownMs?: number;
+}
 
 export interface AutonomousTraderConfig {
   readonly persona: Persona;
@@ -49,6 +57,9 @@ export interface AutonomousTraderConfig {
   /** Minimum gap between option attempts (approved OR refused, observe OR live) on one underlying.
    *  Default 10 minutes. In-memory. */
   readonly optionCooldownMs?: number;
+  /** Called when a dark playbook's observation throws (#5489). The cycle goes on with none: a
+   *  recording must never cost a decision. */
+  readonly onObservationError?: (personaId: string, error: unknown) => void;
 }
 
 const DEFAULT_COOLDOWN_MS = 5 * 60 * 1000;
@@ -65,6 +76,8 @@ const NOTHING_WORKING: ReadonlySet<string> = new Set();
 interface OpenShares {
   readonly known: boolean;
   readonly buying: ReadonlySet<string>;
+  /** The open buys themselves, for the cash they will spend (#4735). */
+  readonly buys: readonly OpenShareOrder[];
   readonly selling: ReadonlyMap<string, number>;
   readonly landed: ReadonlySet<string>;
 }
@@ -72,19 +85,22 @@ interface OpenShares {
 const NOTHING_OPEN: OpenShares = {
   known: true,
   buying: new Set(),
+  buys: [],
   selling: new Map(),
   landed: new Set(),
 };
 const OPEN_UNKNOWN: OpenShares = { ...NOTHING_OPEN, known: false };
 
 function openSharesFrom(orders: readonly OpenShareOrder[]): OpenShares {
-  const buying = new Set<string>();
+  const buys = orders.filter((order) => order.side === "buy");
+  const buying = new Set(buys.map((order) => order.symbol));
   const selling = new Map<string, number>();
   for (const order of orders) {
-    if (order.side === "buy") buying.add(order.symbol);
-    else selling.set(order.symbol, (selling.get(order.symbol) ?? 0) + order.quantity);
+    if (order.side === "sell") {
+      selling.set(order.symbol, (selling.get(order.symbol) ?? 0) + order.quantity);
+    }
   }
-  return { ...NOTHING_OPEN, buying, selling };
+  return { ...NOTHING_OPEN, buying, buys, selling };
 }
 
 /** Symbols held in a different quantity in `after` than in `before`, either side missing as 0. */
@@ -118,7 +134,8 @@ interface Handled {
  * SHARE ORDERS STILL OPEN (#4678): the cooldown is a clock, and an order queued for the open
  * outlives it. So once a live cycle has a share intent, it reads the broker's open share orders —
  * once — and a buy waits (`cooldown-skipped`) while a buy of the same symbol is still open, while a
- * new sell is sized by the guards against what the open sells leave. A failed read holds every buy
+ * new sell is sized by the guards against what the open sells leave, and a new buy against the cash
+ * the open buys leave (#4735). A failed read holds every buy
  * and no sell. The portfolio is then read again, so an order that fills mid-cycle shows up in one
  * read or the other, and an order on a symbol whose holding moved waits a cycle. Observe mode
  * places nothing, so it reads nothing.
@@ -140,11 +157,22 @@ export class AutonomousTrader {
    * (which is immutable) because a Playbook Store subscription change has to reach a running bot
    * without a restart (issue #3595) — see `swapRoster`.
    */
-  private current: { readonly persona: Persona; readonly risk: RiskConfig };
+  private current: {
+    readonly persona: Persona;
+    readonly risk: RiskConfig;
+    readonly tuning: TraderTuning;
+  };
 
   constructor(config: AutonomousTraderConfig) {
     this.config = config;
-    this.current = { persona: config.persona, risk: config.risk ?? DEFAULT_RISK_CONFIG };
+    this.current = {
+      persona: config.persona,
+      risk: config.risk ?? DEFAULT_RISK_CONFIG,
+      tuning: {
+        mode: config.mode ?? "live",
+        ...(config.cooldownMs !== undefined ? { cooldownMs: config.cooldownMs } : {}),
+      },
+    };
     if (config.initialCooldowns) {
       for (const [symbol, at] of config.initialCooldowns) {
         this.lastOrderAt.set(symbol, at);
@@ -161,20 +189,39 @@ export class AutonomousTrader {
    * Applied between cycles, never inside one: `evaluate` snapshots both halves together at the top
    * of a cycle, so a swap landing mid-cycle takes effect on the next one instead of pairing one
    * cycle's persona with another's guards.
+   *
+   * `tuning` rides the same swap when a build change needs it (the owner flips a bot's hardcore
+   * build, #4535 slice 2c): the mode the readiness gate allows and the order cooldown belong to the
+   * build, so they change in the same breath as the persona. Left out, the tuning in force stays.
    */
-  swapRoster(next: { readonly persona: Persona; readonly risk: RiskConfig }): void {
-    this.current = { persona: next.persona, risk: next.risk };
+  swapRoster(next: {
+    readonly persona: Persona;
+    readonly risk: RiskConfig;
+    readonly tuning?: TraderTuning;
+  }): void {
+    this.current = {
+      persona: next.persona,
+      risk: next.risk,
+      tuning: next.tuning ?? this.current.tuning,
+    };
   }
 
   async evaluate(context: MarketContext): Promise<OrderResult[]> {
     // One read of the swappable pair, at the top — see `swapRoster`.
-    const { persona, risk } = this.current;
+    const { persona, risk, tuning } = this.current;
     const now = (this.config.now ?? Date.now)();
-    const mode: TraderMode = this.config.mode ?? "live";
+    const mode: TraderMode = tuning.mode;
 
     // Kill switch / circuit breakers first: if halted, decide nothing and place nothing this cycle.
     // The market context is still captured here — a halt is exactly the kind of cycle the
     // replay/counterfactual measures want to see, not a gap in the tape.
+    // Before any gate: reading what a share order became places nothing, and the order may be the
+    // beta scout's, which trades live on this account whatever this bot's mode or suspend (#4650).
+    try {
+      await this.config.optionOrders?.settleShares?.();
+    } catch {
+      // Never a reason to skip a cycle: an unread order is read again next cycle.
+    }
     const blocked = this.config.blockedReason?.() ?? null;
     if (blocked) {
       this.config.onDecision?.({
@@ -206,13 +253,14 @@ export class AutonomousTrader {
     const enriched = options ? { ...context, options } : context;
     const rawIntents = persona.decide(enriched, decidedOn);
     const playbookVerdicts = persona.playbookVerdicts?.(enriched) ?? [];
+    const playbookObservations = this.observationsOf(persona, enriched);
     const { open, portfolio } = await this.readOpenShares(mode, rawIntents, decidedOn);
     const { approved: guardedIntents, refused: refusals } = applyGuardsWithVerdicts(
       rawIntents,
       portfolio,
       enriched,
       risk,
-      open.selling,
+      { sells: open.selling, buys: open.buys },
     );
 
     const results: OrderResult[] = [];
@@ -220,7 +268,7 @@ export class AutonomousTrader {
     for (const [index, intent] of guardedIntents.entries()) {
       const handled = intent.option
         ? await this.handleOption(intent, index, { persona, mode, now, cooling })
-        : await this.handleShares(intent, { mode, now, open });
+        : await this.handleShares(intent, { mode, now, open, cooldownMs: tuning.cooldownMs });
       outcomes.push(handled.outcome);
       if (handled.result) results.push(handled.result);
     }
@@ -247,9 +295,23 @@ export class AutonomousTrader {
       // The context the cycle was HANDED — option quotes never reach disk or the wire.
       context,
       ...(refusals.length > 0 ? { refusals } : {}),
-      ...(playbookVerdicts.length > 0 ? { playbookVerdicts } : {}),
+      // Always said, even empty (#4773): a pass whose playbooks are all paused ran none, and the
+      // roll call must stop here rather than skip back to a pass from before the pause.
+      playbookVerdicts,
+      ...(playbookObservations.length > 0 ? { playbookObservations } : {}),
     });
     return results;
+  }
+
+  /** What the persona's dark playbooks would have done (#5489) — a recording, never a decision, so a
+   *  reading that throws costs the record its observations and the cycle nothing. */
+  private observationsOf(persona: Persona, context: MarketContext): readonly PlaybookObservation[] {
+    try {
+      return persona.playbookObservations?.(context) ?? [];
+    } catch (error) {
+      this.config.onObservationError?.(persona.id, error);
+      return [];
+    }
   }
 
   /** Underlyings no option order may be attempted on this cycle: one still working at the broker,
@@ -293,10 +355,15 @@ export class AutonomousTrader {
 
   private async handleShares(
     intent: OrderIntent,
-    cycle: { readonly mode: TraderMode; readonly now: number; readonly open: OpenShares },
+    cycle: {
+      readonly mode: TraderMode;
+      readonly now: number;
+      readonly open: OpenShares;
+      readonly cooldownMs: number | undefined;
+    },
   ): Promise<Handled> {
     const { mode, now, open } = cycle;
-    const cooldown = this.config.cooldownMs ?? DEFAULT_COOLDOWN_MS;
+    const cooldown = cycle.cooldownMs ?? DEFAULT_COOLDOWN_MS;
     const last = this.lastOrderAt.get(intent.symbol);
     if (last !== undefined && now - last < cooldown) {
       return { outcome: { intent, action: "cooldown-skipped" } };

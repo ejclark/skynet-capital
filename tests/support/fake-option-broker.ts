@@ -17,6 +17,7 @@ import {
   type AlpacaPosition,
 } from "../../src/alpaca/alpaca-trading-client.js";
 import { clientOrderIdPrefix } from "../../src/autonomous/client-order-id.js";
+import type { OrderSettlement } from "../../src/domain/order-settlement.js";
 
 /**
  * A scriptable Alpaca for the bots' option order flow (#4642 slice 5): both client slices the flow
@@ -145,21 +146,30 @@ export class FakeOptionBroker implements OptionFlowTradingClient, OptionFlowOpti
   }
 }
 
-/** A flow over `broker` that never really waits: 3 polls, 2 settle re-reads. */
+/** A flow over `broker` that never really waits: 3 polls, 2 settle re-reads. Every settlement it
+ *  reports lands in `settled`, unless `onSettled` replaces that listener. */
 export function flowOver(
   broker: FakeOptionBroker,
   pending = new PendingOptionOrders(),
-): { flow: AlpacaOptionOrderFlow; pending: PendingOptionOrders; submitted: OptionLegSubmission[] } {
+  onSettled?: (settlement: OrderSettlement) => void,
+): {
+  flow: AlpacaOptionOrderFlow;
+  pending: PendingOptionOrders;
+  submitted: OptionLegSubmission[];
+  settled: OrderSettlement[];
+} {
   const submitted: OptionLegSubmission[] = [];
+  const settled: OrderSettlement[] = [];
   const flow = new AlpacaOptionOrderFlow({
     trading: broker,
     options: broker,
     pending,
     clientOrderIdPrefix: PREFIX,
     onSubmitted: (info) => submitted.push(info),
+    onSettled: onSettled ?? ((s) => settled.push(s)),
     now: () => NOW,
     sleep: () => Promise.resolve(),
     timing: { waitMs: 3_000, pollMs: 1_000, settleAttempts: 2, settleDelayMs: 500 },
   });
-  return { flow, pending, submitted };
+  return { flow, pending, submitted, settled };
 }

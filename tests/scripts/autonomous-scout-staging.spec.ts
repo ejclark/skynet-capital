@@ -4,6 +4,8 @@ import {
   announceScout,
   sessionDayOf,
   stageOnce,
+  watchScoutPicks,
+  watchScoutStaging,
 } from "../../src/scripts/autonomous-scout-staging.js";
 import { aContext } from "../support/builders.js";
 
@@ -11,6 +13,7 @@ import { aContext } from "../support/builders.js";
 // the market are closed are not on your radar". The session is whatever Alpaca's next_open says.
 describe("after-close scout staging", () => {
   const ctx = (): MarketContext => aContext({ NVDA: { last: 100, momentum: 0.03 } });
+  const on = () => true;
 
   it("sessionDayOf reads the calendar date Alpaca's next_open names (Labor Day → Tuesday)", () => {
     expect(sessionDayOf("2026-09-08T09:30:00-04:00")).toBe("2026-09-08");
@@ -30,6 +33,7 @@ describe("after-close scout staging", () => {
         },
       },
       context: ctx,
+      enabled: on,
       log: (line) => logged.push(line),
     });
     expect(staged).toBe(2);
@@ -50,13 +54,37 @@ describe("after-close scout staging", () => {
       clock: { isOpen: () => true, nextOpen: () => "2026-09-08T09:30:00-04:00" },
       runner,
       context: ctx,
+      enabled: on,
     });
     await stageOnce({
       clock: { isOpen: () => false, nextOpen: () => undefined },
       runner,
       context: ctx,
+      enabled: on,
     });
     expect(calls).toBe(0);
+  });
+
+  // #4535 slice 4b: the owner's switch is read at every pass, so turning it off stops the next one.
+  it("stages nothing while the owner's switch is off, and stages again once it is back on", async () => {
+    let staging = false;
+    const calls: string[] = [];
+    const deps = {
+      clock: { isOpen: () => false, nextOpen: () => "2026-10-20T09:30:00-04:00" },
+      runner: {
+        stageScout: (_c: MarketContext, day: string) => {
+          calls.push(day);
+          return Promise.resolve(1);
+        },
+      },
+      context: ctx,
+      enabled: () => staging,
+    };
+    expect(await stageOnce(deps)).toBe(0);
+    expect(calls).toEqual([]);
+    staging = true;
+    expect(await stageOnce(deps)).toBe(1);
+    expect(calls).toEqual(["2026-10-20"]);
   });
 
   it("logs nothing on an empty scan and never throws out of the poll", async () => {
@@ -66,12 +94,14 @@ describe("after-close scout staging", () => {
       clock: { isOpen: () => false, nextOpen: () => "2026-09-08T09:30:00-04:00" },
       runner: { stageScout: () => Promise.resolve(0) },
       context: ctx,
+      enabled: on,
       log: (line) => logged.push(line),
     });
     const failed = await stageOnce({
       clock: { isOpen: () => false, nextOpen: () => "2026-09-08T09:30:00-04:00" },
       runner: { stageScout: () => Promise.reject(new Error("broker down")) },
       context: ctx,
+      enabled: on,
       warn: (line) => warned.push(line),
     });
     expect([quiet, failed]).toEqual([0, 0]);
@@ -89,8 +119,8 @@ describe("after-close scout staging", () => {
     announceScout({ maxPicks: 2, stageAfterClose: false }, undefined, sink);
     announceScout({ maxPicks: 2, stageAfterClose: true }, "Sauron", sink);
     expect(lines).toEqual([
-      "warn [beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.",
-      "log [beta-scout] armed: up to 2 forced pick(s)/day when nothing organic fires, on Sauron's account; after the close, picks stage for Alpaca's next open.",
+      "warn [beta-scout] forced picks set but no bot account available — staying dark.",
+      "log [beta-scout] armed: up to 2 forced pick(s)/day when nothing organic fires, on Sauron's account while it is subscribed to BETA-SCOUT; after the close, picks stage for Alpaca's next open.",
     ]);
   });
 
@@ -102,12 +132,85 @@ describe("after-close scout staging", () => {
     };
     announceRoster({ enabled: [], rejected: [] }, sink);
     announceRoster(
-      { enabled: [{ playbook: { id: "S1-NVDA" }, mode: "standard" }], rejected: ["BOGUS"] },
+      {
+        enabled: [{ playbook: { id: "S1-NVDA" }, mode: "standard" }],
+        rejected: ["BOGUS", "S1-NVDA:aggressive (repeated)"],
+      },
       sink,
     );
     expect(lines).toEqual([
-      'error [playbooks] REFUSED unknown/malformed token "BOGUS" in SKYNET_PLAYBOOKS',
+      'error [playbooks] REFUSED token "BOGUS" in SKYNET_PLAYBOOKS — unknown, malformed or repeated',
+      'error [playbooks] REFUSED token "S1-NVDA:aggressive (repeated)" in SKYNET_PLAYBOOKS — unknown, malformed or repeated',
       "log [playbooks] armed: S1-NVDA:standard",
+    ]);
+  });
+});
+
+// The scout reads its count at every scan; the poll-time watch only refreshes what the count also
+// shows (the host's roster, with the scout on it while armed) and says so (#4535 slice 2b).
+describe("watching the owner's forced-pick count", () => {
+  it("applies and logs once per change, and stays quiet while the count holds still", () => {
+    let picks = 0;
+    const applied: number[] = [];
+    const logged: string[] = [];
+    const poll = watchScoutPicks(
+      () => picks,
+      () => applied.push(picks),
+      (line) => logged.push(line),
+    );
+    poll();
+    expect(applied).toEqual([]);
+    picks = 3;
+    poll();
+    poll();
+    expect(applied).toEqual([3]);
+    expect(logged).toEqual([
+      "[beta-scout] forced picks per day 0 → 3 (the owner's setting; applied with no restart)",
+    ]);
+    picks = 0;
+    poll();
+    expect(applied).toEqual([3, 0]);
+  });
+
+  it("tries again next poll when applying a change failed", () => {
+    let picks = 0;
+    let fail = true;
+    const logged: string[] = [];
+    const poll = watchScoutPicks(
+      () => picks,
+      () => {
+        if (fail) throw new Error("swap failed");
+      },
+      (line) => logged.push(line),
+    );
+    picks = 2;
+    expect(poll).toThrow("swap failed");
+    expect(logged).toEqual([]);
+    fail = false;
+    poll();
+    expect(logged).toHaveLength(1);
+  });
+});
+
+// The staging pass reads the owner's switch itself; the poll-time watch only says so, in the boot
+// line's words, so the logs at the next close show which way the bots took it (#4535 slice 4b).
+describe("watching the owner's after-close staging switch", () => {
+  it("logs once per flip, in the boot line's words, and stays quiet while it holds still", () => {
+    let staging = false;
+    const logged: string[] = [];
+    const poll = watchScoutStaging(
+      () => staging,
+      (line) => logged.push(line),
+    );
+    poll();
+    staging = true;
+    poll();
+    poll();
+    staging = false;
+    poll();
+    expect(logged).toEqual([
+      "[beta-scout] armed: after the close, picks stage for Alpaca's next open (the owner's setting; applied with no restart)",
+      "[beta-scout] after-close staging off — picks wait for market hours (the owner's setting; applied with no restart)",
     ]);
   });
 });

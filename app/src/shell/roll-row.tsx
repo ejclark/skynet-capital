@@ -16,8 +16,10 @@ import {
   validateDraft,
 } from "../live/draft-order";
 import { type ChainData, type ChainRow, fetchChain } from "../live/options";
+import { parseQuantity } from "../live/quantity";
 import { formatExpiration } from "../live/straddle";
 import { money, TIF_LABELS, type TicketTimeInForce, tifLabel } from "../live/ticket";
+import { InlineResult } from "../ui";
 
 /**
  * ROLL AS ONE TICKET (#3407 P3 slice 3; the study's row 11 — Fidelity's Roll ticket, 1:1): from
@@ -100,8 +102,8 @@ function useChain(parts: HeldContract | undefined, expiration: string): ChainDat
 
 function heldContract(position: DeskPosition): HeldContract | undefined {
   const parts = parseOccSymbol(position.symbol);
-  // `quantity` is display text — "−1,000" carries a comma a bare Number() reads as NaN.
-  const contracts = Number(position.quantity.replace(/,/g, ""));
+  // Signed: a short contract rolls by buying back, then selling the new one.
+  const contracts = parseQuantity(position.quantity);
   if (!(parts && Number.isFinite(contracts)) || contracts === 0) return undefined;
   return { ...parts, contracts };
 }
@@ -111,10 +113,14 @@ export function RollRow({
   position,
   onFilled,
   initialTarget,
+  strikeNote,
 }: {
   readonly deskId: string;
   readonly position: DeskPosition;
   readonly onFilled: () => void;
+  /** Where the picked strike sits against the row's price facts (#5070), when the roll opens
+   *  inside a position's guidance — said under the pickers, beside the choice it describes. */
+  readonly strikeNote?: (strike: number) => string | undefined;
   /** A target the position guidance suggested (#3729) — seeds the pickers; the member still
    *  reviews and confirms, and the strike still snaps to one the target chain lists. */
   readonly initialTarget?: { readonly strike: number; readonly expiration: string };
@@ -142,6 +148,7 @@ export function RollRow({
   const openRow = targetChain?.rows.find((r) => r.strike === targetStrike);
   const closePrice = typedPrice(closeText) ?? closeRow?.[sides.close] ?? closeRow?.premium;
   const openPrice = typedPrice(openText) ?? openRow?.[sides.open] ?? openRow?.premium;
+  const note = strikeNote?.(targetStrike);
   const busy = state.step === "reviewing" || state.step === "submitting";
   const locked = busy || state.step === "done";
   const disarm = () =>
@@ -208,6 +215,7 @@ export function RollRow({
       <span className="tkt-roll-line num">
         {legLine(held, short, targetStrike, targetExpiration, closePrice, openPrice)}
       </span>
+      {note ? <span className="tkt-roll-line tkt-roll-note">{note}</span> : null}
       <RollAction
         state={state}
         timeInForce={timeInForce}
@@ -393,10 +401,14 @@ function RollAction({
             Review roll…
           </button>
           {state.step === "refused" ? (
-            <span className="tkt-close-note gate-refusal">✕ {state.refusals[0]}</span>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.refusals[0]}
+            </InlineResult>
           ) : null}
           {state.step === "error" ? (
-            <span className="tkt-close-note gate-refusal">{state.message}</span>
+            <InlineResult as="span" tone="err" className="tkt-close-note">
+              {state.message}
+            </InlineResult>
           ) : null}
         </>
       );
@@ -424,9 +436,9 @@ function RollAction({
     }
     case "done":
       return (
-        <span className="tkt-close-note gate-ok">
+        <InlineResult as="span" tone="ok" className="tkt-close-note">
           order {state.response.orderId} {state.response.status} — one net limit, both legs
-        </span>
+        </InlineResult>
       );
   }
 }

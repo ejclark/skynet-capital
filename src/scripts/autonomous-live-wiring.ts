@@ -7,6 +7,8 @@
  */
 
 import type { AlpacaAccount } from "../alpaca/alpaca-trading-client.js";
+import type { AuthoredPlaysWire } from "../autonomous/authored-plays-wire.js";
+import type { ShadowOrders } from "../autonomous/authored-shadow-wire.js";
 import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
 import {
   type ControlsState,
@@ -17,37 +19,49 @@ import { type BotControlsClient, resolveBotControls } from "../autonomous/bot-co
 import { type BotsHealthFile, resolveBotsHealthFile } from "../autonomous/bots-health-file.js";
 import type { BotsStateDb } from "../autonomous/bots-state-db.js";
 import { openBotsStateDb } from "../autonomous/bots-state-db.js";
+import type { ConvictionsWire } from "../autonomous/convictions-wire.js";
 import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-equity.js";
 import { type DecisionDb, decisionDbPathFrom, openDecisionDb } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { BetaScoutDeps, LiveBot } from "../autonomous/live-cycle.js";
-import { assessReadiness } from "../autonomous/readiness.js";
 import type { SafetyController } from "../autonomous/safety.js";
 import type { SubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import type { Bot } from "../bots/bot.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
+import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import type { IntradayBarsOf } from "../domain/intraday-bar.js";
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
-import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
-import { hardcoreScenarioPacks, scenarioPacks } from "../evals/scenarios/index.js";
 import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { Persona } from "../personas/persona.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
+import { withQuoteUniverse } from "../personas/universe-view.js";
+import type { AuthoredRoster } from "../playbooks/authored-play.js";
+import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
+import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
+import type { ConvictionLookup } from "../playbooks/conviction-store.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
+import { registeredPlaybooks } from "../playbooks/registry.js";
+import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
 import { withOptionSafety } from "../playbooks/with-option-safety.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
+import { withTargetObservation } from "../playbooks/with-target-observation.js";
+import {
+  windDownSubscriptions,
+  withUnsubscribedExits,
+} from "../playbooks/with-unsubscribed-exits.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
-import { mergeRosters, subscriptionRoster } from "../subscriptions/subscription-roster.js";
 import {
-  optionReadWarn,
-  optionTraderConfig,
-  ownedOptionRoster,
-} from "./autonomous-option-wiring.js";
+  mergeRosters,
+  pausedRoster,
+  subscriptionRoster,
+} from "../subscriptions/subscription-roster.js";
+import { buildTuning, gateBuild, HARDCORE_COOLDOWN_MS } from "./autonomous-hardcore-live.js";
+import { optionReadWarn, optionTraderConfig, ownedRoster } from "./autonomous-option-wiring.js";
 import { botOrderPublisher, logResult } from "./autonomous-sinks.js";
-
-const HARDCORE_COOLDOWN_MS = 90_000;
 
 /** Mission Control boot (Eric, 2026-08-21): one bounded fetch for the boot-applied overrides
  *  (mode/hardcore); the dynamic suspend toggles ride the background poll started in runLive.
@@ -71,6 +85,15 @@ export async function bootMissionControl(
   // Fires on every poll carrying a well-formed Playbook Store snapshot (subscription-sync.ts's
   // hook) — threaded straight through to resolveBotControls, same shape as the cursor above.
   onSubscriptions?: (snapshot: SubscriptionsSnapshot) => void,
+  // Fires on every poll carrying the members' playbooks in a shadow test (authored-shadow-wire.ts) —
+  // threaded straight through, same shape as the two above.
+  onAuthoredShadow?: (orders: ShadowOrders) => void,
+  // Fires on every poll carrying the members' PROMOTED plays (authored-plays-wire.ts) — specs only,
+  // ahead of the subscriptions hook on the same poll.
+  onAuthoredPlays?: (wire: AuthoredPlaysWire) => void,
+  // Fires on every poll carrying the members' handed-over convictions (convictions-wire.ts) —
+  // records only, ahead of the subscriptions hook on the same poll.
+  onConvictions?: (wire: ConvictionsWire) => void,
 ): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
@@ -86,6 +109,9 @@ export async function bootMissionControl(
     },
     onDecisionsCursor,
     onSubscriptions,
+    onAuthoredShadow,
+    onAuthoredPlays,
+    onConvictions,
   );
   const fetched = await controls.fetchOnce();
   health.boot(controls.enabled);
@@ -209,21 +235,35 @@ function logHardcore(roster: ReturnType<typeof applyHardcore>): void {
   }
 }
 
-/** The beta scout's config, or `undefined` (dark) when unarmed or no bot account exists yet. */
+/** The beta scout's config, or `undefined` when no bot account exists yet. Built disarmed too
+ *  (`maxPicks` 0): it then picks nothing, but still sells the picks it holds on the next trading
+ *  day, so switching the forced picks off never strands one (review of #4642 slice 10). The count
+ *  may be a function, read at every scan, so the owner's setting applies live (#4535 slice 2b).
+ *  `subscriptions` reads its host bot's subscriptions as they stand now (a Store change swaps them
+ *  in place), so its picks open only while that bot is subscribed to it (#4642 slice 10). */
 export function buildScoutDeps(
-  betaForcingMaxPicks: number,
+  betaForcingMaxPicks: number | (() => number),
   scoutBroker: BrokerPort | undefined,
   opts: {
     universe: readonly string[];
     managedSymbols: ReadonlySet<string>;
     risk: RiskConfig;
     mode: TraderMode;
+    subscriptions: () => readonly PlaybookSubscription[];
+    realizedPlForPlaybook?: (playbookId: string) => number;
+    hostId?: string;
+    settlementOf?: (orderId: string) => OrderSettlement | undefined;
+    signalledOn?: (session: string, staged: boolean) => readonly string[];
   },
 ): BetaScoutDeps | undefined {
-  if (betaForcingMaxPicks <= 0 || !scoutBroker) {
+  if (!scoutBroker) {
     return undefined;
   }
-  return { maxPicks: betaForcingMaxPicks, broker: scoutBroker, ...opts };
+  const maxPicks =
+    typeof betaForcingMaxPicks === "function"
+      ? () => Math.max(0, betaForcingMaxPicks())
+      : Math.max(0, betaForcingMaxPicks);
+  return { maxPicks, broker: scoutBroker, ...opts };
 }
 
 /** One bot's resolved roster: the house roster plus its own subscriptions layered on top. */
@@ -231,6 +271,10 @@ export interface BotRoster {
   readonly bot: Bot;
   readonly subscriptions: readonly PlaybookSubscription[];
   readonly enabled: readonly EnabledPlaybook[];
+  /** The conviction records this bot's pointers resolve against (#5482 slice 6c): the seeded ones
+   *  plus its members' handed-over views. Absent, the build's seeded store. Carried on the roster
+   *  so the narrowing it was built with and the check `tradingRoster` gates on read the same set. */
+  readonly convictionOf?: ConvictionLookup;
 }
 
 /**
@@ -245,10 +289,20 @@ export function buildBotRosters(
   bots: readonly Bot[],
   playbookRoster: { readonly enabled: readonly EnabledPlaybook[] },
   env: NodeJS.ProcessEnv,
+  // Each bot's own promoted plays (#5457 slice 3), when the app has reported any.
+  authoredFor?: (accountId: string) => AuthoredRoster,
+  // Each bot's conviction records (#5482 slice 6c), when the app has reported any.
+  convictionsFor?: (accountId: string) => ConvictionLookup,
 ): BotRoster[] {
   const subscriptionsByAccount = createSubscriptionStore(env).load();
   return bots.map((bot) =>
-    resolveBotRoster(bot, playbookRoster.enabled, subscriptionsByAccount[bot.persona.id] ?? []),
+    resolveBotRoster(
+      bot,
+      playbookRoster.enabled,
+      subscriptionsByAccount[bot.persona.id] ?? [],
+      authoredFor?.(bot.persona.id),
+      convictionsFor?.(bot.persona.id),
+    ),
   );
 }
 
@@ -257,26 +311,83 @@ export function buildBotRosters(
  * `buildBotRosters` above, off the local file) and on every live subscription swap (issue #3595,
  * off the snapshot the `/controls` poll carries) — a second copy is exactly how a swapped roster
  * would drift from what a restart would have produced. An option playbook then claims its
- * underlyings from every other playbook in the roster (`option-ownership.ts`).
+ * underlyings from every other playbook in the roster, and a persona's own rules (SAURON) yield
+ * every symbol another playbook trades (`option-ownership.ts`).
  */
 export function resolveBotRoster(
   bot: Bot,
   houseEnabled: readonly EnabledPlaybook[],
   subscriptions: readonly PlaybookSubscription[],
+  // This bot's own compiled authored plays (`authoredRoster`, #809), so a `U-*` subscription runs
+  // and pauses exactly like a house one (#4450 slice 3). Only a subscription on the account the
+  // roster was compiled for resolves one (`subscriptionRoster`). Nothing persists a spec yet, so
+  // both callers pass none and every `U-*` subscription is refused below, as before.
+  authored?: AuthoredRoster,
+  // The records this bot's conviction pointers resolve against (#5482 slice 6c); the build's
+  // seeded store when absent. A pointer it cannot resolve runs its pair exits-only (`steeredBy`).
+  convictionOf?: ConvictionLookup,
 ): BotRoster {
-  const acctRoster = subscriptionRoster(subscriptions);
+  const acctRoster = subscriptionRoster(subscriptions, authored, convictionOf);
   for (const bad of acctRoster.rejected) {
     console.error(
       `[playbooks] ${bot.persona.id} is subscribed to unknown playbook "${bad}" — refused`,
     );
+  }
+  // An author whose play is dark deserves to know which field did it (`authoredRoster`).
+  for (const bad of authored?.rejected ?? []) {
+    console.error(
+      `[playbooks] ${bot.persona.id}'s authored play "${bad.slug}" is out of bounds — ${bad.problems.map((p) => `${p.field} ${p.problem}`).join("; ")}`,
+    );
+  }
+  // A conviction narrows the pairs it steers (#5482 slice 4): the fences say so, and a narrowing
+  // that would widen a bound is refused whole, the pair running exits-only.
+  for (const line of acctRoster.steered) {
+    console.log(`[playbooks] ${bot.persona.id} conviction narrows ${line}`);
+  }
+  for (const line of acctRoster.steeringRefused) {
+    console.error(`[playbooks] ${bot.persona.id} conviction REFUSED, exits only — ${line}`);
   }
   if (acctRoster.enabled.length > 0) {
     console.log(
       `[playbooks] ${bot.persona.id} subscribed: ${acctRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
     );
   }
-  const merged = mergeRosters(houseEnabled, acctRoster.enabled);
-  return { bot, subscriptions, enabled: ownedOptionRoster(bot.persona.id, merged) };
+  // Paused: opens nothing new (a covered call excepted); its names and exits are unchanged.
+  const paused = pausedRoster(subscriptions, authored);
+  if (paused.length > 0) {
+    console.log(
+      `[playbooks] ${bot.persona.id} paused (opens nothing new): ${paused.map((e) => e.playbook.id).join(", ")}`,
+    );
+  }
+  // Criterion 11 (#4469): a pair the house never marked ✓ keeps trading without a stated conviction,
+  // and says so — a label, never a stop.
+  const unstated = subscriptions.filter(isConvictionNotStated);
+  if (unstated.length > 0) {
+    console.log(
+      `[playbooks] ${bot.persona.id} runs ${unstated.map((s) => s.playbookId).join(", ")} — ${CONVICTION_NOT_STATED}; still trading`,
+    );
+  }
+  // An env-roster playbook with no subscription opens nothing (#4642 slice 10): it takes the shape a
+  // paused one has — exits only, its names kept, no verdict — so the roll call never calls it armed,
+  // expiry hygiene buys back a short it would otherwise hold into assignment, and it emits no open
+  // only to have the guards refuse it. Said once per roster, so it never reads as a quiet market.
+  const held = new Set(subscriptions.map((s) => s.playbookId));
+  const ungranted = houseEnabled.filter((e) => !held.has(e.playbook.id));
+  if (ungranted.length > 0) {
+    console.warn(
+      `[playbooks] ${bot.persona.id} is not subscribed to ${ungranted.map((e) => e.playbook.id).join(", ")} (named in SKYNET_PLAYBOOKS) — they open nothing on it, exits still run; subscribe in the Store`,
+    );
+  }
+  const house = houseEnabled.map((e) =>
+    held.has(e.playbook.id) ? e : { ...e, exitsOnly: true as const },
+  );
+  const merged = mergeRosters(house, [...acctRoster.enabled, ...paused]);
+  return {
+    bot,
+    subscriptions,
+    enabled: ownedRoster(bot.persona.id, merged),
+    ...(convictionOf ? { convictionOf } : {}),
+  };
 }
 
 /** The two subscription-sensitive halves of a bot's trader config. */
@@ -292,12 +403,38 @@ export interface TradingRoster {
  * What one bot trades under, for a resolved roster. Like `resolveBotRoster`, ONE definition shared
  * by boot (`buildLiveBot` below) and by the live swap (`AutonomousTrader.swapRoster`), so a
  * subscription change applied without a restart produces byte-for-byte what a restart would.
+ *
+ * Only a subscribed playbook opens a position (#4642 slice 10): the guards refuse any open whose
+ * playbook this bot holds no enabled subscription to (`subscribedOnly`), and every exit still runs.
+ *
+ * The forced daily pick (`BETA-SCOUT`) is placed by the live cycle, never by this roster, so it
+ * stays off it — except on the one bot the scout runs on while it is armed (`runsScout`), where it
+ * rides along for its verdict alone (it decides nothing here) so the roll call can say it is on.
  */
 export function tradingRoster(
-  roster: BotRoster,
+  full: BotRoster,
   baseRisk: RiskConfig,
   realizedPlForPlaybook?: (playbookId: string) => number,
+  {
+    runsScout = false,
+    ledgerOf,
+    intradayBars,
+    placedBy,
+  }: {
+    /** The names this bot has placed orders on under a playbook (`decision-db`) — what shows an
+     *  unsubscribed playbook still owns an open position, so its exits keep running (#5609). */
+    readonly placedBy?: (playbookId: string) => ReadonlySet<string>;
+    readonly runsScout?: boolean;
+    /** The 5-minute bars a dark playbook records its would-be orders from (#5489) — absent when no
+     *  feed is wired, and the playbook then records its verdict and nothing more. */
+    readonly intradayBars?: IntradayBarsOf;
+    /** Each pair's history on this bot, for the conviction check — absent when the store is dark. */
+    readonly ledgerOf?: ConvictionGateDeps["ledgerOf"];
+  } = {},
 ): TradingRoster {
+  const roster = runsScout
+    ? full
+    : { ...full, enabled: full.enabled.filter((e) => e.playbook.id !== BETA_SCOUT_ID) };
   return {
     // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose on
     // top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS or a
@@ -305,17 +442,64 @@ export function tradingRoster(
     // `console` is the live runtime's log sink: an opted-in playbook's mixed-signals readings
     // (#3194 step 5b-i) land beside the `[playbooks]`/`[gate]` lines. Observe-only — the sink
     // never feeds back into a decision. Expiry hygiene wraps it all, so a contract on the account is
-    // looked after even with no option playbook subscribed (`with-option-safety.ts`).
-    persona: withOptionSafety(
-      withPlaybooks(roster.bot.persona, roster.enabled, UPCOMING_PRINTS, [], console),
-      roster.enabled,
-      UPCOMING_PRINTS,
+    // looked after even with no option playbook subscribed (`with-option-safety.ts`). The base persona
+    // sees only the ten names, whatever else the stream carries for a playbook (#4777) — on every
+    // bot, a bot with no playbook included.
+    persona: withUnsubscribedExits(
+      (enabled) =>
+        withOptionSafety(
+          // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
+          // hygiene around it, so the gate sits between the two.
+          withTargetObservation(
+            withConvictionGate(
+              withPlaybooks(
+                withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
+                enabled,
+                UPCOMING_PRINTS,
+                [],
+                console,
+                (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+                intradayBars,
+              ),
+              {
+                subscriptions: roster.subscriptions,
+                ...(ledgerOf ? { ledgerOf } : {}),
+                ...(roster.convictionOf ? { convictionOf: roster.convictionOf } : {}),
+                log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+              },
+            ),
+            // OBSERVE-ONLY (#5483 slice 3): reads each play's book against its target and logs; the
+            // intents come back untouched. Hygiene still wraps it all.
+            {
+              accountId: roster.bot.persona.id,
+              subscriptions: roster.subscriptions,
+              enabled: enabled,
+              log: console,
+            },
+          ),
+          enabled,
+          UPCOMING_PRINTS,
+        ),
+      {
+        candidates: registeredPlaybooks(),
+        enabled: roster.enabled,
+        ...(placedBy ? { placedBy } : {}),
+        log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+      },
     ),
     risk: {
       ...baseRisk,
-      subscriptions: roster.subscriptions,
+      subscriptions: [
+        ...roster.subscriptions,
+        ...windDownSubscriptions(
+          roster.bot.persona.id,
+          { candidates: registeredPlaybooks(), enabled: roster.enabled },
+          roster.subscriptions,
+        ),
+      ],
       playbookSymbols: new Map(roster.enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
       ...(realizedPlForPlaybook ? { realizedPlForPlaybook } : {}),
+      subscribedOnly: true,
     },
   };
 }
@@ -344,35 +528,24 @@ export function buildLiveBot(
     /** The bots app's local event bus (#1211 slice 2) — omit (no durable dir configured) to run
      *  exactly as before this existed: no publish attempted, nothing to fail. */
     activityBus?: ActivityEventBus;
+    /** What an order this bot left `working` became once the broker ended it (#4650) — omit and
+     *  late fills stay with the broker's own ledger, as before. */
+    onSettled?: (settlement: OrderSettlement) => void;
   },
 ): LiveBot {
   const hardcore = opts.hardcore.has(bot.persona.id);
-  const readiness = assessReadiness(bot.persona, {
-    pack: hardcore ? hardcoreScenarioPacks[bot.persona.id] : scenarioPacks[bot.persona.id],
-    safetyScenarios: genericSafetyScenarios,
-  });
   // The owner's per-bot mode override (Mission Control, boot-applied) narrows the env default;
-  // the readiness gate still has the final say below.
+  // the readiness gate still has the final say, and re-runs when the hardcore build flips live.
   const wantedMode = controlsMode(opts.bootControls, bot.persona.id, opts.mode);
   if (wantedMode !== opts.mode) {
     console.log(`[controls] ${bot.persona.name}: mode ${wantedMode} (owner override)`);
   }
-  const effectiveMode = wantedMode === "live" && readiness.ready ? "live" : "observe";
-  if (wantedMode === "live" && !readiness.ready) {
-    console.warn(
-      `[gate] ${bot.persona.name} is NOT ready — pinned to observe. ${readiness.reason}`,
-    );
-  } else {
-    console.log(`[gate] ${bot.persona.name}: ${readiness.reason} → ${effectiveMode}`);
-  }
-  // The same verdict as the log line above, riding the `/controls` poll this bot's process is
-  // already making — the ops-status panel's credential-free "which personas are gated, and why"
-  // (#666 slice 3).
-  opts.controls.reportPersonaGate({
-    id: bot.persona.id,
-    ready: readiness.ready,
-    reason: readiness.reason,
-  });
+  // The verdict also rides the `/controls` poll this bot's process is already making — the
+  // ops-status panel's credential-free "which personas are gated, and why" (#666 slice 3).
+  const tuning = buildTuning(
+    gateBuild(bot.persona, hardcore, wantedMode, opts.controls.reportPersonaGate),
+    hardcore,
+  );
   // Swappable, not the plain factory: lets a future credential rotation swap the Alpaca
   // client this bot trades with in place, without restarting the process (and therefore
   // without losing any bot's in-memory momentum/sentiment/cooldown state).
@@ -381,6 +554,7 @@ export function buildLiveBot(
       ? { onSubmitted: botOrderPublisher(bot.persona.id, opts.activityBus) }
       : {}),
     onOptionReadError: optionReadWarn(bot.persona.id),
+    ...(opts.onSettled ? { onSettled: opts.onSettled } : {}),
   });
   return {
     personaName: bot.persona.name,
@@ -390,10 +564,9 @@ export function buildLiveBot(
       broker,
       ...optionTraderConfig(broker),
       risk: opts.trading.risk,
-      mode: effectiveMode,
-      // Hardcore research mode iterates fast: 90s between orders in a symbol instead of 5m.
-      // Small tranches keep the order-rate breaker (20/min) and daily-loss breaker (5%) binding.
-      ...(hardcore ? { cooldownMs: HARDCORE_COOLDOWN_MS } : {}),
+      // The mode the gate allows, and (hardcore) 90s between orders in a symbol instead of 5m.
+      mode: tuning.mode,
+      ...(tuning.cooldownMs !== undefined ? { cooldownMs: tuning.cooldownMs } : {}),
       // Durable cooldowns (slice 4): restored at construction, persisted on every order — dark
       // (both no-ops) unless SKYNET_BOTS_DB_PATH is set.
       ...(opts.botsStateDb
@@ -414,6 +587,11 @@ export function buildLiveBot(
         if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
         opts.onDecision(r);
       },
+      onObservationError: (personaId, error) =>
+        console.warn(
+          `[observe] ${personaId}: a dark playbook's reading failed, none recorded:`,
+          error,
+        ),
     }),
   };
 }

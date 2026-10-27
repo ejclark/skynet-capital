@@ -1,8 +1,11 @@
+import type { OrderForecast } from "../domain/types.js";
 import type { HeartbeatView, PlaybookHeartbeat } from "../observatory/bot-heartbeat-view.js";
+import type { CheckWeekView } from "../observatory/check-week-view.js";
 import type { DecisionCycleView } from "../observatory/decision-json-view.js";
+import { withoutPlaybookNames } from "../observatory/playbook-name-redaction.js";
 import type { SafeguardLadderEntry } from "../observatory/safeguard-ladder-view.js";
 import type { ThesisView } from "../observatory/thesis-json-view.js";
-import type { WireTradeReasoning } from "../observatory/wire-reasoning.js";
+import { withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
@@ -13,7 +16,15 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
  * table, the decision outcome chips and Activity's "Playbook" row onto any member's view of any
  * bot, so the desk JSON family strips the playbook key before it leaves the server for a session
  * that does not own the account. Verdicts, modes, reasons and fills still ride — only the name of
- * the playbook is withheld.
+ * the playbook is withheld, and with it the intent's strategy tag, a playbook's own slug that names
+ * it by inference (#4971). The league Wire (`/api/wire`) lists every account's fills with the same
+ * decisions attached, so it asks `ownsDesk` per row (`attachWireReasoning`'s `ownsAccount`).
+ *
+ * The same strips withhold what the broker said about an order's result (#4650): a broker's message
+ * can name the account's specifics, so it is the owner's alone wherever a bot's order is read.
+ *
+ * Each strip also redacts the ids out of the free text that rides beside those keys — a reason
+ * reads "S1-NVDA window open …" as built (#4442, `playbook-name-redaction.ts`).
  *
  * Ownership is the rule every other per-account gate uses (`trade-orders-routes.ts`,
  * `desk-events-route.ts`): with no OAuth configured there is no one to withhold from (the local,
@@ -29,18 +40,47 @@ export function ownsDesk(
   return resolveOwnedIds(session, config).includes(id);
 }
 
-type WithheldHeartbeat = Omit<HeartbeatView, "playbooks" | "rollCall"> & {
+type WeekLane = CheckWeekView["lanes"][number];
+type WeekTrade = CheckWeekView["trades"][number];
+
+type WithheldWeek = Omit<CheckWeekView, "lanes" | "trades"> & {
+  readonly lanes: readonly Omit<WeekLane, "playbookId">[];
+  readonly trades: readonly Omit<WeekTrade, "playbookId" | "mode">[];
+};
+
+type WithheldHeartbeat = Omit<HeartbeatView, "playbooks" | "rollCall" | "unmanaged" | "week"> & {
   readonly playbooks: readonly Omit<PlaybookHeartbeat, "playbookId">[] | null;
+  readonly week?: WithheldWeek;
 };
 
 /** The heartbeat without each verdict line's id: the verdict, its mode and how long it has held
  *  are the bot's health; which playbook it is stays the owner's. */
 export function withoutHeartbeatPlaybookIds(heartbeat: HeartbeatView): WithheldHeartbeat {
-  // The roll call is nothing but playbook names, so a non-owner gets none of it.
-  const { rollCall: _rollCall, ...rest } = heartbeat;
+  // The roll call is nothing but playbook names, so a non-owner gets none of it — nor the lots it
+  // flags as unmanaged, which say which baskets this bot's playbooks do NOT cover (#4777).
+  const { rollCall: _rollCall, unmanaged: _unmanaged, week, ...rest } = heartbeat;
+  return withoutPlaybookNames(
+    {
+      ...rest,
+      playbooks: heartbeat.playbooks?.map(({ playbookId: _withheld, ...line }) => line) ?? null,
+      ...(week ? { week: withoutWeekPlaybookIds(week) } : {}),
+    },
+    heartbeat,
+  );
+}
+
+/** The week's strip and lanes without a name (#5073 slice 2). A lane stays only when it is one of
+ *  the unnamed verdict lines (it keeps that line's slot); a lane for a playbook no longer running
+ *  would be a name-less row with nothing to sit under. A trade keeps when and which way, never
+ *  whose playbook placed it — on an unnamed lane, a CRWV mark names CRWV-WHEEL by inference
+ *  (#4971), so the trades ride the bot's own strip only. */
+function withoutWeekPlaybookIds(week: CheckWeekView): WithheldWeek {
   return {
-    ...rest,
-    playbooks: heartbeat.playbooks?.map(({ playbookId: _withheld, ...line }) => line) ?? null,
+    ...week,
+    lanes: week.lanes
+      .filter((lane) => lane.slot !== undefined)
+      .map(({ playbookId: _withheld, ...lane }) => lane),
+    trades: week.trades.map(({ playbookId: _p, mode: _m, ...trade }) => trade),
   };
 }
 
@@ -49,49 +89,85 @@ export function withoutHeartbeatPlaybookIds(heartbeat: HeartbeatView): WithheldH
 export function withoutLadderPlaybookIds(
   ladder: readonly SafeguardLadderEntry[],
 ): readonly Omit<SafeguardLadderEntry, "playbookId">[] {
-  return ladder.map(({ playbookId: _withheld, ...entry }) => entry);
+  return withoutPlaybookNames(
+    ladder.map(({ playbookId: _withheld, ...entry }) => entry),
+    ladder,
+  );
 }
 
 type Outcome = DecisionCycleView["outcomes"][number];
+type RefusedIntent = NonNullable<DecisionCycleView["refusedIntents"]>[number];
 
-/** Decision cycles with each outcome's `playbook · mode` chip removed. */
-export function withoutCyclePlaybooks(cycles: readonly DecisionCycleView[]): (Omit<
+/** An outcome's forecast as a non-owner reads it: the call and the order's own falsifier, never
+ *  the playbook's retire rule (#5043). */
+function withoutRetireRule({
+  retireRule: _r,
+  ...forecast
+}: OrderForecast): Omit<OrderForecast, "retireRule"> {
+  return forecast;
+}
+
+/** Decision cycles with each outcome's `playbook · mode` chip, its strategy tag, the broker's words
+ *  and its forecast's retire rule removed — and each refused idea's strategy tag and play. The tag
+ *  is a playbook's own slug (`crwv-wheel-put`), so it names the playbook as plainly as the chip
+ *  does (#4971); the retire rule is the playbook's own falsifier, never the order's (#5043). The
+ *  forecast's direction and the order's own invalidator stay. */
+export function withoutCycleOwnerFields(cycles: readonly DecisionCycleView[]): (Omit<
   DecisionCycleView,
-  "outcomes"
+  "outcomes" | "refusedIntents"
 > & {
-  readonly outcomes: readonly Omit<Outcome, "playbook" | "playbookMode">[];
+  readonly outcomes: readonly (Omit<
+    Outcome,
+    "playbook" | "playbookMode" | "strategy" | "brokerReason" | "forecast"
+  > & { readonly forecast?: Omit<OrderForecast, "retireRule"> })[];
+  readonly refusedIntents?: readonly Omit<RefusedIntent, "strategy" | "playbookId">[];
 })[] {
-  return cycles.map((cycle) => ({
-    ...cycle,
-    outcomes: cycle.outcomes.map(({ playbook: _p, playbookMode: _m, ...outcome }) => outcome),
-  }));
+  return withoutPlaybookNames(
+    cycles.map(({ refusedIntents, ...cycle }) => ({
+      ...cycle,
+      outcomes: cycle.outcomes.map(
+        ({
+          playbook: _p,
+          playbookMode: _m,
+          strategy: _s,
+          brokerReason: _b,
+          forecast,
+          ...outcome
+        }) => (forecast ? { ...outcome, forecast: withoutRetireRule(forecast) } : outcome),
+      ),
+      ...(refusedIntents
+        ? {
+            refusedIntents: refusedIntents.map(({ strategy: _s, playbookId: _p, ...idea }) => idea),
+          }
+        : {}),
+    })),
+    cycles,
+  );
 }
 
-/** An activity row's attached decision without its `playbookId`/`playbookMode`. */
-export function withoutReasoningPlaybook(
-  reasoning: WireTradeReasoning,
-): Omit<WireTradeReasoning, "playbookId" | "playbookMode"> {
-  const { playbookId: _p, playbookMode: _m, ...rest } = reasoning;
-  return rest;
-}
-
-type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning"> & {
-  readonly reasoning?: ReturnType<typeof withoutReasoningPlaybook>;
+type WithheldMarker = Omit<ThesisView["markers"][number], "reasoning" | "playbookId"> & {
+  readonly reasoning?: ReturnType<typeof withoutOwnerReasoning>;
 };
 
 /**
- * The thesis view with each fill marker's decision stripped of its playbook. `/thesis` joins the
+ * The thesis view with each fill marker's decision stripped of its playbook and the broker's words
+ * (`withoutOwnerReasoning`). `/thesis` joins the
  * SAME audit rows `/activity` does (both through `config.findByOrderId`), so it was handing a
  * non-owner the one key `/activity` already withheld — found by #3194 slice 6a's own gate spec,
  * which asked the thesis payload the question this block had only ever asked the other three.
+ * The marker's own `playbookId` and the drawn play (#5327) go too: the play's name names it.
  */
-export function withoutThesisPlaybooks(
+export function withoutThesisOwnerFields(
   thesis: ThesisView,
-): Omit<ThesisView, "markers"> & { readonly markers: readonly WithheldMarker[] } {
-  return {
-    ...thesis,
-    markers: thesis.markers.map(({ reasoning, ...marker }) =>
-      reasoning ? { ...marker, reasoning: withoutReasoningPlaybook(reasoning) } : marker,
-    ),
-  };
+): Omit<ThesisView, "markers" | "play"> & { readonly markers: readonly WithheldMarker[] } {
+  const { play: _play, ...rest } = thesis;
+  return withoutPlaybookNames(
+    {
+      ...rest,
+      markers: thesis.markers.map(({ reasoning, playbookId: _p, ...marker }) =>
+        reasoning ? { ...marker, reasoning: withoutOwnerReasoning(reasoning) } : marker,
+      ),
+    },
+    thesis,
+  );
 }

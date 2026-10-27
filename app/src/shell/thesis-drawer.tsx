@@ -5,13 +5,15 @@ import { useEffect, useId, useRef, useState } from "react";
 import {
   fetchDeskThesis,
   type SafeguardLadderEntry,
-  type SafeguardState,
   type ThesisData,
   type ThesisMarker,
 } from "../live/desk";
+import { playbookTitle, withPairNames } from "../live/playbook-name";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { readChartPalette } from "./chart-mount";
+import { ladderStamp, SAFEGUARD_STATE_GLYPH, SAFEGUARD_STATE_LABEL } from "./safeguard-state";
 import { mountThesisChart } from "./thesis-chart-mount";
+import { ThesisPlayBlock } from "./thesis-play";
 
 /**
  * THE THESIS DRAWER'S SHELL (#3186 slices 4a + 4b) — a bot's standing call, its one-line thesis, a
@@ -102,25 +104,6 @@ function BotControls({
   );
 }
 
-const SAFEGUARD_STATE_LABEL: Record<SafeguardState, string> = {
-  off: "Off",
-  watching: "Watching",
-  "alert-only": "Alert only",
-  enforcing: "Enforcing",
-};
-
-/** Four genuinely different SHAPES, not four fill levels of one — a quarter-filled circle has no
- *  glyph in several common stacks and fell back to a smudge in the 390px frame. Hollow circle,
- *  diamond, warning triangle, filled circle all render in core fonts and read apart at 12px. The
- *  state never depends on hue (CLAUDE.md: a standing reader is red/green colourblind); this is the
- *  third signal, after the word beside it and the stage's own border pattern. */
-const SAFEGUARD_STATE_GLYPH: Record<SafeguardState, string> = {
-  off: "○",
-  watching: "◆",
-  "alert-only": "▲",
-  enforcing: "●",
-};
-
 /**
  * THE SAFEGUARD LADDER (#3194 slice 6a) — per play this bot ran, what each of its two safety
  * stages actually does today. Read-only: arming or downgrading a stage is slice 6b, and this
@@ -141,16 +124,7 @@ function SafeguardLadder({
   if (ladder === undefined) return null;
   // Dated on the page, not just in the payload: nothing bounds how old that pass is, and a
   // safeguard list with no date reads as "this is what protects the bot right now".
-  const when = asOf ? new Date(asOf) : undefined;
-  const stamp =
-    when && !Number.isNaN(when.getTime())
-      ? when.toLocaleString(undefined, {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : undefined;
+  const stamp = ladderStamp(asOf);
   return (
     <section className="thesis-ladder">
       <h3 className="thesis-ladder-heading">
@@ -165,7 +139,7 @@ function SafeguardLadder({
         ladder.map((entry, i) => (
           <div className="thesis-ladder-play" key={`${entry.playbookId ?? i}:${entry.mode}`}>
             <p className="thesis-ladder-play-name">
-              {entry.playbookId ?? `Play ${i + 1}`} · {entry.mode}
+              {entry.playbookId ? playbookTitle(entry.playbookId) : `Play ${i + 1}`} · {entry.mode}
             </p>
             {entry.stages === null ? (
               <p className="note">
@@ -209,7 +183,7 @@ function CallBanner({ call }: { readonly call: ThesisData["call"] }): ReactEleme
   return (
     <div className={`thesis-call thesis-call-${call.verdict.replace(/\s+/g, "-")}`}>
       <p className="thesis-verdict">{VERDICT_LABEL[call.verdict]}</p>
-      <p className="thesis-why">{call.why}</p>
+      <p className="thesis-why">{withPairNames(call.why)}</p>
       <dl className="thesis-call-meta">
         {call.window ? (
           <div>
@@ -229,8 +203,8 @@ function CallBanner({ call }: { readonly call: ThesisData["call"] }): ReactEleme
 }
 
 /** Where a marker's order row lives (#3807 slice 2d, dead end 5): the `#act-<orderId>` anchors exist
- *  only on an Activity table, so a marker links to the Activity of the page it is on — the
- *  any-account page's own (`/u/:id/activity`), or the Profile page's for that account. */
+ *  only on a Ledger table, so a marker links to the Ledger of the page it is on — the
+ *  any-account page's own (`/u/:id/ledger`), or the Profile page's for that account. */
 type ActivityHome = "page" | "profile";
 
 /** A fill without a resolved decision renders exactly as before: a plain link, no fake affordance.
@@ -250,13 +224,13 @@ function MarkerRow({
     <li className={`thesis-marker thesis-marker-${marker.kind}`}>
       <div className="thesis-marker-row">
         {activity === "page" ? (
-          <Link to="/u/$id/activity" params={{ id: deskId }} hash={marker.activityAnchor}>
+          <Link to="/u/$id/ledger" params={{ id: deskId }} hash={marker.activityAnchor}>
             {marker.n}. {marker.label}
           </Link>
         ) : (
           <Link
             to="/accounts"
-            search={{ account: deskId, section: "activity" }}
+            search={{ account: deskId, section: "ledger" }}
             hash={marker.activityAnchor}
           >
             {marker.n}. {marker.label}
@@ -275,7 +249,7 @@ function MarkerRow({
       </div>
       {open && marker.reasoning ? (
         <div className="thesis-marker-detail">
-          <p className="cycle-reason">“{marker.reasoning.reason}”</p>
+          <p className="cycle-reason">“{withPairNames(marker.reasoning.reason)}”</p>
           {marker.reasoning.expectation ? (
             <p className="cycle-expectation">Expected: {marker.reasoning.expectation}</p>
           ) : null}
@@ -366,9 +340,22 @@ export function ThesisDrawer({
   }
 
   const data = thesis.data.thesis;
+  const { play } = data;
+  // The drawn play carries its own safeguards (#5327), so its card leaves the list below: once.
+  const ladder = thesis.data.ladder;
+  const playEntry = play ? ladder?.find((e) => e.playbookId === play.playbookId) : undefined;
+  const restOfLadder = playEntry && ladder ? ladder.filter((e) => e !== playEntry) : ladder;
   return (
     <div className="thesis-drawer">
       {data.thesis ? <p className="thesis-paragraph">{data.thesis}</p> : null}
+      {play ? (
+        <ThesisPlayBlock
+          play={play}
+          markers={data.markers}
+          ladderEntry={playEntry}
+          asOf={thesis.data.ladderAsOf}
+        />
+      ) : null}
       <BotControls ownAccounts={ownAccounts} />
       <CallBanner call={data.call} />
       <p className="thesis-health">
@@ -384,7 +371,10 @@ export function ThesisDrawer({
           <span className="thesis-health-detail"> · {data.health.detail}</span>
         ) : null}
       </p>
-      <SafeguardLadder ladder={thesis.data.ladder} asOf={thesis.data.ladderAsOf} />
+      {/* Its only play drawn above leaves nothing to list — never the "no pass on hand" note. */}
+      {playEntry && restOfLadder?.length === 0 ? null : (
+        <SafeguardLadder ladder={restOfLadder} asOf={thesis.data.ladderAsOf} />
+      )}
       <ThesisChart equity={data.equity} markers={data.markers} deskId={id} activity={activity} />
     </div>
   );

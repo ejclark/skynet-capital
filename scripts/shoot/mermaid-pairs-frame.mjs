@@ -174,6 +174,13 @@ export async function layoutInPage({ html, sources, layout, widths, key }) {
     return Math.ceil(Math.max(0, ...wide));
   };
   const nat = { before: natural("before"), after: natural("after") };
+  // A drawing's own height, for the one-phone-screen half of the legibility budget. Tables have none
+  // worth measuring: they reflow on a phone instead of scaling down.
+  const naturalHeight = (side) => {
+    const svg = frame.querySelector(`.col.${side} .diagram svg`);
+    return svg ? Math.ceil(svg.viewBox.baseVal?.height || svg.getBoundingClientRect().height) : 0;
+  };
+  const natH = { before: naturalHeight("before"), after: naturalHeight("after") };
   const widest = Math.max(nat.before, nat.after);
   const chosen = layout === "auto" ? (widest > widths.sideMax ? "stacked" : "side") : layout;
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -191,6 +198,7 @@ export async function layoutInPage({ html, sources, layout, widths, key }) {
     layout: chosen,
     colW,
     natural: nat,
+    naturalHeight: natH,
     renderErrors,
     width: Math.ceil(box.width),
     height: Math.ceil(box.height),

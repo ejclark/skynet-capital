@@ -23,11 +23,21 @@ export const MILESTONE_CHAPTERS: readonly MilestoneChapter[] = [
   "playbooks",
 ];
 
+/** One glyph per state, each the app's own meaning (#5093 — LOCKED and WIP both wore ◷): ◷ is
+ *  "waiting on you" (the ladder gate, the Store's locked subscribe door), ◌ is "not live yet" (a
+ *  draft, the Season-gated subscribe door). The gate note under the card wears its state's. */
+const GLYPH: Record<ChapterState, string> = {
+  complete: "✓",
+  progress: "●",
+  locked: "◷",
+  wip: "◌",
+};
+
 const BADGE: Record<ChapterState, string> = {
-  complete: "✓ COMPLETE",
-  progress: "● IN PROGRESS",
-  locked: "◷ LOCKED",
-  wip: "◷ WIP · SEASON 1",
+  complete: `${GLYPH.complete} COMPLETE`,
+  progress: `${GLYPH.progress} IN PROGRESS`,
+  locked: `${GLYPH.locked} LOCKED`,
+  wip: `${GLYPH.wip} WIP · SEASON 1`,
 };
 
 export function MilestoneCard({
@@ -40,6 +50,7 @@ export function MilestoneCard({
   points,
   chapter,
   open = false,
+  openAbove = false,
   gateNote,
 }: {
   readonly code: string;
@@ -53,6 +64,8 @@ export function MilestoneCard({
   readonly chapter: MilestoneChapter;
   /** This chapter is the one open beneath the cards. */
   readonly open?: boolean;
+  /** The open chapter leads the page and the cards fold beneath it (#5256): "above", not "below". */
+  readonly openAbove?: boolean;
   readonly gateNote?: string;
 }): ReactElement {
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -61,6 +74,8 @@ export function MilestoneCard({
       to="/accounts"
       search={(prev) => ({ ...prev, section: "milestones" as const, chapter })}
       replace
+      // The chapter opens beneath the cards you just tapped — the page stays put (#4944).
+      resetScroll={false}
       className={`mc mc-${state}${open ? " mc-open" : ""}`}
       aria-current={open ? "page" : undefined}
     >
@@ -79,8 +94,14 @@ export function MilestoneCard({
           {done} / {total}
         </span>
       </span>
-      {gateNote ? <span className="mc-gate num">◷ {gateNote}</span> : null}
-      {open ? <span className="mc-open-word num">▾ Open below</span> : null}
+      {gateNote ? (
+        <span className="mc-gate num">
+          {GLYPH[state]} {gateNote}
+        </span>
+      ) : null}
+      {open ? (
+        <span className="mc-open-word num">{openAbove ? "▴ Open above" : "▾ Open below"}</span>
+      ) : null}
     </Link>
   );
 }

@@ -10,6 +10,7 @@ import { LadderChapter } from "./ladder-chapter";
 import { LadderGateCard } from "./ladder-gate";
 import { LevelUpCeremony } from "./level-up-ceremony";
 import { type ChapterState, MilestoneCard, type MilestoneChapter } from "./milestone-card";
+import { LADDER_CARD_GATE_NOTE, LADDER_CARD_NO_ACCOUNT_NOTE } from "./milestone-strip";
 import { OnboardingChapter } from "./onboarding-chapter";
 import { PlaybooksChapter } from "./playbooks-chapter";
 import { ProfileMeta } from "./profile-meta";
@@ -39,17 +40,6 @@ function ladderState(gated: boolean, done: number, total: number): ChapterState 
   return total > 0 && done === total ? "complete" : "progress";
 }
 
-/** The M·02 gate note — the server's own sentence (`src/domain/progression.ts`
- *  `LADDER_GATE_NOTE`: "the moment you say hello to Moneypenny"). #1672 fixed this card once and
- *  it regressed to "after your first feedback filing"; the hello is the gate, a filing only also
- *  satisfies it. */
-export const LADDER_CARD_GATE_NOTE = "unlocks the moment you say hello to Moneypenny";
-
-/** The same note for a session with no account (#3807 slice 3b-4, first-timer j1 s3): the server
- *  serves no ladder gate without an account, so the card names the step before the gate, then the
- *  gate in the server's words — one sentence, never a second phrasing of the unlock (#1672). */
-export const LADDER_CARD_NO_ACCOUNT_NOTE = `link an account first, then it ${LADDER_CARD_GATE_NOTE}`;
-
 /** M·02's note: the server's gate when it serves one; the account step when nothing is linked. */
 function ladderGateNote(data: Journey): string | undefined {
   if (data.gate) return LADDER_CARD_GATE_NOTE;
@@ -61,11 +51,13 @@ function Chapters({
   ob,
   pb,
   open,
+  openAbove,
 }: {
   readonly data: Journey;
   readonly ob: Onboarding | undefined;
   readonly pb: Playbooks | undefined;
   readonly open: MilestoneChapter | undefined;
+  readonly openAbove: boolean;
 }): ReactElement {
   const ladder = ladderProgress(data);
   return (
@@ -80,6 +72,7 @@ function Chapters({
         points={`+${ob?.totalPoints ?? 30} pts`}
         chapter="onboarding"
         open={open === "onboarding"}
+        openAbove={openAbove}
       />
       <MilestoneCard
         code="M·02"
@@ -107,6 +100,88 @@ function Chapters({
       />
     </div>
   );
+}
+
+/** The table of contents' header, and the one note under it: no account yet, or which account the
+ *  ladder reads when there are several. */
+function TocIntro({
+  linked,
+  ladderAccount,
+}: {
+  readonly linked: boolean;
+  readonly ladderAccount: string | undefined;
+}): ReactElement {
+  return (
+    <>
+      <header className="page-header">
+        <div className="join-eyebrow">Milestones · table of contents</div>
+        <h2>Your milestones</h2>
+        <p>
+          The table of contents for your time in the league — every concept worth knowing and every
+          goal worth chasing, with your progress tracked on each. Open a chapter to learn what it
+          teaches, what completes it, and where that action lives.
+        </p>
+      </header>
+      {!linked ? (
+        <p className="note">
+          Milestones light up from orders you fill yourself — this session isn't linked to an
+          account yet, so the journey shows from the start —{" "}
+          <ConnectLink>open the connect guide</ConnectLink>.
+        </p>
+      ) : ladderAccount ? (
+        <p className="note">
+          The same on every account you pick: ladder progress is read from the fills on{" "}
+          <b>{ladderAccount}</b>, your first linked account.
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/** What must be seen wherever a member lands: a fresh unlock, the check gate, the ladder's gate. */
+function Banners({
+  data,
+  refresh,
+  onLevelUps,
+}: {
+  readonly data: Journey;
+  readonly refresh: () => void;
+  readonly onLevelUps: (ups: readonly LevelUp[]) => void;
+}): ReactElement {
+  return (
+    <>
+      {data.celebrating.length > 0 ? (
+        <UnlockBanner celebrations={data.celebrating} onClaimed={onLevelUps} />
+      ) : null}
+      {data.engagementCelebrating.length > 0 ? (
+        <EngagementUnlockBanner celebrations={data.engagementCelebrating} onClaimed={refresh} />
+      ) : null}
+      {data.check ? (
+        <CheckGateCard key={data.check.milestoneId} gate={data.check} onPassed={refresh} />
+      ) : null}
+      {data.pendingChecks > 1 ? (
+        <p className="note">
+          {data.pendingChecks - 1} more unlock{data.pendingChecks === 2 ? "" : "s"} wait behind this
+          check — each brings its own.
+        </p>
+      ) : null}
+      {data.gate ? <LadderGateCard note={data.gate.note} compact /> : null}
+    </>
+  );
+}
+
+function ChapterBody({
+  chapter,
+  journey,
+  onJoined,
+}: {
+  readonly chapter: MilestoneChapter;
+  readonly journey: Journey;
+  readonly onJoined?: () => void;
+}): ReactElement {
+  if (chapter === "onboarding") return <OnboardingChapter onJoined={onJoined} />;
+  if (chapter === "trading") return <LadderChapter journey={journey} />;
+  return <PlaybooksChapter />;
 }
 
 function useChapterAnchor(chapter: MilestoneChapter | undefined, ready: boolean) {
@@ -146,71 +221,60 @@ export function MilestonesSection({
 
   const data = journey.data;
   const ob = onboarding.data;
+  // A member with no account lands on the connect guide: the steps lead and the table of contents
+  // waits one tap below them (#5256, Eric's Build pick on #5162 round 1). Every other visit keeps
+  // the table of contents first.
+  const stepsFirst = !data.linked && chapter === "onboarding";
+  const banners = (
+    <Banners
+      data={data}
+      refresh={refresh}
+      onLevelUps={(ups) => {
+        if (ups.length > 0) setLevelUps(ups);
+        refresh();
+      }}
+    />
+  );
+  const cards = (
+    <>
+      <Hud journey={data} extraPoints={ob?.points ?? 0} extraTotal={ob?.totalPoints ?? 30} />
+      <Chapters data={data} ob={ob} pb={playbooks.data} open={chapter} openAbove={stepsFirst} />
+    </>
+  );
+  const chapterSection = chapter ? (
+    <section
+      ref={anchor}
+      id={`chapter-${chapter}`}
+      className={stepsFirst ? "ms-chapter ms-chapter-lead" : "ms-chapter"}
+      aria-label={`Chapter: ${CHAPTER_NAMES[chapter]}`}
+    >
+      <ChapterBody chapter={chapter} journey={data} onJoined={onJoined} />
+    </section>
+  ) : null;
   return (
     <div className="milestones">
       <ProfileMeta />
       <LevelUpCeremony levelUps={levelUps} courses={data.courses} />
-      <header className="page-header">
-        <div className="join-eyebrow">Milestones · table of contents</div>
-        <h2>Your milestones</h2>
-        <p>
-          The table of contents for your time in the league — every concept worth knowing and every
-          goal worth chasing, with your progress tracked on each. Open a chapter to learn what it
-          teaches, what completes it, and where that action lives.
-        </p>
-      </header>
-      {!data.linked ? (
-        <p className="note">
-          Milestones light up from orders you fill yourself — this session isn't linked to an
-          account yet, so the journey shows from the start —{" "}
-          <ConnectLink>open the connect guide</ConnectLink>.
-        </p>
-      ) : ladderAccount ? (
-        <p className="note">
-          The same on every account you pick: ladder progress is read from the fills on{" "}
-          <b>{ladderAccount}</b>, your first linked account.
-        </p>
-      ) : null}
-      {data.celebrating.length > 0 ? (
-        <UnlockBanner
-          celebrations={data.celebrating}
-          onClaimed={(ups) => {
-            if (ups.length > 0) setLevelUps(ups);
-            refresh();
-          }}
-        />
-      ) : null}
-      {data.engagementCelebrating.length > 0 ? (
-        <EngagementUnlockBanner celebrations={data.engagementCelebrating} onClaimed={refresh} />
-      ) : null}
-      {data.check ? (
-        <CheckGateCard key={data.check.milestoneId} gate={data.check} onPassed={refresh} />
-      ) : null}
-      {data.pendingChecks > 1 ? (
-        <p className="note">
-          {data.pendingChecks - 1} more unlock{data.pendingChecks === 2 ? "" : "s"} wait behind this
-          check — each brings its own.
-        </p>
-      ) : null}
-      {data.gate ? <LadderGateCard note={data.gate.note} compact /> : null}
-      <Hud journey={data} extraPoints={ob?.points ?? 0} extraTotal={ob?.totalPoints ?? 30} />
-      <Chapters data={data} ob={ob} pb={playbooks.data} open={chapter} />
-      {chapter ? (
-        <section
-          ref={anchor}
-          id={`chapter-${chapter}`}
-          className="ms-chapter"
-          aria-label={`Chapter: ${CHAPTER_NAMES[chapter]}`}
-        >
-          {chapter === "onboarding" ? (
-            <OnboardingChapter onJoined={onJoined} />
-          ) : chapter === "trading" ? (
-            <LadderChapter journey={data} />
-          ) : (
-            <PlaybooksChapter />
-          )}
-        </section>
-      ) : null}
+      {stepsFirst ? (
+        <>
+          {banners}
+          {chapterSection}
+          <details className="ms-toc-fold">
+            <summary>
+              <span className="ms-toc-fold-title">Your milestones</span>
+              <span className="ms-toc-fold-count num">3 chapters · they light up as you go</span>
+            </summary>
+            {cards}
+          </details>
+        </>
+      ) : (
+        <>
+          <TocIntro linked={data.linked} ladderAccount={ladderAccount} />
+          {banners}
+          {cards}
+          {chapterSection}
+        </>
+      )}
     </div>
   );
 }

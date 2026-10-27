@@ -2,7 +2,12 @@ import { LIFECYCLE_STATUS } from "../trading/option-lifecycle.js";
 import { contractMultiplier } from "../trading/option-symbols.js";
 import type { TicketContext } from "../trading/order-ticket.js";
 import type { PlaybookTagsByOrder } from "../trading/playbook-attribution.js";
-import { matchRoundTrips, type RoundTripLedger, type TradeFill } from "../trading/round-trips.js";
+import {
+  matchRoundTrips,
+  type RoundTrip,
+  type RoundTripLedger,
+  type TradeFill,
+} from "../trading/round-trips.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import {
   collapseActivity,
@@ -80,8 +85,9 @@ export function fillsFrom(
         ...(row.price !== undefined ? { price: row.price * scale } : {}),
         at: row.at,
         ...(LIFECYCLE_SYNTHETIC_CLOSE.has(row.status) ? { synthetic: true } : {}),
-        ...(tag ? { playbookId: tag.playbookId } : {}),
+        ...(tag?.playbookId ? { playbookId: tag.playbookId } : {}),
         ...(tag?.playbookMode ? { playbookMode: tag.playbookMode } : {}),
+        ...(tag?.initiator ? { initiator: tag.initiator } : {}),
         ...(row.orderId ? { orderId: row.orderId } : {}),
       };
     });
@@ -142,6 +148,35 @@ export function realizedByOrder(
     });
   }
   return result;
+}
+
+/** What the round-trip matcher knows about how a ledger's orders pair up (#5317): the ledger shows
+ *  a sale with the buy it closed, and a buy later sold as closed rather than open. */
+export interface RoundTripLinks {
+  /** A closing order's id → the trips it closed, the newest opening first. */
+  readonly closes: ReadonlyMap<string, readonly RoundTrip[]>;
+  /** An opening order's id → when its last lot closed. Only for an order with nothing still open:
+   *  a buy partly sold is still open. */
+  readonly closedOn: ReadonlyMap<string, string>;
+}
+
+/** The matcher's pairing, keyed by order id for the activity rows to read. A trip with no closing
+ *  order id (an expiry the broker reported without one) still counts toward `closedOn`. */
+export function roundTripLinks(ledger: RoundTripLedger): RoundTripLinks {
+  const closes = new Map<string, RoundTrip[]>();
+  const closedOn = new Map<string, string>();
+  for (const trip of ledger.trips) {
+    if (trip.orderId) {
+      const list = closes.get(trip.orderId);
+      if (list) list.push(trip);
+      else closes.set(trip.orderId, [trip]);
+    }
+    const entry = trip.entryOrderId;
+    if (entry && (closedOn.get(entry) ?? "") < trip.closedAt) closedOn.set(entry, trip.closedAt);
+  }
+  for (const lot of ledger.open) if (lot.entryOrderId) closedOn.delete(lot.entryOrderId);
+  for (const list of closes.values()) list.sort((a, b) => b.openedAt.localeCompare(a.openedAt));
+  return { closes, closedOn };
 }
 
 /** The account state an order ticket is reviewed against. */

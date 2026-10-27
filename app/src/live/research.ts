@@ -53,7 +53,7 @@ export interface ResearchEvent {
   readonly id: string;
   readonly title: string;
   readonly date: string;
-  /** macro-print · earnings · opex · rates · sector · geopolitical · product-launch */
+  /** macro-print · earnings · opex · rates · sector · geopolitical · product-launch · ipo-listing · lockup-expiry */
   readonly kind?: string;
   /** critical · high · medium · low */
   readonly impact?: string;
@@ -62,6 +62,9 @@ export interface ResearchEvent {
   /** The calendar payload's mark for an event whose ledger states a call (#3977 slice 5) — how
    *  R&D's fog line counts held calls without the calls. Absent on the full shelf's events. */
   readonly called?: boolean;
+  /** The calendar's mark for a date that is a cadence estimate, not a confirmed day (#5510) —
+   *  absent when confirmed, and on a payload from before the mark. */
+  readonly estimated?: boolean;
 }
 
 /** A day the exchange is closed, or closes early — mirrors the server's MarketClosure. */

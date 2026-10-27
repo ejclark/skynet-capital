@@ -2,7 +2,7 @@
 
 A **bot** is a persona bound to the Alpaca paper account it trades. Each bot gets its own
 account (created under your existing Alpaca login) so their portfolios, positions, and
-transactions stay cleanly separated — which is exactly what the dashboard will read from.
+transactions stay cleanly separated — which is exactly what the dashboard reads from.
 
 ## Setup
 
@@ -10,6 +10,8 @@ transactions stay cleanly separated — which is exactly what the dashboard will
    API key/secret.
 2. `cp .env.example .env` and paste the keys. Each persona maps to a pair of env vars by
    convention — persona `news-fader` → `SKYNET_BOT_NEWS_FADER_KEY` / `_SECRET`. `.env` is gitignored.
+   A persona with no pair of its own borrows the shared `SKYNET_BOT_KEY` / `SKYNET_BOT_SECRET`
+   (the warm-up shortcut) — one seat only; if several would borrow it, none do.
 
 ## How a bot trades
 
@@ -22,28 +24,29 @@ Persona.decide()  →  TradingEngine  →  BrokerPort
 ```
 
 - `bots/bot-registry.ts` — `loadBots(personas, env)` builds a bot for every persona whose
-  credentials are present and reports the rest as `missing`. Pure over its `env` argument.
+  credentials are present, seats at most one persona on the shared pair (`sharedAccount`), and
+  reports the rest as `missing`. Pure over its `env` argument.
 - `bots/bot-broker.ts` — `createBotBroker(bot)` assembles transport → client → adapter and
   returns a live `BrokerPort` the engine can drive.
 - `alpaca/trading-transport.ts` — the network seam (key/secret header auth); fake it in tests.
-- `alpaca/alpaca-trading-client.ts` — typed `GET /v2/account`, `GET /v2/positions`,
-  `POST /v2/orders`.
+- `alpaca/alpaca-trading-client.ts` — typed calls for the account and its portfolio history
+  (`/v2/account`), positions (`/v2/positions`), orders — place, read, list, replace, cancel
+  (`/v2/orders`) — and the market clock (`/v2/clock`).
 - `adapters/alpaca-broker-adapter.ts` — maps Alpaca's string-typed payloads to the domain
-  `Portfolio` and submits market orders. A result is `filled` only on a fill the broker
-  confirmed; an order it took but never confirmed (queued after hours, or slower than the
-  sub-second poll) reads `working` (#4655).
+  `Portfolio`, submits a share order as a market order, and hands an option order to
+  `adapters/alpaca-option-order-flow.ts`, which places it as a DAY limit. A result is `filled`
+  only on a fill the broker confirmed; an order it took but never confirmed (queued after hours,
+  or slower than the sub-second poll) reads `working` (#4655).
 
 Because the engine depends only on `BrokerPort`, the exact same engine, personas, and risk
 guards run against the in-memory simulator or a live paper account with no code change.
 
-## Where this stands (updated 2026-09-22 — the roadmap below was stale)
+## Run loop and dashboard
 
-Both items this section used to list as future work are shipped:
-
-- **Run loop** — `src/scripts/run-autonomous.ts` schedules decision cycles per bot and persists
-  each `CycleReport`.
-- **Dashboard** — `src/scripts/serve-dashboard.ts` and the `/u/:id` per-account views (activity,
-  decisions, pulse) are a centralized read on every bot's account.
+- **Run loop** — `src/scripts/run-autonomous.ts` schedules decision cycles per bot and records
+  each one as a `DecisionRecord`.
+- **Dashboard** — `src/scripts/serve-dashboard.ts` and the `/u/:id` per-account views (ledger,
+  playbooks, pulse) are a centralized read on every bot's account.
 
 Doctrine — a persona's own coded rules, graded honestly against the code and the tape — lives in a
 top-level `docs/BOTS-<PERSONA>.md` dossier per bot (see `docs/BOTS-SAURON.md` for the first one),

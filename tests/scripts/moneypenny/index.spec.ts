@@ -59,6 +59,30 @@ describe("triageFeedbackDecision — the backlog gate for freshly-filed feedback
   it("defaults to Backlog with no labels at all", () => {
     expect(triageFeedbackDecision()).toMatchObject({ ready: false });
   });
+
+  // #5667: CLAUDE.md files a mid-build bug `bug` + `fast-track` and says it is "pulled next", but
+  // 23 of 23 open bugs sat without `ready` on 2026-10-18 — no lane could pull one.
+  it("self-readies a bug + fast-track filing, with or without `feedback`", () => {
+    expect(triageFeedbackDecision({ labels: ["bug", "fast-track"] })).toEqual({
+      ready: true,
+      reason: "bug + fast-track — the next pull, self-readying",
+    });
+    expect(triageFeedbackDecision({ labels: ["feedback", "bug", "fast-track"] })).toMatchObject({
+      ready: true,
+    });
+  });
+
+  it("leaves a bug in Backlog without fast-track, as a plan, or while parked", () => {
+    expect(triageFeedbackDecision({ labels: ["bug"] })).toMatchObject({ ready: false });
+    expect(triageFeedbackDecision({ labels: ["bug", "fast-track", "plan"] })).toMatchObject({
+      ready: false,
+    });
+    for (const parked of ["needs-eric", "needs-info", "needs-design"]) {
+      expect(triageFeedbackDecision({ labels: ["bug", "fast-track", parked] })).toMatchObject({
+        ready: false,
+      });
+    }
+  });
 });
 
 describe("moneypenny routing", () => {
@@ -180,14 +204,14 @@ describe("moneypenny routing", () => {
   // teaches a member that filing feedback does nothing.
   it("the audit flags a feedback issue the lane never spoke on, never a fresh one", () => {
     const intents = dryRun("audit-silent-feedback.json") as (Intent & {
-      hoursSinceFiled?: number;
+      hoursWaiting?: number;
     })[];
 
     expect(intents).toHaveLength(1);
     expect(intents[0]?.kind).toBe("flag-silent-feedback");
     expect(intents[0]?.issueNumber).toBe(455);
     expect(intents[0]?.body).toContain("needs-info");
-    // filed an hour ago — the build session may still be running
+    // readied an hour ago — the build session may still be running
     expect(intents.some((i) => i.issueNumber === 456)).toBe(false);
   });
 
@@ -473,7 +497,7 @@ describe("the stall audit sees outcomes, not chatter", () => {
   // forever. #475 sat in precisely that state.
   it("flags an issue that got a receipt and then died", () => {
     const intents = dryRun("audit-receipt-then-died.json") as (Intent & {
-      hoursSinceFiled?: number;
+      hoursWaiting?: number;
     })[];
 
     expect(intents).toHaveLength(1);

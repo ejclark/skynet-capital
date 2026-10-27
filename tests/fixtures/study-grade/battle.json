@@ -1,0 +1,28 @@
+{
+  "fork": "Where the lamp switch sits",
+  "shapes": [
+    {
+      "name": "today",
+      "success": 0.4,
+      "wrongTurns": 5,
+      "involuntaryScroll": 310,
+      "ease": 3,
+      "frame": "round/sessions/night-owl/t1-phone/frames/002.jpg"
+    },
+    {
+      "name": "switch beside the lamp",
+      "success": 0.9,
+      "wrongTurns": 1,
+      "involuntaryScroll": 0,
+      "ease": 6,
+      "frame": "round/sessions/commuter/t1-desktop/frames/001.jpg"
+    },
+    {
+      "name": "switch in a panel",
+      "success": 0.7,
+      "wrongTurns": 2,
+      "involuntaryScroll": 0,
+      "ease": 5
+    }
+  ]
+}

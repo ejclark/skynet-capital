@@ -260,6 +260,7 @@ Registered this session as [`FT-consumer-credit-2026-10-07-1` through
 | 2026-09-08 | D-29 | **Initial research; canonical calendar file written from the one proposal for this id** (`from-retail-sales-2026-09-16`), which existed alone. **Date promoted estimate → confirmed** on the Board's own October 2026 Statistical Release Calendar ("3:00 p.m. \| G.19 - Consumer Credit \| 7"), cross-checked against 34 harvested monthly calendars and the release's fifth-business-day rule. **Measured the release as a tape null:** 22 release days, 15:00–16:00 ET mean abs **0.1378%** vs **0.1445%** control, sd 0.2145% vs 0.2142% (F=1.054); the +0.10% mean drift falls to **+0.04%** without 2025-05-07 (an FOMC decision day) and 2025-04-07 (8.59% session range vs 0.88% median). **Adjacency sweep:** no peer prints (symbols []); macro — jobs 10-02, ISM services 10-05, and a 13:00 ET 10y auction + **14:00 ET FOMC minutes** on this print's own date, the one prior double (2026-07-08) giving a **+0.01%** final hour; VIX **15.27** (2026-09-08 intraday), no regime move; geopolitical — none touching a symbol-less macro print; event tape — no August consensus reachable (two 403s, one client-side renderer). **Found, from the Board's own Technical Q&A #19:** G.19 has "more limited coverage" of non-bank BNPL lenders and "is not currently able to separately track" BNPL originations or balances — the proposing ledger's assignment is unanswerable on the BNPL half. **Found, from two Fed primaries:** the terms-of-credit table is quarterly and populated in the mid-quarter month, so this edition carries the **first Q3-2026 credit-card APR**; Q3 > Q2 in 2023, 2024 and 2025. No new dated adjacent event surfaced that this calendar does not already carry. | **Opened at stand-aside**, and low impact affirmed despite the `confirmed` date — a confirmed date on a measured null is still a null. Registered **FT-…-1** (10-07 release-hour null), **FT-…-2** (August revolving under +$7.0B), **FT-…-3** (Q3-2026 card APR at or above 20.94%). | 2026-10-08 (D+1; low band is 30d out to D-15, then 7d — the close-out lands first) |
 | 2026-09-23 | D-14 | **Pulse check.** `node scripts/event-scan.mjs --on-date=2026-10-07` still shows only the same 3 entries (this print, fomc-minutes-2026-10-07, treasury-10y-note-2026-10-07 [estimate]) — no new same-date filing to check against. **Adjacency sweep:** peer prints — none, `symbols: []`. **Macro surprise, material and FED-sourced:** the September 15–16 FOMC **raised** the target range 25bp to 3¾–4%, unanimous 12-0 (federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm, fetched direct) — a **hike**, not the "easing cycle" this ledger's Leg 4 assumed when framing "a rising card rate into an easing cycle." That framing was wrong at the premise; it does not change the call, and it points the same direction as FT-…-3 (policy is tightening, not loosening, which makes a sub-20.94% Q3 print less likely, not more). **Geopolitical/policy:** the Continuing Appropriations and Extensions Act was signed 2026-09-02, funding the government through 2026-12-11 — the funding-lapse contingency this ledger flagged ("relevant if the CR expiry other ledgers track bites") does not bite across the 09-30/10-07 window. **VIX regime:** 14.87 (2026-09-22 close, NEWS-sourced) vs 15.27 recorded — Δ−0.40, under the 3-point material bar, no regime shift. **Event tape:** no August consensus/street number found (unchanged blind spot). **Corridor re-checked ±5 days of 10-07:** `adjacentStrongIds` unchanged (`jobs-2026-10-02`, `ism-services-2026-10-05`, both still confirmed/high); several new low/medium entries appeared in the wider corridor (e.g. `google-adtech-final-judgment-2026-10-02`, `sp-global-services-pmi-2026-10-05`, `amzn-prime-big-deal-days-2026-10-06`, `sudan-sanctions-regime-expiry-2026-10-09`) but none is a new confirmed high/critical event and none is a dated release this calendar does not already carry — nothing to propose. All three forward tests remain `_open_` (score-by 2026-10-08, past the event but not yet reached). | **No stance change** — still stand-aside on the print, still watch the Q3-2026 credit-card APR line. The only correction is prose, not the call: the "easing cycle" premise in Leg 4 is superseded by the actual September decision (a hike), noted here rather than edited into the append-only initial research. | 2026-09-30 (D-7; low band is 0d+ → 7d once inside D-15) |
 | 2026-09-30 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 16.0 (+1.2pt since last), band unchanged (low:0+), 27 adjacent event(s) tracked, new in corridor since last pulse: `eurostat-hicp-flash-2026-10-01` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-07 |
+| 2026-10-07 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 15.0 (-1.0pt since last), band unchanged (low:0+), 27 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-14 |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to
 the next session, not an essay, and a stance *change* earns its sentence in the Stance section with
@@ -275,3 +276,49 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-09-30
 <!-- probe-ref: {"symbols":{},"vix":16.04,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","boe-dmp-2026-10-02","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-07
+<!-- probe-ref: {"symbols":{},"vix":15.01,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","boe-dmp-2026-10-02","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-10-09, D+2).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) and nothing here reads it. The *print* is scored from the Board's
+own release (federalreserve.gov/releases/g19/current/default.htm, "Release Date: October 7, 2026", and the
+history pages `cc_hist_sa_flows.html` / `cc_hist_tc_levels.html`, all fetched direct 2026-10-09); the
+*tape* from Yahoo 5-minute SPY bars pulled fresh the same day. Date label: **confirmed** (FED:), as in the
+header. No August consensus was reachable (unchanged blind spot), so "vs expectations" is not claimed.
+
+| Measure | Aug 2026 | Base rate / line | Result |
+|---|---|---|---|
+| **Total consumer credit** | **+1.9%** annual rate (+$99.4B ann.) | Jul +4.1% | slowed |
+| **Revolving** | **−4.2%** annual rate; flow **−$4.79B** | median +$3.53B; kill line +$7.0B | **FT-2 pass** |
+| **Nonrevolving** | +4.1% annual rate; flow **+$13.07B** | — | carried the total |
+| **Q3 card APR, all accounts** | **21.19%** | Q2 20.94%; kill line < 20.94% | **FT-3 pass** |
+| **SPY 15:00–16:00 ET** | **−0.067%** (abs 0.067%) | kill needs > 0.30% *and* > 14:00 hour | **FT-1 pass** |
+
+**What happened vs the stance.** The stance was stand aside on the print and read one line; all three
+registered tests held.
+
+- **The null held on a stacked afternoon.** 13:00 hour +0.125% (10-year auction), 14:00 hour +0.046%
+  (FOMC minutes), 15:00 hour −0.067% (this release). The release hour was the quietest-in-effect of the
+  three on a day whose full range was 0.71%.
+- **The back-to-school "borrowed" thesis did not get its measurement.** Revolving *fell* $4.79B in the very
+  month the proposing ledger (retail-sales-2026-09-16) called debt-funded. This is weak evidence only: the
+  Board's Technical Q&A #19 says G.19 cannot separately track BNPL, so a soft revolving print neither
+  confirms nor refutes BNPL funding. FT-2 tested the revolving half, and the revolving half said no.
+- **The cost line printed where the base rate said.** 21.19% is +25bp on Q2 and the fourth straight
+  year Q3 > Q2, with the September FOMC having *hiked* (see the 2026-09-23 row).
+- **Revolving's August was the weakest month since November 2024.** −$4.79B against −$10.34B then and
+  −$2.21B in May 2026 (the previous outlier), per the Board's SA flow history; 25-of-30 positive months
+  is now 25-of-31 with this one a miss. Direction only — one month does not make the series a macro story
+  (the ledger's own bar was July below −$5.3B).
+
+Forward tests: `FT-…-1`, `-2`, `-3` all scored **pass** in
+[`forward-tests/consumer-credit-2026-10-07.md`](../forward-tests/consumer-credit-2026-10-07.md); no kill,
+so nothing moves to the sweep doc's kill list. Next on the series: Sep-data G.19 **2026-11-06** (first
+complete Q3 flow read) — a separate calendar entry owns it.
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","boe-dmp-2026-10-02","ecb-account-2026-10-08","eia-steo-2026-10-06","eurostat-hicp-flash-2026-10-01","fomc-minutes-2026-10-07","google-adtech-final-judgment-2026-10-02","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","jobs-2026-10-02","m3-full-report-2026-10-02","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05","jobs-2026-10-02"],"screenStreak":0,"blocked":[]} -->

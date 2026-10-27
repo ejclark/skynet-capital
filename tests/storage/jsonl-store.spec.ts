@@ -212,4 +212,143 @@ describe("JsonlKeyedStore", () => {
       expect(await store.latest("alpha")).toEqual({ key: "alpha", value: 1 });
     });
   });
+  describe("when streaming entries one at a time", () => {
+    const collect = async (iterable: AsyncIterable<Entry>): Promise<Entry[]> => {
+      const out: Entry[] = [];
+      for await (const entry of iterable) out.push(entry);
+      return out;
+    };
+
+    it("yields the same entries as list, across every key", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      await store.append("alpha", { key: "alpha", value: 1 });
+      await store.append("beta", { key: "beta", value: 2 });
+      await store.append("alpha", { key: "alpha", value: 3 });
+
+      expect(await collect(store.stream())).toEqual(await store.list());
+      expect(await collect(store.stream("alpha"))).toEqual(await store.list("alpha"));
+    });
+
+    it("skips a torn line and keeps the intact ones", async () => {
+      writeFileSync(join(dir, "alpha.jsonl"), '{"key":"alpha","value":1}\n{"key":"al');
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+
+      expect(await collect(store.stream("alpha"))).toEqual([{ key: "alpha", value: 1 }]);
+    });
+
+    it("yields nothing for a key whose file was never written, or a missing directory", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      const missing = join(dir, "nope");
+      const absent = new JsonlKeyedStore<Entry>(missing, fileFor(missing));
+
+      expect(await collect(store.stream("ghost"))).toEqual([]);
+      expect(await collect(absent.stream())).toEqual([]);
+    });
+  });
+
+  describe("when a rotation lands while a rotating store is being read (#6290)", () => {
+    // Four 26-byte rows against a 40-byte cap: `[1,2]` rotates into an archive, `[3,4]` is the
+    // active file, already past the cap — so the next append rotates it.
+    const cap = 40;
+    const seed = async (store: JsonlKeyedStore<Entry>, key: string): Promise<void> => {
+      for (let value = 1; value <= 4; value++) await store.append(key, { key, value });
+    };
+    const original = (key: string): Entry[] => [1, 2, 3, 4].map((value) => ({ key, value }));
+    const readRacingAppend = async (
+      reader: AsyncIterable<Entry>,
+      racer: () => Promise<void>,
+    ): Promise<Entry[]> => {
+      const seen: Entry[] = [];
+      for await (const entry of reader) {
+        seen.push(entry);
+        if (seen.length === 1) await racer(); // rotates mid-read, after the read has begun
+      }
+      return seen;
+    };
+
+    it("still yields every row the key held when its stream began, in write order", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir), { rotateAtBytes: cap });
+      await seed(store, "alpha");
+
+      const seen = await readRacingAppend(store.stream("alpha"), () =>
+        store.append("alpha", { key: "alpha", value: 5 }),
+      );
+
+      expect(seen).toEqual(original("alpha"));
+      expect(await store.list("alpha")).toEqual([...original("alpha"), { key: "alpha", value: 5 }]);
+    });
+
+    it("keeps a key it has not reached yet whole when that key rotates first", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir), { rotateAtBytes: cap });
+      await seed(store, "alpha");
+      await seed(store, "beta");
+
+      const seen = await readRacingAppend(store.stream(), () =>
+        store.append("beta", { key: "beta", value: 5 }),
+      );
+
+      // beta's newest row may or may not be read — it landed after the read began — but none of
+      // the rows beta held before it may go missing, and the order holds.
+      expect(seen.filter((e) => e.value <= 4)).toEqual([...original("alpha"), ...original("beta")]);
+    });
+
+    it("reads a key whose active file a rotation has renamed away but not yet replaced", async () => {
+      writeFileSync(
+        join(dir, "alpha.2026-10-27T12-00-00-000Z.jsonl"),
+        '{"key":"alpha","value":1}\n',
+      );
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir), { rotateAtBytes: cap });
+
+      expect(await store.list()).toEqual([{ key: "alpha", value: 1 }]);
+      expect(await store.list("alpha")).toEqual([{ key: "alpha", value: 1 }]);
+    });
+  });
+
+  describe("when reading every file's appended lines at once (#4458)", () => {
+    it("reads each file from 0 the first time, keyed by file path", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      await store.append("alpha", { key: "alpha", value: 1 });
+      await store.append("beta", { key: "beta", value: 2 });
+
+      const tails = await store.sinceAll(new Map());
+
+      expect([...tails.keys()]).toEqual([join(dir, "alpha.jsonl"), join(dir, "beta.jsonl")]);
+      expect(tails.get(join(dir, "alpha.jsonl"))?.entries).toEqual([{ key: "alpha", value: 1 }]);
+    });
+
+    it("reads only the lines appended since each file's offset, and a new file from 0", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      await store.append("alpha", { key: "alpha", value: 1 });
+      const first = await store.sinceAll(new Map());
+      await store.append("alpha", { key: "alpha", value: 2 });
+      await store.append("gamma", { key: "gamma", value: 3 });
+
+      const from = new Map([...first].map(([file, tail]) => [file, tail.offset]));
+      const next = await store.sinceAll(from);
+
+      expect(next.get(join(dir, "alpha.jsonl"))?.entries).toEqual([{ key: "alpha", value: 2 }]);
+      expect(next.get(join(dir, "gamma.jsonl"))?.entries).toEqual([{ key: "gamma", value: 3 }]);
+    });
+
+    it("reports a file shorter than its offset as reset, and leaves out a file that is gone", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      await store.append("alpha", { key: "alpha", value: 1 });
+      await store.append("beta", { key: "beta", value: 2 });
+      const first = await store.sinceAll(new Map());
+      writeFileSync(join(dir, "alpha.jsonl"), "");
+      rmSync(join(dir, "beta.jsonl"));
+
+      const from = new Map([...first].map(([file, tail]) => [file, tail.offset]));
+      const next = await store.sinceAll(from);
+
+      expect(next.get(join(dir, "alpha.jsonl"))?.reset).toBe(true);
+      expect(next.has(join(dir, "beta.jsonl"))).toBe(false);
+    });
+
+    it("refuses a rotating store, whose archives a since-read would never see", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir), { rotateAtBytes: 1024 });
+
+      await expect(store.sinceAll(new Map())).rejects.toThrow(/rotating store/);
+    });
+  });
 });

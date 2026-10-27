@@ -283,3 +283,117 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-01
 <!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":1} -->
+
+## Outcome
+
+*Close-out, **2026-10-09** (D+1, inside `closeOutWithinDays: 6`). Price figures are **re-run
+instrument data** (caches busted first: `rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`; Yahoo daily bars via `scripts/research/market-data.mjs`, hourly
+bars for the overnight-gap leg). The document's own wording was read through WebFetch, whose answers
+are a small model's summary of the page — so quotes below are marked **secondary** unless the search
+snippet and the fetch agree. Never memory of the tape.*
+
+**Verdict: the stand-aside was right, and the null held — both forward tests PASS.** The account
+published on the stated date, the euro tape treated it as an ordinary day, and no tracked name moved
+on it beyond what its beta to the index explains. The entry's one qualitative use returned a clean
+adjective — **settled, not contested**.
+
+### 1. Date — FT-2 PASSES
+
+- The ECB's own URL carries its date: `ecb.mg261008~a10153d090` ("Meeting of 9-10 September 2026"),
+  the same `mg<yymmdd>` convention as the prior edition's `ecb.mg260827` — **published 2026-10-08**.
+- Time of day: a search-engine result block says **13:30 CEST**; FXStreet's story URL is stamped
+  **11:42 GMT** (13:42 CEST). Consistent with the ~13:30 CEST this ledger inferred (leg 7) but the
+  ECB's own page was not fetched for the minute, so the *clock* is secondary-sourced; the *date*
+  is not in doubt.
+- The +7d slip (4 of 13 editions) did **not** happen: the 10-15 alternative never came into play.
+
+### 2. Price — FT-1 PASSES (the weak kind of pass, as registered)
+
+| 2026-10-08 close-to-close | Move | Kill line (2× baseline) | Ratio to baseline |
+|---|---|---|---|
+| Euro Stoxx 50 (`^STOXX50E`) | **−0.87%** | 1.50% | 1.16× of 0.75% |
+| EUR/USD (`EURUSD=X`) | **−0.46%** (−0.32% if scored to the next bar's open) | 0.66% | 1.4× of 0.33% |
+| DAX (`^GDAXI`, not in the test) | −1.18% | — | 1.46× of 0.81% |
+
+Both registered thresholds held, so FT-1 passes; the kill needed **both** breached and neither was.
+FT-1 was registered as the weak direction (12 of 13 prior account days would have passed), so this
+confirms the null without adding much to it. Two honest qualifiers: the equity move is not nothing —
+the Euro Stoxx 50 had already fallen **−1.47%** the session before (10-07, before the Fed minutes
+printed at 20:00 CEST), so 10-08 is a continuation inside a down week — and daily close-to-close
+cannot see a 13:30 CEST reaction that faded by the close. No attribution to the account is
+supported either way, which is the registered rule: the Fed minutes came first, and no evidence was
+found crediting the ECB.
+
+### 3. Channel kill — DID NOT FIRE (same instrument limits as the sibling close-out)
+
+The kill: *a tracked name moving >2% in 07:00–09:30 ET on 10-08, attributed to the account.* The
+account landed ~07:30 ET; `intraday-edges` has no pre-market bars, so the observable is the overnight
+**gap into the 09:30 open**. Beta and residual σ fitted on the cached hourly sample against QQQ
+(n=719 sessions; CRWV n=377), QQQ's own gap **−0.50%**:
+
+| Name | 10-08 gap | Gap QQQ predicts | Residual | In σ | Whole-day move |
+|---|---|---|---|---|---|
+| NVDA | −1.02% | −0.75% | −0.27pp | −0.23σ | −2.94% |
+| AVGO | −1.47% | −0.76% | −0.71pp | −0.44σ | −4.35% |
+| MRVL | **−2.50%** | −1.08% | −1.43pp | −0.65σ | −3.52% |
+| CRWV | −1.83% | −1.05% | −0.79pp | −0.27σ | −7.77% |
+
+**One name crossed the raw 2% line (MRVL), zero crossed on attribution** — every residual sits inside
+±1σ, and MRVL's absolute-gap line is the one the sibling close-out already showed fires on **33%** of
+its ordinary sessions. **The big moves came after the open, not before it:** the intraday leg
+(09:30→close) was NVDA −1.86%, AVGO −2.85%, MRVL −1.08%, CRWV −6.08%, QQQ −0.85% — a session-long
+semiconductor selloff that began *after* the account had already been absorbed by the gap. This
+ledger found **no sourced cause** for it (a web search returned articles that do not match this
+date's tape and were discarded), so it is recorded as **unattributed**, not credited to the ECB.
+`symbols: []` stands; leg 8's "no channel" claim survived its own test.
+
+### 4. Content — what the account said (the entry's one qualitative use)
+
+*Secondary (WebFetch summaries of the primary page plus a search snippet that agreed on the first
+two):*
+
+- **Settled, not contested.** "All members supported the proposal made by Mr Lane" to raise the
+  deposit rate 2.25% → **2.50%**; Lane called the hike "a robust decision across a wide range of
+  scenarios" (fetch only). That answers FT-ecb-decision-2026-09-10-2's qualitative side in one
+  adjective — near-unanimous — though it is silent on the **terminal** question that FT scores on
+  **2026-12-18**.
+- **No guidance, as at the presser.** The Council kept a "data-dependent, meeting-by-meeting
+  approach", with an explicit wish to "refrain from giving any guidance regarding the future interest
+  rate path" — nothing conditional attached to **10-29**.
+- **Risks to inflation "to the upside" for all members**; 2.50% described as "in the range of neutral
+  interest rates"; wages "moderating"; energy pass-through "more benign than anticipated".
+- **Press read-through (Reuters via Investing.com, 10-08, secondary):** policymakers dampened
+  near-term hike bets, and a 73-economist Reuters poll saw nearly all on hold in October with a move
+  mostly in December. Pricing was not re-fetched from a curve.
+
+### 5. Corrections this close-out owes the initial research
+
+1. **Leg 4 ("names no member") was too strong.** There is still no vote count and no per-member
+   position — the *structure kill* did **not** fire — but the document names the **presenters**
+   (Lane; Schnabel in the fetch) as the ECB convention has it. The correct claim is "no tallies and
+   no positions attributed to named members", which is what the 13-edition reading supports.
+2. **The EUR/USD leg of the baseline was aligned a day early in summer.** Yahoo stamps FX daily bars
+   at London midnight, so during BST they carry the *previous* UTC date, and the initial research's
+   date match credited those editions with the prior session's move. Re-aligned (+2h before taking
+   the date; baseline unaffected): account-day mean **0.28%** vs **0.33%** baseline = **0.84×**
+   (was 1.10×). The conclusion is unchanged and slightly stronger — the one EUR/USD day over 2× is
+   still **2025-04-03 (+1.04%)**, the tariff session — but the stated 1.10× was an alignment artefact.
+   Equity-index rows are exchange-dated and unaffected.
+3. **The stance's attribution base rate is now 0 for 3**, not 0 for 2: no account day, including this
+   one, has produced a move that survives attribution to the document itself.
+
+### 6. What stays open
+
+- **Staleness kill (10-08→10-21) — not scored, no registered test.** Press (10-08) shows
+  unnamed-official hike-dampening comment on the day; no dated, named Governing Council path
+  guidance was found. The window closes after this doc goes quiet; the register is the
+  `ecb-decision-2026-10-29` ledger.
+- **Status stays `estimate`.** The ECB published on the date, but the confirmed-prefix taxonomy has
+  no non-Fed central-bank slot and this lane may not self-confirm; the date is not in doubt, the
+  label is the taxonomy's. `src/domain/market-events/ecb-account-2026-10-08.json` is untouched.
+- **Next account** (of the 10-28/29 meeting, ~2026-11-26 by the four-week rule) remains deliberately
+  not filed. This document now goes quiet.
+
+**Last assessed:** 2026-10-09
+<!-- probe-ref: {"symbols":{},"vix":15.41,"daysBand":"low:0+","adjacentIds":["amzn-prime-big-deal-days-2026-10-06","bobl-5y-auction-2026-10-13","consumer-credit-2026-10-07","eia-steo-2026-10-06","existing-home-sales-2026-10-13","fomc-minutes-2026-10-07","imf-world-bank-annual-meetings-2026-10-12","intl-trade-full-report-2026-10-06","ism-services-2026-10-05","jgb-10y-auction-2026-10-06","jgb-30y-auction-2026-10-08","mrvl-investor-day-2026-10-06","opec-jmmc-68th-2026-10-04","opec-momr-2026-10-13","opec-plus-meeting-2026-10-04","pjm-iras-ferc-deadline-2026-10-12","sifma-bond-market-closure-2026-10-12","sp-global-investment-manager-index-2026-10-13","sp-global-services-pmi-2026-10-05","sudan-sanctions-regime-expiry-2026-10-09","treasury-10y-note-2026-10-07","treasury-30y-bond-2026-10-08","treasury-3y-note-2026-10-06","treasury-buyback-20y30y-2026-10-08","treasury-buyback-2y3y-2026-10-06","wholesale-trade-2026-10-08"],"adjacentStrongIds":["ism-services-2026-10-05"],"screenStreak":0} -->

@@ -28,8 +28,20 @@ describe("readLedger", () => {
       probePrice: 79.88,
       stance: "Stand aside",
       confidence: "high",
+      provesWrong: "a falsifier",
       buySignal: false,
     });
+  });
+
+  it("quotes the Today row's falsifier word for word, dropping only markup (#5720)", () => {
+    const md = (cell: string) =>
+      ledger("- **Buy signal:** no — S1 kill-listed.").replace("a falsifier", cell);
+    expect(
+      readLedger(md("`FT-2` scores **2026-11-06** — see [the plan](x.md) · S2"), "CRWV")
+        .provesWrong,
+    ).toBe("FT-2 scores 2026-11-06 — see the plan · S2");
+    expect(readLedger(md("—"), "CRWV").provesWrong).toBeUndefined();
+    expect(readLedger(md(""), "CRWV").provesWrong).toBeUndefined();
   });
 
   it("licenses a buy only on the ledger's own Buy signal: yes line", () => {

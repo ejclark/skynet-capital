@@ -19,7 +19,7 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
-import { JsonlKeyedStore } from "../storage/jsonl-store.js";
+import { JsonlKeyedStore, type JsonlTail } from "../storage/jsonl-store.js";
 import type { FeedbackKind } from "./feedback-issue.js";
 
 export interface FeedbackLogEntry {
@@ -39,6 +39,11 @@ export interface FeedbackLogStore {
   record(entry: FeedbackLogEntry): Promise<void>;
   /** All entries (order not guaranteed); one member's when given. */
   list(opaqueMemberId?: string): Promise<readonly FeedbackLogEntry[]>;
+  /** Every member file's entries appended since `from` (by file path), in file order — the
+   *  append-aware read `wire-feed-cache.ts` folds (#4458). Optional: without it a reader re-lists. */
+  sinceAll?(
+    from: ReadonlyMap<string, number>,
+  ): Promise<ReadonlyMap<string, JsonlTail<FeedbackLogEntry>>>;
 }
 
 /** The in-memory reference implementation (`InMemoryFeedbackLogStore`) lives in its own file,
@@ -61,6 +66,12 @@ export class JsonlFeedbackLogStore implements FeedbackLogStore {
 
   list(opaqueMemberId?: string): Promise<readonly FeedbackLogEntry[]> {
     return this.store.list(opaqueMemberId);
+  }
+
+  sinceAll(
+    from: ReadonlyMap<string, number>,
+  ): Promise<ReadonlyMap<string, JsonlTail<FeedbackLogEntry>>> {
+    return this.store.sinceAll(from);
   }
 }
 

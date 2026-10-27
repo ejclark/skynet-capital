@@ -8,13 +8,21 @@ import { standingsBoardView, standingsCompareView } from "../observatory/standin
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { Session } from "./auth/session.js";
 import type { BoardPatchChannel } from "./board-patch-routes.js";
+import { serveCoverageJson } from "./coverage-route.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
+import { ownsDesk } from "./desk-owner-gate.js";
 import { serveEquityCurveJson } from "./equity-curve-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { fitAnswerFor } from "./fit-route.js";
 import { serveNetWorthJson } from "./networth-api-routes.js";
-import { playbookPerformanceView, selectAccounts } from "./playbook-performance.js";
+import { outlooksFor } from "./outlook-route.js";
+import {
+  playbookFunnelJson,
+  playbookPerformanceView,
+  selectAccounts,
+} from "./playbook-performance.js";
 import { corpusFingerprint } from "./research-corpus-memo.js";
 import { ledgerDigests } from "./research-horizon-calls.js";
 import {
@@ -30,21 +38,25 @@ import { serveWireJson } from "./wire-routes.js";
  *  attributed to a playbook, as two separate groupings: the house-wide collective, and the viewer's
  *  own accounts (narrowable by `?accounts=a,b`). No weighting/benchmark layer yet, by design. Split out of
  *  `serveContentApi` to keep that dispatcher's own branching complexity under the fitness gate. */
-function outpostPerformanceView(
+async function outpostPerformanceView(
   config: DashboardServerConfig,
   url: string,
   session: Session | undefined,
 ): Promise<unknown> {
   const requested = new URL(url, "http://localhost").searchParams.get("accounts");
-  return playbookPerformanceView(
+  const view = await playbookPerformanceView(
     config.hub.getState().participants,
     selectAccounts(resolveOwnedIds(session, config), requested),
     {
       readTradeActivity: config.readTradeActivity,
       readDecisions: config.readDecisions,
       findByOrderId: config.findByOrderId,
+      findSpreadLeg: config.findSpreadLeg,
     },
   );
+  // House-wide like `house` (#4450 slice 5a): every bot pooled per playbook, no account named.
+  const funnel = config.readPlaybookFunnel?.();
+  return { ...view, funnel: funnel ? playbookFunnelJson(funnel) : null };
 }
 
 /** The research shelf as data. It keeps history (everyEvent) — a closed-out call is a receipt worth
@@ -102,7 +114,14 @@ export async function serveContentApi(
     return true;
   };
   if (path === "/api/wire") {
-    await serveWireJson(res, url, config, Boolean(config.submitFeedback));
+    // Every account's fills, so each bot row's playbook rides only to that account's owner (#885),
+    // the rule `/api/desk/:id` already keeps.
+    // The playbook kind is members-only (#5457 slice 5): a read with no session is the pre-auth
+    // side of the invite gate, so that dep is withheld before anything is assembled.
+    const { readPlayMilestones: _members, ...open } = config;
+    await serveWireJson(res, url, session ? config : open, Boolean(config.submitFeedback), (id) =>
+      ownsDesk(id, config, session),
+    );
     return true;
   }
   const serialized = (body: string): true => {
@@ -114,6 +133,21 @@ export async function serveContentApi(
   // The calendar's slice (#3977 slice 5): the three surfaces that draw the market calendar read
   // this ~8% projection of the same view instead of the whole shelf. Same dispatcher, same gate.
   if (path === "/api/research/calendar") return serialized(cachedShelfBodies().calendar);
+  if (path === "/api/research/coverage") {
+    // R&D → Coverage (#3811 slice 3): the viewer's own holdings and fund bars, so never cached.
+    await serveCoverageJson(res, config, session);
+    return true;
+  }
+  if (path === "/api/research/outlook") {
+    // The symbol summary, light (#4807 slice 4): one pure read per name, no broker.
+    const sym = new URL(url, "http://localhost").searchParams.get("symbol") ?? "";
+    return json(outlooksFor(sym, new Date().toISOString()));
+  }
+  if (path === "/api/research/fit") {
+    // The fit finder (#4469 slice 4): which strategies one ticker fits. Pure, no broker.
+    const sym = new URL(url, "http://localhost").searchParams.get("symbol") ?? "";
+    return json(fitAnswerFor(sym, new Date().toISOString()));
+  }
   if (path === "/api/research/mentions") {
     // The `sym:` scope's second net (#3962). The shelf payload carries slugs and titles, never the
     // documents' text, so the board alone can only match a symbol against a slug — which is how a
@@ -172,10 +206,15 @@ function serveBoardJson(
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
   res.end(
     JSON.stringify({
+      boot: channel.boot,
       seq: channel.head,
       generatedAt: state.generatedAt,
       metric,
-      view: standingsBoardView(state, metric),
+      view: standingsBoardView(
+        state,
+        metric,
+        config.capitalFlows?.flowsFor.bind(config.capitalFlows),
+      ),
       ...(a && b ? { compare: standingsCompareView(a, b) } : {}),
     }),
   );

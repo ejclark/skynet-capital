@@ -180,11 +180,53 @@ export function horizonRowsOf(md: string): HorizonRows {
  * own ordering (a study's `## The call` table has no horizons at all — its first name wins).
  */
 export function todayCallOf(md: string): EventCall | null {
+  return todayOf(md, rowCall);
+}
+
+/** The same nearest-horizon row, read whole — position guidance quotes its falsifier (#5720). */
+export function todayRowOf(md: string): HorizonRow | null {
+  return todayOf(md, fullRow);
+}
+
+function todayOf<T>(md: string, read: (table: CallTable, cells: readonly string[]) => T | null) {
   const table = callTableOf(md);
   if (!table) return null;
   const row =
     table.rows.find((cells) => HORIZON_LABELS.today.test(plain(cells, 0))) ?? table.rows[0];
-  return row ? rowCall(table, row) : null;
+  return row ? read(table, row) : null;
+}
+
+/** The verbs a ledger's `**Call:**` line may state — the symbol summary's call vocabulary (#4807). */
+export const CALL_VERBS = ["buy", "hold", "trim", "sell", "wait"] as const;
+export type CallVerb = (typeof CALL_VERBS)[number];
+
+/** What a ledger says, in one line, about owning the shares: a verb and the day it holds until. */
+export interface CallLine {
+  readonly verb: CallVerb;
+  /** YYYY-MM-DD; absent when the line states a verb alone. */
+  readonly until?: string;
+}
+
+const CALL_LINE = new RegExp(
+  `^\\s*(?:[-*]\\s+)?\\*\\*Call:\\*\\*\\s*(${CALL_VERBS.join("|")})\\b(?:\\s+until\\s+(\\d{4}-\\d{2}-\\d{2}))?`,
+  "im",
+);
+
+/**
+ * The ledger's own call word and until-date (#4807 slice 2): `**Call:** hold until 2026-11-09`, one
+ * line inside the decision header beside the Buy signal bullet. EXTRACTS, never infers — a header
+ * without the line, an unknown verb ("**Call:** accumulate") or an impossible date reads as no line
+ * (a date alone drops, the verb stands), so the symbol summary keeps its conservative roll-up
+ * rather than act on a word it cannot place.
+ */
+export function callLineOf(md: string): CallLine | null {
+  const header = decisionHeaderOf(md);
+  const m = header ? CALL_LINE.exec(header) : null;
+  if (!m) return null;
+  const verb = m[1]?.toLowerCase() as CallVerb;
+  const until = m[2];
+  const real = until && new Date(`${until}T00:00:00Z`).toISOString().slice(0, 10) === until;
+  return real ? { verb, until } : { verb };
 }
 
 /**
@@ -212,13 +254,14 @@ export function tldrOf(md: string): string | null {
 /**
  * The `adjacentIds` the ledger's `probe-ref` line records (docs/process/EVENT-RESEARCH.md,
  * deterministic screening) — the corridor graph every pulse already writes and nothing rendered
- * until #1704. Malformed JSON reads as no edges, never as a throw.
+ * until #1704. The LAST probe-ref, as `sourceBlockedOf` reads it: a pulse appends, so the first is
+ * the original corridor (#5183). Malformed JSON reads as no edges, never as a throw.
  */
 export function adjacentIdsOf(md: string): string[] {
-  const match = md.match(/<!--\s*probe-ref:\s*(\{[\s\S]*?\})\s*-->/);
-  if (!match?.[1]) return [];
+  const raw = [...md.matchAll(/<!--\s*probe-ref:\s*(\{[\s\S]*?\})\s*-->/g)].at(-1)?.[1];
+  if (!raw) return [];
   try {
-    const parsed = JSON.parse(match[1]) as { adjacentIds?: unknown };
+    const parsed = JSON.parse(raw) as { adjacentIds?: unknown };
     return Array.isArray(parsed.adjacentIds)
       ? parsed.adjacentIds.filter((id): id is string => typeof id === "string")
       : [];

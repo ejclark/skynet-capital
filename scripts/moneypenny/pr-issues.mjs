@@ -38,6 +38,8 @@ const CLOSING = String.raw`\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b:?\s+`;
 const PROVENANCE = String.raw`\b(?:part\s+of|slice(?:\s+\d+)?\s+of|refs?|references)\b:?\s+`;
 
 const KEYWORD_REF = new RegExp(`(?:${CLOSING}|${PROVENANCE})${REF}`, "gi");
+const CLOSING_REF = new RegExp(`${CLOSING}${REF}`, "gi");
+const PROVENANCE_REF = new RegExp(`${PROVENANCE}${REF}`, "gi");
 const BARE_REF = new RegExp(REF, "g");
 
 // `feat/4292-ci-burst-alarm`, `feedback/3970`: the number IS the first segment after the prefix.
@@ -102,6 +104,38 @@ export function derivePrIssues({ title = "", body = "", headRef = "", repo = REP
   const branch = branchIssueOf(headRef);
   if (branch) found.add(branch);
   return [...found].sort((a, b) => a - b);
+}
+
+/**
+ * The same keyword rules, split by what the keyword DOES on merge: `closes` are the numbers a
+ * closing keyword names (GitHub closes them), `refs` the ones a provenance phrase names (nothing
+ * closes them). Ascending, de-duplicated, same-repo only. scripts/platter-refs.mjs reads an item
+ * PR's body through this, so a boarded item carries the intent its own PR stated (#4562).
+ */
+export function keywordIssuesOf(text = "", repo = REPO) {
+  const sorted = (nums) => [...new Set(nums)].sort((a, b) => a - b);
+  return {
+    closes: sorted(refsIn(text, CLOSING_REF, repo)),
+    refs: sorted(refsIn(text, PROVENANCE_REF, repo)),
+  };
+}
+
+/**
+ * WHAT THE OPEN PLATTERS WILL CLOSE (#6191): issue → the platter PR whose body closes it. A held
+ * platter's body carries one `Closes #n` Summary bullet per `Platter-Closes` trailer (#4562), so an
+ * issue it closes has nothing left to build — it waits on Eric's merge, which closes it. #5837 was
+ * pulled three more times after its last item boarded #5852. A `Part of #n` bullet is not counted:
+ * that item's issue still has work left, which a puller may take. Pure: open PR rows in, map out.
+ */
+export function platterClosesByIssue(openPrs = [], repo = REPO) {
+  const byIssue = new Map();
+  for (const pr of openPrs ?? []) {
+    if (laneClassOf(pr?.head?.ref) !== "platter") continue;
+    for (const n of keywordIssuesOf(pr?.body ?? "", repo).closes) {
+      if (!byIssue.has(n)) byIssue.set(n, pr.number);
+    }
+  }
+  return byIssue;
 }
 
 /**

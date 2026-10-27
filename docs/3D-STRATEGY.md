@@ -1,7 +1,7 @@
 # 3D strategy — deployable gamification patterns for the hero track
 
-> **Engine note (2026-09-26):** the hero scene has been three.js (0.184) since #3718 (2026-09-25),
-> which retired Babylon. The Babylon API names below (`thinInstanceSetBuffer`, `@babylonjs/gui`,
+> **Engine note:** the hero scene is three.js (`three` in `package.json`), which replaced Babylon
+> in #3718. The Babylon API names below (`thinInstanceSetBuffer`, `@babylonjs/gui`,
 > `NodeMaterial` and the like) are historical; the patterns still apply, the calls do not.
 
 _A living playbook (src: Eric's brief — "guidance on 3D gamification strategies I can deploy";
@@ -13,7 +13,7 @@ researched and verified by Claude, Aug 2026). Companions: [`THE-GAME.md`](THE-GA
 its revisit triggers are free-orbit as a core interaction, ~2k+ animated structures, or contributed
 3D assets. This doc is the playbook for the **3D hero track that already exists** — `src/three/`
 renders Barad-dûr through a pure params seam (`resolveTowerParams`), a stage template
-(`createStage`/`attachPost`), composable greeble molecules, and a deterministic screenshot contract
+(`createStage`), composable greeble molecules, and a deterministic screenshot contract
 (`npm run shoot:tower`). Everything below plugs into those seams; nothing bypasses them.
 
 ## The five engines (what the research says a world-as-scoreboard needs)
@@ -50,30 +50,31 @@ map cleanly because the repo already committed to their preconditions:
 
 ## Deployable slices, ordered by leverage ÷ cost
 
-Each slice is small, reversible, and rides an existing seam. APIs verified against the pinned
-`@babylonjs/core` 9.19.0 (which includes all Babylon 8.0/9.0 features).
+Each slice is small, reversible, and rides an existing seam. The APIs below were verified against
+`@babylonjs/core` 9.19.0 (which includes all Babylon 8.0/9.0 features); see the engine note.
 
 | # | Slice | Mechanic | How, concretely |
 |---|---|---|---|
-| 1 | **Ceremony camera** | Seize the camera to consecrate a win — the single highest-ROI pattern | `Animation.CreateAndStartAnimation` on the existing `ArcRotateCamera` (`window.__towerCamera`) alpha/beta/radius/target with `CubicEase`; `FramingBehavior` is a ready-made "present the winner's tower"; enable the already-built pipeline's `depthOfFieldEnabled` for the close-up (deliberately off at tower scale today). Fire on THE-GAME ceremonies: topping-out, ground-break, founding. |
-| 2 | **Landmark leveling, live** | The tower *is* the scoreboard | Wire real standings into the dials that already exist: `resolveTowerParams({prominence, health})`. The open integration point: nothing computes rank yet — `projectWorld` takes a caller-supplied prominence map (`project.ts:137`), so a small observatory-side rank→0..1 function unlocks the whole "landmarks rise and fall" loop. |
+| 1 | **Ceremony camera** | Seize the camera to consecrate a win — the single highest-ROI pattern | `Animation.CreateAndStartAnimation` on an `ArcRotateCamera` alpha/beta/radius/target with `CubicEase` (the scene's camera is the `PerspectiveCamera` + `OrbitControls` that `createStage` builds); `FramingBehavior` is a ready-made "present the winner's tower"; a pipeline's `depthOfFieldEnabled` for the close-up (the scene has no post stack; see *Phones*). Fire on THE-GAME ceremonies: topping-out, ground-break, founding. |
+| 2 | **Landmark leveling, live** | The tower *is* the scoreboard | Wire real standings into the dials that already exist: `resolveTowerParams({prominence, health})`. The rank→0..1 function is `botLandmarkProminence` (`src/observatory/standings.ts`); it reaches the tower as `?power=` through `towerSrc` (`app/src/shell/sauron-card.tsx`). |
 | 3 | **Idle orbit + tour mode** | Visitability; the world as a place you show someone | `AutoRotationBehavior` for the idle observatory orbit; `Curve3.CreateCatmullRomSpline` + `Path3D` for an auto-camera tour through an empire's highlights. |
 | 4 | **Photo mode / share-a-moment** | Retention + distribution inside the invite gate | `shoot:tower` is already the deterministic capture rig. Add a "bank this moment" that renders a ceremony card (shot + honest caption: ticker, P/L, renown reason) into the group feed. |
 | 5 | **Construction sites** | Anticipation on the honest clock | A scaffold variant of the tower piece driven by position age / days-to-expiry from `StructureState`; completion ceremony = slice 1. Needs the history layer for *events* (the known blocker, THE-GAME.md). |
 | 6 | **The district → city scale-up** | LOD storytelling | `thinInstanceSetBuffer('matrix', …)` renders thousands of buildings in one draw call per material — with the verified caveat that thin instances cull all-or-nothing, so partition by district-parent. Per-building window-light/weathering via custom instance attributes read in a `NodeMaterial` (NME authors it visually, emits GLSL+WGSL). Babylon 9.0's clustered lighting is the enabler for many window/street lights. |
-| 7 | **Mass atmosphere** | The storm, embers, regime weather at city scale | `GPUParticleSystem` (tens of thousands of particles) — guard with `GPUParticleSystem.IsSupported` and fall back to the CPU `ParticleSystem` **manually**; the fallback is not automatic. Current smoke (420 CPU particles, pre-warmed for deterministic shots) stays the pattern for hero pieces. |
+| 7 | **Mass atmosphere** | The storm, embers, regime weather at city scale | `GPUParticleSystem` (tens of thousands of particles) — guard with `GPUParticleSystem.IsSupported` and fall back to the CPU `ParticleSystem` **manually**; the fallback is not automatic. The current embers (`src/three/pieces/embers.ts`: 260 seeded sparks, scaled by `stormDensity`) stay the pattern for hero pieces. |
 | 8 | **Diegetic labels** | The telestrator, in-world | `@babylonjs/gui`: fullscreen ADT + `label.linkWithMesh(tower)` + a `Line` with `connectedControl` *is* the callout mechanic natively; `AdvancedDynamicTexture.CreateForMesh` for true in-world steles/banners (fog and DOF apply — a leaderboard as a monument plaza). |
 | 9 | **WebGPU snapshot mode** | Free speed on mostly-static city scenes | `WebGPUEngine.CreateAsync` behind a `navigator.gpu` check (API-compatible; `createStage` branches once); `engine.snapshotRendering` claims up to ~10× on static scenes — exactly a merged/thin-instanced city. Optional at our scale; WebGL2 stays the screenshot baseline. |
 
-**Phones:** the risk is not draw calls (the merged tower is ~6–10) but the post stack
-(SSAO2 + god rays + MSAA4 + smoke overdraw). Levers, in order: `setHardwareScalingLevel`,
-`SceneOptimizer.OptimizeAsync` toward a target FPS, `freezeActiveMeshes`/`material.freeze` for
-static content. No official draw-call budget exists; community practice keeps mobile scenes in the
-low hundreds (impression, not measurement).
+**Phones:** the risk is not draw calls (the merged tower is ~20, `src/three/kit/bucket.ts`) but per-pixel spend. The scene
+has no post stack; `src/three/kit/quality.ts` sets its pixel-ratio cap, frame cap, shadow map and
+ember count. Levers, in order: `setHardwareScalingLevel`, `SceneOptimizer.OptimizeAsync` toward a
+target FPS, `freezeActiveMeshes`/`material.freeze` for static content. No official draw-call
+budget exists; community practice keeps mobile scenes in the low hundreds (impression, not
+measurement).
 
-**Two package gaps** stand between today and slices 6/8 + any generated asset: `@babylonjs/loaders`
-(prefer `registerBuiltInLoaders` from `/dynamic` — lazy, tree-shaking-friendly) and
-`@babylonjs/gui`, both version-matched exactly to core.
+**No package gap** stands between today and slices 6/8 + any generated asset: the `three` package
+ships its loaders (`GLTFLoader`) and DOM labels (`CSS2DRenderer`) under `three/addons`, the path
+`src/three/kit/env.ts` already imports `OrbitControls` from.
 
 ## Generated assets — the stance
 
@@ -99,7 +100,7 @@ one green rep per athlete invocation**, with the register as the shared prompt e
    `/vision` passage + translation table per piece. It never builds; the gate picks the athlete's
    target, not the athlete.
 2. **`render-alchemist`** — the research step, upstream of building: turns "make it look CGI-real" or
-   "closer to this reference" into a cited, buildable technique brief (Babylon.js APIs, GLSL patterns,
+   "closer to this reference" into a cited, buildable technique brief (three.js APIs, GLSL patterns,
    performance cost class, what's achievable now vs. what needs new infrastructure). Also the one
    athlete that handles reference media directly — pulls frames from provided video via `ffmpeg`,
    distinguishes a *fidelity-bar* ask (production polish — atmosphere, grain, light falloff, motion)

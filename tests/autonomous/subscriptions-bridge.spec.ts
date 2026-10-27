@@ -9,6 +9,7 @@ import {
 import type { PlaybookSubscription } from "../../src/domain/types.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
 import type { SubscriptionsState } from "../../src/subscriptions/subscription-state.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 
 /**
  * The whole bridge, over a real socket (issue #3595): the dashboard folding its Playbook Store
@@ -65,6 +66,10 @@ describe("the Playbook Store bridge, end to end", () => {
           undefined,
           undefined,
           (snapshot) => sync.accept(snapshot),
+          undefined,
+          undefined,
+          undefined,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
 
         // Boot: nothing subscribed. The bot trades the house roster only.
@@ -97,6 +102,10 @@ describe("the Playbook Store bridge, end to end", () => {
         undefined,
         undefined,
         (snapshot: SubscriptionsSnapshot) => sync.accept(snapshot),
+        undefined,
+        undefined,
+        undefined,
+        LOADED_SUITE_BRIDGE_BUDGET,
       );
 
       expect(await client.fetchOnce()).toEqual(CONTROLS);
@@ -122,6 +131,10 @@ describe("the Playbook Store bridge, end to end", () => {
           undefined,
           undefined,
           (snapshot) => sync.accept(snapshot),
+          undefined,
+          undefined,
+          undefined,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         await client.fetchOnce();
         expect(applied).toEqual([[sub()]]);
@@ -136,6 +149,10 @@ describe("the Playbook Store bridge, end to end", () => {
       undefined,
       undefined,
       (snapshot) => sync.accept(snapshot),
+      undefined,
+      undefined,
+      undefined,
+      LOADED_SUITE_BRIDGE_BUDGET,
     );
     expect(await client.fetchOnce()).toBeNull();
     expect(applied).toHaveLength(1);

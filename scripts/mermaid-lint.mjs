@@ -14,7 +14,10 @@
 // Mermaid 11.17.2 on 2026-09-25, read from its production bundle; upstream is 12.0.0. `mermaid` is
 // pinned to that exact version in package.json so a diagram that parses here parses there — a
 // newer parser would pass 12.x-only types (usecase-beta, agentflow-beta) that GitHub shows as an
-// error. When GitHub bumps, bump the pin and GITHUB_MERMAID_VERSION together; a mermaid block
+// error. tests/arch/mermaid-lint.spec.ts fails when the pin or the installed copy drifts from
+// GITHUB_MERMAID_VERSION (a dependabot bump did exactly that, #4769 → #5837), and NEEDS_12 is
+// checked before the parse, so it holds even then. When GitHub bumps, bump the pin and
+// GITHUB_MERMAID_VERSION together; a mermaid block
 // containing just the word `info` prints the deployed version in any GitHub comment.
 //
 // WHAT IS GATED vs NOTED (docs/COACHES.md: a blocking gate protects a constraint — here Eric's
@@ -23,7 +26,8 @@
 // iconify icon packs (GitHub never loads them, they render as "?"); the `journey` type (a
 // UX-satisfaction chart, the wrong shape for reasoning). Notes: `%%{init}%%` (deprecated upstream,
 // use frontmatter), `layout: elk` (GitHub falls back to dagre silently; a state diagram errors instead), `click` (dead on GitHub),
-// a long diagram (the ≤15-node legibility budget is taste — pointed at, never gated).
+// a long diagram (the legibility budget — one phone screen at ≥12px — is measured by the pair
+// renderer, which has a browser; this is only a line-count proxy, pointed at, never gated).
 //
 // THE ROUND-3 RULES (docs/PICTURES.md → "Rules the design rounds found", plan #3786, 2026-09-26).
 // One is gated because it protects the both-modes colour contract: a `classDef`/`style` hex that is
@@ -52,12 +56,14 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** What github.com renders — read from its production bundle on 2026-09-25. Move with the pin. */
 export const GITHUB_MERMAID_VERSION = "11.17.2";
-/** Non-blank lines past which a diagram gets an advisory note — the ≤15-node budget, in lines. */
+/** Non-blank lines past which a diagram gets an advisory note — a proxy for one phone screen. */
 export const LONG_DIAGRAM_LINES = 40;
 
 const CORPUS_ROOTS = ["docs", ".github", ".claude"];
 /** Vendored docs are not ours to gate; shots are images; handoffs are pasted from elsewhere. */
-const CORPUS_SKIP = new Set(["node_modules", "vendor", "shots", "handoffs", ".git"]);
+// `worktrees`: `.claude/worktrees/` holds gitignored agent checkouts — whole copies of the repo —
+// and walking them ran the corpus scan out of heap on a dev machine (2026-10-10).
+const CORPUS_SKIP = new Set(["node_modules", "vendor", "shots", "handoffs", ".git", "worktrees"]);
 
 /** Types upstream 12.x added; GitHub's 11.17.2 renders them as an error. */
 const NEEDS_12 = new Set(["usecase-beta", "usecase", "agentflow-beta", "agentflow"]);
@@ -90,6 +96,11 @@ const HOUSE_NOUNS = /(?<!ship\.sh )(?<!ship )\b(platter|boarding|capsule|state b
 const HANDLE = /(?<![#\w])[0-9a-f]{7,40}(?![\w])/i;
 /** Rule 2 — a flowchart fork: `id{"label"}` (single braces; `{{ }}` is a hexagon, not a fork). */
 const FORK = /\b\w+\{(?!\{)"?([^"{}]*?)"?\}/g;
+/** A live flowchart edge — solid `-->` or thick `==>`, labelled or not; a dotted `-.->` is the
+ *  removed path and stays still, so it never counts. */
+const LIVE_EDGE = /(?:--+|==+)>/g;
+/** Live edges past which an unanimated flow earns a note — one edge is a fact, two are a flow. */
+export const ANIMATE_FLOW_EDGES = 2;
 /** A six-digit hex colour on a classDef or style line. */
 const HEX = /#[0-9a-f]{6}\b/gi;
 
@@ -180,15 +191,21 @@ export async function lintMermaid(markdown, { where = "" } = {}) {
   for (const { line, source } of blocks) {
     const at = where ? `${where}:${line}` : `line ${line}`;
     const head = headerWord(source);
+    // Checked before the parse, never only when it fails: the installed parser drifted to 12.x once
+    // (#4769), and a 12.x parser accepts these types — so a guard that waited for the parse error
+    // passed a bare `usecase-beta` that github.com shows as an error (#5837).
+    if (NEEDS_12.has(head)) {
+      problems.push(
+        `${at}: \`${head}\` needs Mermaid 12 — github.com renders ${GITHUB_MERMAID_VERSION}, which shows it as an error`,
+      );
+      diagrams.push({ line, type: head, ok: false });
+      continue;
+    }
     let result;
     try {
       result = await mermaid.parse(source);
     } catch (error) {
-      if (NEEDS_12.has(head)) {
-        problems.push(
-          `${at}: \`${head}\` needs Mermaid 12 — github.com renders ${GITHUB_MERMAID_VERSION}, which shows it as an error`,
-        );
-      } else if (DECLINED.has(head)) {
+      if (DECLINED.has(head)) {
         problems.push(`${at}: ${DECLINED.get(head)}`);
       } else {
         problems.push(
@@ -253,7 +270,7 @@ function policyFindings(source, config, head, at, registry) {
   const lineCount = source.split("\n").filter((l) => l.trim()).length;
   if (lineCount > LONG_DIAGRAM_LINES) {
     notes.push(
-      `${at}: ${lineCount} lines — the legibility budget is ≤15 nodes on a 390px phone (docs/PICTURES.md); split or simplify`,
+      `${at}: ${lineCount} lines — the legibility budget is one 390px phone screen at ≥12px text (docs/PICTURES.md); measure it with npm run shoot:mermaid-pairs, or split`,
     );
   }
   const round3 = roundThreeFindings(source, head, at, registry);
@@ -286,7 +303,7 @@ function hexFindings(source, at, registry) {
 }
 
 /** The round-3 rules (docs/PICTURES.md → "Rules the design rounds found"): rule 11 gated, rules
- *  1, 2 and 7 advisory. Split from policyFindings so each function stays readable. */
+ *  1, 2 and 7 advisory, plus the animate-the-flow note. Split from policyFindings so each function stays readable. */
 function roundThreeFindings(source, head, at, registry) {
   const problems = [];
   const notes = [];
@@ -321,6 +338,22 @@ function roundThreeFindings(source, head, at, registry) {
           `${at}: fork "${label}" asks no question — a fork shape ends in ? and its exits carry the answers (docs/PICTURES.md rule 2)`,
         );
       }
+    }
+  }
+  // Animate the whole flow (Eric, 2026-10-04, #4549). The rule reached a picture 0 times in 6 PR
+  // diagrams while it lived only in the flowchart card (2026-10-13), so it is said where every body
+  // passes: here, at ship time. A note, never a gate — a still frame is a taste loss, not a defect.
+  if (/^(flowchart|graph)\b/.test(head) && !/@\{[^}]*\banimat/.test(source)) {
+    const live =
+      source
+        .split("\n")
+        .filter((l) => !/^\s*(classDef|style|linkStyle|%%)/.test(l))
+        .join("\n")
+        .match(LIVE_EDGE)?.length ?? 0;
+    if (live >= ANIMATE_FLOW_EDGES) {
+      notes.push(
+        `${at}: a flow of ${live} live edges and none moves — animate every live edge (\`a e1@--> b\` then \`e1@{ animate: true }\`); dotted removed paths stay still (docs/PICTURES.md → The delta grammar)`,
+      );
     }
   }
   const noun = HOUSE_NOUNS.exec(source);

@@ -5,7 +5,12 @@
     "mustBeSeenBy": "member with a linked account (hidden with zero accounts)"
   },
   {
-    "screen": "/accounts ?section=activity",
+    "screen": "/accounts ?section=balance",
+    "verdict": "keep",
+    "mustBeSeenBy": "member with one linked account selected (not All accounts; #5493 slice 3)"
+  },
+  {
+    "screen": "/accounts ?section=ledger",
     "verdict": "keep",
     "mustBeSeenBy": "member (honest empty state with no account)"
   },
@@ -15,9 +20,14 @@
     "mustBeSeenBy": "member (honest empty state with no account)"
   },
   {
-    "screen": "/accounts ?section=heartbeat",
+    "screen": "/accounts ?section=playbooks",
     "verdict": "keep",
     "mustBeSeenBy": "bot owner (only while one bot account is selected)"
+  },
+  {
+    "screen": "/accounts ?section=heartbeat",
+    "verdict": "redirect-only",
+    "target": "/accounts?section=playbooks&checks=open"
   },
   {
     "screen": "/accounts ?section=thesis",
@@ -27,7 +37,7 @@
   {
     "screen": "/accounts ?section=decisions",
     "verdict": "redirect-only",
-    "target": "/accounts?section=heartbeat"
+    "target": "/accounts?section=playbooks&checks=open"
   },
   {
     "screen": "/accounts ?section=milestones (table of contents)",
@@ -60,12 +70,17 @@
     "mustBeSeenBy": "anyone signed in; Settings link and writes only for the owner"
   },
   {
-    "screen": "/u/$id/activity",
+    "screen": "/u/$id/ledger",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in (playbook row should be owner-only, see defect 1)"
   },
   {
-    "screen": "/u/$id/decisions (Heartbeat)",
+    "screen": "/u/$id/activity",
+    "verdict": "redirect-only",
+    "target": "/u/$id/ledger"
+  },
+  {
+    "screen": "/u/$id/playbooks",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in, bot accounts only (playbook ids should be owner-only)"
   },
@@ -80,9 +95,9 @@
     "mustBeSeenBy": "anyone signed in, bot accounts"
   },
   {
-    "screen": "/u/$id/playbooks",
+    "screen": "/u/$id/decisions",
     "verdict": "redirect-only",
-    "target": "/research?section=playbooks&account=$id"
+    "target": "/u/$id/playbooks?checks=open"
   },
   {
     "screen": "/leaderboard",
@@ -95,31 +110,34 @@
     "target": "/leaderboard (keeps by/a/b)"
   },
   {
-    "screen": "/activity ?section=feed",
+    "screen": "/activity",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in"
   },
   {
     "screen": "/activity ?section=pnl",
-    "verdict": "keep",
-    "mustBeSeenBy": "anyone signed in"
+    "verdict": "redirect-only",
+    "target": "/activity (booked P&L is the strip above the feed)"
   },
   {
     "screen": "/activity ?section=pulse (Feedback pulse)",
-    "verdict": "undecided",
-    "mustBeSeenBy": "anyone signed in",
-    "target": "nobody needs this — no member's job reads other members' filings; your own are on Profile → Feedback (this list's empty state already links there): fold in, or keep a league-wide list?"
+    "verdict": "redirect-only",
+    "target": "/activity?q=is:feedback"
   },
   {
     "screen": "/activity ?section=council",
-    "verdict": "undecided",
-    "target": "composer meant for Overview beside the standing (IA); Activity fold into the league page is open",
-    "mustBeSeenBy": "member (composer), anyone (read)"
+    "verdict": "retire",
+    "target": "/activity — the weekly Council retired (#5992); a thesis lives in playbook authoring"
   },
   {
     "screen": "/research ?section=board",
     "verdict": "keep",
     "mustBeSeenBy": "anyone signed in"
+  },
+  {
+    "screen": "/research ?section=coverage",
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in (holdings and sector-fund numbers need an owned, linked account)"
   },
   {
     "screen": "/research ?section=playbooks (Playbook Store)",
@@ -185,6 +203,11 @@
     "screen": "/settings ?section=guests",
     "verdict": "keep",
     "mustBeSeenBy": "fund owner only (the card returns null otherwise)"
+  },
+  {
+    "screen": "/settings ?section=github",
+    "verdict": "keep",
+    "mustBeSeenBy": "fund owner only (renews Moneypenny's GitHub token; the card returns null otherwise)"
   },
   {
     "screen": "/learn",

@@ -7,6 +7,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import type { OwnedAccount } from "../../src/live/settings";
 import { Route } from "../../src/routes/settings";
 import { usePrefs } from "../../src/shell/prefs";
 
@@ -16,12 +17,13 @@ import { usePrefs } from "../../src/shell/prefs";
  * page that only bounces back here.
  */
 
+let accounts: readonly OwnedAccount[] = [];
 rstest.mock("../../src/live/settings", () => ({
   fetchSettings: () =>
     Promise.resolve({
       authConfigured: true,
       adminWired: true,
-      accounts: [],
+      accounts,
       fleetSuspended: false,
       timezones: [],
     }),
@@ -60,6 +62,7 @@ rstest.mock("../../src/live/controls", () => ({
 const realFetch = globalThis.fetch;
 beforeEach(() => {
   owner = false;
+  accounts = [];
   globalThis.fetch = (() =>
     Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))) as typeof fetch;
 });
@@ -92,6 +95,29 @@ describe("Settings → Account with no linked account", () => {
     const line = await screen.findByText(/doesn't resolve to an account yet/);
     expect(line.textContent).toContain("ask a league owner to link one to your sign-in");
     expect(line.textContent).not.toContain("/claim");
+  });
+});
+
+/**
+ * The display-name hint tells the server's rename rule (#6280): sign-in finds an account by email,
+ * never by name, and the only rename refusals left are a blank name or one already taken (#6095).
+ */
+describe("Settings → Account, a member's display-name hint", () => {
+  it("says renaming never unlinks the account, and never that the name must match the session", async () => {
+    accounts = [
+      {
+        id: "ada",
+        name: "Ada",
+        kind: "human",
+        hostConfigured: false,
+        profile: { displayName: "Ada" },
+      },
+    ];
+    mountSettings("/settings?section=account");
+    const hint = await screen.findByText(/Your sign-in finds this account by email/);
+    expect(hint.textContent).toContain("renaming never unlinks it");
+    expect(hint.textContent).toContain("A name another account already uses is refused.");
+    expect(screen.queryByText(/must keep matching your session/)).toBeNull();
   });
 });
 

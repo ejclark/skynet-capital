@@ -11,6 +11,7 @@ import {
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
+import { PulseHistoryFold } from "../../src/observatory/pulse-history-fold.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
@@ -155,6 +156,29 @@ describe("serveWireJson", () => {
       await serveWireJson(res, "/api/wire", deps, true);
 
       expect(tradesFrom(out.body)).toHaveLength(1);
+    });
+
+    // #4458 — the per-process fold replaces all three whole reads; they stay as the fallback.
+    it("reads the fold, not the whole ledgers, when the fold is wired", async () => {
+      const { res, out } = capture();
+      const whole = () => Promise.reject(new Error("a whole read on a request path"));
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllActivityEvents: whole,
+        readAllTradeActivity: whole,
+        readAllFeedback: whole,
+        readWireFeed: () =>
+          Promise.resolve({
+            events: [activityEventFromTradeRecord(record({ orderId: "on-bus" }))],
+            records: [record({ orderId: "pre-bus", at: "2026-07-01T00:00:00.000Z" })],
+            filings: [entry({ title: "Folded idea" })],
+          }),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, true);
+
+      expect(tradesFrom(out.body)).toHaveLength(2);
+      expect(JSON.parse(out.body).wire.feedback[0]?.title).toBe("Folded idea");
     });
 
     it("never puts an owner-only order.submitted line on the cross-member feed", async () => {
@@ -534,10 +558,12 @@ describe("serveWireJson", () => {
       expect(trades[0].key.includes("2026-08-24T00:00:00.000Z")).toBe(true);
       expect(trades[1].key.includes("2026-08-23T00:00:00.000Z")).toBe(true);
       expect(out.headers.link).toBe(
-        '</api/wire?per_page=2&before=2026-08-23T00%3A00%3A00.000Z>; rel="next"',
+        // time|order id (#4802)
+        '</api/wire?per_page=2&before=2026-08-23T00%3A00%3A00.000Z%7Cord-3>; rel="next"',
       );
     });
 
+    // A bare-time cursor (from before #4802) still pages, as strictly older.
     it("follows the Link header's own before cursor to the next page", async () => {
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
@@ -590,13 +616,22 @@ describe("serveWireJson", () => {
           orderId === "ord-bot" ? { record: decision, intent } : undefined,
       };
 
-      await serveWireJson(res, "/api/wire", deps, false);
+      // The bot's owner reads it — a non-owner's copy loses the strategy tag (#4971), below.
+      await serveWireJson(res, "/api/wire", deps, false, () => true);
 
       const { trades } = JSON.parse(out.body).wire;
       const bot = trades.find((t: { whoId: string }) => t.whoId === "sauron");
       const human = trades.find((t: { whoId: string }) => t.whoId === "eric");
       expect(bot.reasoning).toMatchObject({ reason: "panic fade", strategy: "sauron-panic-claim" });
       expect(human.reasoning).toBeUndefined();
+
+      const other = capture();
+      await serveWireJson(other.res, "/api/wire", deps, false);
+      const otherBot = JSON.parse(other.out.body).wire.trades.find(
+        (t: { whoId: string }) => t.whoId === "sauron",
+      );
+      expect(otherBot.reasoning.reason).toBe("panic fade");
+      expect(otherBot.reasoning).not.toHaveProperty("strategy");
     });
 
     it("attaches a live Loss headroom gauge when history is wired, nothing when it isn't", async () => {
@@ -636,6 +671,42 @@ describe("serveWireJson", () => {
       );
       const withoutHistoryTrades = JSON.parse(withoutHistory.out.body).wire.trades;
       expect(withoutHistoryTrades[0].vitals).toBeUndefined();
+    });
+
+    it("reads the gauge off the Pulse fold, never the whole history, when both are wired (#4619)", async () => {
+      const samples = [
+        { at: "2026-08-19T00:00:00.000Z", equity: 100_000 },
+        { at: "2026-08-19T01:00:00.000Z", equity: 99_000 },
+        { at: "2026-08-19T14:30:00.000Z", equity: 99_500 },
+      ].map((s) => ({ ...s, participantId: "sauron", cash: 0, realizedPl: 0 }));
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve([record({ orderId: "ord-bot" })]),
+        findByOrderId: () => ({ record: decision, intent }),
+        readHistory: () => Promise.resolve(samples),
+      };
+      const fromHistory = capture();
+      await serveWireJson(fromHistory.res, "/api/wire", deps, false);
+
+      let wholeReads = 0;
+      const fromFold = capture();
+      await serveWireJson(
+        fromFold.res,
+        "/api/wire",
+        {
+          ...deps,
+          readHistory: () => {
+            wholeReads += 1;
+            return Promise.resolve(samples);
+          },
+          readPulseHistory: () => Promise.resolve(PulseHistoryFold.of(samples)),
+        },
+        false,
+      );
+      const gauge = (body: string) => JSON.parse(body).wire.trades[0].vitals.lossHeadroom;
+      expect(gauge(fromFold.out.body)).toEqual(gauge(fromHistory.out.body));
+      expect(gauge(fromFold.out.body).detailText).toBe("1.0% of 5.0% cap");
+      expect(wholeReads).toBe(0);
     });
   });
 });

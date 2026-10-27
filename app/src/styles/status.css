@@ -1,16 +1,14 @@
-/* THE STATUS PILL AND ITS OPS ROWS (#1296) — pulled out of shell.css when fleet health moved into
-   the topbar and pushed that file past its line budget. Layout only; every colour is a theme token.
+/* FLEET HEALTH'S OPS ROWS (#1296) — `shell/fleet-health.tsx`. Layout only; every colour is a theme
+   token. They hung under a topbar status pill until round 2 of #5037 (question 9) folded the pill
+   into the market's status line; they now open in place inside its panel (`session-status.css`),
+   one tap past the fleet's summary.
 
-   Why it lives in the bar at all: ops status used to be an owner-only card at the bottom of
+   Why fleet health is in the bar at all: it used to be an owner-only card at the bottom of
    Settings (#1295's admitted stopgap), which meant no member could see whether the bots were
-   alive. It is the group's now (#1296), so it rides the one mark that is on every route. */
+   alive. It is the group's now (#1296), so it rides the one line that is on every route. */
 
-/* Two marks, never merged — the dot is the SSE stream, the flag is the fleet, and a live stream
-   proves nothing about whether the bots are trading. */
-.status-wrap {
-  position: relative;
-  display: flex;
-}
+/* A small live/paper chip, kept from the pill: the onboarding chapter's "PAPER · LIVE" mark wears
+   it (`onboarding-chapter.tsx`). */
 .status {
   display: flex;
   align-items: center;
@@ -22,13 +20,6 @@
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 4px 8px;
-  cursor: pointer;
-}
-.status:hover,
-.status[aria-expanded="true"] {
-  color: var(--text);
-  border-color: var(--border);
-  background: var(--surface-2);
 }
 .status-dot {
   width: 7px;
@@ -41,39 +32,7 @@
   background: var(--pos);
   box-shadow: 0 0 6px var(--pos);
 }
-/* Hollow, not just red: at <=860px the pill's text is hidden and the dots are ALL that is left,
-   so live-vs-resyncing cannot ride on green-vs-red alone (docs/BRAND.md -> Accessibility). */
-.status-resyncing .status-dot {
-  background: transparent;
-  box-shadow: inset 0 0 0 2px var(--neg);
-}
-/* The fleet's own mark — sized like the stream dot so it survives the phone layout below, where
-   the pill's text is hidden and the dots are all that's left. */
-.status-flag {
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  background: var(--neg);
-  box-shadow: 0 0 6px var(--neg);
-  flex-shrink: 0;
-}
-.status-attn {
-  border-color: color-mix(in oklab, var(--neg) 45%, var(--border));
-}
 
-/* The ops rows, hung under the pill (elevation: popover). */
-.ops-pop {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 40;
-  width: min(360px, calc(100vw - 24px));
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  box-shadow: var(--elev-overlay);
-}
 .ops-pop-head {
   margin: 0 0 8px;
   font-size: 11.5px;
@@ -112,8 +71,13 @@
   font-size: 11.5px;
   line-height: 1.5;
 }
+/* a grid item stretches the full column: hug the label and give it the 24px tap floor */
 .ops-row a {
   color: var(--accent);
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 .ops-dot {
   width: 9px;
@@ -124,7 +88,7 @@
   background: var(--muted);
 }
 /* Three verdicts, three SHAPES — a filled circle, a square, a hollow ring — so the row reads
-   without separating green from red. The square echoes the fleet flag above it. */
+   without separating green from red. The square echoes the status line's fleet mark. */
 .ops-dot.ops-ok {
   background: var(--pos);
 }
@@ -135,41 +99,4 @@
 .ops-dot.ops-unknown {
   background: transparent;
   box-shadow: inset 0 0 0 2px var(--muted);
-}
-
-@media (max-width: 860px) {
-  /* the dots alone carry the state — the seq text has no room here, but the fleet flag still
-     shows, which is the phone glance #666 asked for */
-  .status-text {
-    display: none;
-  }
-  /* dots only is ~21x17px — sized to the 30px .icon-action beside it, so the row reads as one
-     set of controls and the pill clears the 24px tap floor on its own box (#3816 slice 5) */
-  .status {
-    padding: 4px 6px;
-    min-width: 30px;
-    min-height: 30px;
-    justify-content: center;
-  }
-  /* The popover hangs from the ACTIONS GROUP, not the pill. Pinned to the pill's right edge it
-     ran 113px off the LEFT of a 390px screen (the pill sits ~120px in from the right, the panel
-     is 360px wide). The group's right edge is the topbar gutter, so `right: 0` plus a width
-     capped at the bar's content box (100cqw — shell.css makes the bar a container) keeps both
-     edges inside the gutters, directly under the pill's row. */
-  .topbar-actions {
-    position: relative;
-  }
-  .status-wrap {
-    position: static;
-  }
-  .ops-pop {
-    width: min(360px, 100cqw);
-  }
-  /* a grid item stretches the full column (311x17px): hug the label and give it the 24px floor */
-  .ops-row a {
-    justify-self: start;
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-  }
 }

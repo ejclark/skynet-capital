@@ -14,10 +14,12 @@ coach). Nothing named who owns the whole board. This does.
 
 ## In the app — the rail is her voice
 
-Since 2026-09-03 members meet her directly: the ✦ button in the shell's top bar opens a right
+Members meet her directly: the ✦ button in the shell's top bar opens a right
 rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and files feedback.
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
-same key the feedback coach uses, with four read-only tools over the member's own desk, their live
+same key the feedback coach uses, with seven read-only tools (the member's own desk and progress,
+the play catalog, a chain read through their own linked account, and the public work record,
+#3952 — `COMPANION_TOOL_NAMES` in `companion-tools.ts`), their live
 onboarding/filing state injected every turn (`companion-context.ts`) along with the page they
 asked from, reduced to fixed words (`companion-page.ts`, #2224), with their own holding on that
 page's symbol (`companion-holding.ts`), and a cached help desk
@@ -88,7 +90,8 @@ flowchart TD
 _Caption — every trigger funnels through one of Moneypenny's four lanes; the Orchestration board
 (Status × Horizon, #3818 slice B) is the shared state all four read and write. The dotted paths are
 the exception routes: a freeform (non-`curated`) filing waits in Backlog for `ready`, a red CI run
-escalates to repair, and repair's own unresolved recurrences are the live gap #3926 names._
+escalates to repair, and a repair capsule with no PR 24 hours after filing gets `stall-flagged` and
+a comment asking for a fix PR or `needs-eric` (`scripts/moneypenny/capsule-stall.mjs`)._
 
 ### Where an open ask lives — the board's Blocked column
 
@@ -103,8 +106,9 @@ you" tier is a dated snapshot of the same query, never a second list to reconcil
 - **The one deliberate gap:** a `needs-eric` issue with no `Needs from you` callout stays out of
   Blocked until the ask is written (#3913) — an unwritten ask is not an open ask yet.
 - **From a session, without GraphQL:** `node scripts/issues.mjs show <n>` prints the column the
-  rule yields. Answering is a comment on the Blocked issue itself; once #3959's resume path lands
-  (slice 1 is #4605), an authorized reply restarts the waiting lane without a session noticing it.
+  rule yields. Answering is a comment on the Blocked issue itself: an authorized reply on a
+  `needs-info` / `needs-eric` feedback or plan issue restarts the waiting lane without a session
+  noticing it (#3959 slices 1–2, `docs/FEEDBACK.md`).
 
 ## Authority — she drives the architecture, within the same fence as everyone else
 
@@ -115,7 +119,7 @@ enter her domain answer to her."* Concretely, for anything that is GitHub issue/
 - **`docs/COACHES.md`'s head-coach/governor dispatch policy**, **`.github/workflows/moneypenny-events.yml` +
   `scripts/moneypenny/*.mjs`'s mechanical routing**, **`.github/workflows/moneypenny-repair.yml` +
   `scripts/moneypenny/repair.mjs`'s repair dispatch**, and **`/secretary`'s digest/verification
-  cadence** all now operate *under her mandate*, not as four peer systems Eric has to address by
+  cadence** all operate *under her mandate*, not as four peer systems Eric has to address by
   separate name. He talks to Moneypenny; she directs the mechanism. The repair lane is GitHub
   issue/PR orchestration by the same definition as the other three: one dispatch job with three entry
   points over two triggers (`workflow_run` for a red `main`; `workflow_dispatch` for a conflict or a
@@ -123,9 +127,9 @@ enter her domain answer to her."* Concretely, for anything that is GitHub issue/
   answering to Moneypenny alone.
 - This is a **frame and an authority relationship, not a rewrite** of what those mechanisms do —
   `docs/COACHES.md` and `docs/DELEGATION.md` keep their existing content and carry a pointer to this
-  file. A full restructuring of their text around her is real work and is explicitly **not** done in
-  the PR that introduced this charter — it is named here as the next slice, so it doesn't get lost
-  or silently assumed complete.
+  file. A full restructuring of their text around her is real work and is explicitly **not** part
+  of this charter — it is named below as a next slice, so it doesn't get lost or silently assumed
+  complete.
 
 **She gets no new power beyond what already exists.** `envelope.json`'s irreversible class —
 credentials, spend, workflow files, anything outward-facing and hard to reverse — still gates her
@@ -159,7 +163,7 @@ ran." Concretely:
 Everything above changes what gets *written*. It does not change the account the App posts *as* —
 today that's `skynet-envoy[bot]`, minted per job via `./.github/actions/app-token` (which wraps
 `actions/create-github-app-token`) in
-`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`. Renaming that account-level identity
+`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`/`board-sync.yml`. Renaming that account-level identity
 lives in GitHub App settings (the App's registered display name under Eric's GitHub org), which no
 amount of repo code can reach — governance of credentials and App identity is his call, per
 CLAUDE.md's hard boundaries.
@@ -209,11 +213,13 @@ build**. A label plus a check-in closes it without new infrastructure:
 4. **The builder clears it.** The session that ships the remainder removes `needs-session`. A label
    nobody removes is a wake for work that is already done.
 
-The text match in step 1 is a **backstop with a known expiry**: when
-`.github/prompts/feedback-build.md` next boards the [#1343](https://github.com/ejclark/skynet-capital/issues/1343)
-platter, the Sliced row applies the label itself and the match becomes belt-and-braces. And the
-residual this does not cover — a hand-off landing when no session is open at all — is the open
-follow-on on #1357 (a fired routine), deliberately sequenced behind a probe rather than built here.
+The text match in step 1 is the **mechanism, not a backstop**: `.github/prompts/feedback-build.md`'s
+Sliced row labels only `next-slice`, so the guard's match is what applies `needs-session`. The lane
+prompt applying it itself (a protected-path change, so it boards the platter —
+[#1343](https://github.com/ejclark/skynet-capital/issues/1343)) would make the match
+belt-and-braces. And the residual this does not cover — a hand-off landing when no session is open
+at all — stays uncovered: #1357 named a fired routine for it, deliberately sequenced behind a probe
+rather than built with the label.
 
 ## Next slices (named, not done here)
 

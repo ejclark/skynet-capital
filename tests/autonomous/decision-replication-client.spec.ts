@@ -9,6 +9,7 @@ import { resolveDecisionReplication } from "../../src/autonomous/decision-replic
 import { DECISION_BATCH_KIND, DECISION_BATCH_KIND_V2 } from "../../src/autonomous/decision-wire.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
+import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 import { anOptionIntent } from "../support/builders.js";
 
 /** A bridge that keeps every POST body verbatim and answers like a dashboard that predates
@@ -100,6 +101,7 @@ describe("resolveDecisionReplication", () => {
         const client = resolveDecisionReplication(
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
           () => thisBotsDb,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         // The ascending leg tracks its own resume point locally and ignores the passed cursor
         // entirely (see the module's own bug note) — with a fresh client it starts at 0, so it
@@ -132,6 +134,7 @@ describe("resolveDecisionReplication", () => {
         const client = resolveDecisionReplication(
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
           () => thisBotsDb,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         await client.replicate({ sauron: 0 }); // one poll, cursor at the very start of a 150-row backlog
         // The preview leg: the newest row is visible after ONE poll, not ~2 (150 / MAX_DECISION_BATCH).
@@ -165,6 +168,7 @@ describe("resolveDecisionReplication", () => {
         const client = resolveDecisionReplication(
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
           () => thisBotsDb,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         const pollutedCursor = { sauron: 250 }; // the app claiming it already has everything
         await client.replicate(pollutedCursor);
@@ -198,6 +202,7 @@ describe("resolveDecisionReplication", () => {
         const client = resolveDecisionReplication(
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
           () => thisBotsDb,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         await client.replicate({}); // first send
         await client.replicate({}); // a lost-ack resend — same cursor the caller last knew
@@ -217,6 +222,7 @@ describe("resolveDecisionReplication", () => {
         const client = resolveDecisionReplication(
           { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` },
           () => thisBotsDb,
+          LOADED_SUITE_BRIDGE_BUDGET,
         );
         await expect(client.replicate({})).resolves.toBeUndefined();
       } finally {
@@ -242,6 +248,7 @@ describe("resolveDecisionReplication", () => {
           const client = resolveDecisionReplication(
             { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
             () => thisBotsDb,
+            LOADED_SUITE_BRIDGE_BUDGET,
           );
           await client.replicate({});
           // One ascending POST, then one preview POST — each byte-for-byte the single v1 batch the
@@ -279,6 +286,7 @@ describe("resolveDecisionReplication", () => {
           const client = resolveDecisionReplication(
             { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
             () => thisBotsDb,
+            LOADED_SUITE_BRIDGE_BUDGET,
           );
           await client.replicate({});
           const sent = bridge.bodies.map(
@@ -296,6 +304,43 @@ describe("resolveDecisionReplication", () => {
           await new Promise<void>((resolve) => bridge.server.close(() => resolve()));
         }
       });
+    });
+
+    it("sends the expiry and assignment reports on a POST of their own, grouped by persona, and sends a refused page again (#4650)", async () => {
+      const thisBotsDb = botsDb;
+      const expiry = (id: string) => ({
+        id,
+        type: "OPEXP" as const,
+        symbol: "CRWV261106P00085000",
+        quantity: 1,
+        at: "2026-11-06T23:59:59.999Z",
+      });
+      thisBotsDb.recordOptionLifecycle("sauron", [expiry("exp-1")]);
+      thisBotsDb.recordOptionLifecycle("beta-scout", [expiry("exp-2")]);
+      thisBotsDb.recordOptionLifecycle("sauron", [expiry("exp-3")]);
+      const bridge = await recordingBridge(); // refuses decision.v2
+      try {
+        const client = resolveDecisionReplication(
+          { SKYNET_INSIGHTS_BRIDGE_URL: bridge.url },
+          () => thisBotsDb,
+          LOADED_SUITE_BRIDGE_BUDGET,
+        );
+        await client.replicate({});
+        await client.replicate({});
+        const page = JSON.stringify({
+          kind: DECISION_BATCH_KIND_V2,
+          personaId: "sauron",
+          records: [],
+          lifecycle: [
+            { personaId: "sauron", activities: [expiry("exp-1"), expiry("exp-3")] },
+            { personaId: "beta-scout", activities: [expiry("exp-2")] },
+          ],
+        });
+        // No bot has decided anything yet: the reports go anyway, and again once refused.
+        expect(bridge.bodies).toEqual([page, page]);
+      } finally {
+        await new Promise<void>((resolve) => bridge.server.close(() => resolve()));
+      }
     });
 
     it("never throws when the bridge URL points at nothing listening", async () => {

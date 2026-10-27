@@ -1,7 +1,7 @@
 [tools]
-# The single source of truth for this repo's Node version — CI (actions/setup-node's native
-# mise.toml support), the remote session hook (.claude/hooks/session-start.sh), and local dev
-# (`mise install`) all read this one file. Replaces .nvmrc (2026-09-04): mise's own idiomatic
-# .nvmrc auto-detection is being deprecated upstream (warns in 2026.11.0, removed 2027.11.0), so a
-# real mise.toml pin is the forward-compatible choice, not a second file that could drift from it.
+# This repo's Node version for the remote session hook (.claude/hooks/session-start.sh) and local
+# dev (`mise install`). A real mise.toml pin, not mise's idiomatic .nvmrc auto-detection, which is
+# being deprecated upstream (warns in 2026.11.0, removed 2027.11.0). CI does NOT read this file:
+# actions/setup-node can't parse mise's TOML, so .nvmrc was restored for CI (3a84d73,
+# docs/LESSONS.md 2026-09-06). Bump the two together.
 node = "24"

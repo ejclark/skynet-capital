@@ -7,11 +7,13 @@ import {
   fetchDeskDecisions,
   type RefusedIntent,
 } from "../live/desk";
+import { playbookName, withPairNames } from "../live/playbook-name";
+import { EnvPill, InlineResult } from "../ui";
 import { cycleAnchor } from "./cycle-anchor";
 
 /**
  * ACCOUNTS' DECISIONS SECTION — ported from the `/u/:id/decisions` route ("the bot's mind"),
- * which is still live while its content folds into `/accounts` (#3345/#3350/#3687): the
+ * since folded into the Playbooks section's check log (#3345/#3350/#3687; #5073): the
  * autonomous-trading audit trail, run-row style. Bot-only (Eric: "tied to autonomous
  * trading... folded somewhere within those types of accounts, which is currently only bot
  * accounts") — `AccountsBody` only shows this section in the switch when the selected account's
@@ -22,10 +24,14 @@ import { cycleAnchor } from "./cycle-anchor";
 /** What "the guards" are, in one visible clause (#3807 slice 3b-4; bot-watcher j1 s4) — taken
  *  from where they are defined, `src/engine/guards.ts`'s `applyGuardsWithVerdicts`: the engine's
  *  risk checks on every order a persona asks for, which shrink an order to fit or drop it. The
- *  list is the refusal reasons a reader meets most (`GuardRefusalReason`), in plain words. */
+ *  list is the refusal reasons a reader meets most (`GuardRefusalReason`), in plain words — the
+ *  first since #4642 slice 10: nothing opens a position except a playbook the bot is subscribed to. */
 export const GUARDS_GLOSS =
-  "the risk checks every order must clear before it is placed: a cap on any one position's share of the account, the cash to pay for it, never selling more than is held, and no new buys once the day's loss passes its limit";
+  "the risk checks every order must clear before it is placed: only a playbook the bot is subscribed to may open a position, a cap on any one position's share of the account, the cash to pay for it, never selling more than is held, and no new buys once the day's loss passes its limit";
 
+// Not an account kind: this chip, the strategy chips in OutcomeLine / RefusedLine and the
+// "via <persona>" tag borrow `.chip-bot` for a name. They want a chip style of their own — a taste
+// call left open on #5365 — so they are not `KindChip` (app/src/ui).
 /** The outcome's playbook, mode appended — never the mode standalone. */
 function PlaybookChip({
   outcome,
@@ -35,16 +41,40 @@ function PlaybookChip({
   if (!outcome.playbook) return null;
   return (
     <span className="chip chip-bot">
-      {outcome.playbook}
+      {playbookName(outcome.playbook)}
       {outcome.playbookMode ? ` · ${outcome.playbookMode}` : ""}
     </span>
   );
 }
 
-/** Exported so `u.$id.decisions.tsx` (the standalone `/u/:id/decisions` route) reuses this same
- *  rendering rather than carrying a second, drifting copy. The playbook chip is the owner's alone
+/** An order that never traded: the result statuses whose broker's words answer "why not". */
+const NOT_FILLED = new Set(["unfilled", "rejected"]);
+
+/** The result in words when its status alone would mislead — said ONCE (#4650). On the owner's view
+ *  (`showBroker`) an order that never traded is told in the broker's own words, attributed, in place
+ *  of the generic label; anywhere else, or with no words (an older record), the label as before. The
+ *  status is checked here too, so words a server sent for a fill are never read as "not filled". */
+function ResultWords({
+  outcome,
+  showBroker,
+}: {
+  readonly outcome: DecisionCycle["outcomes"][number];
+  readonly showBroker: boolean;
+}): ReactElement | null {
+  const words =
+    showBroker && NOT_FILLED.has(outcome.resultStatus ?? "") ? outcome.brokerReason : undefined;
+  if (words) return <span className="cycle-broker">not filled — broker: {words}</span>;
+  return outcome.resultStatus && (!outcome.fill || outcome.resultStatus === "working") ? (
+    <span className="cycle-fill">{outcome.resultLabel ?? outcome.resultStatus}</span>
+  ) : null;
+}
+
+/** Exported so the Playbooks section's check log (`bot-playbooks.tsx`, on `/accounts` and
+ *  `/u/:id/playbooks`) reuses this same rendering rather than carrying a second, drifting copy. The playbook chip is the owner's alone
  *  (#885: "we do not show what playbooks others are using") — the server already withholds it
- *  from anyone else, and `showPlaybook={false}` keeps a non-owner's page from ever drawing it. */
+ *  from anyone else, and `showPlaybook={false}` keeps a non-owner's page from ever drawing it. What
+ *  the broker said about an order that never traded rides the same gate: a broker's message can
+ *  name the account's specifics (#4650) — and so does the playbook's retire rule (#5043). */
 export function OutcomeLine({
   outcome,
   showPlaybook = true,
@@ -59,12 +89,11 @@ export function OutcomeLine({
         {outcome.contract ?? `${outcome.side.toUpperCase()} ${outcome.quantity} ${outcome.symbol}`}
       </span>
       {showPlaybook ? <PlaybookChip outcome={outcome} /> : null}
+      {/* a strategy name, not an account kind — its own chip style is open on #5365 */}
       {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
-      {outcome.resultStatus && (!outcome.fill || outcome.resultStatus === "working") ? (
-        <span className="cycle-fill">{outcome.resultLabel ?? outcome.resultStatus}</span>
-      ) : null}
-      <span className="cycle-reason">“{outcome.reason}”</span>
+      <ResultWords outcome={outcome} showBroker={showPlaybook} />
+      <span className="cycle-reason">“{withPairNames(outcome.reason)}”</span>
       {outcome.expectation ? (
         <p className="cycle-expectation">
           Expected: {outcome.expectation}
@@ -72,6 +101,14 @@ export function OutcomeLine({
             <span className="cycle-invalidator">
               {" "}
               — proves it wrong: {outcome.forecast.invalidator}
+            </span>
+          ) : null}
+          {/* The playbook's own falsifier, not the order's (#5043): the owner's, like its chip. A
+              sentence of its own ("The playbook retires if …"), so the order's ends first. */}
+          {showPlaybook && outcome.forecast?.retireRule ? (
+            <span className="cycle-retire-rule">
+              {/[.!?]$/.test(outcome.forecast.invalidator) ? " " : ". "}
+              {outcome.forecast.retireRule}
             </span>
           ) : null}
         </p>
@@ -96,8 +133,9 @@ export function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
         {intent.contract ?? `${intent.side.toUpperCase()} ${intent.quantity} ${intent.symbol}`}
       </span>
       {intent.guardReason ? <span className="cycle-guard">{intent.guardReason}</span> : null}
+      {/* a strategy name, not an account kind — its own chip style is open on #5365 */}
       {intent.strategy ? <span className="chip chip-bot">{intent.strategy}</span> : null}
-      <span className="cycle-reason">“{intent.reason}”</span>
+      <span className="cycle-reason">“{withPairNames(intent.reason)}”</span>
       {intent.expectation ? (
         <p className="cycle-expectation">Expected: {intent.expectation}</p>
       ) : null}
@@ -168,6 +206,7 @@ export function CycleRow({
       >
         <span className="cycle-glyph" aria-hidden="true" />
         <span className="cycle-headline">{cycle.headline}</span>
+        {/* a persona name, not an account kind — its own chip style is open on #5365 */}
         {cycle.authorPersona ? (
           <span
             className="chip chip-bot"
@@ -176,9 +215,7 @@ export function CycleRow({
             via {cycle.authorPersona}
           </span>
         ) : null}
-        <span className={`chip chip-${cycle.mode === "live" ? "human" : "bot"}`}>
-          {cycle.mode.toUpperCase()}
-        </span>
+        <EnvPill mode={cycle.mode} />
         <span className="cycle-when num">{sinceStamp ? `${sinceStamp} – ${stamp}` : stamp}</span>
       </button>
       {open ? (
@@ -316,7 +353,9 @@ export function DecisionsSection({
           {loadingMore ? "Loading…" : "Load older cycles"}
         </button>
       ) : null}
-      {loadMoreError ? <p className="set-err">Couldn't load older cycles — try again.</p> : null}
+      {loadMoreError ? (
+        <InlineResult tone="err">Couldn't load older cycles — try again.</InlineResult>
+      ) : null}
     </>
   );
 }

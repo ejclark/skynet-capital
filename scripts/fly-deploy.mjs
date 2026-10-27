@@ -45,15 +45,39 @@ const TRANSIENT = [
   /TLS handshake timeout/i,
   /context deadline exceeded/i,
   /EAI_AGAIN|temporary failure in name resolution/i,
-  /\b(?:502|503|504)\b/,
+  // A bare /\b50[234]\b/ matched flyctl's own `image size: 502 MB` (run 38951606211, #5519), so
+  // every failure of a 502 MB image — health checks included — was re-flung three times. A status
+  // number only counts beside its protocol context; the reason phrases have their own line below.
+  /(?:\bhttp\/?[\d.]*|\bstatus(?:\s*code)?|\bcode)[\s:=]*50[234]\b/i,
   /Bad Gateway|Service Unavailable|Gateway Time-?out/i,
   /server closed idle connection|http2: (?:server sent GOAWAY|client connection lost)/i,
 ];
 
+/**
+ * Fly saying a human must act (run 38951606211, #5519): the app machine's volume sat on an
+ * unreachable host, and flyctl answered `requires manual intervention` on every attempt. No retry
+ * can fix that, so it wins over any transient token elsewhere in the same output.
+ */
+const NEEDS_HUMAN = [/requires manual intervention/i, /on an unreachable host/i];
+
+/**
+ * Registry propagation lag (run 37476037256, #4796). The bots release reuses the image the
+ * dashboard pushed ~60s earlier; flyctl's own API lookup answered `image found: img_…`, then the
+ * machine's host got `MANIFEST_UNKNOWN` (404) pulling that same digest — eight times in 16s — while
+ * the dashboard's machines already ran it and the identical pull had worked 17 minutes before.
+ * A 404 on its own is also what a genuinely bad reference returns, so it only counts as transient
+ * when Fly's API vouched for the image in the same attempt: a bad digest never prints `image found`
+ * (flyctl stops at the lookup), so it still fails on the first attempt.
+ */
+function isRegistryLag(text) {
+  return /MANIFEST_UNKNOWN/.test(text) && /\bimage found: img_/.test(text);
+}
+
 /** Pure. Is this flyctl output a transport failure (retry) rather than a real rejection (fail)? */
 export function isTransientFlyError(text) {
   const haystack = String(text ?? "");
-  return TRANSIENT.some((pattern) => pattern.test(haystack));
+  if (NEEDS_HUMAN.some((pattern) => pattern.test(haystack))) return false;
+  return TRANSIENT.some((pattern) => pattern.test(haystack)) || isRegistryLag(haystack);
 }
 
 /** Pure. A positive integer from an env string, or `fallback` for anything else. */

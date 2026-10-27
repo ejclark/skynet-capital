@@ -4,6 +4,7 @@
 // the ranking is on screen without a tap and that a filing and a fill read as sibling rows, and the
 // desktop frame proves the same choice adds room instead of a new concept. JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:activity [outdir]
+import { playRowWords } from "../../src/observatory/play-feed-words.ts";
 import { openShell } from "./shell.mjs";
 
 const NAMES = [
@@ -16,7 +17,7 @@ const NAMES = [
 const SYMBOLS = ["NVDA", "AAPL", "SPY", "MSFT", "TSLA", "AMD", "KO", "JNJ"];
 
 // A full feed — the point of the change is that a long list no longer needs a widget beside it.
-// `at` walks back from the close in 9-minute steps and `when` is derived FROM it, so the two agree:
+// `at` walks back from the close and `when` is derived FROM it, so the two agree:
 // a frame where the displayed clock disagrees with the sort order would read as a bug in the shot.
 // The filings below are dated into the same run rather than after it — a mixed feed that happened to
 // sort into two clumps would prove nothing about the mixing.
@@ -28,9 +29,13 @@ const et = (ms) =>
     minute: "2-digit",
   });
 
+// Six fills a market day, walking back over business days, so the frames show the day dividers
+// (#5257) — a feed that all sits on one day would draw one divider and prove nothing about them.
+const DAY_MS = 86_400_000;
+const MARKET_DAYS_BACK = [0, 1, 2, 3, 6, 7]; // Thu Oct 1 → Wed, Tue, Mon, then over the weekend
 const trades = Array.from({ length: 34 }, (_, i) => {
   const [who, whoId, kind] = NAMES[i % NAMES.length];
-  const ms = CLOSE - (i + 1) * 9 * 60_000;
+  const ms = CLOSE - MARKET_DAYS_BACK[Math.floor(i / 6)] * DAY_MS - ((i % 6) + 1) * 37 * 60_000;
   return {
     key: `t${i}`,
     side: i % 3 === 0 ? "sell" : "buy",
@@ -46,7 +51,64 @@ const trades = Array.from({ length: 34 }, (_, i) => {
   };
 });
 
+// The fifth kind (#5457 slice 5, members only): authored playbooks, worded by the SAME function the
+// server uses, so the frame can't drift from the product. Dated into the run like the other kinds.
+const playRow = (who, whoId, kind, name, symbol, at, sessions) => {
+  const words = playRowWords({
+    key: `${whoId}:${kind}`,
+    kind,
+    at,
+    accountId: whoId,
+    playName: name,
+    symbol,
+    ...(sessions !== undefined ? { sessions } : {}),
+  });
+  return {
+    key: `play:${whoId}:${kind}`,
+    icon: words.icon,
+    kindLabel: words.kindLabel,
+    who,
+    whoId,
+    text: words.text,
+    symbol,
+    meta: words.meta,
+    cheer: words.cheer,
+    at,
+  };
+};
+const plays = [
+  playRow(
+    "Vol Harvester",
+    "vol-harvester",
+    "promoted",
+    "NVDA run-up, tighter",
+    "NVDA",
+    "2026-10-01T19:55:00.000Z",
+    10,
+  ),
+  playRow(
+    "Vol Harvester",
+    "vol-harvester",
+    "passed",
+    "NVDA run-up, tighter",
+    "NVDA",
+    "2026-10-01T19:40:00.000Z",
+    10,
+  ),
+  playRow(
+    "News Fader",
+    "news-fader",
+    "paused",
+    "TSLA fade the pop",
+    "TSLA",
+    "2026-10-01T18:50:00.000Z",
+  ),
+  playRow("Sauron", "sauron", "started", "AMD into the print", "AMD", "2026-10-01T17:30:00.000Z"),
+];
+
 const wire = {
+  playsEnabled: true,
+  plays,
   trades,
   pnl: [
     { who: "Sauron", whoId: "sauron", kind: "bot", realized: "+$1,248.30", tone: "pos" },
@@ -64,7 +126,7 @@ const wire = {
       url: "https://github.com/ejclark/skynet-capital/issues/1740",
       status: "next slice",
       statusKey: "next-slice",
-      meta: "#1740 · 10/1/2026",
+      meta: "#1740",
       at: "2026-10-01T19:46:00.000Z",
     },
     {
@@ -75,7 +137,7 @@ const wire = {
       url: "https://github.com/ejclark/skynet-capital/issues/1739",
       status: "In the queue",
       statusKey: "open",
-      meta: "#1739 · 10/1/2026",
+      meta: "#1739",
       at: "2026-10-01T19:20:00.000Z",
     },
     {
@@ -86,7 +148,7 @@ const wire = {
       url: "https://github.com/ejclark/skynet-capital/issues/1742",
       status: "Shipped",
       statusKey: "shipped",
-      meta: "#1742 · 9/30/2026",
+      meta: "#1742",
       at: "2026-09-30T16:20:00.000Z",
     },
   ],
@@ -102,7 +164,7 @@ const wire = {
       title: "feat(activity): one filterable feed with kind facets, booked P&L as a strip",
       url: "https://github.com/ejclark/skynet-capital/pull/4463",
       author: "claude",
-      meta: "#4463 · 10/1/2026",
+      meta: "#4463",
       at: "2026-10-01T19:48:00.000Z",
     },
     {
@@ -112,7 +174,7 @@ const wire = {
       title: "feat(activity): feedback as a kind on the event bus",
       url: "https://github.com/ejclark/skynet-capital/pull/4446",
       author: "claude",
-      meta: "#4446 · 10/1/2026",
+      meta: "#4446",
       at: "2026-10-01T18:05:00.000Z",
     },
     {
@@ -122,7 +184,7 @@ const wire = {
       title: "feat(activity): trade feed reads the event schema",
       url: "https://github.com/ejclark/skynet-capital/pull/4441",
       // No author: GitHub does not always name one, and the row has to read correctly without it.
-      meta: "#4441 · 9/30/2026",
+      meta: "#4441",
       at: "2026-09-30T17:40:00.000Z",
     },
   ],
@@ -138,7 +200,7 @@ const wire = {
       whoId: "eric",
       title: "Sell your first covered call",
       points: 35,
-      meta: "+35 pts · 10/1/2026",
+      meta: "+35 pts",
       at: "2026-10-01T19:52:00.000Z",
     },
     {
@@ -148,7 +210,7 @@ const wire = {
       who: "Tony",
       whoId: "tony",
       title: "Book your first profit",
-      meta: "10/1/2026",
+      meta: "",
       at: "2026-10-01T19:31:00.000Z",
     },
     {
@@ -159,7 +221,7 @@ const wire = {
       whoId: "tony",
       title: "Buy your first stock",
       points: 25,
-      meta: "+25 pts · 10/1/2026",
+      meta: "+25 pts",
       at: "2026-10-01T17:10:00.000Z",
     },
   ],
@@ -177,6 +239,14 @@ const { page, origin, shoot, close } = await openShell({
 await page.goto(`${origin}/app/activity`);
 await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
 await shoot("activity-feed-phone");
+
+// 1c. The fifth kind (#5457 slice 5): a member's authored playbooks — started, passed, trading,
+//     paused — labelled SIM · unvalidated. A pass and a first promotion are cheered; a pause is plain.
+await page.getByRole("button", { name: "Playbooks", exact: true }).click();
+await page.getByText(/started trading/).waitFor();
+await shoot("activity-playbooks-phone");
+await page.goto(`${origin}/app/activity`);
+await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
 
 // 2. The kind facet: one chip narrows the same list instead of paging to another widget.
 await page.getByRole("button", { name: "Ideas", exact: true }).click();
@@ -215,11 +285,19 @@ await page.waitForFunction(() => window.location.search.includes("show"), undefi
 });
 console.log(`shoot/activity: url after two chips → ${new URL(page.url()).search}`);
 
+// 1b. A day's divider at 390 (#5257): the line with the day centred in it, rows keeping their time.
+await page.goto(`${origin}/app/activity`);
+await page.getByRole("heading", { name: /^WED · SEP 30/ }).scrollIntoViewIfNeeded();
+await shoot("activity-day-divider-phone");
+
 // 4. Desktop: the same rows, more of them, and the strip's cells wrap instead of scrolling — room
 //    added, no new concept.
 await page.goto(`${origin}/app/activity`);
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.getByRole("heading", { name: "Everything, newest first" }).waitFor();
 await shoot("activity-feed-desktop");
+await page.getByRole("button", { name: "Playbooks", exact: true }).click();
+await page.getByText(/started trading/).waitFor();
+await shoot("activity-playbooks-desktop");
 
 await close();

@@ -105,7 +105,7 @@ describe("DecisionDb", () => {
       playbookVerdicts: [
         { playbookId: "S1-NVDA", mode: "standard", state: "no-window" },
         { playbookId: "S1-NVDA", mode: "aggressive", state: "no-window" },
-        { playbookId: "HC-SAURON", mode: "standard", state: "tactical" },
+        { playbookId: "SAURON", mode: "standard", state: "tactical" },
       ],
     });
 
@@ -140,13 +140,24 @@ describe("DecisionDb", () => {
       db.record({ ...quiet(3), playbookVerdicts: undefined });
       expect(db.listByPersona("sauron")[0]).not.toHaveProperty("playbookVerdicts");
     });
+
+    it("keeps a pass that ran no playbook as an empty list, across a fresh open (#4773)", () => {
+      db.record({ ...quiet(4), playbookVerdicts: [] });
+      db.close();
+      db = openDecisionDb(dbPath);
+      expect(db.listByPersona("sauron")[0]?.playbookVerdicts).toEqual([]);
+    });
   });
 
   it("captures the market context and structured strategy/forecast fields", () => {
     const raw = intent({
       strategy: "sauron-panic-claim",
       expectation: "Expect a bounce.",
-      forecast: { direction: "up", invalidator: "sentiment deteriorates further" },
+      forecast: {
+        direction: "up",
+        invalidator: "sentiment deteriorates further",
+        retireRule: "The playbook retires if its net P/L is below 0 on 2027-01-29.",
+      },
     });
     db.record({
       at: 1,
@@ -167,7 +178,12 @@ describe("DecisionDb", () => {
     expect(row?.context).toMatchObject({ asOf: "2026-09-09T10:00:00Z" });
     expect(row?.outcomes[0]?.intent).toMatchObject({
       strategy: "sauron-panic-claim",
-      forecast: { direction: "up", invalidator: "sentiment deteriorates further" },
+      // The retire rule rides the forecast's stored JSON, so it needs no column of its own (#5043).
+      forecast: {
+        direction: "up",
+        invalidator: "sentiment deteriorates further",
+        retireRule: "The playbook retires if its net P/L is below 0 on 2027-01-29.",
+      },
     });
   });
 
@@ -261,6 +277,55 @@ describe("DecisionDb", () => {
     expect(found?.record.personaId).toBe("sauron");
     expect(found?.intent.symbol).toBe("NVDA");
     expect(db.findByOrderId("no-such-order")).toBeUndefined();
+  });
+
+  it("names the personas behind a batch of order ids without building a record per order", () => {
+    const placed = (at: number, personaId: string, orderId: string): DecisionRecord => {
+      const raw = intent();
+      return {
+        at,
+        personaId,
+        mode: "live",
+        rawIntents: [raw],
+        guardedIntents: [raw],
+        outcomes: [
+          {
+            intent: raw,
+            action: "placed",
+            result: { intent: raw, status: "filled", orderId },
+          },
+        ],
+      };
+    };
+    db.record(placed(1, "sauron", "ord-1"));
+    db.record(placed(2, "beta-scout", "ord-2"));
+
+    expect(db.personasOfOrders(["ord-1", "ord-2", "no-such-order"]).sort()).toEqual([
+      "beta-scout",
+      "sauron",
+    ]);
+    expect(db.personasOfOrders(["ord-2"])).toEqual(["beta-scout"]);
+    expect(db.personasOfOrders([])).toEqual([]);
+  });
+
+  it("asks in chunks, so a ledger longer than SQLite's variable limit still resolves", () => {
+    const raw = intent();
+    db.record({
+      at: 1,
+      personaId: "beta-scout",
+      mode: "live",
+      rawIntents: [raw],
+      guardedIntents: [raw],
+      outcomes: [
+        {
+          intent: raw,
+          action: "placed",
+          result: { intent: raw, status: "filled", orderId: "last" },
+        },
+      ],
+    });
+    const ids = Array.from({ length: 40_000 }, (_, i) => `ord-${i}`);
+    expect(db.personasOfOrders([...ids, "last"])).toEqual(["beta-scout"]);
   });
 
   it("is idempotent on (personaId, at) — re-recording the same cycle never duplicates intents", () => {
@@ -570,6 +635,36 @@ describe("DecisionDb", () => {
       });
       expect(db.listRetrospectives("sauron")).toHaveLength(1);
       expect(db.listRetrospectives("beta-scout")).toEqual([]);
+    });
+  });
+
+  describe("symbolsPlacedByPlaybook (#5609)", () => {
+    const placed = (raw: OrderIntent, orderId: string) => ({
+      intent: raw,
+      action: "placed" as const,
+      result: {
+        intent: raw,
+        status: "filled" as const,
+        orderId,
+        filledQuantity: raw.quantity,
+        filledPrice: 100,
+      },
+    });
+
+    it("names what one persona placed under one playbook's id, and nothing else", () => {
+      const mine = intent({ side: "buy", quantity: 5, playbookId: "S1-NVDA" });
+      const reflex = intent({ side: "buy", quantity: 5, symbol: "AAPL" });
+      db.record({
+        at: 1_000,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [mine, reflex],
+        guardedIntents: [mine, reflex],
+        outcomes: [placed(mine, "o-1"), placed(reflex, "o-2")],
+      });
+      expect([...db.symbolsPlacedByPlaybook("sauron", "S1-NVDA")]).toEqual([mine.symbol]);
+      expect(db.symbolsPlacedByPlaybook("sauron", "G1-GOOG").size).toBe(0);
+      expect(db.symbolsPlacedByPlaybook("beta-scout", "S1-NVDA").size).toBe(0);
     });
   });
 

@@ -10,7 +10,8 @@ import { issueNumberFromSlug } from "../../../scripts/moneypenny/labels.mjs";
 // module against a fake `gh` on PATH that records every call and answers only what the lease
 // needs: no lease yet (404), a tag object on stamp, success on everything else. No network.
 // Since #3960 the claims ask the admission gate first, so the fake also answers the work-mode dial
-// (`work-mode:$WORK_MODE` on #4153, normal by default), an empty in-flight list, and no comments.
+// (`work-mode:$WORK_MODE` on #4153 over REST, normal by default), an empty in-flight list, and no comments —
+// and, since #5266's fresh re-read, any one-issue read as a `ready` row with no blockers.
 
 let dir: string;
 let log: string;
@@ -27,8 +28,12 @@ beforeEach(() => {
       'case "$*" in',
       "  *git/ref/tags/*) exit 1 ;;",
       `  *git/tags*) echo '{"sha":"stamp"}' ;;`,
-      `  *"issue view 4153 "*) echo "{\\"labels\\":[{\\"name\\":\\"work-mode:\${WORK_MODE:-normal}\\"}],\\"comments\\":[]}" ;;`,
+      // REST reads (GraphQL `issue view` is refused in a cloud session): comments print one
+      // object per line under --jq, so "none" is empty output; the dial is the 4153 read.
+      "  *comments?per_page=100*) ;;",
+      `  *"api repos/{owner}/{repo}/issues/4153 "*) echo "{\\"labels\\":[{\\"name\\":\\"work-mode:\${WORK_MODE:-normal}\\"}]}" ;;`,
       "  *labels=in-progress*) echo '[]' ;;",
+      `  *"api repos/{owner}/{repo}/issues/"[0-9]*) echo '{"number":1,"labels":[{"name":"ready"}]}' ;;`,
       `  *"--json comments"*) echo '{"comments":[]}' ;;`,
       "  *) echo '{}' ;;",
       "esac",
@@ -62,6 +67,20 @@ describe("in-progress: the claim lanes put it on", () => {
       `m.claimFeedback({ payload: { issue: { number: 4242, body: "", labels: [{ name: "feedback" }, { name: "ready" }] } } }, 0, "abc");`,
     );
     expect(calls()).toContain("issue edit 4242 --add-label in-progress");
+  });
+
+  // #5332 — the shipped sweep, the reply resume and feedback-scan all key on `feedback`.
+  it("adds `feedback` to a bug the lane claimed without it, and only then", () => {
+    writeFileSync(log, "");
+    run(
+      `m.claimFeedback({ payload: { issue: { number: 4246, body: "", labels: [{ name: "bug" }, { name: "ready" }] } } }, 0, "abc");`,
+    );
+    expect(calls()).toContain("issue edit 4246 --add-label feedback");
+    writeFileSync(log, "");
+    run(
+      `m.claimFeedback({ payload: { issue: { number: 4247, body: "", labels: [{ name: "feedback" }, { name: "bug" }, { name: "ready" }] } } }, 0, "abc");`,
+    );
+    expect(calls()).not.toContain("issue edit 4247 --add-label feedback");
   });
 
   it("never labels an issue whose claim was refused — nothing is being built", () => {

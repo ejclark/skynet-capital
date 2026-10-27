@@ -1,14 +1,19 @@
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { OrderStatus } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
 import { isRecord } from "../storage/parse-guards.js";
+import type { DecisionDb } from "./decision-db.js";
 import type { DecisionRecord } from "./decision-record.js";
+import { type LifecycleReports, parseLifecycle } from "./decision-wire-lifecycle.js";
 import {
+  MAX_PERSONA_ID_LENGTH,
   parseGuardRefusal,
   parseIntentOutcome,
   parseMarketContext,
   parseOrderIntent,
   parsePlaybookVerdict,
 } from "./decision-wire-parts.js";
+import { parseSettlements } from "./decision-wire-settlements.js";
 
 /**
  * The bots→app decision-replication wire format (`docs/plans/where-are-we-documenting-*.md` PR 4 /
@@ -34,6 +39,17 @@ import {
  * and the sender splits each batch by it, because a refused batch is not resent until the bots
  * restart (`decision-replication-client.ts`'s ascending cursor advances regardless): mixing the
  * two would cost an older dashboard its share records too. The parser reads both kinds the same.
+ *
+ * Late settlements (#4650) ride either kind as an additive envelope field, `settlements`
+ * (`decision-wire-settlements.ts`): what an order a record left `working` became, which the record
+ * itself can never carry — it was sent long before, and the receiver keeps the first copy of each
+ * record it stores. A dashboard that predates the field ignores it and keeps the batch. The bots'
+ * settlement backlog also posts settlements alone, with no records — a batch an older dashboard
+ * refuses, which costs it nothing, and is sent again until a dashboard accepts it.
+ *
+ * The broker's option expiry and assignment reports (#4650) take the same road on a field of their
+ * own, `lifecycle` (`decision-wire-lifecycle.ts`), only ever on a POST without records, so a
+ * dashboard that predates them refuses the batch and the bots keep sending it.
  */
 
 export const DECISION_BATCH_KIND = "decision.v1";
@@ -84,8 +100,6 @@ export function recordWireKind(
  *  a single replication call unboundedly large. */
 export const MAX_DECISION_BATCH = 100;
 
-const MAX_PERSONA_ID_LENGTH = 128;
-
 /**
  * Validates one `DecisionRecord` crossing the bridge. Total and defensive: a malformed, truncated,
  * or hostile payload can only ever produce `undefined` — never a throw, and never a partially
@@ -134,15 +148,18 @@ export function parseDecisionRecord(value: unknown): DecisionRecord | undefined 
     ...(typeof value.halted === "string" ? { halted: value.halted } : {}),
     ...(context ? { context } : {}),
     ...(refusals ? { refusals: refusals as DecisionRecord["refusals"] } : {}),
-    ...(verdicts?.length
-      ? { playbookVerdicts: verdicts as DecisionRecord["playbookVerdicts"] }
-      : {}),
+    // Kept when empty (#4773): "this pass ran no playbook" is a fact, not a missing field.
+    ...(verdicts ? { playbookVerdicts: verdicts as DecisionRecord["playbookVerdicts"] } : {}),
   };
 }
 
 export interface DecisionBatch {
   readonly personaId: string;
   readonly records: readonly DecisionRecord[];
+  /** Late settlements riding this batch — any persona's, since each is keyed by its order id. */
+  readonly settlements?: readonly OrderSettlement[];
+  /** Option expiry/assignment reports riding this batch, each group naming its own persona. */
+  readonly lifecycle?: readonly LifecycleReports[];
 }
 
 /**
@@ -158,8 +175,18 @@ export function parseDecisionBatch(value: unknown): DecisionBatch | undefined {
   const { personaId, records } = value;
   if (typeof personaId !== "string" || personaId.length === 0) return undefined;
   if (personaId.length > MAX_PERSONA_ID_LENGTH) return undefined;
-  if (!Array.isArray(records) || records.length === 0 || records.length > MAX_DECISION_BATCH) {
-    return undefined;
+  if (!Array.isArray(records) || records.length > MAX_DECISION_BATCH) return undefined;
+  const settlements = parseSettlements(value.settlements);
+  const lifecycle = parseLifecycle(value.lifecycle);
+  const riders = {
+    ...(settlements.length > 0 ? { settlements } : {}),
+    ...(lifecycle.length > 0 ? { lifecycle } : {}),
+  };
+  if (records.length === 0) {
+    // A backlog's own POST: settlements or lifecycle reports alone, which a batch never otherwise is.
+    return settlements.length + lifecycle.length > 0
+      ? { personaId, records: [], ...riders }
+      : undefined;
   }
   const parsed = records.map(parseDecisionRecord);
   // A record naming another persona is an identity fault on the bridge: refuse the whole batch.
@@ -168,7 +195,8 @@ export function parseDecisionBatch(value: unknown): DecisionBatch | undefined {
   // Refusing the batch lost every record beside it, because the bots' ascending cursor moves on
   // whatever the answer — and the preview leg would resend the same poisoned batch every poll.
   const kept = parsed.filter((r): r is DecisionRecord => r !== undefined);
-  return kept.length > 0 ? { personaId, records: kept } : undefined;
+  if (kept.length === 0) return undefined;
+  return { personaId, records: kept, ...riders };
 }
 
 /** `GET /controls`'s additive `decisionsCursor` field — a plain `{ personaId: epochMs }` map, the
@@ -181,4 +209,22 @@ export function parseDecisionsCursor(value: unknown): Readonly<Record<string, nu
     if (typeof at === "number" && Number.isFinite(at)) out[personaId] = at;
   }
   return out;
+}
+
+/** The dashboard's half of the bridge: a batch into its copy of the store — the settlements FIRST,
+ *  so every close among the records is scored on a tape that already holds the late fills before
+ *  it. A settlement whose decision is among the records is linked as that decision lands. The
+ *  lifecycle reports go through the bots' own write, which ignores one it already holds. When they
+ *  land changes no score: the option tape is recomputed from everything it holds whenever a fill,
+ *  a settlement or a report lands, so a report that arrives before the fill it closes is scored
+ *  when that fill does. */
+export function storeDecisionBatch(
+  db: Pick<DecisionDb, "recordBatch" | "recordSettlements" | "recordOptionLifecycle">,
+  batch: DecisionBatch,
+): void {
+  if (batch.settlements) db.recordSettlements(batch.settlements);
+  db.recordBatch(batch.records);
+  for (const { personaId, activities } of batch.lifecycle ?? []) {
+    db.recordOptionLifecycle(personaId, activities);
+  }
 }

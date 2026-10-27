@@ -1,8 +1,8 @@
 # Delegation & background agents — the safety rails
 
 > The GitHub-issue/PR-orchestration slice of this — what the event router routes, what the coordinator
-> hands off — now operates under **Moneypenny's** mandate — see [`docs/MONEYPENNY.md`](MONEYPENNY.md).
-> The rails below are unchanged; she directs within them, never around them.
+> hands off — operates under **Moneypenny's** mandate — see [`docs/MONEYPENNY.md`](MONEYPENNY.md).
+> The rails below hold; she directs within them, never around them.
 
 How Claude runs work in the background (subagents) while the foreground thread stays free for Eric's
 dialog — and the rails that make it safe to expand. This is the Second Way (overlapping feedback) and
@@ -14,7 +14,10 @@ and irreversible) applied to autonomy itself.
 The foreground thread (Eric + Claude) dispatches **subagents**, each in its **own isolated git
 worktree**, to build a scoped item to completion — build → verify → screenshot → open a PR — then report.
 They run concurrently with the dialog; a completion notification brings the result back. Eric keeps
-feeding thoughts; work moves underneath.
+feeding thoughts; work moves underneath. **Between two edits, verify with one call:** `npm run check`
+fixes lint, typechecks and runs the related tests for everything changed since `origin/main`,
+printing only the failures (`--no-fix` writes nothing, `--full` runs everything) — never split it
+into separate lint, typecheck and per-suite calls (#5191).
 
 ## The rails (addressing single-point-of-failure & oversight)
 
@@ -24,19 +27,75 @@ feeding thoughts; work moves underneath.
    one un-merged PR.
 2. **Isolation & disposability.** Each agent works in its own worktree with no shared mutable state. A
    failed, stuck, or wrong agent blocks nothing — it's abandoned, not merged. Agents don't run forever;
-   they complete and notify.
+   they complete and notify. **An agent that finds shared state broken** — the primary checkout's
+   install, `main`'s build, a lockfile — **stops and reports it as an incident, never repairs around
+   it silently**: the one that did on 2026-10-09 left everyone else broken for most of an hour
+   (`docs/LESSONS.md`). A worktree's `node_modules` is its own directory of the primary's files,
+   never a link (`scripts/worktree-setup.sh`): a reflink where the filesystem has one, else
+   hard links (~0 extra bytes — a worktree is ~150MB, not ~1.2GB, #5548), and only when the
+   lockfile matches what the primary has installed. A mismatch runs a real `npm ci` in the
+   worktree. `npm ci` and `npm install` unlink and replace files, so they cannot reach the
+   primary's; **don't run `npm rebuild` in a worktree** — a package's lifecycle script writes
+   in place, through the shared inode. **An isolated agent's first call is `bash scripts/wt-start.sh
+   <branch> [--issue N]`** — fetch, checkout (resuming the branch if it exists, never discarding
+   work), worktree setup and one status line, in one call. A dispatch that must start on today's
+   main — a governor athlete, whose slug repeats across cycles — adds `--fresh`, which refuses a
+   taken name and prints the next free `-N` one instead of resuming a stale branch (#6272). Chained `git fetch && git checkout`
+   is refused by the worktree guard and plain `git` is rewritten by the rtk hook; a plain
+   `bash scripts/…` call passes both (#5192). **After it: one plain command per call; no loops,
+   variables or chains around git.** The guard refuses the compound form too — the 2026-10-11
+   token audit counted 285 such refusals in 79 agents, about 15.4M tokens a week. Where plain
+   `git` is refused (the rtk rewrite, #5055), call `/usr/bin/git`. Put both rules in every
+   worktree agent's prompt. **An isolated agent never waits on a PR merge** — its dispatcher
+   does: a session through `subscribe_pr_activity` (the merge arrives as `pull_request.closed`),
+   a Workflow step through one backgrounded REST loop (`CONTRIBUTING.md`, #5193). **Temp files are yours alone:** write them inside your own worktree
+   (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
+   label — never a shared generic name such as a bare body.md. Every agent in a workflow shares one
+   scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
+   (#5240, #5245). **Stop only your own processes:** `pkill -P $$ -f rstest`, never a bare
+   `pkill -f rstest` — that kills every sibling worktree's test run too. You never need it to clear
+   load: full verifies queue one at a time per checkout (`scripts/verify-locked.sh`, #5548), and the
+   pre-push hook skips a tree `ship.sh open` already verified green.
+   **Finished worktrees are swept, not left** (#5548: ten at once filled a cloud session's disk,
+   and they were only ever removed by hand). **After an agent's PR merges, the session that
+   dispatched it runs `npm run worktree:sweep`** (dry run: each `.claude/worktrees/*` entry,
+   keep or remove, and why) **then `npm run worktree:sweep -- --apply`.** It removes a worktree
+   only when its HEAD is in `origin/main` or a remote branch, it has no uncommitted or untracked
+   files, it has sat untouched for an hour, and its lock names no live process; it never removes
+   the primary or the worktree it runs in, and removing one deletes the directory only — the
+   branch and its commits stay. A squash merge leaves no ancestor of `main` and usually deletes
+   the remote branch, so pass `--gh` to also accept "a PR merged at exactly this head". Every
+   agent worktree is locked to the harness process that spawned it, which outlives the agent, so
+   a live session sweeping its own finished agents names them: `--only <dir-or-branch>`
+   (repeatable) sweeps just those and waives their locks, nothing else. A spawned agent that ends its own
+   session (`archive_session`) leaves its worktree to this sweep; it never removes one itself.
 3. **Verify-before-merge gate (the oversight checkpoint).** Agents **open PRs; they never merge.** A
    reviewer (Claude foreground now; Eric whenever he wants) brings the PR onto green `main`, re-runs
    typecheck + lint + test, glances at the diff, then merges. Nothing reaches `main` unreviewed.
 4. **Overlapping nets — no single check is the SPOF.** Agent's own tests/lint + reviewer re-verify + CI
    + later passes. Drift is caught by *some* net. (Proven live: a background agent's lint caught a format
    drift the foreground check had missed; the foreground then corrected it — Detect · Correct · Maintain.)
-5. **Durable state = no record SPOF.** Everything is externalized: the backlog in [`IDEAS.md`](IDEAS.md),
-   branches + PRs on GitHub, the conventions in [`../CLAUDE.md`](../CLAUDE.md). If the session dies,
+5. **Durable state = no record SPOF.** Everything is externalized: the backlog in GitHub issues (the
+   Orchestration board), parked ideas in [`IDEAS.md`](IDEAS.md), branches + PRs on GitHub, the
+   conventions in [`../CLAUDE.md`](../CLAUDE.md). If the session dies,
    work-in-flight survives on branches/PRs and a fresh session resumes from the docs. The coordinator is
    replaceable, not a point of failure for the *record* — only for in-the-moment orchestration.
 6. **Escalation & circuit breakers.** A red PR never merges; a genuine design fork or ambiguity escalates
    to Eric rather than being guessed; a tripped rail halts and reports.
+7. **One build per surface at a time — WIP 1 per surface.** Builds that touch the same surface — the
+   same route or shell component, or the same page screenshots — run one after another, never in
+   parallel. Builds on independent surfaces may still run side by side. Two parallel builds on one
+   surface each change what the other's screenshots expect, so whichever merges second goes red on
+   pictures it never drew, and their code collides in the same files. Before dispatching, name each
+   build's surface (the route and shell files it edits, the `e2e/*-snapshots/` it will move); a second
+   build on a named surface waits — `node scripts/issues.mjs update <second> --blocked-by <first>`,
+   and every puller holds it until the first closes. Evidence, 2026-10-10: four builds ran at once on
+   the profile page (#5078, #5079, #5080, #5081 — all four edited `app/src/routes/accounts.tsx`, three
+   edited the profile head `cockpit-head.tsx`). Both #5079 and #5080 went red on their first CI run;
+   #5079 re-baselined five page shots by hand (902daaed), and #5080's run failed on those same five
+   plus two more — the same pictures, moved by two builds at once (`docs/LESSONS.md`, 2026-10-10).
+   A red first run on a visual PR is one command, not a re-plan: `node scripts/rebaseline-from-ci.mjs
+   <pr>`.
 
 ## Reliability — do we need Routines to keep agents working?
 

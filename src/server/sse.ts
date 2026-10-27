@@ -5,6 +5,10 @@ import type { ServerResponse } from "node:http";
  * tested in one place rather than string-built inline in the server.
  */
 
+/** Every SSE response still open — what a shutdown has to close, because `Server.close()` waits
+ *  forever on a stream that never ends (#4616). Entries leave on the response's own `close`. */
+const openStreams = new Set<ServerResponse>();
+
 /**
  * Write the response head for an SSE stream. Every SSE route wrote this same triple inline
  * (`board-patch-routes.ts`'s `/events`, and now the companion's single-response-turned-stream
@@ -17,6 +21,22 @@ export function openSseStream(res: ServerResponse): void {
     "cache-control": "no-cache",
     connection: "keep-alive",
   });
+  openStreams.add(res);
+  res.once("close", () => openStreams.delete(res));
+}
+
+/**
+ * End every open SSE stream, telling each browser when to come back. The `retry:` field is the
+ * stream's own reconnect hint (the `EventSource` spec) — without it a client waits its default
+ * ~3 s and, on a restart, hammers a booting server. Returns how many streams it closed.
+ */
+export function drainSseStreams(retryMs: number): number {
+  const streams = [...openStreams];
+  for (const res of streams) {
+    if (!(res.writableEnded || res.destroyed)) res.end(`retry: ${retryMs}\n\n`);
+  }
+  openStreams.clear();
+  return streams.length;
 }
 
 export function sseFrame(data: string, event?: string, id?: number | string): string {

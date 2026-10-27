@@ -14,4 +14,4 @@ export function earningsDates(symbol: string): Promise<string[]>;
 
 export function bars(
   symbol: string,
-): Promise<{ date: string; open: number; close: number; rawClose: number }[]>;
+): Promise<{ date: string; open: number; close: number; rawClose: number; volume: number }[]>;

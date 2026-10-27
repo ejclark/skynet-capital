@@ -51,7 +51,14 @@
  * is deliberately left to its own follow-up PR, gated by the characterization specs proving every
  * OTHER playbook stays untouched (#3194's step-1 safety net, still doing its job).
  */
-import { daysUntil, type EarningsPrint, nextPrint } from "../domain/earnings-calendar.js";
+import {
+  daysUntil,
+  type EarningsPrint,
+  nextPrint,
+  sessionsUntil,
+} from "../domain/earnings-calendar.js";
+import type { IntradayBarsOf } from "../domain/intraday-bar.js";
+import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import { heldQuantity } from "../domain/portfolio.js";
 import type {
   ListedExpirations,
@@ -61,9 +68,11 @@ import type {
   PlaybookMode,
   PlaybookVerdict,
   Portfolio,
+  Quote,
 } from "../domain/types.js";
+import type { Steerable } from "./conviction-steering.js";
 import type { MixedSignalsDial } from "./mixed-signals.js";
-import { type TacticalRule, tacticalIntentForSymbol } from "./tactical-playbook.js";
+import type { PlayTargetBounds } from "./play-target.js";
 
 /** What a playbook wants its book to look like at a moment in time. */
 type DesiredState = "long" | "flat" | "no-window";
@@ -128,6 +137,29 @@ interface OptionPlaybookTraits {
   readonly requiredLevel: 1 | 2 | 3;
 }
 
+/**
+ * A study's measured moves in the stretches before a report (#5432): "from 20 to 10 trading days
+ * before, the stock rose 6.30% on average, in 13 of 14 reports". Typed and cited beside `evidence`
+ * so the Store draws the study's numbers, never literals typed into a component.
+ */
+export interface PrintStretches {
+  /** Where the numbers are, e.g. "docs/research/nvda-earnings-cycle.md F2". */
+  readonly source: string;
+  /** The years the reports span, as the member reads it: "2023–26". */
+  readonly era: string;
+  /** How many reports each average is over. */
+  readonly reports: number;
+  /** Trading days before the report, `from` > `to` (0 = the report day). */
+  readonly stretches: readonly {
+    readonly from: number;
+    readonly to: number;
+    /** The average move over the stretch, in percent. */
+    readonly meanPct: number;
+    /** In how many of `reports` the stock rose over the stretch. */
+    readonly rose: number;
+  }[];
+}
+
 export interface Playbook {
   /** e.g. "S1-NVDA" — the id that flows through the attribution seam into every record. */
   readonly id: string;
@@ -141,6 +173,9 @@ export interface Playbook {
   readonly thesis: string;
   /** Citation into docs/research/ — the record of why this play exists. */
   readonly evidence: string;
+  /** Optional — how the stock moved in each stretch before its past reports, as the study behind a
+   *  pre-print window measured it (#5432). Display only; nothing decides on it. */
+  readonly stretches?: PrintStretches;
   /** Target exposure as a fraction of equity, per mode. Risk guards still clamp on top. */
   readonly size: Readonly<Record<PlaybookMode, number>>;
   /**
@@ -170,20 +205,35 @@ export interface Playbook {
    *  `mixed-signals.ts`). OBSERVE-ONLY: a reading is logged, never read by `playbookIntents`.
    *  Absent (every playbook today) means the detector never looks at this playbook. */
   readonly mixedSignals?: MixedSignalsDial;
-  /**
-   * Optional — a second, richer decision surface (issue #3527 plan, slice 2), for a play that
-   * runs a prioritized rule chain every cycle instead of a single condition (see
-   * `tactical-playbook.ts`'s module doc). When present, `playbookIntents` evaluates this INSTEAD
-   * of calling `desiredState` for this playbook's symbols — `desiredState` still exists on the
-   * type (a tactical playbook can supply a trivial one) but goes uncalled. Absent means "no
-   * tactics declared," which behaves identically to today for every current playbook.
-   */
-  readonly tactics?: readonly TacticalRule[];
+  /** Optional — the widest target weight, lean range and band a subscription to this playbook may
+   *  set (#5483 criterion 13, `play-target.ts`). A subscription's target may only NARROW these.
+   *  Absent means the house bounds, the ranges the rebalancing-band backtest covered. */
+  readonly targetBounds?: PlayTargetBounds;
+  /** Optional — present on a playbook a conviction may steer (#5482 slice 4, `conviction-steering.ts`):
+   *  the bounds a narrowing may sit inside, and how to rebuild the playbook inside one. A steered
+   *  playbook carries none, so a narrowing is never narrowed twice. Absent on every other playbook. */
+  readonly steerable?: Steerable<Playbook>;
   /** Optional — see `PlaybookKey`. Absent means "undeclared", which a reader must treat as
    *  "unknown", never as a default. */
   readonly keyedOn?: PlaybookKey;
   /** Optional — present only on an option play; see `OptionPlaybookTraits`. */
   readonly options?: OptionPlaybookTraits;
+  /**
+   * Optional — the id of the persona whose own rules this playbook IS (`SAURON` → `"sauron"`,
+   * #4651). On a bot whose base persona has this id, `withPlaybooks` never calls `decide`: it runs
+   * the bot's own persona exactly as it always has and stamps those reflexes with this playbook's id
+   * and mode, so the bot's own build (a hardcore one included) stays exact and its rules never run
+   * twice. On any other bot it is an ordinary `decide` playbook. Absent on every other playbook.
+   */
+  readonly rulesOf?: string;
+  /** Optional — the name a member reads in place of the id (`SAURON` → "Buy the rumor, sell the
+   *  news", Eric 2026-10-12). Read today only by the Thesis tab's drawn rule (#5327); the app-wide
+   *  sweep that moves every surface off ids is #5205. Absent → surfaces keep showing the id. */
+  readonly displayName?: string;
+  /** Optional — what the roll call says when no recorded pass ran this playbook, for one whose
+   *  being off is not "nobody switched it on" (the forced daily pick runs on one bot only, and only
+   *  while armed in operations). Absent on every other playbook. */
+  readonly whenOff?: string;
   /** PURE. Which chains and contracts this cycle needs priced. `NO_OPTION_DEMAND` = no network. */
   optionDemand?(
     asOfIso: string,
@@ -193,8 +243,31 @@ export interface Playbook {
     mode: PlaybookMode,
   ): OptionDemand;
   /**
+   * Optional — DARK (#5489 slice 2): the playbook records its verdict ("observing") every pass and
+   * places nothing. `playbookIntents` and `exitSafetyIntents` contribute no order for it whatever
+   * its `decide` or `desiredState` would answer, and it takes no name from the base persona
+   * (`managedSymbols`), so subscribing a bot to it changes nothing that bot does. What it would have
+   * done is its own module's reading (`dip-bounce.ts`), in a type that is not an order. Going live
+   * is a PR that deletes this field, after the observed days its plan asks for.
+   */
+  readonly observeOnly?: true;
+  /**
+   * Optional — what a dark playbook RECORDS in place of an order (#5489 slice 2): its would-be
+   * orders and the late-recovery level, from the 5-minute bars the pass can see. PURE: `asOf` is the
+   * only clock, `bars` a synchronous read of the feed's cache (asking for a ticker is what makes the
+   * feed fetch it). The return type has no path to an order, and `observeOnly` already guarantees
+   * the engine places nothing for this playbook; the two together are the "records, never trades"
+   * guarantee (`tests/playbooks/dip-bounce-wiring.spec.ts`).
+   */
+  readonly observe?: (input: {
+    readonly bars: IntradayBarsOf;
+    readonly asOf: string;
+    readonly quotes: Readonly<Record<string, Quote>>;
+    readonly calendar: readonly EarningsPrint[];
+  }) => readonly PlaybookObservation[];
+  /**
    * Optional — the widened decision surface (#3208). PURE: `context.asOf` is the only clock. When
-   * present, `playbookIntents` calls this INSTEAD of `tactics`/`desiredState`, keeps only intents on
+   * present, `playbookIntents` calls this INSTEAD of `desiredState`, keeps only intents on
    * the playbook's own symbols that no exit-safety trip claimed, and stamps `playbookId`/
    * `playbookMode` itself. `desiredState` stays the verdict the roll call records.
    */
@@ -210,6 +283,33 @@ export interface Playbook {
 export interface EnabledPlaybook {
   readonly playbook: Playbook;
   readonly mode: PlaybookMode;
+  /**
+   * A PAUSED subscription (#4651). One rule: Pause stops a playbook opening anything new; its
+   * ownership and its exits are unchanged. `playbookIntents` keeps what `pausedMayPlace` allows —
+   * its exits (share sells, option closes, exit-safety trips) and one risk-reducing open, a covered
+   * call — and drops every other open. Its names stay its own exactly as when it runs, held or flat:
+   * the base persona stays off them (buys and sells), the scout skips them, a running SAURON yields
+   * them, and an option play keeps its claim. It records no verdict. On the base persona's own rules
+   * (SAURON on Sauron's account) it is ignored: those orders are the persona's reflexes, which run
+   * unlabelled as before. Absent on every running entry.
+   */
+  readonly exitsOnly?: true;
+}
+
+/** An order that takes risk off: a share sell (the bots trade long only) or an option close. A
+ *  sold put is a `sell` that OPENS risk, so an option order is judged by its effect, never its side. */
+export function isExitIntent(intent: OrderIntent): boolean {
+  return intent.option ? intent.option.effect === "close" : intent.side === "sell";
+}
+
+/**
+ * What a PAUSED entry may still place: its exits, plus THE ONE RISK-REDUCING OPEN — a covered call.
+ * Selling it can only ever deliver shares the bot already holds (the guards refuse a call the shares
+ * do not cover), so it is how a paused wheel gets out of assigned shares: without it they would have
+ * no exit at all. Every other open — a cash-secured put, a spread, a share buy — is refused.
+ */
+export function pausedMayPlace(intent: OrderIntent): boolean {
+  return isExitIntent(intent) || intent.option?.structure === "covered-call";
 }
 
 /** One exit-safety dial crossing its trip line — reported whether or not it was enforced, so an
@@ -260,7 +360,7 @@ export function exitSafetyIntents(
   const trips: ExitSafetyTrip[] = [];
   for (const { playbook, mode } of enabled) {
     const dial = playbook.exitSafety?.[mode];
-    if (!dial) {
+    if (!dial || playbook.observeOnly) {
       continue;
     }
     for (const symbol of playbook.symbols) {
@@ -324,29 +424,20 @@ export function printWindow(
 }
 
 /**
- * A tactical playbook's whole contribution for one cycle (issue #3527 plan, slice 2): its rule
- * chain evaluated per symbol, skipping any symbol an exit-safety trip already claimed this cycle.
- * Split out from `playbookIntents` to keep that function's branching within the complexity budget.
+ * The same question in TRADING SESSIONS — the unit the house pre-print research counts in (#4776).
+ * S1-NVDA and G1-GOOG read this; `printWindow` stays calendar days because a member-authored play's
+ * form declares days as its unit (`authored-play.ts`).
  */
-function tacticalPlaybookIntents(
-  playbook: Playbook,
-  mode: PlaybookMode,
-  context: MarketContext,
-  portfolio: Portfolio,
-  trippedSymbols: ReadonlySet<string>,
-): OrderIntent[] {
-  const rules = playbook.tactics ?? [];
-  const intents: OrderIntent[] = [];
-  for (const symbol of playbook.symbols) {
-    if (trippedSymbols.has(symbol)) {
-      continue;
-    }
-    const intent = tacticalIntentForSymbol(playbook.id, mode, symbol, rules, context, portfolio);
-    if (intent) {
-      intents.push(intent);
-    }
+export function printSessionWindow(
+  symbol: string,
+  asOfIso: string,
+  calendar: readonly EarningsPrint[],
+): { sessions: number; confirmed: boolean } | undefined {
+  const print = nextPrint(symbol, asOfIso, calendar);
+  if (!print) {
+    return undefined;
   }
-  return intents;
+  return { sessions: sessionsUntil(asOfIso, print.date), confirmed: print.status === "confirmed" };
 }
 
 /**
@@ -381,11 +472,9 @@ function decidedIntents(
  * its scoped flatten intent and is skipped by the desired-state logic below for this cycle — the
  * safety net overrides the playbook's own thesis rather than competing with it for the same sell.
  *
- * A TACTICAL playbook (issue #3527 plan, slice 2 — `playbook.tactics` present) runs its own
- * prioritized rule chain per symbol instead of the shared long/flat/no-window condition below —
- * `desiredState` goes uncalled for it. See `tactical-playbook.ts`'s module doc for why this is a
- * second shape rather than more fields bolted onto the state machine. A `decide` playbook (#4645,
- * the option plays) goes first of all three and answers with whole intents — `decidedIntents`.
+ * A `decide` playbook (#4645, the option plays, a persona's own rules) goes first and answers with
+ * whole intents — `decidedIntents`. The generic tactic chain that once sat beside it (#3527) was
+ * removed with HC-SAURON, its only user, on 2026-10-16 (docs/BOTS-SAURON.md → adaptation ledger).
  */
 /** Each enabled playbook's verdict for this pass — the same pure `desiredState` call
  *  `playbookIntents` makes, recorded so a quiet pass can say which playbooks looked and why each
@@ -399,8 +488,22 @@ export function playbookVerdicts(
   return enabled.map(({ playbook, mode }) => ({
     playbookId: playbook.id,
     mode,
-    state: playbook.tactics ? "tactical" : playbook.desiredState(asOfIso, calendar, events),
+    state: playbook.observeOnly
+      ? "observing"
+      : readsLiveSignals(playbook)
+        ? "tactical"
+        : playbook.desiredState(asOfIso, calendar, events),
   }));
+}
+
+/**
+ * Whether a playbook decides on live price and sentiment every pass, with no date or event window
+ * at all — a persona's own rules (`rulesOf`). Its verdict is
+ * "tactical", and no reader probes or scans a window for it: there is none, and asking its
+ * `desiredState` would answer a question it does not have.
+ */
+export function readsLiveSignals(playbook: Playbook): boolean {
+  return playbook.rulesOf !== undefined;
 }
 
 export function playbookIntents(
@@ -413,27 +516,37 @@ export function playbookIntents(
   const { intents: safetyIntents } = exitSafetyIntents(enabled, context, portfolio);
   const trippedSymbols = new Set(safetyIntents.map((i) => i.symbol));
   const intents: OrderIntent[] = [...safetyIntents];
-  for (const { playbook, mode } of enabled) {
-    if (playbook.decide) {
-      intents.push(...decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols));
-      continue;
-    }
-    if (playbook.tactics) {
-      intents.push(...tacticalPlaybookIntents(playbook, mode, context, portfolio, trippedSymbols));
-      continue;
-    }
-    // One shared condition per cycle, applied to every symbol in the basket — see the `symbols`
-    // field doc: desiredState is not an independent state machine per symbol.
-    const state = playbook.desiredState(context.asOf, calendar, events);
-    for (const symbol of playbook.symbols) {
-      if (trippedSymbols.has(symbol)) {
-        continue;
-      }
-      const intent = stateIntent(playbook, mode, state, symbol, context, portfolio);
-      if (intent) intents.push(intent);
-    }
+  for (const entry of enabled) {
+    const own = entryIntents(entry, context, portfolio, calendar, events, trippedSymbols);
+    // A paused entry (#4651) opens nothing new: its exits, and a covered call, only.
+    intents.push(...(entry.exitsOnly ? own.filter(pausedMayPlace) : own));
   }
   return intents;
+}
+
+/** One entry's own intents for the cycle, by the shape it declares: a `decide`, or the shared
+ *  long/flat/no-window condition applied across its basket. */
+function entryIntents(
+  { playbook, mode }: EnabledPlaybook,
+  context: MarketContext,
+  portfolio: Portfolio,
+  calendar: readonly EarningsPrint[],
+  events: readonly PlaybookEvent[],
+  trippedSymbols: ReadonlySet<string>,
+): OrderIntent[] {
+  // Dark: it records a verdict and places nothing, whatever its own rules would answer.
+  if (playbook.observeOnly) return [];
+  if (playbook.decide) {
+    return decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols);
+  }
+  // One shared condition per cycle, applied to every symbol in the basket — see the `symbols`
+  // field doc: desiredState is not an independent state machine per symbol.
+  const state = playbook.desiredState(context.asOf, calendar, events);
+  return playbook.symbols.flatMap((symbol) => {
+    if (trippedSymbols.has(symbol)) return [];
+    const intent = stateIntent(playbook, mode, state, symbol, context, portfolio);
+    return intent ? [intent] : [];
+  });
 }
 
 /** The gap between one symbol's desired state and what is held, as at most one intent. */

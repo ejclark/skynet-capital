@@ -372,6 +372,7 @@ read the content on 10-14 against what the 09-16 FOMC did; attribute nothing to 
 
 | 2026-09-29 | D-14 | **Cadence band transition, and it is why this pulse reached a session.** D-14 crosses the `low` cadence floor (`minDaysOut: 15`), so the interval tightens **30d → 7d**; `event-material-scan.mjs`'s own `days-band-transition` trigger fired this alongside a genuinely new adjacency (next). **Two confirmed high-impact events entered the corridor since the last row** — `cpi-2026-10-14` and `retail-sales-2026-10-15` — both already tracked in `adjacentIds` at D-34 but not yet `confirmed`/high at that time; `adjacentStrongIds` moves from `[]` to these two (computed via `computeAdjacentIds`/`isStrongAdjacent` against the live calendar). **Event-specific tape: the calendar has rolled, and the rule's prediction reads back exactly.** `pmi.spglobal.com/Public/Release/ReleaseDates?language=en` (curl, browser UA/Accept-Language, HTTP 200, re-fetched today) now lists, under the `October 13` heading, `S&P Global Investment Manager Index` at **14:00 UTC** — verbatim the date and time legs 1–2 derived. This is the positive resolution the ledger's own "This week" row and `FT-…-1` (score by 2026-09-18, now lapsed) were watching for; per EVENT-RESEARCH.md's mode split, formal scoring of that row is close-out's job (this event has not passed), so `## Outcome` is not touched here — noted as tape, not scored. **Macro surprise, carried from the sibling close-out, not re-derived:** [`fomc-2026-09-16`](fomc-2026-09-16.md)'s own `## Outcome` — the Fed hiked **25bp to 3.75–4.00%**, unanimously (12–0), its **first hike in three years**, with a hawkish SEP (2026 median **4.1%**, up from June's 3.8%). This is the opposite polarity of the content-prior leg 9 built from the May–August 2026 series and the October-2025 analogue (*"a rate cut boosts equity investor sentiment"*) — the panel whose collection window (base case closing Thursday 10-08) sits across this decision will be reading a **hawkish hike**, not a cut, the first time in six read editions the Fed communication inside the window has been a hike. Sharpens the Information leg; changes no call. **Volatility regime:** VIX **15.91** (own `^VIX` daily fetch, 2026-09-29 close) vs **16.28** at D-34 — **−0.37pt**, under the 3pt threshold, same calm band. **Geopolitical / funding:** the CR through **2026-12-11** (H.R. 6500 / PL 119-103) is unchanged — no new shutdown risk found. No new Middle East escalation found this sweep. **Peers:** n/a, `symbols: []`. **No new dated adjacency to propose** — `node scripts/event-scan.mjs --on-date=2026-10-13` still shows only this entry and `existing-home-sales-2026-10-13`; `computeAdjacentIds` against the live calendar returns no id outside the set already on file (the two strong entries above were already present as weak `adjacentIds`, not new discoveries). **Stance survives unchanged: stand aside, nil tradeability, no house playbook, nothing sized.** Probe-ref replaced with today's readings (VIX 15.91, band `low:0+`, adjacentStrongIds populated, streak 0). | — (stance holds; the Information leg sharpens — the FOMC communication inside the collection window is now known to be a hawkish hike rather than the assumed-cut analogue, not yet a call on anything) | 2026-10-06 (low, 0+ band: every 7d) |
 | 2026-10-06 | D-7 | **Deterministic screen (no Claude session).** Readings — VIX 15.5 (-0.4pt since last), band unchanged (low:0+), 35 adjacent event(s) tracked, new in corridor since last pulse: `bobl-5y-auction-2026-10-13` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-13 |
+| 2026-10-14 | D+1 | **CLOSE-OUT — see `## Outcome` for the scoring; this row is the index.** Release landed exactly as derived: masthead *"Embargoed until 1000 EDT (1400 UTC) 13 October 2026"* (hash `4af1e2c6…`, 200, 522,889 B, 3 pp). Risk Appetite **−15% (Sep) → +11% (Oct)**, near-term outlook flat, central-bank drag worst since July 2023, panel "just under 300" / ~$3,500bn. **FT-1 pass · FT-2 pass (guard unmet) · FT-3 pass · FT-4 left open (scores 10-20).** Window **5-8 Oct** (Mon-Thu) holds the 10-07 minutes. Adjacency: VIX **15.27** (10-13 close) vs 15.52 at D-7; `^TNX` 5.22; new in corridor since 10-06: `opec-momr-2026-10-13`, `eurostat-hicp-final-2026-10-16`, `warsh-imf-fireside-2026-10-15`, all already tracked, none proposed. FT-4 tape: the calendar (Oct 14 → Nov 11) shows no IMI under `November 10`. | Closed — stand-aside upheld | — (closed; `forward-test-due` re-opens 10-20 for FT-4) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -383,8 +384,85 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
+## Outcome
+
+**Closed 2026-10-14 (D+1).** Every number below was re-run cold on 2026-10-14: instrument caches busted, the calendar and the release PDF fetched direct, Yahoo 5-minute bars re-pulled. `symbols: []`, so nothing was ever sized; the stand-aside was correct by construction.
+
+### What the release said
+
+Source: `pmi.spglobal.com/Public/Home/PressRelease/4af1e2c617524429aba47a06ff95f50a` (HTTP 200, `application/pdf`, 522,889 B, 3 pp), masthead *"Embargoed until 1000 EDT (1400 UTC) 13 October 2026"*.
+
+- **Risk Appetite Index +11%**, up from **−15% in September** (September's was its lowest since March); still short of the year's earlier highs. Near-term outlook for October is flat.
+- **US equities most favored globally; UK then EU least.** Sovereign and corporate credit appetite the most bearish since October 2022.
+- **Central-bank policy is the biggest equity drag since July 2023**, citing the need for "more aggressive monetary policy tightening"; fiscal policy and the political environment (Middle East war, trade) also drag.
+- **Sectors:** IT first for the first time in five months, energy fell 1st → 5th, financials 3rd → 6th, real estate last for a seventh month with bearishness at a three-year high.
+- **Panel:** "just under 300" participants, ~$3,500bn AUM.
+
+**Against the ledger's content prior.** Leg 9 said the panel swung −26% → +4% on one cut in October 2025 and that October 2026 would be "mostly a verdict on" the 09-16 decision; the 09-29 row then noted that decision was a *hike*. The swing came (+26 points), but in the *opposite* sign to what a hawkish decision would suggest, so the magnitude held and the direction rule did not. One observation, not a rule: this panel's month-to-month change is not keyed to the direction of the Fed's decision.
+
+### FT-1, scored — pass
+
+*Prediction: by 2026-09-18 the calendar lists an October IMI at October 13, 14:00 UTC.* The 09-15 lane's own pull on 2026-09-16 read `October 13 … 14:00 UTC … S&P Global Investment Manager Index` (its FT-3), inside the deadline. Today's pull of the press-release index (HTTP 200, 89,304 B) lists the release at `October 13 2026 14:00 UTC`, and the masthead above matches to the minute. The rule — *the Tuesday eight days after the month's first Monday* — is now **8 for 8** on mastheads and listings, including its first out-of-sample use and the October Columbus-Day geometry that leg 1 singled out.
+
+### FT-2, scored — pass, with the guard unmet
+
+*Prediction: the stated collection window starts on or after 2026-10-05; base case ends Thursday 10-08.* The Note to Editors reads *"Data were collected 5-8 October, 2026"*: Monday to Thursday, base case hit, and the 10-07 14:00 ET September minutes sit inside it. **The registered guard could not be applied as written.** It trusts the Note only where the body's own collection sentence agrees, and this edition's body carries no collection sentence at all (the 09-15 edition carried two, differently). So the window is read from a single line. The body's content is consistent with a post-minutes panel (rate-hike worries, central-bank drag at a 39-month worst) but cites neither the minutes nor a date. Scored **pass** on the line as written; the "first panel to answer across a Fed communication" claim is supported by the dates and uncorroborated by the text. From the 09-15 close-out's lesson: name the section, not the sentence — this score names the Note to Editors.
+
+### FT-3, scored — pass
+
+*Prediction: the 10:00-10:15 share of the 09:30-10:30 \|move\| sits at or below its trailing median in 3 or more of SPY/QQQ/TLT/IWM/`^TNX`; kill if it exceeds in 3 or more.* Construction as registered (open of the bar at A → close of the bar at B−5m, Yahoo 5-minute bars, 60 sessions 2026-07-21 → 10-13, 51 for `^TNX`, target day excluded from its own reference):
+
+| Instrument | 09:30-10:30 \|move\| | Guard (≥0.02%) | 10:00-10:15 move | Share of the hour | Trailing median share | Verdict |
+|---|---|---|---|---|---|---|
+| SPY | 0.0244% | kept (barely) | −0.081% | 331.3% | 42.1% | exceeds, but see below |
+| QQQ | 0.4222% | kept | −0.050% | 11.8% | 48.3% | at-or-below |
+| TLT | 0.1910% | kept | +0.089% | 46.8% | 45.5% | exceeds |
+| IWM | 0.6008% | kept | +0.047% | 7.8% | 54.4% | at-or-below |
+| `^TNX` | 0.3654% | kept | −0.077% | 20.9% | 36.6% | at-or-below |
+
+**Exceeds on 2 of 5, at-or-below on 3 of 5: the prediction holds and the kill switch (3 or more exceeding) did not fire.** SPY's hour moved 0.0244%, 4 thousandths of a percentage point above the guard, so its 331% share is a near-zero-denominator artifact (the same one the 09-15 close-out documented). The verdict does not depend on it: dropping SPY leaves exceeds on 1 of 4 and at-or-below on 3 of 4. Dropping the guard changes nothing, as no instrument was excluded. The 10:00 window did not carry the day's move on the instruments with a real denominator. **Not varied this run:** the median definition (trailing vs full-sample). The 09-15 close-out showed it did not decide its verdict; this one was not re-tested.
+
+**What this does and does not say.** It is one more null-consistent observation on the series' shared-slot edition (the co-tenant, existing home sales, is measured inert on 114 days). It does not undo the 09-15 kill, which was a loud window on a day the whole session was moving. Two observations now sit on opposite sides, each with a different regime behind it; neither supports a tape claim, and the stand-aside needs neither.
+
+### FT-4 — left open on purpose
+
+Score-by **2026-10-20** is past this close-out window, so the row stays `_open_` and the scanner re-dispatches this lane as `forward-test-due` on the day. Scoring it now would be falsification. **Tape only, not a score:** the calendar pulled today (HTTP 200, 26,593 B) spans October 14 → November 11 and the `November 10` block lists only `AIB Ireland Construction PMI` — no IMI. On 09-16, with a window ending around October 14, the October 13 listing was already visible, so the November one is not showing at the same lead. The row's kill switch names "any other listed date or time", so an *absent* listing by 10-20 is a case the wording does not cleanly cover; the scoring session should read it as a miss on the prediction and say so.
+
+### FT-4, scored — pass (2026-10-20, `forward-test-due`)
+
+*Prediction: by 2026-10-20 the calendar lists a November IMI at November 10, 15:00 UTC.* Re-pulled cold on 2026-10-20: `pmi.spglobal.com/Public/Release/ReleaseDates?language=en` with the browser `User-Agent` + `Accept-Language` (HTTP 200, 26,309 B), parsed to 278 text lines. The `November 10` block reads `01:01 UTC AIB Ireland Construction PMI` then `15:00 UTC S&P Global Investment Manager Index` — the page's layout is time-then-title, so the 15:00 UTC belongs to the IMI. It is the only IMI listing on the page (the window now runs October 22 → November 11). Date and time both match, so the kill switch (any other November date, or a time that is not 15:00 UTC) did not fire. **The 10-14 tape note is resolved:** on 10-14 the November block listed only the AIB row, so the listing appeared between 10-14 and 10-20 — a lead of 21–27 days, against the October edition's 27 days on 09-16 — inside the registered deadline. The 15:00 UTC (not 14:00) reading also supports the 10:00 ET reading of the series over a fixed UTC slot, as US DST ends 2026-11-01. The rule is now **9 for 9** on mastheads and listings; the November edition stays `estimate` until its own masthead prints. Scored from a fresh pull, not memory; no other cell touched.
+
+### The kill switches, scored
+
+| Switch (as written) | Resolution | Verdict |
+|---|---|---|
+| Calendar lists October IMI on any other date, or none (FT-1) | Listed October 13, 14:00 UTC | Did not fire |
+| Collection window starts before 2026-10-05 (FT-2) | *"5-8 October, 2026"* | Did not fire |
+| Share exceeds trailing median on ≥3 of 5 (FT-3) | 2 of 5 | Did not fire |
+| Calendar lists November IMI on another date/time (FT-4) | Not listed as of 10-14; scores 10-20 | Open |
+| Published pre-release consensus for the Risk Appetite Index | None found; the release compares to no forecast. "Not found" is a search result, not proof of absence | Did not fire |
+| 32-day null reverses, or a finer instrument appears | Not re-run (daily study out of scope for a close-out); 5-minute bars still cap at 60 days | Not tested |
+| S&P moves the release off 10:00 ET, off Tuesday, or publishes a schedule | Masthead *"1000 EDT (1400 UTC) 13 October 2026"*, a Tuesday; still no published schedule | Did not fire |
+| Panel materially below ~300 or AUM below $3,500bn | "just under 300", ~$3,500bn | Did not fire |
+| Existing-home-sales moves off 10:00 ET or off 10-13 | Not re-checked this run (its own ledger owns it) | Not tested |
+
+### Vs. the stance
+
+- **Tradeability: nil — upheld.** No position existed; no consensus to be surprised against.
+- **Date: derived and stress-tested — upheld, to the minute.** The label stays `estimate`: the canonical file is not edited by a close-out, and the taxonomy point from leg 3 is unchanged. The masthead is now a primary source for the date; promoting the entry is moot for a passed event.
+- **Information: this panel answered across the Fed's minutes and prints pre-CPI — upheld on the dates, uncorroborated by text** (FT-2).
+- **Attribution: degraded, not destroyed — consistent with FT-3.**
+
+### Adjacency — no proposal
+
+No new dated event inside the horizon was found. The three ids new to the corridor since 10-06 (`opec-momr-2026-10-13`, `eurostat-hicp-final-2026-10-16`, `warsh-imf-fireside-2026-10-15`) are already tracked. The series' remaining editions, 2026-11-10 and 2026-12-15, are already canonical.
+
+
 **Last assessed:** 2026-09-29
 <!-- probe-ref: {"symbols":{},"vix":15.91,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->
 
 **Last assessed:** 2026-10-06
 <!-- probe-ref: {"symbols":{},"vix":15.52,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":1} -->
+
+**Last assessed:** 2026-10-14
+<!-- probe-ref: {"symbols":{},"vix":15.27,"daysBand":"low:0+","adjacentIds":["beige-book-2026-10-14","bobl-5y-auction-2026-10-13","bund-30y-auction-2026-10-14","cpi-2026-10-14","ecb-account-2026-10-08","eia-weekly-petroleum-status-2026-10-15","empire-state-mfg-2026-10-15","eurostat-hicp-final-2026-10-16","existing-home-sales-2026-10-13","fomc-blackout-start-2026-10-17","g20-fmcbg-bangkok-2026-10-15","iea-omr-2026-10-14","imf-world-bank-annual-meetings-2026-10-12","import-export-prices-2026-10-16","industrial-production-2026-10-16","jgb-30y-auction-2026-10-08","jgb-5y-auction-2026-10-14","mtis-2026-10-15","norway-gpfg-ethics-committee-2026-10-15","opec-momr-2026-10-13","opex-2026-10-16","philly-fed-mfg-2026-10-15","pjm-iras-ferc-deadline-2026-10-12","ppi-2026-10-15","retail-sales-2026-10-15","saudi-east-west-pipeline-repair-window-close-2026-10-15","sifma-bond-market-closure-2026-10-12","ssa-cola-2027-2026-10-14","sudan-sanctions-regime-expiry-2026-10-09","tic-monthly-2026-10-16","treasury-30y-bond-2026-10-08","treasury-buyback-10y20y-2026-10-15","treasury-buyback-20y30y-2026-10-08","treasury-coupon-announcement-2026-10-15","treasury-primary-dealer-agenda-2026-10-16","uk-monthly-gdp-2026-10-15","warsh-imf-fireside-2026-10-15","wholesale-trade-2026-10-08"],"adjacentStrongIds":["cpi-2026-10-14","retail-sales-2026-10-15"],"screenStreak":0} -->

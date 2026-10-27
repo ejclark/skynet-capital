@@ -130,8 +130,9 @@ A code-knowledge-graph tool like [Graphify](https://github.com/Graphify-Labs/gra
 *structure* — nodes/edges, **communities** (subsystems), **god-nodes** (highest-degree hubs) — but has
 no identity layer. BCP is the complementary layer, and it *consumes* that map:
 
-- **god-nodes → identity-anchor candidates** (Anchor). The most central elements are where cohesion
-  should be most vivid.
+- **god-nodes → identity-anchor candidates** (Anchor). Centrality ranks the candidates; which of them
+  carry identity is a judgment, not a read-off (here the most central hubs were the engine, not the
+  brand — the worked example in [`BCP-GRAPHIFY.md`](BCP-GRAPHIFY.md)).
 - **communities → cohesion scopes** (Enforce). Consistency is checked per subsystem.
 - **the graph → the Sense substrate.** Structure is one identity signal among assets + character +
   metaphors.

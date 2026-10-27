@@ -28,6 +28,8 @@ const markers = [
     kind: "entry" as const,
     at: "2026-09-01T00:00:00Z",
     label: "Buy 10 NVDA",
+    symbol: "NVDA",
+    side: "buy" as const,
     activityAnchor: "act-1",
   },
   {
@@ -35,6 +37,8 @@ const markers = [
     kind: "exit" as const,
     at: "2026-09-02T00:00:00Z",
     label: "Sell 10 NVDA",
+    symbol: "NVDA",
+    side: "sell" as const,
     activityAnchor: "act-2",
   },
 ];
@@ -49,6 +53,18 @@ describe("mountThesisChart (smoke)", () => {
     expect(container.querySelector("table, canvas, div")).not.toBeNull();
     expect(() => mounted.dispose()).not.toThrow();
     expect(container.childElementCount).toBe(0);
+    container.remove();
+  });
+
+  it("prints the equity axis in dollars with thousands commas, not a bare 1007500.00 (#5204)", () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    const mounted = mountThesisChart(container, equity, markers, readChartPalette(), shim);
+
+    expect(mounted.formatPrice(1_007_500)).toBe("$1,007,500");
+    expect(mounted.formatPrice(-1_200)).toBe("−$1,200");
+    mounted.dispose();
     container.remove();
   });
 

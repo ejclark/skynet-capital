@@ -1,3 +1,5 @@
+import { join } from "node:path";
+
 type Env = Readonly<Record<string, string | undefined>>;
 
 /**
@@ -10,6 +12,7 @@ type Env = Readonly<Record<string, string | undefined>>;
  */
 export const PERSISTED_STORES: Readonly<Record<string, string>> = {
   SKYNET_ALLOWLIST_STORE: "data/allowlist.json",
+  SKYNET_GITHUB_TOKEN_STORE: "data/github-token.json",
   SKYNET_PARTICIPANT_STORE: "data/participants.json",
   SKYNET_CONTROLS_FILE: "data/bot-controls.json",
   SKYNET_ACTIVITY_DIR: "data/activity",
@@ -28,6 +31,87 @@ export const PERSISTED_STORES: Readonly<Record<string, string>> = {
   SKYNET_SUBSCRIPTIONS_FILE: "data/playbook-subscriptions.json",
   SKYNET_SAVED_POSITIONS_FILE: "data/saved-positions.json",
 };
+
+/**
+ * Stores with NO relative default: the var is the whole switch, and unset means the feature is
+ * dark (no audit trail, no decision DB, no IV clock) rather than writing under `/app/data`. They
+ * are still durable data, so a value that is set must sit on the volume, and the sizes line must
+ * count them (#4621, slice 9 of #4612: "every file the server writes is declared"). Siblings are
+ * derived, never declared: `decisions.db` sits beside `SKYNET_BOTS_DB_PATH` (`decisionDbPathFrom`),
+ * `council.json` beside `SKYNET_CONTROLS_FILE`, and the run marker beside `SKYNET_HISTORY_DIR`.
+ * `tests/arch/volume-persistence.spec.ts` fails when a new `env.SKYNET_*_DIR|FILE|STORE|PATH` read
+ * is in neither this list nor `PERSISTED_STORES` nor the scan's named non-stores.
+ */
+export const OPT_IN_STORES: readonly string[] = [
+  "SKYNET_AUDIT_DIR",
+  "SKYNET_BOTS_DB_PATH",
+  "SKYNET_BOTS_HEALTH_PATH",
+  "SKYNET_FLOW_DIR",
+  "SKYNET_IV_HISTORY_DIR",
+];
+
+/**
+ * The volume `fly.toml` mounts (`[mounts] destination`). Both Fly apps mount it here, and
+ * `tests/arch/volume-persistence.spec.ts` fails if `fly.toml` ever says otherwise — the gate
+ * READS that file, so a new store never has to edit it (#4604).
+ */
+export const DEFAULT_ROOT_ON_FLY = "/data";
+
+/**
+ * Stores whose path is DERIVED from one root instead of pinned by their own `fly.toml` line
+ * (#4604): explicit var → the name it gets under the root. Six store lines rode five held merges
+ * in 33 days before this existed, each one a protected-file click for a single `[env]` line; a
+ * store registered here costs none. `storePath` only accepts a key of this table, so a derived
+ * store cannot exist without the boot check, the gate and the `[stores]` line seeing it.
+ * The 19 `PERSISTED_STORES` stay explicit — this is for new stores, not a migration.
+ */
+export const DERIVED_STORES = {} as const satisfies Readonly<Record<string, string>>;
+
+/**
+ * Where derived stores live: `SKYNET_DATA_ROOT` when set, the Fly mount on a Fly Machine, and a
+ * relative `data` everywhere else — local runs stay disposable, and a non-Fly host sets the var
+ * (docs/DEPLOY.md). Keyed on `FLY_APP_NAME`, not `isProduction()`: only Fly guarantees the mount.
+ */
+export function dataRoot(env: Env): string {
+  return env.SKYNET_DATA_ROOT ?? (env.FLY_APP_NAME ? DEFAULT_ROOT_ON_FLY : "data");
+}
+
+/** The resolution rule behind `storePath`: an explicit var always wins over the derived path. */
+export function resolveStorePath(env: Env, explicitVar: string, name: string): string {
+  return env[explicitVar] ?? join(dataRoot(env), name);
+}
+
+/** A derived store's path — `storePath(env, "SKYNET_WATCHLIST_DIR")` instead of a `fly.toml` line. */
+export function storePath(env: Env, store: keyof typeof DERIVED_STORES): string {
+  return resolveStorePath(env, store, DERIVED_STORES[store]);
+}
+
+/**
+ * Why this Fly boot must not start, or undefined. The derived stores have no per-store line a
+ * reviewer would notice, so on Fly the root itself is proved: it must exist and sit on a different
+ * device than `/` — the image's root filesystem is ephemeral, a mounted volume is not. A missing
+ * mount or a root typo'd off it fails here instead of writing inside the image. `deviceOf` is the
+ * `stat().dev` seam (undefined when the path is absent). Off Fly it is silent: a VM's root disk
+ * persists, so a shared device there is not a defect.
+ */
+export function dataRootProblem(
+  env: Env,
+  deviceOf: (path: string) => number | undefined,
+  stores: Readonly<Record<string, string>> = DERIVED_STORES,
+): string | undefined {
+  if (!env.FLY_APP_NAME) return undefined;
+  const root = dataRoot(env);
+  const device = deviceOf(root);
+  if (device !== undefined && device !== deviceOf("/")) return undefined;
+  const first = Object.keys(stores)[0];
+  const at = first ? resolveStorePath(env, first, stores[first] as string) : root;
+  const subject = first ? `${first} would write to "${at}"` : `the data root "${root}"`;
+  return (
+    `Refusing to boot: ${subject}, which is ${device === undefined ? "missing" : "not on a mounted volume"} ` +
+    `— inside the image, erased on the next deploy. Mount the volume at ${DEFAULT_ROOT_ON_FLY} or point ` +
+    `SKYNET_DATA_ROOT at it. See docs/LESSONS.md: "The guest list was never on the volume".`
+  );
+}
 
 /**
  * Runtime backstop for the class of bug in `docs/LESSONS.md` ("The guest list was never on the
@@ -50,8 +134,20 @@ export function volumePersistenceWarnings(env: Env, mount = "/data"): string[] {
   if (!env.FLY_APP_NAME) {
     return [];
   }
-  return Object.entries(PERSISTED_STORES)
-    .map(([name, fallback]) => [name, env[name] ?? fallback] as const)
+  const optedIn = OPT_IN_STORES.flatMap((name) => {
+    const value = env[name];
+    return value ? [[name, value] as const] : [];
+  });
+  const derived = Object.entries(DERIVED_STORES as Readonly<Record<string, string>>).map(
+    ([name, dir]) => [name, resolveStorePath(env, name, dir)] as const,
+  );
+  return [
+    ...Object.entries(PERSISTED_STORES).map(
+      ([name, fallback]) => [name, env[name] ?? fallback] as const,
+    ),
+    ...optedIn,
+    ...derived,
+  ]
     .filter(([, effective]) => !effective.startsWith(`${mount}/`))
     .map(
       ([name, effective]) =>

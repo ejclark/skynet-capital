@@ -6,10 +6,10 @@ centrality; [Graphify](https://github.com/Graphify-Labs/graphify) is the referen
 
 > **Confidence note.** The Graphify specifics below are read from its public README (communities via
 > Leiden, god-nodes = highest-degree hubs, `graph.json` full dataset, edge confidence tags
-> `EXTRACTED`/`INFERRED`, ~40-language tree-sitter extraction). The exact `graph.json` schema is not
-> verified here — treat field names as *roles to bind*, not literal keys, until confirmed against the
-> tool. This spec ideally lives in the mapper's repo eventually; it sits here now because that's the
-> session we're in.
+> `EXTRACTED`/`INFERRED` — its own report also counts `AMBIGUOUS` — ~40-language tree-sitter
+> extraction). The exact `graph.json` schema is not verified here — treat field names as *roles to
+> bind*, not literal keys, until confirmed against the tool. This spec ideally lives in the mapper's
+> repo eventually; it sits here now because that's the session we're in.
 
 ## The pipeline
 
@@ -28,7 +28,7 @@ adds identity, consuming the map as one input. The operating model applies both.
 | **god-nodes** (highest-degree hubs) | ranked **identity-anchor candidates** | Anchor |
 | **communities** (subsystems) | **cohesion scopes** (units of internal consistency) | Enforce |
 | **nodes + edges** (entities, relations) | one **Sense** signal (structure) among assets, character, metaphors | Sense |
-| **confidence tags** (`EXTRACTED`/`INFERRED`) | trust weighting — `INFERRED` inputs get flagged for human confirmation | Sense/Anchor |
+| **confidence tags** (`EXTRACTED`/`INFERRED`/`AMBIGUOUS`) | trust weighting — `INFERRED` inputs get flagged for human confirmation | Sense/Anchor |
 
 ## Mapping rules
 
@@ -64,7 +64,7 @@ rule:**
 
 - **Real god-nodes are the trading domain model:** `MarketContext` (38), `OrderIntent` (36), `Persona`
   (32), `Portfolio` (30) — the *engine*. I had guessed the UI files (`authenticator.ts`,
-  `render-dashboard.ts`) would top the list. They did **not**.
+  and render-dashboard.ts, since deleted) would top the list. They did **not**.
 - **Why the guess was wrong is the lesson.** `authenticator.ts` is the most *brand-dense* file (the
   entire `/login` world) yet structurally *light* — it's one giant inline canvas template, so
   tree-sitter sees few nodes. **Structural centrality and identity density are near-inverse here.**
@@ -83,8 +83,6 @@ rule:**
 ## Open questions (for a Graphify-scoped session)
 
 - Confirm `graph.json`'s real schema and bind the roles above to concrete fields.
-- Does the mapper expose per-node centrality scores (to rank anchor candidates) and community
-  membership directly, or must BCP derive them?
 - Should BCP emit a machine-readable `brand.json` (tokens + anchor→node bindings + scope rules) so
   *Enforce* can be partly automated (lint deliverables against the brand per scope)?
 - Where should this spec live long-term — here, in Graphify, or a shared meta-repo?

@@ -810,6 +810,22 @@ describe("AlpacaOptionsClient", () => {
       });
     });
   });
+
+  /** The dashboard sweep's resume (#4650): oldest first, from just past the newest id it holds. */
+  describe("readOptionLifecycleActivitiesAfter", () => {
+    it("asks for the page just past the given id, oldest first", async () => {
+      const log: Array<{ path: string; body?: unknown }> = [];
+      const client = new AlpacaOptionsClient(fakeTransport({ "/v2/account/activities": [] }, log));
+      expect(await client.readOptionLifecycleActivitiesAfter("20261030000000000::b")).toEqual({
+        ok: true,
+        rows: [],
+      });
+      expect(log[0]?.path).toContain("direction=asc");
+      expect(log[0]?.path).toContain("page_token=20261030000000000%3A%3Ab");
+      await client.readOptionLifecycleActivitiesAfter();
+      expect(log[1]?.path).not.toContain("page_token");
+    });
+  });
 });
 
 describe("rowPremium — rounds to the cent at the source (round-half-up)", () => {

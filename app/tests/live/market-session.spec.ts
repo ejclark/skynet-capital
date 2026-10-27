@@ -1,4 +1,11 @@
-import { formatMinutes, marketSession, sessionSentence } from "../../src/live/market-session";
+import {
+  formatMinutes,
+  marketSession,
+  nextOpenLabel,
+  sessionSentence,
+  statusLineCue,
+  waitsForOpen,
+} from "../../src/live/market-session";
 
 // The topbar market clock (#3689 slice 1) — the regular session in ET, holidays and early
 // closes from the exchange calendar. September 2026 is EDT (UTC−4).
@@ -69,6 +76,63 @@ describe("sessionSentence", () => {
     );
     expect(sessionSentence(marketSession(new Date("2026-09-26T15:00:00Z")))).toBe(
       "Market closed, opens Mon 9:30 ET",
+    );
+  });
+});
+
+describe("nextOpenLabel", () => {
+  it("names the next session's day and date while one is running", () => {
+    expect(nextOpenLabel(new Date("2026-09-24T18:32:00Z"))).toBe("Fri Sep 25 · 9:30 ET");
+  });
+
+  it("is today before the open", () => {
+    expect(nextOpenLabel(new Date("2026-09-24T12:48:00Z"))).toBe("Today · 9:30 ET");
+  });
+
+  it("skips the weekend and the exchange's holidays", () => {
+    expect(nextOpenLabel(new Date("2026-09-26T15:00:00Z"))).toBe("Mon Sep 28 · 9:30 ET");
+    expect(nextOpenLabel(new Date("2026-11-25T21:00:00Z"))).toBe("Fri Nov 27 · 9:30 ET");
+  });
+});
+
+// The market's one word beside a fleet alarm on a phone (#5064's review): the sentence steps
+// aside, but no state may be left to a ring's colour — each keeps a word nothing else shares.
+describe("statusLineCue", () => {
+  const cue = (iso: string) => statusLineCue(marketSession(new Date(iso)));
+
+  it("says open, in the last hour too", () => {
+    expect(cue("2026-09-24T18:32:00Z")).toBe("Open"); // Thu 14:32 ET
+    expect(cue("2026-09-24T19:15:00Z")).toBe("Open"); // 15:15 ET, power hour
+  });
+
+  it("names the open's time before the bell — one width, however early it is", () => {
+    expect(cue("2026-09-24T12:48:00Z")).toBe("Opens 9:30"); // 8:48 ET
+    expect(cue("2026-09-24T05:00:00Z")).toBe("Opens 9:30"); // 1:00 ET, 8h 30m out
+  });
+
+  it("says closed after the bell, at weekends and on holidays", () => {
+    for (const iso of ["2026-09-24T21:00:00Z", "2026-09-26T15:00:00Z", "2026-11-26T15:00:00Z"]) {
+      expect(cue(iso)).toBe("Closed");
+    }
+  });
+});
+
+// #6257: the open a ticket placed now waits for — undefined only while the session runs.
+describe("waitsForOpen", () => {
+  it("is undefined mid-session and in power hour", () => {
+    expect(waitsForOpen(marketSession(new Date("2026-10-27T15:00:00Z")))).toBeUndefined();
+    expect(waitsForOpen(marketSession(new Date("2026-10-27T19:30:00Z")))).toBeUndefined();
+  });
+
+  it("names today's open before the bell and the next session's after the close", () => {
+    expect(waitsForOpen(marketSession(new Date("2026-10-27T12:00:00Z")))).toBe(
+      "today's 9:30 ET open",
+    );
+    expect(waitsForOpen(marketSession(new Date("2026-10-27T00:00:00Z")))).toBe(
+      "the Tue 9:30 ET open",
+    );
+    expect(waitsForOpen(marketSession(new Date("2026-10-31T16:00:00Z")))).toBe(
+      "the Mon 9:30 ET open",
     );
   });
 });

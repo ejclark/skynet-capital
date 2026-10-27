@@ -9,8 +9,8 @@
   max-width: var(--col-wide);
   min-width: 0;
 }
-/* The range selector — the same `.railctl` chip idiom as the chart studies, but single-select
-   (aria-pressed on exactly one at a time, not "any number on"). */
+/* The range selector — a chip row like the chart studies' `FilterChip`s, but single-select
+   (aria-pressed on exactly one at a time, not "any number on"), so it is not one of them. */
 .hero-chart-range {
   display: flex;
   flex-wrap: wrap;
@@ -103,4 +103,30 @@
   .hero-chart-canvas {
     height: 280px;
   }
+}
+/* A recorded capital flow (#4563): the chart's square marker, named in words under the canvas.
+   Quiet ink only — a top-up is neither a gain nor a loss, so it never borrows a P/L colour. */
+.hero-chart-flows {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.hero-chart-flows ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hero-chart-flows li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text);
+}
+.hero-chart-flow-glyph {
+  font-size: 9px;
+  color: var(--muted);
+}
+.hero-chart-flows .note {
+  margin: 2px 0 0;
 }

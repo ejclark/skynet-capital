@@ -11,8 +11,24 @@
  * A roster with an OPTION play (#4645) also tells the trader which underlyings it trades and which
  * quotes this cycle needs (`optionUnderlyings`, `optionDemand`); a roster without one carries
  * neither, so the trader reads no option market for it.
+ *
+ * A playbook that IS the base persona's own rules (`rulesOf === base.id`, today only `SAURON` on
+ * Sauron's account — #4651) is not run as a playbook: it would be the same rules twice. Step 2 runs
+ * the base persona exactly as above — suppressed on the OTHER playbooks' symbols, which stay theirs —
+ * and stamps every surviving reflex with that playbook's id and mode. With no such playbook enabled
+ * nothing here differs from a roster without the field.
+ *
+ * ONE RUN-UP BET PER ACCOUNT (#4469 slice 2e, `run-up-bet.ts`): the plays' intents pass through it,
+ * so a second run-up strategy never opens on another ticker while the account holds one. Exits and
+ * every non-run-up intent pass unchanged.
+ *
+ * A PAUSED entry (`exitsOnly`, #4651) opens nothing new (`playbookIntents`), and its names stay its
+ * own exactly as when it runs: the base persona stays off them, buys and sells, held or flat. It
+ * records no verdict, and a paused own-rules entry is ignored altogether. With no paused entry
+ * nothing here differs from a roster without the field.
  */
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
+import type { IntradayBarsOf } from "../domain/intraday-bar.js";
 import {
   type ListedExpirations,
   type MarketContext,
@@ -27,6 +43,7 @@ import {
   observeMixedSignals,
   SILENT_MIXED_SIGNALS_SINK,
 } from "./mixed-signals.js";
+import { observationDelta } from "./observation-delta.js";
 import { mergeOptionDemand } from "./option-demand.js";
 import {
   type EnabledPlaybook,
@@ -34,6 +51,7 @@ import {
   playbookIntents,
   playbookVerdicts,
 } from "./playbook.js";
+import { oneRunUpBet } from "./run-up-bet.js";
 
 /** The option half of a composed persona: present only when an enabled playbook is an option play. */
 function optionSurface(
@@ -60,6 +78,23 @@ function optionSurface(
   };
 }
 
+/**
+ * The symbols a bot's playbooks take from its base persona: every enabled basket, running or paused,
+ * EXCEPT the base persona's own rules (`rulesOf === baseId`), whose orders are the persona's
+ * reflexes. Static on purpose: a paused playbook keeps its names held or flat, so nothing else opens
+ * a position its paused exits would then govern (#4651). The one definition — `withPlaybooks`
+ * suppresses reflexes on it, and the beta scout skips it (`run-autonomous.ts`), so the two can never
+ * disagree about which names a playbook owns.
+ */
+export function managedSymbols(baseId: string, enabled: readonly EnabledPlaybook[]): Set<string> {
+  return new Set(
+    enabled
+      // A dark playbook (`observeOnly`, #5489) holds nothing, so it takes no name from anyone.
+      .filter((e) => e.playbook.rulesOf !== baseId && !e.playbook.observeOnly)
+      .flatMap((e) => e.playbook.symbols),
+  );
+}
+
 export function withPlaybooks(
   base: Persona,
   enabled: readonly EnabledPlaybook[],
@@ -71,22 +106,78 @@ export function withPlaybooks(
    *  after this cycle's intents are fixed and its output never reaches them. Defaults to a no-op,
    *  and no playbook opts in today, so every existing call site is unchanged. */
   mixedSignalsLog: MixedSignalsSink = SILENT_MIXED_SIGNALS_SINK,
+  /** Where a refused run-up open is said (#4469 2e), once per distinct line however many cycles
+   *  repeat it. Defaults to silence; the live wiring points it at its `[playbooks]` log. */
+  refusalLog: (line: string) => void = () => undefined,
+  /** The 5-minute bars a dark playbook (`observeOnly`, #5489) records its would-be orders from. A
+   *  synchronous read of the feed's cache; asking for a ticker is what makes the feed fetch it.
+   *  Defaults to no bars, so a roster built without a feed records its verdict and nothing else. */
+  intradayBars: IntradayBarsOf = () => undefined,
 ): Persona {
   if (enabled.length === 0) {
     return base;
   }
-  const managed = new Set(enabled.flatMap((e) => e.playbook.symbols));
+  // The base persona's own rules, when enabled as a playbook — run as the base, never as a play.
+  // A live roster holds one entry per playbook (`onePerPlaybook`, applied where it resolves, which
+  // is what stops a repeated env token running any playbook twice on any bot). Dropping EVERY
+  // own-rules entry here also keeps a hand-built roster from running his rules a second time; the
+  // first one names the stamp.
+  // A PAUSED own-rules entry is ignored entirely: his reflexes run unlabelled, as before he
+  // subscribed — his rules have no basket of positions to manage apart from himself.
+  const own = enabled.find((e) => e.playbook.rulesOf === base.id && !e.exitsOnly);
+  const others = enabled.filter((e) => e.playbook.rulesOf !== base.id);
+  const running = enabled.filter((e) => !e.exitsOnly);
+  const managed = managedSymbols(base.id, enabled);
+  const attribute = (intent: OrderIntent): OrderIntent =>
+    own ? { ...intent, playbookId: own.playbook.id, playbookMode: own.mode } : intent;
+  // One run-up bet per account (#4469 2e): a refusal repeats every cycle, so each line says it once.
+  const told = new Set<string>();
+  const refuseRunUp = (line: string): void => {
+    if (told.has(line)) return;
+    told.add(line);
+    refusalLog(line);
+  };
+  // What a dark playbook would have done, said once and again only when it moves (`observation-delta`).
+  const newly = observationDelta();
   return {
     id: base.id,
     name: base.name,
     thesis: base.thesis,
     decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
-      const plays = playbookIntents(enabled, context, portfolio, calendar, events);
-      const reflexes = base.decide(context, portfolio).filter((i) => !managed.has(i.symbol));
-      observeMixedSignals(enabled, context, mixedSignalsLog);
+      const plays = oneRunUpBet(
+        others,
+        playbookIntents(others, context, portfolio, calendar, events),
+        portfolio,
+        refuseRunUp,
+      );
+      const reflexes = base
+        .decide(context, portfolio)
+        .filter((i) => !managed.has(i.symbol))
+        .map(attribute);
+      observeMixedSignals(running, context, mixedSignalsLog);
       return [...plays, ...reflexes];
     },
-    playbookVerdicts: (context) => playbookVerdicts(enabled, context.asOf, calendar, events),
+    // A paused entry records no verdict: the roll call reads a verdict as "this playbook ran".
+    playbookVerdicts: (context) => playbookVerdicts(running, context.asOf, calendar, events),
+    // What a dark playbook records. Present only when one is on the roster, read after the intents
+    // are fixed, and never handed to them: its return type is not an order.
+    ...(enabled.some((e) => e.playbook.observe)
+      ? {
+          playbookObservations: (context: MarketContext) =>
+            newly(
+              running.flatMap(({ playbook }) =>
+                playbook.observe
+                  ? playbook.observe({
+                      bars: intradayBars,
+                      asOf: context.asOf,
+                      quotes: context.quotes,
+                      calendar,
+                    })
+                  : [],
+              ),
+            ),
+        }
+      : {}),
     ...optionSurface(enabled, calendar),
   };
 }

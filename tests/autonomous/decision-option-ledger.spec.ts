@@ -191,6 +191,29 @@ describe("DecisionDb — option round trips", () => {
     expect(written).toEqual([["sauron", PUT, 205]]);
   });
 
+  it("reads its reports back after a cursor, in the order stored and bounded — the bots' replication backlog (#4650)", () => {
+    db.recordOptionLifecycle("sauron", [activity("exp-1"), activity("asn-1", { type: "OPASN" })]);
+    db.recordOptionLifecycle("beta-scout", [activity("exp-9", { symbol: LOW })]);
+    db.recordOptionLifecycle("sauron", [activity("exp-1")]); // a re-read stores nothing
+    db.close();
+    db = openDecisionDb(dbPath); // the cursor's key survives a restart
+
+    const all = db.lifecycleSince(0);
+    expect(all.map((r) => [r.personaId, r.activity])).toEqual([
+      ["sauron", activity("exp-1")],
+      ["sauron", activity("asn-1", { type: "OPASN" })],
+      ["beta-scout", activity("exp-9", { symbol: LOW })],
+    ]);
+    const [first, second] = all;
+    expect((second?.seq ?? 0) > (first?.seq ?? 0)).toBe(true);
+    expect(db.lifecycleSince(first?.seq ?? 0).map((r) => r.activity.id)).toEqual([
+      "asn-1",
+      "exp-9",
+    ]);
+    expect(db.lifecycleSince(0, 1).map((r) => r.activity.id)).toEqual(["exp-1"]);
+    expect(db.lifecycleSince(all.at(-1)?.seq ?? 0)).toEqual([]);
+  });
+
   it("reaches a database created before the lifecycle table existed", () => {
     db.close();
     const raw = new DatabaseSync(dbPath);

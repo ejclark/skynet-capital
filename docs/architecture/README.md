@@ -44,9 +44,9 @@ _Caption — system context of the runtime, from the code paths named on each el
 |---|---|---|---|---|
 | **Browser app** | React 19, TanStack Router (basepath /app) + TanStack Query, Zustand, lightweight | The observatory shell every member uses: the standings board over a seq-numbered SSE patch stream, accounts and positions, the trade ticket  | `app/src/main.tsx`, `app/src/routes`, `app/src/live` | [runtime-browser.md](runtime-browser.md) |
 | **Observatory server** | Node 24 (mise.toml), node:http, TypeScript run via tsx | Auth gate (Google/GitHub OAuth or legacy password), the in-memory ObservatoryHub folding Alpaca fills/ticks into DashboardData, the SSE boar | `src/scripts/serve-dashboard.ts`, `src/scripts/dashboard-*.ts`, `src/server` | [runtime-api.md](runtime-api.md) |
-| **Bot runtime** | Node 24, TypeScript via tsx, node:sqlite | The autonomous trader loop: one credential feeds the market clock, the 10-symbol universe price stream and a 60s news poll; ticks update mom | `src/scripts/run-autonomous.ts`, `src/scripts/autonomous-*.ts`, `src/autonomous` | [runtime-bots.md](runtime-bots.md) |
+| **Bot runtime** | Node 24, TypeScript via tsx, node:sqlite | The autonomous trader loop: one credential feeds the market clock, the price stream (the 10-symbol universe plus whatever an enabled playboo | `src/scripts/run-autonomous.ts`, `src/scripts/autonomous-*.ts`, `src/autonomous` | [runtime-bots.md](runtime-bots.md) |
 | **Observatory volume** | Fly volume skynet_data mounted at /data | Every durable member-facing record: participants.json (credentials, encrypted), allowlist.json, bot-controls.json, activity/ (trade activity | `src/storage`, `src/participants/participant-store.ts`, `src/server/auth/allowlist-store.ts` | [runtime-appvol.md](runtime-appvol.md) |
-| **Bots volume** | Fly volume skynet_bots_data at /data | What must survive a bots redeploy: momentum and sentiment windows, per-persona cooldown clocks, the beta scout's day state, the decision jou | `src/autonomous/bots-state-db.ts`, `src/autonomous/decision-db.ts`, `src/autonomous/decision-db-rows.ts` | [runtime-botvol.md](runtime-botvol.md) |
+| **Bots volume** | Fly volume skynet_bots_data at /data | What must survive a bots redeploy: momentum and sentiment windows, per-persona cooldown clocks, the beta scout's day state, the shadow-test  | `src/autonomous/bots-state-db.ts`, `src/autonomous/decision-db.ts`, `src/autonomous/decision-db-rows.ts` | [runtime-botvol.md](runtime-botvol.md) |
 | **CI and agent lanes** | GitHub Actions (ubuntu-latest), actions/setup-node from mise.toml, superfly/flyc | pipeline.yml: verify (typecheck/lint/test/commitlint) → integration tests (Playwright e2e over the offline dashboard) → arm-auto-merge (enve | `.github/workflows`, `.github/actions`, `scripts/moneypenny` | [runtime-ci.md](runtime-ci.md) |
 | **Test suites** | Rstest 0.12 (rstest.config.ts, tests/**/*.spec.ts, node env) and app/rstest.conf | The consumer that proves the runtime: unit/BDD specs import src modules directly (ports & adapters make every network seam fakeable), archit | `tests`, `app/tests`, `e2e` | [runtime-tests.md](runtime-tests.md) |
 
@@ -76,7 +76,7 @@ C4Container
     Rel(browser, api, "GET /api/* JSON, POST writes via postJson, EventSource /events?by=metric and /api/trade/events, fetch-streamed POST /api/companion/chat", "HTTPS JSON, SSE")
     Rel(api, appvol, "Reads and writes all volume-pinned stores", "fs JSON and JSONL, AES-256-GCM envelope, node:sqlite")
     Rel(bots, botvol, "Persists state tables, decision journal, JSONL audit, health stamp", "node:sqlite DatabaseSync, fs")
-    Rel(bots, api, "Polls GET /controls every 30s carrying decisionsCursor and subscriptions; GET /bot-credentials per persona when credentialsVersion changes; POST /decisions batches of up to 100 (4 MB cap). The insight relay client has no production caller", "HTTP over Fly 6PN to app.process.skynet-capital.internal:8788, shared-secret header")
+    Rel(bots, api, "Polls GET /controls every 30s carrying decisionsCursor, subscriptions, authoredShadow (the draft playbooks in a shadow test) and authoredPlays (the specs of promoted ones) and convictions (the views members handed to their bots, each with the accounts it may steer, #5482 slice 6c); GET /bot-credentials per persona when credentialsVersion changes; POST /decisions batches of up to 100 (4 MB cap); POST /authored-shadow, the report on those tests, whole each time. The insight relay client has no production caller", "HTTP over Fly 6PN to app.process.skynet-capital.internal:8788, shared-secret header")
     Rel(api, alpaca, "Accounts, positions, orders (place, replace, cancel), activities, options chains and snapshots, portfolio history; per-account trade_updates and held-symbol market-data websockets. Live mode only", "REST, WSS")
     Rel(bots, alpaca, "Market-data websocket for the 10-symbol universe, GET /clock and the 60s news poll on one shared data credential; paper orders per bot in live mode; each bot's option expiry and assignment activities every 30 minutes", "REST, WSS")
     Rel(api, anthropic, "Companion tool rounds then a streamed reply; feedback coach turns on claude-haiku-4-5", "HTTPS JSON and SSE, x-api-key")
@@ -165,7 +165,7 @@ _Caption — system context of the operating model, from the code paths named on
 | **Moneypenny event lane** | GitHub Actions trigger shim, Node ESM router (scripts/moneypenny/index.mjs), gh  | One router for every issue-driven automation: sweeps receipt issues for never-assessed events, claims feedback labels and plan ready-comment | `.github/workflows/moneypenny-events.yml`, `scripts/moneypenny/`, `scripts/event-scan.mjs` | [operating-model-mp-events.md](operating-model-mp-events.md) |
 | **Moneypenny repair lane** | GitHub Actions workflow_run + workflow_dispatch, Node ESM router (scripts/moneyp | Watches the other lanes: a failed run on main files one ci-failure issue per signature and dispatches a repair session; workflow_dispatch en | `.github/workflows/moneypenny-repair.yml`, `scripts/moneypenny/repair.mjs`, `scripts/moneypenny/repair-logs.mjs` | [operating-model-mp-repair.md](operating-model-mp-repair.md) |
 | **Human-directed lane** | GitHub Actions on issues/issue_comment/pull_request_review_comment, claude-code- | Any comment from a recognised OWNER/MEMBER/COLLABORATOR on an existing thread starts or steers a session under .github/prompts/interactive.m | `.github/workflows/claude.yml`, `.github/prompts/interactive.md` | [operating-model-claude-lane.md](operating-model-claude-lane.md) |
-| **Ops buttons** | GitHub Actions workflow_dispatch, flyctl 0.4.99, the autonomy-ops GitHub Environ | Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode, set-playbooks, set-bet | `.github/workflows/autonomy-ops.yml`, `.github/workflows/fly-logs.yml`, `.github/workflows/companion-eval.yml` | [operating-model-ops-buttons.md](operating-model-ops-buttons.md) |
+| **Ops buttons** | GitHub Actions workflow_dispatch, flyctl 0.4.99, the autonomy-ops GitHub Environ | Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode), fly-logs (filtered lo | `.github/workflows/autonomy-ops.yml`, `.github/workflows/fly-logs.yml`, `.github/workflows/companion-eval.yml` | [operating-model-ops-buttons.md](operating-model-ops-buttons.md) |
 | **Secretary digest loop** | claude.ai Routine (daily 12:00, trig_01KaMC2uR3cFW5XTUL6rzPuS), scripts/digest-s | Protects Eric's attention: when digest-scan says a digest is due (5 commits or 7 days), assemble the three tiers (needs-you, headlines, nois | `.claude/skills/secretary/SKILL.md`, `scripts/digest-scan.mjs`, `scripts/config-audit.mjs` | [operating-model-secretary.md](operating-model-secretary.md) |
 | **Graphify structural map** | graphifyy (PyPI, tree-sitter code extraction, no LLM), bash wrapper | Regenerates docs/STRUCTURE-graph.md from graphify-out/ on demand; navigation via graphify explain/affected/path/query; refresh is manual and | `scripts/refresh-graph.sh`, `docs/STRUCTURE-graph.md`, `docs/GRAPHIFY.md` | [operating-model-graphify.md](operating-model-graphify.md) |
 | **Repo ledgers and budgets (git)** | git-tracked Markdown and JSON | The durable operating state every lane reads and writes through PRs: research ledgers (docs/research/events, ~688 files), the market-event c | `docs/research/events/`, `docs/research/forward-tests/`, `src/domain/market-events/` | [operating-model-ledgers.md](operating-model-ledgers.md) |
@@ -233,7 +233,7 @@ C4Container
   Rel(github, claude_lane, "OWNER, MEMBER or COLLABORATOR comment, new or edited, on an issue or PR thread, or a new issue with @claude", "Actions, cancel-in-progress")
   Rel(claude_lane, ccp, "Interactive session", "claude-code-action")
   Rel(dependabot, github, "Opens weekly bump PRs", "pull_request opened")
-  Rel(ops_buttons, bots, "flip-mode, set-playbooks, set-beta-forcing, set-hardcore, set-cond-scout-universe, logs, status, bootstrap; never bot Alpaca credentials", "flyctl secrets set and logs through the Fly API")
+  Rel(ops_buttons, bots, "flip-mode, logs, status, bootstrap; never bot Alpaca credentials", "flyctl secrets set and logs through the Fly API")
   Rel(ops_buttons, anthropic, "companion-eval replays and LLM judge; key borrowed from the Fly app at run time", "companion-eval.yml")
   Rel(ccp, secretary, "Fires daily 12:00; gated by digest-scan --due", "Routine trig_01KaMC2uR3cFW5XTUL6rzPuS")
   Rel(secretary, ledgers, "Writes docs/digests/YYYY-MM-DD.md from TEMPLATE and ships it as an auto-merged docs PR", "ship skill")
@@ -304,6 +304,14 @@ C4Dynamic
   RelIndex(13, github, mp_events, "push main tick", "Actions event")
   RelIndex(14, mp_events, github, "Close the issue as Shipped, naming the PR", "shipped.mjs")
 ```
+
+## Component anatomy — hand-kept pages
+
+A component that cuts across containers, written from the code with `path:line` citations; the spec checks every cited line still exists.
+
+| Page | Covers | Code roots |
+|---|---|---|
+| [Playbook anatomy](playbook-anatomy.md) | What a playbook is made of, today and proposed: strategy, pair, setting, subscription, allocation; the decision surface; cycles; signals; thresholds; invariants | `src/playbooks`, `src/engine/option-guards.ts`, `src/subscriptions/strategy-budgets.ts` |
 
 ## Graphify parity
 

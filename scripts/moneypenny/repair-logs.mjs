@@ -53,6 +53,29 @@ export function sanitizeLog(raw) {
     .join("\n");
 }
 
+/**
+ * The job's own failure annotations as fold lines. When the log blob is gone, these are the only
+ * diagnosis GitHub kept (#6033: a 404 log, and "The hosted runner lost communication with the
+ * server" sitting in the annotations the whole time). Notices are dropped — the ubuntu-latest
+ * migration banner rides every job and diagnoses nothing.
+ */
+export function annotationLines(annotations) {
+  return (Array.isArray(annotations) ? annotations : [])
+    .filter((a) => a?.annotation_level === "failure" && a.message)
+    .map((a) => `##[error]${a.message}`);
+}
+
+/** The failure annotations for one job (a job id is its check-run id), or `[]`. Never throws. */
+function fetchAnnotations(jobId) {
+  try {
+    return annotationLines(
+      JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/check-runs/${jobId}/annotations`])),
+    );
+  } catch {
+    return [];
+  }
+}
+
 /** The log, or an honest sentence about why there isn't one. Never throws. */
 function fetchLog(jobId) {
   let firstError = "";
@@ -67,7 +90,8 @@ function fetchLog(jobId) {
       firstError ||= String(err.stderr || err.message).trim();
     }
   }
-  return `(log fetch failed: ${firstError})`;
+  const annotations = fetchAnnotations(jobId);
+  return [`(log fetch failed: ${firstError})`, ...annotations].join("\n");
 }
 
 /** The log for one job, sanitized, or an honest sentence about why there isn't one. */

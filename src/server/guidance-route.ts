@@ -1,6 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
-import { join } from "node:path";
 import { EdgarFilings } from "../adapters/edgar-filings.js";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
@@ -16,6 +14,7 @@ import {
 import type { GuidanceMarket, GuidanceQuote } from "../options/position-guidance-types.js";
 import { daysToExpiryFrom } from "../options/single-leg-odds.js";
 import { printEvidenceFor } from "../research/print-evidence.js";
+import { outlookLedger, symbolOutlook } from "../research/symbol-outlook.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { marketOpen } from "./desk-gate.js";
@@ -36,7 +35,6 @@ import {
   spotCheckOf,
   spotPulse,
 } from "./guidance-pulse.js";
-import { readLedger } from "./ledger-stance.js";
 import { sendJson } from "./page-shell.js";
 
 /**
@@ -74,17 +72,6 @@ interface MarketRead {
   readonly inputs: Promise<GuidanceMarket | { readonly reason: string; readonly note: string }>;
 }
 const inflight = new Map<string, MarketRead>();
-
-function ledgerFor(symbol: string, printDate: string | undefined) {
-  if (!printDate) return undefined;
-  const slug = `events/${symbol.toLowerCase()}-${printDate}-print`;
-  const path = join(process.cwd(), "docs", "research", `${slug}.md`);
-  if (!existsSync(path)) return undefined;
-  return {
-    read: readLedger(readFileSync(path, "utf8"), symbol),
-    source: `docs/research/${slug}.md`,
-  };
-}
 
 async function chainFor(
   client: AlpacaOptionsClient,
@@ -158,7 +145,10 @@ async function readMarket(
   const parity = parityImpliedSpot(parityRows("call"), parityRows("put"), spot, days(parityExp));
   const stamps = pages.flatMap((p) => p.rows.flatMap((r) => (r.quotedAt ? [r.quotedAt] : [])));
   const total = pages.reduce((n, p) => n + p.rows.length, 0);
-  const ledger = ledgerFor(symbol, print?.date);
+  // One summary per symbol (#4807): its nearest ledger — a print's or any other event's — feeds the
+  // levers below, and the summary itself rides along for the recap card.
+  const outlook = symbolOutlook(symbol, now);
+  const ledger = outlookLedger(outlook);
   const evidence = printEvidenceFor(symbol);
   // In session today's bar is a partial day; counting it would understate realized vol and flatter
   // the implied ÷ realized ratio.
@@ -205,12 +195,21 @@ async function readMarket(
     catalysts: allEvents(now)
       .filter((e) => e.symbols.includes(symbol) && !e.id.endsWith("-print") && e.date >= today)
       .map((e) => ({ date: e.date, label: e.title, source: e.source })),
+    outlook,
     ...(ledger
       ? {
           ledger: {
             buySignal: ledger.read.buySignal,
             buyConfidence: ledger.read.buySignal ? (ledger.read.confidence ?? "low") : "none",
             stance: ledger.read.stance ?? "no call on record",
+            ...(ledger.read.provesWrong
+              ? {
+                  provesWrong: {
+                    quote: ledger.read.provesWrong,
+                    ...(ledger.read.assessed ? { asOf: ledger.read.assessed } : {}),
+                  },
+                }
+              : {}),
             source: ledger.source,
           },
         }
@@ -219,7 +218,13 @@ async function readMarket(
       spotPulse(observed, now, sessionOpen),
       chainPulse(stamps, total, now, sessionOpen),
       researchPulse(
-        ledger ? { ...ledger.read, source: ledger.source } : undefined,
+        ledger
+          ? {
+              ...ledger.read,
+              source: ledger.source,
+              ...(outlook.basis?.callFrom === "ledger" ? { callUntil: outlook.until } : {}),
+            }
+          : undefined,
         spot,
         atm,
         today,

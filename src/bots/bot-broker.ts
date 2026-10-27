@@ -5,11 +5,13 @@ import {
   type OptionOrderTiming,
 } from "../adapters/alpaca-option-order-flow.js";
 import { PendingOptionOrders } from "../adapters/pending-option-orders.js";
+import type { PendingShareOrders } from "../adapters/pending-share-orders.js";
 import { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { AlpacaCredentials } from "../alpaca/credentials.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { clientOrderIdPrefix } from "../autonomous/client-order-id.js";
+import type { OrderSettlement } from "../domain/order-settlement.js";
 import { ALPACA_DATA_BASE_URL } from "../runtime/data-source.js";
 import { ALPACA_PAPER_BASE_URL, type Bot } from "./bot.js";
 
@@ -46,27 +48,37 @@ export function botOptionsClient(credentials: AlpacaCredentials): AlpacaOptionsC
  * adapter — optional, so every existing caller is unaffected (#1211 slice 2).
  *
  * An option order goes through `AlpacaOptionOrderFlow` (#4642 slice 5), which knows this bot's own
- * orders by its persona's client order id prefix. `pendingOptionOrders` comes from an owner that
- * outlives this broker (`SwappableBotBroker`), so an order still working survives a rebuild.
+ * orders by its persona's client order id prefix. `pendingOptionOrders` and `pendingShareOrders`
+ * come from an owner that outlives this broker (`SwappableBotBroker`), so an order still working
+ * survives a rebuild; `onSettled` hears what each became once the broker ended it (#4650).
  */
 export function createBotBroker(
   bot: Bot,
   deps?: {
     onSubmitted?: (info: BotOrderSubmission) => void;
     pendingOptionOrders?: PendingOptionOrders;
+    pendingShareOrders?: PendingShareOrders;
+    onSettled?: (settlement: OrderSettlement) => void;
     /** The option flow's waits — specs pass zeros so a submit runs instantly. */
     optionOrderTiming?: Partial<OptionOrderTiming>;
   },
 ): AlpacaBrokerAdapter {
   const trading = botTradingClient(bot.credentials);
   const onSubmitted = deps?.onSubmitted ? { onSubmitted: deps.onSubmitted } : {};
+  const onSettled = deps?.onSettled ? { onSettled: deps.onSettled } : {};
   const optionFlow = new AlpacaOptionOrderFlow({
     trading,
     options: botOptionsClient(bot.credentials),
     pending: deps?.pendingOptionOrders ?? new PendingOptionOrders(),
     clientOrderIdPrefix: clientOrderIdPrefix(bot.persona.id),
     ...onSubmitted,
+    ...onSettled,
     ...(deps?.optionOrderTiming ? { timing: deps.optionOrderTiming } : {}),
   });
-  return new AlpacaBrokerAdapter(trading, { ...onSubmitted, optionFlow });
+  return new AlpacaBrokerAdapter(trading, {
+    ...onSubmitted,
+    ...onSettled,
+    optionFlow,
+    ...(deps?.pendingShareOrders ? { pendingShares: deps.pendingShareOrders } : {}),
+  });
 }

@@ -6,6 +6,7 @@
 // must not jump). JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:milestones [outdir]
 import { playbooks, plays } from "./milestones-fixture.mjs";
+import { profileStubs } from "./profile-fixture.mjs";
 import { openShell } from "./shell.mjs";
 
 const step = (id, title, detail, done) => ({ id, title, detail, points: 10, route: "", done });
@@ -85,6 +86,21 @@ const learn = {
   engagementCelebrating: [],
   pendingChecks: 0,
 };
+const unlinkedLearn = {
+  ...learn,
+  linked: false,
+  points: 0,
+  rank: "Observer",
+  courses: learn.courses.map((course) => ({
+    ...course,
+    locked: course.level !== 100,
+    done: 0,
+    milestones: course.milestones.map(({ earned: _earned, ...m }) => ({
+      ...m,
+      ticket: "/app/trade",
+    })),
+  })),
+};
 const onboarding = {
   linked: true,
   viewerName: "Eric",
@@ -124,8 +140,8 @@ const ericStats = {
 };
 const networth = {
   generatedAt: "2026-09-26T00:00:00Z",
-  accounts: [{ ...eric, ...ericStats, idle: "81% idle", idlePct: 80.9 }],
-  total: { ...ericStats, idle: "81% idle", idlePct: 80.9 },
+  accounts: [{ ...eric, ...ericStats, idle: "81% idle", idlePct: 80.9, invested: "$200,632.14" }],
+  total: { ...ericStats, idle: "81% idle", idlePct: 80.9, invested: "$200,632.14" },
 };
 const fresh = {
   linked: true,
@@ -146,9 +162,20 @@ const fresh = {
 const { page, origin, shoot, close } = await openShell({
   name: "milestones",
   stubs: {
-    "/api/learn": () => (linked ? learn : { ...learn, points: 0, rank: "Observer" }),
+    // No account linked reads as the server serves it (`learnJsonView(undefined)`): nothing earned,
+    // only the first level open, so M·02 says LOCKED at 0 / 8.
+    "/api/learn": () => (linked ? learn : unlinkedLearn),
     "/api/onboarding": () => (linked ? onboarding : fresh),
-    "/api/playbooks": playbooks,
+    // The same for M·03: no account has unlocked a playbook, so the frame never shows 1 / 4.
+    "/api/playbooks": () =>
+      linked
+        ? playbooks
+        : {
+            ...playbooks,
+            linked: false,
+            unlocked: 0,
+            playbooks: playbooks.playbooks.map((p) => ({ ...p, unlocked: false })),
+          },
     "/api/trade/plays": plays,
     "/api/join": { wired: true, canAddBots: false, classes: [], timezones: [] },
     "/api/feedback": {
@@ -160,6 +187,8 @@ const { page, origin, shoot, close } = await openShell({
     },
     "/api/settings": () => ({ accounts: linked ? [eric] : [] }),
     "/api/accounts/networth": networth,
+    // The 1280 rail reads Eric's desk; an unstubbed `{}` desk is the route's error card (#5184).
+    "/api/desk/human-eric": profileStubs([eric])["/api/desk/human-eric"],
     "/api/desk/human-eric/activity": { available: true, activity: [] },
   },
 });
@@ -185,6 +214,17 @@ for (const [width, suffix] of [
     await page.waitForTimeout(150);
     await shoot(`milestones-${tag}-top-${suffix}`);
   }
+  // The chapter cards themselves, every badge state on one frame: the door's M·02 is LOCKED (◷)
+  // beside M·03's WIP (◌) — two states, two shapes (#5093). A fold holds them under the steps.
+  linked = false;
+  await page.goto(`${origin}/app/accounts?section=milestones`);
+  await page.locator(".mc-grid").waitFor({ state: "attached" });
+  await page.evaluate(() => {
+    for (const fold of document.querySelectorAll("details.ms-toc-fold")) fold.open = true;
+    document.querySelector(".mc-grid")?.scrollIntoView({ block: "center" });
+  });
+  await page.waitForTimeout(250);
+  await shoot(`milestones-cards-${suffix}`);
   // The head's height with a viewer-level section open vs. the switcher — the same, by design.
   linked = true;
   const head = async (path) => {
@@ -196,7 +236,7 @@ for (const [width, suffix] of [
     );
   };
   console.log(
-    `cockpit head at ${width}: switcher ${await head("/app/accounts?section=activity")}px · ` +
+    `cockpit head at ${width}: switcher ${await head("/app/accounts?section=ledger")}px · ` +
       `milestones ${await head("/app/accounts?section=milestones")}px · ` +
       `feedback ${await head("/app/accounts?section=feedback")}px`,
   );
@@ -204,7 +244,7 @@ for (const [width, suffix] of [
 
 await page.setViewportSize({ width: 1280, height: 900 });
 await page.goto(`${origin}/app/accounts?section=milestones`);
-await page.getByText("Your milestones", { exact: true }).waitFor();
+await page.getByRole("heading", { name: "Your milestones" }).waitFor();
 await shoot("milestones-toc");
 await page.goto(`${origin}/app/accounts?section=milestones&chapter=playbooks`);
 await page.getByText("Prove the play by hand, then arm it").waitFor();

@@ -12,3 +12,12 @@ export function readAllPages(
   fetchPage: (page: number) => RunsPage | Promise<RunsPage>,
   options?: { perPage?: number; maxPages?: number },
 ): Promise<{ runs: unknown[]; total: number; truncated: boolean }>;
+
+export function windowRanges(
+  days: number,
+  now?: number,
+): { since: string; window: string; agedOut: string };
+export function agedOutCandidates<T extends { sha: string }>(
+  runs: T[],
+  p?: { windowShas?: Set<string>; isLearned?: (sha: string) => boolean },
+): T[];

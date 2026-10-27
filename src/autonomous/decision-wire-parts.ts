@@ -25,6 +25,9 @@ import { parseLegFills, parseLegOrders, parseOptionOrderIntent } from "./decisio
  * `parseInsightRecord`'s house style (`insight-record.ts`) for input crossing the bots↔app bridge.
  */
 
+/** The longest persona id the bridge accepts, wherever on the envelope one is named. */
+export const MAX_PERSONA_ID_LENGTH = 128;
+
 /** The option half of an intent: a malformed `option` fails the whole intent (never a silent share
  *  order); a malformed `clientOrderId` is optional, so it is dropped rather than rejecting. */
 function parseOptionFields(
@@ -45,9 +48,11 @@ function parseForecast(value: unknown): OrderForecast | undefined {
     value.direction === "up" || value.direction === "down" ? value.direction : undefined;
   const invalidator = boundedString(value.invalidator);
   if (!(direction && invalidator)) return undefined;
+  const retireRule = boundedString(value.retireRule);
   return {
     direction,
     invalidator,
+    ...(retireRule ? { retireRule } : {}),
     ...(typeof value.magnitudePct === "number" ? { magnitudePct: value.magnitudePct } : {}),
     ...(typeof value.horizonMs === "number" ? { horizonMs: value.horizonMs } : {}),
   };

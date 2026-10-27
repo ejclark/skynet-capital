@@ -21,6 +21,7 @@ import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright-core";
 import { isAppShellPath, serveAppShell } from "../../src/server/app-shell-routes.ts";
+import { sceneBundle } from "../study/scene-bundle.mjs";
 import { outputDir, resolveChromium, shooter, stubBody } from "./lib.mjs";
 
 /**
@@ -29,6 +30,7 @@ import { outputDir, resolveChromium, shooter, stubBody } from "./lib.mjs";
  * @param {object} opts
  * @param {string} opts.name    the surface, used in the dist-missing message and the output dir
  * @param {Record<string, unknown | ((path: string) => unknown)>} [opts.stubs]  pathname → JSON body
+ * @param {boolean} [opts.hasTouch]  emulate a touch screen (the phone frame); default false
  * @returns {Promise<{page: import("playwright-core").Page, origin: string, out: string,
  *                    shoot: (tag: string) => Promise<string>, close: () => Promise<void>}>}
  */
@@ -36,6 +38,7 @@ export async function openShell({
   name,
   stubs = {},
   viewport = { width: 1280, height: 900 },
+  hasTouch = false,
   colorScheme = "dark",
   quality = 62,
   out = outputDir(name),
@@ -50,10 +53,9 @@ export async function openShell({
     const path = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
     if (isAppShellPath(path)) return serveAppShell(res, path, { distDir: dist });
     // The landmark portrait (#3725) embeds the real `/tower` scene. Served when the scene bundle is
-    // built (`npm run build:scene`); otherwise the frame 404s and stays the night background.
-    const scene = { "/tower": "src/three/scene.html", "/three/scene.js": "public/three/scene.js" }[
-      path
-    ];
+    // built (a redesign shoot's cache or `npm run build:scene`, scene-bundle.mjs); otherwise the
+    // frame 404s and stays the night background.
+    const scene = { "/tower": "src/three/scene.html", "/three/scene.js": sceneBundle() }[path];
     if (scene && existsSync(scene)) {
       res.writeHead(200, {
         "content-type": path.endsWith(".js")
@@ -74,7 +76,8 @@ export async function openShell({
     ...(exe ? { executablePath: exe } : {}),
     args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"],
   });
-  const page = await browser.newPage({ viewport, colorScheme });
+  // `hasTouch` so a phone-frame caller (the member study's recorder) taps instead of clicking.
+  const page = await browser.newPage({ viewport, colorScheme, hasTouch });
   await page.route("**/events*", () => {
     // Deliberately empty: never answered, never aborted. The shell's EventSource stays pending and
     // the header renders "connecting…", exactly as the hand-rolled servers left it.

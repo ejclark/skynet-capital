@@ -23,7 +23,7 @@ doing. It's for learning the plays and having fun — <b>no real money, ever</b>
 <div class="steps">
   <div class="step"><div class="step-n">1</div><div class="step-b"><h3>Sign in</h3><p>Use your Google account — the same email Eric added to the guest list. That's your seat at the table.</p></div></div>
   <div class="step"><div class="step-n">2</div><div class="step-b"><h3>Create a free Alpaca paper account</h3><p>Alpaca provides the simulated brokerage. It's free, takes a minute, and needs no funding — we'll walk you through it after you sign in.</p></div></div>
-  <div class="step"><div class="step-n">3</div><div class="step-b"><h3>Connect it</h3><p>Paste your Alpaca <b>paper</b> API keys once. We read them only to show your balance and trades on the board — nothing is ever placed on your behalf.</p></div></div>
+  <div class="step"><div class="step-n">3</div><div class="step-b"><h3>Connect it</h3><p>Paste your Alpaca <b>paper</b> API keys once. We use them to show your balance and trades on the board, and to send the orders you place. Nothing is placed without you.</p></div></div>
 </div>
 <a class="cta" href="/login">Get started → Sign in</a>
 <p class="fineprint">New to options? Once you're in, the <a href="/learn">Learn</a> section starts you on the safest play and unlocks more as you're ready.<br>

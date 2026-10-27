@@ -173,6 +173,12 @@ describe("deploy lag", () => {
       ).toThrow();
     });
 
+    it("calls a window of only rolled-back releases STALE, not 'never deployed' (#5955)", () => {
+      const r = explain({ ...current, botsReleased: "", botsChanged: [], botsRolledBack: 12 });
+      expect(r.text).toContain("bots app is STALE — the last 12 bots release(s) all failed smoke");
+      expect(r.verdict.bots).toMatchObject({ known: true, baseline: false, lagging: true });
+    });
+
     it("reports no-baseline and unknown as themselves, never as an alarm", () => {
       const none = explain({ ...current, botsReleased: "", botsChanged: [] });
       expect(none.text).toContain("no deploy baseline");
@@ -239,5 +245,37 @@ describe("deploy lag — missing inputs", () => {
     expect(r.stdout).toContain("bots app: state unknown");
     expect(r.stderr).toContain("· job scan failed");
     expect(r.stderr).toContain("bots state UNKNOWN");
+  });
+
+  // #5955: 16 bots releases failed smoke and rolled back while this read "bots app is current".
+  it("never takes a bots release whose smoke failed, or is still running, as the baseline", () => {
+    const bin = join(dir, "bin-smoke");
+    mkdirSync(bin);
+    const bots = (smoke: string) =>
+      `{"name":"release · deploy","conclusion":"success"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"success"},{"name":"Smoke test the bots release","conclusion":"${smoke}"}]}`;
+    writeFileSync(
+      join(bin, "gh"),
+      [
+        "#!/bin/sh",
+        'case "$*" in',
+        `  *commits/main*) echo '{"sha":"${HEAD}"}' ;;`,
+        `  *per_page=20*) echo '{"workflow_runs":[{"id":3,"head_sha":"${HEAD}"},{"id":2,"head_sha":"${HEAD}"},{"id":1,"head_sha":"${RELEASED}"}]}' ;;`,
+        `  *runs/3/jobs*) echo '{"jobs":[${bots("null").replace('"null"', "null")}]}' ;;`,
+        `  *runs/2/jobs*) echo '{"jobs":[${bots("failure")}]}' ;;`,
+        `  *runs/1/jobs*) echo '{"jobs":[${bots("success")}]}' ;;`,
+        `  *compare/${RELEASED}...${HEAD}*) echo '{"files":[{"filename":"src/autonomous/run.ts"}]}' ;;`,
+        "  *) exit 1 ;;",
+        "esac",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(join(bin, "gh"), 0o755);
+    const r = cli([], { path: bin });
+    expect(r.stdout).toContain("deploy is current");
+    expect(r.stdout).toContain(`since its last deploy (${RELEASED.slice(0, 7)})`);
+    expect(r.stdout).not.toContain("bots app is current");
+    expect(r.stderr).toContain(
+      "1 newer bots release(s) failed smoke and rolled back (latest 4f234c0)",
+    );
   });
 });

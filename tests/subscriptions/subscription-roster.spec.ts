@@ -1,8 +1,20 @@
 import type { PlaybookSubscription } from "../../src/domain/types.js";
 import { authoredRoster } from "../../src/playbooks/authored-play.js";
 import type { EnabledPlaybook } from "../../src/playbooks/playbook.js";
-import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
-import { mergeRosters, subscriptionRoster } from "../../src/subscriptions/subscription-roster.js";
+import {
+  COND_SCOUT,
+  CRWV_LONG_CALL,
+  CRWV_WHEEL,
+  G1_GOOG,
+  S1_NVDA,
+  TACO_DJT,
+} from "../../src/playbooks/registry.js";
+import {
+  mergeRosters,
+  pausedPlaybookIds,
+  pausedRoster,
+  subscriptionRoster,
+} from "../../src/subscriptions/subscription-roster.js";
 
 const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscription => ({
   accountId: "bot-1",
@@ -22,6 +34,18 @@ describe("subscriptionRoster", () => {
     expect(rejected).toEqual([]);
   });
 
+  // #4535 slice 3a: the shadow scout is a registered playbook, so an owner's subscription to it is
+  // no longer refused as an unknown id, and it claims no name from the bot's own rules.
+  it("resolves a shadow scout subscription without refusing it, and it claims no name", () => {
+    const { enabled, rejected } = subscriptionRoster([
+      sub({ playbookId: "COND-SCOUT", capitalAllocated: undefined, symbols: ["AAPL"] }),
+    ]);
+    expect(rejected).toEqual([]);
+    expect(enabled).toEqual([{ playbook: COND_SCOUT, mode: "standard" }]);
+    expect(COND_SCOUT.symbols).toEqual([]);
+    expect(COND_SCOUT.decide?.(undefined as never, undefined as never, [], "standard")).toEqual([]);
+  });
+
   it("resolves multiple subscriptions, preserving each one's own mode", () => {
     const { enabled } = subscriptionRoster([
       sub({ playbookId: "S1-NVDA", mode: "conservative" }),
@@ -39,6 +63,31 @@ describe("subscriptionRoster", () => {
     expect(rejected).toEqual([]);
   });
 
+  // The inline carry's replacement, bots first: a ◆ pair trades only on a conviction (#4469 c2).
+  // With neither a pointer nor an inline copy it has no check day, so it opens nothing new and its
+  // exits keep running, the same as an unmoved copy. Before, it read "conviction not stated",
+  // which never stops a pair, so it would have traded unchecked once the app stops carrying a copy.
+  it("runs a ◆ pair with neither a pointer nor a copy exits-only, and says why", () => {
+    const { enabled, steeringRefused } = subscriptionRoster([
+      sub({ playbookId: "CRWV-WHEEL" }),
+      sub({ playbookId: "CRWV-LONG-CALL", mode: "conservative" }),
+    ]);
+    expect(enabled).toEqual([
+      { playbook: CRWV_WHEEL, mode: "standard", exitsOnly: true },
+      { playbook: CRWV_LONG_CALL, mode: "conservative", exitsOnly: true },
+    ]);
+    expect(steeringRefused).toEqual([
+      "CRWV-WHEEL: its conviction is not on a view yet",
+      "CRWV-LONG-CALL: its conviction is not on a view yet",
+    ]);
+  });
+
+  it("still runs a non-◆ pair with no conviction: criterion 11 labels it, never stops it", () => {
+    const { enabled, steeringRefused } = subscriptionRoster([sub({ playbookId: "COND-SCOUT" })]);
+    expect(enabled).toEqual([{ playbook: COND_SCOUT, mode: "standard" }]);
+    expect(steeringRefused).toEqual([]);
+  });
+
   it("rejects a subscription naming a playbook id that doesn't exist in the house roster", () => {
     const { enabled, rejected } = subscriptionRoster([sub({ playbookId: "NOT-A-PLAYBOOK" })]);
     expect(enabled).toEqual([]);
@@ -46,7 +95,25 @@ describe("subscriptionRoster", () => {
   });
 
   it("is empty for an empty subscription list", () => {
-    expect(subscriptionRoster([])).toEqual({ enabled: [], rejected: [] });
+    expect(subscriptionRoster([])).toEqual({
+      enabled: [],
+      rejected: [],
+      steered: [],
+      steeringRefused: [],
+    });
+  });
+
+  // HC-SAURON was dissolved on 2026-10-16 (docs/BOTS-SAURON.md → adaptation ledger). A subscription
+  // still on file for it must name itself as rejected and leave the rest of the roster running.
+  it("names a stale HC-SAURON subscription as rejected and keeps resolving the rest", () => {
+    const stale = sub({ playbookId: "HC-SAURON" });
+    expect(subscriptionRoster([stale, sub()])).toEqual({
+      enabled: [{ playbook: S1_NVDA, mode: "standard" }],
+      rejected: ["HC-SAURON"],
+      steered: [],
+      steeringRefused: [],
+    });
+    expect(pausedRoster([{ ...stale, enabled: false }])).toEqual([]);
   });
 });
 
@@ -94,6 +161,17 @@ describe("subscriptionRoster with an authored play", () => {
     ]);
   });
 
+  it("runs an authored play carrying a conviction pointer exits-only (#5482 contract piece 2)", () => {
+    // No record steers an authored play, so the pointer can never be used, and a pointed pair never
+    // reads its inline conviction: trading it unchecked is the one state no owner chose.
+    const pointed = { ...authoredSub, convictionId: "ai-dip-2026-10" };
+    const { enabled, steeringRefused } = subscriptionRoster([pointed], authored);
+    expect(enabled).toEqual([{ playbook: authored.plays[0], mode: "standard", exitsOnly: true }]);
+    expect(steeringRefused).toEqual([
+      'U-bot-1-earnings-runup: points at conviction "ai-dip-2026-10", which does not steer U-bot-1-earnings-runup',
+    ]);
+  });
+
   it("rejects an authored id when no authored roster was supplied — today's every caller", () => {
     expect(subscriptionRoster([authoredSub]).rejected).toEqual(["U-bot-1-earnings-runup"]);
   });
@@ -121,5 +199,42 @@ describe("mergeRosters", () => {
 
   it("is empty when both base and overrides are empty", () => {
     expect(mergeRosters([], [])).toEqual([]);
+  });
+
+  // #4651: a paused subscription used to be skipped before the merge, so the house entry of the
+  // same id kept trading and Pause did nothing for any playbook the env roster names. Now it is an
+  // exits-only override, which replaces the house entry like any other.
+  it("a paused (exits-only) override replaces the house entry of the same id, in place", () => {
+    const paused: EnabledPlaybook = { playbook: S1_NVDA, mode: "conservative", exitsOnly: true };
+    expect(mergeRosters([house, houseGoog], [paused])).toEqual([paused, houseGoog]);
+  });
+});
+
+describe("pausedRoster — pause means exits only (#4651)", () => {
+  it("resolves a paused subscription to an exits-only entry in its own mode", () => {
+    expect(pausedRoster([sub({ enabled: false, mode: "conservative" })])).toEqual([
+      { playbook: S1_NVDA, mode: "conservative", exitsOnly: true },
+    ]);
+  });
+
+  it("never resolves an enabled subscription, or an id no playbook answers to", () => {
+    expect(pausedRoster([sub(), sub({ playbookId: "NOT-A-PLAYBOOK", enabled: false })])).toEqual(
+      [],
+    );
+  });
+});
+
+describe("pausedPlaybookIds", () => {
+  it("names an id the account holds a switched-off subscription to", () => {
+    expect(pausedPlaybookIds([sub({ enabled: false }), sub({ playbookId: "G1-GOOG" })])).toEqual(
+      new Set(["S1-NVDA"]),
+    );
+  });
+
+  it("never names an id with no subscription, or one that also has an enabled subscription", () => {
+    expect(pausedPlaybookIds([])).toEqual(new Set());
+    expect(pausedPlaybookIds([sub({ enabled: false }), sub({ mode: "aggressive" })])).toEqual(
+      new Set(),
+    );
   });
 });

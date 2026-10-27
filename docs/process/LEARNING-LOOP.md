@@ -12,12 +12,13 @@ Five moves, repeating: **thin slice → pressure test → find the weakness → 
 enhance the process → back-test.** A loop is "done" for now when the back-test closes clean; it
 reopens the next time the domain needs re-validating, at whatever cadence that domain calls for.
 
-## The anatomy — thirteen fields, nine custom, four fixed
+## The anatomy — fourteen fields
 
 The first nine are **custom-catered per instance** — they are the actual subject matter, different
-every time. The last four are **fixed mechanism** — every instance reuses the same artifacts for
+every time. The next four are **fixed mechanism** — every instance reuses the same artifacts for
 capture and scheduling, which is what makes this a *loop* (compounding across instances) rather than
-an ad hoc one-off process reinvented each time.
+an ad hoc one-off process reinvented each time. The fourteenth (2026-10-18) is both: the iteration
+budget is custom, and the per-iteration record is fixed, so effort compares across loops.
 
 | # | Field | What it answers | Custom or fixed |
 |---|---|---|---|
@@ -31,9 +32,10 @@ an ad hoc one-off process reinvented each time.
 | 8 | **Cycle gate** | The explicit condition that must hold before scaling from thin slice to the full run. | Custom |
 | 9 | **Kill rule** | The dated observation that ends or pivots the loop — `closed` is not the only way out, and a loop with no way to die runs on as ceremony. | Custom |
 | 10 | **Owning issue** | The GitHub plan issue tracking the loop's state across cycles — one loop, one issue, reused every cycle. Its state block holds the current status. | Fixed |
-| 11 | **Next check** | A date the next result will be visible, kept in the list below, where the daily digest flags it once it arrives. | Fixed (location), custom (date) |
+| 11 | **Next check** | A date the next result will be visible, kept in the list below, where the push-tick check (`scripts/loop-check.mjs`) posts it once it arrives. | Fixed (location), custom (date) |
 | 12 | **Weakness capture** | A caught flaw is banked in `docs/LESSONS.md` via `/retro` — root cause, detection signal, prevention. Never only a chat message. | Fixed |
 | 13 | **Process artifact** | The refined, reusable procedure lives in one versioned file (`docs/grind/*.instructions.md`, or the nearest equivalent for a non-grind domain) that the next cycle edits in place, never a fresh ad hoc prompt re-deriving what's already known. | Fixed |
+| 14 | **Iterations** | The budget (how many cycles of the five moves, as Eric dials it — "commanding x number of iterations is a normalized way to instruct the degree of effort", 2026-10-18) and, per iteration, a row on the owning issue: its cost (tokens · dollars · wall time) and how far it moved the aim's number. Stop early, and say so, when an iteration moves the number less than the loop states as worth an iteration; never spend the rest of a budget because it is there. | Custom (budget), fixed (the record) |
 
 **Why 11–13 are fixed, not a choice per loop:** a check with no date is never made; a lesson with
 nowhere durable to live gets re-learned; a procedure re-typed from memory each cycle drifts and
@@ -71,6 +73,62 @@ from, not designed in the abstract first. Field by field:
 | Next check | none — ended; no prospective results exist yet to check |
 | State | `pivoted` (#3300, 2026-09-18) — was `blocked-on-fix`, which went stale when the loop quietly stopped. That staleness is why fields 4, 9 and 11 exist |
 
+## The loop census — does the system improve itself?
+
+Eric, 2026-10-18: *"My intent is to increase agentic orchestration process capable of iteratively
+driving self improvement, self learning, self healing systems."* And the same day: *"we should be
+looking for ways to automate away Manual checks; that's the only way to scale."* A learning loop
+above is one experiment; a **loop census** audits every loop the system runs — gates, lanes, bots,
+studies, this registry — for the stage a person still has to do.
+
+**Five stages, four grades.** Every loop has **sense** (a signal is noticed) → **decide** (it is
+judged) → **act** (something changes) → **verify** (the change is confirmed) → **remember** (it is
+banked so the next cycle starts ahead). Grade each stage `auto` (runs on a schedule or event, no
+session) · `session` (an agent session runs it, started automatically) · `human` (someone must
+remember) · `missing`.
+
+**Two rules decide what to build.**
+
+1. **A recurring manual check is the first thing to automate.** Rank by how often the human stage
+   recurs × what it costs when it is late. Automate the *check*, keep the *decision* where it
+   belongs: a taste call or the irreversible class stays Eric's, but its check still runs itself
+   and arrives pre-verified (`CLAUDE.md` → *When Eric's action IS needed*).
+2. **Automate an act only behind a mechanical verify** — a spec, a gate, a script's number, a filed
+   falsifier. An automated check with no oracle is false assurance (`docs/members/study/README.md`:
+   the crawl passed every screen the owner then found broken). Where verify is judgment, the act
+   stays a session and the census says so.
+
+**Every exercise ends with one census line.** An audit, a study, a scenario run, a retro: name the
+stage of which loop a person still had to do, and route the cheapest one — a build, an issue, or a
+row here — and say how many iterations it took and what each cost (field 14). That is how usability
+work also improves the process that ran it, and how its effort becomes comparable across loops.
+
+**The first census (2026-10-18)** — four read-only auditors, one per family. The shared finding:
+the fixes and gates exist; **the trigger is missing**. Advisory output nobody reads, checks that wait
+for someone to remember, overdue work that goes quiet.
+
+| Family | Worst open stage, measured | What happened |
+|---|---|---|
+| Orchestration | Plan cap: 9 of 10 "Waiting" plans had nothing pullable, so every fresh plan (a P1 among them) was refused | built: a started plan holds a seat only while a lane could pull its next work |
+| Orchestration | This registry: 3 checks overdue, owners of 14 of 16 rows closed, none surfaced in 7 digests | built: `scripts/loop-check.mjs` posts due checks on the push tick (#5724) |
+| Bots | A stalled or halted bot is caught only when someone notices no trades (LESSONS: days, then 45 min) | built: an alert while the market is open (#5734) |
+| Bots | "Daily" loss breaker measured loss since the process started | fixed (#5723) |
+| Product/UX | Journeys never run in CI (5 failing on main); crawl 22 days old; judge never run | built: the 5 journey steps fixed (one real contradiction found, filed and fixed by the lane in under an hour: #5731 → #5737) and loop freshness in the daily config audit; the CI job is a protected-path ask (#5730) |
+| Engineering | 11 of 14 debt budgets over, no trigger for the athletes; 14 unlearned incidents ageing out | filed with the follow-ups |
+
+**2026-10-26 — the first surge.** Three loops a session ran by hand that day, each now a
+deliverable. The stage a person still did is named first.
+
+| Loop | Stage still by hand | Now automated by |
+|---|---|---|
+| Clear-path flip (`docs/ISSUES.md` → *Who may flip it*) | decide + verify: a session judged 21 issues and recruited refuters itself; 2 flips lacked `feedback` and sat unbuilt (lane fixed by #6219) | `.claude/workflows/clear-path-flip.js` (judge → two refuters) and `scripts/clear-path-post.mjs` (posts survivors only) |
+| Post-merge correctness audit | sense + verify: a session read 11 merged builds and re-checked its own findings | `.claude/workflows/post-merge-audit.js` (reviewer per PR → trace + reproduce refuters) |
+| The surge itself | remember: the dial, the pre-reset revert, the relay and resume traps lived in one session's context | `.claude/skills/surge/SKILL.md` |
+
+Still human: the *sense* that quota is spare (Eric's phrase starts it, by rule — surge is his) and
+the *act* of filing confirmed audit findings, which stays a session step until a finding's shape is
+stable enough to file mechanically.
+
 ## Starting a new loop
 
 1. Fill fields 1–9 before running anything — if the aim, baseline, prediction, pressure test,
@@ -90,22 +148,33 @@ from, not designed in the abstract first. Field by field:
 
 ## Loops running now
 
-One row per loop. The daily digest (`node scripts/doctrine-scan.mjs --due`, run by the
-secretary-digest Routine) lists any row whose **Next check** date has arrived while its **State**
-is still live, under Needs-you. Settle a check by doing it, then moving the date forward — or by
+One row per loop. `node scripts/doctrine-scan.mjs --due` lists any row whose **Next check** date
+has arrived while its **State** is still live (`source: "loop-list"`). The secretary-digest
+Routine's stored prompt does not run that scan (checked 2026-10-19), so the push-tick check below is
+what actually surfaces a due row. Settle a check by doing it, then moving the date forward — or by
 ending the loop (`closed` · `killed` · `pivoted` · `replaced`). A cell that isn't a date is never
 flagged, so point it at the loop's own scanner when one already exists rather than double-flag, or
 name the event that triggers the check. A row is never deleted — an ended loop keeps its row with an
 ended State (same rule as `docs/READERS.md`). Keep the column names: `scripts/loop-list-decide.mjs`
-finds columns by header. Seeded by #4060; filled from #3955's audit by #4059.
+finds columns by header.
+
+**The checks run themselves** (2026-10-18). On every push to main, `scripts/loop-check.mjs --post`
+(called from `scripts/moneypenny/index.mjs --audit`) posts one comment per running row whose Next
+check has arrived, once per date: the row's question, the falsifier it is judged against, and — when
+the question names `npm run <x>` — that command's output. **A posted check nobody settles is routed, not left** (2026-10-26, #5724
+retro): if a row still carries the same date 3 days after its post, the tick opens or updates one
+`feedback` issue listing those rows (filed `ready`, never `needs-eric`), and the build lane records
+each verdict and moves the date or ends the loop — never one whose owning issue is open. A Next
+check cell must *lead* with its date; one that buries a date after prose fails
+`tests/scripts/loop-list-decide.spec.ts`. **Check results post to:** #5724
 
 | Loop | The question | Owning issue | State | Next check |
 |---|---|---|---|---|
 | Bot doctrine checks | Does each bot's written doctrine still match its code? | #2287 | running | its dossier ledger (`docs/BOTS-SAURON.md`), flagged by the same scan |
 | Mobile-first bet | Is expanding a curated phone view faster than retrofitting a desktop one? | `CLAUDE.md` → Mobile-first | running | 2026-10-31 — wrong if the next three phone-first surfaces each needed a desktop re-layout PR |
-| Research scorecard | Do high-confidence forward-test calls pass more often than medium ones? (If not, confidence is not telling us anything about size.) `npm run research:scorecard` | #4061 | running | 2026-10-31 — re-run and post on #4061; baseline 2026-09-30: high 16 of 25 decided pass, medium 21 of 33, both 64% |
-| Did the fix hold? | Do gate-type LESSONS preventions recur less than doctrine-only ones? `npm run lessons:held` | #4062 | running | 2026-10-21 — re-run and post on #4062; baseline 2026-09-30: gate or script 6 of 55 recurred (11%), doctrine 0 of 9, ledger-only 2 of 7 (29%) |
-| Bottleneck before/after | Does each `bottleneck` fix move the number it named? `npm run bottleneck:baseline` | #4063 | running | 2026-10-21 — re-run; recount #3926 for its After line; baseline 2026-09-30: 1 of 40 carry a Before number (#3926: 63 "Failed again" comments in 7 days, 4 fixes stuck 21–25 days) |
+| Research scorecard | Do high-confidence forward-test calls pass more often than medium ones? (If not, confidence is not telling us anything about size.) `npm run research:scorecard` | #4061 | running | 2026-10-31 — re-run; baseline 2026-09-30: high 16 of 25 decided pass, medium 21 of 33, both 64% |
+| Did the fix hold? | Do gate-type LESSONS preventions recur less than doctrine-only ones? `npm run lessons:held` | #4062 | running | 2026-11-21 — re-run. 2026-10-22 (#5724): mechanized 10 of 73 recurred (14%), doctrine 0 of 10, ledger-only 2 of 9 (22%): gate-type does not yet recur less than doctrine, and doctrine's 10 are too few to say it is better. Baseline 2026-09-30: gate or script 6 of 55 (11%), doctrine 0 of 9, ledger-only 2 of 7 (29%) |
+| Bottleneck before/after | Does each `bottleneck` fix move the number it named? `npm run bottleneck:baseline` | #4063 | running | 2026-11-21 — re-run. 2026-10-22 (#5724): 24 of 64 carry a Before number, none scored yet, 5 closed with no After. #3926 closed 2026-10-19 with no After line, and its "Failed again" count can't be recounted cleanly until #5955 (the bots outage, which floods the same comment) closes. Baseline 2026-09-30: 1 of 40 carry a Before number (#3926: 63 "Failed again" comments in 7 days, 4 fixes stuck 21–25 days) |
 | Readiness rubric | Do items the rubric flags deliver worse than unflagged ones? | #4056 | running | 2026-10-31 — kill everything but the parked check if flagged and unflagged land within 5pp |
 | Handoffs, not lanes, bind delivery | Is ownership of each handoff the limit, rather than build capacity? | #4056 | running | 2026-10-31 — wrong if ready items wait >24h median for a free lane while the ready queue is non-empty |
 | Ready blocks only on parking | Does refusing ready-while-parked stop parked builds without refusing real ones? | #4056 | running | 2026-10-31 — wrong if any lane claims a parked item, or the guard refuses >2 legitimate claims |
@@ -115,9 +184,11 @@ finds columns by header. Seeded by #4060; filled from #3955's audit by #4059.
 | No deploy probe yet | Does skipping a post-deploy outcome probe and member notifications still cost nothing? | #4056 | running | 2026-11-15 — wrong if ≥5 genuine 7-day reworks were deploy-only faults, or member filings resume at ≥2/week |
 | Priority only with a reader | Do lanes read the priority Eric sets? | #4056 | running | 2026-10-31 — wrong if `npm run rank` ships as the first reader and Eric's hand-set Priority is still unseen by lanes |
 | No age-based closing | Are old entries still wanted, so an age expiry would bury them? | #4056 | running | 2026-11-15 — wrong (age expiry OK, IDEAS.md only) if the 30-oldest probe finds <10% still wanted and none re-dictated; 2026-09-30 sweep: 14 retired, 16 parked, none expired by age alone |
-| Lane work leaves Needs-you | Does the digest's Needs-you hold only decisions Eric alone can make? | #4056 | running | 2026-10-15 — wrong if that day's digest lists retro, repair or code-applied needs-eric items under Needs-you |
-| Issue-centric orchestration | Do #3818's dated falsifiers hold? | #3818 | running | 2026-10-10 — first falsifier; the second is 2026-10-31 |
+| Lane work leaves Needs-you | Does the digest's Needs-you hold only decisions Eric alone can make? | #4056 | closed | none — ended 2026-10-26: held. The 10-15 digest's Needs-you had 3 items, none of them retro, repair or code-applied: a platter merge (a workflow file), a design pick, and a gate-budget fork. #4056 is closed and the check was a single date. |
+| Issue-centric orchestration | Do #3818's dated falsifiers hold? | #3818 | running | 2026-10-31 — second falsifier: wrong if the median assignment→reply is ≥24h, or a `needs-session` remainder waits >24h three times. The 10-10 falsifier held: #3665's continued slices shipped and the plan closed 10-02, with nothing idle 48h. |
 | Research kill list | Does each killed hypothesis stay dead? (`docs/research/multi-symbol-sweep.md`) | #3955 | running | on each sweep Eric names tickers for — a kill reopens only on its stated condition |
 | Capability adoption | Does a full-adoption pass cost what we predicted? (#3748, #3769 differed 13× in tokens) | #3769 | running | before the next run — write its predicted token cost first |
+| steering-touch-points | Does one page at 8am and 4pm get Eric's decisions answered faster, in ≤45 active minutes a weekday? (`.claude/skills/steer`) | #5056 | running | 2026-11-09 — re-judge over the 10 weekdays after pages resume; wrong if pages are submitted on ≥8 of 10 and a Needs-you decision still waits a median of ≥6 days. 10-24 verdict: not fired, and not tested either. Pages were answered on 5 of 10 weekdays (10-12 to 10-16, none 10-19 to 10-23, while Eric was away), and needs-eric waited a median of 7.5 days over 12 open (2026-10-26). #5056 owns whether to keep the loop. |
+| Member studies | Do simulated members find what a real member struggled with, without seeing it — and anything structural he missed? (`docs/members/study/README.md`) | #4943 | running | 2026-11-09 — the next fixed-build control at a fresh pin, graded (#4943's state block). The 2026-10-17 date passed unrun: #5216, #5218 and #5155 closed 10-11, but the re-run needs Eric's live session. on a pass, scaling to Trade goes to Eric. Eric chose "revise the method first" on 2026-10-10; first round 2026-10-09: recall 12 of 12, 66 structural, fixed-build control failed (`docs/members/study/profile-2026-10/readout.md`); its re-run 2026-10-11 failed 2 of 7 (`docs/members/study/README.md` → Lessons) |
 | Bot readiness evals | Does each bot pass its fixed scenario set? (`src/evals/`) | README phase 6 | blocked-on-fix | when the evals are live-verified — the bot learning loop's own plan owns it |
 | Haiku eval replay | Can Haiku/Sonnet do Layer 1 research as well as Opus? | #3264 | pivoted (#3300) | none — ended; worked example above |

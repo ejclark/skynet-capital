@@ -330,16 +330,10 @@
   color: var(--muted);
   font-size: var(--text-xs);
 }
+/* Also sizes a close/roll outcome, an InlineResult whose ✓ / ✕ comes from inline-result.css —
+   this sheet loads after that one, so the row's size wins over the result line's 12px. */
 .tkt-close-note {
   font-size: var(--text-sm);
-}
-/* The close line's refusal already carries a literal cross; its success needed the matching tick,
-   or "filled" and "refused" differed by hue alone (docs/BRAND.md -> Accessibility). */
-.gate-ok {
-  color: var(--pos);
-}
-.gate-ok::before {
-  content: "\2713\00a0";
 }
 @media (max-width: 700px) {
   .tkt-fields {
@@ -486,6 +480,10 @@
   flex-basis: 100%;
   font-size: var(--text-sm);
   color: var(--muted);
+}
+/* The picked strike against the opened row's 20-day range and busiest strike (#5070). */
+.tkt-roll-note {
+  color: var(--text);
 }
 /* Position Statement vocabulary on the option positions card (#3407 P2 slice 3): DTE and an
    ITM/OTM word chip under the name, the holding's greeks in the num register; ITM carries a

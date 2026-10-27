@@ -14,7 +14,7 @@ import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/typ
 import type { JsonResponse } from "../../src/http/fetch-json.js";
 import { decisionCyclesView } from "../../src/observatory/decision-json-view.js";
 import type { Persona } from "../../src/personas/persona.js";
-import { aContext } from "../support/builders.js";
+import { aContext, aSubscription } from "../support/builders.js";
 
 /**
  * #4655 end to end: a share order Alpaca takes but never confirms a fill for — queued after hours,
@@ -80,6 +80,9 @@ class NeverBuys implements Persona {
 }
 
 const RISK = { maxPositionPct: 0.5 };
+/** The scout's host bot subscribed to it, uncapped, in the mode its picks always carried — the
+ *  scout exactly as it ran before only subscribed playbooks could open (#4642 slice 10). */
+const SCOUT_ON = () => [aSubscription("host", "BETA-SCOUT", { mode: "conservative" })];
 
 describe("a share order the broker never confirmed (#4655)", () => {
   let dir: string;
@@ -185,6 +188,7 @@ describe("a share order the broker never confirmed (#4655)", () => {
         managedSymbols: new Set(),
         risk: RISK,
         mode: "live",
+        subscriptions: SCOUT_ON,
       },
       onDecision: (r) => {
         decisions.push(r);

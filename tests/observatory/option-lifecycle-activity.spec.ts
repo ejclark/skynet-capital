@@ -1,6 +1,7 @@
 import {
   lifecycleLedgerRecord,
   lifecycleOrderId,
+  lifecycleTypeOf,
 } from "../../src/observatory/option-lifecycle-activity.js";
 import type { NormalizedLifecycleActivity } from "../../src/trading/option-lifecycle.js";
 
@@ -45,5 +46,18 @@ describe("lifecycleLedgerRecord (#468 criterion 6)", () => {
       "ann",
     );
     expect(settled).toMatchObject({ status: "option settlement", price: 150, side: "buy" });
+  });
+});
+
+describe("lifecycleTypeOf (#4650)", () => {
+  it("reads each of the four events back off the line the ledger holds", () => {
+    for (const type of ["OPEXP", "OPASN", "OPEXC", "OPTRD"] as const) {
+      expect(lifecycleTypeOf(lifecycleLedgerRecord({ ...base, type }, "ann"))).toBe(type);
+    }
+  });
+
+  it("says nothing about an order's line, even one whose status reads like an event", () => {
+    expect(lifecycleTypeOf({ orderId: "o-1", status: "filled" })).toBeUndefined();
+    expect(lifecycleTypeOf({ orderId: "o-2", status: "assigned" })).toBeUndefined();
   });
 });

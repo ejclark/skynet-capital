@@ -10,12 +10,22 @@ import type { ParticipantProgression, ProgressionService } from "../server/progr
 import type { ReadRoadmap } from "../server/roadmap.js";
 import { MAX_ISSUES_PER_LOOKUP, type ReadWorkStatus } from "../server/work-status.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
+import {
+  type ChatConvictionDraft,
+  CONVICTION_TOOL_DEFS,
+  CONVICTION_TOOL_NAMES,
+  type CompanionConvictions,
+  type ConvictionToolName,
+  runConvictionTool,
+} from "./companion-convictions.js";
 
 /**
- * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of seven read-only lookups plus one
- * hand-off (`draft_feedback`, which files nothing: it hands the rail a draft the member still has
- * to send), and nothing else. This is the structural half of the "never fires an order" invariant (the other
- * half is the system prompt): `runCompanionTool` is a `switch` over eight literal string cases
+ * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of eight read-only lookups plus two
+ * hand-offs (`draft_feedback`, which files nothing: it hands the rail a draft the member still has
+ * to send; `draft_conviction`, which saves nothing: it hands the rail a view's card the member
+ * still has to tap — `companion-convictions.ts`), and nothing else. This is the structural half of
+ * the "never fires an order" invariant (the other
+ * half is the system prompt): `runCompanionTool` is a `switch` over ten literal string cases
  * with no default fallthrough to anything callable, so there is no code path here — not a typo,
  * not a hallucinated tool name, not a crafted `tool_use` block — that reaches an order-placing
  * function. This file does not import `trade-service.ts`, `option-trade-service.ts`,
@@ -49,6 +59,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_work_status",
   "get_roadmap",
   "draft_feedback",
+  ...CONVICTION_TOOL_NAMES,
 ] as const;
 
 /** What `draft_feedback` carries to the rail — a filing the MEMBER still has to send. */
@@ -58,13 +69,14 @@ export interface FeedbackDraft {
   readonly details: string;
 }
 
-const KINDS = new Set(["bug", "feature", "idea"]);
+const FEEDBACK_DRAFT_KINDS = new Set(["bug", "feature", "idea"]);
 
 /** The model's draft, bounded and typed — anything else is refused as no draft at all. */
 export function parseFeedbackDraft(input: unknown): FeedbackDraft | undefined {
   if (!input || typeof input !== "object") return undefined;
   const raw = input as { kind?: unknown; title?: unknown; details?: unknown };
-  const kind = typeof raw.kind === "string" && KINDS.has(raw.kind) ? raw.kind : "idea";
+  const kind =
+    typeof raw.kind === "string" && FEEDBACK_DRAFT_KINDS.has(raw.kind) ? raw.kind : "idea";
   const title = typeof raw.title === "string" ? raw.title.trim().slice(0, 80) : "";
   const details = typeof raw.details === "string" ? raw.details.trim().slice(0, 4000) : "";
   if (!(title && details)) return undefined;
@@ -214,6 +226,7 @@ export const COMPANION_TOOL_DEFS = [
       required: ["kind", "title", "details"],
     },
   },
+  ...CONVICTION_TOOL_DEFS,
 ] as const;
 
 /** What the tool dispatcher needs to answer honestly — all read accessors, all optional so a
@@ -241,6 +254,11 @@ export interface CompanionDeskDeps {
   /** #3952 slice 3: what is coming — the open plan queue grouped Now / Next / Later, same token.
    *  Optional — without it `get_roadmap` says "not available", never guesses. */
   readonly readRoadmap?: ReadRoadmap;
+  /** #5482 criterion 9: the session's own conviction reads, bound per turn by the chat route (they
+   *  need the session, which boot wiring does not have). Reads only — no save, no hand-over. */
+  readonly convictions?: CompanionConvictions;
+  /** Where a drafted view's card goes — the rail's hand-off hook, never a write. */
+  readonly onConvictionDraft?: (drafted: ChatConvictionDraft) => void;
 }
 
 export type CompanionToolResult =
@@ -387,7 +405,7 @@ async function roadmapResult(read: ReadRoadmap | undefined): Promise<CompanionTo
 }
 
 /**
- * Run ONE of the eight allow-listed tools. Any other name — including anything a compromised or
+ * Run ONE of the ten allow-listed tools. Any other name — including anything a compromised or
  * confused model might invent, like `place_order` or `submit_trade` — falls through to the
  * refusal below and touches nothing. `participantId` is the SESSION's own linked desk, resolved
  * upstream (`resolveOwnerId`) — never a client-supplied id, so this can never be pointed at
@@ -441,6 +459,17 @@ export async function runCompanionTool(
       return workStatusResult(deps.readWorkStatus, input);
     case "get_roadmap":
       return roadmapResult(deps.readRoadmap);
+    case "get_my_convictions":
+    case "draft_conviction":
+      // Desk tools: offered only with a linked desk, and refused the same way without one.
+      return participantId
+        ? runConvictionTool(
+            name as ConvictionToolName,
+            deps.convictions,
+            deps.onConvictionDraft,
+            input,
+          )
+        : { ok: false, error: "no linked desk" };
     default:
       // Structural refusal — there is no branch above that reaches a write, so an unrecognized
       // name (a typo, a hallucination, an adversarial member steering the model) lands here and

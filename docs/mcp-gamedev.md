@@ -1,50 +1,55 @@
-# Game-dev MCP tooling (Babylon.js)
+# Game-dev MCP tooling (three.js)
 
-Three MCP servers wired in [`.mcp.json`](../.mcp.json) for 3D/game-dev work on the Babylon scene
-(`src/three/scene.html`). They load at **session start** and each needs your one-time approval —
-adding a third-party MCP server runs its code, so it's a supply-chain decision that stays yours.
+Two MCP servers wired in [`.mcp.json`](../.mcp.json) for 3D work on the hero scene (`src/three/`,
+three.js since #3718). Both launch over `npx`, so they start the same way on Eric's Mac and in a
+Claude Code cloud session — no local server, no pre-session provisioning. They load at **session
+start** and each needs a one-time approval (`/mcp`, or `enabledMcpjsonServers` in
+`.claude/settings.local.json`) — adding a third-party MCP server runs its code, so that stays Eric's.
 
-## Enable them (your step, once)
+## 1. `context7` — version-matched library docs (the 3D docs tool)
 
-Project MCP servers are **opt-in**. In a session, run `/mcp` and approve `context7` + `playwright`
-(and `babylon-mcp` only if you're running the bridge — see caveat). Or set in
-`.claude/settings.local.json`:
+`@upstash/context7-mcp`. Answers API questions from current docs instead of training-data memory.
+For the scene, resolve `Three.js` → library `/mrdoob/three.js`, then query one concept at a time
+(`ShaderMaterial` uniforms, `EffectComposer` passes, `InstancedMesh`). The `render-alchemist` agent
+has both context7 tools in its allowlist; other agents reach it only if their `tools:` line names
+`mcp__context7__resolve-library-id` and `mcp__context7__query-docs`.
 
-```json
-{ "enabledMcpjsonServers": ["context7", "playwright"] }
-```
+- **The API key is optional.** `.mcp.json` passes `${CONTEXT7_API_KEY:-}`: unset, it expands to an
+  empty string and the server runs keyless at the lower rate limit. The `:-` matters — a bare
+  `${CONTEXT7_API_KEY}` with the variable unset is passed through as that literal text, which
+  context7 rejects with "Invalid API key" on every call (`docs/vendor/claude-code/mcp.md` →
+  *Environment variable expansion*). To raise the limit, set a real `ctx7sk-…` key as an
+  environment secret.
 
-They activate on the **next** session (MCP servers are loaded at startup, not mid-session).
+## 2. `playwright` — drive headless Chromium (the visual iterate loop)
 
-## The three servers
+`@playwright/mcp` (Microsoft), pinned to the **pre-installed** Chromium at `/opt/pw-browsers/chromium`
+(`--executable-path` stops it downloading; the env sets `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`). Lets
+Claude navigate the served scene, screenshot the canvas, and inspect the page as MCP calls.
 
-### 1. `context7` — version-pinned docs (adopt: high value here)
-`@upstash/context7-mcp`, launched via `npx`. Injects precise, version-matched Babylon.js / WebGL /
-WebGPU API docs so generated code doesn't drift to stale syntax. No live scene needed — pure win for
-API accuracy on a large, fast-moving engine.
-- **Optional API key** for higher rate limits: set `CONTEXT7_API_KEY` as an environment secret (same
-  pattern as the signing key). Works without one at lower limits. `.mcp.json` references
-  `${CONTEXT7_API_KEY}`; leave it unset to run keyless.
+- Serve the scene first: `npm run dev:tower` (rebuilds the bundle on save and serves
+  `http://127.0.0.1:8931/tower.html`; `docs/RUNNING.md` → *Iterating on the `/tower` 3D scene*), then
+  point the browser at that URL.
 
-### 2. `playwright` — drive headless Chromium (adopt: our visual iterate loop)
-`@playwright/mcp` (Microsoft), launched via `npx` against the **pre-installed** Chromium at
-`/opt/pw-browsers/chromium` (`--executable-path` pins it so it never tries to download — the env sets
-`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`). Lets Claude navigate the served scene, screenshot the canvas,
-and inspect the page as MCP calls instead of bespoke scripts.
-- Serve the scene first: `npx tsx src/three/serve-scene.ts` (then point the browser at the local URL).
+## The loop
 
-### 3. `babylon-mcp` — real-time scene control (⚠️ deferred / experimental here)
-`http://localhost:4000/mcp` (immersiveidea server; setup in `scripts/setup-babylon-mcp.sh`).
-**Honest caveat:** these scene-control MCPs are built for a **live browser you have open locally**,
-bridged over WebSocket — Claude pokes meshes/lights and *sees* them react. This environment is
-**headless and remote**: there's no live scene to poke and no live view, so in practice the
-inspect-and-iterate loop is **`playwright` (drive + screenshot headless Chromium) + `context7` (API
-accuracy)**, which deliver the same outcomes here. Leave `babylon-mcp` disabled unless/until we build
-a headless-scene + WS bridge and prove it beats the screenshot loop.
+1. Edit `src/three/`.
+2. Serve it (`npm run dev:tower`); drive and screenshot with `playwright`.
+3. Check API calls against `context7` (`/mrdoob/three.js`).
+4. Iterate on the screenshots.
 
-## The practical loop (what actually works headless)
+## No `babylon-mcp`
 
-1. Edit `src/three/scene.html`.
-2. Serve it (`serve-scene.ts`), drive + screenshot via the `playwright` MCP.
-3. Use `context7` to keep Babylon API calls version-correct.
-4. Iterate on the screenshots. (No real-time scene poking — that's the local-desktop paradigm we don't have.)
+`.mcp.json` carries no `babylon-mcp` (`immersiveidea/babylon-mcp`, a local semantic-search index of
+the Babylon.js docs and source at `http://localhost:4000/mcp`), and one does not belong there:
+
+- **It documents an engine the scene does not use.** The scene is three.js (#3718); no `@babylonjs/*`
+  package is in `package.json`.
+- **A cloud session cannot reach a local server.** Tools load at session start and each cloud session
+  gets a fresh container, so a server provisioned inside a session only serves the *next* one on that
+  machine, and every cloud session start fails with `ECONNREFUSED`. The index is also ~1GB+.
+- **No agent calls it.** None of the forge agents' `tools:` allowlists names it.
+
+The setup scripts are in git history (`git log --diff-filter=D -- scripts/setup-babylon-mcp.sh`) if a
+Babylon surface ever returns; even then, use context7's Babylon.js library before re-adding a local
+server.

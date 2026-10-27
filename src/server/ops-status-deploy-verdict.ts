@@ -71,14 +71,21 @@ export interface BotsDeployLagVerdict {
 }
 
 /** Ported from `botsDeployLag()` in `scripts/deploy-lag.mjs`. `botsReleased`/`botsChanged`
- *  `undefined` = the scan itself failed; `""`/`[]` = scanned clean, no baseline yet. */
+ *  `undefined` = the scan itself failed; `""`/`[]` = scanned clean, no release that passed smoke.
+ *  `botsRolledBack` counts the newer releases that failed smoke and rolled back. */
 export function botsDeployLag(
   head: string,
   botsReleased: string | undefined,
   botsChanged: readonly string[] | undefined,
+  botsRolledBack = 0,
 ): BotsDeployLagVerdict {
   if (botsReleased === undefined || botsChanged === undefined) {
     return { known: false, baseline: false, lagging: false };
+  }
+  if (!botsReleased && botsRolledBack > 0) {
+    // Every bots release in the scanned window failed smoke: not "never deployed", a dark fleet.
+    const reason = `the last ${botsRolledBack} bots release(s) all failed smoke and rolled back`;
+    return { known: true, baseline: false, lagging: true, reason };
   }
   if (!botsReleased) return { known: true, baseline: false, lagging: false };
   if (botsReleased === head || botsChanged.length === 0) {
@@ -220,6 +227,15 @@ export function botsDeploySignal(
       detail: running
         ? `Bots report running ${running}, but GitHub couldn't say what has changed since — check Actions.`
         : "Couldn't scan Actions job history for the bots app.",
+      link: actionsLink,
+    };
+  }
+  if (!lag.baseline && lag.lagging) {
+    return {
+      id: "deploy-bots",
+      label: "Bots deploy",
+      verdict: "attention",
+      detail: `Bots app is STALE — ${lag.reason ?? "no bots release passed smoke"}. Check the bots machine is started, then recover via Pipeline → Run workflow → force_bots_deploy.`,
       link: actionsLink,
     };
   }

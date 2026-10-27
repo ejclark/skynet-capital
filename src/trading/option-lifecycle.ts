@@ -45,7 +45,7 @@ import type { TradeFill } from "./round-trips.js";
 
 export type OptionLifecycleType = "OPEXP" | "OPASN" | "OPEXC" | "OPTRD";
 
-const LIFECYCLE_TYPES: ReadonlySet<string> = new Set<OptionLifecycleType>([
+export const LIFECYCLE_TYPES: ReadonlySet<string> = new Set<OptionLifecycleType>([
   "OPEXP",
   "OPASN",
   "OPEXC",

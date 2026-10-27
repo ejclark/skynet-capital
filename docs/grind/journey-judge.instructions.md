@@ -1,6 +1,7 @@
 ---
 name: journey-judge
 description: grade one member's crawl frames on "can this reader tell what to do next in ten seconds?" and fill the ledger's judge cells
+model: opus
 effort: high
 isolation: worktree
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
@@ -11,8 +12,9 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 **Calling convention:** generate the call with
 `node scripts/grind-manifest.mjs --args --items '["first-timer","eric"]' --item-source 'the members listed in docs/members/friction-ledger.md for run <date>' docs/grind/journey-judge.instructions.md`
 — one item per **member**, never per frame: a judge reads a journey as a sequence, and a frame
-graded alone loses the step before it. `effort: high` because this is a judgment call on a
-rendered page against a rubric (`docs/COMPUTE.md`: anything that judges runs at `high`); the crawl
+graded alone loses the step before it. `model: opus` and `effort: high` because this is a judgment
+call on a rendered page against a rubric (`docs/COMPUTE.md`: the judgment row's floor is
+`opus`/`high`, and grind's own default is `sonnet`); the crawl
 itself deliberately makes NO model call, so this chore is the only place the judge line is
 answered. `isolation: worktree` because step 1 checks out its own branch. Fan as wide as the member
 list — one member's rows never overlap another's (the ledger sorts rows by member, so each item's
@@ -28,8 +30,9 @@ against the step's own judge line — and the grades are honest about the frame,
 
 ## Steps
 
-1. `git fetch origin main && git checkout -B docs/journey-judge-<member> origin/main`, then
-   `bash scripts/worktree-setup.sh`.
+1. `bash scripts/wt-start.sh docs/journey-judge-<member>` — fetch, branch off `origin/main`,
+   `node_modules` and one status line, in one call. After it, one plain command per call — never a
+   `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md` rail 2).
 2. Read `docs/members/<member>.md` (the journeys, in prose) and `e2e/journeys/<member>.journey.json`
    (the same steps, with `judge` lines). Read the frames under
    `docs/shots/crawl-<date>/<member>/` — the date is the ledger's header — in journey order, phone

@@ -1,10 +1,26 @@
-import type { PlaybookSubscription } from "../domain/types.js";
+import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
+import type { StrategyId } from "../playbooks/pair-table.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
 import {
+  heldHere,
+  type MemberPointers,
+  pointAtRecord,
+  restated,
+} from "../subscriptions/conviction-pointer.js";
+import {
+  carriedOnResubscribe,
   EMPTY_SUBSCRIPTIONS,
   parseSubscriptionsState,
   type SubscriptionsState,
 } from "../subscriptions/subscription-state.js";
+import {
+  type AllocationsState,
+  allocationsIn,
+  EMPTY_ALLOCATIONS,
+  readsWhole,
+  rewrite,
+  withAllocations,
+} from "../subscriptions/subscriptions-file.js";
 
 /**
  * What an owner re-tunes on an existing subscription (#4649): every field the subscriptions.v1
@@ -23,18 +39,52 @@ export type SubscriptionTuning = Pick<
  * Plain JSON, deliberately NOT encrypted, same reasoning as `bot-controls-store.ts`: no
  * credentials, no personal data. Backed by the same `JsonFileStore` primitive: atomic
  * tmp+rename writes, total reads (a missing or malformed file is just `EMPTY_SUBSCRIPTIONS`,
- * reported once).
+ * reported once). Every write keeps what this build could not read (#4772,
+ * `subscriptions-file.ts`).
+ *
+ * `members` (#5482 slice 6c) is the read of members' handed-over views, so a write that recomputes
+ * a pointer keeps one at a view its owner handed over (`conviction-pointer.ts`). Without it a
+ * restated conviction would drop that pointer, and the pair would run unnarrowed until the next
+ * poll put it back. Read fresh on each write; absent, only seeded records match, as before.
  */
 export class SubscriptionStore {
   private readonly file: JsonFileStore<SubscriptionsState>;
+  /** The same file, read for its `$allocations` key; a write lays that key over the file on disk
+   *  and leaves every account's records as they are (`withAllocations`). */
+  private readonly allocations: JsonFileStore<AllocationsState>;
+  private readonly members: (() => MemberPointers) | undefined;
 
-  constructor(path: string, onReadError?: (message: string) => void) {
+  constructor(
+    path: string,
+    onReadError?: (message: string) => void,
+    members?: () => MemberPointers,
+  ) {
+    this.members = members;
+    const report = onReadError ?? (() => undefined);
     this.file = new JsonFileStore({
       path,
       parse: (raw) => parseSubscriptionsState(raw) ?? undefined,
       empty: EMPTY_SUBSCRIPTIONS,
       label: "subscriptions",
-      ...(onReadError ? { onReadError } : {}),
+      onReadError: report,
+      readsWhole,
+      serialize: (state, onDisk) => {
+        const { document, notes } = rewrite(state, onDisk);
+        if (notes.length > 0) {
+          report(
+            `[subscriptions] ${path}: rewrote around what this build could not read — ${notes.join("; ")}`,
+          );
+        }
+        return document;
+      },
+    });
+    // No reporter: a torn file is already reported by the subscriptions read of the same path.
+    this.allocations = new JsonFileStore({
+      path,
+      parse: (raw) => (parseSubscriptionsState(raw) ? allocationsIn(raw) : undefined),
+      empty: EMPTY_ALLOCATIONS,
+      label: "allocations",
+      serialize: withAllocations,
     });
   }
 
@@ -42,24 +92,113 @@ export class SubscriptionStore {
     return this.file.load();
   }
 
+  private heldBy(accountId: string) {
+    return heldHere(this.members?.(), accountId);
+  }
+
+  /** Each account's allocation per strategy (#4469 slice 3c). */
+  loadAllocations(): AllocationsState {
+    return this.allocations.load();
+  }
+
+  /**
+   * Set (or, with `undefined`, clear) the account's allocation for one strategy (#4469 slice 3c
+   * part 3). Whether the budgets already set fit under it is the caller's check
+   * (`allocationChangeRefusal`); this only writes.
+   */
+  setAllocation(
+    accountId: string,
+    strategy: StrategyId,
+    capitalAllocated: number | undefined,
+    at = new Date(),
+  ): AllocationsState {
+    const all = this.loadAllocations();
+    const { [strategy]: _old, ...others } = all[accountId] ?? {};
+    const mine =
+      capitalAllocated === undefined
+        ? others
+        : { ...others, [strategy]: { capitalAllocated, updatedAt: at.toISOString() } };
+    const { [accountId]: _account, ...rest } = all;
+    const next: AllocationsState =
+      Object.keys(mine).length > 0 ? { ...rest, [accountId]: mine } : rest;
+    this.allocations.write(next);
+    return next;
+  }
+
+  /**
+   * The owner's conviction on an existing subscription (#4469 criteria 2 and 12): why they hold the
+   * pair, and the market day it is checked. Setting a new date is how a pair stopped by a failed
+   * check resumes. Every other field is kept, so it never resumes a paused subscription or touches
+   * a budget. Only the pointer is written (#5482 slice 2, `restated`): the record the conviction
+   * matches, else the owner's own view on the pair, which the caller wrote first
+   * (`pair-conviction-write.ts`) — the conviction itself is never kept on the subscription. Returns
+   * undefined and writes nothing when the account has no such subscription.
+   */
+  setConviction(
+    accountId: string,
+    playbookId: string,
+    conviction: SubscriptionConviction,
+    at = new Date(),
+  ): SubscriptionsState | undefined {
+    const state = this.load();
+    const existing = state[accountId] ?? [];
+    const prior = existing.find((s) => s.playbookId === playbookId);
+    if (!prior) return undefined;
+    const next = restated(
+      { ...prior, updatedAt: at.toISOString() },
+      conviction,
+      undefined,
+      this.heldBy(accountId),
+    );
+    const nextState: SubscriptionsState = {
+      ...state,
+      [accountId]: existing.map((s) => (s === prior ? next : s)),
+    };
+    this.file.write(nextState);
+    return nextState;
+  }
+
+  /** `load`, but `undefined` for a file that exists and cannot be read — the seeders' read, so a
+   *  seed never rewrites a subscriptions file it could not see (`JsonFileStore.loadIfReadable`). */
+  loadIfReadable(): SubscriptionsState | undefined {
+    return this.file.loadIfReadable();
+  }
+
   /**
    * Create or replace (by `playbookId`) the account's subscription to a playbook. Replacing an
-   * existing subscription preserves its original `createdAt`.
+   * existing subscription preserves its original `createdAt`, and every field a subscribe does not
+   * set — its pointer, a newer build's field (#4772). A subscribe that states a `conviction` points
+   * the subscription at the record it matches, else at the owner's own view the caller wrote first
+   * (#5482 slice 2, `pair-conviction-write.ts`), and never keeps the conviction itself; one that
+   * states none keeps the pointer it had, or gains one when one record steers its pair.
    */
   subscribe(
     accountId: string,
-    sub: Omit<PlaybookSubscription, "accountId" | "createdAt" | "updatedAt">,
+    {
+      conviction: stated,
+      ...sub
+    }: Omit<PlaybookSubscription, "accountId" | "createdAt" | "updatedAt"> & {
+      readonly conviction?: SubscriptionConviction;
+    },
     at = new Date(),
   ): SubscriptionsState {
     const state = this.load();
     const existing = state[accountId] ?? [];
     const prior = existing.find((s) => s.playbookId === sub.playbookId);
-    const next: PlaybookSubscription = {
+    const written: PlaybookSubscription = {
+      ...(prior ? carriedOnResubscribe(prior) : {}),
       ...sub,
       accountId,
       createdAt: prior?.createdAt ?? at.toISOString(),
       updatedAt: at.toISOString(),
     };
+    // A conviction stated here replaces the carried pointer, which is recomputed from it; a pointer
+    // the caller names is its own call.
+    const here = this.heldBy(accountId);
+    const next =
+      stated && sub.convictionId === undefined
+        ? restated(written, stated, undefined, here)
+        : pointAtRecord(written, undefined, here);
     const nextState: SubscriptionsState = {
       ...state,
       [accountId]: [...existing.filter((s) => s.playbookId !== sub.playbookId), next],
@@ -143,7 +282,9 @@ export class SubscriptionStore {
     };
     const nextState: SubscriptionsState = {
       ...state,
-      [accountId]: existing.map((s) => (s === prior ? next : s)),
+      [accountId]: existing.map((s) =>
+        s === prior ? pointAtRecord(next, undefined, this.heldBy(accountId)) : s,
+      ),
     };
     this.file.write(nextState);
     return nextState;
@@ -154,8 +295,9 @@ export class SubscriptionStore {
 export function createSubscriptionStore(
   env: NodeJS.ProcessEnv,
   onReadError?: (message: string) => void,
+  members?: () => MemberPointers,
 ): SubscriptionStore {
-  return new SubscriptionStore(subscriptionsFilePath(env), onReadError);
+  return new SubscriptionStore(subscriptionsFilePath(env), onReadError, members);
 }
 
 /** Where the subscription store lives — shared with the seed-marker file beside it. */

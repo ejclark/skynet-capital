@@ -7,180 +7,85 @@
 //
 // Two frame groups:
 //   · `store`  — the catalog, the metric blocks, the subscriber count and the delegation fog
-//                (#1707: the same card before and after rung 102 is earned). Entered through the
-//                retired desk URL `/app/u/<id>/playbooks`, so the shots also prove the redirect.
+//                (#1707: the same card before and after rung 102 is earned). Entered through
+//                R&D's own address; `/app/u/<id>/playbooks` is the bot's Playbooks section now
+//                (#5073), no longer a redirect to the Store.
 //   · `tune`   — #4642 slice 7 (#4649, #4610): a bot account (Sauron) with one subscription on and
 //                aimed at two symbols and one paused, leading their cards; the Edit form; a human
 //                account behind the bots-only door; the bot's roll call linking here.
-// FRAMES=<group> runs one group; unset runs both.
+//   · `options` — the two option plays' cards (#4642 slices 5–6).
+//   · `sauron-rules` — the SAURON card, Sauron's own rules as a playbook (#4642 slice 9a, #4651).
+//   · `subscribed-only` — the forced daily pick's card and SAURON's Pause row once only subscribed
+//                playbooks open (#4642 slice 10, #4652).
+//   · `strategies` — the Store by strategy (#4469 slice 3b): one card per strategy, the owner's own
+//                pairs first, tickers by evidence, ✗ ? ⊘ folded into one counted line.
+//   · `picker` — the ticker picker bottom sheet (#4469 slice 3b part 2): every ticker with a
+//                disabled row's reason in words, and "Check first" stating one contract's cash.
+//   · `conviction` — the owner's conviction and a strategy's allocation (#4469 slice 3c part 3b): the
+//                CRWV wheel states its reason and check day with "Set a new date", and the card says
+//                what is budgeted inside the allocation.
+//   · `window` — a pre-earnings play as one line (#5432): NVDA's buy, hold and sell counted back from
+//                the earnings report, with a bar per stretch, on the study world's clock (Thu 10-08).
+//   · `one-build` — #5494 step 1: the mission line, the list with a + per ready play and its bots
+//                panel, a ticker's evidence as a call, the folded "not yet" line, the wide layout.
+//   · `shadow` — #5457 slice 2: a draft in its shadow test — the offer on a draft, a play mid-window
+//                with its would-be buy, a finished round trip, an event play with no news feed — the
+//                report written by the real runner over fixture prices.
+//   · `promote` — #5457 slice 3: a play that has not met the bar (the checks, in words), one that has
+//                (the one button), and a promoted play trading, marked SIM and unvalidated.
+//   · `author` — #5457 slice 1: "Your playbooks" and the authoring form on the same screen — a draft
+//                saved, the form open on a phone and wide, a setting past its limit refused in words.
+//   · `shadow-scout` — #4535 slice 3a: the shadow scout's card, the subscribe form with no budget,
+//                mode or compounding, and its subscribed row ("places no orders"), a FIXTURE.
+//   · `scorecard` — #5482 slice 5: "steered by: AI-dip view · check … · pass / fail / pending" on the
+//                CRWV pair rows, opened to its claims. The first frame is the record as it stands (the
+//                server's own view: nothing is due yet); the second is a FIXTURE with some claims
+//                decided, to show how a pass and a fail wear a glyph and a word.
+// FRAMES=<group> runs one group; unset runs them all.
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:playbook-store [outdir]
-import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.ts";
-import { playbookRollCall } from "../../src/observatory/bot-heartbeat-view.ts";
+
 import { playbookStoreView } from "../../src/observatory/playbook-store-json-view.ts";
-import { PLAYBOOK_WIRING_GAPS, registeredPlaybooks } from "../../src/playbooks/registry.ts";
+import { authoredGroups } from "./playbook-store-authored.mjs";
+// Each card's closed-trade numbers (#3665): S1-NVDA with a record, SAURON without one.
+import { performance } from "./playbook-store-fixture.mjs";
+import { funnelGroups, oneBuildGroups } from "./playbook-store-groups.mjs";
+import { strategyGroups } from "./playbook-store-strategies.mjs";
+import {
+  COUNTS,
+  deskFor,
+  heartbeat,
+  JOE,
+  openSubscribe,
+  PHONE,
+  SAURON,
+  SAURON_CARD,
+  STORE,
+  settings,
+  subscription,
+  underHeader,
+  views,
+  withCounts,
+} from "./playbook-store-world.mjs";
 import { openShell } from "./shell.mjs";
 
-const SAURON = { id: "sauron", name: "Sauron", kind: "bot", hostConfigured: true, profile: null };
-const JOE = {
-  id: "human-joe",
-  name: "Uncle Joe",
-  kind: "human",
-  hostConfigured: false,
-  profile: null,
-};
-
-// The shell's header reads the account roster on every `/app/*` surface — unstubbed it throws
-// before the route ever renders.
-const settings = {
-  authConfigured: true,
-  adminWired: false,
-  fleetSuspended: false,
-  timezones: [],
-  accounts: [SAURON, JOE],
-};
-
-const tiles = {
-  openPositions: 0,
-  invested: "$0.00",
-  dayPl: "$0.00",
-  dayTone: "flat",
-  unrealized: "$0.00",
-  unrealizedNote: "no positions",
-  unrealizedTone: "flat",
-  cash: "$1,000,000.00",
-};
-const deskFor = (account) => ({
-  generatedAt: "2026-10-05T15:00:00Z",
-  desk: { id: account.id, name: account.name, kind: account.kind, positions: [], tiles },
-});
-
-// The subscriber count (#3970): enabled subscriptions across every account, a bare number.
-const COUNTS = { "S1-NVDA": 3, "HC-SAURON": 1 };
-const withCounts = (view) => ({
-  ...view,
-  cards: view.cards.map((card) => ({ ...card, subscribers: COUNTS[card.id] ?? 0 })),
-});
-
-const AT = "2026-10-01T14:00:00.000Z";
-const subscription = (playbookId, over) => ({
-  accountId: "sauron",
-  playbookId,
-  mode: "standard",
-  enabled: true,
-  createdAt: AT,
-  updatedAt: AT,
-  ...over,
-});
-// HC-SAURON on, aimed at NVDA + CRWV; S1-NVDA paused. G1-GOOG and TACO-DJT not subscribed.
-const SAURON_SUBSCRIPTIONS = [
-  subscription("HC-SAURON", { capitalAllocated: 25_000, symbols: ["NVDA", "CRWV"] }),
-  subscription("S1-NVDA", { mode: "conservative", capitalAllocated: 10_000, enabled: false }),
-];
-
-const views = {
-  catalog: withCounts(playbookStoreView(undefined)),
-  fresh: withCounts(playbookStoreView([])),
-  fogged: withCounts(playbookStoreView([], true)),
-  sauron: withCounts(playbookStoreView(SAURON_SUBSCRIPTIONS)),
-  human: withCounts(playbookStoreView([], false, [], true)),
-};
-
-// The selected account's own closed trades per playbook (#3665 slice 3): S1-NVDA has a record,
-// HC-SAURON has none — so one frame shows both the numbers and the honest empty state. The
-// house-wide block (slice 4) has both: every account's trips, larger than the account's own and
-// drawn beside it, never summed into it. The cycle mix (slice 5) counts option trips only, so
-// S1-NVDA's 7 house contracts split across cycles while HC-SAURON, which trades only shares, says
-// so in words instead of printing three zeros.
-const HOUR = 3_600_000;
-const row = (playbookId, over) => ({
-  playbookId,
-  avgHoldMs: 10 * 24 * HOUR,
-  longestHold: { holdMs: 15 * 24 * HOUR },
-  shortestHold: { holdMs: 26 * HOUR },
-  byDirection: { long: over.trades, short: 0 },
-  byInstrument: { stock: over.trades, call: 0, put: 0 },
-  byCycle: { weekly: 0, monthly: 0, quarterly: 0 },
-  ...over,
-});
-const performance = {
-  house: [
-    row("S1-NVDA", {
-      trades: 19,
-      wins: 13,
-      losses: 6,
-      winRate: 68.4,
-      netRealized: 3_915.2,
-      returnPct: 4.7,
-      capitalCommitted: 83_300,
-      byInstrument: { stock: 12, call: 7, put: 0 },
-      byCycle: { weekly: 2, monthly: 4, quarterly: 1 },
-    }),
-    row("HC-SAURON", {
-      trades: 212,
-      wins: 109,
-      losses: 97,
-      winRate: 52.9,
-      netRealized: -1_284.75,
-      returnPct: -0.6,
-      capitalCommitted: 214_050,
-      avgHoldMs: 7 * HOUR,
-      longestHold: { holdMs: 4 * 24 * HOUR + 2 * HOUR },
-      shortestHold: { holdMs: 18 * 60_000 },
-      byDirection: { long: 188, short: 24 },
-    }),
-  ],
-  mine: [
-    row("S1-NVDA", {
-      trades: 4,
-      wins: 3,
-      losses: 1,
-      winRate: 75,
-      netRealized: 842.5,
-      returnPct: 6.2,
-      capitalCommitted: 13_580,
-      byInstrument: { stock: 3, call: 1, put: 0 },
-      byCycle: { weekly: 0, monthly: 1, quarterly: 0 },
-    }),
-  ],
-  accounts: ["sauron"],
-};
-
-// The bot's own Heartbeat, with the roll call the live code would read for this roster —
-// `playbookRollCall` over a pass that ran HC-SAURON, never hand-written sentences.
-const NOW = new Date("2026-10-05T15:00:00Z");
-const verdicts = [{ playbookId: "HC-SAURON", mode: "standard", state: "flat" }];
-const heartbeat = {
-  available: true,
-  heartbeat: {
-    state: "beating",
-    marketOpen: true,
-    lastPassAt: "2026-10-05T14:59:40Z",
-    sinceLastPassMs: 20_000,
-    cadenceMs: 15_000,
-    staleAfterMs: 120_000,
-    playbooks: verdicts.map((v) => ({ ...v, since: AT, sinceIsLowerBound: false })),
-    rollCall: playbookRollCall(
-      verdicts,
-      NOW,
-      registeredPlaybooks(),
-      PLAYBOOK_WIRING_GAPS,
-      UPCOMING_PRINTS,
-    ),
-  },
-};
-
-// One shell per state rather than a reload: the browser serves a fulfilled route from its own
-// memory cache on reload, so a second state has to be a second page load with its own stubs.
-// `scrollTo` lands the named text just under the sticky top bar and market strip (~150px), not at
-// the very top edge, where they would cover it.
-const underHeader = (el) =>
-  window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 150);
-
-async function frame({ tag, view, account = SAURON, expect, viewport, scrollTo, path, act }) {
+// `shell` passes `viewport` and `quality` (a dense frame's lower JPEG quality, under the ~100KB cap)
+// straight to openShell; either left undefined keeps its default.
+async function frame({
+  tag,
+  view,
+  account = SAURON,
+  expect,
+  scrollTo,
+  path,
+  act,
+  clockAt,
+  extraStubs = {},
+  ...shell
+}) {
   const { page, origin, shoot, close } = await openShell({
     name: "playbook-store",
-    ...(viewport ? { viewport } : {}),
+    ...shell,
     stubs: {
       "/api/playbook-store": view,
       "/api/settings": settings,
@@ -188,13 +93,18 @@ async function frame({ tag, view, account = SAURON, expect, viewport, scrollTo, 
       [`/api/desk/${account.id}`]: deskFor(account),
       [`/api/desk/${account.id}/heartbeat`]: heartbeat,
       [`/api/desk/${account.id}/probes`]: { available: false },
-      [`/api/desk/${account.id}/decisions`]: { available: true, kind: account.kind, cycles: [] },
+      [`/api/desk/${account.id}/decisions`]: {
+        available: true,
+        kind: account.kind,
+        cycles: [],
+      },
+      ...extraStubs,
     },
   });
-  const to = path ?? `/app/u/${account.id}/playbooks`;
+  const to = path ?? `/app/research?section=playbooks&account=${encodeURIComponent(account.id)}`;
+  // A dated picture (the window's dates are counted from today) is shot on a fixed day.
+  if (clockAt) await page.clock.setFixedTime(new Date(clockAt));
   await page.goto(`${origin}${to}`);
-  if (to.endsWith("/playbooks"))
-    await page.waitForURL(/\/app\/research\?.*section=playbooks.*account=/);
   await page.getByText(expect).first().waitFor();
   if (act) await act(page);
   if (scrollTo) await page.getByText(scrollTo).first().evaluate(underHeader);
@@ -202,8 +112,6 @@ async function frame({ tag, view, account = SAURON, expect, viewport, scrollTo, 
   await close();
 }
 
-const PHONE = { width: 390, height: 844 };
-const STORE = "/app/research?section=playbooks";
 const groups = {
   store: [
     {
@@ -241,11 +149,21 @@ const groups = {
     {
       tag: "phone-delegation-earned",
       view: views.fresh,
-      expect: "Capital to delegate",
+      expect: "Subscribe",
       viewport: PHONE,
+      act: openSubscribe,
     },
-    { tag: "delegation-locked", view: views.fogged, expect: "Delegating capital opens after" },
-    { tag: "delegation-earned", view: views.fresh, expect: "Capital to delegate" },
+    {
+      tag: "delegation-locked",
+      view: views.fogged,
+      expect: "Delegating capital opens after",
+    },
+    {
+      tag: "delegation-earned",
+      view: views.fresh,
+      expect: "Subscribe",
+      act: openSubscribe,
+    },
   ],
   tune: [
     // The owner's question first: what does this bot run? Subscribed cards lead, state first.
@@ -269,7 +187,7 @@ const groups = {
       view: views.sauron,
       expect: "Paused",
       viewport: PHONE,
-      scrollTo: "S1-NVDA",
+      scrollTo: "The pre-print run-up",
     },
     {
       tag: "phone-4-human-door",
@@ -298,7 +216,11 @@ const groups = {
       path: "/app/u/sauron/decisions",
       scrollTo: "Which playbooks this bot runs",
     },
-    { tag: "desktop-1-bot-subscribed", view: views.sauron, expect: "new entries: NVDA, CRWV" },
+    {
+      tag: "desktop-1-bot-subscribed",
+      view: views.sauron,
+      expect: "new entries: NVDA, CRWV",
+    },
     {
       tag: "desktop-2-human-door",
       view: views.human,
@@ -313,27 +235,122 @@ groups.options = [
   {
     tag: "phone-option-crwv-wheel",
     view: views.catalog,
-    expect: "CRWV-WHEEL",
+    expect: "The wheel",
     viewport: PHONE,
-    scrollTo: "CRWV-WHEEL",
+    scrollTo: "The wheel",
     path: STORE,
   },
   {
     tag: "phone-option-nvda-spread",
     view: views.catalog,
-    expect: "NVDA-CALL-SPREAD",
+    expect: "The call spread",
     viewport: PHONE,
-    scrollTo: "NVDA-CALL-SPREAD",
+    scrollTo: "The call spread",
     path: STORE,
   },
   {
     tag: "desktop-option-plays",
     view: views.catalog,
-    expect: "CRWV-WHEEL",
-    scrollTo: "CRWV-WHEEL",
+    expect: "The wheel",
+    scrollTo: "The wheel",
     path: STORE,
   },
 ];
+
+// #4642 slice 9a (#4651): SAURON, Sauron's own rules as a playbook — the new card in the catalog,
+// its rules and what pausing does, then the card as his account would show it once subscribed. That
+// last frame is a FIXTURE (uncapped, as 9b would seed it beside the wheel): this slice seeds nothing.
+// The fixture's own subscriptions count on their cards, so an "On" card never reads "no subscribers".
+views.sauronRules = withCounts(
+  playbookStoreView([
+    subscription("SAURON"),
+    subscription("CRWV-WHEEL", { capitalAllocated: 25_000 }),
+  ]),
+  { ...COUNTS, SAURON: 1, "CRWV-WHEEL": 1 },
+);
+// Paused (a fixture too): the note under the state says what Pause does — no new entries, exits kept.
+views.sauronPaused = withCounts(playbookStoreView([subscription("SAURON", { enabled: false })]));
+const toSauronCard = (page) =>
+  page.locator(".pb-card").filter({ hasText: SAURON_CARD }).first().evaluate(underHeader);
+const sauronFrame = (tag, over = {}) => ({
+  tag,
+  view: views.catalog,
+  expect: SAURON_CARD,
+  viewport: PHONE,
+  path: STORE,
+  act: toSauronCard,
+  ...over,
+});
+groups["sauron-rules"] = [
+  sauronFrame("phone-1-sauron-card"),
+  sauronFrame("phone-2-sauron-rules", {
+    act: undefined,
+    scrollTo: "It runs his standard rules on that bot's own account",
+  }),
+  sauronFrame("phone-3-sauron-subscribed-fixture", {
+    view: views.sauronRules,
+    path: undefined,
+  }),
+  sauronFrame("phone-4-sauron-paused-fixture", {
+    view: views.sauronPaused,
+    path: undefined,
+  }),
+  sauronFrame("desktop-sauron-card", { viewport: undefined, quality: 55 }),
+];
+
+// #4642 slice 10 (#4652): only a subscribed playbook opens a position. The forced daily pick's new
+// card (catalog, then its two-switches rows), SAURON paused on Sauron's account (the Pause row now
+// says his buys stop, and the note under the state names the rule), and the pick as his account
+// would show it subscribed. The paused and subscribed frames are FIXTURES: this slice seeds nothing.
+views.scoutSubscribed = withCounts(
+  playbookStoreView([
+    subscription("SAURON"),
+    subscription("BETA-SCOUT", {
+      mode: "conservative",
+      capitalAllocated: 10_000,
+    }),
+  ]),
+  { ...COUNTS, SAURON: 1, "BETA-SCOUT": 1 },
+);
+const SCOUT_CARD = "The forced daily pick";
+const toScoutCard = (page) =>
+  page.locator(".pb-card").filter({ hasText: SCOUT_CARD }).first().evaluate(underHeader);
+groups["subscribed-only"] = [
+  sauronFrame("phone-1-scout-card", { expect: SCOUT_CARD, act: toScoutCard }),
+  sauronFrame("phone-2-scout-switches", {
+    expect: SCOUT_CARD,
+    act: undefined,
+    scrollTo: "Exit — take profit",
+  }),
+  sauronFrame("phone-3-scout-subscribed-fixture", {
+    view: views.scoutSubscribed,
+    expect: SCOUT_CARD,
+    path: undefined,
+    act: toScoutCard,
+  }),
+  sauronFrame("phone-4-sauron-paused-fixture", {
+    view: views.sauronPaused,
+    path: undefined,
+  }),
+  sauronFrame("phone-5-sauron-pause-row", {
+    act: undefined,
+    scrollTo: "Research settings",
+  }),
+  sauronFrame("desktop-scout-card", {
+    expect: SCOUT_CARD,
+    act: toScoutCard,
+    viewport: undefined,
+    quality: 48,
+  }),
+];
+
+// Order matters: `strategies` … `window` sit between `subscribed-only` and `one-build`, as before.
+Object.assign(groups, strategyGroups);
+
+// `one-build`, the authored groups, `funnel` and `shadow-scout` follow in that order.
+Object.assign(groups, oneBuildGroups);
+Object.assign(groups, authoredGroups);
+Object.assign(groups, funnelGroups);
 
 const only = process.env.FRAMES;
 for (const [group, frames] of Object.entries(groups)) {

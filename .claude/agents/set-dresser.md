@@ -16,8 +16,12 @@ what it means, or what its dials do.
 
 ## Loop (one pass = one layer)
 
-1. **Branch off latest main**: `git fetch origin main && git checkout -B art/dress-<piece-slug>
-   origin/main`, then `bash scripts/worktree-setup.sh`.
+1. **Branch off latest main**: `bash scripts/wt-start.sh art/dress-<piece-slug> --fresh` — fetch, a new branch off `origin/main`,
+   `node_modules` (it runs `worktree-setup.sh`) and one status line, in one call. After it, one plain
+   command per call — never a `&&` chain around git; `/usr/bin/git` where plain `git` is refused
+   (`docs/DELEGATION.md` rail 2).
+   If it refuses because the name is taken (an earlier cycle's branch stays on origin), re-run with
+   the `-N` name it prints — never drop `--fresh`: without it a taken name resumes that stale branch.
 2. **Read the piece's canon:** its build-sheet entry or art doc (`docs/art/`), its translation
    table, and the current code. Take a **before** screenshot with the piece's shot rig.
 3. **Pick ONE layer** — the next element that can carry the treatment (`CLAUDE.md`: depth

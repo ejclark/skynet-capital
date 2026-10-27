@@ -64,17 +64,17 @@ describe("the any-account head's settings ownership", () => {
       expect(railSource).not.toMatch(/^\s*<Link to="\/settings">/m);
     });
 
-    it("folds Decisions into Heartbeat and drops the rail's way out (#3807 slices 2a, 2d)", () => {
+    it("folds Decisions into Playbooks and drops the rail's way out (#3807 slices 2a, 2d; #5073)", () => {
       expect(railSource).toContain("Overview");
-      expect(railSource).toContain("Heartbeat");
+      expect(railSource).toContain("Playbooks");
       expect(railSource).not.toMatch(/>\s*Decisions\s*</);
-      expect(railSource).toContain('<Link to="/u/$id/decisions" params={{ id }}>');
+      expect(railSource).toContain('<Link to="/u/$id/playbooks" params={{ id }}>');
       expect(railSource).not.toContain("← Leaderboard");
       expect(railSource).not.toContain('className="rail-label"');
     });
 
-    it("gives the page an Activity section and its own sticky head (#3807 slice 2d)", () => {
-      expect(railSource).toContain('<Link to="/u/$id/activity" params={{ id }}>');
+    it("gives the page a Ledger section and its own sticky head (#3807 slice 2d)", () => {
+      expect(railSource).toContain('<Link to="/u/$id/ledger" params={{ id }}>');
       expect(railSource).toContain('className="cockpit-head acct-head"');
       expect(railSource).toContain("<h1>{name}</h1>");
     });

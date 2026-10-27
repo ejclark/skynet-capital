@@ -21,6 +21,15 @@ export function findDuplicates<T extends IssueLike>(
   threshold?: number,
 ): T[];
 export function withFooter(body: string): string;
+export function commentWrite(args: {
+  n: number;
+  body: string;
+  editId?: string | number | boolean;
+}): {
+  method: "POST" | "PATCH";
+  path: string;
+  payload: { body: string };
+};
 export function boardStatus(issue: IssueLike): string;
 export function row(issue: IssueLike): string;
 export function nextLabels(current: string[], add?: string[], remove?: string[]): string[];
@@ -33,5 +42,31 @@ export function followUps(args: {
   child: { id: number; number: number };
   parentNumber?: number;
   blockers?: Array<{ id: number }>;
+  afterLinks?: string[];
   closed?: boolean;
 }): Array<{ method: string; path: string; payload: Record<string, unknown> }>;
+/** #5266: `ready` waits for a filing's parent/blocker links, so a claim never sees it unlinked. */
+export function splitLabels(
+  labels?: string[],
+  links?: { parentNumber?: number; blockers?: Array<{ id: number }> },
+): { initial: string[]; afterLinks: string[] };
+export function searchQuery(args: {
+  repo: string;
+  words: string;
+  state?: string;
+  label?: string;
+}): string;
+export function searchRemote(args: {
+  words: string;
+  state: string;
+  label?: string;
+  limit: number;
+  repo?: string;
+  read?: (path: string) => unknown;
+}): IssueLike[];
+export function scanIssues<T extends IssueLike & { pull_request?: unknown }>(
+  state: string,
+  keep: (issue: T) => boolean,
+  limit: number,
+  opts: { read: (path: string) => T[]; perPage?: number; maxPages?: number },
+): { items: T[]; partial: boolean; scanned?: number };

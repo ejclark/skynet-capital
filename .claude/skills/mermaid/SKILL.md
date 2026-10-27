@@ -15,8 +15,8 @@ validated), not in any session's memory. Load this page when drawing; open one c
 
 ## The contract in one line
 
-**Pick the type by the story, draw ≤15 nodes in plain words, mark the delta without hue, run the
-lint, caption it.** Every step has an owner below.
+**Pick the type by the story, draw ≤15 nodes in plain words, mark the delta without hue, animate
+the flow, run the lint, caption it.** Every step has an owner below.
 
 ## 1. Pick by the story — `docs/PICTURES.md` → decision table
 
@@ -24,7 +24,7 @@ lint, caption it.** Every step has an owner below.
 |---|---|---|
 | a behaviour before vs after | `sequenceDiagram` with two `Note over` halves | `reference/sequencediagram.md` |
 | a lifecycle, gate or mode | `stateDiagram-v2` (composite state + guard labels) | `reference/statediagram.md` |
-| branch / merge mechanics (platter, backport) | `gitGraph` | `reference/gitgraph.md` |
+| branch topology with few branches (a backport, worktrees) — never the held PR, which is a `flowchart` (`docs/PICTURES.md`) | `gitGraph` | `reference/gitgraph.md` |
 | a dataflow, pipeline or decision path | `flowchart` (delta grammar below) | `reference/flowchart.md` |
 | a number moving over time | `xychart-beta` | `reference/xychart.md` |
 | a call sheet / triage (confidence × impact) | `quadrantChart` | `reference/quadrantchart.md` |
@@ -51,9 +51,11 @@ Cross-cutting cards (open one when the question is not "which type" but "how do 
   `packet-beta`, `swimlane-beta`, `venn-beta`, `ishikawa-beta`, `wardley-beta`, `cynefin-beta`,
   `treeView-beta`, `eventmodeling`. Not `usecase-beta` / `agentflow-beta` (12.x) or `zenuml`.
 - Honours YAML frontmatter `config:` (`look: handDrawn` works) — never `theme` (freezes one colour
-  mode; the lint fails it). `layout: elk` silently falls back to dagre. Iconify / Font Awesome
-  icons render as `?`. `click` is dead. The GitHub *mobile app* renders no Mermaid; a phone browser
-  does — design for 390px in a browser: `TD` over `LR` past ~6 nodes, ≤4 sequence participants.
+  mode; the lint fails it). `layout: elk` falls back to dagre on a flowchart, class, ER or
+  requirement diagram, and throws at render on a state diagram (the lint fails that one). Iconify /
+  Font Awesome icons render as `?`. `click` is dead. The GitHub *mobile app* renders no Mermaid; a
+  phone browser does — design for 390px in a browser: `TD` over `LR` past ~6 nodes, ≤4 sequence
+  participants.
 - Drift check: a mermaid block containing only `info` prints the deployed version in any comment.
 
 ## 3. The delta grammar — emphasis a colourblind reader sees
@@ -62,6 +64,7 @@ Cross-cutting cards (open one when the question is not "which type" but "how do 
 |---|---|---|
 | new in this change | thick edge `==>`, or `subgraph "this PR"` | a green fill |
 | removed / the old path | dotted edge `-.->` | a red fill |
+| a live path (anything that runs) | animate every live edge: `a e1@--> b` then `e1@{ animate: true }` — dotted removed paths stay still, so motion says "this runs" | one animated edge among many |
 | changed | `classDef changed stroke-width:3px` (no colour) | a hue shift |
 | a fork / decision | diamond `{ }` | — |
 | a store | `@{ shape: cyl }` | — |

@@ -48,8 +48,38 @@ Lead with **intent and end-state**, not exhaustive orders; a well-aligned execut
 micromanagement (decentralized command). That is what makes drop-in autonomy work — and cheaper. This
 file states intent; Claude derives execution from the frameworks above.
 
+**The two primary outcomes** (Eric, 2026-10-26, said of a friend he showed the app to, who may
+want to contribute): "1. Enabling a delightful trading experience to make paper money.
+2. Enabling others to contribute to enhance their experience." When two candidates compete, these
+rank them. *Contribute* covers both a member improving their own experience through the in-app
+feedback loop and a person contributing code; granting anyone repo or app access stays Eric's call
+(hard boundaries below).
+
 **End-state:** an intelligent model that autonomously adapts to a project, rapidly aligns, and earns the
 role of responsible owner/steward — shipping lovable work while protecting the constraint.
+
+**The orchestration north star — systems that improve, learn and heal themselves** (Eric,
+2026-10-18: "My intent is to increase agentic orchestration process capable of iteratively driving
+self improvement, self learning, self healing systems... identifies process gaps, friction that
+autonomously resolves/enhances"; and "we should be looking for ways to automate away Manual checks;
+that's the only way to scale"). Every exercise — an audit, a study, a scenario run, a retro — is also
+a probe of the system that ran it, and ends by naming the stage of a loop (sense · decide · act ·
+verify · remember) a person still had to do. A recurring manual check is the first thing to
+automate; an act is automated only behind a mechanical verify; and loops get closed before actors
+get added (`/charter`). The lens and the first census: [`docs/process/LEARNING-LOOP.md`](docs/process/LEARNING-LOOP.md)
+→ *The loop census*.
+
+**Alignment is the asymptote, and it is measured** (Eric, 2026-10-18: "If we are fully aligned
+(ongoing goal that we will never fully reach), you would be equipped to make 100% of
+decisions/judgement calls on my behalf. That is the ideal we should be working towards"). Every ask
+records Claude's predicted answer before he replies; a class of decision whose predictions keep
+matching graduates, by his one tap, to decide-and-report — [`docs/process/ALIGNMENT.md`](docs/process/ALIGNMENT.md).
+The irreversible class still moves only by his hand. **Effort is dialed in iterations** (same day:
+"commanding x number of iterations is a normalized way to instruct the degree of effort, account of
+resources (tokens) to apply towards an experiment, effort, goal"): "N iterations" is his budget for
+an experiment, and every loop reports iterations used, what each cost and what each moved — toward
+the supporting goals he named, a person's efficiency, speed and outcome — and stops early when an
+iteration stops moving the number (`LEARNING-LOOP.md` field 14).
 
 ## Product taste & ethos (what "good" looks like — not derivable from frameworks)
 
@@ -118,7 +148,11 @@ role of responsible owner/steward — shipping lovable work while protecting the
   eye, each pointing at its row in [`docs/PATTERNS.md`](docs/PATTERNS.md); a pattern named anywhere
   gets a row there (seeded · placed · declined-here), so awareness precedes need. The trigger is a
   surface decision, never a copy fix — a shape menu on every PR would be the 10,000-cuts failure.
-  First instance: #1740's call sheet, which settled *kind / section / sub-view*.
+  First instance: #1740's call sheet, which settled *kind / section / sub-view*. Design work runs
+  the redesign loop by default ([`docs/process/REDESIGN.md`](docs/process/REDESIGN.md), `/redesign`;
+  Eric, 2026-10-11: "fwiw, i really like this style of iteration on designs and would prefer more of
+  this as a permanent process that I can continue to refine"); he keeps refining it with `process:`
+  notes, and each one lands as a dated line in that page's *Process changes*.
 - **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal:
   engagement, trust, and compounding capital all come from one gamified design (see
   [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md)).
@@ -216,9 +250,9 @@ role of responsible owner/steward — shipping lovable work while protecting the
   still asks is `envelope.json`'s, mechanically — never "a branch I did not create".
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
-  CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped
-  `and hard to reverse`, which is how "outward-facing" came to fire on copy changes. Cite the file;
-  don't re-copy the list. **Read the words narrowly:** *outward-facing* = reachable by a non-member
+  CI check on autonomous lanes. A prose restatement drifts — a copy that drops `and hard to
+  reverse` makes "outward-facing" fire on copy changes. Cite the file; don't re-copy the list.
+  **Read the words narrowly:** *outward-facing* = reachable by a non-member
   or changing an external contract; *spend* = provisioning a credential or raising a cap, never
   picking a model tier on a lane already paid for.
 - **Safety scales to stakes.** Risk tolerance = f(recoverability, worst-case magnitude) — not probability
@@ -419,7 +453,13 @@ chat; its plan issue's state block is current; no PR watch or scheduled check-in
   is reversible (Unarchive).
 - **Opened by hand** (any other origin — app, phone, CLI) → ask **"archive this session?"** as a
   yes/no `AskUserQuestion` form (Eric, 2026-09-29: "makes this process easier to navigate"); on yes,
-  archive as the final action.
+  archive as the final action. **The ask carries its proof** (Eric, 2026-10-18: "give me confidence
+  that when there is a question to ask about archiving, it's a simple yes"): run
+  `scripts/archive-audit.mjs` on a manifest of the session's PRs, children, check-ins and follow-up
+  homes, and put its table in the question; ask only on `ARCHIVE: yes`. A red row carrying a
+  `HEAL:` is the session's to fix and re-run, never his to answer (Eric, same day: "Self healing and
+  improving needs to be part of the process"); say which heals ran, and send one that recurs to
+  `/retro` for a prevention.
 - **Done-check fails** (blocked, PR open, watch pending) → never archive: the open session is the
   signal that it still needs someone.
 - **Spawned sessions carry `issue:<n>`** (Eric, 2026-10-01: "if grouped, we could archive the
@@ -429,6 +469,17 @@ chat; its plan issue's state block is current; no PR watch or scheduled check-in
 
 `archive_session` releases the container the call runs in, so its spinner can sit for a minute with
 no result — that wait is teardown, not thinking. Nothing goes after it.
+
+**Sessions run in the cloud by default; the laptop is the exception** (Eric, 2026-10-13, after a
+Remote Control session on his laptop went `computer_unreachable` and his phone could not wake it:
+cloud sessions "organically convert the issue… a none problem, solved OOTB"). A cloud session keeps
+working with the lid closed, is steerable from the phone, and bills against the same plan with no VM
+charge; review already rides screenshots and messages, so nothing in the loop needs his machine.
+Any session Claude starts or hands him (`create_session`, a "start a session" link, a `/redesign`
+round) is a cloud one; a laptop session is for files that exist only there or a real GPU for 3D feel.
+The environment is code — `mise.toml` pins the toolchain, `.claude/hooks/session-start.sh` installs
+it — so a gap a cloud session hits is fixed there, never routed around by going local. Wrong if, by
+2026-11-13, three sessions had to move to the laptop for a reason the environment could not absorb.
 
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
@@ -552,9 +603,11 @@ common routes:
   normal, expected verdict, not a shortfall.
 - **"make a shareable page"** (field guide, dashboard, report) → the `artifact-smith` agent (builds
   from `docs/BRAND.md` tokens).
-- **A finished Claude Design session** → a `[handoff]` GitHub issue carrying contract + bundle
-  ([`docs/HANDOFFS.md`](docs/HANDOFFS.md)); filing triggers nothing — Eric's comment or label is the
-  go signal, exactly as `ready` is for a plan.
+- **A finished Claude Design session** → one of the two paths in [`docs/HANDOFFS.md`](docs/HANDOFFS.md)
+  — mark the canvas boards `build` and fire the design lane with one tap, or attach the session's
+  export to a Claude Code session with a one-line ask (Eric, 2026-09-24: "attaching the artifact
+  from the claude design session is enough for you to take it from here"). Either way Eric's own act
+  is the go signal; a saved canvas or an idle bundle triggers nothing.
 - **Drawing or reviewing any diagram** (a PR picture, an issue, a plan's lifecycle, an architecture
   page, a reply) → **`/mermaid`** — the type by story, the delta grammar, GitHub's actual renderer
   facts and one reference card per type, loaded only then (Eric, 2026-09-25: expert on demand, no
@@ -596,8 +649,9 @@ is expected and fine; the docs are the memory.
 
 - Branch off latest `origin/main` per change **before editing** (`git fetch origin main && git
   checkout -B <branch> origin/main` — fetch first: a cached ref can be genuinely stale or diverged
-  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04) — branch-first
-  means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
+  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04; an isolated
+  worktree refuses that chain — its git rules are [`docs/DELEGATION.md`](docs/DELEGATION.md)
+  rail 2) — branch-first means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
   focused PRs; squash-merge on green; Conventional-Commit subjects, **lowercase-led** (commitlint
   rejects a capitalized first word — even "PRs"/"Barad-dûr").
 - Open PRs with **`/ship`** (local verify + integration tests → push → REST open → stop; the pipeline arms; wraps
@@ -613,7 +667,8 @@ is expected and fine; the docs are the memory.
 - **Commits & PRs are documents** ([`docs/ENGINEERING.md`](docs/ENGINEERING.md) → _Change
   communication_): plain-language **Summary** + **Why**, weeds below the fold, mirroring
   `.github/pull_request_template.md`; proportional — no ceremony on a typo fix.
-- Verify before merge: `npm run typecheck`, `npm run lint`, `npm test`, + a screenshot for visual
+- Verify before merge: `npm run verify` (typecheck + lint + tests, root and `app/` — the set the
+  pre-push hook and CI run), + a screenshot for visual
   work (`npm run shoot:login` or an offline render). **Verify by exit status, not tailed output** —
   a pipeline exits with the last command's status, so `cmd | tail && …` will not halt on failure.
   Code gotchas (the inline login-canvas template-literal trap, `prefers-reduced-motion`):

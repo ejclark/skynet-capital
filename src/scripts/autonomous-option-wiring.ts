@@ -12,8 +12,13 @@ import type { Bot } from "../bots/bot.js";
 import { botTradingClient } from "../bots/bot-broker.js";
 import type { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import type { RiskConfig } from "../engine/guards.js";
-import { claimOptionUnderlyings } from "../playbooks/option-ownership.js";
+import {
+  claimOptionUnderlyings,
+  onePerPlaybook,
+  yieldPersonaRules,
+} from "../playbooks/option-ownership.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
+import { armSweepClock, OPTION_LIFECYCLE_SWEEP_MS } from "../runtime/sweep-clock.js";
 import { parseLifecycleActivity } from "../trading/option-lifecycle.js";
 
 /** One option attempt per underlying per 10 minutes — approved or refused, observe or live. */
@@ -23,15 +28,17 @@ type Log = { log(line: string): void; warn(line: string): void };
 type ReadAccount = (credentials: AlpacaCredentials) => Promise<AlpacaAccount>;
 const readBotAccount: ReadAccount = (credentials) => botTradingClient(credentials).getAccount();
 
-/** A bot's merged roster with the one-option-playbook-per-underlying rule applied, every refusal
- *  and narrowing announced on a `[playbooks]` line — the same prefix the roster's own lines use. */
-export function ownedOptionRoster(
+/** A bot's merged roster with the ownership rules applied (`option-ownership.ts`), in order: one
+ *  entry per playbook, one option playbook per underlying, then a persona's own rules yielding every
+ *  symbol another playbook trades. The single place every bot's roster resolves — at boot and on
+ *  every Store swap — so each rule holds on every bot. Every refusal and narrowing is announced on a
+ *  `[playbooks]` line, the roster's own prefix. */
+export function ownedRoster(
   personaId: string,
   merged: readonly EnabledPlaybook[],
 ): EnabledPlaybook[] {
-  return claimOptionUnderlyings(merged, (line) =>
-    console.warn(`[playbooks] ${personaId}: ${line}`),
-  );
+  const log = (line: string) => console.warn(`[playbooks] ${personaId}: ${line}`);
+  return yieldPersonaRules(claimOptionUnderlyings(onePerPlaybook(merged, log), log), log);
 }
 
 /**
@@ -176,10 +183,6 @@ export async function sweepOrphanOptionOrders(
   }
 }
 
-/** How often each bot's account is asked what happened to its contracts. Expiries and assignments
- *  post after the close, so half-hourly is ample; two reads an hour per bot cost nothing. */
-export const OPTION_LIFECYCLE_SWEEP_MS = 30 * 60_000;
-
 /**
  * One pass: each bot's newest option expiry/assignment reports, into the decision store, which
  * stores each once and closes the contract it names (#4642 slice 8). This is how a sold put that
@@ -211,9 +214,9 @@ export async function sweepOptionLifecycle(
   }
 }
 
-/** The sweep at boot and every `OPTION_LIFECYCLE_SWEEP_MS` after; a pass still running is never
- *  doubled up. Dark with no decision store (`SKYNET_BOTS_DB_PATH` unset) — there is nowhere to
- *  score the reports. Returns the timer so a caller (a spec) can stop it. */
+/** The sweep at boot and every `OPTION_LIFECYCLE_SWEEP_MS` after, on the shared sweep clock (a pass
+ *  still running is never doubled up). Dark with no decision store (`SKYNET_BOTS_DB_PATH` unset) —
+ *  there is nowhere to score the reports. Returns the timer so a caller (a spec) can stop it. */
 export function armOptionLifecycleSweep(
   brokers: ReadonlyMap<string, Pick<SwappableBotBroker, "readOptionLifecycle">>,
   db: Pick<DecisionDb, "recordOptionLifecycle"> | undefined,
@@ -221,14 +224,5 @@ export function armOptionLifecycleSweep(
   everyMs = OPTION_LIFECYCLE_SWEEP_MS,
 ): ReturnType<typeof setInterval> | undefined {
   if (!db) return undefined;
-  let running = false;
-  const pass = () => {
-    if (running) return;
-    running = true;
-    void sweepOptionLifecycle(brokers, db, logger).finally(() => {
-      running = false;
-    });
-  };
-  pass();
-  return setInterval(pass, everyMs);
+  return armSweepClock(() => sweepOptionLifecycle(brokers, db, logger), everyMs);
 }

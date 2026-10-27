@@ -79,21 +79,19 @@ describe("nextEventFor", () => {
 
 describe("the IV-crush decision", () => {
   it("warns a long option holding through its own print, even if the stock moves its way", () => {
-    // the real calendar: MSFT prints Oct 27 (estimate), before a Nov 20 expiry
+    // MSFT prints Oct 28, before a Nov 20 expiry (a pinned table: the real one refreshes itself)
     const now = new Date(asOf);
     const p = { symbol: "MSFT261120C00500000", quantity: 2, avgPrice: 1500, marketValue: 1200 };
-    const [d] = decisionsFor("eric", [{ ...p, plain: plainPosition(p, now) }], []);
-    expect(d?.title).toBe("Earnings on Oct 27 could shrink this call even if MSFT rises");
-    expect(d?.clocks).toContain("Earnings Oct 27");
+    const msft: EarningsPrint[] = [
+      { symbol: "MSFT", date: "2026-10-28", status: "confirmed", source: "IR: fixture" },
+    ];
+    const [d] = decisionsFor("eric", [{ ...p, plain: plainPosition(p, now, msft) }], []);
+    expect(d?.title).toBe("Earnings on Oct 28 could shrink this call even if MSFT rises");
+    expect(d?.clocks).toContain("Earnings Oct 28");
     expect(d?.why).toMatch(/iv crush/);
     expect(d?.learn).toEqual({ term: "ivCrush", label: "What is IV crush?" });
     // "decide before the print" — so the print, not the expiry, is the day it's due
-    expect(d?.due).toEqual({
-      at: "2026-10-27",
-      reason: "event",
-      label: "Earnings Oct 27",
-      estimated: true,
-    });
+    expect(d?.due).toEqual({ at: "2026-10-28", reason: "event", label: "Earnings Oct 28" });
   });
 });
 
@@ -140,15 +138,18 @@ describe("nextPrintFor (#3977 slice 4)", () => {
   });
 
   it("rides on every position, even an option whose print lands after it expires", () => {
-    // the real calendar: MSFT prints Oct 27 (estimate); an Oct 17 call expires first, so its
-    // nextEvent falls back to a macro print, while nextPrint still names the print
-    const p = { symbol: "MSFT261017C00500000", quantity: 1, avgPrice: 500, marketValue: 400 };
-    const plain = plainPosition(p, new Date(asOf));
+    // GOOG prints Oct 28; an Oct 17 call expires first, so its nextEvent falls back to a macro
+    // print, while nextPrint still names the print
+    const p = { symbol: "GOOG261017C00200000", quantity: 1, avgPrice: 500, marketValue: 400 };
+    const goog: EarningsPrint[] = [
+      { symbol: "GOOG", date: "2026-10-28", status: "confirmed", source: "IR: fixture" },
+    ];
+    const plain = plainPosition(p, new Date(asOf), goog);
     expect(plain.nextEvent?.scope).toBe("market");
     expect(plain.nextPrint).toEqual({
-      status: "estimate",
-      at: "2026-10-27",
-      label: "Earnings Oct 27 (estimated)",
+      status: "confirmed",
+      at: "2026-10-28",
+      label: "Earnings Oct 28",
     });
   });
 });

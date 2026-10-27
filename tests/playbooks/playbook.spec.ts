@@ -1,12 +1,13 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import {
   type EnabledPlaybook,
+  isExitIntent,
   type Playbook,
+  pausedMayPlace,
   playbookIntents,
   printWindow,
 } from "../../src/playbooks/playbook.js";
-import type { TacticalRule } from "../../src/playbooks/tactical-playbook.js";
-import { aContext, aPortfolio, aPosition } from "../support/builders.js";
+import { aContext, anOptionIntent, aPortfolio, aPosition } from "../support/builders.js";
 
 const calendar: readonly EarningsPrint[] = [
   { symbol: "NVDA", date: "2026-08-26", status: "confirmed", source: "test" },
@@ -153,88 +154,62 @@ describe("playbookIntents", () => {
       expect(intents[0]).toMatchObject({ symbol: "AMD", side: "buy" });
     });
   });
+});
 
-  describe("tactical playbooks (issue #3527 plan, slice 2)", () => {
-    const scalpRule: TacticalRule = {
-      kind: "momentum-scalp",
-      momentumAtOrAbove: 0.01,
-      sentimentAbove: -0.35,
-      sentimentBelow: 0.35,
-      notional: 8_000,
-      maxTrancheValue: 36_000,
-    };
+/** PAUSE = EXITS ONLY (#4651): a paused entry keeps managing to flat and never opens. */
+describe("a paused (exits-only) entry", () => {
+  const order = (side: "buy" | "sell") =>
+    ({ symbol: "NVDA", side, quantity: 1, type: "market", reason: "test" }) as const;
 
-    it("takes priority over desiredState when tactics are declared, even if desiredState would fire", () => {
-      const context = aContext(
-        { NVDA: { last: 100, momentum: 0.02, sentiment: 0.1 } },
-        "2026-08-16T15:00:00Z",
-      );
-      // desiredState says "long" (the default `play()` fixture) — if it ran, entry sizing would
-      // be 2% of equity; the tactic's own notional-based sizing proves desiredState never ran.
-      const tactical = play({ tactics: [scalpRule] });
+  it("judges an exit by risk taken off: a share sell or an option close, never a sold put", () => {
+    expect(isExitIntent(order("sell"))).toBe(true);
+    expect(isExitIntent(order("buy"))).toBe(false);
+    expect(isExitIntent(anOptionIntent())).toBe(false);
+    expect(isExitIntent(anOptionIntent({ side: "buy", option: { effect: "close" } }))).toBe(true);
+  });
 
-      const [intent] = playbookIntents(
-        enabled(tactical),
-        context,
-        aPortfolio({ cash: 100_000 }),
-        calendar,
-      );
+  // The one risk-reducing open (#4651): a covered call can only deliver shares already held.
+  it("may still place its exits and a covered call — never a put, a spread or a share buy", () => {
+    const coveredCall = anOptionIntent({ option: { structure: "covered-call" } });
+    expect(pausedMayPlace(order("sell"))).toBe(true);
+    expect(pausedMayPlace(anOptionIntent({ side: "buy", option: { effect: "close" } }))).toBe(true);
+    expect(pausedMayPlace(coveredCall)).toBe(true);
+    expect(isExitIntent(coveredCall)).toBe(false);
+    expect(pausedMayPlace(order("buy"))).toBe(false);
+    expect(pausedMayPlace(anOptionIntent())).toBe(false);
+    expect(pausedMayPlace(anOptionIntent({ option: { structure: "call-debit-spread" } }))).toBe(
+      false,
+    );
+  });
 
-      expect(intent).toMatchObject({ symbol: "NVDA", side: "buy", playbookId: "TEST-NVDA" });
-      expect((intent?.quantity ?? 0) * 100.05).toBeLessThan(9_000); // ~$8k tranche, not ~2% of $100k
+  it("keeps a decide playbook's option close and drops its opens", () => {
+    const close = anOptionIntent({ side: "buy", option: { effect: "close" } });
+    const decider = play({
+      id: "CRWV-WHEEL",
+      symbols: ["CRWV"],
+      decide: () => [anOptionIntent(), close],
     });
+    const context = aContext({ CRWV: { last: 92 } });
+    const running = playbookIntents(enabled(decider), context, aPortfolio(), calendar);
+    expect(running.map((i) => i.option?.effect)).toEqual(["open", "close"]);
+    const paused = playbookIntents(
+      [{ playbook: decider, mode: "standard", exitsOnly: true }],
+      context,
+      aPortfolio(),
+      calendar,
+    );
+    expect(paused.map((i) => i.option?.effect)).toEqual(["close"]);
+  });
 
-    it("returns nothing when no tactic in the chain fires", () => {
-      const context = aContext(
-        { NVDA: { last: 100, momentum: 0, sentiment: 0 } },
-        "2026-08-16T15:00:00Z",
-      );
-      const tactical = play({ tactics: [scalpRule] });
-
-      expect(
-        playbookIntents(enabled(tactical), context, aPortfolio({ cash: 100_000 }), calendar),
-      ).toEqual([]);
-    });
-
-    it("applies the tactic chain independently per symbol in a basket", () => {
-      const context = aContext(
-        {
-          NVDA: { last: 100, momentum: 0.02, sentiment: 0.1 },
-          AMD: { last: 50, momentum: 0, sentiment: 0 },
-        },
-        "2026-08-16T15:00:00Z",
-      );
-      const tactical = play({ symbols: ["NVDA", "AMD"], tactics: [scalpRule] });
-
-      const intents = playbookIntents(
-        enabled(tactical),
-        context,
-        aPortfolio({ cash: 100_000 }),
-        calendar,
-      );
-
-      expect(intents).toHaveLength(1);
-      expect(intents[0]).toMatchObject({ symbol: "NVDA" });
-    });
-
-    it("skips a symbol an exit-safety trip already claimed this cycle", () => {
-      const context = aContext(
-        { NVDA: { last: 90, momentum: 0.02, sentiment: 0.1 } },
-        "2026-08-16T15:00:00Z",
-      );
-      const portfolio = aPortfolio({
-        positions: [aPosition({ symbol: "NVDA", quantity: 100, avgPrice: 100 })],
-      });
-      const tactical = play({
-        tactics: [scalpRule],
-        exitSafety: { standard: { drawdownTripPct: 0.05, enforcement: "enforce" } },
-      });
-
-      const intents = playbookIntents(enabled(tactical), context, portfolio, calendar);
-
-      // Only the exit-safety trip's own sell — the scalp tactic never got a look at NVDA this cycle.
-      expect(intents).toHaveLength(1);
-      expect(intents[0]).toMatchObject({ side: "sell", quantity: 100 });
-    });
+  it("still sells a held position when its window closes, and buys nothing when it opens", () => {
+    const held = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 20 })] });
+    const pausedFlat: EnabledPlaybook[] = [
+      { playbook: play({ desiredState: () => "flat" }), mode: "standard", exitsOnly: true },
+    ];
+    expect(playbookIntents(pausedFlat, aContext({ NVDA: {} }), held, calendar)).toEqual([
+      expect.objectContaining({ symbol: "NVDA", side: "sell", quantity: 20 }),
+    ]);
+    const pausedLong: EnabledPlaybook[] = [{ playbook: play(), mode: "standard", exitsOnly: true }];
+    expect(playbookIntents(pausedLong, aContext({ NVDA: {} }), aPortfolio(), calendar)).toEqual([]);
   });
 });

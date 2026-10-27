@@ -112,26 +112,46 @@ describe("betaScoutIntents", () => {
 });
 
 describe("betaScoutExitIntents", () => {
-  it("flattens every tracked scout-owned position", () => {
+  it("sells every tracked scout lot", () => {
     const portfolio = aPortfolio({
       positions: [
         aPosition({ symbol: "AAPL", quantity: 5 }),
         aPosition({ symbol: "MSFT", quantity: 3 }),
       ],
     });
-    const intents = betaScoutExitIntents(portfolio, new Set(["AAPL", "MSFT"]));
-    expect(intents).toHaveLength(2);
-    expect(intents.every((i) => i.side === "sell" && i.playbookId === BETA_SCOUT_ID)).toBe(true);
+    const intents = betaScoutExitIntents(
+      portfolio,
+      new Map([
+        ["AAPL", 5],
+        ["MSFT", 3],
+      ]),
+    );
+    expect(intents.map((i) => `${i.side} ${i.quantity} ${i.symbol}`)).toEqual([
+      "sell 5 AAPL",
+      "sell 3 MSFT",
+    ]);
+    expect(intents.every((i) => i.playbookId === BETA_SCOUT_ID)).toBe(true);
+  });
+
+  // Review of #4642 slice 10: the scout used to sell the WHOLE holding of a name it owned — another
+  // playbook's shares included. It sells its own lot, and never more than is held.
+  it("sells only the scout's own shares — never the rest of the holding — and never more than held", () => {
+    const portfolio = aPortfolio({ positions: [aPosition({ symbol: "MSFT", quantity: 510 })] });
+    expect(betaScoutExitIntents(portfolio, new Map([["MSFT", 10]]))).toMatchObject([
+      { symbol: "MSFT", quantity: 10 },
+    ]);
+    const thin = aPortfolio({ positions: [aPosition({ symbol: "MSFT", quantity: 4 })] });
+    expect(betaScoutExitIntents(thin, new Map([["MSFT", 10]]))).toMatchObject([{ quantity: 4 }]);
   });
 
   it("skips a tracked symbol that is already flat — nothing left to exit", () => {
-    const intents = betaScoutExitIntents(aPortfolio({ positions: [] }), new Set(["AAPL"]));
+    const intents = betaScoutExitIntents(aPortfolio({ positions: [] }), new Map([["AAPL", 5]]));
     expect(intents).toEqual([]);
   });
 
   it("ignores positions not in the tracked set — never touches a real conviction position", () => {
     const portfolio = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 10 })] });
-    const intents = betaScoutExitIntents(portfolio, new Set());
+    const intents = betaScoutExitIntents(portfolio, new Map());
     expect(intents).toEqual([]);
   });
 });

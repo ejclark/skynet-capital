@@ -41,15 +41,20 @@ export interface DayChange {
 
 /**
  * The last sample of each recorded day, oldest day first. Intraday noise collapses to the close.
- * Runs over a desk's whole history, so the zone's formatter is resolved once (`marketDayKeyer`).
+ * `samples` must already be in ascending `at` order — `dailyChangesOf`'s per-participant groups
+ * inherit that order from `byParticipant`'s stable partition, so there is nothing left to sort here.
  */
-function dayCloses(
-  samples: readonly EquitySample[],
-  timezone: string,
-): { day: string; at: string; equity: number }[] {
-  const closes = new Map<string, { day: string; at: string; equity: number }>();
+/** A market day's last recorded sample — what a day-over-day change is measured between. */
+export interface DayClose {
+  readonly day: string;
+  readonly at: string;
+  readonly equity: number;
+}
+
+function dayCloses(samples: readonly EquitySample[], timezone: string): DayClose[] {
+  const closes = new Map<string, DayClose>();
   const dayOf = marketDayKeyer(timezone);
-  for (const s of ordered(samples)) {
+  for (const s of samples) {
     const day = dayOf(s.at);
     closes.set(day, { day, at: s.at, equity: s.equity });
   }
@@ -66,27 +71,51 @@ export function dailyChanges(
   samples: readonly EquitySample[],
   timezone: string = MARKET_TIMEZONE,
 ): DayChange[] {
+  return dailyChangesOf(ordered(samples), timezone);
+}
+
+/**
+ * `dailyChanges` over samples already in ascending `at` order — skips the sort. A desk's Pulse
+ * view needs the same order for its curve and drawdown too, so the request sorts once and every
+ * section reuses it (#4612 slice 7).
+ */
+export function dailyChangesOf(
+  orderedSamples: readonly EquitySample[],
+  timezone: string = MARKET_TIMEZONE,
+): DayChange[] {
   const changes: DayChange[] = [];
-  for (const [participantId, group] of byParticipant(samples)) {
-    const closes = dayCloses(group, timezone);
-    for (let i = 1; i < closes.length; i += 1) {
-      const prior = closes[i - 1];
-      const close = closes[i];
-      if (!(prior && close)) continue;
-      const abs = close.equity - prior.equity;
-      changes.push({
-        participantId,
-        day: close.day,
-        at: close.at,
-        equity: close.equity,
-        abs,
-        pct: prior.equity !== 0 ? (abs / prior.equity) * 100 : 0,
-      });
+  for (const [participantId, group] of byParticipant(orderedSamples)) {
+    for (const change of changesFromCloses(participantId, dayCloses(group, timezone))) {
+      changes.push(change);
     }
   }
   return changes.sort(
     (a, b) => a.day.localeCompare(b.day) || a.participantId.localeCompare(b.participantId),
   );
+}
+
+/**
+ * One participant's day-over-day changes from its day closes, oldest first — the step
+ * `dailyChangesOf` takes per participant, shared with a reader that keeps the closes itself
+ * (`pulse-history-fold.ts`, #4619) instead of re-keying every sample on each request.
+ */
+export function changesFromCloses(participantId: string, closes: readonly DayClose[]): DayChange[] {
+  const changes: DayChange[] = [];
+  for (let i = 1; i < closes.length; i += 1) {
+    const prior = closes[i - 1];
+    const close = closes[i];
+    if (!(prior && close)) continue;
+    const abs = close.equity - prior.equity;
+    changes.push({
+      participantId,
+      day: close.day,
+      at: close.at,
+      equity: close.equity,
+      abs,
+      pct: prior.equity !== 0 ? (abs / prior.equity) * 100 : 0,
+    });
+  }
+  return changes;
 }
 
 /**

@@ -77,11 +77,12 @@ export function opensRisk(intent: OrderIntent): boolean {
   return intent.option ? intent.option.effect === "open" : intent.side === "buy";
 }
 
-/** The Alpaca options level an order needs: 1 for a cash-secured put or covered call, 3 for a
- *  spread, 0 for a close (closing never needs an approval). */
+/** The Alpaca options level an order needs: 1 for a cash-secured put or covered call, 2 for a
+ *  bought call, 3 for a spread, 0 for a close (closing never needs an approval). */
 export function requiredOptionLevel(option: OptionOrderIntent): 0 | 1 | 2 | 3 {
   if (option.effect === "close" || option.structure === "close") return 0;
-  return option.structure === "call-debit-spread" ? 3 : 1;
+  if (option.structure === "call-debit-spread") return 3;
+  return option.structure === "long-call" ? 2 : 1;
 }
 
 /** One contract line the cover arithmetic sees. `contracts` is signed: + long, − short. */
@@ -131,7 +132,7 @@ function shortRequirement(short: CoverLeg, capStrike: number | undefined): numbe
 }
 
 /** The cheapest long for a short: calls — the lowest strike; puts — the highest; then the earliest
- *  expiry (so a later short keeps the longer cap), then the strike-and-expiry key for a total order. */
+ *  expiry (the longer cap stays free), then the strike-and-expiry key for a total order. */
 function capOrder(type: "call" | "put"): (a: CoverLeg, b: CoverLeg) => number {
   return (a, b) =>
     (type === "call" ? a.strike - b.strike : b.strike - a.strike) ||
@@ -141,10 +142,12 @@ function capOrder(type: "call" | "put"): (a: CoverLeg, b: CoverLeg) => number {
 
 /**
  * What a set of contracts promises, by ONE-TO-ONE cap assignment — a long caps at most as many shorts
- * as it has contracts. Per (underlying, type): shorts in expiration order each take capacity from
- * unused longs expiring no earlier, cheapest first. The member desk's multi-leg ticket reads the same
- * assignment (`draft-order-requirements.ts`, and `bareCalls` below for its unlimited-loss warning),
- * so a bot and a member are held to one cover rule.
+ * as it has contracts. Per (underlying, type): shorts, latest expiry first, each take capacity from
+ * unused longs expiring no earlier, cheapest first — so it leaves bare exactly as many sold calls as
+ * `coverShortfall`'s exact search does with no free shares. The member desk's multi-leg ticket reads
+ * the same assignment (`draft-order-requirements.ts`, and `bareCalls` below for its unlimited-loss
+ * warning), and its single-leg ticket counts free shares off it (`option-economics.ts`), so a bot
+ * and a member are held to one cover rule.
  *
  *   capped call:  cash   += max(0, L−S)·100·n      uncapped call: shares += 100·n
  *   capped put:   cash   += max(0, S−L)·100·n      uncapped put:  cash   += S·100·n
@@ -201,11 +204,14 @@ function assignAll(legs: readonly CoverLeg[]): CapAssignment[] {
 function assignCaps(group: readonly CoverLeg[]): CapAssignment[] {
   const capacity = new Map<CoverLeg, number>();
   for (const leg of group) if (leg.contracts > 0) capacity.set(leg, leg.contracts);
-  // Within one expiry the higher strike goes first: capping it costs the least cash for a call, and
-  // saves the most for a put.
+  // The latest-expiring short goes first: the longs that may cap it are a subset of those that may
+  // cap any earlier short, so serving it first never strands a short a long could have capped — an
+  // earlier short taking the one later-expiring long left the later short bare, where the exact
+  // `coverShortfall` capped both (#4736). Within one expiry the higher strike goes first: capping it
+  // costs the least cash for a call, and saves the most for a put.
   const shorts = group
     .filter((l) => l.contracts < 0)
-    .sort((a, b) => a.expiration.localeCompare(b.expiration) || b.strike - a.strike);
+    .sort((a, b) => b.expiration.localeCompare(a.expiration) || b.strike - a.strike);
   const assigned: CapAssignment[] = [];
   for (const short of shorts) {
     let left = -short.contracts;

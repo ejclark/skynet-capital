@@ -3,9 +3,10 @@
 _A proto-member: not a real person, so there are no quotes; the description is the plan's
 (2026-09-26) and the fixture's. Twin: `e2e/journeys/invited-friend.journey.json`._
 
-**Why this member exists.** Every other signed-in member file signs in as `crawl@example.test`,
-which is linked to `human-eric` AND listed as an owner (`SKYNET_ALLOWED_EMAILS`) — so every
-signed-in journey was really Eric, the fund owner, and no test had ever seen what anyone else sees.
+**Why this member exists.** Every other member file with a linked account signs in as
+`crawl@example.test`, which is linked to `human-eric` AND listed as an owner
+(`SKYNET_ALLOWED_EMAILS`) — so every journey on a linked account was really Eric, the fund owner,
+and no test had ever seen what anyone else sees.
 Eric, 2026-09-26: *"Other people that log in should have the perspective of their accounts/data,
 not mine."* This file is that perspective, and its journeys are the standing check that the line
 between "mine" and "the league's" holds.
@@ -51,13 +52,20 @@ heading, the account picker); if it names someone else, nothing else on the page
 They skip the owner's tools entirely — they would not know what a guest list or a fleet switch is
 for, and seeing one would read as "I am in the wrong place".
 
+- **Attention: easily distracted.** Anything on the screen that isn't their task can pull them off
+  it, and a crowded page can lose them before the task is done. This is a study setting, not a
+  guess about one person: Eric, 2026-10-14, "my brother DEFINITELY has ADHD too.. so that is a good
+  attribute to factor into personas in our user studies", and his brother is the kind of friend this
+  file stands for.
+
 ## 5. What frustrates them
 
 - **The playbook names of another member's bot (fixed, #3834)** — `docs/IA.md` §5.2 says a
   non-owner's `/u/<bot>` Heartbeat withholds playbook ids (#885). A non-owner's copy of
   `/api/desk/<bot>/heartbeat` and of its decisions carries no `playbookId`
   (`src/server/desk-json-routes.ts` → `withoutHeartbeatPlaybookIds`, `src/server/desk-owner-gate.ts`),
-  and the page hides the column (`app/src/shell/heartbeat.tsx`, `showPlaybook`). Offline no
+  and the page never draws them (`app/src/shell/bot-playbooks.tsx`, `showPlaybooks` false for a
+  non-owner, down to `decisions-section.tsx`'s playbook chip). Offline no
   decision trail is wired, so j3 s2 still passes on absent data. A crawl boot that wires one turns
   it into a real check.
 - Nothing else on the boundary: every j1 step holds today, at both widths. The friend meets the
@@ -112,21 +120,22 @@ for, and seeing one would read as "I am in the wrong place".
    accounts."; no Close, no New trade. **WHEN the invited friend opens another member's bot, the
    app shall show its book read-only, with no control that would write to it.** Judge: can this
    reader tell they are looking, not trading?
-2. `/app/u/sauron/decisions` — Heartbeat; offline, "No decision trail is wired in this
-   deployment." **WHEN the invited friend reads another member's bot's heartbeat, the app shall not
-   name the playbooks it runs.** Passes offline on absent data (§5). Judge: can this reader tell
-   the bot is alive without learning its playbooks?
+2. `/app/u/sauron/playbooks` — Playbooks (Heartbeat merged in as its top strip, #5073); offline,
+   "No decision trail is wired in this deployment." **WHEN the invited friend reads another
+   member's bot's playbooks, the app shall not name the playbooks it runs.** Passes offline on
+   absent data (§5). Judge: can this reader tell the bot is alive without learning its playbooks?
 
 ### j4 — my bot
 
 _(Added 2026-09-29, #3816 slice 9 — the friend is the only member in these files who owns a bot
 and is not the owner.)_
 
-1. `/app/accounts?account=day-trader&section=heartbeat` — Profile on The Day Trader: the section
-   switch gains Heartbeat · Thesis; Heartbeat says whether the loop is alive (offline: no
-   decision trail is wired). **WHEN the invited friend opens Profile on the bot they own, the app
-   shall offer its Heartbeat and show whether it is alive.** Judge: can this reader tell whether
-   their bot is running?
+1. `/app/accounts?account=day-trader&section=playbooks` — Profile on The Day Trader: the section
+   switch gains Playbooks · Thesis (on a phone the open Playbooks takes the switch's More slot,
+   #5072); Playbooks' top strip says whether the loop is alive (offline: no decision trail is
+   wired). **WHEN the invited friend opens Profile on the bot they own, the app shall offer its
+   Playbooks and show whether it is alive.** Judge: can this reader tell whether their bot is
+   running?
 2. `/app/accounts?account=day-trader&section=thesis` — Thesis on their own bot: its standing call
    and the markers behind it. **WHEN the invited friend opens Thesis on the bot they own, the app
    shall show that bot's standing call.** Judge: can this reader tell what their bot believes

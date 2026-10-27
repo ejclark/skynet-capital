@@ -92,4 +92,18 @@ describe("startHistorySampler", () => {
     await new Promise((r) => setTimeout(r, 25));
     expect((await store.list()).length).toBe(after); // no growth after stop
   });
+
+  it("hands every sample it takes to onSample, the capital-flow watch's feed (#4563)", async () => {
+    const seen: string[] = [];
+    const stop = startHistorySampler({
+      getState: () => data([p({ id: "a", equity: 1 }), p({ id: "down", error: "unreachable" })]),
+      store: new InMemoryHistoryStore(),
+      intervalMs: 10,
+      onSample: (sample) => seen.push(sample.participantId),
+    });
+    await new Promise((r) => setTimeout(r, 15));
+    stop();
+    expect(seen.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(seen)).toEqual(new Set(["a"])); // error rows are never sampled, so never watched
+  });
 });

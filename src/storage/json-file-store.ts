@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { writeFileAtomicSync } from "./atomic-write.js";
+import { survivesParse } from "./parse-guards.js";
 
 /**
  * The house PLAIN-JSON FILE STORE primitive — one small unencrypted state file on the mounted
@@ -20,6 +21,8 @@ export class JsonFileStore<T> {
   private readonly empty: T;
   private readonly label: string;
   private readonly onReadError: (message: string) => void;
+  private readonly readsWhole: (raw: unknown, parsed: T) => boolean;
+  private readonly serialize: ((state: T, onDisk: unknown) => unknown) | undefined;
 
   constructor(options: {
     readonly path: string;
@@ -29,37 +32,75 @@ export class JsonFileStore<T> {
     /** Short tag for error messages, e.g. "controls" → `[controls] …`. */
     readonly label: string;
     readonly onReadError?: (message: string) => void;
+    /** `loadIfReadable`'s bar for "read whole" — `survivesParse` unless a store keeps, on its
+     *  own rewrite, something its parse leaves out (`subscriptions-file.ts`'s `readsWhole`). */
+    readonly readsWhole?: (raw: unknown, parsed: T) => boolean;
+    /** What `write` puts on disk, given the state and the file as it is now (undefined when
+     *  missing or unreadable) — so a store can keep what its parse cannot read (#4772). */
+    readonly serialize?: (state: T, onDisk: unknown) => unknown;
   }) {
     this.path = options.path;
     this.parse = options.parse;
     this.empty = options.empty;
     this.label = options.label;
     this.onReadError = options.onReadError ?? (() => undefined);
+    this.readsWhole = options.readsWhole ?? survivesParse;
+    this.serialize = options.serialize;
   }
 
   load(): T {
+    const state = this.read("using empty", false);
+    return state === undefined ? this.empty : state;
+  }
+
+  /**
+   * `load`, except that a file which exists but cannot be read WHOLE is `undefined` instead of
+   * `empty` (still reported): it fails to parse, or the total parse dropped or changed anything in
+   * it — one malformed record, an unknown mode, a field a newer build wrote (`survivesParse`). A
+   * missing file is still `empty`. For an unattended writer that rewrites the whole file from what
+   * it read — the subscription seeders — which must leave a file it could not read whole alone
+   * rather than write back a state that silently lost part of it.
+   */
+  loadIfReadable(): T | undefined {
+    return this.read("left untouched", true);
+  }
+
+  private read(fallback: string, whole: boolean): T | undefined {
     if (!existsSync(this.path)) return this.empty;
     try {
-      const parsed = this.parse(JSON.parse(readFileSync(this.path, "utf8")));
+      const raw: unknown = JSON.parse(readFileSync(this.path, "utf8"));
+      const parsed = this.parse(raw);
       if (parsed === undefined) {
         this.onReadError(
-          `[${this.label}] ${this.path} did not parse as a ${this.label} state — using empty`,
+          `[${this.label}] ${this.path} did not parse as a ${this.label} state — ${fallback}`,
         );
-        return this.empty;
+      } else if (whole && !this.readsWhole(raw, parsed)) {
+        this.onReadError(
+          `[${this.label}] ${this.path} parsed only in part (a record or field in it did not ` +
+            `parse, so a rewrite would lose it) — ${fallback}`,
+        );
+        return undefined;
       }
       return parsed;
     } catch (error) {
       this.onReadError(
-        `[${this.label}] failed to read ${this.path}: ${String(error)} — using empty`,
+        `[${this.label}] failed to read ${this.path}: ${String(error)} — ${fallback}`,
       );
-      return this.empty;
+      return undefined;
     }
   }
 
   write(state: T): void {
-    mkdirSync(dirname(this.path), { recursive: true });
-    const tmp = `${this.path}.tmp`;
-    writeFileSync(tmp, `${JSON.stringify(state, null, 2)}\n`, "utf8");
-    renameSync(tmp, this.path);
+    const body = this.serialize ? this.serialize(state, this.onDisk()) : state;
+    writeFileAtomicSync(this.path, `${JSON.stringify(body, null, 2)}\n`);
+  }
+
+  private onDisk(): unknown {
+    if (!existsSync(this.path)) return undefined;
+    try {
+      return JSON.parse(readFileSync(this.path, "utf8"));
+    } catch {
+      return undefined;
+    }
   }
 }

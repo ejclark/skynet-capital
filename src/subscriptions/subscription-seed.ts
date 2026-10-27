@@ -1,4 +1,4 @@
-import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
+import type { HouseRosterEntry, HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import { isRecord } from "../storage/parse-guards.js";
 import type { SubscriptionsState } from "./subscription-state.js";
@@ -21,12 +21,23 @@ import type { SubscriptionsState } from "./subscription-state.js";
  * never seeded again — so an owner who later unsubscribes from a seeded playbook stays
  * unsubscribed. The markers live in their own file (`subscription-seed-store.ts`), not in the
  * subscriptions file, whose content fingerprint (`subscriptionsVersion`) is the wire's contract.
+ *
+ * A second seed, a bot's own rules as its subscription (#4642 slice 9b), runs the same loop on its
+ * own marker — `seedOwnRules` below — and a third, the shadow scout's names (#4535 slice 4c),
+ * `seedCondScout`.
  */
 
 export const SEEDED_FROM_ENV_ROSTER = "SKYNET_PLAYBOOKS";
 
+/** The second seed: a bot subscribed to the playbook that IS its persona's own rules (#4651 9b). */
+export const SEEDED_FROM_OWN_RULES = "own-rules";
+
+/** The third: the shadow scout's host subscribed to COND-SCOUT on the env's names (#4535 4c). */
+export const SEEDED_FROM_COND_SCOUT_UNIVERSE = "SKYNET_COND_SCOUT_UNIVERSE";
+
 export interface SeedMarker {
-  /** Where the seed came from — today only the bots app's env roster. */
+  /** Where the seed came from — the bots app's env roster, or the bot's own rules. Each seed keeps
+   *  its markers in its own file, so one seed's marker never stops the other. */
   readonly seededFrom: string;
   /** ISO-8601. */
   readonly at: string;
@@ -41,8 +52,78 @@ export const EMPTY_SEED_MARKERS: SeedMarkers = {};
 export interface SeedResult {
   readonly state: SubscriptionsState;
   readonly markers: SeedMarkers;
-  /** The accounts this call seeded — empty means nothing to write. */
+  /** The accounts this call marked — empty means nothing to write. */
   readonly seeded: readonly string[];
+  /** Those of them that gained a subscription. The rest already held everything the seed would add
+   *  and are only marked; when this is empty `state` is the very object passed in, so a caller
+   *  writes the marker alone and never rewrites the subscriptions file for nothing. */
+  readonly added: readonly string[];
+}
+
+/** One account's seed: the playbooks to add if it does not hold them yet, in order — each with the
+ *  symbol filter to carry, when it has one. */
+interface AccountSeed {
+  readonly accountId: string;
+  readonly entries: readonly (HouseRosterEntry & { readonly symbols?: readonly string[] })[];
+}
+
+/**
+ * The one loop both seeds run. Per account with no marker: add (uncapped, enabled) each entry it
+ * does not already hold, placed by `place`, and mark the account — even when nothing was added,
+ * because the owner already held it all (then its subscriptions are not even copied). An account
+ * already marked is never touched again.
+ */
+function seedAccounts(
+  state: SubscriptionsState,
+  markers: SeedMarkers,
+  seeds: readonly AccountSeed[],
+  seededFrom: string,
+  at: Date,
+  place: (
+    added: readonly PlaybookSubscription[],
+    existing: readonly PlaybookSubscription[],
+  ) => readonly PlaybookSubscription[],
+): SeedResult {
+  const stamp = at.toISOString();
+  const nextState: Record<string, readonly PlaybookSubscription[]> = { ...state };
+  const nextMarkers: Record<string, SeedMarker> = { ...markers };
+  const seeded: string[] = [];
+  const gained: string[] = [];
+  for (const { accountId, entries } of seeds) {
+    if (nextMarkers[accountId]) continue;
+    const existing = state[accountId] ?? [];
+    const held = new Set(existing.map((s) => s.playbookId));
+    const added: PlaybookSubscription[] = [];
+    for (const entry of entries) {
+      if (held.has(entry.playbookId)) continue;
+      held.add(entry.playbookId);
+      added.push({
+        accountId,
+        playbookId: entry.playbookId,
+        mode: entry.mode,
+        enabled: true,
+        ...(entry.symbols ? { symbols: [...entry.symbols] } : {}),
+        createdAt: stamp,
+        updatedAt: stamp,
+      });
+    }
+    if (added.length > 0) {
+      nextState[accountId] = place(added, existing);
+      gained.push(accountId);
+    }
+    nextMarkers[accountId] = {
+      seededFrom,
+      at: stamp,
+      playbookIds: added.map((s) => s.playbookId),
+    };
+    seeded.push(accountId);
+  }
+  return {
+    state: gained.length > 0 ? nextState : state,
+    markers: seeded.length > 0 ? nextMarkers : markers,
+    seeded,
+    added: gained,
+  };
 }
 
 /** Pure: what seeding `report` onto `state` produces. Idempotent by construction. */
@@ -52,39 +133,97 @@ export function seedFromHouseRoster(
   report: HouseRosterReport,
   at: Date,
 ): SeedResult {
-  if (report.roster.length === 0) return { state, markers, seeded: [] };
-  const stamp = at.toISOString();
-  const nextState: Record<string, readonly PlaybookSubscription[]> = { ...state };
-  const nextMarkers: Record<string, SeedMarker> = { ...markers };
-  const seeded: string[] = [];
-  for (const accountId of report.accounts) {
-    if (markers[accountId]) continue;
-    const existing = state[accountId] ?? [];
-    const held = new Set(existing.map((s) => s.playbookId));
-    const added: PlaybookSubscription[] = [];
-    for (const entry of report.roster) {
-      if (held.has(entry.playbookId)) continue;
-      held.add(entry.playbookId);
-      added.push({
-        accountId,
-        playbookId: entry.playbookId,
-        mode: entry.mode,
-        enabled: true,
-        createdAt: stamp,
-        updatedAt: stamp,
-      });
-    }
-    if (added.length > 0) nextState[accountId] = [...added, ...existing];
-    nextMarkers[accountId] = {
-      seededFrom: SEEDED_FROM_ENV_ROSTER,
-      at: stamp,
-      playbookIds: added.map((s) => s.playbookId),
-    };
-    seeded.push(accountId);
-  }
-  return seeded.length > 0
-    ? { state: nextState, markers: nextMarkers, seeded }
-    : { state, markers, seeded };
+  if (report.roster.length === 0) return { state, markers, seeded: [], added: [] };
+  const seeds = report.accounts.map((accountId) => ({ accountId, entries: report.roster }));
+  return seedAccounts(state, markers, seeds, SEEDED_FROM_ENV_ROSTER, at, (added, existing) => [
+    ...added,
+    ...existing,
+  ]);
+}
+
+/** What the own-rules seed reads off a playbook: its id, and whose persona's rules it is. */
+export interface OwnRulesPlaybook {
+  readonly id: string;
+  readonly rulesOf?: string;
+}
+
+/**
+ * SEEDING A BOT'S OWN RULES AS ITS SUBSCRIPTION (#4642 slice 9b, design on #4651) — the cutover.
+ *
+ * A playbook with `rulesOf` IS a persona's own rules (`SAURON` → `"sauron"`). Subscribed on that
+ * persona's own account, it changes nothing he trades, only labels his orders with the playbook's
+ * id. The label is what lets a capital cap or symbol filter set in the Store's Edit act on his buys.
+ * Since slice 10 only a subscribed playbook opens a position, so this subscription is also what lets
+ * his rules buy at all: paused or unsubscribed, they only sell. So each reported bot whose persona has such a
+ * playbook is subscribed to it once — standard, uncapped, enabled, no symbol filter: the shape that
+ * changes only the label (`docs/BOTS-SAURON.md`'s 2026-10-06 correction row). `accounts` is the
+ * bots app's own list of the bots it runs (persona ids), so a human account is never a candidate.
+ *
+ * - **Every other subscription is untouched.** The new entry is appended, where a Store subscribe
+ *   puts it; nothing on the account is reordered, re-moded or re-allocated.
+ * - **An account that already holds the playbook is marked, not changed** — subscribed by hand,
+ *   paused, capped or seeded from the env roster, the owner's entry wins.
+ * - **Once only, on its own marker.** The marker (`SEEDED_FROM_OWN_RULES`) lives apart from the
+ *   env roster's, so a bot already seeded from `SKYNET_PLAYBOOKS` is still seeded here once, and an
+ *   owner who later unsubscribes or pauses it stays that way.
+ * - **A bot with no own-rules playbook gets no marker**, so it is still seeded if one is added.
+ */
+export function seedOwnRules(
+  state: SubscriptionsState,
+  markers: SeedMarkers,
+  accounts: readonly string[],
+  playbooks: readonly OwnRulesPlaybook[],
+  at: Date,
+): SeedResult {
+  const seeds = accounts.flatMap((accountId): AccountSeed[] => {
+    const own = playbooks.filter((p) => p.rulesOf === accountId);
+    if (own.length === 0) return [];
+    return [{ accountId, entries: own.map((p) => ({ playbookId: p.id, mode: "standard" })) }];
+  });
+  return seedAccounts(state, markers, seeds, SEEDED_FROM_OWN_RULES, at, (added, existing) => [
+    ...existing,
+    ...added,
+  ]);
+}
+
+/**
+ * SEEDING THE SHADOW SCOUT'S NAMES (#4535 slice 4c). Since slice 2a the scout reads its names from
+ * its host bot's COND-SCOUT subscription and falls back to `SKYNET_COND_SCOUT_UNIVERSE` only for a
+ * host holding none. Before that fallback retires, the host (`accounts[0]` of the report, the bot
+ * the bots app runs the scout beside) is subscribed once on the env's names — standard, no budget
+ * (COND-SCOUT places no orders and takes none), the names as its symbol filter: the subscription the
+ * Store would make with those chips picked, so the scout scans exactly what it scans today.
+ *
+ * The names are cut to `pickFrom` — the Store's chips for COND-SCOUT, the ten the bots stream — so
+ * the row saves in the Store's Edit as it is. The scout already drops a name off the stream, so the
+ * cut changes nothing it scans.
+ *
+ * Same rules as the other seeds: a host already holding COND-SCOUT, on or paused, is only marked;
+ * once only, on its own marker; and an env naming nothing pickable seeds and marks nothing — an
+ * empty symbol filter would mean every name.
+ */
+export function seedCondScout(
+  state: SubscriptionsState,
+  markers: SeedMarkers,
+  report: HouseRosterReport,
+  playbookId: string,
+  pickFrom: readonly string[],
+  at: Date,
+): SeedResult {
+  const host = report.accounts[0];
+  const names = (report.settings?.condScoutUniverse ?? []).filter((s) => pickFrom.includes(s));
+  if (!host || names.length === 0) return { state, markers, seeded: [], added: [] };
+  const seeds = [
+    { accountId: host, entries: [{ playbookId, mode: "standard" as const, symbols: names }] },
+  ];
+  return seedAccounts(
+    state,
+    markers,
+    seeds,
+    SEEDED_FROM_COND_SCOUT_UNIVERSE,
+    at,
+    (added, existing) => [...existing, ...added],
+  );
 }
 
 function parseMarker(raw: unknown): SeedMarker | null {

@@ -47,6 +47,7 @@ import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
 import { DEFAULT_MODEL } from "./model-tier.mjs";
+import { BLOCKER_READS, nextSubIssue } from "./pickup-hold.mjs";
 import { derivePrIssues } from "./pr-issues.mjs";
 import {
   allReceiptsOf,
@@ -92,33 +93,48 @@ export const MAX_CANDIDATES = 5;
  *  the next push, which is minutes away. */
 export const STOP_CAP = 1;
 
-/** How many open sub-issues one candidate reads blockers for. Past this the answer is UNKNOWN, and
- *  `nextSubIssue` refuses an unknown rather than guessing it unblocked (see its header). */
-const BLOCKER_READS = 10;
-
 const DAY_MS = 864e5;
 
+// `nextSubIssue` (the first open, unblocked slice) lives in pickup-hold.mjs since #5707, so the
+// pick's hold and this lane ask one rule; it is re-exported here for the callers that import it.
+export { nextSubIssue };
+
 /**
- * The next slice to take: the first open sub-issue whose every blocker is closed (#4056's
- * correction). Order is the sub-issue list's own, which GitHub returns in the order they were
- * attached — the plan's slicing order.
- *
- * AN UNREAD BLOCKER LIST IS UNKNOWN, NEVER "UNBLOCKED". The gather reads blockers for the first
- * `BLOCKER_READS` open slices only, so a sub-issue with no entry in `blockedBy` has not been asked
- * about — and treating that as "no blockers" would dispatch a slice whose dependency is still open,
- * which is precisely the check #4056 asked for. A plan deep enough to run past that bound falls
- * back to the block's next-pickup line instead, which a human wrote.
- *
- * @param blockedBy map of sub-issue number → its blocker issues (`[{ state }]`)
+ * WHICH SLICE A TEXT NAMES — the ordinal a pickup line ("slice 4, board subtraction") or a slice's
+ * sub-issue ("Parent | #3939, slice 3 of 4", or "… (COND-SCOUT slice 8)" in its title) carries.
+ * Null when it names none, or names several ("slices 4 and 5" never matches `slice\s`), so an
+ * unparseable line falls through to the old behaviour rather than to a guess.
  */
-export function nextSubIssue(subIssues = [], blockedBy = {}) {
-  const known = (s) => Object.hasOwn(blockedBy ?? {}, s.number);
-  return (
-    (subIssues ?? [])
-      .filter((s) => s && (s.state ?? "open") === "open")
-      .find((s) => known(s) && blockedBy[s.number].every((b) => (b?.state ?? "open") !== "open")) ??
-    null
-  );
+export const sliceOf = (text) => {
+  const m = /\bslice\s+(\d+)\b/i.exec(String(text ?? ""));
+  return m ? Number(m[1]) : null;
+};
+
+/** A sub-issue's slice: its title's, else its body's "slice N of M" (a bare mention in the body,
+ *  "unblocks slice 5", is not the sub-issue's own number). */
+const subSliceOf = (sub) =>
+  sliceOf(sub?.title) ?? sliceOf(/\bslice\s+\d+\s+of\s+\d+/i.exec(String(sub?.body ?? ""))?.[0]);
+
+const isOpen = (s) => (s?.state ?? "open") === "open";
+
+/**
+ * STALE EVIDENCE CUTS BOTH WAYS (#4530, #4557). A slice can ship straight against the parent and
+ * leave its own sub-issue open (#3939's slice 3 merged as #4529 while #4319 sat open, and the sweep
+ * re-dispatched #4319); and a block can keep naming a slice whose sub-issue already closed (#3651's
+ * "slice 8" a day after #4533 closed). Sub-issues still win (#4056) — but not one whose slice the
+ * block has already moved past; and with no sub-issue to take, `shipped` is the closed sub-issue
+ * proving the pickup line's slice already landed, so the line is not a target.
+ *
+ * @returns {{ sub: object | null, shipped: object | null }}
+ */
+function sliceToTake({ subIssues = [], blockedBy } = {}, pickup) {
+  const named = sliceOf(pickup);
+  const subs = subIssues ?? [];
+  if (named === null) return { sub: nextSubIssue(subs, blockedBy), shipped: null };
+  const live = subs.filter((s) => !isOpen(s) || (subSliceOf(s) ?? named) >= named);
+  const sub = nextSubIssue(live, blockedBy);
+  if (sub || subs.some((s) => isOpen(s) && subSliceOf(s) === named)) return { sub, shipped: null };
+  return { sub, shipped: subs.find((s) => !isOpen(s) && subSliceOf(s) === named) ?? null };
 }
 
 /**
@@ -211,11 +227,17 @@ export function continuationDecision(candidate = {}, { caps = {}, now = Date.now
   if (today >= cap) {
     return skip(`${today} of ${cap} continuations already dispatched for #${plan.number} today`);
   }
-  const sub = nextSubIssue(candidate.subIssues, candidate.blockedBy);
   const pickup = nextPickupOf(block.body);
+  const { sub, shipped } = sliceToTake(candidate, pickup);
   if (!(sub || pickup)) {
     return skip(
       `#${plan.number}'s block names no next pickup and no open, unblocked slice remains`,
+    );
+  }
+  if (shipped) {
+    return skip(
+      `#${plan.number}'s block names slice ${sliceOf(pickup)} as the next pickup, but its ` +
+        `sub-issue #${shipped.number} is already closed — the block is stale; edit its next-pickup line`,
     );
   }
   return {
