@@ -77,6 +77,15 @@ describe("botsDeployLag", () => {
     expect(botsDeployLag(HEAD, RELEASED, ["docs/x.md"]).lagging).toBe(false);
     expect(botsDeployLag(HEAD, RELEASED, ["src/bots/runner.ts"]).lagging).toBe(true);
   });
+
+  it("reads stale with no baseline when every release in the window rolled back (#6276)", () => {
+    expect(botsDeployLag(HEAD, "", [], 3)).toEqual({
+      known: true,
+      baseline: false,
+      lagging: true,
+      reason: "the last 3 bots release(s) all failed smoke and rolled back",
+    });
+  });
 });
 
 describe("appDeploySignal", () => {
@@ -113,6 +122,22 @@ describe("botsDeploySignal", () => {
     );
     expect(stale.verdict).toBe("attention");
     expect(stale.detail).toContain("force_bots_deploy");
+  });
+
+  it("reads attention, not no-baseline, when every release rolled back (#6276)", () => {
+    const dark = botsDeploySignal(
+      {
+        known: true,
+        baseline: false,
+        lagging: true,
+        reason: "the last 3 bots release(s) all failed smoke and rolled back",
+      },
+      LINK,
+    );
+    expect(dark.verdict).toBe("attention");
+    expect(dark.detail).toContain("Bots app is STALE — the last 3 bots release(s)");
+    expect(dark.detail).toContain("machine is started");
+    expect(dark.link).toEqual(LINK);
   });
 });
 
