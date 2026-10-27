@@ -1,3 +1,4 @@
+import { strategyCatalog } from "../../src/discovery/playbook-store-strategies.js";
 import { fitFor } from "../../src/playbooks/fit-finder.js";
 import { pairFor, STRATEGIES } from "../../src/playbooks/pair-table.js";
 
@@ -35,8 +36,36 @@ describe("fitFor", () => {
     expect(first?.until).toBe(row?.evidence.shelfOn);
   });
 
-  it("says a weakened ✓ is weakened, in words", () => {
-    expect(strategyOf("NVDA", "pre-print-run-up")?.word).toBe("researched, weakened");
+  it("marks a ✓ below the house bar △, in the same glyph and words as the Store's card (#6275)", () => {
+    const row = strategyOf("NVDA", "pre-print-run-up");
+    expect(row?.glyph).toBe("△");
+    expect(row?.word).toBe("researched, below the house bar");
+  });
+
+  // The two rows the post-merge audit caught wearing ✓ here and △ on the card (#6275).
+  it.each([
+    ["NVDA", "pre-print-run-up", "S1-NVDA", NOW],
+    ["NBIS", "dip-bounce", "NBIS-DIP-BOUNCE", NOW],
+    ["NVDA", "pre-print-run-up", "S1-NVDA", "2027-04-02T15:00:00Z"],
+  ])(
+    "reads %s on %s exactly as the Store's card row %s does, as of %s",
+    (symbol, strategy, id, asOf) => {
+      const row = strategyOf(symbol, strategy, asOf);
+      const card = strategyCatalog(asOf)
+        .flatMap((entry) => entry.pairs)
+        .find((pair) => pair.id === id);
+      expect(card).toBeDefined();
+      expect(`${row?.glyph} ${row?.word}`).toBe(card?.statusLabel);
+    },
+  );
+
+  it("ranks a ✓ below the house bar after every clean ✓, still ahead of everything else", () => {
+    const { fits } = fitFor("NVDA", NOW);
+    const firstWeak = fits.findIndex((r) => r.status === "researched" && r.glyph === "△");
+    const lastClean = fits.findLastIndex((r) => r.status === "researched" && r.glyph === "✓");
+    expect(firstWeak).toBeGreaterThanOrEqual(0);
+    expect(lastClean).toBeLessThan(firstWeak);
+    expect(fits.slice(0, firstWeak).every((r) => r.status === "researched")).toBe(true);
   });
 
   it("keeps a stand-aside ◆ conviction visible with its check date, and ranks it after a ✓", () => {
@@ -52,8 +81,9 @@ describe("fitFor", () => {
   it("reads a ✓ past its shelf date as stale, not as a fit", () => {
     const row = strategyOf("NVDA", "pre-print-run-up", "2027-04-02T15:00:00Z");
     expect(row?.status).toBe("stale");
-    expect(row?.word).toBe("stale, due for re-research");
-    expect(row?.glyph).toBe("△");
+    // △ already means "below the house bar"; stale says its shelf date in words instead (#6275).
+    expect(row?.word).toBe("researched, below the house bar · past its shelf date");
+    expect(row?.until).toBe("2027-03-31");
   });
 
   it("offers a ticker the house has not studied its free screen, with the ticker filled in", () => {
