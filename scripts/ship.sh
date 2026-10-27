@@ -759,6 +759,7 @@ cmd_merge() {
 #                                [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter board <item-branch> [--subject S] [--no-verify] [--closes …] [--part-of …]
 #   scripts/ship.sh platter ledger [--base <ref>] [--body]
+#   scripts/ship.sh platter sync
 #
 # `--closes` / `--part-of` name the issues the item finishes or advances; with neither, the item's
 # own PR's keywords are read, and a branch number alone is only ever `Part of` (#4562). They ride as
@@ -813,8 +814,30 @@ cmd_platter_ledger() {
   if [ "$body" = 1 ]; then platter_body; else platter_ledger_table; fi
 }
 
+# The boarded items: commits in the range that carry the Platter-Item trailer `board` writes, and
+# nothing else. The ledger, the picture's count and the Summary refs all read this one list, so an
+# item's row number is the same in all three. A bare `<base>..HEAD` is not enough on its own: from a
+# shallow or stale origin/main, the platter's catch-up merges drag main's history into the range —
+# #5852's ledger grew to 986 rows over 20 real items (#6252). Merges and main's commits carry no
+# trailer, so they never become rows; the range itself is checked against GitHub's own count before
+# a body is posted (platter_sync_body).
+platter_items_log() {
+  git log --reverse --no-merges --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" | python3 -c '
+import sys
+for record in sys.stdin.read().split("\x1e"):
+    body = record.split("\x00")[-1]
+    if any(line.strip().startswith("Platter-Item:") for line in body.splitlines()):
+        sys.stdout.write(record + "\x1e")
+'
+}
+
+platter_item_count() { platter_items_log | tr -cd '\036' | wc -c | tr -d ' '; }
+
 platter_ledger_table() {
-  git log --reverse --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" | python3 -c '
+  # Non-merge commits with no trailer are platter-side fixes (#5852's two hand reverts) — or, from a
+  # stale range, main's own. Either way they are not items, so they are counted, not given rows.
+  local others; others=$(( $(git rev-list --count --no-merges "$PLATTER_BASE..HEAD") - $(platter_item_count) ))
+  platter_items_log | python3 -c '
 import sys
 
 def cell(text):
@@ -846,6 +869,10 @@ print("| # | item | why | verify evidence | revert |")
 print("|---|---|---|---|---|")
 print("\n".join(rows) if rows else "| — | _nothing boarded yet_ | — | — | — |")
 '
+  if [ "$others" -gt 0 ]; then
+    printf '\n_Also on the branch, not items: %s commit(s) with no `Platter-Item:` trailer — `git log --no-merges %s..%s` lists them._\n' \
+      "$others" "$PLATTER_BASE" "$(git rev-parse --abbrev-ref HEAD)"
+  fi
 }
 
 # The PR body: ledger as the picture (docs/PICTURES.md prescribes a table for exactly this shape),
@@ -855,7 +882,7 @@ print("\n".join(rows) if rows else "| — | _nothing boarded yet_ | — | — | 
 # scripts/platter-picture.mjs so it never names a count the ledger does not hold; the after-landing
 # picture is `ship platter landed <pr>`, read from the log, in whichever ending is true.
 platter_picture() {
-  local count; count="$(git rev-list --count "$PLATTER_BASE..HEAD")"
+  local count; count="$(platter_item_count)"
   [ "$count" -ge 1 ] || count=1
   node "$(dirname "$0")/platter-picture.mjs" open --count "$count"
 }
@@ -863,8 +890,7 @@ platter_picture() {
 # The issues the boarded items close or are part of, one Summary bullet each (#4562). Read from the
 # same commits as the ledger, so dropping an item (re-opening without it) drops its close too.
 platter_summary_refs() {
-  git log --reverse --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" \
-    | node "$(dirname "$0")/platter-refs.mjs" summary
+  platter_items_log | node "$(dirname "$0")/platter-refs.mjs" summary
 }
 
 platter_body() {
@@ -1023,6 +1049,44 @@ platter_item_refs() {
   node "$(dirname "$0")/platter-refs.mjs" "${args[@]}"
 }
 
+# The ledger's range must be the PR's own commits before a body is posted (#6252). A cloud session
+# clones 50 commits deep, so first deepen a shallow clone — otherwise main's history past the cut-off
+# reads as platter commits. Then wait for GitHub to see the pushed head, and compare its commit count
+# with the UNFILTERED range: the item rows are fewer by design (merges, hand reverts), so comparing
+# rows would refuse every real platter. A disagreement posts nothing — the old body stays up.
+PLATTER_SYNC_WAIT="${PLATTER_SYNC_WAIT:-5}"
+platter_range_check() {
+  local branch="$1" num="$2" resp http head want local_count gh_count tries=0
+  if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+    git fetch --quiet --unshallow origin main "$branch" ||
+      echo "ship platter: could not unshallow this clone — the range check below decides." >&2
+  fi
+  want="$(git rev-parse HEAD)"
+  while :; do
+    resp="$(api GET "/pulls/$num")" || true
+    http="$(http_of "$resp")"
+    if [ "$http" != 200 ]; then
+      echo "ship platter: GET pulls/$num returned HTTP ${http:-none} — the ledger was not refreshed." >&2; return 1
+    fi
+    read -r head gh_count < <(body_of "$resp" | python3 -c 'import sys,json; r=json.load(sys.stdin); print(r["head"]["sha"], r["commits"])')
+    [ "$head" = "$want" ] && break
+    tries=$((tries + 1))
+    if [ "$tries" -ge 6 ]; then
+      echo "ship platter: #$num's head is still ${head:0:7}, not the pushed ${want:0:7} — the ledger was not refreshed." >&2
+      echo "  Once GitHub catches up: scripts/ship.sh platter sync" >&2
+      return 1
+    fi
+    sleep "$PLATTER_SYNC_WAIT"
+  done
+  local_count="$(git rev-list --count "$PLATTER_BASE..HEAD")"
+  if [ "$local_count" != "$gh_count" ]; then
+    echo "ship platter: the ledger's range $PLATTER_BASE..HEAD holds $local_count commits, but GitHub says #$num has $gh_count —" >&2
+    echo "  $PLATTER_BASE is stale or shallow here, so the ledger would list commits that are not the platter's." >&2
+    echo "  Fix the clone, then re-sync: git fetch --unshallow origin main || git fetch origin main; scripts/ship.sh platter sync" >&2
+    return 1
+  fi
+}
+
 # Refresh the open platter PR's ledger. The commit is already made and pushed, so a failure here is
 # a stale body to fix by hand, never a lost item — but it returns non-zero with that said plainly,
 # so the board ends red on a named cause rather than on a bare curl error (#6212).
@@ -1038,6 +1102,7 @@ platter_sync_body() {
   if [ -z "$num" ]; then
     echo "ship platter: no open PR for $branch — open one with 'ship platter open'." >&2; return 1
   fi
+  platter_range_check "$branch" "$num" || return 1
   newbody="$(platter_body)"
   payload="$(printf '%s' "$newbody" | python3 -c "import json,sys; print(json.dumps({'body': sys.stdin.read()}))")"
   resp="$(api PATCH "/pulls/$num" "$payload")" || true
@@ -1122,16 +1187,29 @@ cmd_platter_board() {
   }
 }
 
+cmd_platter_sync() {
+  local branch; branch="$(git rev-parse --abbrev-ref HEAD)"
+  case "$branch" in platter/*) ;; *)
+    echo "ship platter sync: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
+    exit 1 ;;
+  esac
+  git fetch --quiet origin main || {
+    echo "ship platter: cannot fetch origin/main to read the ledger's range" >&2; exit 1; }
+  platter_sync_body "$branch" || exit 1
+}
+
 cmd_platter() {
   local sub="${1:-}"; shift || true
   case "$sub" in
     open) cmd_platter_open "$@" ;;
     board) cmd_platter_board "$@" ;;
     ledger) cmd_platter_ledger "$@" ;;
+    # re-post the checked-out platter's body without boarding — the recovery after a refused sync.
+    sync) cmd_platter_sync ;;
     # the record after landing, from the first-parent log, in whichever ending is true (merge commit
     # or squash) — posted as a comment on the landed PR by whoever reports it (the digest, a session).
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
-    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
   esac
 }
 
