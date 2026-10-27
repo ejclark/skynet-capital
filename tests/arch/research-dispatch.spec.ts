@@ -259,17 +259,14 @@ describe("List due events — the scan reads a main at least as new as the heads
   const workflow = readFileSync(".github/workflows/moneypenny-events.yml", "utf8");
   const start = workflow.indexOf("- name: List due events");
   const step = workflow.slice(start, workflow.indexOf("\n      - name: ", start + 1));
-  const at = (needle: string) => {
-    const i = step.indexOf(needle);
-    expect(i).toBeGreaterThan(-1);
-    return i;
-  };
+  const at = (needle: string) => step.indexOf(needle);
 
   it("reads open heads, then fetches and detaches to origin/main, then scans for due events", () => {
     const heads = at("gh pr list --state open");
     const fetch = at("git fetch --quiet origin main");
     const detach = at("git checkout --quiet --detach origin/main");
     const scan = at("node scripts/event-scan.mjs --due");
+    expect(heads).toBeGreaterThan(-1);
     expect(heads).toBeLessThan(fetch);
     expect(fetch).toBeLessThan(detach);
     expect(detach).toBeLessThan(scan);
