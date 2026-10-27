@@ -250,3 +250,29 @@ describe("the research ceiling follows the work spigot's dial", () => {
     );
   });
 });
+
+// #6251 (2026-10-26): a queued workflow_dispatch checks out main as it was when dispatched. The
+// scan ran on that old tree and the open heads were read live after it, so a research/<id> PR that
+// merged in the wait was in neither, and the event was dispatched again — 35 of 146 legs, 22% of
+// the lane's spend. The order below closes that gap: heads first, then fresh main, then the scan.
+describe("List due events — the scan reads a main at least as new as the heads it filters by", () => {
+  const workflow = readFileSync(".github/workflows/moneypenny-events.yml", "utf8");
+  const start = workflow.indexOf("- name: List due events");
+  const step = workflow.slice(start, workflow.indexOf("\n      - name: ", start + 1));
+  const at = (needle: string) => step.indexOf(needle);
+
+  it("reads open heads, then fetches and detaches to origin/main, then scans for due events", () => {
+    const heads = at("gh pr list --state open");
+    const fetch = at("git fetch --quiet origin main");
+    const detach = at("git checkout --quiet --detach origin/main");
+    const scan = at("node scripts/event-scan.mjs --due");
+    expect(heads).toBeGreaterThan(-1);
+    expect(heads).toBeLessThan(fetch);
+    expect(fetch).toBeLessThan(detach);
+    expect(detach).toBeLessThan(scan);
+  });
+
+  it("scans exactly once, so no older-tree read can slip back in ahead of the fetch", () => {
+    expect(step.match(/^\s+node scripts\/event-scan\.mjs --due\b/gm)).toHaveLength(1);
+  });
+});
