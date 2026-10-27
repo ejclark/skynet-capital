@@ -25,19 +25,27 @@ const CURRENT_RUNS = {
   status: 200,
   body: { workflow_runs: [{ id: 1, head_sha: HEAD }] },
 };
-const CURRENT_JOBS = {
-  status: 200,
-  body: {
-    jobs: [
-      { name: "release · deploy", conclusion: "success" },
-      {
-        name: "release · deploy bots",
-        conclusion: "success",
-        steps: [{ name: "Deploy bots", conclusion: "success" }],
-      },
-    ],
-  },
-};
+/** One run's jobs: the dashboard deploy green, and the bots job's `Deploy bots` step green with
+ *  the given smoke conclusion (`null` = still running) — the shape `pipeline.yml` reports. */
+function jobsWithSmoke(smoke: string | null): JsonResponse {
+  return {
+    status: 200,
+    body: {
+      jobs: [
+        { name: "release · deploy", conclusion: "success" },
+        {
+          name: "release · deploy bots",
+          conclusion: smoke === "failure" ? "failure" : smoke,
+          steps: [
+            { name: "Deploy bots", conclusion: "success" },
+            { name: "Smoke test the bots release", conclusion: smoke },
+          ],
+        },
+      ],
+    },
+  };
+}
+const CURRENT_JOBS = jobsWithSmoke("success");
 
 describe("computeDeploySignals", () => {
   const config = { token: "t", repo: "x/y" };
@@ -61,22 +69,7 @@ describe("computeDeploySignals", () => {
         "/runs?event=push&branch=main&per_page=20",
         { status: 200, body: { workflow_runs: [{ id: 1, head_sha: RELEASED }] } },
       ],
-      [
-        "/actions/runs/1/jobs",
-        {
-          status: 200,
-          body: {
-            jobs: [
-              { name: "release · deploy", conclusion: "success" },
-              {
-                name: "release · deploy bots",
-                conclusion: "success",
-                steps: [{ name: "Deploy bots", conclusion: "success" }],
-              },
-            ],
-          },
-        },
-      ],
+      ["/actions/runs/1/jobs", CURRENT_JOBS],
       [
         `/compare/${RELEASED}...${HEAD}`,
         {
@@ -212,5 +205,84 @@ describe("the reported running commit as the bots baseline", () => {
 
     await fetcher(new Date(now.getTime() + 2_000), HEAD);
     expect(calls).toBeGreaterThan(afterFirst); // a redeploy must not serve the old commit
+  });
+});
+
+/**
+ * #6276: the port of `scanRunBaselines()` must count a bots release as landed only once its smoke
+ * passed (#6050, #6053). With the bots machine stopped (#5955) every release deploys, fails smoke
+ * and rolls back, the process never polls, and the row falls back to CI's record — which used to
+ * name the rolled-back release and call the fleet current.
+ */
+describe("a bots release counts only once its smoke passed (#6276)", () => {
+  const config = { token: "t", repo: "x/y" };
+  const BOT_CHANGE = {
+    status: 200,
+    body: { commits: [], files: [{ filename: "src/autonomous/runner.ts" }] },
+  };
+
+  /** Head is run 1 (with the given smoke), an older run 2 passed smoke at RELEASED, and a
+   *  bot-relevant file changed between the two. */
+  function headOverLanded(headSmoke: string | null) {
+    return fakeGithub([
+      ["/commits/main", { status: 200, body: { sha: HEAD } }],
+      [
+        "/runs?event=push&branch=main&per_page=20",
+        {
+          status: 200,
+          body: {
+            workflow_runs: [
+              { id: 1, head_sha: HEAD },
+              { id: 2, head_sha: RELEASED },
+            ],
+          },
+        },
+      ],
+      ["/actions/runs/1/jobs", jobsWithSmoke(headSmoke)],
+      ["/actions/runs/2/jobs", CURRENT_JOBS],
+      [`/compare/${RELEASED}...${HEAD}`, BOT_CHANGE],
+    ]);
+  }
+
+  it("reads STALE when the head release failed smoke and rolled back over a landed one", async () => {
+    const { bots } = await computeDeploySignals(config, LINK, headOverLanded("failure"));
+    expect(bots.verdict).toBe("attention");
+    expect(bots.detail).toContain("STALE");
+    expect(bots.detail).not.toContain("current");
+  });
+
+  it("reads STALE, not current, while the head release is still smoke-testing", async () => {
+    const { bots } = await computeDeploySignals(config, LINK, headOverLanded(null));
+    expect(bots.verdict).toBe("attention");
+    expect(bots.detail).toContain("STALE");
+  });
+
+  it("reads STALE when every release in the window rolled back", async () => {
+    const doFetch = fakeGithub([
+      ["/commits/main", { status: 200, body: { sha: HEAD } }],
+      [
+        "/runs?event=push&branch=main&per_page=20",
+        {
+          status: 200,
+          body: {
+            workflow_runs: [
+              { id: 1, head_sha: HEAD },
+              { id: 2, head_sha: RELEASED },
+            ],
+          },
+        },
+      ],
+      ["/actions/runs/1/jobs", jobsWithSmoke("failure")],
+      ["/actions/runs/2/jobs", jobsWithSmoke("failure")],
+    ]);
+    const { bots } = await computeDeploySignals(config, LINK, doFetch);
+    expect(bots.verdict).toBe("attention");
+    expect(bots.detail).toContain("the last 2 bots release(s) all failed smoke and rolled back");
+    expect(bots.link).toEqual(LINK);
+  });
+
+  it("still reads current when the head release passed smoke", async () => {
+    const { bots } = await computeDeploySignals(config, LINK, headOverLanded("success"));
+    expect(bots.verdict).toBe("ok");
   });
 });
