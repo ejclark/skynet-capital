@@ -116,9 +116,16 @@ ${FIND(n)} Use \`git show --name-only --format= <sha>\` for the paths.
 
 Then run \`node scripts/envelope-scan.mjs --check <every path>\` from the repo root and set protected=true if any entry says "protected": true.`
 
+// Reviewers and trace refuters share the calling session's checkout (only the repro refuter gets a
+// worktree). On 2026-10-27 one ran `git checkout origin/main` there mid-run: the caller's branch went
+// detached, a commit landed off-branch, and a resumed run loaded a stale copy of this very file.
+const SHARED_TREE = `This working tree is shared with the session that launched you: never run git checkout, switch, reset, stash, rebase, merge, commit or clean in it. Read current main with \`git show origin/main:<path>\` and \`git grep <pattern> origin/main\`, not the working-tree files, which may be on another branch.`
+
 const reviewPrompt = (n) => `Review merged PR #${n} in ejclark/skynet-capital for CORRECTNESS ONLY: wrong results, crashes, broken contracts, regressions, a requirement in its linked issue the code does not meet. Not style, naming, structure, test coverage or debt — the fitness gates own those.
 
 ${FIND(n)}
+
+${SHARED_TREE}
 
 Judge every finding against the code as it is on origin/main NOW (read the current files, not just the diff): a later merge may already have fixed it, or the PR may have broken a caller it never touched. Report a finding only when you can name a concrete failure scenario. Severity: high = wrong money/P&L/state, data loss, crash on a common path, a broken gate or lane; medium = wrong on a real but narrower path; low = edge cases you are unsure anyone hits. Zero findings is a normal answer.`
 
@@ -128,6 +135,8 @@ ${f.file}${f.line ? `:${f.line}` : ''} — ${f.summary}
 Failure scenario: ${f.failure_scenario}
 
 ${FIND(n)}
+
+${SHARED_TREE}
 
 YOUR LENS — trace. On origin/main as it is now, walk from a real caller or real input (an entrypoint, a route, a scheduled job, a CLI) to the claimed failure. Refute if no real path reaches it, if a guard upstream prevents it, if current main already fixed it, or if the behaviour is intended and documented. Default to refuted=true if you cannot complete the trace. Evidence: the call chain with file:line hops.`
 

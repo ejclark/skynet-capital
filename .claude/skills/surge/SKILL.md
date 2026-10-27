@@ -87,7 +87,15 @@ Sources, in pull order (`npm run rank`):
 - **Fan-out from findings** — a bug found mid-wave is filed `bug` + `fast-track` and pulled next.
 
 After each wave merges, run **`.claude/workflows/post-merge-audit.js`** (`{prs: [...]}`) over its
-PRs; each confirmed finding is filed `bug` + `fast-track` and leads the next wave.
+PRs; it routes money/state/auth PRs to the deep tier and skips docs-only ones by itself. Ration
+`fast-track` to high-severity or member/money findings and send lane-machinery findings through the
+clear-path flip instead: a 20-issue fast-track wave drew 162 Moneypenny runs in one hour and spent
+the App's REST limit (#6319).
+
+**Split a big audit across child sessions.** A cloud container has 4 CPUs, so a workflow runs 2
+agents at once: 37 PRs in one run is hours of deep reviews. Give each child 6–9 PRs (one
+`create_session` per batch, tagged `audit`), each running the same workflow and filing its own
+findings (2026-10-27: one local batch + four children).
 
 ## 3. Check in every ~2h
 
