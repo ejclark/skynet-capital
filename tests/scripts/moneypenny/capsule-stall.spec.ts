@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import {
   type Capsule,
@@ -216,6 +217,76 @@ describe("greenProof — skips are left out, a failure ends the streak (#6076)",
   it("a failed deploy newer than the passes ends the streak", () => {
     const runs = [deployRun(4, 1, "failure"), ...[2, 3, 4].map((h) => deployRun(h, h, "success"))];
     expect(greenProof(deploy(runs))).toBeNull();
+  });
+});
+
+describe("greenProof — a lost runner's capsule can erode like any other (#6274)", () => {
+  // #6036 names the step a lost runner left unfinished, with a note after it that no real step
+  // carries. Read back verbatim, that note made every later green run prove nothing, so the
+  // capsule's needs-eric could never come off. The body here is repair.mjs's own dry-run output.
+  const CLAUDE = "Run anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea";
+  const [filed] = JSON.parse(
+    execFileSync(
+      "node",
+      [
+        "scripts/moneypenny/repair.mjs",
+        "--dry-run",
+        "--event",
+        "tests/fixtures/events/workflow-run-runner-lost.json",
+      ],
+      { encoding: "utf8" },
+    ),
+  ) as { title: string; body: string }[];
+  const researchRun = (id: number, h: number, step = CLAUDE, conclusion = "success") => ({
+    id,
+    url: `https://github.com/o/r/actions/runs/${id}`,
+    createdAt: hoursAgo(h),
+    jobs: [
+      {
+        name: "research due events (uk-gilt-auction-long-2026-11-10, never-assessed)",
+        conclusion,
+        steps: [{ name: step, conclusion }],
+      },
+    ],
+  });
+  const lost = (recentRuns: CapsuleRun[]) =>
+    capsule({
+      number: 6033,
+      title: filed?.title ?? "",
+      body: filed?.body ?? "",
+      labels: ["ci-failure", "needs-eric"],
+      recentRuns,
+    });
+
+  it("tracks the step by its own name, the runner note left off", () => {
+    expect(filed?.body).toContain("never finished — the runner went away mid-step");
+    expect(capsuleTarget(lost([]))).toEqual({
+      workflow: "Moneypenny Events (event-research automation)",
+      job: "research due events",
+      step: CLAUDE,
+    });
+  });
+
+  it("three green runs of that step remove needs-eric", () => {
+    const [intent] = capsuleIntents({
+      capsules: [lost([researchRun(3, 1), researchRun(2, 5), researchRun(1, 10)])],
+    });
+    expect(intent?.kind).toBe("clear-eroded-needs-eric");
+    expect(intent?.body).toContain(`that ran \`${CLAUDE}\``);
+  });
+
+  it("still counts the step after a pin bump renames it — the bump is often the fix", () => {
+    const bumped = "Run anthropics/claude-code-action@0123456789abcdef0123456789abcdef01234567";
+    const runs = [researchRun(3, 1, bumped), researchRun(2, 5, bumped), researchRun(1, 10)];
+    expect(greenProof(lost(runs))?.runs.map((r) => r.id)).toEqual([3, 2, 1]);
+    // A different action is a different step, and proves nothing.
+    const other = [3, 5, 10].map((h) => researchRun(h, h, "Run actions/checkout@abc"));
+    expect(greenProof(lost(other))).toBeNull();
+  });
+
+  it("a lost runner again ends the streak", () => {
+    const runs = [researchRun(4, 1, CLAUDE, "failure"), ...[2, 3, 4].map((h) => researchRun(h, h))];
+    expect(greenProof(lost(runs))).toBeNull();
   });
 });
 
