@@ -344,6 +344,108 @@ describe("ship platter — refusals that keep the platter an assembly point, not
   });
 });
 
+// #6253: a boarded item's own PR stayed open and held, so assignments.mjs kept it on Eric's list
+// beside the platter — on 2026-10-26 two of his four held-PR assignments were items already boarded.
+// A real board, run against a stub `curl` that plays GitHub, so the close is proven end to end.
+describe("ship platter board — closes the item's own PR with a pointer (#6253)", () => {
+  const STUB_CURL = `#!/usr/bin/env bash
+method=GET; url=""; data=""
+while [ $# -gt 0 ]; do case "$1" in
+  -X) method="$2"; shift 2 ;;
+  --data-binary) data="$(cat)"; shift 2 ;;
+  -H|-w) shift 2 ;;
+  http*) url="$1"; shift ;;
+  *) shift ;;
+esac; done
+printf '%s %s %s\\n' "$method" "$url" "$data" >> "$CURL_LOG"
+case "$method $url" in
+  "GET "*"state=all"*) out='[{"number":42,"body":""}]'; code=200 ;;
+  "GET "*"platter/"*) out='[{"number":7}]'; code=200 ;;
+  "GET "*"fix/item"*) out="$ITEM_PRS"; code=200 ;;
+  "POST "*) out='{}'; code=201 ;;
+  *) out='{}'; code=200 ;;
+esac
+printf '%s\\n__SHIP_HTTP__%s' "$out" "$code"
+`;
+
+  const boardWith = (itemPrs: string) => {
+    const root = mkdtempSync(join(tmpdir(), "ship-board-close-"));
+    const bin = join(root, "bin");
+    const log = join(root, "curl.log");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
+    writeFileSync(join(bin, "npx"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 }); // commitlint
+    writeFileSync(log, "");
+    const env = hermeticGitEnv({
+      GH_TOKEN: "test-token-never-used",
+      PATH: `${bin}:${process.env.PATH ?? ""}`,
+      CURL_LOG: log,
+      ITEM_PRS: itemPrs,
+    });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const work = join(root, "work");
+    git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+    git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+    git(work, ["config", "user.email", "spec@example.com"]);
+    git(work, ["config", "user.name", "spec"]);
+    // main carries this ship.sh, so the stale-script refusal lets the board through, and the
+    // envelope, which the ledger's protected-path column reads from the working tree.
+    mkdirSync(join(work, "scripts"));
+    writeFileSync(join(work, "scripts", "ship.sh"), readFileSync("scripts/ship.sh"));
+    writeFileSync(join(work, "envelope.json"), readFileSync("envelope.json"));
+    git(work, ["add", "."]);
+    git(work, ["commit", "-q", "-m", "chore: seed"]);
+    git(work, ["push", "-q", "origin", "main"]);
+    git(work, ["checkout", "-q", "-b", "fix/item"]);
+    writeFileSync(join(work, "item.txt"), "item\n");
+    git(work, ["add", "."]);
+    git(work, ["commit", "-q", "-m", "fix: the item"]);
+    git(work, ["push", "-q", "origin", "fix/item"]);
+    git(work, ["checkout", "-q", "-b", "platter/2026-10-19", "main"]);
+    git(work, ["push", "-q", "origin", "platter/2026-10-19"]);
+    try {
+      const stdout = execFileSync(
+        "bash",
+        [resolve("scripts/ship.sh"), "platter", "board", "fix/item", "--no-verify"],
+        { cwd: work, encoding: "utf8", env, stdio: "pipe" },
+      );
+      const sha = git(work, ["rev-parse", "--short", "HEAD"]).trim();
+      const remote = git(work, ["rev-parse", "--short", "origin/platter/2026-10-19"]).trim();
+      return { stdout, sha, remote, calls: readFileSync(log, "utf8").trim().split("\n") };
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it("posts the pointer, then closes the item PR, after the platter is pushed", () => {
+    const { stdout, sha, remote, calls } = boardWith('[{"number":42}]');
+    expect(remote).toBe(sha); // the sha the pointer names already exists on the remote
+    const comment = calls.findIndex(
+      (c) => c.startsWith("POST ") && c.includes("/issues/42/comments"),
+    );
+    const close = calls.findIndex((c) => c.startsWith("PATCH ") && c.includes("/pulls/42 "));
+    expect(comment).toBeGreaterThan(-1);
+    expect(close).toBeGreaterThan(comment);
+    expect(calls[comment]).toContain(`Boarded onto #7 as \`${sha}\`; lands with it.`);
+    expect(calls[close]).toContain('{"state":"closed"}');
+    expect(stdout).toContain("closed #42");
+  });
+
+  it("signs the pointer with the Claude Code footer, so it does not wake claude.yml", () => {
+    const { calls } = boardWith('[{"number":42}]');
+    const comment = calls.find((c) => c.includes("/issues/42/comments")) ?? "";
+    expect(comment).toContain("[Claude Code](https://claude");
+  });
+
+  it("closes nothing, and still succeeds, when the item has no open PR", () => {
+    const { stdout, calls } = boardWith("[]");
+    expect(stdout).toContain("has no open PR — nothing to close");
+    expect(calls.some((c) => c.includes("/issues/42/comments"))).toBe(false);
+    expect(calls.some((c) => c.startsWith("PATCH ") && c.includes("/pulls/42 "))).toBe(false);
+  });
+});
+
 describe("ship platter — the source contract", () => {
   const source = readFileSync("scripts/ship.sh", "utf8");
 
