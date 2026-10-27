@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { citesToken } from "../../scripts/conviction-proposals.mjs";
 import { bars } from "../../scripts/research/market-data.mjs";
 import { parseForwardTests } from "../../scripts/research-scorecard.mjs";
 import {
@@ -55,24 +56,38 @@ async function tapesFor(conviction: Conviction): Promise<Map<string, readonly Ta
 
 const FRAGMENTS = join(process.cwd(), "docs", "research", "forward-tests");
 
-/**
- * The row a link names in its event's fragment: by id for an `FT-…` ref, else the row whose text
- * cites the proposal token, as a whole token (`…/P1` is not `…/P10`) — the same answer
- * `scripts/conviction-proposals.mjs` reads. Pure; the verdict is the register's own reading.
- */
-export function findForwardTest(fragment: string, ref: string): ForwardRow | undefined {
-  const cites = new RegExp(`${ref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\d)`);
-  for (const line of fragment.split("\n")) {
-    const [row] = parseForwardTests(line);
-    if (row === undefined) continue;
-    if (ref.startsWith("FT-") ? row.id === ref : cites.test(line)) return row;
-  }
-  return undefined;
+/** One fragment's forward-test rows, each with the line it was read from. */
+type FragmentRows = readonly (ForwardRow & { readonly line: string })[];
+
+/** Parse a fragment once; the verdict is the research scorecard's own reading of each row. */
+export function fragmentRows(fragment: string): FragmentRows {
+  return fragment
+    .split("\n")
+    .flatMap((line) => parseForwardTests(line).map((r) => ({ ...r, line })));
 }
 
-/** Each event's fragment, read once; an event with no fragment yet has registered nothing. */
+/**
+ * The row a link names in its event's fragment: by id for an `FT-…` ref. For a proposal token, the
+ * rows citing it as a whole token (`citesToken`, the same test that answers the proposal), narrowed
+ * to the ones registered FROM it when any say so (a row that only cross-references another
+ * proposal is not its registration), then past any retired one (void), and the newest of those,
+ * since rows append only. Pure.
+ */
+export function findForwardTest(rows: FragmentRows, ref: string): ForwardRow | undefined {
+  if (ref.startsWith("FT-")) return strip(rows.find((r) => r.id === ref));
+  const citing = rows.filter((r) => citesToken(ref, r.line));
+  const registered = citing.filter((r) => citesToken(`proposal ${ref}`, r.line));
+  const own = registered.length > 0 ? registered : citing;
+  const live = own.filter((r) => r.verdict !== "void");
+  return strip((live.length > 0 ? live : own).at(-1));
+}
+
+const strip = (row: FragmentRows[number] | undefined): ForwardRow | undefined =>
+  row && { id: row.id, verdict: row.verdict };
+
+/** Each event's fragment, read and parsed once; an event with no fragment has registered nothing. */
 function forwardTestsReader(): (link: ForwardLink) => ForwardRow | undefined {
-  const fragments = new Map<string, string>();
+  const fragments = new Map<string, FragmentRows>();
   return (link) => {
     if (!fragments.has(link.event)) {
       let text = "";
@@ -81,9 +96,9 @@ function forwardTestsReader(): (link: ForwardLink) => ForwardRow | undefined {
       } catch {
         // No fragment: the lane has registered nothing for this event, so the claim stays pending.
       }
-      fragments.set(link.event, text);
+      fragments.set(link.event, fragmentRows(text));
     }
-    return findForwardTest(fragments.get(link.event) ?? "", link.ref);
+    return findForwardTest(fragments.get(link.event) ?? [], link.ref);
   };
 }
 

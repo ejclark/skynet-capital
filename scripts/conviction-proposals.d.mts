@@ -13,6 +13,7 @@ export interface Proposal {
 }
 
 export function parseProposals(slug: string, text: string): Proposal[];
+export function citesToken(key: string, text: string): boolean;
 export function pendingFor(
   eventId: string,
   today: string,

@@ -300,13 +300,26 @@ describe("scoreClaim — the forward test an event lane registered", () => {
     });
     expect(mixed.outcome).toBe("fail");
     expect(mixed.basis).not.toContain("FT-x-1");
-    expect(scored([P1, P2], { "ai-dip-2026-10/P1": pass }).outcome).toBe("pending");
+    const waiting = scored([P1, P2], { "ai-dip-2026-10/P1": pass });
+    expect(waiting.outcome).toBe("pending");
+    expect(waiting.basis).toBe(
+      "Due 2026-11-25. FT-x-1 (registered from ai-dip-2026-10/P1) passed: this claim held. ai-dip-2026-10/P2 is not registered in crwv-2026-11-10-print's forward tests yet.",
+    );
     expect(
       scored([P1, P2], {
         "ai-dip-2026-10/P1": pass,
         "ai-dip-2026-10/P2": { ...pass, id: "FT-x-2" },
       }).outcome,
     ).toBe("pass");
+  });
+
+  it("says the forward tests were not read, never 'not registered', when no reader is wired", () => {
+    const score = scoreClaim(
+      claim({ scoreBy: "2026-11-25", check: { kind: "forward-tests", tests: [P1] } }),
+      { today: "2026-11-25" },
+    );
+    expect(score.outcome).toBe("pending");
+    expect(score.basis).toBe("Due 2026-11-25. ai-dip-2026-10/P1: this pass read no forward tests.");
   });
 
   it("names a row linked by its own id without repeating it", () => {
@@ -429,7 +442,10 @@ describe("the AI-dip record's checks", () => {
       "claim 1: P6 is neither an FT id nor a proposal token",
     );
     expect(bad({ kind: "forward-tests", tests: [{ ...P6, event: " " }] })).toContain(
-      "claim 1: a forward test names no event",
+      "claim 1: ai-dip-2026-10/P6: its event is not an event id",
+    );
+    expect(bad({ kind: "forward-tests", tests: [{ ...P6, event: "../../README" }] })).toContain(
+      "claim 1: ai-dip-2026-10/P6: its event is not an event id",
     );
     expect(
       bad({ kind: "forward-tests", tests: [{ ...P6, onPass: "pending", onKill: "pending" }] }),

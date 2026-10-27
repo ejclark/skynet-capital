@@ -88,6 +88,7 @@ export interface ForwardRow {
 }
 
 /** A proposal token: `<conviction-slug>/P<n>`. */
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PROPOSAL_TOKEN = /^[a-z0-9]+(?:-[a-z0-9]+)*\/P\d+$/;
 
 export interface ClaimScore {
@@ -217,7 +218,10 @@ function readLink(
   link: ForwardLink,
   ctx: ScoreContext,
 ): { readonly outcome: LinkOutcome; readonly says: string } {
-  const row = ctx.forwardTest?.(link);
+  if (ctx.forwardTest === undefined) {
+    return { outcome: "pending", says: `${link.ref}: this pass read no forward tests.` };
+  }
+  const row = ctx.forwardTest(link);
   if (row === undefined) {
     return {
       outcome: "pending",
@@ -259,7 +263,7 @@ function scoreForward(
   if (reads.length > 0 && reads.every((r) => r.outcome === "pass")) {
     return decided("pass", says(), dueOn, ctx.today);
   }
-  return pending(`Due ${dueOn}. ${says("pending")}`, dueOn);
+  return pending(`Due ${dueOn}. ${says()}`, dueOn);
 }
 
 /**
@@ -276,7 +280,7 @@ export function scoreClaim(claim: ConvictionClaim, ctx: ScoreContext): ClaimScor
   const { check } = claim;
   if (check === undefined) {
     return pending(
-      `Due ${dueOn}; no reading recorded yet. Its forward test is scored by the lane that registered it.`,
+      `Due ${dueOn}; no reading recorded yet. It names no check this pass can read.`,
       dueOn,
     );
   }
@@ -380,7 +384,7 @@ function forwardProblems(tests: readonly ForwardLink[]): string[] {
   const problems: string[] = [];
   if (tests.length === 0) problems.push("check names no forward test");
   for (const link of tests) {
-    if (blank(link.event)) problems.push("a forward test names no event");
+    if (!SLUG.test(link.event)) problems.push(`${link.ref}: its event is not an event id`);
     if (!(link.ref.startsWith("FT-") || PROPOSAL_TOKEN.test(link.ref))) {
       problems.push(`${link.ref || "a forward test"} is neither an FT id nor a proposal token`);
     }
