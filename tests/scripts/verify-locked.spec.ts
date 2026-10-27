@@ -1,5 +1,12 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
@@ -12,6 +19,20 @@ import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 const HELPER = resolve("scripts/verify-locked.sh");
 const HOOK = resolve(".husky/pre-push");
+
+// #6278: a box with no flock (stock macOS) runs unlocked on purpose, so the lock specs only mean
+// something where flock exists — without this guard they failed there and turned verify red.
+const HAVE_FLOCK = spawnSync("sh", ["-c", "command -v flock"]).status === 0;
+
+/** A PATH holding only the binaries verify-locked.sh needs — no flock, whatever this host has. */
+function pathWithoutFlock() {
+  const bin = mkdtempSync(join(tmpdir(), "verify-locked-bin-"));
+  for (const name of ["bash", "sh", "git", "cat", "true"]) {
+    const found = spawnSync("sh", ["-c", `command -v ${name}`], { encoding: "utf8" }).stdout.trim();
+    symlinkSync(found, join(bin, name));
+  }
+  return bin;
+}
 
 function repo() {
   const dir = mkdtempSync(join(tmpdir(), "verify-locked-"));
@@ -60,7 +81,16 @@ function startLocked(dir: string, env: NodeJS.ProcessEnv, script: string) {
   );
 }
 
-describe("verify-locked — one full verify at a time per checkout", () => {
+describe("verify-locked — a machine with no flock", () => {
+  it("runs the verify unlocked and says so, instead of failing", () => {
+    const { run } = repo();
+    const r = run(["--", "true"], { PATH: pathWithoutFlock() });
+    expect(r.status).toBe(0);
+    expect(r.stderr).toContain("no flock on this machine");
+  });
+});
+
+describe.skipIf(!HAVE_FLOCK)("verify-locked — one full verify at a time per checkout", () => {
   it("runs two verifies started together one after the other, and says the second is queued", async () => {
     const { dir, env } = repo();
     const log = join(dir, "..", `${dir.split("/").pop()}.order`);
