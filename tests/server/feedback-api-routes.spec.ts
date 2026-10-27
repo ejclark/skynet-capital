@@ -165,6 +165,43 @@ describe("serveFeedbackApi", () => {
     ]);
   });
 
+  it("refuses an over-long follow-up by its length, never as empty, and sends nothing (#6291)", async () => {
+    // Its own member: the shared throttle (5 / 10 min) must not decide this spec.
+    const longEmail = `spec-long-${Math.random().toString(36).slice(2)}@example.com`;
+    const sent: unknown[] = [];
+    const config = configWith({
+      readFeedback: () =>
+        Promise.resolve([{ ...entry(7, "Mine"), opaqueMemberId: opaqueMemberId(longEmail) }]),
+      submitFollowup: (i: unknown) => {
+        sent.push(i);
+        return Promise.resolve({ ok: true });
+      },
+    });
+    const { res, out } = fakeRes();
+    await serveFeedbackApi(
+      post({ issueNumber: 7, details: "x".repeat(8_001) }),
+      res,
+      "/api/feedback/followup",
+      config,
+      { email: longEmail } as never,
+    );
+    expect(sent).toEqual([]);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({
+      ok: false,
+      error: "Keep a follow-up to 8,000 characters.",
+    });
+
+    const atCap = fakeRes();
+    await serveFeedbackApi(
+      post({ issueNumber: 7, details: "x".repeat(8_000) }),
+      atCap.res,
+      "/api/feedback/followup",
+      config,
+      { email: longEmail } as never,
+    );
+    expect(sent).toHaveLength(1);
+  });
+
   it("relays a filing failure with a 502, verbatim, and never records a log entry", async () => {
     const recorded: unknown[] = [];
     const config = configWith({
