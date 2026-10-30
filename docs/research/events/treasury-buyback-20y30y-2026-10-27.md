@@ -448,3 +448,84 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":18.23,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->
+
+## Outcome
+
+**Assessed 2026-10-30 (D+3, inside the 6-day close-out window).** `rates` event, `symbols: []` — no
+`earnings-cycle`/`intraday-edges` target applies, so the instrument caches were busted (`rm -rf`) and
+nothing needed re-running; recorded rather than skipped. Every number below is a fresh pull this
+session: `api.fiscaldata.treasury.gov` `buybacks_operations`, `buybacks_security_details` and
+`auctions_query` (plain curl, HTTP 200), Yahoo `^VIX`/`^TNX`/`^TYX` daily closes. The announced
+maximum is read from fiscaldata's `max_par_amt_redeemed`, not the release PDF. The calendar entry
+stays `estimate`: the confirmed-prefix table has no Treasury-buyback prefix and this lane may not
+self-confirm an event it discovered in-sweep.
+
+### The operation, re-pulled from the primary
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$6,000,000,000** (tentative schedule: `= or > $4 billion`; the amended base case held) |
+| Total par offered | **$10,746,000,000** (10-08: $14.886B; 09-24: $10.468B) |
+| Total par accepted | **$6,000,000,000** |
+| Cover (offered ÷ max) | **1.791x** |
+| Fill (accepted ÷ max) | **100%** |
+| Issues | **6 accepted of 35 eligible** |
+| Largest clip | **$1,693M**, 2048-08-15 (28.2% of accepted) |
+
+Accepted par by line: 2048-08-15 **$1,693M**, 2051-02-15 **$1,333M**, 2048-05-15 **$1,025M**,
+2051-05-15 **$1,014M**, 2049-02-15 **$885M**, 2049-05-15 **$50M**. Eligible lines ran 2047-02-15 to
+2056-02-15; neither CUSIP 912810UW6 nor the 10-21 20-Year (912810UX4, matures 2046-08-15) was among
+them, so both eligibility premises held. The 5-Year auction's results were not retrievable from
+`auctions_query` this session, so the same-day auction context is not scored here.
+
+### Forward tests scored
+
+- **`FT-…-1` — PASS.** Full announced maximum accepted. As the row said, a pass is the base rate
+  re-printing and is near-uninformative; the slot's record is now 4 of 4 on meeting-day-1 and the
+  sector's 26 of 29 all-time.
+- **`FT-…-2` — VOID, explicitly not passed.** It filled on 6 issues, the registered void clause
+  (a full fill on ≤ 6 lines has a largest clip ≥ $1,000M by arithmetic). The $1,693M clip clears
+  $312M, but that is forced; the informative set stays at 9 observations.
+
+### The finding: the cover floor leaks a second time, at 1.79x
+
+Re-computed over all nominal liquidity-support operations at caps ≥ $4B and cover ≥ 1.2x (the
+restriction the 2Y-3Y and 10-08 close-outs used): **cover ≥ 2.56x → 15 of 21 full fills; cover
+< 2.56x → 2 of 21**, both in this bucket and both since 10-08 (2.48x, then 1.79x). Before 10-08 the
+same cut read 0 of 19. The 09-24 under-fill at 1.745x and this full fill at 1.791x sit 0.046x
+apart and printed opposite verdicts, so cover alone does not separate them; in this bucket the
+book ranged 1.74x–2.48x and the outcome split 1 under, 2 full. What the two full fills below the
+line share is that both sat in the operation's own cap regime (`$6B`) with a book of at least
+$10.7B and 6 to 10 lines accepted; 09-24 took 12 lines for $4.078B. That is a description of three
+points, not a rule. Under the enlarged cap this sector is now **2 of 3** full.
+
+### Kill switches, adjudicated against the close-out data
+
+- **The operation under-filling (`FT-…-1`'s kill)** — did not fire; 100% of the cap.
+- **`FT-…-2` clip-shape kill (≥ 7 issues all under $312M, or an under-fill with a clip above $150M)**
+  — did not fire; neither condition arose.
+- **A third under-fill neither D+1..2 after a long-end auction nor near an FOMC decision** — did not
+  fire; no under-fill occurred.
+- **The announcement printing a maximum below $4B, or the operation pulled or moved** — did not fire;
+  maximum $6.000B, ran 10-27 1:40–2:00pm ET, settled 10-28.
+- **Eligible list containing 912810UW6 or the 10-21 20-Year** — did not fire (see above).
+- **The window moving 20-30Y yields > 5bp with no explanation** — not tested; no intraday tape was
+  pulled this session, and daily closes cannot isolate a 20-minute window.
+
+### Tape, for the record (no attribution claimed)
+
+10Y (`^TNX`) **4.993%** on 10-27 (+0.7bp vs 4.986% on 10-26), 30Y (`^TYX`) **5.305%** (+0.4bp vs
+5.301%); VIX **17.52** (-0.87). The FOMC decision day 10-28 followed with 10Y 5.045% and 30Y 5.361%
+(+5.2bp, +5.6bp). The day also carried the 5-Year auction, three data prints and the FOMC meeting's
+first day, so no single cause would be anything but a guess.
+
+### What this closes
+
+The meeting-day-1 slot is 4 of 4 and the sector 2 of 3 under the enlarged cap; the 09-24 under-fill
+remains the only partial fill since sb0607. Next dated items are already tracked (`treasury-buyback-10y20y-2026-11-04`,
+`treasury-refunding-2026-11-04`), so nothing is proposed.
+The next 20Y-30Y operation scores under its own event's fragment, not this file. Paper-only,
+educational; `symbols: []`, no trade implication.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":20.85,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"screenStreak":0} -->
