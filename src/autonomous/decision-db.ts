@@ -73,6 +73,11 @@ export interface DecisionDb {
    *  1.5 s a request at 180 days (#4612 slice 7). Same join as `findByOrderId`: the intent's own
    *  order id, or a working order's settlement. */
   personasOfOrders(orderIds: readonly string[]): string[];
+  /** Moves whenever a row `personasOfOrders` can match is added: an intent carrying an order id,
+   *  an option intent carrying a client id, a settlement. Unchanged means every past answer still
+   *  holds, because none of those tables is ever rewritten (#4619) — `account-personas-fold.ts`
+   *  re-asks only when it moves. Observed intents, written every pass, never move it. */
+  orderJoinMark(): string;
   /** A spread leg's own broker order id → the spread order it belongs to. The account
    *  reports each leg's fill under the leg's id, which `findByOrderId` never matches; this is the
    *  hop from that fill to the parent id `findByOrderId` does. Kept apart on purpose: a caller that
@@ -292,6 +297,15 @@ export function openDecisionDb(path: string): DecisionDb {
       .all(...ids) as { persona_id: string }[];
     for (const row of [...direct, ...settled]) into.add(row.persona_id);
   }
+  // Each part walks only the non-null end of its own index, never the observed intents: left to
+  // itself the planner walks `intents` backward by id, past every pass since the last placed
+  // order (7 ms at 180 days, against 0.45 ms down the index).
+  const selectOrderJoinMark = db.prepare(`
+    SELECT (SELECT COALESCE(MAX(id), 0) FROM intents INDEXED BY intents_order
+        WHERE order_id IS NOT NULL) || ':' ||
+      (SELECT COALESCE(MAX(intent_id), 0) FROM intent_options INDEXED BY intent_options_client
+        WHERE client_order_id IS NOT NULL) || ':' ||
+      (SELECT COALESCE(MAX(seq), 0) FROM order_settlements) AS mark`);
   const selectSymbolsPlacedByPlaybook = db.prepare(`
     SELECT DISTINCT intents.symbol AS symbol
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
@@ -659,6 +673,8 @@ export function openDecisionDb(path: string): DecisionDb {
         personasOfOrderChunk(orderIds.slice(i, i + PERSONAS_CHUNK), found);
       return [...found];
     },
+
+    orderJoinMark: () => (selectOrderJoinMark.get() as { mark: string }).mark,
 
     findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),
 

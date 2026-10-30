@@ -95,6 +95,8 @@ export interface InsightsBridgeHandle {
   /** Which personas decided these orders, ids only — the Decisions tab's cross-persona join
    *  without a decision record per order (#4612 slice 7). */
   readonly personasOfOrders?: (orderIds: readonly string[]) => string[];
+  /** Moves only when that join gains a row it can match — same store (`DecisionDb.orderJoinMark`). */
+  readonly orderJoinMark?: () => string;
   /** A spread leg's order id → its spread — the same store, filled by the same replicated
    *  records, so a leg resolves the moment its decision has landed. */
   readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
@@ -266,6 +268,7 @@ export function startInsightsBridge(
             }),
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
           personasOfOrders: (orderIds: readonly string[]) => decisionDb.personasOfOrders(orderIds),
+          orderJoinMark: () => decisionDb.orderJoinMark(),
           findSpreadLeg: (legOrderId: string) => decisionDb.findSpreadLeg(legOrderId),
           // Not remembered: the store folds each persona's funnel and reads only what was recorded
           // since (`decision-db-funnel.ts`, #4619), so every ask is ~2 ms and current.

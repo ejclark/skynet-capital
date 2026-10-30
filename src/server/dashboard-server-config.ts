@@ -195,6 +195,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * order when unset. Same dark-when-unset posture.
    */
   readonly personasOfOrders?: (orderIds: readonly string[]) => string[];
+  /** The same join kept per account, advanced by only the ledger lines appended since and asked
+   *  again only when the decision store gains a row it can match (`account-personas-fold.ts`,
+   *  #4619). Preferred over `personasOfOrders` when wired. */
+  readonly readAccountPersonas?: (accountId: string) => Promise<readonly string[]>;
   /**
    * The decision funnel (measure #2, PR 7b, issue #2287) for the `/decisions` panel: cycles → raw
    * → survived guards → placed → filled → closed, plus refusals by reason — the operations read on
