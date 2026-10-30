@@ -320,3 +320,92 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-27
 <!-- probe-ref: {"symbols":{"MSFT":532.6},"vix":18.39,"daysBand":"critical:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+2 by calendar; the D+1 reaction session is complete, D+2 is not).**
+Instrument cache busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`), then `earnings-cycle.mjs MSFT --bench QQQ --peers GOOG,AMZN,META`
+and `intraday-edges.mjs MSFT` re-run cold. **Instrument caveat:** the earnings list ends at the
+**2026-07-29** print (n=88, so the July tail is now in the modern era, n=15) even though price history
+runs to 2026-10-30 — the 10-28 print is not in it. Every figure below for *this* print comes from
+Yahoo daily bars (`query1.finance.yahoo.com/v8/finance/chart`, fetched cold 2026-10-30), not from the
+study. The July print re-enters the study: modern fade **mean −0.85%, win 13% (2 green of 15)**, up
+from −1.13% / 1 of 14 before it.
+
+**What printed** (primary: SEC 8-K Item 2.02, accession 0001193125-26-436122, Exhibit 99.1, accepted
+2026-10-28 20:04 UTC — 4:04 pm ET, after the close). Revenue **$92.3B (+19%)**, operating income
+**$45.9B (+21%)**, GAAP EPS **$4.92 (+32%)**, non-GAAP EPS **$4.89 (+18%)** excluding the OpenAI
+investment impact, Microsoft Cloud **$63.9B (+30%)**, commercial RPO **$677B (+73%)**, **Azure +48%**
+(the release states the rate without a constant-currency label), M365 commercial cloud **+18%**
+adjusted, Agents and Infra **$76.8B (+25%)**, Devices and Consumer **$15.5B (−3%)**, **$10.2B** returned.
+Consensus for the beat is secondary (CNBC and Newsquawk via search results): revenue ~$90.6–90.7B,
+EPS ~$4.72–4.73, Azure ~44.8% cc. **The call-day detail is secondary and unverified here:** Q2 Azure
+guide **49–50% cc** against a 45.1% StreetAccount consensus; quarterly capex **$39.37B** against
+~$46B expected (one outlet puts the figure at $45.2B, probably cash versus finance-lease-inclusive,
+unresolved). EDGAR also shows a **424B2 prospectus supplement filed pre-open 2026-10-29** and an FWP on
+10-30 — outlets attribute a **$25B bond plan** to it; the size is secondary.
+
+**The tape — stand-aside held, and the after-hours pop did not survive the session.**
+
+| Window | MSFT | QQQ | MSFT − QQQ |
+|---|---|---|---|
+| Pre-print run-up, D−5 close $532.95 → D close $531.01 | **−0.36%** | — | — |
+| Overnight gap, D close $531.01 → D+1 open $540.22 | **+1.73%** | −1.25% | +3.0pt |
+| Reaction-day fade, open $540.22 → close $530.14 | **−1.87%** | −0.17% | −1.7pt |
+| Reaction day, D close → D+1 close $530.14 | **−0.16%** | −1.42% | **+1.25pt** |
+
+- **The call:** stand aside, flat through the 10-29 close, no position — no position was held, so
+  nothing was lost. S1, the D-10 run-up and the pre-print entry stay killed: MSFT drifted **−0.36%**
+  over the last five sessions into the print, no edge to claim and none claimed.
+- **Where it sits against the record:** the **+1.73%** gap is ordinary (modern gap p10 −5.33%, p90
+  +9.07%; median −0.57%) and nowhere near July's **+12.12%** (D close $390.54 → open $437.90). The
+  day's damage came after the open: a **−1.87%** fade, inside the modern fade range (p10 −2.30%). The
+  session ran $519.56–$541.29. Secondaries put after-hours at about **+4%** (a report of a spike above
+  $550 is unverified; the regular session never printed above $541.29), so most of the pop was gone by
+  the open and the rest by the close.
+- **Why it reversed is secondary and mixed:** outlets read low capex as an AI-demand worry and the
+  new bond plan as a funding worry despite the Azure beat. Neither is checked against a transcript
+  here. Treat the cause as unresolved.
+- **The contaminants did show up.** QQQ fell **−1.42%** on D+1 (ECB, advance Q3 GDP, PCE and the
+  AMZN/AAPL prints share that session), so MSFT's **−0.16%** is a relative *gain* of +1.25pt: the
+  stock held, the index did not. A beat that closes flat on a down-index day is neither "sold" nor
+  "rewarded", which is the ambiguity the contamination was expected to produce.
+- **D+2 (10-30) is not scored.** The bars were fetched mid-session (about 2:20 pm ET: MSFT **$520.21**,
+  QQQ **$685.13**, VIX **22.02**, QQQ −4.2% from the 10-29 close). A large macro-led move is
+  underway; its cause was not researched and nothing is read from it.
+
+**Kill switches, read against the tape.**
+
+- *S3-caution leg: the July point is now measured, and October is the second look.* The 2026-07-30
+  session leg was **green**: open $437.90 → close $451.10, **+3.01%** — one streak-break, which the
+  instrument confirms (the modern fade win rate moved from 1 of 14 to 2 of 15). October's leg was
+  **red** (−1.87%), so there is **no second consecutive green** and the "kills MSFT S3" trigger does
+  **not** fire. S3 stays blocked on the shorting lock regardless, and this close-out opens nothing.
+  The measurement the "deploy small when shorting unblocks" queue item was held for now exists; what
+  to do with it belongs to the sweep doc, which this lane does not edit.
+- *Definition leg, successor:* did **not** fire. Azure printed **48%** against the recast **44–45% cc**
+  bar and M365 commercial cloud **18%** against the ~17% cc guide, so the Azure/M365 wedge did not run
+  wider than the ~1pt the 8-K implied, and Microsoft did not withdraw or re-cut the band. The cc basis
+  of the 48% is not stated in the release; the margin over the bar is the point, and it is large.
+- *Date leg:* resolved — IR said 2026-10-28 after the close and the 8-K was accepted at 4:04 pm ET that
+  day. The calendar file still carries 2026-10-27 (outside this lane's remit; filed in the 10-13 row).
+- *Pre-paid-beat leg:* its registered test (FT-1) was scored **PASS** at ORCL on 2026-09-19 and is not
+  touched. MSFT's own October print is an **unregistered** fifth observation and a mixed one: a clean,
+  beat-and-raise print that gave back its after-hours gain and closed flat in absolute terms, but
+  **+1.25pt over QQQ**. Net of the index it was not sold, so it does not add a supporting row.
+  Count stays 3 supporting / 1 against (July) at n=4, with this print recorded as ambiguous.
+
+**Forward tests.** `FT-msft-2026-10-27-print-1` was already scored (**PASS**, 2026-09-19); no other
+row in this event's fragment is open, so nothing new was scored. No legacy `FT-N` row is scored here:
+`FT-17` (the Oct 27–29 compound-window variance test) is a different, still-running test across five
+prints (AMZN and AAPL report 10-29) and is untouched.
+
+**Loop census** (docs/process/LEARNING-LOOP.md): the stage a person still had to do was *sense* — the
+earnings-cycle study's event list lags a printed quarter by days, so this close-out re-derived the
+reaction from price bars and read the print from EDGAR by hand. The META close-out (2026-10-27) logged
+the same gap; with this, **two occurrences** are measured, which is the bar that close-out set for filing
+a `bottleneck` issue.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{"MSFT":520.21},"vix":22.02,"daysBand":"critical:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0} -->
