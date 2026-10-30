@@ -71,6 +71,12 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The October FOMC holds, because the October odds were never October's" (FT-fomc-2026-10-28-1) and "The October FOMC hikes" (FT-fomc-2026-10-28-2)** — added 2026-10-30 from the
+  [fomc-2026-10-28 close-out](events/fomc-2026-10-28.md). The Committee held at 3.75–4.00%, 10–2 (Cook, Hammack for a hike). `FT-2` was a plain miss: a 65% hike read registered
+  at D-31 fell to 6% by D-6 on two soft prints. `FT-1` was right on the outcome only: its own mechanism kill (a venue above ~30% on the meeting's own conditional) fired at D-31, so the
+  cumulative-vs-conditional decomposition was not what produced the hold. Do not register a meeting-outcome bet off a venue quote more than a few data prints old, and do not
+  score a decomposition on its outcome when the row names a mechanism kill.
+
 - **"A Liquidity Enhancement Auction in the 11-39y zone reopens under 5% 20-year paper" (FT-jgb-liquidity-enhancement-11-39y-2026-10-27-2)** — added 2026-10-30 from the
   [jgb-liquidity-enhancement-11-39y-2026-10-27 close-out](events/jgb-liquidity-enhancement-11-39y-2026-10-27.md). Registered 2026-09-09 off
   three prints that each took 0.0% 20-year. The fourth took **72.8%** (¥181.2bn of ¥248.9bn; 61.9% without the newly eligible No.197). Do not
