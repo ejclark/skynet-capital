@@ -45,6 +45,8 @@ const REACH: FalsifierCheck = {
   level: 63.15,
 };
 
+type PutsCheck = Extract<FalsifierCheck, { kind: "puts-expire" }>;
+
 const P6: ForwardLink = {
   event: "midterm-elections-2026-11-03",
   ref: "ai-dip-2026-10/P6",
@@ -162,6 +164,105 @@ describe("scoreClaim — a level the closes must reach", () => {
   it("does not count a close after the window", () => {
     const tape = [bar("2026-10-16", 64.72), bar("2027-02-01", 50), bar("2027-02-02", 90)];
     expect(scoreClaim(claimReach, ctx("2027-02-02", tape)).outcome).toBe("fail");
+  });
+});
+
+describe("scoreClaim — sold puts that must expire worthless", () => {
+  const PUTS: PutsCheck = {
+    kind: "puts-expire",
+    symbol: "CRWV",
+    puts: [{ expiry: "2026-11-06", strike: 54 }],
+    unnamed: 0,
+  };
+  const claimPuts = (check: FalsifierCheck = PUTS) =>
+    claim({ statement: "2a. Sell puts before the print.", scoreBy: "2026-11-06", check });
+  const closing = (close: number, on = "2026-11-06") => [
+    bar("2026-11-05", 60),
+    bar(on, close),
+    bar("2026-11-09", 40),
+  ];
+
+  it("fails when the close on expiry is under the strike, naming the close", () => {
+    const score = scoreClaim(claimPuts(), ctx("2026-11-07", closing(53.99)));
+    expect(score).toEqual({
+      outcome: "fail",
+      basis:
+        "CRWV closed at $53.99 on 2026-11-06, under the $54.00 2026-11-06 put's strike: it finished in the money.",
+      dueOn: "2026-11-06",
+      scoredOn: "2026-11-07",
+    });
+  });
+
+  it("passes when every put expires worthless and none is left unnamed; the strike itself is worthless", () => {
+    const score = scoreClaim(claimPuts(), ctx("2026-11-07", closing(54)));
+    expect(score.outcome).toBe("pass");
+    expect(score.basis).toContain("expired worthless");
+  });
+
+  it("reads only the expiry's close: a dip before it or after it decides nothing", () => {
+    const tape = [bar("2026-11-05", 40), bar("2026-11-06", 58), bar("2026-11-09", 40)];
+    expect(scoreClaim(claimPuts(), ctx("2026-11-09", tape)).outcome).toBe("pass");
+  });
+
+  it("stays pending after a worthless expiry while puts it names are still unnamed", () => {
+    const score = scoreClaim(claimPuts({ ...PUTS, unnamed: 2 }), ctx("2026-11-07", closing(58)));
+    expect(score.outcome).toBe("pending");
+    expect(score.scoredOn).toBeUndefined();
+    expect(score.basis).toContain("it expired worthless.");
+    expect(score.basis).toContain("2 more puts it names are not listed yet");
+  });
+
+  it("still fails on the first put while later ones are unnamed", () => {
+    const score = scoreClaim(claimPuts({ ...PUTS, unnamed: 2 }), ctx("2026-11-07", closing(50)));
+    expect(score.outcome).toBe("fail");
+  });
+
+  it("fails on whichever put finishes in the money, reading them in expiry order", () => {
+    const two: FalsifierCheck = {
+      ...PUTS,
+      puts: [
+        { expiry: "2026-12-04", strike: 50 },
+        { expiry: "2026-11-06", strike: 54 },
+      ],
+    };
+    const tape = [bar("2026-11-06", 58), bar("2026-12-04", 49), bar("2026-12-07", 60)];
+    const score = scoreClaim(claimPuts(two), ctx("2026-12-07", tape));
+    expect(score.outcome).toBe("fail");
+    expect(score.basis).toContain("$50.00 2026-12-04 put");
+  });
+
+  it("reads the session before an expiry the exchange is shut on", () => {
+    const sat: FalsifierCheck = { ...PUTS, puts: [{ expiry: "2026-11-07", strike: 54 }] };
+    const score = scoreClaim(claimPuts(sat), ctx("2026-11-09", closing(50)));
+    expect(score.outcome).toBe("fail");
+    expect(score.basis).toContain("on 2026-11-06");
+  });
+
+  it("waits, and says why, when the tape ends before the expiry", () => {
+    const score = scoreClaim(claimPuts(), ctx("2026-11-06", [bar("2026-11-05", 50)]));
+    expect(score).toMatchObject({
+      outcome: "pending",
+      basis:
+        "The CRWV tape ends 2026-11-05; the $54.00 2026-11-06 put's close on 2026-11-06 counts once a later session is on it.",
+    });
+  });
+
+  it("never decides off a tape that ends on the expiry: that bar may be a mid-session price", () => {
+    const live = [bar("2026-11-05", 60), bar("2026-11-06", 50)];
+    expect(scoreClaim(claimPuts(), ctx("2026-11-07", live)).outcome).toBe("pending");
+    expect(scoreClaim(claimPuts(), ctx("2026-11-07", closing(50))).outcome).toBe("fail");
+  });
+
+  it("waits rather than read an older close when the expiry's own close is missing", () => {
+    const gap = [bar("2026-11-05", 50), bar("2026-11-09", 60)];
+    const score = scoreClaim(claimPuts(), ctx("2026-11-09", gap));
+    expect(score.outcome).toBe("pending");
+    expect(score.basis).toBe("No CRWV close on 2026-11-06 to read the $54.00 2026-11-06 put.");
+  });
+
+  it("waits when the symbol's tape cannot be read at all", () => {
+    const score = scoreClaim(claimPuts(), { today: "2026-11-07", tape: () => undefined });
+    expect(score).toMatchObject({ outcome: "pending", basis: "No CRWV price history to read." });
   });
 });
 
@@ -393,6 +494,7 @@ describe("the AI-dip record's checks", () => {
     );
     expect(kinds).toEqual({
       "1.": "rerun",
+      "2a": "puts-expire",
       "2b": "forward-tests",
       "4.": "forward-tests",
       "5.": "forward-tests",
@@ -428,6 +530,48 @@ describe("the AI-dip record's checks", () => {
     );
     expect(bad({ ...WITHIN, low: 70 })).toContain("claim 1: check band must run low to high");
     expect(bad({ ...REACH, symbol: " " })).toContain("claim 1: check names no symbol");
+  });
+
+  it("scores claim 2a against its own falsifier: a $54 put assigned on 11-06 fails the sell-puts claim", () => {
+    const twoA = AI_DIP_2026_10.claims.find((c) => c.statement.startsWith("2a."));
+    if (!twoA) throw new Error("claim 2a is missing");
+    const { score: _score, ...unscored } = twoA;
+    const on1106 = (close: number) =>
+      ctx("2026-11-09", [bar("2026-11-06", close), bar("2026-11-09", 60)]);
+    expect(scoreClaim(unscored, on1106(52)).outcome).toBe("fail");
+    // Expiring worthless is one of the three puts it names, so it decides nothing alone.
+    expect(scoreClaim(unscored, on1106(58)).outcome).toBe("pending");
+    expect(scoreClaim(unscored, ctx("2026-11-05", [bar("2026-11-05", 52)])).outcome).toBe(
+      "pending",
+    );
+  });
+
+  it("refuses a puts check with no put, a bad expiry or strike, or a split count", () => {
+    const bad = (check: FalsifierCheck) =>
+      convictionProblems({ ...AI_DIP_2026_10, claims: [claim({ check })] }).filter((p) =>
+        p.startsWith("claim 1:"),
+      );
+    const ok: PutsCheck = {
+      kind: "puts-expire",
+      symbol: "CRWV",
+      puts: [{ expiry: "2026-11-06", strike: 54 }],
+      unnamed: 2,
+    };
+    expect(bad(ok)).toEqual([]);
+    expect(bad({ ...ok, puts: [] })).toContain("claim 1: check names no put");
+    expect(bad({ ...ok, symbol: "" })).toContain("claim 1: check names no symbol");
+    expect(bad({ ...ok, puts: [{ expiry: "11-06", strike: 54 }] })).toContain(
+      "claim 1: a put's expiry 11-06 is not a calendar day",
+    );
+    expect(bad({ ...ok, puts: [{ expiry: "2026-11-06", strike: 0 }] })).toContain(
+      "claim 1: the 2026-11-06 put's strike is not a price",
+    );
+    expect(bad({ ...ok, puts: [...ok.puts, ...ok.puts] })).toContain(
+      "claim 1: check names two puts on one expiry",
+    );
+    expect(bad({ ...ok, unnamed: 1.5 })).toContain(
+      "claim 1: check's unnamed puts is not a whole number",
+    );
   });
 
   it("refuses a forward-test check with no test, a bad ref, or a link that decides nothing", () => {
