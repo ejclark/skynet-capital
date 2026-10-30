@@ -16,6 +16,8 @@ import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
+import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import type { PulseTrades } from "../observatory/pulse-json-view.js";
 import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
 import type { AlertDismissalsPort } from "../ports/alert-dismissals.js";
 import type { WatchlistPort } from "../ports/watchlist.js";
@@ -232,6 +234,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * stay honest about it via the backfill caveat.
    */
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
+  /** Pulse's weekly bars and trade stats, held while the participant's ledger and broker window
+   *  are unchanged (`pulse-trade-cache.ts`, #4619). Omit and Pulse builds them from
+   *  `readTradeActivity` on every request. */
+  readonly readPulseTrades?: (snapshot: ParticipantSnapshot) => Promise<PulseTrades>;
   /**
    * Reads a participant's per-order audit lines (`order-audit-log.ts`) so the record views can say
    * WHO placed each order, not just how the ledger learned about it (`order-origin.ts`, #782).

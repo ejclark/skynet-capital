@@ -36,6 +36,10 @@ export interface ActivityStore {
    *  corroboration signal (e.g. "did this bot trade recently"); use `list` + `collapseActivity`
    *  when the caller needs an order's true latest fill state. */
   latest(participantId: string): Promise<TradeActivityRecord | undefined>;
+  /** One participant's lines appended since `offset`, in file order — how `pulse-trade-cache.ts`
+   *  learns the ledger has not moved without reading it (#4619). Optional: without it a reader
+   *  re-lists. */
+  since?(participantId: string, offset: number): Promise<JsonlTail<TradeActivityRecord>>;
   /** Every participant file's lines appended since `from` (by file path), in file order — the
    *  append-aware read `wire-feed-cache.ts` folds (#4458). Optional: without it a reader re-lists. */
   sinceAll?(
