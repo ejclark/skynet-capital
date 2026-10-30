@@ -387,5 +387,31 @@ only thing this close-out could actually test today. The two predictions that ma
 honestly past the close-out window; they stay registered and open rather than being scored early or
 quietly dropped. This doc goes quiet on `## Outcome` until a score-by date reopens it.
 
+### Forward-test scoring — 2026-10-30 (`forward-test-due`)
+
+Scored `FT-uk-electricity-vat-zero-rate-2026-10-01-2` (score by 2026-10-28): **kill.** Budget 2026
+(delivered 2026-10-28) extended the zero rate by three months, to **1 July 2027**. Primary: the
+gov.uk *Budget 2026 policy costings* (AB26), contents entry and page 12 — "Cut VAT on domestic
+electricity from 5% to 0% from 1 October 2026 to 1 July 2027", "effective from 1 October 2026 until
+1 July 2027", Exchequer impact **−£755m** (2026-27), **−£305m** (2027-28), nil after. The Budget
+document (para 6.210, read second-hand via a PolicyEngine pull request quoting it) says the same;
+its direct PDF could not be text-extracted this session. The costing resolves the "no Exchequer
+number" gap the 09-09 row recorded. The 09-08 HMRC TIIN still reads 31 March 2027 (never updated).
+
+What this does and does not change: the registered kill switch fired, so the claim "a genuine
+six-month notch with its sunset fixed at 31 March 2027" is wrong as stated; the rate is still
+**temporary** (no permanence, and no source found extending past 1 July 2027). The stance calls
+(stand aside, `symbols: []`) are untouched. The *look-through* argument in the "This quarter" row
+is weakened, not refuted — a nine-month notch with a re-dated sunset is a thinner "look through"
+case, and the sibling [`uk-electricity-vat-reversion-2027-04-01`](uk-electricity-vat-reversion-2027-04-01.md)
+ledger's 2027-04-01 reversion date is now stale (the lapse is ~2027-07-01, estimate pending a
+statutory instrument, since SI 2026/987 itself still ends 31 March 2027). That ledger belongs to its
+own lane; it is flagged in the PR, not edited here. No new proposal filed: 2027-07-01 is ~244 days
+out, beyond `assessment-cadence.json`'s `maxDaysOut` of 60. `FT-…-1` (ONS October CPI, 2026-11-18)
+stays open until its score-by date. Instrument cache busted first; nothing in this macro event reads it.
+
 **Last assessed:** 2026-10-02
 <!-- probe-ref: {"symbols":{},"vix":16.39,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->
