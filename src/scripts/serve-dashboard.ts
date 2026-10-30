@@ -37,6 +37,7 @@ import {
 import type { EquitySample } from "../observatory/history-record.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { pulseHistoryReader } from "../observatory/pulse-history-cache.js";
+import { pulseTradesReader } from "../observatory/pulse-trade-cache.js";
 import { rememberSpreadLegs } from "../observatory/spread-activity.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { wireFeedReader } from "../observatory/wire-feed-cache.js";
@@ -142,6 +143,8 @@ async function main(): Promise<void> {
     process.env,
     dataSource.mode,
   );
+  // Pulse's trade half (#4619): held per participant until its ledger or broker window moves.
+  const readPulseTrades = pulseTradesReader(activity);
   // Ladder milestone auto-completion — never a client claim; see the wiring module.
   const {
     onActivity,
@@ -446,6 +449,7 @@ async function main(): Promise<void> {
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
     readPulseHistory,
+    readPulseTrades,
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
     recordOrderAudit: (entry) => orderAudit.record(entry),
@@ -580,7 +584,9 @@ async function main(): Promise<void> {
     );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
     telemetry.listening();
-    // Then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read,
+    // Pulse's history folds, then its trade half for each participant (the held answer's first
+    // build is the whole-ledger read: ~90 ms for Sauron at 180 days, #4619),
+    // then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read,
     // then each bot's decision funnel, so the first Decisions open is not either (#4619).
     // Best effort: a failed warm leaves the fold to the first request, which reads it the same way.
     const { funnelFor } = insightsBridge;
@@ -588,6 +594,15 @@ async function main(): Promise<void> {
       roster.map((p) => p.id),
       readPulseHistory,
     )
+      .then(() =>
+        warmFolds(
+          roster.map((p) => p.id),
+          async (id) => {
+            const snapshot = hub.getState().participants.find((p) => p.id === id);
+            if (snapshot) await readPulseTrades(snapshot);
+          },
+        ),
+      )
       .then(() => readWireFeed().catch(() => undefined))
       .then(() =>
         funnelFor

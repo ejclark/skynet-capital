@@ -1,6 +1,6 @@
 import { formatDateTime } from "../domain/intl-format.js";
 import type { RoundTrip } from "../trading/round-trips.js";
-import { tradeStats } from "../trading/trade-stats.js";
+import { type TradeStats, tradeStats } from "../trading/trade-stats.js";
 import type { TradeActivityRecord } from "./activity-store.js";
 import { deskLedger, formatPctOrDash, formatRatio } from "./desk-data.js";
 import type { EquitySample } from "./history-store.js";
@@ -169,6 +169,24 @@ function pulseRace(history: PulseHistoryFold, equity: number): PulseRace | null 
       };
 }
 
+/** Everything Pulse takes from closed round trips: the weekly bars and the stat family. Small and
+ *  fixed-size whatever the ledger's length, so a server can keep one per participant and skip the
+ *  ledger read while nothing has changed (`pulse-trade-cache.ts`, #4619). */
+export interface PulseTrades {
+  readonly weeks: readonly PulseWeek[];
+  readonly stats: TradeStats;
+}
+
+/** The trade half of Pulse from the durable ledger plus the snapshot's broker window — the same
+ *  merge every desk view reads (`deskLedger`). */
+export function pulseTradesOf(
+  snapshot: ParticipantSnapshot,
+  durable?: readonly TradeActivityRecord[],
+): PulseTrades {
+  const trips = deskLedger(snapshot, durable).trips;
+  return { weeks: pulseWeeks(trips), stats: tradeStats(trips) };
+}
+
 /** The view from raw samples, in any order — folded here; a server holding a live fold calls
  *  `deskPulseViewOf` and skips reading the history at all (#4619). */
 export function deskPulseView(
@@ -176,16 +194,15 @@ export function deskPulseView(
   samples: readonly EquitySample[],
   durable?: readonly TradeActivityRecord[],
 ): DeskPulseView {
-  return deskPulseViewOf(snapshot, PulseHistoryFold.of(samples), durable);
+  return deskPulseViewOf(snapshot, PulseHistoryFold.of(samples), pulseTradesOf(snapshot, durable));
 }
 
 export function deskPulseViewOf(
   snapshot: ParticipantSnapshot,
   history: PulseHistoryFold,
-  durable?: readonly TradeActivityRecord[],
+  trades: PulseTrades,
 ): DeskPulseView {
-  const trips = deskLedger(snapshot, durable).trips;
-  const stats = tradeStats(trips);
+  const { stats } = trades;
   const drawdown = history.drawdown();
   const tiles: PulseTile[] = [
     {
@@ -228,7 +245,7 @@ export function deskPulseViewOf(
   ];
   return {
     curve: pulseCurve(history),
-    weeks: pulseWeeks(trips),
+    weeks: trades.weeks,
     tiles,
     race: pulseRace(history, snapshot.equity),
     streaks: pulseStreaksFrom(history.dailyChanges(), stats),
