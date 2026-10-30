@@ -313,6 +313,7 @@ Zero capital by construction.
 | 2026-10-13 | D-16 | **BEA's 09-30 revision landed; the 1.42pp anchor is pre-revision.** Dallas Fed page (direct): Aug 1-month trim **1.9%** (Jul 1.9%), 12-month **2.2%**; headline **3.4%**, core **3.0%**. Wedge on the new basis: Jul ≈**1.1pp**, Aug **1.2pp** (1-dp figures); core-minus-trim ≈0.7–0.8pp vs 1.06pp. Percentiles not recomputed (FRED unreachable, recorded in `blocked`). Next update still "Oct. 29"; BEA schedule (direct) still lists 10-29 8:30 AM Sept Personal Income and Outlays. **Cleveland nowcast** (direct, stamp 10-09): Sep headline +0.43% m/m / 3.56% y/y, core +0.25% / 3.02% — implies a Sept wedge of ~1.3–1.4pp if the trim holds 2.2%, only ~0.1–0.2pp over `FT-1`'s 1.20pp; `FT-2` on track (Aug 1-month trim 1.9%). **Energy:** EIA regular $4.157 · $4.319 · $4.478 · $4.465 (09-07→09-28), Sep avg ~$4.35; Oct-05 $4.354. EIA dated-Brent spot ran $114–131 (Sep 14–Oct 2) vs Yahoo `BZ=F` ~$100 on the pce ledger: different series, not reconciled. **Adjacency:** VIX **15.21** (Cboe 10-12; 15.52 last row, no shift); Sep payrolls +29k, minutes 10-07, Sep CPI 10-14, PPI 10-15 read via [`pce-2026-10-29`](pce-2026-10-29.md), not re-derived; peers n/a. Corridor 48 adjacent; `ism-manufacturing-2026-11-02` now confirmed-high (strong set 4→5), `boe-dmp-2026-10-30` added. No new dated event, so no proposal. | **Yes, trimmed:** "This month" High→Medium, "This quarter" Medium→Low (wedge anchors were pre-revision); rule and kill switches unchanged; stand aside. | 2026-10-20 (medium, 8+ band: every 7d) |
 | 2026-10-20 | D-9 | **Stance holds; `FT-1`'s margin is thin and the hot-core tape cuts the wrong way for it.** Dallas Fed page (direct): still Aug data (1-mo **1.9%**, 6-mo 2.3%, 12-mo **2.2%**; headline 3.4%, core 3.0%), next update "October 29"; BEA schedule (direct) lists Sep Personal Income and Outlays 10-29 8:30 AM beside Q3 GDP advance. **Cleveland nowcast** (direct, stamp 10-19): Sep headline **+0.47% m/m / 3.60%** y/y, core +0.28% / 3.05% — headline 12-mo less 2.2-2.3% trim = **~1.3-1.4pp**, still only 0.1-0.2pp over `FT-1`'s 1.20pp. **Macro (secondary):** Sep CPI 3.7% y/y vs 3.6% exp., core +0.33% m/m vs 0.2 (10-14); PPI hot 10-15, airfares/hotels read via [`pce-2026-10-29`](pce-2026-10-29.md). Broad core strength can lift the trim itself (narrowing the wedge) — unscored. **Energy:** EIA regular $4.354 (10-05), $4.331 (10-12), Sep avg ~$4.35. **VIX** ~19.99 (10-16, via the pce ledger, secondary; Cboe feeds unreachable) vs 15.21 = **+4.8pt**, crosses the 3pt bar. 10-24→11-03 corridor: 5 strong confirmed (fomc, gdp, pce, eci, ism-mfg), no new dated event outside the calendar, so no proposal. | — (stance unchanged; stand aside, reading rule and 1.20pp kill switch intact) | 2026-10-22 (medium band turns 0+: every 2d) |
 | 2026-10-26 | D-3 | **Stance holds; `FT-1` margin still ~0.1-0.2pp.** Dallas Fed page (direct): still Aug data (1-mo **1.9%**, 6-mo 2.3%, 12-mo **2.2%**; headline 3.4%, core 3.0%), next "October 29"; BEA (direct) lists Sep Personal Income and Outlays 10-29 8:30 AM beside Q3 GDP advance. FRED (reachable today) Aug 12-mo trim **2.19**. **Cleveland nowcast** (direct, 10-26): Sep headline **+0.47% m/m / 3.60%** y/y, core +0.28% / 3.05% (unchanged vs 10-20) → wedge ~**1.4pp** vs 1.20pp bar; Oct nowcast 0.27% / 3.72%. Secondary previews: Sep headline +0.5% m/m, core +0.3% / 3.1% y/y. **Energy:** EIA regular **$4.284** (10-19, -4.7c w/w); Sep avg ~$4.35. Yahoo `BZ=F` 109.55 (10-19) → 116.72 (10-23) → 109.93 (10-26), Hormuz tanker-strike headlines (secondary); Oct data, not Sep. **VIX** 18.29 (10-26) vs 19.99 = -1.7pt, under the bar. FOMC 10-28 priced ~85% hold (secondary). No peer prints (`symbols: []`). Corridor 51 adjacent, 6 strong confirmed (adds amd-fq3 11-03); no new dated event, so no proposal. | — (stance unchanged; stand aside, reading rule and 1.20pp kill switch intact) | 2026-10-28 (medium band 0+: every 2d) |
+| 2026-10-30 | D+1 | **Close-out.** Release posted 10-29 as scheduled (Dallas Fed page, direct: "Latest update: Oct. 29, next Nov. 25"). Sep 12-mo trim **2.3%** (FRED 2.26), 1-mo **2.8%** (FRED 2.84), headline **3.6%** (3.649 from index), core **3.1%**. Wedge **1.39pp** vs the 1.20pp bar: **FT-1 pass**; 1-mo trim ≤3.0% beside headline +0.5% m/m: **FT-2 pass**. Gasoline (+190% ann.) and air fares (+68%) were cut from the top tail. Full scoring in `## Outcome`. **Adjacency:** VIX 17.20 (10-29 close) → 23.46 (10-30 live, +5.9pt vs 18.29); same-slot PCE, GDP advance and the FOMC read via their own ledgers, not re-derived. No new dated event, so no proposal. | — (closed; no stance change) | none (close-out) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -335,3 +336,65 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":18.29,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+1; inside `closeOutWithinDays`).** Macro-print mode: `symbols: []`, so no
+`earnings-cycle` / `intraday-edges` run applies (cache busted per the lane contract anyway, a no-op).
+Everything below was re-fetched today, never recalled: `dallasfed.org/research/pce` (direct, HTTP 200),
+the Dallas Fed's own component workbook (`…/pce/detail`, direct), `bea.gov/news/2026/personal-income-and-outlays-september-2026`
+(direct), and FRED CSVs (`PCETRIM12M159SFRBDAL`, `PCETRIM1M158SFRBDAL`, `PCEPI`, `PCEPILFE`, direct).
+
+**The date held.** The Dallas Fed page reads "Latest update: Oct. 29 · Next update: Nov. 25" and the BEA
+release carries "Next release: November 25, 2026"; the entry stays `estimate` (this lane may not
+self-confirm; the derivation-rule gap in the initial research stands). Nothing to re-date.
+
+**What printed (September 2026), publisher one-decimal vs FRED two-decimal:**
+
+| | Jun | Jul | Aug | **Sep** | Registered anchor |
+|---|---|---|---|---|---|
+| Headline PCE y/y (from index) | 3.45 | 3.37 | 3.44 | **3.65** (pub. 3.6) | Cleveland nowcast 3.60 (10-26) |
+| Core PCE y/y (from index) | 3.04 | 3.00 | 3.03 | **3.12** (pub. 3.1) | nowcast 3.05 |
+| 12-mo trimmed mean | 2.28 | 2.29 | 2.20 | **2.26** (pub. 2.3) | — |
+| Headline − trim wedge | 1.17 | 1.08 | 1.24 | **1.39** | 1.20 bar (FT-1) |
+| 1-mo trimmed mean, annualized | 1.52 | 2.00 | 1.96 | **2.84** (pub. 2.8) | ≤3.0% (FT-2) |
+| 1-mo headline PCE, annualized | -1.2 | 0.7 | 3.9 | **6.1** (+0.49% m/m) | nowcast +0.47% m/m |
+
+**What the trim did.** The workbook sorts 177 components by September's annualized 1-month change. The
+top-tail cut took **Gasoline and other motor fuel (+190% annualized, weight 2.23%)**, **Fuel oil (+454%)**,
+**Air transportation (+68%)**, **Hotels and motels (+32%)** and the other components in the top 31% of
+spending weight. A by-hand reconstruction (24% bottom / 31% top trim, 177 rows) gives 2.87% against the
+published 2.8%, so the cut points are approximately right and the energy tail was discarded as the
+mechanism intends. This closes the "Honest limits" item the initial research could not read before the
+print. The bottom cut took video discs, household linens, prescription drugs, legal services and similar
+(not an energy story).
+
+**FT-dallas-fed-trimmed-mean-2026-10-29-1 — PASS.** Registered: September headline-minus-trim wedge
+**≥1.20pp**. Actual **1.39pp** computed (3.649 − 2.26), or **1.3pp** on the publisher's own one-decimal
+figures (3.6 − 2.3); both clear the bar. The margin the last four pulses flagged as thin (0.1–0.2pp) held,
+and the Cleveland nowcast (3.60% headline y/y, +0.47% m/m) was close: the print came in 0.05pp hotter
+on headline y/y and +0.49% m/m.
+
+**FT-dallas-fed-trimmed-mean-2026-10-29-2 — PASS.** Registered: published 1-month annualized trim **≤3.0%**
+while headline m/m is **≥0.35%**. Actual trim **2.8%** (FRED 2.84), headline **+0.5% m/m** (BEA: "PCE price
+index for September increased 0.5 percent"; 6.1% annualized). The trim read 3.3pp under the headline month.
+Caveat on the margin: 2.84% is a 2.84 vs 3.0 test, only 0.16pp of room, and the 1-month trim rose 0.9pp
+from August (1.96%), so the trim did pass through some of the broad hot core (core 1-mo 3.9%, hotels and
+air fares were top-cut but breadth was real).
+
+**Stance vs outcome.** "Stand aside every horizon" needed nothing: no instrument keys to this release and
+no position existed. The pre-committed reading rule (a wide headline-trim wedge is the trim working, not
+evidence inflation is contained) scored correctly on the number, with one honest qualification the rule
+did not carry: the 12-month trim *rose* 0.06pp (2.20 → 2.26) and the 1-month trim rose to 2.8%, so
+"contained" is not what the print showed either. **This quarter's call** (core-minus-trim and
+headline-minus-trim wedges both back inside their 1978-2026 interquartile range by the 2026-12-23 release)
+is untouched: the core-minus-trim wedge widened to **0.86pp** (from 0.71 in July) on the revised series,
+the opposite direction. Percentile ranks were not recomputed on the post-revision series (not needed to
+score either test).
+
+**Method note.** The wedge widened for the right reason (gasoline +190% annualized cut from the top
+tail), but the trim itself also ticked up, so a future "the trim looks calm" read should be checked against
+the 1-month series, not only the 12-month one.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":23.46,"daysBand":"medium:0+","adjacentIds":["advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0,"blocked":[]} -->
