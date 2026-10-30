@@ -71,6 +71,15 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A Liquidity Enhancement Auction in the 11-39y zone reopens under 5% 20-year paper" (FT-jgb-liquidity-enhancement-11-39y-2026-10-27-2)** — added 2026-10-30 from the
+  [jgb-liquidity-enhancement-11-39y-2026-10-27 close-out](events/jgb-liquidity-enhancement-11-39y-2026-10-27.md). Registered 2026-09-09 off
+  three prints that each took 0.0% 20-year. The fourth took **72.8%** (¥181.2bn of ¥248.9bn; 61.9% without the newly eligible No.197). Do not
+  register a segmentation or "market has stopped taking X" claim on a zone off n=3 and a split date picked after seeing the series.
+
+- **"The 25y+ share of an 11-39y Liquidity Enhancement Auction's reopenings stays above its 28.9% share of eligible stock" (FT-jgb-liquidity-enhancement-11-39y-2026-10-27-3)** — added 2026-10-30
+  from the same close-out. Registered 2026-09-09 (1.41x / 1.34x / 1.87x, filed MIXED on the size-cut confound). The fourth print, at an unchanged
+  ¥248.9bn size, took **3.7%** 25y+ (0.13x). Do not re-register a bucket-overweight test off the post-April-2026 prints; the regime reading did not survive.
+
 - **"META's 2-trading-day excess return vs QQQ around the New Mexico privacy-penalty ruling stays within +/-4%, whatever figure the judge sets" (FT-meta-nm-privacy-penalty-ruling-2026-10-20-1)** — added 2026-10-23 from the [meta-nm-privacy-penalty-ruling-2026-10-20 close-out](events/meta-nm-privacy-penalty-ruling-2026-10-20.md). Registered 2026-10-03 off the unconfounded 10-01 hearing day (+0.1%/+0.4%). The ruling came on 10-21 at **$25B** (past the stance's $20B line) and META 10-20 to 10-22 returned -6.54% vs QQQ -1.83% (**-4.71pt**). Confounded: Meta's Q3 print was after the close the same day (the registration read a stale 10-28 estimate), so this kills the rule as written, not the ruling's isolated price effect. Do not re-register a price-window test around a legal ruling that falls inside a print week; separate the two first, and do not read a hearing day's muted tape as a prior for the number.
 
 - **"The seven-day ECB quiet window carries no `^STOXX50E` close-to-close move >= 1.50% (2x the 0.75% baseline), extrapolated from 13 windows in 2025-26" (FT-ecb-quiet-period-start-2026-10-21-1)** — added 2026-10-22 from the [ecb-quiet-period-start-2026-10-21 close-out](events/ecb-quiet-period-start-2026-10-21.md). Registered 2026-09-05 (0 of 54 trimmed sessions at 2x; 11 of 13 prior windows would have passed). The 10-22 session, day two of the window, closed **-1.94%** on an equity-wide risk-off tape (`^GDAXI` -1.07%, EUR/USD flat); no cause was sourced. Do not register a no-large-move threshold on a quiet window from a thin-tail count: the null is a statement about the 2025 sample, not a property of the gate. The topic-scope test (FT-2) passed and is not retired.
