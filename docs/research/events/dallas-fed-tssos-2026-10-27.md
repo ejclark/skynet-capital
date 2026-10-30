@@ -123,3 +123,67 @@ same PR. Close-out fills `## Outcome` from re-run data, never from memory.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.94,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+3 — inside the `closeOutWithinDays: 6` deadline).** Macro-print mode
+carries no `earnings-cycle`/`intraday-edges` instrument (`symbols: []` by design); the cache-bust
+command was run regardless, per the lane's standing instruction — nothing here uses it. "Re-run
+data" means the Dallas Fed's own October TSSOS report, fetched direct this session —
+`dallasfed.org/research/surveys/tssos/2026/2610`, desktop-UA curl, **HTTP 200, 67,542 bytes** — and
+the Conference Board's own Consumer Confidence page, never recalled from memory.
+
+### What printed (stance: stand aside — held; nothing was ever sized on this print)
+
+| Line | Oct (this print) | Sep | Series avg |
+|---|---|---|---|
+| General business activity (headline) | **4.0** | −1.8 | 1.8 |
+| Revenue | 4.4 | −0.9 | 9.9 |
+| Employment | 2.8 | 4.1 | 5.6 |
+| Hours worked | 2.2 | 0.1 | 2.4 |
+| Company outlook | 3.0 | −3.2 | 3.8 |
+| Outlook uncertainty | 16.3 | 21.4 | 14.1 |
+| Input prices | **41.7** | 42.1 | 28.0 |
+| Selling prices | 18.2 | 14.9 | 7.5 |
+| Wages and benefits | **20.5** | 15.1 | 15.4 |
+| Future revenue | 43.6 | 38.2 | 37.1 |
+
+Dallas Fed's own words (fetched 2026-10-30): *"Texas service sector activity grew in October after
+stalling the prior month"*; *"Price and wage pressures remained elevated. The input prices index was
+little changed at 41.7"*; wages *"rose five points to 20.5, its highest reading since January 2023"*;
+*"Data were collected Oct. 13-21, and 224 of the 342 Texas service sector business executives
+surveyed submitted responses."* Next release: December 1, 2026.
+
+**The reading order paid off as a reading, not a trade.** The stagflation read the call sheet named
+(second negative headline with uncertainty above average) did **not** form: the headline rebounded
+to 4.0 and uncertainty fell five points. What persisted was the price side — input prices held at
+41.7 against a 28.0 average, and wages reversed September's easing outright (20.5 vs the 15.4 line).
+Same-day tape, for context only (Yahoo daily bars, direct): S&P 500 7,676.77 → 7,722.60 on 10-27
+(+0.60%), VIX 18.39 → 17.52. No session wrap was read that names this survey as the driver, and the
+10:00 ET Consumer Confidence release sat ahead of it, so the "unattributable slot" caveat stands;
+the call sheet's falsifier for the today-row was not triggered.
+
+### Forward tests, scored
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| FT-…-1 (field window Oct. 13–21) | both edges exact | `Data were collected Oct. 13-21` | **PASSED** |
+| FT-…-2 (Consumer Confidence dated 10-27, 10:00 ET) | dated 2026-10-27 at 10:00 ET | Conference Board page: *"US Consumer Confidence Increased in October … Latest Press Release Updated: Tuesday, October 27, 2026"*; the 10:00 ET time rests on the page's standing *"at 10 AM ET"* wording (read 10-18 for this release) — the press-release block does not stamp a clock time | **PASSED** (date primary-confirmed; time per standing wording) |
+| FT-…-3 (input prices ≥ 35.1) | ≥ 35.1, registered 70% | **41.7** | **PASSED** |
+
+FT-3 passes by a wide margin (6.6 points above the line), so the prices-first reading order is
+**not** demoted: the September spike was not a one-month burst. The 70% was a judgment-labelled
+call; 41.7 vs 42.1 is closer to persistence than to the line, so it was, if anything, low. FT-1
+extends the 2020-twin method for this series (Sept and Oct windows both matched their registered
+edges). FT-2 is a structural claim and scores without reference to the tape. No scored kill, so
+nothing moves to the sweep doc's kill list.
+
+**Open cross-ledger note, still unreconciled:** the October report page carries the same line as
+September's — *"This month's data release also includes annual seasonal factor revisions"* — and
+its September comparison values (−1.8, 42.1, 15.1) match September's own report, so no visible
+revision landed on the prior month. Whether that is boilerplate or a real revision is for the
+[12-29 edition](dallas-fed-tssos-2026-12-29.md)'s owner, which currently says the revision lands
+with January.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":20.89,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0,"blocked":[]} -->
