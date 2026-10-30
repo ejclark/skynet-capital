@@ -28,6 +28,7 @@ export type StrategyId =
   | "wheel"
   | "call-spread"
   | "long-call"
+  | "long-leap"
   | "event"
   | "persona-rules"
   | "forced-pick"
@@ -117,6 +118,18 @@ export const STRATEGIES: Readonly<Record<StrategyId, Strategy>> = {
     runsOnConviction: true,
     noScreen:
       "No study measures long calls held through prints yet; it runs only on its owner's dated conviction.",
+  },
+  "long-leap": {
+    id: "long-leap",
+    name: "the long LEAP",
+    line: "Buys two-year calls after a 15% pullback",
+    act: "Buy <SYM> calls about two years out once it closes 15% under its high of the past year",
+    summary:
+      "Buys calls about two years out once a stock closes 15% under its high of the past year; sells half at double the cost and the rest with six months left.",
+    instrument: "options",
+    runsOnConviction: true,
+    noScreen:
+      "No screen tests a ticker for it: the study found a dip added no measured edge, so it runs only on its owner's dated conviction.",
   },
   event: {
     id: "event",
@@ -241,6 +254,7 @@ export interface Pair {
 }
 
 const NVDA_STUDY = "docs/research/events/nvda-2026-11-18-print.md";
+const LONG_LEAP_STUDY = "docs/research/long-leap-dip-2026-10.md";
 
 const PAIRS: readonly Pair[] = [
   {
@@ -331,6 +345,26 @@ const PAIRS: readonly Pair[] = [
       study: "docs/research/events/crwv-2026-11-10-print.md",
       past: {
         line: "CRWV's moves on its earnings reports have run larger than its options priced them. No study has measured holding calls through them.",
+      },
+    },
+  },
+  {
+    // #6340: the long LEAP on NVDA, the study's first name. Checked at the study's own forward-test
+    // date, when the real-price record (slice 3) can grade the modeled shape.
+    id: "NVDA-LONG-LEAP",
+    strategy: "long-leap",
+    symbols: ["NVDA"],
+    evidence: {
+      status: "conviction",
+      call: "Runs as its owner's conviction (#6340): NVDA's long-term growth carries a two-year call bought after a 15% pullback. The study found the pullback itself added no measured edge over an ordinary day; the contract and the exit mattered more.",
+      confidence: "low",
+      number:
+        "bought 30%+ under the high, a modeled LEAP won 60% of the time; on an ordinary day, 63% (25 names since 1990, option prices modeled)",
+      verdictOn: "2026-10-30",
+      checkOn: "2028-01-31",
+      study: LONG_LEAP_STUDY,
+      past: {
+        line: "Over 36 years of 25 large stocks, a modeled two-year call bought after a pullback did about as well as one bought on any other day. No real LEAP prices exist for the test.",
       },
     },
   },

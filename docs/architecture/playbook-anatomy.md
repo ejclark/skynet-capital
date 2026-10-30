@@ -112,6 +112,14 @@ observations in the decision store beside the verdicts (`playbook_observations`,
 `src/autonomous/decision-db-observations.ts`); they never reach an order intent, the guards or the
 broker.
 
+A `decide` playbook may also take **reads** beyond the cycle's context (`PlaybookReads`, #6340):
+the ticker's last completed close and its 252-session high (`src/domain/daily-high.ts`, kept fresh by
+`src/playbooks/daily-high-feed.ts` from split-adjusted daily bars, fetched only once a playbook asks),
+and its own memory off the decision store (`occSymbolsPlacedUnder`, the OCC symbols it placed an
+order on under one strategy tag). `withPlaybooks` hands them to `decide` and `optionDemand`; a read
+that is absent (a spec, the Store's preflight) reads as unknown, so the long LEAP
+(`src/playbooks/long-leap.ts`) then buys nothing and takes no profit trim.
+
 A member's authored draft in its **shadow test** (#5457 slice 2) is not a `Playbook` on any roster, and
 the engine never sees it as one. `runnableSpecs` hands a bot nothing for it (`shadow` is not in
 `TRADING_STATUSES`); `shadowOrders` hands the saved spec to the shadow runner instead
