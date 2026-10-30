@@ -1,0 +1,11 @@
+{
+  "id": "uk-gdp-q3-first-2026-11-12",
+  "kind": "macro-print",
+  "title": "UK GDP first quarterly estimate, July to September 2026 (ONS, 07:00 London / 02:00 ET) — the Bank's forecast quarter, measured one working week before the labour print that shares its window",
+  "date": "2026-11-12",
+  "status": "estimate",
+  "source": "EST: two ONS primaries and one gov.uk statutory register, all fetched direct 2026-10-30 (HTTP 200) — ons.gov.uk/releases/gdpfirstquarterlyestimateukjulytoseptember2026 reads verbatim 'GDP first quarterly estimate, UK: July to September 2026', 'Release date: 12 November 2026 7:00am', 'This release is not yet published'; the live August 2026 monthly GDP bulletin (published 2026-10-15) names its own 'Next release: 12 November 2026'; and the gov.uk statistics-announcement register (/government/statistics/announcements/gdp-first-quarterly-estimate-uk-july-to-september-2026) returns state 'confirmed', release_timestamp 2026-11-12T07:00:00Z. Filed estimate because the confirmed-prefix taxonomy in market-events-data.ts has no slot for the UK Office for National Statistics and this lane may not self-confirm; the DATE is not in doubt. Proposed 2026-10-18 by the uk-labour-market-2026-11-17 lane; researched and made canonical by its own lane 2026-10-30",
+  "impact": "low",
+  "symbols": [],
+  "notes": "CANONICAL as of 2026-10-30; the proposal from the uk-labour-market-2026-11-17 lane (2026-10-18) was read in full first and is now inert. Why it earns a slot: Jul-Sep 2026 is the same three months as the Jul-Sep AWE/LFS window of uk-labour-market-2026-11-17, and 2026 Q3 is the quarter the July 2026 Monetary Policy Report forecasts (0.1% q/q headline per the BoE's September minutes; a staff update then implied 0.4%). Initial research finding: July (+0.4% m/m) and August (+0.1%) are already published, so a flat September mechanically implies Q3 of about +0.7% q/q; September would have to fall about 2.2% m/m for Q3 to print 0.0%. The release lands 7 days after the 2026-11-05 BoE decision and November Monetary Policy Report, and the same ONS slot carries the September monthly GDP edition. symbols: [], no house playbook is rates- or sterling-keyed; tiered LOW like every UK ONS print here. Estimate widens caution only; nothing date-keyed may act on this. Ledger: docs/research/events/uk-gdp-q3-first-2026-11-12.md."
+}
