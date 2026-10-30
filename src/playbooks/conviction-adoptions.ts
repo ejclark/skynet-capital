@@ -57,29 +57,33 @@ export interface AdoptedHold {
 export type HoldLookup = (convictionId: string, pairId: string) => AdoptedHold | undefined;
 
 /** The hold a ledger puts on one view's pair, or undefined. A line naming any other change holds
- *  nothing (`adoptionProblems` keeps such a line out of the build). */
+ *  nothing (`adoptionProblems` keeps such a line out of the build). Read once into a map. */
 export function holdIn(ledger: AdoptionLedger): HoldLookup {
-  return (convictionId, pairId) => {
-    for (const [key, adoption] of Object.entries(ledger)) {
-      const parts = splitKey(key);
-      if (parts?.conviction !== convictionId || parts.pair !== pairId) continue;
-      if (adoption.change === "stop-new-entries") {
-        return { claim: parts.claim, adoptedOn: adoption.adoptedOn };
-      }
-    }
-    return undefined;
-  };
+  const holds = new Map<string, AdoptedHold>();
+  for (const [key, adoption] of Object.entries(ledger)) {
+    const parts = splitKey(key);
+    if (!parts || adoption.change !== "stop-new-entries") continue;
+    holds.set(`${parts.conviction}/${parts.pair}`, {
+      claim: parts.claim,
+      adoptedOn: adoption.adoptedOn,
+    });
+  }
+  return (convictionId, pairId) => holds.get(`${convictionId}/${pairId}`);
 }
 
 /** The build's holds: the committed ledger. */
 export const adoptedHold: HoldLookup = holdIn(ADOPTIONS);
 
-/** Words every adopted hold's reason carries, so the owner's row can say it as its own sentence. */
-export const ADOPTED_HOLD = "the change that holds it was adopted";
+/** How every adopted hold's reason begins, so the owner's row can say it as its own sentence. */
+export const ADOPTED_HOLD = "an adopted change holds it";
 
-/** Why a held pair opens nothing new, for the boot log, the roll call and the owner's row. */
+/**
+ * Why a held pair opens nothing new, for the boot log, the roll call and the owner's row. Worded
+ * as what happened (the claim failed, the change was adopted that day), so it stays true if a later
+ * full pass re-reads the claim; `staleAdoptions` is what flags that case for a person.
+ */
 export const adoptedHoldReason = (record: Conviction, hold: AdoptedHold): string =>
-  `claim ${hold.claim} of "${record.title ?? record.id}" failed; ${ADOPTED_HOLD} ${hold.adoptedOn}`;
+  `${ADOPTED_HOLD} (${hold.adoptedOn}) after claim ${hold.claim} of "${record.title ?? record.id}" failed`;
 
 /**
  * What is wrong with a ledger against the records it names: a key that is not view/claim/pair, a
@@ -115,7 +119,8 @@ export function adoptionProblems(
   return problems;
 }
 
-const claimOf = (record: Conviction, label: string) =>
+/** A record's claim by its label ("2a"), the way the record numbers it. */
+export const claimOf = (record: Conviction, label: string) =>
   record.claims.find((c, i) => claimLabel(c.statement, i + 1) === label);
 
 /**

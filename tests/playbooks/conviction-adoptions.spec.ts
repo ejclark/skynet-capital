@@ -115,8 +115,7 @@ describe("adoptionProblems — a hand edit can't hold a pair for nothing", () =>
 });
 
 describe("an adopted hold runs the pair exits-only, saying why", () => {
-  const reason =
-    'claim 2a of "AI-dip view" failed; the change that holds it was adopted 2026-11-10';
+  const reason = 'an adopted change holds it (2026-11-10) after claim 2a of "AI-dip view" failed';
 
   it("refuses the held pair with the claim and the day, and leaves the view's other pair narrowed", () => {
     const holds = holdIn(HOLD_2A);
@@ -140,7 +139,7 @@ describe("an adopted hold runs the pair exits-only, saying why", () => {
 
   it("reads on the owner's row as its own sentence, not as a view that can't steer", () => {
     expect(convictionHoldNote(reason)).toBe(
-      'Opening nothing new: claim 2a of "AI-dip view" failed; the change that holds it was adopted 2026-11-10. Exits still run.',
+      'Opening nothing new: an adopted change holds it (2026-11-10) after claim 2a of "AI-dip view" failed. Exits still run.',
     );
   });
 });

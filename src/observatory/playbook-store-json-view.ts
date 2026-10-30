@@ -171,7 +171,7 @@ export function convictionHoldNote(refused: string): string {
   if (refused === CONVICTION_NOT_ON_VIEW) return UNMOVED_CONVICTION_NOTE;
   // An adopted hold (#5482 criterion 6): the view still steers the pair, so "can't steer it" would
   // be false; its reason already names the failed claim and the day.
-  if (refused.includes(ADOPTED_HOLD)) return `Opening nothing new: ${refused}. Exits still run.`;
+  if (refused.startsWith(ADOPTED_HOLD)) return `Opening nothing new: ${refused}. Exits still run.`;
   return `Opening nothing new: its conviction view can't steer it (${refused}). Exits still run.`;
 }
 

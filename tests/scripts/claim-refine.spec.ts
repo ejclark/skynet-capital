@@ -5,7 +5,14 @@ import { join } from "node:path";
 import type { AdoptionLedger } from "../../src/playbooks/conviction-adoptions.js";
 import type { Conviction } from "../../src/playbooks/conviction-record.js";
 import { AI_DIP_2026_10 } from "../../src/playbooks/conviction-seeds.js";
-import { adopt, listing, main, prFor, proposalsOf } from "../../src/scripts/claim-refine.js";
+import {
+  adopt,
+  listing,
+  main,
+  marketDay,
+  prFor,
+  proposalsOf,
+} from "../../src/scripts/claim-refine.js";
 
 /** #5482 criterion 6, its second half — `npm run research:refine` turns a failed claim's proposal
  *  into one ledger line and the body of its own held PR. It never adopts a pass. */
@@ -78,12 +85,28 @@ describe("listing", () => {
     expect(text).toContain("ai-dip-2026-10/8/CRWV-LONG-CALL · claim held");
   });
 
-  it("flags an adopted line whose claim no longer reads failed", () => {
+  it("flags an adopted line whose claim no longer reads failed, once", () => {
     const ledger: AdoptionLedger = {
       [KEY]: { change: "stop-new-entries", adoptedOn: "2026-11-10", basis: "x" },
     };
-    const text = listing([], ledger, [AI_DIP_2026_10]);
-    expect(text).toContain(`${KEY} · adopted, but the claim now reads`);
+    expect(listing([], ledger, [AI_DIP_2026_10])).toBe(
+      `${KEY} · adopted, but the claim now reads pending: review it, and delete the line to lift the hold\n`,
+    );
+    // Re-read as a pass, the claim proposes under the same key; the line still says it once.
+    const passed = scoredAs({ "2a": "pass" });
+    const text = listing(proposalsOf([passed]), ledger, [passed]);
+    expect(text.split("\n").filter((l) => l.startsWith(KEY))).toEqual([
+      `${KEY} · adopted, but the claim now reads pass: review it, and delete the line to lift the hold`,
+    ]);
+  });
+
+  it("says an adopted key is adopted", () => {
+    const ledger: AdoptionLedger = {
+      [KEY]: { change: "stop-new-entries", adoptedOn: "2026-11-10", basis: "x" },
+    };
+    expect(listing(proposalsOf([FAILED_2A]), ledger, [FAILED_2A])).toContain(
+      `${KEY} · adopted 2026-11-10: stops new entries`,
+    );
   });
 });
 
@@ -93,13 +116,23 @@ describe("prFor — the held PR's body", () => {
   it("shows the pair's before and after, asks Eric to merge, and is part of the plan", () => {
     if (!found) throw new Error("no proposal");
     const { title, body } = prFor(found, "2026-11-10");
-    expect(title.length).toBeLessThanOrEqual(100);
+    expect(title).toBe(
+      "feat(convictions): stop new entries on CRWV-WHEEL, claim 2a of ai-dip-2026-10 failed",
+    );
     expect(title).toMatch(/^feat\(convictions\): [a-z]/);
     expect(body).toMatch(/^## The picture\n/);
     expect(body).toContain("| New entries | inside the view's fence");
     expect(body).toContain("| Exits | run | run |");
     expect(body).toContain("Part of #5482");
     expect(body).not.toMatch(/\b(closes|fixes|resolves) #/i);
+  });
+
+  it("keeps the title within 100 characters for a long view id", () => {
+    if (!found) throw new Error("no proposal");
+    const long = { ...found, conviction: { ...found.conviction, id: "x".repeat(64) } };
+    expect(prFor(long, "2026-11-10").title).toBe(
+      "feat(convictions): stop new entries on CRWV-WHEEL, claim 2a failed",
+    );
   });
 
   it("passes the house body check", () => {
@@ -114,6 +147,13 @@ describe("prFor — the held PR's body", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("marketDay", () => {
+  it("is New York's day, so an evening run never writes tomorrow's date", () => {
+    expect(marketDay(new Date("2026-11-11T01:00:00Z"))).toBe("2026-11-10");
+    expect(marketDay(new Date("2026-11-10T15:00:00Z"))).toBe("2026-11-10");
   });
 });
 

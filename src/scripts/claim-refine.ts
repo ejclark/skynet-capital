@@ -3,7 +3,7 @@
  *
  *   npm run research:refine                                   # every proposal key and its state
  *   npm run research:refine -- <key>                          # adopt it: write the ledger line
- *   npm run research:refine -- <key> --on 2026-11-10          # the adoption's day (default today)
+ *   npm run research:refine -- <key> --on 2026-11-10          # the adoption's day (default: today in New York)
  *   npm run research:refine -- <key> --body-file pr-body.md   # also write the held PR's body
  *
  * WHY A SEPARATE PR. The scoring pass already puts a decided claim's proposal in the PR that scores
@@ -24,10 +24,10 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { type Proposal, proposalKey, proposalsFor } from "../playbooks/claim-proposals.js";
-import { claimLabel } from "../playbooks/claim-score.js";
 import {
   type Adoption,
   type AdoptionLedger,
+  claimOf,
   staleAdoptions,
 } from "../playbooks/conviction-adoptions.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
@@ -59,14 +59,17 @@ export function listing(
   ledger: AdoptionLedger,
   convictions: readonly Conviction[],
 ): string {
-  const stale = staleAdoptions(ledger, convictions).map(
+  const staleKeys = staleAdoptions(ledger, convictions);
+  const stale = staleKeys.map(
     ({ key, outcome }) =>
       `${key} · adopted, but the claim now reads ${outcome}: review it, and delete the line to lift the hold`,
   );
-  if (found.length === 0) {
-    return `${["No proposals: no claim a pair's fence rests on is decided yet.", ...stale].join("\n")}\n`;
+  // A stale key is said once, as stale: a claim re-read as a pass proposes under the same key.
+  const fresh = found.filter((f) => !staleKeys.some((s) => s.key === f.key));
+  if (fresh.length === 0 && stale.length === 0) {
+    return "No proposals: no claim a pair's fence rests on is decided yet.\n";
   }
-  const lines = found.map(({ key, proposal }) => {
+  const lines = fresh.map(({ key, proposal }) => {
     const adopted = ledger[key];
     if (adopted) return `${key} · adopted ${adopted.adoptedOn}: stops new entries`;
     return proposal.kind === "narrow-or-retire"
@@ -107,9 +110,7 @@ export function adopt(
     };
   }
   if (ledger[key]) return { ok: true, ledger, changed: false, found };
-  const claim = found.conviction.claims.find(
-    (c, i) => claimLabel(c.statement, i + 1) === found.proposal.claim,
-  );
+  const claim = claimOf(found.conviction, found.proposal.claim);
   const adoption: Adoption = {
     change: "stop-new-entries",
     adoptedOn: on,
@@ -121,6 +122,24 @@ export function adopt(
   return { ok: true, ledger: sorted, changed: true, found };
 }
 
+/** A Conventional-Commit subject within the house's 100 characters, naming the view when it fits. */
+function titleFor(conviction: Conviction, proposal: Proposal): string {
+  const lead = `feat(convictions): stop new entries on ${proposal.pair}`;
+  const full = `${lead}, claim ${proposal.claim} of ${conviction.id} failed`;
+  if (full.length <= 100) return full;
+  const short = `${lead}, claim ${proposal.claim} failed`;
+  return short.length <= 100 ? short : lead.slice(0, 100);
+}
+
+/** The day in New York: the market's day, never the UTC date an evening run would write. */
+export const marketDay = (at: Date): string =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(at);
+
 /** The held PR's title and body, in the house template (`scripts/ship.sh checkbody` reads it). */
 export function prFor(
   { conviction, proposal, key }: Found,
@@ -130,7 +149,7 @@ export function prFor(
   readonly body: string;
 } {
   const view = conviction.title ?? conviction.id;
-  const claim = conviction.claims.find((c, i) => claimLabel(c.statement, i + 1) === proposal.claim);
+  const claim = claimOf(conviction, proposal.claim);
   const fence = proposal.narrowings.join("; ");
   const body = [
     "## The picture",
@@ -176,7 +195,7 @@ export function prFor(
     "",
   ].join("\n");
   return {
-    title: `feat(convictions): stop new entries on ${proposal.pair}, claim ${proposal.claim} of ${conviction.id} failed`,
+    title: titleFor(conviction, proposal),
     body,
   };
 }
@@ -212,7 +231,7 @@ export function main(
     return 1;
   }
   const key = keys[0] as string;
-  const result = adopt(key, ledger, convictions, on ?? today.toISOString().slice(0, 10));
+  const result = adopt(key, ledger, convictions, on ?? marketDay(today));
   if (!result.ok) {
     console.error(result.error);
     return 1;
