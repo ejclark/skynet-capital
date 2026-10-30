@@ -8,9 +8,11 @@ import type { Narrowing } from "./conviction-steering.js";
  * result suggests: a pass suggests carrying the narrowing it backed into the pair's own settings; a
  * fail suggests narrowing the pair further or retiring it from this view.
  *
- * THIS IS A DRY RUN, and the hand-off point for a later lane. It returns markdown. It opens no pull
- * request, edits no file, changes no pair's live settings, places no order. A future lane may turn a
- * proposal into a reviewable PR; until then a person reads it. Paper only, educational.
+ * IT IS TEXT, NEVER A CHANGE. It returns markdown; it edits no setting and places no order. The
+ * scoring pass writes it to `docs/research/convictions/refinements/<id>.md` (`refinementText`), so
+ * the pull request that decides a claim carries the change that claim implies as a diff a reviewer
+ * reads (criterion 6). Adopting a proposal is its own pull request; each section carries a stable
+ * key (`proposalKey`) for the lane that will open one. Paper only, educational.
  *
  * HONESTY. A pass is one claim surviving one falsifier on one tape, so every proposal says what the
  * result is not: not an edge, not a size, not a reason to widen a bound. Widening a playbook's
@@ -47,6 +49,10 @@ export function describeNarrowing(n: Narrowing): string {
   }
 }
 
+/** One proposal's stable key, the view, the claim and the pair: "ai-dip-2026-10/2a/CRWV-WHEEL". */
+export const proposalKey = (conviction: Pick<Conviction, "id">, p: Proposal): string =>
+  `${conviction.id}/${p.claim}/${p.pair}`;
+
 const positionOf = (conviction: Conviction, claim: ConvictionClaim): number =>
   conviction.claims.indexOf(claim) + 1;
 
@@ -80,8 +86,10 @@ function section(conviction: Conviction, p: Proposal): string[] {
   const score = claim.score;
   const fence = p.narrowings.map((n) => `  - ${n}`);
   const read = `Scored ${score?.scoredOn ?? "?"}: ${score?.basis ?? ""}`;
+  const key = `<!-- refinement: ${proposalKey(conviction, p)} -->`;
   if (p.kind === "carry-into-playbook") {
     return [
+      key,
       `### ${p.pair} · claim ${p.claim} held`,
       "",
       `Claim ${p.claim}: ${claim.statement}`,
@@ -95,6 +103,7 @@ function section(conviction: Conviction, p: Proposal): string[] {
     ];
   }
   return [
+    key,
     `### ${p.pair} · claim ${p.claim} failed`,
     "",
     `Claim ${p.claim}: ${claim.statement}`,
@@ -119,7 +128,7 @@ export function renderProposals(conviction: Conviction): string {
   const lines = [
     `# Refinement proposals · ${conviction.title ?? conviction.id}`,
     "",
-    "> **DRY RUN.** Text for a reviewer. It opens no pull request, edits nothing and changes no pair's live settings. A later lane may turn a proposal into a reviewable PR; this is that hand-off point. Paper only, SIM.",
+    "> **For review.** The scoring pass writes this into the pull request that decides a claim. It edits nothing and changes no pair's live settings; adopting a proposal is its own pull request. Paper only, SIM.",
     "",
     `Owner ${conviction.owner} · stated ${conviction.statedOn} · checked ${conviction.checkOn} · steers ${conviction.steers.join(", ")}`,
     "",
@@ -147,4 +156,12 @@ export function renderProposals(conviction: Conviction): string {
     for (const p of proposals) lines.push(...section(conviction, p));
   }
   return `${lines.join("\n").trimEnd()}\n`;
+}
+
+/**
+ * The text the scoring pass commits for a conviction, or undefined while no claim a fence rests on
+ * is decided (a file that only says "none yet" would be a diff in every lane's PR for nothing).
+ */
+export function refinementText(conviction: Conviction): string | undefined {
+  return proposalsFor(conviction).length > 0 ? renderProposals(conviction) : undefined;
 }
