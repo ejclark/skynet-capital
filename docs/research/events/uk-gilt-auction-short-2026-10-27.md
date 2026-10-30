@@ -91,8 +91,68 @@ Five short-auction prints is a sample, not a forecast. The ETF is a diluted prox
 |---|---|---|---|---|
 | 2026-10-16 | D-11 | **Initial research.** Canonical file written from `proposals/…from-uk-autumn-budget-2026-10-28.json`; DMO calendar notice (28 Aug) fetched direct: 10-27, 10:00 London, details 10-20 3:30pm; Budget-move footnote from the 17 Aug agenda. **Five short auctions since 06-24: cover 3.07–3.47x, tail 0.1–0.4bp**, 10-14 drew £17.07bn of bids at 3.41x/0.2bp while same-stock yields rose +15.8bp (4% 2030) and +23.2bp (4% 2032). **IGLT.L moves 1.03x on auction days** (n=7, σ 0.430%). VIX 19.99, ^TNX 5.098, IGLT.L 9.5675. DMO web pages bot-challenged (recorded in `blocked`). Proposed `uk-gilt-auction-long-2026-11-10` (est, in the horizon). Past the horizon, named only: DMO short auctions 11-12, 12-01, 12-10. | — (initial; stand aside) | 2026-10-20 (the DMO size notice) |
 | 2026-10-26 | D-1 | **Pulse.** **FT-…-1 answered: the DMO's 20 Oct notice (primary, fetched direct) names Treasury Gilt 2032, £4.5bn** (auction 9:00–10:00 London 10-27, Post Auction Option Facility 12:30–1:00pm; £15,340.2m outstanding after; ISIN GB00BWGDRG14) — below the last two sizes (£5.0bn, £4.75bn), no size-trend break. **Correction to the 10-16 row: the 2032 is the 4⅝% gilt** (first coupon £2.727242 long, dated 5 Aug 2026), not '4% 2032'; the 08-04 and 09-22 rows' coupon label was wrong, cover/tail/size unaffected. Date still `estimate` (taxonomy). **Tape:** IGLT.L 9.6191 (10-26 intraday; 9.5675 on 10-16), 20d realized vol **4.76%** vs 8.3% trigger; VIX 17.86 (10-26 bar, may be intraday; 19.99 on 10-16), ^TNX 4.980. **Adjacency (press, secondary):** UK Sep CPI 3.5% vs 3.4% f'cast, 10y gilt ~5.4%, markets price a BoE hike 11-05; none moved this auction's calibration. FOMC/Budget 10-28 on the calendar. No new in-horizon event; none proposed. DMO web pages still bot-challenged (curl 200, no content); PDFs read direct. | — (stand aside holds; kill switch 1 not tripped) | 2026-10-28 (close-out) |
+| 2026-10-30 | D+3 | **Close-out (full session; `event-passed-unscored`).** **Both open forward tests score pass; stand-aside holds, nothing was ever deployed.** **Print (DMO result notice `271026conventional.pdf`, fetched direct HTTP 200, text layer decoded locally, A145/26):** £4,500m 4⅝% Treasury Gilt 2032, bids **£15,816m, cover 3.51x**, **tail 0.3bp**, accepted 5.033% / 5.036% / **5.039%**, 34% at the lowest. Cover is the highest of six short prints (band was 3.07–3.47x) and the tail sits inside 0.1–0.4bp. Same stock cleared +19.2bp vs 09-22 (4.847%). **IGLT.L 10-27: +0.052%**, inside ±0.86%; 20d vol peaked 5.04% (10-20), never near 8.3%. **Adjacency:** VIX 17.52 (10-27), 21.25 (10-30 bar, may be intraday); ^TNX 4.993 → 4.941; FOMC/Budget 10-28 on the calendar, IGLT.L +0.10% / +0.31% / -0.05% on 10-28/29/30; gilts steady after the Budget (headline only, secondary). Post-auction option result not read. No in-horizon event; none proposed. DMO web pages still bot-challenged; PDF read direct. | — (stand aside; closed) | none — close-out; the scanner goes quiet |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in every row; a dated adjacent event found **inside the research horizon** (`assessment-cadence.json`'s `horizon`: nothing past `maxDaysOut`, and past `allImpactsWithinDays` only critical/high) gets proposed as a new `src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717). One past the horizon is named in the row instead (#2946): it can never become due, so a calendar file for it is clutter, while prose in a row is free. Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from memory. After that the assessment is closed; the doc reopens only to score a registered forward test whose `Score by` has arrived (`forward-test-due`).
 
+## Outcome
+
+**Close-out (2026-10-30, D+3 — inside `closeOutWithinDays`).** Rates mode runs no `earnings-cycle` /
+`intraday-edges` instrument (`symbols: []` by design); the cache was busted anyway and nothing here
+reads it. "Re-run data" means every number below was re-fetched this session: the auction result from
+the DMO's own press notice (`dmo.gov.uk/media/symm1225/271026conventional.pdf`, HTTP 200, 68,890 bytes,
+sha256 77638595b029…, one page, text layer decoded locally), and IGLT.L from the Yahoo daily chart
+(506 sessions to 2026-10-30) with the σ and volatility figures recomputed from scratch. The date
+stays `estimate` (taxonomy), unchanged.
+
+**What printed — a clean auction, a little stronger than the band.**
+
+| Measure | 2026-10-27 | Five-print band (06-24 → 10-14) | Result |
+|---|---|---|---|
+| Stock · size | 4⅝% Treasury Gilt 2032 · **£4,500m** | £4.25–5.0bn | scored under FT-1 on 10-26 |
+| Total bids | **£15,816m** | up to £17,070m (10-14, at £5.0bn) | inside |
+| **Cover** | **3.51x** | 3.07–3.47x, mean 3.31x | above the top of the band |
+| **Tail** | **0.3bp** | 0.1–0.4bp, mean 0.24bp | inside |
+| Accepted yields | 5.033% / 5.036% / **5.039%** (high / average / lowest) | — | 34% allotted at the lowest |
+| Same stock vs 09-22 | **+19.2bp** (4.847% → 5.039%, 35 days) | — | demand grew into higher yields again |
+
+Six prints now: cover mean **3.34x**, tail mean **0.25bp**. Still a sample, not a distribution.
+
+**FT-2 (cover ≥ 3.00x and tail ≤ 0.4bp) — PASS on both legs.** 3.51x and 0.3bp. The weakest print of
+the run (09-22, 3.07x / 0.4bp) was not repeated, and the auction the day before the Budget cleared
+with a cover higher than any of the five before it. Read narrowly: that is a calm Budget-eve, which
+the entry already said every Budget-eve is, so it does not forecast the 11-10 long auction.
+
+**FT-3 (IGLT.L within ±0.86% on 10-27) — PASS, +0.052%.** One of the quietest sessions of the month
+(10-19 was -0.523%, the largest in the window). The quiet-market premise held throughout: 20-day
+realized volatility ran 4.5–5.0% from 10-16 to 10-30 (peak 5.04% on 10-20) against the 8.3% trigger.
+The Budget day itself moved the ETF +0.104%, and no session from 10-16 to 10-30 reached the parent's
+-1.30% gilt-tail trigger. The US 5y auction, Consumer Confidence, Durable Goods and MSFT shared the
+day and did not show up in the gilt ETF.
+
+**Kill switches, final state.** (1) Size and stock break — unfired (2032, £4.5bn). (2) Band break —
+unfired. (3) Quiet-market premise — unfired. (4) A short-gilt tail ≥ 1.0bp before 2026-12-10 —
+**still open**: the DMO's short auctions on 11-12, 12-01 and 12-10 fall after this close-out and carry
+no registered forward test here, so nobody scores it. It is a standing watch, not a pending score.
+
+**The call, scored against the tape.** Stand aside with no position stood: zero capital was ever
+exposed and no tracked instrument is keyed to a gilt auction. The analytical calls held: the
+five-print band predicted the result, and the "auction days don't move gilts" premise held on one
+more data point (10-27: +0.052%). The call that did not carry weight is the Budget ledger's framing of this
+auction as an early hint of the gilt-to-Treasury channel opening: a strong short-end result on the eve
+said nothing about the Budget, and the 11-10 long auction (est) remains the first long-end test.
+
+**Process note — a stage a person still did.** Finding the result notice was a *sense* step done by
+search: the DMO's own web pages return a bot-challenge page to plain fetchers, so the PDF's media URL
+(`media/<id>/<ddmmyy>conventional.pdf`) cannot be guessed and had to be found through a search engine.
+The earlier lane's notice URLs were not recorded in a machine-readable place. Recording each result
+PDF URL as it is found would let the next close-out fetch it directly.
+
+No forward test in this doc scores past this close-out — all three settled by 2026-10-30, so nothing
+carries this ledger into `forward-test-due`. This doc goes quiet after this entry.
+
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.86,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0,"blocked":[{"url":"https://www.dmo.gov.uk/responsibilities/gilt-market/auctions/","status":"200-BOT-CHALLENGE","at":"2026-10-26"},{"url":"https://www.dmo.gov.uk/data/gilt-market/auction-results/","status":"200-BOT-CHALLENGE","at":"2026-10-26"}]} -->
+
+**Last assessed:** 2026-10-30 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":21.25,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0,"blocked":[{"url":"https://www.dmo.gov.uk/responsibilities/gilt-market/auctions/","status":"200-BOT-CHALLENGE","at":"2026-10-30"},{"url":"https://www.dmo.gov.uk/data/gilt-market/auction-results/","status":"200-BOT-CHALLENGE","at":"2026-10-30"}]} -->
