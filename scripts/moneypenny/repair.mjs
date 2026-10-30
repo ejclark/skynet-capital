@@ -559,7 +559,7 @@ function main(argv) {
   const raw = eventFile && existsSync(eventFile) ? JSON.parse(readFileSync(eventFile, "utf8")) : {};
   const fixture = raw.deps;
   const run = raw.workflow_run ?? raw.run ?? {};
-  const live = !raw.failures && !raw.jobs && !dry;
+  const live = !(raw.failures || raw.jobs || dry);
 
   const ctx = {
     run,

@@ -2,12 +2,12 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { readFailures } from "../../../scripts/moneypenny/repair.mjs";
 import {
   annotationLines,
   logArgVariants,
   sanitizeLog,
 } from "../../../scripts/moneypenny/repair-logs.mjs";
-import { readFailures } from "../../../scripts/moneypenny/repair.mjs";
 
 // The self-healing lane's router, exercised the way moneypenny.spec.ts exercises its own: feed a
 // fixture `workflow_run` payload through `--dry-run` and assert the INTENTS. The dry run never
@@ -529,7 +529,7 @@ describe("moneypenny repair — re-reading a run's jobs before filing a guess", 
   const reads = (...answers: (object[] | Error)[]) => {
     let i = 0;
     return () => {
-      const answer = answers[Math.min(i++, answers.length - 1)];
+      const answer = answers[Math.min(i++, answers.length - 1)] ?? [];
       if (answer instanceof Error) throw answer;
       return answer;
     };
@@ -554,7 +554,7 @@ describe("moneypenny repair — re-reading a run's jobs before filing a guess", 
     const failures = readFailures(run, {
       fetchJobs: reads([]),
       logOf: () => "",
-      sleep: () => {},
+      sleep: () => undefined,
       waits: [1, 2],
     });
 
@@ -566,7 +566,7 @@ describe("moneypenny repair — re-reading a run's jobs before filing a guess", 
       readFailures(run, {
         fetchJobs: reads(new Error("HTTP 502")),
         logOf: () => "",
-        sleep: () => {},
+        sleep: () => undefined,
         waits: [1],
       }),
     ).toThrow("HTTP 502");
