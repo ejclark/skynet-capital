@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A 19.4M-share staged lock-up release (~2 days of volume) moves CBRS no more than an ordinary bad day" (FT-cbrs-lockup-expiry-2026-11-09-1)** — added 2026-10-30 from the
+  [cbrs-lockup-expiry-2026-11-09 ledger](events/cbrs-lockup-expiry-2026-11-09.md). The 10-28 tranche day closed **-7.40pp** vs SMH (-5.66% vs +1.74%) on 18.97M shares, past the -5% line,
+  the day after a +7.1pp excess day with no filing behind it. Do not register a tranche-day "within noise" claim off five prior tranche days (mean -0.4%, σ 4.4%); n=5 did not bound the tail,
+  and a -5% single-day line on this name sits near 1.1σ, so it is crossed often.
+
 - **"A published release hour is the hour the page goes live" (FT-nar-metro-home-prices-2026-10-29-1) and "The autumn FOMC+1 session is an ordinary homebuilder day" (FT-nar-metro-home-prices-2026-10-29-2)** — added 2026-10-30 from the
   [nar-metro-home-prices-2026-10-29 close-out](events/nar-metro-home-prices-2026-10-29.md). NAR's Q3 metro release carried a page stamp of 08:15 ET against a published schedule of 10:00 ET
   (the three earlier 2026 editions matched exactly), and ITB ranged **3.690%** on a session that stacked FOMC+1, GDP and PCE at 08:30 and DHI's pre-open print, against a 2.504% line set from an n=10 null.
