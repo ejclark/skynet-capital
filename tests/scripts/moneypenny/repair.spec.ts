@@ -7,6 +7,7 @@ import {
   logArgVariants,
   sanitizeLog,
 } from "../../../scripts/moneypenny/repair-logs.mjs";
+import { readFailures } from "../../../scripts/moneypenny/repair.mjs";
 
 // The self-healing lane's router, exercised the way moneypenny.spec.ts exercises its own: feed a
 // fixture `workflow_run` payload through `--dry-run` and assert the INTENTS. The dry run never
@@ -114,6 +115,47 @@ describe("moneypenny repair — routing a failed run", () => {
     expect(intent?.body).not.toContain("dep-warden review");
     expect(intent?.body).toContain("gh run rerun 37370406790 --failed");
     expect(intent?.body).not.toContain("rejected the workflow file");
+  });
+
+  // #6356: Pipeline run 41103012157 failed at `release · deploy bots`, but the triage's read of its
+  // jobs showed no failed one, and the lane filed "GitHub rejected the workflow file" for a run
+  // named `Pipeline` with five jobs — so the deploy-bots recurrence never reached its open capsule.
+  const parsedRunReadEarly = {
+    repository: { default_branch: "main" },
+    workflow_run: {
+      id: 41103012157,
+      name: "Pipeline",
+      path: ".github/workflows/pipeline.yml",
+      conclusion: "failure",
+      event: "push",
+      head_branch: "main",
+      html_url: "https://github.com/ejclark/skynet-capital/actions/runs/41103012157",
+    },
+    jobs: [
+      { id: 1, name: "release · deploy", conclusion: "success", runner_name: "r", steps: [] },
+      { id: 2, name: "release · deploy bots", status: "in_progress", runner_name: "r", steps: [] },
+      { id: 3, name: "verify", conclusion: "skipped", runner_name: "", steps: [] },
+    ],
+    deps: { openIssues: [] },
+  };
+
+  it("never calls a run that parsed a rejected workflow file", () => {
+    const [intent, ...rest] = dryRunPayload(parsedRunReadEarly);
+
+    expect(rest).toEqual([]);
+    expect(intent?.title).toBe("[ci] Pipeline — (the failed job could not be read)");
+    expect(intent?.body).not.toContain("rejected the workflow file");
+    expect(intent?.body).toContain("`release · deploy bots` (in_progress)");
+    expect(intent?.body).toContain("gh run view 41103012157 --json jobs");
+  });
+
+  it("still calls zero jobs on a path-named run a rejected file, even with `path` set", () => {
+    const payload = structuredClone(parsedRunReadEarly);
+    payload.workflow_run.name = ".github/workflows/pipeline.yml";
+    payload.jobs = [];
+    const [intent] = dryRunPayload(payload);
+
+    expect(intent?.body).toContain("zero jobs were created");
   });
 
   it("names the step a lost runner left unfinished — never 'unknown'", () => {
@@ -467,5 +509,77 @@ describe("moneypenny repair — a run already fixed while it was in flight", () 
     const [intent] = dryRunPayload(payload);
     expect(intent?.issue).toBe(4374);
     expect(intent?.body).toContain("Failed again");
+  });
+});
+
+// #6356, the live half: the jobs read that came back empty was GitHub lagging (the same endpoint
+// answered 502 minutes later). A re-read after a wait finds the real failed job, which then
+// routes as a recurrence onto its open capsule instead of a new mislabelled one.
+describe("moneypenny repair — re-reading a run's jobs before filing a guess", () => {
+  const run = { id: 7, name: "Pipeline", conclusion: "failure" };
+  const failed = [
+    {
+      id: 2,
+      name: "release · deploy bots",
+      conclusion: "failure",
+      runner_name: "r",
+      steps: [{ name: "Smoke test the bots release", conclusion: "failure" }],
+    },
+  ];
+  const reads = (...answers: (object[] | Error)[]) => {
+    let i = 0;
+    return () => {
+      const answer = answers[Math.min(i++, answers.length - 1)];
+      if (answer instanceof Error) throw answer;
+      return answer;
+    };
+  };
+
+  it("waits and re-reads until the failed job shows up", () => {
+    const waited: number[] = [];
+    const failures = readFailures(run, {
+      fetchJobs: reads([], new Error("HTTP 502"), failed),
+      logOf: () => "log",
+      sleep: (ms: number) => waited.push(ms),
+      waits: [1, 2, 3],
+    });
+
+    expect(failures).toEqual([
+      { job: "release · deploy bots", step: "Smoke test the bots release", logTail: "log" },
+    ]);
+    expect(waited).toEqual([1, 2]);
+  });
+
+  it("files the honest unread shape once the waits run out", () => {
+    const failures = readFailures(run, {
+      fetchJobs: reads([]),
+      logOf: () => "",
+      sleep: () => {},
+      waits: [1, 2],
+    });
+
+    expect(failures[0]?.job).toBe("(the failed job could not be read)");
+  });
+
+  it("goes red rather than guessing when the last read still throws", () => {
+    expect(() =>
+      readFailures(run, {
+        fetchJobs: reads(new Error("HTTP 502")),
+        logOf: () => "",
+        sleep: () => {},
+        waits: [1],
+      }),
+    ).toThrow("HTTP 502");
+  });
+
+  it("does not wait at all on a rejected file — zero jobs on a path-named run is final", () => {
+    const waited: number[] = [];
+    const failures = readFailures(
+      { ...run, name: ".github/workflows/pipeline.yml" },
+      { fetchJobs: reads([]), logOf: () => "", sleep: (ms: number) => waited.push(ms) },
+    );
+
+    expect(failures[0]?.job).toBe("(the workflow never started)");
+    expect(waited).toEqual([]);
   });
 });
