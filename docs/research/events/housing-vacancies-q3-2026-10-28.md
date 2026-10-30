@@ -354,6 +354,7 @@ housing-specific added). Both are zero-capital predictions about data and tape, 
 | 2026-10-06 | D-22 | **Deterministic screen (no Claude session).** Readings — VIX 15.5 (+1.0pt since last), band unchanged (low:15+), 48 adjacent event(s) tracked, new in corridor since last pulse: `aapl-2026-10-29-print`, `aapl-iphone-duo-launch-2026-10-23`, `amzn-2026-10-29-print`, `case-shiller-hpi-2026-10-27`, `dallas-fed-mfg-2026-10-26`, `dallas-fed-trimmed-mean-2026-10-29` +19 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-05 |
 | 2026-10-16 | D-12 | **Pulse: date holds; VIX regime jumped to 19.99 on an AI-led tech selloff, so FT-2's ITB band is a weaker test if it breaks.** **Date:** `census.gov/economic-indicators/calendar-listview-2026.html` (89,130 B, fetched today) still has `A202610281000` / Third Quarter 2026, no Suspended marker on this series; the default `calendar-listview.html` now serves 2027. **Macro:** Sep CPI 10-14 hot (core 2.6% vs ~2.5%); Oct FOMC hold ~70% / hike ~29% (defirate 10-14), Dec hike ~78%; Fed Chair Warsh gave no signal 10-16 (press). **Vol/tape (Yahoo):** VIX 15.52 → 19.99 (10-06 → 10-16, +4.5pt), SPY 763.25, QQQ 709.80 (-2.5% on 10-16), ITB 86.40 (held). A hotter regime inflates the FOMC-day range, so ITB leaving the 2.46%-4.93% p25-p90 band on 10-28 says less about housing. **Peers:** none; siblings (new-home-sales, housing-starts) log no change to this print. **Beyond horizon (not proposed, #2946):** Census now lists HVS Q4 2026 on 2027-02-02, then 04-27, 07-27, 11-02; the Fed's 2027 meetings are Apr 27-28 and Jul 27-28, so the April and July releases land on FOMC day one. **No proposal filed.** | None - stand aside holds; FT-1 and FT-2 stay open | 2026-10-23 |
 | 2026-10-26 | D-2 | **Pulse: date and stance hold; VIX 17.88, so FT-2 is back to a fair test.** **Date:** `census.gov/economic-indicators/calendar-listview-2026.html` (89,130 B, HTTP 200, fetched today) still carries `A202610281000`, no Suspended marker (the 4 "suspend" hits are boilerplate). `--on-date` shows 7 entries, this one already on the calendar. **Macro:** no CPI/jobs print since 10-16; Oct FOMC hold ~83-87% / hike ~13-17% (CME via press 10-20; Polymarket 94/6 on 10-22 per the fomc ledger); hike talk sits on Dec 9; PCE 10-29 next. **Vol/tape (Yahoo, 10-26 close):** VIX 19.99 (10-16) → 17.88, ITB 90.41 (86.40 on 10-16), SPY 766.77, QQQ 714.57; the 10-22 tech selloff has partly retraced. **Peers:** none; `symbols: []`. **Beyond horizon:** nothing new (Q4 HVS 2027-02-02 stays noted). **No proposal filed** — every adjacent event is already tracked. | None - stand aside holds; FT-1 and FT-2 stay open, both score after 10-28 | close-out |
+| 2026-10-30 | D+2 | **Close-out.** CB26-161 published 2026-10-28 10:00 ET (PDF `last-modified` 14:02Z): rental vacancy **7.6%** (Q2 7.3%, Q3 2025 7.1%) "higher than" both; homeowner vacancy 1.2% "virtually the same"; homeownership 65.5% "not statistically different" from 65.0%. **FT-1 killed, FT-2 passed** (ITB 10-28 range 3.339%, inside the band; FOMC held 10-2 on two hawkish dissents). **Macro/vol:** VIX 16.91 on 10-28, 23.15 on the 10-30 read. **Peers:** none, `symbols: []`. **Beyond horizon (not proposed, #2946):** next release Feb 2, 2027. **No proposal filed.** Detail in `## Outcome`. | None - stand aside held; no kill switch on the stance fired | closed |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -372,3 +373,111 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.88,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Assessed 2026-10-30 (D+2).** `symbols: []`, so the cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) had no target. Everything below was fetched fresh this session.
+**Scorecard: one kill, one pass.** The rental vacancy rate moved enough for Census to call it a change
+(`-1` killed). The session still read as an ordinary FOMC day (`-2` passed). The stance, stand aside, held;
+no stance kill switch fired.
+
+| Test | Prediction | Measured | Verdict |
+|---|---|---|---|
+| `FT-…-1` | Census calls the Q2→Q3 rental vacancy change "not statistically different" or "virtually the same" | **"higher than"** the Q2 rate: 7.3% → **7.6%**, +0.3pp | **kill** |
+| `FT-…-2` | ITB range on 10-28 inside [2.46%, 4.93%] | **3.339%** | **pass** |
+
+Both rows were scored two trading days before their registered `Score by` (2026-11-04). That is deliberate:
+the release text and the 10-28 daily bar are final, neither test keyed on anything later, and the
+"unscoreable until it settles" door exists for rows whose data does not exist yet.
+
+### Leg 1 — the print (Census release CB26-161, `currenthvspress.pdf`, `last-modified` 2026-10-28T14:02:31Z)
+
+| Series | Q3 2026 | Q2 2026 | Q3 2025 | Census's own wording |
+|---|---|---|---|---|
+| Rental vacancy rate | **7.6%** | 7.3% | 7.1% | "higher than" both |
+| Homeowner vacancy rate | **1.2%** | 1.2% | 1.2% | "virtually the same" as both |
+| Homeownership rate | **65.5%** | 65.0% | 65.3% | "not statistically different" from both |
+| Median asking rent (vacant for rent) | **$1,541** | $1,531 | n/a | not tested in the headline |
+| Median asking sales price (vacant for sale) | **$353,600** | $343,800 | n/a | not tested in the headline |
+
+The release came out on its published day and time; its summary box reads "Next release: February 2, 2027".
+Regional rental vacancy: South **9.2%** (Q2 9.5%, still the highest region), Midwest 7.1%, West 6.7%,
+Northeast 6.2%; principal cities 8.8% against suburbs 6.5%. The Q4 2025 asterisk (federal-funding lapse,
+Nov–Dec data only) is unchanged. A re-parse of `histtab1.xlsx` (HTTP 200, 461,453 bytes, fetched today) puts
+7.6% as the highest US rental vacancy rate since **2014Q1 (8.3%)**; the previous rung this ledger cited, 7.3%
+"highest since 2017Q3", is now one step below the series' 12-year high.
+
+### Leg 2 — `-1`, why it killed and what it does not refute
+
+The registered kill was any directional wording on the Q2→Q3 comparison, and the release has it twice. Three
+readings, none of which the registration got wrong in advance:
+
+- **The significant move was 0.3pp, below the "roughly 0.4pp" the kill switch assumed.** The registration
+  already said the naive ±0.347pp difference band "over-states the true band because CPS quarters share
+  sample and are positively correlated". The release confirms the direction of that caveat and shows the
+  true band for this edition sits under 0.3pp. The ±0.245pp margin of error on the *level* is not the
+  margin on the *change*, and the test keyed on the level.
+- **The move is also the seasonal default.** The series is not seasonally adjusted and the registered Q2→Q3
+  median was **+0.25pp** (14 of 20 years up). A +0.3pp "higher than" is therefore about one seasonal step,
+  which Census cannot call noise because the standard error is on the unadjusted difference. Whether this
+  edition is more than the usual Q3 tilt is not measured here; Q4 and Q1 are the test.
+- **Census's language still mostly agrees with the rest of the registration.** Homeowner vacancy and
+  homeownership were both non-findings against Q2 and a year earlier. Against Q3 2025, rental vacancy in the
+  South and Midwest was "not statistically different"; only the national rate and two regions (Northeast, West)
+  were "higher than" a year earlier.
+
+### Leg 3 — `-2`, the session's shape (Yahoo daily and 5-minute bars, fetched today)
+
+ITB, 2026-10-28: open **90.45**, high **91.00**, low **87.98**, close **88.99**, so the registered range is
+**(91.00 − 87.98) ÷ 90.45 × 100 = 3.339%**, inside [2.46%, 4.93%] (the p25–p90 band of 45 prior decision days;
+registered base rate 64.4%). The FOMC statement (federalreserve.gov, `monetary20261028a.htm`, last modified
+2026-10-28T18:00Z) held the range at **3¾–4%** by a **10–2** vote; Lisa Cook and Beth Hammack dissented in
+favour of a 25bp hike. That is a hawkish tail on a decision the earlier ledger rows had at roughly 83–94%
+hold, and it did not push ITB outside the band, so there was no cause to assign and the kill-switch
+reading rule (read the statement first) was not triggered.
+
+Intraday attribution, on 5-minute bars (unadjusted, indicative only):
+
+| Time ET | Event | ITB 5-min bar | Note |
+|---|---|---|---|
+| 09:55 | pre-print | high **91.00** (the day's high) | before the release |
+| 10:00 | this print | 90.78 → 90.20 (**−0.64%**, range 0.76%) | retraced to 90.58 by 10:15 |
+| 14:00 | FOMC statement | range 0.85%, 89.34 → 88.96 | second-widest bar of the day |
+| 14:55 | press conference | low **87.98** (the day's low) | hours after the print |
+
+The day's high came before the release and the day's low came after the Fed, and the 10:00 bar is only the
+third-widest of the session (09:35 at 0.91% and 14:00 at 0.85% are wider). The print's own move was a dip that
+the tape bought within fifteen minutes, which is consistent with `-2`'s "looks like the Fed and only the Fed"
+and is not a measurement of a release effect: one session, one instrument, one bar.
+
+### What this changes in the stance
+
+- **"This month" (don't read 10-28 as this print's answer): held.** Same sequence as registered, the Fed's day.
+- **"This quarter" (stock side confirms the overhang, read in trend): strengthened on rental, unchanged on owner.**
+  Rental vacancy **7.6%** is a 12-year high and the median asking sales price rose to **$353,600**; homeowner
+  vacancy is flat at 1.2%, and homeownership rose to 65.5% (not a finding), so the owner side does not corroborate.
+  Neither of this call's kill switches fired: rental vacancy below **7.0%** (it is 7.6%) or homeownership above
+  **65.7%** (it is 65.5%, 0.2pp short, on a series where 0.5pp q/q was called "not statistically different").
+- **"Unreadable print-by-print": weakened.** The first test of it failed on a +0.3pp move that sits at the seasonal
+  Q3 default. The call that survives is narrower: read the publisher's difference language, never the level's
+  margin of error, and strip the seasonal tilt from a Q3 rise before reading it as deterioration.
+- **Open and not scored here:** the stance's "This month" kill switch (a Holm-adjusted p<0.05 on the HVS
+  release-day tape on a re-run **after 2026-11-04**) is a separate, dated observation and stays open.
+
+### Honest limits
+
+- **Scored two trading days before `Score by`.** Both inputs are final, but a reader who wants the strict reading
+  should treat the scores as provisional until 2026-11-04. Nothing registered depends on later data.
+- **The FOMC consensus figures are recalled from this ledger's own earlier rows** (Polymarket 94/6 on 10-22, CME
+  83–87% on 10-20), not re-fetched, and are used only to label the dissents a tail, not to score anything.
+- **5-minute bars are Yahoo's and unadjusted**; the attribution table is indicative and has no control sample.
+- **`histtab1.xlsx`'s "highest since 2014Q1" is a parse of the workbook's US column** by this session, not a
+  Census statement.
+- Stance impact: none on capital. There is no instrument on this event and no playbook, so nothing was risked on
+  either test.
+
+**The stance holds: stand aside.** This document goes quiet, except for the forward-test register.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":23.15,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0} -->
