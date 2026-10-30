@@ -463,20 +463,45 @@ export function failuresFrom(run, jobs = [], logOf = () => "") {
 export const REREAD_WAITS_MS = [10_000, 20_000, 30_000];
 
 /**
- * `failuresFrom` over a live read, re-reading while the read is the unread shape or throws (a 502
- * on the jobs endpoint, #6356). A read that still fails after the last wait throws, so the triage
- * job goes red instead of filing a guess. `fetchJobs` and `sleep` are injected so a spec drives it.
+ * The further waits, earned only by a read that PROVES itself stale: a job still `in_progress` or
+ * `queued` on a run that already concluded (#6406). Measured 2026-10-30: Pipeline run 41121443220's
+ * `release · deploy bots` completed 20:17:56, the run concluded 20:20:21, and every read from
+ * 20:20:27 to 20:21:38 still said `in_progress` — so the minute above ran out and the lane filed
+ * "(the failed job could not be read)" beside the open capsule (#5955) the real job already had,
+ * and dispatched a repair session to re-diagnose it. Three more minutes is cheap next to that.
  */
-export function readFailures(run, { fetchJobs, logOf, sleep, waits = REREAD_WAITS_MS }) {
+export const STALE_WAITS_MS = [60_000, 60_000, 60_000];
+
+/** A job the API still reports as running. On a concluded run, that is a stale read by definition. */
+function stillRunning(job) {
+  return Boolean(job?.status) && job.status !== "completed";
+}
+
+/**
+ * `failuresFrom` over a live read, re-reading while the read is the unread shape or throws (a 502
+ * on the jobs endpoint, #6356). Once any read shows a job still running, the budget extends by
+ * `staleWaits` (#6406). A read that still fails after the last wait throws, so the triage job goes
+ * red instead of filing a guess. `fetchJobs` and `sleep` are injected so a spec drives it.
+ */
+export function readFailures(
+  run,
+  { fetchJobs, logOf, sleep, waits = REREAD_WAITS_MS, staleWaits = STALE_WAITS_MS },
+) {
+  const schedule = [...waits, ...staleWaits];
   let attempt = 0;
+  let stale = false;
+  const budget = () => (stale ? schedule.length : waits.length);
   for (;;) {
     try {
-      const failures = failuresFrom(run, fetchJobs(run.id), logOf);
-      if (failures[0]?.job !== UNREAD_JOB || attempt >= waits.length) return failures;
+      const jobs = fetchJobs(run.id);
+      const failures = failuresFrom(run, jobs, logOf);
+      if (failures[0]?.job !== UNREAD_JOB) return failures;
+      stale ||= jobs.some(stillRunning);
+      if (attempt >= budget()) return failures;
     } catch (err) {
-      if (attempt >= waits.length) throw err;
+      if (attempt >= budget()) throw err;
     }
-    sleep(waits[attempt++]);
+    sleep(schedule[attempt++]);
   }
 }
 
