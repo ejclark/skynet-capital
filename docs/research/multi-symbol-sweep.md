@@ -988,6 +988,14 @@ robust, alpha fragile — is the finding.
   +1.7, are consistent with a coin flip on size. Do not re-propose a small-revision call for a UMich final
   on event-load grounds; n=1 killed on its first test, the mirror of the FT-55 kill above.
 
+- **"The CPS/HVS Q3 headline is a non-finding: Census calls the q/q rental vacancy change 'not statistically different' or 'virtually the same' (FT-housing-vacancies-q3-2026-10-28-1)"** — added 2026-10-30 from the
+  [housing-vacancies-q3-2026-10-28 close-out](events/housing-vacancies-q3-2026-10-28.md). Registered 2026-09-06 on a ±0.245pp
+  margin of error against a 0.20pp median q/q move. CB26-161 printed rental vacancy **7.6%** against 7.3% and called it "higher than":
+  **+0.3pp** cleared the publisher's test, short of the ~0.4pp the kill switch assumed. **What it does and does not refute:** the
+  naive difference band over-stated the true one (positively correlated CPS quarters, as the registration said), and Q3 is the
+  seasonal-high quarter (median Q2→Q3 +0.25pp, unadjusted series) so a 0.3pp rise is also the seasonal default. Do not register a
+  "this series' quarterly change will read as noise" call off the level's margin of error; test the publisher's difference language.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
