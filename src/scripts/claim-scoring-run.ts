@@ -40,8 +40,8 @@ async function tapesFor(conviction: Conviction): Promise<Map<string, readonly Ta
   const symbols = new Set<string>();
   for (const claim of conviction.claims) {
     const check = claim.check;
-    if (check?.kind === "closes-within" || check?.kind === "closes-reach")
-      symbols.add(check.symbol);
+    // Every check that names a symbol reads its tape, so a new price check needs no line here.
+    if (check && "symbol" in check) symbols.add(check.symbol);
   }
   const tapes = new Map<string, readonly TapeBar[]>();
   for (const symbol of symbols) {

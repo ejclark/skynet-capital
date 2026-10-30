@@ -1,3 +1,4 @@
+import { isSession, sessionsBefore } from "../domain/market-calendar.js";
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
 import { blank } from "./claim-blank.js";
 import type { ConvictionClaim } from "./conviction-record.js";
@@ -37,6 +38,10 @@ export const CLAIM_OUTCOMES: readonly ClaimOutcome[] = ["pass", "fail", "pending
  *  - `closes-reach`: some close after `after` and up to `by` must reach `level`; none is the
  *    falsifier landing.
  *  - `forward-tests`: the forward tests an event lane registered and scored decide (below).
+ *  - `puts-expire`: every named put must expire worthless, read as the symbol's close on its expiry
+ *    at or above its strike; one finishing in the money is the falsifier landing. `unnamed` counts
+ *    the puts the falsifier names that cannot be listed yet (a later print's, whose strike and
+ *    expiry are not set), so while any are unnamed the named ones expiring worthless decide nothing.
  */
 export type FalsifierCheck =
   | { readonly kind: "rerun" }
@@ -55,7 +60,21 @@ export type FalsifierCheck =
       readonly by: string;
       readonly level: number;
     }
-  | { readonly kind: "forward-tests"; readonly tests: readonly ForwardLink[] };
+  | { readonly kind: "forward-tests"; readonly tests: readonly ForwardLink[] }
+  | {
+      readonly kind: "puts-expire";
+      readonly symbol: string;
+      readonly puts: readonly ExpiringPut[];
+      readonly unnamed: number;
+    };
+
+/** A sold put a claim's falsifier names: it expires worthless when the close on `expiry` is at or
+ *  above `strike`. */
+export interface ExpiringPut {
+  /** `YYYY-MM-DD`: the expiry day, read as the last close on or before it. */
+  readonly expiry: string;
+  readonly strike: number;
+}
 
 /**
  * A FORWARD TEST THAT SCORES A CLAIM (#5482 criterion 6, slice 5's deferral). A conviction may not
@@ -213,6 +232,54 @@ function scoreReach(
       );
 }
 
+/**
+ * The puts in expiry order, each read off the close of its expiry's session (the expiry itself, or
+ * the session before it when the exchange is shut). The first to finish in the money fails the
+ * claim. A decided score is final, so two things wait rather than guess. The expiry's bar counts
+ * only once a later session is on the tape: the feed serves the open session's bar live, and the
+ * research cache keeps whatever it fetched, so a bar read on the expiry day could be a mid-session
+ * price. And a missing close on that session never borrows an older one.
+ */
+function scorePuts(
+  check: Extract<FalsifierCheck, { kind: "puts-expire" }>,
+  dueOn: string,
+  ctx: ScoreContext,
+): ClaimScore {
+  const { symbol } = check;
+  const tape = ctx.tape?.(symbol);
+  const last = tape?.at(-1)?.date;
+  if (last === undefined) return pending(`No ${symbol} price history to read.`, dueOn);
+  const read: string[] = [];
+  const sofar = (wait: string): ClaimScore => pending([...read, wait].join(" "), dueOn);
+  for (const put of [...check.puts].sort((a, b) => a.expiry.localeCompare(b.expiry))) {
+    const name = `the ${money(put.strike)} ${put.expiry} put`;
+    const session = isSession(put.expiry) ? put.expiry : sessionsBefore(put.expiry, 1);
+    if (last <= session) {
+      return sofar(
+        `The ${symbol} tape ends ${last}; ${name}'s close on ${session} counts once a later session is on it.`,
+      );
+    }
+    const close = tape?.find((b) => b.date === session);
+    if (close === undefined) return sofar(`No ${symbol} close on ${session} to read ${name}.`);
+    const at = `${symbol} closed at ${money(close.close)} on ${session}`;
+    if (close.close < put.strike) {
+      return decided(
+        "fail",
+        `${at}, under ${name}'s strike: it finished in the money.`,
+        dueOn,
+        ctx.today,
+      );
+    }
+    read.push(`${at}, at or above ${name}'s strike: it expired worthless.`);
+  }
+  if (check.unnamed > 0) {
+    const more =
+      check.unnamed === 1 ? "1 more put it names is" : `${check.unnamed} more puts it names are`;
+    return sofar(`${more} not listed yet, so that decides nothing alone.`);
+  }
+  return decided("pass", read.join(" "), dueOn, ctx.today);
+}
+
 /** One link's reading: what its row says, and what that means for the claim. */
 function readLink(
   link: ForwardLink,
@@ -293,6 +360,8 @@ export function scoreClaim(claim: ConvictionClaim, ctx: ScoreContext): ClaimScor
       return scoreReach(check, dueOn, ctx);
     case "forward-tests":
       return scoreForward(check, dueOn, ctx);
+    case "puts-expire":
+      return scorePuts(check, dueOn, ctx);
   }
 }
 
@@ -395,6 +464,26 @@ function forwardProblems(tests: readonly ForwardLink[]): string[] {
   return problems;
 }
 
+/** Every rule a puts check breaks, in words. */
+function putsProblems(check: Extract<FalsifierCheck, { kind: "puts-expire" }>): string[] {
+  const problems: string[] = [];
+  if (check.puts.length === 0) problems.push("check names no put");
+  for (const put of check.puts) {
+    if (!isCalendarDay(put.expiry))
+      problems.push(`a put's expiry ${put.expiry} is not a calendar day`);
+    if (!(Number.isFinite(put.strike) && put.strike > 0)) {
+      problems.push(`the ${put.expiry} put's strike is not a price`);
+    }
+  }
+  if (new Set(check.puts.map((p) => p.expiry)).size < check.puts.length) {
+    problems.push("check names two puts on one expiry");
+  }
+  if (!(Number.isInteger(check.unnamed) && check.unnamed >= 0)) {
+    problems.push("check's unnamed puts is not a whole number");
+  }
+  return problems;
+}
+
 /** Every rule a claim's check breaks, in words. */
 export function checkProblems(check: FalsifierCheck, scoreBy: string | undefined): string[] {
   const problems: string[] = [];
@@ -402,6 +491,7 @@ export function checkProblems(check: FalsifierCheck, scoreBy: string | undefined
   if (check.kind === "rerun") return problems;
   if (check.kind === "forward-tests") return [...problems, ...forwardProblems(check.tests)];
   if (blank(check.symbol)) problems.push("check names no symbol");
+  if (check.kind === "puts-expire") return [...problems, ...putsProblems(check)];
   const days = check.kind === "closes-within" ? [check.from, check.to] : [check.after, check.by];
   if (!days.every(isCalendarDay)) problems.push("check window is not calendar days");
   else if (days[0] !== undefined && days[1] !== undefined && days[1] <= days[0]) {

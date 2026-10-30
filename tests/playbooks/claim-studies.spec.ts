@@ -278,6 +278,33 @@ describe("withStudies", () => {
     expect(out.claims[1]?.study).toBeUndefined();
   });
 
+  it("serves the claim's own falsifier on its verdict, not the copy taken when it was studied", () => {
+    const studied: ClaimStudy = {
+      disposition: "studied",
+      instrument: "premium-fit",
+      measures: "m",
+      symbol: "CRWV",
+      dataDate: "2026-10-16",
+      verdict: {
+        reading: "against",
+        call: "c",
+        confidence: "low",
+        why: "w",
+        falsifier: "The house call's flip lands by 2026-11-13.",
+        scoreBy: "2026-11-20",
+        numbers: {},
+      },
+    };
+    const corrected = {
+      ...record,
+      claims: [{ ...claim("Premiums are rich."), falsifier: "Still stand aside by 2026-11-13." }],
+    };
+    const out = withStudies(corrected, [{ statement: "Premiums are rich.", study: studied }]);
+    const verdict = out.claims[0]?.study?.disposition === "studied" && out.claims[0].study.verdict;
+    expect(verdict && verdict.falsifier).toBe("Still stand aside by 2026-11-13.");
+    expect(verdict && verdict.reading).toBe("against");
+  });
+
   it("drops an entry whose claim was re-read: the old verdict belongs to the old sentence", () => {
     const out = withStudies(record, [{ statement: "Premiums are VERY rich.", study: untestable }]);
     expect(out.claims.every((c) => c.study === undefined)).toBe(true);
