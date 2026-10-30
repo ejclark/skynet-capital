@@ -88,6 +88,20 @@ describe("readAccountDecisions", () => {
     expect(records?.map((r) => r.at).sort()).toEqual([1, 2]);
   });
 
+  it("takes the kept per-account answer when it is wired, and never reads the ledger itself (#4619)", async () => {
+    const records = await readAccountDecisions("sauron", {
+      readDecisions: async (id) =>
+        id === "sauron" ? [decision({ at: 1 })] : [decision({ at: 2, personaId: id })],
+      readAccountPersonas: async () => ["sauron", "beta-scout"],
+      readTradeActivity: () =>
+        Promise.reject(new Error("the whole ledger is exactly what this path avoids")),
+      personasOfOrders: () => {
+        throw new Error("the kept answer already joined the orders");
+      },
+    });
+    expect(records?.map((r) => r.at).sort()).toEqual([1, 2]);
+  });
+
   it("dedupes a foreign persona discovered via multiple trades — one fetch, not two", async () => {
     let betaFetches = 0;
     const records = await readAccountDecisions("sauron", {

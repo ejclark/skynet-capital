@@ -46,6 +46,7 @@ import { createParticipantStore } from "../participants/participant-store.js";
 import { createIvHistoryStore } from "../research/iv-sampler.js";
 import { createSpotChecks } from "../research/spot-checks.js";
 import { resolveDataSource } from "../runtime/data-source.js";
+import { accountPersonasFrom } from "../server/account-personas-fold.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { createBookHealthHistoryStore } from "../server/book-health-history-store.js";
 import { startBookHealthSampler } from "../server/book-health-sampler.js";
@@ -288,6 +289,9 @@ async function main(): Promise<void> {
     { hub, activity, authConfigured: Boolean(auth) },
     credentialsBridge,
   );
+  // The Decisions tab's "who else trades on this account" (#4619): kept per account, advanced by
+  // only what each ledger appends, asked again only when the decision store gains a joinable row.
+  const readAccountPersonas = accountPersonasFrom(activity, insightsBridge);
   // Broker slow-sync + per-order audit log + desk trading (dashboard-desk-wiring.ts).
   const { brokerSync, orderAudit, desk } = wireDeskTrading({
     env: process.env,
@@ -520,6 +524,7 @@ async function main(): Promise<void> {
     ...(insightsBridge.personasOfOrders
       ? { personasOfOrders: insightsBridge.personasOfOrders }
       : {}),
+    readAccountPersonas,
     // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458).
     ...(insightsBridge.findSpreadLeg
       ? { findSpreadLeg: rememberSpreadLegs(insightsBridge.findSpreadLeg) }
@@ -587,9 +592,11 @@ async function main(): Promise<void> {
     // Pulse's history folds, then its trade half for each participant (the held answer's first
     // build is the whole-ledger read: ~90 ms for Sauron at 180 days, #4619),
     // then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read,
-    // then each bot's decision funnel, so the first Decisions open is not either (#4619).
+    // then each bot's decision funnel and who trades on its account, so the first Decisions open
+    // is not either (#4619).
     // Best effort: a failed warm leaves the fold to the first request, which reads it the same way.
     const { funnelFor } = insightsBridge;
+    const bots = roster.filter((p) => p.kind === "bot").map((p) => p.id);
     void warmFolds(
       roster.map((p) => p.id),
       readPulseHistory,
@@ -604,14 +611,8 @@ async function main(): Promise<void> {
         ),
       )
       .then(() => readWireFeed().catch(() => undefined))
-      .then(() =>
-        funnelFor
-          ? warmFolds(
-              roster.filter((p) => p.kind === "bot").map((p) => p.id),
-              async (id) => funnelFor(id),
-            )
-          : undefined,
-      );
+      .then(() => warmFolds(bots, async (id) => funnelFor?.(id)))
+      .then(() => warmFolds(bots, async (id) => readAccountPersonas?.(id)));
   });
 }
 
