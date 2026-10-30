@@ -21,31 +21,33 @@ import { pathToFileURL } from "node:url";
 import { refinementText, renderProposals } from "../playbooks/claim-proposals.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
+import { CONVICTION_ID, CONVICTION_ID_MAX } from "../subscriptions/subscription-state.js";
 
 export const REFINEMENTS_DIR = join(process.cwd(), "docs/research/convictions/refinements");
-
-/** An id safe to name a file with; a record's id is a slug, and anything else writes nothing. */
-const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 
 /**
  * Write one conviction's refinement file from the scores attached to it, or remove a stale one when
  * no decided claim backs a fence any more (only a full pass can move a decided score). Returns the
- * path and what was done, or undefined when nothing was.
+ * path and what was (or, with `dry`, would be) done, or undefined when nothing was. An id the
+ * record's own rule refuses names no file.
  */
 export function writeRefinement(
   conviction: Conviction,
-  dir: string = REFINEMENTS_DIR,
+  { dir = REFINEMENTS_DIR, dry = false }: { readonly dir?: string; readonly dry?: boolean } = {},
 ): { readonly path: string; readonly action: "wrote" | "removed" } | undefined {
-  if (!SLUG.test(conviction.id)) return undefined;
-  const path = join(dir, `${conviction.id}.md`);
+  const { id } = conviction;
+  if (!(CONVICTION_ID.test(id) && id.length <= CONVICTION_ID_MAX)) return undefined;
+  const path = join(dir, `${id}.md`);
   const text = refinementText(conviction);
   if (text === undefined) {
     if (!existsSync(path)) return undefined;
-    rmSync(path);
+    if (!dry) rmSync(path);
     return { path, action: "removed" };
   }
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(path, text);
+  if (!dry) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path, text);
+  }
   return { path, action: "wrote" };
 }
 

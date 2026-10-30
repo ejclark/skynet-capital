@@ -12,9 +12,15 @@ import { AI_DIP_2026_10 } from "../../src/playbooks/conviction-seeds.js";
 /** #5482 slice 5, criterion 6 — what a scored claim implies for a pair, as honest text. A dry run:
  *  it names a change for a reviewer and changes nothing. */
 
-const scored = (labels: Record<string, ClaimScore["outcome"]>): Conviction => ({
+/** The seed with no score attached: the live ledger's scores must never move these specs. */
+const UNSCORED: Conviction = {
   ...AI_DIP_2026_10,
-  claims: AI_DIP_2026_10.claims.map((c) => {
+  claims: AI_DIP_2026_10.claims.map(({ score: _, ...c }) => c),
+};
+
+const scored = (labels: Record<string, ClaimScore["outcome"]>): Conviction => ({
+  ...UNSCORED,
+  claims: UNSCORED.claims.map((c) => {
     const label = c.statement.match(/^(\d+[a-z]?)\./)?.[1] ?? "";
     const outcome = labels[label];
     if (outcome !== "pass" && outcome !== "fail") return c;
@@ -32,8 +38,8 @@ const scored = (labels: Record<string, ClaimScore["outcome"]>): Conviction => ({
 
 describe("proposalsFor", () => {
   it("proposes nothing while every claim is pending or untestable", () => {
-    expect(proposalsFor(AI_DIP_2026_10)).toEqual([]);
-    expect(renderProposals(AI_DIP_2026_10)).toContain("No proposal yet");
+    expect(proposalsFor(UNSCORED)).toEqual([]);
+    expect(renderProposals(UNSCORED)).toContain("No proposal yet");
   });
 
   it("after a pass, proposes carrying the fence that claim backs into the pair's own settings", () => {
@@ -102,7 +108,7 @@ describe("renderProposals — honest text", () => {
 
 describe("refinementText — what the scoring pass commits", () => {
   it("is nothing while no claim a fence rests on is decided, so a lane's PR carries no empty file", () => {
-    expect(refinementText(AI_DIP_2026_10)).toBeUndefined();
+    expect(refinementText(UNSCORED)).toBeUndefined();
     expect(refinementText(scored({ "5": "pass" }))).toBeUndefined();
   });
 
@@ -114,7 +120,7 @@ describe("refinementText — what the scoring pass commits", () => {
 
   it("keys a proposal the same way every time", () => {
     const [p] = proposalsFor(scored({ "2a": "fail" }));
-    expect(p && proposalKey(AI_DIP_2026_10, p)).toBe("ai-dip-2026-10/2a/CRWV-WHEEL");
+    expect(p && proposalKey(UNSCORED, p)).toBe("ai-dip-2026-10/2a/CRWV-WHEEL");
   });
 });
 

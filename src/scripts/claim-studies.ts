@@ -281,17 +281,22 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     // A scores-only pass changes only the claims it newly decides (`laneScores`).
     const written = scoreOnly ? laneScores(onFile, scoring.entries) : scoring.entries;
     scores = { ...scores, [conviction.id]: written };
-    scored.push(withScores(conviction, written));
+    // Only this pass's scores: a claim whose fresh entry is unreadable reads as unscored, exactly as
+    // the store will serve it, never as the score it carried before the pass.
+    const unscored = conviction.claims.map(({ score: _, ...claim }) => claim);
+    scored.push(withScores({ ...conviction, claims: unscored }, written));
+  }
+  // What a decided claim implies for its pairs travels in the same PR as the score (criterion 6).
+  // Written first: a failed write here stops the pass before the scores, so a re-run still decides
+  // the claim and writes both, where the other order would leave a final score with no proposal.
+  for (const conviction of scored) {
+    const done = writeRefinement(conviction, { dry });
+    if (done) console.log(`${dry ? `would have ${done.action}` : done.action} ${done.path}`);
   }
   if (!dry) {
     mkdirSync(join(ROOT, "src", "playbooks"), { recursive: true });
     if (!scoreOnly) writeSorted(LEDGER_PATH, ledger);
     writeSorted(SCORES_PATH, scores);
-    // What a decided claim implies for its pairs travels in the same PR as the score (criterion 6).
-    for (const conviction of scored) {
-      const done = writeRefinement(conviction);
-      if (done) console.log(`${done.action} ${done.path}`);
-    }
   }
   return 0;
 }
