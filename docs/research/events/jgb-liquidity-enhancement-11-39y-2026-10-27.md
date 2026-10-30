@@ -445,3 +445,108 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.88,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+3).** Rates mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) though nothing here
+reads it. Every figure below was fetched direct today from MOF primaries (all HTTP 200) and the stock /
+remaining-maturity arithmetic re-run from the MOF auction workbook (`Auction_Results_for_JGBs.xls`, last
+saved 2026-10-02), never carried from an earlier row. Date and size stay **estimate** labels on the
+calendar entry (no confirmed-prefix slot for MOF; this lane does not self-confirm).
+
+### What happened
+
+**Result** (`calendar/eresul/eresul20261027.htm`): auction 2026-10-27, issue 2026-10-28, competitive bids
+**¥990.3bn** against **¥248.9bn** accepted (**cover 3.98x, excess bids ¥741.4bn**), Highest Accepted
+Spread **▲0.001%** and Average Accepted Spread **▲0.001%** (spreads to the reference rate; **tail 0.0bp**),
+allotment at the highest accepted spread **90.4883%**. Terms (`announcement/auct20261020e.htm`, dated
+10-20, the 7-day lead predicted): eligible 20Y No.163-197 · 30Y No.28-91 · 40Y No.1-18, "About 250
+billion yen".
+
+**By the stance's own thresholds this was a strong print** (tail at or under 0.3bp *and* excess bids
+above ¥640bn): the tail of 0.0bp ties the series low (2024-10-17), and excess bids are the 4th-highest of 13 (behind ¥879.4 / 864.4 / 840.2bn, all
+2024-25 at ¥400-450bn sizes) and the highest since 2025-04-22. Cover 3.98x is the highest of the 13.
+Same ¥248.9bn accepted as 2026-08-14, so the size-cut confound that made cover misleading was **absent
+this time**: cover and excess bids both rose against 08-14 (3.549 → 3.979; ¥634.4bn → ¥741.4bn), which is
+the "This week" row's own falsifier. It tripped, narrowly: at an unchanged size the two metrics agree,
+and the −0.648 cover-vs-size correlation remains a property of the 2024-26 sequence of size cuts, not
+of this print. n is now 4 under the 11-39y definition.
+
+**The Issues Re-opened page** (`eresul20261027a.htm`), 21 issues (the same count as 08-14), matched to
+remaining maturity at the 2026-10-28 issue date from MOF's workbook:
+
+| Security | Taken ¥bn | Share of accepted | Share of eligible stock | Taken / stock |
+|---|---|---|---|---|
+| 20-Year (No.164 · 178 · **179** · 197) | 181.2 (16.6 · 22.2 · **115.3** · 27.1) | **72.8%** | 36.0% | 2.02x |
+| 30-Year (10 issues, No.29-51) | 19.6 | 7.9% | 49.4% | 0.16x |
+| 40-Year (7 issues, No.1-9) | 48.1 | 19.3% | 14.6% | 1.32x |
+| **25y+ remaining** (40Y No.5 · 8 · 9) | **9.3** | **3.7%** | **28.6%** | **0.13x** |
+
+The eligible stock recomputes to ¥321.6tn on the rolled ranges (20Y ¥115.7tn · 30Y ¥159.0tn · 40Y
+¥46.9tn), against ¥321.9tn on 08-14's. The 25y+ stock share is 28.6% (30Y No.73-91 plus 40Y No.5-18).
+**Both of the ledger's demand-map findings reversed on the same print**: the 20-year went from **0.0%
+in all three prior prints to 72.8%** (one bond, No.179, matures 2041-12, took 46.3% of the auction),
+and the 25y+ overweight went from 1.41x / 1.34x / 1.87x to **0.13x** (40-year No.4, 24.4 years left,
+took ¥32.6bn and does not count as 25y+). Excluding No.197, the one 20-year issue that rolled into the
+eligible range, the 20-year is still **¥154.1bn = 61.9%**, so the swing is not the range roll. This
+ledger's cause for the earlier zero was never established ("describe the zero, do not name its cause"),
+and nothing on this page names one either: the bid composition changed, the reason did not print. The
+rival explanations (coupon / vintage, the neighbouring 5-11y zone absorbing 20-year paper, a
+price-driven rotation inside a basket bid as spreads) were not re-tested today.
+
+### The forward tests
+
+**`FT-jgb-liquidity-enhancement-11-39y-2026-10-27-1` — PASS.** Offering about ¥250bn; the band is MOF's
+"11-39 years" calendar row, and the eligible ranges compute to 11.1-38.4 years of remaining life at issue.
+The announcement page itself prints ranges, not the band, so the prediction's wording ("the announcement
+names the zone") is met by the calendar row, not the announcement. The instrument was not redefined a
+second time; the post-April-2026 n is 4.
+
+**`FT-jgb-liquidity-enhancement-11-39y-2026-10-27-2` — KILL.** Predicted 20-year reopenings under 5% of
+the accepted amount; actual **72.8%**. The "market has stopped taking 20-year paper here" claim, written
+at n=3 with a pre/post split chosen after seeing the series (t = −2.81), did not survive the fourth
+observation. Moved to the sweep doc's kill list.
+
+**`FT-jgb-liquidity-enhancement-11-39y-2026-10-27-3` — KILL.** Predicted a 25y+ share above 28.9%;
+actual **3.7%** (0.13x). The regime reading (0.74x → 1.46x, t = +3.21) was already filed MIXED on a
+confound with the size cut; the unchanged-size fourth print is the cleanest available test of it and it
+fails by a wide margin. Moved to the kill list.
+
+**`FT-jgb-liquidity-enhancement-11-39y-2026-10-27-4` — NOT SCORED; settles 2027-01-08.** Its score-by
+(2027-01-08, MOF's 2026-12-31 par curve) is past this event's close-out window, so it stays open for
+the `forward-test-due` mode. Informational only, not a score: MOF par curve **2026-10-29** — 20Y 3.701 ·
+25Y 3.988 · 30Y 3.956 · 40Y 3.984, **20s25s +28.7bp** (above the 93rd percentile of the 4,620 sessions in the
+through-9-30 file), **25s30s −3.2bp** (below the 1st percentile), 30s40s +2.8bp. On the 10-27 auction day itself:
+20Y 3.638 · 25Y 3.932 · 30Y 3.895 · 40Y 3.912, 20s25s +29.4bp, 25s30s −3.7bp. The kink at 25 years
+is intact and the prediction's two legs (25s30s at or below +5bp; 20s25s at or above +12.7bp) both
+hold today.
+
+### Against the stance
+
+The stance was **stand aside, permanently**, and nothing here contradicts it: `symbols: []`, no position
+was keyed to this auction, and none is warranted now. What the close-out costs the *research* is the
+demand-map claim: of the ledger's four diagnostic jobs, #1 (the published demand map "reads zero 20-year,
+25y+ overweight up to 1.87x") is wrong as stated, #2 (the kink at 25 years) holds, #3 (the BoJ absorption
+correction) is unaffected, and #4 (the cover trap) is narrowed to periods when MOF is changing the size.
+The transferable lesson, in the register of leg 1: **a regime read off three prints and a split date chosen
+after the fact is a description of the sample.** Both reversals came on the first print that was
+out-of-sample.
+
+**Kill switches, scored.** (1) No-price-channel premise: VIX **17.52** (10-27) → 16.91 (10-28) → 17.20
+(10-29) → **21.23** on 10-30 (Yahoo, secondary; the 10-30 bar is intraday and is +4.0 points on the
+prior close) and USD/JPY 157.53 → 157.43; no tracked-name price series was pulled (`symbols: []`), a
+single web search for a JGB / yen headline returned only 2025-era coverage and was discarded, so the
+10-30 VIX jump is **recorded, not attributed**. (2) Instrument redefined: **did not fire.** (3) Zero-20-year:
+**fired** (72.8%). (4) 25y+ overweight: **fired** (3.7%). (5) Kink at 25: open to 2026-12-31. (6) Cover
+trap: not triggered (size unchanged). (7) BoJ line: `ope2610.xlsx` was not re-fetched; the October month
+file was unpublished at the 10-16 row and is **not scored**.
+
+**Beyond the horizon, not proposed:** the next 11-39y auction is planned for December 2026 per MOF's
+2026-09-29 plan (about ¥250bn, none in November), past `assessment-cadence.json`'s horizon for a
+low-impact event. Nothing proposed.
+
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":21.23,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29"],"screenStreak":0} -->
