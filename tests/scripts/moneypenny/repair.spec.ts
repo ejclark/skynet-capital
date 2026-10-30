@@ -561,6 +561,55 @@ describe("moneypenny repair — re-reading a run's jobs before filing a guess", 
     expect(failures[0]?.job).toBe("(the failed job could not be read)");
   });
 
+  // #6406: run 41121443220 concluded failure while every read for a minute still had `release ·
+  // deploy bots` at `in_progress`, so the lane filed the unread shape beside #5955's open capsule.
+  const stillRunning = [
+    { id: 2, name: "release · deploy bots", status: "in_progress", conclusion: null, steps: [] },
+    { id: 3, name: "verify", status: "completed", conclusion: "skipped", steps: [] },
+  ];
+
+  it("keeps re-reading past the first minute while a job still reads as running", () => {
+    const waited: number[] = [];
+    const failures = readFailures(run, {
+      fetchJobs: reads(stillRunning, stillRunning, stillRunning, failed),
+      logOf: () => "log",
+      sleep: (ms: number) => waited.push(ms),
+      waits: [1, 2],
+      staleWaits: [60, 60],
+    });
+
+    expect(failures[0]?.job).toBe("release · deploy bots");
+    expect(failures[0]?.step).toBe("Smoke test the bots release");
+    expect(waited).toEqual([1, 2, 60]);
+  });
+
+  it("files the unread shape only once the extended waits also run out", () => {
+    const waited: number[] = [];
+    const failures = readFailures(run, {
+      fetchJobs: reads(stillRunning),
+      logOf: () => "",
+      sleep: (ms: number) => waited.push(ms),
+      waits: [1],
+      staleWaits: [60, 60],
+    });
+
+    expect(failures[0]?.job).toBe("(the failed job could not be read)");
+    expect(waited).toEqual([1, 60, 60]);
+  });
+
+  it("does not extend the waits for a read with no job still running", () => {
+    const waited: number[] = [];
+    readFailures(run, {
+      fetchJobs: reads([{ ...stillRunning[1] }]),
+      logOf: () => "",
+      sleep: (ms: number) => waited.push(ms),
+      waits: [1, 2],
+      staleWaits: [60],
+    });
+
+    expect(waited).toEqual([1, 2]);
+  });
+
   it("goes red rather than guessing when the last read still throws", () => {
     expect(() =>
       readFailures(run, {
