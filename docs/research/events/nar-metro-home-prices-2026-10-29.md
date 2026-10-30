@@ -54,6 +54,8 @@ licenses nothing: `symbols: []`, and a re-grep of the playbooks returns **0** ho
   (proposed) **10-27** · **FOMC 10-28** · **10-29 08:30 GDP Q3 advance + PCE, 10:00 this print** ·
   BoJ + ECI **10-30** · ISM **11-02** · **midterms 11-03**.
 
+**10-30 close-out (D+1):** NAR published Q3 on the scheduled **day** but about **1h45 before** the scheduled 10:00 ET (page stamp **08:15 ET**) — `FT-…-1` **kill** on the hour. National median **$432,900, +1.7%**, inside the monthly range (`-4` **pass**). ITB ranged **3.690%** on 10-29 (`-2` **kill**) but SPY only 0.539%, and 63% of ITB's range came in the first half-hour. DHI filed 10-29 (`-3` **pass**). Stand aside cost nothing (`symbols: []`). Outcome below.
+
 ## Initial research
 
 ### The question, plainly
@@ -331,6 +333,7 @@ lane's null. Neither is expected before the print.
 | 2026-10-09 | D-20 | **Deterministic screen (no Claude session).** Readings — VIX 15.4 (+0.1pt since last), band unchanged (low:15+), 48 adjacent event(s) tracked, new in corridor since last pulse: `aapl-2026-10-29-print`, `amzn-2026-10-29-print`, `boe-dmp-2026-10-30`, `dallas-fed-mfg-2026-10-26`, `dallas-fed-trimmed-mean-2026-10-29`, `dallas-fed-tssos-2026-10-27` +13 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-08 |
 | 2026-10-16 | D-13 | **Pulse (full session; screen verdict material: band low:15+→low:0+, VIX +4.6pt, ISM 11-02 new in corridor).** **Leg 2 data landed:** the 10-13 September EHS (`2026-10-13T09:01-05:00`) prints single-family median **$422,700, +1.2% y/y** (all types $417,500, +1.3%); July was **$440,300, +1.9%** (08-11), June $446,400 +1.8%. Y/y has decelerated 1.8→1.9→1.2%; Yun cites mortgage rates rising and "price discounts and other incentives". Q3's pooled national median is bounded by those monthlies (Aug not re-read this pulse) — `-4` untouched, still open. **Leg 5 upgraded from inference to publication:** DHI's own IR release (investor.drhorton.com, 2025-10-16, HTTP 200) names FY Q4 **Thu 2026-10-29, pre-open, call 08:30 ET** — the same morning, 90 min ahead of this 10:00 print; `-3` (≤10-30) now near-certain on the date. PHM's Q3 is **10-22** (company release, search-sourced, not re-fetched direct). **Tape:** VIX **19.99** (15.27 on 10-13; 16.46 on 10-15), SPY 763.25 (-1.1% on the day; 778.0 on 10-13), ITB 86.40, XHB 94.91, 10y 5.10% (5.31% on 10-05). Search-sourced: a chipmaker-led selloff, S&P's first >1% down day in 55 sessions. **Adjacency:** FOMC 10-28, GDP+PCE 10-29, ECB 10-29, BoJ+ECI 10-30, ISM 11-02, midterms 11-03 unchanged; 50 tracked events within 5 days. **Proposed:** DHI FY Q4 print (`estimate`, `sector`, `low`) as `proposals/dhi-q4-fy2026-2026-10-29.from-nar-metro-home-prices-2026-10-29.json`. Not proposed: PHM 10-22 (second builder print, date not fetched direct), the Nov/Dec Case-Shiller editions (past `allImpactsWithinDays` for low). No cited source failed except businesswire.com (HTTP 000, IR page used instead). | **None — stand aside holds.** Two registered tests are now *harder to pass, not changed*: `-2` (ITB range < 2.504%) now faces a published DHI print + GDP/PCE + VIX ~20 on the day, so its 75% base rate is generous; edited by nobody, scored on 10-30 as registered | 2026-10-23 |
 | 2026-10-26 | D-3 | **Pulse (full session; screen verdict material: 10-16 row's cadence band now low:0+ and the 7-day interval elapsed).** **Date holds:** NAR's schedule page re-read direct 2026-10-26 (WebFetch, HTTP ok) — "Thu., Oct. 29 \| Third Quarter Metro Home Prices", header "All releases at 10 a.m. Eastern Time"; `-1` still open, scored on the day. **Leg 2 (`-4`) inputs:** Sep EHS single-family median $422,700 and July $440,300 are unchanged from the 10-16 row; the August single-family median was NOT found this pulse (search-sourced only the all-types $429,100, +1.6% y/y), so the range test stays unresolved — `-4` open. **Pending Sales (10-20, search-sourced, not fetched direct):** September PHSI reported **66.0, -7.3% m/m, -11.3% y/y, lowest on record**, Yun citing fast-rising mortgage rates — a *volume* read that bears on the 10-29 Metro table's affordability tone, not on whether Q3 median sits in the monthly range. **Peers (Leg 5):** PHM Q3 landed 10-22; the tape, read direct from Yahoo daily closes, is the record: PHM 112.89→119.48 (**+5.8%**), DHI 138.98→147.66 (**+6.2%**), ITB 86.57→91.24 (**+5.4%**), XHB +3.8%, 10y 5.146→4.953 on the same day. One search result in this pulse claimed PHM fell 7% that day; the closes refute it, so it is not used. DHI's own release is still the same-morning 08:30 ET print (`dhi-q4-fy2026-2026-10-29`, confirmed) — `-3` stays near-certain on the date. **Tape since 10-16:** VIX 19.99→**17.86** (peak 19.45 on 10-23), SPY 763.25→**766.67**, ITB 86.40→**90.37** (+4.6%), XHB 94.91→**98.39**, DHI 139.39→**147.24**, 10y 5.098→**4.982**. **Adjacency:** FOMC 10-28, GDP Q3 advance + PCE 10-29 08:30, ECB, Intel after the close, BoJ + ECI 10-30, ISM 11-02, AMD + midterms 11-03 unchanged; 51 tracked events within 5 days (strong: ECI, FOMC, GDP, ISM, PCE, AMD); `--on-date=2026-10-29` lists ten entries, none a re-slug of this one. No CPI/FOMC surprise has landed since the last row (the next is 10-28). Nothing dated inside the horizon was discovered, so no proposal is filed. **Effect on `-2`:** ITB has rallied 4.6% since 10-16 and the session now carries a builder print, GDP/PCE and FOMC+1 together — the 75% base rate is still generous, the test is edited by nobody. No cited source failed. | **None — stand aside holds** on every horizon. `-1`, `-2`, `-3`, `-4` unchanged and open; scored 10-29/10-30 as registered | 2026-10-29 |
+| 2026-10-30 | D+1 | **Close-out.** NAR's release (`nar.realtor/newsroom/home-prices-rise-78-percent-metro-areas-q3-2026`, fetched direct): 78% of metros up (Q2 80%), national median single-family **$432,900, +1.7%**; page stamp `2026-10-29T07:15:25-05:00` = **08:15 ET**, not 10:00. DHI 8-K Item 2.02 filed 10-29. ITB 10-29 range **3.690%** (5-minute bars). `-1` **kill** (hour), `-2` **kill**, `-3` **pass**, `-4` **pass**. No adjacent event proposed. Conviction proposals: none for this event. | — (closed out; see `## Outcome`) | — |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to the
 next session, not an essay, and a stance *change* earns its sentence in the Stance section with the row
@@ -344,3 +347,62 @@ as its receipt.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.86,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","mwts-benchmark-revision-2026-10-26","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+1 — inside the `closeOutWithinDays` window).** `symbols: []`, so no
+`earnings-cycle` run attaches; the intraday and filing reads below were re-fetched on 2026-10-30 after
+`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`, and every NAR figure was
+read direct from nar.realtor. Wire copies on GlobeNewswire and Inman returned HTTP 403, so no wire
+timestamp was read; press-grade items are labelled as such.
+
+### What happened
+
+**NAR published on the scheduled day, but earlier than the scheduled hour.** The release
+(`nar.realtor/newsroom/home-prices-rise-78-percent-metro-areas-q3-2026`, fetched direct) reads: prices rose in
+**78%** of metros (Q2 80%), **4%** double-digit (Q2 5%), **21%** declined; national median existing
+single-family **$432,900, +1.7% y/y**; regions Northeast $561,500 (+4.0%), Midwest $342,500 (+3.6%), South
+$374,900 (+1.0%), West $629,000 (-0.6%); San Jose $1,920,000 (+0.3%) the most expensive; typical-home payment
+**$2,251** (+$48 q/q, +$69 y/y), 24.1% of income. Its `article:published_time` is
+**`2026-10-29T07:15:25-05:00` = 08:15 ET**; the three earlier 2026 editions carried 09:00 CDT (10:00 ET) exactly.
+Floor Daily's republication is stamped `2026-10-29T08:25:20-04:00` (press-grade, an independent clock), 25
+minutes after NAR's stamp and an hour and a half before 10:00. NAR's later magazine write-up is stamped
+09:02 CDT (10:02 ET). The schedule page still reads "All releases at 10 a.m. Eastern Time". The stamp is a CMS
+field, not a wire time, so the honest claim is "NAR's own page and one independent site both place it near 08:15-08:25
+ET", not a precise embargo-lift time.
+
+**The national price was already public, as claimed.** The Q3 figure of **$432,900** sits inside the span of
+NAR's own monthly single-family medians read in the 10-16 row: July **$440,300**, September **$422,700** (the
+August median was never read direct, and cannot narrow a span that two read months already bound).
+
+**The tape ran on other things.** ITB's 10-29 session, from 5-minute bars (open 88.89, high 92.17, low 88.89,
+close 92.15): range **3.690%** of the open, open-to-close **+3.67%** — above the 2014+ p90 of 3.474% recorded
+in Leg 3. XHB ranged **3.955%** (+3.50%); DHI **4.106%** (+3.20%); **SPY only 0.539%** (+0.10%, against a 0.864%
+baseline). So the widening was housing-specific, not market-wide. **63% of ITB's range came in the first half-hour
+(9:30-10:00 ET, 2.329%)**, after the 08:15 NAR page, the 08:30 GDP and PCE prints and DHI's pre-open release; the
+10:00 hour carried **32.8%** of the session range, against the 33.9% / 35.3% ordinary-hour comparison the sibling
+lane recorded. That is consistent with the earlier finding that this print's own hour is not special, and it
+cannot separate DHI, GDP/PCE and the NAR page from each other: the stance said "unreadable", and it stayed
+unreadable. 10y (^TNX daily): 5.045 (10-28) to 4.989 (10-29); VIX 16.91 to 17.20.
+
+### Forward tests
+
+| Row | Verdict | Evidence |
+|---|---|---|
+| `-1` date and hour | **kill** (hour; date exact) | Published 2026-10-29, but page stamp 08:15 ET, not 10:00 ET; Floor Daily 08:25 ET. The registered kill switch fires on "an hour other than 10:00 ET" |
+| `-2` ITB range < 2.504% | **kill** | ITB 10-29 range **3.690%** (5-minute bars) |
+| `-3` DHI 8-K Item 2.02 by 10-30 | **pass** | EDGAR submissions API: DHI 8-K Items 2.02, 9.01 filed **2026-10-29**, accession 0000882184-26-000119 |
+| `-4` Q3 median within July-Sept monthly span | **pass** | $432,900 inside $422,700-$440,300 |
+
+**What these scores mean.** `-1` is a kill on the hour only: the calendar date was exact, so `status` stays
+`confirmed` for the date and `src/domain/market-events/nar-metro-home-prices-2026-10-29.json` is not edited. The
+registered consequence (reverting to `estimate`) is moot on an event that has already passed. What survives is a
+fact for the next NAR lanes: the 10:00 ET hour is NAR's published *schedule*, and one of four 2026 quarterly
+metro editions did not honor it. Any intraday signature keyed to a 10:00 ET NAR release should read the page
+stamp first. `-2` is the autumn FOMC+1 null failing on this one instance (n=1, no more than one observation).
+Both scored kills are added to the sweep doc's kill list. `-3` and `-4` are single observations.
+**Process gap named:** a calendar entry cannot carry a publication hour as a checkable field, so the hour
+check was prose and was caught only by a human-readable close-out; no data-level tripwire watches it.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"low:0+","adjacentIds":["advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","mwts-benchmark-revision-2026-10-26","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0} -->
