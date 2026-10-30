@@ -35,6 +35,10 @@
  * writes pass / fail / pending to `src/playbooks/conviction-scores.json`, so a claim whose day has
  * come, or whose study was just re-run, is scored in the same pass.
  *
+ * Last, for each conviction it scored, it writes what the decided claims imply for the pairs they
+ * fence to `docs/research/convictions/refinements/<id>.md` (`writeRefinement`, #5482 criterion 6),
+ * so the PR that decides a claim carries the proposal. Text only: it changes no pair's settings.
+ *
  * Network: only through the instruments' own cached fetchers (Yahoo bars, SEC EDGAR, the Cboe
  * chain). Paper only, educational; nothing here routes an order or sizes a trade.
  */
@@ -47,7 +51,7 @@ import { promisify } from "node:util";
 import { researchCapNow } from "../../scripts/moneypenny/events.mjs";
 import { bars } from "../../scripts/research/market-data.mjs";
 import { premiumFit } from "../../scripts/research/premium-fit.mjs";
-import { claimLabel, type ScoreLedgerEntry } from "../playbooks/claim-score.js";
+import { claimLabel, type ScoreLedgerEntry, withScores } from "../playbooks/claim-score.js";
 import type { StudyLedgerEntry } from "../playbooks/claim-studies.js";
 import {
   type RunnerDeps,
@@ -58,6 +62,7 @@ import {
 } from "../playbooks/claim-study-runner.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
+import { writeRefinement } from "./claim-proposals.js";
 import { laneScores, readsEvent, scoreConviction } from "./claim-scoring-run.js";
 
 const run = promisify(execFile);
@@ -254,6 +259,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     readonly ScoreLedgerEntry[]
   >;
   let used = 0;
+  const scored: Conviction[] = [];
   for (const conviction of convictions) {
     let studies = (ledger[conviction.id] ?? []) as readonly StudyLedgerEntry[];
     if (scoreOnly) {
@@ -275,6 +281,17 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     // A scores-only pass changes only the claims it newly decides (`laneScores`).
     const written = scoreOnly ? laneScores(onFile, scoring.entries) : scoring.entries;
     scores = { ...scores, [conviction.id]: written };
+    // Only this pass's scores: a claim whose fresh entry is unreadable reads as unscored, exactly as
+    // the store will serve it, never as the score it carried before the pass.
+    const unscored = conviction.claims.map(({ score: _, ...claim }) => claim);
+    scored.push(withScores({ ...conviction, claims: unscored }, written));
+  }
+  // What a decided claim implies for its pairs travels in the same PR as the score (criterion 6).
+  // Written first: a failed write here stops the pass before the scores, so a re-run still decides
+  // the claim and writes both, where the other order would leave a final score with no proposal.
+  for (const conviction of scored) {
+    const done = writeRefinement(conviction, { dry });
+    if (done) console.log(`${dry ? `would have ${done.action}` : done.action} ${done.path}`);
   }
   if (!dry) {
     mkdirSync(join(ROOT, "src", "playbooks"), { recursive: true });
