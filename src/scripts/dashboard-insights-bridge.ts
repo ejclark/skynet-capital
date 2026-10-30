@@ -130,7 +130,6 @@ export interface CredentialsBridgeDeps {
   readonly findParticipant: (id: string) => Participant | undefined;
 }
 
-const FUNNEL_TTL_MS = 30_000;
 /** A bot's week of checks (#5073 slice 2) is re-read at most this often per bot — every viewer of
  *  the Playbooks section polls it every 30s. Short enough that the newest check it holds is never
  *  older than the strip's own two-minute "no check" window: 15s here plus replication's ~45s. */
@@ -268,11 +267,9 @@ export function startInsightsBridge(
           findByOrderId: (orderId: string) => decisionDb.findByOrderId(orderId),
           personasOfOrders: (orderIds: readonly string[]) => decisionDb.personasOfOrders(orderIds),
           findSpreadLeg: (legOrderId: string) => decisionDb.findSpreadLeg(legOrderId),
-          // Remembered for 30 s: a grouped scan of the persona's whole history (~190 ms at 180
-          // days) that no viewer can tell is half a minute old (#4612 slice 7).
-          funnelFor: memoPerKey(FUNNEL_TTL_MS, (personaId: string) =>
-            decisionDb.funnelFor(personaId),
-          ),
+          // Not remembered: the store folds each persona's funnel and reads only what was recorded
+          // since (`decision-db-funnel.ts`, #4619), so every ask is ~2 ms and current.
+          funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
           readCheckWeek: memoPerKey(CHECK_WEEK_TTL_MS, (personaId: string) => {
             const window = checkWeekWindow(new Date());
             return window

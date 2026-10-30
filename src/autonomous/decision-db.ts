@@ -4,8 +4,8 @@ import { DatabaseSync } from "node:sqlite";
 import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
-import type { GuardRefusalReason } from "../engine/guards.js";
 import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
+import { openFunnelFold } from "./decision-db-funnel.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
 import { openObservationTables } from "./decision-db-observations.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
@@ -17,7 +17,6 @@ import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decisio
 import { CORE_TABLES_SQL } from "./decision-db-schema.js";
 import {
   openSettlements,
-  SETTLED_JOIN,
   SETTLEMENTS_SQL,
   type SequencedSettlement,
   type SettledIntent,
@@ -25,7 +24,7 @@ import {
 } from "./decision-db-settlements.js";
 import { openVerdictRunReads, type VerdictRunStart } from "./decision-db-verdict-run.js";
 import { type CheckWeekRows, openCheckWeekReads } from "./decision-db-week.js";
-import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
+import type { DecisionFunnel } from "./decision-funnel.js";
 import { openOptionLedger, type SequencedLifecycle } from "./decision-option-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
 
@@ -96,7 +95,8 @@ export interface DecisionDb {
   /** The decision funnel (PR 7b) — cycles → raw → survived guards → placed → filled → closed,
    *  plus refusals by reason. A single SQL aggregation over the FULL history, never bounded by
    *  `MAX_PAGE` the way `listByPersona`/`listRetrospectives` are — a funnel undercounting its own
-   *  totals would be a worse lie than a slow query. */
+   *  totals would be a worse lie than a slow query. Folded per persona and advanced by only the
+   *  intents recorded since the last read (`decision-db-funnel.ts`, #4619). */
   funnelFor(personaId: string): DecisionFunnel;
   /** One persona's passes, grouped verdicts and placed trades in `[from, to)` (#5073 slice 2) —
    *  the week strip and each playbook's lane. Bounded by the window, never a page: see
@@ -213,6 +213,7 @@ export function openDecisionDb(path: string): DecisionDb {
   const verdictRun = openVerdictRunReads(db);
   const playbookFunnel = openPlaybookFunnelReads(db);
   const retrospectives = openRetrospectiveReads(db);
+  const funnel = openFunnelFold(db, retrospectives.closedCount);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -283,18 +284,6 @@ export function openDecisionDb(path: string): DecisionDb {
       .all(...ids) as { persona_id: string }[];
     for (const row of [...direct, ...settled]) into.add(row.persona_id);
   }
-  const selectCycleCount = db.prepare("SELECT COUNT(*) AS n FROM decisions WHERE persona_id = ?");
-  // Grouped, not one row per intent (#4612 slice 7, defect #9: "+205 MB at 12 × 180 days" on this
-  // path) — the distinct (guard_reason, action, result_status) combinations are few no matter how
-  // long a persona's history runs, so the count SQLite already has to compute for GROUP BY is the
-  // whole result, never a row pulled per intent.
-  const selectFunnelGrouped = db.prepare(`
-    SELECT i.guard_reason AS guard_reason, i.action AS action,
-           COALESCE(s.status, i.result_status) AS result_status, COUNT(*) AS n
-    FROM intents i JOIN decisions ON decisions.id = i.decision_id ${SETTLED_JOIN}
-    WHERE decisions.persona_id = ?
-    GROUP BY i.guard_reason, i.action, COALESCE(s.status, i.result_status)
-  `);
   const selectSymbolsPlacedByPlaybook = db.prepare(`
     SELECT DISTINCT intents.symbol AS symbol
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
@@ -556,26 +545,7 @@ export function openDecisionDb(path: string): DecisionDb {
 
     playbookFunnel: (from, to) => playbookFunnel.read(from, to),
 
-    funnelFor(personaId): DecisionFunnel {
-      const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
-      const closed = retrospectives.closedCount(personaId);
-      const rows = selectFunnelGrouped.all(personaId) as {
-        guard_reason: string | null;
-        action: string | null;
-        result_status: string | null;
-        n: number;
-      }[];
-      return computeFunnel(
-        cycles,
-        closed,
-        rows.map((r) => ({
-          guardReason: r.guard_reason as GuardRefusalReason | null,
-          action: r.action,
-          resultStatus: r.result_status,
-          count: r.n,
-        })),
-      );
-    },
+    funnelFor: (personaId) => funnel.read(personaId),
 
     recordOptionLifecycle(personaId, activities): number {
       db.exec("BEGIN");

@@ -580,19 +580,30 @@ async function main(): Promise<void> {
     );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
     telemetry.listening();
-    // Then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read.
+    // Then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read,
+    // then each bot's decision funnel, so the first Decisions open is not either (#4619).
     // Best effort: a failed warm leaves the fold to the first request, which reads it the same way.
-    void warmPulseFolds(
+    const { funnelFor } = insightsBridge;
+    void warmFolds(
       roster.map((p) => p.id),
       readPulseHistory,
-    ).then(() => readWireFeed().catch(() => undefined));
+    )
+      .then(() => readWireFeed().catch(() => undefined))
+      .then(() =>
+        funnelFor
+          ? warmFolds(
+              roster.filter((p) => p.kind === "bot").map((p) => p.id),
+              async (id) => funnelFor(id),
+            )
+          : undefined,
+      );
   });
 }
 
 /** Fold each participant's history one at a time after `listen`, yielding between them so the
  *  first requests after a deploy are never queued behind all twelve (#4619). Best effort: a
- *  failed warm leaves that participant to fold on its first Pulse, exactly as before. */
-async function warmPulseFolds(
+ *  failed warm leaves that participant to fold on its first request, exactly as before. */
+async function warmFolds(
   ids: readonly string[],
   read: (id: string) => Promise<unknown>,
 ): Promise<void> {
