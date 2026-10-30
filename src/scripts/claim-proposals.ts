@@ -12,8 +12,8 @@
  * THE COMMITTED COPY (#5482 criterion 6). `research:claims` calls `writeRefinement` for each
  * conviction it scores, so the pull request that decides a claim carries what it implies as a diff
  * under `docs/research/convictions/refinements/` (a subdirectory: the research lint and the
- * forward-test proposal reader read only the conviction docs beside it). Opening a separate change
- * PR from a proposal's key is the next step.
+ * forward-test proposal reader read only the conviction docs beside it). A failed claim's key is
+ * adopted in its own held PR by `npm run research:refine` (`claim-refine.ts`).
  */
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
