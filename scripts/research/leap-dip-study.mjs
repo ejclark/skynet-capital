@@ -131,7 +131,8 @@ function modelLeap(series, i, { months, delta, hold, takeProfit, ivScale = 1 }) 
     const left = Math.max(years - k / YEAR, 0);
     const vol = volAt(i + k, entryVol);
     mark = callValue(series[i + k].close, strike, left, vol) * (1 - SLIPPAGE);
-    if (takeProfit && mark >= takeProfit * paid) return { roi: mark / paid - 1, days: k, hit: true };
+    if (takeProfit && mark >= takeProfit * paid)
+      return { roi: mark / paid - 1, days: k, hit: true };
   }
   return { roi: mark / paid - 1, days: hold, hit: false };
 }
@@ -253,7 +254,10 @@ for (const [label, list] of [
   ["fell and stayed down", FALLEN],
 ]) {
   report(`ordinary day, ${label}`, measure(ordinaryDays(list), SHAPE));
-  report(`trigger, ${label}`, measure(episodes(TRIGGERS["30%+ off high, QQQ 10%+ off high"], list), SHAPE));
+  report(
+    `trigger, ${label}`,
+    measure(episodes(TRIGGERS["30%+ off high, QQQ 10%+ off high"], list), SHAPE),
+  );
 }
 
 const bear = episodes(TRIGGERS["30%+ off high, QQQ 10%+ off high"]);
@@ -267,7 +271,10 @@ for (const [label, from, to] of [
   ["2021-23 rate bear", "2021", "2024"],
   ["2024 on", "2024", "2030"],
 ]) {
-  report(label, bearRows.filter((r) => r.date >= from && r.date < to));
+  report(
+    label,
+    bearRows.filter((r) => r.date >= from && r.date < to),
+  );
 }
 
 console.log("\n=== Shapes: same trigger, every shape sold with 6 months left");
