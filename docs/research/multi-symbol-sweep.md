@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A published release hour is the hour the page goes live" (FT-nar-metro-home-prices-2026-10-29-1) and "The autumn FOMC+1 session is an ordinary homebuilder day" (FT-nar-metro-home-prices-2026-10-29-2)** — added 2026-10-30 from the
+  [nar-metro-home-prices-2026-10-29 close-out](events/nar-metro-home-prices-2026-10-29.md). NAR's Q3 metro release carried a page stamp of 08:15 ET against a published schedule of 10:00 ET
+  (the three earlier 2026 editions matched exactly), and ITB ranged **3.690%** on a session that stacked FOMC+1, GDP and PCE at 08:30 and DHI's pre-open print, against a 2.504% line set from an n=10 null.
+  Do not register a publisher's hour as a date-keyed claim off a 3-for-3 record, and do not set a quiet-session line from an n=10 subset when a same-morning builder print is dated.
+
 - **"The annual update does not buy a sub-3.2% core handle, because the underlying series is accelerating into it" (FT-pce-2026-10-29-2)** — added 2026-10-30 from the
   [pce-2026-10-29 close-out](events/pce-2026-10-29.md). September core PCE printed **3.1% y/y** (BEA, 10-29), below the 3.2% line. The 09-15 registration netted a pre-revision Cleveland
   nowcast (3.49%) against a sourced −10 to −30bp revision range; the realized 09-30 revision (−0.36pp on July core) ran past the range's low end. Do not register a y/y-level
