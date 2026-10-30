@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `(the workflow never started)` red on main: never file a parsed run as a rejected workflow file
+- **SHA:** d350998   **DATE:** 2026-10-30   **STATUS:** closed
+- **COVERS:** ae01b5f
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `(the workflow never started)` on `main`, the first [41103012157](https://github.com/ejclark/skynet-capital/actions/runs/41103012157) at 2026-10-30T17:59:45Z. Repair capsule #6356 filed 2026-10-30T18:10:29Z, closed 18m later by #6358.
+- **ROOT CAUSE:** Pipeline run 41103012157 failed at `release · deploy bots` with the same signature as #5955. The bots machine is `stopped`, waiting on Eric's revive paste. The triage read the run's jobs 48s after it completed and saw no failed job; GitHub's jobs read was lagging, and the same endpoint answered 502 minutes later. The lane then fell through to `parseFailure` and filed #6356, "the workflow never started". The run was named `Pipeline` and had five jobs; its own evidence text claimed the name was the file path. Two costs followed. A repair session went hunting for a syntax error that `workflow-lint` says does not exist. The real recurrence also never reached #5955, which carries `needs-eric`, s…
+- **PREVENTION:** spec — `tests/scripts/moneypenny/repair.spec.ts` (#6358).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `sync project status` red on main: keep github's reason when a rest read fails, so a rate limit skips the board sync
 - **SHA:** 872cb69   **DATE:** 2026-10-26   **STATUS:** closed
 - **COVERS:** 09e8710 3c47942
