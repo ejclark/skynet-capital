@@ -303,6 +303,84 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-10-30, D+3).** Macro-print mode carries no `earnings-cycle` / `intraday-edges`
+instrument (`symbols: []` by design) — the instrument cache was busted per the lane's contract
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) but has no target
+here, so the release and the tape are re-fetched fresh rather than re-run. Primary:
+conference-board.org/topics/consumer-confidence fetched direct 2026-10-30 (HTTP 200, 331,262 B),
+headed "US Consumer Confidence Increased in October," *Updated: Tuesday, October 27, 2026*. The page
+now states *"The next release is Tuesday, November 24th at 10 AM ET."*
+
+**What printed — the opposite of the base case, on every number the call sheet named.** Headline
+**91.7**, **+7.5** from September, which is itself revised **up** to **84.2** (first printed 81.9).
+**Present Situation 120.4** (+8.6). **Expectations 72.6** (+6.9), *"only partially reversing three
+consecutive monthly declines"* and still below the Board's 80.0 recession-signal line (below it
+since February 2025). Net business conditions **+3.6%** (+4.8pp, "good" 21.4% vs "bad" 17.8%); jobs
+plentiful **26.7%** vs hard-to-get **21.4%** = **+5.3pp** differential (+2.4pp); net expectations for
+business conditions **−3.0%** (+5.7pp), labor market **−11.1%** (+1.8pp), household income **+6.7%**
+(+3.5pp) — all three Expectations components improved. 12-month inflation expectations
+**5.8% average**, down from 6.1% (the median is not stated in the release text read today).
+Survey window **Oct 1–21** (cut-off **Oct 21**), so it did span the 10-14/10-16 selloffs the ledger
+flagged and still rose. The Board's explanation: the gain tracked *"retail gasoline prices easing
+from September to October"*; write-ins on war and conflict eased for a second straight month; planned
+spending on services and durables fell. Street consensus, search-relayed from two secondary
+aggregators only (the Board's page carries none): **~81.0**, a **~10.7-point beat** — unverified, so
+the size of the miss is soft though its sign is not. The Board's own words, *"confidence revived to
+June levels,"* mark the level; it still calls the long-run trend down.
+
+**Scoring the standing calls (all from the numbers above).**
+
+- **"This month" call — headline under 90, Expectations below 68.2: WRONG on both legs.** 91.7 is
+  1.7 above 90 and 72.6 is 4.4 above 68.2. Its dated falsifier (*the 10-27 release printing
+  Expectations above 68.2*) fired exactly as written. The 10-18 row's reasoning (gasoline complaints
+  at highs, Brent $109.86, survey window overlapping the selloff) extrapolated the September trend;
+  the survey instead tracked retail gasoline easing even while Brent kept rising into 10-23
+  (**$116.72**). The call was Low confidence by its own label, and it was the wrong side of a mean
+  reversion in a series that had just printed a 12-year-low.
+- **Kill switches.** *Expectations above 80* — did **not** fire (72.6). *Expectations below ~62* —
+  did not fire (10.6 above). *Any print date moves off Oct 27–29* — did not fire. *This print visibly
+  moves the tape (S&P ≥0.5% attributable)* — **unscoreable**: S&P rose **+0.60%** on 10-27 but the
+  same session carried durable goods, new home sales, Case-Shiller, the 5Y auction and the MSFT
+  print's estimated date, and no source isolates the 10:00 ET bar. Recorded as confounded, not as
+  support for or against leg 7's base rate.
+- **"Stand aside" / "flat into Oct 27–30": nothing to score — no position, no trade, no sizing
+  change existed to be right or wrong.** `symbols: []`. Whether it was *correct* to be flat is
+  the FOMC / GDP / PCE / mega-cap ledgers' to adjudicate, not this survey's.
+- **Revision pattern — a standing risk reverses sign.** The September ledger recorded August
+  revised **down** (89.4 → 88.6). September is now revised **up** (81.9 → 84.2). Two revisions, two
+  directions: a first-print comparison and a revised-series comparison can differ by 2+ points
+  either way, so score against the *as-published* figure the ledger registered, and name the
+  revision beside it.
+- **Cross-reads.** UMich final (10-23) was **48.0** against a 46.3 prelim; the Conference Board
+  survey window (Oct 1–21) ended two days before it, and the two indices moved in opposite
+  directions from their September levels (UMich 48.1 → 48.0, flat; CB 84.2 → 91.7). The read-through
+  this ledger called "negative-but-flat" held for UMich and failed for the Board.
+
+**Forward tests.** None registered by this ledger — the 10-18 and 10-26 rows said the sibling's FT-1
+and FT-2 already cover the series — so this event has no fragment and nothing to score. The
+sibling's FT-2 (12-month inflation expectations above ~5.8%) scored on the 09-29 print; October's
+5.8% is the figure that line was anchored on, now back to it. `npm run research:claims -- --event
+consumer-confidence-2026-10-27` was run: no conviction reads this event's rows.
+
+**Market reaction (Yahoo daily closes, direct, 2026-10-30 — the 10-30 bar is an intraday read and
+is not used).** 10-26 → 10-27: S&P 500 **7,676.77 → 7,722.60 (+0.60%)**, Nasdaq-100 **29,273.40 →
+29,651.44 (+1.29%)**, VIX **18.39 → 17.52**, 10Y ^TNX **4.99% → 4.99%**, Brent **$115.81 →
+$113.88**. The rates market did not move on a 10-point beat, which is the cleanest single read in
+the set: a yield-flat day does not read a stronger consumer as hawkish news for the 10-28 FOMC. By
+10-29: S&P **7,720.39**, VIX **17.20**, 10Y **4.99%**. Attribution to this print is **not**
+claimed.
+
+**What to carry forward.** (1) The series is mean-reverting on a one-month horizon after an
+extreme print; a trend-extrapolating Low-confidence call should name the reversion case in its
+falsifier column, not only the continuation case. (2) Check the poll-sourced calendars for a
+consensus *before* writing "none exists" — the sibling's correction applied here again: this ledger
+repeated "no consensus, structural" in every row and only the web search at close-out found ~81.0.
+(3) The 11-24 edition is tracked as `consumer-confidence-2026-11-24`; its ledger inherits September's
+and October's revisions as the baseline. **Loop stage a person still had to do:** none in this
+close-out. The consensus-hunting miss in (2) is a *sense* gap the next initial research can close.
+
 **Last assessed:** 2026-09-27
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"medium:8+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","meta-2026-10-28-print","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23"],"adjacentStrongIds":["fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","eci-q3-2026-10-30"],"screenStreak":0} -->
 
@@ -320,3 +398,6 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":18.22,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->
