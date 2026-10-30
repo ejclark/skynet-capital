@@ -1,6 +1,6 @@
 # Long LEAPs after a pullback: the contract matters, the dip does not
 
-**Kind:** event study (price only, options modeled) · **Date:** 2026-10-30 · **Symbols:** NVDA, CRWV · **Impact:** medium
+**Kind:** event study (price only, options modeled) · **Date:** 2026-10-30 · **Symbols:** NVDA · **Impact:** medium
 **Last assessed:** 2026-10-30
 
 **Question (Eric, 2026-10-30):** after a steep pullback in a bearish market, is a long LEAP (12+
@@ -19,7 +19,7 @@ only; educational; not investment advice.
 | Any name · require a bearish market too? | **Don't gate on it** | medium | QQQ 20%+ off its high won 53%, the worst tested; it also keeps 2000–03, which lost | The same forward record shows entries with QQQ 10%+ off high beating the rest over two separate sell-offs |
 | Any name · the contract | **24 months, 0.80 delta, half sold at double, rest out with 6 months left** | low | Modeled mean +83%, win 63%, lost over half 22%; 18m 0.50 lost over half 41%. It holds 18 months, others 12 | **2028-01-31**: real marks show the 0.80 losing over half as often as the 0.50 |
 | NVDA · today | **Not at the line yet: fires at 15% off high, about $203** | low | $204.84 is 14% off $239.24, 0.4% over its 200-day. 16 past 30%+ entries won 56% | NVDA closes 15%+ off high and the first such entry, bought at the real quote, is under water at **2027-10-29** |
-| CRWV · today | **Far past the line, but the worst lever. Wait out the print** | low | 60% off high; 90% vol makes the modeled 18m premium 41% of spot (NVDA 23%), leverage ~1.7x vs ~3.0x. The conviction's fence bars buys until 6 sessions after the ~11-10 print | CRWV's real 18-month 0.70-delta ask, read after the print, is under 30% of spot |
+| CRWV · long LEAP | **Not a long-LEAP name. Its money is in the swings, so it goes to its own plan** (Eric, 2026-10-30) | low | 60% off high, but 90% vol makes the modeled 18m premium 41% of spot (NVDA 23%), leverage ~1.7x vs ~3.0x: a LEAP pays for the swings instead of earning from them | CRWV's real 18-month 0.70-delta ask, read after the ~11-10 print, is under 30% of spot |
 | Both · how much | **Size for a total loss** | medium | 22–41% of modeled entries lost over half by shape; dot-com entries 63%, 2021–23 entries 57% | Nothing dated proves this wrong. It is a risk stance |
 
 **TL;DR.** Buying a long-dated call after a dip did about as well as buying one on any other day.
