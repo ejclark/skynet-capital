@@ -353,6 +353,7 @@ Four predictions carry score-by dates and are registered in
 | 2026-10-16 | D-13 | **Pulse; stance holds (stand aside); the tape got louder, the print did not move.** *Terms:* MOF `2610e.htm` (HTTP 200, direct) Oct. 29 2-year row still shows bare `Detail` cells, no `href`; announcement due ~10-22 (D-7), so `FT-1` (No.490, ¥2,800bn) is untouched. *Rates (MOF `jgbcme.csv`, direct):* 2Y **1.913%** on 10-15 (1.939 on 10-01, 1.848 on 09-08), so `FT-3`'s band is {1.9%, 2.0%}. *BoJ:* MPM still Oct. 29 (Thurs.), 30 (Fri.) on boj.or.jp (HTTP 200), so the day-one overlap (`FT-2`/`FT-4`) holds; press (Japan Times 10-13) says officials lean against a back-to-back October hike, ~10% priced, December ~88% (secondary). *Vol (Yahoo, secondary):* VIX **19.99** on 10-16 vs 15.41 (+4.6pt, regime shift); S&P 500 7,659 (-1.1%), Nasdaq 26,140 (-2.1%); USD/JPY 157.99 flat. A higher-vol FOMC day (10-28) makes a thin day-one cover easier to get, so read `FT-2` against the 3.540 cohort and discount a weak print. No JGB/yen-attributed tracked-name move found (kill 1 unfired). *Adjacency:* 50 ids within 5d (48 at the last probe); new in corridor: `japan-cpi-tokyo-flash-2026-10-30`, `tic-shca-annual-final-2026-10-30`, `uk-gilt-auction-short-2026-10-27`, all tracked (`--on-date` run for 10-22 and 10-29); nothing proposed. Beyond horizon: BoJ Dec. 17-18 MPM, not filed (#2946). Band now low:0+ (7d). | None - stand aside holds; no forward test changed | 2026-10-23 |
 | 2026-10-16 | D-13 | **Full pulse (screen tripped: VIX +4.6pt, band `low:15+`→`low:0+`, ISM 11-02 now a strong adjacent).** **Calendar:** MOF `2610e.htm` (HTTP 200) still shows bare `Detail` on this row, no `href` and no issue number — terms not out, ~10-22 lead unbroken; BoJ index (HTTP 200) still reads MPM `Oct. 29 (Thurs.), 30 (Fri.)`, so the day-one condition stands. **Peer print:** the 10-14 JGB 5Y cleared issue 188, 2.4%, maturity 2031-09-20 (MOF result page, HTTP 200), bids 6,818.2 / accepted 1,915.1bn (≈3.56x), low price 100.07 vs avg 100.09 — the sibling's issue/maturity call held; no stress. **Rates:** MOF 2Y 2.045% (10-15) vs 1.848% (09-08), +20bp, same one-way tape; saturation margin only widens. **Vol:** VIX 19.99 (10-16, Yahoo secondary) vs 15.41, 20-session range 14.21-19.99; I found no sourced cause (search came back empty), so unattributed. `symbols: []`, nothing to re-price. Past the horizon: none. **Dated finds:** none new (ISM 11-02, Tokyo CPI 10-30 already on calendar). **Checked:** 2Y coupon band for 10-29 is now `{2.0, 2.1}` at this close (estimate). | None — stand aside holds; no tracked symbol, so the VIX move changes no call. Kill switch 1 not yet testable | 2026-10-23 (`low:0+`, 7d; the ~10-22 announcement should be out — confirm issue 490 and ¥2,800bn) |
 | 2026-10-26 | D-3 | **Pulse; stance holds (stand aside). The terms are out: offering half of `FT-1` passes, the issue number is still unprinted.** *Terms:* MOF announcement `auct20261022e.htm` (HTTP 200, direct, dated 10-22 = D-7) reads auction 10-29, issue 11-02, maturity 2028-11-01, **"About 2,800 billion yen"**, so the size held at the sixth straight print; the page prints NO issue number, and the `2610e.htm` row for this auction still shows no `(No.)` while every other October tenor shows one, so **No.490 stays an inference** and `FT-1` is not scored (score-by 10-29). *Rates (MOF `jgbcme.csv`, direct):* 2Y **1.872%** on 10-23 (1.914 on 10-22; 1.918 on 10-16 — the second 10-16 row's 2.045 does not match the file), so `FT-3`'s coupon band is {1.9%, 2.0%}. *Peer print:* 20Y on 10-20 (MOF result, direct) bids 3,139.0 / accepted 537.1 = **5.84x**, avg 3.723%, tail 0.07, a strong print with no supply stress. *BoJ:* index (HTTP 200) still reads MPM Oct. 29, 30, so `FT-2`/`FT-4` stand; press (secondary) has a hold at 1.25% base case, ~10% October, ~88% December. *Fed (secondary):* FOMC 10-28 hold ~80% priced as of 10-05, so I read it as stale. *Vol (Yahoo, secondary):* VIX **17.86** (10-26) vs 19.99 on 10-16, range 16.68-19.45 since, back inside the old band; USD/JPY 157.62; S&P 7,692. No JGB/yen-attributed tracked-name move found (kill 1 unfired). *Adjacency:* `--on-date` run for 10-22 and 10-29; new in corridor since the last probe: `dhi-q4-fy2026-2026-10-29`, `intc-fq3-2026-results-2026-10-29`, both already tracked; nothing proposed. Beyond horizon: BoJ Dec. 17-18 MPM, not filed (#2946). Warning stands: score the cover against the 3.540 day-one cohort, not 3.885. Band `low:0+` (7d). | None - stand aside holds; no forward test changed | 2026-10-29 (the result; score `FT-1`-`FT-3`) |
+| 2026-10-30 | D+1 | **Close-out; stance held (stand aside), scored from MOF primaries re-fetched direct.** Result `eresul20261029.htm` (HTTP 200): issue **490**, coupon **1.9%**, bids Y8,539.2bn / accepted Y2,118.4bn = cover **4.031**, avg yield 1.905%, tail 0.7bp, allotment 83.65%. `FT-1` PASS (Y2,800bn, 10-22 lead; number on calendar/result only), `FT-2` PASS (4.031 <= 4.470), `FT-3` PASS (1.9% vs 2Y close 1.901%), `FT-4` open to 2027-06-30. Tape: 2Y 1.915 -> 1.901, USD/JPY 157.83 (-0.10%) on 10-29, no JGB/yen headline found; AI-complex fell hard (MRVL -13.2% 10-29, VIX 22.57 live on 10-30), KS1 not fired. Full detail in `## Outcome`. | None (close-out) | — (closed; `FT-4` re-opens 2027-06-30) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -374,3 +375,81 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.86,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","meta-2026-10-28-print","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0} -->
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":22.57,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","meta-2026-10-28-print","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+1; inside `closeOutWithinDays`).** Rates mode runs no `earnings-cycle` /
+`intraday-edges` instrument (`symbols: []` by design); the cache was busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) though nothing here
+reads it. Every figure below was re-fetched direct on 2026-10-30, never carried from an earlier row.
+**Scope limit, stated first:** the 2026-10-30 session was still open at assessment time (the Yahoo bars
+are live), so every 10-30 move below is provisional and is not scored as a close.
+
+### What happened
+
+MOF primaries, all HTTP 200: the announcement `auct20261022e.htm` (page dated **October 22, 2026**, D-7,
+inside the predicted window) names Auction Date 2026-10-29, Issue Date 2026-11-02, Offering Amount
+**About 2,800 billion yen** and prints no issue number. The October calendar `2610e.htm` now prints
+`2-year(490)` on the Oct. 29 row. The result page `eresul/eresul20261029.htm` prints issue **490**,
+maturity **2028-11-01**, nominal coupon **1.9%**, competitive bids **Y8,539.2bn** against **Y2,118.4bn**
+accepted (**cover 4.031**), lowest accepted price 99.975 (yield 1.912%), weighted average 99.989 (yield
+**1.905%**) so **tail 0.7bp**, allotment at the lowest accepted price **83.65%**, non-competitive
+bids Y1.070bn and Y680.1bn accepted at the Non-price-competitive-I round (round II: none).
+
+Against the family: cover 4.031 sits above the era mean (3.885) and the day-one mean (3.540) the ledger
+told readers to use, so this was not a thin print; the tail is mid-range for the series (0.1 to 1.7bp).
+MOF `jgbcme.csv` (direct): 2Y **1.915%** on 10-28, **1.901%** on 10-29; 10Y 2.867% to 2.876%. BoJ's
+policy-release index (HTTP 200) lists the Statement on Monetary Policy, Outlook Report, an ETF-sales
+pace decision and the updated Q4 JGB purchase schedule all dated Oct. 30, so the Oct. 29-30 MPM ran as
+scheduled and this auction did clear on its day one. The statement text was a PDF this runner could not
+extract, so no policy outcome is asserted here; `boj-decision-2026-10-30` owns that read.
+
+### Forward tests
+
+- **FT-1 (No.490, Y2,800bn, lead inside 10-19 to 10-22) - PASS.** Offering and lead hold; 490 is on the
+  calendar and the result page, not the announcement, so "the announcement names 490" is true only of the
+  published calendar, and the kill (any other number) did not fire. Issue sequence now 45 of 45 gapless.
+- **FT-2 (cover at or below 4.470) - PASS, weak by construction.** The four day-one covers are again the
+  four lowest of the eight July/October prints, every one below the lowest near-miss (4.187); exact
+  permutation over C(8,4)=70 gives p=0.014 at n=4, the minimum attainable. Not called: six comparisons
+  were run to find it, the MPM-eve confound stands, and 4.031 is the print closest to the line.
+- **FT-3 (coupon not below rounded close) - PASS.** Coupon 1.9% equals the 10-29 close (1.901%) rounded
+  to 0.1%; 0 below in 35, 33 exact.
+- **FT-4 (non-Outlook MPM collision rule, through 2027-06-30) - OPEN.** Past the close-out window by
+  construction; it re-opens as `forward-test-due` on its date.
+
+### Kill switches, re-adjudicated at close
+
+- **KS1 (no-price-channel premise) - not fired, with a limit.** Tracked names moved well over 2%: on
+  10-29 MRVL -13.2% and CRWV -5.0% (NVDA -0.8%, AVGO -1.9%); on 10-30, provisional, NVDA -5.9%, AVGO
+  -6.9%, MRVL -12.2%, CRWV -11.3%, VIX +31% to 22.57 (Yahoo, secondary). But the attribution half did not
+  fire: USD/JPY moved -0.10% on 10-29 and -0.29% on 10-30, the 2Y moved -1.4bp, and two web searches
+  found no JGB or yen headline for either session. The AMZN and AAPL prints landed 10-29 after the close
+  (`amzn-2026-10-29-print` Outcome), the likelier driver, and MRVL's own cause was not found, so this
+  is "no attribution found", not proof of no channel.
+- **KS2 (cover above 4.470) / KS3 (non-Outlook MPM near month-end) / KS4 (coupon below rounded close) /
+  KS5 (issue number other than 490) / KS6 (offering other than Y2,800bn) - not fired**, same evidence as
+  above. KS3 is a 2027 statement and rests on `FT-4`, which stays open.
+- **KS7 (workbook or family basis moves) - not re-checked** at close; nothing here depends on it.
+
+### The stance calls, scored
+
+- **Stand aside, permanently - CORRECT.** Nothing was keyed to this auction; the auction was uneventful
+  while the equities the calendar does trade moved on other news.
+- **Day-one cohort as the comparison set (This quarter, Medium) - CONSISTENT, one more observation.**
+  The print was inside the cohort's pattern, above it in level; it improves n to 4 and settles nothing.
+
+### Honest limits
+
+- The BoJ statement PDF text was not extracted, so no BoJ policy outcome is stated.
+- 10-30 equity, VIX and USD/JPY readings are live intraday Yahoo bars (secondary), provisional.
+- Two web searches for a JGB/yen cause of the tracked-name moves returned nothing dated, so KS1 is
+  "no attribution found".
+- Process census: the manual step left in this loop is fetching the result page and re-deriving cover
+  and tail by hand; a small script over the result page would close it (idea, not built here).
+
+**Kill list.** No ticker-level hypothesis was ever carried here, so nothing is added to
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list.
