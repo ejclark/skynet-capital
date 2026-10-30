@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The UK domestic-electricity zero rate is a fixed six-month notch; extension needs a fresh SI the Budget will not supply" (FT-uk-electricity-vat-zero-rate-2026-10-01-2)** — added 2026-10-30 from the
+  [uk-electricity-vat-zero-rate-2026-10-01 ledger](events/uk-electricity-vat-zero-rate-2026-10-01.md). Budget 2026 (10-28) extended the 0% rate to **1 July 2027** (gov.uk AB26 policy costings;
+  −£755m 2026-27, −£305m 2027-28). Do not register "a temporary tax relief lapses on its statutory date" ahead of a fiscal event that owns the extension decision: a sunset written into the
+  instrument is a default, and a Budget is the one dated venue built to move it.
+
 - **"A 19.4M-share staged lock-up release (~2 days of volume) moves CBRS no more than an ordinary bad day" (FT-cbrs-lockup-expiry-2026-11-09-1)** — added 2026-10-30 from the
   [cbrs-lockup-expiry-2026-11-09 ledger](events/cbrs-lockup-expiry-2026-11-09.md). The 10-28 tranche day closed **-7.40pp** vs SMH (-5.66% vs +1.74%) on 18.97M shares, past the -5% line,
   the day after a +7.1pp excess day with no filing behind it. Do not register a tranche-day "within noise" claim off five prior tranche days (mean -0.4%, σ 4.4%); n=5 did not bound the tail,
