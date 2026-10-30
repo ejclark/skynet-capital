@@ -517,3 +517,112 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.87,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+3 — inside `closeOutWithinDays: 6`, ceiling 2026-11-02).** `symbols: []`,
+so the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`)
+has no target of its own; every number below is a fresh fetch this session — the Census release page,
+Yahoo daily bars (high/low/close, ITB·XHB·DHI·LEN·PHM·TOL·SPY·QQQ·`^VIX`), both Atlanta Fed workbooks
+and the Fed's own statement. The 10-30 bar is partial (fetched ~14:20 ET) and is used for nothing
+scored.
+
+### Leg 1 — the print, read from the primary itself
+
+`census.gov/construction/nrs/current/index.html` (HTTP 200, 243,994 B) and
+`construction/nrs/pdf/newressales.pdf` (HTTP 200, `last-modified` 2026-10-27 14:00:04 GMT = 10:00 ET,
+as scheduled), release **CB26-174**:
+
+| Line | September 2026 | vs. revised August 2026 | vs. September 2025 |
+|---|---|---|---|
+| New houses sold (SAAR) | **676,000** | **−0.6% (±13.8%)\*** (from a revised **680,000**) | −5.3% (±12.5%)\* (from 714,000) |
+| New houses for sale | **476,000** | −1.0% (±0.9%) (from 481,000) | −2.3% (±4.0%)\* |
+| Months' supply | **8.4** | −1.2% (±14.7%)\* (from 8.5) | +2.4% (±14.1%)\* |
+| Median sales price | **$400,400** | +3.9% (±6.2%)\* (from $385,400) | −3.9% (±8.9%)\* |
+| Average sales price | **$472,800** | +0.4% (±6.1%)\* | −6.7% (±6.6%) |
+
+`*` is Census's own not-statistically-significant flag. The slot held (7th consecutive on-schedule
+edition; `schedule.html` and the FOMC pairing re-read unchanged at the 10-26 pulse). August was
+restated **684,000 → 680,000 (−0.6%)** — one revision, recorded as a fact and **not** scored against
+`FT-…-4`, which measures September's restatement on 2026-11-25. Against the secondary-reported
+consensus of ~**650,000** (`NEWS:` investinglive, FT Portfolios — not a primary) the headline was a
+**~4% beat**, yet the m/m sat at −0.6% against a ±13.8% error bar: a "beat" on a level the publisher
+will not call different from the prior month, exactly the shape Leg 5 described.
+
+### Leg 2 — the tape: 10-27 quiet, 10-28 loud, as registered
+
+Session high-low range, % of close (Yahoo daily bars):
+
+| | 10-26 | **10-27 (print, FOMC-eve)** | **10-28 (FOMC decision)** | decision/eve |
+|---|---|---|---|---|
+| ITB | 2.971 | **2.125** | **3.394** | **1.60×** |
+| XHB | 1.654 | 2.057 | 2.572 | 1.25× |
+| SPY | 0.797 | 0.770 | 0.533 | 0.69× |
+| QQQ | 1.358 | 1.287 | 0.805 | 0.63× |
+| DHI | 2.423 | 2.258 | 5.510 | 2.44× |
+| LEN | 3.322 | 2.400 | 3.775 | 1.57× |
+| PHM | 2.671 | 1.924 | 3.951 | 2.05× |
+| TOL | 1.588 | 2.332 | 3.081 | 1.32× |
+
+ITB's print-day range (2.125%) is at its 2.012% 2021+ baseline and below the next day's, which is
+the registered ordering; ITB closed 10-27 at +0.61% open→close against SPY +0.30%, small and
+unremarkable. The index ETFs were *not* louder on the decision day (SPY 0.533%, QQQ 0.805%), so the
+"decision day is loud" half held for the housing complex (ITB, DHI, LEN, PHM, TOL, XHB), not for
+the index — consistent with the registration, which named ITB as the instrument under test. The FOMC
+primary (`federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm`, HTTP 200): range held
+at **3¾–4%**, vote **10–2**, Cook and Hammack dissenting in favor of a **hike**. VIX closed 17.52
+(10-27) and 16.91 (10-28), then printed ~22 intraday on 10-30 with SPY −1.2% and QQQ −1.7% (partial
+bars) — a regime move two sessions after the window, unconnected to this print.
+
+### Leg 3 — the nowcast, on the model's own archive
+
+`GDPNowcastDataReleaseDates.xlsx` (HTTP 200, 16,944 B — byte-identical to the 09-06 read) →
+`PostedUpdates` row 69, **2026-10-27: "Advance Census manufacturing (M3-1) , New-home sales"**, exactly
+the two-item bundle Leg 3 relied on. `GDPTrackingModelDataAndForecasts.xlsx` (HTTP 200, 10,977,477 B)
+→ `ContribArchives` rows 1908-1910:
+
+| Vintage | `Data releases` | Residential contribution | GDP nowcast |
+|---|---|---|---|
+| 2026-10-20 | Housing starts | −0.0993pp | 3.499% |
+| **2026-10-27** | **Advance Census manuf. (M3-1), New-home sales** | **−0.1348pp** (Δ **−0.0356pp**) | 3.412% (Δ −0.087pp) |
+| 2026-10-28 | Advance Economic Indicators | −0.1347pp (Δ +0.0002pp) | 3.272% |
+
+The residential move is 0.0356pp and the GDP move is 0.087pp — the latter below the 0.0961pp
+baseline, the same "moves residential, not the headline" footprint Leg 3 measured.
+**One registration slip, disclosed rather than silently absorbed:** `FT-…-1` and the stance text call
+this the "Q4-2026" residential contribution, but on 10-27 the model was still nowcasting **2026:Q3**
+(the 10-28 row is the *final* Q3 nowcast; the *initial* Q4 nowcast posts 10-29, `PostedUpdates` row
+71). The quantity measured — the 10-27 vintage against the immediately preceding vintage — is the one
+the base rates were built on (same-quarter deltas), so it is scored as registered in substance.
+
+### Forward tests, scored (three of four)
+
+| Test | Prediction | Printed | Verdict |
+|---|---|---|---|
+| `FT-new-home-sales-2026-10-27-1` | 10-27 GDPNow vintage moves residential by ≥0.02pp | Δ **−0.0356pp** (2026:Q3, see slip above) | **PASSED** |
+| `FT-new-home-sales-2026-10-27-2` | m/m carries the not-statistically-significant asterisk | **−0.6% (±13.8%)\*** | **PASSED** |
+| `FT-new-home-sales-2026-10-27-3` | ITB 10-27 range below its 10-28 range | **2.125% < 3.394%** | **PASSED** |
+| `FT-new-home-sales-2026-10-27-4` | September restated by ≥1.0% on 2026-11-25 | needs the 11-25 edition | _open_, score by 2026-11-30 |
+
+Rows 1-3 carry a `Score by` of 2026-11-02, which has not arrived; they are scored now because the
+observation each one names (a published release, a closed session, a posted workbook vintage) is
+complete and cannot change, so scoring them does not pre-empt anything. `FT-…-4` sits past this
+window's ceiling and stays `_open_` for the scanner's `forward-test-due` re-dispatch (#2884).
+All three passes are high-base-rate registrations (78-92%); none is evidence of edge.
+
+### Stance — final word
+
+**Stand aside, confirmed at close.** `symbols: []`, no macro-keyed playbook exists, and nothing here
+licenses an entry. Kill switches: the ITB ordering (1st) did **not** fire; the significance kill
+(4th) did **not** fire (−0.6% ±13.8%); the date and the FOMC pairing held (6th, 7th); the
+macro-keyed-playbook switch (8th) did **not** fire — `docs/plans/trade-playbooks.md` and
+`multi-symbol-sweep.md` re-grepped today for macro/housing/Census keying, 0 hits. The 2nd, 3rd and
+5th need the post-2026-11-25 re-run and are untested. The corridor's housing risk was the Fed, as
+stated; the housing names' next large move (10-29, ITB +3.6% open→close) coincided with DHI's own
+results (`dhi-q4-fy2026-2026-10-29`), not with this series.
+
+**This document goes quiet**, with one door back in: `FT-…-4` reaching 2026-11-30 re-dispatches this
+lane as `forward-test-due` to fill only that Outcome cell.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":22.03,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->
