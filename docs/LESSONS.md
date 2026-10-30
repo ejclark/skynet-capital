@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `(the failed job could not be read)` red on main: keep re-reading a run's jobs while one still reads as running
+- **SHA:** 39d7201   **DATE:** 2026-10-30   **STATUS:** closed
+- **COVERS:** fd87f45
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `(the failed job could not be read)` on `main`, the first [41121443220](https://github.com/ejclark/skynet-capital/actions/runs/41121443220) at 2026-10-30T20:13:03Z. Repair capsule #6406 filed 2026-10-30T20:21:38Z, closed 18m later by #6413.
+- **ROOT CAUSE:** Pipeline run 41121443220 failed at `release · deploy bots` → `Smoke test the bots release` — the same stopped-machine fault #5955 already tracks (`needs-eric`, the `bots-revive.sh` paste). Its `deploy bots` job completed 20:17:56 and the run concluded 20:20:21, but every jobs read from 20:20:27 to 20:21:38 still showed that job `in_progress`. #6356's one-minute re-read ran out, so the lane filed #6406 under the unread signature instead of commenting the recurrence on #5955, and dispatched this repair session to re-diagnose a known fault. A job still running on a concluded run is positive proof the read is stale, so that case — and only that case — earns a longer wait.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/repair.spec.ts` (#6413).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `(the workflow never started)` red on main: never file a parsed run as a rejected workflow file
 - **SHA:** d350998   **DATE:** 2026-10-30   **STATUS:** closed
 - **COVERS:** ae01b5f
