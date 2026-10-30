@@ -314,3 +314,84 @@ doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":19.45,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+3).** Macro-print mode: `symbols: []`, so no `earnings-cycle` /
+`intraday-edges` run applies (the cache-bust was run regardless and touched nothing this doc uses).
+The release is scored from the **Census primary**, fetched direct today: `census.gov/manufacturing/m3/adv/pdf/durgd.pdf`
+(HTTP 200, 1.02 MB) — its text layer decoded this time (the 09-25 edition's primary did not), and it
+opens *"OCTOBER 27, 2026 … Release Number: CB 26-169 M3-1 (26-09)"*. The tape is Yahoo daily bars for
+SPY, QQQ and ^VIX pulled today; every number below is from those two sources, not from memory.
+
+**What printed — a real headline beat, a modest core, and a shipments line that turned positive.**
+
+| Line | Sep 2026 (CENSUS) | Reference |
+|---|---|---|
+| **Headline new orders** | **+1.8% to $345.4B** (+$6.3B), "up six of the last seven months" | Aug revised to **+0.1%** ($339.1B) |
+| Ex-transportation | **+0.5%** | Continuum preview **+1.0%** (miss) |
+| Ex-defense | **+2.2%** | — |
+| Transportation equipment | **+4.6% to $119.8B** (+$5.2B) — "led the increase" | Continuum **+8.5%** |
+| Nondefense capital goods, **orders** (incl. aircraft) | **+6.2% to $107.8B** | — |
+| Nondefense capital goods, **shipments** (incl. aircraft) | **+1.7% to $97.1B** | Aug **−1.3%** (09-25 ledger) |
+| Total durable-goods shipments | **+0.9% to $336.8B**, "up nine of the last ten months" | Aug **−0.2%** |
+| Defense capital goods orders | −1.8% to $20.8B | — |
+| Unfilled orders (nondefense capital goods) | +1.1% to $968.4B | — |
+
+Release header names **Next Release: November 25, 2026** — the successor `durable-goods-2026-11-25`,
+unchanged. Secondary corroboration (not relied on for any figure above): [FT Portfolios](https://www.ftportfolios.com/Commentary/EconomicResearch/2026/10/27/new-orders-for-durable-goods-rose-1.8percent-in-september)
+and Trading Economics both report **+1.8%** with ex-transportation **+0.5%**, against a headline consensus
+they put at ~+1.5–1.9%. **Scored against the 10-26 spread:** the headline (+1.8%) landed at the top of the
+aggregators' +1.3–1.8% band and far below Continuum's lone +3.5%; ex-transportation (+0.5%) came in
+under Continuum's +1.0%; transportation (+4.6%) under its +8.5%. Boeing's 165 September orders lifted
+the line, but not by the amount the Continuum call leaned on — leg 8's mapping stays unmeasured.
+
+**Scoring the reading order.** Ex-transportation **+0.5%** was positive (the "first negative core month"
+kill switch did **not** fire). The headline/core split held but **narrowed**: 1.8 vs 0.5 is ~3.6×, nowhere
+near the 10.9× of the σ table and far from August's flat-headline-over-strong-core, and the
+"headline and core move together by a similar magnitude" kill switch did **not** fire (they differ by
+1.3pp). **Leg 7's channel resolved the opposite way from August:** total nondefense capital-goods
+shipments — the line BEA takes into Q3 equipment investment two days later — rose **+1.7%** after
+August's −1.3%, so the third-month-of-Q3 shipments line this edition was flagged for printed constructive.
+Scored as a mechanism check only; the Q3 GDP advance (10-29) is owned by its own ledger and is not read here.
+
+**The tape on 10-27 (Yahoo, fetched 2026-10-30).**
+
+| | 10-26 close | 10-27 open | 10-27 high | 10-27 low | 10-27 close | Gap | Range / 10-26 close |
+|---|---|---|---|---|---|---|---|
+| **SPY** | 765.37 | 767.34 | 771.14 | 765.21 | 769.66 | **+0.257%** | **0.775%** |
+| QQQ | 712.20 | 715.12 | 722.87 | 713.59 | 721.25 | +0.410% | **1.303%** |
+
+VIX 18.39 → **17.52** on the day. **Forward tests scored from this table:**
+
+- **`FT-durable-goods-2026-10-27-1` — pass.** SPY's 10-27 range was **0.775%**, below the registered
+  **0.876%** line (a 0.101pp margin; the 09-04 registration's two-year median). The kill switch (≥ 0.876%)
+  did not fire. **Read it as weak evidence, by construction:** the base rate on FOMC day-1 was 10/16
+  (62.5%) against an unconditional 50%; it is one observation; and the confound the Honest limits named
+  moved in this test's favour — MSFT's print slipped to **10-28 after the close** (10-18 row), so day-1
+  carried no mega-cap print. QQQ, reported because it cuts against the clean story, ran **1.303%**,
+  *above* its 1.235% two-year median — the compression showed up on SPY and not on QQQ this time. The
+  open was ordinary: SPY gap **+0.257%** sits *below* the 0.287% median |gap|, so the predecessor's
+  "gap above the 90th percentile" kill switch did not fire on arithmetic alone (no session wrap naming
+  this release as a cause was sought or found; not asserted either way).
+- **`FT-durable-goods-2026-10-27-2` — pass.** Census published the September-2026 Advance Report on
+  **2026-10-27** (release header, `CB 26-169`), and the M3 schedule (re-fetched today) still reads
+  `September 2026 | 10/27/2026 | 11/3/2026`. The 8:30 ET time is from the Census indicator calendar
+  fetched at registration; the PDF text itself carries the date, not the clock time. H.R. 6500 was
+  never unwound (the release's existence is itself the evidence). A near-certain-by-construction pass:
+  it licenses nothing and says nothing about content.
+
+**Kill switches, final status:** day-1 range ≥ 0.876% (SPY) — **not fired**; gap > p90 — **not fired**;
+ex-transportation negative — **not fired** (+0.5%); headline/core co-moving — **not fired**; H.R. 6500
+unwound — **not fired**; Census re-dating the slot — **not fired**; Census publishing semiconductor new
+orders — not checked in this edition's text, no evidence it did; FOMC moving the meeting — **not fired**
+(10-28 decision is owned by [`fomc-2026-10-28`](fomc-2026-10-28.md)). **No stance change:** the print
+was a reading exercise, no position was licensed on it, and none is retroactively scored.
+
+**Honest limits of this close-out.** One session, n=1 for the day-1 configuration this doc called
+unprecedented — it neither confirms nor refutes the 16-session compression finding. The consensus
+column is secondary (aggregators plus one research-shop forecast); no verified street survey was found
+at any pulse. Yahoo bars are rounded to the cent, so the range is good to ~±0.002pp.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->
