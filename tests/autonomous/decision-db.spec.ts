@@ -10,6 +10,7 @@ import {
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { parseDecisionRecord } from "../../src/autonomous/decision-wire.js";
 import type { OrderIntent } from "../../src/domain/types.js";
+import { optionCloseIntent } from "../../src/playbooks/option-intent.js";
 
 const intent = (over: Partial<OrderIntent> = {}): OrderIntent => ({
   symbol: "NVDA",
@@ -665,6 +666,38 @@ describe("DecisionDb", () => {
       expect([...db.symbolsPlacedByPlaybook("sauron", "S1-NVDA")]).toEqual([mine.symbol]);
       expect(db.symbolsPlacedByPlaybook("sauron", "G1-GOOG").size).toBe(0);
       expect(db.symbolsPlacedByPlaybook("beta-scout", "S1-NVDA").size).toBe(0);
+    });
+
+    it("names the contracts one playbook placed under one strategy tag (#6340's trim memory)", () => {
+      const trim = (occSymbol: string, strategy: string): OrderIntent => {
+        const built = optionCloseIntent({
+          underlying: "NVDA",
+          legs: [{ occSymbol, side: "sell" }],
+          quantity: 2,
+          limitPrice: 66,
+          band: { low: 66, high: 67, at: "2026-10-30T15:00:00Z" },
+          strategy,
+          reason: "half at double",
+        });
+        if (!built) throw new Error("a well-formed close");
+        return { ...built, playbookId: "NVDA-LONG-LEAP" };
+      };
+      const trimmed = trim("NVDA280616C00160000", "nvda-long-leap-trim");
+      const timed = trim("NVDA270416C00160000", "nvda-long-leap-close");
+      db.record({
+        at: 1_000,
+        personaId: "sauron",
+        mode: "live",
+        rawIntents: [trimmed, timed],
+        guardedIntents: [trimmed, timed],
+        outcomes: [placed(trimmed, "o-3"), placed(timed, "o-4")],
+      });
+      expect([
+        ...db.occSymbolsPlacedUnder("sauron", "NVDA-LONG-LEAP", "nvda-long-leap-trim"),
+      ]).toEqual(["NVDA280616C00160000"]);
+      expect(
+        db.occSymbolsPlacedUnder("beta-scout", "NVDA-LONG-LEAP", "nvda-long-leap-trim").size,
+      ).toBe(0);
     });
   });
 

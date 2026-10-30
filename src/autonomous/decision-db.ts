@@ -126,6 +126,14 @@ export interface DecisionDb {
    *  positions IT opened stay on the book (#5609), without claiming a position the bot's own rules
    *  hold in the same name. Empty when it has placed nothing. */
   symbolsPlacedByPlaybook(personaId: string, playbookId: string): ReadonlySet<string>;
+  /** The OCC symbols this persona placed an option order on under one playbook and one strategy
+   *  tag (#6340) — a play's memory of what it already did to a contract, such as the long-LEAP's
+   *  one profit trim. Empty when it has placed nothing under that tag. */
+  occSymbolsPlacedUnder(
+    personaId: string,
+    playbookId: string,
+    strategy: string,
+  ): ReadonlySet<string>;
   /** How the sold puts one playbook opened under one strategy tag have ended for one persona
    *  (#4469 criterion 12, the wheel's retire test): `closed` is those the expiry or assignment
    *  reports ended, `assigned` the ones that finished in the money. A put bought back early or
@@ -288,6 +296,15 @@ export function openDecisionDb(path: string): DecisionDb {
     SELECT DISTINCT intents.symbol AS symbol
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
     WHERE intents.playbook_id = ? AND decisions.persona_id = ? AND intents.action = 'placed'
+  `);
+
+  const selectOccPlacedUnder = db.prepare(`
+    SELECT DISTINCT legs.occ_symbol AS occ
+    FROM intents
+    JOIN decisions ON decisions.id = intents.decision_id
+    JOIN intent_option_legs legs ON legs.intent_id = intents.id
+    WHERE intents.playbook_id = ? AND decisions.persona_id = ? AND intents.strategy = ?
+      AND intents.action = 'placed'
   `);
 
   const optionLedger = openOptionLedger(db, retrospectives.write);
@@ -601,6 +618,11 @@ export function openDecisionDb(path: string): DecisionDb {
     symbolsPlacedByPlaybook(personaId, playbookId): ReadonlySet<string> {
       const rows = selectSymbolsPlacedByPlaybook.all(playbookId, personaId) as { symbol: string }[];
       return new Set(rows.map((r) => r.symbol));
+    },
+
+    occSymbolsPlacedUnder(personaId, playbookId, strategy): ReadonlySet<string> {
+      const rows = selectOccPlacedUnder.all(playbookId, personaId, strategy) as { occ: string }[];
+      return new Set(rows.map((r) => r.occ));
     },
 
     putOutcomesForPlaybook: (personaId, playbookId, strategy) =>

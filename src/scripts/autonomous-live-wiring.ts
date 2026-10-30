@@ -42,7 +42,7 @@ import type { AuthoredRoster } from "../playbooks/authored-play.js";
 import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { ConvictionLookup } from "../playbooks/conviction-store.js";
-import type { EnabledPlaybook } from "../playbooks/playbook.js";
+import type { EnabledPlaybook, PlaybookReads } from "../playbooks/playbook.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
 import { withOptionSafety } from "../playbooks/with-option-safety.js";
@@ -420,6 +420,7 @@ export function tradingRoster(
     ledgerOf,
     intradayBars,
     placedBy,
+    reads,
   }: {
     /** The names this bot has placed orders on under a playbook (`decision-db`) — what shows an
      *  unsubscribed playbook still owns an open position, so its exits keep running (#5609). */
@@ -428,6 +429,9 @@ export function tradingRoster(
     /** The 5-minute bars a dark playbook records its would-be orders from (#5489) — absent when no
      *  feed is wired, and the playbook then records its verdict and nothing more. */
     readonly intradayBars?: IntradayBarsOf;
+    /** What a `decide` playbook reads beyond the context — the daily high, its own memory (#6340).
+     *  Absent reads leave a play that needs them buying nothing. */
+    readonly reads?: PlaybookReads;
     /** Each pair's history on this bot, for the conviction check — absent when the store is dark. */
     readonly ledgerOf?: ConvictionGateDeps["ledgerOf"];
   } = {},
@@ -460,6 +464,7 @@ export function tradingRoster(
                 console,
                 (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
                 intradayBars,
+                reads,
               ),
               {
                 subscriptions: roster.subscriptions,

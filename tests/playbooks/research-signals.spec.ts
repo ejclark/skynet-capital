@@ -71,12 +71,13 @@ describe("the retrofit table (call-sheet comment, 2026-10-07)", () => {
     }
   });
 
-  it("has TACO, SAURON and the long call say they are unvalidated, and the two scouts say by design", () => {
+  it("has TACO, SAURON, the long call and the long LEAP say they are unvalidated, and the two scouts say by design", () => {
     const why = (id: string) => {
       const research = researchOf(id);
       return research?.kind === "none" ? research.why : undefined;
     };
-    expect(["TACO-DJT", "SAURON", "CRWV-LONG-CALL"].map(why)).toEqual([
+    expect(["TACO-DJT", "SAURON", "CRWV-LONG-CALL", "NVDA-LONG-LEAP"].map(why)).toEqual([
+      "unvalidated",
       "unvalidated",
       "unvalidated",
       "unvalidated",

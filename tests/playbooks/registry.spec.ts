@@ -224,6 +224,7 @@ describe("playbookRoster", () => {
       { id: "TACO-DJT", symbol: TACO_DJT.symbols[0] },
       { id: "CRWV-WHEEL", symbol: "CRWV" },
       { id: "CRWV-LONG-CALL", symbol: "CRWV" },
+      { id: "NVDA-LONG-LEAP", symbol: "NVDA" },
       { id: "NVDA-CALL-SPREAD", symbol: "NVDA" },
       { id: "SAURON", symbol: SAURON.symbols[0] },
       { id: "MU-DIP-BOUNCE", symbol: "MU" },

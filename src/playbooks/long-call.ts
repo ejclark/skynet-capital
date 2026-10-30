@@ -81,7 +81,7 @@ export const LONG_CALL_MAX_CONTRACTS: Readonly<Record<PlaybookMode, number>> = {
 /** Buys come in thirds: each open asks for a third of the mode's cap (the guard cuts it to what the
  *  budget and cash can pay for), so a budget is put to work in about three orders, ten minutes
  *  apart, rather than one contract at a time. */
-const tranche = (mode: PlaybookMode, held: number, steering?: Steering): number => {
+export const tranche = (mode: PlaybookMode, held: number, steering?: Steering): number => {
   const cap = capOf(mode, steering);
   return Math.max(1, Math.min(Math.ceil(cap / 3), cap - held));
 };
@@ -96,14 +96,15 @@ export interface LongCallSetting {
 /** The strategy tag its buys carry on the decision record. */
 const longCallTag = (symbol: string): string => `${symbol.toLowerCase()}-long-call`;
 
-/** The held calls this play trades: long calls on the ticker, nothing else. */
-function heldCalls(portfolio: Portfolio, symbol: string): HeldContract[] {
+/** The held calls this play trades: long calls on the ticker, nothing else. The long LEAP reads its
+ *  book through the same four helpers (`long-leap.ts`). */
+export function heldCalls(portfolio: Portfolio, symbol: string): HeldContract[] {
   return optionBook(portfolio, symbol).contracts.filter((c) => c.type === "call" && c.quantity > 0);
 }
 
 /** Whether anything else is on the ticker's option book (a sold contract, a put) — not this play's
  *  book, so it neither adds nor closes. */
-function foreign(portfolio: Portfolio, symbol: string): boolean {
+export function foreign(portfolio: Portfolio, symbol: string): boolean {
   return optionBook(portfolio, symbol).contracts.some((c) => c.quantity < 0 || c.type === "put");
 }
 
@@ -125,14 +126,14 @@ function entryExpiry(
 }
 
 /** The most contracts it holds: the mode's cap, or a conviction's lower one. */
-const capOf = (mode: PlaybookMode, steering?: Steering): number =>
+export const capOf = (mode: PlaybookMode, steering?: Steering): number =>
   Math.min(LONG_CALL_MAX_CONTRACTS[mode], steering?.contractsMax ?? Infinity);
 
-const contractsOf = (held: readonly HeldContract[]): number =>
+export const contractsOf = (held: readonly HeldContract[]): number =>
   held.reduce((n, c) => n + c.quantity, 0);
 
 /** Average premium paid per share across the held calls. */
-const averageCost = (held: readonly HeldContract[]): number =>
+export const averageCost = (held: readonly HeldContract[]): number =>
   held.reduce((sum, c) => sum + c.avgPrice * c.quantity, 0) / Math.max(1, contractsOf(held));
 
 /** Why a held call is sold now, or `undefined` while it should be held. */
