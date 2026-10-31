@@ -18,8 +18,10 @@
  * Read-only, forever: every call here is a GET on the token the feedback lane already holds
  * (`SKYNET_FEEDBACK_GITHUB_TOKEN`), cached five minutes per issue like `feedback-status.ts`.
  */
+
+import { FEEDBACK_STATUS_LABEL, statusFromIssue } from "../domain/feedback-status.js";
 import { fetchJson } from "../http/fetch-json.js";
-import { FEEDBACK_STATUS_LABEL, labelNamesOf, statusFromIssue } from "./feedback-status.js";
+import { labelNamesOf } from "./feedback-status.js";
 import { githubHeaders } from "./github-api.js";
 
 type DoFetch = typeof fetchJson;
@@ -136,11 +138,10 @@ function statusWords(issue: IssueJson, labels: readonly string[], refs: PullRefs
   }
   if (issue.state === "closed" && issue.state_reason === "not_planned") return "Closed, not built";
   const status = statusFromIssue(String(issue.state ?? "open"), labels);
-  if (issue.state === "open" && status === "open") {
-    if (refs.open.length > 0) {
-      return `Being built — PR ${refs.open.map((n) => `#${n}`).join(", ")} open`;
-    }
-    if (labels.includes("in-progress")) return "Being built";
+  // An open PR is the build, whatever the labels say yet — it outranks waiting and up next.
+  const moving = status === "open" || status === "up-next" || status === "building";
+  if (issue.state === "open" && moving && refs.open.length > 0) {
+    return `Being built — PR ${refs.open.map((n) => `#${n}`).join(", ")} open`;
   }
   return FEEDBACK_STATUS_LABEL[status];
 }

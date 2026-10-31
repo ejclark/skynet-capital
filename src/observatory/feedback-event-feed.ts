@@ -1,5 +1,5 @@
+import type { FeedbackStatus } from "../domain/feedback-status.js";
 import type { FeedbackLogEntry } from "../server/feedback-log.js";
-import type { FeedbackStatus } from "../server/feedback-status.js";
 import {
   type ActivityEvent,
   activityEventFromFeedbackEntry,
@@ -53,6 +53,8 @@ const FEEDBACK_KINDS: ReadonlySet<string> = new Set(["bug", "feature", "idea"]);
 
 const FEEDBACK_STATUSES: ReadonlySet<string> = new Set([
   "open",
+  "up-next",
+  "building",
   "needs-info",
   "needs-eric",
   "next-slice",

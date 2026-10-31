@@ -66,6 +66,10 @@ shape for tooling; without `--file` it drafts and says so, never posts.
    never as a "run `/retro`" item under Needs you** (#4212). A repair capsule's close drafts its
    own LESSONS entry (`scripts/moneypenny/lesson-draft.mjs`), so the count drains without him; a
    number that stops falling is a retro for this pipeline, not a step on his list.
+   **Member filings with no state go here too, as `node scripts/digest-scan.mjs
+   --member-filings`'s one line** (#6316) — every open `member-*` filing older than 24h that
+   carries none of ready / in-progress / needs-info / needs-eric / next-slice, counted, the oldest
+   named. A count above zero is the clear-path judge's next input, not a step on his list.
 
 **Measure the digest's own channel** (#456): `node scripts/comms-scan.mjs --table` emits one row
 per PR merged since the last digest — which picture form it used (or waived, with the reason),

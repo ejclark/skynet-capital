@@ -106,7 +106,7 @@ describe("MoneypennyRail", () => {
     expect(
       await screen.findByText(/filed as issue #1042 — “Fix the equity column”/),
     ).toBeInTheDocument();
-    expect(await screen.findByText(/^sauron·ops · triaged · on the build queue/)).toHaveClass(
+    expect(await screen.findByText(/^sauron·ops · filed · waiting to be picked/)).toHaveClass(
       "mp-sys",
     );
     const submit = calls.find((c) => c.url === "/api/feedback" && c.body);
@@ -143,7 +143,7 @@ describe("MoneypennyRail", () => {
     await flush();
     expect(await screen.findByText(/filed as issue #7/)).toBeInTheDocument();
     expect(
-      await screen.findByText(/^sauron·ops · triaged · on the build queue/),
+      await screen.findByText(/^sauron·ops · filed · waiting to be picked/),
     ).toBeInTheDocument();
     expect(calls.filter((c) => c.url === "/feedback/coach")).toHaveLength(0);
     const submit = calls.find((c) => c.url === "/api/feedback" && c.body);

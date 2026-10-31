@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
+import { FEEDBACK_STATUS_LABEL } from "../../../src/domain/feedback-status";
 import { type FollowupOutcome, followupRequest, type RecentFiling } from "../live/feedback";
 import { InlineResult } from "../ui";
 import { Toggle } from "./toggle";
@@ -13,9 +14,9 @@ import { Toggle } from "./toggle";
  * by default with a toggle") — a growing ledger of finished items would otherwise bury what's
  * still moving. "Completed" means `status === "shipped"` specifically: `next-slice` still has
  * real work on the issue (docs/FEEDBACK.md's "four ways a build session ends" — sliced waits on
- * nobody, but isn't done), so it stays in the default view alongside `open`/`needs-info`/
- * `needs-eric`. So does `not-built` (closed as not planned): it is finished, but the member who
- * filed it should see that plainly rather than have it vanish. The `Toggle` only appears once
+ * nobody, but isn't done), so it stays in the default view alongside `open`/`up-next`/
+ * `building`/`needs-info`/`needs-eric`. So does `not-built` (closed as not planned): it is
+ * finished, but the member who filed it should see that plainly rather than have it vanish. The `Toggle` only appears once
  * there's something it would reveal.
  *
  * A shipped filing also carries the last piece of #429's acceptance criteria: "stamped with the
@@ -29,6 +30,10 @@ import { Toggle } from "./toggle";
  * it (#5253, option B of #5159's round 2). The words carry the meaning; the track is the glance.
  * At desktop width the track and its words share one right-hand column beside a capped title
  * column, so they stay grouped without a wide empty gap (Eric's note on the round).
+ *
+ * An open filing is in one of three places (#6316): filed and waiting to be picked, up next
+ * (`ready`), or being built (`in-progress`) — the only one that lights the middle step. Their
+ * words are the server's own (`FEEDBACK_STATUS_LABEL`), so Moneypenny answers with the same ones.
  */
 
 const RECENT_FILTERS = [
@@ -39,15 +44,16 @@ type RecentFilter = (typeof RECENT_FILTERS)[number][0];
 
 type Status = NonNullable<RecentFiling["status"]>;
 
-/** One step of the track: filled (done), striped (paused), half-filled (part shipped), or
- *  outlined and empty (not yet). Each mark rides with its row's words — never alone (BRAND →
+/** One step of the track: filled (done), filled with a halo (underway now), striped (paused),
+ *  half-filled (part shipped), or outlined and empty (not yet). Each mark rides with its row's words — never alone (BRAND →
  *  Accessibility; #5093's lesson that one shape must keep one meaning). */
-type Step = "done" | "paused" | "part" | "todo";
+type Step = "done" | "now" | "paused" | "part" | "todo";
 
 const STEP_NAMES = ["Filed", "Being built", "Shipped"] as const;
 
 const STEP_WORDS: Record<Step, string> = {
   done: "done",
+  now: "underway",
   paused: "paused",
   part: "partly",
   todo: "not yet",
@@ -59,7 +65,9 @@ const STATUS_VIEW: Record<
   Status,
   { readonly words: string; readonly track: readonly Step[] | null }
 > = {
-  open: { words: "In the build queue", track: ["done", "todo", "todo"] },
+  open: { words: FEEDBACK_STATUS_LABEL.open, track: ["done", "todo", "todo"] },
+  "up-next": { words: FEEDBACK_STATUS_LABEL["up-next"], track: ["done", "todo", "todo"] },
+  building: { words: FEEDBACK_STATUS_LABEL.building, track: ["done", "now", "todo"] },
   "needs-info": {
     words: "Waiting on your answer",
     track: ["done", "paused", "todo"],

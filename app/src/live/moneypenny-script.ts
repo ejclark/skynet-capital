@@ -182,10 +182,14 @@ export function filedLine(number: number, title: string, url?: string): string {
   return `Moneypenny · filed as issue #${number} — “${title}”.${where} your context went into the filing. watch this thread for the answer.`;
 }
 
-/** The desk's own word after a filing, as a system line — filed and triaged, never a "shipped"
- *  claim. Filing no longer lifts the ladder gate (that's `MESSAGE_OPS_LINE` now, on her first
- *  reply), so every filing gets the same word regardless of whether it's the member's first. */
-export const OPS_LINE = "sauron·ops · triaged · on the build queue. watch the changelog.";
+/** The desk's own word after a filing, as a system line — filed and waiting to be picked, never a
+ *  "shipped" claim, and never "on the build queue": nothing builds a filing until `ready` lands, and
+ *  no filing carries it the moment it is filed (#6316). Profile → Feedback then says where it
+ *  stands, in the same words Moneypenny answers with. Filing no longer lifts the ladder gate (that's
+ *  `MESSAGE_OPS_LINE` now, on her first reply), so every filing gets the same word regardless of
+ *  whether it's the member's first. */
+export const OPS_LINE =
+  "sauron·ops · filed · waiting to be picked. it joins the build queue once it's picked — Profile → Feedback shows where it stands.";
 
 /** The desk's own word the moment a member has said anything to her — the ladder gate's whole
  *  bar (Eric's 2026-09-03 ruling): a message opens trading, no filing required. */

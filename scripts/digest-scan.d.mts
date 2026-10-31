@@ -12,3 +12,7 @@ export function learningLine(count: {
   unlearnedRuns?: number | null;
   agedOutRuns?: number | null;
 }): string;
+/** The "Noise absorbed" line for member filings older than 24h with no state (#6316). */
+export function memberFilingsLine(
+  unseen: readonly { number: number; title?: string; ageHours: number }[],
+): string;

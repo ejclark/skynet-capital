@@ -18,6 +18,13 @@ describe("the companion's system prompt", () => {
     expect(COMPANION_SYSTEM_PROMPT).toContain("never invent a figure, a route, or a rule");
   });
 
+  // #6316: nothing builds a filing until `ready` lands, so she never says a new one is queued.
+  it("says a new filing waits to be picked, and names the Feedback row's status words", () => {
+    expect(COMPANION_SYSTEM_PROMPT).toContain("a new filing waits to be picked");
+    expect(COMPANION_SYSTEM_PROMPT).not.toContain("file straight onto the build queue");
+    expect(COMPANION_SYSTEM_PROMPT).toContain("filed — waiting to be picked, up next, being built");
+  });
+
   it("tells her to name a place as a link, from the allow-list only (#5238)", () => {
     expect(COMPANION_SYSTEM_PROMPT).toContain("LINKING A PLACE");
     expect(COMPANION_SYSTEM_PROMPT).toContain("[open Trade](/trade)");

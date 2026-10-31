@@ -1,9 +1,6 @@
+import { FEEDBACK_STATUS_LABEL } from "../../src/domain/feedback-status.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
-import {
-  createStatusFetcher,
-  FEEDBACK_STATUS_LABEL,
-  resolveFeedbackStatus,
-} from "../../src/server/feedback-status.js";
+import { createStatusFetcher, resolveFeedbackStatus } from "../../src/server/feedback-status.js";
 
 // GitHub is the source of truth for a filed issue's state — these specs cover the fold from raw
 // issue JSON into the app's own four-outcome vocabulary (docs/FEEDBACK.md, "the four ways a build
@@ -63,6 +60,30 @@ describe("feedback-status", () => {
     );
 
     expect((await fetch([7])).get(7)).toBe("open");
+    expect(FEEDBACK_STATUS_LABEL.open).toBe("Filed — waiting to be picked");
+  });
+
+  // #6316: nothing builds a filing until `ready` lands, so an open filing says which of three
+  // places it is in — never "in the build queue" before anything builds it.
+  it("reads ready as up next, and in-progress as being built — in-progress wins over ready", async () => {
+    const fetch = createStatusFetcher(
+      config,
+      fakeFetch({
+        1: { status: 200, body: { state: "open", labels: ["feedback", "ready"] } },
+        2: { status: 200, body: { state: "open", labels: ["feedback", "in-progress"] } },
+        3: { status: 200, body: { state: "open", labels: ["ready", "in-progress"] } },
+        4: { status: 200, body: { state: "open", labels: ["in-progress", "needs-info"] } },
+      }),
+    );
+
+    const statuses = await fetch([1, 2, 3, 4]);
+    expect(statuses.get(1)).toBe("up-next");
+    expect(statuses.get(2)).toBe("building");
+    expect(statuses.get(3)).toBe("building");
+    // The lane parks with a question and removes `in-progress` last: the question is the truth.
+    expect(statuses.get(4)).toBe("needs-info");
+    expect(FEEDBACK_STATUS_LABEL["up-next"]).toBe("Up next");
+    expect(FEEDBACK_STATUS_LABEL.building).toBe("Being built");
   });
 
   it("reads needs-info and needs-eric labels off an open issue", async () => {

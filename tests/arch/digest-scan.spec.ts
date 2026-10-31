@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { memberFilingsLine } from "../../scripts/digest-scan.mjs";
 
 // Digest contract gate — the secretary's scan (scripts/digest-scan.mjs) and every committed
 // digest (docs/digests/) must satisfy the template contract, because the daily digest Routine
@@ -58,5 +59,20 @@ describe("digest-scan — an absent digests directory is a named state", () => {
     expect(code).toBe(0);
     expect(JSON.parse(stdout)).toMatchObject({ due: true, reason: "no-digest" });
     expect(stderr).toContain("· docs/digests/ absent — no digest yet");
+  });
+});
+
+// #6316: the digest carries the count of member filings that have sat a day with no state, the
+// oldest named — a line under Noise absorbed, since the clear-path judge, not Eric, works it.
+describe("digest-scan — the member-filings line", () => {
+  it("counts the unseen filings and names the oldest five in days", () => {
+    const unseen = [468, 60, 50, 40, 30, 26].map((ageHours, i) => ({ number: 100 + i, ageHours }));
+    expect(memberFilingsLine(unseen)).toBe(
+      "- Member filings: 6 older than 24h with no state (#100 19.5d, #101 2.5d, #102 2.1d, #103 1.7d, #104 1.3d, +1 more) — nothing builds one until it is picked.",
+    );
+  });
+
+  it("says so plainly when none is waiting", () => {
+    expect(memberFilingsLine([])).toBe("- Member filings: none older than 24h without a state.");
   });
 });
