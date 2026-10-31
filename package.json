@@ -151,7 +151,7 @@
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.3",
     "@playwright/experimental-ct-react": "1.62.1",
-    "@playwright/test": "1.62.1",
+    "@playwright/test": "1.63.0",
     "@rstest/core": "0.12.4",
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/git": "11.0.1",
@@ -167,7 +167,7 @@
     "knip": "6.42.1",
     "mermaid": "11.17.2",
     "npm-run-all2": "9.0.4",
-    "playwright-core": "1.62.1",
+    "playwright-core": "1.63.0",
     "semantic-release": "25.0.9",
     "tsx": "4.23.15",
     "typescript": "7.0.2"
