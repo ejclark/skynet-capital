@@ -125,7 +125,12 @@ concurrency:
   # `feedback` event on the SAME issue (e.g. a genuine re-label retry) still collides with the
   # first, which is the intended dedupe, since `claimFeedback`'s lease already makes that safe.
   # Empty for push/workflow_dispatch (no `label` on those payloads), so their grouping is unchanged.
-  group: moneypenny-events-${{ github.event_name }}-${{ github.event.issue.number || github.ref }}-${{ github.event.label.name || '' }}
+  # EXCEPT a `scan` dispatch (2026-10-26, #5130): it is one claim AND one build in the same run, so a
+  # shared group held every later claim behind the running build — builds ran strictly one at a
+  # time under any in-flight cap, and 43% of wakes were cancelled from the one-pending slot. A scan
+  # now gets its own group (the run id); the claim alone is serialized by `route`'s job-level group
+  # below, so the cap and the lease still bound concurrent builds. Every other event keeps the key.
+  group: moneypenny-events-${{ github.event_name }}-${{ github.event.issue.number || github.ref }}-${{ github.event.label.name || '' }}${{ github.event_name == 'workflow_dispatch' && inputs.command == 'scan' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: false
 
 jobs:
@@ -174,6 +179,13 @@ jobs:
   route:
     name: route
     runs-on: ubuntu-latest
+    # One `scan` claim at a time (#5130), so the in-flight count a claim reads is never stale; queued
+    # wakes wait in line (FIFO, up to 100) instead of cancelling each other. Any other event keys on
+    # its own run id — its workflow-level group above already serializes it as before. `queue: max`
+    # with `cancel-in-progress: true` is a validation error, so this group never sets the latter.
+    concurrency:
+      group: moneypenny-route-${{ github.event_name == 'workflow_dispatch' && inputs.command == 'scan' && 'scan' || github.run_id }}
+      queue: max
     outputs:
       due_events: ${{ steps.screen.outputs.due }}
       # #3960 slice 3: the retry sweep (`next`) fills a lane when no event-driven claim did.
@@ -276,8 +288,15 @@ jobs:
           # once it did. A file has no such ceiling.
           DUE_FILE=$(mktemp)
           HEADS_FILE=$(mktemp)
-          node scripts/event-scan.mjs --due > "$DUE_FILE"
+          # Heads FIRST, then the scan on a fresh main (#6251). A queued dispatch checks out main as
+          # it was when dispatched; a research/<id> PR merging in the wait was in neither the old
+          # tree nor the live heads, so the event read as due again (35 of 146 legs, 22% of spend,
+          # 2026-10-23..26). In this order a PR merged before the head read is in the tree, and one
+          # still open is in the heads. Later steps run on this tree too: newer main, never older.
           gh pr list --state open --limit 100 --json headRefName | jq -c '[.[].headRefName]' > "$HEADS_FILE"
+          git fetch --quiet origin main
+          git checkout --quiet --detach origin/main
+          node scripts/event-scan.mjs --due > "$DUE_FILE"
           FILTERED=$(DUE_FILE="$DUE_FILE" HEADS_FILE="$HEADS_FILE" node -e '
             import("node:fs").then((fs) => {
               import("./scripts/moneypenny/index.mjs").then((m) => {
@@ -570,6 +589,10 @@ jobs:
       max-parallel: 8
       matrix:
         event: ${{ fromJSON(needs.route.outputs.due_events) }}
+    # Scan runs now overlap (#5130), so two ticks can list the same due event before its PR opens.
+    # One leg per event id at a time: the second finds it no longer due and stops (the prompt says so).
+    concurrency:
+      group: moneypenny-research-${{ matrix.event.id }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -813,13 +836,24 @@ jobs:
           RESUME_SINCE: ${{ needs.route.outputs.feedback_reply_at }}
         run: node scripts/moneypenny/index.mjs --guard-feedback-outcome ${{ needs.route.outputs.feedback_issue }}
 
+      # A SECOND MINT FOR THE POST-BUILD STEPS (#5936). An App installation token lives one hour,
+      # and the one minted at the top of this job is the session's: a build past 60 minutes (92 min
+      # on 2026-10-20, run 39441909089) left `--end-build` logging `HTTP 401: Bad credentials` as a
+      # green warning with `in-progress` still on. A fresh token here costs ~1 s and no new secret.
+      - id: app-token-late
+        if: always() && needs.route.outputs.feedback_issue != ''
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       # THE LEASE IS PART OF THE TERMINAL-STATE PROMISE. A build that dies leaves the issue claimed
       # for the full 2h TTL, so a member's feedback reads as "in progress" while nothing is running
       # and a re-label is a no-op — the exact shape that hid three separate failures on 2026-08-22.
       # Freeing it here makes a retry immediate; the claim itself still prevents double-builds.
       - if: failure() && needs.route.outputs.feedback_issue != ''
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token-late.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release feedback-${{ needs.route.outputs.feedback_issue }}
 
       # THE NIGHT CHAIN'S BACKSTOP (#5056 slice 2). Every ending takes `in-progress` off — the
@@ -831,7 +865,7 @@ jobs:
       - if: always() && needs.route.outputs.feedback_issue != ''
         name: End the build — take in-progress off
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token-late.outputs.token }}
         run: node scripts/moneypenny/index.mjs --end-build feedback-${{ needs.route.outputs.feedback_issue }}
 
   # ═══ THE PLAN LANE (#823) ═══
@@ -888,17 +922,29 @@ jobs:
             complete instruction set for this run.
 
             The plan issue is #${{ needs.route.outputs.plan_issue }} in this repo.
+      # A SECOND MINT FOR THE POST-BUILD STEPS (#5936). An App installation token lives one hour,
+      # and the one minted at the top of this job is the session's: a build past 60 minutes (92 min
+      # on 2026-10-20, run 39441909089) left `--end-build` logging `HTTP 401: Bad credentials` as a
+      # green warning with `in-progress` still on. A fresh token here costs ~1 s and no new secret. Same step
+      # as on `build-feedback` above.
+      - id: app-token-late
+        if: always() && needs.route.outputs.plan_issue != ''
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       # Same terminal-state promise as the feedback lane: a build that dies must not leave the issue
       # claimed for the full 2h TTL while looking "in progress" with nothing running.
       - if: failure() && needs.route.outputs.plan_issue != ''
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token-late.outputs.token }}
         run: node scripts/moneypenny/index.mjs --release plan-${{ needs.route.outputs.plan_issue }}
       # The night chain's backstop — see the same step on `build-feedback` above (#5056 slice 2).
       - if: always() && needs.route.outputs.plan_issue != ''
         name: End the build — take in-progress off
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token-late.outputs.token }}
         run: node scripts/moneypenny/index.mjs --end-build plan-${{ needs.route.outputs.plan_issue }}
 
   sync-project:
