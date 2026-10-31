@@ -5,7 +5,7 @@ import {
   humanizeOptionSymbol,
   isOccSymbol,
 } from "../trading/option-symbols.js";
-import type { OpenLot, RoundTrip, RoundTripLedger } from "../trading/round-trips.js";
+import type { OpenLot, RoundTrip } from "../trading/round-trips.js";
 import { type ActivityNarrowOptions, narrowActivity } from "./activity-filter.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { collapseActivity } from "./activity-store.js";
@@ -246,7 +246,9 @@ export interface DeskView {
 
 export function deskView(
   snapshot: ParticipantSnapshot,
-  ledger?: RoundTripLedger,
+  /** Only its open lots are read — a full `RoundTripLedger` fits, and so does the held answer
+   *  (`trade-ledger-cache.ts`, #4619). */
+  ledger?: { readonly open: readonly OpenLot[] },
   playbooks: readonly PlaybookStoreEntry[] = [],
   /** The clock for "expires in N days" (#3689 slice 6); the server's `config.now`, pinned in specs. */
   clock: () => Date = () => new Date(),

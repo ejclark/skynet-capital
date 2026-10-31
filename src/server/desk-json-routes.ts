@@ -3,7 +3,6 @@ import { envNamedFor } from "../autonomous/house-roster-wire.js";
 import { playbookStoreCatalog } from "../discovery/playbook-store.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import { activityNarrowing, type PlaybookOf } from "../observatory/activity-filter.js";
-import type { TradeActivityRecord } from "../observatory/activity-record.js";
 import {
   type BotHoldings,
   botHeartbeatView,
@@ -28,11 +27,11 @@ import { thesisView } from "../observatory/thesis-json-view.js";
 import { thesisPlayView } from "../observatory/thesis-play-view.js";
 import { reasoningForOrder, withoutOwnerReasoning } from "../observatory/wire-reasoning.js";
 import { hypothesisVerdicts } from "../playbooks/cond-scout-verdict.js";
-import type { PlaybookTagsByOrder } from "../trading/playbook-attribution.js";
+import type { OpenLot } from "../trading/round-trips.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import { accountConvictionLookup } from "./account-conviction-lookup.js";
 import type { Session } from "./auth/session.js";
-import { deskHealthPayload } from "./book-health-payload.js";
+import { deskHealthPayload, openLotsOf } from "./book-health-payload.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { readAccountDecisionsPage } from "./decision-account-view.js";
 import {
@@ -96,18 +95,33 @@ function ownerPlaybookOf(
 /** Which playbook opened each order behind a position the bot holds now (#5073 slice 4b) — the
  *  owner's alone (#885), so anyone else's ledger stays untagged and its positions name nothing.
  *  Only the held symbols' orders are looked up: a closed trade's opener is not this view's to say.
- *  A spread's legs take their spread's playbook, since the question is who put the leg on. */
-function ownerPositionTags(
+ *  A spread's legs take their spread's playbook, since the question is who put the leg on.
+ *  Laid onto the matched lots by their opening order (#4619): tags are attribution only — the
+ *  matcher never reads them — so this is the ledger a tagged match returns, without re-matching
+ *  and without the whole ledger, which the held lots (`trade-ledger-cache.ts`) let it skip. */
+function ownerTaggedLots(
   found: ParticipantSnapshot,
-  durable: readonly TradeActivityRecord[],
+  open: readonly OpenLot[],
   config: DashboardServerConfig,
   owner: boolean,
-): PlaybookTagsByOrder | undefined {
+): readonly OpenLot[] {
   const { findByOrderId, findSpreadLeg } = config;
-  if (found.kind !== "bot" || !owner || !findByOrderId) return undefined;
+  if (found.kind !== "bot" || !owner || !findByOrderId) return open;
   const held = new Set(found.positions.map((p) => p.symbol));
-  const orders = [...durable, ...(found.activity ?? [])].filter((row) => held.has(row.symbol));
-  return tagsByOrder(orders, findByOrderId, findSpreadLeg, true);
+  const openers = open.flatMap((lot) =>
+    held.has(lot.symbol) && lot.entryOrderId ? [{ orderId: lot.entryOrderId }] : [],
+  );
+  const tags = tagsByOrder(openers, findByOrderId, findSpreadLeg, true);
+  return open.map((lot) => {
+    const tag = lot.entryOrderId ? tags.get(lot.entryOrderId) : undefined;
+    if (!tag) return lot;
+    return {
+      ...lot,
+      ...(tag.playbookId ? { playbookId: tag.playbookId } : {}),
+      ...(tag.playbookMode ? { playbookMode: tag.playbookMode } : {}),
+      ...(tag.initiator ? { initiator: tag.initiator } : {}),
+    };
+  });
 }
 
 /** `/api/desk/:id/activity` — the account's orders, newest first, keyset-paged by `before`, and
@@ -397,13 +411,13 @@ export async function serveDeskJson(
     // a null curve that says "still accruing", never a missing page.
     // The live fold when the server keeps one (#4619): Pulse then folds only what was appended
     // since the last read, never the whole history again. The trade half likewise comes from the
-    // held answer while the ledger and the broker window are unchanged (`pulse-trade-cache.ts`).
+    // held answer while the ledger and the broker window are unchanged (`trade-ledger-cache.ts`).
     const [history, trades] = await Promise.all([
       config.readPulseHistory
         ? config.readPulseHistory(id)
         : (config.readHistory?.(id) ?? Promise.resolve([])).then((s) => PulseHistoryFold.of(s)),
-      config.readPulseTrades
-        ? config.readPulseTrades(found)
+      config.readHeldLedger
+        ? config.readHeldLedger(found).then((held) => held.trades)
         : (config.readTradeActivity?.(id) ?? Promise.resolve(undefined)).then((durable) =>
             pulseTradesOf(found, durable),
           ),
@@ -421,12 +435,12 @@ export async function serveDeskJson(
   // prominence from real relative standing, health from real P/L, or the field stays absent.
   const power = botLandmarkProminence(state.participants).get(id);
   const empire = projectEmpire(found, power === undefined ? {} : { personaProminence: power });
-  // The lot breakdown (#3186 slice 1) needs the same durable ledger `/activity` already reads —
-  // absent with no ledger wired, same honest degrade every other branch here takes, and
-  // `deskView` already renders lot-free positions when `ledger` is undefined.
-  const durable = await config.readTradeActivity?.(id);
-  const tags = durable ? ownerPositionTags(found, durable, config, owner) : undefined;
-  const ledger = durable ? deskLedger(found, durable, tags) : undefined;
+  // The lot breakdown (#3186 slice 1) needs the open lots of the same durable ledger `/activity`
+  // reads, held between fills (`trade-ledger-cache.ts`, #4619) — absent with no ledger wired,
+  // same honest degrade every other branch here takes, and `deskView` already renders lot-free
+  // positions when `ledger` is undefined.
+  const untagged = await openLotsOf(found, config);
+  const ledger = untagged ? { open: ownerTaggedLots(found, untagged, config, owner) } : undefined;
   // The book's health (#5493 slice 1): every finding for the owner, counts for anyone else.
   const health = await deskHealthPayload(found, config, owner, ledger?.open);
   // The considerations rail (#3186 slice 3) folds house playbooks matching a held symbol into the

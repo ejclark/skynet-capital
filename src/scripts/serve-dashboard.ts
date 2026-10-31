@@ -37,8 +37,8 @@ import {
 import type { EquitySample } from "../observatory/history-record.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { pulseHistoryReader } from "../observatory/pulse-history-cache.js";
-import { pulseTradesReader } from "../observatory/pulse-trade-cache.js";
 import { rememberSpreadLegs } from "../observatory/spread-activity.js";
+import { heldLedgerReader } from "../observatory/trade-ledger-cache.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { wireFeedReader } from "../observatory/wire-feed-cache.js";
 import { mergeRoster } from "../participants/participant.js";
@@ -144,8 +144,9 @@ async function main(): Promise<void> {
     process.env,
     dataSource.mode,
   );
-  // Pulse's trade half (#4619): held per participant until its ledger or broker window moves.
-  const readPulseTrades = pulseTradesReader(activity);
+  // What Pulse and the blotter read off each trade ledger (#4619): held per participant until its
+  // ledger or broker window moves.
+  const readHeldLedger = heldLedgerReader(activity);
   // Ladder milestone auto-completion — never a client claim; see the wiring module.
   const {
     onActivity,
@@ -453,7 +454,7 @@ async function main(): Promise<void> {
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
     readPulseHistory,
-    readPulseTrades,
+    readHeldLedger,
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
     recordOrderAudit: (entry) => orderAudit.record(entry),
@@ -606,7 +607,7 @@ async function main(): Promise<void> {
           roster.map((p) => p.id),
           async (id) => {
             const snapshot = hub.getState().participants.find((p) => p.id === id);
-            if (snapshot) await readPulseTrades(snapshot);
+            if (snapshot) await readHeldLedger(snapshot);
           },
         ),
       )

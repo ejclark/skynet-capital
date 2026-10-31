@@ -171,7 +171,7 @@ function pulseRace(history: PulseHistoryFold, equity: number): PulseRace | null 
 
 /** Everything Pulse takes from closed round trips: the weekly bars and the stat family. Small and
  *  fixed-size whatever the ledger's length, so a server can keep one per participant and skip the
- *  ledger read while nothing has changed (`pulse-trade-cache.ts`, #4619). */
+ *  ledger read while nothing has changed (`trade-ledger-cache.ts`, #4619). */
 export interface PulseTrades {
   readonly weeks: readonly PulseWeek[];
   readonly stats: TradeStats;
@@ -183,7 +183,11 @@ export function pulseTradesOf(
   snapshot: ParticipantSnapshot,
   durable?: readonly TradeActivityRecord[],
 ): PulseTrades {
-  const trips = deskLedger(snapshot, durable).trips;
+  return pulseTradesFrom(deskLedger(snapshot, durable).trips);
+}
+
+/** The same, from trips a caller already matched — so one match can serve Pulse and the blotter. */
+export function pulseTradesFrom(trips: readonly RoundTrip[]): PulseTrades {
   return { weeks: pulseWeeks(trips), stats: tradeStats(trips) };
 }
 
