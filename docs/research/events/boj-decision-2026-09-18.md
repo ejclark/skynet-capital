@@ -420,3 +420,18 @@ quiet from here for its own event — `scripts/event-scan.mjs` will not surface 
 remains an open row in
 [`forward-tests/boj-decision-2026-09-18.md`](../forward-tests/boj-decision-2026-09-18.md) until the
 2026-10-30 decision settles it.
+
+**FT-2 scored 2026-10-31 (`forward-test-due`) — PASS.** The row above that read "stays open, by design"
+settled on the 2026-10-30 decision. The BoJ's own Statement on Monetary Policy, `k261030a.pdf` (re-fetched
+direct 2026-10-31, HTTP 200, text-extracted with `pdfminer.six`), reads "The Bank will encourage the
+uncollateralized overnight call rate to remain at around 1.25 percent" by an **8-1** vote: Takata alone
+dissented, for 1.5%. The rate therefore stood at 1.25% — at most one hike across 09-18 and 10-30 combined,
+not above 1.25% and not below 1.0% — and the 10-29/30 MPM met on its scheduled dates, so the void clause did
+not apply. This is one observation on one central bank, exactly as registered; the lone hawkish dissent shows
+the pace argument is live inside the board, not that the cycle has accelerated. Fragment cell filled:
+[`forward-tests/boj-decision-2026-09-18.md`](../forward-tests/boj-decision-2026-09-18.md). The assessment
+and the stance above are untouched; the sibling event [`boj-decision-2026-10-30`](boj-decision-2026-10-30.md)
+carries the full 10-30 close-out and its own forward tests.
+
+**Last assessed:** 2026-10-31
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"closed","adjacentIds":["boe-decision-2026-09-17","bowman-stress-testing-2026-09-18","fomc-2026-09-16","house-vote-ratepayer-protection-act-2026-09-17","industrial-production-2026-09-18","japan-cpi-2026-09-18","meta-connect-2026-09-23","opex-2026-09-18","treasury-2y-note-2026-09-22","uk-retail-sales-2026-09-18"],"adjacentStrongIds":["fomc-2026-09-16","opex-2026-09-18"],"screenStreak":0} -->
