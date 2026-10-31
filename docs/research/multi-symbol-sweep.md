@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A builder's pre-open earnings gap is at least 3% in size because 11 of its last 15 were" (FT-dhi-q4-fy2026-2026-10-29-2)** — added 2026-10-31 from the
+  [dhi-q4-fy2026-2026-10-29 close-out](events/dhi-q4-fy2026-2026-10-29.md). DHI's FY Q4 print gapped **−0.70%** (close $143.00 → open $142.00), against a 15-print modern mean |gap| of 5.27%.
+  The print carried orders −7% y/y and the group rallied through it (ITB +3.49% that day), so the open had little left to reprice. Do not register a size threshold off a heavy-tailed gap sample
+  without naming the pre-print regime: the 11/15 record included the two fattest Q4 gaps (−15.07%, −6.84%) and said nothing about a print the sector had already traded into.
+
 - **"The ECI's SA quarterly pace holds at 0.9%, so the y/y breaks its 3.4% flatline at ≥3.5%" (FT-eci-q3-2026-10-30-1)** — added 2026-10-31 from the
   [eci-q3-2026-10-30 close-out](events/eci-q3-2026-10-30.md). BLS printed SA **0.8%** q/q and **3.4%** y/y (3.374% unrounded; NSA 178.738 vs the 178.870 the 3.5% line needed). The arithmetic
   was right to the index point and the bet still missed by 7.6bp. Do not register a persistence bet on a one-tenth rounding threshold off two quarters at the same pace: the line sits inside
