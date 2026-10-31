@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A builder's pre-open earnings gap is at least 3% in size because 11 of its last 15 were" (FT-dhi-q4-fy2026-2026-10-29-2)** — added 2026-10-31 from the
+  [dhi-q4-fy2026-2026-10-29 close-out](events/dhi-q4-fy2026-2026-10-29.md). DHI's FY Q4 print gapped **−0.70%** (close $143.00 → open $142.00), against a 15-print modern mean |gap| of 5.27%.
+  The print carried orders −7% y/y and the group rallied through it (ITB +3.49% that day), so the open had little left to reprice. Do not register a size threshold off a heavy-tailed gap sample
+  without naming the pre-print regime: the 11/15 record included the two fattest Q4 gaps (−15.07%, −6.84%) and said nothing about a print the sector had already traded into.
+
 - **"The UK domestic-electricity zero rate is a fixed six-month notch; extension needs a fresh SI the Budget will not supply" (FT-uk-electricity-vat-zero-rate-2026-10-01-2)** — added 2026-10-30 from the
   [uk-electricity-vat-zero-rate-2026-10-01 ledger](events/uk-electricity-vat-zero-rate-2026-10-01.md). Budget 2026 (10-28) extended the 0% rate to **1 July 2027** (gov.uk AB26 policy costings;
   −£755m 2026-27, −£305m 2027-28). Do not register "a temporary tax relief lapses on its statutory date" ahead of a fiscal event that owns the extension decision: a sunset written into the
