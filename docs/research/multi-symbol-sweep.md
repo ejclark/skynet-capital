@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The ECI's SA quarterly pace holds at 0.9%, so the y/y breaks its 3.4% flatline at ≥3.5%" (FT-eci-q3-2026-10-30-1)** — added 2026-10-31 from the
+  [eci-q3-2026-10-30 close-out](events/eci-q3-2026-10-30.md). BLS printed SA **0.8%** q/q and **3.4%** y/y (3.374% unrounded; NSA 178.738 vs the 178.870 the 3.5% line needed). The arithmetic
+  was right to the index point and the bet still missed by 7.6bp. Do not register a persistence bet on a one-tenth rounding threshold off two quarters at the same pace: the line sits inside
+  one quarter's normal ±0.1pp wobble, so the registration is a coin on the third decimal, not a read.
+
 - **"The UK domestic-electricity zero rate is a fixed six-month notch; extension needs a fresh SI the Budget will not supply" (FT-uk-electricity-vat-zero-rate-2026-10-01-2)** — added 2026-10-30 from the
   [uk-electricity-vat-zero-rate-2026-10-01 ledger](events/uk-electricity-vat-zero-rate-2026-10-01.md). Budget 2026 (10-28) extended the 0% rate to **1 July 2027** (gov.uk AB26 policy costings;
   −£755m 2026-27, −£305m 2027-28). Do not register "a temporary tax relief lapses on its statutory date" ahead of a fiscal event that owns the extension decision: a sunset written into the
