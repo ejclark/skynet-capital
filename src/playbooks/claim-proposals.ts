@@ -12,7 +12,8 @@ import type { Narrowing } from "./conviction-steering.js";
  * scoring pass writes it to `docs/research/convictions/refinements/<id>.md` (`refinementText`), so
  * the pull request that decides a claim carries the change that claim implies as a diff a reviewer
  * reads (criterion 6). Adopting a proposal is its own pull request; each section carries a stable
- * key (`proposalKey`) for the lane that will open one. Paper only, educational.
+ * key (`proposalKey`), and a failed claim's key is what `npm run research:refine` adopts
+ * (`conviction-adoptions.ts`). Paper only, educational.
  *
  * HONESTY. A pass is one claim surviving one falsifier on one tape, so every proposal says what the
  * result is not: not an edge, not a size, not a reason to widen a bound. Widening a playbook's
@@ -115,6 +116,8 @@ function section(conviction: Conviction, p: Proposal): string[] {
     "",
     "The fence this claim backed:",
     ...fence,
+    "",
+    `**To adopt option 1:** \`npm run research:refine -- ${proposalKey(conviction, p)}\` writes it as one ledger line for its own held pull request.`,
     "",
     "**What it is not:** a fail does not say the opposite is true, and it is no reason to size a trade the other way.",
     "",

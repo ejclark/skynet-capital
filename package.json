@@ -80,6 +80,7 @@
     "research:signals": "tsx src/scripts/signal-schedule.ts",
     "research:dossier": "tsx src/scripts/symbol-dossier.ts",
     "research:proposals": "tsx src/scripts/claim-proposals.ts",
+    "research:refine": "tsx src/scripts/claim-refine.ts",
     "research:scorecard": "node scripts/research-scorecard.mjs",
     "lessons:held": "node scripts/fix-held.mjs",
     "bottleneck:baseline": "node scripts/bottleneck-baseline.mjs",

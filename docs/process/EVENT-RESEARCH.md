@@ -284,6 +284,8 @@ reading can set a pair's live narrowing; a claim scored by a re-run stays pendin
 pair (criterion 6): commit it too, and add a Summary bullet naming the pair and the proposal, so the
 reviewer of your PR sees it. It is text for review and changes no setting. Never hand-edit either
 file, and never edit the conviction doc or its record: the score is the command's, not yours.
+Never run `npm run research:refine` in your PR either: adopting a proposal is its own held PR,
+opened by a build session after yours merges, because you ship one PR.
 **The scores file is shared** with every lane that scores a linked row, the one exception to
 one-file-per-owner here, and it is safe for the same reason appends are: each lane changes a
 different claim's entry, once. On a merge conflict in it or in a refinements file, take `main`'s

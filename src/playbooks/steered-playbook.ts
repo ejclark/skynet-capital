@@ -1,4 +1,5 @@
 import type { PlaybookSubscription } from "../domain/types.js";
+import { adoptedHold, adoptedHoldReason, type HoldLookup } from "./conviction-adoptions.js";
 import { resolveSteering } from "./conviction-steering.js";
 import { type ConvictionLookup, lookupConviction } from "./conviction-store.js";
 import type { Playbook } from "./playbook.js";
@@ -31,6 +32,11 @@ import type { Playbook } from "./playbook.js";
  * it unnarrowed and unchecked would be the one state no owner chose. The pointer rule only ever
  * points at a record steering the pair (`conviction-pointer.ts`), so this is the gap between a
  * record changing and the next poll re-pointing, and the pair waits it out exits-only.
+ *
+ * WHY AN ADOPTED HOLD IS REFUSED TOO (#5482 criterion 6). When a claim a pair's fence rests on fails
+ * and Eric merges the change it proposes (`conviction-adoptions.ts`), the view still steers the pair
+ * but the pair opens nothing new under it. The pointer stays, so nothing is re-pointed or logged;
+ * the refusal carries the claim and the day, and the same exits-only path runs it.
  */
 export type SteeredPlaybook =
   | { readonly playbook: Playbook; readonly says: readonly string[] }
@@ -40,6 +46,7 @@ export function steeredBy(
   playbook: Playbook,
   sub: Pick<PlaybookSubscription, "convictionId" | "playbookId">,
   lookup: ConvictionLookup = lookupConviction,
+  holds: HoldLookup = adoptedHold,
 ): SteeredPlaybook {
   const unchanged = { playbook, says: [] } as const;
   if (sub.convictionId === undefined) return unchanged;
@@ -56,6 +63,8 @@ export function steeredBy(
       refused: `points at conviction "${sub.convictionId}", which does not steer ${sub.playbookId}`,
     };
   }
+  const hold = holds(record.id, sub.playbookId);
+  if (hold) return { playbook, refused: adoptedHoldReason(record, hold) };
   const narrow = (record.narrowings ?? [])
     .filter((n) => n.pair === sub.playbookId)
     .flatMap((n) => n.narrow);
