@@ -141,9 +141,9 @@ export function createRest() {
  * the `>=` form of `created` is honoured by this listing (a day or a range read as zero runs on
  * 2026-11-01), so a window past the 1,000-run cap cannot be chunked; it is refused by name.
  */
-export function listRuns(rest, workflowFile, sinceMs) {
+export function listRuns(rest, workflowFile, sinceMs, event = null) {
   const created = new Date(sinceMs - LIST_SLACK_MS).toISOString().replace(/\.\d+Z$/, "Z");
-  const query = `created=${encodeURIComponent(`>=${created}`)}&per_page=100`;
+  const query = `created=${encodeURIComponent(`>=${created}`)}&per_page=100${event ? `&event=${event}` : ""}`;
   const runs = [];
   for (let page = 1; page <= LIST_PAGE_CAP; page += 1) {
     const body = rest.api(
@@ -154,7 +154,7 @@ export function listRuns(rest, workflowFile, sinceMs) {
     if (items.length < 100) return runs;
   }
   throw new Error(
-    `${workflowFile} has over ${LIST_PAGE_CAP * 100} runs in the window, past GitHub's listing cap: narrow the window`,
+    `${workflowFile}${event ? ` (${event})` : ""} has over ${LIST_PAGE_CAP * 100} runs in the window, past GitHub's listing cap: narrow the window`,
   );
 }
 
@@ -242,13 +242,17 @@ export function readLanes({
     const startedMs = Date.parse(run.run_started_at);
     return startedMs <= untilMs + LIST_SLACK_MS && startedMs >= sinceMs - LIST_SLACK_MS;
   };
-  for (const workflow of LANE_WORKFLOWS) {
-    // A workflow never listed is as unread as a run left behind: the totals are withheld.
+  // One listing per workflow and lane event: the 15-minute repair scans and every push run never
+  // enter the listing, which is what kept moneypenny-repair.yml under the 1,000-run cap.
+  for (const [workflow, event] of LANE_WORKFLOWS.flatMap((w) =>
+    [...LANE_EVENTS].map((e) => [w, e]),
+  )) {
+    // A listing never made is as unread as a run left behind: the totals are withheld.
     if (rest.calls >= maxRest) {
-      counts.unlisted.push(workflow);
+      counts.unlisted.push(`${workflow} ${event}`);
       continue;
     }
-    for (const run of listRuns(rest, workflow, sinceMs).filter(inWindow)) {
+    for (const run of listRuns(rest, workflow, sinceMs, event).filter(inWindow)) {
       const bucket = classify(run);
       counts[bucket] += 1;
       if (bucket !== "newRuns") continue;

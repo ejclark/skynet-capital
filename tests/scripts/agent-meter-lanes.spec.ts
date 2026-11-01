@@ -161,10 +161,12 @@ describe("lane rows from cached runs", () => {
 });
 
 /** A fake REST layer: canned bodies by path substring, every call counted like the real one. */
-function fakeRest(routes: [string, string | Buffer][]) {
+function fakeRest(routes: [string | RegExp, string | Buffer][]) {
   const paths: string[] = [];
   const find = (path: string) => {
-    const hit = routes.find(([key]) => path.includes(key));
+    const hit = routes.find(([key]) =>
+      typeof key === "string" ? path.includes(key) : key.test(path),
+    );
     if (!hit) throw new Error(`fakeRest: no route for ${path}`);
     return hit[1];
   };
@@ -204,9 +206,10 @@ describe("reading the lanes over REST with a cache", () => {
     "2_route.txt": "2026-10-30T09:59:00.0000000Z routed",
     "research due events (a-1)/system.txt": "not a job log",
   });
-  const routes = (): [string, string | Buffer][] => [
+  // Listings are per workflow and lane event; only the events dispatch listing has runs here.
+  const routes = (): [string | RegExp, string | Buffer][] => [
     [
-      "/workflows/moneypenny-events.yml/runs",
+      /moneypenny-events\.yml\/runs\?.*event=workflow_dispatch/,
       JSON.stringify({
         workflow_runs: [
           RUN(10, "2026-10-30T09:58:00Z", 22),
@@ -217,8 +220,7 @@ describe("reading the lanes over REST with a cache", () => {
         ],
       }),
     ],
-    ["/workflows/moneypenny-repair.yml/runs", JSON.stringify({ workflow_runs: [] })],
-    ["/workflows/claude.yml/runs", JSON.stringify({ workflow_runs: [] })],
+    [/\.yml\/runs\?/, JSON.stringify({ workflow_runs: [] })],
     ["/actions/runs/10/logs", zip],
   ];
 
@@ -241,8 +243,8 @@ describe("reading the lanes over REST with a cache", () => {
       inProgress: 1,
       unreadRuns: 0,
     });
-    // 3 listings + 1 zip; the short run and the running one cost nothing.
-    expect(cold.calls).toBe(4);
+    // 15 listings (3 workflows × 5 lane events) + 1 zip; the short run and the running one cost nothing.
+    expect(cold.calls).toBe(16);
 
     const warm = fakeRest(routes());
     const second = await readLanes({
@@ -253,7 +255,7 @@ describe("reading the lanes over REST with a cache", () => {
       maxRest: 100,
     });
     expect(second.rows).toEqual(first.rows);
-    expect(warm.calls).toBe(3);
+    expect(warm.calls).toBe(15);
     expect(warm.paths.some((p) => p.includes("/logs"))).toBe(false);
   });
 
@@ -262,7 +264,8 @@ describe("reading the lanes over REST with a cache", () => {
     const rest = fakeRest(routes());
     const out = await readLanes({ rest, cache, sinceMs: since, untilMs: until, maxRest: 1 });
     expect(out.counts.unreadRuns).toBe(1);
-    expect(out.counts.unlisted).toEqual(["moneypenny-repair.yml", "claude.yml"]);
+    expect(out.counts.unlisted).toHaveLength(14);
+    expect(out.counts.unlisted[0]).toBe("moneypenny-events.yml issue_comment");
     expect(out.rows.research).toBeUndefined();
   });
 
@@ -285,7 +288,7 @@ describe("reading the lanes over REST with a cache", () => {
     const full = JSON.stringify({
       workflow_runs: Array.from({ length: 100 }, (_, i) => RUN(i, "2026-10-30T09:00:00Z", 1)),
     });
-    const rest = fakeRest([["/workflows/moneypenny-events.yml/runs", full]]);
+    const rest = fakeRest([[/moneypenny-events\.yml\/runs\?/, full]]);
     expect(() =>
       readLanes({
         rest,
