@@ -1,5 +1,12 @@
-import { execFileSync } from "node:child_process";
-import { parseLedgerHeader } from "../../scripts/event-material-decide.mjs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  INTENT_TRIP_CAP,
+  parseLedgerHeader,
+  splitIntents,
+} from "../../scripts/event-material-decide.mjs";
 import { closeFromChart } from "../../scripts/event-material-scan.mjs";
 
 // The deterministic material-change probe (issue #724) — driven through the real CLI entrypoint,
@@ -51,6 +58,7 @@ type Explain = {
   intervalDays: number;
   daysOut: number;
   ledgerText?: string;
+  cappedIntents: string[];
 };
 
 const baseEvent = {
@@ -212,6 +220,80 @@ describe("event-material-scan decide()", () => {
     });
     expect(verdict).toBe(1);
     expect(out.reasons).toEqual(["conviction-proposal:ai-dip-2026-10/P6"]);
+  });
+
+  it("a declared intent no ledger row cites is material on an otherwise quiet pulse", () => {
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
+      pendingIntents: ["some-study"],
+    });
+    expect(verdict).toBe(1);
+    expect(out.reasons).toEqual(["declared-intent:some-study"]);
+    expect(out.cappedIntents).toEqual([]);
+  });
+
+  it("a capped intent does not trip, and the screen row says it stopped and why", () => {
+    const { verdict, out } = explain({
+      ledger: { lastAssessed: "2026-09-01", probeRef: quietProbeRef },
+      ledgerText: LEDGER_TEXT,
+      cappedIntents: ["some-study"],
+    });
+    expect(verdict).toBe(0);
+    expect(out.reasons).toEqual([]);
+    expect(out.cappedIntents).toEqual(["some-study"]);
+    const row = (out.ledgerText ?? "").split("\n").find((l) => l.includes("Deterministic screen"));
+    expect(row).toContain("`some-study`");
+    expect(row).toContain(`${INTENT_TRIP_CAP} sessions`);
+  });
+});
+
+describe("splitIntents: an active intent is material until a session cites it, within a cap", () => {
+  const intent = { slug: "some-study", stated: "2026-11-01" };
+  const ledger = (...rows: string[]) => [LEDGER_TEXT.trimEnd(), ...rows].join("\n");
+  const session = (date: string, note = "A pulse.") =>
+    `| ${date} | D-9 | ${note} | — | 2026-12-01 |`;
+  const screen = (date: string, note = "") =>
+    `| ${date} | D-9 | **Deterministic screen (no Claude session).** Readings${note}. | — | 2026-12-01 |`;
+  const split = (...rows: string[]) => splitIntents([intent], ledger(...rows));
+
+  it("is pending with no session since it was stated", () => {
+    expect(split()).toEqual({ pending: ["some-study"], capped: [] });
+  });
+
+  it("drops out as soon as a session row cites the slug, as a whole token", () => {
+    const cited = session("2026-11-03", "Per declared intent some-study, ran the re-check.");
+    expect(split(cited)).toEqual({ pending: [], capped: [] });
+    const longer = session("2026-11-03", "Per declared intent some-study-2.");
+    expect(split(longer).pending).toEqual(["some-study"]);
+  });
+
+  it("keeps tripping after one uncited session and stops at the cap", () => {
+    expect(INTENT_TRIP_CAP).toBe(2);
+    const one = [session("2026-11-03")];
+    expect(split(...one)).toEqual({ pending: ["some-study"], capped: [] });
+    const two = [...one, session("2026-11-05")];
+    expect(split(...two)).toEqual({ pending: [], capped: ["some-study"] });
+  });
+
+  it("does not count sessions from on or before the day it was stated: they could not have read it", () => {
+    const before = [session("2026-10-30"), session("2026-11-01")];
+    expect(split(...before)).toEqual({ pending: ["some-study"], capped: [] });
+  });
+
+  it("does not count screens, and a screen naming the slug is never a citation", () => {
+    const screens = [screen("2026-11-03"), screen("2026-11-05", " `some-study` no longer trips")];
+    expect(split(...screens)).toEqual({ pending: ["some-study"], capped: [] });
+  });
+
+  it("does not count a dated row outside the assessment ledger, before or after it", () => {
+    const dated = ["| 2026-11-03 | a dated fact |", "| 2026-11-04 | another |"];
+    const above = LEDGER_TEXT.replace(
+      "## At a glance",
+      ["## At a glance", "", ...dated].join("\n"),
+    );
+    expect(splitIntents([intent], above)).toEqual({ pending: ["some-study"], capped: [] });
+    const below = ledger("", "## Outcome", "", "| Date | Move |", "|---|---|", ...dated);
+    expect(splitIntents([intent], below)).toEqual({ pending: ["some-study"], capped: [] });
   });
 });
 
@@ -438,5 +520,147 @@ describe("event-material-scan --screen-due — an unreadable due list is UNKNOWN
     expect(stderr).toContain("cannot read stdin");
     expect(stderr).toContain("UNKNOWN");
     expect(stdout).not.toContain("stillDue");
+  });
+});
+
+// The whole path a lane walks: the real CLI, a real folder of records, a real ledger on disk. Only
+// the price feed is stubbed, by a preloaded module rather than a flag production would carry.
+describe("event-material-scan --screen-due reads declared intents", () => {
+  const SLUG = "crwv-nvda-prints-2026-11";
+  // A symbol no conviction doc proposes against: the real conviction proposals are read from the
+  // real folder, and they must not decide these verdicts. intents.spec.ts pins the real event ids.
+  const ID = "zzzz-2026-11-10-print";
+  const root = mkdtempSync(join(tmpdir(), "screen-due-"));
+  afterAll(() => rmSync(root, { recursive: true, force: true }));
+  const ledgerDir = join(root, "ledgers");
+  const eventsDir = join(root, "events");
+  // The real record's text, pointed at the fixture event. Any Outcome stripped, so closing the
+  // real record later is not a red here.
+  const realRecord = readFileSync(`docs/intents/${SLUG}.md`, "utf8")
+    .replace(/## Outcome[\s\S]*/, "")
+    .replaceAll("crwv-2026-11-10-print", ID);
+  mkdirSync(ledgerDir);
+  mkdirSync(eventsDir);
+  writeFileSync(
+    join(root, "calendar.ts"),
+    `export const UPCOMING_PRINTS: readonly EarningsPrint[] = [\n  { symbol: "ZZZZ", date: "2026-11-10", status: "confirmed" },\n];\n`,
+  );
+  writeFileSync(join(root, "cadence.json"), JSON.stringify(CADENCE));
+  const stub = join(root, "stub-fetch.mjs");
+  const stamp = Date.parse("2026-10-30T13:30:00Z") / 1000;
+  writeFileSync(
+    stub,
+    `globalThis.fetch = async () => ({ ok: true, json: async () => ({ chart: { result: [{ timestamp: [${stamp}], indicators: { quote: [{ close: [100] }] }, meta: { gmtoffset: 0 } }] } }) });\n`,
+  );
+  const quiet = JSON.stringify({
+    symbols: { ZZZZ: 100 },
+    vix: 100,
+    daysBand: "critical:8+",
+    adjacentIds: [],
+    adjacentStrongIds: [],
+    screenStreak: 0,
+  });
+  const ledgerWith = (rows: string[]) =>
+    [
+      LEDGER_TEXT.replace("# Some print — some-id", `# ZZZZ print — ${ID}`).trimEnd(),
+      ...rows,
+      "",
+      "**Last assessed:** 2026-10-31",
+      `<!-- probe-ref: ${quiet} -->`,
+      "",
+    ].join("\n");
+
+  /** One pulse, with `records` as the whole of docs/intents and `rows` already in the ledger. */
+  const pulse = (records: Record<string, string>, rows: string[] = []) => {
+    const intentsDir = mkdtempSync(join(root, "intents-"));
+    for (const [slug, text] of Object.entries(records)) {
+      writeFileSync(join(intentsDir, `${slug}.md`), text);
+    }
+    const ledgerPath = join(ledgerDir, `${ID}.md`);
+    const before = ledgerWith(rows);
+    writeFileSync(ledgerPath, before);
+    const env: NodeJS.ProcessEnv = { ...process.env, INTENTS_DIR: intentsDir };
+    delete env.HTTPS_PROXY;
+    delete env.https_proxy;
+    const res = spawnSync(
+      "node",
+      [
+        "--import",
+        stub,
+        "scripts/event-material-scan.mjs",
+        "--screen-due",
+        "--today=2026-11-02",
+        `--ledger-dir=${ledgerDir}`,
+        `--events-dir=${eventsDir}`,
+        `--calendar-file=${join(root, "calendar.ts")}`,
+        `--cadence-file=${join(root, "cadence.json")}`,
+      ],
+      { encoding: "utf8", env, input: JSON.stringify([{ id: ID, reason: "interval-elapsed" }]) },
+    );
+    return {
+      status: res.status,
+      stderr: res.stderr,
+      out: res.status === 0 ? JSON.parse(res.stdout) : null,
+      before,
+      after: readFileSync(ledgerPath, "utf8"),
+    };
+  };
+  const screenedIds = (run: ReturnType<typeof pulse>) =>
+    run.out.screened.map((s: { id: string }) => s.id);
+
+  it("the first pulse after the record lands trips on its slug and writes nothing", () => {
+    const run = pulse({ [SLUG]: realRecord });
+    expect(run.status).toBe(0);
+    expect(run.out.stillDue[0].materialReasons).toEqual([`declared-intent:${SLUG}`]);
+    expect(run.out.screened).toEqual([]);
+    expect(run.after).toBe(run.before);
+  });
+
+  it("the same pulse is quiet with no record: the record is what trips it", () => {
+    const run = pulse({});
+    expect(run.out.stillDue).toEqual([]);
+    expect(screenedIds(run)).toEqual([ID]);
+  });
+
+  it("the pulse after a session cites the slug does not re-trip", () => {
+    const row = `| 2026-11-02 | D-8 | Per declared intent ${SLUG}, ran its check. | — | 2026-11-04 |`;
+    const run = pulse({ [SLUG]: realRecord }, [row]);
+    expect(run.out.stillDue).toEqual([]);
+    expect(screenedIds(run)).toEqual([ID]);
+    expect(run.stderr).not.toContain(SLUG);
+  });
+
+  it("stops tripping after two sessions ignored it, and says so in the row, the output and the log", () => {
+    const rows = ["2026-11-02", "2026-11-02"].map((d) => `| ${d} | D-8 | A pulse. | — | ${d} |`);
+    const run = pulse({ [SLUG]: realRecord }, rows);
+    expect(run.out.stillDue).toEqual([]);
+    expect(run.out.screened[0].cappedIntents).toEqual([SLUG]);
+    expect(run.stderr).toContain(`declared intent ${SLUG}`);
+    expect(run.stderr).toContain("no longer trips");
+    const row = run.after.split("\n").find((l) => l.includes("Deterministic screen"));
+    expect(row).toContain(`\`${SLUG}\``);
+    expect(row).toContain("no longer trips");
+  });
+
+  it("a lapsed record does not trip", () => {
+    const lapsed = realRecord.replace("**Until:** 2026-11-30", "**Until:** 2026-11-01");
+    expect(pulse({ [SLUG]: lapsed }).out.stillDue).toEqual([]);
+  });
+
+  it("a record naming another event does not trip this one", () => {
+    const other = realRecord.replace(`\`${ID}\` · `, "");
+    expect(pulse({ [SLUG]: other }).out.stillDue).toEqual([]);
+  });
+
+  it("a malformed record fails the run loudly instead of reading as no intent", () => {
+    const run = pulse({ [SLUG]: realRecord.replace(" · **Until:** 2026-11-30", "") });
+    expect(run.status).toBe(2);
+    expect(run.stderr).toContain("Until");
+  });
+
+  it("the research protocol tells the lane to read a record and cite it", () => {
+    const protocol = readFileSync("docs/process/EVENT-RESEARCH.md", "utf8");
+    expect(protocol).toContain("node scripts/intents.mjs --event=<your-event-id>");
+    expect(protocol).toContain("`declared-intent:<slug>`");
   });
 });
