@@ -471,10 +471,17 @@ async function main(): Promise<void> {
     // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
     readAllLadderProgress,
     // Handed ids, only those participants' files are read: the Wire asks for its members alone, so
-    // the bots' audit trails (most of the bytes) stay unread (#4619).
+    // the bots' audit trails (most of the bytes) stay unread (#4619). Each read keeps its own id's
+    // lines, so two ids that share a file name never return its lines twice.
     readAllOrderAudit: async (participantIds) =>
       participantIds
-        ? (await Promise.all(participantIds.map((id) => orderAudit.list(id)))).flat()
+        ? (
+            await Promise.all(
+              participantIds.map(async (id) =>
+                (await orderAudit.list(id)).filter((r) => r.participantId === id),
+              ),
+            )
+          ).flat()
         : orderAudit.list(),
     // Absent without a GitHub token: the feed then renders no development kind and says so, rather
     // than letting an empty list imply the league has never merged anything.

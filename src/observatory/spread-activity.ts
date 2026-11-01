@@ -111,10 +111,13 @@ export function spreadLookup(deps: SpreadLookupDeps): SpreadOf {
  * A miss is remembered only while `legMark` holds still (#4619). Nearly every option fill is a miss —
  * about 5,300 per request at 180 days, ~25 ms of `/api/wire` — and a miss can turn into a hit only
  * when a leg is written: a spread recorded `working` gets its legs from a late settlement, and the
- * next request must see them. That write moves the mark, which forgets every miss at once. The mark
- * is read once per synchronous pass, not once per fill (that would cost what the misses did): the
- * fold asks for every fill in one turn, and this process writes nothing to the store mid-turn. With
- * no `legMark`, no miss is remembered.
+ * next request must see them. That write moves the mark, which forgets every miss at once.
+ *
+ * The mark is read once per synchronous pass, not once per fill (that would cost what the misses
+ * did): a fold asks for all its fills in one turn, and the held mark is dropped when the microtasks
+ * already queued behind that turn have run. So a leg written in the meantime can be missed by at most
+ * a request that was already running. That request shows the legs as the separate contract fills
+ * they are, which is true, and the next one folds them. With no `legMark`, no miss is remembered.
  */
 export function rememberSpreadLegs(
   findSpreadLeg: (legOrderId: string) => OptionOrderLeg | undefined,
@@ -123,27 +126,24 @@ export function rememberSpreadLegs(
   const found = new Map<string, OptionOrderLeg>();
   const missed = new Set<string>();
   let missedAt: number | undefined;
-  let markThisTurn: number | undefined;
-  const currentMark = (read: () => number): number => {
-    if (markThisTurn === undefined) {
-      markThisTurn = read();
+  let markThisPass: number | undefined;
+  const missedNow = (legOrderId: string, readMark: () => number): boolean => {
+    if (markThisPass === undefined) {
+      markThisPass = readMark();
       queueMicrotask(() => {
-        markThisTurn = undefined;
+        markThisPass = undefined;
       });
     }
-    return markThisTurn;
+    if (markThisPass !== missedAt) {
+      missed.clear();
+      missedAt = markThisPass;
+    }
+    return missed.has(legOrderId);
   };
   return (legOrderId) => {
     const held = found.get(legOrderId);
     if (held) return held;
-    if (legMark) {
-      const mark = currentMark(legMark);
-      if (mark !== missedAt) {
-        missed.clear();
-        missedAt = mark;
-      }
-      if (missed.has(legOrderId)) return undefined;
-    }
+    if (legMark && missedNow(legOrderId, legMark)) return undefined;
     const leg = findSpreadLeg(legOrderId);
     if (leg) found.set(legOrderId, leg);
     else if (legMark) missed.add(legOrderId);
