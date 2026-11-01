@@ -244,7 +244,7 @@ function requireBothOrders(runs) {
   for (const arm of ["without", "with"]) {
     const ofArm = runs.filter((run) => run.arm === arm);
     const forward = ofArm.filter((run) => run.order === "forward").length;
-    if (!forward || forward * 2 !== ofArm.length || ofArm.length * 2 !== runs.length) {
+    if (forward * 2 !== ofArm.length || ofArm.length * 2 !== runs.length) {
       throw new Error(
         `the ${arm} arm read ${forward} of ${ofArm.length} runs forward, of ${runs.length} in all: the arms have to run equally and read both orders equally, or order poses as the page`,
       );
