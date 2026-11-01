@@ -41,8 +41,15 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+// Deadlines. The exec also gets flyctl's own --timeout, because its session can outlive ours.
+// deploy-lag makes up to a few dozen GitHub reads of its own, so it gets a longer one.
+const SPAWN_TIMEOUT_MS = Number(process.env.FITNESS_SPAWN_MS ?? 60_000);
+const DEPLOY_LAG_TIMEOUT_MS = SPAWN_TIMEOUT_MS * 3;
+const EXEC_TIMEOUT_S = 30;
 // CI installs the binary as flyctl; a laptop usually has fly.
-const FLY = process.env.FLY_BIN ?? (spawnSync("fly", ["version"]).status === 0 ? "fly" : "flyctl");
+const FLY =
+  process.env.FLY_BIN ??
+  (spawnSync("fly", ["version"], { timeout: SPAWN_TIMEOUT_MS }).status === 0 ? "fly" : "flyctl");
 const GH = process.env.GH_BIN ?? "gh";
 const OWNER = "ejclark";
 const BOTS_APP = "skynet-capital-bots";
@@ -51,9 +58,6 @@ const STAMP_FRESH_MS = 5 * 60_000;
 // A push lags for the minutes its own deploy takes. Judged with no grace, healthy 10-15 to 10-22
 // read red at 65 of 729 ticks; 20 minutes clears them all (#6470 study).
 const DEPLOY_GRACE_MS = 20 * 60_000;
-// Deadlines. The exec also gets flyctl's own --timeout, because its session can outlive ours.
-const SPAWN_TIMEOUT_MS = Number(process.env.FITNESS_SPAWN_MS ?? 60_000);
-const EXEC_TIMEOUT_S = 30;
 // A read that fails once is retried after this pause before it counts as blind.
 const RETRY_MS = Number(process.env.FITNESS_RETRY_MS ?? 15_000);
 // What src/adapters/email-alert-delivery.ts needs. Read as names, never values. The boot line said the
@@ -99,9 +103,10 @@ export function judgeStamp(stamp, nowMs) {
  * has waited past the grace; a lag with no date cannot be aged, so it is unknown, not a pass.
  */
 export function judgeDeploys(lag, nowMs) {
-  if (!lag || lag.known === false) {
-    return unknown(`cannot read GitHub${lag?.reason ? `: ${lag.reason}` : ""}`);
-  }
+  // deploy-lag's reasons go to the run log through the probe, never into this detail: an issue
+  // carries the contract's words only.
+  if (!lag || lag.known === false) return unknown("cannot read GitHub");
+  if (lag.bots?.known === false) return unknown("cannot read the bots deploys");
   const halves = [
     ["dashboard", lag.lagging, lag.since],
     ["bots", lag.bots?.lagging, lag.bots?.since],
@@ -110,11 +115,13 @@ export function judgeDeploys(lag, nowMs) {
   const young = [];
   for (const [name, lagging, since] of halves) {
     if (!lagging) continue;
-    const waitedMin = Math.round((nowMs - Date.parse(since ?? "")) / 60000);
-    if (!Number.isFinite(waitedMin)) return unknown(`the ${name} lag carries no date`);
-    (waitedMin * 60000 > DEPLOY_GRACE_MS ? late : young).push(
-      `${name} undeployed ${waitedMin} min`,
-    );
+    const waitedMs = nowMs - Date.parse(since ?? "");
+    if (!Number.isFinite(waitedMs)) return unknown(`the ${name} lag carries no date`);
+    // A date ahead of this clock cannot be aged either: the API has read an hour ahead of a
+    // runner, and a negative wait would pass as young for as long as the skew lasts.
+    if (waitedMs < 0) return unknown(`the ${name} lag is dated in the future`);
+    const line = `${name} undeployed ${Math.round(waitedMs / 60000)} min`;
+    (waitedMs > DEPLOY_GRACE_MS ? late : young).push(line);
   }
   if (late.length) return fail(late.join(", "));
   return pass(young.length ? `${young.join(", ")}: inside the deploy grace` : "both apps current");
@@ -241,8 +248,15 @@ export const CONTRACTS = [
     reaches: ISSUE_TO_OWNER,
     // deploy-lag reads the deploy jobs and what the bots machine runs; bots-deploy-preflight is
     // not a judge, because it says skip on a debounce or after three failed deploys.
-    probe: (nowMs) =>
-      judgeDeploys(json(process.execPath, [join(HERE, "deploy-lag.mjs"), "--json"]), nowMs),
+    probe: (nowMs) => {
+      const lag = json(
+        process.execPath,
+        [join(HERE, "deploy-lag.mjs"), "--json"],
+        DEPLOY_LAG_TIMEOUT_MS,
+      );
+      if (lag?.known === false && lag.reason) readFailures.push(`deploy-lag: ${lag.reason}`);
+      return judgeDeploys(lag, nowMs);
+    },
   },
   {
     id: "alerts-reach-owner",
@@ -425,7 +439,9 @@ function report(results, write) {
     "--limit",
     "200",
   ]);
-  if (!listed) {
+  if (!Array.isArray(listed)) {
+    if (listed !== null)
+      readFailures.push("gh issue list replied with something that is not a list");
     console.log(
       `::warning::fitness: cannot read GitHub issues, so nothing was reported (${readFailures.join("; ")})`,
     );
@@ -476,11 +492,13 @@ function probeAll(nowMs, here) {
   const results = CONTRACTS.map(({ probe, ...contract }) => {
     if (contract.home !== here) return { ...contract, ...notHere(contract.home, here) };
     let verdict = attempt({ ...contract, probe }, nowMs);
+    // A crash on either read is still a crash: the retry may read clean, the run stays red.
+    crashed ||= Boolean(verdict.crashed);
     if (verdict.status === "unknown") {
       sleep(RETRY_MS);
       verdict = attempt({ ...contract, probe }, nowMs);
+      crashed ||= Boolean(verdict.crashed);
     }
-    if (verdict.crashed) crashed = true;
     const { crashed: _, ...rest } = verdict;
     return { ...contract, ...rest };
   });

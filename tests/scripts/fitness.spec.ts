@@ -88,8 +88,16 @@ describe("fitness judges", () => {
     expect(after(5 * MIN).status).toBe("pass");
     expect(after(5 * MIN).detail).toContain("inside the deploy grace");
     expect(after(20 * MIN).status).toBe("pass");
+    // The boundary is the millisecond, not the rounded minute.
+    expect(after(20 * MIN + 1000).status).toBe("fail");
     expect(after(21 * MIN).status).toBe("fail");
     expect(after(45 * MIN).detail).toBe("dashboard undeployed 45 min");
+  });
+
+  it("cannot age a lag dated ahead of its own clock, which the API has done by an hour", () => {
+    const ahead = judgeDeploys({ lagging: true, since: iso(NOW + 60 * MIN) }, NOW);
+    expect(ahead.status).toBe("unknown");
+    expect(ahead.detail).toBe("the dashboard lag is dated in the future");
   });
 
   it("judges the bots half by the same rule, not by a run's colour", () => {
@@ -102,9 +110,12 @@ describe("fitness judges", () => {
 
   it("treats no evidence as unknown, never as a pass", () => {
     expect(judgeDeploys(null, NOW).status).toBe("unknown");
+    // deploy-lag's reason stays out of the detail: an issue carries the contract's words only.
     const blind = judgeDeploys({ known: false, reason: "could not read GitHub state" }, NOW);
-    expect(blind.status).toBe("unknown");
-    expect(blind.detail).toContain("could not read GitHub state");
+    expect(blind).toEqual({ status: "unknown", detail: "cannot read GitHub" });
+    // The bots half unreadable is not a pass for the whole, even with the dashboard current.
+    const halfBlind = judgeDeploys({ lagging: false, bots: { known: false } }, NOW);
+    expect(halfBlind).toEqual({ status: "unknown", detail: "cannot read the bots deploys" });
     // A lag with no date cannot be aged, so it cannot be waved through as young.
     expect(judgeDeploys({ lagging: true }, NOW).status).toBe("unknown");
   });
@@ -373,7 +384,8 @@ S="$STUB"; echo "$*" >> "$S/fly-calls"
 [[ -f "$S/fly-dead" ]] && { echo "Error: token expired" >&2; exit 1; }
 app() { [[ "$*" == *"-a $1"* ]] || { echo "Error: app not found" >&2; exit 1; }; }
 case "$1 $2" in
-  "machine list") app "skynet-capital-bots --json" "$@"; cat "$S/machines" ;;
+  "machine list") app "skynet-capital-bots --json" "$@"
+    if [[ -f "$S/machines-first" ]]; then cat "$S/machines-first"; rm "$S/machines-first"; else cat "$S/machines"; fi ;;
   "machine exec") app "skynet-capital-bots --timeout" "$@"; [[ -f "$S/exec-hang" ]] && sleep 5; cat "$S/stamp" ;;
   "secrets list") app "skynet-capital --json" "$@"; cat "$S/secrets" ;;
 esac
@@ -576,6 +588,14 @@ describe("fitness wiring", () => {
     expect(res.stdout).toContain("::warning::fitness: bots-running probe crashed");
     // A blip is read twice before it counts: two contracts list machines, each twice.
     expect(lines(calls(stub, "fly"), "machine list")).toBe(4);
+    // A crash on the first read is still a crash when the retry reads clean: the run stays red
+    // so the malformed reply is seen, while the contract itself reports what the retry found.
+    const once = fixture();
+    writeFileSync(join(once, "machines-first"), '{"not":"a list"}');
+    const recovered = run(once, ["--json"]);
+    expect(recovered.status).toBe(1);
+    expect(results(recovered)("bots-running").status).toBe("pass");
+    expect(recovered.stdout).toContain("::warning::fitness: bots-running probe crashed");
   });
 
   it("reports a dead Fly as unknown with the cause kept, and opens one unassigned issue for it", () => {
@@ -686,6 +706,18 @@ describe("fitness wiring", () => {
     expect(res.status).toBe(0);
     expect(res.stdout).toContain("fitness: COULD NOT open [fitness] bots-running");
     expect(res.stdout).toContain("HTTP 502");
+  });
+
+  it("reports nothing, with a warning, when the issue list is not a list", () => {
+    const stub = fixture({ machine: "stopped" });
+    writeFileSync(join(stub, "issues"), "{}");
+    const res = run(stub, ["--report"]);
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain(
+      "::warning::fitness: cannot read GitHub issues, so nothing was reported",
+    );
+    expect(res.stdout).toContain("not a list");
+    expect(calls(stub, "gh")).not.toContain("issue create");
   });
 
   (existsSync(WORKFLOW) ? it : it.skip)("has a clock runner that really invokes the script", () => {
