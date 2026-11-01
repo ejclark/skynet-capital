@@ -35,11 +35,13 @@ on:
           - logs
           - bootstrap-bots-app
           - flip-mode
+          - set-bridge-secret
       target_app:
         description: >-
           Which Fly app to operate on. After the deploy split the bots fleet lives in
           skynet-capital-bots (the default); skynet-capital remains selectable for the transition
-          window while the old shared-app bots group still exists.
+          window while the old shared-app bots group still exists. Ignored by set-bridge-secret,
+          which always sets both apps.
         required: true
         type: choice
         options:
@@ -154,4 +156,38 @@ jobs:
           fi
         env:
           FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+
+      - name: Set the bridge secret — dashboard first, then staged on the bots app
+        # #4621: the bots→dashboard bridge (port 8788) authenticates with SKYNET_INSIGHTS_BRIDGE_SECRET
+        # once it is set, instead of the repo-public literal. This replaces the terminal step that
+        # was in #4612's state block (Eric, 2026-10-24: "running terminal commands is out of the
+        # question"). Order is the whole design (src/server/bridge-http.ts, resolveBridgeAuth):
+        #   1. The dashboard gets it now and restarts. It accepts the new secret AND the literal, so
+        #      the bots, still sending the literal, keep their bridge.
+        #   2. The bots get it STAGED and pick it up on their next deploy (any runtime push, or
+        #      Pipeline -> force_bots_deploy). No bots restart here.
+        # The one unsafe state is the bots holding a value the dashboard doesn't: they would send it,
+        # get 401s, and lose the bridge. So the step refuses when the bots app already lists the
+        # secret (staged or deployed) — this button provisions once, it does not rotate. A dashboard
+        # that has it while the bots don't is harmless (step 1's state), so a re-run after a failed
+        # step 2 just generates a fresh value and overwrites the dashboard's.
+        # The value is generated here, masked, piped through stdin (never argv), and never printed.
+        if: ${{ inputs.action == 'set-bridge-secret' }}
+        run: |
+          NAME=SKYNET_INSIGHTS_BRIDGE_SECRET
+          bots_list=$(FLY_API_TOKEN="$BOTS_TOKEN" flyctl secrets list -a skynet-capital-bots --json)
+          if jq -e --arg n "$NAME" 'any(.. | objects; (.Name // .name) == $n)' <<<"$bots_list" >/dev/null; then
+            echo "::error::skynet-capital-bots already has $NAME (staged or deployed). Setting a new value on the dashboard now would cut the bridge, so nothing was changed. Rotating both apps together is a break-glass step, not this button."
+            exit 1
+          fi
+          S=$(openssl rand -hex 32)
+          echo "::add-mask::$S"
+          echo "1/2 · setting $NAME on skynet-capital (the dashboard restarts; it keeps accepting the old literal)"
+          printf '%s=%s\n' "$NAME" "$S" | FLY_API_TOKEN="$DASH_TOKEN" flyctl secrets import -a skynet-capital
+          echo "2/2 · staging $NAME on skynet-capital-bots (applies on the bots' next deploy; no restart now)"
+          printf '%s=%s\n' "$NAME" "$S" | FLY_API_TOKEN="$BOTS_TOKEN" flyctl secrets import --stage -a skynet-capital-bots
+          echo "Done. The dashboard's boot line should now read 'auth: provisioned secret, literal still accepted'. The bots take the secret on their next deploy (Pipeline -> force_bots_deploy to do it now)."
+        env:
+          DASH_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          BOTS_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
