@@ -8,7 +8,7 @@
 // 2026-10-26 a surge session shipped 11 builds and audited them by hand: one reviewer per PR, then
 // two refuters per serious finding. This file is that loop, run by name:
 //
-//   review (one per PR)   → correctness-only findings, judged against CURRENT main, not the PR's
+//   review (one per PR, per lens) → correctness-only findings, judged against CURRENT main, not the PR's
 //                           base — a later merge may already have fixed it, or made it worse
 //   refute (two per high/medium finding, independent, different lenses)
 //     - trace:     walk a real caller or input to the failure in today's code
@@ -36,6 +36,13 @@
 // Why: on 2026-10-27 a standard-tier pass over 73 merges confirmed 19 defects; a deep-tier pass over 5
 // of the same PRs confirmed 6 more it had missed — every one under src/trading, src/storage,
 // src/server or pipeline.yml. `args.deep` forces listed PRs to the deep tier.
+//
+// THE WORKER — triage, review and both refuters run as `agentType: 'worker'`: no persona, file and
+// shell tools only, 29.4k tokens on the first call against 82k for the default workflow agent
+// (measured 2026-11-01; the first real run of this file paid for 26 agents). The prompts below are
+// the whole job, and the tier stays on each call because a per-call model overrides the agent file's.
+// The standard tier names no model, so it stays on the session's, and takes the worker file's high
+// effort, the floor table's row for review.
 export const meta = {
   name: 'post-merge-audit',
   description: 'Correctness-review merged PRs against current main, refute each high/medium finding twice, return the confirmed findings',
@@ -78,7 +85,7 @@ const tierOf = (n, t) => {
 // deepened by hand. Deepen first; "not found" then means the PR really did not land.
 const FIND = (n) =>
   `Find PR #${n}'s change: \`git fetch -q origin main\`; if \`git rev-parse --is-shallow-repository\` prints true, also \`git fetch -q --deepen=1000 origin main\`. Then \`git log origin/main --oneline --grep "(#${n})"\` (squash merges carry "(#${n})" in the subject) and \`git show <sha>\`. ` +
-  `If no commit matches, read it over REST: \`curl -sS --fail -H "Authorization: Bearer $(gh auth token 2>/dev/null || echo $GH_TOKEN)" https://api.github.com/repos/ejclark/skynet-capital/pulls/${n}\` (and /files), or the GitHub MCP pull_request_read tool.`
+  `If no commit matches, read it over REST: \`curl -sS --fail -H "Authorization: Bearer $(gh auth token 2>/dev/null || echo $GH_TOKEN)" https://api.github.com/repos/ejclark/skynet-capital/pulls/${n}\` (and /files).`
 
 const FINDINGS_SCHEMA = {
   type: 'object',
@@ -139,6 +146,16 @@ ${FIND(n)}
 ${SHARED_TREE}
 
 Judge every finding against the code as it is on origin/main NOW (read the current files, not just the diff): a later merge may already have fixed it, or the PR may have broken a caller it never touched. Report a finding only when you can name a concrete failure scenario. Severity: high = wrong money/P&L/state, data loss, crash on a common path, a broken gate or lane; medium = wrong on a real but narrower path; low = edge cases you are unsure anyone hits. Zero findings is a normal answer.`
+
+// THE LENS TABLE — one row per way of reading a merged PR, chosen by the paths it touched. `roots` is
+// the same prefix list DEEP_ROOTS uses, and null means every path. Correctness is the only row today,
+// so a later lens (a security read of the trust-boundary paths, say) is one row and one prompt: the
+// refuters, the tier and the result shape below already apply to whatever a row finds. Nothing merges
+// two lenses' reports of one defect yet: that is the second row's to settle, once there are two.
+const LENSES = [
+  { name: 'correctness', roots: null, prompt: reviewPrompt },
+]
+const lensesFor = (files) => LENSES.filter((lens) => !lens.roots || files.some((f) => lens.roots.some((r) => f.startsWith(r))))
 
 const tracePrompt = (n, f) => `A reviewer claims merged PR #${n} in ejclark/skynet-capital introduced this ${f.severity} defect. Try to REFUTE it. Read-only.
 
@@ -223,22 +240,34 @@ async function whatDeadAgentsLeft(phaseName) {
 const results = await pipeline(
   prs,
   // Mechanical lookup — the tier is decided by tierOf below, never by this agent.
-  (n) => tracked(`triage-${n}`, triagePrompt(n), { label: `triage #${n}`, phase: 'Triage', schema: TRIAGE_SCHEMA, model: 'sonnet', effort: 'medium' }),
+  (n) => tracked(`triage-${n}`, triagePrompt(n), { label: `triage #${n}`, phase: 'Triage', schema: TRIAGE_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'medium' }),
   async (t, n) => {
     if (t && !t.merged) return { pr: n, unreviewed: 'not found on origin/main' }
     // A triage that died fails safe to deep: an unknown blast radius is never skipped.
     const tier = t ? tierOf(n, t) : 'deep'
     if (tier === 'skip') return { pr: n, skipped: `docs-only: ${t.files.join(', ')}` }
     const dial = TIERS[tier]
-    const review = await tracked(`review-${n}`, reviewPrompt(n), { label: `review #${n} (${tier})`, phase: 'Review', schema: FINDINGS_SCHEMA, ...dial.review })
-    if (!review?.merged) return { pr: n, unreviewed: review ? 'not found on origin/main' : 'reviewer did not return' }
-    const serious = review.findings.filter((f) => f.severity !== 'low')
-    const low = review.findings.filter((f) => f.severity === 'low').map((f) => ({ pr: n, tier, ...f }))
+    // An unknown blast radius gets every lens, for the same reason a dead triage gets the deep tier.
+    const lenses = t?.files?.length ? lensesFor(t.files) : LENSES
+    const reviews = await parallel(
+      lenses.map((lens) => async () => {
+        const review = await tracked(`review-${lens.name}-${n}`, lens.prompt(n), { label: `review #${n} ${lens.name} (${tier})`, phase: 'Review', schema: FINDINGS_SCHEMA, agentType: 'worker', ...dial.review })
+        return review && { ...review, lens: lens.name }
+      }),
+    )
+    const returned = reviews.filter(Boolean)
+    if (!returned.length) return { pr: n, unreviewed: 'no reviewer came back: re-run this PR' }
+    if (!returned.some((r) => r.merged)) return { pr: n, unreviewed: 'not found on origin/main' }
+    const findings = returned.filter((r) => r.merged).flatMap((r) => r.findings.map((f) => ({ lens: r.lens, ...f })))
+    // A lens that did not come back is a read this PR still needs, even when another lens returned.
+    const missed = reviews.flatMap((r, i) => (r ? [] : [lenses[i].name]))
+    const serious = findings.filter((f) => f.severity !== 'low')
+    const low = findings.filter((f) => f.severity === 'low').map((f) => ({ pr: n, tier, ...f }))
     const judged = await parallel(
       serious.map((f, i) => async () => {
         const [trace, repro] = await parallel([
-          () => tracked(`trace-${n}-${i + 1}`, tracePrompt(n, f), { label: `trace #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, ...dial.refute }),
-          () => tracked(`repro-${n}-${i + 1}`, reproPrompt(n, f), { label: `repro #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, isolation: 'worktree', ...dial.refute }),
+          () => tracked(`trace-${n}-${i + 1}`, tracePrompt(n, f), { label: `trace #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, agentType: 'worker', ...dial.refute }),
+          () => tracked(`repro-${n}-${i + 1}`, reproPrompt(n, f), { label: `repro #${n}.${i + 1}`, phase: 'Refute', schema: VERDICT_SCHEMA, isolation: 'worktree', agentType: 'worker', ...dial.refute }),
         ])
         const votes = [
           trace ?? { refuted: true, evidence: 'trace refuter did not return' },
@@ -248,7 +277,7 @@ const results = await pipeline(
         return { pr: n, tier, ...f, confirmed: votes.every((v) => !v.refuted), ...(singleLens ? { singleLens } : {}), trace: votes[0].evidence, repro: votes[1].evidence }
       }),
     )
-    return { pr: n, tier, judged: judged.filter(Boolean), low }
+    return { pr: n, tier, judged: judged.filter(Boolean), low, ...(missed.length ? { unreviewed: `the ${missed.join(', ')} lens did not come back: re-run this PR` } : {}) }
   },
 )
 

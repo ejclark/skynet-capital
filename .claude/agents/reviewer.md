@@ -56,8 +56,9 @@ whether it's ready.
 
 ## The process-file lens
 
-A session asks for this when a diff touches a file `isInstructionFile` accepts
-(`scripts/instructions/scope.mjs`), and `/ship` says when. Instruction files are code, and the next
+A session may ask for this on any file `isInstructionFile` accepts
+(`scripts/instructions/scope.mjs`); `/ship` asks only for `CLAUDE.md`, `.claude/**` and lane prompts,
+because that module also takes every doc. Instruction files are code, and the next
 session obeys the terse form, not the intent behind it, so read the new rule with nothing but the
 file, as that session will. First run `node scripts/config-audit.mjs`, `node scripts/doc-rot-scan.mjs`
 and `node scripts/agent-surface-scan.mjs`, and report what they say beyond the base, not their totals.
