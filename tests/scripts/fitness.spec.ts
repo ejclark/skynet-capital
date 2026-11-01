@@ -1,0 +1,85 @@
+import { describe, expect, it } from "@rstest/core";
+import {
+  CONTRACTS,
+  judgeAlertReach,
+  judgeClaudeMd,
+  judgeDeploys,
+  judgeMachine,
+  judgeStamp,
+  // @ts-expect-error plain .mjs script, no declarations
+} from "../../scripts/fitness.mjs";
+
+const NOW = Date.parse("2026-11-01T06:00:00Z");
+const standby = { state: "stopped", config: { standbys: ["m1"] } };
+
+describe("fitness contracts", () => {
+  it("fails a stopped machine, whatever a standby is doing", () => {
+    expect(judgeMachine([standby, { state: "stopped", config: {} }]).status).toBe("fail");
+    expect(judgeMachine([standby, { state: "started", config: {} }]).status).toBe("pass");
+  });
+
+  it("passes a stop a person marked", () => {
+    const halted = { state: "stopped", config: { metadata: { "skynet-halt": "eric paused" } } };
+    expect(judgeMachine([halted]).status).toBe("pass");
+  });
+
+  it("fails a stale or unreachable process that still reads as started", () => {
+    const fresh = "2026-11-01T05:59:00Z";
+    expect(judgeStamp({ lastControlsPollAt: fresh, bridge: "armed" }, NOW).status).toBe("pass");
+    expect(
+      judgeStamp({ lastControlsPollAt: "2026-11-01T05:00:00Z", bridge: "armed" }, NOW).status,
+    ).toBe("fail");
+    expect(judgeStamp({ lastControlsPollAt: fresh, bridge: "unreachable" }, NOW).status).toBe(
+      "fail",
+    );
+    expect(judgeStamp({}, NOW).status).toBe("fail");
+  });
+
+  it("reads deploys from the newest finished run and ignores cancelled ones", () => {
+    expect(judgeDeploys([{ conclusion: "cancelled" }, { conclusion: "success" }]).status).toBe(
+      "pass",
+    );
+    const red = judgeDeploys([
+      { conclusion: "failure" },
+      { conclusion: "failure" },
+      { conclusion: "success" },
+    ]);
+    expect(red.status).toBe("fail");
+    expect(red.detail).toBe("2 failed in a row");
+  });
+
+  it("treats no evidence as unknown, never as a pass", () => {
+    expect(judgeDeploys([{ conclusion: "cancelled" }]).status).toBe("unknown");
+    expect(judgeAlertReach("nothing relevant").status).toBe("unknown");
+    expect(judgeClaudeMd(10, "no budget here").status).toBe("unknown");
+  });
+
+  it("fails an alarm that can reach nobody, the 10-18 to 11-01 gap", () => {
+    const off = "app [info]Alert delivery: off — no mail credential is set on this deployment";
+    expect(judgeAlertReach(off).status).toBe("fail");
+    expect(judgeAlertReach("[info]Alert delivery: on (email as a@b, sweep 60m)").status).toBe(
+      "pass",
+    );
+  });
+
+  it("reads the newest boot line when delivery has changed", () => {
+    const logs = "Alert delivery: off — none\nAlert delivery: on (email)";
+    expect(judgeAlertReach(logs).status).toBe("pass");
+  });
+
+  it("holds the size budget in one place", () => {
+    const source = "const CLAUDE_MD_BUDGET_BYTES = 100;";
+    expect(judgeClaudeMd(100, source).status).toBe("pass");
+    expect(judgeClaudeMd(101, source).status).toBe("fail");
+  });
+
+  it("makes every contract state an outcome, a corrector field, a budget and who hears it", () => {
+    for (const contract of CONTRACTS) {
+      expect(contract.mustBeTrue.length).toBeGreaterThan(10);
+      expect(contract).toHaveProperty("corrector");
+      expect(contract.budget.length).toBeGreaterThan(0);
+      expect(contract.reaches.length).toBeGreaterThan(0);
+      expect(typeof contract.probe).toBe("function");
+    }
+  });
+});
