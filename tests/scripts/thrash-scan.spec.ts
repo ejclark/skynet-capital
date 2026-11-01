@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -302,5 +302,53 @@ describe("thrash-scan --digest — digest lines and the two-scan auto-file (#393
     expect(d.needsYou.join("\n")).toContain("event-research burst on 2026-09-29");
     expect(d.noise[0]).toContain("2 hit(s), 1 new since 2026-09-28");
     expect(d.noise.join("\n")).not.toContain("#3720");
+  });
+});
+
+// NO TOKEN IS A NAMED SKIP, NOT A CRASH (#6470): the other eyes (incident-scan, pr-provenance-scan)
+// exit 0 with one line, so a session with no token can run every eye in a loop. A token that GitHub
+// refuses is a different fact and stays loud: the fake curl below answers 401 with no network.
+describe("thrash-scan: with no token", () => {
+  const noToken = { ...process.env, GH_TOKEN: "", GITHUB_TOKEN: "" };
+  const scan = (flags: string[], env: NodeJS.ProcessEnv, input = "") =>
+    spawnSync("node", ["scripts/thrash-scan.mjs", ...flags], { env, input, encoding: "utf8" });
+
+  it.each(["", "--json", "--digest", "--digest --file"])(
+    "exits 0 with one skip line (flags: %s)",
+    (flags) => {
+      const r = scan(flags.split(" ").filter(Boolean), noToken);
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim().split("\n")).toEqual([
+        "thrash-scan: no GH_TOKEN/GITHUB_TOKEN — skipping (offline no-op).",
+      ]);
+      expect(r.stderr).toBe("");
+    },
+  );
+
+  it("still scans --explain, whose input is stdin and needs no token", () => {
+    const r = scan(["--explain", "--today=2026-08-29"], noToken, "{}");
+    expect(r.status).toBe(0);
+    expect(r.stdout).not.toContain("skipping");
+  });
+
+  it("still rejects a malformed --today, which no token cannot excuse", () => {
+    expect(scan(["--today=Sept"], noToken).status).not.toBe(0);
+  });
+
+  it("stays loud when a token is set and GitHub refuses it", () => {
+    const bin = mkdtempSync(join(tmpdir(), "fake-curl-"));
+    const curl = join(bin, "curl");
+    writeFileSync(
+      curl,
+      '#!/bin/sh\necho "curl: (22) The requested URL returned error: 401" >&2\nexit 22\n',
+    );
+    chmodSync(curl, 0o755);
+    try {
+      const r = scan([], { ...noToken, GH_TOKEN: "refused", PATH: `${bin}:${process.env.PATH}` });
+      expect(r.status).toBe(1);
+      expect(r.stdout).not.toContain("skipping");
+    } finally {
+      rmSync(bin, { recursive: true, force: true });
+    }
   });
 });

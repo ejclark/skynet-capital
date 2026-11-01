@@ -29,6 +29,8 @@
 // ADVISORY ONLY — never a gate (COACHES.md: a gate is a momentum breaker unless it protects a
 // constraint). No schedule of its own: /secretary runs it when a digest is due.
 // Loud-failure doctrine: an unreadable GitHub response is an error (exit 1), never a silent zero.
+// No token at all is a named skip, exit 0 and one line, like incident-scan and pr-provenance-scan:
+// nothing was asked of GitHub. A token GitHub refuses is the loud case.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { digestFiles } from "./digest-scan.mjs";
@@ -240,6 +242,10 @@ function main() {
   const win = { since, today };
 
   const explain = has("explain");
+  if (!(explain || process.env.GH_TOKEN || process.env.GITHUB_TOKEN)) {
+    console.log("thrash-scan: no GH_TOKEN/GITHUB_TOKEN — skipping (offline no-op).");
+    return;
+  }
   const state = explain ? JSON.parse(readStdin() || "{}") : gatherState(since);
   const hits = scan(state, win, explain ? {} : { lookup: lookupPr });
 
