@@ -213,6 +213,12 @@ that could carry the brand, add one row to the list in the first comment of #661
 it came from, why it might carry. Propose only: no rename and no new name in member copy until he picks
 one. Quality over volume.
 
+**What a good name does** (Eric, 2026-11-01, on dreaming: "the name reflects the deep concepts to a
+somewhat visceral scientific level"): it is a real concept the mechanism actually behaves like, so the
+name teaches the mechanism. `/dream` earns its name because it replays recent experience, prunes, and does
+nothing in the world while it runs. A name that is only cute fails, and plain words still sit beside
+it in copy and in questions to him. Being able to own a name is a separate test.
+
 ## Cohesion rules (how new work stays on-brand)
 
 - **Named patterns live in [`PATTERNS.md`](PATTERNS.md)** — the seed bank of UI patterns with a
