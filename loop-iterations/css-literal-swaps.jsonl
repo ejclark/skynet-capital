@@ -1,1 +1,2 @@
 {"date":"2026-11-01","loop":"css-literal-swaps","before":1173,"after":1173,"worth":20,"tokensM":null,"usd":null,"changed":"node scripts/css-literal-scan.mjs --json: counts.fontSizeEqualsToken 364 + counts.spacingEqualsToken 809"}
+{"date":"2026-11-01","loop":"css-literal-swaps","before":1173,"after":1128,"tokensM":0,"usd":0,"changed":"css-literal-scan --apply on app/src/styles/playbook-store.css: 45 swapped, 0 skipped. 0 is the swap's price; building the script was session work, not counted."}
