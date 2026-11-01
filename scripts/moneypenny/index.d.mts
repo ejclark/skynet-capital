@@ -42,14 +42,17 @@ export type CalloutCtx = {
     sender?: { login?: string };
   };
 };
-/** #3913 slice 2b: `needs-eric` landed — comment once if the body never states the decision. */
+/** #3913 slice 2b: `needs-eric` landed — state a lane's ask, else comment once on the gap. */
 export function checkCallout(
   ctx: CalloutCtx,
   deps?: {
-    readComments?: (issueNumber: number) => (string | null)[];
+    readComments?: (issueNumber: number) => unknown[];
     post?: (issueNumber: number, body: string) => void;
+    readBody?: (issueNumber: number) => string;
+    writeBody?: (issueNumber: number, body: string) => void;
+    now?: number;
   },
-): { posted: boolean; reason?: string; actor?: string };
+): { posted: boolean; lifted?: boolean; reason?: string; actor?: string };
 export type ClaimResult = { claimed: boolean; reason: string; number?: number; model?: string };
 /** The feedback lane's claim; refuses a parked issue before touching the lease (#3818 slice 2),
  *  re-reads the issue for a blocker the payload predates (#5266, `readIssue`), then asks the

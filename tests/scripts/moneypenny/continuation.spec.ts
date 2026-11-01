@@ -591,6 +591,7 @@ describe("the writes", () => {
           return "";
         },
         retry: (fn) => fn(),
+        read: () => ({ body: "", labels: [{ name: "plan" }] }),
         assign: (intent) => {
           assigned.push(intent);
           return "assigned";
@@ -598,7 +599,7 @@ describe("the writes", () => {
       },
     );
 
-    expect(calls[0]).toEqual(["gh", "issue", "edit", "3818", "--add-label", "needs-eric"]);
+    expect(calls.at(-1)).toEqual(["gh", "issue", "edit", "3818", "--add-label", "needs-eric"]);
     expect(assigned).toHaveLength(1);
   });
 

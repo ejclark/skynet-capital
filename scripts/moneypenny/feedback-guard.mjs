@@ -9,6 +9,7 @@
 // SPLIT OUT ON PURPOSE, same doctrine as plan-claim.mjs/audit.mjs: `visibleOutcome` is the PURE
 // decision (fixture-drivable, no network); `guardFeedbackOutcome` is the impure half the workflow
 // step calls once the build step has already run (or been skipped by the oauth gate).
+import { withLaneAsk, writeIssueBody } from "./decision-callout.mjs";
 import { sh } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS } from "./labels.mjs";
 
@@ -128,14 +129,22 @@ ${FOOTER}`;
  * session itself had reached that terminal state. Never called by the session; only by the
  * workflow step right after it, which is the one vantage point that can tell "the session said
  * nothing" apart from "the session said something and I haven't looked yet".
+ *
+ * The ask goes in the body before the label lands, so the `labeled` event's check finds it stated
+ * and the board reads Blocked (docs/ISSUES.md rule 7). `run` and `ensure` are injected for specs.
  */
-export function guardFeedbackOutcome(issueNumber, runUrl, since) {
+export function guardFeedbackOutcome(
+  issueNumber,
+  runUrl,
+  since,
+  { run = sh, ensure = ensureLabel } = {},
+) {
   const n = Number(issueNumber);
   const view = JSON.parse(
-    sh("gh", ["issue", "view", String(n), "--json", "state,labels,comments"]),
+    run("gh", ["issue", "view", String(n), "--json", "state,labels,comments,body"]),
   );
   const prs = JSON.parse(
-    sh("gh", [
+    run("gh", [
       "pr",
       "list",
       "--state",
@@ -161,7 +170,7 @@ export function guardFeedbackOutcome(issueNumber, runUrl, since) {
   // "did the member see anything" vs "who can build what's left". A hand-off is always visible
   // (it carries `next-slice`), so in practice this only ever fires on the happy path — but nothing
   // here depends on that staying true.
-  const handedOff = markInteractiveHandoff(n, issue);
+  const handedOff = markInteractiveHandoff(n, issue, { run, ensure });
   // #3959 slice 1: a build that ended on `needs-info` is WAITING, not running — see this module's
   // `waitingOnMember` note. The caller releases the lease on this; the guard only reports it,
   // because `releaseClaim` lives in index.mjs (which imports this file, so the dependency can only
@@ -173,9 +182,14 @@ export function guardFeedbackOutcome(issueNumber, runUrl, since) {
     return { visible: true, handedOff, waitingOnMember };
   }
   console.log(`::warning::feedback #${n} — silent stall caught, no visible outcome from the build`);
-  ensureLabel(LABELS.needsEric);
-  sh("gh", ["issue", "comment", String(n), "--body", stallGuardComment(n, runUrl)]);
-  sh("gh", ["issue", "edit", String(n), "--add-label", LABELS.needsEric.name]);
+  ensure(LABELS.needsEric);
+  const ask =
+    "Retry this build, or close the issue? — the session ended and said nothing anyone can see.";
+  const body = view.body ?? "";
+  const stated = withLaneAsk(body, ask);
+  if (stated !== body) writeIssueBody(n, stated, { run });
+  run("gh", ["issue", "comment", String(n), "--body", stallGuardComment(n, runUrl)]);
+  run("gh", ["issue", "edit", String(n), "--add-label", LABELS.needsEric.name]);
   return { visible: false, handedOff, waitingOnMember };
 }
 
@@ -185,14 +199,14 @@ export function guardFeedbackOutcome(issueNumber, runUrl, since) {
  * the session that builds the remainder removes it. Skipped when the label is already there so a
  * re-run of this guard is a no-op rather than a redundant write.
  */
-function markInteractiveHandoff(n, issue) {
+function markInteractiveHandoff(n, issue, { run = sh, ensure = ensureLabel } = {}) {
   if (!interactiveHandoff(issue)) return false;
   if ((issue.labels ?? []).some((l) => l?.name === LABELS.needsSession.name)) {
     console.log(`::notice::feedback #${n} — interactive hand-off already marked needs-session`);
     return true;
   }
   console.log(`::notice::feedback #${n} — interactive hand-off, labelling needs-session`);
-  ensureLabel(LABELS.needsSession);
-  sh("gh", ["issue", "edit", String(n), "--add-label", LABELS.needsSession.name]);
+  ensure(LABELS.needsSession);
+  run("gh", ["issue", "edit", String(n), "--add-label", LABELS.needsSession.name]);
   return true;
 }

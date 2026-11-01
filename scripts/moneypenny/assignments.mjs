@@ -28,6 +28,7 @@
 //      and leave an unassign marker, so a label that returns later asks again (#5955).
 //   3. never a second assignment comment on one issue — the marker is the memory — unless this
 //      lane's own unassign came after it; his unassign leaves no marker and stays his answer.
+//      `askOnce` is what holds this when two sweeps overlap.
 //   4. a held or platter PR unmerged ≥12h → assign ejclark.
 // And the HONEST QUEUE half: every open `needs-eric` with the one decision it waits on, flagging the
 // ones that state none — `needs-eric` means exactly one thing, a decision only Eric can make
@@ -37,8 +38,8 @@
 // writes land — and `digest-scan.mjs --needs-you` prints exactly that list. One selector, two
 // readers; tests/scripts/moneypenny/needs-you.spec.ts fails if they ever disagree.
 import { aboveFold } from "../issue-lint.mjs";
-import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
-import { ghRestAll, sh, trustedComment, withRetry } from "./gh.mjs";
+import { ERIC, NEEDS_ERIC, withoutLaneAsk, writeIssueBody } from "./decision-callout.mjs";
+import { ghRest, ghRestAll, sh, trustedComment, withRetry } from "./gh.mjs";
 import { FOOTER } from "./labels.mjs";
 
 export const ASSIGN_MARKER = "<!-- moneypenny:assigned -->";
@@ -54,6 +55,8 @@ export const HOLD_MERGE = "hold-merge";
 export const HELD_PR_HOURS = 12;
 /** New assignments one sweep tick may make. See the header: the bound on a wrong read. */
 export const ASSIGN_CAP = 3;
+/** How long a dead sweep's lease on one ask can block the next: its writes take seconds. */
+export const ASK_LEASE_MS = 10 * 60 * 1000;
 
 const names = (labels = []) => labels.map((l) => (typeof l === "string" ? l : l?.name));
 const logins = (users = []) => users.map((u) => (typeof u === "string" ? u : u?.login));
@@ -81,14 +84,15 @@ export function decisionLine(body = "") {
   return pick ? pick.replace(/^(\d+\.|[-*])\s+/, "") : null;
 }
 
-/** The comment criterion 1 posts: the decision quoted, the marker that makes criteria 2–3 work. */
+/** The comment criterion 1 posts: the ask quoted, the marker that makes criteria 2–3 work. The ask
+ *  can be a decision or a task such as pressing a button (#4621), so the wording fits both. */
 export function assignmentComment({ decision }) {
   return [
-    `@${ERIC} — assigned to you for one decision:`,
+    `@${ERIC} — assigned to you, one thing only you can do or decide:`,
     "",
     `> ${decision}`,
     "",
-    "Reply here in a word; this lane removes the assignment when the label comes off or the issue closes.",
+    "Do it or answer here, whichever it asks; this lane removes the assignment when the label comes off or the issue closes.",
     "",
     ASSIGN_MARKER,
     "",
@@ -352,6 +356,61 @@ export function executeAssignments(intent, { run = sh, retry = withRetry } = {})
   return `📬 assigned #${n} to @${ERIC} (criterion ${intent.criterion}) — ${intent.why}`;
 }
 
+/**
+ * Run `work` while holding the one lease this issue's asks share, or return the line saying why not.
+ *
+ * WHY A LEASE. A push sweep and a `scan` dispatch run in separate concurrency groups (#5130), so both
+ * can gather no marker and both can write one: #4621 and #5709 got the same ask twice, 6 seconds
+ * apart, on 2026-11-01. A read just before the write closes most of that window but not a read
+ * landing between another sweep's two writes. Creating a ref is a real compare-and-set
+ * (claim-lease.mjs), and the read under it is what stops the sweep that takes the lease just after
+ * the first one lets go.
+ *
+ * A LEASE GITHUB REFUSES NEVER COSTS HIM THE ASK. A duplicate comment is the smaller failure, so any
+ * refusal other than another holder writes anyway. `lease` is left out by the by-hand CLI, which is
+ * one person at a keyboard, and `index.mjs` supplies it because `claimHandoff` lives there.
+ */
+export function withAskLease(number, lease, work) {
+  const slug = `ask-${number}`;
+  const taken = lease ? lease.claim(slug) : null;
+  if (taken && !taken.claimed) {
+    if (!/^could not create the lease/.test(taken.reason ?? "")) {
+      return `· #${number} — another sweep holds this ask (${taken.reason})`;
+    }
+    console.error(`::warning::#${number} — ${taken.reason}; writing without the lease`);
+  }
+  try {
+    return work();
+  } finally {
+    if (taken?.claimed) lease.release(slug);
+  }
+}
+
+/**
+ * `executeAssignments`, once: the marker comments are re-read under the lease, because the plan was
+ * made from a read that can be minutes old by now. Clearing the label also takes back any ask this
+ * lane wrote into the body, so an answered question stops reading as open.
+ */
+export function askOnce(
+  intent,
+  { run = sh, retry = withRetry, rest = ghRestAll, read = ghRest, lease = null } = {},
+) {
+  const n = intent.number;
+  return withAskLease(n, lease, () => {
+    const asking = intent.kind === "assign-eric";
+    if (markedByComments(rest(`issues/${n}/comments`)) === asking) {
+      return `· #${n} — another sweep already ${asking ? "asked" : "cleared this"}`;
+    }
+    const line = executeAssignments(intent, { run, retry });
+    if (!asking) {
+      const body = retry(() => read(`issues/${n}`))?.body ?? "";
+      const cleared = withoutLaneAsk(body);
+      if (cleared !== body) writeIssueBody(n, cleared, { run, retry });
+    }
+    return line;
+  });
+}
+
 /** The live REST read both the dry run and the digest plan from — one gather, one `plan()`.
  *  `rest` and `now` are injectable so a spec can drive the marker read without GitHub or a clock. */
 export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
@@ -392,7 +451,7 @@ function main(argv) {
     console.log("· nothing to assign or clear");
     return;
   }
-  for (const i of intents) console.log(executeAssignments(i));
+  for (const i of intents) console.log(askOnce(i));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));

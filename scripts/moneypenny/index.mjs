@@ -67,7 +67,7 @@ import {
   sweepHold,
   waitingPlans,
 } from "./admission.mjs";
-import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
+import { ASK_LEASE_MS, askOnce, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { capsuleAudit, closeProvenCapsule, flagCapsuleOrphan } from "./capsule-stall.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
@@ -82,7 +82,14 @@ import {
   postContinuationReceipt,
   routeContinuation,
 } from "./continuation.mjs";
-import { calloutGapComment, shouldPostCalloutGap } from "./decision-callout.mjs";
+import {
+  askFromComments,
+  calloutGapComment,
+  missingDecisionCallout,
+  shouldPostCalloutGap,
+  withLaneAsk,
+  writeIssueBody,
+} from "./decision-callout.mjs";
 import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
@@ -585,8 +592,14 @@ export function triageFeedback(ctx) {
  *
  * The rule itself is `decision-callout.mjs` and is pure; this function is only its I/O — the
  * labelled issue straight from the event payload (no `gh issue view`, same discipline as
- * `triageFeedback`), its comment bodies over REST, and one comment when the gap is real. `deps`
- * injects both so the wiring is specced without a network.
+ * `triageFeedback`), its comments over REST, and one comment when the gap is real. `deps` injects
+ * them so the wiring is specced without a network.
+ *
+ * A LANE'S ASK IS WRITTEN, NOT FLAGGED. The feedback, design and plan prompts all say to comment and
+ * then label, and each is an envelope-protected file. So when a bot applied the label and has just
+ * commented, its first line becomes the callout: the decision reaches his queue with nobody asked to
+ * edit anything. The body is read live for this write, since the payload is from the label's moment.
+ * The board may read the old column until the next reconcile: `sync-project` is a parallel job.
  *
  * NEVER strips the label (a settled fork on #3913): silently removing a decision label would hide
  * a real ask. A comment is loud, reversible, and leaves the ask where Eric can still see it.
@@ -594,23 +607,32 @@ export function triageFeedback(ctx) {
 export function checkCallout(ctx, deps = {}) {
   const issue = ctx.payload?.issue;
   if (!issue) return { posted: false, reason: "no issue in the payload" };
-  const readComments =
-    deps.readComments ?? ((n) => ghRestAll(`issues/${n}/comments`).map((c) => c?.body ?? ""));
+  const readComments = deps.readComments ?? ((n) => ghRestAll(`issues/${n}/comments`));
   const post =
     deps.post ?? ((n, body) => sh("gh", ["issue", "comment", String(n), "--body", body]));
+  const readBody = deps.readBody ?? ((n) => ghRest(`issues/${n}`)?.body ?? "");
+  const writeBody = deps.writeBody ?? writeIssueBody;
 
   const labels = (issue.labels ?? []).map((l) => l.name);
-  const gap = shouldPostCalloutGap({
-    labels,
-    body: issue.body ?? "",
-    author: issue.user?.login ?? "",
-    comments: readComments(issue.number),
-  });
-  if (!gap) {
+  const body = issue.body ?? "";
+  const nothing = () => {
     console.log(`::notice::#${issue.number} — needs-eric callout check: nothing to say`);
     return { posted: false, reason: "no gap, or already commented" };
-  }
+  };
+  if (!missingDecisionCallout({ labels, body })) return nothing();
+  const comments = readComments(issue.number);
   const actor = ctx.payload?.sender?.login ?? ctx.actor;
+  const said = askFromComments(comments, { actor, now: deps.now ?? Date.now() });
+  if (said) {
+    const live = readBody(issue.number);
+    if (missingDecisionCallout({ labels, body: live })) {
+      writeBody(issue.number, withLaneAsk(live, said.line, said.url));
+    }
+    console.log(`::notice::#${issue.number} — stated the ask ${actor} just commented`);
+    return { posted: false, lifted: true, actor };
+  }
+  const bodies = comments.map((c) => c?.body ?? "");
+  if (!shouldPostCalloutGap({ labels, body, comments: bodies })) return nothing();
   post(issue.number, calloutGapComment({ actor }));
   console.log(
     `::notice::#${issue.number} — needs-eric with no decision callout (labelled by ${actor}); commented once`,
@@ -1465,14 +1487,14 @@ function executeSweepIntent(i) {
   if (i.kind === "assign-eric" || i.kind === "unassign-eric") {
     // The two writes live in assignments.mjs so its own `--apply` CLI reuses them without importing
     // this router — the same cycle-avoidance as the relay below.
-    const line = executeAssignments(i);
+    const line = askOnce(i, { lease: ASK_LEASE });
     console.log(`::notice::${line}`);
     return line;
   }
   if (i.kind === "stop-continuation") {
     // The label write and the assignment live in continuation.mjs so its own CLI can reuse them
     // without importing this router — the same cycle-avoidance as the relay and the assignments.
-    const line = executeStopContinuation(i);
+    const line = executeStopContinuation(i, { lease: ASK_LEASE });
     console.log(`::warning::${line}`);
     return line;
   }
@@ -1551,7 +1573,13 @@ export function wakeAfter(
  *   run by `execute()`, not once per intent (#3280). Pushed only after the comment/label landed,
  *   so an issue whose memory could not be written is not dispatched either, exactly as before.
  */
-function executeOne(i, stallRepairs = []) {
+/** One lease per issue across an ask, an unassign and a stop. `withAskLease` says why it exists. */
+const ASK_LEASE = {
+  claim: (slug) => claimHandoff(slug, process.env.GITHUB_SHA ?? "", Date.now(), ASK_LEASE_MS),
+  release: releaseClaim,
+};
+
+export function executeOne(i, stallRepairs = []) {
   if (Object.hasOwn(ONE_CALL_INTENTS, i.kind)) return ONE_CALL_INTENTS[i.kind](i);
   if (i.kind === "open-issue") {
     ensureLabel(i.label);
