@@ -159,15 +159,15 @@
   {
     "id": "report-open-label",
     "file": "scripts/fitness.mjs",
-    "find": "\"--label\",\n          \"bug\",\n          \"--assignee\",",
-    "replace": "\"--label\",\n          \"fitness\",\n          \"--assignee\",",
+    "find": "\"--label\",\n            \"bug\",\n            ...(a.assign ? [\"--assignee\", OWNER] : []),\n            \"--body\",\n            issueBody(a.result),",
+    "replace": "\"--label\",\n            \"enhancement\",\n            ...(a.assign ? [\"--assignee\", OWNER] : []),\n            \"--body\",\n            issueBody(a.result),",
     "why": "the report lists open issues by the bug label, so the issue it opened is never found again and a new one opens every tick"
   },
   {
     "id": "report-no-assignee",
     "file": "scripts/fitness.mjs",
-    "find": "\"--assignee\",\n          OWNER,\n          \"--body\",",
-    "replace": "\"--body\",",
+    "find": "...(a.assign ? [\"--assignee\", OWNER] : []),\n            \"--body\",\n            issueBody(a.result),",
+    "replace": "\"--body\",\n            issueBody(a.result),",
     "why": "an unassigned issue reaches no phone or inbox, which is the whole reason the contract files one"
   },
   {
@@ -225,5 +225,158 @@
     "find": "    maxBuffer: 64 * 1024 * 1024,\n    timeout: timeoutMs,",
     "replace": "    maxBuffer: 64 * 1024 * 1024,",
     "why": "a hung fly or gh read hangs the whole tick instead of costing one contract"
+  },
+  {
+    "id": "assign-at-first-failure",
+    "file": "scripts/fitness.mjs",
+    "find": "kind: \"open\", result: r, assign: assignsAtOnce(r)",
+    "replace": "kind: \"open\", result: r, assign: true",
+    "why": "the bug this slice removes: every failing contract emails him before anything has tried to fix it"
+  },
+  {
+    "id": "assign-no-age-limit",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "nowMs - sinceMs >= OWNER_AFTER_MS",
+    "replace": "nowMs - sinceMs >= 0",
+    "why": "a failure with no script assigns him on the next tick rather than after two hours"
+  },
+  {
+    "id": "assign-limit-never-fires",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "nowMs - sinceMs >= OWNER_AFTER_MS",
+    "replace": "false",
+    "why": "a failure nothing fixes stays unassigned for ever"
+  },
+  {
+    "id": "assign-budget-off-by-one",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "spent >= r.attempts.max",
+    "replace": "spent >= r.attempts.max - 1",
+    "why": "he is assigned while the script still has a start left"
+  },
+  {
+    "id": "assign-budget-ignored",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "spent >= r.attempts.max",
+    "replace": "false",
+    "why": "a machine the script has given up on waits out the age limit"
+  },
+  {
+    "id": "assign-stranger-counts",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "c.type === \"Bot\" && ",
+    "replace": "c.type && ",
+    "why": "on a public repo a stranger's marker spends the budget or stops the email"
+  },
+  {
+    "id": "assign-window-ignored",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "nowMs - Date.parse(c.at) <= windowMs",
+    "replace": "true",
+    "why": "starts from last week spend today's budget"
+  },
+  {
+    "id": "assign-repeats-after-marker",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "if (askedAtOpen || asked) return null;",
+    "replace": "if (false) return null;",
+    "why": "he takes himself off a standing failure and is assigned again on the next tick"
+  },
+  {
+    "id": "assign-age-ignores-reopen",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "Math.max(Date.parse(thread.createdAt), ...reopenings)",
+    "replace": "Date.parse(thread.createdAt)",
+    "why": "a reopened thread is already past two hours, so the fix that did not hold emails him at once"
+  },
+  {
+    "id": "assign-unread-comments-assign",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "if (assigned(thread) || !thread.botComments) return null;",
+    "replace": "if (assigned(thread)) return null;",
+    "why": "comments that could not be read count as none, and the tick can assign on a guess"
+  },
+  {
+    "id": "reopen-window-ignored",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "nowMs - closedAt(i) <= REOPEN_WITHIN_MS",
+    "replace": "true",
+    "why": "a thread closed months ago reopens, or one with no close date does"
+  },
+  {
+    "id": "reopen-keeps-the-owner",
+    "file": "scripts/fitness.mjs",
+    "find": "...(a.removeOwner ? [removeOwner(a.number)] : []),",
+    "replace": "...[],",
+    "why": "reopening mails him as assignee before this failure's rung says so"
+  },
+  {
+    "id": "refused-assign-still-marks",
+    "file": "scripts/fitness.mjs",
+    "find": "if (!done.ok) break;",
+    "replace": "if (false) break;",
+    "why": "a refused assignment still posts the marker, so no later tick ever assigns him"
+  },
+  {
+    "id": "self-assignment-passes",
+    "file": "scripts/fitness.mjs",
+    "find": "issue.title.startsWith(\"[fitness] \") && newest && !byBot(newest)",
+    "replace": "false",
+    "why": "#6501's silent self-assignment reads as a working path",
+    "contract": "owner-assignment-path"
+  },
+  {
+    "id": "assignment-path-never-stale",
+    "file": "scripts/fitness.mjs",
+    "find": "return ageMs <= ASSIGNMENT_FRESH_MS",
+    "replace": "return ageMs <= Infinity",
+    "why": "a path nothing has used for a year reads as working",
+    "contract": "owner-assignment-path"
+  },
+  {
+    "id": "credential-not-noticed",
+    "file": "scripts/fitness.mjs",
+    "find": "if (DEAD_CREDENTIAL.test(readFailures.join(\" \"))) return { ...verdict, credential: true };",
+    "replace": "if (false) return { ...verdict, credential: true };",
+    "why": "a dead Fly token waits two hours for the only person who can replace it"
+  },
+  {
+    "id": "one-stop-two-issues",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "if (primary.state !== \"started\") {",
+    "replace": "if (false) {",
+    "why": "a stopped machine also reads as a blind source, so one stop leaves two threads"
+  },
+  {
+    "id": "start-script-own-thread",
+    "contract": "bots-running",
+    "file": "scripts/bots-start-stopped.sh",
+    "find": "ISSUE_TITLE=\"[fitness] bots-running\"",
+    "replace": "ISSUE_TITLE=\"[bots] machine found stopped\"",
+    "why": "the start script and the report keep separate threads, and the budget is read from neither"
+  },
+  {
+    "id": "start-script-budget-forgets-close",
+    "contract": "bots-running",
+    "file": "scripts/bots-start-stopped.sh",
+    "find": "(.closedAt // \"\") >= $cutoff",
+    "replace": "false",
+    "why": "each close starts a new thread, so crash, start, pass, close never spends the budget"
+  },
+  {
+    "id": "assign-repeats-after-open",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "if (askedAtOpen || asked) return null;",
+    "replace": "if (asked) return null;",
+    "why": "an issue that opened assigned has no comment marker, so he takes himself off and is assigned again"
+  },
+  {
+    "id": "restart-loop-reads-quiet",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "return starts.length === 1 && nowMs - starts[0] < windowMs;",
+    "replace": "return starts.length > 0 && nowMs - Math.max(...starts) < windowMs;",
+    "why": "a process restarting every few minutes always has a young start, so a dead fleet reads as quiet"
   }
 ]
