@@ -23,9 +23,10 @@
 //
 // IS ANYONE LISTENING (Eric, 2026-10-13: "is there a way to get a more responsive 'reconnected to
 // session' feedback?"). The session also stamps that document: `listening` after each publish or
-// re-watch and on a watch-lost notice (ear-client.js draws that line), and `ackAt` when a Done
-// reaches it, before the read-back — the bar then says Claude got it, and the five-minute
-// fallback stands down. The page reads these and never writes them; its merge leaves them be.
+// re-watch and on a watch-lost notice (ear-client.js draws that line), and `ackAt` with `ackFor` (the
+// press's stamp, copied from the Done comment) when a Done reaches it, before the read-back — the
+// bar then says received, from that read and never from the press alone (#6606), and the two-minute
+// line stands down. The page reads these and never writes them; its merge leaves them be.
 //
 // PIN REACTIONS (#5143, pins-client.js) save in the decision's own record as `pins`, and MERGE one
 // key at a time (`update({ pins: { <id>: v } })`, a cleared one as null): the same page open on a
@@ -103,7 +104,7 @@
     UNPOSTED,
     UNTOLD,
     WAIT,
-    ackOf,
+    acks,
     clock,
     notSaved,
     readBackOf,
@@ -120,8 +121,9 @@
   let toldLine = "";
   /** The read-back already shown (its time and summary), so a re-delivered snapshot repeats nothing. */
   let heardKey = null;
-  /** The ack already shown, by its time, for the same reason. */
-  let ackedMs = Number.NaN;
+  /** The session's ack as the last read of the round's document held it: a change is one landing. */
+  const ackKey = (d) => `${d?.ackAt ?? ""}|${d?.ackFor ?? ""}`;
+  let ackSeen = ackKey(null);
 
   const rec = (sec, key) => {
     state[sec][key] = state[sec][key] || blank();
@@ -420,6 +422,7 @@
   }
   async function sendDone(n, saved, pressedAt) {
     const mine = ++turn;
+    const doneAt = meta.doneAt;
     const say = (line) => {
       if (mine === turn) tell(line);
     };
@@ -432,14 +435,15 @@
       if (!c) line = NO_REACH;
       else if (can !== "available") line = unable(can);
       else {
-        // Anchored on the bar Done sits in, at the press; the text names the round for the session.
+        // Anchored on the bar Done sits in, at the press; the text names the round for the session,
+        // and the press's stamp it copies into `ackFor`.
         const anchor = await c.anchorFor(bar);
-        const text = `Done with steering round ${ID}: ${n} of ${TP.decisions.length} answered. Read it back.`;
+        const text = `Done with steering round ${ID}: ${n} of ${TP.decisions.length} answered. Pressed ${doneAt}. Read it back.`;
         await c.sendToClaude({ anchor, text }).catch((err) => {
           if (![...UNPOSTED, ...LIFECYCLE].includes(err?.code)) told = MAYBE;
           throw err;
         });
-        if (mine === turn) listen(meta.doneAt, pressedAt);
+        if (mine === turn) listen(doneAt, pressedAt);
         return say(sent());
       }
     } catch (err) {
@@ -447,8 +451,8 @@
     }
     say((await saved) === false ? notSaved(told) : line);
   }
-  /** One timer from the press of a sent Done: no read-back by then, and the bar says the session
-   *  isn't listening. Never a resend — only Eric can wake the session. A dead watch can't tell. */
+  /** One timer from the press of a sent Done: nothing read by then, and the bar says so. Never a
+   *  resend — only Eric can wake the session. A dead watch can't tell. */
   function listen(doneAt, pressedAt) {
     stopWaiting();
     if (!live) return;
@@ -484,18 +488,20 @@
     if (focused) doneBtn.focus();
   }
 
-  /** The round's document as it opened: a read-back after the last Done shows; a Done without one
-   *  says it is waiting. */
+  /** The round's document as it opened: a read-back after the last Done shows, then its ack; a Done
+   *  with neither says it is waiting, and the two minutes still run from the press, so a page
+   *  revisited hours later says at once that no session read it. */
   function opened(d) {
     const rb = readBackOf(d);
     heardKey = rb ? rb.key : null;
+    ackSeen = ackKey(d);
     const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
-    const ack = ackOf(d);
     if (rb && (Number.isNaN(doneMs) || rb.ms >= doneMs)) toldLine = rb.line;
-    else if (ack >= doneMs) {
-      ackedMs = ack;
-      toldLine = ACK;
-    } else if (!Number.isNaN(doneMs)) toldLine = `Done at ${clock(doneMs)}. ${waiting()}`;
+    else if (acks(d, meta.doneAt, false)) toldLine = ACK;
+    else if (!Number.isNaN(doneMs)) {
+      toldLine = `Done at ${clock(doneMs)}. ${waiting()}`;
+      listen(meta.doneAt, doneMs);
+    }
   }
   /** The round's document changed: a new read-back shows, else a new ack of this Done, without a
    *  reload; the listening line reads its stamp either way. */
@@ -504,21 +510,22 @@
     notesUi?.hear(d);
     const rb = readBackOf(d);
     const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
+    const landed = ackKey(d) !== ackSeen;
+    ackSeen = ackKey(d);
     if (rb && rb.key !== heardKey) {
       heardKey = rb.key;
-      if (Number.isNaN(doneMs) || rb.ms >= doneMs) stopWaiting();
+      // One landing now is the session answering, whatever time it claims (`acks`, status-client.js).
+      stopWaiting();
       turn++;
       return tell(rb.line);
     }
     // An ack only answers the Done it follows, and never covers that Done's read-back.
-    const ack = ackOf(d);
-    if (ack >= doneMs && ack !== ackedMs && !(rb && rb.ms >= doneMs)) {
-      ackedMs = ack;
+    if (landed && acks(d, meta.doneAt, true) && !(rb && rb.ms >= doneMs)) {
       stopWaiting();
       turn++;
       return tell(ACK);
     }
-    // The session said it lost the page while a sent Done waits: say so now, not in five minutes.
+    // The session said it lost the page while a sent Done waits: say so now, not in two minutes.
     if (ear === "lost" && awaiting !== null && awaiting === meta.doneAt) {
       stopWaiting();
       turn++;
