@@ -124,6 +124,8 @@
   /** The session's ack as the last read of the round's document held it: a change is one landing. */
   const ackKey = (d) => `${d?.ackAt ?? ""}|${d?.ackFor ?? ""}`;
   let ackSeen = ackKey(null);
+  /** The `doneAt` whose read-back is showing: its ack, landing late, never covers it. */
+  let readBackFor = null;
 
   const rec = (sec, key) => {
     state[sec][key] = state[sec][key] || blank();
@@ -496,8 +498,10 @@
     heardKey = rb ? rb.key : null;
     ackSeen = ackKey(d);
     const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
-    if (rb && (Number.isNaN(doneMs) || rb.ms >= doneMs)) toldLine = rb.line;
-    else if (acks(d, meta.doneAt, false)) toldLine = ACK;
+    if (rb && (Number.isNaN(doneMs) || rb.ms >= doneMs)) {
+      readBackFor = meta.doneAt;
+      toldLine = rb.line;
+    } else if (acks(d, meta.doneAt, false)) toldLine = ACK;
     else if (!Number.isNaN(doneMs)) {
       toldLine = `Done at ${clock(doneMs)}. ${waiting()}`;
       listen(meta.doneAt, doneMs);
@@ -509,18 +513,18 @@
     const ear = earUi?.hear(d);
     notesUi?.hear(d);
     const rb = readBackOf(d);
-    const doneMs = meta.doneAt ? Date.parse(meta.doneAt) : Number.NaN;
     const landed = ackKey(d) !== ackSeen;
     ackSeen = ackKey(d);
     if (rb && rb.key !== heardKey) {
       heardKey = rb.key;
       // One landing now is the session answering, whatever time it claims (`acks`, status-client.js).
+      readBackFor = meta.doneAt;
       stopWaiting();
       turn++;
       return tell(rb.line);
     }
     // An ack only answers the Done it follows, and never covers that Done's read-back.
-    if (landed && acks(d, meta.doneAt, true) && !(rb && rb.ms >= doneMs)) {
+    if (landed && acks(d, meta.doneAt, true) && readBackFor !== meta.doneAt) {
       stopWaiting();
       turn++;
       return tell(ACK);

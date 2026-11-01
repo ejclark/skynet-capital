@@ -187,6 +187,30 @@ describe("Done says received once a session has read it (#6606)", () => {
     expect(v.told()).toBe(SENT);
   });
 
+  it("says received on a new press though the last read-back's guessed clock is ahead of it", async () => {
+    const docs = answered();
+    const v = await openWith(docs);
+    await v.press("done");
+    await stamp(v, {
+      readBackAt: new Date(Date.now() + 10 * MIN).toISOString(),
+      readBackSummary: "1 pick posted",
+    });
+    await v.press("reopen");
+    await new Promise((r) => setTimeout(r, 2));
+    await v.press("done");
+    await stamp(v, { ackAt: ago(0), ackFor: docs[META]?.doneAt });
+    expect(v.told()).toBe(ACK);
+  });
+
+  it("keeps the read-back when that Done's ack lands after it", async () => {
+    const docs = answered();
+    const v = await openWith(docs);
+    await v.press("done");
+    await stamp(v, { readBackAt: ago(0), readBackSummary: "1 pick posted" });
+    await stamp(v, { ackAt: ago(0), ackFor: docs[META]?.doneAt });
+    expect(v.told()).toMatch(/^Read back .+ · 1 pick posted$/);
+  });
+
   it("replaces the not-received line when a session reads the Done late", async () => {
     const v = await openWith(answered());
     rstest.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
