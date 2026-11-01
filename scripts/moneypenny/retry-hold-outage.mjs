@@ -11,10 +11,11 @@
 // whether the lane has recovered, and the limit keeps any one issue at three a go.
 //
 // WHAT THE OUTAGE SHAPE BUYS. The bar lasts an hour past the issue's last start, not until midnight,
-// so the top of the queue is first again within the hour without anyone doing anything, and a whole
-// barred queue cannot sit idle after the lane recovers. An hour, because #4621's deaths came three
-// minutes apart: a retry per hour per issue is under a tenth of that, and it is short enough that
-// a lower-ranked build barely gets ahead.
+// so the first sweep after that takes the top of the queue again, and a whole barred queue still has
+// something to probe the lane with. It takes a sweep: every lane wakes on a repository event, so with
+// nothing merging the retry waits for the next event, and the digest's quiet rule is what covers that
+// silence. An hour, because #4621's deaths came three minutes apart: a retry per hour per issue is
+// under a tenth of that, and it is short enough that a lower-ranked build barely gets ahead.
 //
 // TWO BAD ISSUES LOOK LIKE AN OUTAGE, and that error is the one this accepts. They get `OUTAGE_DAY_CAP`
 // starts instead of `MAX_STARTS_PER_DAY`, then stay barred, and the queue behind them moves throughout
@@ -23,8 +24,9 @@
 // midnight; the note on the issue says how to start it sooner.
 //
 // ONLY A LANE BRANCH'S MERGE COUNTS. A live session's PR landing says nothing about whether the
-// build action can start. A lane PR opened and not merged is not counted either, so a stretch can read
-// longer than it was, which at worst earns a retry.
+// build action can start. A lane PR opened and not merged is not counted either, and a merge older than
+// the closed-PR page (the 100 most recently updated) is not seen, so a stretch can read longer than it
+// was. Either way it reads as an outage more often, which at worst earns retries up to the cap.
 import { FOOTER, LABELS } from "./labels.mjs";
 
 /** How long the outage shape holds an issue past its last start. */
@@ -41,8 +43,17 @@ export const OUTAGE_PEER_READS = 5;
 const LANE_BRANCH = /^(?:plan|feedback)\/\d+$/;
 const NOTE_MARKER = (day) => `<!-- moneypenny:retry-held day=${day} -->`;
 
-/** When `in-progress` went on, in ms ascending, from `from` on. The start `retryHoldReason` counts. */
-const startsFrom = (events, from) =>
+/** This UTC day's start, in ms: when the retry limit's count begins. */
+export const utcMidnight = (now) => {
+  const day = new Date(now);
+  return Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate());
+};
+
+/**
+ * When `in-progress` went on, in ms ascending, from `from` on. One definition of a build start, for
+ * the limit and for the outage reading: every claim path writes that label.
+ */
+export const startsFrom = (events, from) =>
   (events ?? [])
     .filter((e) => e?.event === "labeled" && e.label?.name === LABELS.inProgress.name)
     .map((e) => Date.parse(e?.created_at ?? ""))
@@ -83,20 +94,21 @@ export function mayRetryThroughOutage({
   events,
   mergedMs,
   closed,
-  peers,
+  peersOf,
   seen,
   eventsOf,
   limit,
   now,
   log = console.log,
 }) {
-  const day = new Date(now);
-  const midnight = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate());
+  const midnight = utcMidnight(now);
   const starts = startsFrom(events, Math.max(midnight, mergedMs ?? 0));
   if (starts.length >= OUTAGE_DAY_CAP) return false;
   if (now - (starts.at(-1) ?? now) < OUTAGE_RETRY_HOURS * 3.6e6) return false;
   const landings = laneLandings(closed);
-  for (const p of peers.filter((i) => i.number !== issue.number).slice(0, OUTAGE_PEER_READS)) {
+  for (const p of peersOf()
+    .filter((i) => i.number !== issue.number)
+    .slice(0, OUTAGE_PEER_READS)) {
     eventsOf(p.number);
   }
   const peerStarts = [...seen]
@@ -123,7 +135,7 @@ export function noteRetryHold({ issue, reason, now, readAll, run, log = console.
     const body = [
       `⏸ **The build sweep has stopped retrying this issue for now:** ${reason}.`,
       "",
-      "- If other issues are failing the same way with no lane build merged, that reads as the lane and not this issue, and it tries again about an hour after its last start.",
+      "- If other issues are failing the same way with no lane build merged, that reads as the lane and not this issue, and the first sweep from an hour after its last start tries it again.",
       "- **To start it now:** remove `ready` and add it back. A `ready` label event is someone asking for this build, which this limit does not stop.",
       "",
       marker,

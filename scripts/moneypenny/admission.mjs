@@ -61,7 +61,12 @@ import {
 import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
 import { derivePrIssues, platterClosesByIssue } from "./pr-issues.mjs";
 import { isStartedPlan, statusForIssue, subIssueCounts, WAITING } from "./projects.mjs";
-import { mayRetryThroughOutage, noteRetryHold } from "./retry-hold-outage.mjs";
+import {
+  mayRetryThroughOutage,
+  noteRetryHold,
+  startsFrom,
+  utcMidnight,
+} from "./retry-hold-outage.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
 /** Hidden marker on every queue note, so the dedupe finds this lane's own comments. */
@@ -275,15 +280,7 @@ export const MAX_STARTS_PER_DAY = 3;
  * `withoutOpenPr` drops it from the pool first.
  */
 export function retryHoldReason({ events = [], mergedMs = null, now }) {
-  const day = new Date(now);
-  const from = Math.max(
-    Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()),
-    mergedMs ?? 0,
-  );
-  const starts = (events ?? []).filter((e) => {
-    const at = Date.parse(e?.created_at ?? "");
-    return e?.event === "labeled" && e.label?.name === LABELS.inProgress.name && at >= from;
-  }).length;
+  const starts = startsFrom(events, Math.max(utcMidnight(now), mergedMs ?? 0)).length;
   return starts >= MAX_STARTS_PER_DAY
     ? `${starts} builds started today with nothing merged since, so the sweep tries it again after midnight UTC`
     : null;
@@ -311,7 +308,7 @@ function mergedAtOf(rows) {
  * list once however many are refused. A push tick's peek and the run it dispatches each read the
  * queue once. Only the sweep and `--next` ask. A `ready` label event is someone asking for this build
  * now, and `--check` is a live session, which is not the lane that is retrying. Once a refused pick's
- * last start is an hour old, up to `OUTAGE_PEER_READS` more calls (retry-hold-outage.mjs), which also
+ * last start is an hour old, up to `OUTAGE_PEER_READS` more histories (retry-hold-outage.mjs), which also
  * holds what tells one issue's failing build from a lane outage. `run` writes the note on the issue;
  * only the claim passes it, so a peek and the CLI stay read-only.
  *
@@ -340,8 +337,8 @@ export function retryHold({
       const mergedMs = merged.get(issue.number);
       const reason = retryHoldReason({ events, mergedMs, now });
       if (!reason) return null;
-      const peers = pullQueue(pool);
-      const ctx = { issue, events, mergedMs, closed, peers, seen, eventsOf, now, log };
+      const peersOf = () => pullQueue(pool);
+      const ctx = { issue, events, mergedMs, closed, peersOf, seen, eventsOf, now, log };
       if (mayRetryThroughOutage({ ...ctx, limit: MAX_STARTS_PER_DAY })) return null;
       if (run) noteRetryHold({ issue, reason, now, readAll, run, log });
       return reason;
