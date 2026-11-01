@@ -1,0 +1,12 @@
+{
+  "eventName": "workflow_dispatch",
+  "actor": "ejclark",
+  "event": { "inputs": { "command": "audit" } },
+  "deps": {
+    "clock": {
+      "hoursSince": 4.2,
+      "newestSuccessAt": "2026-11-01T07:48:00Z",
+      "openIssue": null
+    }
+  }
+}
