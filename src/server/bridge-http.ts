@@ -14,12 +14,12 @@ import {
 /**
  * What the listener accepts in `INSIGHTS_BRIDGE_SECRET_HEADER` (#4621). `secret` is the provisioned
  * `SKYNET_INSIGHTS_BRIDGE_SECRET`, or the repo-public literal on a host that never set one.
- * `acceptLegacy` is the expand half of the listener-first rollout: the dashboard and bots apps
- * deploy separately, so a staged secret reaches one before the other, and the bots still sending
- * the literal must not lose the bridge meanwhile. The first use of the literal while a secret is
- * set warns (`[insights-listener] legacy bridge secret used`), and the contract (stop accepting it once
- * both apps run with the secret) is a follow-up on #4621. Until then, the secret only guards a host
- * on which the literal is also refused.
+ * `acceptLegacy` was the expand half of a listener-first rollout: the dashboard and bots apps
+ * deploy separately, so while a staged secret reached one before the other, the listener also took
+ * the literal and warned (`[insights-listener] legacy bridge secret used`). Production finished
+ * that rollout on 2026-11-01 (both apps carry the secret, no warning after the bots' deploy), so
+ * the contract is done: a host that sets the secret refuses the literal. A rotation that needs the
+ * overlap again sets it back for one deploy.
  */
 export interface BridgeAuth {
   readonly secret: string;
@@ -34,7 +34,7 @@ export const LEGACY_BRIDGE_AUTH: BridgeAuth = {
 
 export function resolveBridgeAuth(env: NodeJS.ProcessEnv): BridgeAuth {
   const secret = provisionedBridgeSecret(env);
-  return secret ? { secret, acceptLegacy: true } : LEGACY_BRIDGE_AUTH;
+  return secret ? { secret, acceptLegacy: false } : LEGACY_BRIDGE_AUTH;
 }
 
 /** Hashing first makes the compare constant-time whatever the header's length. */

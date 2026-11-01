@@ -39,7 +39,7 @@ import type { Participant } from "../participants/participant.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
-import { resolveBridgeAuth } from "../server/bridge-http.js";
+import { LEGACY_BRIDGE_AUTH, resolveBridgeAuth } from "../server/bridge-http.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import { pollSeedsFromEnv } from "../server/subscription-seed-store.js";
@@ -251,7 +251,12 @@ export function startInsightsBridge(
         }
       : {}),
   }).listen(insightsPort, () => {
-    const auth = bridgeAuth.acceptLegacy ? "provisioned secret, literal still accepted" : "literal";
+    const auth =
+      bridgeAuth === LEGACY_BRIDGE_AUTH
+        ? "literal"
+        : bridgeAuth.acceptLegacy
+          ? "provisioned secret, literal still accepted"
+          : "provisioned secret";
     console.log(`[insights-bridge] internal listener on port ${insightsPort} (auth: ${auth})`);
   });
   return {
