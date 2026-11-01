@@ -11,6 +11,56 @@ export const EXIT_DTE = 45;
 /** Sell everything once the bid is this multiple of the average cost. */
 export const TAKE_PROFIT = 2;
 
+/** The day the time stop falls due: `EXIT_DTE` days before expiry. Both YYYY-MM-DD. */
+export function timeStopDay(expiration: string): string {
+  return new Date(Date.parse(`${expiration}T00:00:00Z`) - EXIT_DTE * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/**
+ * THE EXIT PLAN A CALL IS BOUGHT WITH (#5709 slice 3) — these two rules, priced for one purchase:
+ * the bid that takes the profit, the day the time stop falls due, and what each means in dollars.
+ * Shown in the ticket's review step before anything is sent; a member who carries it has it read
+ * back by every surface that judges the held call. Offered, never applied: nothing sells on it.
+ */
+export interface LongCallPlan {
+  /** Premium per share the plan is priced from — the limit, else the quoted premium. */
+  readonly paid: number;
+  readonly multiple: number;
+  /** The bid per share that fires the take-profit: `TAKE_PROFIT` × `paid`. */
+  readonly takeProfit: number;
+  /** Dollars banked across the order if it sells at `takeProfit`. */
+  readonly gain: number;
+  readonly exitDte: number;
+  /** YYYY-MM-DD. */
+  readonly timeStop: string;
+  /** Days from `today` until the time stop; zero or less means it is already due. */
+  readonly holdDays: number;
+}
+
+export function longCallPlan(order: {
+  readonly paid: number;
+  readonly contracts: number;
+  readonly expiration: string;
+  /** YYYY-MM-DD, the server's own clock. */
+  readonly today: string;
+}): LongCallPlan {
+  const timeStop = timeStopDay(order.expiration);
+  const takeProfit = TAKE_PROFIT * order.paid;
+  return {
+    paid: order.paid,
+    multiple: TAKE_PROFIT,
+    takeProfit,
+    gain: (takeProfit - order.paid) * 100 * order.contracts,
+    exitDte: EXIT_DTE,
+    timeStop,
+    holdDays: Math.round(
+      (Date.parse(`${timeStop}T00:00:00Z`) - Date.parse(`${order.today}T00:00:00Z`)) / 86_400_000,
+    ),
+  };
+}
+
 /**
  * Why a held long call should be sold now, or `undefined` while it should be held. The time stop
  * needs no price; the take-profit needs the bid and what was paid, per share. Time wins a tie —

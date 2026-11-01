@@ -1,4 +1,4 @@
-import { EXIT_DTE, longCallExit, TAKE_PROFIT } from "../playbooks/long-call-rules.js";
+import { EXIT_DTE, longCallExit, TAKE_PROFIT, timeStopDay } from "../playbooks/long-call-rules.js";
 import { type LeverContext, why } from "./position-guidance-levers.js";
 import { daysBetween, dayText, pct, pulseOf, usd } from "./position-guidance-rules.js";
 import type { GuidanceReason, HeldLongOption, LongCallCall } from "./position-guidance-types.js";
@@ -16,6 +16,8 @@ import type { GuidanceReason, HeldLongOption, LongCallCall } from "./position-gu
  *
  * Calls only: the bot has no rule for a bought put, so a held put gets none. A rule is OFFERED —
  * nothing here sells, and there is no "Use this" (BRAND: never apply a rule on the member's behalf).
+ * A call bought with the plan carried (#5709 slice 3, `planCarried`) hears the same rules as its
+ * own plan's: the verdicts are identical, only whose words they are changes.
  * PURE: no I/O, no clock. The member's quote comes from their own account in the browser.
  */
 
@@ -26,14 +28,11 @@ interface Verdict {
   readonly until?: { readonly date: string; readonly why: string };
 }
 
-/** The day the time stop falls due: `EXIT_DTE` days before expiry. */
-function timeStopDay(expiration: string): string {
-  return new Date(Date.parse(`${expiration}T00:00:00Z`) - EXIT_DTE * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-}
-
 const days = (n: number): string => `${n} day${n === 1 ? "" : "s"}`;
+
+/** Whose rule a reason names: the plan the member carried when buying, else the house's bot. */
+const owner = (c: HeldLongOption): string =>
+  c.planCarried ? "your plan" : "the house's long-call bot";
 
 /** "bid $6.00 against the $12.00 you paid — half of it" / "— 2.3× it": the price against cost. */
 function againstCost(bid: number, paid: number): string {
@@ -52,7 +51,9 @@ function timeStop(c: HeldLongOption, dte: number): Verdict {
     reasons: [
       why(
         "EXIT-TIME",
-        `${days(dte)} left — inside the ${EXIT_DTE} days where the house's long-call bot sells its own calls, before time decay speeds up.`,
+        c.planCarried
+          ? `${days(dte)} left — your plan's time stop: you carried the rule of selling with ${EXIT_DTE} days left, before time decay speeds up.`
+          : `${days(dte)} left — inside the ${EXIT_DTE} days where the house's long-call bot sells its own calls, before time decay speeds up.`,
       ),
       ...priced,
       why(
@@ -71,17 +72,17 @@ function takeProfit(c: HeldLongOption, bid: number, dte: number): Verdict {
     reasons: [
       why(
         "EXIT-PROFIT",
-        `${againstCost(bid, c.costPerContract)} — the ${TAKE_PROFIT}× the house's long-call bot sells at.`,
+        `${againstCost(bid, c.costPerContract)} — the ${TAKE_PROFIT}× ${owner(c)} sells at.`,
       ),
       why(
         "MANAGE",
-        "This is the win the rule waits for: a run-up can pull back while time keeps costing the call, so selling banks it and frees the cash for your next trade.",
+        `This is the win ${c.planCarried ? "your plan" : "the rule"} waits for: a run-up can pull back while time keeps costing the call, so selling banks it and frees the cash for your next trade.`,
       ),
     ],
     provesWrong: `If the stock keeps climbing, holding would make more — the cost is the pullback risk, with ${days(dte)} of time decay still running.`,
     until: {
       date: timeStopDay(c.expiration),
-      why: `the time stop falls due — the house sells with ${EXIT_DTE} days left`,
+      why: `the time stop falls due — ${c.planCarried ? "your plan sells" : "the house sells"} with ${EXIT_DTE} days left`,
     },
   };
 }
@@ -94,14 +95,14 @@ function hold(c: HeldLongOption, bid: number | undefined): Verdict {
       ...(bid === undefined ? [] : [why("EXIT-PROFIT", `${againstCost(bid, c.costPerContract)}.`)]),
       why(
         "EXIT-PROFIT",
-        `The take-profit rule fires at ${usd(target)} a share (${TAKE_PROFIT}× what you paid).`,
+        `${c.planCarried ? "Your plan takes profit" : "The take-profit rule fires"} at ${usd(target)} a share (${TAKE_PROFIT}× what you paid).`,
       ),
       why(
         "EXIT-TIME",
-        `The time stop falls due ${dayText(timeStopDay(c.expiration))}, with ${EXIT_DTE} days left.`,
+        `${c.planCarried ? "Your plan's" : "The"} time stop falls due ${dayText(timeStopDay(c.expiration))}, with ${EXIT_DTE} days left.`,
       ),
     ],
-    provesWrong: `If the bid reaches ${usd(target)} → the take-profit rule fires; if the stock fades first, the time stop still falls due on ${dayText(timeStopDay(c.expiration))}.`,
+    provesWrong: `If the bid reaches ${usd(target)} → ${c.planCarried ? "your plan's take-profit" : "the take-profit rule"} fires; if the stock fades first, the time stop still falls due on ${dayText(timeStopDay(c.expiration))}.`,
     until: {
       date: timeStopDay(c.expiration),
       why: `the time stop falls due — or come back once the bid reaches ${usd(target)}`,

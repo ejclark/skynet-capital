@@ -34,6 +34,7 @@ import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
 import type { CouncilRepliesDeps } from "./council-replies-form.js";
 import type { SubmitDraftOrder } from "./draft-trade-service.js";
+import type { ExitPlanStore } from "./exit-plan-store.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { FilingCommentsDeps } from "./filing-comments-form.js";
 import type { GithubTokenDeps } from "./github-token.js";
@@ -359,6 +360,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * section still renders, with saves/loads answering "not wired in this deployment."
    */
   readonly savedPositions?: SavedPositionsStore;
+  /**
+   * THE EXIT PLANS MEMBERS CARRIED (#5709 slice 3) — the house's long-call plan, recorded against a
+   * contract when a member taps Carry in the options ticket's review step. Omit to disable (offline
+   * mode): the review still shows the plan, and the receipt says it was not saved.
+   */
+  readonly exitPlans?: ExitPlanStore;
   /**
    * THE AUTHORED PLAYS STORE (#5457 slice 1) — the drafts a member writes on R&D → Playbooks. Omit to
    * disable (offline mode): the list answers empty and a save answers "not wired in this deployment."

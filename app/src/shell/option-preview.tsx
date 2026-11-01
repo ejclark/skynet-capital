@@ -1,9 +1,8 @@
 import type { ReactElement } from "react";
 import type { DeskOrderEvent } from "../live/desk-events";
 import { fillHeadline } from "../live/fill-headline";
-import type { OptionPreview } from "../live/options";
+import type { OptionPreview, OptionTicketResult } from "../live/options";
 import { daysToExpiry, expiresIn } from "../live/straddle";
-import type { TicketResult } from "../live/ticket";
 import { money, orderTypeLabel, tifLabel } from "../live/ticket";
 import { signOf } from "../ui";
 import { DisarmNote, DoneNote, GateHead, keepFocus } from "./gate-frame";
@@ -22,7 +21,7 @@ export type OptionGateState =
   | { readonly step: "reviewing" }
   | { readonly step: "reviewed"; readonly preview: OptionPreview }
   | { readonly step: "submitting"; readonly preview: OptionPreview }
-  | { readonly step: "done"; readonly result: TicketResult }
+  | { readonly step: "done"; readonly result: OptionTicketResult }
   | { readonly step: "error"; readonly message: string };
 
 function Est({ label, value }: { readonly label: string; readonly value: string }): ReactElement {

@@ -66,6 +66,7 @@ function cleanHeldOption(c: HeldLongOption): HeldLongOption | undefined {
     costPerContract: c.costPerContract,
     ...(positive(c.bid) ? { bid: c.bid } : {}),
     ...(positive(c.ask) ? { ask: c.ask } : {}),
+    ...(c.planCarried === true ? { planCarried: true as const } : {}),
   };
 }
 

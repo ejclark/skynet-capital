@@ -55,6 +55,9 @@ export interface DeskPosition {
    *  (#885), and only when one playbook's orders account for all of it. */
   readonly playbookId?: string;
   readonly playbookMode?: string;
+  /** The house's long-call exit plan, when the member carried it at purchase (#5709 slice 3): the
+   *  take-profit bid per share and the time stop's day (YYYY-MM-DD). */
+  readonly exitPlan?: { readonly takeProfit: number; readonly timeStop: string };
   /** Plain words (#3689 slice 6; `src/observatory/position-plain.ts`). Optional so an older payload
    *  or fixture without them still renders, showing "—". */
   readonly plainName?: string;
