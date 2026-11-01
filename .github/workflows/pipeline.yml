@@ -471,16 +471,25 @@ jobs:
         # read still cannot stop: a pull_request run takes its WORKFLOW FILE from the merge commit,
         # so a PR that edits this job itself runs its own edit — closing that route takes the App
         # token's scope or a GitHub rule on the branch, not a read here.
+        #
+        # THE PATHS ARE NAMES A PR CHOOSES (2026-11-01). They travel NUL-separated and quoted after
+        # `--`, so no name can become a flag or a second argument: a root file named `--base`, or a
+        # decoy `x --lane` once word-split, used to swallow the protected path after it. -z also stops
+        # git quoting a non-ASCII name into a form no rule matches, and --no-renames keeps the source
+        # of a rename out of a protected directory on the list. Into a file first, so a failed diff
+        # fails this step (bash -e); a process substitution would read as an empty, unprotected diff.
         run: |
-          FILES=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
-          echo "changed files:"; echo "$FILES"
           BASE="${{ github.event.pull_request.base.sha }}"
           GATE="$RUNNER_TEMP/envelope-gate"
           mkdir -p "$GATE/scripts"
+          git diff -z --name-only --no-renames "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" > "$GATE/files"
+          FILES=()
+          while IFS= read -r -d '' f; do FILES+=("$f"); done < "$GATE/files"
+          echo "changed files:"; printf '%s\n' "${FILES[@]}"
           git show "$BASE:envelope.json" > "$GATE/envelope.json"
           git show "$BASE:scripts/envelope-scan.mjs" > "$GATE/scripts/envelope-scan.mjs"
           # Fail closed: a crashed scan or unparseable output fails this step (bash -e), never arms.
-          SCAN=$(cd "$GATE" && node scripts/envelope-scan.mjs --check $FILES)
+          SCAN=$(cd "$GATE" && node scripts/envelope-scan.mjs --check -- "${FILES[@]}")
           HITS=$(printf '%s' "$SCAN" | jq -er '[.[] | select(.blocking) | .path] | join(" ")')
           if [ -n "$HITS" ]; then
             echo "::notice::not arming — protected paths need Eric's merge: $HITS"
