@@ -105,6 +105,7 @@ import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { rearmStranded } from "./stranded-pr.mjs";
+import { updateStuckBranch } from "./stuck-branch-update.mjs";
 import { endBuild, routeWake, wakeNext } from "./wake.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
@@ -1487,6 +1488,7 @@ function executeSweepIntent(i) {
  * needed one more kind (`wake-next`). Moving the four one-liners here takes it back under.
  */
 const ONE_CALL_INTENTS = {
+  "update-stuck-branch": (i) => updateStuckBranch(i),
   noop: (i) => {
     console.log(`· nothing to do (${i.reason})`);
     return `noop — ${i.reason}`;
@@ -1767,8 +1769,10 @@ function main(argv) {
 
   const deps = fixtureDeps ?? (dry ? {} : gatherDeps(ctx));
   const auditMode = argv.includes("--audit") || ctx.inputs?.command === "audit";
+  // A dry run writes nothing, so it takes no lease; the update pass then stops at the list.
+  const hourly = dry ? {} : { takeHourlyLease: takeUpdateBranchLease };
   const intents = auditMode
-    ? [...audit(fixtureDeps ?? gatherAuditDeps(Date.now())), ...capsuleAudit(fixtureDeps)]
+    ? [...audit(fixtureDeps ?? gatherAuditDeps(Date.now(), hourly)), ...capsuleAudit(fixtureDeps)]
     : route(ctx, deps);
 
   if (dry) {
@@ -1777,6 +1781,15 @@ function main(argv) {
   }
   execute(intents);
   if (auditMode && !fixtureDeps) postLoopChecks();
+}
+
+/**
+ * True at most once an hour across runners. It is the claim lease with a one-hour life, and it lives
+ * here because this file owns the lease: the audit tick runs on every push, and the branch-update
+ * pass must not read every armed PR's suites that often. Nothing releases it, so it simply ages out.
+ */
+function takeUpdateBranchLease(nowMs) {
+  return claimHandoff("update-branch-scan", process.env.GITHUB_SHA ?? "", nowMs, 36e5).claimed;
 }
 
 /** The learning-loop registry's due checks, posted on the push tick (scripts/loop-check.mjs). Never

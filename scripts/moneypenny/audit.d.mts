@@ -67,6 +67,8 @@ export interface AuditDeps {
   /** The instruction-drift chore's ticket intent (#5729), from `driftChoreIntent` — null for none. */
   driftChore?: AuditIntent | null;
   /** Green, unarmed PRs whose arm job failed — the re-arm act stage (stranded-pr.mjs). */
+  /** Green, armed PRs held by a cancelled suite — the update act stage (stuck-branch-update.mjs). */
+  stuckBranches?: import("./stuck-branch-update.mjs").StuckBranch[];
   stranded?: import("./stranded-pr.mjs").StrandedPr[];
   /** The 15-minute clock as this tick read it (clock-watch.mjs, #6470) — null when unreadable. */
   clock?: import("./clock-watch.mjs").ClockState | null;
@@ -157,4 +159,7 @@ export const OPEN_ISSUE_LIMIT: number;
 /** Pass a `gh … list --limit` result through, or throw when it came back at the limit (may be truncated). */
 export function untruncated<T>(rows: T[] | undefined, limit: number, label: string): T[];
 /** Read the real audit dependencies over `gh` — network, not fixture-drivable. */
-export function gatherAuditDeps(nowMs: number): AuditDeps;
+export function gatherAuditDeps(
+  nowMs: number,
+  hourly?: { takeHourlyLease?: (nowMs: number) => boolean },
+): AuditDeps;
