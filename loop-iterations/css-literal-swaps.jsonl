@@ -1,0 +1,1 @@
+{"date":"2026-11-01","loop":"css-literal-swaps","before":1173,"after":1173,"worth":20,"tokensM":null,"usd":null,"changed":"node scripts/css-literal-scan.mjs --json: counts.fontSizeEqualsToken 364 + counts.spacingEqualsToken 809"}

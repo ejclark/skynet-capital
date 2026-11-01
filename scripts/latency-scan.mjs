@@ -36,7 +36,9 @@
 //
 // Loud-failure doctrine: an unreadable GitHub response is an error, never a silent zero.
 // Exit 1 = could not do its job: GitHub unreadable, a malformed --today/--since, or an --explain
-// stdin that could not be read (UNKNOWN — never scored as zero issues).
+// stdin that could not be read (UNKNOWN — never scored as zero issues). No token at all is a named
+// skip, exit 0 and one line, like incident-scan and pr-provenance-scan: nothing was asked of GitHub.
+// A token GitHub refuses is the loud case above.
 import { readFileSync } from "node:fs";
 import { ghRest } from "./moneypenny/gh.mjs";
 import { isReadySignal } from "./moneypenny/plan-claim.mjs";
@@ -243,6 +245,11 @@ function main() {
   if (!DATE_RE.test(today)) throw new Error("latency-scan: --today must be YYYY-MM-DD.");
   const since = arg("since") ?? defaultSince(today);
   if (!DATE_RE.test(since)) throw new Error("latency-scan: --since must be YYYY-MM-DD.");
+
+  if (!(has("explain") || process.env.GH_TOKEN || process.env.GITHUB_TOKEN)) {
+    console.log("latency-scan: no GH_TOKEN/GITHUB_TOKEN — skipping (offline no-op).");
+    return;
+  }
 
   const { planIssues, feedbackIssues } = has("explain")
     ? (() => {

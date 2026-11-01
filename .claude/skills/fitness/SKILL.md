@@ -22,10 +22,11 @@ header. Check `npm run work-gate` before any step that spends a model.
 
 ## The procedure
 
-1. **One outcome line.** A declared intent ("the bots must trade during market hours") or an
-   incident (the 10-08 stall) becomes one EARS line (`/ears`): `WHILE <state>, the <system> shall
-   <response>`. Write the outcome, never the proxy: "a merge reaches production", not "the deploy
-   step is green". No real failure behind it means it is a hypothesis: say so, keep it advisory.
+1. **One outcome line.** A declared intent ("the bots must trade during market hours", or a dated
+   record under `docs/intents/`, whose Outcome and Check are the starting point) or an incident (the
+   10-08 stall) becomes one EARS line (`/ears`): `WHILE <state>, the <system> shall <response>`.
+   Write the outcome, never the proxy: "a merge reaches production", not "the deploy step is green".
+   No real failure behind it means it is a hypothesis: say so, keep it advisory.
 2. **Route it.** A production outcome is a contract in `scripts/fitness.mjs`. Code shape is an
    eye with a budget (`docs/COACHES.md`). `src` behaviour is a spec. Prose quality is a judged
    eval. Taste is the owner's labels first.
