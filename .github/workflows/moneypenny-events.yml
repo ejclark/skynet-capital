@@ -722,7 +722,9 @@ jobs:
           COST=$(jq -r "$RESULT_FILTER | .total_cost_usd // \"?\"" "$F" 2>/dev/null || echo "?")
           TURNS=$(jq -r "$RESULT_FILTER | .num_turns // \"?\"" "$F" 2>/dev/null || echo "?")
           MS=$(jq -r "$RESULT_FILTER | .duration_ms // \"?\"" "$F" 2>/dev/null || echo "?")
-          ERR=$(jq -r "$RESULT_FILTER | .is_error // \"?\"" "$F" 2>/dev/null || echo "?")
+          # `if . == null`, not `//`: jq's `//` treats `false` as missing, so every clean session
+          # printed `is_error=?` and the one value this line exists to show was never shown (#6020).
+          ERR=$(jq -r "$RESULT_FILTER | .is_error | if . == null then \"?\" else . end" "$F" 2>/dev/null || echo "?")
           echo "::notice::cost — event=$ID usd=$COST turns=$TURNS duration_ms=$MS is_error=$ERR"
           echo "- \`$ID\` — **\$$COST** (imputed, Max 20 flat-fee — not a literal charge) · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
 
