@@ -3,6 +3,8 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
+// @ts-expect-error plain .mjs script, no declarations
+import { applyBug, attribute, bugDeadlineMs, validateBugs } from "../../scripts/fitness-audit.mjs";
 
 // #6470. The audit grades a check by breaking it on purpose: each bug in a list is applied to a
 // temporary copy of the files and the spec is run there. Driven end to end through the real CLI
@@ -119,5 +121,145 @@ describe("fitness audit refusals", () => {
     const res = audit([...TARGET, "--bugs", file]);
     expect(res.status).toBe(2);
     expect(res.err).toContain("no-find");
+  });
+
+  it("still refuses an empty find and a replace that is not text", () => {
+    expect(() => validateBugs([{ ...DELETE_A_LINE, find: "" }])).toThrow('"find"');
+    const { replace: _, ...noReplace } = DELETE_A_LINE;
+    expect(() => validateBugs([noReplace])).toThrow('"replace"');
+  });
+});
+
+// A bug's most natural shape is deleting a guard, and an empty replace was refused, so it had to be
+// written as a comment or a no-op that a reader then has to see through.
+const DELETE_A_LINE = {
+  id: "delete-the-guard",
+  file: `${FIXTURE}/toy.mjs`,
+  find: 'return machines.length > 0 ? "pass" : "fail";',
+  replace: "",
+  why: "with the line gone the judge says nothing, and the spec expects a verdict",
+};
+
+describe("fitness audit: a bug that deletes a line", () => {
+  it("accepts an empty replace and grades it end to end", () => {
+    const dir = mkdtempSync(join(tmpdir(), "fitness-audit-delete-"));
+    const file = join(dir, "bugs.json");
+    writeFileSync(file, JSON.stringify([DELETE_A_LINE]));
+    const res = audit([...TARGET, "--bugs", file, "--json"]);
+    expect(parseReport(res).bugs[0].result).toBe("caught");
+  });
+
+  it("counts a bug that empties the whole file as applied, not as a find that went stale", () => {
+    expect(applyBug({ ...DELETE_A_LINE, find: "all of it" }, "all of it")).toEqual({
+      source: "",
+      note: "",
+    });
+  });
+});
+
+describe("fitness audit: which contract a bug attacks", () => {
+  const SOURCE = `const judge = 1;
+export const CONTRACTS = [
+  {
+    id: "first",
+    probe: () => "inside first",
+  },
+  {
+    id: "last",
+    probe: () => "inside last",
+  },
+];
+const below = 2;
+`;
+  const bug = (find: string) => ({ find });
+
+  it("takes the bug's own field first", () => {
+    expect(attribute({ contract: "first", find: "const below" }, SOURCE)).toBe("first");
+  });
+
+  it("gives a bug inside a contract to that contract", () => {
+    expect(attribute(bug("inside first"), SOURCE)).toBe("first");
+    expect(attribute(bug("inside last"), SOURCE)).toBe("last");
+  });
+
+  it("calls anything outside the array shared, above it or below it", () => {
+    expect(attribute(bug("const judge"), SOURCE)).toBe("shared");
+    expect(attribute(bug("const below"), SOURCE)).toBe("shared");
+  });
+
+  it("keeps --candidate on the contracts: a survivor below the array skews no contract's reading", () => {
+    // The real shape: a check's reporting lives below its contracts, and every survivor there used
+    // to read as the last contract's, so the candidate named a contract nobody had attacked.
+    const root = mkdtempSync(join(tmpdir(), "fitness-audit-below-"));
+    mkdirSync(join(root, FIXTURE), { recursive: true });
+    for (const name of ["toy.mjs", "toy.check.ts"]) {
+      writeFileSync(join(root, FIXTURE, name), readFileSync(resolve(FIXTURE, name)));
+    }
+    const toy = join(root, FIXTURE, "toy.mjs");
+    writeFileSync(toy, `${readFileSync(toy, "utf8")}export const BELOW = "unread";\n`);
+    writeFileSync(
+      join(root, "bugs.json"),
+      JSON.stringify([
+        {
+          id: "below-the-array",
+          file: `${FIXTURE}/toy.mjs`,
+          find: 'BELOW = "unread"',
+          replace: 'BELOW = "changed"',
+          why: "nothing reads it, so it survives, and it attacks no contract",
+        },
+      ]),
+    );
+    const res = audit([...TARGET, "--bugs", "bugs.json", "--root", root, "--json"]);
+    const report = parseReport(res);
+    expect(report.bugs[0]).toMatchObject({ contract: "shared", result: "survived" });
+    expect(report.candidate).toMatchObject({ survivors: 0 });
+  });
+});
+
+describe("fitness audit: a slow machine is not a caught bug", () => {
+  const root = () => {
+    const dir = mkdtempSync(join(tmpdir(), "fitness-audit-slow-"));
+    mkdirSync(join(dir, FIXTURE), { recursive: true });
+    for (const name of ["toy.mjs", "toy.check.ts", "bugs.json"]) {
+      writeFileSync(join(dir, FIXTURE, name), readFileSync(resolve(FIXTURE, name)));
+    }
+    return dir;
+  };
+
+  it("says the baseline ran out of time, rather than printing nothing", () => {
+    const res = audit([
+      ...TARGET,
+      "--bugs",
+      `${FIXTURE}/bugs.json`,
+      "--root",
+      root(),
+      "--timeout",
+      "0.001",
+    ]);
+    expect(res.status).toBe(2);
+    expect(res.err).toContain("baseline ran out of time");
+    expect(res.err).not.toContain("undefined");
+    expect(res.err).toContain("--timeout");
+  });
+
+  it("gives a bug at least three times what the green baseline took", () => {
+    // Under load a mutant that runs a little long used to read as caught, the one wrong answer the
+    // score cannot afford. The floor is the baseline's own time, so it moves with the machine.
+    expect(bugDeadlineMs(10_000)).toBe(120_000);
+    expect(bugDeadlineMs(150_000)).toBe(450_000);
+  });
+
+  it("refuses a timeout that is not a positive number", () => {
+    for (const bad of ["soon", "0", "-5"]) {
+      const res = audit([...TARGET, "--bugs", `${FIXTURE}/bugs.json`, "--timeout", bad]);
+      expect(res.status).toBe(2);
+      expect(res.err).toContain("--timeout needs a positive number");
+    }
+  });
+
+  it("names the test that caught a bug, so a caught row can be checked", () => {
+    const run = audit([...TARGET, "--bugs", `${FIXTURE}/bugs.json`, "--json"]);
+    const caught = parseReport(run).bugs.find((b: { id: string }) => b.id === "count-needs-two");
+    expect(caught.caughtBy).toContain("passes one machine and fails none");
   });
 });

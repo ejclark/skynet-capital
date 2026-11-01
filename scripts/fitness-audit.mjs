@@ -20,11 +20,17 @@
 //   --env NAME=VALUE                set for the spec run (repeatable). FLY_BIN=/usr/bin/false is
 //                                   always set, so scripts/fitness.mjs never looks for a real fly
 //   --root <dir>                    read the files from another checkout (the spec uses this)
+//   --timeout <seconds>             how long the green baseline may take (default 600)
 //
 // Results: caught (the spec went red), survived (the spec stayed green: the gap is the finding),
 // NOT APPLIED (the find text is not in the file, or matches the replace text). A bug that did not
 // apply stays in the denominator and is printed on stderr, because once the fixes rewrite the lines
-// a list was written against, a silently shrinking list reads as a better spec.
+// a list was written against, a silently shrinking list reads as a better spec. A caught row names
+// the test that went red, so a catch by something unrelated can be seen and not just counted.
+//
+// A bug gets three times what the baseline took, with a two-minute floor. A fixed limit read a slow
+// machine as a catch: the decision-cycle spec took 150 seconds at a load average of about 25, past a
+// 120-second limit with no bug in it at all.
 //
 // Exit codes: 0 every bug applied, whatever survived · 1 a bug did not apply · 2 cannot audit: a
 // malformed bug list, a missing file, or a baseline spec that is already red.
@@ -37,7 +43,7 @@
 //       "contract": "bots-responsive",                 // optional: the contract id this bug attacks
 //       "file": "scripts/fitness.mjs",                 // relative to the repo root
 //       "find": "ageMs > STAMP_FRESH_MS",              // exact text, first occurrence is replaced
-//       "replace": "ageMs >= STAMP_FRESH_MS",          // what the bug looks like
+//       "replace": "ageMs >= STAMP_FRESH_MS",          // what the bug looks like; "" deletes it
 //       "why": "a poll exactly at the limit should still pass"   // the behaviour that must break
 //     }
 //   ]
@@ -45,8 +51,8 @@
 // Write `find` as the smallest exact text that pins one line; whitespace counts. Keep the list
 // short and curated: Google found most generated mutants unproductive, so each bug should name a
 // behaviour a person cares about in `why`. Without `contract`, a bug inside the CONTRACTS array is
-// attributed to the nearest contract above it, and anything else counts as "shared" (judges,
-// reporting, probes read by more than one contract).
+// attributed to the nearest contract above it, and anything else, above or below the array, counts
+// as "shared" (judges, reporting, probes read by more than one contract).
 //
 // --candidate names the contract with the most survivors; with no survivors, the contract with the
 // fewest bugs aimed at it, so an unattacked contract is named before a well-covered one.
@@ -70,7 +76,13 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "..");
 const RSTEST = join(REPO, "node_modules", "@rstest", "core", "bin", "rstest.js");
 const FIELDS = ["id", "file", "find", "replace", "why"];
-const SPEC_TIMEOUT_MS = 120_000;
+// Text, but it may be empty: the commonest bug is a guard deleted outright.
+const MAY_BE_EMPTY = new Set(["replace"]);
+const BASELINE_TIMEOUT_S = 600;
+const BUG_TIMEOUT_FLOOR_MS = 120_000;
+
+/** How long a bug's run may take, given how long the green baseline took. */
+export const bugDeadlineMs = (baselineMs) => Math.max(BUG_TIMEOUT_FLOOR_MS, 3 * baselineMs);
 
 function parseArgs(argv) {
   const opts = {
@@ -80,6 +92,7 @@ function parseArgs(argv) {
     root: process.cwd(),
     with: [],
     env: [],
+    timeout: BASELINE_TIMEOUT_S,
     json: false,
     candidate: false,
   };
@@ -95,6 +108,8 @@ function parseArgs(argv) {
     } else throw new Error(`unknown argument ${arg}`);
   }
   if (!opts.bugs) throw new Error("--bugs <file> is required");
+  opts.timeout = Number(opts.timeout);
+  if (!(opts.timeout > 0)) throw new Error("--timeout needs a positive number of seconds");
   return opts;
 }
 
@@ -105,8 +120,11 @@ export function validateBugs(raw) {
   raw.forEach((bug, i) => {
     const name = typeof bug?.id === "string" ? bug.id : `#${i + 1}`;
     for (const field of FIELDS) {
-      if (typeof bug?.[field] !== "string" || !bug[field]) {
-        throw new Error(`bug ${name}: "${field}" must be a non-empty string`);
+      if (typeof bug?.[field] !== "string") {
+        throw new Error(`bug ${name}: "${field}" must be a string`);
+      }
+      if (!(bug[field] || MAY_BE_EMPTY.has(field))) {
+        throw new Error(`bug ${name}: "${field}" must not be empty`);
       }
     }
     if (bug.contract !== undefined && typeof bug.contract !== "string") {
@@ -131,12 +149,15 @@ function contractsBody(source) {
   return source.slice(start, end === -1 ? undefined : end);
 }
 
-/** Which contract a bug attacks: its own field, else the nearest contract above it in CONTRACTS. */
+/** Which contract a bug attacks: its own field, else the contract around it in CONTRACTS. */
 export function attribute(bug, source) {
   if (bug.contract) return bug.contract;
-  const start = source.indexOf("CONTRACTS = [");
   const at = source.indexOf(bug.find);
-  if (start === -1 || at < start) return "shared";
+  const body = contractsBody(source);
+  const start = source.indexOf("CONTRACTS = [");
+  // Past the array is the reporting and the entrypoint, which attack no one contract. Reading those
+  // as the last contract's made --candidate name a contract nobody had aimed at.
+  if (start === -1 || at < start || at >= start + body.length) return "shared";
   const above = contractIds(source.slice(0, at));
   return above.at(-1) ?? "shared";
 }
@@ -213,19 +234,30 @@ function specEnv(pairs) {
   return env;
 }
 
-/** Run the spec in the staged tree. Green is 0; a red, crashed or hung spec is non-zero. */
-function runSpec(dir, spec, env) {
-  const res = spawnSync(process.execPath, [RSTEST, "run", spec], {
-    cwd: dir,
-    encoding: "utf8",
-    timeout: SPEC_TIMEOUT_MS,
-    env,
-  });
-  if (res.error?.code === "ETIMEDOUT") return { status: 1, note: "the spec hung" };
+/**
+ * Run the spec in the staged tree, stopping at its first red test when `bail` says so: a caught bug
+ * has answered, and the rest of a slow spec tells nothing more. Green is 0; a red, crashed or hung
+ * spec is non-zero. The md reporter is named so the output has one shape in CI and on a laptop.
+ */
+function runSpec(dir, spec, env, timeoutMs, bail = false) {
+  const res = spawnSync(
+    process.execPath,
+    [RSTEST, "run", spec, "--reporter", "md", ...(bail ? ["--bail", "1"] : [])],
+    {
+      cwd: dir,
+      encoding: "utf8",
+      timeout: timeoutMs,
+      env,
+    },
+  );
+  if (res.error?.code === "ETIMEDOUT") return { status: 1, hung: true, note: "the spec hung" };
   // Anything else is the runner failing, never the spec: rstest missing, a dead node_modules link.
   if (res.error) throw new Error(`cannot run rstest: ${res.error.message}`);
   return { status: res.status ?? 1, out: `${res.stdout}\n${res.stderr}` };
 }
+
+/** The test that went red, read from the md reporter's report, or nothing if it did not say. */
+const firstFailure = (out) => /"fullName": "(.+?)",?\n/.exec(out ?? "")?.[1];
 
 export function audit(opts) {
   const root = resolve(opts.root);
@@ -234,12 +266,19 @@ export function audit(opts) {
   const env = specEnv(opts.env ?? []);
   const dir = stage(root, files, opts.spec);
   try {
-    const baseline = runSpec(dir, opts.spec, env);
+    const startedAt = Date.now();
+    const baseline = runSpec(dir, opts.spec, env, (opts.timeout ?? BASELINE_TIMEOUT_S) * 1000);
+    if (baseline.hung) {
+      throw new Error(
+        `baseline ran out of time: ${opts.spec} did not finish in ${opts.timeout ?? BASELINE_TIMEOUT_S} s with no bug applied, so nothing can be graded; try a larger --timeout`,
+      );
+    }
     if (baseline.status !== 0) {
       throw new Error(
         `baseline is red: ${opts.spec} fails before any bug is applied\n${baseline.out}`,
       );
     }
+    const deadlineMs = bugDeadlineMs(Date.now() - startedAt);
     const script = readFileSync(join(dir, opts.script), "utf8");
     const rows = bugs.map((bug) => {
       const target = join(dir, bug.file);
@@ -251,13 +290,16 @@ export function audit(opts) {
         why: bug.why,
         note: applied.note,
       };
-      if (!applied.source) return { ...row, result: "not-applied" };
+      // Not a truthiness test: a bug may empty the whole file, which is still a bug applied.
+      if (applied.source === undefined) return { ...row, result: "not-applied" };
       writeFileSync(target, applied.source);
-      const run = runSpec(dir, opts.spec, env);
+      const run = runSpec(dir, opts.spec, env, deadlineMs, true);
       writeFileSync(target, original);
+      if (run.status === 0) return { ...row, result: "survived" };
       return {
         ...row,
-        result: run.status === 0 ? "survived" : "caught",
+        result: "caught",
+        caughtBy: firstFailure(run.out),
         note: run.note ?? row.note,
       };
     });
@@ -281,7 +323,8 @@ function print(report) {
   console.log(`fitness-audit: ${report.script} against ${report.spec}, ${report.total} bugs`);
   const label = { caught: "CAUGHT", survived: "SURVIVED", "not-applied": "NOT APPLIED" };
   for (const b of report.bugs) {
-    const note = b.note ? ` (${b.note})` : "";
+    const said = [b.note, b.caughtBy && `by: ${b.caughtBy}`].filter(Boolean).join(", ");
+    const note = said ? ` (${said})` : "";
     console.log(
       `${label[b.result].padEnd(12)}${b.id.padEnd(28)}${b.contract.padEnd(20)}${b.why}${note}`,
     );
