@@ -389,9 +389,9 @@ GitHub issues/PRs, sequencing work and hunting friction proactively; see
 [`docs/MONEYPENNY.md`](docs/MONEYPENNY.md) for her mandate before extending anything she owns. The
 common routes:
 
-- "clean up the code" / "burn down debt" → a `/governor` cycle (athletes `decomposer`,
-  `ui-librarian`, `mortician`, `test-backfiller`; drills `/decompose`, `/dedupe`; big burn-downs →
-  feast mode, see the governor skill). "Why did CI fail" → a gate probably caught real drift — fix
+- "clean up the code" / "burn down debt" → a `/governor` cycle (drills `/decompose`, `/dedupe`,
+  `/bury`, `/backfill`, run by `docs/grind/governor.instructions.md`; big burn-downs → feast mode,
+  see the governor skill). "Why did CI fail" → a gate probably caught real drift — fix
   the finding, not the gate.
 - "grind through a batch of near-identical, mechanical chores" (the same fix/skill/command applied
   across many files/PRs/branches/tickers, low judgment per item) → **`/grind`**
@@ -440,8 +440,8 @@ common routes:
   a good research skill to develop… getting concepts on our radar to add tools to our toolbox").
 - **"we need an agent for X"** → `/charter` before writing any `.claude/agents/*.md` — REJECT is a
   normal, expected verdict, not a shortfall.
-- **"make a shareable page"** (field guide, dashboard, report) → the `artifact-smith` agent (builds
-  from `docs/BRAND.md` tokens).
+- **"make a shareable page"** (field guide, dashboard, report) → the `artifact-design` skill, built from
+  `docs/BRAND.md` tokens.
 - **A finished Claude Design session** → one of the two paths in [`docs/HANDOFFS.md`](docs/HANDOFFS.md)
   — mark the canvas boards `build` and fire the design lane with one tap, or attach the session's
   export to a Claude Code session with a one-line ask (Eric, 2026-09-24: "attaching the artifact

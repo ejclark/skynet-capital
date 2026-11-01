@@ -101,6 +101,12 @@ describe("renderProposals — honest text", () => {
     expect(text).toContain("Exits keep running");
   });
 
+  it("names the command that adopts option 1 as its own held pull request", () => {
+    expect(text).toContain(
+      "`npm run research:refine -- ai-dip-2026-10/8/CRWV-LONG-CALL` writes it as one ledger line",
+    );
+  });
+
   it("is deterministic text, with no timestamp that would make a re-run differ", () => {
     expect(renderProposals(scored({ "7": "pass" }))).toBe(renderProposals(scored({ "7": "pass" })));
   });

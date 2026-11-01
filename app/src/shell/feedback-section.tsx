@@ -30,8 +30,9 @@ export function FeedbackSection(): ReactElement {
       <header className="page-header">
         <h2>Your feedback</h2>
         <p>
-          Bugs, features, enhancements — filed straight onto the build queue as GitHub issues.
-          Moneypenny files them for you; every filing gets a real answer.
+          Bugs, features, enhancements — filed as GitHub issues. Moneypenny files them for you; each
+          one below says whether it's waiting to be picked, up next or being built, and every filing
+          gets a real answer.
         </p>
         {data.feedbackCount > 0 ? (
           <p className="fb-count num">

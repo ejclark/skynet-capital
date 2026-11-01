@@ -162,7 +162,10 @@ best-outcome routing, not economy:
 - **`/grind` steps** (`.claude/workflows/grind.js`): effort defaults by step kind — `script`
   (run a command, report its exit) at `low`, everything else at `high`; model defaults to
   `sonnet`, and a chore that needs more declares it in its front matter (the research chore runs
-  `fable`/`high`).
+  `fable`/`high`). Every step but `skill` dispatches as the `worker` agent, which starts near 30k
+  tokens against 82k for the default workflow agent; a hand-written workflow script passes
+  `agentType: 'worker'` on its file-and-shell stages for the same reason. A `skill` step keeps the
+  default agent because it needs the Skill tool.
 
 ## Honest limit
 
@@ -176,22 +179,18 @@ is what the self-correcting loop reclaims from feedback, the same way it reclaim
 The config-audit parses the block below (agent · class · model floor · effort floor) and flags any agent
 whose declared `model`/`effort` frontmatter falls below its floor, or is missing `effort` entirely. Adding
 a model or effort level means editing this block — never touching the agents. Keep one row per roster
-agent; a new agent needs a row here (that itself is a useful "did you think about its tier?" gate).
+agent; a new agent needs a row here (that itself is a useful "did you think about its tier?" gate). A
+file on the bench (`docs/agents/bench/README.md`) has no row until it comes back. `worker.md` has no
+`model:` line on purpose: a per-call model overrides an agent file's model, so the script sets the
+tier and the row is the floor for what it may set.
 
 <!-- FLOOR-TABLE:START -->
 | agent | class | model floor | effort floor |
 |---|---|---|---|
 | red-team | genuinely hard / adversarial | fable | xhigh |
 | reviewer | genuinely hard / adversarial | fable | xhigh |
-| render-alchemist | genuinely hard / unfamiliar | fable | xhigh |
-| art-director | complex/judgment | opus | high |
-| artifact-smith | complex/judgment | opus | high |
+| evals-expert | genuinely hard / adversarial (blind grading of a check) | fable | xhigh |
 | linguist | complex/judgment | opus | high |
-| piece-wright | mechanical code change | sonnet | high |
-| decomposer | mechanical code change | sonnet | high |
 | dep-warden | mechanical code change | sonnet | high |
-| mortician | mechanical code change | sonnet | high |
-| set-dresser | mechanical code change | sonnet | high |
-| test-backfiller | mechanical code change | sonnet | high |
-| ui-librarian | mechanical code change | sonnet | high |
+| worker | workflow stage, tier set per call by the script | sonnet | high |
 <!-- FLOOR-TABLE:END -->

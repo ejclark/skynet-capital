@@ -1,3 +1,4 @@
+import type { FeedbackStatus } from "../../src/domain/feedback-status.js";
 import type {
   ActivityEventBus,
   MergedPullRequestInfo,
@@ -20,7 +21,6 @@ import { InMemoryActivityEventBus } from "../../src/observatory/in-memory-activi
 import { InMemoryActivityStore } from "../../src/observatory/in-memory-activity-store.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import { InMemoryFeedbackLogStore } from "../../src/server/feedback-log-memory-store.js";
-import type { FeedbackStatus } from "../../src/server/feedback-status.js";
 import type { LadderProgressEntry } from "../../src/server/ladder-progress-log.js";
 import { InMemoryLadderProgressLogStore } from "../../src/server/ladder-progress-log-memory-store.js";
 import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";

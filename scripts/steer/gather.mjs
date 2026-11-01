@@ -195,6 +195,7 @@ function queueBlock(gate, next) {
     items,
     nextPick: script("scripts/moneypenny/admission.mjs", ["--next"]),
     dialLink: `https://github.com/${REPO}/issues/${DIAL_ISSUE}`,
+    pace: script("scripts/moneypenny/quota.mjs", ["--tick", "--json"]).pace,
     hours: next.hours,
   };
 }

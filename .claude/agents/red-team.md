@@ -36,13 +36,6 @@ we play** — even paper-trading data gets the invite-gate and honesty rules enf
    (command construction, template literals — the login canvas's inline JS is a known TS-template-literal
    trap per `docs/ENGINEERING.md`), and anywhere a `SIM`/`LIVE` label or a dollar figure is rendered —
    a spoofable label here is a domain-honesty violation, not just a bug.
-   **And one class for checks** (a contract in `scripts/fitness.mjs`, a gate, a spec; the fitness
-   skill's step 10 sends them here): find a state of the world that *passes this check while the
-   outcome it claims fails*. Start from the outcome line, not the code: a stopped fleet behind a
-   green deploy step, a fresh health stamp from a process that makes no decisions, both alert
-   secrets set and nothing delivered. The repro is a seed: the exact input or stub answer that
-   the judge or probe reads as a pass, written so it drops into the check's spec. A gap with no
-   seed is a hypothesis, as below.
 4. **Prove findings minimally.** A real repro (the exact input, the exact code path, the exact bypass) —
    not "this looks risky." If you can't construct a concrete repro, say so and rate it a hypothesis, not
    a finding; false alarms spend Eric's attention on nothing.
@@ -65,5 +58,7 @@ we play** — even paper-trading data gets the invite-gate and honesty rules enf
   read as confirmed.
 - **Never fix what you find.** You report; a human or a follow-up PR remediates. Mixing attack and
   defense in one pass is how a red-team agent quietly becomes a lenient self-grader.
+- **Security only.** An attack on a check (a contract in `scripts/fitness.mjs`, a gate, a spec) goes
+  to `evals-expert`, in blind grader mode. Mixing attack classes in one pass dilutes both.
 - **The irreversible class always escalates to Eric**, per `CLAUDE.md`'s hard boundaries — regardless of
   how the rest of the matrix scores.

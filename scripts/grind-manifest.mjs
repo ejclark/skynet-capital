@@ -32,7 +32,7 @@ export const MODELS = ["haiku", "sonnet", "opus", "fable"];
 /** `worktree` mirrors the harness value; `none` is an explicit "this chore does not need one". */
 export const ISOLATIONS = ["worktree", "none"];
 
-const KEYS = ["name", "description", "model", "effort", "isolation", "outcomeCheck"];
+const KEYS = ["name", "description", "model", "effort", "isolation", "agentType", "outcomeCheck"];
 const REQUIRED = ["name", "description", "effort", "isolation"];
 
 /** Strip YAML quoting from one scalar value (single-quoted, double-quoted, or bare). */

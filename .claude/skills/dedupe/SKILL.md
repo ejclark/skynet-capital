@@ -5,7 +5,7 @@ description: >-
   one symbol per PR, behavior-preserving, verified green and ratcheted. Use when the duplication gate
   (scripts/dupe-scan.mjs) flags a symbol defined in multiple files, when the same helper or token block
   appears pasted across files, or when asked to "dedupe", "consolidate", or "promote to src/ui". The
-  corrective drill the ui-librarian agent runs; also invokable as /dedupe.
+  corrective drill the governor chore runs; also invokable as /dedupe.
 ---
 
 # Dedupe — the consolidation drill

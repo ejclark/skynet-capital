@@ -83,17 +83,20 @@ only when more than one conductor needs the same worker.
 
 ## Charter verdicts, 2026-11-01
 
-Six pillars went through `/charter` with the evidence from their own build. **Build list: none yet.**
-Rejecting is the expected outcome, and each rejection names what would reopen it.
+Six pillars went through `/charter` with the evidence from their own build, and all six conductor
+agents stay rejected, because a conductor here is a script. Rejecting is the expected outcome, and each
+rejection names what would reopen it. **Built since, neither one a pillar's conductor:** `worker`, the
+file-and-shell stage agent these scripts share, and `evals-expert`, on request
+([`COACHES.md`](../COACHES.md) → *Roster pass, 2026-11-01*).
 
-| Candidate agent | Verdict | Why | Reopen when |
-|---|---|---|---|
-| Loop engineer | Reject | a library every agent uses, with no input or output of its own | never as an agent |
-| Memory keeper | Reject | a tool and a hook; 0 collisions in 20 writes across 32 sessions | a lock failure, or a commit naming the wrong session (under load the hook lost provenance, never content, so a lost write cannot show up) |
-| Dreamer | Reject for now | `dream.js` already isolates its reads with sub-agents, and one run does not earn a standing role | a second conductor needs the same transcript analysis |
-| Context curator | Reject for now | the size gate can name a target, but the file is under budget with nothing to work | the budget trips twice in a month |
-| Self-healer | Reject, existing owner | Moneypenny's repair lane owns this ([`MONEYPENNY.md`](../MONEYPENNY.md)), though the lane has no Fly token today | a stop class recurs that scripted steps can't resolve |
-| Research intake | Reject, existing owner | a procedure, with no isolation benefit worth an agent; `render-alchemist` and the event lane cover their own domains | links arrive in batches that outgrow a session |
+| Candidate agent | Verdict | The script that conducts it today | Why | Reopen when |
+|---|---|---|---|---|
+| Loop engineer | Reject | none of its own: `.claude/workflows/grind.js`, `dream.js`, `post-merge-audit.js` and `clear-path-flip.js` are what the other pillars use | a library every agent uses, with no input or output of its own | never as an agent |
+| Memory keeper | Reject | part of `.claude/workflows/dream.js`, plus `scripts/run-memory.mjs` and `scripts/hooks/memory-history.mjs` | a tool and a hook; 0 collisions in 20 writes across 32 sessions | a lock failure, or a commit naming the wrong session (under load the hook lost provenance, never content, so a lost write cannot show up) |
+| Dreamer | Reject for now | `.claude/workflows/dream.js` | it already isolates its reads with sub-agents, and one run does not earn a standing role | a second conductor needs the same transcript analysis |
+| Context curator | Reject for now | `.claude/workflows/grind.js` over `docs/grind/instruction-drift.instructions.md`; `scripts/config-audit.mjs` holds the size budget | the size gate can name a target, but the file is under budget with nothing to work, and `reviewer` holds the pre-merge read | the budget trips twice in a month |
+| Self-healer | Reject, existing owners | `.github/workflows/bots-catchup.yml` runs `scripts/bots-start-stopped.sh` on a 15-minute schedule; `moneypenny-repair.yml` runs `scripts/moneypenny/repair.mjs` on a failed workflow | no single owner: the scripted start handles a stopped machine, and the repair lane handles a failed run but holds no Fly token, so it cannot act on a machine. In `scripts/fitness.mjs`, `bots-running` and `main-deploys` reach a fix with nobody asking, and no contract has a fix a lane can merge alone | a stop class recurs that scripted steps can't resolve |
+| Research intake | Reject, existing owner | the research dispatch in `moneypenny-events.yml`; `.claude/workflows/symbol-sweep.js` and `grind.js` for batches | a procedure, with no isolation benefit worth an agent; the event lane covers its domain, and `render-alchemist` waits on the bench for a 3D reference | links arrive in batches that outgrow a session |
 
 **Fitness contracts change what would reopen these.** `/charter` refuses an autonomous agent with no objective gate to name its target, and a failing contract with no corrector is exactly that gate. The trigger for a pillar's agent is therefore written down: it fails repeatedly, and scripted correction has run out of budget.
 
