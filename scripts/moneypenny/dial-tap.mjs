@@ -135,6 +135,8 @@ export function executeDialTidy(
   { exec = sh, config = loadWorkModeConfig(), now = Date.now() } = {},
 ) {
   const { issueNumber, label } = intent;
+  if (issueNumber !== config.trackingIssue)
+    return `🎚️ left ${label} on #${issueNumber}: the dial lives on #${config.trackingIssue}`;
   const mode = readWorkMode(exec, config, now);
   if (mode.endedLabel !== label)
     return `🎚️ left ${label} on #${issueNumber}: the dial reads ${mode.position} (${mode.reason})`;

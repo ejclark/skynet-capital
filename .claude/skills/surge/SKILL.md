@@ -125,8 +125,8 @@ reverts.
    merged by lane, Needs Eric in order with a predicted answer each, headlines, the self-ready
    record against `docs/ISSUES.md`'s falsifier (2026-11-19).
 2. **Dial back to `normal`** if the reset has not come yet and the spare quota is spent. After the
-   reset it already reads `normal`, but the label stays on: tap `work-mode:normal` so next week's
-   tap on surge adds the label instead of removing it.
+   reset it already reads `normal`, and the next push to `main` replaces the label with
+   `work-mode:normal` and says so on #4153, so next week's tap on surge adds the label.
 3. **One census line** in `docs/process/LEARNING-LOOP.md` → *The loop census*: which stage a
    person still did by hand this surge.
 4. Archive the children whose PRs are merged or closed (the `issue:<n>` group sweep), then self.

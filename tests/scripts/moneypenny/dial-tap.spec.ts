@@ -388,7 +388,7 @@ describe("executeDialTidy", () => {
     ["a surge with no end date", ["work-mode:surge"], [], set("surge"), "surge"],
     ["two labels on the dial", ["work-mode:surge", "work-mode:normal"], [], [], "surge"],
     ["a dial already at normal", ["work-mode:normal"], [], [], "surge"],
-  ] as Array<[string, string[], DialComment[], LabelEvent[], string]>)(
+  ] as [string, string[], DialComment[], LabelEvent[], string][])(
     "writes nothing for %s",
     (_what, start, comments, events, position) => {
       const { exec, writes, labels } = fakeGh(start, comments, events);
@@ -398,8 +398,19 @@ describe("executeDialTidy", () => {
     },
   );
 
+  it("touches nothing for an intent naming another issue", () => {
+    const { exec, writes, labels } = fakeGh(
+      ["work-mode:surge"],
+      [endDate(`surge until ${RESET}`)],
+      set("surge"),
+    );
+    executeDialTidy({ ...intent("surge"), issueNumber: 99 }, { exec, config, now: AFTER });
+    expect(writes).toEqual([]);
+    expect(labels).toEqual(["work-mode:surge"]);
+  });
+
   it("is what the push tick's intent runs", () => {
     const source = readFileSync("scripts/moneypenny/index.mjs", "utf8");
-    expect(source).toMatch(/i\.kind === "tidy-ended-dial"\) return executeDialTidy\(i\)/);
+    expect(source).toContain(`"tidy-ended-dial": (i) => executeDialTidy(i)`);
   });
 });

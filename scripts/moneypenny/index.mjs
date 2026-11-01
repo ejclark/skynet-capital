@@ -1516,6 +1516,7 @@ const ONE_CALL_INTENTS = {
   "draft-lesson": (i) => draftLesson(i),
   "wake-next": (i) => wakeAfter(i.issueNumber),
   "route-dial": (i) => executeDialTap(i),
+  "tidy-ended-dial": (i) => executeDialTidy(i),
   // #5727 — the CI repair capsules' two stall checks, which live beside audit.mjs.
   "flag-capsule-orphan": (i) => flagCapsuleOrphan(i),
   "close-proven-capsule": (i) => closeProvenCapsule(i),
@@ -1620,7 +1621,6 @@ function executeOne(i, stallRepairs = []) {
     console.log(`::notice::work-mode title → ${i.newTitle} (${i.reason})`);
     return `🪧 retitled #${i.issueNumber} — \`${i.title}\` → \`${i.newTitle}\``;
   }
-  if (i.kind === "tidy-ended-dial") return executeDialTidy(i);
   if (i.kind === "rearm-stranded") return rearmStranded(i);
   if (i.kind === "flag-conflict-cap") {
     commentAndFlagConflictCap(i);
