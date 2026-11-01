@@ -59,8 +59,8 @@
     "id": "deploy-future-date-passes",
     "contract": "main-deploys",
     "file": "scripts/fitness.mjs",
-    "find": "if (waitedMs < 0) return unknown(`the ${name} lag is dated in the future`);",
-    "replace": "if (waitedMs < 0) continue;",
+    "find": "else if (waitedMs < 0) undated.push(unknown(`the ${name} lag is dated in the future`));",
+    "replace": "else if (waitedMs < 0) continue;",
     "why": "a lag dated ahead of the runner's clock passes as current for as long as the skew lasts, instead of being unknown"
   },
   {

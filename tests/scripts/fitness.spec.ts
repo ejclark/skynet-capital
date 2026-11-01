@@ -28,7 +28,7 @@ import {
 // that only exercised the judges caught 0 of 15 deliberate bugs in the probes and the wiring.
 //
 // Graded blind: tests/scripts/fixtures/fitness-heldout-bugs.json holds 30 deliberate bugs written
-// by a pass that never saw this spec; it caught 29 before the seed above the stamp tests was added.
+// by a pass that never saw this spec; it caught 29 before the never-polled stamp seed was added.
 // That list is the regression list now (`node scripts/fitness-audit.mjs --bugs <it> --with ...`,
 // the --with files are the ones named below), so a new score needs bugs from a fresh blind pass.
 const SCRIPT = resolve("scripts/fitness.mjs");
@@ -91,6 +91,16 @@ describe("fitness judges", () => {
     expect(garbled.status).toBe("fail");
   });
 
+  it("cannot age a stamp dated ahead of its clock, but forgives the seconds two clocks differ by", () => {
+    const ahead = (ms: number) =>
+      judgeStamp({ lastControlsPollAt: iso(NOW + ms), bridge: "armed" }, NOW);
+    expect(ahead(30_000).status).toBe("pass");
+    expect(ahead(60 * MIN)).toEqual({
+      status: "unknown",
+      detail: "the stamp is dated in the future",
+    });
+  });
+
   it("reads deploys from what is running, and passes only when both apps are current", () => {
     const current = judgeDeploys({ lagging: false, bots: { known: true, lagging: false } }, NOW);
     expect(current.status).toBe("pass");
@@ -132,6 +142,12 @@ describe("fitness judges", () => {
     expect(halfBlind).toEqual({ status: "unknown", detail: "cannot read the bots deploys" });
     // A lag with no date cannot be aged, so it cannot be waved through as young.
     expect(judgeDeploys({ lagging: true }, NOW).status).toBe("unknown");
+    // One half it cannot date never hides the other half's failure.
+    const masked = judgeDeploys(
+      { lagging: true, bots: { lagging: true, since: iso(NOW - 90 * MIN) } },
+      NOW,
+    );
+    expect(masked).toEqual({ status: "fail", detail: "bots undeployed 90 min" });
   });
 
   it("fails an alarm that can reach nobody, the 10-18 to 11-01 gap", () => {
@@ -206,7 +222,7 @@ describe("fitness reporting", () => {
     const open = {
       ...issue,
       title: "[fitness] bots-responsive",
-      body: "last controls poll 10 min ago",
+      body: "**What failed:** last controls poll 10 min ago.",
     };
     expect(reportActions([stale(25)], [open])).toEqual([]);
     const commented = {
@@ -228,6 +244,18 @@ describe("fitness reporting", () => {
       })),
     );
     expect(tally).toEqual({ opens: 1, comments: 0, closes: 0 });
+  });
+
+  it("comments when a cause narrows: one app still undeployed is not the two it reported", () => {
+    const both = {
+      ...issue,
+      title: "[fitness] main-deploys",
+      body: "**What failed:** dashboard undeployed 45 min, bots undeployed 30 min.",
+    };
+    const narrowed = { ...failing, id: "main-deploys", detail: "dashboard undeployed 60 min" };
+    expect(reportActions([narrowed], [both])).toEqual([
+      { kind: "comment", number: 7, result: narrowed },
+    ]);
   });
 
   it("closes the issue when the check passes", () => {
@@ -433,7 +461,7 @@ type World = {
   machines?: string;
   stampAgeMs?: number;
   secrets?: string[];
-  deploy?: "current" | "young" | "late" | "unreadable";
+  deploy?: "current" | "young" | "late" | "future" | "unreadable";
   issues?: unknown[];
   memoryHistory?: boolean | "none";
 };
@@ -468,7 +496,7 @@ function fixture(world: World = {}) {
     writeFileSync(join(stub, "api-runs"), JSON.stringify({ workflow_runs: runs }));
     writeFileSync(join(stub, "api-jobs-1"), landed);
     writeFileSync(join(stub, "api-jobs-2"), skipped);
-    const since = iso(now - (deploy === "late" ? 45 : 5) * MIN);
+    const since = iso(now - { current: 5, young: 5, late: 45, future: -60 }[deploy] * MIN);
     writeFileSync(
       join(stub, "api-compare"),
       JSON.stringify({
@@ -645,7 +673,8 @@ describe("fitness wiring", () => {
     writeFileSync(join(stub, "exec-hang"), "");
     const started = Date.now();
     const res = run(stub, ["--json"], { FITNESS_SPAWN_MS: "300" });
-    expect(Date.now() - started).toBeLessThan(4000);
+    // Two hung reads would be ten seconds; the bound leaves room for a slow runner's node starts.
+    expect(Date.now() - started).toBeLessThan(8000);
     const r = results(res);
     expect(r("bots-responsive")).toMatchObject({
       status: "unknown",
@@ -664,6 +693,20 @@ describe("fitness wiring", () => {
     const blind = results(run(fixture({ deploy: "unreadable" }), ["--json"]))("main-deploys");
     expect(blind.status).toBe("unknown");
     expect(blind.detail).toContain("cannot read GitHub");
+  });
+
+  it("retries only a read that failed: a judge's own unknown is not read twice", () => {
+    const stub = fixture({ deploy: "future" });
+    const r = results(run(stub, ["--json"]))("main-deploys");
+    expect(r).toMatchObject({
+      status: "unknown",
+      detail: "the dashboard lag is dated in the future",
+    });
+    expect(lines(calls(stub, "gh"), "commits/main")).toBe(1);
+    // A read that did fail is read twice before it counts as blind.
+    const dead = fixture({ deploy: "unreadable" });
+    run(dead, ["--json"]);
+    expect(lines(calls(dead, "gh"), "commits/main")).toBe(2);
   });
 
   it("opens a failing contract's issue on the clock, assigned to the owner, and exits 0 under --report", () => {

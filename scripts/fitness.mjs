@@ -89,6 +89,9 @@ export function judgeMachine(machines) {
 export function judgeStamp(stamp, nowMs) {
   const ageMs = nowMs - Date.parse(stamp.lastControlsPollAt ?? "");
   if (!Number.isFinite(ageMs)) return fail("the stamp has no controls poll");
+  // Two clocks differ by seconds; a stamp a whole window ahead of this one cannot be aged, and a
+  // negative age would pass as fresh for as long as the skew lasts (the deploys judge's rule).
+  if (ageMs < -STAMP_FRESH_MS) return unknown("the stamp is dated in the future");
   if (ageMs > STAMP_FRESH_MS)
     return fail(`last controls poll ${Math.round(ageMs / 60000)} min ago`);
   return stamp.bridge === "armed"
@@ -113,17 +116,22 @@ export function judgeDeploys(lag, nowMs) {
   ];
   const late = [];
   const young = [];
+  const undated = [];
   for (const [name, lagging, since] of halves) {
     if (!lagging) continue;
     const waitedMs = nowMs - Date.parse(since ?? "");
-    if (!Number.isFinite(waitedMs)) return unknown(`the ${name} lag carries no date`);
+    if (!Number.isFinite(waitedMs)) undated.push(unknown(`the ${name} lag carries no date`));
     // A date ahead of this clock cannot be aged either: the API has read an hour ahead of a
     // runner, and a negative wait would pass as young for as long as the skew lasts.
-    if (waitedMs < 0) return unknown(`the ${name} lag is dated in the future`);
-    const line = `${name} undeployed ${Math.round(waitedMs / 60000)} min`;
-    (waitedMs > DEPLOY_GRACE_MS ? late : young).push(line);
+    else if (waitedMs < 0) undated.push(unknown(`the ${name} lag is dated in the future`));
+    else {
+      const line = `${name} undeployed ${Math.round(waitedMs / 60000)} min`;
+      (waitedMs > DEPLOY_GRACE_MS ? late : young).push(line);
+    }
   }
+  // A half this cannot date never hides the other half's failure.
   if (late.length) return fail(late.join(", "));
+  if (undated.length) return undated[0];
   return pass(young.length ? `${young.join(", ")}: inside the deploy grace` : "both apps current");
 }
 
@@ -299,10 +307,12 @@ const blindTitle = (source) => `[fitness] cannot read ${source}`;
 const filesIssue = (r) => r.reaches === ISSUE_TO_OWNER;
 // Details carry running numbers (minutes ago, a streak), so the compare drops them: a standing
 // failure is one state, not a new one every tick. A real-tick replay of the 10-22 outage posted 70
-// comments before this.
+// comments before this. The detail is matched whole, from the space after the label to the full
+// stop the body and the comment both put after it, so a cause that narrows (one app still
+// undeployed of the two reported) is a change and not a substring of the old one.
 const shape = (text) => String(text ?? "").replace(/\d+/g, "N");
-const seen = (issue, detail) =>
-  shape(issue.body).includes(shape(detail)) || shape(issue.lastComment).includes(shape(detail));
+const said = (text, detail) => shape(text).includes(` ${shape(detail)}.`);
+const seen = (issue, detail) => said(issue.body, detail) || said(issue.lastComment, detail);
 
 /**
  * What the issues should do, given results and the open fitness issues. Pure. A failure opens one
@@ -486,6 +496,12 @@ function attempt(contract, nowMs) {
   }
 }
 
+// An unknown worth a second read: a read failed or a reply crashed the probe. A judge's own
+// unknown (no memory folder here, a lag dated in the future) reads the same twice, and the retry
+// would repeat deploy-lag's dozens of GitHub reads for nothing.
+const blip = (verdict) =>
+  verdict.status === "unknown" && (verdict.crashed || readFailures.length > 0);
+
 /** Every contract read once from here, blips read twice. Returns the results and whether one crashed. */
 function probeAll(nowMs, here) {
   let crashed = false;
@@ -494,7 +510,7 @@ function probeAll(nowMs, here) {
     let verdict = attempt({ ...contract, probe }, nowMs);
     // A crash on either read is still a crash: the retry may read clean, the run stays red.
     crashed ||= Boolean(verdict.crashed);
-    if (verdict.status === "unknown") {
+    if (blip(verdict)) {
       sleep(RETRY_MS);
       verdict = attempt({ ...contract, probe }, nowMs);
       crashed ||= Boolean(verdict.crashed);
