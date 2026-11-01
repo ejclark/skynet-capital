@@ -456,8 +456,9 @@ EOF_SHOTS
     # `*-chromium-linux.png` only, so on macOS Playwright writes fresh `-darwin` files and fails
     # every `matches the known-good page screenshot` spec — false-red. Local e2e runs on Linux only.
     # Not piped: a kill by SIGPIPE on a match would read as a docs-only diff and skip these tests. An
-    # empty diff must stay false, and a here-string would hand `grep -v` one blank line to match.
-    local changed; changed="$(git diff --name-only "origin/$base...HEAD")"
+    # empty diff must stay false, and a here-string would hand `grep -v` one blank line to match. A
+    # diff that fails says nothing about what changed, so it runs the tests rather than skipping them.
+    local changed; changed="$(git diff --name-only "origin/$base...HEAD")" || changed="the diff failed"
     if [ -n "$changed" ] && grep -qvE '(\.md$|^docs/)' <<<"$changed"; then
       if [ "$(uname -s)" != "Linux" ]; then
         echo "ship: ⚠ local integration tests NOT run — screenshot baselines are Linux-only and this is $(uname -s). CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."

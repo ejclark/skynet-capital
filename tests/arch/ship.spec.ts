@@ -7,12 +7,14 @@ import { run } from "../support/ship-run.js";
 // A pipe into a quiet grep under pipefail: grep exits on its match, the writer takes SIGPIPE, and the
 // pipeline reports 141, so the match reads as a miss. It races on output size and load, so a passing
 // run proves little, and this reads the source instead. Here-strings have no pipeline to signal.
-const PIPED_QUIET_GREP = /(?<!\|)\|&?\s*grep\s+(?:-\S+\s+)*(?:-[a-zA-Z]*q[a-zA-Z]*|--quiet)\b/;
+const PIPED_QUIET_GREP =
+  /(?<!\|)\|&?\s*(?:\w+=\S*\s+)*[ef]?grep\s+(?:-\S+\s+)*(?:-[a-zA-Z]*q[a-zA-Z]*|--quiet)\b/;
 const ALLOW_MARKER = "pipefail-grep-ok:";
 
 function pipedQuietGreps(source: string) {
-  if (!/^\s*set -[a-zA-Z]*o pipefail/m.test(source)) return [];
+  if (!/^\s*set\s.*-[a-zA-Z]*o\s+pipefail/m.test(source)) return [];
   return source
+    .replace(/(?<!\|)(\|&?)[ \t]*\\?\n\s*/g, "$1 ") // a pipe that ends a line continues on the next
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => !line.startsWith("#"))
@@ -29,8 +31,21 @@ describe("no pipe into a quiet grep under pipefail", () => {
     "a | grep -E -q x",
     "a | grep --quiet x",
     "a |& grep -q x",
+    "a | egrep -q x",
+    "a | LC_ALL=C grep -q x",
   ])("flags %s", (line) => {
     expect(pipedQuietGreps(under(line))).toEqual([line]);
+  });
+
+  it("flags a pipe that ends the line before the grep", () => {
+    expect(pipedQuietGreps(under("a |\n  grep -q x"))).toHaveLength(1);
+    expect(pipedQuietGreps(under("a | \\\n  grep -q x"))).toHaveLength(1);
+  });
+
+  it("reads a script that sets pipefail apart from its other flags", () => {
+    const body = "a | grep -q x\n";
+    expect(pipedQuietGreps(`set -eu -o pipefail\n${body}`)).toHaveLength(1);
+    expect(pipedQuietGreps(`set -o errexit -o pipefail\n${body}`)).toHaveLength(1);
   });
 
   it.each([
