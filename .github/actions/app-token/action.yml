@@ -6,6 +6,13 @@ description: >-
   mint instead of failing the run on a missing private key. No fallback tier (Eric, 2026-08-28 —
   the App is assumed reliable): callers that need the token should fail loudly when it's absent,
   not degrade to a weaker identity.
+
+  SCOPE (2026-11-01, #6470's study): with no `permission-*` input the token inherits EVERY
+  permission the App holds. A caller that runs open scripts beside another credential — the
+  bots catch-up clock holds a Fly token — passes only what its steps need, so a steered script
+  there cannot reach what the App can. An empty input is ignored by the action (its
+  getPermissionsFromInputs drops blank values), so callers that pass nothing keep today's
+  inherit-everything token.
 inputs:
   client-id:
     description: 'GitHub App client ID (pass vars.APP_CLIENT_ID)'
@@ -13,6 +20,22 @@ inputs:
   private-key:
     description: 'GitHub App private key (pass secrets.APP_PRIVATE_KEY)'
     required: true
+  permission-actions:
+    description: "Scope the token's Actions permission ('read' or 'write'); blank inherits the App's"
+    required: false
+    default: ''
+  permission-contents:
+    description: "Scope the token's contents permission ('read' or 'write'); blank inherits the App's"
+    required: false
+    default: ''
+  permission-issues:
+    description: "Scope the token's issues permission ('read' or 'write'); blank inherits the App's"
+    required: false
+    default: ''
+  permission-pull-requests:
+    description: "Scope the token's pull-requests permission ('read' or 'write'); blank inherits the App's"
+    required: false
+    default: ''
 outputs:
   token:
     description: 'The minted installation token, or empty if client-id was blank'
@@ -22,7 +45,13 @@ runs:
   steps:
     - id: app-token
       if: inputs.client-id != ''
-      uses: actions/create-github-app-token@v3
+      # Pinned by SHA like every other action here: this one receives the App's private key, and
+      # it was the one still floating on a tag (v3.3.0, 2026-10-12).
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
       with:
         client-id: ${{ inputs.client-id }}
         private-key: ${{ inputs.private-key }}
+        permission-actions: ${{ inputs.permission-actions }}
+        permission-contents: ${{ inputs.permission-contents }}
+        permission-issues: ${{ inputs.permission-issues }}
+        permission-pull-requests: ${{ inputs.permission-pull-requests }}
