@@ -158,6 +158,37 @@ describe("smoke-bots.sh — a pass must hold, not just happen once", () => {
     expect(r.err).toContain("controls bridge never armed");
   });
 
+  // The log read is the previous boot's too: `flyctl logs -n` holds a boot line for hours. So a
+  // stamp that can be read outranks it, and the fallback is only for a stamp that cannot.
+  it("fails a boot whose own stamp says the bridge did not arm, over the previous boot's armed line", () => {
+    const r = smoke({ list: machine(), exec: stamp({ bridge: "unreachable" }), logs: MARKER });
+    expect(r.code).toBe(1);
+    expect(r.out).not.toContain("PASS");
+    expect(r.err).toContain("controls bridge never armed");
+  });
+
+  it("fails a stamp left by the previous release, over the previous boot's armed line", () => {
+    const r = smoke({ list: machine(), exec: stamp({ gitSha: "old0000" }), logs: MARKER });
+    expect(r.code).toBe(1);
+    expect(r.out).not.toContain("PASS");
+    expect(r.err).toContain("controls bridge never armed");
+  });
+
+  it("passes once the new process overwrites the previous release's stamp", () => {
+    const r = smoke({ list: machine(), exec: stamp(), "exec.1": stamp({ gitSha: "old0000" }) });
+    expect(r.err).toBe("");
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("PASS");
+  });
+
+  it("still takes the log fallback when the stamp reads as anything but a JSON object", () => {
+    for (const unreadable of ["not json", "", "null"]) {
+      const r = smoke({ list: machine(), exec: unreadable, logs: MARKER });
+      expect(r.code, JSON.stringify(unreadable)).toBe(0);
+      expect(r.out, JSON.stringify(unreadable)).toContain("PASS");
+    }
+  });
+
   it("still fails a primary that never starts on the expected commit", () => {
     const r = smoke({ list: machine({ sha: "old0000" }), exec: stamp() });
     expect(r.code).toBe(1);
