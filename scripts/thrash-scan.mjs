@@ -158,7 +158,7 @@ function fileIssue({ title, body, labels }) {
   const { problems } = lintIssue({ title, body, labels });
   if (problems.length)
     throw new Error(`thrash-scan: refusing to file "${title}": ${problems.join("; ")}`);
-  const token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? "";
+  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "";
   const repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
   const out = sh(
     "curl",
