@@ -269,7 +269,7 @@
   {
     "screen": "server / and /index.html",
     "verdict": "redirect-only",
-    "target": "/app/ (then /leaderboard)"
+    "target": "/app/ (then /leaderboard); /app/accounts for a session with no linked account (#6317)"
   },
   {
     "screen": "server /add, /onboarding, /app/onboarding",

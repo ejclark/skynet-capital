@@ -1,3 +1,5 @@
+import { activityEventFromAuditRecord } from "../../../src/observatory/activity-event";
+import { deskOrderEvent } from "../../../src/server/desk-events-route";
 import { doneNote, fillHeadline } from "../../src/live/fill-headline";
 import { marketSession } from "../../src/live/market-session";
 
@@ -74,5 +76,59 @@ describe("doneNote", () => {
       payload: { status: "canceled", filledQuantity: 0 },
     });
     expect(doneNote(cancelled, open)).not.toContain("simulated fill");
+  });
+
+  // #6330: a terminal non-fill frame said "Queued" under a "canceled" headline.
+  it("names a terminal non-fill status instead of 'queued', agreeing with the headline", () => {
+    for (const status of ["canceled", "rejected", "expired"]) {
+      const terminal = frame({
+        eventType: "order.updated",
+        payload: { status, filledQuantity: 0 },
+      });
+      const note = doneNote(terminal, closed);
+      expect(note).not.toMatch(/Queued/);
+      expect(note.toLowerCase()).toContain(status);
+      expect(fillHeadline(order, terminal)).toContain(status);
+    }
+    const british = frame({ eventType: "order.updated", payload: { status: "cancelled" } });
+    expect(doneNote(british, open)).toBe("Canceled at the paper broker — nothing filled.");
+  });
+});
+
+// #6529: a member's cancel reaches the ticket as the app's own audit frame — no status, no
+// symbol — and a status-less frame read "filled" under a "Queued" note.
+describe("a status-less frame never reads as filled", () => {
+  const open = marketSession(new Date("2026-10-27T15:00:00Z"));
+  const audit = (intent: "open" | "cancel") =>
+    deskOrderEvent(
+      activityEventFromAuditRecord({
+        participantId: "p-1",
+        orderId: "o-1",
+        at: "2026-10-27T15:01:00Z",
+        intent,
+        ...(intent === "open" ? { symbol: "NVDA", side: "buy" as const } : {}),
+      }),
+    );
+
+  it("reads the server's cancel frame as a cancel request, headline and note agreeing", () => {
+    const cancel = audit("cancel");
+    const headline = fillHeadline(order, cancel);
+    const note = doneNote(cancel, open);
+    expect(headline).toBe("Order o-1 cancel requested — NVDA");
+    expect(headline).not.toContain("filled");
+    expect(note).toMatch(/^Cancel requested/);
+    expect(note).not.toMatch(/Queued|simulated fill/);
+  });
+
+  it("keeps the broker's echo for the submission's own audit frame", () => {
+    const submitted = audit("open");
+    expect(fillHeadline(order, submitted)).toBe("Order o-1 accepted — NVDA · GTC");
+    expect(doneNote(submitted, open)).toMatch(/^Queued/);
+  });
+
+  it("still reads a real fill as filled", () => {
+    expect(fillHeadline(order, frame({ payload: { filledQuantity: 5 } }))).toBe(
+      "Order o-1 filled — 5 NVDA",
+    );
   });
 });

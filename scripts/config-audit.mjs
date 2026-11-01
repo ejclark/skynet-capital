@@ -28,7 +28,7 @@
 // of the report still prints; 2 only says one section is not an answer.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { recurringIntents } from "./config-audit-intent-clusters.mjs";
 import { loopFreshness } from "./crawl/loop-freshness.mjs";
@@ -231,6 +231,25 @@ function printLoopFreshness() {
   console.log(freshness.lines.length ? freshness.lines.join("\n") : "  • none");
 }
 
+// ---- check ⑥: CLAUDE.md's size -----------------------------------------------------------------------
+
+// Every session and CI lane pays for this file. It was compressed once (26.3KB to 21.7KB, #723), then
+// regrew to 60.8KB because nothing measured it, one dated paragraph at a time. So the number is
+// advisory with a ratchet: lower it when text moves out, and raise it only on purpose in a diff a
+// person reads (#6470). A new rule enters as one line plus a link to where its story lives.
+const CLAUDE_MD_BUDGET_BYTES = 47500;
+
+function printClaudeMdBudget() {
+  const bytes = existsSync(CLAUDE_MD) ? statSync(CLAUDE_MD).size : 0;
+  console.log(
+    `\n⑥ CLAUDE.md size: ${bytes} of ${CLAUDE_MD_BUDGET_BYTES} bytes${
+      bytes > CLAUDE_MD_BUDGET_BYTES
+        ? " — OVER. Move a narrow rule to docs/process/WORKING-AGREEMENTS.md instead of raising this."
+        : ""
+    }`,
+  );
+}
+
 // ---- report ---------------------------------------------------------------------------------------
 
 function main() {
@@ -284,6 +303,7 @@ function main() {
   );
 
   printLoopFreshness();
+  printClaudeMdBudget();
 
   console.log(
     `\n${line}\nEvidence-triggered · human-gated · wrote nothing. Approve any proposal by acting on it yourself.\n${line}\n`,

@@ -113,6 +113,12 @@ const HOUSE_RESEARCH: Readonly<Record<string, PlaybookResearch>> = {
     why: "unvalidated",
     reason: "no study measures long calls held through reports; it runs on its owner's conviction.",
   },
+  "NVDA-LONG-LEAP": {
+    kind: "none",
+    why: "unvalidated",
+    reason:
+      "its study found buying after a 15% dip did no better than buying on an ordinary day, and every option price in it is modeled; it runs on its owner's conviction.",
+  },
   "NVDA-CALL-SPREAD": {
     kind: "signals",
     signals: [

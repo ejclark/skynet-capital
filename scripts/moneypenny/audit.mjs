@@ -3,12 +3,15 @@
 // slice 3) joined 2026-08-29: a plan issue whose ready-flip comment never got claimed or built is
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
+import { clockIntents, clockOrUnknown } from "./clock-watch.mjs";
 import { driftChoreFromRepo } from "./drift-chore.mjs";
 import { ghRestAll, sh } from "./gh.mjs";
 import { FOOTER, LABELS, PARKING_LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
+import { redLaneIntents, redLaneOrNone } from "./red-lane-pr.mjs";
 import { rearmIntents, strandedOrNone } from "./stranded-pr.mjs";
-import { loadWorkModeConfig, resolveWorkMode } from "./work-mode.mjs";
+import { stuckBranchesOrNone, updateIntents } from "./stuck-branch-update.mjs";
+import { loadWorkModeConfig, readWorkMode } from "./work-mode.mjs";
 import { workModeRetitle } from "./work-mode-title.mjs";
 
 /**
@@ -57,13 +60,15 @@ export function owedAnswer(issue = {}) {
 
 /**
  * When this issue last BEGAN waiting for an answer (#6042): the latest `ready` or `feedback`
- * added, or `needs-eric` / `needs-info` / `next-slice` removed — each is the moment `owedAnswer`
- * can turn true. `fallback` (its `createdAt`) covers an issue whose timeline shows none of them.
+ * added, or a parking label (`PARKING_LABELS`) or `next-slice` removed — each is the moment the
+ * claim paths treat as an unpark. Every parking label counts (#6287): the plan clock missed
+ * `needs-design` / `hold-merge` removals, so an unparked plan read as stalled since its old flip.
+ * `fallback` (its `createdAt`) covers an issue whose timeline shows none of them.
  * Pure over the REST issue timeline.
  */
 export function waitingSince(timeline = [], fallback = undefined) {
   const added = [LABELS.ready.name, "feedback"];
-  const removed = [LABELS.needsEric.name, LABELS.needsInfo.name, LABELS.nextSlice.name];
+  const removed = [...PARKING_LABELS, LABELS.nextSlice.name];
   const starts = (timeline ?? [])
     .filter(
       (e) =>
@@ -306,9 +311,20 @@ export function audit(deps = {}) {
   // stamped. Decided in drift-chore.mjs (`driftChoreIntent`); the open ticket is its own memory.
   // Each is at most one intent, null when there is nothing to do.
   intents.push(...[workModeRetitle(deps.workMode), deps.driftChore].filter(Boolean));
+  // A green, armed PR held by a cancelled suite gets a new head (stuck-branch-update.mjs). `halt`
+  // stops this too: a new head can land work.
+  if (deps.workMode?.mode?.position !== "halt") intents.push(...updateIntents(deps.stuckBranches));
   // The stranded-PR act stage (stranded-pr.mjs): re-run a green PR's failed arm job, once per head.
   // `halt` stops every lane, so it stops this too — re-arming lands work.
   if (deps.workMode?.mode?.position !== "halt") intents.push(...rearmIntents(deps.stranded));
+  // A red lane PR whose session has ended (red-lane-pr.mjs): close it and release its issue. `halt`
+  // stops this too, because a released issue is a build the sweep may start.
+  if (deps.workMode?.mode?.position !== "halt") intents.push(...redLaneIntents(deps.redLanePrs));
+  // The clock's watcher (clock-watch.mjs, #6470): one `[fitness] clock-running` issue while the
+  // 15-minute schedule's newest successful run is over 3h old, closed when it is back. Not gated on
+  // `halt`: a stopped clock under halt is still a stopped clock, and an issue is not work. Null
+  // means the Actions list could not be read this tick — `clockIntents` decides nothing on it.
+  intents.push(...clockIntents(deps.clock));
   return intents;
 }
 
@@ -439,7 +455,7 @@ export function untruncated(rows, limit, label) {
 /** Audit-mode dependencies: unclaimed dispatch issues. Loud on failure, same doctrine as
  *  gatherDeps. `now` injected for the day math (never Date.now() in a testable path — the caller
  *  passes it). */
-export function gatherAuditDeps(nowMs) {
+export function gatherAuditDeps(nowMs, hourly = {}) {
   const json = (label, args) => {
     let out;
     try {
@@ -588,17 +604,22 @@ export function gatherAuditDeps(nowMs) {
     staleStallFlags: [...staleStallFlags(issues), ...plans.staleFlags],
     alreadyFlagged,
     alreadyFlaggedPRs,
-    workMode: workModeState(nowMs, json),
+    workMode: workModeState(nowMs),
     driftChore: driftChoreFromRepo(issues),
+    // One REST call on a tick with no armed PR past 3h; the rest of its reads run at most hourly.
+    stuckBranches: stuckBranchesOrNone(nowMs, hourly),
     stranded: strandedOrNone(nowMs),
+    // One REST call; the open issue comes from the `issues` list already in hand.
+    clock: clockOrUnknown(nowMs, issues),
+    // One REST call on a tick where no lane PR has sat a day untouched.
+    redLanePrs: redLaneOrNone(nowMs),
   };
 }
 
 /**
  * The dial as the audit needs to see it (#3960 slice 4): the tracking issue's CURRENT title beside
  * the position the lanes resolve, so `workModeRetitle` can tell a stale dashboard from a fresh one.
- * One `gh issue view` — title, labels and comments in a single call — and the same pure resolver
- * every lane uses, so this can never disagree with them about what the position is.
+ * The same reader every lane uses, so this can never disagree with them about what the position is.
  *
  * SOFT ON FAILURE, unlike `dueEventIds`' loud throw above, and deliberately so: this is the only
  * thing in this file that is a DISPLAY rather than a pair of eyes. Every lane that acts on the dial
@@ -606,27 +627,15 @@ export function gatherAuditDeps(nowMs) {
  * cost one stale title — not the stall, silent-feedback, plan-stall and conflict checks that ride
  * the same run. The warning says so out loud rather than failing silently.
  */
-function workModeState(nowMs, json) {
+function workModeState(nowMs) {
   try {
     const config = loadWorkModeConfig();
-    const view = json(`gh issue view (work-mode, #${config.trackingIssue})`, [
-      "issue",
-      "view",
-      String(config.trackingIssue),
-      "--json",
-      "title,labels,comments",
-    ]);
-    const mode = resolveWorkMode({
-      labels: view.labels,
-      comments: view.comments,
-      now: nowMs,
-      config,
-    });
+    const { title, ...mode } = readWorkMode(undefined, config, nowMs);
     // A dial read fine but misconfigured — two labels, a forgotten `until` — still warns, and the
     // title sync corrects the DISPLAY without fixing the cause. Print it here so the push run that
     // retitles also says why it had to.
     if (mode.warning) console.log(`::warning::${mode.warning}`);
-    return { trackingIssue: config.trackingIssue, title: view.title ?? null, mode };
+    return { trackingIssue: config.trackingIssue, title: title ?? null, mode };
   } catch (err) {
     console.log(`::warning::work-mode title sync skipped — ${String(err.message).slice(0, 200)}`);
     return null;

@@ -331,8 +331,8 @@ function putCash(shorts: readonly Unit[], longs: readonly Unit[]): number {
  *
  * Exact means a guard may judge an order by whether it makes this WORSE: a covered book stays
  * covered, and a book already short of cover can still shed risk. Past `MAX_EXACT_CONTRACTS` it falls
- * back to `coverNeeds` (a valid assignment, so never an understatement of what that assignment needs)
- * and says so.
+ * back to `coverNeeds` with the free shares taking over its widest caps (`shareAwareGreedy` — a valid
+ * assignment, so never an understatement of what that assignment needs) and says so.
  */
 export function coverShortfall(
   legs: readonly CoverLeg[],
@@ -346,15 +346,7 @@ export function coverShortfall(
   const tooMany = [calls.shorts, calls.longs, puts.shorts, puts.longs].some(
     (units) => units.length > MAX_EXACT_CONTRACTS,
   );
-  if (tooMany) {
-    const greedy = coverNeeds(own);
-    const shares = greedy.sharesByUnderlying.get(underlying) ?? 0;
-    return {
-      shares: Math.max(0, shares - room),
-      cash: greedy.cashByUnderlying.get(underlying) ?? 0,
-      exact: false,
-    };
-  }
+  if (tooMany) return shareAwareGreedy(own, underlying, room);
   const short = (shares: number): number => Math.max(0, shares - room);
   const [fewestShort, leastCash] = callFrontier(calls.shorts, calls.longs).reduce<[number, number]>(
     (chosen, [shares, cash]) =>
@@ -368,6 +360,29 @@ export function coverShortfall(
     cash: leastCash + putCash(puts.shorts, puts.longs),
     exact: true,
   };
+}
+
+/**
+ * Past the exact limit: `coverNeeds`' greedy assignment, then the free shares beyond its bare calls
+ * take over its widest call caps, 100 a contract — so a call the shares could cover is never charged
+ * a cap's width the exact search would not charge (#6330: shares-blind, the fallback refused a
+ * share-covered covered call on width alone). Still a valid assignment, so never an understatement.
+ */
+function shareAwareGreedy(legs: readonly CoverLeg[], underlying: string, room: number): Shortfall {
+  const greedy = coverNeeds(legs);
+  const bare = greedy.sharesByUnderlying.get(underlying) ?? 0;
+  let spare = Math.floor(Math.max(0, room - bare) / OPTION_MULTIPLIER);
+  let cash = greedy.cashByUnderlying.get(underlying) ?? 0;
+  const capped = assignAll(legs)
+    .filter((a) => a.short.type === "call" && a.capStrike !== undefined)
+    .map((a) => ({ width: shortRequirement(a.short, a.capStrike), contracts: a.contracts }))
+    .sort((a, b) => b.width - a.width);
+  for (const { width, contracts } of capped) {
+    const released = Math.min(spare, contracts);
+    cash -= width * released;
+    spare -= released;
+  }
+  return { shares: Math.max(0, bare - room), cash, exact: false };
 }
 
 const coverLegOf = (c: HeldContract): CoverLeg => ({

@@ -216,3 +216,74 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-27
 <!-- probe-ref: {"symbols":{"AMZN":249.09},"vix":18.39,"daysBand":"critical:0+","adjacentIds":["aapl-2026-10-29-print","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+1; inside `closeOutWithinDays`).** Both instruments re-run on a busted cache
+(`earnings-cycle.mjs AMZN --bench QQQ --peers MSFT,GOOG,META`, 86 prints; `intraday-edges.mjs AMZN`, 722
+sessions). **Scope limits, stated first:** the study's newest print is still **2026-07-30** (its SEC event list
+has not caught up), so every instrument cell reproduces the pre-print state and does **not** include this print;
+the October numbers below are computed by hand from the same cached Yahoo daily/hourly bars. **2026-10-30 is not
+a closed session** at assessment time (~14:40 ET; the AMZN bar is the live $238.29, QQQ and VIX likewise), so the
+gap below is final and everything measured to the D+1 close is **provisional** and is not scored as a close.
+
+**The date.** The 10-29 date held: **confirmed** by Amazon's own IR notice (ledger row 2026-10-17) and the
+calendar entry stays as it is. Amazon's 8-K (Item 2.02) exhibit is
+[amzn-20260930xex991.htm](https://www.sec.gov/Archives/edgar/data/0001018724/000101872426000038/amzn-20260930xex991.htm);
+the acceptance time was not read, so the print-to-gap timing rests on the IR notice's after-the-close call.
+
+**What printed (8-K Exhibit 99.1, primary).** Net sales **$201.9B (+12%)** vs the **$197–202B** guide (top of
+range); operating income **$28.1B** vs $17.4B; AWS **$46.0B (+39%)**, AWS operating income $17.8B vs $11.4B; net
+income $20.7B vs $21.2B and diluted EPS **$1.89 vs $1.95** a year ago. Trailing-twelve-month purchases of
+property and equipment **$215.2B**, free cash flow **−$42.4B** (vs +$14.8B). 2026 cash capex still "approximately
+**$220 billion**" (unchanged from Q2). Q4 guide: sales **$240.0–247.0B** (+12–16%), operating income
+**$28.5–33.5B**. Street consensus for this print was not re-read this session, so no beat/miss claim is made
+against it; the beat is stated against Amazon's own guide only.
+
+**What the tape did (Yahoo bars, AMZN vs QQQ, peers).**
+
+| Window | AMZN | QQQ | Note |
+|---|---|---|---|
+| D-20 → D (10-01 → 10-29 close) | **−1.79%** | n/a | the run-up leg, never played |
+| D-10 → D / D-5 → D | −4.31% / −2.63% | n/a | the pre-print drift was down |
+| D session (10-29, print after the close) | −4.25% (open→close −1.28%) | −1.42% | GOOG's reaction day (−12.29%); MSFT −0.16%, META +1.96% |
+| D → D+1 open (the gap) | **−4.62%** ($243.79 → $232.53) | −2.55% | modern-era gap p10 −8.98%, p90 +12.22% (n=15) |
+| D+1 open → live (fade) | **+2.48%** to $238.29 | −1.69% | **provisional**: bar low $229.36, first hour closed +2.5% off the open |
+| D → D+1 live | **−2.26%** | −4.19% | **provisional**; excess vs QQQ about +1.9 pts |
+
+D+1 is a broad sell-off: QQQ −4.19% (open $697.13 → live $685.35), GOOG −2.19%, MSFT −1.98%, META −1.75%
+(each close-to-close, live), and VIX **23.29** live against 17.20 at the 10-29 close. **The cause is
+unattributed** — a search for the day's wrap returned nothing dated; it was not researched further. Part of the
+AMZN gap is therefore tape, not print (QQQ gapped −2.55% on its own): the market-neutral gap is about **−2.1 pts**.
+
+**Stance scorecard.**
+
+- **Stand aside / flat through the print (S2): right.** The −4.62% gap landed inside the modern-era tails
+  (p10 −8.98%), so this was a mid-sized hit, not a tail event; a holder through the night took it on a day the whole
+  tape gapped lower. Flat through the night meant not taking that gap.
+- **No pre-print long (S1): right, and it would have lost.** D-20 ran −1.79% and D-10 −4.31% against a modern-era
+  mean of +4.29% / +2.02%. One run-up window is one observation; the kill-list bar (≥3 prints) is untouched.
+- **S3 observation (zero size): one data point, not decided.** The registered rule dies if the reaction day
+  closes green on 2 of the next 3 prints. This is print 1: the open→live leg is **+2.48%** (green
+  against the lean's −0.60% modern mean) while close-to-close is **−2.26%**; neither is a close yet, so S3 stays
+  unscored. It is re-read with the final D+1 close in the next study run, not here.
+- **E1 (defer the open): supported.** The 09:30 bar ranged $229.36–$240.21 (~4.7% of price) and closed $238.40;
+  the first hour carried the day's extremes, as the sweep's 30% share of volatility predicts.
+- **The narrative tell (capex read as liability): not resolved.** The print delivered AWS +39% (faster than Q2's
+  +37%), a record operating margin and unchanged $220B capex, but TTM free cash flow of −$42.4B and EPS below last
+  year. The gap was −4.6% against a −2.6% QQQ gap, which is consistent with *not* adding a capex penalty on top of
+  the tape; one print on a sell-off day cannot separate the two, and the claim is not made.
+
+**Forward tests scored.** None to score: this event registered no forward-test fragment
+(`docs/research/forward-tests/amzn-2026-10-29-print.md` does not exist) and none was registered at close-out. The
+one legacy row that named this print, `FT-17`, was already scored **VOID** by the 2026-10-30 GOOG close-out
+(AMZN 1.43× of ordinary range in its measurement). The conviction-proposals check
+(`conviction-proposals.mjs --event=amzn-2026-10-29-print`) printed `[]`; nothing to answer.
+
+**Unresolved, said plainly.** The D+1 close, and with it S3 and the final reaction-day excess, are open until the
+session closes; the 10-30 market sell-off is unattributed; macro surprises on 10-29 (PCE, Q3 GDP advance) were not
+read. The instrument study will include this print once its event list catches up — that re-run, not this hand
+computation, is the number to cite after that.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{"AMZN":238.29},"vix":23.29,"daysBand":"critical:0+","adjacentIds":["aapl-2026-10-29-print","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->

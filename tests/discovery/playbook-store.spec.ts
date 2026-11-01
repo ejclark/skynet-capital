@@ -26,6 +26,7 @@ describe("playbookStoreCatalog", () => {
       "MU-DIP-BOUNCE",
       "NBIS-DIP-BOUNCE",
       "NVDA-CALL-SPREAD",
+      "NVDA-LONG-LEAP",
       "S1-NVDA",
       "SAURON",
       "TACO-DJT",

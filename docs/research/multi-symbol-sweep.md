@@ -71,6 +71,51 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A builder's pre-open earnings gap is at least 3% in size because 11 of its last 15 were" (FT-dhi-q4-fy2026-2026-10-29-2)** — added 2026-10-31 from the
+  [dhi-q4-fy2026-2026-10-29 close-out](events/dhi-q4-fy2026-2026-10-29.md). DHI's FY Q4 print gapped **−0.70%** (close $143.00 → open $142.00), against a 15-print modern mean |gap| of 5.27%.
+  The print carried orders −7% y/y and the group rallied through it (ITB +3.49% that day), so the open had little left to reprice. Do not register a size threshold off a heavy-tailed gap sample
+  without naming the pre-print regime: the 11/15 record included the two fattest Q4 gaps (−15.07%, −6.84%) and said nothing about a print the sector had already traded into.
+
+- **"The ECI's SA quarterly pace holds at 0.9%, so the y/y breaks its 3.4% flatline at ≥3.5%" (FT-eci-q3-2026-10-30-1)** — added 2026-10-31 from the
+  [eci-q3-2026-10-30 close-out](events/eci-q3-2026-10-30.md). BLS printed SA **0.8%** q/q and **3.4%** y/y (3.374% unrounded; NSA 178.738 vs the 178.870 the 3.5% line needed). The arithmetic
+  was right to the index point and the bet still missed by 7.6bp. Do not register a persistence bet on a one-tenth rounding threshold off two quarters at the same pace: the line sits inside
+  one quarter's normal ±0.1pp wobble, so the registration is a coin on the third decimal, not a read.
+
+- **"The UK domestic-electricity zero rate is a fixed six-month notch; extension needs a fresh SI the Budget will not supply" (FT-uk-electricity-vat-zero-rate-2026-10-01-2)** — added 2026-10-30 from the
+  [uk-electricity-vat-zero-rate-2026-10-01 ledger](events/uk-electricity-vat-zero-rate-2026-10-01.md). Budget 2026 (10-28) extended the 0% rate to **1 July 2027** (gov.uk AB26 policy costings;
+  −£755m 2026-27, −£305m 2027-28). Do not register "a temporary tax relief lapses on its statutory date" ahead of a fiscal event that owns the extension decision: a sunset written into the
+  instrument is a default, and a Budget is the one dated venue built to move it.
+
+- **"A 19.4M-share staged lock-up release (~2 days of volume) moves CBRS no more than an ordinary bad day" (FT-cbrs-lockup-expiry-2026-11-09-1)** — added 2026-10-30 from the
+  [cbrs-lockup-expiry-2026-11-09 ledger](events/cbrs-lockup-expiry-2026-11-09.md). The 10-28 tranche day closed **-7.40pp** vs SMH (-5.66% vs +1.74%) on 18.97M shares, past the -5% line,
+  the day after a +7.1pp excess day with no filing behind it. Do not register a tranche-day "within noise" claim off five prior tranche days (mean -0.4%, σ 4.4%); n=5 did not bound the tail,
+  and a -5% single-day line on this name sits near 1.1σ, so it is crossed often.
+
+- **"A published release hour is the hour the page goes live" (FT-nar-metro-home-prices-2026-10-29-1) and "The autumn FOMC+1 session is an ordinary homebuilder day" (FT-nar-metro-home-prices-2026-10-29-2)** — added 2026-10-30 from the
+  [nar-metro-home-prices-2026-10-29 close-out](events/nar-metro-home-prices-2026-10-29.md). NAR's Q3 metro release carried a page stamp of 08:15 ET against a published schedule of 10:00 ET
+  (the three earlier 2026 editions matched exactly), and ITB ranged **3.690%** on a session that stacked FOMC+1, GDP and PCE at 08:30 and DHI's pre-open print, against a 2.504% line set from an n=10 null.
+  Do not register a publisher's hour as a date-keyed claim off a 3-for-3 record, and do not set a quiet-session line from an n=10 subset when a same-morning builder print is dated.
+
+- **"The annual update does not buy a sub-3.2% core handle, because the underlying series is accelerating into it" (FT-pce-2026-10-29-2)** — added 2026-10-30 from the
+  [pce-2026-10-29 close-out](events/pce-2026-10-29.md). September core PCE printed **3.1% y/y** (BEA, 10-29), below the 3.2% line. The 09-15 registration netted a pre-revision Cleveland
+  nowcast (3.49%) against a sourced −10 to −30bp revision range; the realized 09-30 revision (−0.36pp on July core) ran past the range's low end. Do not register a y/y-level
+  bet that nets a nowcast against a not-yet-published revision: the bet inherits the range's width, and here the range was too narrow by ~20bp.
+
+- **"The October FOMC holds, because the October odds were never October's" (FT-fomc-2026-10-28-1) and "The October FOMC hikes" (FT-fomc-2026-10-28-2)** — added 2026-10-30 from the
+  [fomc-2026-10-28 close-out](events/fomc-2026-10-28.md). The Committee held at 3.75–4.00%, 10–2 (Cook, Hammack for a hike). `FT-2` was a plain miss: a 65% hike read registered
+  at D-31 fell to 6% by D-6 on two soft prints. `FT-1` was right on the outcome only: its own mechanism kill (a venue above ~30% on the meeting's own conditional) fired at D-31, so the
+  cumulative-vs-conditional decomposition was not what produced the hold. Do not register a meeting-outcome bet off a venue quote more than a few data prints old, and do not
+  score a decomposition on its outcome when the row names a mechanism kill.
+
+- **"A Liquidity Enhancement Auction in the 11-39y zone reopens under 5% 20-year paper" (FT-jgb-liquidity-enhancement-11-39y-2026-10-27-2)** — added 2026-10-30 from the
+  [jgb-liquidity-enhancement-11-39y-2026-10-27 close-out](events/jgb-liquidity-enhancement-11-39y-2026-10-27.md). Registered 2026-09-09 off
+  three prints that each took 0.0% 20-year. The fourth took **72.8%** (¥181.2bn of ¥248.9bn; 61.9% without the newly eligible No.197). Do not
+  register a segmentation or "market has stopped taking X" claim on a zone off n=3 and a split date picked after seeing the series.
+
+- **"The 25y+ share of an 11-39y Liquidity Enhancement Auction's reopenings stays above its 28.9% share of eligible stock" (FT-jgb-liquidity-enhancement-11-39y-2026-10-27-3)** — added 2026-10-30
+  from the same close-out. Registered 2026-09-09 (1.41x / 1.34x / 1.87x, filed MIXED on the size-cut confound). The fourth print, at an unchanged
+  ¥248.9bn size, took **3.7%** 25y+ (0.13x). Do not re-register a bucket-overweight test off the post-April-2026 prints; the regime reading did not survive.
+
 - **"META's 2-trading-day excess return vs QQQ around the New Mexico privacy-penalty ruling stays within +/-4%, whatever figure the judge sets" (FT-meta-nm-privacy-penalty-ruling-2026-10-20-1)** — added 2026-10-23 from the [meta-nm-privacy-penalty-ruling-2026-10-20 close-out](events/meta-nm-privacy-penalty-ruling-2026-10-20.md). Registered 2026-10-03 off the unconfounded 10-01 hearing day (+0.1%/+0.4%). The ruling came on 10-21 at **$25B** (past the stance's $20B line) and META 10-20 to 10-22 returned -6.54% vs QQQ -1.83% (**-4.71pt**). Confounded: Meta's Q3 print was after the close the same day (the registration read a stale 10-28 estimate), so this kills the rule as written, not the ruling's isolated price effect. Do not re-register a price-window test around a legal ruling that falls inside a print week; separate the two first, and do not read a hearing day's muted tape as a prior for the number.
 
 - **"The seven-day ECB quiet window carries no `^STOXX50E` close-to-close move >= 1.50% (2x the 0.75% baseline), extrapolated from 13 windows in 2025-26" (FT-ecb-quiet-period-start-2026-10-21-1)** — added 2026-10-22 from the [ecb-quiet-period-start-2026-10-21 close-out](events/ecb-quiet-period-start-2026-10-21.md). Registered 2026-09-05 (0 of 54 trimmed sessions at 2x; 11 of 13 prior windows would have passed). The 10-22 session, day two of the window, closed **-1.94%** on an equity-wide risk-off tape (`^GDAXI` -1.07%, EUR/USD flat); no cause was sourced. Do not register a no-large-move threshold on a quiet window from a thin-tail count: the null is a statement about the 2025 sample, not a property of the gate. The topic-scope test (FT-2) passed and is not retired.
@@ -972,6 +1017,14 @@ robust, alpha fragile — is the finding.
   evidence that back-half event load stops moving the final: two consecutive finals, one +0.3 and one
   +1.7, are consistent with a coin flip on size. Do not re-propose a small-revision call for a UMich final
   on event-load grounds; n=1 killed on its first test, the mirror of the FT-55 kill above.
+
+- **"The CPS/HVS Q3 headline is a non-finding: Census calls the q/q rental vacancy change 'not statistically different' or 'virtually the same' (FT-housing-vacancies-q3-2026-10-28-1)"** — added 2026-10-30 from the
+  [housing-vacancies-q3-2026-10-28 close-out](events/housing-vacancies-q3-2026-10-28.md). Registered 2026-09-06 on a ±0.245pp
+  margin of error against a 0.20pp median q/q move. CB26-161 printed rental vacancy **7.6%** against 7.3% and called it "higher than":
+  **+0.3pp** cleared the publisher's test, short of the ~0.4pp the kill switch assumed. **What it does and does not refute:** the
+  naive difference band over-stated the true one (positively correlated CPS quarters, as the registration said), and Q3 is the
+  seasonal-high quarter (median Q2→Q3 +0.25pp, unadjusted series) so a 0.3pp rise is also the seasonal default. Do not register a
+  "this series' quarterly change will read as noise" call off the level's margin of error; test the publisher's difference language.
 
 ## Portfolio-level critique — what no single-symbol view sees
 

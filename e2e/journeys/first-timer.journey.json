@@ -17,6 +17,19 @@
           "judge": "can this reader tell how to get in, in ten seconds?"
         },
         {
+          "id": "s0b",
+          "goto": "/",
+          "sees": "the sign-in hop lands a member with no linked account on Profile, the Onboarding chapter open: step 1 (connect Alpaca) first, then 'Say hello now', then 'Not ready to connect yet? See the leaderboard ›' — the race one tap away, never the first screen (#6317)",
+          "ears": "WHEN a signed-in session with zero linked accounts arrives on the sign-in hop, the app shall open its Profile on the onboarding chapter, with a link to the leaderboard.",
+          "expect": [
+            { "url": "/app/accounts" },
+            { "role": "region", "name": "Chapter: Onboarding", "within": "main" },
+            { "text": "Connect your Alpaca paper account" },
+            { "role": "link", "name": "See the leaderboard ›", "href": "/app/leaderboard" }
+          ],
+          "judge": "can this reader tell what to do first, and where the race is, in ten seconds?"
+        },
+        {
           "id": "s1",
           "goto": "/app/",
           "sees": "the league table, ranked rows; the topbar's Profile tab one tap away — it always lands on the Profile page, which opens on the connect guide for a member with no account (#3807 slice 2b)",

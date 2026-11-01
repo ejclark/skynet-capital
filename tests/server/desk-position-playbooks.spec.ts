@@ -6,6 +6,8 @@ import { type DecisionDb, openDecisionDb } from "../../src/autonomous/decision-d
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
+import { JsonlActivityStore } from "../../src/observatory/activity-store.js";
+import { heldLedgerReader } from "../../src/observatory/trade-ledger-cache.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveDeskJson } from "../../src/server/desk-json-routes.js";
 import { anOptionIntent } from "../support/builders.js";
@@ -13,7 +15,9 @@ import { anOptionIntent } from "../support/builders.js";
 /**
  * `/api/desk/:id` names the playbook that opened each position (#5073 slice 4b — #5037 round 2,
  * R2-pos), over the real decision store: the owner's copy only (#885), and only when one playbook's
- * orders account for the whole position.
+ * orders account for the whole position. Run twice: matched from the whole ledger, and from the
+ * open lots the server holds between fills with the owner's tags laid on per request (#4619) —
+ * which must serve the same payload.
  */
 
 const LOW = "NVDA261113C00185000";
@@ -114,20 +118,26 @@ interface Desk {
   desk: { positions: { symbol: string; playbookId?: string; playbookMode?: string }[] };
 }
 
-describe("a bot's positions name the playbook that opened them", () => {
+describe.each([
+  ["matched from the whole ledger", false],
+  ["read from the held ledger", true],
+])("a bot's positions name the playbook that opened them, %s", (_, held) => {
   let dir: string;
   let db: DecisionDb;
-  beforeEach(() => {
+  let store: JsonlActivityStore;
+  beforeEach(async () => {
     dir = mkdtempSync(join(tmpdir(), "desk-position-playbooks-"));
     db = openDecisionDb(join(dir, "decisions.db"));
     db.record(record);
+    store = new JsonlActivityStore(join(dir, "activity"));
+    for (const row of ledger) await store.record(row);
   });
   afterEach(() => {
     db.close();
     rmSync(dir, { recursive: true, force: true });
   });
 
-  const read = async (who: string): Promise<Desk> => {
+  const serve = async (who: string, withHeld: boolean): Promise<string> => {
     let body = "";
     const res = {
       writeHead: () => res,
@@ -139,7 +149,9 @@ describe("a bot's positions name the playbook that opened them", () => {
       hub: { getState: () => ({ generatedAt: "t", participants: [bot], collisions: [] }) },
       auth: {} as never,
       resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
+      now: () => new Date("2026-10-31T12:00:00.000Z"),
       readTradeActivity: async () => ledger,
+      ...(withHeld ? { readHeldLedger: heldLedgerReader(store) } : {}),
       findByOrderId: (id: string) => db.findByOrderId(id),
       findSpreadLeg: (id: string) => db.findSpreadLeg(id),
     } as unknown as DashboardServerConfig;
@@ -148,8 +160,9 @@ describe("a bot's positions name the playbook that opened them", () => {
       provider: "google",
       exp: 0,
     });
-    return JSON.parse(body) as Desk;
+    return body;
   };
+  const read = async (who: string): Promise<Desk> => JSON.parse(await serve(who, held)) as Desk;
   const tagOf = (desk: Desk["desk"], symbol: string) => {
     const p = desk.positions.find((row) => row.symbol === symbol);
     return { playbookId: p?.playbookId, playbookMode: p?.playbookMode };
@@ -169,6 +182,12 @@ describe("a bot's positions name the playbook that opened them", () => {
   it("names nothing on a holding a playbook opened only part of", async () => {
     const { desk } = await read("owner@x");
     expect(tagOf(desk, "NVDA")).toEqual({ playbookId: undefined, playbookMode: undefined });
+  });
+
+  it("serves the same payload either way, to the owner and to anyone else", async () => {
+    for (const who of ["owner@x", "guest@x"]) {
+      expect(await serve(who, true)).toBe(await serve(who, false));
+    }
   });
 
   // The house's playbook ideas (`considerations`) are public catalogue entries and may name

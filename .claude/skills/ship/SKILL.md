@@ -17,6 +17,13 @@ The mechanics live in `scripts/ship.sh` (a one-time build cost, ~free per run). 
 
 Before writing the body: the picture grammar is `docs/PICTURES.md`, drawing it is `/mermaid`, and who reads it is `docs/READERS.md`.
 
+The body has to pass `checkbody`, so write to it from the first draft: `## The picture` holds media
+or the line `Picture: waived — <reason>`, media gets a filled caption line, Summary bullets stay
+within 120 characters, `raw.githubusercontent.com` URLs pin a commit, every mermaid block renders,
+and closing keywords sit only in Summary bullets. Check a draft with `scripts/ship.sh checkbody
+<file>`, which needs no network. These limits put what every reader pays for on top and the rest
+behind the fold, read on demand (`.claude/skills/issue/SKILL.md`, step 4).
+
 ## Why (the constraint this protects)
 
 `git` and repo-scoped **REST** run on your machine / the **core** bucket (15k/hr, barely touched).

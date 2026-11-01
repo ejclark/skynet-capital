@@ -255,6 +255,7 @@ pass on any forward test is one observation, never a promotion.
 | 2026-10-09 | D-19 | **Deterministic screen (no Claude session).** Readings — VIX 15.4 (-0.3pt since last), band unchanged (low:15+), 50 adjacent event(s) tracked, new in corridor since last pulse: `aapl-2026-10-29-print`, `aapl-iphone-duo-launch-2026-10-23`, `amzn-2026-10-29-print`, `boe-dmp-2026-10-30`, `dallas-fed-mfg-2026-10-26`, `dallas-fed-trimmed-mean-2026-10-29` +14 more (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-08 |
 | 2026-10-16 | D-12 | **Full pulse (screen was material: band low:15+→low:0+, VIX +4.6pt, ISM now strong-adjacent).** **OBR half of FT-…-3 now primary-sourced:** obr.uk (403 on 09-09) fetched direct 2026-10-16, notice dated 31 Jul: "commissioned the OBR to produce our next forecast on Wednesday 28 October 2026", EFO same day; date stays `estimate` (taxonomy). **Gilt tape calm:** IGLT.L 9.5675 (-0.16% vs 09-07 9.5825), 20d realized vol **5.0%** vs 8.3% trigger. **Level is not:** 10y gilt ~5.2–5.4% (press, highest since 2008); fiscal headroom est. ~£12bn vs OBR £23.6bn (press); Aug borrowing over forecast. **VIX 19.99** (10-16 bar, vs 15.41; may be intraday), ^TNX 5.098. **Adjacency:** US CPI printed 10-14; FOMC 10-28 same day, blackout from 10-17. **New: DMO moved its 28 Oct short-gilt auction to Tue 10-27** (DMO notice, footnote 5) → proposed `uk-gilt-auction-short-2026-10-27` (estimate). DMO remit revision on Budget day: unsourced, not proposed. | — none; stand aside holds. Tail trigger unchanged (IGLT.L ≤ -1.30%). VIX >19 widens US-side caution only. | 2026-10-23 (`low:0+` → 7d) |
 | 2026-10-26 | D-2 | **Full pulse (interval-elapsed).** **Date/EFO unchanged:** press still says Wed 10-28 + OBR forecast same day (HMT/OBR 10-16 primaries stand); no slip. **Gilt tape calm, tail trigger untouched:** IGLT.L 9.619 (+0.38% vs 09-07; 5 sessions to 10-26 all within ±0.45%), 20d vol **4.8%** / 60d **5.5%** vs 8.3% trigger. Press: 10y gilt ~5.34% 10-26, headroom est. £11-13bn vs £23.6bn Mar, Healey aims ≥£15bn; leaks are small (pensioner allowance, VAT on marketplaces). **US side:** VIX **17.88** (from 19.99 10-16; 10-23 19.45), ^TNX 4.978 (from 5.098), GBPUSD 1.334. Adjacency: 52 tracked events ±5d; strong = FOMC 10-28 (same day), GDP/PCE 10-29, ECI 10-30, ISM 11-02. `--on-date` read: DMO short auction moved to 10-27 is already proposed (`uk-gilt-auction-short-2026-10-27`). No new dated event found; no proposal. DMO remit on Budget day still unsourced. | — none; stand aside holds, attribution rule (credit the Fed first) stands. FT-…-1/-2/-3 still open, score 10-29/11-05. | 2026-10-29 (close-out window opens D+1) |
+| 2026-10-30 | D+2 | **Close-out.** Budget delivered Wed 10-28 (gov.uk *Budget 2026 in full*, 13:30Z) with the OBR EFO first published 13:29Z the same day. IGLT.L **+0.10%** on the day, +0.31% / -0.05% on D+1 / D+2; tail line (-1.30%) never approached. FT-…-1 and -3 **pass**; FT-…-2 left open to 11-05. Adjacency: 10-30 S&P and VIX moved sharply intraday with gilts flat — unattributed, not UK fiscal. No proposal filed. | — none; stand-aside call held. | FT-…-2 scoring, 2026-11-05 |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -274,3 +275,62 @@ this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.88,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+2 — inside the `closeOutWithinDays` window).** Macro-event mode with
+`symbols: []` runs no `earnings-cycle` / `intraday-edges` instrument, so the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) was performed and
+had no target. Every number below was re-fetched **today** — Yahoo daily bars for `IGLT.L`, `^TNX`,
+`^GSPC`, `^VIX`, `GBPUSD=X`, `^FTSE`, and the gov.uk search and content APIs (HTTP 200) — never
+recalled. `obr.uk` still returns 403 to this lane; the OBR publication was read from its gov.uk
+mirror instead.
+
+**What happened.** The Budget was delivered on **Wednesday 2026-10-28** by Chancellor John Healey; HM
+Treasury's *Budget 2026 in full* and *Budget 2026 document* are stamped **13:30Z**, and the OBR's
+*Economic and fiscal outlook - October 2026* shows *First published* **13:29Z** the same day (a
+10-30 correction fixed one paragraph's carbon-price-support date). Press the same afternoon
+(investinglive, 12:59 GMT): OBR near-term growth cut, headroom about **£15bn** at the end of the
+forecast against **£23.6bn** in March (matching a Reuters poll), 10y gilt **5.34%**, **-1.4bp** on the
+day — a "boring", priced-in Budget. Neither 2022 marker (off-Wednesday scheduling, no OBR forecast)
+was present.
+
+| Date | IGLT.L | US 10y (^TNX) | S&P 500 | GBP/USD | FTSE 100 |
+|---|---|---|---|---|---|
+| 10-28 (Budget + FOMC) | **+0.10%** | 4.993 → 5.045 | +0.28% | -0.29% | +0.07% |
+| 10-29 (D+1) | +0.31% | 5.045 → 4.989 | -0.30% | +0.16% | +0.26% |
+| 10-30 (D+2, US bars intraday) | -0.05% | 4.989 → 4.919 | -2.32% | +0.50% | +0.07% |
+
+| Registered test | Verdict | The number |
+|---|---|---|
+| FT-…-1 (IGLT.L no worse than -1.30% on 10-28) | **pass** | **+0.104%** (9.5950 → 9.6050): about 1/12 of the line, and a rally |
+| FT-…-2 (cumulative 10-28 → 11-04 no worse than -3%) | **not yet scoreable** — settles 2026-11-05 | Interim, through 10-30: **+0.36%** vs the 10-27 close; the `forward-test-due` mode re-opens it on its score-by date |
+| FT-…-3 (Budget delivered 10-28 with an OBR forecast the same day) | **pass** | Both gov.uk primaries stamped 2026-10-28; OBR 13:29Z |
+
+**The stance held, and the attribution rule did its job.** Gilts were quiet at 0.25x the 0.41%
+ordinary-Wednesday baseline on the day (the ledger's pre-registered expectation was 1.35x), and the
+D+1 / D+2 lag channel that carried 2022 stayed shut. The US 10y rose about **5bp** on 10-28 and fell about **6bp**
+on 10-29 while gilts barely moved — the Fed-day and GDP/PCE-day attribution the stance named, not
+Westminster. IGLT.L 20-day realized vol ended at **4.5%** (60-day **5.2%**) against the 8.3% re-test
+line: the quiet-market premise held through the event.
+
+**One item for whoever scores FT-…-2.** The 10-30 US session shows the S&P at **-2.32%** and the VIX
+at **23.61** (**+37%**) — bars captured at roughly 14:45 ET, so intraday, not closes. Gilts were
+flat (-0.05%) and sterling firmer, so the move does not look UK-fiscal; this session could not find
+a cause (one search returned nothing dated 2026-10-30). FT-…-2's void clause covers an
+*identifiable* non-fiscal shock — if one is named by 11-05 and the gilt week turns out worse than
+-3%, score it `void` with the cause, not as a kill.
+
+**What this close-out did not establish.** The DMO financing-remit revision on Budget day is still
+unsourced (the DMO site is behind a bot wall), so the supply-side mechanism the ledger named remains
+untested. One Budget cannot move the 9-event base rate meaningfully. No gilt tape below the
+all-maturity IGLT.L, so a 30-year-specific move is not ruled out by this table.
+
+**Loop census (sense · decide · act · verify · remember).** The step still done by hand is **sense**
+for the OBR half of FT-…-3: `obr.uk` 403'd this lane on 09-09 and again today (it answered on 10-16), and the
+answer was only reachable by noticing the gov.uk mirror (`first_published_at` in the content API). A scanner
+helper that checks the gov.uk mirror for any `obr.uk` dependency would automate it; filed here, not
+built.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":23.61,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0} -->

@@ -81,8 +81,88 @@ No instrument scripts: `symbols: []` and `earnings-cycle.mjs` / `intraday-edges.
 |---|---|---|---|---|
 | 2026-10-16 | D-14 | Initial research banked (above). Canonical `src/domain/market-events/japan-cpi-tokyo-flash-2026-10-30.json` written this PR, shadowing the `from-japan-cpi-2026-10-23` proposal (read first). **New since the proposal:** Bureau Tokyo Sep PDF located (`kubu.pdf`); core 102.6 / +2.7%, core-core 103.0 / +3.0%, water +0.24pp and childcare +0.29pp of the jump; Oct-2025 core +0.90% m/m, largest Sep→Oct in 2002-2025; model centre ~2.4% (2.2-2.6%). **Adjacency:** peers none (`symbols: []`) · macro — US CPI 10-14 hot, owned by its own ledger; national Sept CPI 10-23 (cons. 2.1%, per [`japan-cpi-2026-10-23`](japan-cpi-2026-10-23.md)) · volatility — VIX **19.99** (10-16 bar), up from 15.27 on 10-14 and over the 3pt bar; no channel into a `symbols: []` event · geopolitical — press cites the Middle East conflict and energy behind Tokyo's strength; untested here · event tape — no consensus yet; 58 tracked events within 5 days, five confirmed-strong (`eci-q3-2026-10-30`, `fomc-2026-10-28`, `gdp-q3-2026-advance-2026-10-29`, `ism-manufacturing-2026-11-02`, `pce-2026-10-29`). **Proposed:** nothing — `--on-date=2026-10-30` shows no other Japanese release; the national October print (11-20) and Tokyo November flash (11-27) are already canonical. **Beyond the leash:** none. **Own weaknesses:** no consensus, childcare base unresolved, small windows. | — (stance set: stand aside completely; Medium on a sub-2.7% print, Low-Medium on the core-core framing) | 2026-10-23 → next pulse by 2026-10-30 (low band, every 7d) |
 | 2026-10-26 | D-4 | **Full session (interval-elapsed, low 0+ band).** **Since 10-16:** national Sept CPI printed 10-23 — core **2.1%** (Aug 1.7%), core-core 2.4%, per the sibling [`japan-cpi-2026-10-23`](japan-cpi-2026-10-23.md) close-out; the nation came in 0.6pp *below* Tokyo's 2.7%, the base-driven gap this ledger's legs 1-2 expect, and it moves no input here (Tokyo's own index, water and childcare lines are untouched by it). **Re-read, unchanged:** stat.go.jp schedule page (HTTP 200, 13,839 bytes, stamp still 23 Jan 2026) still lists Tokyo October preliminary **2026-10-30**, empty Remarks; `kubu.pdf` still the Sept flash (Last-Modified 2026-10-01 23:31 GMT), so no October file is up yet. **No consensus found** — searches returned only the Sept flash coverage and old-year polls; the 2.2-2.6% band and the ~2.4% centre stand as a model, not a market read. Water-waiver 2026 question (leg 2 risk) and the Oct-2025 childcare base (leg 4) still unresolved; nothing new sourced. **Adjacency:** peers none (`symbols: []`) · macro — FOMC 10-28 (confirmed) and PCE/GDP 10-29 ahead, no Japanese read-through; BoJ ledger logs Oct-30 hike <5%, Dec ~80% (press-cited, per [`boj-decision-2026-10-30`](boj-decision-2026-10-30.md)), so a sub-2.7% Tokyo print is the expected shape against a hold · volatility — VIX **17.88** (10-26 bar) vs 19.99 at the last row, down 2.1 (inside the 3pt bar; 19.45 on 10-23); USD/JPY **157.53** vs 157.99 · geopolitical — nothing new touching Tokyo prices · event tape — four more confirmed-strong adjacents than at the last row: MSFT 10-27, GOOG 10-28, AMZN 10-29 prints and AMD 11-03 (the mega-cap prints joined the calendar after 10-16); the 10-29/30 window gets more crowded, not less, so a US-session move on 10-30 is still unattributable to this print. **Proposed:** nothing — `--on-date=2026-10-30` shows 11 entries, all tracked, no other Japanese release. **Beyond the leash:** none. FT-1 / FT-2 stay _open_ (score by 10-31). **Own weaknesses:** no consensus; two unresolved items (2026 water waiver, childcare base) both widen the top of the band. | — (stance unchanged: stand aside completely; Medium on a sub-2.7% print) | 2026-10-30 close-out (event day; release 08:30 JST proxy, 19:30 ET 10-29) |
+| 2026-10-31 | D+1 | **Close-out (event-passed-unscored).** The print is out and scored in `## Outcome`: Tokyo core **+2.6%** (index 103.3), core-core **+2.6%**, headline **+2.8%**; FT-1 and FT-2 both **pass**. Release dated 令和８年10月30日, `Last-Modified` 08:32 JST. Legs 1, 2 and 4 resolved from the Bureau PDF itself (water −0.24pp exactly; childcare contribution unchanged at −0.21pp); energy turning positive (+0.18pp) was the unmodelled upside. **Adjacency:** peers none (`symbols: []`) · macro — BoJ held at 1.25%, 8-1 the same day, per [`boj-decision-2026-10-30`](boj-decision-2026-10-30.md) · volatility — VIX **19.42** (10-30 bar) vs 17.88 at the last row, +1.5pt, inside the 3pt bar · AI-complex tape — NVDA −4.21%, AVGO −5.48%, MRVL −10.04%, CRWV −9.66% on 10-30, unattributable to this print (see Outcome) · USD/JPY 157.80, flat. **Proposed:** nothing — the next Tokyo flash (11-27) and the national October print (11-20) are already canonical. **Beyond the leash:** none. | — (closed; stand-aside stands as the final word) | none — closed |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse; the adjacency sweep runs in every row; a dated adjacent event inside the research horizon is proposed as a new `proposals/<id>.from-japan-cpi-tokyo-flash-2026-10-30.json` (`status: "estimate"`). Close-out fills `## Outcome` from re-run data, never from memory.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.88,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-10-31, D+1, inside the `closeOutWithinDays` window).** `symbols: []`, so no
+`earnings-cycle`/`intraday-edges` run has a target; the mandated cache bust (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) ran first regardless. "Re-run
+data" here is a fresh direct fetch of the Bureau's own release, not this ledger's earlier rows.
+
+**The print, from the Statistics Bureau's PDF** (`stat.go.jp/data/cpi/sokuhou/tsuki/pdf/kubu.pdf`,
+fetched direct 2026-10-31, HTTP 200, 624,693 B, titled "Ku-area of Tokyo, October 2026 (mid-month
+flash)", header 令和８年10月30日 = **2026-10-30**, `Last-Modified` Thu 29 Oct 2026 23:32:02 GMT =
+**08:32 JST**, so the release-time proxy now holds on three consecutive Bureau releases; 2025 base).
+The calendar date stays `estimate`: no confirmed source prefix exists for the Bureau and this lane
+may not self-confirm.
+
+| Measure (Oct-2026, y/y) | Index | Published | Sep | This ledger's call |
+|---|---|---|---|---|
+| Core (less fresh food) | **103.3** | **+2.6%** (SA m/m +0.3%) | 2.7% | centre ~2.4%, likely 2.2-2.6% |
+| All items | 103.5 | **+2.8%** (SA m/m +0.5%) | 2.7% | not called |
+| Core-core (less fresh food & energy) | 103.6 | **+2.6%** (SA m/m +0.2%) | 3.0% | centre ~2.6%, range 2.3-2.9% |
+
+No consensus was located for this print (searches returned only September-flash and earlier-year
+coverage), so there is no surprise figure to quote; the call stands or falls against its own model.
+
+**Both forward tests pass** ([fragment](../forward-tests/japan-cpi-tokyo-flash-2026-10-30.md)):
+
+| Test | Prediction | Measured | Verdict |
+|---|---|---|---|
+| FT-japan-cpi-tokyo-flash-2026-10-30-1 | Tokyo core y/y ≤ +2.6% | **+2.6%** | **PASS** (on the line) |
+| FT-japan-cpi-tokyo-flash-2026-10-30-2 | Water y/y within ±10% | **0.0%** (from +65.6%) | **PASS** |
+
+**What the model got right and wrong.**
+
+- **Right, exactly:** the water item. Its contribution went +0.24pp → 0.00pp, a −0.24pp
+  subtraction the Bureau names itself; leg 2's mechanism is confirmed.
+- **Right:** the underlying read. Core-core at +2.6% is the centre of leg 3's 2.3-2.9% range, and
+  the underlying kill (below +2.3%) did not fire; Tokyo's underlying inflation did not slow, and the
+  dip in core is arithmetic. Core-core eased from 3.0% only because of the same base.
+- **Resolved:** leg 4 (childcare). The line is −100% y/y in both months and its contribution is
+  **−0.21pp in both**, so the October-2025 base added no further lift. That uncertainty is closed.
+- **Wrong, by a tenth or two:** the level. Raw Sep→Oct core m/m was **+0.68%** (102.6 → 103.3) vs
+  the +0.6% centre, so the print landed at the top of the band, not the ~2.4% centre. The residual
+  is **energy**, which this ledger treated as flat: electricity and city gas turned positive y/y
+  (+0.18pp), with lodging +0.05pp, offset by food ex-fresh −0.12pp and water −0.24pp (the Bureau's
+  own driver list). Fresh food added +0.26pp to the *headline* only, which is why headline rose to
+  2.8% while core fell. The Bureau's footnote also splits out a gasoline-tax-abolition and policy
+  effect on energy (−0.35pp total: −0.60pp current-month, +0.24pp base drop-off), so energy is
+  policy-timing too, and is the item to model next time. One observation, so no re-fit is made.
+- **Probability check:** the ledger put ≥2.7% at ~20% and it did not happen; 2.6% was inside the
+  stated likely band. A single hit at the edge of the band is weak evidence either way.
+
+**Channel check: the "no channel" premise survives, on absence of attribution.** The flash landed at
+19:30 ET on 10-29, so the first US session to react was 10-30. Yahoo daily closes re-fetched today:
+NVDA 213.66 → 204.64 (**−4.21%**), AVGO 345.00 → 326.08 (**−5.48%**), MRVL 218.34 → 196.40
+(**−10.04%**), CRWV 60.74 → 54.87 (**−9.66%**): all four cleared the 2% bar, all lower. The channel
+kill needs the tape to attribute the move to the Japan CPI headline, and none does: the sibling
+[`boj-decision-2026-10-30`](boj-decision-2026-10-30.md) close-out reads the same rout as having begun
+on 10-29 before its statement and as not keyed to Tokyo, with the cause search-summarised as Intel
+guidance, Amazon and neocloud debt worries; USD/JPY was flat (157.83 → 157.80); and the print was
+inside the model's band, not a surprise. A search for a 10-30 attribution found nothing naming Japanese
+CPI. **Channel kill: not fired.** Evidence is absence, not an intraday study (none exists for a
+`symbols: []` event).
+
+**Read-through (context; other ledgers own the calls).** The BoJ held at 1.25% (8-1, Takata for
+1.5%) the same day, so a sub-2.7% core was the expected shape against a hold. For the national
+October print, [FT-japan-cpi-2026-11-20-1](../forward-tests/japan-cpi-2026-11-20.md) takes this
+number as an input (mean of national September 2.1% and Tokyo October 2.6% = 2.35%); that fragment is
+its own lane's to score on 2026-11-21 and is not touched here.
+
+**Sweep.** Next Japanese releases are already tracked (national October CPI 2026-11-20, Tokyo
+November flash 2026-11-27). Nothing new proposed.
+
+**Own weaknesses:** no consensus found; the energy attribution rests on the Bureau's contribution
+tables, not an item-level re-derivation; the 10-30 attribution paragraph rests on absence of evidence
+and a sibling ledger's search-summarised cause. **This document is now closed.** No trade was taken,
+none is authorized, and stand-aside stands as the final word on it.
+
+**Last assessed:** 2026-10-31
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"closed","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0,"blocked":[]} -->

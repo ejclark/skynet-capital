@@ -1,6 +1,8 @@
 import {
   describeNarrowing,
+  proposalKey,
   proposalsFor,
+  refinementText,
   renderProposals,
 } from "../../src/playbooks/claim-proposals.js";
 import type { ClaimScore } from "../../src/playbooks/claim-score.js";
@@ -10,9 +12,15 @@ import { AI_DIP_2026_10 } from "../../src/playbooks/conviction-seeds.js";
 /** #5482 slice 5, criterion 6 — what a scored claim implies for a pair, as honest text. A dry run:
  *  it names a change for a reviewer and changes nothing. */
 
-const scored = (labels: Record<string, ClaimScore["outcome"]>): Conviction => ({
+/** The seed with no score attached: the live ledger's scores must never move these specs. */
+const UNSCORED: Conviction = {
   ...AI_DIP_2026_10,
-  claims: AI_DIP_2026_10.claims.map((c) => {
+  claims: AI_DIP_2026_10.claims.map(({ score: _, ...c }) => c),
+};
+
+const scored = (labels: Record<string, ClaimScore["outcome"]>): Conviction => ({
+  ...UNSCORED,
+  claims: UNSCORED.claims.map((c) => {
     const label = c.statement.match(/^(\d+[a-z]?)\./)?.[1] ?? "";
     const outcome = labels[label];
     if (outcome !== "pass" && outcome !== "fail") return c;
@@ -30,8 +38,8 @@ const scored = (labels: Record<string, ClaimScore["outcome"]>): Conviction => ({
 
 describe("proposalsFor", () => {
   it("proposes nothing while every claim is pending or untestable", () => {
-    expect(proposalsFor(AI_DIP_2026_10)).toEqual([]);
-    expect(renderProposals(AI_DIP_2026_10)).toContain("No proposal yet");
+    expect(proposalsFor(UNSCORED)).toEqual([]);
+    expect(renderProposals(UNSCORED)).toContain("No proposal yet");
   });
 
   it("after a pass, proposes carrying the fence that claim backs into the pair's own settings", () => {
@@ -61,11 +69,16 @@ describe("proposalsFor", () => {
 describe("renderProposals — honest text", () => {
   const text = renderProposals(scored({ "7": "pass", "8": "fail" }));
 
-  it("says it is a dry run that opens no pull request and changes no live setting", () => {
-    expect(text).toContain("DRY RUN");
-    expect(text).toContain("opens no pull request");
+  it("says it is for review, edits nothing, and that adopting one is its own pull request", () => {
+    expect(text).toContain("**For review.**");
+    expect(text).toContain("edits nothing");
     expect(text).toContain("changes no pair's live settings");
-    expect(text).toContain("hand-off point");
+    expect(text).toContain("adopting a proposal is its own pull request");
+  });
+
+  it("keys each section by view, claim and pair, for the lane that opens a change PR", () => {
+    expect(text).toContain("<!-- refinement: ai-dip-2026-10/7/CRWV-WHEEL -->");
+    expect(text).toContain("<!-- refinement: ai-dip-2026-10/8/CRWV-LONG-CALL -->");
   });
 
   it("states the scorecard and each claim's outcome", () => {
@@ -90,6 +103,24 @@ describe("renderProposals — honest text", () => {
 
   it("is deterministic text, with no timestamp that would make a re-run differ", () => {
     expect(renderProposals(scored({ "7": "pass" }))).toBe(renderProposals(scored({ "7": "pass" })));
+  });
+});
+
+describe("refinementText — what the scoring pass commits", () => {
+  it("is nothing while no claim a fence rests on is decided, so a lane's PR carries no empty file", () => {
+    expect(refinementText(UNSCORED)).toBeUndefined();
+    expect(refinementText(scored({ "5": "pass" }))).toBeUndefined();
+  });
+
+  it("is the reviewer's text once one is", () => {
+    const decided = scored({ "2a": "fail" });
+    expect(refinementText(decided)).toBe(renderProposals(decided));
+    expect(refinementText(decided)).toContain("### CRWV-WHEEL · claim 2a failed");
+  });
+
+  it("keys a proposal the same way every time", () => {
+    const [p] = proposalsFor(scored({ "2a": "fail" }));
+    expect(p && proposalKey(UNSCORED, p)).toBe("ai-dip-2026-10/2a/CRWV-WHEEL");
   });
 });
 

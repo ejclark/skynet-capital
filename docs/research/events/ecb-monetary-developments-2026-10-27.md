@@ -346,3 +346,50 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.87,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+3 — inside `closeOutWithinDays`).** Date stayed `estimate`; nothing here
+licensed action. Scored from data re-fetched this session, never from memory: the ECB press release
+(`ecb.md2609`, HTTP 200, 110,039 bytes), the 2026-10-29 monetary policy statement (`ecb.is261029`,
+HTTP 200, 137,889 bytes), and Yahoo adjusted daily bars with `node_modules/.cache/earnings-cycle` and
+`intraday-edges` busted first (`symbols: []`, so neither instrument has a macro mode and neither feeds
+a number below).
+
+**What printed — a hold.** Sep-2026: M3 **3.5%** (unchanged), M1 **2.7%** (from 2.9%), adjusted loans to
+households **3.1%** (unchanged), adjusted loans to non-financial corporations **4.2%** (unchanged).
+The credit run this ledger watched peaked in **July (4.4%)** and stepped down in the Aug print
+(2026-09-25); September held the lower plateau. No consensus for Sep M3 was found in search, so the
+surprise axis (leg 4) got no new observation.
+
+| Check | Result |
+|---|---|
+| **FT-1** — 10-29 statement quotes Sep-2026 lending by number | **pass** — "4.2 per cent in August and September, from 4.4 per cent in July". 7 of 7 meetings in 2026 |
+| **FT-2** — Sep NFC loans ≥ 4.0% | **pass** — 4.2%. The six-month acceleration had already ended in August; the test asked about the level |
+| Null (≥ 1.90% `EXV1.DE` on 10-27), sibling-owned FT | **not fired** — `EXV1.DE` **+0.13%** (38.12 → 38.17); `^STOXX50E` +0.79%, `^GDAXI` +0.71%, `EURUSD=X` −0.39%, `^GSPC` +0.60%, `^VIX` −4.7% |
+| Surprise-axis kill (≥ 0.4pp *and* ≥ 1.90%) | **not fired** — conjunction cannot hold at +0.13%; Aug print day (09-25) `EXV1.DE` +1.23% |
+| Channel kill (tracked name > 2% attributed to this print) | **not fired** — AVGO +4.00%, MRVL +4.19%, CRWV +7.94% on 10-27, but nothing ties them to euro money data (banks flat, prints unchanged); per-name commentary was not read |
+| Date kill / meeting-date kill | **not fired** — release published 10-27, Council met 10-29 as scheduled |
+| Collision kill | **not checked past the 10-26 row**; the Q3 BLS is cited in the 10-29 statement, which is what leg 5 predicted |
+
+**The call, scored against the tape.** *Stand aside, read it forward to 10-29* held on both halves:
+no tape event on the day (0.13% on the exposed instrument, a sixth of its 0.75% release-day mean) and
+the ECB did quote the figure two days later. The rates decision (three key rates unchanged; the
+statement says the Council debated a hike) is owned by the `ecb-decision-2026-10-29` ledger. Zero
+capital was deployed across this doc's life.
+
+**What the stance missed.** FT-1 was a 6-of-6 base rate going in (the 2026-10-05 row), so its pass is near-uninformative, as
+registered; the more useful reading is that the 10-29 statement frames loan growth as **slowing**
+("slowed to an annual rate of 4.2 per cent") — the same data the ledger's watch item flagged on
+2026-09-25, now carried into the decision text.
+
+**Process note — a stage a person still did.** *Sense:* ECB press-release URLs carry a content hash
+(`md2609~dd1bf1b2e4`), so the primary is found by scraping the series index, not built from the slug;
+and the Sep M3 consensus is only reachable by search, never from a primary. Both are manual lookups that
+a loop census would name.
+
+No forward test in this doc scores past this close-out — both settled today. This doc goes quiet after
+this entry.
+
+**Last assessed:** 2026-10-30 (close-out — the scanner goes quiet on this event from here)
+<!-- probe-ref: {"symbols":{},"vix":21.23,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","msft-2026-10-27-print","pce-2026-10-29","spcx-lockup-release-2026-10-22"],"screenStreak":0} -->

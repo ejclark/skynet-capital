@@ -201,7 +201,12 @@ arch scan checks the root against `[mounts] destination`, so the file is read, n
 
 ## Render / Railway / any container host (same Docker image)
 
-The `Dockerfile` is host-agnostic. On Render: New → Web Service → point at this repo →
+The `Dockerfile` is host-agnostic and multi-stage: `docker build --target dashboard .` is the slim
+image for any host (plain node plus `marked` and `three`; ~325 MB against 1.39 GB for the old
+single-stage image), and a bare `docker build .` takes the last stage, `bots`, which adds `tsx` for
+the bots app and is what Fly's two apps run. `tests/arch/runtime-deps.spec.ts` fails the build if
+`src/` imports a package that is only a devDependency, because the slim image would not have it.
+On Render: New → Web Service → point at this repo →
 Docker → set the same env vars (Render injects `PORT`, which the server honors). Enable
 "always on" (no idle sleep) so streams stay connected. On a host that is not Fly (ECS/ALB, a VM):
 

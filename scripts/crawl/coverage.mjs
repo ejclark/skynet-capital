@@ -98,6 +98,10 @@ const SERVER_PAGES = [
   { screen: "unknown URL" },
 ];
 
+/** The sign-in hop's triage row — a redirect whose target depends on the member, so `landingOf`
+ *  routes it by hand rather than through the row's one `target`. */
+const SIGN_IN_HOP = "server / and /index.html";
+
 // ── parsers (pure — the spec drives them over fixture strings) ─────────────────────────────────
 
 /**
@@ -220,7 +224,14 @@ export function matchRoute(pathname, routePaths) {
  * followed to its target (one hop at a time, three at most).
  */
 export function landingOf(goto, { linked, routePaths, sections, triage }, hops = 0) {
-  const server = serverPageOf(new URL(goto, "http://x").pathname);
+  const path = new URL(goto, "http://x").pathname;
+  // The sign-in hop (`serveHomePage`): a member with no linked account starts on Profile's
+  // onboarding chapter, everyone else on `/app/` as before (#6317).
+  if (path === "/" || path === "/index.html") {
+    const next = linked ? "/app/" : "/app/accounts";
+    return [SIGN_IN_HOP, ...landingOf(next, { linked, routePaths, sections, triage }, hops + 1)];
+  }
+  const server = serverPageOf(path);
   if (server !== undefined) return [server];
   const [pathname, asked] = routeLabel(goto).split(" · ");
   const route = matchRoute(pathname, routePaths);

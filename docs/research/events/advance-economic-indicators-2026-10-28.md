@@ -263,6 +263,7 @@ Nothing about this event licenses an entry, and there is no instrument to enter.
 | 2026-10-12 | D-16 | **Deterministic screen (no Claude session).** Readings — VIX 14.8 (-0.5pt since last), band unchanged (medium:8+), 50 adjacent event(s) tracked, new in corridor since last pulse: `boe-dmp-2026-10-30`, `umich-sentiment-final-2026-10-23` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-19 |
 | 2026-10-19 | D-9 | **Full session — dispatched on VIX +5.15pt (14.84 → 19.99, past the 3pt screen); the date holds, the stance holds.** **Date re-verified, with a URL trap:** census.gov `calendar-listview.html` now defaults to the **2027** schedule and carries no 2026 rows; the 2026 list is `calendar-listview-2026.html` (HTTP 200, byte-parsed): "October 28, 2026 | 8:30 AM | September 2026", no `Suspended` text on the row (the only two suspended AEIR rows remain Jan/Feb 2026). Status stays `estimate`. **Volatility:** VIX **19.99** (Yahoo, 10-16 close; 16.46 the day before) vs 14.84 at the last row — highest close in this ledger; SPY 763.25, S&P 7,659.44 (−1.10%). Drivers per sibling ledgers (AI-financing credit scare), not re-derived; the 10-19 session had not closed. **Macro:** Sep CPI hot (core +0.3% m/m, 2.6% y/y), carried from `fomc-2026-10-28`. Hike odds for 10-28 **13%** (Kalshi/Polymarket 12.5¢, defirate direct 10-18 8:44 PM ET; 18% a week earlier), Dec 9 hike ~74% — the decision-day back-loading read (Leg 5) stays, with a hold-modal meeting. **Series tape:** `intl-trade-full-report-2026-10-06` closed out — Aug deficit $105.6B, July capital goods revised +$10M (the capital-goods attribution this ledger leans on survived revision). GDPNow Q3 **3.6%** (page: updated 10-15, next 10-20); this event's final vintage is still ahead. **Corridor** (`--on-date` 10-23 → 11-02): 53 ids; new `dhi-q4-fy2026-2026-10-29`, `japan-cpi-tokyo-flash-2026-10-30`, `tic-shca-annual-final-2026-10-30`, `uk-gilt-auction-short-2026-10-27` (all already canonical, low, recorded not assessed); `meta-2026-10-28-print` left (Meta reports 10-21). Strong set: ECI, FOMC, GDP advance, ISM mfg, PCE. **Kill switches:** none fired; FT-1 / FT-2 unscored until 10-28. **Nothing to propose; nothing seen beyond the horizon.** | No — stand aside holds (`symbols: []`, no macro-keyed playbook). | 2026-10-26 (medium, 0+ band: every 2d) |
 | 2026-10-26 | D-2 | **Full session — `interval-elapsed`; the date holds, no kill switch fires, the stance holds.** **Date primary:** census.gov `calendar-listview-2026.html` (HTTP 200, 89,130 bytes, byte-parsed): "October 28, 2026 \| 8:30 AM \| September 2026", no `#FFE954` Suspended highlight on the row; the only Suspended AEIR rows are still Jan/Feb 2026; the Dec-28 (Nov data) row also still stands. Status stays `estimate`. **Volatility:** VIX **18.29** (Yahoo, 10-26) vs 19.99 at the last full row (-1.70pt); range since 10-16: 16.68-19.99. **Tape:** SPY **764.78** (10-26) vs 763.25 (10-16). **GDPNow:** Atlanta Fed page (fetched direct) still reads "Updated: October 20, 2026 · Next update: October 27, 2026" — Q3 3.50% per the sibling `gdp-q3-2026-advance-2026-10-29` row (carried, not re-derived), so FT-1's anchor vintage (10-27) posts tomorrow and this event's final vintage is still ahead. **FOMC:** hold-modal (~94% hold, Polymarket 10-22) per sibling `fomc-2026-10-28`, carried, not re-fetched — Leg 5's decision-day back-loading read stands with a quiet-modal statement. **Peers/macro/geopolitics:** `symbols: []`; MSFT (10-27 AMC) and GOOG (10-28 AMC) are `confirmed` critical in the corridor, not yet printed; no CPI/jobs print since 10-19; Brent/AI-financing stress carried from siblings, no stance effect. **Kill switches:** none fired — Census slot unmoved; no macro-keyed playbook (`trade-playbooks.md` unchanged); FT-1/FT-2 unscored until 10-28 (SPY morning-range test needs the session). **Corridor:** `--on-date` 10-27/10-28/10-29 read — every entry already canonical or a proposal; nothing to propose; nothing seen beyond the horizon. | No — stand aside holds (`symbols: []`, no macro-keyed playbook). | 2026-10-28 (medium, 0+ band: every 2d; the event day) |
+| 2026-10-30 | D+2 (close-out) | **Close-out — scored from re-fetched primaries and the re-pulled GDPNow workbook; instrument cache busted first (`symbols: []`, nothing reads it).** Census **CB26-177** published 08:30 on 10-28 as scheduled (goods deficit **$134.9B**, +$2.8B on a revised $132.1B; capital-goods imports $157.4B, +7.5% m/m); the Census 2026 calendar still shows the Nov-27 and Dec-28 slots unsuspended. **GDPNow (`ContribArchives`, md5 `812ab198…`):** 10-27 **3.412%** → 10-28 final **3.272%** (−0.140pp) — `FT-…-1` **PASS**, the first live observation of the final-vintage-down skew (now 21 of 27, p=0.0030); BEA's advance estimate the next morning was **3.4%** (Atlanta Fed's own 10-29 row 3.37), a **0.10pp** final-nowcast miss against the 0.469pp median. The edition rewrote the parts (\|Δ\| equipment/net exports/inventories 0.161/0.095/0.206 = **0.463pp**, 3.3× the headline) but barely touched net exports (**0.095pp**, under the 0.265pp AEIR median). **SPY (Yahoo hourly):** 09:30–12:00 range $2.46 of a $4.12 session = **59.7%** — `FT-…-2` **PASS**, thinly, and on a session far narrower (0.53%) than the decision-day median (1.12%). **FOMC** held 3.75–4.00% by 10–2 (Cook, Hammack dissenting for a hike). **Vol:** VIX 17.20 (10-29) → 22.11 (10-30, intraday); SPY −2.0% on 10-30 — cause not investigated, outside this event. **Kill switches 1–4: none fired.** Nothing proposed; nothing seen beyond the horizon. | **Closed; stand-aside holds as written.** Both tests pass; nothing was entered. | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -283,3 +284,97 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":18.29,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+2 — inside the `closeOutWithinDays` deadline).** Macro-print mode runs no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design); "re-run instrument data"
+here means re-fetching every cited source direct rather than reading this doc's memory of the tape.
+The instrument cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`), though nothing in this ledger reads it. Five inputs, all fetched
+direct today: Census's September release PDF (`census.gov/econ/indicators/advance_report.pdf`, text
+layer decompressed locally), the Census 2026 release calendar (`calendar-listview-2026.html`), the
+Atlanta Fed's `GDPTrackingModelDataAndForecasts.xlsx` (`ContribArchives`, 10,977,477 bytes, md5
+`812ab198f05837c1fed2c57563eb0753`) cross-read against the GDPNow page's own inline vintage arrays,
+BEA's advance-estimate page and the Fed's 10-28 statement, and Yahoo hourly bars for SPY plus the daily
+`^VIX`.
+
+**The headline verdict: the report published on schedule, both registered predictions passed, and
+the stance — stand aside, read it as the composition print, never trade the morning — held. What the
+data adds is a limit on Leg 2:** this edition rewrote the nowcast's parts, but not the trade line the
+ledger said the release "owns".
+
+### Forward tests scored
+
+| Test | Prediction | Result | Verdict |
+|---|---|---|---|
+| `FT-advance-economic-indicators-2026-10-28-1` (final nowcast revises down) | GDPNow Q3 published 2026-10-28 below the 2026-10-27 vintage | **3.4119% → 3.2721% (−0.1398pp)** — `ContribArchives` rows for forecast dates 2026-10-27 (`Advance Census manuf. (M3-1), New-home sales`) and 2026-10-28 (`Advance Economic Indicators`); the page's inline arrays agree (3.41 → 3.27) | **PASS** |
+| `FT-advance-economic-indicators-2026-10-28-2` (decision-day back-loading) | SPY 09:30–12:00 ET range < 65% of the full 09:30–16:00 range | Morning range **$2.46** (769.24–771.70, three hourly bars) against a full-session range of **$4.12** (769.24–773.36) — **59.7%** | **PASS** |
+
+**Reading `FT-1`.** The final-vintage skew now stands at **21 of 27** (one-sided binomial p = 0.0030,
+from 20 of 26 at p = 0.0047), with this edition the first *live* observation after registration. Per
+the test's own rule a pass is one observation and never a promotion — promotion needs three. The
+mechanism the ledger proposed (the import line arrives last, as a drag) is not what happened here:
+net exports moved **−2.856 → −2.950pp (−0.095pp)** and the downward revision came from
+**inventories (1.850 → 1.643, −0.206pp)** while equipment *rose* (0.999 → 1.160, +0.161pp). So the
+sign held and the stated mechanism did not — the skew is still a sign asymmetry and nothing more.
+
+**Reading `FT-2`.** The back-loading share held, but only 5.3 points under the line, and the other
+half of the finding did not: decision-day was supposed to be a *wide* session (median full range 1.122%
+of price), and this one was the narrowest of the fortnight — **$4.12, 0.53%** — against 0.85% for an
+ordinary session. The reason is on the record: the Fed held at 3.75–4.00% by **10–2** (Cook and Hammack
+dissenting for a hike), the outcome the hold-modal pricing carried in the 10-26 row (~94% hold) expected, so the 14:00
+statement had little to resolve. Hourly bars put the 12:00–16:00 session at $3.74 of the $4.12 total, so
+the day was still back-loaded — there was just less variance to load. No exogenous shock voided the test.
+
+### What the release said
+
+Census **CB26-177**, "FOR RELEASE AT 8:30 AM EDT, WEDNESDAY, OCTOBER 28, 2026": the goods deficit was
+**$134.9B in September, up $2.8B from a revised $132.1B in August** (first print $132.6B). Exports
+$209.2B (+$5.3B), imports $344.1B (+$8.1B). The capital-goods channel this ledger leans on kept
+building: capital-goods imports **$157.4B, +7.5% m/m and +77.2% y/y** (July revised to $140.3B), against
+capital-goods exports of $73.3B (+5.4% m/m). Wholesale inventories $1,011.5B (+0.6% m/m, +7.4% y/y);
+retail inventories $885.3B (+0.3% m/m, +4.8% y/y). The release names its successor — "The October 2026
+Advance report is scheduled for release on November 27, 2026" — matching the existing
+`advance-economic-indicators-2026-11-27` entry. Census's 2026 calendar still lists 12-28 unsuspended;
+only the January and February reference months carry the `Suspended` mark.
+
+### Legs re-checked against the outcome
+
+| Leg | Verdict at research | What 10-28 showed |
+|---|---|---|
+| 2 — composition engine | **SUPPORTED** | **Holds on churn, weakens on the trade line.** \|Δ equipment\| + \|Δ net exports\| + \|Δ inventories\| = **0.463pp** (0.161 + 0.095 + 0.206), 3.3× the −0.140pp headline move and 9.6× the 0.048pp non-AEIR median — though under the 0.584pp AEIR median. Net exports moved **0.095pp**, just under the 0.10pp line and well under the 0.265pp AEIR median. The big net-exports move came a day later, from BEA's own data: **−2.95 → −3.32pp (−0.37)** on 10-29 |
+| 3 — final vintage skews down | **SUPPORTED** | First live pass (above); 21 of 27 |
+| 4 — the final nowcast does not tell you 10-29 | **REFUTED (as a preview)** | Final nowcast **3.27%** against BEA's advance **3.4%** (the Atlanta Fed's own 10-29 row: 3.37%) — a **0.10pp** miss, inside the 0.469pp median. One good quarter does not move a median taken over 26 |
+| 5 — decision-day back-loading | **REFUTED (as a tradeability argument)** | Share held (59.7%), width did not (0.53% session) |
+
+### Kill switches re-checked
+
+- **#1 — the 2026-09-30 edition moves net exports by < 0.10pp:** **not fired** — it moved 1.23pp
+  (`advance-economic-indicators-2026-09-30` close-out). *This* edition's 0.095pp is a fresh
+  observation of the same kind and is recorded above, not scored: the kill switch was written for 09-30.
+- **#2 — a macro-keyed playbook lands before 2026-10-20:** **not fired** — `docs/plans/trade-playbooks.md`
+  re-read today still lists only S1/S2/E1/S3/S4/G1, all earnings- or execution-keyed.
+- **#3 — Census moves or suspends the slot:** **not fired** — the release published on the listed date.
+- **#4 — SPY's morning range exceeds 65%:** **not fired** — 59.7%.
+
+**Vol and tape, not scored against anything.** VIX **16.91** (10-28 close) → **17.20** (10-29) →
+**22.11** (10-30, Yahoo daily series at fetch time, an intraday reading); SPY **772.35** at the 10-28 close
+(last hourly bar's close) and **753.81** at 13:56 ET on 10-30, about −2.0% from 10-29's 769.53. That move
+is after this event and was not investigated; it is carried to the owning ledgers and bears on nothing
+here. **Adjacency:** the 10-23 → 11-02 corridor reads 52 canonical ids plus four earnings prints, every
+one already tracked; nothing new to propose.
+
+**Process note.** The Atlanta Fed workbook has been a dead link on `…/cqer/researchcq/gdpnow/…` in
+this series' ledgers since 09-22; the file is live today at
+`…/research-and-data/data/gdpnow/GDPTrackingModelDataAndForecasts.xlsx` (the path the
+`gdp-q3-2026-advance-2026-10-29` ledger already used). The workbook's component rows match the GDPNow
+page's inline arrays to two decimals. Ledgers still citing the old path should switch.
+
+**Verdict against the stance.** Stand aside on every edition of this report held exactly as written:
+nothing was licensed, nothing was entered, and `symbols: []` left nothing to enter. `## Outcome` is
+written; per this lane's contract this ledger goes quiet — both registered forward tests are scored, so
+there is no `forward-test-due` door back in for this event.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":22.11,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0,"blocked":[{"url":"https://www.atlantafed.org/-/media/Project/Atlanta/FRBA/Documents/cqer/researchcq/gdpnow/GDPTrackingModelDataAndForecasts.xlsx","status":"HTTP 200 but the Bank's own HTML 404 page (curl-downloaded, 48278 bytes) \u2014 the old cqer/researchcq path; substituted research-and-data/data/gdpnow/GDPTrackingModelDataAndForecasts.xlsx (10977477 bytes, md5 812ab198f05837c1fed2c57563eb0753), which parsed","at":"2026-10-30"}]} -->

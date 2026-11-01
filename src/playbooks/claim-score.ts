@@ -1,3 +1,4 @@
+import { isSession, sessionsBefore } from "../domain/market-calendar.js";
 import { isCalendarDay } from "../subscriptions/subscription-state.js";
 import { blank } from "./claim-blank.js";
 import type { ConvictionClaim } from "./conviction-record.js";
@@ -10,8 +11,8 @@ import { money } from "./format-money.js";
  *
  *   pass         the day came, the falsifier did not land: the claim held.
  *   fail         the day came and the falsifier landed: the claim did not hold.
- *   pending      not due yet, or due and nobody has recorded the reading (a forward test belongs to
- *                the event lane that registered it; this module reads no ledger of theirs).
+ *   pending      not due yet, or due and nothing has decided it yet (a forward test the event lane
+ *                has not registered, or has not scored).
  *   untestable   nothing here can check it; it carries no size and is never counted as pending.
  *
  * WHAT A SCORE IS NOT. A pass is one claim surviving one falsifier on one tape. It is not an edge,
@@ -20,9 +21,9 @@ import { money } from "./format-money.js";
  * pair's live settings change. Paper only, educational.
  *
  * HOW A CLAIM IS READ. Free-text falsifiers cannot be parsed honestly, so a claim names its own
- * mechanical check as data (`check`) where one exists, and only then: the study re-run, or a stated
- * band or level on a symbol's closes. A claim with no check is scored by recording the reading, not
- * by guessing it from the sentence.
+ * mechanical check as data (`check`) where one exists, and only then: the study re-run, a stated
+ * band or level on a symbol's closes, or the forward test an event lane registered for it. A claim
+ * with no check is scored by recording the reading, not by guessing it from the sentence.
  */
 
 export type ClaimOutcome = "pass" | "fail" | "pending" | "untestable";
@@ -36,6 +37,11 @@ export const CLAIM_OUTCOMES: readonly ClaimOutcome[] = ["pass", "fail", "pending
  *    [low, high]; outside is the falsifier landing.
  *  - `closes-reach`: some close after `after` and up to `by` must reach `level`; none is the
  *    falsifier landing.
+ *  - `forward-tests`: the forward tests an event lane registered and scored decide (below).
+ *  - `puts-expire`: every named put must expire worthless, read as the symbol's close on its expiry
+ *    at or above its strike; one finishing in the money is the falsifier landing. `unnamed` counts
+ *    the puts the falsifier names that cannot be listed yet (a later print's, whose strike and
+ *    expiry are not set), so while any are unnamed the named ones expiring worthless decide nothing.
  */
 export type FalsifierCheck =
   | { readonly kind: "rerun" }
@@ -53,7 +59,56 @@ export type FalsifierCheck =
       readonly after: string;
       readonly by: string;
       readonly level: number;
+    }
+  | { readonly kind: "forward-tests"; readonly tests: readonly ForwardLink[] }
+  | {
+      readonly kind: "puts-expire";
+      readonly symbol: string;
+      readonly puts: readonly ExpiringPut[];
+      readonly unnamed: number;
     };
+
+/** A sold put a claim's falsifier names: it expires worthless when the close on `expiry` is at or
+ *  above `strike`. */
+export interface ExpiringPut {
+  /** `YYYY-MM-DD`: the expiry day, read as the last close on or before it. */
+  readonly expiry: string;
+  readonly strike: number;
+}
+
+/**
+ * A FORWARD TEST THAT SCORES A CLAIM (#5482 criterion 6, slice 5's deferral). A conviction may not
+ * write an event's forward-test rows; it proposes them, and the event lane registers one citing the
+ * proposal's token (`scripts/conviction-proposals.mjs`) and later scores it. The link names that row
+ * and says what each of its verdicts means for THIS claim, read against the claim's own falsifier,
+ * because the two are not always the same sentence: a test's prediction can be the claim's falsifier
+ * (a passing test fails the claim), and a test can be one of several readings the falsifier needs
+ * (a killed test leaves the claim pending). Void, unscoreable and open tests decide nothing.
+ */
+export interface ForwardLink {
+  /** The event whose fragment holds the row: `docs/research/forward-tests/<event>.md`. */
+  readonly event: string;
+  /** The row's own id (`FT-…`), or the proposal token its registration cites (`ai-dip-2026-10/P6`). */
+  readonly ref: string;
+  /** What the claim scores when the test passes, and when it is killed. */
+  readonly onPass: LinkOutcome;
+  readonly onKill: LinkOutcome;
+}
+
+type LinkOutcome = "pass" | "fail" | "pending";
+
+/** A forward test's verdict as its lane recorded it (`scripts/research-scorecard.mjs` → verdictOf). */
+export type ForwardVerdict = "pass" | "kill" | "void" | "unscoreable" | "open" | "unread";
+
+/** The row a link resolves to, as the scoring run read it from the event's fragment. */
+export interface ForwardRow {
+  readonly id: string;
+  readonly verdict: ForwardVerdict;
+}
+
+/** A proposal token: `<conviction-slug>/P<n>`. */
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const PROPOSAL_TOKEN = /^[a-z0-9]+(?:-[a-z0-9]+)*\/P\d+$/;
 
 export interface ClaimScore {
   readonly outcome: ClaimOutcome;
@@ -75,6 +130,8 @@ export interface ScoreContext {
   readonly today: string;
   /** A symbol's daily closes, oldest first, or nothing when the tape cannot be read. */
   readonly tape?: (symbol: string) => readonly TapeBar[] | undefined;
+  /** The forward-test row a link names, or nothing when the lane has not registered it. */
+  readonly forwardTest?: (link: ForwardLink) => ForwardRow | undefined;
 }
 
 const pending = (basis: string, dueOn?: string): ClaimScore => ({
@@ -176,6 +233,107 @@ function scoreReach(
 }
 
 /**
+ * The puts in expiry order, each read off the close of its expiry's session (the expiry itself, or
+ * the session before it when the exchange is shut). The first to finish in the money fails the
+ * claim. A decided score is final, so two things wait rather than guess. The expiry's bar counts
+ * only once a later session is on the tape: the feed serves the open session's bar live, and the
+ * research cache keeps whatever it fetched, so a bar read on the expiry day could be a mid-session
+ * price. And a missing close on that session never borrows an older one.
+ */
+function scorePuts(
+  check: Extract<FalsifierCheck, { kind: "puts-expire" }>,
+  dueOn: string,
+  ctx: ScoreContext,
+): ClaimScore {
+  const { symbol } = check;
+  const tape = ctx.tape?.(symbol);
+  const last = tape?.at(-1)?.date;
+  if (last === undefined) return pending(`No ${symbol} price history to read.`, dueOn);
+  const read: string[] = [];
+  const sofar = (wait: string): ClaimScore => pending([...read, wait].join(" "), dueOn);
+  for (const put of [...check.puts].sort((a, b) => a.expiry.localeCompare(b.expiry))) {
+    const name = `the ${money(put.strike)} ${put.expiry} put`;
+    const session = isSession(put.expiry) ? put.expiry : sessionsBefore(put.expiry, 1);
+    if (last <= session) {
+      return sofar(
+        `The ${symbol} tape ends ${last}; ${name}'s close on ${session} counts once a later session is on it.`,
+      );
+    }
+    const close = tape?.find((b) => b.date === session);
+    if (close === undefined) return sofar(`No ${symbol} close on ${session} to read ${name}.`);
+    const at = `${symbol} closed at ${money(close.close)} on ${session}`;
+    if (close.close < put.strike) {
+      return decided(
+        "fail",
+        `${at}, under ${name}'s strike: it finished in the money.`,
+        dueOn,
+        ctx.today,
+      );
+    }
+    read.push(`${at}, at or above ${name}'s strike: it expired worthless.`);
+  }
+  if (check.unnamed > 0) {
+    const more =
+      check.unnamed === 1 ? "1 more put it names is" : `${check.unnamed} more puts it names are`;
+    return sofar(`${more} not listed yet, so that decides nothing alone.`);
+  }
+  return decided("pass", read.join(" "), dueOn, ctx.today);
+}
+
+/** One link's reading: what its row says, and what that means for the claim. */
+function readLink(
+  link: ForwardLink,
+  ctx: ScoreContext,
+): { readonly outcome: LinkOutcome; readonly says: string } {
+  if (ctx.forwardTest === undefined) {
+    return { outcome: "pending", says: `${link.ref}: this pass read no forward tests.` };
+  }
+  const row = ctx.forwardTest(link);
+  if (row === undefined) {
+    return {
+      outcome: "pending",
+      says: `${link.ref} is not registered in ${link.event}'s forward tests yet.`,
+    };
+  }
+  const name = row.id === link.ref ? row.id : `${row.id} (registered from ${link.ref})`;
+  if (row.verdict !== "pass" && row.verdict !== "kill") {
+    return { outcome: "pending", says: `${name} reads ${row.verdict}.` };
+  }
+  const outcome = row.verdict === "pass" ? link.onPass : link.onKill;
+  const means =
+    outcome === "pass"
+      ? "this claim held"
+      : outcome === "fail"
+        ? "this claim's falsifier landed"
+        : "that alone does not decide this claim";
+  return {
+    outcome,
+    says: `${name} ${row.verdict === "pass" ? "passed" : "was killed"}: ${means}.`,
+  };
+}
+
+/** Any link that fails the claim fails it; it passes only when every link passes it. */
+function scoreForward(
+  check: Extract<FalsifierCheck, { kind: "forward-tests" }>,
+  dueOn: string,
+  ctx: ScoreContext,
+): ClaimScore {
+  const reads = check.tests.map((link) => readLink(link, ctx));
+  const says = (outcome?: LinkOutcome): string =>
+    reads
+      .filter((r) => outcome === undefined || r.outcome === outcome)
+      .map((r) => r.says)
+      .join(" ");
+  if (reads.some((r) => r.outcome === "fail")) {
+    return decided("fail", says("fail"), dueOn, ctx.today);
+  }
+  if (reads.length > 0 && reads.every((r) => r.outcome === "pass")) {
+    return decided("pass", says(), dueOn, ctx.today);
+  }
+  return pending(`Due ${dueOn}. ${says()}`, dueOn);
+}
+
+/**
  * The claim's score as of `ctx.today`. Pure: the tape arrives through the context, so a hit, a
  * miss, a day not yet due and a study that flips on its re-run are each specced without a network.
  */
@@ -189,7 +347,7 @@ export function scoreClaim(claim: ConvictionClaim, ctx: ScoreContext): ClaimScor
   const { check } = claim;
   if (check === undefined) {
     return pending(
-      `Due ${dueOn}; no reading recorded yet. Its forward test is scored by the lane that registered it.`,
+      `Due ${dueOn}; no reading recorded yet. It names no check this pass can read.`,
       dueOn,
     );
   }
@@ -200,6 +358,10 @@ export function scoreClaim(claim: ConvictionClaim, ctx: ScoreContext): ClaimScor
       return scoreWithin(check, dueOn, ctx);
     case "closes-reach":
       return scoreReach(check, dueOn, ctx);
+    case "forward-tests":
+      return scoreForward(check, dueOn, ctx);
+    case "puts-expire":
+      return scorePuts(check, dueOn, ctx);
   }
 }
 
@@ -286,12 +448,50 @@ export function scoreAll(
   return claims.map((claim) => ({ statement: claim.statement, score: scoreClaim(claim, ctx) }));
 }
 
+/** Every rule a forward-test check's links break, in words. */
+function forwardProblems(tests: readonly ForwardLink[]): string[] {
+  const problems: string[] = [];
+  if (tests.length === 0) problems.push("check names no forward test");
+  for (const link of tests) {
+    if (!SLUG.test(link.event)) problems.push(`${link.ref}: its event is not an event id`);
+    if (!(link.ref.startsWith("FT-") || PROPOSAL_TOKEN.test(link.ref))) {
+      problems.push(`${link.ref || "a forward test"} is neither an FT id nor a proposal token`);
+    }
+    if (link.onPass === link.onKill) {
+      problems.push(`${link.ref} scores the claim the same whichever way it goes`);
+    }
+  }
+  return problems;
+}
+
+/** Every rule a puts check breaks, in words. */
+function putsProblems(check: Extract<FalsifierCheck, { kind: "puts-expire" }>): string[] {
+  const problems: string[] = [];
+  if (check.puts.length === 0) problems.push("check names no put");
+  for (const put of check.puts) {
+    if (!isCalendarDay(put.expiry))
+      problems.push(`a put's expiry ${put.expiry} is not a calendar day`);
+    if (!(Number.isFinite(put.strike) && put.strike > 0)) {
+      problems.push(`the ${put.expiry} put's strike is not a price`);
+    }
+  }
+  if (new Set(check.puts.map((p) => p.expiry)).size < check.puts.length) {
+    problems.push("check names two puts on one expiry");
+  }
+  if (!(Number.isInteger(check.unnamed) && check.unnamed >= 0)) {
+    problems.push("check's unnamed puts is not a whole number");
+  }
+  return problems;
+}
+
 /** Every rule a claim's check breaks, in words. */
 export function checkProblems(check: FalsifierCheck, scoreBy: string | undefined): string[] {
   const problems: string[] = [];
   if (scoreBy === undefined) problems.push("a check needs a scoreBy day");
   if (check.kind === "rerun") return problems;
+  if (check.kind === "forward-tests") return [...problems, ...forwardProblems(check.tests)];
   if (blank(check.symbol)) problems.push("check names no symbol");
+  if (check.kind === "puts-expire") return [...problems, ...putsProblems(check)];
   const days = check.kind === "closes-within" ? [check.from, check.to] : [check.after, check.by];
   if (!days.every(isCalendarDay)) problems.push("check window is not calendar days");
   else if (days[0] !== undefined && days[1] !== undefined && days[1] <= days[0]) {

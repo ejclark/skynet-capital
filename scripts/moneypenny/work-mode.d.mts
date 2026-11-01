@@ -46,17 +46,29 @@ export const POSITIONS: readonly Position[];
  *  halt, or a position looser than the one above it. */
 export function loadWorkModeConfig(file?: string): WorkModeConfig;
 
-/** Pure: the position every lane should act on, from the tracking issue's labels and comments. */
+/** Pure: the position every lane should act on, from the tracking issue's labels, comments and
+ *  label events. An end date counts only from a trusted comment written for this setting of the
+ *  dial, so a label event must exist for it to count at all. */
 export function resolveWorkMode(opts: {
   labels?: ReadonlyArray<string | { name?: string }>;
-  comments?: ReadonlyArray<{ body?: string; createdAt?: string }>;
+  comments?: ReadonlyArray<{
+    body?: string;
+    createdAt?: string;
+    author_association?: string;
+    user?: { type?: string };
+  }>;
+  events?: ReadonlyArray<{ label?: string; createdAt?: string }>;
   now?: number;
   config: WorkModeConfig;
 }): WorkMode;
 
-/** One `gh issue view` on the tracking issue. Never throws on a read failure (→ conserve + warning);
- *  a broken config still throws from `loadWorkModeConfig`. */
-export function readWorkMode(exec?: Exec, config?: WorkModeConfig, now?: number): WorkMode;
+/** REST reads of the tracking issue, plus its title. Never throws on a read failure (→ conserve +
+ *  warning); a broken config still throws from `loadWorkModeConfig`. */
+export function readWorkMode(
+  exec?: Exec,
+  config?: WorkModeConfig,
+  now?: number,
+): WorkMode & { readonly title?: string };
 
 export type ActorRule = "anyone" | "after-eric-phrase" | "eric-only";
 

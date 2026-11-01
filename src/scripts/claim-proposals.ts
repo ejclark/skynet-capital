@@ -6,13 +6,50 @@
  *   npm run research:proposals -- --out proposals.md   # write the text to a file instead
  *
  * Reads the record with its recorded scores (`npm run research:claims` writes them). It opens no
- * pull request, edits no pair's settings and places no order: the text is for a reviewer, and the
- * hand-off to a lane that turns it into a PR is a later slice. Paper only, SIM.
+ * pull request, edits no pair's settings and places no order: the text is for a reviewer. Paper
+ * only, SIM.
+ *
+ * THE COMMITTED COPY (#5482 criterion 6). `research:claims` calls `writeRefinement` for each
+ * conviction it scores, so the pull request that decides a claim carries what it implies as a diff
+ * under `docs/research/convictions/refinements/` (a subdirectory: the research lint and the
+ * forward-test proposal reader read only the conviction docs beside it). Opening a separate change
+ * PR from a proposal's key is the next step.
  */
-import { writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { renderProposals } from "../playbooks/claim-proposals.js";
+import { refinementText, renderProposals } from "../playbooks/claim-proposals.js";
+import type { Conviction } from "../playbooks/conviction-record.js";
 import { CONVICTIONS } from "../playbooks/conviction-store.js";
+import { CONVICTION_ID, CONVICTION_ID_MAX } from "../subscriptions/subscription-state.js";
+
+export const REFINEMENTS_DIR = join(process.cwd(), "docs/research/convictions/refinements");
+
+/**
+ * Write one conviction's refinement file from the scores attached to it, or remove a stale one when
+ * no decided claim backs a fence any more (only a full pass can move a decided score). Returns the
+ * path and what was (or, with `dry`, would be) done, or undefined when nothing was. An id the
+ * record's own rule refuses names no file.
+ */
+export function writeRefinement(
+  conviction: Conviction,
+  { dir = REFINEMENTS_DIR, dry = false }: { readonly dir?: string; readonly dry?: boolean } = {},
+): { readonly path: string; readonly action: "wrote" | "removed" } | undefined {
+  const { id } = conviction;
+  if (!(CONVICTION_ID.test(id) && id.length <= CONVICTION_ID_MAX)) return undefined;
+  const path = join(dir, `${id}.md`);
+  const text = refinementText(conviction);
+  if (text === undefined) {
+    if (!existsSync(path)) return undefined;
+    if (!dry) rmSync(path);
+    return { path, action: "removed" };
+  }
+  if (!dry) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path, text);
+  }
+  return { path, action: "wrote" };
+}
 
 export function main(argv: readonly string[] = process.argv.slice(2)): number {
   const outAt = argv.indexOf("--out");

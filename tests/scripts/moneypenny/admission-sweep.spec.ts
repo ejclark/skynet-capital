@@ -1,3 +1,4 @@
+import { openPrsByIssue } from "../../../scripts/moneypenny/continuation.mjs";
 import {
   type ClaimCtx,
   claimNext,
@@ -5,6 +6,8 @@ import {
   SWEEP_HELD_SKIPS,
   withoutOpenPr,
 } from "../../../scripts/moneypenny/index.mjs";
+import { readPickupHold } from "../../../scripts/moneypenny/pickup-hold.mjs";
+import { platterClosesByIssue } from "../../../scripts/moneypenny/pr-issues.mjs";
 import {
   issue,
   mode,
@@ -13,6 +16,7 @@ import {
   noOpenPlans,
   noOpenPrs,
 } from "../../support/admission-fixtures.js";
+import { heldPlatter } from "../../support/platter-fixtures.js";
 
 // The retry sweep's specs (claimNext / peekNext). Every `deps` injects the "reads nothing live"
 // defaults from tests/support/admission-fixtures.ts — see the comments there for why.
@@ -262,6 +266,19 @@ describe("the sweep skips an issue an open PR already names", () => {
     expect(withoutOpenPr(pool, new Map([[2, 9]])).map((i) => i.number)).toEqual([1]);
     expect(withoutOpenPr(pool)).toEqual(pool);
   });
+
+  // #6282: since #6144 a held platter's body carries a `Part of #n` bullet per boarded item with
+  // work left; read as "a build of #n", it parked #4535 for the platter's whole hold.
+  it("a held platter's `Part of #n` bullet leaves #n in the pool; its `Closes #n` does not", () => {
+    const platter = {
+      number: 950,
+      title: "chore(platter): 2026-10-27",
+      body: "## Summary\n- Closes #4246 — boarded as item 1.\n- Part of #4535 — boarded as item 2.",
+      head: { ref: "platter/2026-10-27" },
+    };
+    const pool = [at(4246, 1), at(4535, 2)];
+    expect(withoutOpenPr(pool, openPrsByIssue([platter])).map((i) => i.number)).toEqual([4535]);
+  });
 });
 
 // #5707: #4808's block read `Next pickup: none buildable now`, and the sweep claimed it twice into
@@ -316,5 +333,71 @@ describe("the sweep steps past a plan whose state block names nothing to build",
   it("peeks the plan once its block names a slice again", () => {
     const { deps: d } = deps([at(4808, 1)], []);
     expect(peekNext(d)?.number).toBe(4808);
+  });
+});
+
+// #6530: a boarded slice's sub-issue stays open until the platter merges. Continuation read it as
+// the next slice and the hold read it as open work, so the push tick peeked a plan whose block says
+// `none — waiting on #950`. Both real deciders run here; only GitHub's reads are stubbed.
+describe("the sweep does not pick a plan whose only open slice a held platter closes", () => {
+  const P = 70001;
+  const S = 70003;
+  const NOW = Date.parse("2026-11-01T12:00:00Z");
+  const comments = [
+    {
+      id: 1,
+      body: "## State block\n\n**Next pickup:** none — waiting on #950.",
+      created_at: "2026-11-01T08:00:00Z",
+    },
+  ];
+  const subIssues = [{ number: S, state: "open", title: "slice 2: the protected part" }];
+  const peek = (platter: ReturnType<typeof heldPlatter>) => {
+    const plan = { ...issue(P, "scripts/x.mjs", ["ready", "plan"]), title: "a plan" };
+    const rows: Record<string, unknown> = {
+      [`issues/${P}/comments`]: comments,
+      [`issues/${P}/sub_issues`]: subIssues,
+      "pulls?state=open": [platter],
+    };
+    const holdReads = {
+      readAll: (path: string) => (rows[path] ?? []) as unknown[],
+      read: () => [],
+      log: () => undefined,
+    };
+    return peekNext({
+      readMode: () => ({ ...mode("normal"), until: null, reason: "set to normal" }),
+      readReady: () => [plan],
+      readInFlight: () => [],
+      readPrIssues: () => openPrsByIssue([platter]),
+      readPlans: noOpenPlans,
+      readHold: (i) => readPickupHold({ ...i, number: i.number ?? -1 }, holdReads),
+      continuation: () => ({
+        continuations: {
+          candidates: [
+            {
+              plan,
+              comments,
+              subIssues,
+              blockedBy: { [S]: [] },
+              openPlanPr: openPrsByIssue([platter]).get(P),
+              boardedOn: platterClosesByIssue([platter]),
+              mergedMs: NOW - 3 * 36e5,
+              runs: {},
+            },
+          ],
+          caps: { continuationsPerDay: 3 },
+        },
+        inFlight: [],
+        mode: mode("normal"),
+        now: NOW,
+      }),
+    });
+  };
+
+  it("peeks nothing for the house `Closes #S` + `Part of #P` platter", () => {
+    expect(peek(heldPlatter({ closes: [S], partOf: [P] }))).toBeNull();
+  });
+
+  it("still peeks the plan when its platter is only `Part of #P` (#6327)", () => {
+    expect(peek(heldPlatter({ partOf: [P] }))?.number).toBe(P);
   });
 });

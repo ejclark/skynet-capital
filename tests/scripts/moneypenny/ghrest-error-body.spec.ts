@@ -26,6 +26,29 @@ const failingRun = (err: Error) => () => {
   throw err;
 };
 
+describe("ghRest reads an empty GH_TOKEN as unset (#6470)", () => {
+  it("falls through to GITHUB_TOKEN, as the scans' no-token check does", () => {
+    const before = { gh: process.env.GH_TOKEN, github: process.env.GITHUB_TOKEN };
+    process.env.GH_TOKEN = "";
+    process.env.GITHUB_TOKEN = "from-github-token";
+    const seen: string[][] = [];
+    try {
+      ghRest("issues/4619", {
+        run: (_cmd: string, args: string[]) => {
+          seen.push(args);
+          return "{}";
+        },
+      });
+    } finally {
+      if (before.gh === undefined) delete process.env.GH_TOKEN;
+      else process.env.GH_TOKEN = before.gh;
+      if (before.github === undefined) delete process.env.GITHUB_TOKEN;
+      else process.env.GITHUB_TOKEN = before.github;
+    }
+    expect(seen[0]).toContain("Authorization: Bearer from-github-token");
+  });
+});
+
 describe("ghRest keeps GitHub's reason when curl fails (#6224)", () => {
   it("asks curl for the body on failure, not bare --fail", () => {
     const seen: string[][] = [];

@@ -2,9 +2,10 @@
 // Digest scan — the eye behind the secretary's activity digest (.claude/skills/secretary).
 //
 // Answers one question deterministically: is a digest DUE — enough autonomous change has landed
-// on main since the last digest (threshold), or too long has passed (heartbeat)? The volume math
-// lives here so the daily digest Routine stays a thin clock (same doctrine as event-scan.mjs:
-// the scan is the contract, the Routine is just the schedule).
+// on main since the last digest (threshold), too long has passed (heartbeat), or main has gone
+// quiet while work sits waiting (quiet-with-work)? The volume math lives here so the daily digest
+// Routine stays a thin clock (same doctrine as event-scan.mjs: the scan is the contract, the
+// Routine is just the schedule).
 //
 //   node scripts/digest-scan.mjs               # human report
 //   node scripts/digest-scan.mjs --due         # JSON {due, reason, ...} (due:false = no-op)
@@ -14,6 +15,18 @@
 //   node scripts/digest-scan.mjs --stuck       # the green-but-not-merging PR line (stuck-pr-scan.mjs)
 //   node scripts/digest-scan.mjs --member-filings  # the unseen-member-filings line (feedback-scan.mjs)
 //   ... --today=YYYY-MM-DD                     # deterministic date override for tests
+//   ... --now=<ISO instant>                    # deterministic clock for the quiet rule (tests)
+//
+// QUIET WITH WORK WAITING (#6470). Every lane here is woken by a repository event, so when pushes,
+// issue events and freed build slots all stop, the lanes stop with them and nothing says so: main
+// sat 75.8h from 2026-10-27T13:37Z with research due, the lane workflow ran zero times of any kind
+// for 75.2h of it, and the two rules above both read "nothing to report" (2 commits, 3 days). The
+// daily Routine's push notification is the one armed channel that reaches his phone without a
+// merge, so this is where the silence becomes visible: main quiet `QUIET_HOURS` with something the
+// sweep would start (a `ready` issue the pull rule admits) or research the event scan says is due.
+// Quiet with NOTHING waiting is not a reason — a quiet weekend is not a failure. The waiting read
+// is made only once the quiet threshold is crossed, so an ordinary day costs no GitHub call, and a
+// read that fails is said as unknown, never counted as due or as nothing.
 //
 // NEEDS YOU (#3818 criterion 12, #4293): the list is `plan().needsYou` from
 // scripts/moneypenny/assignments.mjs — the same call the assignment dry run makes, never a second
@@ -30,6 +43,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { pullable } from "./moneypenny/labels.mjs";
 import { stuckLine } from "./stuck-pr-decide.mjs";
 
 const ROOT = process.cwd();
@@ -39,6 +53,12 @@ const DIGEST_DIR = join(ROOT, "docs", "digests");
 // the heartbeat owes Eric a line. Constants, not config — tune here, on the record.
 const COMMIT_THRESHOLD = 5;
 const HEARTBEAT_DAYS = 7;
+// The third edge: main quiet this long WITH work waiting. A day, not a night: the 14–18h overnight
+// gaps on record (10-15 to 11-01, 7 of 10 gaps over 12h) are the ordinary shape of a repo whose
+// lanes stop when he does, and a line on each would be the ten-thousand-cuts failure; 24h is a
+// full day of lanes idle beside admissible work, which no reading of "waiting for him" explains.
+// It would have fired on 2026-10-29's 12:00 tick, 46h into the 75.8h gap, instead of never.
+export const QUIET_HOURS = 24;
 
 const REQUIRED_SECTIONS = ["## Needs you", "## Headlines", "## Noise absorbed"];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -81,6 +101,101 @@ function commitsSince(date) {
   const truncated =
     shallow && count === Number.parseInt(git(["rev-list", "--count", "origin/main"]), 10);
   return { count, truncated };
+}
+
+/** Hours since the newest commit on origin/main — the quiet clock. Missing ref throws, loud. */
+function quietHoursOn(nowMs) {
+  const newest = Date.parse(git(["log", "-1", "--format=%cI", "origin/main"]));
+  return Math.round(((nowMs - newest) / 3_600_000) * 10) / 10;
+}
+
+/**
+ * What counts as work waiting, pure: the open `ready` issues the pull rule would admit — the same
+ * `pullable` the sweep and `/work-issues` read, so a parked (`PARKING_LABELS`) or started
+ * (`in-progress`) issue never counts — and how many events `event-scan --due` lists. A `ready`
+ * issue an open PR already names still counts here (the sweep's open-PR screen is a second REST
+ * read this does not make); the line he gets names the issues, so a false count is one glance.
+ */
+export function waitingWork({ readyIssues = [], researchDue = 0 }) {
+  const ready = readyIssues
+    .filter((i) => pullable(i))
+    .map(({ number, title }) => ({ number, title }));
+  return { ready, researchDue };
+}
+
+/**
+ * The third due reason, pure: `quiet-with-work` or null. A half that could not be read is `null`
+ * inside `waiting` and counts as nothing — never as due; `waiting: null` (nothing read) is never due.
+ */
+export function quietReason(quietHours, waiting) {
+  if (quietHours < QUIET_HOURS || !waiting) return null;
+  const ready = waiting.ready?.length ?? 0;
+  const research = waiting.researchDue ?? 0;
+  return ready > 0 || research > 0 ? "quiet-with-work" : null;
+}
+
+/**
+ * The open `ready` issues, as the sweep reads them: the same `gh api` call as admission.mjs's
+ * `readOpenIssues("ready")`, written here rather than imported because admission → rank →
+ * digest-scan is a cycle this file's top-level `await main()` would deadlock on (node exit 13).
+ * REST, not `gh issue list` — that is GraphQL, which a Claude Code cloud session is refused with a
+ * 403 (circuit-breaker.mjs:99, 2026-10-18), and the Routine that runs `--due` is one. One page of
+ * 100 is the sweep's own ceiling; a full page is said as unknown rather than read as the whole list.
+ */
+function readReadyIssues() {
+  const rows = JSON.parse(
+    execFileSync(
+      "gh",
+      [
+        "api",
+        "repos/{owner}/{repo}/issues?state=open&labels=ready&sort=created&direction=asc&per_page=100",
+      ],
+      { cwd: ROOT, encoding: "utf8" },
+    ) || "[]",
+  );
+  if (!Array.isArray(rows)) throw new Error("the open `ready` read did not return a list");
+  if (rows.length >= 100) throw new Error("100+ open `ready` issues — the list may be truncated");
+  return rows.filter((r) => !r.pull_request);
+}
+
+/**
+ * The waiting read, made only past the quiet threshold: the ready list above and one local event
+ * scan for `today`. Each half is soft on failure on its own, by design: this runs inside a
+ * claude.ai Routine whose `--due` answer is the whole contract, and a GitHub blip must cost one
+ * "unknown" half — printed on stderr, carried in the JSON — not a crashed clock, a silent "not
+ * due", or the other half's good read. Mirrors `learningLine`'s `unlearnedRuns: null`.
+ */
+function readWaitingWork(today) {
+  const unknown = [];
+  const soft = (what, read) => {
+    try {
+      return read();
+    } catch (err) {
+      const why = String(err?.stderr || err?.message || err)
+        .trim()
+        .slice(0, 200);
+      console.error(`· ${what} unknown — ${why}`);
+      unknown.push(`${what}: ${why}`);
+      return null;
+    }
+  };
+  const readyIssues = soft("ready issues", readReadyIssues);
+  const due = soft("research due", () =>
+    JSON.parse(
+      execFileSync("node", [join(ROOT, "scripts/event-scan.mjs"), "--due", `--today=${today}`], {
+        cwd: ROOT,
+        encoding: "utf8",
+      }) || "[]",
+    ),
+  );
+  const counted = waitingWork({ readyIssues: readyIssues ?? [], researchDue: due?.length ?? 0 });
+  return {
+    waiting: {
+      ready: readyIssues ? counted.ready : null,
+      researchDue: due ? counted.researchDue : null,
+    },
+    unknown: unknown.length ? unknown.join(" · ") : null,
+  };
 }
 
 /** The digest's "Needs you" list from `plan()` output: one line per item Eric holds. Pure. */
@@ -140,7 +255,7 @@ export function latestDigestDate() {
   return latest ? latest.slice(0, 10) : null;
 }
 
-function status(today) {
+function status(today, nowMs) {
   const [latest] = digestFiles();
   if (!latest) {
     return {
@@ -150,13 +265,25 @@ function status(today) {
       commitsSinceLast: null,
       commitsTruncated: false,
       daysSinceLast: null,
+      quietHours: null,
+      waiting: null,
+      waitingUnknown: null,
     };
   }
   const lastDate = latest.slice(0, 10);
   const { count: commits, truncated } = commitsSince(lastDate);
   const days = daysBetween(lastDate, today);
+  // The quiet clock is read always (git, free); the waiting read only past the threshold, and even
+  // when another reason already fires — the digest then carries the quiet line as well.
+  const quietHours = quietHoursOn(nowMs);
+  const { waiting, unknown } =
+    quietHours >= QUIET_HOURS ? readWaitingWork(today) : { waiting: null, unknown: null };
   const reason =
-    commits >= COMMIT_THRESHOLD ? "threshold" : days >= HEARTBEAT_DAYS ? "heartbeat" : null;
+    commits >= COMMIT_THRESHOLD
+      ? "threshold"
+      : days >= HEARTBEAT_DAYS
+        ? "heartbeat"
+        : quietReason(quietHours, waiting);
   return {
     due: reason !== null,
     reason,
@@ -164,7 +291,24 @@ function status(today) {
     commitsSinceLast: commits,
     commitsTruncated: truncated,
     daysSinceLast: days,
+    quietHours,
+    waiting,
+    waitingUnknown: unknown,
   };
+}
+
+/** The quiet clause of the human report: what the rule saw, in the words the digest line uses. */
+function quietLine(s) {
+  if (s.quietHours === null) return "";
+  const base = ` · main quiet ${s.quietHours}h (quiet rule ${QUIET_HOURS}h with work waiting)`;
+  if (s.quietHours < QUIET_HOURS) return base;
+  if (!s.waiting) return `${base} — work waiting unknown: ${s.waitingUnknown}`;
+  const ready = s.waiting.ready
+    ? s.waiting.ready.map((i) => `#${i.number}`).join(" ") || "none"
+    : "unknown";
+  const research = s.waiting.researchDue ?? "unknown";
+  const why = s.waitingUnknown ? ` (${s.waitingUnknown})` : "";
+  return `${base}: ready to start ${ready}, research due ${research}${why}`;
 }
 
 function validate() {
@@ -188,7 +332,9 @@ function validate() {
 }
 
 async function main() {
-  const today = arg("today") ?? new Date().toISOString().slice(0, 10);
+  const nowMs = arg("now") ? Date.parse(arg("now")) : Date.now();
+  if (!Number.isFinite(nowMs)) throw new Error("digest-scan: --now must be an ISO instant.");
+  const today = arg("today") ?? new Date(nowMs).toISOString().slice(0, 10);
   if (!DATE_RE.test(today)) throw new Error("digest-scan: --today must be YYYY-MM-DD.");
   if (!existsSync(DIGEST_DIR)) {
     // stderr under --due, whose stdout is the JSON the Routine parses.
@@ -232,7 +378,7 @@ async function main() {
     return;
   }
 
-  const s = status(today);
+  const s = status(today, nowMs);
   if (has("due")) {
     process.stdout.write(`${JSON.stringify(s, null, 2)}\n`);
     return;
@@ -243,7 +389,7 @@ async function main() {
     `${mark} last digest: ${s.lastDigest ?? "never"} · ${s.commitsTruncated ? "≥" : ""}` +
       `${s.commitsSinceLast ?? "?"} commit(s) since ` +
       `(threshold ${COMMIT_THRESHOLD}) · ${s.daysSinceLast ?? "?"}d elapsed (heartbeat ${HEARTBEAT_DAYS}d)` +
-      `${s.due ? ` — DUE (${s.reason}); run /secretary` : ""}`,
+      `${quietLine(s)}${s.due ? ` — DUE (${s.reason}); run /secretary` : ""}`,
   );
 }
 

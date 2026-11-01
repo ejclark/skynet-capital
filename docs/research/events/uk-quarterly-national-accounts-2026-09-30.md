@@ -460,3 +460,28 @@ this book's macro mode would catch it, and none was run.
 
 This document goes quiet on the `event-passed-unscored` door; one remains open —
 `forward-test-due` on **FT-uk-quarterly-national-accounts-2026-09-30-3**, no earlier than **2026-10-29**.
+
+**Forward test scored 2026-10-30 (`forward-test-due`, one row, `## Outcome` above not re-opened).**
+**FT-uk-quarterly-national-accounts-2026-09-30-3 — PASS.** Source: the OBR's *Economic and fiscal outlook – October
+2026*, first published **2026-10-28 13:29Z**, read on its gov.uk copy (content API + PDF, HTTP 200; `obr.uk` 403'd this
+lane, so this is the publisher's own text via the mirror, not a relay). The gov.uk record's `public_updated_at` is
+2026-10-30, so the wording quoted here is as read that day.
+
+- **(a) Outside the forecast.** *"The pre-measures economy forecast was completed on 8 September"* and the final
+  pre-measures fiscal forecast *"on 18 September"* — both before the 2026-09-30 release. The economy forecast sat on
+  market data averaged to 19 August, a longer gap than the MoU provides, at the Treasury's request.
+- **(b) In the document anyway.** **Box 2.2, "Recent ONS revisions to historical economic data"**, opens *"In the period
+  since we closed our forecast to new data, the ONS has released revised historical National Accounts"* and covers the
+  *"Quarterly National Accounts published on 30 September"*: 2025 growth revised **-0.1pp**, H1 2026 **+0.1pp**, 2026Q2
+  nominal GDP **+0.1%**; conclusion *"it is unlikely that incorporating the Blue Book 2026 revisions would have had a
+  material impact on our economy or fiscal forecasts."* This is the 2024 third outcome again (Box 2.2 *"Blue Book 2024
+  revisions"*, *"broadly unchanged"*), same box number, same logic.
+- **Receipt for the discrimination rule.** A scorer reading the document alone would see the 30 September accounts named
+  and might call it incorporated; the timetable says otherwise, which is what FT-3 was written to separate. The sibling
+  `FT-uk-public-sector-finances-2026-09-22-4` turns on the same cut-off and should read the same two passages; it is that
+  lane's row to score.
+- **Also in Box 2.2, unrelated to this release:** the ONS's component-approach hours revisions were published after the
+  forecast closed and are not in it. Not scored, no market claim.
+
+No kill switch fired; no stance change; no new proposals (nothing dated inside the horizon surfaced). All three
+registered tests on this event are now scored: **FT-1 PASS, FT-2 PASS, FT-3 PASS**, so the `forward-test-due` door closes.

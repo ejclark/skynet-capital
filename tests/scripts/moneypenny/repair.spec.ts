@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { limitRejected, readFailures } from "../../../scripts/moneypenny/repair.mjs";
 import {
   annotationLines,
   logArgVariants,
@@ -116,6 +117,47 @@ describe("moneypenny repair — routing a failed run", () => {
     expect(intent?.body).not.toContain("rejected the workflow file");
   });
 
+  // #6356: Pipeline run 41103012157 failed at `release · deploy bots`, but the triage's read of its
+  // jobs showed no failed one, and the lane filed "GitHub rejected the workflow file" for a run
+  // named `Pipeline` with five jobs — so the deploy-bots recurrence never reached its open capsule.
+  const parsedRunReadEarly = {
+    repository: { default_branch: "main" },
+    workflow_run: {
+      id: 41103012157,
+      name: "Pipeline",
+      path: ".github/workflows/pipeline.yml",
+      conclusion: "failure",
+      event: "push",
+      head_branch: "main",
+      html_url: "https://github.com/ejclark/skynet-capital/actions/runs/41103012157",
+    },
+    jobs: [
+      { id: 1, name: "release · deploy", conclusion: "success", runner_name: "r", steps: [] },
+      { id: 2, name: "release · deploy bots", status: "in_progress", runner_name: "r", steps: [] },
+      { id: 3, name: "verify", conclusion: "skipped", runner_name: "", steps: [] },
+    ],
+    deps: { openIssues: [] },
+  };
+
+  it("never calls a run that parsed a rejected workflow file", () => {
+    const [intent, ...rest] = dryRunPayload(parsedRunReadEarly);
+
+    expect(rest).toEqual([]);
+    expect(intent?.title).toBe("[ci] Pipeline — (the failed job could not be read)");
+    expect(intent?.body).not.toContain("rejected the workflow file");
+    expect(intent?.body).toContain("`release · deploy bots` (in_progress)");
+    expect(intent?.body).toContain("gh run view 41103012157 --json jobs");
+  });
+
+  it("still calls zero jobs on a path-named run a rejected file, even with `path` set", () => {
+    const payload = structuredClone(parsedRunReadEarly);
+    payload.workflow_run.name = ".github/workflows/pipeline.yml";
+    payload.jobs = [];
+    const [intent] = dryRunPayload(payload);
+
+    expect(intent?.body).toContain("zero jobs were created");
+  });
+
   it("names the step a lost runner left unfinished — never 'unknown'", () => {
     // #6033: run 40304642365's research leg died 50 minutes in with claude-code-action frozen at
     // `in_progress`. No step failed, so the capsule read "Failing step: unknown" over an empty
@@ -196,6 +238,77 @@ describe("moneypenny repair — routing a failed run", () => {
     rmSync(dir, { recursive: true, force: true });
 
     expect(JSON.parse(out)).toEqual([]);
+  });
+});
+
+// Study 2026-11-01 ("limit rejections are not faults"): a lane the usage limit refused dies as a
+// red run, and this lane read every such run as a fault — #6098 took 16 recurrence comments in 15
+// hours from one session limit, and #6336 was filed for a leg that ran 394 ms at zero cost. A
+// repair session cannot fix a refusal. The real log shapes, numbers only: the action's own result
+// print (is_error true, zero cost, one turn), the output file's `rate_limit_event` with status
+// rejected, and the envelope's `api_error_status` 429.
+describe("moneypenny repair — a usage-limit rejection is not a fault", () => {
+  const rejectedResult =
+    '{\n  "type": "result",\n  "subtype": "success",\n  "is_error": true,\n  "duration_ms": 394,\n  "num_turns": 1,\n  "total_cost_usd": 0,\n  "permission_denials_count": 0\n}\n';
+  const rejectedEvent =
+    '{\n  "type": "rate_limit_event",\n  "rate_limit_info": {\n    "status": "rejected",\n    "rateLimitType": "five_hour"\n  }\n}\n';
+  const realFailure =
+    '{\n  "type": "result",\n  "subtype": "success",\n  "is_error": true,\n  "duration_ms": 106446,\n  "num_turns": 25,\n  "total_cost_usd": 0.9303738000000001\n}\n{\n  "type": "rate_limit_event",\n  "rate_limit_info": {\n    "status": "allowed_warning"\n  }\n}\n';
+
+  it("reads each of the three shapes, and not a session that ran and then failed", () => {
+    expect(limitRejected(rejectedResult)).toBe(true);
+    expect(limitRejected(rejectedEvent)).toBe(true);
+    expect(limitRejected('"api_error_status": 429,')).toBe(true);
+    expect(limitRejected(realFailure)).toBe(false);
+    expect(limitRejected("")).toBe(false);
+    expect(limitRejected(undefined)).toBe(false);
+    // The lane's own script text mentions the field names; prose is not an envelope.
+    expect(limitRejected('COST=$(jq -r "$F | .total_cost_usd"); echo is_error=$ERR')).toBe(false);
+    // A transient 429 the CLI retried leaves this line too; alone it says nothing about the death.
+    expect(limitRejected('"error": "rate_limit",\n"is_api_error_message": true')).toBe(false);
+  });
+
+  it("a session that worked for 25 turns and then died on the limit is still a refusal", () => {
+    // #6098's longest legs: 25 turns, $0.93, then the five-hour window closed on them.
+    const spentThenRejected = `${realFailure.replace("allowed_warning", "rejected")}`;
+    expect(limitRejected(spentThenRejected)).toBe(true);
+    const payload = failedRun(
+      ["research due events (x)"],
+      ["[ci] Moneypenny Events (event-research automation) — research due events"],
+    );
+    payload.failures[0] = { ...payload.failures[0], logTail: spentThenRejected } as never;
+    expect(dryRunPayload(payload).map((i) => i.type)).toEqual(["skip"]);
+  });
+
+  it("skips the rejected leg: no capsule, no recurrence comment, no repair session", () => {
+    const intents = dryRun("workflow-run-limit-rejected.json");
+    expect(intents.map((i) => i.type)).toEqual(["skip"]);
+    expect(intents[0]?.reason).toContain("usage limit");
+    expect(intents[0]?.issue).toBe(6098);
+  });
+
+  it("opens nothing when no capsule is open either — a refusal never files one", () => {
+    const fixture = JSON.parse(
+      readFileSync("tests/fixtures/events/workflow-run-limit-rejected.json", "utf8"),
+    );
+    const intents = dryRunPayload({ ...fixture, deps: { openIssues: [] } });
+    expect(intents.map((i) => i.type)).toEqual(["skip"]);
+    expect(intents[0]?.issue).toBeUndefined();
+  });
+
+  it("still files a leg that spent real turns and money, whatever the limit warning says", () => {
+    const payload = failedRun(["research due events (x)"]);
+    payload.failures[0] = { ...payload.failures[0], logTail: realFailure } as never;
+    expect(dryRunPayload(payload).map((i) => i.type)).toEqual(["open-issue"]);
+  });
+
+  it("files the real leg of a matrix run whose other leg was refused, and only that one", () => {
+    const payload = failedRun(["research due events (a)", "research due events (b)"]);
+    payload.failures[0] = { ...payload.failures[0], logTail: rejectedResult } as never;
+    payload.failures[1] = { ...payload.failures[1], logTail: realFailure } as never;
+    const intents = dryRunPayload(payload);
+    expect(intents.map((i) => i.type)).toEqual(["open-issue"]);
+    expect(intents[0]?.body).not.toContain("research due events (a)");
   });
 });
 
@@ -467,5 +580,126 @@ describe("moneypenny repair — a run already fixed while it was in flight", () 
     const [intent] = dryRunPayload(payload);
     expect(intent?.issue).toBe(4374);
     expect(intent?.body).toContain("Failed again");
+  });
+});
+
+// #6356, the live half: the jobs read that came back empty was GitHub lagging (the same endpoint
+// answered 502 minutes later). A re-read after a wait finds the real failed job, which then
+// routes as a recurrence onto its open capsule instead of a new mislabelled one.
+describe("moneypenny repair — re-reading a run's jobs before filing a guess", () => {
+  const run = { id: 7, name: "Pipeline", conclusion: "failure" };
+  const failed = [
+    {
+      id: 2,
+      name: "release · deploy bots",
+      conclusion: "failure",
+      runner_name: "r",
+      steps: [{ name: "Smoke test the bots release", conclusion: "failure" }],
+    },
+  ];
+  const reads = (...answers: (object[] | Error)[]) => {
+    let i = 0;
+    return () => {
+      const answer = answers[Math.min(i++, answers.length - 1)] ?? [];
+      if (answer instanceof Error) throw answer;
+      return answer;
+    };
+  };
+
+  it("waits and re-reads until the failed job shows up", () => {
+    const waited: number[] = [];
+    const failures = readFailures(run, {
+      fetchJobs: reads([], new Error("HTTP 502"), failed),
+      logOf: () => "log",
+      sleep: (ms: number) => waited.push(ms),
+      waits: [1, 2, 3],
+    });
+
+    expect(failures).toEqual([
+      { job: "release · deploy bots", step: "Smoke test the bots release", logTail: "log" },
+    ]);
+    expect(waited).toEqual([1, 2]);
+  });
+
+  it("files the honest unread shape once the waits run out", () => {
+    const failures = readFailures(run, {
+      fetchJobs: reads([]),
+      logOf: () => "",
+      sleep: () => undefined,
+      waits: [1, 2],
+    });
+
+    expect(failures[0]?.job).toBe("(the failed job could not be read)");
+  });
+
+  // #6406: run 41121443220 concluded failure while every read for a minute still had `release ·
+  // deploy bots` at `in_progress`, so the lane filed the unread shape beside #5955's open capsule.
+  const stillRunning = [
+    { id: 2, name: "release · deploy bots", status: "in_progress", conclusion: null, steps: [] },
+    { id: 3, name: "verify", status: "completed", conclusion: "skipped", steps: [] },
+  ];
+
+  it("keeps re-reading past the first minute while a job still reads as running", () => {
+    const waited: number[] = [];
+    const failures = readFailures(run, {
+      fetchJobs: reads(stillRunning, stillRunning, stillRunning, failed),
+      logOf: () => "log",
+      sleep: (ms: number) => waited.push(ms),
+      waits: [1, 2],
+      staleWaits: [60, 60],
+    });
+
+    expect(failures[0]?.job).toBe("release · deploy bots");
+    expect(failures[0]?.step).toBe("Smoke test the bots release");
+    expect(waited).toEqual([1, 2, 60]);
+  });
+
+  it("files the unread shape only once the extended waits also run out", () => {
+    const waited: number[] = [];
+    const failures = readFailures(run, {
+      fetchJobs: reads(stillRunning),
+      logOf: () => "",
+      sleep: (ms: number) => waited.push(ms),
+      waits: [1],
+      staleWaits: [60, 60],
+    });
+
+    expect(failures[0]?.job).toBe("(the failed job could not be read)");
+    expect(waited).toEqual([1, 60, 60]);
+  });
+
+  it("does not extend the waits for a read with no job still running", () => {
+    const waited: number[] = [];
+    readFailures(run, {
+      fetchJobs: reads([{ ...stillRunning[1] }]),
+      logOf: () => "",
+      sleep: (ms: number) => waited.push(ms),
+      waits: [1, 2],
+      staleWaits: [60],
+    });
+
+    expect(waited).toEqual([1, 2]);
+  });
+
+  it("goes red rather than guessing when the last read still throws", () => {
+    expect(() =>
+      readFailures(run, {
+        fetchJobs: reads(new Error("HTTP 502")),
+        logOf: () => "",
+        sleep: () => undefined,
+        waits: [1],
+      }),
+    ).toThrow("HTTP 502");
+  });
+
+  it("does not wait at all on a rejected file — zero jobs on a path-named run is final", () => {
+    const waited: number[] = [];
+    const failures = readFailures(
+      { ...run, name: ".github/workflows/pipeline.yml" },
+      { fetchJobs: reads([]), logOf: () => "", sleep: (ms: number) => waited.push(ms) },
+    );
+
+    expect(failures[0]?.job).toBe("(the workflow never started)");
+    expect(waited).toEqual([]);
   });
 });

@@ -280,3 +280,102 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":18.18,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0,"blocked":[{"url":"https://www.fxstreet.com/analysis/ecb-october-pause-mrr-in-focus-202610201244","status":"HTTP 403","at":"2026-10-26"},{"url":"https://www.benzinga.com/markets/treasuries/26/10/62579887/fed-ecb-expected-to-hold-rates-next-week-but-december-hikes-still-in-play","status":"HTTP 403","at":"2026-10-26"},{"url":"https://rateprobability.com/ecb","status":"HTTP 403","at":"2026-10-26"},{"url":"https://www.fxstreet.com/news/european-central-bank-december-hike-signalled-as-markets-overprice-path-nomura-202610221628","status":"HTTP 403","at":"2026-10-26"}]} -->
+
+## Outcome
+
+*Close-out, **2026-10-30** (D+1, inside `closeOutWithinDays: 6`). Every figure is either **re-run
+instrument data** (caches busted first: `rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`, then 5-minute bars re-pulled for NVDA/AVGO/MRVL/CRWV/AAPL/AMZN
+and QQQ) or an **ECB primary fetched today** (decisions release `ecb.mp261029~9a493adf17`, press
+conference statement and Q&A `ecb.is261029~5c5ffe99e5`, both HTTP 200) — never the 10-26 row, and
+never memory of the tape. Date stays `estimate`: the confirmed-prefix taxonomy still has no slot
+for a non-Fed central bank, so the label belongs to whoever owns that file, not to this lane.*
+
+**Verdict: the hold call was right, the stand-aside was right, and the one thing nobody had in the
+stance — Lagarde's early exit — landed before the press conference and moved none of our names.**
+Both registered tests pass. Nothing here licenses a position: `symbols: []`, no rates-keyed playbook.
+
+### 1. What the ECB did (primary)
+
+- **Rates unchanged**: deposit facility **2.50%**, main refinancing **2.65%**, marginal lending
+  **2.90%**. The release leads with *"The Governing Council today decided to keep the three key ECB
+  interest rates unchanged"* and ends *"We are not pre-committing to a particular rate path."*
+- **Unanimous hold after a live hike debate.** From the Q&A: *"the Governing Council debated
+  whether a hike was appropriate … the Governing Council unanimously decided that we were well
+  positioned enough at this stage to hold."* The stated reason is the same one the 10-26 row leaned
+  on: average 10-year sovereign yields *"have risen by around 35 basis points since our last cut-off
+  for the September projections"*, and the statement says financing conditions *"have tightened
+  since our last meeting."* So the structural skip case held, but the room was closer to a hike than
+  the Reuters poll's 70-of-73 hold implied.
+- **Press conference starts 14:45 CET** (stated on the release) = **09:45 ET** (EU on CET since
+  10-25, US still on EDT). Leg 6's clock conversion is confirmed; the 14:15 CET decision slot is not
+  printed on either page I read and stays a convention.
+- **Not in the stance: Lagarde announced she will step down after the February 2027 Governing
+  Council meeting** (Q&A: *"My decision is to step down … after the February monetary policy
+  Governing Council"*; the effective date is reported as 7 February 2027 by Euronews and Reuters
+  copy). A Euronews page carrying a 14:24 CET timestamp already reports it, i.e. before the
+  14:45 CET presser began (~09:24 ET). Her successor and the February date are past the 60-day
+  horizon (`assessment-cadence.json`), so no proposal is filed; they are named here instead.
+- **Markets, as reported (Reuters copy, no timestamps)**: euro at its lowest since May 2025, about
+  **$1.113** (−0.2%); two-year euro yields down sharply; STOXX 600 about **+0.95%**. One data page
+  puts December hike odds near **82%**, which I could not confirm against a second source — recorded,
+  not relied on. The pricing kill (a per-meeting October probability above ~40%) never fired.
+
+### 2. FT-ecb-decision-2026-10-29-1 — PASS
+
+Predicted: all three key rates unchanged on 10-29. Observed: unchanged at **2.50 / 2.65 / 2.90**
+(release above). The void precondition (09-10 delivering the hike) held — the deposit rate was
+2.50% going in. One observation about one meeting; not a claim about euro policy.
+
+### 3. FT-ecb-decision-2026-10-29-2 — PASS (no ECB attribution), with the raw crossings shown
+
+Window: open of the 09:45 ET bar to the close of the 10:25 bar (nine 5-minute bars, the ECB press
+conference's first 45 minutes). Beta and residual σ fitted on the **same window** across the prior
+59 sessions of the 60-session 5-minute cap (2026-08-07 → 10-28), vs QQQ — the beta-adjusted form the
+09-10 close-out said this test should have used.
+
+| Name | Net window move | QQQ same window | Beta | Residual | In σ | Max excursion from window open | Sessions with excursion >2% (59) |
+|---|---|---|---|---|---|---|---|
+| NVDA | **−0.20%** | +0.08% | 1.30 | −0.25% | **−0.42σ** | 0.93% | 2 |
+| AVGO | **−0.31%** | +0.08% | 1.62 | −0.38% | **−0.65σ** | 1.22% | 4 |
+| MRVL | **−1.34%** | +0.08% | 3.03 | −1.42% | **−1.13σ** | **3.00%** (low) | 20 |
+| CRWV | **+1.77%** | +0.08% | 3.15 | +1.78% | **+1.09σ** | **2.76%** (high) | 33 |
+| AAPL | **+0.19%** | +0.08% | 0.46 | +0.02% | **+0.03σ** | 0.44% | 1 |
+| AMZN | **+0.86%** | +0.08% | 0.90 | +0.82% | **+1.49σ** | 0.90% | 0 |
+
+- **No name's net window move reached 2%** (largest: CRWV +1.77%). Two names crossed 2% *at some
+  point* inside the window — MRVL (low −3.00%, the 09:50 bar) and CRWV (high +2.76%, the 10:15 bar).
+- **Neither is attributable to the ECB.** Both residuals sit inside ±1.2σ of their own noise, and
+  that excursion is ordinary for them in this exact window (MRVL 20 of 59 sessions, CRWV 33 of 59).
+  QQQ itself moved +0.08% across the window. The Lagarde-exit news was out ~20 minutes before the
+  window opened, and no source I found attributes any US equity move to the ECB.
+- **What was not the window's:** bar data show MRVL gapping about **−11.6%** into the 09:30 open
+  (prior close 251.61 → open 222.54) before the window began; I found no source for the cause on
+  10-29 (mid-October coverage only), so it is recorded as unexplained and **not cross-checked**
+  against a second price feed. It is outside the pre-registered window either way.
+- **Limit, stated:** one session, a 59-session fit, and a window that sits in the first hour of
+  a heavy attribution day (FOMC the evening before, GDP and PCE at 08:30 ET); absence of an ECB attribution in the press I could reach is
+  not proof of none. The premise survives its strongest available test; it is not thereby proven.
+
+### 4. Stance versus outcome, and what the next ECB ledger inherits
+
+- **Hold on 10-29: right.** Structural skip (no projections, no October HICP until 11-04) called it.
+  The supply-side kill that fired on 10-20 (services 3.2% vs 3.0%) did not change the October
+  outcome, as the 10-20 row said it would not.
+- **Where it resolves now:** [`ecb-decision-2026-12-17`](ecb-decision-2026-12-17.md) — December
+  projections, Oct flash HICP on 11-04, the ECB SPF on 10-30 (`ecb-spf-q4-2026-10-30`, already on the
+  calendar), and the first meeting run under an announced lame-duck president.
+- **Inherit:** the unanimous-hold-after-hike-debate wording is the signal to price into December,
+  not the hold; and a successor/February-date question is a separate dated event once it is inside
+  the horizon.
+- **VIX regime, recorded:** VIX **17.20** at the 10-29 close (Yahoo), then **23.75** on the 10-30
+  bar the probe read (+5.6 vs the last 18.18 reading). That move is the day *after* this event and
+  is not attributed to it.
+
+**Adjacency:** nothing new inside the horizon to propose; `--on-date` for 10-30 shows every dated
+neighbour already canonical (BoJ, BoE DMP, ECI, ECB SPF, Chicago PMI, Blue and Pink Books).
+**Conviction proposals:** `conviction-proposals.mjs --event=ecb-decision-2026-10-29` printed none.
+This document now goes quiet.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":23.75,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->

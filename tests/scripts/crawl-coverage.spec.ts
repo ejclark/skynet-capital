@@ -211,6 +211,15 @@ describe("landingOf", () => {
     ]);
   });
 
+  it("lands the sign-in hop on onboarding without an account, on the leaderboard with one (#6317)", () => {
+    expect(landingOf("/", ctx(false))).toEqual([
+      "server / and /index.html",
+      "/accounts ?section=milestones",
+      "/accounts ?section=milestones&chapter=onboarding",
+    ]);
+    expect(landingOf("/", ctx(true))).toEqual(["server / and /index.html", "/", "/leaderboard"]);
+  });
+
   it("maps a member id onto its pattern, and an unknown path onto the Not Found row", () => {
     expect(landingOf("/app/u/sauron/thesis", ctx(true))).toEqual(["/u/$id/thesis"]);
     expect(landingOf("/app/nowhere", ctx(true))).toEqual(["unknown URL"]);

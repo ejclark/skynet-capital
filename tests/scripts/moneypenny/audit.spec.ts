@@ -65,6 +65,20 @@ describe("readyPlanCandidate — the pure per-issue stall decision", () => {
     expect(readyPlanCandidate(planIssue(), unparked, false, NOW)?.hoursSinceReady).toBe(4);
   });
 
+  // #6287 — the clock counted only needs-eric / needs-info / next-slice removals as an unpark, so a
+  // plan unparked from needs-design or hold-merge read as stalled since its 480h-old flip.
+  it.each(["needs-design", "hold-merge", "needs-eric", "needs-info"])(
+    "restarts the clock when `%s` comes off after an old flip",
+    (label) => {
+      const timeline = [
+        labelEvent("ready", 480),
+        labelEvent(label, 470),
+        labelEvent(label, 5 / 60, "unlabeled"),
+      ];
+      expect(readyPlanCandidate(planIssue(), timeline, false, NOW)?.hoursSinceReady).toBe(0);
+    },
+  );
+
   it("is null once the lane took `ready` back after the latest flip — that answered it", () => {
     const withdrawn = [
       readyComment(400),
@@ -189,6 +203,19 @@ describe("planStallFrom — the plan writer's flags and clears (#6042)", () => {
       ["flag-plan-stall", 4808, 49],
     ]);
   });
+
+  // #6287 — the push minutes after an unpark posted "Plan never claimed … 480h".
+  it.each(["needs-design", "hold-merge"])(
+    "sends no stall ping on the push right after `%s` comes off an old-flipped plan",
+    (label) => {
+      const timeline = [
+        labelEvent("ready", 480),
+        labelEvent(label, 470),
+        labelEvent(label, 5 / 60, "unlabeled"),
+      ];
+      expect(intents([plan(12, ["plan", "ready"])], timeline)).toEqual([]);
+    },
+  );
 
   it("keeps a plan's flag while it is still owed a feedback answer, so the two writers never fight", () => {
     const owed = plan(8, ["plan", "feedback", "ready", "stall-flagged"]);

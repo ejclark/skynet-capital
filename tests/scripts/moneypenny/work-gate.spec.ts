@@ -36,6 +36,33 @@ const gateWith = (position: string, breaker: boolean | (() => boolean), extra = 
   });
 
 describe("the work gate — the dial and the spend breaker in one answer", () => {
+  it("names an empty REST bucket and when it refills, and does not call it a tripped brake", () => {
+    const g = workGate({
+      readMode: () => mode("conserve"),
+      readBreaker: () => {
+        throw new Error("gh: API rate limit exceeded for user ID 1 (HTTP 403)");
+      },
+      readRestReset: () => "2026-11-01T09:46:00Z",
+    });
+    expect(g.dispatch).toBe(false);
+    expect(g.breakerTripped).toBe(false);
+    expect(g.restEmptyUntil).toBe("2026-11-01T09:46:00Z");
+    expect(g.reason).toContain("until 2026-11-01T09:46:00Z");
+  });
+
+  it("still refuses and says so when the refill time cannot be read", () => {
+    const g = workGate({
+      readMode: () => mode("normal"),
+      readBreaker: () => {
+        throw new Error("API rate limit exceeded");
+      },
+      readRestReset: () => null,
+    });
+    expect(g.dispatch).toBe(false);
+    expect(g.restEmptyUntil).toBeNull();
+    expect(g.reason).not.toContain("until");
+  });
+
   it("clears a normal dial with an untripped breaker, and hands back the caps", () => {
     const g = gateWith("normal", false);
     expect(g.dispatch).toBe(true);
