@@ -107,7 +107,9 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   **The numbers live in `work-mode.json`, not in this doc** — citing the spigot is the whole point
   of it having one carrier; restating the positions here is how the two drift apart. Effort and
   model floors are untouched at every position — the dial is a width control, which is why it can
-  be mechanical while this bullet's cut order stays a judgment.
+  be mechanical while this bullet's cut order stays a judgment. `npm run pace` prints the week's
+  percent used against the percent of the week gone and what a pace rule would have done; it writes
+  nothing and moves nothing (`scripts/moneypenny/quota.mjs`, whose header says why).
 - **Cost-first defaults are bugs.** A default that exists "to be cheap" rather than because a
   higher tier wouldn't change the outcome contradicts this doc; `scripts/config-audit.mjs` checks
   agents against the floor table, and the same rubric applies to `docs/grind/*.instructions.md`

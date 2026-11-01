@@ -22,10 +22,11 @@ header. Check `npm run work-gate` before any step that spends a model.
 
 ## The procedure
 
-1. **One outcome line.** A declared intent ("the bots must trade during market hours") or an
-   incident (the 10-08 stall) becomes one EARS line (`/ears`): `WHILE <state>, the <system> shall
-   <response>`. Write the outcome, never the proxy: "a merge reaches production", not "the deploy
-   step is green". No real failure behind it means it is a hypothesis: say so, keep it advisory.
+1. **One outcome line.** A declared intent ("the bots must trade during market hours", or a dated
+   record under `docs/intents/`, whose Outcome and Check are the starting point) or an incident (the
+   10-08 stall) becomes one EARS line (`/ears`): `WHILE <state>, the <system> shall <response>`.
+   Write the outcome, never the proxy: "a merge reaches production", not "the deploy step is green".
+   No real failure behind it means it is a hypothesis: say so, keep it advisory.
 2. **Route it.** A production outcome is a contract in `scripts/fitness.mjs`. Code shape is an
    eye with a budget (`docs/COACHES.md`). `src` behaviour is a spec. Prose quality is a judged
    eval. Taste is the owner's labels first.
@@ -65,7 +66,7 @@ only for labels or taste. Fresh bugs are the done line, never the list the spec 
 
 | Rep | Target | Done means |
 |---|---|---|
-| 1 | Re-audit the six contracts in `scripts/fitness.mjs` and fix them in one pass | 35 or more of 40 held-out bugs caught; one comment per failure state on the real-tick replay (70 today) |
+| 1 | Re-audit the six contracts in `scripts/fitness.mjs` and fix them in one pass | 35 or more of 40 held-out bugs caught; one comment per failure state on the real-tick replay (70 today). Done 2026-11-01: 29 of 30 blind, the survivor seeded; the replay opens one issue per failure state with 0 comments. The list is `tests/scripts/fixtures/fitness-heldout-bugs.json`, a regression list now: the next score needs a fresh blind pass |
 | 2 | Decision cycles in market hours: the judge reads the per-bot decision journal and fires only on the stalled alert, held against the real session clock under node 24 (no second calendar). Seeds: the 10-08 shape, every bot's evaluation failing, a breaker-halted fleet, a stuck clock, a holiday, an early close, no stamp (unknown), a future timestamp | Red within 10 minutes plus the clock gap on the 10-08 replay; unknown, not silence, on a missing stamp |
 | 3 | Diagram legibility with the pinned Mermaid: an advisory ratchet at `ship.sh`, oracle is the owner's eyes on six borderline pictures | Waits: it costs his eyes |
 

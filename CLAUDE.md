@@ -256,6 +256,7 @@ buildable asks that should start now but don't belong in *this* session — see
 **plan** (a tangent that needs its own interrogation before it's buildable — hand it to a fresh
 planning session per [`docs/ISSUES.md`](docs/ISSUES.md) → *Delegating a tangent to a planning
 session*, #3818 slice 1; it lands ready, `needs-eric`, or parked, never a build) ·
+**declare** (an outcome with a date: `docs/intents/README.md`) ·
 **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
 `NOW:` · `PARK:` · `FAN:` · `ME:` · `Q:`. Doubt between act/park/fan → park and ask. *(That
 doubt-rule is about **routing a raw thought in a live session**, where Eric is right there. It is

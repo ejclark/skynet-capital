@@ -65,8 +65,20 @@ export function deployLag(state = {}) {
     // the fix is the credential. A mixed or human-merged set means something else is wrong, and
     // saying "unknown" is more useful than guessing the familiar answer.
     cause: stranded.length > 0 && silent.length === stranded.length ? "silent-merge" : "unknown",
+    // When the lag began: the oldest stranded commit's landing. A reader with a grace window
+    // (scripts/fitness.mjs) judges this age, not the bare fact of a lag, because every push lags
+    // for the minutes its own deploy takes.
+    since: oldest(stranded.map((c) => c.committedAt)),
   };
 }
+
+/** The earliest of some ISO dates, or undefined when none parses. */
+const oldest = (dates) => {
+  const parsed = (dates ?? []).filter((d) => Number.isFinite(Date.parse(d ?? "")));
+  return parsed.length
+    ? parsed.reduce((a, b) => (Date.parse(b) < Date.parse(a) ? b : a))
+    : undefined;
+};
 
 /** One-line summary for a run log, a digest, or a terminal. */
 export function describeLag(lag, { released, head } = {}) {
@@ -86,24 +98,50 @@ export function describeLag(lag, { released, head } = {}) {
  * names (a failed deploy-bots job followed by docs-only merges), and force_bots_deploy is the
  * recovery lever.
  *
- * @param {{head?: string, botsReleased?: string, botsChanged?: string[], botsRolledBack?: number}} state
+ * @param {{head?: string, botsReleased?: string, botsChanged?: string[], botsRolledBack?: number,
+ *          botsSince?: string}} state
  *   — botsReleased empty-string = scanned clean, no bots release that passed smoke; absent = the
  *   scan itself failed. botsRolledBack counts the newer releases that failed smoke and rolled back.
+ *   botsSince dates the lag: the oldest undeployed bot-relevant commit, or the oldest rolled-back
+ *   release.
  */
 export function botsDeployLag(state = {}) {
-  const { head, botsReleased, botsChanged, botsRolledBack = 0 } = state;
+  const { head, botsReleased, botsChanged, botsRolledBack = 0, botsSince } = state;
   if (botsReleased === undefined || botsChanged === undefined) return { known: false };
   if (!botsReleased && botsRolledBack > 0) {
     // Every bots release in the scanned window failed smoke: not "never deployed", a dark fleet.
     const reason = `the last ${botsRolledBack} bots release(s) all failed smoke and rolled back`;
-    return { known: true, baseline: false, lagging: true, reason };
+    return { known: true, baseline: false, lagging: true, reason, since: botsSince };
   }
   if (!botsReleased) return { known: true, baseline: false, lagging: false };
   if (botsReleased === head || botsChanged.length === 0) {
     return { known: true, baseline: true, lagging: false };
   }
   const verdict = classify(botsChanged);
-  return { known: true, baseline: true, lagging: verdict.deploy, reason: verdict.reason };
+  return {
+    known: true,
+    baseline: true,
+    lagging: verdict.deploy,
+    reason: verdict.reason,
+    ...(verdict.deploy ? { since: botsSince } : {}),
+  };
+}
+
+/**
+ * Pure. The index of the oldest commit whose arrival made the range bot-relevant, found by halving:
+ * `relevantUpTo(i)` says whether commits[0..i] together touch a bot-relevant path, which is
+ * monotone, so about log2(n) reads settle it instead of one per commit. `n` is the range's length,
+ * already known to be relevant as a whole.
+ */
+export function oldestRelevantIndex(n, relevantUpTo) {
+  let lo = 0;
+  let hi = n - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (relevantUpTo(mid)) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
 }
 
 /** One-line bots-app summary, sibling of describeLag. */
@@ -136,6 +174,9 @@ const gh = (args) => execFileSync("gh", args, { encoding: "utf8" });
  * The deploy job's own run is the honest baseline: it is exactly the thing whose absence this
  * script exists to notice.
  */
+/** `·` notes naming a skipped input, printed to stderr so `--json` stdout stays parseable. */
+const notes = [];
+
 /**
  * What one run did to the bots app: "landed", "rolled back", or nothing (a preflight skip, a run
  * that never reached the deploy, a smoke test still running). A release whose smoke failed was rolled back, so the bots never
@@ -182,20 +223,40 @@ function scanRunBaselines() {
     if (botsReleased === undefined) {
       const outcome = botsReleaseOutcome(jobs);
       if (outcome === "landed") botsReleased = run.head_sha;
-      if (outcome === "rolled back") rolledBack.push(run.head_sha);
+      if (outcome === "rolled back") rolledBack.push({ sha: run.head_sha, at: run.created_at });
     }
   }
   if (rolledBack.length > 0) {
     notes.push(
-      `· ${rolledBack.length} newer bots release(s) failed smoke and rolled back (latest ${rolledBack[0].slice(0, 7)}) — the baseline is the last one that passed`,
+      `· ${rolledBack.length} newer bots release(s) failed smoke and rolled back (latest ${rolledBack[0].sha.slice(0, 7)}) — the baseline is the last one that passed`,
     );
   }
   // Scanned clean with no real bots deploy in the window: report "no baseline", not "unknown".
-  return { released, botsReleased: botsReleased ?? "", botsRolledBack: rolledBack.length };
+  // Runs arrive newest first, so the last rolled-back one is when the fleet went dark.
+  return {
+    released,
+    botsReleased: botsReleased ?? "",
+    botsRolledBack: rolledBack.length,
+    rolledBackSince: rolledBack.at(-1)?.at,
+  };
 }
 
-/** `·` notes naming a skipped input, printed to stderr so `--json` stdout stays parseable. */
-const notes = [];
+const compare = (base, head) =>
+  JSON.parse(gh(["api", `repos/{owner}/{repo}/compare/${base}...${head}`]));
+const filesOf = (cmp) => cmp.files?.map((f) => f.filename) ?? [];
+const landedAt = (c) => c.commit?.committer?.date;
+
+/**
+ * When the bots half started lagging: the landing of the oldest commit past the last bots deploy
+ * that touched a bot-relevant path. The range's aggregate file list cannot say which commit that
+ * was, so this halves over prefix compares (about log2(n) reads, never one per commit), and only
+ * runs once the aggregate already says the bots are behind: a healthy tick reads nothing extra.
+ */
+function botsLagSince(botsReleased, commits) {
+  if (!commits.length) return undefined;
+  const relevantUpTo = (i) => classify(filesOf(compare(botsReleased, commits[i].sha))).deploy;
+  return landedAt(commits[oldestRelevantIndex(commits.length, relevantUpTo)]);
+}
 
 function readState() {
   const head = JSON.parse(gh(["api", "repos/{owner}/{repo}/commits/main"])).sha;
@@ -203,14 +264,16 @@ function readState() {
   let botsReleased;
   let botsChanged;
   let botsRolledBack = 0;
+  let botsSince;
   try {
-    ({ released, botsReleased, botsRolledBack } = scanRunBaselines());
-    botsChanged =
-      botsReleased && botsReleased !== head
-        ? (JSON.parse(
-            gh(["api", `repos/{owner}/{repo}/compare/${botsReleased}...${head}`]),
-          ).files?.map((f) => f.filename) ?? [])
-        : [];
+    let rolledBackSince;
+    ({ released, botsReleased, botsRolledBack, rolledBackSince } = scanRunBaselines());
+    botsSince = rolledBackSince;
+    if (botsReleased && botsReleased !== head) {
+      const cmp = compare(botsReleased, head);
+      botsChanged = filesOf(cmp);
+      if (classify(botsChanged).deploy) botsSince = botsLagSince(botsReleased, cmp.commits ?? []);
+    } else botsChanged = [];
   } catch (err) {
     // Optional input: fail SOFT on the scan. The dashboard baseline falls back to the pre-split
     // query below (it can only err toward "lagging", never toward a false "current"), and the bots
@@ -233,14 +296,13 @@ function readState() {
   const stranded =
     head === released
       ? []
-      : JSON.parse(gh(["api", `repos/{owner}/{repo}/compare/${released}...${head}`])).commits.map(
-          (c) => ({
-            sha: c.sha,
-            subject: String(c.commit?.message ?? "").split("\n")[0],
-            mergedBy: c.author?.login ?? c.committer?.login ?? "",
-          }),
-        );
-  return { head, released, stranded, botsReleased, botsChanged, botsRolledBack };
+      : compare(released, head).commits.map((c) => ({
+          sha: c.sha,
+          subject: String(c.commit?.message ?? "").split("\n")[0],
+          mergedBy: c.author?.login ?? c.committer?.login ?? "",
+          committedAt: landedAt(c),
+        }));
+  return { head, released, stranded, botsReleased, botsChanged, botsRolledBack, botsSince };
 }
 
 /** Read a whole stdin stream synchronously — the `--explain` fixture channel. */

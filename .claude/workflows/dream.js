@@ -74,7 +74,7 @@ const patterns = analyzed.filter(Boolean).flatMap((r) => r.patterns);
 log(`${analyzed.filter(Boolean).length}/${batches.length} batches returned, ${patterns.length} patterns`);
 
 const checked = await agent(
-  `Check the memory files in ${args.memoryDir} against today's code on origin/main. Start from this mechanical report of cited paths that no longer exist and cited issues now closed: ${args.staleReport ?? "(none supplied)"}. A closed issue only makes a memory stale if its wording still depends on it being open. Also find duplicates, contradictions between memories, contradictions with origin/main:CLAUDE.md, and memories that merely repeat a skill or doc. ${READ_ONLY}`,
+  `Check the memory files in ${args.memoryDir} against today's code on origin/main. Start from this mechanical report of cited paths and npm scripts that no longer exist, flags no longer in the script they are passed to, cited issues now closed, and wording that still waits on a closed issue: ${args.staleReport ?? "(none supplied)"}. A closed issue only makes a memory stale if its wording still depends on it being open. Each row is a candidate to check against the code, not a verdict. Also find duplicates, contradictions between memories, contradictions with origin/main:CLAUDE.md, and memories that merely repeat a skill or doc. ${READ_ONLY}`,
   {
     label: "check:memory",
     phase: "Check",

@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { describeNoTokenSkip } from "../support/no-token-skip.js";
 
 // Thrash scan (#3939 slice 1) — driven through the real entrypoint via `--explain`, same pattern as
 // latency-scan.spec.ts: state goes in as JSON on stdin, so this runs offline.
@@ -304,3 +305,5 @@ describe("thrash-scan --digest — digest lines and the two-scan auto-file (#393
     expect(d.noise.join("\n")).not.toContain("#3720");
   });
 });
+
+describeNoTokenSkip("thrash-scan", ["", "--json", "--digest", "--digest --file"]);

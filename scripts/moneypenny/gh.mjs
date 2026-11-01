@@ -116,7 +116,7 @@ export function withRetry(
  */
 export function ghRest(
   path,
-  { token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN, run = sh } = {},
+  { token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN, run = sh } = {},
 ) {
   const repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
   const url = path.startsWith("http")

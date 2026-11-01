@@ -35,7 +35,7 @@ budget is custom, and the per-iteration record is fixed, so effort compares acro
 | 11 | **Next check** | A date the next result will be visible, kept in the list below, where the push-tick check (`scripts/loop-check.mjs`) posts it once it arrives. | Fixed (location), custom (date) |
 | 12 | **Weakness capture** | A caught flaw is banked in `docs/LESSONS.md` via `/retro` — root cause, detection signal, prevention. Never only a chat message. | Fixed |
 | 13 | **Process artifact** | The refined, reusable procedure lives in one versioned file (`docs/grind/*.instructions.md`, or the nearest equivalent for a non-grind domain) that the next cycle edits in place, never a fresh ad hoc prompt re-deriving what's already known. | Fixed |
-| 14 | **Iterations** | The budget (how many cycles of the five moves, as Eric dials it — "commanding x number of iterations is a normalized way to instruct the degree of effort", 2026-10-18) and, per iteration, a row on the owning issue: its cost (tokens · dollars · wall time) and how far it moved the aim's number. Stop early, and say so, when an iteration moves the number less than the loop states as worth an iteration; never spend the rest of a budget because it is there. | Custom (budget), fixed (the record) |
+| 14 | **Iterations** | The budget (how many cycles of the five moves, as Eric dials it — "commanding x number of iterations is a normalized way to instruct the degree of effort", 2026-10-18) and, per iteration, a row in `loop-iterations/<loop>.jsonl`, written in the PR that did the work with `npm run loop:ledger -- --add`: its cost (tokens or dollars) and how far it moved the aim's number. The owning issue's Log keeps one dated line. A loop's first row states how far an iteration must move the number to be worth running. Stop early, and say so, when two iterations in a row move it less, which is what `npm run loop:ledger` reads as `stopped`; never spend the rest of a budget because it is there. | Custom (budget), fixed (the record) |
 
 **Why 11–13 are fixed, not a choice per loop:** a check with no date is never made; a lesson with
 nowhere durable to live gets re-learned; a procedure re-typed from memory each cycle drifts and
@@ -166,7 +166,8 @@ retro): if a row still carries the same date 3 days after its post, the tick ope
 `feedback` issue listing those rows (filed `ready`, never `needs-eric`), and the build lane records
 each verdict and moves the date or ends the loop — never one whose owning issue is open. A Next
 check cell must *lead* with its date; one that buries a date after prose fails
-`tests/scripts/loop-list-decide.spec.ts`. **Check results post to:** #5724
+`tests/scripts/loop-list-decide.spec.ts`. A check that came due after the iteration record began,
+with no row for its loop, prints a warning naming the command that writes one (field 14). **Check results post to:** #5724
 
 | Loop | The question | Owning issue | State | Next check |
 |---|---|---|---|---|

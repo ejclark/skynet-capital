@@ -8,3 +8,12 @@ export function parseLedgerHeader(text: string): {
   lastAssessed: string | null;
   probeRef: Record<string, unknown> | null;
 };
+
+/** Sessions that may land uncited before an intent stops making its event's pulses material. */
+export const INTENT_TRIP_CAP: number;
+
+/** Which active intents naming this event still trip (`pending`) and which hit the cap (`capped`). */
+export function splitIntents(
+  intents: { slug: string; stated: string }[],
+  ledgerText: string,
+): { pending: string[]; capped: string[] };
