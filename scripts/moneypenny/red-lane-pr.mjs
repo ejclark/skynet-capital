@@ -16,6 +16,13 @@
 // a stale remote branch of that name leaves the new session a rejected push, one step from a force
 // push. The commits stay reachable through the closed PR (`pull/<n>/head`, and its Restore button).
 //
+// THE STATE BLOCK IS CORRECTED WITH IT. A plan's next build follows the block and treats the thread as
+// context, and the session that opened the PR ended by writing the block as if the slice had landed.
+// Left alone, `Next pickup: slice 3` builds past the closed work, and `Next pickup: none` holds the plan
+// (`pickupHoldReason`) with no build to come, while the comment says it is back in the queue. So the
+// next-pickup line now names the closed PR first and keeps what it said after that. The edit is soft: a
+// comment that fails it says so in the thread, and it must not cost the handoff or the branch.
+//
 // THE LOOP HAS AN END. A build that goes red every time would cost one session per age limit forever,
 // so the issue's own comments count the closes, and past `RED_CLOSE_CAP` it takes `needs-session`,
 // the existing label that keeps a remainder from the automated lanes and offers it to a live session.
@@ -29,6 +36,7 @@ import {
 } from "../stuck-pr-decide.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, notPullableReason } from "./labels.mjs";
+import { stateBlockOf } from "./state-block.mjs";
 
 /**
  * How long a required check stays red before the PR counts as nobody's. A lane session runs for
@@ -62,6 +70,18 @@ function redCheck(checkRuns, nowMs) {
 }
 
 /**
+ * Pure: the block with its next-pickup line naming the closed PR's work first. Matches the label the
+ * way `nextPickupOf` does, so both shapes work and `none …` stops reading as nothing to build. A block
+ * with no such line gains one.
+ */
+export function blockAfterClose(body, prNumber) {
+  const first = `rebuild what closed PR #${prNumber} carried (it never merged; \`git fetch origin pull/${prNumber}/head\`). After that, the block said:`;
+  const label = /\*\*next pickup\b[:*\s]*/i;
+  if (label.test(body)) return body.replace(label, (m) => `${m}${first} `);
+  return `${body.trimEnd()}\n\n**Next pickup:** ${first} nothing.`;
+}
+
+/**
  * Pure: the two comments and the act for each candidate. `handToSession` is the cap's answer.
  */
 export function redLaneIntents(candidates = []) {
@@ -71,6 +91,8 @@ export function redLaneIntents(candidates = []) {
     const next = handToSession
       ? `This is red PR number ${c.priorCloses + 1} on this issue, so it now carries \`${LABELS.needsSession.name}\`: the automated lanes stop here, and a live session can take it.`
       : "This issue is back in the queue, so a new build can start on it.";
+    // One line, swapped by the act if the edit fails: a comment must not claim an edit that did not land.
+    const blockFixed = `- The state block's next pickup now names this work, ahead of what it said.\n`;
     return {
       kind: "close-red-lane-pr",
       prNumber: c.number,
@@ -79,8 +101,16 @@ export function redLaneIntents(candidates = []) {
       title: c.title,
       hours: Math.round(c.hours),
       handToSession,
+      blockEdit: c.block
+        ? {
+            commentId: c.block.id,
+            body: blockAfterClose(c.block.body, c.number),
+            said: blockFixed,
+            saidIfFailed: `- **The state block could not be corrected.** It still says what to build next as if #${c.number} had landed, so build that work first.\n`,
+          }
+        : null,
       prBody: `🧹 **Closing this PR: \`${c.failed}\` has been failing for ${Math.round(c.hours)}h and nobody is working on it.** The session that opened it has ended, and an open PR keeps #${c.issue} out of the build queue.\n\nNothing was merged. The commits stay on this PR (${keep}), and the branch can be restored from here. The next step is on #${c.issue}.\n\n${FOOTER}`,
-      issueBody: `**#${c.number} was closed with \`${c.failed}\` still failing after ${Math.round(c.hours)}h.** ([the failed check](${c.failedUrl}))\n\n- ${next}\n- **To keep that work:** ${keep}, then merge or cherry-pick it onto the new branch. Read the failed check first; the code may only need that fix.\n\n<!-- moneypenny:red-pr-closed pr=${c.number} -->\n\n${FOOTER}`,
+      issueBody: `**#${c.number} was closed with \`${c.failed}\` still failing after ${Math.round(c.hours)}h.** ([the failed check](${c.failedUrl}))\n\n- ${next}\n${c.block ? blockFixed : ""}- **To keep that work:** ${keep}, then merge or cherry-pick it onto the new branch. Read the failed check first; the code may only need that fix.\n\n<!-- moneypenny:red-pr-closed pr=${c.number} -->\n\n${FOOTER}`,
     };
   });
 }
@@ -112,6 +142,7 @@ export function gatherRedLanePrs(nowMs, { hours = RED_PR_HOURS, rest = ghRest } 
     const files = ghRestAll(`pulls/${pr.number}/files`, { read: rest }).map((f) => f.filename);
     if (exemptReason({ pr, files, ...exempt })) continue;
     const comments = ghRestAll(`issues/${issue}/comments`, { read: rest });
+    const block = stateBlockOf(comments);
     out.push({
       number: pr.number,
       title: pr.title,
@@ -121,6 +152,7 @@ export function gatherRedLanePrs(nowMs, { hours = RED_PR_HOURS, rest = ghRest } 
       failed: red.run.name,
       failedUrl: red.run.html_url,
       priorCloses: comments.filter((c) => CLOSED_MARKER.test(c?.body ?? "")).length,
+      block: block?.id ? { id: block.id, body: block.body } : null,
     });
   }
   return out;
@@ -149,14 +181,36 @@ export function redLaneOrNone(nowMs, { log = console.log, ...opts } = {}) {
   }
 }
 
+/** Edit the block, soft, and return the issue comment saying how that went. */
+function issueBodyAfterEdit(i, run, log) {
+  if (!i.blockEdit) return i.issueBody;
+  const { commentId, body, said, saidIfFailed } = i.blockEdit;
+  try {
+    run("gh", [
+      "api",
+      "-X",
+      "PATCH",
+      `repos/{owner}/{repo}/issues/comments/${commentId}`,
+      "-f",
+      `body=${body}`,
+    ]);
+    return i.issueBody;
+  } catch (err) {
+    const why = String(err?.stderr || err?.message).slice(0, 200);
+    log(`::warning::#${i.issueNumber}'s state block could not be corrected — ${why}`);
+    return i.issueBody.replace(said, saidIfFailed);
+  }
+}
+
 /**
  * The act. The close goes first, so the issue's marker only ever counts a close that happened: if
  * the close fails, nothing changed and the next push tries again. The branch goes last, so a failed
- * delete cannot cost the issue its handoff.
+ * delete cannot cost the issue its handoff. The block's edit sits between, soft, and before the comment
+ * so that the comment can say whether it landed.
  */
-export function closeRedLanePr(i, { run = sh } = {}) {
+export function closeRedLanePr(i, { run = sh, log = console.log } = {}) {
   run("gh", ["pr", "close", String(i.prNumber), "--comment", i.prBody]);
-  run("gh", ["issue", "comment", String(i.issueNumber), "--body", i.issueBody]);
+  run("gh", ["issue", "comment", String(i.issueNumber), "--body", issueBodyAfterEdit(i, run, log)]);
   if (i.handToSession) {
     const label = LABELS.needsSession.name;
     run("gh", ["issue", "edit", String(i.issueNumber), "--add-label", label]);

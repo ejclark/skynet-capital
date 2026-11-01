@@ -6,7 +6,9 @@ export interface StuckBranch {
   title: string;
   hours: number;
   headSha: string;
-  /** Dependabot's own PR takes a rebase comment, not a merge commit. */
+  /** The branch, which the empty commit on a dependabot PR moves. */
+  headRef: string;
+  /** Dependabot's own PR takes an empty commit it may rebase over, not a merge commit. */
   dependabot: boolean;
   /** The heads already tried, from the marker on the PR's comments. */
   triedShas: string[];
@@ -15,6 +17,7 @@ export interface UpdateStuckIntent extends AuditIntent {
   kind: "update-stuck-branch";
   prNumber: number;
   headSha: string;
+  headRef: string;
   hours: number;
   dependabot: boolean;
   body: string;

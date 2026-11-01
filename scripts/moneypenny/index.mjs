@@ -747,7 +747,8 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readPlans = () => readOpenPlans(),
     claims = { plan: claimPlan, feedback: claimFeedback },
     continuation = () => continuationContext({ now: nowMs }),
-    holdReads = {},
+    // `run` writes the note on a barred issue. The real sweep only: a spec's own reads write nothing.
+    holdReads = { run: sh },
     readHold: holdOf = sweepHold({ now: nowMs, ...holdReads }),
     ...admission
   } = deps;
