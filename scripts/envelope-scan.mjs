@@ -107,13 +107,31 @@ export const normalizeCheckPath = (given, root = process.cwd()) => {
   return rel === "" || rel === ".." || rel.startsWith("../") ? given : rel;
 };
 
+/** Flags that take a value, so `--check a b --base <sha>` never reads the sha as a path (the arm
+ *  job passed exactly that for a month and got a harmless extra row — harmless only because a sha
+ *  matches no rule; a flag value that happened to match one would have been a false hit). */
+const FLAGS_WITH_VALUE = ["--base", "--lane"];
+
+/** Pure: the paths among `--check`'s arguments, flags and their values left out. */
+export function checkPaths(args) {
+  const paths = [];
+  for (let i = 0; i < args.length; i += 1) {
+    const a = args[i];
+    if (FLAGS_WITH_VALUE.includes(a)) {
+      i += 1;
+    } else if (!a.startsWith("--")) {
+      paths.push(a);
+    }
+  }
+  return paths;
+}
+
 // --check: is this path (or these paths) protected? JSON out, always exit 0 — the build session
 // asks this BEFORE editing, learning the answer from the gate rather than guessing at a prose list.
 function runCheck() {
-  const paths = process.argv
-    .slice(process.argv.indexOf("--check") + 1)
-    .filter((a) => !a.startsWith("--"))
-    .map((p) => normalizeCheckPath(p));
+  const paths = checkPaths(process.argv.slice(process.argv.indexOf("--check") + 1)).map((p) =>
+    normalizeCheckPath(p),
+  );
   const out = paths.map((path) => {
     const rule = breachOf(path);
     if (!rule) return { path, protected: false, blocking: false };

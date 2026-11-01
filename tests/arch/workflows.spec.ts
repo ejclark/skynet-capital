@@ -737,7 +737,9 @@ describe("pipeline — PR diffs are the PR's own changes (three-dot)", () => {
   it("the envelope step fails closed and says why it did not arm", () => {
     const step = pipeline.slice(pipeline.indexOf("name: Is the diff protected?"));
     const body = step.slice(0, step.indexOf("- name:", 10));
-    expect(body).toContain("SCAN=$(node scripts/envelope-scan.mjs");
+    // The scan runs from the base commit's own copy of the list and the scanner — the attack it
+    // closes and the proof it still refuses are in tests/arch/arm-base-read.spec.ts.
+    expect(body).toContain("node scripts/envelope-scan.mjs --check $FILES");
     expect(body).toContain("jq -er");
     expect(body).toContain("::notice::not arming");
   });
