@@ -22,14 +22,17 @@
 //   reaches      who hears a failure, read by report(): only a contract that reaches an issue
 //                files one. The market-hours stall alert detected correctly from 10-18 and
 //                reached nobody, because its mail credential was never set.
+//   gap          optional: the state of the world this can read well while its outcome fails,
+//                printed on its issue so whoever reads a stall knows what the check cannot see.
 //
 // A probe that cannot run reports "unknown", never a pass: an unknown is not health. A blip is
 // retried once inside the tick; an unknown that persists opens one issue per unreadable source,
 // whose age is how long the checks were blind and which takes the same two-hour limit. A dead
-// credential behind the read goes straight to the owner. A probe reads "quiet" when another
-// contract owns the fault: neither health nor a failure, so one stop is one report. Each probe runs
-// in its own try/catch with a ::warning:: line, so one malformed reply cannot blind the others.
-// Every spawn has a deadline: a hung read must cost one contract, not the tick.
+// credential behind the read goes straight to the owner. A probe reads "quiet" when there is nothing
+// here to judge (a closed market, a fault another contract owns): neither health nor a failure, so
+// one stop is one report and a stall at 15:50 does not read as healed at 16:00. Each probe runs in
+// its own try/catch with a ::warning:: line, so one malformed reply cannot blind the others. Every
+// spawn has a deadline: a hung read must cost one contract, not the tick.
 //
 // This script detects and reports. The start script runs before it on the clock, so the correction
 // has happened or been refused by the time this reads. `--json` for machines. `--report` keeps one
@@ -44,6 +47,7 @@
 // probe crashed. A write that GitHub refused is printed, not fatal: the next tick retries it.
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
+import nodeModule, { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -88,6 +92,19 @@ const ALERT_SECRETS = ["SKYNET_ALERT_EMAIL_API_KEY", "SKYNET_ALERT_EMAIL_FROM"];
 // The `reaches` values report() understands. Any other value files nothing.
 const ISSUE_TO_OWNER = "an issue assigned to the owner";
 const HOMES = ["clock", "push", "session"];
+// Where the bots write one JSONL file per persona (SKYNET_AUDIT_DIR in fly.bots.toml). A name is
+// checked before it is passed back to the machine. `<persona>.<stamp>.jsonl.gz` is a rotated archive
+// and never matches. The same archive is plain `<persona>.<stamp>.jsonl` while its gzip runs, or for
+// good if the gzip failed, and that one does: mid-rotation it holds the persona's newest record.
+const JOURNAL_DIR = "/data/audit";
+const JOURNAL_FILE = /^[\w.-]+\.jsonl$/;
+// The scouts file records under their own persona ids when they pick or close. A scout writing says
+// nothing about the bots' cycles, so its record must not read as the fleet deciding. Matched on the
+// name before its first dot, which also covers a scout's plain archive.
+const SCOUT_JOURNALS = new Set(["beta-scout", "cond-scout"]);
+// The node .nvmrc names, and the one the session clock is proven on. The clock job's own pin is on a
+// held platter PR, so until it lands this contract reads unknown and says why.
+const SESSION_CLOCK_NODE = 24;
 // A second start inside this is a machine that keeps dying, not one that just came back.
 const RESTART_LOOP_MS = 60 * 60_000;
 // How recent a bot's assignment must be for the assignment path to count as used. A longer quiet
@@ -183,6 +200,62 @@ export function judgeAlertReach(secretNames) {
   return missing.length
     ? fail(`alerts reach nobody: ${missing.join(" and ")} not set`)
     : pass("the mail credential is set; each account still has to opt in");
+}
+
+/** Past the closures table's last year a holiday reads as an open market, so nothing there is sure. */
+function outsideSession(nowMs, rule) {
+  if (new Date(nowMs).getUTCFullYear() > Number(rule.calendarEnds.slice(0, 4))) {
+    return unknown("the exchange calendar table ends before today");
+  }
+  return rule.sessionAt(nowMs) ? null : quiet("the regular session is closed");
+}
+
+/**
+ * Judge the fleet's newest decision record with the app's own stall rule and session clock. `rule`
+ * is what loadStallRule returns; `newest` is what parseDecisionLine returns, or null for no record,
+ * which botAlerts itself would read as no claim. Only the stalled alert fails this: the halted alert
+ * is a different question, a breaker, and a person may halt on purpose. The minutes come from the
+ * alert but not its title, whose "12 min" and "1 h 5 min" would be a new cause every hour.
+ */
+export function judgeDecisionCycle(newest, nowMs, rule) {
+  const outside = outsideSession(nowMs, rule);
+  if (outside) return outside;
+  if (!newest) return unknown("the decision journal holds no record");
+  // The stamp's rule: two clocks differ by seconds, and a negative age would pass as fresh.
+  if (newest.at - nowMs > STAMP_FRESH_MS)
+    return unknown("the newest record is dated in the future");
+  const read = `newest record ${new Date(newest.at).toISOString()}, halted ${newest.halted ? "yes" : "no"}, ${newest.bytes} bytes`;
+  const stalled = rule
+    .botAlerts([{ botId: "fleet", name: "The fleet", records: [newest] }], nowMs)
+    .find((alert) => alert.dedupeKey.startsWith("stalled:"));
+  if (stalled) {
+    const minutes = Math.round(stalled.data.quietMs / 60_000);
+    return fail(`no decision cycle finished in ${minutes} min of open market: ${read}`);
+  }
+  // The rule starts its count at the open, so a fleet dead since Friday is not yet stalled at 09:35.
+  // That is no pass: it would close the open issue every morning and reopen it ten minutes later.
+  if (newest.at < rule.sessionAt(nowMs).openAt) {
+    return quiet("no cycle has finished since the open, and the stall window has not run out");
+  }
+  return newest.halted
+    ? quiet(`cycles are running and the newest is halted, which this does not judge: ${read}`)
+    : pass(read);
+}
+
+/**
+ * The time, a flag and the size of a journal line, or null. Nothing else leaves this function: the
+ * journal is production data and the clock's logs are public, and a halted record carries the
+ * owner's reason verbatim, so the reason becomes a flag and a line that fails to parse says nothing.
+ */
+export function parseDecisionLine(text) {
+  let record;
+  try {
+    record = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!Number.isFinite(record?.at) || record.at <= 0) return null;
+  return { at: record.at, halted: Boolean(record.halted), bytes: Buffer.byteLength(text) };
 }
 
 /**
@@ -283,6 +356,95 @@ function json(bin, args, timeoutMs) {
   }
 }
 
+/**
+ * One read on the bots machine, with no shell, for the journal. Its reason keeps only flyctl's exit
+ * and leaves out what it said on stderr, because that may repeat what the command read.
+ */
+function journalRead(id, command) {
+  const res = run(FLY, [
+    "machine",
+    "exec",
+    id,
+    command,
+    "-a",
+    BOTS_APP,
+    "--timeout",
+    String(EXEC_TIMEOUT_S),
+  ]);
+  if (!res.ok) {
+    readFailures.push(res.why.split(":")[0]);
+    return null;
+  }
+  // flyctl prints a remote command's failure as this line on stdout and exits 0.
+  if (!/^Exit code: \d+/m.test(res.out)) return res.out;
+  readFailures.push("the command failed on the machine");
+  return null;
+}
+
+/** The newest live journal's last record, null for no record, or the unknown that stopped the read. */
+function newestDecision(id) {
+  const cannotRead = unknown("cannot read the decision journal");
+  const listing = journalRead(id, `ls -t ${JOURNAL_DIR}`);
+  if (listing === null) return cannotRead;
+  const newestFile = listing
+    .split("\n")
+    .map((name) => name.trim())
+    .find((name) => JOURNAL_FILE.test(name) && !SCOUT_JOURNALS.has(name.split(".")[0]));
+  if (!newestFile) return null;
+  // Two lines: a crash or a full disk tears the newest first, and a stall must not hide behind that.
+  const lines = journalRead(id, `tail -n 2 ${JOURNAL_DIR}/${newestFile}`);
+  if (lines === null) return cannotRead;
+  if (!lines.trim()) return null;
+  const newest = lines.trim().split("\n").reverse().map(parseDecisionLine).find(Boolean);
+  if (newest) return newest;
+  // A short file whose only line is torn may be mid-append, so this is worth the retry a blip gets.
+  readFailures.push("unreadable");
+  return unknown("the newest decision record is unreadable");
+}
+
+let stallRule;
+
+/**
+ * The app's stall rule and calendar, loaded from its TypeScript with no install: plain node 24
+ * strips the types, and this hook maps the source's `./x.js` imports to `./x.ts`. There is no second
+ * session clock here, which is the point. An older node gets a reason rather than a crash.
+ */
+export function loadStallRule(version = process.versions.node) {
+  if (Number(version.split(".")[0]) < SESSION_CLOCK_NODE) {
+    return {
+      why: `this job runs node ${version}, and the session clock needs ${SESSION_CLOCK_NODE}`,
+    };
+  }
+  if (stallRule) return stallRule;
+  try {
+    nodeModule.registerHooks({
+      resolve(spec, context, next) {
+        try {
+          return next(spec, context);
+        } catch (err) {
+          if (!(spec.startsWith(".") && spec.endsWith(".js"))) throw err;
+          return next(`${spec.slice(0, -3)}.ts`, context);
+        }
+      },
+    });
+    const load = createRequire(join(HERE, "fitness.mjs"));
+    const { BOT_STALL_AFTER_MS, botAlerts, sessionAt } = load("../src/alerts/bot-watch.ts");
+    const { MARKET_CLOSURES } = load("../src/domain/market-calendar.ts");
+    stallRule = {
+      botAlerts,
+      sessionAt,
+      stallAfterMs: BOT_STALL_AFTER_MS,
+      calendarEnds: MARKET_CLOSURES.at(-1).date,
+    };
+  } catch (err) {
+    // The code or name and not the message, which can print this machine's paths into a public issue.
+    stallRule = {
+      why: `node ${version} could not load the session clock (${err?.code ?? err?.name})`,
+    };
+  }
+  return stallRule;
+}
+
 function memoryDirs() {
   const root = join(homedir(), ".claude", "projects");
   if (!existsSync(root)) return [];
@@ -373,6 +535,53 @@ export const CONTRACTS = [
       // stamp's own window to write a new one, rather than a second issue about the same stop.
       return verdict.status === "fail" && startedOnceWithin(primary, STAMP_FRESH_MS, nowMs)
         ? quiet("the machine just started, so its stamp has not caught up")
+        : verdict;
+    },
+  },
+  {
+    id: "decision-cycle",
+    mustBeTrue:
+      "While the regular session is open, the bots keep making decisions, unless a person halted them",
+    home: "clock",
+    // Its own source: a job whose node cannot load the clock has read Fly perfectly well.
+    reads: "the decision journal",
+    // A stall has no script: neither recorded one would be fixed by a restart, and a restart is a
+    // state-destroying action, never a probe. Add a corrector only after a /retro names a hang.
+    corrector: null,
+    budget: "none: past restarts did not fix this class, so it needs a named cause first",
+    rung: "wait",
+    reaches: ISSUE_TO_OWNER,
+    gap: "A fresh record from one bot passes for the whole fleet, a cycle that decided on frozen prices passes, a fleet in observe mode passes because it decides and places nothing, a fleet held by a breaker reads quiet, which includes every evaluation failing once five in a row trip the errors breaker, a running machine still carrying a person's halt mark reads quiet, a stall reads quiet for the first ten minutes of a session, and one in the session's last twenty minutes, which the 15-minute clock cannot read ten minutes on, stays quiet until ten minutes past the next open. A journal write that fails on a full volume reads as a stall while cycles run",
+    // Reads the outcome's own trace, "every decision cycle is a durable line". The older reads pass
+    // the 10-08 class: started and polling, with no decision for days. Class: an atomic read of a
+    // fleet-wide outcome (the gap above is the difference), continual on the 15-minute clock, dynamic,
+    // automated.
+    //
+    // Wrong if, between 2026-11-02 and 2026-11-30, this fails on a session where the machine's
+    // [heartbeat] log line shows cycles running; or if, by 2026-12-15, a session shows a gap of 30
+    // minutes or more in the journal with no issue within 45 minutes. Retires when a contract reads
+    // both this and a breaker, or if the journal stops being written.
+    probe: (nowMs) => {
+      const rule = loadStallRule();
+      if (rule.why) return unknown(rule.why);
+      const outside = outsideSession(nowMs, rule);
+      if (outside) return outside;
+      const machines = json(FLY, ["machine", "list", "-a", BOTS_APP, "--json"]);
+      // A Fly outage is charged to Fly, so it opens one issue and not a second for the journal.
+      if (!Array.isArray(machines)) return { ...unknown("cannot read Fly"), reads: "Fly" };
+      const primary = machines.find((m) => (m.config?.standbys ?? []).length === 0);
+      // One stop, one report: bots-running reports the first two. The halt note is not echoed.
+      if (!primary) return quiet("no primary machine: bots-running reports this");
+      if (primary.config?.metadata?.["skynet-halt"]) return quiet("a person halted the machine");
+      if (primary.state !== "started") {
+        return quiet(`machine is ${primary.state}: bots-running reports this`);
+      }
+      const newest = newestDecision(primary.id);
+      const verdict = newest?.status ? newest : judgeDecisionCycle(newest, nowMs, rule);
+      // The start script ran moments ago, so the newest record is the dead process's. Give the new
+      // one the stall window, rather than a second issue about the same stop.
+      return verdict.status === "fail" && startedOnceWithin(primary, rule.stallAfterMs, nowMs)
+        ? quiet("the machine just started, so it has not had the stall window yet")
         : verdict;
     },
   },
@@ -588,6 +797,7 @@ function issueBody(r) {
     `**What failed:** ${r.detail}.`,
     `**What fixes it:** ${r.corrector ?? "nothing automatic yet"} (budget: ${r.budget}).`,
     `**What happens next:** ${whatHappensNext(r)}`,
+    ...(r.gap ? [`**What this cannot see:** ${r.gap}.`] : []),
     "",
     "This issue closes itself once the check passes, and reopens if it fails again within 14 days. Contract: `scripts/fitness.mjs`.",
     ...(assignsAtOnce(r) ? ["", ASSIGNED_MARKER] : []),
