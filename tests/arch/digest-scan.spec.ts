@@ -23,8 +23,17 @@ describe("digest-scan contract", () => {
       encoding: "utf8",
     });
     const s = JSON.parse(out);
-    expect(typeof s.due).toBe("boolean");
-    expect([null, "no-digest", "threshold", "heartbeat", "quiet-with-work"]).toContain(s.reason);
+    // `null` is the third answer: main is quiet and a read that decides it failed (`quiet-unknown`).
+    expect(s.due === null || typeof s.due === "boolean").toBe(true);
+    expect(s.due === null).toBe(s.reason === "quiet-unknown");
+    expect([
+      null,
+      "no-digest",
+      "threshold",
+      "heartbeat",
+      "quiet-with-work",
+      "quiet-unknown",
+    ]).toContain(s.reason);
     // The quiet rule's fields (#6470): hours always; the waiting read null below the threshold,
     // or on a read that failed — then named, never a silent "not due".
     expect(typeof s.quietHours).toBe("number");

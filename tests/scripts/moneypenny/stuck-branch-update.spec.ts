@@ -83,6 +83,7 @@ const branch = (over: Partial<StuckBranch> = {}): StuckBranch => ({
   title: "feat(feedback): a filing says waiting",
   hours: 119,
   headSha: SHA,
+  headRef: "feedback/6316",
   dependabot: false,
   triedShas: [],
   ...over,
@@ -115,8 +116,12 @@ describe("gatherStuckBranches — which green, armed PR is held by a cancelled s
     expect(gather(listed(), { files: [".github/workflows/pipeline.yml"] })).toEqual([]);
   });
 
-  it("marks a dependabot PR, which takes a rebase and not a merge commit", () => {
-    expect(gather(listed({ user: { login: "dependabot[bot]" } }))[0]?.dependabot).toBe(true);
+  it("marks a dependabot PR, which takes an empty commit and not a merge commit", () => {
+    const pr = listed({
+      user: { login: "dependabot[bot]" },
+      head: { ref: "dependabot/x", sha: SHA },
+    });
+    expect(gather(pr)[0]).toMatchObject({ dependabot: true, headRef: "dependabot/x" });
     expect(gather()[0]?.dependabot).toBe(false);
   });
 
@@ -225,10 +230,75 @@ describe("updateStuckBranch — the act", () => {
     ]);
   });
 
-  it("asks dependabot to rebase its own PR instead", () => {
-    const { calls } = act({ dependabot: true });
-    expect(calls[1]).toEqual(["pr", "comment", "6325", "--body", "@dependabot rebase"]);
-    expect(calls).toHaveLength(2);
+  // Live on #6314, 2026-11-01: dependabot answered the App's `@dependabot rebase` with "Sorry, only
+  // users with push access can use that command", the comment itself exited 0, and the receipt said
+  // the PR had a new head. No comment command is the way in under this token.
+  describe("dependabot's own PR", () => {
+    const TREE = "tree1234";
+    const NEW = "new5678";
+    const actDependabot = (over: Partial<StuckBranch> = {}, refuse = "") => {
+      const calls: string[][] = [];
+      const warned: string[] = [];
+      const [i] = updateIntents([
+        branch({ dependabot: true, headRef: "dependabot/npm_and_yarn/x-1.2.3", ...over }),
+      ]);
+      if (!i) throw new Error("expected an intent");
+      const line = updateStuckBranch(i, {
+        run: (_cmd: string, args: string[]) => {
+          calls.push(args);
+          const text = args.join(" ");
+          if (refuse && text.includes(refuse)) throw new Error("HTTP 422: refused");
+          if (text.includes(`git/commits/${SHA}`)) return TREE;
+          if (text.includes("-X POST")) return NEW;
+          return "";
+        },
+        log: (m: string) => warned.push(m),
+      });
+      return { calls, line, warned };
+    };
+
+    it("never posts a dependabot command: that token is refused and the comment still exits 0", () => {
+      const { calls } = actDependabot();
+      expect(calls.flat().join(" ")).not.toContain("@dependabot");
+    });
+
+    it("adds an empty commit dependabot may rebase over, on top of the head it read", () => {
+      const { calls } = actDependabot();
+      expect(calls[1]).toEqual([
+        "api",
+        `repos/{owner}/{repo}/git/commits/${SHA}`,
+        "--jq",
+        ".tree.sha",
+      ]);
+      const commit = calls[2] ?? [];
+      expect(commit.slice(0, 4)).toEqual(["api", "-X", "POST", "repos/{owner}/{repo}/git/commits"]);
+      expect(commit).toContain(`tree=${TREE}`);
+      expect(commit).toContain(`parents[]=${SHA}`);
+      // GitHub's documented marker: without it dependabot stops maintaining a PR it did not push.
+      expect(commit.find((a) => a.startsWith("message="))).toContain("[dependabot skip]");
+    });
+
+    it("moves the branch without force, so a head that moved since the read refuses it", () => {
+      const { calls } = actDependabot();
+      expect(calls[3]).toEqual([
+        "api",
+        "-X",
+        "PATCH",
+        "repos/{owner}/{repo}/git/refs/heads/dependabot/npm_and_yarn/x-1.2.3",
+        "-f",
+        `sha=${NEW}`,
+      ]);
+      expect(calls).toHaveLength(4);
+      expect(calls.flat().join(" ")).not.toContain("force");
+    });
+
+    it("says it gave a new head only once the branch has moved", () => {
+      expect(actDependabot().line).toContain("gave #6325 a new head");
+      const { line, warned } = actDependabot({}, "git/refs/heads");
+      expect(line).not.toContain("gave #6325 a new head");
+      expect(line).toContain("could not update");
+      expect(warned.join("\n")).toContain("could not update #6325");
+    });
   });
 
   it("never force-pushes and never merges: the only writes are those two", () => {

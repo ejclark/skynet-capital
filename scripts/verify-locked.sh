@@ -11,9 +11,9 @@
 # The lock — every worktree of one checkout shares `git rev-parse --git-common-dir`, so one
 # `verify.lock` there queues every agent in the session. The kernel drops a flock when its holder
 # dies, so there is never a stale lock to clean up. Waits up to VERIFY_LOCK_WAIT seconds (default
-# 1800), then exits 75 with a line saying so. No `flock` on the box (stock macOS) → runs unlocked,
-# as before. SKYNET_VERIFY_LOCKED=1 marks a run already inside the lock, so a nested call never
-# deadlocks on its own parent.
+# 1800), then exits 75 with a line saying so. flock(1) is util-linux, so stock macOS takes the same
+# lock through perl; only a box with neither runs unlocked, and says so. SKYNET_VERIFY_LOCKED=1 marks
+# a run already inside the lock, so a nested call never deadlocks on its own parent.
 #
 # The stamp — after the default command (`npm run verify`) passes on a tree with no uncommitted or
 # untracked files that is unchanged once it ends, `HEAD^{tree}` is written to this worktree's own
@@ -68,21 +68,53 @@ run() {
 before=""
 if [ "$default_cmd" = 1 ] && clean; then before="$(tree_of HEAD)"; fi
 
+lock_tool=""
+if command -v flock >/dev/null 2>&1; then lock_tool=flock
+elif command -v perl >/dev/null 2>&1; then lock_tool=perl
+fi
+
+# take_lock NOW|<seconds> locks fd 9, which this shell keeps open, so the lock lasts until the shell
+# closes it or dies: 0 held, 1 another verify has it, anything else the tool itself failed. macOS has
+# no flock(1), and it is where the fan-outs run: this queue was off there from the day it landed, and
+# on 2026-11-01 agents verifying at once took a 10-core laptop to load 85 while all 8 verifies ship.sh
+# logged in two hours failed. perl's flock() is the same call on the same inherited descriptor, so it
+# outlives perl, and a dead holder still frees it. A wait under 1s tries once, as flock -w 0 does:
+# alarm 0 would turn the limit off.
+take_lock() {
+  if [ "$lock_tool" = flock ]; then
+    if [ "$1" = NOW ]; then flock -n 9; else flock -w "$1" 9; fi
+    return
+  fi
+  perl -MFcntl=:flock -e '
+    open(my $fd, ">&=", 9) or exit 2;
+    my $wait = shift;
+    exit(flock($fd, LOCK_EX | LOCK_NB) ? 0 : 1) if $wait eq "NOW" or int($wait) < 1;
+    $SIG{ALRM} = sub { exit 1 };
+    alarm int($wait);
+    exit(flock($fd, LOCK_EX) ? 0 : 1);
+  ' "$1"
+}
+
 if [ "${SKYNET_VERIFY_LOCKED:-}" = 1 ]; then
   run; status=$?
-elif ! command -v flock >/dev/null 2>&1; then
-  echo "verify: no flock on this machine — running unlocked (parallel verifies are not queued)." >&2
+elif [ -z "$lock_tool" ]; then
+  echo "verify: no flock or perl on this machine — running unlocked (parallel verifies are not queued)." >&2
   run; status=$?
 else
   wait_s="${VERIFY_LOCK_WAIT:-1800}"
   exec 9>"$lock"
-  if ! flock -n 9; then
+  take_lock NOW; held=$?
+  if [ "$held" = 1 ]; then
     echo "verify: queued — another verify in this checkout holds $lock (waiting up to ${wait_s}s)…" >&2
-    if ! flock -w "$wait_s" 9; then
+    take_lock "$wait_s"; held=$?
+    if [ "$held" = 1 ]; then
       echo "verify: gave up after ${wait_s}s waiting for $lock — another verify is still running (fuser $lock)." >&2
       exit 75
     fi
+    [ "$held" != 0 ] || echo "verify: got the lock after ${SECONDS}s — running now." >&2
   fi
+  # A broken lock tool must not stop every verify on the box, and must not read as a long wait.
+  [ "$held" = 0 ] || echo "verify: $lock_tool could not take the lock (exit $held) — running unlocked (parallel verifies are not queued)." >&2
   run; status=$?
   exec 9>&-
 fi

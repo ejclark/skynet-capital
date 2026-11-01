@@ -14,6 +14,7 @@ import type { ParticipantSnapshot } from "../../src/observatory/participant-snap
 import { PulseHistoryFold } from "../../src/observatory/pulse-history-fold.js";
 import { wireTradeVitalsFor } from "../../src/observatory/vitals.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
+import { ladderEvidenceFrom } from "../../src/server/ladder-evidence.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
 import { wireFeedOf } from "../support/wire-feed.js";
@@ -392,10 +393,20 @@ describe("serveWireJson", () => {
       evidence: { kind: "realized-profit" as const, orderId: "ord-9" },
       at: "2026-10-02T15:00:00.000Z",
     };
+    /** The Learn page's ladder over these fills, as `ladderEvidenceReader` hands it per participant. */
+    const ladderOf =
+      (fills: readonly TradeActivityRecord[]): NonNullable<WireRouteDeps["readLadderEvidence"]> =>
+      (id) =>
+        Promise.resolve(
+          ladderEvidenceFrom(
+            fills.filter((f) => f.participantId === id),
+            [],
+          ),
+        );
     const wired = (over: Partial<WireRouteDeps> = {}): WireRouteDeps => ({
       hub: hubWith([member]),
       readAllLadderProgress: () => Promise.resolve([]),
-      readAllOrderAudit: () => Promise.resolve([]),
+      readLadderEvidence: ladderOf([]),
       ...over,
     });
     const milestonesOf = async (deps: WireRouteDeps, url = "/api/wire") => {
@@ -404,9 +415,9 @@ describe("serveWireJson", () => {
       return JSON.parse(out.body).wire;
     };
 
-    it("shows one row for a member's first fill, derived from the ledger the Learn page reads", async () => {
+    it("shows one row for a member's first fill, read from the ladder the Learn page reads", async () => {
       const { milestones, milestonesEnabled } = await milestonesOf(
-        wired({ readWireFeed: wireFeedOf({ records: [record({ participantId: "eric" })] }) }),
+        wired({ readLadderEvidence: ladderOf([record({ participantId: "eric" })]) }),
       );
 
       expect(milestonesEnabled).toBe(true);
@@ -436,51 +447,32 @@ describe("serveWireJson", () => {
       expect(milestones).toEqual([expect.objectContaining({ title: "Book your first profit" })]);
     });
 
-    it("leaves a bot's first fill off — the ladder is a member's curriculum", async () => {
+    it("asks the held ladder for members only, and leaves a bot's first fill off (#4619)", async () => {
+      const asked: string[] = [];
+      const ladder = ladderOf([record({ participantId: "eric" }), record({ orderId: "bot-1" })]);
+
       const { milestones } = await milestonesOf(
         wired({
-          hub: hubWith([snapshot()]),
-          readWireFeed: wireFeedOf({ records: [record()] }),
-        }),
-      );
-
-      expect(milestones).toEqual([]);
-    });
-
-    it("asks for the members' audit trails only, and shows the same rows when a store returns everyone's (#4619)", async () => {
-      const asked: (readonly string[] | undefined)[] = [];
-      const fills = [record({ participantId: "eric" }), record({ orderId: "bot-1" })];
-      const deps = (audit: WireRouteDeps["readAllOrderAudit"]) =>
-        wired({
           hub: hubWith([member, snapshot()]),
-          readWireFeed: wireFeedOf({ records: fills }),
-          readAllOrderAudit: audit,
-        });
-      const everyone = [
-        { participantId: "sauron", orderId: "bot-1", tag: "x" },
-      ] as unknown as Awaited<ReturnType<NonNullable<WireRouteDeps["readAllOrderAudit"]>>>;
-
-      const filtered = await milestonesOf(
-        deps((ids) => {
-          asked.push(ids);
-          return Promise.resolve(everyone);
+          readLadderEvidence: (id) => {
+            asked.push(id);
+            return ladder(id);
+          },
         }),
       );
-      const plain = await milestonesOf(deps(() => Promise.resolve([])));
 
-      expect(asked).toEqual([["eric"]]);
-      expect(filtered.milestones).toEqual(plain.milestones);
-      expect(filtered.milestones).toEqual([expect.objectContaining({ who: "Eric" })]);
+      expect(asked).toEqual(["eric"]);
+      expect(milestones).toEqual([expect.objectContaining({ who: "Eric" })]);
     });
 
     it("says the kind is off when either source is unwired, rather than sending an empty list", async () => {
-      const noAudit = await milestonesOf({
+      const noLadder = await milestonesOf({
         hub: hubWith([member]),
         readAllLadderProgress: () => Promise.resolve([logged]),
       });
 
-      expect(noAudit.milestonesEnabled).toBe(false);
-      expect(noAudit.milestones).toEqual([]);
+      expect(noLadder.milestonesEnabled).toBe(false);
+      expect(noLadder.milestones).toEqual([]);
     });
 
     it("bounds the milestone rows by the same per_page every other kind rides", async () => {
@@ -495,7 +487,7 @@ describe("serveWireJson", () => {
       ];
 
       const { milestones } = await milestonesOf(
-        wired({ readWireFeed: wireFeedOf({ records: fills }) }),
+        wired({ readLadderEvidence: ladderOf(fills) }),
         "/api/wire?per_page=1",
       );
 

@@ -149,6 +149,24 @@ describe("fitness judges", () => {
     expect(ahead.detail).toBe("the dashboard lag is dated in the future");
   });
 
+  // A merge that lands during the tick is dated after this tick's clock, and GitHub's clock and a
+  // runner's differ by seconds. Neither is blindness, so a small lead reads as a lag that just began.
+  it("reads a lag dated a little ahead of its clock as just begun, not as blindness", () => {
+    const lead = (ms: number) => judgeDeploys({ lagging: true, since: iso(NOW + ms) }, NOW);
+    expect(lead(5000)).toEqual({
+      status: "pass",
+      detail: "dashboard undeployed 0 min: inside the deploy grace",
+    });
+    expect(lead(4 * MIN).detail).toBe("dashboard undeployed 0 min: inside the deploy grace");
+    expect(lead(5 * MIN).status).toBe("pass");
+    expect(lead(5 * MIN + 1000).status).toBe("unknown");
+    const bots = judgeDeploys(
+      { lagging: false, bots: { lagging: true, since: iso(NOW + 5000) } },
+      NOW,
+    );
+    expect(bots.status).toBe("pass");
+  });
+
   it("judges the bots half by the same rule, not by a run's colour", () => {
     const bots = (ms: number) =>
       judgeDeploys({ lagging: false, bots: { lagging: true, since: iso(NOW - ms) } }, NOW);
@@ -175,12 +193,35 @@ describe("fitness judges", () => {
     expect(masked).toEqual({ status: "fail", detail: "bots undeployed 90 min" });
   });
 
+  it("never reads a bots half with no landed release as current", () => {
+    const none = { known: true, baseline: false, lagging: false };
+    expect(judgeDeploys({ lagging: false, bots: none }, NOW)).toEqual({
+      status: "unknown",
+      detail: "no bots release landed in the runs read",
+    });
+    // It never hides the dashboard's failure either, and a young dashboard does not make it a pass.
+    const late = judgeDeploys({ lagging: true, since: iso(NOW - 45 * MIN), bots: none }, NOW);
+    expect(late).toEqual({ status: "fail", detail: "dashboard undeployed 45 min" });
+    const young = judgeDeploys({ lagging: true, since: iso(NOW - 5 * MIN), bots: none }, NOW);
+    expect(young.status).toBe("unknown");
+    // A dark fleet is a failure with a date, not a missing baseline.
+    const dark = { known: true, baseline: false, lagging: true, since: iso(NOW - 90 * MIN) };
+    expect(judgeDeploys({ lagging: false, bots: dark }, NOW).status).toBe("fail");
+  });
+
   it("fails an alarm that can reach nobody, the 10-18 to 11-01 gap", () => {
     const key = "SKYNET_ALERT_EMAIL_API_KEY";
     const from = "SKYNET_ALERT_EMAIL_FROM";
     expect(judgeAlertReach(["OTHER"]).status).toBe("fail");
     expect(judgeAlertReach([key]).detail).toBe(`alerts reach nobody: ${from} not set`);
     expect(judgeAlertReach([key, from]).status).toBe("pass");
+  });
+
+  // Delivery is also opt-in per account and off by default, and this reads neither. Reproduced: both
+  // secrets set, no opt-in, a market-hours stall mails nobody, so "delivery is configured" was false.
+  it("claims only the credential when the secrets are set, not that an alert arrives", () => {
+    const { detail } = judgeAlertReach(["SKYNET_ALERT_EMAIL_API_KEY", "SKYNET_ALERT_EMAIL_FROM"]);
+    expect(detail).toBe("the mail credential is set; each account still has to opt in");
   });
 
   it("knows where it is from the Actions environment, and takes --here as an override", () => {
@@ -283,6 +324,19 @@ describe("fitness reporting", () => {
     expect(reportActions([narrowed], [both])).toEqual([
       { kind: "comment", number: 7, result: narrowed },
     ]);
+    // The second half narrows the same way: after the comma it is still not the whole detail.
+    const botsOnly = { ...failing, id: "main-deploys", detail: "bots undeployed 60 min" };
+    expect(reportActions([botsOnly], [both])).toEqual([
+      { kind: "comment", number: 7, result: botsOnly },
+    ]);
+    // Once said, in any of the three lines that carry a detail, it stays said.
+    for (const lastComment of [
+      "Still failing, and it changed: bots undeployed 75 min.",
+      "Assigned to the owner: why. Still failing: bots undeployed 75 min.",
+      "Reopened. What failed: bots undeployed 75 min.",
+    ]) {
+      expect(reportActions([botsOnly], [{ ...both, lastComment }])).toEqual([]);
+    }
   });
 
   it("closes the issue when the check passes", () => {
@@ -905,9 +959,9 @@ describe("fitness: the owner is assigned last", () => {
     });
   });
 
-  it("leaves the mail contract reading the mail outcome: this path does not satisfy it", () => {
+  it("leaves the mail contract reading the mail credential: this path does not satisfy it", () => {
     expect(contract("alerts-reach-owner").mustBeTrue).toBe(
-      "A critical alert reaches the owner when they are not looking",
+      "The dashboard holds the mail credential a critical alert needs. This does not prove an alert reaches the owner: each account must also opt in, delivery is off by default, and nothing here reads that",
     );
     expect(judgeAlertReach(["OTHER"]).status).toBe("fail");
   });
@@ -972,7 +1026,8 @@ case "$1 $2" in
         [[ "$2" =~ issues/([0-9]+)/comments ]]; f="$S/comments-\${BASH_REMATCH[1]}"
         if [[ -f "$f" ]]; then jq -c "$5" "$f"; fi ;;
       *commits/main) cat "$S/api-head" ;;
-      *pipeline.yml/runs*) cat "$S/api-runs" ;;
+      *pipeline.yml/runs*)
+        if [[ "$2" == *event=push* && -f "$S/api-runs-push" ]]; then cat "$S/api-runs-push"; else cat "$S/api-runs"; fi ;;
       *compare/*) cat "$S/api-compare" ;;
       *) [[ "$2" =~ runs/([0-9]+)/jobs ]] && cat "$S/api-jobs-\${BASH_REMATCH[1]}" ;;
     esac ;;
@@ -1061,6 +1116,11 @@ const HEAD = "aaaaaaa0000000000000000000000000000000aa";
 const NEXT = "bbbbbbb0000000000000000000000000000000bb";
 const landed = `{"jobs":[{"name":"release · deploy","conclusion":"success"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"success"},{"name":"Smoke test the bots release","conclusion":"success"}]}]}`;
 const skipped = `{"jobs":[{"name":"release · deploy","conclusion":"failure"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"skipped"}]}]}`;
+/** The dashboard deployed; the bots step did what it says, with its smoke not reached. */
+const botsStep = (conclusion: string) =>
+  `{"jobs":[{"name":"release · deploy","conclusion":"success"},{"name":"release · deploy bots","conclusion":"${conclusion}","steps":[{"name":"Deploy bots","conclusion":"${conclusion}"}]}]}`;
+/** A dispatched landing: the dashboard's job is skipped on a dispatch, the bots deploy and smoke pass. */
+const dispatchLanded = `{"jobs":[{"name":"release · deploy","conclusion":"skipped"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"success"},{"name":"Smoke test the bots release","conclusion":"success"}]}]}`;
 
 /** The assignment-path reply: one piece of work a bot assigned him at `at`. */
 function graphqlReply(at: number, extra: unknown[] = []) {
@@ -1089,7 +1149,7 @@ type World = {
   machines?: string;
   stampAgeMs?: number;
   secrets?: string[];
-  deploy?: "current" | "young" | "late" | "future" | "unreadable";
+  deploy?: "current" | "young" | "late" | "future" | "ahead" | "unreadable";
   issues?: unknown[];
   memoryHistory?: boolean | "none";
   closed?: unknown[];
@@ -1138,7 +1198,8 @@ function fixture(world: World = {}) {
     writeFileSync(join(stub, "api-runs"), JSON.stringify({ workflow_runs: runs }));
     writeFileSync(join(stub, "api-jobs-1"), landed);
     writeFileSync(join(stub, "api-jobs-2"), skipped);
-    const since = iso(now - { current: 5, young: 5, late: 45, future: -60 }[deploy] * MIN);
+    const ages = { current: 5, young: 5, late: 45, future: -60, ahead: -0.5 };
+    const since = iso(now - ages[deploy] * MIN);
     writeFileSync(
       join(stub, "api-compare"),
       JSON.stringify({
@@ -1205,6 +1266,62 @@ const results = (res: ReturnType<typeof run>) => {
     return r;
   };
 };
+
+/** Runs the scan reads, newest first, with one set of jobs each. Main sits on the newest run's sha. */
+function runsWindow(stub: string, jobs: string[]) {
+  const now = Date.now();
+  const runs = jobs.map((_, i) => ({
+    id: i + 1,
+    head_sha: `sha${i + 1}`,
+    created_at: iso(now - (i + 1) * 3 * MIN),
+  }));
+  writeFileSync(join(stub, "api-head"), JSON.stringify({ sha: "sha1" }));
+  writeFileSync(join(stub, "api-runs"), JSON.stringify({ workflow_runs: runs }));
+  jobs.forEach((body, i) => {
+    writeFileSync(join(stub, `api-jobs-${i + 1}`), body);
+  });
+}
+
+/** The real 11-01 shape: a push skipped by the debounce, then catch-up's dispatch landed it. */
+function dispatchLandedWorld(stub: string) {
+  const now = Date.now();
+  writeFileSync(join(stub, "api-head"), JSON.stringify({ sha: NEXT }));
+  const run = (id: number, sha: string, event: string, agoMin: number) => ({
+    id,
+    event,
+    head_sha: sha,
+    created_at: iso(now - agoMin * MIN),
+  });
+  const dispatched = run(3, NEXT, "workflow_dispatch", 125);
+  const push = [run(2, NEXT, "push", 142), run(1, HEAD, "push", 155)];
+  writeFileSync(join(stub, "api-runs"), JSON.stringify({ workflow_runs: [dispatched, ...push] }));
+  writeFileSync(join(stub, "api-runs-push"), JSON.stringify({ workflow_runs: push }));
+  writeFileSync(join(stub, "api-jobs-3"), dispatchLanded);
+  writeFileSync(join(stub, "api-jobs-2"), botsStep("skipped"));
+  writeFileSync(join(stub, "api-jobs-1"), landed);
+  writeFileSync(
+    join(stub, "api-compare"),
+    JSON.stringify({
+      commits: [
+        {
+          sha: NEXT,
+          commit: { message: "fix: x", committer: { date: iso(now - 142 * MIN) } },
+          author: { login: "ejclark" },
+        },
+      ],
+      files: [{ filename: "scripts/fitness.mjs" }],
+    }),
+  );
+}
+
+const deploysIssue = (body: string) => ({
+  number: 7,
+  title: "[fitness] main-deploys",
+  body,
+  comments: [],
+  createdAt: iso(Date.now() - 30 * MIN),
+  assignees: [],
+});
 
 describe("fitness wiring", () => {
   it("reads every clock contract from the real things, with the arguments the apps need", () => {
@@ -1364,6 +1481,104 @@ describe("fitness wiring", () => {
     const blind = results(run(fixture({ deploy: "unreadable" }), ["--json"]))("main-deploys");
     expect(blind.status).toBe("unknown");
     expect(blind.detail).toContain("cannot read GitHub");
+  });
+
+  // Audit, 2026-11-01: the scan read push runs only, so catch-up's own landing never counted.
+  it("counts a bots release landed by catch-up's dispatch: a current fleet is not behind", () => {
+    const stub = fixture();
+    dispatchLandedWorld(stub);
+    const res = run(stub, ["--json", "--report"]);
+    expect(results(res)("main-deploys")).toMatchObject({
+      status: "pass",
+      detail: "both apps current",
+    });
+    expect(calls(stub, "gh")).not.toContain("[fitness] main-deploys");
+  });
+
+  // Audit, 2026-11-01: a run of failed deploys pushed the last landing out of the runs read, and the
+  // contract then passed and closed its issue with the fleet still on old code.
+  it("stays red on a run of failed bots deploys with no landing left in the runs read", () => {
+    const stub = fixture({ issues: [deploysIssue("**What failed:** bots undeployed 30 min.")] });
+    runsWindow(
+      stub,
+      Array.from({ length: 40 }, () => botsStep("failure")),
+    );
+    const res = run(stub, ["--json", "--report"]);
+    expect(results(res)("main-deploys")).toMatchObject({
+      status: "fail",
+      detail: "bots undeployed 120 min",
+    });
+    expect(calls(stub, "gh")).not.toContain("issue close 7");
+  });
+
+  it("leaves the issue open when no landing is in the runs read and nothing says why", () => {
+    const stub = fixture({ issues: [deploysIssue("**What failed:** bots undeployed 30 min.")] });
+    runsWindow(
+      stub,
+      Array.from({ length: 40 }, () => botsStep("skipped")),
+    );
+    const res = run(stub, ["--json", "--report"]);
+    expect(results(res)("main-deploys")).toMatchObject({
+      status: "unknown",
+      detail: "no bots release landed in the runs read",
+    });
+    const gh = calls(stub, "gh");
+    expect(gh).not.toContain("issue close 7");
+    expect(gh).toContain("issue create --title [fitness] cannot read GitHub");
+    expect(gh).toContain("no bots release landed in the runs read");
+  });
+
+  // Audit, 2026-11-01: a merge that landed after the tick's clock was taken filed "cannot read GitHub".
+  it("files nothing when a merge lands during the tick and is dated ahead of its clock", () => {
+    const stub = fixture({ deploy: "ahead" });
+    const res = run(stub, ["--json", "--report"]);
+    const r = results(res)("main-deploys");
+    expect(r.status).toBe("pass");
+    expect(r.detail).toBe("dashboard undeployed 0 min: inside the deploy grace");
+    expect(calls(stub, "gh")).not.toContain("issue create");
+  });
+
+  it("comments when only the bots half is left of the two a thread reported", () => {
+    const stub = fixture({
+      issues: [
+        deploysIssue("**What failed:** dashboard undeployed 45 min, bots undeployed 30 min."),
+      ],
+    });
+    runsWindow(stub, [botsStep("skipped"), landed]);
+    writeFileSync(
+      join(stub, "api-compare"),
+      JSON.stringify({
+        commits: [
+          {
+            sha: "sha1",
+            commit: { message: "fix: x", committer: { date: iso(Date.now() - 60 * MIN) } },
+            author: { login: "ejclark" },
+          },
+        ],
+        files: [{ filename: "scripts/fitness.mjs" }],
+      }),
+    );
+    run(stub, ["--report"]);
+    expect(calls(stub, "gh")).toContain(
+      "issue comment 7 --body Still failing, and it changed: bots undeployed 60 min.",
+    );
+  });
+
+  it("says what it read when the mail credential arrives, closing its thread in those words", () => {
+    const stub = fixture({
+      issues: [
+        {
+          ...deploysIssue("**What failed:** alerts reach nobody: SKYNET_ALERT_EMAIL_FROM not set."),
+          title: "[fitness] alerts-reach-owner",
+        },
+      ],
+    });
+    run(stub, ["--report"]);
+    const gh = calls(stub, "gh");
+    expect(gh).toContain(
+      "issue close 7 --comment Passing again: the mail credential is set; each account still has to opt in.",
+    );
+    expect(gh).not.toContain("delivery is configured");
   });
 
   it("retries only a read that failed: a judge's own unknown is not read twice", () => {

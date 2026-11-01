@@ -30,8 +30,7 @@ import { tradeFillFromEvent } from "./trade-event-feed.js";
  * WHAT IT HANDS BACK IS INPUT, NOT ANSWERS. The reader returns the same three lists the route reads
  * today (bus events, ledger lines, filings), reduced to the lines that can still decide a row, in
  * the order `list()` would hand them over. The route then runs its existing pure folds over them
- * unchanged (`mergeLedgerIntoEvents`, `collapseTradeEvents`, `collapseFeedbackEvents`,
- * `deriveMilestoneEvents`, …), so a page from the fold equals a page from the whole files by
+ * unchanged (`mergeLedgerIntoEvents`, `collapseTradeEvents`, `collapseFeedbackEvents`, …), so a page from the fold equals a page from the whole files by
  * construction, not by a second implementation of each rule kept in step by hand.
  *
  * "Can still decide a row" means: per file, per key, every line whose standing ties the best seen so
@@ -294,7 +293,7 @@ function slimmed(event: ActivityEvent): ActivityEvent {
 export interface WireFeed {
   /** Bus events: trade fills, filings, statuses, merges and earns — what `assembleWire` calls `published`. */
   readonly events: readonly ActivityEvent[];
-  /** Trade ledger lines — the union leg for the trade page, and `deriveMilestoneEvents`' input. */
+  /** Trade ledger lines — the union leg for the trade page. */
   readonly records: readonly TradeActivityRecord[];
   /** Feedback log entries — the union leg for the pulse. */
   readonly filings: readonly FeedbackLogEntry[];

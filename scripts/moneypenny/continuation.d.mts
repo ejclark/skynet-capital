@@ -118,6 +118,11 @@ export function executeStopContinuation(
     run?: (cmd: string, args: readonly string[]) => string;
     retry?: <T>(fn: () => T) => T;
     assign?: (intent: Record<string, unknown>, opts?: Record<string, unknown>) => string;
+    read?: (path: string) => unknown;
+    lease?: {
+      claim: (slug: string) => { claimed: boolean; reason?: string };
+      release: (slug: string) => unknown;
+    } | null;
   },
 ): string;
 export function postContinuationReceipt(

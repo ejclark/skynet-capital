@@ -1,6 +1,7 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -147,4 +148,29 @@ describe("ship open — a failed local verify lands in the meter's log with its 
       error: "src/x.ts(3,5): error TS2322: boom",
     });
   });
+
+  it("does not call a queue timeout a failed verify: exit 75, no row, and it says what happened", async () => {
+    const logged = join(dir, "runs", "ship-verify.jsonl");
+    const rowsBefore = readFileSync(logged, "utf8");
+    const queued = { ...env(), SKYNET_VERIFY_LOCKED: "" };
+    const inside = join(dir, "holding");
+    const holder = spawn(
+      "bash",
+      ["scripts/verify-locked.sh", "--", "sh", "-c", `: > "${inside}"; sleep 60`],
+      { cwd: work, env: queued, detached: true, stdio: "ignore" },
+    );
+    const deadline = performance.now() + 30_000;
+    while (!existsSync(inside) && performance.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    const r = spawnSync(
+      "bash",
+      [resolve("scripts/ship.sh"), "open", "test: spec", "--body-file", join(dir, "body.md")],
+      { cwd: work, env: { ...queued, VERIFY_LOCK_WAIT: "0" }, encoding: "utf8" },
+    );
+    process.kill(-(holder.pid as number), "SIGKILL");
+    expect(r.status).toBe(75);
+    expect(r.stdout).toContain("verify did not run");
+    expect(readFileSync(logged, "utf8")).toBe(rowsBefore);
+  }, 60_000);
 });

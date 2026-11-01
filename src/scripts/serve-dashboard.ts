@@ -328,6 +328,9 @@ async function main(): Promise<void> {
   const developmentSink = mergedPullRequests
     ? publishingMergedPullRequests(mergedPullRequests, activityEventBus)
     : undefined;
+  // The trade ladder's evidence, held per participant and advanced by appended lines: one fold read
+  // by both the Learn page (the progression service) and the Wire's milestone kind (#4619).
+  const readLadderEvidence = ladderEvidenceReader({ activity, orderAudit });
   // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance
   // and the ladder gate's message log (dashboard-companion.ts owns crossing the id seam).
   const {
@@ -337,7 +340,7 @@ async function main(): Promise<void> {
   } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
-    readEvidence: ladderEvidenceReader({ activity, orderAudit }),
+    readEvidence: readLadderEvidence,
     feedbackLog,
     ownerEmailFor,
     botControls,
@@ -463,22 +466,10 @@ async function main(): Promise<void> {
     // above. The ledger rides alongside the bus because the event log only starts at #1211's deploy
     // and older fills live only on the ledger (`mergeLedgerIntoEvents` dedupes the overlap).
     readWireFeed,
-    // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and the audit
-    // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
+    // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and each
+    // member's earned rungs off the Learn page's own held ladder (#4619).
     readAllLadderProgress,
-    // Handed ids, only those participants' files are read: the Wire asks for its members alone, so
-    // the bots' audit trails (most of the bytes) stay unread (#4619). Each read keeps its own id's
-    // lines, so two ids that share a file name never return its lines twice.
-    readAllOrderAudit: async (participantIds) =>
-      participantIds
-        ? (
-            await Promise.all(
-              participantIds.map(async (id) =>
-                (await orderAudit.list(id)).filter((r) => r.participantId === id),
-              ),
-            )
-          ).flat()
-        : orderAudit.list(),
+    readLadderEvidence,
     // Absent without a GitHub token: the feed then renders no development kind and says so, rather
     // than letting an empty list imply the league has never merged anything.
     ...(developmentSink ? { readMergedPullRequests: developmentSink } : {}),
@@ -603,12 +594,13 @@ async function main(): Promise<void> {
     telemetry.listening();
     // Pulse's history folds, then its trade half for each participant (the held answer's first
     // build is the whole-ledger read: ~90 ms for Sauron at 180 days, #4619),
-    // then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read,
-    // then each bot's decision funnel and who trades on its account, so the first Decisions open
+    // then `/wire`'s fold, once, and each member's held ladder (the Wire's milestones and the Learn
+    // page), so the first Activity open after a deploy is not the cold read, then each bot's decision funnel and who trades on its account, so the first Decisions open
     // is not either (#4619).
     // Best effort: a failed warm leaves the fold to the first request, which reads it the same way.
     const { funnelFor } = insightsBridge;
     const bots = roster.filter((p) => p.kind === "bot").map((p) => p.id);
+    const members = roster.filter((p) => p.kind === "human").map((p) => p.id);
     void warmFolds(
       roster.map((p) => p.id),
       readPulseHistory,
@@ -623,6 +615,7 @@ async function main(): Promise<void> {
         ),
       )
       .then(() => readWireFeed().catch(() => undefined))
+      .then(() => warmFolds(members, readLadderEvidence))
       .then(() => warmFolds(bots, async (id) => funnelFor?.(id)))
       .then(() => warmFolds(bots, async (id) => readAccountPersonas?.(id)));
   });

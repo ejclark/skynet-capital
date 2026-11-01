@@ -158,4 +158,44 @@ describe("the Playbook Store bridge, end to end", () => {
     expect(applied).toHaveLength(1);
     expect(sync.version()).toBe(inForce);
   });
+
+  it("says so when the dashboard sends a kind the bots no longer read, and keeps the roster", async () => {
+    // An app rolled back past #6000 sends subscriptions.v3; since #5482's contract step closed
+    // the bots read v4 only, so the swap is never offered it and the log names the kind.
+    const server = createInsightsListener({
+      record: () => Promise.resolve(),
+      controls: () => CONTROLS,
+      subscriptions: () =>
+        ({
+          ...buildSubscriptionsSnapshot({ sauron: [sub()] }, Date.now()),
+          kind: "subscriptions.v3",
+        }) as never,
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    const warned: string[] = [];
+    const emit = process.emitWarning;
+    process.emitWarning = ((line: string) => warned.push(line)) as typeof process.emitWarning;
+    try {
+      let offered = 0;
+      const client = resolveBotControls(
+        { SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}` } as NodeJS.ProcessEnv,
+        undefined,
+        undefined,
+        () => offered++,
+        undefined,
+        undefined,
+        undefined,
+        LOADED_SUITE_BRIDGE_BUDGET,
+      );
+      expect(await client.fetchOnce()).toEqual(CONTROLS);
+      expect(offered).toBe(0);
+      expect(warned).toEqual([
+        expect.stringMatching(/subscriptions \(subscriptions\.v3\) did not read whole/),
+      ]);
+    } finally {
+      process.emitWarning = emit;
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
 });

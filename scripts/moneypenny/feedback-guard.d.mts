@@ -27,4 +27,8 @@ export function guardFeedbackOutcome(
   issueNumber: number | string,
   runUrl?: string,
   since?: string,
+  opts?: {
+    run?: (cmd: string, args: readonly string[]) => string;
+    ensure?: (label: unknown) => unknown;
+  },
 ): GuardResult;

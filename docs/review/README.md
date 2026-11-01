@@ -21,7 +21,7 @@ spec holds each under 4,000 characters (`tests/arch/review-lenses.spec.ts`).
 
 | Lens | What it reads for | Fires on | Characters |
 |---|---|---|---|
-| [`lenses/adversarial.md`](lenses/adversarial.md) | The input that proves a PR wrong | every code path | 3,931 |
+| [`lenses/adversarial.md`](lenses/adversarial.md) | The input that proves a PR wrong | every code path | 3,968 |
 | [`lenses/performance.md`](lenses/performance.md) | A request or boot path whose cost grows with history | server, observatory, storage | 3,564 |
 | [`lenses/context-loop.md`](lenses/context-loop.md) | What a change costs every session, and whether it can be judged | instructions, workflows, the loop registry | 3,961 |
 | [`lenses/smells-and-patterns.md`](lenses/smells-and-patterns.md) | Code and architecture smells, and the pattern that answers each | `src/`, `app/src/`, when a file or an import is added | 3,986 |
@@ -32,10 +32,15 @@ A recognised pattern has one home: `docs/PATTERNS.md` → *The ledger — code s
 says which problems are worth solving and which are taste, because a finding with no failure or cost
 to name is taste, however confident it sounds.
 
-**Where this stands.** The audit's lens table holds one row, correctness, and it does not read these
-files yet. A lens joins as one row, after its replay: performance, then smells and patterns, then
-context and loop, then security. The replay in #6555 scores a lens over labelled PRs before it joins, and its set opens with
-how that score could flatter a lens.
+**Where this stands.** The audit's lens table holds two rows, correctness and performance. A lens
+joins as one row, after its replay: smells and patterns next, then context and loop, then security.
+The replay in #6555 scores a lens over labelled PRs before it joins, and its set opens with how that
+score could flatter a lens.
+
+| Lens | Replay, 2026-11-01 | Controls | Call |
+|---|---|---|---|
+| Performance | 8 of 8 on reading; 5 by file match, and the other 3 named the same defect at the calling file | 13 of 14 clean, the 14th on a trap | Joined |
+| Smells and patterns | 1 of 3 on reading, 0 by file match; 2 of the 5 labelled PRs did not run | 8 of 8 clean | Not yet: it says little on the set, and every case in it was labelled for correctness |
 
 ## Keep or kill
 
@@ -63,6 +68,8 @@ smell ledger, and a doctrine line only when a gate would cost more than the dama
 
 ## Not known yet
 
-No replay has run, so recall and manufacture are unmeasured for every lens. Each lens's real examples
-were checked against this repo's history; what a reviewer does with the lens has not been checked at
-all. The path counts come from one census of 650 code PRs since 2026-10-01, and they will drift.
+Adversarial, context and loop, security and reuse have not been replayed, so their recall and
+manufacture are unmeasured. Reading a miss by hand is what moved performance from 5 of 8 to 8 of 8:
+`score` matches on file, and a reviewer often names the route where the label names the view behind
+it. Replay has no refuters, so whether the lens survives them is the 40-PR keep or kill above. The
+path counts come from one census of 650 code PRs since 2026-10-01, and they will drift.

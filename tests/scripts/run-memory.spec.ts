@@ -202,7 +202,9 @@ describe("run memory", () => {
     expect(existsSync(`${target}.lock`)).toBe(true);
   });
 
-  // A session reads MEMORY.md only to line 200 or 25 KB, so past that a promote silently hides rules.
+  // A session reads MEMORY.md only to line 200 or 25,000, so past that a promote hides rules. The
+  // boundary is the loader's own number, read from the installed harness: the vendor docs' "25KB" reads
+  // as 25,600, which is how the 600 bytes a session would cut came to be accepted.
   describe("the memory index's read limit", () => {
     function promoteIndex(body: string, name = "MEMORY.md") {
       const dir = mkdtempSync(join(tmpdir(), "runs-"));
@@ -228,15 +230,23 @@ describe("run memory", () => {
       expect(existsSync(target)).toBe(false);
     });
 
-    it("takes exactly 25,600 bytes and refuses one more", () => {
-      expect(promoteIndex("x".repeat(25_600)).res.status).toBe(0);
-      const over = promoteIndex("x".repeat(25_601)).res;
+    it("takes exactly 25,000 bytes and refuses one more", () => {
+      expect(promoteIndex("x".repeat(25_000)).res.status).toBe(0);
+      const over = promoteIndex("x".repeat(25_001)).res;
       expect(over.status).toBe(7);
-      expect(over.stderr).toContain("25601 bytes");
+      expect(over.stderr).toContain("25001 bytes");
+    });
+
+    it("refuses an index under the line limit that the loader would cut by size", () => {
+      const entries = Array.from({ length: 100 }, (_, i) => `- ${"x".repeat(250)} ${i}`).join("\n");
+      expect(entries.split("\n")).toHaveLength(100);
+      expect(Buffer.byteLength(entries)).toBeGreaterThan(25_000);
+      expect(Buffer.byteLength(entries)).toBeLessThan(25_600);
+      expect(promoteIndex(entries).res.status).toBe(7);
     });
 
     it("counts bytes, not characters", () => {
-      expect(promoteIndex("é".repeat(12_801)).res.status).toBe(7);
+      expect(promoteIndex("é".repeat(12_501)).res.status).toBe(7);
     });
 
     it("leaves every other file to its own size", () => {

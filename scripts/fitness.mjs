@@ -7,6 +7,7 @@
 // carries the parts it does:
 //
 //   mustBeTrue   an outcome, not a proxy. A green deploy step reported "current" over a dead fleet.
+//                A contract that can only read a proxy says so in these words (alerts-reach-owner).
 //   probe        reads the real thing, from outside it. A check inside the process dies with it.
 //   reads        the source the probe depends on. One issue per source that cannot be read, so a
 //                Fly outage opens one issue and not three.
@@ -79,6 +80,10 @@ const STAMP_FRESH_MS = 5 * 60_000;
 // A push lags for the minutes its own deploy takes. Judged with no grace, healthy 10-15 to 10-22
 // read red at 65 of 729 ticks; 20 minutes clears them all (#6470 study).
 const DEPLOY_GRACE_MS = 20 * 60_000;
+// How far ahead of this tick's clock a lag can be dated and still be aged as just begun. A tick takes
+// its clock before any probe runs, so a merge landing during the tick is dated after it, and GitHub's
+// clock and a runner's differ by seconds. Further ahead is a clock that cannot be trusted.
+const CLOCK_LEAD_MS = 5 * 60_000;
 // A read that fails once is retried after this pause before it counts as blind.
 const RETRY_MS = Number(process.env.FITNESS_RETRY_MS ?? 15_000);
 // What src/adapters/email-alert-delivery.ts needs. Read as names, never values. The boot line said the
@@ -144,10 +149,11 @@ export function judgeStamp(stamp, nowMs) {
 }
 
 /**
- * Judge main's deploys on what is running, never on a run's colour: a run reads green on a bots
+ * Judge main's deploys on which release landed, never on a run's colour: a run reads green on a bots
  * debounce skip, and keeps reading green forever with no pushes. `lag` is what
  * scripts/deploy-lag.mjs --json prints. Each half is red only once its oldest undeployed commit
- * has waited past the grace; a lag with no date cannot be aged, so it is unknown, not a pass.
+ * has waited past the grace; a lag with no date cannot be aged, so it is unknown, not a pass. A bots
+ * half with no landed release in the runs read is unknown too: it says nothing about what they run.
  */
 export function judgeDeploys(lag, nowMs) {
   // deploy-lag's reasons go to the run log through the probe, never into this detail: an issue
@@ -165,13 +171,17 @@ export function judgeDeploys(lag, nowMs) {
     if (!lagging) continue;
     const waitedMs = nowMs - Date.parse(since ?? "");
     if (!Number.isFinite(waitedMs)) undated.push(unknown(`the ${name} lag carries no date`));
-    // A date ahead of this clock cannot be aged either: the API has read an hour ahead of a
+    // A date well ahead of this clock cannot be aged either: the API has read an hour ahead of a
     // runner, and a negative wait would pass as young for as long as the skew lasts.
-    else if (waitedMs < 0) undated.push(unknown(`the ${name} lag is dated in the future`));
-    else {
-      const line = `${name} undeployed ${Math.round(waitedMs / 60000)} min`;
+    else if (waitedMs < -CLOCK_LEAD_MS) {
+      undated.push(unknown(`the ${name} lag is dated in the future`));
+    } else {
+      const line = `${name} undeployed ${Math.round(Math.max(waitedMs, 0) / 60000)} min`;
       (waitedMs > DEPLOY_GRACE_MS ? late : young).push(line);
     }
+  }
+  if (lag.bots?.baseline === false && !lag.bots.lagging) {
+    undated.push(unknown("no bots release landed in the runs read"));
   }
   // A half this cannot date never hides the other half's failure.
   if (late.length) return fail(late.join(", "));
@@ -179,12 +189,17 @@ export function judgeDeploys(lag, nowMs) {
   return pass(young.length ? `${young.join(", ")}: inside the deploy grace` : "both apps current");
 }
 
-/** Judge whether an alert can reach anyone, from the app's own secret names. */
+/**
+ * Judge whether the mail credential is set, from the app's own secret names. A failure is proof: with
+ * no credential nothing is mailed. A pass is not proof of the reverse, and its words say so, because
+ * delivery is also opt-in per account and off by default. Reading the opt-in means reading the prefs
+ * store, whose lines hold member addresses, so this contract states its limit instead of reading it.
+ */
 export function judgeAlertReach(secretNames) {
   const missing = ALERT_SECRETS.filter((name) => !secretNames.includes(name));
   return missing.length
     ? fail(`alerts reach nobody: ${missing.join(" and ")} not set`)
-    : pass("delivery is configured");
+    : pass("the mail credential is set; each account still has to opt in");
 }
 
 /** Past the closures table's last year a holiday reads as an open market, so nothing there is sure. */
@@ -579,8 +594,9 @@ export const CONTRACTS = [
     budget: "once per failure signature",
     rung: "wait",
     reaches: ISSUE_TO_OWNER,
-    // deploy-lag reads the deploy jobs and what the bots machine runs; bots-deploy-preflight is
-    // not a judge, because it says skip on a debounce or after three failed deploys.
+    // deploy-lag reads which releases the deploy jobs landed, and never the machine's GIT_SHA;
+    // bots-deploy-preflight is not a judge, because it says skip on a debounce or after three failed
+    // deploys.
     probe: (nowMs) => {
       const lag = json(
         process.execPath,
@@ -592,8 +608,11 @@ export const CONTRACTS = [
     },
   },
   {
+    // The id is the title of its open thread (#6501), so it keeps the outcome it was named for. The
+    // words below say what it reads.
     id: "alerts-reach-owner",
-    mustBeTrue: "A critical alert reaches the owner when they are not looking",
+    mustBeTrue:
+      "The dashboard holds the mail credential a critical alert needs. This does not prove an alert reaches the owner: each account must also opt in, delivery is off by default, and nothing here reads that",
     home: "clock",
     reads: "Fly",
     corrector: null,
@@ -608,8 +627,8 @@ export const CONTRACTS = [
     },
   },
   {
-    // Separate from alerts-reach-owner on purpose: that contract reads whether the mail alert can be
-    // delivered, and passing this one does not satisfy it (#6470 study, corrected finding).
+    // Separate from alerts-reach-owner on purpose: that contract reads whether the mail credential is
+    // set, and passing this one does not satisfy it (#6470 study, corrected finding).
     id: "owner-assignment-path",
     mustBeTrue:
       "The owner can be assigned, a bot made the assignment, and one exists from the last 30 days. This does not prove an email arrived or that a watch buzzed: no API shows that",
@@ -673,11 +692,16 @@ const blindTitle = (source) => `[fitness] cannot read ${source}`;
 const filesIssue = (r) => r.reaches === ISSUE_TO_OWNER;
 // Details carry running numbers (minutes ago, a streak), so the compare drops them: a standing
 // failure is one state, not a new one every tick. A real-tick replay of the 10-22 outage posted 70
-// comments before this. The detail is matched whole, from the space after the label to the full
-// stop the body and the comment both put after it, so a cause that narrows (one app still
-// undeployed of the two reported) is a change and not a substring of the old one.
+// comments before this. The detail is matched whole, from the label's colon to the full stop the body
+// and the comments all put after it, so a cause that narrows (either app still undeployed of the two
+// reported) is a change and not a substring of the old one: a leading space alone also matches after
+// the comma that joins them.
 const shape = (text) => String(text ?? "").replace(/\d+/g, "N");
-const said = (text, detail) => shape(text).includes(` ${shape(detail)}.`);
+const said = (text, detail) => {
+  const shaped = shape(text);
+  const whole = shape(detail);
+  return shaped.includes(`:** ${whole}.`) || shaped.includes(`: ${whole}.`);
+};
 const seen = (issue, detail) => said(issue.body, detail) || said(issue.lastComment, detail);
 
 const assignAction = (number, title, why, detail) => ({

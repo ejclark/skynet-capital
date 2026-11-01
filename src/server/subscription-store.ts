@@ -23,8 +23,8 @@ import {
 } from "../subscriptions/subscriptions-file.js";
 
 /**
- * What an owner re-tunes on an existing subscription (#4649): every field the subscriptions.v1
- * wire carries except `enabled`. Absent capital = uncapped; absent or empty symbols = the whole
+ * What an owner re-tunes on an existing subscription (#4649): every field the subscriptions wire
+ * has fingerprinted since its first kind (v1), except `enabled`. Absent capital = uncapped; absent or empty symbols = the whole
  * basket; absent compounding = off. The same meanings `PlaybookSubscription` documents.
  */
 export type SubscriptionTuning = Pick<

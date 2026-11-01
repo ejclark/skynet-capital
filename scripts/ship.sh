@@ -431,14 +431,20 @@ EOF_SHOTS
     local verify_log="/tmp/ship-verify.$$.log"
     # Every outcome goes to scripts/agent-meter.mjs's log: a mistake caught here never reaches CI, so
     # without this line the first-pass rate only sees what got past local verify (#6470).
-    local verify_ok=true
-    bash scripts/verify-locked.sh --log "$verify_log" || verify_ok=false
+    local verify_ok=true verify_rc=0
+    bash scripts/verify-locked.sh --log "$verify_log" || { verify_rc=$?; verify_ok=false; }
+    # 75 is the queue's wait running out: nothing ran, so there is no log to show and no mistake for
+    # the meter to count, and telling it from a red verify stops an agent hunting for a failure.
+    if [ "$verify_rc" = 75 ]; then
+      echo "ship: verify did not run — the queue wait ran out and nothing was pushed. Run this again."
+      exit 75
+    fi
     # A failed row also says which step failed and the first error line: a row that only said
     # ok=false left the meter unable to name what agents get wrong first (#6470).
     local verify_why=""
     "$verify_ok" || verify_why=",$(verify_row_fields "$verify_log")"
     # Only for this repo: ship's own specs run it in throwaway repos, and those must not count.
-    git remote get-url origin 2>/dev/null | grep -q 'skynet-capital' \
+    grep -q 'skynet-capital' <<<"$(git remote get-url origin 2>/dev/null)" \
       && mkdir -p "${AGENT_RUNS_DIR:-$HOME/.claude/runs}" 2>/dev/null \
       && printf '{"at":"%s","ok":%s,"branch":"%s"%s}\n' "$(date -u +%FT%TZ)" "$verify_ok" "$(git branch --show-current)" "$verify_why" \
         >> "${AGENT_RUNS_DIR:-$HOME/.claude/runs}/ship-verify.jsonl" 2>/dev/null || true
@@ -455,7 +461,11 @@ EOF_SHOTS
     # Same reasoning for the PLATFORM (2026-10-02, PR #4519): screenshot baselines are
     # `*-chromium-linux.png` only, so on macOS Playwright writes fresh `-darwin` files and fails
     # every `matches the known-good page screenshot` spec — false-red. Local e2e runs on Linux only.
-    if git diff --name-only "origin/$base...HEAD" | grep -qvE '(\.md$|^docs/)'; then
+    # Not piped: a kill by SIGPIPE on a match would read as a docs-only diff and skip these tests. An
+    # empty diff must stay false, and a here-string would hand `grep -v` one blank line to match. A
+    # diff that fails says nothing about what changed, so it runs the tests rather than skipping them.
+    local changed; changed="$(git diff --name-only "origin/$base...HEAD")" || changed="the diff failed"
+    if [ -n "$changed" ] && grep -qvE '(\.md$|^docs/)' <<<"$changed"; then
       if [ "$(uname -s)" != "Linux" ]; then
         echo "ship: ⚠ local integration tests NOT run — screenshot baselines are Linux-only and this is $(uname -s). CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
       elif node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
@@ -1304,7 +1314,10 @@ cmd_platter_amend() {
   git diff --quiet && git diff --cached --quiet || {
     echo "ship platter: uncommitted changes — commit or drop them before amending" >&2; exit 1; }
   platter_require_current_script
-  git log --no-merges --format=%b "$PLATTER_BASE..HEAD" | grep -qxF "Platter-Item: $item" || {
+  # A here-string, for the reason at checkbody: a piped `grep -q` kills git on a match, and pipefail
+  # then reports the match as a miss, most often for the items boarded most recently.
+  local boarded; boarded="$(git log --no-merges --format=%b "$PLATTER_BASE..HEAD")"
+  grep -qxF "Platter-Item: $item" <<<"$boarded" || {
     echo "ship platter amend: no item '$item' is boarded in $PLATTER_BASE..HEAD — \`ship platter ledger\` lists the items." >&2
     exit 1; }
 

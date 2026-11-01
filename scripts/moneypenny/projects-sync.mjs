@@ -522,11 +522,7 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
     return { skipped: true, reason: "not a backlog candidate" };
   }
 
-  const decisionCalloutMissing = missingDecisionCallout({
-    labels,
-    body: issue.body,
-    author: issue.user?.login,
-  });
+  const decisionCalloutMissing = missingDecisionCallout({ labels, body: issue.body });
 
   // Add-or-find, never add-and-hope: `item-add` errors on an issue that is already an item, and
   // every sync after an issue's first one hits exactly that (#3954). The board list we already hold

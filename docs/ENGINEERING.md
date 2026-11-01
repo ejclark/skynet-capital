@@ -372,6 +372,11 @@ written as history; its check C has a before/after for rule 2.
 
 ## House gotchas (recurring traps)
 
+- **A spec red on one machine is a finding about that machine.** Fix the machine's path or file it;
+  never skip the spec to get green. The verify queue's specs were skipped on macOS in #6324 because
+  they failed there. They were right: the queue did nothing on a Mac for six days, and that is where
+  the fan-outs run (`docs/LESSONS.md`, 2026-11-01).
+
 - **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever
   (the recurring TS1005 trap: the embedded script lives inside a template string, so those tokens
   terminate or interpolate the host literal).
