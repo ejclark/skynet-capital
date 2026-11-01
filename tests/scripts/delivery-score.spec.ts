@@ -1,4 +1,7 @@
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 import {
   agreement,
@@ -6,7 +9,9 @@ import {
   classify,
   cleanRate,
   contrastTable,
+  DEFAULT_WINDOW_DAYS,
   renderTable,
+  sinceOf,
 } from "../../scripts/delivery-score.mjs";
 
 // The instrument #3955's loop rows score #4056's calls with. The frozen cohort is the study's own
@@ -123,6 +128,105 @@ describe("delivery score: classifying an outcome", () => {
     const events = [{ event: "labeled", label: { name: "ready" }, created_at: at(0) }];
     const late = pr(10, { body: "Closes #500", created_at: at(9), merged_at: at(9) });
     expect(classify({ issue: issue(), events, prs: [late], now })?.outcome).toBe("STALLED");
+  });
+});
+
+// The registry's "Format stays out of ready" row names bare `npm run delivery:score`, and the
+// push-tick check runs a row's command with no arguments — so with no default the posted check
+// could only ever read "did not finish" (loop census, 2026-10-31). The default is a window ending
+// today, and the heading says which date it chose, so the posted output names its own cohort.
+describe("delivery score: the default window", () => {
+  const now = Date.parse("2026-11-03T15:00:00Z");
+
+  it("reads back the window a caller names", () => {
+    expect(sinceOf(["--since", "2026-10-01"], now)).toEqual({
+      since: "2026-10-01",
+      defaulted: false,
+    });
+  });
+
+  it("falls back to the window ending today, and says it did", () => {
+    const { since, defaulted } = sinceOf([], now);
+    expect(defaulted).toBe(true);
+    expect(Date.parse(`${since}T15:00:00Z`)).toBe(now - DEFAULT_WINDOW_DAYS * DAY);
+  });
+
+  it("refuses a malformed date rather than scoring since the epoch", () => {
+    expect(() => sinceOf(["--since", "yesterday"], now)).toThrow(/usage/);
+    expect(() => sinceOf(["--since"], now)).toThrow(/usage/);
+  });
+});
+
+// The wiring, driven through a stub `curl` (ghRest's one shell-out): the CLI with no argument
+// must exit 0 and name its window, and an issue nothing merged builds must cost no events read —
+// that read was one REST call per issue, which is what made the live score too slow for the
+// push tick's command budget.
+describe("delivery score: the CLI with no argument, against a stub GitHub", () => {
+  const STUB_CURL = `#!/usr/bin/env bash
+url="\${@: -1}"
+echo "$url" >> "$STUB/calls"
+case "$url" in
+*/pulls?*) cat "$STUB/pulls.json" ;;
+*/issues?*) cat "$STUB/issues.json" ;;
+*/events?*) echo '[]' ;;
+*) echo '[]' ;;
+esac
+`;
+  const run = (args: string[], { pulls = [], issues = [] }: Record<string, unknown[]> = {}) => {
+    const dir = mkdtempSync(join(tmpdir(), "delivery-score-"));
+    try {
+      writeFileSync(join(dir, "curl"), STUB_CURL, { mode: 0o755 });
+      writeFileSync(join(dir, "pulls.json"), JSON.stringify(pulls));
+      writeFileSync(join(dir, "issues.json"), JSON.stringify(issues));
+      writeFileSync(join(dir, "calls"), "");
+      let out = "";
+      let status = 0;
+      try {
+        out = execFileSync("node", ["scripts/delivery-score.mjs", ...args], {
+          encoding: "utf8",
+          stdio: "pipe",
+          env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, STUB: dir, GH_TOKEN: "stub" },
+        });
+      } catch (err) {
+        status = (err as { status: number }).status;
+        out = String((err as { stdout?: string }).stdout ?? "");
+      }
+      return { out, status, calls: readFileSync(join(dir, "calls"), "utf8").trim().split("\n") };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it("exits 0 with no argument and names the window it scored", () => {
+    const { out, status } = run([]);
+    expect(status).toBe(0);
+    const { since } = sinceOf([], Date.now());
+    expect(out).toContain(
+      `**Handed off since ${since} (the default: ${DEFAULT_WINDOW_DAYS} days back), scored live**`,
+    );
+  });
+
+  it("reads events only for an issue something merged builds", () => {
+    const since = sinceOf([], Date.now()).since;
+    const recent = new Date(Date.parse(since) + 2 * DAY).toISOString();
+    const pulls = [
+      pr(10, { body: "Closes #500", created_at: recent, merged_at: recent, head: { ref: "x" } }),
+    ];
+    const issues = [
+      {
+        number: 500,
+        state: "closed",
+        state_reason: "completed",
+        labels: [],
+        created_at: recent,
+        body: "",
+      },
+      { number: 501, state: "open", labels: [], created_at: recent, body: "" },
+    ];
+    const { status, calls } = run([], { pulls, issues });
+    expect(status).toBe(0);
+    expect(calls.some((u) => u.includes("issues/500/events"))).toBe(true);
+    expect(calls.some((u) => u.includes("issues/501/events"))).toBe(false);
   });
 });
 
