@@ -421,4 +421,8 @@ const reviewedCount = done.filter((r) => r.judged).length
 const withDefect = new Set(out.confirmed.map((f) => f.pr)).size
 const singleLensCount = out.confirmed.filter((f) => f.singleLens).length
 log(`${out.confirmed.length} confirmed (${singleLensCount} on the trace alone) across ${withDefect} of ${reviewedCount} reviewed PRs · ${out.refuted.length} refuted · ${out.low.length} low (unverified) · ${out.unreviewed.length} unreviewed`)
+// The meter counts defects only beside how many PRs were audited (#6470): record this run's
+// receipt, or the week's defect number reads unknown.
+const reviewed = done.filter((r) => r.judged).map((r) => r.pr)
+log(`record it: node scripts/agent-meter.mjs --audit-receipt --prs ${reviewed.join(',') || '<none>'} --confirmed ${out.confirmed.length}`)
 return out
