@@ -74,6 +74,10 @@ describe("ship platter revert — one item out of a squashed platter, from refs/
     // A fresh clone, as any later session has it: the item's commit is nowhere in it.
     clone = join(root, "clone");
     git(root, "clone", "-q", `file://${origin}`, clone);
+    // ship.sh's own `git revert` runs in this clone with a hermetic env, so the identity lives in
+    // its config: a runner has no passwd name for git to guess from (#6576's first CI run).
+    git(clone, "config", "user.email", "spec@example.com");
+    git(clone, "config", "user.name", "spec");
   });
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
