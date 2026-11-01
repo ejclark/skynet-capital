@@ -59,6 +59,40 @@ describe("bots-catchup — a failed start still reports, and nothing hides a fai
     );
   });
 
+  // `!cancelled()` also reaches the check after a failed setup, with no flyctl: the machine read
+  // comes back empty, the preflight says deploy on "no baseline", and the lever restarts the bots
+  // from the image they already run, wiping their in-memory signal windows, on every tick.
+  it("never lets a failed setup reach the stranded check, which would fail open into a redeploy", () => {
+    expect(named("Set up flyctl").text).toMatch(/^\s+id: flyctl$/m);
+    expect(named("Is a bot-relevant commit stranded?").text).toContain(
+      "steps.flyctl.outcome == 'success'",
+    );
+  });
+
+  // A hung flyctl used to run to the job's timeout, a cancellation, and `!cancelled()` steps do not
+  // run after that, so the contracts went dark. A step timeout is a failure, and they still run.
+  it("bounds the two steps that read Fly, so a hung read still leaves the contracts their run", () => {
+    for (const name of [
+      "Start the machine if it is stopped",
+      "Is a bot-relevant commit stranded?",
+    ]) {
+      const minutes = Number(/^\s+timeout-minutes: (\d+)$/m.exec(named(name).text)?.[1]);
+      expect(minutes, name).toBeGreaterThanOrEqual(2);
+      expect(minutes, name).toBeLessThanOrEqual(4);
+    }
+  });
+
+  // fitness.mjs --report exits 0 on a failed contract, and moneypenny-repair.yml does not list this
+  // workflow. The next reader trusts these comments, so they have to say what really happens.
+  it("says what a red run means, and no longer claims the repair lane hears it", () => {
+    expect(text).not.toMatch(/a failed contract is a red run/i);
+    expect(text).not.toMatch(/repair lane and his\s+#?\s*notifications/);
+    expect(text).toMatch(/exits 0 on a failed contract/);
+    const repair = readFileSync(".github/workflows/moneypenny-repair.yml", "utf8");
+    expect(repair).not.toContain("Bots deploy catch-up");
+    expect(repair).not.toContain("bots-catchup.yml");
+  });
+
   it("sets up Node from .nvmrc before any node runs", () => {
     const setup = steps.findIndex(
       (s) => s.text.includes("actions/setup-node@") && s.text.includes("node-version-file: .nvmrc"),

@@ -802,6 +802,56 @@ describe("deploy-bots — a machine that will not start still reaches smoke and 
   });
 });
 
+// The dashboard job closed this in #6293; the bots job kept the gap. flyctl can fail `Deploy bots` with
+// the machine already on the new image, smoke is then skipped, and a rollback keyed only on smoke
+// leaves the bad image running until the next deploy.
+describe("deploy-bots — a failed deploy step rolls back exactly as a failed smoke does", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const job = pipeline.slice(pipeline.indexOf("\n  deploy-bots:"));
+  const step = (name: string) => {
+    const start = job.indexOf(`- name: ${name}`);
+    return job.slice(start, job.indexOf("\n      - name: ", start + 1));
+  };
+  const condition =
+    step("Roll back bots to previous image").match(/^\s+if: \$\{\{ (.+) \}\}$/m)?.[1] ?? "";
+
+  type Outcome = "success" | "failure" | "skipped";
+  const rollsBack = (deploy: Outcome, smoke: Outcome, prevImage = "registry.fly.io/app:prev") => {
+    const js = condition
+      .replace(/failure\(\)/g, String(deploy === "failure" || smoke === "failure"))
+      .replace(/steps\.deploy-bots\.conclusion/g, JSON.stringify(deploy))
+      .replace(/steps\.smoke-bots\.conclusion/g, JSON.stringify(smoke))
+      .replace(/steps\.prev-bots\.outputs\.image/g, JSON.stringify(prevImage))
+      .replace(/'([^']*)'/g, (_m, s: string) => JSON.stringify(s))
+      .replace(/!=/g, "!==")
+      .replace(/([^!=])==([^=])/g, "$1===$2");
+    if (!/^[\s\w"./:()|&!=-]+$/.test(js)) throw new Error(`unreadable condition: ${js}`);
+    return new Function(`return (${js});`)() as boolean;
+  };
+
+  it("gives the deploy step the id the rollback reads", () => {
+    expect(step("Deploy bots")).toMatch(/^\s+id: deploy-bots$/m);
+    expect(condition).toContain("steps.deploy-bots.conclusion");
+  });
+
+  it("rolls back when the deploy step fails and smoke is therefore skipped", () => {
+    expect(rollsBack("failure", "skipped")).toBe(true);
+  });
+
+  it("still rolls back when the deploy succeeds and smoke fails", () => {
+    expect(rollsBack("success", "failure")).toBe(true);
+  });
+
+  it("never rolls back a deploy that succeeded, or one the preflight skipped", () => {
+    expect(rollsBack("success", "success")).toBe(false);
+    expect(rollsBack("skipped", "skipped")).toBe(false);
+  });
+
+  it("does not roll back when there is no previous image to go to", () => {
+    expect(rollsBack("failure", "skipped", "")).toBe(false);
+  });
+});
+
 // #6293 (found 2026-10-27): #6039's production-access gate refuses a boot, flyctl fails the
 // `Deploy to Fly` step, `Smoke test the release` (no `if: always()`) is then skipped — and the
 // rollback keyed only on smoke never ran, leaving the one machine crash-looping. The condition is

@@ -677,19 +677,22 @@ jobs:
       # instead of a one-line read. The CLI always writes its structured result to this fixed temp
       # path regardless of outcome; on failure, print it. This is NOT `show_full_output: true` (which
       # would dump the whole conversation transcript, the thing the security note is about) — just the
-      # terminal result envelope (is_error, duration_ms, num_turns, total_cost_usd, modelUsage, and any
-      # error text it carries), which is diagnostic, not transcript.
+      # terminal result envelope's own numbers and status fields (is_error, duration_ms, num_turns,
+      # total_cost_usd, modelUsage, api_error_status, …), which are diagnostic, not transcript.
       - if: always() && steps.build.outcome == 'failure'
         name: Surface the swallowed Claude result on failure
         # FILTERED, NEVER `cat` (2026-11-01, #6470's study): the file is the SDK's whole streamed
         # message array, so a bare `cat` printed every assistant turn of a failed leg into a public
         # run log — the transcript the comment above promised not to dump. Only the terminal
-        # envelope and the rate-limit events are diagnostic; everything else is dropped here.
+        # envelope and the rate-limit events are diagnostic; everything else is dropped here. And
+        # the program LISTS their fields: the envelope's `result` is the session's last words, so
+        # passing the object through would print them, and a field added later stays out until
+        # someone lists it. The three lanes run the same program; repair.mjs reads this print.
         run: |
           echo "::group::Claude execution result (the action hides this by default)"
           F=/home/runner/work/_temp/claude-execution-output.json
           if [ -f "$F" ]; then
-            jq -c 'if type=="array" then .[] else . end | select(.type == null or .type == "result" or .type == "rate_limit_event")' "$F" \
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
               || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
           else
             echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API-level rejection)"
@@ -848,7 +851,7 @@ jobs:
           echo "::group::Claude execution result (the action hides this by default)"
           F=/home/runner/work/_temp/claude-execution-output.json
           if [ -f "$F" ]; then
-            jq -c 'if type=="array" then .[] else . end | select(.type == null or .type == "result" or .type == "rate_limit_event")' "$F" \
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
               || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
           else
             echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API failure)"
@@ -998,7 +1001,7 @@ jobs:
           echo "::group::Claude execution result (the action hides this by default)"
           F=/home/runner/work/_temp/claude-execution-output.json
           if [ -f "$F" ]; then
-            jq -c 'if type=="array" then .[] else . end | select(.type == null or .type == "result" or .type == "rate_limit_event")' "$F" \
+            jq -c 'if type=="array" then .[] else . end | select(.type == "result" or .type == "rate_limit_event") | {type, subtype, is_error, terminal_reason, api_error_status, duration_ms, num_turns, total_cost_usd, modelUsage, rate_limit_info} | with_entries(select(.value != null))' "$F" \
               || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
           else
             echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API failure)"

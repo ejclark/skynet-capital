@@ -20,10 +20,12 @@
 # not skip the catch-up deploy, and must not skip the one step that can tell the owner. The fitness
 # contracts run LAST with no `continue-on-error`: they used to run second behind the start step, so
 # all six went dark exactly when a corrector had failed, and `continue-on-error` hid a crash as a
-# green step. Now a failed contract is a red run, which is what the repair lane and his
-# notifications read. The App token is minted beside the Fly token here, so it is scoped to the two
-# writes this job makes (issues, actions) and nothing else the App can do; a failed mint falls back
-# to GITHUB_TOKEN rather than skipping anything (the mint carries `continue-on-error`).
+# green step. What each outcome means now: `fitness.mjs --report` exits 0 on a failed contract, whose
+# delivery is its issue, assigned to the owner; a red run means a step crashed or the start's budget
+# is spent. Nothing listens for that red run beyond the Actions page, because moneypenny-repair.yml
+# does not watch this workflow. The App token is minted beside the Fly token here, so it is scoped to
+# the two writes this job makes (issues, actions) and nothing else the App can do; a failed mint
+# falls back to GITHUB_TOKEN rather than skipping anything (the mint carries `continue-on-error`).
 name: Bots deploy catch-up
 
 on:
@@ -58,6 +60,7 @@ jobs:
           node-version-file: .nvmrc # the one source of truth for CI's Node; the scripts below run on it
 
       - name: Set up flyctl
+        id: flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
         with:
           version: 0.4.99
@@ -78,15 +81,22 @@ jobs:
 
       - name: Start the machine if it is stopped
         # A crash between merges has no deploy coming to recover it (#5955). This keeps the exit
-        # record and a named cause on an issue and stops after 3 starts in 6 hours.
+        # record and a named cause on an issue and stops after 3 starts in 6 hours. Its own timeout
+        # (the script waits 90s for a start at most): the job's timeout is a cancellation, which would
+        # take the contracts below with it, and a step's is a failure, which leaves them their run.
+        timeout-minutes: 3
         env:
           GH_TOKEN: ${{ github.token }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
         run: bash scripts/bots-start-stopped.sh skynet-capital-bots --report
 
       - name: Is a bot-relevant commit stranded?
+        # Only on a flyctl that was set up: with none, the machine read below comes back empty, the
+        # preflight says deploy on "no baseline", and the lever restarts the bots from the image they
+        # already run, on every tick. A failed start is still fine here; that is what `!cancelled()` is for.
         id: check
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.flyctl.outcome == 'success' }}
+        timeout-minutes: 3
         env:
           GH_TOKEN: ${{ github.token }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
@@ -137,10 +147,11 @@ jobs:
         # three stop, main sat 75.8h with research due. If the events workflow has not run in 2h,
         # the dial is not halt, and the sweep's peek or the due list names something admissible,
         # this dispatches one `scan` — the same call the push tick makes — at most once per 2h,
-        # counted from the run list. The per-issue retry limit (#6526) is what makes it safe: a
-        # failed build is held after three starts in a day, so the clock cannot re-run it all
-        # night. The common case costs one REST read. App token only (a GITHUB_TOKEN dispatch
-        # hides the run from the repair lane), so a failed mint skips this step and nothing else.
+        # counted from the run list. The per-issue retry limit (#6526) is what bounds it: a failed
+        # build is held after three starts in a day, or nine each if two barred issues read as a lane
+        # outage, the bound clock-wake.mjs's header works through. The common case costs one REST
+        # read. App token only (a GITHUB_TOKEN dispatch hides the run from the repair lane), so a
+        # failed mint skips this step and nothing else.
         if: ${{ !cancelled() && steps.app-token.outputs.token != '' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}

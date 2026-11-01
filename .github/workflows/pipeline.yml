@@ -763,6 +763,7 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
       - name: Deploy bots
+        id: deploy-bots
         # deploy-lag.mjs reads THIS step's conclusion (by name) to find the last real bots deploy —
         # a preflight skip leaves it `skipped`, so a no-op run can never poison the lag baseline.
         #
@@ -806,9 +807,11 @@ jobs:
       - name: Roll back bots to previous image
         # A rollback drops the GIT_SHA stamp (fly.toml env only), so the NEXT push's preflight
         # finds no baseline and fails open to deploying — the safe direction after a bad release.
-        if: ${{ failure() && steps.smoke-bots.conclusion == 'failure' && steps.prev-bots.outputs.image != '' }}
+        # Keyed on the deploy too, as the dashboard's is (#6293): flyctl can fail with the machine
+        # already on the new image, and smoke is then skipped.
+        if: ${{ failure() && (steps.deploy-bots.conclusion == 'failure' || steps.smoke-bots.conclusion == 'failure') && steps.prev-bots.outputs.image != '' }}
         run: |
-          echo "bots smoke failed — rolling back to ${{ steps.prev-bots.outputs.image }}"
+          echo "bots ${{ steps.deploy-bots.conclusion == 'failure' && 'deploy' || 'smoke' }} failed — rolling back to ${{ steps.prev-bots.outputs.image }}"
           node scripts/fly-deploy.mjs --config fly.bots.toml --image "${{ steps.prev-bots.outputs.image }}"
           bash scripts/bots-start-stopped.sh skynet-capital-bots
         env:
