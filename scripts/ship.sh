@@ -126,6 +126,21 @@ cmd_push() {
 # Prints one word: real (success/failure/…), pending (queued/in progress), stale (latest is
 # skipped or cancelled), none (no verify check yet). "Latest" is the highest id — the order GitHub
 # created them in, which is the order branch protection reads.
+# The failed step and the first error line of a verify log, as two JSON string fields for the row
+# scripts/agent-meter.mjs reads (#6470). The step is run-p's `ERROR: "<name>" exited with` line; the
+# error line prefers a compiler or test failure over an advisory ✗, which green runs print too.
+# Quotes, backslashes and control characters are dropped so the row stays one JSON line.
+verify_row_fields() {
+  local log="$1" step err
+  # Under set -e, a grep with no match would abort the ship; an empty field is the honest answer.
+  step=$(grep -m1 -o 'ERROR: "[^"]*" exited with' "$log" 2>/dev/null | sed 's/ERROR: "\([^"]*\)".*/\1/' || true)
+  err=$(grep -m1 -E 'error TS[0-9]+|AssertionError|FAIL |✖|Error:' "$log" 2>/dev/null || true)
+  [ -n "$err" ] || err=$(grep -m1 '✗' "$log" 2>/dev/null || true)
+  [ -n "$err" ] || err=$(grep -m1 'exited with' "$log" 2>/dev/null || true)
+  err=$(printf '%s' "$err" | sed 's/\x1b\[[0-9;]*m//g' | tr -d '"\\' | tr -d '\000-\037' | cut -c1-160)
+  printf '"step":"%s","error":"%s"' "$step" "$err"
+}
+
 cmd_checkverify() {
   python3 -c '
 import sys, json
@@ -418,10 +433,14 @@ EOF_SHOTS
     # without this line the first-pass rate only sees what got past local verify (#6470).
     local verify_ok=true
     bash scripts/verify-locked.sh --log "$verify_log" || verify_ok=false
+    # A failed row also says which step failed and the first error line: a row that only said
+    # ok=false left the meter unable to name what agents get wrong first (#6470).
+    local verify_why=""
+    "$verify_ok" || verify_why=",$(verify_row_fields "$verify_log")"
     # Only for this repo: ship's own specs run it in throwaway repos, and those must not count.
     git remote get-url origin 2>/dev/null | grep -q 'skynet-capital' \
       && mkdir -p "${AGENT_RUNS_DIR:-$HOME/.claude/runs}" 2>/dev/null \
-      && printf '{"at":"%s","ok":%s,"branch":"%s"}\n' "$(date -u +%FT%TZ)" "$verify_ok" "$(git branch --show-current)" \
+      && printf '{"at":"%s","ok":%s,"branch":"%s"%s}\n' "$(date -u +%FT%TZ)" "$verify_ok" "$(git branch --show-current)" "$verify_why" \
         >> "${AGENT_RUNS_DIR:-$HOME/.claude/runs}/ship-verify.jsonl" 2>/dev/null || true
     "$verify_ok" || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 "$verify_log"; exit 1; }
     echo "ship: verify green."
@@ -503,6 +522,11 @@ EOF_SHOTS
   # forbids it, this just makes drift back into it visible. Advisory only — a real system boundary
   # can be a legitimate exception a script can't judge.
   node scripts/test-quality-scan.mjs "$branch" --base "$base" 2>/dev/null || true
+
+  # Reuse advisory: a helper this change pasted, named while the fix is still one import. No REST
+  # call, silent when there is no copy. Only a body match prints; scripts/dupe-delta.mjs holds the
+  # measured precision and the number that removes this line.
+  node scripts/dupe-scan.mjs --diff "origin/$base" 2>/dev/null || true
 
   # Braces are load-bearing: stock macOS bash (3.2) reads the ellipsis bytes as identifier
   # characters, so a bare $branch… is the undefined variable "branch…" and set -u kills the run
@@ -1280,7 +1304,8 @@ case "${1:-}" in
   pinshots) shift; cmd_pinshots "$@" ;;
   checkarm) shift; cmd_checkarm "$@" ;;
   checkverify) shift; cmd_checkverify "$@" ;;
+  verifyrow) shift; verify_row_fields "$1"; echo ;;
   push) shift; cmd_push "$@" ;;
   platter) shift; cmd_platter "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | push <branch> | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | verifyrow <verify-log> | push <branch> | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
 esac

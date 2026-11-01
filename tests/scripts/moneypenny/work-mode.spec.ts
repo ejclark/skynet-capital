@@ -816,3 +816,40 @@ describe("the status line", () => {
     expect(noticeLine({ position: "normal", until: null })).toBe("::notice::work-mode=normal");
   });
 });
+
+// An ended position keeps its label while every lane reads normal, so the next tap on that label takes
+// it off, leaving none, which reads conserve. `endedLabel` is what the push tick tidies, so it names the
+// one state that is safe: an end date passed. A brake with no date and a date still ahead never carry it.
+describe("naming the label an end date has passed", () => {
+  it.each(["conserve", "surge", "halt"])("names %s once its end date has passed", (position) => {
+    const mode = resolve([label(position)], [until("2026-09-29")]);
+    expect(mode.position).toBe("normal");
+    expect(mode.endedLabel).toBe(`work-mode:${position}`);
+  });
+
+  it("does not name a halt with no end date, which stays halted", () => {
+    const mode = resolve([label("halt")]);
+    expect(mode.position).toBe("halt");
+    expect(mode.endedLabel).toBeUndefined();
+  });
+
+  it.each(["conserve", "surge", "halt"])("does not name %s with its end date ahead", (position) => {
+    const mode = resolve([label(position)], [until("2026-09-30")]);
+    expect(mode.position).toBe(position);
+    expect(mode.endedLabel).toBeUndefined();
+  });
+
+  // Reads normal, but no date passed: the end date may be a second behind the label, and a surge from
+  // anyone but him stays exactly as it reads (dial-tap.mjs). Neither is an ended position.
+  it.each(["conserve", "surge"])("does not name %s with no end date at all", (position) => {
+    const mode = resolve([label(position)]);
+    expect(mode.position).toBe("normal");
+    expect(mode.endedLabel).toBeUndefined();
+  });
+
+  it("does not name a dial already at normal, or one that is not exactly one label", () => {
+    expect(resolve([label("normal")]).endedLabel).toBeUndefined();
+    expect(resolve([label("surge"), label("normal")]).endedLabel).toBeUndefined();
+    expect(resolve([]).endedLabel).toBeUndefined();
+  });
+});

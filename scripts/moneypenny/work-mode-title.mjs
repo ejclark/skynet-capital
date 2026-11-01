@@ -76,3 +76,27 @@ export function workModeRetitle(state) {
     reason: mode.reason ?? "",
   };
 }
+
+/**
+ * Pure: should the label an end date has passed come off the dial?
+ *
+ * An ended surge or conserve keeps its label while reading normal, and adding a label already on fires
+ * no event, so a tap on it can only remove it. That leaves no label, which reads conserve until a
+ * second tap. Only `endedLabel` opens this, and the reader sets that only when an end date passed: a
+ * halt with no date and a date still ahead never carry it. A surge with no date reads normal too, and
+ * stays as it reads, because that is what keeps anyone else's surge label from going live.
+ *
+ * @returns a `tidy-ended-dial` intent, or null (the common case). Its own write is the memory: the
+ *   next push reads `work-mode:normal`, which carries no `endedLabel`.
+ */
+export function endedDialTidy(state) {
+  const { trackingIssue, mode } = state ?? {};
+  if (!Number.isInteger(trackingIssue) || trackingIssue <= 0) return null;
+  if (mode?.position !== "normal" || !mode.endedLabel || mode.unreadable) return null;
+  return {
+    kind: "tidy-ended-dial",
+    issueNumber: trackingIssue,
+    label: mode.endedLabel,
+    reason: mode.reason ?? "",
+  };
+}

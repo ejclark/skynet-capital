@@ -16,10 +16,13 @@
 //   node scripts/dupe-scan.mjs            # report + enforce (exit 1 if duplication grew past budget)
 //   node scripts/dupe-scan.mjs --update   # rewrite dupe-budget.json (ratchet: only lower)
 //   node scripts/dupe-scan.mjs --candidate# emit the highest-leverage consolidation target as JSON
+//   node scripts/dupe-scan.mjs --diff <base> [--head <ref>] [--names] [--json]
+//                                         # only the copies this change adds (scripts/dupe-delta.mjs)
 //
 // Enforced in CI via tests/arch/dupe.spec.ts — runs on every PR, no extra workflow.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { DEF as defRe, deltaLine, reuseDelta, sameNameLine } from "./dupe-delta.mjs";
 
 const ROOT = process.cwd();
 const BUDGET_FILE = join(ROOT, "dupe-budget.json");
@@ -55,7 +58,45 @@ const SCOPES = {
     ignore: new Set(["Route"]),
   },
 };
-const defRe = /^(?:export\s+)?(?:async\s+)?(?:function|const|class)\s+([A-Za-z_$][\w$]*)/gm;
+
+// Before the whole-tree walk below, which this mode never needs. Advisory by design: exit 0 with or
+// without a copy; a base it cannot read is exit 2 (UNKNOWN), never a clean answer.
+if (process.argv.includes("--diff")) {
+  const value = (flag) => {
+    const i = process.argv.indexOf(flag);
+    const v = i < 0 ? undefined : process.argv[i + 1];
+    return v?.startsWith("--") ? undefined : v;
+  };
+  const base = value("--diff");
+  const head = value("--head");
+  if (!base || (process.argv.includes("--head") && !head)) {
+    console.error("dupe-scan --diff: --diff and --head each need a ref — verdict UNKNOWN.");
+    process.exit(2);
+  }
+  let delta;
+  try {
+    const ignore = Object.values(SCOPES).flatMap((scope) => [...scope.ignore]);
+    delta = reuseDelta({ base, head: head ?? "HEAD", ignore });
+  } catch (error) {
+    console.error(
+      `dupe-scan --diff: could not read ${base}..${head ?? "HEAD"} — verdict UNKNOWN. ${error.message}`,
+    );
+    process.exit(2);
+  }
+  if (process.argv.includes("--json")) {
+    console.log(JSON.stringify(delta, null, 2));
+    process.exit(0);
+  }
+  for (const row of delta.pastes) console.log(deltaLine(row));
+  if (process.argv.includes("--names")) {
+    for (const row of delta.sameName) console.log(sameNameLine(row));
+  }
+  const copies = delta.pastes.length;
+  console.error(
+    `reuse: ${copies} ${copies === 1 ? "copy" : "copies"} added; ${delta.sameName.length} same-named.`,
+  );
+  process.exit(0);
+}
 
 /** Duplicated symbols within one scope, most-copied first. Debt = Σ (copies − 1). */
 function scan({ dir, ext, ignore }) {

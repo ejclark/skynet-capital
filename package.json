@@ -75,6 +75,7 @@
     "work-gate": "node scripts/moneypenny/work-gate.mjs",
     "pace": "node scripts/moneypenny/quota.mjs --tick",
     "delivery:score": "node scripts/delivery-score.mjs",
+    "meter": "node scripts/agent-meter.mjs",
     "steer:gather": "node scripts/steer/gather.mjs",
     "steer:build": "node scripts/steer/build.mjs",
     "steer:readback": "node scripts/steer/readback.mjs",
@@ -164,7 +165,7 @@
     "@rstest/core": "0.12.4",
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/git": "11.0.1",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "@types/three": "0.186.0",
     "acorn": "8.19.0",
     "dependency-cruiser": "18.7.0",
@@ -173,7 +174,7 @@
     "husky": "9.1.7",
     "jscpd": "5.4.2",
     "jsdom": "30.1.3",
-    "knip": "6.42.1",
+    "knip": "6.43.0",
     "mermaid": "11.17.2",
     "npm-run-all2": "9.0.4",
     "playwright-core": "1.62.1",
@@ -182,7 +183,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
-    "marked": "18.1.1",
+    "marked": "18.1.2",
     "three": "0.186.1"
   }
 }

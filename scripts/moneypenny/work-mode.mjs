@@ -24,7 +24,8 @@
 //   - A surge never reads past the first weekly reset after its end date was written, whatever that
 //     date says. A date alone cannot land on the reset: `until 2026-10-27` ran 19 hours into the new
 //     week, and only a revert, itself 52 minutes late, ended it. Counted from the comment rather than
-//     the label because an ended surge keeps its label, and adding a label already on fires no event.
+//     the label because an ended surge keeps its label until the next push takes it off, and adding a
+//     label already on fires no event.
 //     The reset is `weeklyResetAnchor` in work-mode.json, one real reset that the rest repeat from at
 //     7 days.
 //   - That comment counts only if it was written for this setting of the dial: by this repo's
@@ -271,6 +272,9 @@ export function resolveWorkMode({
       expiry.atTime
         ? `${position} expired at ${expiry.until}`
         : `${position} expired at the end of ${expiry.until} (UTC)`,
+      // The one state whose label may be taken off for it (work-mode-title.mjs). A position with no
+      // end date also reads normal, but its date may be a second behind its label.
+      { endedLabel: dial[0] },
     );
   return { ...settle(position, `set to ${position} until ${expiry.until}`), until: expiry.until };
 }
