@@ -709,8 +709,11 @@ jobs:
       - name: Start the bots machine if it landed stopped
         # flyctl leaves a stopped machine stopped and calls it a good state (#5955), so smoke would
         # judge a dead fleet and a known-good image could never recover it. A skynet-halt marker is
-        # respected; the catch-up job covers a crash between deploys.
+        # respected; the catch-up job covers a crash between deploys. continue-on-error because smoke
+        # is the judge: the rollback keys on smoke's conclusion, so a start that failed the job would
+        # skip smoke and leave an image Fly refused to start on the machine (2026-11-01 audit, #6476).
         if: ${{ steps.preflight.outputs.deploy == 'true' }}
+        continue-on-error: true
         run: bash scripts/bots-start-stopped.sh skynet-capital-bots
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
