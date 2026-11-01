@@ -773,6 +773,33 @@ describe("moneypenny-events — build lanes push as the App, never the persisted
   }
 });
 
+// The 2026-11-01 audit of #6476: the step that starts a stopped bots machine failed the job before
+// smoke, and the rollback keys on smoke's conclusion, so an image Fly refused to start stayed on the
+// machine with nothing judging it. Smoke has to stay the judge.
+describe("deploy-bots — a machine that will not start still reaches smoke and the rollback", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const job = pipeline.slice(pipeline.indexOf("\n  deploy-bots:"));
+  const step = (name: string) => {
+    const start = job.indexOf(`- name: ${name}`);
+    return job.slice(start, job.indexOf("\n      - name: ", start + 1));
+  };
+
+  it("does not let the start step fail the job", () => {
+    expect(step("Start the bots machine if it landed stopped")).toMatch(
+      /^\s+continue-on-error: true$/m,
+    );
+  });
+
+  it("keeps the start step ahead of smoke, and the rollback keyed on smoke", () => {
+    expect(job.indexOf("- name: Start the bots machine")).toBeLessThan(
+      job.indexOf("- name: Smoke test the bots release"),
+    );
+    expect(step("Roll back bots to previous image")).toContain(
+      "steps.smoke-bots.conclusion == 'failure'",
+    );
+  });
+});
+
 // #6293 (found 2026-10-27): #6039's production-access gate refuses a boot, flyctl fails the
 // `Deploy to Fly` step, `Smoke test the release` (no `if: always()`) is then skipped — and the
 // rollback keyed only on smoke never ran, leaving the one machine crash-looping. The condition is
