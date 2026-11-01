@@ -82,6 +82,25 @@ function speed(s) {
   return lines;
 }
 
+/** One agent type: what it starts at, and how many stages a missing tool cost. */
+function stageRow(row) {
+  const lines = [
+    `  ${row.type}: ${row.n} stage${row.n === 1 ? "" : "s"}, median first call ${k(row.median)} (${k(row.min)} to ${k(row.max)}), ${row.stopped} stopped for a missing tool, ${row.triedMissing} tried one`,
+  ];
+  for (const stage of row.stoppedStages) lines.push(`    stopped: ${stage}`);
+  return lines;
+}
+
+/** `--worker-stages` alone: first calls by agent type and the worker's oracle, with no REST read. */
+export function renderWorkerStages({ window: w, stages, oracle }) {
+  return [
+    `workflow stages, ${w.hours} hours: ${w.since} to ${w.until}`,
+    ...stages.flatMap(stageRow),
+    "",
+    oracle.line,
+  ].join("\n");
+}
+
 const SOURCES = [
   [
     "mainCi",
@@ -168,6 +187,7 @@ function agents(a) {
     `  first call p50 by type: ${Object.entries(a.firstCallP50ByType)
       .map(([type, row]) => `${type} ${k(row.p50)} (n=${row.n})`)
       .join(" · ")}`,
+    `  ${a.workerOracle.line}`,
   );
   for (const [wf, row] of Object.entries(a.tokensByWorkflow).sort(
     (x, y) => y[1].total - x[1].total,
