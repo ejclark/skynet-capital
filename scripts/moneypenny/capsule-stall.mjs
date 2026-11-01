@@ -4,15 +4,23 @@
 //   1. ORPHANED. A `ci-failure` capsule with no linked PR and no `needs-eric`: the repair session
 //      never ran, or ended without a PR. #4395 sat 17 days like that; each recurrence added a
 //      comment and nothing else, because repair.mjs dispatches only when it FILES a capsule.
-//   2. ERODED. A capsule waiting on `needs-eric` whose failing job has since gone green on every
-//      push. #5577 held the label two days after that, until someone closed it by hand. The
-//      decision it was waiting on no longer blocks anything, so the label comes off. "Green" means
-//      the failing step ran and passed: a job that skipped it proves nothing (#6076).
+//   2. PROVEN. A capsule whose failing job has since gone green on every run that tested it. #5577
+//      held `needs-eric` two days after that, until someone closed it by hand; the study of
+//      2026-11-01 found three more sitting 125–139 hours, one of them for a workflow that runs on
+//      `workflow_dispatch`, which the proof — push runs only, then — could never read. The proof
+//      now reads dispatch runs beside pushes and CLOSES the capsule, at zero tokens: the failure it
+//      tracked has stopped happening, so there is nothing left to repair and no decision left to
+//      wait on (`needs-eric` comes off first). "Green" means the failing step ran and passed: a
+//      job that skipped it proves nothing (#6076). And the proof counts only runs newer than the
+//      fault's last recurrence, so a capsule whose failure is still happening is never closed.
+//      (This replaces the earlier "eroded" check, which only removed the label; the decision it
+//      recorded — a decision that no longer blocks anything comes off — survives as the close.)
 //
 // Both ride the `--audit` push tick (scripts/moneypenny/index.mjs), beside audit.mjs, which is at
-// its size cap. Same doctrine as audit(): comment and move a label, never decide more than that.
-// It NEVER re-dispatches a repair (that needs a workflow edit, which is protected) and NEVER closes
-// a capsule — closing stays the shipped sweep's job, when a `Closes #n` PR merges.
+// its size cap. Same doctrine as audit(): comment, move a label, close on proof — never decide
+// more than that. It NEVER re-dispatches a repair (that needs a workflow edit, which is protected).
+// A fault that comes back after the close files a fresh capsule through repair.mjs as any new
+// failure does.
 //
 // REST only (the core bucket — gh.mjs `ghRest` says why), and one comment per capsule per condition,
 // deduped by a hidden marker in the comment itself. Pure core (`capsuleIntents` and its helpers) +
@@ -23,10 +31,10 @@ import { LOST_RUNNER, normalizeJobName } from "./repair.mjs";
 
 /** A capsule younger than this may still have its repair session running. */
 export const ORPHAN_AFTER_HOURS = 24;
-/** Consecutive green pushes that count as "the failing job has gone green". */
+/** Consecutive green runs (push or dispatch) that count as "the failing job has gone green". */
 export const GREEN_PUSHES = 3;
 export const ORPHAN_MARKER = "<!-- moneypenny:capsule-orphan -->";
-export const ERODED_MARKER = "<!-- moneypenny:capsule-eroded -->";
+export const PROVEN_MARKER = "<!-- moneypenny:capsule-proven -->";
 
 const names = (labels = []) => labels.map((l) => (typeof l === "string" ? l : l?.name));
 const hours = (fromIso, nowMs) => Math.floor((nowMs - Date.parse(fromIso)) / 3_600_000);
@@ -125,13 +133,14 @@ export function hasLinkedPr(timeline = [], since) {
   });
 }
 
-/** What the gather needs to read for this capsule, from its labels and age alone — so the costly
- *  per-capsule reads happen only where a condition could still fire. */
+/** What the gather needs to read for this capsule, from its labels and age alone. The proof is
+ *  read for every open capsule — green closes any of them — and the costlier PR read only where
+ *  the orphan flag could still fire. */
 export function lookupsFor(issue, nowMs, orphanAfterHours = ORPHAN_AFTER_HOURS) {
   const labels = names(issue.labels);
-  if (labels.includes(LABELS.needsEric.name)) return { orphan: false, eroded: true };
+  if (labels.includes(LABELS.needsEric.name)) return { orphan: false, proof: true };
   const old = hours(issue.created_at ?? issue.createdAt, nowMs) >= orphanAfterHours;
-  return { orphan: old && !labels.includes(LABELS.stall.name), eroded: false };
+  return { orphan: old && !labels.includes(LABELS.stall.name), proof: true };
 }
 
 /**
@@ -150,62 +159,67 @@ export function provenRuns(runs, target, n = GREEN_PUSHES) {
   return { passes, ended: false };
 }
 
-/** The runs that prove a job green: the newest `n` filed after the capsule that tested its fault,
- *  all passing — else null. */
+/** The moment the proof starts counting from: the capsule's filing, or the fault's last recurrence
+ *  if that is later. A run from before the fault last came back cannot speak for it as it is now. */
+export function proofCut(capsule) {
+  const filed = Date.parse(capsule.createdAt ?? "");
+  const back = Date.parse(capsule.recurredAt ?? "");
+  return Number.isFinite(back) && back > filed ? back : filed;
+}
+
+/** The runs that prove a job green: the newest `n` after the capsule's last recurrence (or its
+ *  filing) that tested its fault, all passing — else null. */
 export function greenProof(capsule, n = GREEN_PUSHES) {
   const target = capsuleTarget(capsule);
   if (!target) return null;
-  const filed = Date.parse(capsule.createdAt);
-  const after = (capsule.recentRuns ?? []).filter((r) => Date.parse(r.createdAt) > filed);
+  const cut = proofCut(capsule);
+  const after = (capsule.recentRuns ?? []).filter((r) => Date.parse(r.createdAt) > cut);
   const { passes } = provenRuns(after, target, n);
   return passes.length >= n ? { ...target, runs: passes } : null;
-}
-
-/**
- * An eroded capsule has already said what state it is in, so the orphan flag stays quiet after it —
- * until the fault comes back. A `Failed again` after the eroded comment means the green streak
- * ended, and nothing is repairing it again (#6076: #5955 sat a day and a half like that).
- */
-function recurredSinceEroded(comments = []) {
-  const eroded = comments.findLastIndex((b) => String(b ?? "").includes(ERODED_MARKER));
-  return eroded >= 0 && comments.slice(eroded + 1).some(recurrence);
 }
 
 function orphanBody(c) {
   return `🧭 **No repair has reached this** — this capsule was filed **${c.ageHours}h** ago and has no linked PR and no \`${LABELS.needsEric.name}\`. The repair session either never ran or ended without opening a PR, and a recurrence only adds a comment here.\n\nTo move it: open a fix PR that says \`Closes #${c.number}\`, apply \`${LABELS.needsEric.name}\` with the reason if the fix is Eric's call, or close it if the job passes again.\n\n${ORPHAN_MARKER}\n\n${FOOTER}`;
 }
 
-function erodedBody(c, proof) {
+function provenBody(proof, clearNeedsEric) {
   const runs = proof.runs.map((r) => `[${r.id}](${r.url})`).join(", ");
   const ran = proof.step ? ` that ran \`${proof.step}\`` : "";
-  return `🌤 **Passing again — \`${LABELS.needsEric.name}\` removed** — \`${proof.job}\` (${proof.workflow}) passed on the last ${proof.runs.length} pushes to \`main\`${ran}: ${runs}. The failure this was waiting on has stopped happening, so the decision no longer blocks anything.\n\nThis issue stays open. It closes the usual way, when a PR that says \`Closes #${c.number}\` merges, or by hand if nothing needs fixing. If the decision still stands, re-apply \`${LABELS.needsEric.name}\`: this check removes it only once.\n\n${ERODED_MARKER}\n\n${FOOTER}`;
+  const label = clearNeedsEric
+    ? ` \`${LABELS.needsEric.name}\` comes off with it: the decision it waited on no longer blocks anything.`
+    : "";
+  return `🌤 **Passing again — closed** — \`${proof.job}\` (${proof.workflow}) passed on the last ${proof.runs.length} runs on \`main\`${ran}: ${runs}. The failure this tracked has stopped happening, so there is nothing left here to repair.${label}\n\nIf it comes back, the repair lane files a fresh issue for it; reopen this one only to keep its history together.\n\n${PROVEN_MARKER}\n\n${FOOTER}`;
 }
 
 /**
  * The decision, pure. Each capsule carries its labels, age, the trusted comment bodies (for the
- * markers) and whichever lookups `lookupsFor` asked for: `hasLinkedPr` for an orphan candidate,
- * `recentRuns` (newest first, each with its jobs) for an escalated one. A lookup that is absent is
- * unknown, and unknown never fires.
+ * markers), when its fault last recurred, and whichever lookups `lookupsFor` asked for:
+ * `hasLinkedPr` for an orphan candidate, `recentRuns` (newest first, each with its jobs) for the
+ * proof. A lookup that is absent is unknown, and unknown never fires. Proof is judged first and
+ * for every capsule: a green one closes, whatever else it carries.
  */
 export function capsuleIntents({ capsules = [], orphanAfterHours = ORPHAN_AFTER_HOURS } = {}) {
   const intents = [];
   for (const c of capsules) {
     const labels = names(c.labels);
     const posted = (c.comments ?? []).join("\n");
-    if (labels.includes(LABELS.needsEric.name)) {
-      const proof = posted.includes(ERODED_MARKER) ? null : greenProof(c);
-      if (proof) {
-        const kind = "clear-eroded-needs-eric";
-        intents.push({ kind, issueNumber: c.number, title: c.title, body: erodedBody(c, proof) });
-      }
+    const proof = greenProof(c);
+    if (proof) {
+      const clearNeedsEric = labels.includes(LABELS.needsEric.name);
+      intents.push({
+        kind: "close-proven-capsule",
+        issueNumber: c.number,
+        title: c.title,
+        body: provenBody(proof, clearNeedsEric),
+        clearNeedsEric,
+      });
       continue;
     }
+    // Not proven. An escalated capsule waits on its decision; the rest may be orphans.
+    if (labels.includes(LABELS.needsEric.name)) continue;
     if (c.ageHours < orphanAfterHours || c.hasLinkedPr !== false) continue;
     if (labels.includes(LABELS.stall.name)) continue;
-    // An eroded capsule has already said what state it is in; flagging it orphaned next would be
-    // a second comment telling the reader nothing new — unless the fault has come back since.
     if (posted.includes(ORPHAN_MARKER)) continue;
-    if (posted.includes(ERODED_MARKER) && !recurredSinceEroded(c.comments)) continue;
     const kind = "flag-capsule-orphan";
     intents.push({ kind, issueNumber: c.number, title: c.title, body: orphanBody(c) });
   }
@@ -217,21 +231,37 @@ export function capsuleIntents({ capsules = [], orphanAfterHours = ORPHAN_AFTER_
 /** A run counts toward "the last pushes" only if it actually tested something. */
 const DECIDED = new Set(["success", "failure"]);
 
+/** The two ways a run lands on `main` that can test a fault: a push, and a dispatch — a workflow
+ *  that runs only on `workflow_dispatch` (the research lane, the catch-up clock) has no push runs
+ *  at all, which is how a capsule for one could never prove itself green. */
+const RUN_EVENTS = ["push", "workflow_dispatch"];
+
 /**
- * The newest completed push runs on `main` of one workflow filed after the capsule, each with its
+ * The newest completed runs on `main` of one workflow after the capsule's proof cut, each with its
  * jobs, read newest first until `provenRuns` has its answer — so a streak of debounce skips is paged
- * past, up to one page of 20, instead of filling the window (#6076). A run whose jobs do not fit one
+ * past, up to one page of 20 per event, instead of filling the window (#6076). Push and dispatch
+ * runs are merged into one timeline before any job is read, so a failing dispatch run newer than
+ * three green pushes ends the walk the way any newer failure does. A run whose jobs do not fit one
  * page is left without them, so `jobPassed` cannot be proven by a partial list.
  */
-function recentRuns(workflowId, target, filedIso, { rest }) {
-  const page = rest(
-    `actions/workflows/${workflowId}/runs?branch=main&event=push&status=completed&per_page=20`,
-  );
-  const filed = Date.parse(filedIso);
+function recentRuns(workflowId, target, cutMs, { rest }) {
+  const seen = new Set();
+  const candidates = [];
+  for (const event of RUN_EVENTS) {
+    const page = rest(
+      `actions/workflows/${workflowId}/runs?branch=main&event=${event}&status=completed&per_page=20`,
+    );
+    for (const r of page?.workflow_runs ?? []) {
+      const counts = DECIDED.has(r.conclusion) && Date.parse(r.created_at) > cutMs;
+      if (counts && !seen.has(r.id)) {
+        seen.add(r.id);
+        candidates.push(r);
+      }
+    }
+  }
+  candidates.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   const runs = [];
-  for (const r of page?.workflow_runs ?? []) {
-    const counts = DECIDED.has(r.conclusion) && Date.parse(r.created_at) > filed;
-    if (!counts) continue;
+  for (const r of candidates) {
     const jobs = rest(`actions/runs/${r.id}/jobs?per_page=100`);
     const whole = (jobs?.jobs ?? []).length >= (jobs?.total_count ?? 0);
     runs.push({ id: r.id, url: r.html_url, createdAt: r.created_at, jobs: whole ? jobs.jobs : [] });
@@ -247,10 +277,9 @@ export function gatherCapsules(nowMs, { rest = ghRest, restAll = ghRestAll } = {
   const capsules = [];
   for (const i of open.filter((x) => !x.pull_request)) {
     const need = lookupsFor(i, nowMs);
-    if (!(need.orphan || need.eroded)) continue;
     const read = restAll(`issues/${i.number}/comments`).filter(trustedComment);
     const comments = read.map((c) => c.body ?? "");
-    const lastRecurrence = read.filter((c) => recurrence(c.body)).at(-1)?.created_at;
+    const recurredAt = read.filter((c) => recurrence(c.body)).at(-1)?.created_at;
     const c = {
       number: i.number,
       title: i.title,
@@ -259,17 +288,18 @@ export function gatherCapsules(nowMs, { rest = ghRest, restAll = ghRestAll } = {
       ageHours: hours(i.created_at, nowMs),
       labels: names(i.labels),
       comments,
+      recurredAt,
     };
     if (need.orphan) {
-      c.hasLinkedPr = hasLinkedPr(restAll(`issues/${i.number}/timeline`), lastRecurrence);
+      c.hasLinkedPr = hasLinkedPr(restAll(`issues/${i.number}/timeline`), recurredAt);
     }
-    const target = need.eroded && !comments.join("\n").includes(ERODED_MARKER) && capsuleTarget(i);
+    const target = need.proof && capsuleTarget(i);
     if (target) {
       workflowIds ??= new Map(
         (rest("actions/workflows?per_page=100")?.workflows ?? []).map((w) => [w.name, w.id]),
       );
       const id = workflowIds.get(target.workflow);
-      if (id) c.recentRuns = recentRuns(id, target, i.created_at, { rest });
+      if (id) c.recentRuns = recentRuns(id, target, proofCut(c), { rest });
     }
     capsules.push(c);
   }
@@ -311,14 +341,18 @@ export function flagCapsuleOrphan(i, { run = sh, ensure = ensureLabel } = {}) {
 }
 
 /**
- * Label first and strict, like audit.mjs's `clearStaleInProgress`: if the removal fails, no comment
- * claims it happened. A comment lost after a good removal costs the explanation, never a storm: the
- * label is gone, so this check cannot fire on the capsule again.
+ * Label first and strict, like audit.mjs's `clearStaleInProgress`: if the `needs-eric` removal
+ * fails, nothing closes and no comment claims it did. Then one `gh issue close` carries the comment
+ * and the close together, so a closed capsule always says why. A capsule is an issue, never a PR,
+ * so the issue subcommand is safe here.
  */
-export function clearErodedNeedsEric(i, { run = sh } = {}) {
-  const label = encodeURIComponent(LABELS.needsEric.name);
-  run("gh", ["api", "-X", "DELETE", `${issuePath(i.issueNumber)}/labels/${label}`]);
-  run("gh", ["api", "-X", "POST", `${issuePath(i.issueNumber)}/comments`, "-f", `body=${i.body}`]);
-  console.log(`::notice::needs-eric removed from #${i.issueNumber} — its failing job is green`);
-  return `🌤 \`${LABELS.needsEric.name}\` removed — \`${i.title}\` is passing again (#${i.issueNumber})`;
+export function closeProvenCapsule(i, { run = sh } = {}) {
+  const n = String(i.issueNumber);
+  if (i.clearNeedsEric) {
+    const label = encodeURIComponent(LABELS.needsEric.name);
+    run("gh", ["api", "-X", "DELETE", `${issuePath(i.issueNumber)}/labels/${label}`]);
+  }
+  run("gh", ["issue", "close", n, "--reason", "completed", "--comment", i.body]);
+  console.log(`::notice::closed #${n} — its failing job is green again`);
+  return `🌤 closed #${n} — \`${i.title}\` is passing again`;
 }

@@ -3,7 +3,7 @@
 export const ORPHAN_AFTER_HOURS: number;
 export const GREEN_PUSHES: number;
 export const ORPHAN_MARKER: string;
-export const ERODED_MARKER: string;
+export const PROVEN_MARKER: string;
 export const RECURRENCE: string;
 
 type Label = { name?: string } | string;
@@ -30,14 +30,18 @@ export interface Capsule {
   ageHours: number;
   labels: readonly Label[];
   comments?: readonly string[];
+  /** When the fault last came back (the newest trusted `Failed again` comment), if ever. */
+  recurredAt?: string;
   hasLinkedPr?: boolean;
   recentRuns?: readonly CapsuleRun[];
 }
 export interface CapsuleIntent {
-  kind: "flag-capsule-orphan" | "clear-eroded-needs-eric";
+  kind: "flag-capsule-orphan" | "close-proven-capsule";
   issueNumber: number;
   title: string;
   body: string;
+  /** On a close: the capsule carries `needs-eric`, which comes off before the close. */
+  clearNeedsEric?: boolean;
 }
 export interface TimelineEvent {
   event?: string;
@@ -62,12 +66,14 @@ export function lookupsFor(
   issue: { labels?: readonly Label[]; created_at?: string; createdAt?: string },
   nowMs: number,
   orphanAfterHours?: number,
-): { orphan: boolean; eroded: boolean };
+): { orphan: boolean; proof: boolean };
 export function provenRuns(
   runs: readonly CapsuleRun[] | undefined,
   target: Target,
   n?: number,
 ): { passes: CapsuleRun[]; ended: boolean };
+/** Epoch ms the proof counts from: the filing, or the last recurrence if later. */
+export function proofCut(capsule: Pick<Capsule, "createdAt" | "recurredAt">): number;
 export function greenProof(capsule: Capsule, n?: number): (Target & { runs: CapsuleRun[] }) | null;
 export function capsuleIntents(deps?: {
   capsules?: readonly Capsule[];
@@ -85,4 +91,4 @@ export function flagCapsuleOrphan(
   i: CapsuleIntent,
   io?: { run?: Run; ensure?: (label: { name: string }) => void },
 ): string;
-export function clearErodedNeedsEric(i: CapsuleIntent, io?: { run?: Run }): string;
+export function closeProvenCapsule(i: CapsuleIntent, io?: { run?: Run }): string;

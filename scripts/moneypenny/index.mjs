@@ -68,7 +68,7 @@ import {
 } from "./admission.mjs";
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
-import { capsuleAudit, clearErodedNeedsEric, flagCapsuleOrphan } from "./capsule-stall.mjs";
+import { capsuleAudit, closeProvenCapsule, flagCapsuleOrphan } from "./capsule-stall.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import {
   CONTINUED_MODEL,
@@ -1505,7 +1505,7 @@ const ONE_CALL_INTENTS = {
   "wake-next": (i) => wakeAfter(i.issueNumber),
   // #5727 — the CI repair capsules' two stall checks, which live beside audit.mjs.
   "flag-capsule-orphan": (i) => flagCapsuleOrphan(i),
-  "clear-eroded-needs-eric": (i) => clearErodedNeedsEric(i),
+  "close-proven-capsule": (i) => closeProvenCapsule(i),
 };
 
 /**
