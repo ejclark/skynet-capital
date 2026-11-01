@@ -1,0 +1,26 @@
+[
+  {
+    "id": "count-needs-two",
+    "contract": "has-machines",
+    "file": "tests/fixtures/fitness-audit/toy.mjs",
+    "find": "machines.length > 0",
+    "replace": "machines.length > 1",
+    "why": "one machine should pass; the spec checks exactly that"
+  },
+  {
+    "id": "age-boundary-off",
+    "contract": "fresh-stamp",
+    "file": "tests/fixtures/fitness-audit/toy.mjs",
+    "find": "ageMs > FRESH_MS",
+    "replace": "ageMs >= FRESH_MS",
+    "why": "a stamp exactly at the limit should pass; the spec never tests the limit"
+  },
+  {
+    "id": "stale-find",
+    "contract": "fresh-stamp",
+    "file": "tests/fixtures/fitness-audit/toy.mjs",
+    "find": "const FRESH_MS = 999;",
+    "replace": "const FRESH_MS = 1;",
+    "why": "written against an older copy of the file; the text no longer exists"
+  }
+]
