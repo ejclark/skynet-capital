@@ -36,13 +36,6 @@
 // Why: on 2026-10-27 a standard-tier pass over 73 merges confirmed 19 defects; a deep-tier pass over 5
 // of the same PRs confirmed 6 more it had missed — every one under src/trading, src/storage,
 // src/server or pipeline.yml. `args.deep` forces listed PRs to the deep tier.
-//
-// PREVENTION — a defect found twice should not need finding a third time. The audit confirmed 27
-// defects over about 110 merges and none became a spec, a gate line or a reviewer line (#6470). So the
-// last step groups what this run confirmed by cause and proposes one line per repeated cause, returned
-// as data for the session to file. One small agent does it, only when two or more findings were
-// confirmed; it reads what it is given and greps, and never reviews code. Which causes earn a proposal
-// is decided in plain code from the ids it returns, so the threshold is a rule and not its judgment.
 export const meta = {
   name: 'post-merge-audit',
   description: 'Correctness-review merged PRs against current main, refute each high/medium finding twice, return the confirmed findings',
@@ -259,6 +252,12 @@ const results = await pipeline(
   },
 )
 
+// PREVENTION — a defect found twice should not need finding a third time. The audit confirmed 27
+// defects over about 110 merges and none became a spec, a gate line or a reviewer line (#6470). So the
+// last step groups what this run confirmed by cause and proposes one line per repeated cause, returned
+// as data for the session to file. One small agent does it, only when two or more findings were
+// confirmed; it reads what it is given and greps, and never reviews code. Which causes earn a proposal
+// is decided in plain code from the ids it returns, so the threshold is a rule and not its judgment.
 const PREVENTION_SCHEMA = {
   type: 'object',
   required: ['causes'],
