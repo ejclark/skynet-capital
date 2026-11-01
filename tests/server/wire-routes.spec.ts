@@ -12,6 +12,7 @@ import type { TradeActivityRecord } from "../../src/observatory/activity-store.j
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import { PulseHistoryFold } from "../../src/observatory/pulse-history-fold.js";
+import { wireTradeVitalsFor } from "../../src/observatory/vitals.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
@@ -660,29 +661,17 @@ describe("serveWireJson", () => {
       expect(otherBot.reasoning).not.toHaveProperty("strategy");
     });
 
-    it("attaches a live Loss headroom gauge when history is wired, nothing when it isn't", async () => {
+    it("attaches a live Loss headroom gauge when the Pulse fold is wired, nothing when it isn't", async () => {
+      const samples = [
+        { at: "2026-08-19T00:00:00.000Z", equity: 100_000 },
+        { at: "2026-08-19T14:30:00.000Z", equity: 100_000 },
+      ].map((s) => ({ ...s, participantId: "sauron", cash: 0, realizedPl: 0 }));
       const withHistory = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
         readAllTradeActivity: () => Promise.resolve([record({ orderId: "ord-bot" })]),
         findByOrderId: () => ({ record: decision, intent }),
-        readHistory: () =>
-          Promise.resolve([
-            {
-              at: "2026-08-19T00:00:00.000Z",
-              participantId: "sauron",
-              equity: 100_000,
-              cash: 0,
-              realizedPl: 0,
-            },
-            {
-              at: "2026-08-19T14:30:00.000Z",
-              participantId: "sauron",
-              equity: 100_000,
-              cash: 0,
-              realizedPl: 0,
-            },
-          ]),
+        readPulseHistory: () => Promise.resolve(PulseHistoryFold.of(samples)),
       };
       await serveWireJson(withHistory.res, "/api/wire", deps, false);
       const withHistoryTrades = JSON.parse(withHistory.out.body).wire.trades;
@@ -692,47 +681,35 @@ describe("serveWireJson", () => {
       await serveWireJson(
         withoutHistory.res,
         "/api/wire",
-        { ...deps, readHistory: undefined },
+        { ...deps, readPulseHistory: undefined },
         false,
       );
       const withoutHistoryTrades = JSON.parse(withoutHistory.out.body).wire.trades;
       expect(withoutHistoryTrades[0].vitals).toBeUndefined();
     });
 
-    it("reads the gauge off the Pulse fold, never the whole history, when both are wired (#4619)", async () => {
+    it("reads the gauge off the Pulse fold, the same gauge a sorted scan of the samples gives (#4619)", async () => {
       const samples = [
         { at: "2026-08-19T00:00:00.000Z", equity: 100_000 },
         { at: "2026-08-19T01:00:00.000Z", equity: 99_000 },
         { at: "2026-08-19T14:30:00.000Z", equity: 99_500 },
       ].map((s) => ({ ...s, participantId: "sauron", cash: 0, realizedPl: 0 }));
-      const deps: WireRouteDeps = {
-        hub: hubWith([snapshot()]),
-        readAllTradeActivity: () => Promise.resolve([record({ orderId: "ord-bot" })]),
-        findByOrderId: () => ({ record: decision, intent }),
-        readHistory: () => Promise.resolve(samples),
-      };
-      const fromHistory = capture();
-      await serveWireJson(fromHistory.res, "/api/wire", deps, false);
-
-      let wholeReads = 0;
+      const fill = record({ orderId: "ord-bot" });
       const fromFold = capture();
       await serveWireJson(
         fromFold.res,
         "/api/wire",
         {
-          ...deps,
-          readHistory: () => {
-            wholeReads += 1;
-            return Promise.resolve(samples);
-          },
+          hub: hubWith([snapshot()]),
+          readAllTradeActivity: () => Promise.resolve([fill]),
+          findByOrderId: () => ({ record: decision, intent }),
           readPulseHistory: () => Promise.resolve(PulseHistoryFold.of(samples)),
         },
         false,
       );
-      const gauge = (body: string) => JSON.parse(body).wire.trades[0].vitals.lossHeadroom;
-      expect(gauge(fromFold.out.body)).toEqual(gauge(fromHistory.out.body));
-      expect(gauge(fromFold.out.body).detailText).toBe("1.0% of 5.0% cap");
-      expect(wholeReads).toBe(0);
+      const gauge = JSON.parse(fromFold.out.body).wire.trades[0].vitals.lossHeadroom;
+      expect(gauge).toEqual(wireTradeVitalsFor(samples)(fill.at).lossHeadroom);
+      expect(gauge.detailText).toBe("1.0% of 5.0% cap");
     });
   });
 });

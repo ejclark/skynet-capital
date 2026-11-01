@@ -6,7 +6,6 @@ import {
   type HealthFinding,
 } from "../observatory/book-health-view.js";
 import { WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
-import { deskLedger } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import type { OpenLot } from "../trading/round-trips.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -60,16 +59,14 @@ export async function deskHealthView(
 }
 
 /** An account's open lots, untagged — the desk route's lot breakdown and both health readers
- *  judge a book by them. Held while the ledger and broker window are unchanged when the server
- *  keeps them (`trade-ledger-cache.ts`, #4619), else matched from the whole ledger; undefined with
- *  no ledger wired. */
+ *  judge a book by them. Held while the ledger and broker window are unchanged
+ *  (`trade-ledger-cache.ts`, #4619); undefined with no ledger fold wired — never a whole-ledger
+ *  match per request. */
 export async function openLotsOf(
   found: ParticipantSnapshot,
   config: DashboardServerConfig,
 ): Promise<readonly OpenLot[] | undefined> {
-  if (config.readHeldLedger) return (await config.readHeldLedger(found)).open;
-  const durable = await config.readTradeActivity?.(found.id);
-  return durable ? deskLedger(found, durable).open : undefined;
+  return config.readHeldLedger ? (await config.readHeldLedger(found)).open : undefined;
 }
 
 export async function deskHealthPayload(
