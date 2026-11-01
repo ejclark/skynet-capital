@@ -504,6 +504,11 @@ EOF_SHOTS
   # can be a legitimate exception a script can't judge.
   node scripts/test-quality-scan.mjs "$branch" --base "$base" 2>/dev/null || true
 
+  # Reuse advisory: a helper this change pasted, named while the fix is still one import. No REST
+  # call, silent when there is no copy. Only a body match prints; scripts/dupe-delta.mjs holds the
+  # measured precision and the number that removes this line.
+  node scripts/dupe-scan.mjs --diff "origin/$base" 2>/dev/null || true
+
   # Braces are load-bearing: stock macOS bash (3.2) reads the ellipsis bytes as identifier
   # characters, so a bare $branch… is the undefined variable "branch…" and set -u kills the run
   # right before the push. Brace any variable followed by a non-ASCII character in this file.
