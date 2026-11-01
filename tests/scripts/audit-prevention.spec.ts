@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "@rstest/core";
 import { type Reply, runWorkflow } from "../support/run-workflow";
 
@@ -41,6 +42,33 @@ type Prevention = {
   notRun?: string;
 };
 const prevention = (result: unknown) => (result as { prevention: Prevention }).prevention;
+
+// The three causes the 2026-11-01 audit grouped its findings under. Each is one sentence in each place
+// a reviewer reads, so the wording is pinned loosely: a rephrase is fine, losing the question is not.
+const REVIEWER_QUESTIONS = [
+  /name the signal .*real effect it claims.*signal can be true while the effect is not/i,
+  /when it fails or its window holds no sample.*all-clear answer/i,
+  /new way to close, park, label or exempt.*grep every reader.*what each now sees/i,
+];
+const flat = (text: string) => text.replace(/\s+/g, " ");
+
+describe("the questions every correctness reviewer is asked", () => {
+  it("reach the audit's reviewer, under its warning that zero findings is normal", async () => {
+    const { calls } = await audit([], { causes: [] });
+    const prompt = flat(calls.find((c) => c.opts.label?.startsWith("review"))?.prompt ?? "");
+    for (const question of REVIEWER_QUESTIONS) expect(prompt).toMatch(question);
+    expect(prompt).toContain("CORRECTNESS ONLY");
+    expect(prompt).toContain("Zero findings is a normal answer");
+  });
+
+  it.each([".claude/agents/reviewer.md", "docs/review/lenses/adversarial.md"])(
+    "are in %s",
+    (path) => {
+      const text = flat(readFileSync(path, "utf8"));
+      for (const question of REVIEWER_QUESTIONS) expect(text).toMatch(question);
+    },
+  );
+});
 
 describe("the audit's prevention step", () => {
   it("pays for no agent with fewer than two confirmed findings", async () => {

@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Time a verify's wait and its run, per row.** `ship-verify.jsonl` says pass or fail with no duration, so nobody could see verifies slow from minutes to ten-minute timeouts. `waited` and `ran` seconds beside each row would let `npm run meter` report the queue. One verify alone took 78 seconds on 2026-11-01, so the 1,800-second wait fits about 23 in line; a row per run would show when that stops being true. _(src: Claude · while: retro on the verify queue, 2026-11-01)_
+- **List the specs that load turns red.** The same names failed on 5-second timeouts at load 25-80 and passed alone: steer-widths, steer-pins-client, trade-chain-tap, guidance-section, RollRow, and fitness.spec's 300 ms hung read. A verify run under a fixed stress load would name them, and each is a false red the queue only hides. _(src: Claude · while: retro on the verify queue, 2026-11-01)_
+- **A verify that hangs now stops the queue.** A working queue means one hung verify makes every waiter exit 75 after 30 minutes, with nothing running. It has not been seen, and it needs a limit on the holder that also stops the holder's children. Separately, `SKYNET_VERIFY_LOCKED=1` leaking into an agent's shell would turn the queue off with no line at all. _(src: Claude · while: retro on the verify queue, 2026-11-01)_
+- **A worker stage cannot run a review it is asked to run.** The `worker` agent has no Skill tool, and a brief told one to run `/code-review` before opening a PR, so it pushed two branches and opened nothing. A workflow check that a brief naming a skill does not run under `worker` would catch this before launch. _(src: Claude · while: retro on the verify queue, 2026-11-01)_
+- **Notice when the harness changes the memory index limit.** `scripts/run-memory.mjs` holds 25,000,
+  read by hand from Claude Code 2.1.263, and an upgrade could change it unseen. A check of the
+  installed binary needs a pattern that survives minified names.
+  _(src: Claude · while: fixing the index limit the post-merge audit confirmed, #6583)_
 - **The dupe scan counts same-named per-route constants as copies.** Three of today's dupe
   candidates were names, not code: `BODY_CAP_BYTES` (six routes, six different caps, 1–16 KB),
   `MAX_ID` (next in line, likely the same), and half of `num`/`pct`. The athlete has to diff every

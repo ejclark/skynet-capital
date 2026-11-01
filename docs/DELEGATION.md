@@ -67,7 +67,11 @@ into separate lint, typecheck and per-suite calls (#5191).
    was read. **Stop only your own processes:** `pkill -P $$ -f rstest`, never a bare
    `pkill -f rstest` — that kills every sibling worktree's test run too. You never need it to clear
    load: full verifies queue one at a time per checkout (`scripts/verify-locked.sh`, #5548), and the
-   pre-push hook skips a tree `ship.sh open` already verified green.
+   pre-push hook skips a tree `ship.sh open` already verified green. **A queued ship can outlast the
+   ten-minute tool ceiling, so start it with `run_in_background` and wait in foreground `until` loops.
+   Never end your turn while it runs:** a workflow agent's turn is its whole life, so a background job
+   or a Monitor cannot wake it once it has answered (2026-11-01: 3 of 5 builders in one batch came
+   back with no PR that way).
    **Finished worktrees are swept, not left** (#5548: ten at once filled a cloud session's disk,
    and they were only ever removed by hand). **After an agent's PR merges, the session that
    dispatched it runs `npm run worktree:sweep`** (dry run: each `.claude/worktrees/*` entry,

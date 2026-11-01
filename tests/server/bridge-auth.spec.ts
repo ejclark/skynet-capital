@@ -13,9 +13,9 @@ import { createInsightsListener } from "../../src/server/insights-listener.js";
 import { LOADED_SUITE_BRIDGE_BUDGET } from "../support/bridge-budget.js";
 
 // Bridge auth beyond Fly's private network (#4621): a host that sets SKYNET_INSIGHTS_BRIDGE_SECRET
-// on both apps authenticates the bots with it; a host that never set one behaves as before. The
-// listener still takes the repo-public literal while a secret is set (expand half of a
-// listener-first rollout), and says so once.
+// on both apps authenticates the bots with it; a host that never set one behaves as before. Once
+// production finished the listener-first rollout, a host with a secret refuses the repo-public
+// literal; `acceptLegacy` keeps the overlap (accept it, warn once) for a future rotation.
 
 const SECRET = "4f1c0e9a-provisioned-on-both-apps";
 const record: InsightRecord = { at: 1, personaId: "sauron", kind: "observation", data: {} };
@@ -79,10 +79,10 @@ describe("resolveBridgeAuth (what the dashboard accepts)", () => {
     });
   });
 
-  it("accepts the provisioned secret, and still the literal, once one is set", () => {
+  it("accepts the provisioned secret alone once one is set", () => {
     expect(resolveBridgeAuth({ SKYNET_INSIGHTS_BRIDGE_SECRET: SECRET })).toEqual({
       secret: SECRET,
-      acceptLegacy: true,
+      acceptLegacy: false,
     });
   });
 });
@@ -107,10 +107,27 @@ describe("the bridge with a provisioned secret", () => {
     }
   });
 
-  it("still delivers from a bots app that has no secret yet, and warns once", async () => {
+  it("refuses the repo-public literal from a bots app that has no secret", async () => {
     const { warnings, restore } = captureWarnings();
     try {
       await withListener(resolveBridgeAuth(provisioned), async (base, received) => {
+        const bridge = resolveInsightBridge(
+          { SKYNET_INSIGHTS_BRIDGE_URL: base },
+          LOADED_SUITE_BRIDGE_BUDGET,
+        );
+        await bridge.recordInsight(record);
+        expect(received).toEqual([]);
+      });
+      expect(warnings).toEqual(["[insights-bridge] rejected (401)"]);
+    } finally {
+      restore();
+    }
+  });
+
+  it("still takes the literal, warning once, while a rotation keeps the overlap", async () => {
+    const { warnings, restore } = captureWarnings();
+    try {
+      await withListener({ secret: SECRET, acceptLegacy: true }, async (base, received) => {
         const bridge = resolveInsightBridge(
           { SKYNET_INSIGHTS_BRIDGE_URL: base },
           LOADED_SUITE_BRIDGE_BUDGET,

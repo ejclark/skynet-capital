@@ -7,6 +7,7 @@ import {
 import type { ActivityStore } from "../observatory/activity-record.js";
 import { foldLatestPerOrder, newestFirst } from "../observatory/activity-store.js";
 import type { OrderAuditLog } from "./order-audit-log.js";
+import { serialPerKey } from "./per-key-queue.js";
 
 /**
  * WHAT THE LADDER READS FROM A PARTICIPANT'S TWO LEDGERS, KEPT UP TO DATE BY WHAT WAS APPENDED
@@ -122,7 +123,6 @@ export function ladderEvidenceReader(stores: {
 
 function heldReader(since: FillsSince, sinceTags: TagsSince): LadderEvidenceReader {
   const folds = new Map<string, { fold: LadderFold; fillsAt: number; tagsAt: number }>();
-  const queue = new Map<string, Promise<LadderEvidence>>();
 
   async function rebuild(participantId: string): Promise<LadderEvidence> {
     const [fills, tags] = await Promise.all([since(participantId, 0), sinceTags(participantId, 0)]);
@@ -148,14 +148,5 @@ function heldReader(since: FillsSince, sinceTags: TagsSince): LadderEvidenceRead
     return held.fold.evidence();
   }
 
-  return (participantId) => {
-    const prior = queue.get(participantId) ?? Promise.resolve(undefined);
-    const next = prior.catch(() => undefined).then(() => refresh(participantId));
-    queue.set(participantId, next);
-    const settle = (): void => {
-      if (queue.get(participantId) === next) queue.delete(participantId);
-    };
-    next.then(settle, settle);
-    return next;
-  };
+  return serialPerKey(refresh);
 }

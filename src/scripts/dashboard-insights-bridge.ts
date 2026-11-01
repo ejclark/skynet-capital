@@ -29,17 +29,14 @@ import { storeDecisionBatch } from "../autonomous/decision-wire.js";
 import type { HouseRosterReport } from "../autonomous/house-roster-wire.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { type PlaybookFunnelView, readHouseFunnel } from "../autonomous/playbook-funnel.js";
-import {
-  buildSubscriptionsSnapshot,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
-} from "../autonomous/subscriptions-wire.js";
+import { buildSubscriptionsSnapshot } from "../autonomous/subscriptions-wire.js";
 import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../observatory/check-week-view.js";
 import type { Participant } from "../participants/participant.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { resolveBotCredentials } from "../server/bot-credentials-gate.js";
-import { resolveBridgeAuth } from "../server/bridge-http.js";
+import { LEGACY_BRIDGE_AUTH, resolveBridgeAuth } from "../server/bridge-http.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import { pollSeedsFromEnv } from "../server/subscription-seed-store.js";
@@ -144,14 +141,10 @@ const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
 
 /** The Playbook Store as the bots receive it on every poll: `subscriptions.v4`, with each
  *  subscription's pointer at a conviction record in the version (#5482 contract piece 4). Its
- *  inline-copy bit is frozen at `false` since the field was retired (`subscriptions-wire.ts`). */
+ *  inline-copy bit is frozen at `false` since the field was retired, and v4 is the only kind the
+ *  wire knows since the contract step's close (`subscriptions-wire.ts`). */
 export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
-  return buildSubscriptionsSnapshot(
-    store.load(),
-    at,
-    store.loadAllocations(),
-    SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
-  );
+  return buildSubscriptionsSnapshot(store.load(), at, store.loadAllocations());
 }
 
 /** Start the internal insights listener; logs the port it bound once it's up. */
@@ -251,7 +244,12 @@ export function startInsightsBridge(
         }
       : {}),
   }).listen(insightsPort, () => {
-    const auth = bridgeAuth.acceptLegacy ? "provisioned secret, literal still accepted" : "literal";
+    const auth =
+      bridgeAuth === LEGACY_BRIDGE_AUTH
+        ? "literal"
+        : bridgeAuth.acceptLegacy
+          ? "provisioned secret, literal still accepted"
+          : "provisioned secret";
     console.log(`[insights-bridge] internal listener on port ${insightsPort} (auth: ${auth})`);
   });
   return {

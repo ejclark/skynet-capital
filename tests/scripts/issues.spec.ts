@@ -74,12 +74,12 @@ describe("issues cli: board status follows labels", () => {
   });
 
   // #3913 slice 2: the board keeps an unstated ask out of Blocked until the callout is written.
-  it("keeps a needs-eric issue with no callout out of Blocked, unless Eric filed it", () => {
+  it("keeps a needs-eric issue with no callout out of Blocked, whoever filed it", () => {
     const labels = [{ name: "needs-eric" }];
     expect(boardStatus({ title: "x", state: "open", labels, body: "no ask" })).toBe("Backlog");
     expect(
       boardStatus({ title: "x", state: "open", labels, body: "", user: { login: "ejclark" } }),
-    ).toBe("Blocked");
+    ).toBe("Backlog");
   });
 
   it("prints one scan-able row per issue", () => {

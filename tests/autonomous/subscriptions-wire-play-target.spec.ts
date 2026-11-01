@@ -1,10 +1,6 @@
 import {
   buildSubscriptionsSnapshot,
   parseSubscriptionsSnapshot,
-  SUBSCRIPTIONS_SNAPSHOT_KIND,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
-  type SubscriptionsSnapshotKind,
   subscriptionsVersion,
 } from "../../src/autonomous/subscriptions-wire.js";
 import type { PlaybookSubscription } from "../../src/domain/types.js";
@@ -29,30 +25,19 @@ const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscriptio
 });
 const target = { weight: 0.7, lean: { min: 0.6, max: 0.8 }, band: { signal: 0.05, gate: 0.1 } };
 const AT = Date.parse("2026-10-16T12:00:00.000Z");
-const KINDS: SubscriptionsSnapshotKind[] = [
-  SUBSCRIPTIONS_SNAPSHOT_KIND,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V2,
-  SUBSCRIPTIONS_SNAPSHOT_KIND_V3,
-];
 
 describe("playTarget on the subscriptions wire", () => {
-  it("does not move the version under any kind, so it never swaps a live roster", () => {
+  it("does not move the version, so it never swaps a live roster", () => {
     const without: SubscriptionsState = { sauron: [sub()] };
     const withTarget: SubscriptionsState = { sauron: [sub({ playTarget: target })] };
-    for (const kind of KINDS) {
-      expect(subscriptionsVersion(withTarget, kind)).toBe(subscriptionsVersion(without, kind));
-    }
+    expect(subscriptionsVersion(withTarget)).toBe(subscriptionsVersion(without));
   });
 
   it("reaches the bots intact: a snapshot with a target parses back to the same target", () => {
     const state: SubscriptionsState = { sauron: [sub({ playTarget: target })] };
-    for (const kind of KINDS) {
-      const wire = JSON.parse(
-        JSON.stringify(buildSubscriptionsSnapshot(state, AT, undefined, kind)),
-      );
-      const parsed = parseSubscriptionsSnapshot(wire);
-      expect(parsed?.accounts.sauron?.[0]?.playTarget).toEqual(target);
-    }
+    const wire = JSON.parse(JSON.stringify(buildSubscriptionsSnapshot(state, AT)));
+    const parsed = parseSubscriptionsSnapshot(wire);
+    expect(parsed?.accounts.sauron?.[0]?.playTarget).toEqual(target);
   });
 
   it("is dropped, not fatal, when the target is malformed: the roster still applies", () => {

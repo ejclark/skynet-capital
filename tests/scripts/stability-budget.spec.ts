@@ -198,6 +198,31 @@ describe("verdict", () => {
     ]);
   });
 
+  it("prints time budgets as advisories, and keeps memory and breakage blocking, in CI mode", () => {
+    const fat = { path: "/api/wire", status: 200, ms: 400, msEach: [400, 410, 390], addMb: 25 };
+    const slow = { path: "/api/learn", status: 200, ms: 900, msEach: [900, 910, 890], addMb: 2 };
+    const slowAndFat = [fat, slow];
+    const ci = { ...budgets, advisoryLatency: true };
+    const v = verdict({
+      phases: [phase({ rows: [pulse(12, 400)] }), phase({ name: "common", rows: slowAndFat })],
+      state: alive,
+      budgets: ci,
+    });
+    expect(v.failures).toEqual(["common: /api/wire added 25 MB > budget 20 MB"]);
+    expect(v.advisories).toEqual([
+      "/api/desk/a/pulse took 400 ms > budget 150 ms",
+      "common: /api/wire took 400 ms (median) > budget 150 ms",
+      "common: /api/learn took 900 ms (median) > budget 150 ms",
+    ]);
+    const timesOnly = verdict({
+      phases: [phase({ name: "common", rows: [slow] })],
+      state: alive,
+      budgets: ci,
+    });
+    expect(timesOnly.ok).toBe(true);
+    expect(timesOnly.advisories).toHaveLength(1);
+  });
+
   it("skips the page budget for a phase the server died in — it has no peak to read", () => {
     const killed: BudgetPhase = {
       name: "accounts-open",
@@ -238,6 +263,23 @@ describe("summary", () => {
     expect(text).toContain("18,928 history samples per participant");
     expect(text).toContain("| `/api/desk/a/pulse` | 200 | 40 |");
     expect(text.trim().endsWith("**PASS** — within budget.")).toBe(true);
+  });
+
+  it("lists advisories after a PASS, under their own heading", () => {
+    const text = summary(
+      report({
+        verdict: {
+          ok: true,
+          peakMb: 180,
+          failures: [],
+          advisories: ["common: /api/learn took 900 ms (median) > budget 150 ms"],
+        },
+      }),
+    );
+    expect(text).toContain("**PASS** — within budget.");
+    expect(text).toContain(
+      "Slower than budget (advisory, not blocking):\n- common: /api/learn took 900 ms",
+    );
   });
 
   it("names a killed server and every failure instead of a peak it could not read", () => {
