@@ -37,6 +37,8 @@
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
+  # A laptop session needs none of the above, but it does need today's rules (#6470).
+  (cd "${CLAUDE_PROJECT_DIR:-.}" && node scripts/hooks/fresh-checkout.mjs) || true
   exit 0
 fi
 

@@ -129,6 +129,16 @@ checks all four."
   earned its own file yet (rule of three: write it inline once, promote to `instructions` on the
   second recurrence — same rule COACHES.md applies to skills vs. agents).
 
+**Which agent runs a step.** `script`, `instructions` and `prompt` steps, and the automatic
+envelope and branch checks, dispatch as the `worker` agent (`.claude/agents/worker.md`: file and
+shell tools, about 30k tokens at start against 82k for the default workflow agent). A `skill` step
+keeps the default agent because it needs the Skill tool. A stage that needs Agent, ReportFindings or
+an MCP tool sets `agentType: 'general-purpose'` on the step, or a chore declares it in its front
+matter; `args.agentType` sets it for the whole run except `skill` steps. Whether WebFetch and
+WebSearch work in a narrow agent is not yet proven by a real run, so the two chores that depend on
+the web declare the default-weight agent until one does. The model and effort rules below still apply, since a per-call model
+overrides the agent file.
+
 Every step after the first gets the prior step's `{status, summary}` result as `{prev}` in its
 prompt, so a chain can react to what came before (a script step's failing output feeding an
 `instructions` step that's meant to fix it, for example).
@@ -161,14 +171,15 @@ prose ("the target below") rather than trying to template inside the instruction
 
 - **`/bury` and `/backfill`** (`.claude/skills/bury/SKILL.md`, `.claude/skills/backfill/SKILL.md`)
   — the dead-code and spec-gap drills, fanned with `{kind: "skill"}`. The
-  `mortician`/`test-backfiller` agents and grind share that one copy (#1326). Each skill's body
-  carries its grind calling convention.
+  governor chore and grind share that one copy (#1326). Each skill's body carries its grind
+  calling convention.
 - [`governor.instructions.md`](governor.instructions.md) — one coach's athlete rep: WIP check, the
   gate's own `--candidate`, the open-PR file-collision check, then the drill's `SKILL.md`. The
   dispatch half of `/governor`'s cycle (steps 3–4) expressed as a chore, with **one item per coach**
   as the fence that keeps two reps off one ratchet file. The sunset review in `docs/COACHES.md`
-  (2026-10-03) is why: the four athlete agents ran once between them in 30 days while their gates
-  carried real debt, so the dispatch layer is the part that was idle, not the drills. Landing the
+  (2026-10-03) is why: the four agents that used to wrap the drills ran once between them in 30 days
+  while their gates carried real debt, so the dispatch layer was the idle part, not the drills, and
+  the agent files are gone. Landing the
   wave as one cycle PR stays the caller's job — a rep opens nothing.
 - [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one doc's dead references
   flagged by `scripts/doc-rot-scan.mjs`.
@@ -308,6 +319,13 @@ expects this trailing step — the chore files as their `outcomeCheck`, `/bury` 
 A finished run returns a `ledger` field: a GFM table, one row per item (item · step · status ·
 summary), under a headline carrying the counts, the `itemSource`, and the run's output-token
 delta from `budget.spent()`. Print it verbatim; paste it into the issue or PR the run served.
+
+**What a dead agent left.** Every agent that does the work has its own folder,
+`runs/<run>/<agent>` in the session scratchpad, named in its prompt. The run folder comes from the
+chain and the items, so only a re-run of the same batch finds earlier notes, or from `args.run` to
+name it yourself. A run where an agent died returns
+`deadAgents`: each one's folder and what its notes show. A clean run returns an empty list and pays
+for no reader. One-command steps, the envelope check and the run's own lookups get no folder.
 
 **Checking a run before it returns** — who is done, what came back, what an agent is stuck on — is
 `node scripts/wf-read.mjs --latest` (`--agent <id> --tail 10` for one agent's last tool calls,

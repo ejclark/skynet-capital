@@ -6,6 +6,7 @@ export interface ChoreManifest {
   model: string | null;
   effort: string | null;
   isolation: string | null;
+  agentType: string | null;
   outcomeCheck: string | null;
 }
 

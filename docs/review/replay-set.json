@@ -1,0 +1,971 @@
+{
+  "name": "review-lens replay set",
+  "builtOn": "2026-11-01",
+  "readAt": "origin/main 597663df1 (shas re-checked 2026-11-01)",
+  "howToRun": "scripts/review-replay.mjs prints what each reviewer gets and scores what comes back; .claude/workflows/review-replay.js fans it out. For each PR a lens runs on, the reviewer gets only `git diff base head` plus read access to the tree at `head`, with no GitHub reads, no docs/LESSONS.md or docs/IDEAS.md, no later commits and no file:line hints, and the lens text with its real examples removed. Scored per PR (a PR with two defects counts once), per facet: a hit is a high or medium finding on `defect.file`, an upper bound until someone reads that it names the same mechanism; a finding on a control counts against the lens, except on a control marked trapFor that facet, which is read by hand. The 21 correctness PRs were produced by the audit's own reviewer + two-refuter design on Fable, so re-running that design re-finds them: a new lens's number must come from the reuse, performance, security and context cases, which no standing reviewer found.",
+  "howThisCouldFlatterALens": [
+    "Incumbent advantage: every correctness case was found by post-merge-audit.js on 2026-10-27 at the deep (Fable) tier; replaying the same prompt on the same PRs measures recall of a known answer, not yield on new merges. Compare against the clean controls from the same surge, never alone.",
+    "Leakage: each defect has a public issue naming file:line and a later fix PR on main. A lens with GitHub access, or a tree newer than `head`, can read the answer. Run offline at `head`.",
+    "Path prior: 11 of 22 correctness defects sit under src/trading, src/server, src/storage or scripts/moneypenny. A lens that flags those paths blindly looks good; the controls deliberately come from the same paths (#6303 storage, #6300 boot, #6294 server, #6225 and #6227 moneypenny).",
+    "Date skew: performance cases are Aug to Oct 5 PRs, controls are Oct 26 to 27. File age or size must not be an input.",
+    "Reuse cases are mechanical: `git grep` at `base` for the pasted name finds them with no model. The honest question for a model lens is whether it adds judgment (same concept, or a homonym; pct in #4443 takes a fraction, render-atoms' pct takes a percent) over the script, not whether it finds the name.",
+    "Performance ground truth is the later `npm run stability:budget` number, which the replay cannot run per case cheaply (an 180-day x 12-account seed in a 512 MB container). A lens is scored on naming the mechanism (a request path re-reading a whole growing ledger), not on predicting milliseconds.",
+    "Security cases are unexploited: S1 and S2 are the study's readings of the code, not incidents. Confidence is stated per case; a lens that misses them is not proven wrong, and one that finds them is not proven right until the fixture in tests/scripts/moneypenny/work-mode.spec.ts exists.",
+    "Controls are 'no confirmed finding'; batches B, C and D of the audit lost their low findings before writing them out (#6330), so a low-severity true positive on a control is possible. Count only high/medium findings against controls.",
+    "Fix-PR controls (#6294, #6296, #6299, #6300, #6302, #6303) close audit issues; a lens reading the linked issue learns the defect area. The eval strips PR bodies.",
+    "The lenses were written from this set: most smells' real examples are cases here. The prompt strips each lens's Real: clauses, but the smell itself is still shaped by the answer, so recall on these cases is an upper bound on recall on new PRs. Only a run on PRs the lens was not grown from can say otherwise.",
+    "The structure facet has five borrowed correctness cases (D08, D13, D14, D19, D20), labelled by one reader, and its clean labels on controls are an assumption: a small fix PR with no structural finding on record, which nobody read for structure. Treat a structure finding on a control as a candidate to read, and structure recall as thin.",
+    "This replay runs reviewers only, not the two refuters. Findings on controls are counted before any refuter, so they overstate manufacture compared with the audit; the one-in-three survival number in each lens's kill rule cannot come from here.",
+    "A hit is matched by file. A reviewer that flags the right file for the wrong reason counts until someone reads it and sets mechanism: false on that finding."
+  ],
+  "facets": {
+    "correctness": "wrong result, crash, broken contract, a requirement the code does not meet (post-merge-audit.js's lens today)",
+    "reuse": "a top-level symbol or block this PR defines that already exists elsewhere in the tree at base",
+    "performance": "a request or boot path that re-reads a whole growing ledger, or asks a store once per row",
+    "security": "a trust boundary crossed without the check the rest of the repo applies (author, scope, secret origin)",
+    "context-loop": "a change to CLAUDE.md, a skill, an agent, a hook, a workflow or the loop registry read for startup cost, a claim the named code does not hold, a rule with no reader, a loop with no number, a verifier whose unknown reads as a verdict",
+    "structure": "a concept with no named home, a second rule beside the one predicate, a hand-synced copy: the smells-and-patterns lens"
+  },
+  "cases": [
+    {
+      "id": "D01",
+      "pr": 6039,
+      "head": "5695d32bf6168b9441a5af58449ed6f9ec1d78a4",
+      "base": "64a14f2dd951f4a9e488c3a59f07028761be4a1d",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": ".github/workflows/pipeline.yml",
+        "line": 574,
+        "summary": "A refused production boot is not rolled back; the pipeline's rollback covers only a later failure",
+        "issue": 6293
+      },
+      "foundBy": "post-merge audit 2026-10-27, deep tier",
+      "oracleGap": "YAML: the reproduce refuter cannot write a spec for it; confirmed by trace plus impact",
+      "confidence": "high"
+    },
+    {
+      "id": "D02",
+      "pr": 6039,
+      "head": "5695d32bf6168b9441a5af58449ed6f9ec1d78a4",
+      "base": "64a14f2dd951f4a9e488c3a59f07028761be4a1d",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "src/scripts/serve-dashboard.ts",
+        "line": 368,
+        "summary": "SKYNET_PUBLIC_URL is validated only after the run marker is claimed, so a bad URL leaves a claimed marker behind",
+        "issue": 6292
+      },
+      "foundBy": "post-merge audit 2026-10-27, deep tier",
+      "confidence": "high"
+    },
+    {
+      "id": "D03",
+      "pr": 6095,
+      "head": "bd2981f20f44e472ddd45b8fcf132629a30e385c",
+      "base": "8c06fe181f25bea5148dcfdd39897791f1386a7b",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "app/src/routes/settings.tsx",
+        "line": 107,
+        "summary": "Settings still tells members their name must keep matching their session after the rule was dropped",
+        "issue": 6280
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D04",
+      "pr": 6182,
+      "head": "09724eb7c5987b302c8ce7b39c830b0ea33b1ebc",
+      "base": "46820d379efc02b65ab84532e4d827777cba2d5c",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "app/src/shell/events-symbol-head.tsx",
+        "line": 59,
+        "summary": "One-symbol head prints a net-negative invested amount as positive",
+        "issue": 6283
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D05",
+      "pr": 6029,
+      "head": "3deaad646d53fa53ec904ced7503c456d5fed7c6",
+      "base": "9ec3e2d511c01f4cff727867b9f685824466e0a3",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "alsoPositiveFor": ["reuse"],
+      "defect": {
+        "file": "src/server/coverage-route.ts",
+        "line": 65,
+        "summary": "An unreadable account counts as a holdings read, so Coverage tells the member it holds nothing",
+        "issue": 6273
+      },
+      "reuseNote": "the same PR pasted a 14th DAY_MS into coverage-route.ts; deduped by #6034 into src/domain/time.ts",
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D06",
+      "pr": 6206,
+      "head": "85d6b964cfb766f11be62bd7e2f6810bfaee9222",
+      "base": "c962f28bcc28323c06f5f57827f06523ed5d3cbe",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "src/server/feedback-coach-reply.ts",
+        "line": 199,
+        "summary": "closeCutFold adds an orphan </details> and a false 'brief was cut off' line",
+        "issue": 6286
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D07",
+      "pr": 6195,
+      "head": "a1d63824f1d7d6c0f3e5234f5c835eb8a6cb38d7",
+      "base": "031a9676325f0b1abb4b182f36598c6974ab2d7a",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "scripts/issues.mjs",
+        "line": 370,
+        "summary": "update --edit-comment with a bare trailing flag silently POSTs a new comment instead of editing",
+        "issue": 6285
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D08",
+      "pr": 6063,
+      "head": "9ca4ca0abd973c24e34fc55cc224e3bbf0fae0ba",
+      "base": "2820fcb5384b8d055256bb2771355f782ce7c2a4",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "scripts/moneypenny/admission.mjs",
+        "line": 608,
+        "summary": "--queue still lists a held plan that --check now refuses",
+        "issue": 6279
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high",
+      "alsoFor": ["smells-and-patterns"]
+    },
+    {
+      "id": "D09",
+      "pr": 6062,
+      "head": "b4ad1baca36904075a8f6f226de1f42feb35a0c4",
+      "base": "88925b36b29e8177e8e8aaccfca5f20b352cc027",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "tests/scripts/verify-locked.spec.ts",
+        "line": 63,
+        "summary": "verify-locked lock specs fail on any host without flock, such as stock macOS",
+        "issue": 6278
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D10",
+      "pr": 6190,
+      "head": "020bd94b38d31735b98368320dbdf183d1d300c4",
+      "base": "3a4fa0ba63f492797417be418defc5150bcfbe77",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "app/src/live/symbol-why.ts",
+        "line": 44,
+        "summary": "An expiry row's why line can describe a different contract when two options share an expiry",
+        "issue": 6284
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D11",
+      "pr": 6043,
+      "head": "fee38c2f02f373b67baf3f1772ca83f7c0615d22",
+      "base": "50806c8f10f04b1ab313358d264e28fb1ceca50b",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "src/playbooks/fit-finder.ts",
+        "line": 125,
+        "summary": "Fit finder puts a check mark on verdicts the house marks below its own bar",
+        "issue": 6275
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D12",
+      "pr": 6059,
+      "head": "56203e0b7a880c38bc116e6ada3541835f287938",
+      "base": "3530d12e27c15d62cfb5dbc54ab4f9dba2b2768f",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "prDefectCount": 2,
+      "defect": {
+        "file": "src/trading/option-economics.ts",
+        "line": 163,
+        "summary": "Freed shares rest on a long-call cap the single-leg close never re-checks; the 202 ticket frees shares against a cap whose cash width is never charged",
+        "issue": [6277, 6289]
+      },
+      "foundBy": "post-merge audit 2026-10-27, deep tier",
+      "confidence": "high"
+    },
+    {
+      "id": "D13",
+      "pr": 6209,
+      "head": "e9e379d044052f4bdb6e8c72c86ebffb152adb2c",
+      "base": "1d52564ae084db2b3381c13f9cd445f891eb38f6",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "scripts/moneypenny/audit.mjs",
+        "line": 359,
+        "summary": "Removing needs-design or hold-merge parks a plan but does not restart its slice",
+        "issue": 6287
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high",
+      "alsoFor": ["smells-and-patterns"]
+    },
+    {
+      "id": "D14",
+      "pr": 6144,
+      "head": "2f72a3e7bb9373a7866ac47d40167c57ec2ad417",
+      "base": "a4f6dfdd4fcbe1933a1f573a43a7cbb8909503fa",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "scripts/moneypenny/continuation.mjs",
+        "line": 390,
+        "summary": "A platter's Part-of bullets stop the retry sweep and plan continuation",
+        "issue": 6282
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high",
+      "alsoFor": ["smells-and-patterns"]
+    },
+    {
+      "id": "D15",
+      "pr": 6012,
+      "head": "ecef393fe396a62f8bcb54127cea80b0e377fdec",
+      "base": "2302c7b912ba87b3b41e6171530404aef1b3d10a",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "alsoPositiveFor": ["context-loop"],
+      "defect": {
+        "file": ".claude/agents/decomposer.md",
+        "line": 20,
+        "summary": "Step 1 says wt-start.sh branches off origin/main; on a reused slug it resumed stale work",
+        "issue": 6272
+      },
+      "contextCheck": "a claim the named script does not hold (read scripts/wt-start.sh at head)",
+      "oracleGap": "prose: no spec can fail on it; confirmed by trace",
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D16",
+      "pr": 6186,
+      "head": "8a606950ea4f8950204d6d395e9096883f298f00",
+      "base": "020bd94b38d31735b98368320dbdf183d1d300c4",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "src/storage/jsonl-store.ts",
+        "line": 268,
+        "summary": "A rotation landing while the boot backfill streams the trail silently skips the rest of it",
+        "issue": 6290
+      },
+      "foundBy": "post-merge audit 2026-10-27, deep tier",
+      "confidence": "high"
+    },
+    {
+      "id": "D17",
+      "pr": 6097,
+      "head": "e18616f92e4cab0cdd01f8c92cea600061fb1ef5",
+      "base": "bd2981f20f44e472ddd45b8fcf132629a30e385c",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "scripts/bots-revive.sh",
+        "line": 159,
+        "summary": "The log fallback overrides a fresh stamp that says the bridge is not armed",
+        "issue": 6281
+      },
+      "oracleGap": "shell: the reproduce refuter cannot write a spec for it",
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high"
+    },
+    {
+      "id": "D18",
+      "pr": 6301,
+      "head": "f669fe4327989e1c5c9d2ebd59d41575929fc8b2",
+      "base": "337b00870a921e7483d620ae78d5e02b60687e5b",
+      "mergedOn": "2026-10-27",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "src/trading/option-economics.ts",
+        "line": 275,
+        "summary": "A $0-cash covered call or option close is refused on negative cash",
+        "issue": 6328
+      },
+      "relatedPr": 6288,
+      "foundBy": "post-merge audit 2026-10-27, deep tier; reproduced in a spec",
+      "confidence": "high"
+    },
+    {
+      "id": "D19",
+      "pr": 6089,
+      "head": "9affe24e5fc8003eaa476844bfd848e9846e99cd",
+      "base": "8a140dfb84e46cffae17a88d9302239b006d28a2",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "scripts/moneypenny/repair.mjs",
+        "line": 409,
+        "summary": "A decorated lost-runner step name breaks capsule-stall's erosion check",
+        "issue": 6274
+      },
+      "relatedPr": 6036,
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high",
+      "alsoFor": ["smells-and-patterns"]
+    },
+    {
+      "id": "D20",
+      "pr": 6053,
+      "head": "86e9561b932ae9cfd99eb0790c02eeb6e1deb952",
+      "base": "59867ef3be7c138a80b07493e22b17c875575b6f",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "src/server/ops-status-deploy-lag.ts",
+        "line": 85,
+        "summary": "The fix never reached the hand-synced port behind the group-visible fleet page",
+        "issue": 6276
+      },
+      "foundBy": "post-merge audit 2026-10-27",
+      "confidence": "high",
+      "alsoFor": ["smells-and-patterns"]
+    },
+    {
+      "id": "D21",
+      "pr": 6091,
+      "head": "8c06fe181f25bea5148dcfdd39897791f1386a7b",
+      "base": "9affe24e5fc8003eaa476844bfd848e9846e99cd",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "correctness",
+      "defect": {
+        "file": "src/server/feedback-api-routes.ts",
+        "line": 187,
+        "summary": "A follow-up over 8,000 chars is answered with the false line 'Add a few words'",
+        "issue": 6291
+      },
+      "foundBy": "post-merge audit 2026-10-27, deep tier",
+      "confidence": "high"
+    },
+    {
+      "id": "R01",
+      "pr": 5766,
+      "head": "767bc880bf451bc299454df93de46390a1772711",
+      "base": "d9249bbe23ecc24c1313b78cc555e494f16a695e",
+      "mergedOn": "2026-10-19",
+      "isControl": false,
+      "facet": "reuse",
+      "defect": {
+        "file": "src/playbooks/conviction-parse.ts",
+        "symbol": "MAX_ID",
+        "summary": "Defines MAX_ID (and again in src/server/member-convictions-api-routes.ts) while src/options/saved-position.ts (#4004) and src/server/authored-plays-api-routes.ts (#5580) already define it; also NUMBERED, which src/ui/markdown-preview.ts exports",
+        "laterFix": "#6114 governed cycle 5, dedupe MAX_ID"
+      },
+      "howKnown": "git log -S MAX_ID per file; dupe-scan at head lists MAX_ID 6x; the dedupe commit names the symbol",
+      "gateState": "dupe-scan at head: src 212 over a budget of 0, advisory, so it said nothing new",
+      "confidence": "high"
+    },
+    {
+      "id": "R02",
+      "pr": 5601,
+      "head": "ae7c4d61e44cc31f0e0c56fb19830d60a98d9f83",
+      "base": "312f054396592e09c4053e5c1de6cdd2aae8df94",
+      "mergedOn": "2026-10-17",
+      "isControl": false,
+      "facet": "reuse",
+      "defect": {
+        "file": "src/playbooks/claim-study.ts",
+        "symbol": "blank",
+        "summary": "Defines `const blank = (value) => !value || value.trim().length === 0` six hours after src/playbooks/conviction-record.ts (#5511) defined the same line",
+        "laterFix": "#6207 governed cycle 11, src/playbooks/claim-blank.ts"
+      },
+      "howKnown": "git log -S blank per file; commit timestamps 18:50Z vs 00:32Z next day",
+      "confidence": "high"
+    },
+    {
+      "id": "R03",
+      "pr": 5627,
+      "head": "9ea555e5dc37e96ad2fdc074d4e4a74a4678f275",
+      "base": "4f8a3bdb63e195b6d79fa43f69089407a86c7bf9",
+      "mergedOn": "2026-10-17",
+      "isControl": false,
+      "facet": "reuse",
+      "defect": {
+        "file": "src/playbooks/claim-score.ts",
+        "symbol": "blank",
+        "summary": "Third copy of blank in the same folder in one day; also windowOf, which app/src/shell/playbook-thumbs.tsx defines",
+        "laterFix": "#6207"
+      },
+      "confidence": "high"
+    },
+    {
+      "id": "R04",
+      "pr": 4443,
+      "head": "459f87d642deb2b308a498b94fd55ff64eabf3de",
+      "base": "7600bbf4aa93a84756603033bd0fac9b7d39017f",
+      "mergedOn": "2026-10-01",
+      "isControl": false,
+      "facet": "reuse",
+      "defect": {
+        "file": "src/observatory/safeguard-ladder-view.ts",
+        "symbol": "pct",
+        "summary": "Defines pct(fraction) while src/observatory/render-atoms.ts exports pct(value) in the same folder; the two take different units, which is the composability judgment a script cannot make",
+        "laterFix": "#6052 governed cycle 3, src/domain/percent.ts"
+      },
+      "confidence": "high"
+    },
+    {
+      "id": "P01",
+      "pr": 4759,
+      "head": "78cfdfd8fc7a24f9ca989c6dceb4272aae5f5fac",
+      "base": "2d7049e9c2e813e54ac461d09547e83bef66c349",
+      "mergedOn": "2026-10-05",
+      "isControl": false,
+      "facet": "performance",
+      "defect": {
+        "file": "src/observatory/spread-activity.ts",
+        "summary": "Every /api/wire request asks the decision store about ~5,300 option fills it already knows are not spread legs",
+        "laterFix": "#6503: 166 to 122 ms at 180 days x 12, budget 150",
+        "measure": "npm run stability:budget"
+      },
+      "note": "merged one day after the budget run existed (#4637, 10-04); the budget was not in CI and nobody ran it on this PR",
+      "confidence": "medium-high"
+    },
+    {
+      "id": "P02",
+      "pr": 3397,
+      "head": "f11e605f351d8f53c4370f93d3cb327005282766",
+      "base": "5a78312005042af615ee7630773c66d9d8ab8a6e",
+      "mergedOn": "2026-09-20",
+      "isControl": false,
+      "facet": "performance",
+      "defect": {
+        "file": "src/autonomous/decision-db.ts",
+        "summary": "The decision funnel folds a bot's whole ledger on every Decisions read",
+        "laterFix": "#6348: /api/desk/sauron/decisions 195 to 80 ms; the funnel read alone 98 to 1.8 ms"
+      },
+      "confidence": "high"
+    },
+    {
+      "id": "P03",
+      "pr": 3187,
+      "head": "0af07a58ec7d37314ebc5d14f12adac44568b127",
+      "base": "2389414608e9823a63361ea84f84f8eb82f4687e",
+      "mergedOn": "2026-09-16",
+      "isControl": false,
+      "facet": "performance",
+      "defect": {
+        "file": "src/observatory/desk-json-view.ts",
+        "summary": "Every account-page open reads all trade-ledger lines (29,647 at 180 days) to rebuild open lots",
+        "laterFix": "#6452: /api/desk/sauron 137 to 44 ms"
+      },
+      "confidence": "medium"
+    },
+    {
+      "id": "P04",
+      "pr": 2355,
+      "head": "ec12c1eb12a788397de1519f4f885edf91ebba53",
+      "base": "5dadb9ed3cd43e430b787f06c2a22272e4567d77",
+      "mergedOn": "2026-09-08",
+      "isControl": false,
+      "facet": "performance",
+      "defect": {
+        "file": "src/observatory/wire-reasoning.ts",
+        "summary": "The loss-headroom gauge reads each bot's whole history on every Wire request",
+        "laterFix": "#6232: /api/wire 516 to 262 ms"
+      },
+      "confidence": "high"
+    },
+    {
+      "id": "P05",
+      "pr": 3630,
+      "head": "923c0cd29952ff5422b413fcfbd9873e4c004ef7",
+      "base": "49dc08abfa522eb216d702e8cf3472b70e92a241",
+      "mergedOn": "2026-09-23",
+      "isControl": false,
+      "facet": "performance",
+      "defect": {
+        "file": "src/server/decision-account-view.ts",
+        "summary": "Finding the other personas trading on an account reads the whole activity ledger (~16k orders) per Decisions open",
+        "laterFix": "#6439: kept per account, reads only appended lines"
+      },
+      "confidence": "medium"
+    },
+    {
+      "id": "P06",
+      "pr": 752,
+      "head": "f133924d89b01f184d82167da7090c85933e2d48",
+      "base": "774942e8e010ef1bda94823c1dbd1b59284acefd",
+      "mergedOn": "2026-08-28",
+      "isControl": false,
+      "facet": "performance",
+      "defect": {
+        "file": "src/observatory/pulse-json-view.ts",
+        "summary": "A desk's weekly bars and trade stats are recomputed from the ledger on every Pulse request",
+        "laterFix": "#6391: Sauron's Pulse alone 129 to 5 ms; the every-desk burst 311 to 20 ms"
+      },
+      "note": "oldest case; the file changed a great deal between birth and fix, so a miss here is weaker evidence than a miss on P01 to P04",
+      "confidence": "medium"
+    },
+    {
+      "id": "P07",
+      "pr": 3190,
+      "head": "2f7f932f7e24926f8db659f73103d25c41b65541",
+      "base": "aa8a9a75ce66855508de2c340ed207d3dfd4e925",
+      "mergedOn": "2026-09-16",
+      "isControl": false,
+      "facet": "performance",
+      "defect": {
+        "file": "src/observatory/thesis-json-view.ts",
+        "summary": "The thesis drawer reads history whole instead of the Pulse fold",
+        "laterFix": "#6491: 173 to 115 ms, +13 to +2 MB"
+      },
+      "confidence": "medium"
+    },
+    {
+      "id": "P08",
+      "pr": 6213,
+      "head": "b3fc8873751e03c8ac3d5abb403172aefaaad140",
+      "base": "cf50499277b4d3fc8ca0d8087c333e5e9eea6752",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "performance",
+      "cleanFor": ["correctness", "security"],
+      "defect": {
+        "file": "src/server/wire-routes.ts",
+        "summary": "Serves /api/wire from the per-process fold but leaves the gauge reading whole histories: 459 ms against a 150 ms budget at merge (the chart in #6503)",
+        "laterFix": "#6232, #6491, #6503"
+      },
+      "note": "a performance lens that says 'still over budget, here is why' is right; a correctness lens that finds anything high or medium is manufacturing",
+      "confidence": "high"
+    },
+    {
+      "id": "S01",
+      "pr": 4155,
+      "head": "3a904f4d4cd31936c0f4a28ec2432e97a8454175",
+      "base": "60f42d6b80afe50119f6f9d8edc96fa129f83fc8",
+      "mergedOn": "2026-09-29",
+      "isControl": false,
+      "facet": "security",
+      "defect": {
+        "file": "scripts/moneypenny/work-mode.mjs",
+        "summary": "The dial reader takes an `until` end date from any comment on the public tracking issue, whoever wrote it and whenever; a stranger can release a halt, and a stale owner date makes a bare halt label read normal",
+        "laterFix": "none merged; the study's step 1 (count only trusted authors at or after the last label event)"
+      },
+      "howKnown": "study finding stranger-comment-moves-the-dial, re-run against the real #4153 comments",
+      "confidence": "medium"
+    },
+    {
+      "id": "S02",
+      "pr": 4414,
+      "head": "f1c23a830da8b693dbb8278b38f70cb0ed4327ff",
+      "base": "12d48840d1d912c2495c62cf210286fa5eb32076",
+      "mergedOn": "2026-09-30",
+      "isControl": false,
+      "facet": "security",
+      "defect": {
+        "file": "scripts/moneypenny/admission.mjs",
+        "summary": "pullable() checks labels and state but never who wrote the issue, so a non-member's issue a session flips to ready reaches a build lane with its text as the spec",
+        "laterFix": "none merged; study finding outside-text-can-reach-a-build"
+      },
+      "note": "unobserved: whether issue-form labels apply to non-members is unknown",
+      "confidence": "medium"
+    },
+    {
+      "id": "S03",
+      "pr": 317,
+      "head": "9e85db077390b82870d971920fcddfb964f430c4",
+      "base": "583bbefc99c6801a2ff3570539dc9588aefcf5b2",
+      "mergedOn": "2026-08-13",
+      "isControl": false,
+      "facet": "security",
+      "defect": {
+        "file": "src/scripts/dashboard-insights-bridge.ts",
+        "symbol": "INSIGHTS_BRIDGE_SHARED_SECRET",
+        "summary": "The bots-to-dashboard bridge password is a literal in source, safe only on Fly's private network, in a public repo",
+        "laterFix": "#6256 (2026-10-27) reads it from the environment"
+      },
+      "confidence": "high"
+    },
+    {
+      "id": "C01",
+      "pr": 6223,
+      "head": "452f4e09b3ec4a851924bc11786e01756cd1f88c",
+      "base": "09e87100cb38a1c79f40381cb6b691025eb81bf4",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "context-loop",
+      "defect": {
+        "file": ".claude/skills/surge/SKILL.md",
+        "summary": "Three numbers contradict the code they describe: 'start nothing when WIP is over 6' where admission.mjs gates at >= 6 (:65); a stranded green PR counted twice across two rows (:72); the reset written as midnight Central (:47) while the plan resets at a fixed UTC time",
+        "laterFix": "#6330 rows (open); study step 12"
+      },
+      "contextCheck": "a number in an instruction that the named code does not hold",
+      "confidence": "medium-high"
+    },
+    {
+      "id": "C02",
+      "pr": 5325,
+      "head": "d5faa9ca92174f1417baf549f8117d443c34411a",
+      "base": "0164e392f847c120eca4b3528440368eff53a3d2",
+      "mergedOn": "2026-10-13",
+      "isControl": false,
+      "facet": "context-loop",
+      "defect": {
+        "file": "CLAUDE.md",
+        "summary": "Adds 1,000 bytes to a file already at 56,486 against the 47,500 budget config-audit now holds (check 6); the session-start hook it extends exits on a laptop (CLAUDE_CODE_REMOTE != true), while 7 of 7 local sessions in the last 14 days started from a checkout frozen at 10-10",
+        "laterFix": "#6476 platter cut CLAUDE.md to 47,361 on 11-01; the stale checkout is unfixed"
+      },
+      "contextCheck": "startup cost over budget; a rule with no reader on the path that needs it",
+      "confidence": "high for size, medium for the reader claim"
+    },
+    {
+      "id": "C03",
+      "pr": 6228,
+      "head": "ea724f84ce2b34fe102a9b7c3482ddc880f634b6",
+      "base": "872cb690e53cb795ba9486fa349778dc15e2ad4d",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "context-loop",
+      "defect": {
+        "file": "CLAUDE.md",
+        "summary": "The ninth October commit to grow CLAUDE.md, to 60,794 bytes; the story went above the fold instead of one line plus a link",
+        "laterFix": "#6476"
+      },
+      "contextCheck": "startup cost; an instruction that belongs behind the fold",
+      "confidence": "high"
+    },
+    {
+      "id": "C04",
+      "pr": 6472,
+      "head": "8247fe40e8e4afac571ce934e94c5583a5cc80b6",
+      "base": "0461845552995ce08bf177620311ced6398be509",
+      "mergedOn": "2026-11-01",
+      "isControl": false,
+      "facet": "context-loop",
+      "defect": {
+        "file": ".claude/workflows/dream.js",
+        "summary": "A new loop (memory review) lands with no row in docs/process/LEARNING-LOOP.md and no number that decides whether it runs again; its own first score says wait",
+        "laterFix": "none; study finding second-memory-review-decides"
+      },
+      "contextCheck": "a loop with no number",
+      "confidence": "medium"
+    },
+    {
+      "id": "C05",
+      "pr": 6482,
+      "head": "82c101de635051b94341e6a2cee48c9d48a25514",
+      "base": "50a76d01a8ca6254c64a235cef3107c02df76157",
+      "mergedOn": "2026-11-01",
+      "isControl": false,
+      "facet": "context-loop",
+      "defect": {
+        "file": "docs/process/PILLARS.md",
+        "summary": "Draws run memory and the meter under every pillar; run-memory's only callers are scripts/run-memory.mjs itself and dream.js (2 runs ever, none on a runner), and the meter has no reader",
+        "laterFix": "none"
+      },
+      "contextCheck": "a claim with no caller",
+      "howKnown": "grep -rln run-memory .github scripts .claude package.json",
+      "confidence": "high"
+    },
+    {
+      "id": "C06",
+      "pr": 5726,
+      "head": "3e5899802066792f5b6c59ecb313e03654126501",
+      "base": "0b385f45bb32cd7b33041ba911a1d4a48e5db569",
+      "mergedOn": "2026-10-18",
+      "isControl": false,
+      "facet": "context-loop",
+      "defect": {
+        "file": "docs/process/LEARNING-LOOP.md",
+        "line": 178,
+        "summary": "Registry rows (readiness rubric :178, last slice closes :183, priority with a reader :185) carry a dated check but no command that produces the number, so the 10-31 checks posted and none settled",
+        "laterFix": "none; study step 4"
+      },
+      "contextCheck": "a loop with no number",
+      "confidence": "medium"
+    },
+    {
+      "id": "C07",
+      "pr": 6221,
+      "head": "166105666fd4dfb11a94da646a446c1383d5570f",
+      "base": "452f4e09b3ec4a851924bc11786e01756cd1f88c",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "context-loop",
+      "defect": {
+        "file": ".claude/workflows/post-merge-audit.js",
+        "line": 151,
+        "summary": "The reproduce refuter returns refuted=true when it cannot build a spec, so a real defect in YAML, shell or prompt text can never be confirmed; a verifier whose unknown reads as a verdict",
+        "laterFix": "none; #6330 names it; study step 6"
+      },
+      "contextCheck": "a verifier whose unknown reads as a verdict",
+      "confidence": "high"
+    },
+    {
+      "id": "C08",
+      "pr": 6218,
+      "head": "f0a9ce22ba6b6dea9c60b1f23e5e5eabe51deb4d",
+      "base": "fb7b3b16d38020cfbead23782fc24f935ed2c00d",
+      "mergedOn": "2026-10-26",
+      "isControl": false,
+      "facet": "context-loop",
+      "defect": {
+        "file": "scripts/clear-path-post.mjs",
+        "summary": "Posts `ready` without the `feedback` label the lane's pull rule requires, so two flipped issues sat unbuilt",
+        "laterFix": "#6219 (lane), #6230 (wording); LEARNING-LOOP.md:124"
+      },
+      "contextCheck": "a writer whose output no reader accepts",
+      "confidence": "high"
+    },
+    {
+      "id": "C09",
+      "pr": 6499,
+      "head": "9fbc7c1245ffcc3aece73ce0d61092b4d979c6a7",
+      "base": "8d95e52f531bbedc4b63989eb1019afe3e45d5a4",
+      "mergedOn": "2026-11-01",
+      "isControl": false,
+      "facet": "context-loop",
+      "defect": {
+        "file": "scripts/fitness.mjs",
+        "summary": "startup-size reads one file of what a session loads and duplicates config-audit check 6; alerts-reach-owner reads the wrong thing; a corrector can edit its own test",
+        "laterFix": "none; study steps 9 and 11"
+      },
+      "contextCheck": "a probe that reads a proxy, not the outcome",
+      "confidence": "medium-high"
+    },
+    {
+      "id": "K01",
+      "pr": 6299,
+      "head": "c313d924430b353197a50eb4d983d1f8be9ceb15",
+      "base": "6c260eea8a03521c70c8d8109d711b73883aaa01",
+      "mergedOn": "2026-10-27",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "context-loop"],
+      "note": "fix PR for D11; audited in the next batch with no confirmed finding; low findings for its batch were lost (#6330). The mechanical reuse scan fires on rankOf (app/src/shell/use-row-marks.ts) — likely a homonym; a reuse lens that flags it without reading both is manufacturing",
+      "confidence": "high",
+      "trapFor": "reuse"
+    },
+    {
+      "id": "K02",
+      "pr": 6294,
+      "head": "96ed34ab33c71eccb8fd07e1c1203e5706266752",
+      "base": "1c69dfbceef8bf807cf7f55ae4c1ae9d2282c44c",
+      "mergedOn": "2026-10-27",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop", "structure"],
+      "note": "fix PR for D05, src/server path",
+      "confidence": "high"
+    },
+    {
+      "id": "K03",
+      "pr": 6303,
+      "head": "337b00870a921e7483d620ae78d5e02b60687e5b",
+      "base": "7e3703768dc7cf1c99439e707fccd73aaa73c192",
+      "mergedOn": "2026-10-27",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop", "structure"],
+      "note": "fix PR for D16, src/storage (a deep-tier path)",
+      "confidence": "high"
+    },
+    {
+      "id": "K04",
+      "pr": 6300,
+      "head": "2b341540e657d9aadf81614e7403158751b4c744",
+      "base": "9942f19bfe6212d021cf9b057209c3c9c4f699be",
+      "mergedOn": "2026-10-27",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop", "structure"],
+      "note": "fix PR for D02, boot path",
+      "confidence": "high"
+    },
+    {
+      "id": "K05",
+      "pr": 6302,
+      "head": "7e3703768dc7cf1c99439e707fccd73aaa73c192",
+      "base": "a4583b2d5b47372bb43298cd79ba4905de6bd304",
+      "mergedOn": "2026-10-27",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop", "structure"],
+      "note": "fix PR for D21, a feedback route that parses member input: a security lens that flags input parsing here must name a concrete bypass",
+      "confidence": "high"
+    },
+    {
+      "id": "K06",
+      "pr": 6296,
+      "head": "14a516b32350906cb08076e360b3bb660fcccb20",
+      "base": "96ed34ab33c71eccb8fd07e1c1203e5706266752",
+      "mergedOn": "2026-10-27",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop", "structure"],
+      "note": "fix PR for D10",
+      "confidence": "high"
+    },
+    {
+      "id": "K07",
+      "pr": 6256,
+      "head": "4cf11350ac517589acf2c4543d215562c6b70622",
+      "base": "f0619f027d81996d0e5bff64e0fa345bdfea2470",
+      "mergedOn": "2026-10-27",
+      "isControl": true,
+      "cleanFor": ["correctness", "performance", "reuse", "context-loop"],
+      "trapFor": "security",
+      "note": "reads the bridge secret from the environment but still accepts the old literal with a warning until the bots redeploy, on purpose and in the PR body. A security finding here counts only if it names a path an outsider can reach; 'fallback accepts the weak secret' alone is the documented transition",
+      "confidence": "high"
+    },
+    {
+      "id": "K08",
+      "pr": 6295,
+      "head": "6c260eea8a03521c70c8d8109d711b73883aaa01",
+      "base": "14a516b32350906cb08076e360b3bb660fcccb20",
+      "mergedOn": "2026-10-27",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop", "structure"],
+      "note": "member copy, 2 files",
+      "confidence": "high"
+    },
+    {
+      "id": "K09",
+      "pr": 6210,
+      "head": "8c6b45e9530e069e1df64356665adb4db35560a2",
+      "base": "b3fc8873751e03c8ac3d5abb403172aefaaad140",
+      "mergedOn": "2026-10-26",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "context-loop"],
+      "note": "16 files around the model client; no confirmed finding; reuse unknown",
+      "confidence": "medium"
+    },
+    {
+      "id": "K10",
+      "pr": 6216,
+      "head": "aaa66073b4af7fab4ea27a52811ee2771a4b93ff",
+      "base": "075162ae2ccf6b27c15b7076b08d43a88400cd4d",
+      "mergedOn": "2026-10-26",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop", "structure"],
+      "note": "scripts/ship.sh, a lane path",
+      "confidence": "high"
+    },
+    {
+      "id": "K11",
+      "pr": 6222,
+      "head": "b63e971cf10f9da64a4901d2a31e719531070e41",
+      "base": "30cd88b255d92e2a2ddb3a5edfa0cbdd61c5980b",
+      "mergedOn": "2026-10-26",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop"],
+      "confidence": "high"
+    },
+    {
+      "id": "K12",
+      "pr": 6227,
+      "head": "872cb690e53cb795ba9486fa349778dc15e2ad4d",
+      "base": "b63e971cf10f9da64a4901d2a31e719531070e41",
+      "mergedOn": "2026-10-26",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop", "structure"],
+      "note": "scripts/moneypenny, same path class as D08, D13, D14, D19",
+      "confidence": "high"
+    },
+    {
+      "id": "K13",
+      "pr": 6225,
+      "head": "3c4794268f902fb6c89b1d1ba09d481e0cda6076",
+      "base": "166105666fd4dfb11a94da646a446c1383d5570f",
+      "mergedOn": "2026-10-26",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "context-loop"],
+      "note": "13 files in scripts/moneypenny; reuse unknown",
+      "confidence": "medium"
+    },
+    {
+      "id": "K14",
+      "pr": 6093,
+      "head": "0d9cca76fbb1b5dcafe0733b38e9388e9b17dfec",
+      "base": "527cfbaa69a9d54e656ea4178cd7cf9959cdd1df",
+      "mergedOn": "2026-10-26",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "performance", "reuse", "context-loop"],
+      "note": "later commits that mention #6093 are a lessons draft and a stuck-pr fix, not fixes of it",
+      "confidence": "high"
+    },
+    {
+      "id": "K15",
+      "pr": 6232,
+      "head": "300a102cd8532a09ac2ff692354be85bbbd1b682",
+      "base": "fd317968a2cdac870faac52dd2fe347bdd53d182",
+      "mergedOn": "2026-10-27",
+      "isControl": true,
+      "cleanFor": ["correctness", "security", "reuse", "context-loop"],
+      "trapFor": "performance",
+      "note": "a perf fix (516 to 262 ms) that leaves /api/wire over the 150 ms budget, said in its own body. 'Still over budget' is a correct performance finding, not manufactured; anything else high or medium is",
+      "confidence": "high"
+    }
+  ],
+  "counts": {
+    "defectCases": 45,
+    "distinctDefectPRs": 44,
+    "defectIssuesFromAudit": 22,
+    "controls": 15,
+    "byFacet": {
+      "correctness": 21,
+      "reuse": 4,
+      "performance": 8,
+      "security": 3,
+      "context-loop": 9,
+      "structure": 5
+    }
+  }
+}

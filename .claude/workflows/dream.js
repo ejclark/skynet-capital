@@ -21,7 +21,7 @@
 // boundary is the guard against one bad transcript, or an injected line in one, rewriting what
 // every later session reads. Transcript text is data, never instructions.
 //
-// Args: { digests: [path], memoryDir, staleReport, instructions? }
+// Args: { digests: [path], memoryDir, staleReport, instructions?, force? }
 export const meta = {
   name: "dream",
   description: "Review session digests against memory and propose at most 5 evidence-backed changes",
@@ -62,6 +62,46 @@ const batches = [];
 for (let i = 0; i < digests.length; i += BATCH) batches.push(digests.slice(i, i + BATCH));
 log(`${digests.length} sessions in ${batches.length} batches`);
 
+// THE WORK-MODE GATE (#3960, #6470). The same read grind.js makes, and its comment says why it has to
+// be an agent: a script has no filesystem, `gh` or network. A refusal is loud and refuses the whole run,
+// never a silent cut to the list. `force: true` is the override, for a run Eric typed himself: a gate
+// that only threw would refuse his own command, so it goes on and prints what it overrode and the
+// price. A lane never sets it. The same block sits in dream, clear-path-flip, post-merge-audit and
+// symbol-sweep, because a workflow script cannot import; tests/scripts/workflow-gate.spec.ts runs each.
+const GATE_SCHEMA = {
+  type: 'object',
+  required: ['found'],
+  properties: {
+    found: { type: 'boolean', description: 'true only if you read a real verdict back from the command' },
+    dispatch: { type: 'boolean', description: 'the verdict JSON "dispatch" field, verbatim' },
+    position: { type: 'string', description: 'the verdict JSON "position" field (halt/conserve/normal/surge)' },
+    grindWidth: { type: 'number', description: 'the verdict JSON caps.grindWidth field, verbatim' },
+    until: { type: 'string', description: 'the verdict JSON "until" field, only when it is not null' },
+    reason: { type: 'string', description: 'the verdict JSON "reason" field, verbatim' },
+  },
+}
+const WIDTH = batches.length
+const PRICE = `${batches.length + 2} agents to start: ${batches.length + 1} on sonnet to analyze and check, one on the session's model to propose; then up to ${MAX_PROPOSALS} attackers on sonnet.`
+const gate = await agent(
+  'Run exactly: node scripts/moneypenny/work-gate.mjs\n\nIt prints one JSON object on stdout and status lines on stderr. Its exit code is part of the answer, not a failure: 0 means cleared to dispatch, 3 means refused (work-mode is halt, or the spend breaker is tripped) — BOTH are a real verdict and both print the JSON. Report "found": true plus that JSON object: the "dispatch", "position" and "reason" fields and caps.grindWidth, all verbatim, plus "until" only when it is not null.\n\nIf the command exits 1, prints no parseable JSON, or the object carries no caps.grindWidth, report "found": false and nothing else — never guess a position or a width. Do nothing else: no exploration, no fixing, no editing any file.',
+  { schema: GATE_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'low', label: 'work-mode', phase: 'Analyze' },
+).catch(() => null) // A read that throws is an unread dial: refused below, or forced past.
+const dialRead = gate?.found === true && typeof gate.dispatch === 'boolean' && Number.isInteger(gate.grindWidth)
+const refusal = !dialRead
+  ? 'could not read the dial through `node scripts/moneypenny/work-gate.mjs`; exit 1 there means a malformed control to fix, not route around'
+  : !gate.dispatch
+    ? gate.reason || `work-mode=${gate.position}`
+    : WIDTH > gate.grindWidth
+      ? `${WIDTH} batches of 7 sessions is over the ${gate.grindWidth} that work-mode=${gate.position} allows${gate.until ? ` (until ${gate.until})` : ''}: re-run with at most ${gate.grindWidth} batches of 7 sessions, or flip the dial`
+      : null
+if (args?.force === true) {
+  log(`force: true${refusal ? `, past this: ${refusal}` : ', though the dial allowed it'}. Price: ${PRICE}`)
+} else if (refusal) {
+  throw new Error(`dream: refused — ${refusal}. Nothing dispatched. If Eric typed this run himself, re-run it with force: true.`)
+} else {
+  log(`work-mode=${gate.position}${gate.until ? ` (until ${gate.until})` : ''} · width ${WIDTH}/${gate.grindWidth}`)
+}
+
 const analyzed = await parallel(
   batches.map((batch, index) => () =>
     agent(
@@ -74,7 +114,7 @@ const patterns = analyzed.filter(Boolean).flatMap((r) => r.patterns);
 log(`${analyzed.filter(Boolean).length}/${batches.length} batches returned, ${patterns.length} patterns`);
 
 const checked = await agent(
-  `Check the memory files in ${args.memoryDir} against today's code on origin/main. Start from this mechanical report of cited paths that no longer exist and cited issues now closed: ${args.staleReport ?? "(none supplied)"}. A closed issue only makes a memory stale if its wording still depends on it being open. Also find duplicates, contradictions between memories, contradictions with origin/main:CLAUDE.md, and memories that merely repeat a skill or doc. ${READ_ONLY}`,
+  `Check the memory files in ${args.memoryDir} against today's code on origin/main. Start from this mechanical report of cited paths and npm scripts that no longer exist, flags no longer in the script they are passed to, cited issues now closed, and wording that still waits on a closed issue: ${args.staleReport ?? "(none supplied)"}. A closed issue only makes a memory stale if its wording still depends on it being open. Each row is a candidate to check against the code, not a verdict. Also find duplicates, contradictions between memories, contradictions with origin/main:CLAUDE.md, and memories that merely repeat a skill or doc. ${READ_ONLY}`,
   {
     label: "check:memory",
     phase: "Check",

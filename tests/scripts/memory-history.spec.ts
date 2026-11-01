@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
@@ -18,11 +18,41 @@ function fire(root: string, input: object) {
   });
 }
 
+function fireAsync(root: string, input: object): Promise<{ code: number | null; stderr: string }> {
+  return new Promise((done) => {
+    const child = spawn("node", [HOOK], {
+      env: { ...ENV, AGENT_MEMORY_ROOT: root },
+      stdio: ["pipe", "ignore", "pipe"],
+    });
+    let stderr = "";
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("close", (code) => done({ code, stderr }));
+    child.stdin.end(JSON.stringify(input));
+  });
+}
+
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "projects-"));
   const dir = join(root, "proj", "memory");
   mkdirSync(dir, { recursive: true });
   return { root, dir };
+}
+
+function writeBy(session: string, file: string) {
+  return { tool_name: "Write", tool_input: { file_path: file }, session_id: session };
+}
+
+function gitOut(dir: string, ...args: string[]) {
+  return spawnSync("git", ["-C", dir, ...args], { encoding: "utf8", env: ENV }).stdout;
+}
+
+/** The session named by each commit that touched a file, newest first. */
+function commitsTouching(dir: string, file: string) {
+  return gitOut(dir, "log", "--format=%B", "--", file)
+    .split("\n")
+    .filter((line) => line.startsWith("session: "));
 }
 
 describe("memory history hook", () => {
@@ -80,4 +110,119 @@ describe("memory history hook", () => {
     const bad = spawnSync("node", [HOOK], { input: "not json", encoding: "utf8", env: ENV });
     expect(bad.status).toBe(0);
   });
+
+  // The order that broke provenance: both files are on disk before either hook fires, so a hook that
+  // stages the whole folder commits the other session's file under its own name.
+  it("gives two writes from two sessions two commits, each naming its own session", () => {
+    const { root, dir } = fixture();
+    const [a, b] = [join(dir, "a.md"), join(dir, "b.md")];
+    writeFileSync(a, "from a\n");
+    writeFileSync(b, "from b\n");
+    expect(fire(root, writeBy("s-a", a)).status).toBe(0);
+    expect(fire(root, writeBy("s-b", b)).status).toBe(0);
+    expect(commitsTouching(dir, "a.md")).toEqual(["session: s-a"]);
+    expect(commitsTouching(dir, "b.md")).toEqual(["session: s-b"]);
+    expect(gitOut(dir, "rev-list", "--count", "HEAD").trim()).toBe("2");
+  });
+
+  it("leaves a file it was not fired for out of the commit", () => {
+    const { root, dir } = fixture();
+    const [a, b] = [join(dir, "a.md"), join(dir, "b.md")];
+    writeFileSync(a, "from a\n");
+    writeFileSync(b, "still being written\n");
+    fire(root, writeBy("s-a", a));
+    expect(gitOut(dir, "show", "--name-only", "--format=", "HEAD").trim()).toBe("a.md");
+    expect(gitOut(dir, "status", "--porcelain").trim()).toBe("?? b.md");
+  });
+
+  it("lands every version when sessions fire at once, on a folder with no repo yet", async () => {
+    const { root, dir } = fixture();
+    const sessions = Array.from({ length: 8 }, (_, i) => `s-${i}`);
+    for (const s of sessions) writeFileSync(join(dir, `${s}.md`), `${s}\n`);
+    const results = await Promise.all(
+      sessions.map((s) => fireAsync(root, writeBy(s, join(dir, `${s}.md`)))),
+    );
+    expect(results.map((r) => r.code)).toEqual(sessions.map(() => 0));
+    for (const s of sessions) expect(commitsTouching(dir, `${s}.md`)).toEqual([`session: ${s}`]);
+  }, 60_000);
+
+  it("waits out a lock another git process lets go of", async () => {
+    const { root, dir } = fixture();
+    const file = join(dir, "a.md");
+    writeFileSync(file, "one\n");
+    fire(root, writeBy("s-0", file));
+    writeFileSync(file, "two\n");
+    const lock = join(dir, ".git", "index.lock");
+    writeFileSync(lock, "");
+    const firing = fireAsync(root, writeBy("s-1", file));
+    setTimeout(() => rmSync(lock), 300);
+    expect((await firing).code).toBe(0);
+    expect(commitsTouching(dir, "a.md")).toEqual(["session: s-1", "session: s-0"]);
+  }, 30_000);
+
+  it("has nothing to say about a file already removed again", () => {
+    const { root, dir } = fixture();
+    const fired = fire(root, writeBy("s-1", join(dir, "gone.md")));
+    expect(fired.status).toBe(0);
+    expect(fired.stderr).toBe("");
+  });
+
+  // A filesystem failure in the lock costs a version like any other, so it must not exit 0. The lock
+  // lives beside the memory folder, so a read-only parent stops the lock and nothing else.
+  it("exits 2 when it cannot take its turn at all", () => {
+    const { root, dir } = fixture();
+    const file = join(dir, "a.md");
+    writeFileSync(file, "one\n");
+    chmodSync(join(root, "proj"), 0o555);
+    const fired = fire(root, writeBy("s-1", file));
+    chmodSync(join(root, "proj"), 0o755);
+    expect(fired.status).toBe(2);
+    expect(fired.stderr).toContain("a.md has no version");
+  });
+
+  it("exits 2 when git itself cannot start", () => {
+    const { root, dir } = fixture();
+    const file = join(dir, "a.md");
+    writeFileSync(file, "one\n");
+    const fired = spawnSync(process.execPath, [HOOK], {
+      input: JSON.stringify(writeBy("s-1", file)),
+      encoding: "utf8",
+      env: { ...ENV, AGENT_MEMORY_ROOT: root, PATH: "/nonexistent" },
+    });
+    expect(fired.status).toBe(2);
+    expect(fired.stderr).toContain("a.md has no version");
+  });
+
+  it("is not blocked by a hook that died holding its turn", () => {
+    const { root, dir } = fixture();
+    const file = join(dir, "a.md");
+    writeFileSync(file, "one\n");
+    const dead = spawnSync("node", ["-e", ""]).pid;
+    writeFileSync(`${dir}.history.lock`, `${dead} ${Date.now()}\n`);
+    expect(fire(root, writeBy("s-1", file)).status).toBe(0);
+    expect(commitsTouching(dir, "a.md")).toEqual(["session: s-1"]);
+    expect(existsSync(`${dir}.history.lock`)).toBe(false);
+  });
+
+  // Exit 2 is what reaches the session once settings.json stops masking it; the JSON line is what
+  // reaches it today, because the mask drops stderr and the exit code but not stdout.
+  it("says so and exits 2 when a version cannot land", () => {
+    const { root, dir } = fixture();
+    const file = join(dir, "a.md");
+    writeFileSync(file, "one\n");
+    fire(root, writeBy("s-0", file));
+    writeFileSync(file, "two\n");
+    const lock = join(dir, ".git", "index.lock");
+    writeFileSync(lock, "");
+    const stuck = fire(root, writeBy("s-1", file));
+    expect(stuck.status).toBe(2);
+    expect(stuck.stderr).toContain("memory-history: a.md has no version");
+    expect(JSON.parse(stuck.stdout).systemMessage).toContain("a.md has no version");
+    expect(commitsTouching(dir, "a.md")).toEqual(["session: s-0"]);
+
+    // The next write after the lock clears versions the file again, nothing is stuck.
+    rmSync(lock);
+    expect(fire(root, writeBy("s-2", file)).status).toBe(0);
+    expect(commitsTouching(dir, "a.md")).toEqual(["session: s-2", "session: s-0"]);
+  }, 30_000);
 });

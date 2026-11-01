@@ -256,6 +256,7 @@ buildable asks that should start now but don't belong in *this* session — see
 **plan** (a tangent that needs its own interrogation before it's buildable — hand it to a fresh
 planning session per [`docs/ISSUES.md`](docs/ISSUES.md) → *Delegating a tangent to a planning
 session*, #3818 slice 1; it lands ready, `needs-eric`, or parked, never a build) ·
+**declare** (an outcome with a date: `docs/intents/README.md`) ·
 **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
 `NOW:` · `PARK:` · `FAN:` · `ME:` · `Q:`. Doubt between act/park/fan → park and ask. *(That
 doubt-rule is about **routing a raw thought in a live session**, where Eric is right there. It is
@@ -388,9 +389,9 @@ GitHub issues/PRs, sequencing work and hunting friction proactively; see
 [`docs/MONEYPENNY.md`](docs/MONEYPENNY.md) for her mandate before extending anything she owns. The
 common routes:
 
-- "clean up the code" / "burn down debt" → a `/governor` cycle (athletes `decomposer`,
-  `ui-librarian`, `mortician`, `test-backfiller`; drills `/decompose`, `/dedupe`; big burn-downs →
-  feast mode, see the governor skill). "Why did CI fail" → a gate probably caught real drift — fix
+- "clean up the code" / "burn down debt" → a `/governor` cycle (drills `/decompose`, `/dedupe`,
+  `/bury`, `/backfill`, run by `docs/grind/governor.instructions.md`; big burn-downs → feast mode,
+  see the governor skill). "Why did CI fail" → a gate probably caught real drift — fix
   the finding, not the gate.
 - "grind through a batch of near-identical, mechanical chores" (the same fix/skill/command applied
   across many files/PRs/branches/tickers, low judgment per item) → **`/grind`**
@@ -439,8 +440,8 @@ common routes:
   a good research skill to develop… getting concepts on our radar to add tools to our toolbox").
 - **"we need an agent for X"** → `/charter` before writing any `.claude/agents/*.md` — REJECT is a
   normal, expected verdict, not a shortfall.
-- **"make a shareable page"** (field guide, dashboard, report) → the `artifact-smith` agent (builds
-  from `docs/BRAND.md` tokens).
+- **"make a shareable page"** (field guide, dashboard, report) → the `artifact-design` skill, built from
+  `docs/BRAND.md` tokens.
 - **A finished Claude Design session** → one of the two paths in [`docs/HANDOFFS.md`](docs/HANDOFFS.md)
   — mark the canvas boards `build` and fire the design lane with one tap, or attach the session's
   export to a Claude Code session with a one-line ask (Eric, 2026-09-24: "attaching the artifact
@@ -487,9 +488,7 @@ is expected and fine; the docs are the memory.
 
 - Branch off latest `origin/main` per change **before editing** (`git fetch origin main && git
   checkout -B <branch> origin/main` — fetch first: a cached ref can be genuinely stale or diverged
-  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04; an isolated
-  worktree refuses that chain — its git rules are [`docs/DELEGATION.md`](docs/DELEGATION.md)
-  rail 2) — branch-first means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
+  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04) — branch-first means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
   focused PRs; squash-merge on green; Conventional-Commit subjects, **lowercase-led** (commitlint
   rejects a capitalized first word — even "PRs"/"Barad-dûr").
 - Open PRs with **`/ship`** (local verify + integration tests → push → REST open → stop; the pipeline arms; wraps
@@ -530,3 +529,10 @@ is expected and fine; the docs are the memory.
 - Background work runs via subagents under [`docs/DELEGATION.md`](docs/DELEGATION.md) (isolated
   worktrees, verify-before-merge). In burn-down mode, opening small green PRs and letting
   `pipeline.yml` arm their squash auto-merge is the expected loop.
+- **An agent isolated in a worktree: Claude Code's worktree check reads every Bash command** and
+  refuses what it cannot show stays inside: git aimed at another checkout (the real protection, never
+  worked around), a loop or `$(…)` around git, `bash file; echo $?`, `bash -c` whose text names git,
+  a variable as an argument to sed or node, `find` with `( … )`. On 2026-11-01 those cost 148 agents 129 failed calls.
+  Spell paths out, even long ones. The tool already reports a non-zero exit, so `echo $?` adds
+  nothing. Anything longer goes in a script file in your scratchpad, run as `bash <file>`, aimed at
+  your own worktree. Rail 2 of [`docs/DELEGATION.md`](docs/DELEGATION.md) has the rest.

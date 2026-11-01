@@ -11,6 +11,7 @@ import {
   readCorpus,
   renderMarkdown,
   scorecard,
+  THIN_CELL,
   verdictOf,
 } from "../../scripts/research-scorecard.mjs";
 
@@ -63,8 +64,8 @@ describe("parseForwardTests", () => {
       ]),
     );
     expect(rows).toEqual([
-      { id: "FT-e-1", verdict: "pass" },
-      { id: "FT-e-2", verdict: "open" },
+      { id: "FT-e-1", verdict: "pass", scoreBy: "2026-09-20" },
+      { id: "FT-e-2", verdict: "open", scoreBy: "2026-10-01" },
     ]);
   });
 
@@ -72,7 +73,7 @@ describe("parseForwardTests", () => {
     const rows = parseForwardTests(
       fragment(["| FT-3 | h | p | k | ~2026-09-11 | **SCORED 2026-09-03 — KILLED** | tail |"]),
     );
-    expect(rows).toEqual([{ id: "FT-3", verdict: "kill" }]);
+    expect(rows).toEqual([{ id: "FT-3", verdict: "kill", scoreBy: null }]);
   });
 });
 
@@ -147,6 +148,77 @@ describe("scorecard", () => {
     expect(md).toContain("| high | 1 | 0 | 100% |");
     expect(md).toContain("| Horizon |");
     expect(md).toContain("| unlinked | 1 | 0 | 100% |");
+  });
+});
+
+// 2026-10-31 (the loop census, "scorecard-falsifier-fired"): high 75% and medium 76% read as a tie,
+// but medium calls sit at longer horizons, and this quarter had 186 of 226 calls still open — its
+// 86% is the calls that resolved early. The comparison that can move the sizing rule is high
+// against medium WITHIN a horizon, over calls whose score-by date has passed, with a thin cell
+// said to be thin rather than read as a percentage.
+describe("confidence by horizon, matured calls only", () => {
+  const today = "2026-11-03";
+  const tests = [
+    { id: "FT-w-1", verdict: "pass" as const, scoreBy: "2026-10-01" },
+    { id: "FT-w-2", verdict: "kill" as const, scoreBy: "2026-10-02" },
+    { id: "FT-w-3", verdict: "pass" as const, scoreBy: "2026-10-03" },
+    { id: "FT-w-4", verdict: "open" as const, scoreBy: "2026-10-04" },
+    { id: "FT-q-1", verdict: "pass" as const, scoreBy: "2026-12-31" },
+    { id: "FT-q-2", verdict: "pass" as const, scoreBy: null },
+  ];
+  const links = [
+    { id: "FT-w-1", horizon: "this week" as const, grade: "high" as const },
+    { id: "FT-w-2", horizon: "this week" as const, grade: "high" as const },
+    { id: "FT-w-3", horizon: "this week" as const, grade: "medium" as const },
+    { id: "FT-w-4", horizon: "this week" as const, grade: "medium" as const },
+    { id: "FT-q-1", horizon: "this quarter" as const, grade: "high" as const },
+    { id: "FT-q-2", horizon: "this quarter" as const, grade: "medium" as const },
+  ];
+  const card = scorecard({ tests, links, today });
+
+  it("parseForwardTests carries the score-by date, or null when the cell leads with none", () => {
+    const rows = parseForwardTests(
+      fragment([
+        "| FT-e-1 | h | p | k | 2026-09-20 | **pass** |",
+        "| FT-e-2 | h | p | k | ~2026-09-11 | _open_ |",
+      ]),
+    );
+    expect(rows).toEqual([
+      { id: "FT-e-1", verdict: "pass", scoreBy: "2026-09-20" },
+      { id: "FT-e-2", verdict: "open", scoreBy: null },
+    ]);
+  });
+
+  it("counts a call only once its score-by date has passed; a future or undated one waits", () => {
+    expect(card.matured.cells["this week"].high).toMatchObject({ pass: 1, kill: 1 });
+    expect(card.matured.cells["this week"].medium).toMatchObject({ pass: 1, open: 1 });
+    expect(card.matured.cells["this quarter"].high).toMatchObject({ pass: 0, kill: 0 });
+    expect(card.matured.notYet).toBe(1);
+    expect(card.matured.undated).toBe(1);
+    expect(card.matured.pastDueOpen).toBe(1);
+  });
+
+  it("renders high beside medium within each horizon, naming a thin cell as thin", () => {
+    const md = renderMarkdown(card, today);
+    expect(md).toContain("| Matured by 2026-11-03 | high | medium-high | medium | low |");
+    expect(md).toContain("| this week | thin: 1/2 | — | thin: 1/1 | — |");
+    expect(md).toContain(`fewer than ${THIN_CELL} decided`);
+    expect(md).toContain("1 matured call(s) still open past their date");
+  });
+
+  it("prints a percentage once a cell has enough decided calls", () => {
+    const many = Array.from({ length: THIN_CELL }, (_, i) => ({
+      id: `FT-m-${i}`,
+      verdict: (i < 8 ? "pass" : "kill") as "pass" | "kill",
+      scoreBy: "2026-10-01",
+    }));
+    const manyLinks = many.map((t) => ({
+      id: t.id,
+      horizon: "this month" as const,
+      grade: "high" as const,
+    }));
+    const md = renderMarkdown(scorecard({ tests: many, links: manyLinks, today }), today);
+    expect(md).toContain(`| this month | 80% (8/${THIN_CELL}) | — | — | — |`);
   });
 });
 

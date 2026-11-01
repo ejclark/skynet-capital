@@ -40,13 +40,19 @@ into separate lint, typecheck and per-suite calls (#5191).
    <branch> [--issue N]`** — fetch, checkout (resuming the branch if it exists, never discarding
    work), worktree setup and one status line, in one call. A dispatch that must start on today's
    main — a governor athlete, whose slug repeats across cycles — adds `--fresh`, which refuses a
-   taken name and prints the next free `-N` one instead of resuming a stale branch (#6272). Chained `git fetch && git checkout`
-   is refused by the worktree guard and plain `git` is rewritten by the rtk hook; a plain
-   `bash scripts/…` call passes both (#5192). **After it: one plain command per call; no loops,
-   variables or chains around git.** The guard refuses the compound form too — the 2026-10-11
-   token audit counted 285 such refusals in 79 agents, about 15.4M tokens a week. Where plain
-   `git` is refused (the rtk rewrite, #5055), call `/usr/bin/git`. Put both rules in every
-   worktree agent's prompt. **An isolated agent never waits on a PR merge** — its dispatcher
+   taken name and prints the next free `-N` one instead of resuming a stale branch (#6272).
+   **The harness's worktree check reads every command an isolated agent runs, after hooks rewrite
+   it.** It is Claude Code's, not this repo's, and it is the real protection: `git -C` or `cd` aimed
+   at the shared checkout or another worktree is refused, and stays refused. The user-level rtk hook
+   used to trip it, by putting `rtk` in front of `git` (#5055); `scripts/hooks/guard-bash.mjs` now
+   hands those commands back as written, so `git status` and `git a && git b` work as typed (#6470).
+   If a refusal still names rtk (a glob, variable or quoted pipe handed to `rtk grep` or `rtk ls`),
+   the absolute path passes: `/usr/bin/grep`, `/bin/ls`, `/usr/bin/git`. **What it still refuses on its own:** a loop
+   or `$(…)` around git, `bash file; echo $?`, `bash -c` with shell text, a variable as an argument
+   to sed or node. The 2026-10-11 token audit counted 285 such refusals in 79 agents, about 15.4M
+   tokens a week. A non-zero exit is reported by the tool, so `echo $?` adds nothing. Anything longer
+   goes in a script file in your scratchpad, run as `bash <file>`, still aimed at your own worktree
+   (#5192). **An isolated agent never waits on a PR merge** — its dispatcher
    does: a session through `subscribe_pr_activity` (the merge arrives as `pull_request.closed`),
    a Workflow step through one backgrounded REST loop (`CONTRIBUTING.md`, #5193). **Temp files are yours alone:** write them inside your own worktree
    (`scratchpad/` there is gitignored) or in a session-scratchpad subfolder named after your
@@ -54,9 +60,11 @@ into separate lint, typecheck and per-suite calls (#5191).
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
    (#5240, #5245). **A long or retried task keeps run memory:** `scripts/run-memory.mjs` gives a run
    a contract, an attempt log that refuses a retry changing nothing, and one scratch pad per agent,
-   outside any worktree so a resumed session or sibling agent can pick it up (#6470). Pass a workflow
-   agent its path from `run-memory scratch <run> <agent>`, and reach shared files through `promote`,
-   which refuses when the target changed since it was read. **Stop only your own processes:** `pkill -P $$ -f rstest`, never a bare
+   outside any worktree so a resumed session or sibling agent can pick it up (#6470). A workflow agent's
+   own folder is `runs/<run>/<agent>` in the session scratchpad, carried in its prompt (grind,
+   post-merge-audit, symbol-sweep), because `.claude` is a protected path whose writes are never
+   auto-approved. Reach shared files through `promote`, which refuses when the target changed since it
+   was read. **Stop only your own processes:** `pkill -P $$ -f rstest`, never a bare
    `pkill -f rstest` — that kills every sibling worktree's test run too. You never need it to clear
    load: full verifies queue one at a time per checkout (`scripts/verify-locked.sh`, #5548), and the
    pre-push hook skips a tree `ship.sh open` already verified green.

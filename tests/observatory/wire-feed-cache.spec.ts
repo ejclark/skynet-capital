@@ -2,6 +2,7 @@ import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "n
 import type { ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { FeedbackStatus } from "../../src/domain/feedback-status.js";
 import { JsonlActivityEventBus } from "../../src/observatory/activity-bus.js";
 import {
   type ActivityEvent,
@@ -29,7 +30,6 @@ import { mergeLedgerIntoEvents } from "../../src/observatory/trade-event-feed.js
 import { buildWireTradeRows } from "../../src/observatory/wire-data.js";
 import { type WireFeed, wireFeedReader } from "../../src/observatory/wire-feed-cache.js";
 import { type FeedbackLogEntry, JsonlFeedbackLogStore } from "../../src/server/feedback-log.js";
-import type { FeedbackStatus } from "../../src/server/feedback-status.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
 import type { JsonlTail } from "../../src/storage/jsonl-store.js";
@@ -479,11 +479,14 @@ describe("the Wire's append-aware fold (#4458)", () => {
         readAllLadderProgress: () => Promise.resolve([]),
         readAllOrderAudit: () => Promise.resolve([]),
       };
+      // The oracle: every line of every file, unreduced — what the route read before the fold.
       const whole: WireRouteDeps = {
         ...shared,
-        readAllActivityEvents: () => sources.bus.list(),
-        readAllTradeActivity: () => sources.activity.list(),
-        readAllFeedback: () => sources.feedbackLog.list(),
+        readWireFeed: async () => ({
+          events: await sources.bus.list(),
+          records: await sources.activity.list(),
+          filings: await sources.feedbackLog.list(),
+        }),
       };
       const folded: WireRouteDeps = { ...shared, readWireFeed: wireFeedReader(sources).read };
 

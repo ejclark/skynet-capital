@@ -1,6 +1,7 @@
 // Type surface for scripts/moneypenny/assignments.mjs (see index.d.mts for why scripts/ ships
 // hand-written declarations instead of `allowJs`).
 export const ASSIGN_MARKER: string;
+export const UNASSIGN_MARKER: string;
 export const HOLD_MERGE: string;
 export const HELD_PR_HOURS: number;
 export const ASSIGN_CAP: number;
@@ -74,13 +75,45 @@ export interface PlanInput {
 
 export function decisionLine(body?: string | null): string | null;
 export function assignmentComment(opts: { decision: string }): string;
+export function unassignmentComment(opts: { why: string }): string;
+/** A REST comment as `markedByComments` reads it: body plus the author fields `trustedComment` checks. */
+export interface MarkerComment {
+  body?: string | null;
+  author_association?: string;
+  user?: { type?: string; login?: string };
+}
+export function markedByComments(comments?: readonly MarkerComment[]): boolean;
 export function plan(input?: PlanInput): Planned;
 export function report(planned: Pick<Planned, "queue" | "actions">): string;
-export function gather(): Required<Pick<PlanInput, "issues" | "prs" | "markers">>;
+export function gather(opts?: {
+  /** Injected for specs; production reads through gh.mjs's `ghRestAll` at the wall clock. */
+  rest?: (path: string) => unknown[];
+  now?: number;
+}): Required<Pick<PlanInput, "issues" | "prs" | "markers">>;
 export function routeAssignments(deps?: {
   assignments?: Required<Pick<PlanInput, "issues" | "prs" | "markers">> | null;
   now?: number;
 }): AssignIntent[];
+export const ASK_LEASE_MS: number;
+export interface AskLease {
+  claim: (slug: string) => { claimed: boolean; reason?: string };
+  release: (slug: string) => unknown;
+}
+export function withAskLease<T>(
+  number: number | string,
+  lease: AskLease | null | undefined,
+  work: () => T,
+): T | string;
+export function askOnce(
+  intent: AssignIntent,
+  opts?: {
+    run?: (cmd: string, args: readonly string[]) => string;
+    retry?: <T>(fn: () => T) => T;
+    rest?: (path: string) => unknown[];
+    read?: (path: string) => { body?: string | null } | null;
+    lease?: AskLease | null;
+  },
+): string;
 export function executeAssignments(
   intent: AssignIntent,
   opts?: {

@@ -1,0 +1,15 @@
+{
+  "$comment": "Whole reads of a growing ledger still on the dashboard server's request/boot paths (scripts/whole-read-scan.mjs, #4619). Per file, per read: how many call sites and why. Only shrinks — a lower count in the code fails until it is lowered here. #4619's bar is a total of 3 or fewer.",
+  "src/server/desk-alerts-route.ts": {
+    "log.list()": {
+      "count": 1,
+      "why": "the Alerts strip reads the owner's whole event log for the orders' recent lifecycle"
+    }
+  },
+  "src/server/wire-routes.ts": {
+    "readAllOrderAudit()": {
+      "count": 1,
+      "why": "member milestones read each member's whole order audit (members only since #6503)"
+    }
+  }
+}

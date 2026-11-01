@@ -39,7 +39,7 @@
 // only the first, so the output shows both what is priced and what deliberately is not.
 //
 //   node scripts/arch-scan.mjs             # report + enforce (exit 1 on any new over-cap file)
-//   node scripts/arch-scan.mjs --candidate # emit the next decompose target as JSON
+//   node scripts/arch-scan.mjs --candidate # emit the next decompose target and the debt as JSON
 //   node scripts/arch-scan.mjs --update    # rewrite scripts-grouping-budget.json (ratchet: only lower)
 //
 // Exit codes: 0 within cap · 1 a finding (over-cap file, junk-drawer name, grouping smell grew) ·
@@ -54,7 +54,7 @@ const CAP = 300;
 // The trees this cap covers, with the file kinds Biome's rule used to lint in each and the ceilings
 // it used (300; 500 for tests, where a spec file's arrange/act/assert repetition is the point). An
 // src-only walk would report zero over-cap files on code lines today — a green gate that feeds the
-// decomposer nothing — so the cap follows the code Biome stopped watching.
+// /decompose nothing — so the cap follows the code Biome stopped watching.
 const TREES = [
   { dir: "src", exts: [".ts"], cap: CAP },
   { dir: "app/src", exts: [".ts", ".tsx", ".css"], cap: CAP },
@@ -96,14 +96,18 @@ const files = TREES.flatMap(({ dir, exts, cap }) => {
   });
 }).sort((a, b) => b.lines - b.cap - (a.lines - a.cap)); // ranked by overage, not size: the caps differ
 
-// --candidate: the decomposer agent's next target — the largest file that's over cap AND not
+// --candidate: the governor chore's next /decompose target — the largest file that's over cap AND not
 // already grandfathered with a documented reason (those need a deliberate decision, not a bot).
 if (process.argv.includes("--candidate")) {
   const eligible = files
     .filter((x) => x.lines > x.cap && !(x.file in grandfather))
     .map((x) => ({ ...x, over: x.lines - x.cap }));
   console.log(
-    JSON.stringify({ candidate: eligible[0] ?? null, runnerUp: eligible[1] ?? null }, null, 2),
+    JSON.stringify(
+      { candidate: eligible[0] ?? null, runnerUp: eligible[1] ?? null, debt: eligible.length },
+      null,
+      2,
+    ),
   );
   process.exit(0);
 }

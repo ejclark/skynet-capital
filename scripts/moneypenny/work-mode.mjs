@@ -18,8 +18,20 @@
 // DECISIONS (slice 1, recorded so slices 2–3 don't re-litigate them):
 //   - Zero, two or more, or an unknown `work-mode:*` label → `conserve` + a warning (criterion 5).
 //   - Every non-normal position expires. The expiry is the NEWEST issue comment carrying
-//     `until <YYYY-MM-DD>` (case-insensitive, backticks allowed). It is inclusive through the end
-//     of that day in UTC; after that the lanes read `normal` (criterion 4).
+//     `until <YYYY-MM-DD>` (case-insensitive, backticks allowed), inclusive through the end of that
+//     day in UTC, or `until <YYYY-MM-DDTHH:MMZ>`, which ends at that instant; after that the lanes
+//     read `normal` (criterion 4). A timestamp has to be UTC: any other offset is no end date at all.
+//   - A surge never reads past the first weekly reset after its end date was written, whatever that
+//     date says. A date alone cannot land on the reset: `until 2026-10-27` ran 19 hours into the new
+//     week, and only a revert, itself 52 minutes late, ended it. Counted from the comment rather than
+//     the label because an ended surge keeps its label until the next push takes it off, and adding a
+//     label already on fires no event.
+//     The reset is `weeklyResetAnchor` in work-mode.json, one real reset that the rest repeat from at
+//     7 days.
+//   - That comment counts only if it was written for this setting of the dial: by this repo's
+//     people or bots, at or after the label went on (a minute's grace), and not naming another
+//     position. Any old date used to win, so a bare `halt` tap read `normal` from a surge's expired
+//     date, and a stranger's one-line comment could release a brake (#6470's study, 2026-11-01).
 //   - A non-normal position with NO expiry comment splits by direction: `halt` stays `halt` — a
 //     brake never silently releases — while `conserve`/`surge` read `normal` with a warning, so a
 //     forgotten throttle cannot starve the repo and a forgotten surge cannot keep spending.
@@ -30,6 +42,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { trustedComment } from "./gh.mjs";
+import { readingFrom } from "./pace-reading.mjs";
 
 const CONFIG_FILE = join(process.cwd(), "work-mode.json");
 
@@ -111,56 +125,113 @@ export function loadWorkModeConfig(file = CONFIG_FILE) {
   } catch {
     refuse(file, "is not valid JSON.");
   }
-  const { trackingIssue, labelPrefix, positions } = cfg ?? {};
+  const { trackingIssue, labelPrefix, positions, weeklyResetAnchor } = cfg ?? {};
   if (!(Number.isInteger(trackingIssue) && trackingIssue > 0))
     refuse(file, `trackingIssue must be a positive integer, got ${JSON.stringify(trackingIssue)}.`);
   if (!(typeof labelPrefix === "string" && labelPrefix.length > 0))
     refuse(file, `labelPrefix must be a non-empty string, got ${JSON.stringify(labelPrefix)}.`);
   if (!(positions && typeof positions === "object"))
     refuse(file, "positions must be an object keyed by halt/conserve/normal/surge.");
+  if (Number.isNaN(Date.parse(weeklyResetAnchor ?? "")))
+    refuse(file, `weeklyResetAnchor must be a time, got ${JSON.stringify(weeklyResetAnchor)}.`);
   const caps = readCaps(file, positions);
   checkOrdering(file, caps);
-  return { trackingIssue, labelPrefix, positions: caps };
+  return { trackingIssue, labelPrefix, positions: caps, weeklyResetAnchor };
 }
 
-const UNTIL = /\buntil\s+`?(\d{4})-(\d{2})-(\d{2})`?/i;
+const UNTIL =
+  /(?:\b(halt|conserve|surge|normal)\b[\s*`_:–—-]*)?\buntil\s+`?(\d{4})-(\d{2})-(\d{2})(T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?Z)?(?!T)`?/i;
 
-/** The first instant AFTER the expiry day, in UTC ms — or null when the text carries no real date.
- *  Round-tripped through Date.UTC so `2026-02-31` is rejected rather than rolled into March. */
+/** When the position ends, in UTC ms, plus the position named right beside the date, if any — or null
+ *  when the text carries no real date. A bare date ends at the first instant AFTER its day; a
+ *  timestamp ends at itself (`atTime`). Round-tripped through Date.UTC so `2026-02-31` is rejected
+ *  rather than rolled into March. */
 function expiryEnd(body) {
   const m = UNTIL.exec(body ?? "");
   if (!m) return null;
-  const [y, mo, d] = [Number(m[1]), Number(m[2]) - 1, Number(m[3])];
+  const [y, mo, d] = [Number(m[2]), Number(m[3]) - 1, Number(m[4])];
   const start = new Date(Date.UTC(y, mo, d));
   if (start.getUTCFullYear() !== y || start.getUTCMonth() !== mo || start.getUTCDate() !== d)
     return null;
-  return { until: `${m[1]}-${m[2]}-${m[3]}`, endMs: Date.UTC(y, mo, d + 1) };
+  const date = `${m[2]}-${m[3]}-${m[4]}`;
+  const named = m[1]?.toLowerCase() ?? null;
+  if (!m[5]) return { until: date, endMs: Date.UTC(y, mo, d + 1), named, atTime: false };
+  const endMs = Date.parse(`${date}${m[5].toUpperCase()}`);
+  return Number.isNaN(endMs)
+    ? null
+    : { until: `${date}${m[5].toUpperCase()}`, endMs, named, atTime: true };
 }
 
-/** The newest comment's valid `until <date>`, or null. Sorted by `createdAt` when present
- *  (gh returns oldest-first, but the rule should not depend on that); array order otherwise. */
-function newestExpiry(comments = []) {
-  const ordered = (comments ?? [])
-    .map((c, i) => ({ c, i }))
-    .sort((a, b) => {
-      const [ta, tb] = [Date.parse(a.c?.createdAt ?? ""), Date.parse(b.c?.createdAt ?? "")];
-      return Number.isNaN(ta) || Number.isNaN(tb) || ta === tb ? a.i - b.i : ta - tb;
-    });
-  for (let k = ordered.length - 1; k >= 0; k--) {
-    const hit = expiryEnd(ordered[k].c?.body);
-    if (hit) return hit;
+const WEEK_MS = 7 * 24 * 3_600_000;
+
+/** Pure: the first weekly reset strictly after `at` (ms), from one known reset. */
+export function nextWeeklyReset(anchor, at) {
+  const first = Date.parse(anchor);
+  return first + Math.ceil((at - first + 1) / WEEK_MS) * WEEK_MS;
+}
+
+/** A reset time as the dial writes it: UTC, to the second, nothing a person has to convert. */
+export const isoUntil = (ms) => new Date(ms).toISOString().replace(".000Z", "Z");
+
+/** A session posts the end date and sets the label within a second or so, in either order
+ *  (2026-10-26: comment one second first). Too small fails safe: `halt` holds, the others read
+ *  `normal` with a warning, and a later comment still counts. */
+const END_DATE_GRACE_MS = 60_000;
+
+/** When this label last went on, in ms, or null if no event says so. */
+function labelledAt(events, dialLabel) {
+  const times = (events ?? [])
+    .filter((e) => e?.label === dialLabel)
+    .map((e) => Date.parse(e?.createdAt ?? ""))
+    .filter((t) => !Number.isNaN(t));
+  return times.length > 0 ? Math.max(...times) : null;
+}
+
+/** The newest end date written for this setting of the dial (see the header), or null. */
+function newestExpiry(comments, position, setAt) {
+  if (setAt === null) return null;
+  const candidates = (comments ?? [])
+    .map((c) => ({ c, at: Date.parse(c?.createdAt ?? "") }))
+    .filter(({ c, at }) => at >= setAt - END_DATE_GRACE_MS && trustedComment(c))
+    .sort((a, b) => a.at - b.at);
+  for (let k = candidates.length - 1; k >= 0; k--) {
+    const hit = expiryEnd(candidates[k].c.body);
+    if (hit && (hit.named === null || hit.named === position))
+      return { ...hit, writtenAt: candidates[k].at };
   }
   return null;
 }
 
+/** The end date already written for this setting of the dial, if any. Lets a tap's route tell a
+ *  session that wrote its own end date from a bare tap, by the same rule the lanes read with. */
+export function writtenEndDate({ position, comments, events, config }) {
+  return newestExpiry(comments, position, labelledAt(events, `${config.labelPrefix}${position}`));
+}
+
+/** A surge's end, held to the first reset after it was written (see the header). */
+function surgeEnd(expiry, config) {
+  const reset = nextWeeklyReset(config.weeklyResetAnchor, expiry.writtenAt);
+  if (expiry.endMs <= reset) return expiry;
+  return { ...expiry, until: isoUntil(reset), endMs: reset, atTime: true };
+}
+
 const nameOf = (l) => (typeof l === "string" ? l : l?.name);
 
+const dialLabels = (labels, labelPrefix) =>
+  (labels ?? []).map(nameOf).filter((n) => n?.startsWith(labelPrefix));
+
 /**
- * Pure: turn an issue's labels and comments into the position every lane should act on.
+ * Pure: turn an issue's labels, comments and label events into the position every lane should act on.
  * Returns `{ position, until, caps, reason, warning? }` — `until` is the ISO date the position
  * holds through (null for `normal` and an unexpiring `halt`), `caps` the numbers from the config.
  */
-export function resolveWorkMode({ labels = [], comments = [], now = Date.now(), config }) {
+export function resolveWorkMode({
+  labels = [],
+  comments = [],
+  events = [],
+  now = Date.now(),
+  config,
+}) {
   const { labelPrefix, positions } = config;
   const settle = (position, reason, extra = {}) => ({
     position,
@@ -170,7 +241,7 @@ export function resolveWorkMode({ labels = [], comments = [], now = Date.now(), 
     ...extra,
   });
 
-  const dial = (labels ?? []).map(nameOf).filter((n) => n?.startsWith(labelPrefix));
+  const dial = dialLabels(labels, labelPrefix);
   if (dial.length !== 1) {
     const what = dial.length === 0 ? "no" : `${dial.length} (${dial.join(", ")})`;
     const warning = `work-mode: ${what} ${labelPrefix}* labels on the tracking issue — acting as conserve until exactly one is set`;
@@ -185,22 +256,31 @@ export function resolveWorkMode({ labels = [], comments = [], now = Date.now(), 
   }
   if (position === "normal") return settle("normal", "set to normal");
 
-  const expiry = newestExpiry(comments);
+  const written = newestExpiry(comments, position, labelledAt(events, dial[0]));
+  const expiry = written && position === "surge" ? surgeEnd(written, config) : written;
   if (!expiry) {
     if (position === "halt")
       return settle("halt", "halted with no expiry — stays halted until changed");
-    const warning = `work-mode: ${position} has no "until <YYYY-MM-DD>" comment — acting as normal`;
+    const warning = `work-mode: ${position} has no "until <date or time>" comment — acting as normal`;
     return settle("normal", `${position} carries no expiry, so it is treated as expired`, {
       warning,
     });
   }
   if (now >= expiry.endMs)
-    return settle("normal", `${position} expired at the end of ${expiry.until} (UTC)`);
+    return settle(
+      "normal",
+      expiry.atTime
+        ? `${position} expired at ${expiry.until}`
+        : `${position} expired at the end of ${expiry.until} (UTC)`,
+      // The one state whose label may be taken off for it (work-mode-title.mjs). A position with no
+      // end date also reads normal, but its date may be a second behind its label.
+      { endedLabel: dial[0] },
+    );
   return { ...settle(position, `set to ${position} until ${expiry.until}`), until: expiry.until };
 }
 
 /** `gh api --jq '.[] | …'` prints one JSON object per line, across every page. */
-const jsonLines = (out) =>
+export const jsonLines = (out) =>
   String(out ?? "")
     .split("\n")
     .filter((l) => l.trim())
@@ -211,28 +291,42 @@ function defaultExec(cmd, args, opts) {
   return execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, ...opts });
 }
 
-/** Impure: two REST reads of the tracking issue (its labels, then its comments), then
- *  `resolveWorkMode`. REST, not `gh issue view`: that is GraphQL, which a Claude Code cloud session
- *  is refused with a 403 — so every cloud session read the dial as unreadable and fell back to
- *  conserve whatever the label said (2026-10-18). The comments come back in gh's own
- *  `{ body, createdAt }` shape, one JSON object per line across every page. Never throws on a
- *  read failure — an unreadable dial is `conserve` plus a warning (criterion 5). A broken CONFIG
- *  does throw, from `loadWorkModeConfig`, per the header. */
+/** Impure: REST reads of the tracking issue, then `resolveWorkMode`. REST, not `gh issue view`: that
+ *  is GraphQL, which a Claude Code cloud session is refused with a 403 — so every cloud session read
+ *  the dial as unreadable and fell back to conserve whatever the label said (2026-10-18). Every lane
+ *  reads this and the dial sits at `normal` most of the time, so `normal` costs the one call; only
+ *  a position that can carry an end date reads the comments and label events, one JSON object per
+ *  line across every page. Never throws on a read failure — an unreadable dial is `conserve` plus a
+ *  warning (criterion 5). A broken CONFIG does throw, from `loadWorkModeConfig`, per the header. */
 export function readWorkMode(exec = defaultExec, config = loadWorkModeConfig(), now = Date.now()) {
   let issue;
   try {
     const path = `repos/{owner}/{repo}/issues/${config.trackingIssue}`;
-    issue = JSON.parse(exec("gh", ["api", path, "--jq", "{labels: [.labels[] | {name}]}"]));
-    if (!issue || typeof issue !== "object") throw new Error("not a JSON object");
-    issue.comments = jsonLines(
-      exec("gh", [
-        "api",
-        "--paginate",
-        `${path}/comments?per_page=100`,
-        "--jq",
-        ".[] | {body, createdAt: .created_at}",
-      ]),
+    issue = JSON.parse(
+      exec("gh", ["api", path, "--jq", "{title, body, labels: [.labels[] | {name}]}"]),
     );
+    if (!issue || typeof issue !== "object") throw new Error("not a JSON object");
+    const dial = dialLabels(issue.labels, config.labelPrefix);
+    if (dial.length === 1 && dial[0] !== `${config.labelPrefix}normal`) {
+      issue.comments = jsonLines(
+        exec("gh", [
+          "api",
+          "--paginate",
+          `${path}/comments?per_page=100`,
+          "--jq",
+          ".[] | {body, createdAt: .created_at, author_association, user: {type: .user.type}}",
+        ]),
+      );
+      issue.events = jsonLines(
+        exec("gh", [
+          "api",
+          "--paginate",
+          `${path}/events?per_page=100`,
+          "--jq",
+          '.[] | select(.event == "labeled") | {label: .label.name, createdAt: .created_at}',
+        ]),
+      );
+    }
   } catch (err) {
     return {
       position: "conserve",
@@ -249,7 +343,17 @@ export function readWorkMode(exec = defaultExec, config = loadWorkModeConfig(), 
       warning: `work-mode: could not read issue #${config.trackingIssue} (${err.message}) — acting as conserve`,
     };
   }
-  return resolveWorkMode({ labels: issue.labels, comments: issue.comments, now, config });
+  return {
+    ...resolveWorkMode({
+      labels: issue.labels,
+      comments: issue.comments,
+      events: issue.events,
+      now,
+      config,
+    }),
+    title: issue.title,
+    reading: readingFrom(issue.body),
+  };
 }
 
 /** Who may turn the dial to each position (#3960, Eric 2026-09-30, "option C, tightened").

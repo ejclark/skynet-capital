@@ -64,12 +64,14 @@ import {
   readOpenIssues,
   readOpenPlans,
   recheckPullable,
+  sweepHold,
   waitingPlans,
 } from "./admission.mjs";
-import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
+import { ASK_LEASE_MS, askOnce, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
-import { capsuleAudit, clearErodedNeedsEric, flagCapsuleOrphan } from "./capsule-stall.mjs";
+import { capsuleAudit, closeProvenCapsule, flagCapsuleOrphan } from "./capsule-stall.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
+import { closeClockIssue, openClockIssue } from "./clock-watch.mjs";
 import {
   CONTINUED_MODEL,
   continuationContext,
@@ -80,7 +82,15 @@ import {
   postContinuationReceipt,
   routeContinuation,
 } from "./continuation.mjs";
-import { calloutGapComment, shouldPostCalloutGap } from "./decision-callout.mjs";
+import {
+  askFromComments,
+  calloutGapComment,
+  missingDecisionCallout,
+  shouldPostCalloutGap,
+  withLaneAsk,
+  writeIssueBody,
+} from "./decision-callout.mjs";
+import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -96,13 +106,15 @@ import {
 } from "./labels.mjs";
 import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
 import { modelTier } from "./model-tier.mjs";
-import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
+import { nextUnheld } from "./pickup-hold.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
+import { closeRedLanePr } from "./red-lane-pr.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { rearmStranded } from "./stranded-pr.mjs";
+import { updateStuckBranch } from "./stuck-branch-update.mjs";
 import { endBuild, routeWake, wakeNext } from "./wake.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
@@ -150,7 +162,9 @@ export const slugify = (s) =>
 export function route(ctx, deps = {}) {
   if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
   // #5056 slice 2: `in-progress` coming off is a freed build slot, and wakes the queue (wake.mjs).
-  if (ctx.eventName === "issues") return [...routeLessonDraft(ctx), ...routeWake(ctx)];
+  // One tap on the dial clears the others and writes the end time (dial-tap.mjs).
+  if (ctx.eventName === "issues")
+    return [...routeLessonDraft(ctx), ...routeWake(ctx), ...routeDial(ctx)];
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
     return routeRelease(ctx);
   }
@@ -578,8 +592,14 @@ export function triageFeedback(ctx) {
  *
  * The rule itself is `decision-callout.mjs` and is pure; this function is only its I/O — the
  * labelled issue straight from the event payload (no `gh issue view`, same discipline as
- * `triageFeedback`), its comment bodies over REST, and one comment when the gap is real. `deps`
- * injects both so the wiring is specced without a network.
+ * `triageFeedback`), its comments over REST, and one comment when the gap is real. `deps` injects
+ * them so the wiring is specced without a network.
+ *
+ * A LANE'S ASK IS WRITTEN, NOT FLAGGED. The feedback, design and plan prompts all say to comment and
+ * then label, and each is an envelope-protected file. So when a bot applied the label and has just
+ * commented, its first line becomes the callout: the decision reaches his queue with nobody asked to
+ * edit anything. The body is read live for this write, since the payload is from the label's moment.
+ * The board may read the old column until the next reconcile: `sync-project` is a parallel job.
  *
  * NEVER strips the label (a settled fork on #3913): silently removing a decision label would hide
  * a real ask. A comment is loud, reversible, and leaves the ask where Eric can still see it.
@@ -587,23 +607,35 @@ export function triageFeedback(ctx) {
 export function checkCallout(ctx, deps = {}) {
   const issue = ctx.payload?.issue;
   if (!issue) return { posted: false, reason: "no issue in the payload" };
-  const readComments =
-    deps.readComments ?? ((n) => ghRestAll(`issues/${n}/comments`).map((c) => c?.body ?? ""));
+  const readComments = deps.readComments ?? ((n) => ghRestAll(`issues/${n}/comments`));
   const post =
     deps.post ?? ((n, body) => sh("gh", ["issue", "comment", String(n), "--body", body]));
+  const readIssue = deps.readIssue ?? ((n) => ghRest(`issues/${n}`));
+  const writeBody = deps.writeBody ?? writeIssueBody;
 
   const labels = (issue.labels ?? []).map((l) => l.name);
-  const gap = shouldPostCalloutGap({
-    labels,
-    body: issue.body ?? "",
-    author: issue.user?.login ?? "",
-    comments: readComments(issue.number),
-  });
-  if (!gap) {
+  const body = issue.body ?? "";
+  const nothing = () => {
     console.log(`::notice::#${issue.number} — needs-eric callout check: nothing to say`);
     return { posted: false, reason: "no gap, or already commented" };
-  }
+  };
+  if (!missingDecisionCallout({ labels, body })) return nothing();
+  const comments = readComments(issue.number);
   const actor = ctx.payload?.sender?.login ?? ctx.actor;
+  const said = askFromComments(comments, { actor, now: deps.now ?? Date.now() });
+  if (said) {
+    // Live labels and body, not the payload's: an answer may have cleared the label since, and this
+    // write replaces the whole body, so an empty read must not reach it.
+    const live = readIssue(issue.number);
+    if (!live) throw new Error(`#${issue.number}: could not read the issue to state its ask`);
+    const liveLabels = (live.labels ?? []).map((l) => l.name);
+    if (!missingDecisionCallout({ labels: liveLabels, body: live.body })) return nothing();
+    writeBody(issue.number, withLaneAsk(live.body, said.line, said.url));
+    console.log(`::notice::#${issue.number} — stated the ask ${actor} just commented`);
+    return { posted: false, lifted: true, actor };
+  }
+  const bodies = comments.map((c) => c?.body ?? "");
+  if (!shouldPostCalloutGap({ labels, body, comments: bodies })) return nothing();
   post(issue.number, calloutGapComment({ actor }));
   console.log(
     `::notice::#${issue.number} — needs-eric with no decision callout (labelled by ${actor}); commented once`,
@@ -712,7 +744,9 @@ export function peekNext(deps = {}) {
     readPrIssues = () => readOpenPrIssues(),
     readPlans = () => readOpenPlans(),
     continuation = () => continuationContext(),
-    readHold: holdOf = (issue) => readPickupHold(issue),
+    holdReads = {},
+    // The same holds as the claim, or a refused issue dispatches an empty run on every tick.
+    readHold: holdOf = sweepHold(holdReads),
   } = deps;
   const mode = readMode();
   const ready = withoutOpenPr(readReady(), readPrIssues());
@@ -738,7 +772,8 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readPlans = () => readOpenPlans(),
     claims = { plan: claimPlan, feedback: claimFeedback },
     continuation = () => continuationContext({ now: nowMs }),
-    readHold: holdOf = (issue) => readPickupHold(issue),
+    holdReads = {},
+    readHold: holdOf = sweepHold({ now: nowMs, ...holdReads }),
     ...admission
   } = deps;
   const mode = readMode();
@@ -1455,14 +1490,14 @@ function executeSweepIntent(i) {
   if (i.kind === "assign-eric" || i.kind === "unassign-eric") {
     // The two writes live in assignments.mjs so its own `--apply` CLI reuses them without importing
     // this router — the same cycle-avoidance as the relay below.
-    const line = executeAssignments(i);
+    const line = askOnce(i, { lease: ASK_LEASE });
     console.log(`::notice::${line}`);
     return line;
   }
   if (i.kind === "stop-continuation") {
     // The label write and the assignment live in continuation.mjs so its own CLI can reuse them
     // without importing this router — the same cycle-avoidance as the relay and the assignments.
-    const line = executeStopContinuation(i);
+    const line = executeStopContinuation(i, { lease: ASK_LEASE });
     console.log(`::warning::${line}`);
     return line;
   }
@@ -1482,6 +1517,7 @@ function executeSweepIntent(i) {
  * needed one more kind (`wake-next`). Moving the four one-liners here takes it back under.
  */
 const ONE_CALL_INTENTS = {
+  "update-stuck-branch": (i) => updateStuckBranch(i),
   noop: (i) => {
     console.log(`· nothing to do (${i.reason})`);
     return `noop — ${i.reason}`;
@@ -1496,6 +1532,7 @@ const ONE_CALL_INTENTS = {
     console.log(`· commented on #${i.issueNumber}`);
     return `commented on #${i.issueNumber}`;
   },
+  "close-red-lane-pr": (i) => closeRedLanePr(i),
   "edit-issue-body": (i) => {
     sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
     console.log(`· refreshed the body of #${i.issueNumber}`);
@@ -1503,9 +1540,14 @@ const ONE_CALL_INTENTS = {
   },
   "draft-lesson": (i) => draftLesson(i),
   "wake-next": (i) => wakeAfter(i.issueNumber),
+  "route-dial": (i) => executeDialTap(i),
+  "tidy-ended-dial": (i) => executeDialTidy(i),
   // #5727 — the CI repair capsules' two stall checks, which live beside audit.mjs.
   "flag-capsule-orphan": (i) => flagCapsuleOrphan(i),
-  "clear-eroded-needs-eric": (i) => clearErodedNeedsEric(i),
+  "close-proven-capsule": (i) => closeProvenCapsule(i),
+  // #6470 — the clock's watcher: the writes live in clock-watch.mjs beside the decision.
+  "open-clock-issue": (i) => openClockIssue(i),
+  "close-clock-issue": (i) => closeClockIssue(i),
 };
 
 /**
@@ -1534,7 +1576,13 @@ export function wakeAfter(
  *   run by `execute()`, not once per intent (#3280). Pushed only after the comment/label landed,
  *   so an issue whose memory could not be written is not dispatched either, exactly as before.
  */
-function executeOne(i, stallRepairs = []) {
+/** One lease per issue across an ask, an unassign and a stop. `withAskLease` says why it exists. */
+const ASK_LEASE = {
+  claim: (slug) => claimHandoff(slug, process.env.GITHUB_SHA ?? "", Date.now(), ASK_LEASE_MS),
+  release: releaseClaim,
+};
+
+export function executeOne(i, stallRepairs = []) {
   if (Object.hasOwn(ONE_CALL_INTENTS, i.kind)) return ONE_CALL_INTENTS[i.kind](i);
   if (i.kind === "open-issue") {
     ensureLabel(i.label);
@@ -1759,8 +1807,10 @@ function main(argv) {
 
   const deps = fixtureDeps ?? (dry ? {} : gatherDeps(ctx));
   const auditMode = argv.includes("--audit") || ctx.inputs?.command === "audit";
+  // A dry run writes nothing, so it takes no lease; the update pass then stops at the list.
+  const hourly = dry ? {} : { takeHourlyLease: takeUpdateBranchLease };
   const intents = auditMode
-    ? [...audit(fixtureDeps ?? gatherAuditDeps(Date.now())), ...capsuleAudit(fixtureDeps)]
+    ? [...audit(fixtureDeps ?? gatherAuditDeps(Date.now(), hourly)), ...capsuleAudit(fixtureDeps)]
     : route(ctx, deps);
 
   if (dry) {
@@ -1769,6 +1819,15 @@ function main(argv) {
   }
   execute(intents);
   if (auditMode && !fixtureDeps) postLoopChecks();
+}
+
+/**
+ * True at most once an hour across runners. It is the claim lease with a one-hour life, and it lives
+ * here because this file owns the lease: the audit tick runs on every push, and the branch-update
+ * pass must not read every armed PR's suites that often. Nothing releases it, so it simply ages out.
+ */
+function takeUpdateBranchLease(nowMs) {
+  return claimHandoff("update-branch-scan", process.env.GITHUB_SHA ?? "", nowMs, 36e5).claimed;
 }
 
 /** The learning-loop registry's due checks, posted on the push tick (scripts/loop-check.mjs). Never

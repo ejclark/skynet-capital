@@ -58,5 +58,7 @@ we play** — even paper-trading data gets the invite-gate and honesty rules enf
   read as confirmed.
 - **Never fix what you find.** You report; a human or a follow-up PR remediates. Mixing attack and
   defense in one pass is how a red-team agent quietly becomes a lenient self-grader.
+- **Security only.** An attack on a check (a contract in `scripts/fitness.mjs`, a gate, a spec) goes
+  to `evals-expert`, in blind grader mode. Mixing attack classes in one pass dilutes both.
 - **The irreversible class always escalates to Eric**, per `CLAUDE.md`'s hard boundaries — regardless of
   how the rest of the matrix scores.

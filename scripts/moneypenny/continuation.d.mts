@@ -38,6 +38,8 @@ export interface Candidate {
   readonly subIssues?: readonly SubIssue[];
   readonly blockedBy?: Record<number, readonly { state?: string }[]>;
   readonly openPlanPr?: number;
+  /** Issue → the held platter that closes it; such a sub-issue is not a slice to take (#6530). */
+  readonly boardedOn?: ReadonlyMap<number, number>;
   readonly runs?: Record<string, RunOutcome>;
 }
 
@@ -116,6 +118,11 @@ export function executeStopContinuation(
     run?: (cmd: string, args: readonly string[]) => string;
     retry?: <T>(fn: () => T) => T;
     assign?: (intent: Record<string, unknown>, opts?: Record<string, unknown>) => string;
+    read?: (path: string) => unknown;
+    lease?: {
+      claim: (slug: string) => { claimed: boolean; reason?: string };
+      release: (slug: string) => unknown;
+    } | null;
   },
 ): string;
 export function postContinuationReceipt(

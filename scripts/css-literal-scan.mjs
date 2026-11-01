@@ -32,13 +32,21 @@
 //   node scripts/css-literal-scan.mjs --update    # rewrite css-literal-budget.json (only lowers)
 //   node scripts/css-literal-scan.mjs --candidate # file with the most token-equal literals, as JSON
 //   node scripts/css-literal-scan.mjs --json      # counts, tokens and every finding as JSON
+//   node scripts/css-literal-scan.mjs --apply <file>  # swap that file's token-equal literals
+//
+// --apply takes one file, so a PR stays one screen's worth to shoot before and after. It works from
+// this scan's own walk, so what it swaps and what the scan counts cannot disagree. It costs no model:
+// `13px` and `var(--text-base)` render the same as long as the token holds that one value everywhere
+// it can apply, so a token with a second theme value, or one set outside theme.css, is skipped and
+// named rather than swapped. It never touches the budget.
 //
 // Advisory in CI (tests/arch/css-literal.spec.ts via advisoryScan — debt class, never red
-// mid-flow). Exit 2 = UNKNOWN: no styles dir, no theme.css, or a budget key missing. Dependency-free
+// mid-flow). Exit 2 = UNKNOWN: no styles dir, no theme.css, a budget key missing, or --apply given
+// no stylesheet it may rewrite. Dependency-free
 // on purpose: postcss is only a transitive dependency here, and a declaration regex over
 // comment-stripped CSS is enough for these four property families.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 const ROOT = process.cwd();
 const APP_SRC = join(ROOT, "app/src");
@@ -91,7 +99,8 @@ function varsIn(value) {
   }
   return out;
 }
-/** `value` with every top-level var(…) removed, so only literals written outright remain. */
+/** `value` with every top-level var(…) blanked, so only literals written outright remain. Blanked
+ *  to the same length, so a literal's offset here is its offset in `value`, which --apply needs. */
 function withoutVars(value) {
   let out = "";
   let i = 0;
@@ -103,7 +112,7 @@ function withoutVars(value) {
         if (value[j] === "(") depth++;
         else if (value[j] === ")" && --depth === 0) break;
       }
-      out += " ";
+      out += " ".repeat(j + 1 - i);
       i = j + 1;
     } else out += value[i++];
   }
@@ -116,15 +125,17 @@ const LITERAL = /(?<![\w.#-])(-?(?:\d+\.?\d*|\.\d+))(px|rem|em)\b/g;
 const literalsIn = (value) =>
   [...value.matchAll(LITERAL)]
     .filter((m) => Number(m[1]) !== 0)
-    .map((m) => ({ text: `${m[1]}${m[2]}`, n: Number(m[1]), unit: m[2] }));
+    .map((m) => ({ text: `${m[1]}${m[2]}`, n: Number(m[1]), unit: m[2], at: m.index }));
 
-/** `prop: value` declarations (custom properties included) with their line numbers. */
+/** `prop: value` declarations (custom properties included), with line numbers and the offset of
+ *  the value in the file: comments are blanked to the same length, so offsets carry over. */
 function declarations(css) {
   const text = stripComments(css);
   const out = [];
-  const re = /(?:^|[;{\s])(--[\w-]+|[a-z][a-z-]*)\s*:\s*([^;{}]*?)\s*(?=[;}])/g;
+  const re = /(?:^|[;{\s])(--[\w-]+|[a-z][a-z-]*)\s*:\s*([^;{}]*?)\s*(?=[;}])/dg;
   for (const m of text.matchAll(re)) {
-    out.push({ prop: m[1], value: m[2], line: lineAt(text, m.index + m[0].indexOf(m[1])) });
+    const line = lineAt(text, m.index + m[0].indexOf(m[1]));
+    out.push({ prop: m[1], value: m[2], line, valueAt: m.indices[2][0] });
   }
   return out;
 }
@@ -170,8 +181,14 @@ function walkCode(dir, acc = []) {
   }
   return acc;
 }
+// A token named in quotes in the app's code may be set from there (an inline style, setProperty), so
+// --apply treats it as not safe to assume. Reading one with getPropertyValue trips this too: a skip
+// named out loud is the cheap side of that mistake.
+const namedInCode = new Set();
 for (const f of walkCode(APP_SRC)) {
-  for (const m of readFileSync(f, "utf8").matchAll(/--[a-zA-Z][\w-]*/g)) defined.add(m[0]);
+  const code = readFileSync(f, "utf8");
+  for (const m of code.matchAll(/--[a-zA-Z][\w-]*/g)) defined.add(m[0]);
+  for (const m of code.matchAll(/["'`](--[a-zA-Z][\w-]*)["'`]/g)) namedInCode.add(m[1]);
 }
 
 // ── the scan ──
@@ -187,7 +204,7 @@ for (const fam of Object.keys(FAMILIES)) {
 }
 counts.danglingVar = 0;
 counts.mismatchedFallback = 0;
-const perFileEquals = new Map();
+const perFileSwaps = new Map(); // file → its token-equal literals, with their offsets
 for (const f of cssFiles) {
   if (f === THEME) continue;
   const file = rel(f);
@@ -230,7 +247,13 @@ for (const f of cssFiles) {
           literal: lit.text,
           token,
         });
-        perFileEquals.set(file, (perFileEquals.get(file) ?? 0) + 1);
+        if (!perFileSwaps.has(file)) perFileSwaps.set(file, []);
+        perFileSwaps.get(file).push({
+          where: `${file}:${d.line}`,
+          literal: lit.text,
+          token,
+          at: d.valueAt + lit.at,
+        });
       }
     }
   }
@@ -249,12 +272,45 @@ const budgetKeys = Object.keys(counts).filter((k) => counts[k] !== null);
 function candidateMode() {
   // Cheapest high-leverage move: the file with the most literals that already equal a token —
   // each is a mechanical swap with no taste call. Fallback findings are listed beside it.
-  const [file, n] =
-    [...perFileEquals].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] ?? [];
+  const [file, literals] =
+    [...perFileSwaps].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))[0] ??
+    [];
+  const n = literals?.length;
   const swaps = findings.equalsToken.filter((x) => x.where.startsWith(`${file}:`));
   const candidate = file ? { file, equalsToken: n, swaps } : null;
   const fallback = findings.danglingVar[0] ?? findings.mismatchedFallback[0] ?? null;
   console.log(JSON.stringify({ candidate, fallback, counts }, null, 2));
+  return 0;
+}
+
+/** Why a token cannot be assumed to equal its value everywhere, or null when it can. */
+function unsafeToken(token) {
+  if (themeTokens.get(token).size > 1) return "the theme gives this token more than one value";
+  const elsewhere = [...parsed]
+    .filter(([f]) => f !== THEME)
+    .some(([, decls]) => decls.some((d) => d.prop === token));
+  return elsewhere || namedInCode.has(token) ? "this token is set outside theme.css" : null;
+}
+
+function applyMode(target) {
+  const file = target ? rel(resolve(ROOT, target)) : null;
+  const path = file && join(ROOT, file);
+  if (!(path && parsed.has(path)) || path === THEME) {
+    return unknown(`--apply needs one stylesheet in ${rel(STYLES)} other than theme.css`);
+  }
+  const swaps = perFileSwaps.get(file) ?? [];
+  const skipped = [];
+  let css = readFileSync(path, "utf8");
+  // From the end of the file back, so an earlier swap never moves a later offset.
+  for (const swap of [...swaps].reverse()) {
+    const why = unsafeToken(swap.token);
+    if (why) skipped.unshift({ where: swap.where, literal: swap.literal, token: swap.token, why });
+    else {
+      css = `${css.slice(0, swap.at)}var(${swap.token})${css.slice(swap.at + swap.literal.length)}`;
+    }
+  }
+  writeFileSync(path, css);
+  console.log(JSON.stringify({ file, swapped: swaps.length - skipped.length, skipped }, null, 2));
   return 0;
 }
 
@@ -310,6 +366,8 @@ function verdict(budget) {
 }
 
 function main() {
+  const applyAt = process.argv.indexOf("--apply");
+  if (applyAt !== -1) return applyMode(process.argv[applyAt + 1]);
   if (process.argv.includes("--json")) {
     const report = { counts, distinct: distinctCounts, tokenized, tokens, findings };
     console.log(JSON.stringify(report, null, 2));

@@ -6,6 +6,7 @@ import { serveContentApi } from "../../src/server/content-api-routes.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveDeskJson } from "../../src/server/desk-json-routes.js";
 import { anOptionIntent } from "../support/builders.js";
+import { wireFeedOf } from "../support/wire-feed.js";
 
 /**
  * #5043: a wheel order's "Proves it wrong" line used to end with the playbook's own retire rule
@@ -102,7 +103,7 @@ function configFor(sold: OrderIntent): DashboardServerConfig {
     resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
     readDecisions: () => Promise.resolve([pass]),
     readTradeActivity: async () => [fill],
-    readAllTradeActivity: async () => [fill],
+    readWireFeed: wireFeedOf({ records: [fill] }),
     findByOrderId: (orderId: string) =>
       orderId === "opt-1" ? { record: pass, intent: sold } : undefined,
   } as unknown as DashboardServerConfig;

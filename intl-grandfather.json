@@ -1,0 +1,27 @@
+{
+  "$comment": "Intl formatters built inside a function body in the browser app (scripts/intl-scan.mjs, #4612 slice 5). Per file, per constructor: how many call sites and why. Only shrinks — a lower count in the code fails until it is lowered here. src/ lists none and must stay that way: on the server a formatter per call is how Pulse OOM-killed production.",
+  "app/src/live/horizon-range.ts": {
+    "Intl.DateTimeFormat()": {
+      "count": 1,
+      "why": "marketToday builds one per call; a tab calls it a few times per render, never per sample"
+    }
+  },
+  "app/src/live/market-hours.ts": {
+    "Intl.DateTimeFormat()": {
+      "count": 1,
+      "why": "localSessionSuffix takes the viewer's zone as an argument, so the shape is not a constant"
+    }
+  },
+  "app/src/live/market-session.ts": {
+    "Intl.DateTimeFormat()": {
+      "count": 1,
+      "why": "easternParts is a fixed shape that could be hoisted; a tab calls it once per tick"
+    }
+  },
+  "app/src/live/price-context.ts": {
+    "Intl.NumberFormat()": {
+      "count": 1,
+      "why": "contractsText is a fixed shape that could be hoisted; a tab formats a handful of counts"
+    }
+  }
+}

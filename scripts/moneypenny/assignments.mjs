@@ -24,8 +24,11 @@
 //
 // WHAT IT PLANS (#3818's EARS criteria):
 //   1. `needs-eric` + a `Needs from you` line → assign ejclark, one comment quoting the line.
-//   2. label removed / issue closed → remove only the assignments this lane made (its marker).
-//   3. never a second assignment comment on one issue — the marker is the memory.
+//   2. label removed / issue closed → remove only the assignments this lane made (its marker),
+//      and leave an unassign marker, so a label that returns later asks again (#5955).
+//   3. never a second assignment comment on one issue — the marker is the memory — unless this
+//      lane's own unassign came after it; his unassign leaves no marker and stays his answer.
+//      `askOnce` is what holds this when two sweeps overlap.
 //   4. a held or platter PR unmerged ≥12h → assign ejclark.
 // And the HONEST QUEUE half: every open `needs-eric` with the one decision it waits on, flagging the
 // ones that state none — `needs-eric` means exactly one thing, a decision only Eric can make
@@ -35,14 +38,25 @@
 // writes land — and `digest-scan.mjs --needs-you` prints exactly that list. One selector, two
 // readers; tests/scripts/moneypenny/needs-you.spec.ts fails if they ever disagree.
 import { aboveFold } from "../issue-lint.mjs";
-import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
-import { ghRestAll, sh, withRetry } from "./gh.mjs";
+import { ERIC, NEEDS_ERIC, withoutLaneAsk, writeIssueBody } from "./decision-callout.mjs";
+import { ghRest, ghRestAll, sh, trustedComment, withRetry } from "./gh.mjs";
+import { FOOTER } from "./labels.mjs";
 
 export const ASSIGN_MARKER = "<!-- moneypenny:assigned -->";
+/**
+ * Left by THIS lane's own unassign (criterion 2), so a later read can tell its removal from his.
+ * #5955: the label came off, the lane unassigned him, the label came back a day later — and for six
+ * days the capsule carried the ask marker with nobody assigned, so criterion 3 refused a second ask
+ * and `needsYou` dropped it from every digest. The marker is still the memory; it just has to say
+ * which of the two happened last (`markedByComments`).
+ */
+export const UNASSIGN_MARKER = "<!-- moneypenny:unassigned -->";
 export const HOLD_MERGE = "hold-merge";
 export const HELD_PR_HOURS = 12;
 /** New assignments one sweep tick may make. See the header: the bound on a wrong read. */
 export const ASSIGN_CAP = 3;
+/** How long a dead sweep's lease on one ask can block the next: its writes take seconds. */
+export const ASK_LEASE_MS = 10 * 60 * 1000;
 
 const names = (labels = []) => labels.map((l) => (typeof l === "string" ? l : l?.name));
 const logins = (users = []) => users.map((u) => (typeof u === "string" ? u : u?.login));
@@ -55,35 +69,72 @@ const isEric = (login) => String(login ?? "").toLowerCase() === ERIC;
  */
 export function decisionLine(body = "") {
   const lines = aboveFold(body ?? "").split("\n");
-  const start = lines.findIndex((l) => /^>\s*\[!IMPORTANT\]/.test(l));
-  if (start === -1) return null;
-  const callout = [];
-  for (const l of lines.slice(start + 1)) {
-    if (!/^>/.test(l)) break;
-    callout.push(l.replace(/^>\s?/, "").trim());
+  // Every alert, not only the first: a lane's ask can land below an unrelated note, and the rule
+  // (`hasDecisionCallout`) counts it, so this has to find it too or he is never asked.
+  for (const [start, line] of lines.entries()) {
+    if (!/^>\s*\[!IMPORTANT\]/.test(line)) continue;
+    const callout = [];
+    for (const l of lines.slice(start + 1)) {
+      if (!/^>/.test(l)) break;
+      callout.push(l.replace(/^>\s?/, "").trim());
+    }
+    const head = callout.findIndex((l) => /needs from you/i.test(l));
+    if (head === -1) continue;
+    const rest = callout.slice(head + 1).filter(Boolean);
+    const numbered = rest.find((l) => /^\d+\.\s+/.test(l));
+    const pick = numbered ?? rest[0];
+    return pick ? pick.replace(/^(\d+\.|[-*])\s+/, "") : null;
   }
-  const head = callout.findIndex((l) => /needs from you/i.test(l));
-  if (head === -1) return null;
-  const rest = callout.slice(head + 1).filter(Boolean);
-  const numbered = rest.find((l) => /^\d+\.\s+/.test(l));
-  const pick = numbered ?? rest[0];
-  return pick ? pick.replace(/^(\d+\.|[-*])\s+/, "") : null;
+  return null;
 }
 
-/** The comment criterion 1 posts: the decision quoted, the marker that makes criteria 2–3 work. */
+/** The comment criterion 1 posts: the ask quoted, the marker that makes criteria 2–3 work. The ask
+ *  can be a decision or a task such as pressing a button (#4621), so the wording fits both. */
 export function assignmentComment({ decision }) {
   return [
-    `@${ERIC} — assigned to you for one decision:`,
+    `@${ERIC} — assigned to you, one thing only you can do or decide:`,
     "",
     `> ${decision}`,
     "",
-    "Reply here in a word; this lane removes the assignment when the label comes off or the issue closes.",
+    "Do it or answer here, whichever it asks; this lane removes the assignment when the label comes off or the issue closes.",
     "",
     ASSIGN_MARKER,
     "",
-    "---",
-    "_Generated by [Claude Code](https://claude.ai/code)_",
+    FOOTER,
   ].join("\n");
+}
+
+/** The comment criterion 2 leaves: why the assignment came off, and the marker that lets a
+ *  returning label ask again (the ask marker above it no longer counts as "asked"). Criterion 1
+ *  asks only on an open issue, so a closed one is promised a re-ask on reopen, not on relabel. */
+export function unassignmentComment({ why }) {
+  const back = `\`${NEEDS_ERIC}\` comes back with a stated decision`;
+  const when = why === "issue closed" ? `it is reopened and ${back}` : back;
+  return [
+    `Unassigned — ${why}. If ${when}, this lane asks again.`,
+    "",
+    UNASSIGN_MARKER,
+    "",
+    FOOTER,
+  ].join("\n");
+}
+
+/**
+ * Is this issue "marked" — asked by this lane, and not since cleared by it? True when the newest
+ * trusted comment carrying either marker is an ask. An unassign he did by hand leaves no marker, so
+ * it still reads as his answer (criterion 3); only the lane's own unassign re-opens the question.
+ * Comments arrive oldest first from REST. A stranger's marker never counts: this repo is public
+ * (`trustedComment`). Pure.
+ */
+export function markedByComments(comments = []) {
+  let marked = false;
+  for (const c of comments) {
+    if (!trustedComment(c)) continue;
+    const body = c.body ?? "";
+    if (body.includes(UNASSIGN_MARKER)) marked = false;
+    else if (body.includes(ASSIGN_MARKER)) marked = true;
+  }
+  return marked;
 }
 
 /**
@@ -163,7 +214,8 @@ function planIssue(issue, { markers, now, queue, actions, ask, stillHeld = new S
     ageDays: Math.floor((now - Date.parse(issue.created_at ?? now)) / 864e5),
   });
   // No stated decision → a clear candidate, never an ask. Marked → criterion 3, asked once
-  // already. Assigned → his by hand; nothing to add.
+  // already and not since cleared by this lane (`markedByComments`: a label that comes back after
+  // the lane's own unassign is unmarked, and asks again). Assigned → his by hand; nothing to add.
   const why = `needs-eric with a stated decision: "${decision}"`;
   if (decision && !marked && !assigned) {
     actions.push({
@@ -176,7 +228,8 @@ function planIssue(issue, { markers, now, queue, actions, ask, stillHeld = new S
     });
   }
   // Needs-you = what he holds after this run: stated, and either his already or about to be. A
-  // marked issue he unassigned himself stays off — criterion 3 means the lane won't re-ask.
+  // marked issue he unassigned himself stays off — criterion 3 means the lane won't re-ask. (One
+  // the LANE unassigned is not marked any more, so it is back on the list the moment it asks.)
   if (decision && (assigned || !marked)) {
     ask({ number: issue.number, title: issue.title, criterion: 1, why, decision });
   }
@@ -283,45 +336,106 @@ export function executeAssignments(intent, { run = sh, retry = withRetry } = {})
         `assignees[]=${ERIC}`,
       ]),
     );
+  const comment = (body) =>
+    retry(() =>
+      run("gh", [
+        "api",
+        "--method",
+        "POST",
+        `repos/{owner}/{repo}/issues/${n}/comments`,
+        "-f",
+        `body=${body}`,
+      ]),
+    );
   if (intent.kind === "unassign-eric") {
+    // Same order, same reasoning: the removal is the write that matters, the marker is memory. A
+    // marker lost after a good removal costs one thing — a label that returns reads as his answer
+    // and is not re-asked, which is exactly what every unassign did before #5955's fix.
     assignees("DELETE");
+    comment(unassignmentComment({ why: intent.why }));
     return `🧹 unassigned #${n} — ${intent.why}`;
   }
   assignees("POST");
-  retry(() =>
-    run("gh", [
-      "api",
-      "--method",
-      "POST",
-      `repos/{owner}/{repo}/issues/${n}/comments`,
-      "-f",
-      `body=${intent.body}`,
-    ]),
-  );
+  comment(intent.body);
   return `📬 assigned #${n} to @${ERIC} (criterion ${intent.criterion}) — ${intent.why}`;
 }
 
-/** The live REST read both the dry run and the digest plan from — one gather, one `plan()`. */
-export function gather() {
+/**
+ * Run `work` while holding the one lease this issue's asks share, or return the line saying why not.
+ *
+ * WHY A LEASE. A push sweep and a `scan` dispatch run in separate concurrency groups (#5130), so both
+ * can gather no marker and both can write one: #4621 and #5709 got the same ask twice, 6 seconds
+ * apart, on 2026-11-01. A read just before the write closes most of that window but not a read
+ * landing between another sweep's two writes. Creating a ref is a real compare-and-set
+ * (claim-lease.mjs), and the read under it is what stops the sweep that takes the lease just after
+ * the first one lets go.
+ *
+ * A LEASE GITHUB REFUSES NEVER COSTS HIM THE ASK. A duplicate comment is the smaller failure, so any
+ * refusal other than another holder writes anyway. `lease` is left out by the by-hand CLI, which is
+ * one person at a keyboard, and `index.mjs` supplies it because `claimHandoff` lives there.
+ */
+export function withAskLease(number, lease, work) {
+  const slug = `ask-${number}`;
+  const taken = lease ? lease.claim(slug) : null;
+  if (taken && !taken.claimed) {
+    if (!/^could not create the lease/.test(taken.reason ?? "")) {
+      return `· #${number} — another sweep holds this ask (${taken.reason})`;
+    }
+    console.error(`::warning::#${number} — ${taken.reason}; writing without the lease`);
+  }
+  try {
+    return work();
+  } finally {
+    if (taken?.claimed) lease.release(slug);
+  }
+}
+
+/**
+ * `executeAssignments`, once: the marker comments are re-read under the lease, because the plan was
+ * made from a read that can be minutes old by now. Clearing the label also takes back any ask this
+ * lane wrote into the body, so an answered question stops reading as open. That comes first: the
+ * unassign marker ends this lane's interest in the issue, so a failure after it would never retry.
+ */
+export function askOnce(
+  intent,
+  { run = sh, retry = withRetry, rest = ghRestAll, read = ghRest, lease = null } = {},
+) {
+  const n = intent.number;
+  return withAskLease(n, lease, () => {
+    const asking = intent.kind === "assign-eric";
+    if (markedByComments(rest(`issues/${n}/comments`)) === asking) {
+      return `· #${n} — another sweep already ${asking ? "asked" : "cleared this"}`;
+    }
+    if (!asking) {
+      const body = retry(() => read(`issues/${n}`))?.body ?? "";
+      const cleared = withoutLaneAsk(body);
+      if (cleared !== body) writeIssueBody(n, cleared, { run, retry });
+    }
+    return executeAssignments(intent, { run, retry });
+  });
+}
+
+/** The live REST read both the dry run and the digest plan from — one gather, one `plan()`.
+ *  `rest` and `now` are injectable so a spec can drive the marker read without GitHub or a clock. */
+export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
   // PRs stay in: a held PR can carry `needs-eric` too (#4361), and GitHub lists it as an issue.
-  const issues = ghRestAll(`issues?state=open&labels=${NEEDS_ERIC}`);
+  const issues = rest(`issues?state=open&labels=${NEEDS_ERIC}`);
   // Criterion 2's candidates: things Eric holds that may have lost the label or closed since.
   const seen = new Set(issues.map((i) => i.number));
-  const since = new Date(Date.now() - 14 * 864e5).toISOString();
-  for (const i of ghRestAll(`issues?state=all&assignee=${ERIC}&since=${since}`)) {
+  const since = new Date(now - 14 * 864e5).toISOString();
+  for (const i of rest(`issues?state=all&assignee=${ERIC}&since=${since}`)) {
     if (!seen.has(i.number)) issues.push(i);
   }
-  const prs = ghRestAll("pulls?state=open");
+  const prs = rest("pulls?state=open");
   // Marker candidates: every issue above, PLUS the held PRs criterion 4 targets. The PRs matter —
   // without their markers, a PR Eric unassigned himself from is invisible to every other read here
   // and gets re-asked on every push (see `plan`'s `!markers.has(pr.number)`). Only the ones already
   // past the hold window, so this is normally one or two extra reads, not one per open PR.
   const candidates = new Set(issues.map((i) => i.number));
-  for (const pr of prs) if (heldPrHours(pr, Date.now()) !== null) candidates.add(pr.number);
+  for (const pr of prs) if (heldPrHours(pr, now) !== null) candidates.add(pr.number);
   const markers = new Set();
   for (const n of candidates) {
-    const comments = ghRestAll(`issues/${n}/comments`);
-    if (comments.some((c) => (c.body ?? "").includes(ASSIGN_MARKER))) markers.add(n);
+    if (markedByComments(rest(`issues/${n}/comments`))) markers.add(n);
   }
   return { issues, prs, markers };
 }
@@ -341,7 +455,7 @@ function main(argv) {
     console.log("· nothing to assign or clear");
     return;
   }
-  for (const i of intents) console.log(executeAssignments(i));
+  for (const i of intents) console.log(askOnce(i));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));

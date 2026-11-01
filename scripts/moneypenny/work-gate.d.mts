@@ -13,6 +13,8 @@ export interface WorkGate {
   readonly reason: string;
   /** Carried through from the dial when it was unreadable or ambiguous — print as ::warning::. */
   readonly warning?: string;
+  /** Set when an empty GitHub REST bucket stopped the read: when it refills, or null if unknown. */
+  readonly restEmptyUntil?: string | null;
 }
 
 /** The dial and the #2946 spend breaker, folded into one answer (#3960 criterion 1). Throws only
@@ -21,6 +23,7 @@ export interface WorkGate {
 export function workGate(opts?: {
   readMode?: () => WorkMode;
   readBreaker?: () => boolean;
+  readRestReset?: () => string | null;
 }): WorkGate;
 
 /** The CLI a skill runs: JSON on stdout, status lines on stderr, exit 0 cleared / 3 refused. */

@@ -15,7 +15,7 @@ import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
-import type { EquitySample } from "../observatory/history-store.js";
+import type { OrderOriginIndex } from "../observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import type { HeldLedger } from "../observatory/trade-ledger-cache.js";
 import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
@@ -142,11 +142,6 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * inside the handler itself, exactly like every other owner-only page.
    */
   readonly opsStatus?: OpsStatusDeps;
-  /**
-   * Reads a participant's recorded equity/realized history for the individual view's performance panel.
-   * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).
-   */
-  readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
   /** Re-reads this account from the broker before its desk renders, so the screen shows what Alpaca
    *  holds rather than only what the fill stream delivered. Rate-limited and failure-swallowing
    *  in `createBrokerSync`; omit (offline/tests) and the desk renders live memory as before. */
@@ -189,15 +184,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly findByOrderId?: (
     orderId: string,
   ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
-  /**
-   * Which personas decided these orders — ids only, no decision record built (#4612 slice 7). The
-   * Decisions tab's "who else trades on this account" join; falls back to `findByOrderId` per
-   * order when unset. Same dark-when-unset posture.
-   */
-  readonly personasOfOrders?: (orderIds: readonly string[]) => string[];
-  /** The same join kept per account, advanced by only the ledger lines appended since and asked
-   *  again only when the decision store gains a row it can match (`account-personas-fold.ts`,
-   *  #4619). Preferred over `personasOfOrders` when wired. */
+  /** Which other personas trade on an account — the order-id join kept per account, advanced by
+   *  only the ledger lines appended since and asked again only when the decision store gains a row
+   *  it can match (`account-personas-fold.ts`, #4619). Omit and the Decisions tab shows the
+   *  account's own decisions alone. */
   readonly readAccountPersonas?: (accountId: string) => Promise<readonly string[]>;
   /**
    * The decision funnel (measure #2, PR 7b, issue #2287) for the `/decisions` panel: cycles → raw
@@ -235,7 +225,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they
-   * stay honest about it via the backfill caveat.
+   * stay honest about it via the backfill caveat. Every reader folds the lines to the latest per
+   * order before it uses them, so the composition root binds a held fold of the ledger
+   * (`held-activity.ts`, #4619) rather than a whole `list()`: the lines come back already collapsed.
    */
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
   /** What Pulse and the blotter take from the ledger — weekly bars, trade stats, open lots — held
@@ -243,11 +235,16 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  #4619). Omit and both build it from `readTradeActivity` on every request. */
   readonly readHeldLedger?: (snapshot: ParticipantSnapshot) => Promise<HeldLedger>;
   /**
-   * Reads a participant's per-order audit lines (`order-audit-log.ts`) so the record views can say
-   * WHO placed each order, not just how the ledger learned about it (`order-origin.ts`, #782).
-   * Omit and every row classifies `unknown` — no marker, exactly today's rendering.
+   * A participant's order-origin evidence (`order-origin.ts`), so the record views can say WHO
+   * placed each order, not just how the ledger learned about it (#782). Built from the per-order
+   * audit (`order-audit-log.ts`) by a fold that reads only the lines appended since its last read
+   * (`held-activity.ts`, #4619). Omit and every row classifies `unknown` — no marker, exactly
+   * today's rendering.
    */
-  readonly readOrderAudit?: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
+  readonly readOrderOrigins?: (
+    participantId: string,
+    kind: "human" | "bot",
+  ) => Promise<OrderOriginIndex>;
   /** Appends one audit line — the cancel route's write to the same trail the desk seam writes
    *  on submit (#3407 P1). Omit and a cancel still reaches the broker, unrecorded here. */
   readonly recordOrderAudit?: (entry: OrderAuditRecord) => Promise<void>;

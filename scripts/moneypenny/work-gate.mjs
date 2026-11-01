@@ -23,6 +23,7 @@
 //   - an unreadable BRAKE refuses outright (circuit-breaker.mjs throws; "broken must never read as
 //     clear" is the whole reason that file exists), and so does a malformed config on either side.
 import { isBreakerTripped, loadBreakerConfig } from "./circuit-breaker.mjs";
+import { sh } from "./gh.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
 /** The default breaker read, with its config loaded EAGERLY: a malformed research-circuit-breaker
@@ -33,14 +34,28 @@ const breakerFromDisk = () => {
   return () => isBreakerTripped(config);
 };
 
+/** When GitHub's REST allowance refills, or null. This endpoint is free and answers on an empty bucket. */
+const restResetFromGh = () => {
+  try {
+    return sh("gh", ["api", "rate_limit", "--jq", ".resources.core.reset | todate"]) || null;
+  } catch {
+    return null;
+  }
+};
+
 /**
  * May a lane dispatch right now, and with what numbers? Every read is injectable so specs never
  * touch the network.
  *
  * @returns {{ dispatch: boolean, position: string, until: string|null, caps: object,
- *             breakerTripped: boolean, reason: string, warning?: string }}
+ *             breakerTripped: boolean, reason: string, warning?: string,
+ *             restEmptyUntil?: string|null }}
  */
-export function workGate({ readMode = () => readWorkMode(), readBreaker } = {}) {
+export function workGate({
+  readMode = () => readWorkMode(),
+  readBreaker,
+  readRestReset = restResetFromGh,
+} = {}) {
   const checkBreaker = readBreaker ?? breakerFromDisk();
   const mode = readMode();
   const base = {
@@ -53,6 +68,19 @@ export function workGate({ readMode = () => readWorkMode(), readBreaker } = {}) 
   try {
     breakerTripped = checkBreaker() === true;
   } catch (err) {
+    // An empty REST bucket says nothing about the brake, and it refills by itself: a loop should
+    // wait, not raise an alarm (a study's reads emptied his login's bucket on 2026-11-01).
+    if (/rate limit/i.test(String(err?.message ?? err))) {
+      const restEmptyUntil = readRestReset();
+      const when = restEmptyUntil ? ` until ${restEmptyUntil}` : "";
+      return {
+        ...base,
+        dispatch: false,
+        breakerTripped: false,
+        restEmptyUntil,
+        reason: `refused: GitHub's REST allowance is used up${when}. Nothing tripped, so wait for it`,
+      };
+    }
     return {
       ...base,
       dispatch: false,

@@ -4,8 +4,8 @@ description: >-
   Write behavioral BDD specs for one src file no spec imports — add-only, never touching src or
   existing tests, verified green, the spec-gap budget ratcheted. Use when the spec-gap gate
   (scripts/spec-gap-scan.mjs) names a target, when asked to "backfill tests" or "add specs for",
-  or as a /grind skill step fanned across the gate's list. The corrective drill the test-backfiller
-  agent runs; also invokable as /backfill. Takes the target file as the argument.
+  or as a /grind skill step fanned across the gate's list. The corrective drill the governor chore
+  runs; also invokable as /backfill. Takes the target file as the argument.
 ---
 
 # Backfill — the spec-gap drill
@@ -13,12 +13,12 @@ description: >-
 The *correction* half of the spec-gap Coach: the eye (`scripts/spec-gap-scan.mjs` +
 `spec-gap-budget.json`, reported (advisory, non-blocking) by `tests/arch/spec-gap.spec.ts`) says a
 `src/` file has no spec importing it; this drill writes the behavioral coverage. It is the **one**
-copy of the procedure — the `test-backfiller` agent preloads this file and follows it, and a `/grind`
+copy of the procedure — `docs/grind/governor.instructions.md` reads this file and follows it, and a `/grind`
 run points `{kind: "skill", name: "backfill"}` at it (hand copies of a drill drift apart unwatched).
 
 ## The target
 
-Whoever invokes the drill names the target. The `test-backfiller` agent takes it from
+Whoever invokes the drill names the target. The governor chore takes it from
 `node scripts/spec-gap-scan.mjs --candidate` (never hand-picked); a `/grind` item carries it as
 `{item}`, produced by `node scripts/spec-gap-scan.mjs`; a human passes it as the argument. The drill
 never re-derives the target from a fresh scan.

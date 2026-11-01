@@ -9,6 +9,13 @@ import { execFileSync } from "node:child_process";
 export const sh = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", maxBuffer: 64 << 20, ...opts }).trim();
 
+const TRUSTED_ASSOCIATIONS = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
+
+/** May a REST comment's text be acted on? This repo's people and bots only. The repo is public, and
+ *  a stranger's comment must not switch a check off (#2224) or move the work dial. */
+export const trustedComment = (c) =>
+  TRUSTED_ASSOCIATIONS.has(c?.author_association) || c?.user?.type === "Bot";
+
 /**
  * A REST token for a CLI a live session runs by hand: GH_TOKEN, GITHUB_TOKEN, else the gh login —
  * the same fallback scripts/ship.sh uses. Sets GH_TOKEN, so `ghRest` and any child process see it.
@@ -109,7 +116,7 @@ export function withRetry(
  */
 export function ghRest(
   path,
-  { token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN, run = sh } = {},
+  { token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN, run = sh } = {},
 ) {
   const repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
   const url = path.startsWith("http")

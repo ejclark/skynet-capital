@@ -56,6 +56,8 @@ import type { DashboardServerConfig } from "../server/dashboard-server-config.js
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { bootGithubToken } from "../server/github-token.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
+import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
+import { ladderEvidenceReader } from "../server/ladder-evidence.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { recordPasses } from "../server/play-milestone-sync.js";
@@ -335,7 +337,7 @@ async function main(): Promise<void> {
   } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
-    readTags: (id) => orderAudit.list(id),
+    readEvidence: ladderEvidenceReader({ activity, orderAudit }),
     feedbackLog,
     ownerEmailFor,
     botControls,
@@ -452,20 +454,14 @@ async function main(): Promise<void> {
     readMessages: (id) => companionMessageLog.list(id),
     recordMessage: (id) => companionMessageLog.record(id),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
-    readHistory: (id) => history.list(id),
     readPulseHistory,
     readHeldLedger,
-    readTradeActivity: (id) => activity.list(id),
-    readOrderAudit: (id) => orderAudit.list(id),
+    readTradeActivity: heldActivity(activity),
+    readOrderOrigins: heldOrderOrigins(orderAudit),
     recordOrderAudit: (entry) => orderAudit.record(entry),
-    // `/wire`'s cross-participant feed: the same stores, called with no id. Activity's trade rows
-    // are built from the bus's `ActivityEvent` envelope (#784 slice 1); the ledger rides alongside
-    // it because the event log only starts at #1211's deploy and older fills live only on the
-    // ledger (`mergeLedgerIntoEvents` dedupes the overlap on the deterministic event id).
-    readAllActivityEvents: () => activityEventBus.list(),
-    readAllTradeActivity: () => activity.list(),
-    readAllFeedback: () => feedbackLog.list(),
-    // …and the same three, off the fold above; the reads above stay as the route's fallback.
+    // `/wire`'s cross-participant feed: the bus, the trade ledger and the feedback log, off the fold
+    // above. The ledger rides alongside the bus because the event log only starts at #1211's deploy
+    // and older fills live only on the ledger (`mergeLedgerIntoEvents` dedupes the overlap).
     readWireFeed,
     // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and the audit
     // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
@@ -534,9 +530,6 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
-    ...(insightsBridge.personasOfOrders
-      ? { personasOfOrders: insightsBridge.personasOfOrders }
-      : {}),
     readAccountPersonas,
     // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458),
     // and the misses until the table gains a row (#4619).

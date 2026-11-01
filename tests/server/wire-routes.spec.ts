@@ -12,9 +12,11 @@ import type { TradeActivityRecord } from "../../src/observatory/activity-store.j
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import { PulseHistoryFold } from "../../src/observatory/pulse-history-fold.js";
+import { wireTradeVitalsFor } from "../../src/observatory/vitals.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
+import { wireFeedOf } from "../support/wire-feed.js";
 
 // /wire's shared assembly: every dep is optional, so the honest empty state renders with nothing
 // wired, and each wired dep's data actually reaches the shell's JSON. Rendering detail lives in
@@ -99,7 +101,7 @@ describe("serveWireJson", () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = {
       hub: hubWith([snapshot()]),
-      readAllTradeActivity: () => Promise.resolve([record()]),
+      readWireFeed: wireFeedOf({ records: [record()] }),
     };
 
     await serveWireJson(res, "/api/wire", deps, true);
@@ -120,7 +122,7 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllActivityEvents: () => Promise.resolve([activityEventFromTradeRecord(record())]),
+        readWireFeed: wireFeedOf({ events: [activityEventFromTradeRecord(record())] }),
       };
 
       await serveWireJson(res, "/api/wire", deps, true);
@@ -133,10 +135,10 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllActivityEvents: () =>
-          Promise.resolve([activityEventFromTradeRecord(record({ orderId: "on-bus" }))]),
-        readAllTradeActivity: () =>
-          Promise.resolve([record({ orderId: "pre-bus", at: "2026-07-01T00:00:00.000Z" })]),
+        readWireFeed: wireFeedOf({
+          events: [activityEventFromTradeRecord(record({ orderId: "on-bus" }))],
+          records: [record({ orderId: "pre-bus", at: "2026-07-01T00:00:00.000Z" })],
+        }),
       };
 
       await serveWireJson(res, "/api/wire", deps, true);
@@ -149,8 +151,7 @@ describe("serveWireJson", () => {
       const both = record();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllActivityEvents: () => Promise.resolve([activityEventFromTradeRecord(both)]),
-        readAllTradeActivity: () => Promise.resolve([both]),
+        readWireFeed: wireFeedOf({ events: [activityEventFromTradeRecord(both)], records: [both] }),
       };
 
       await serveWireJson(res, "/api/wire", deps, true);
@@ -158,15 +159,12 @@ describe("serveWireJson", () => {
       expect(tradesFrom(out.body)).toHaveLength(1);
     });
 
-    // #4458 — the per-process fold replaces all three whole reads; they stay as the fallback.
-    it("reads the fold, not the whole ledgers, when the fold is wired", async () => {
+    // #4458 — the per-process fold replaced all three whole reads; #4619 removed the fallback, so
+    // what the reader hands over is the whole of what the route reads.
+    it("renders exactly what the feed reader hands it", async () => {
       const { res, out } = capture();
-      const whole = () => Promise.reject(new Error("a whole read on a request path"));
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllActivityEvents: whole,
-        readAllTradeActivity: whole,
-        readAllFeedback: whole,
         readWireFeed: () =>
           Promise.resolve({
             events: [activityEventFromTradeRecord(record({ orderId: "on-bus" }))],
@@ -185,8 +183,8 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllActivityEvents: () =>
-          Promise.resolve([
+        readWireFeed: wireFeedOf({
+          events: [
             activityEventFromAuditRecord({
               participantId: "sauron",
               orderId: "ord-1",
@@ -195,7 +193,8 @@ describe("serveWireJson", () => {
               symbol: "NVDA",
               side: "buy",
             }),
-          ]),
+          ],
+        }),
       };
 
       await serveWireJson(res, "/api/wire", deps, true);
@@ -209,7 +208,7 @@ describe("serveWireJson", () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = {
       hub: hubWith([]),
-      readAllFeedback: () => Promise.resolve([entry({ title: "Shared idea" })]),
+      readWireFeed: wireFeedOf({ filings: [entry({ title: "Shared idea" })] }),
     };
 
     await serveWireJson(res, "/api/wire", deps, true);
@@ -222,8 +221,9 @@ describe("serveWireJson", () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = {
       hub: hubWith([]),
-      readAllActivityEvents: () =>
-        Promise.resolve([activityEventFromFeedbackEntry(entry({ title: "Bus-only idea" }))]),
+      readWireFeed: wireFeedOf({
+        events: [activityEventFromFeedbackEntry(entry({ title: "Bus-only idea" }))],
+      }),
     };
 
     await serveWireJson(res, "/api/wire", deps, true);
@@ -235,11 +235,12 @@ describe("serveWireJson", () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = {
       hub: hubWith([]),
-      readAllActivityEvents: () =>
-        Promise.resolve([
+      readWireFeed: wireFeedOf({
+        events: [
           activityEventFromFeedbackEntry(entry()),
           activityEventFromFeedbackStatus(1, "shipped", "2026-08-21T00:00:00.000Z"),
-        ]),
+        ],
+      }),
     };
 
     await serveWireJson(res, "/api/wire", deps, true);
@@ -251,8 +252,10 @@ describe("serveWireJson", () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = {
       hub: hubWith([]),
-      readAllActivityEvents: () => Promise.resolve([activityEventFromFeedbackEntry(entry())]),
-      readAllFeedback: () => Promise.resolve([entry()]),
+      readWireFeed: wireFeedOf({
+        events: [activityEventFromFeedbackEntry(entry())],
+        filings: [entry()],
+      }),
     };
 
     await serveWireJson(res, "/api/wire", deps, true);
@@ -264,7 +267,7 @@ describe("serveWireJson", () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = {
       hub: hubWith([]),
-      readAllFeedback: () => Promise.resolve([entry()]),
+      readWireFeed: wireFeedOf({ filings: [entry()] }),
       fetchFeedbackStatus: () => Promise.resolve(new Map([[1, "needs-info" as const]])),
     };
 
@@ -278,7 +281,7 @@ describe("serveWireJson", () => {
     const requested: number[][] = [];
     const deps: WireRouteDeps = {
       hub: hubWith([]),
-      readAllFeedback: () => Promise.resolve([entry({ issueNumber: 7 })]),
+      readWireFeed: wireFeedOf({ filings: [entry({ issueNumber: 7 })] }),
       fetchFeedbackStatus: (issueNumbers) => {
         requested.push([...issueNumbers]);
         return Promise.resolve(new Map());
@@ -295,7 +298,7 @@ describe("serveWireJson", () => {
     let called = false;
     const deps: WireRouteDeps = {
       hub: hubWith([]),
-      readAllFeedback: () => Promise.resolve([]),
+      readWireFeed: wireFeedOf({ filings: [] }),
       fetchFeedbackStatus: () => {
         called = true;
         return Promise.resolve(new Map());
@@ -338,7 +341,7 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllActivityEvents: () => Promise.resolve([activityEventFromMergedPullRequest(merge)]),
+        readWireFeed: wireFeedOf({ events: [activityEventFromMergedPullRequest(merge)] }),
         readMergedPullRequests: () => Promise.resolve([merge]),
       };
 
@@ -403,7 +406,7 @@ describe("serveWireJson", () => {
 
     it("shows one row for a member's first fill, derived from the ledger the Learn page reads", async () => {
       const { milestones, milestonesEnabled } = await milestonesOf(
-        wired({ readAllTradeActivity: () => Promise.resolve([record({ participantId: "eric" })]) }),
+        wired({ readWireFeed: wireFeedOf({ records: [record({ participantId: "eric" })] }) }),
       );
 
       expect(milestonesEnabled).toBe(true);
@@ -425,7 +428,7 @@ describe("serveWireJson", () => {
     it("shows a logged earn once, whether it reached the bus, the log, or both", async () => {
       const { milestones } = await milestonesOf(
         wired({
-          readAllActivityEvents: () => Promise.resolve([activityEventFromLadderEntry(logged)]),
+          readWireFeed: wireFeedOf({ events: [activityEventFromLadderEntry(logged)] }),
           readAllLadderProgress: () => Promise.resolve([logged]),
         }),
       );
@@ -437,7 +440,7 @@ describe("serveWireJson", () => {
       const { milestones } = await milestonesOf(
         wired({
           hub: hubWith([snapshot()]),
-          readAllTradeActivity: () => Promise.resolve([record()]),
+          readWireFeed: wireFeedOf({ records: [record()] }),
         }),
       );
 
@@ -450,7 +453,7 @@ describe("serveWireJson", () => {
       const deps = (audit: WireRouteDeps["readAllOrderAudit"]) =>
         wired({
           hub: hubWith([member, snapshot()]),
-          readAllTradeActivity: () => Promise.resolve(fills),
+          readWireFeed: wireFeedOf({ records: fills }),
           readAllOrderAudit: audit,
         });
       const everyone = [
@@ -492,7 +495,7 @@ describe("serveWireJson", () => {
       ];
 
       const { milestones } = await milestonesOf(
-        wired({ readAllTradeActivity: () => Promise.resolve(fills) }),
+        wired({ readWireFeed: wireFeedOf({ records: fills }) }),
         "/api/wire?per_page=1",
       );
 
@@ -506,11 +509,12 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllTradeActivity: () =>
-          Promise.resolve([
+        readWireFeed: wireFeedOf({
+          records: [
             record({ orderId: "a", symbol: "NVDA" }),
             record({ orderId: "b", symbol: "TSLA" }),
-          ]),
+          ],
+        }),
       };
 
       await serveWireJson(res, "/api/wire", deps, false);
@@ -523,11 +527,12 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllTradeActivity: () =>
-          Promise.resolve([
+        readWireFeed: wireFeedOf({
+          records: [
             record({ orderId: "a", symbol: "NVDA" }),
             record({ orderId: "b", symbol: "TSLA" }),
-          ]),
+          ],
+        }),
       };
 
       await serveWireJson(res, "/api/wire?symbol=NVDA", deps, false);
@@ -541,7 +546,7 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllTradeActivity: () => Promise.resolve([record({ symbol: "NVDA" })]),
+        readWireFeed: wireFeedOf({ records: [record({ symbol: "NVDA" })] }),
       };
 
       await serveWireJson(res, "/api/wire?symbol=!!not-valid!!", deps, false);
@@ -561,7 +566,7 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllTradeActivity: () => Promise.resolve(many),
+        readWireFeed: wireFeedOf({ records: many }),
       };
 
       await serveWireJson(res, "/api/wire", deps, false);
@@ -574,7 +579,7 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllTradeActivity: () => Promise.resolve(many),
+        readWireFeed: wireFeedOf({ records: many }),
       };
 
       await serveWireJson(res, "/api/wire?per_page=2", deps, false);
@@ -593,7 +598,7 @@ describe("serveWireJson", () => {
     it("follows the Link header's own before cursor to the next page", async () => {
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllTradeActivity: () => Promise.resolve(many),
+        readWireFeed: wireFeedOf({ records: many }),
       };
       const first = capture();
       await serveWireJson(first.res, "/api/wire?per_page=2", deps, false);
@@ -633,11 +638,12 @@ describe("serveWireJson", () => {
       const { res, out } = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot(), snapshot({ id: "eric", kind: "human" })]),
-        readAllTradeActivity: () =>
-          Promise.resolve([
+        readWireFeed: wireFeedOf({
+          records: [
             record({ orderId: "ord-bot", participantId: "sauron" }),
             record({ orderId: "ord-human", participantId: "eric" }),
-          ]),
+          ],
+        }),
         findByOrderId: (orderId) =>
           orderId === "ord-bot" ? { record: decision, intent } : undefined,
       };
@@ -660,29 +666,17 @@ describe("serveWireJson", () => {
       expect(otherBot.reasoning).not.toHaveProperty("strategy");
     });
 
-    it("attaches a live Loss headroom gauge when history is wired, nothing when it isn't", async () => {
+    it("attaches a live Loss headroom gauge when the Pulse fold is wired, nothing when it isn't", async () => {
+      const samples = [
+        { at: "2026-08-19T00:00:00.000Z", equity: 100_000 },
+        { at: "2026-08-19T14:30:00.000Z", equity: 100_000 },
+      ].map((s) => ({ ...s, participantId: "sauron", cash: 0, realizedPl: 0 }));
       const withHistory = capture();
       const deps: WireRouteDeps = {
         hub: hubWith([snapshot()]),
-        readAllTradeActivity: () => Promise.resolve([record({ orderId: "ord-bot" })]),
+        readWireFeed: wireFeedOf({ records: [record({ orderId: "ord-bot" })] }),
         findByOrderId: () => ({ record: decision, intent }),
-        readHistory: () =>
-          Promise.resolve([
-            {
-              at: "2026-08-19T00:00:00.000Z",
-              participantId: "sauron",
-              equity: 100_000,
-              cash: 0,
-              realizedPl: 0,
-            },
-            {
-              at: "2026-08-19T14:30:00.000Z",
-              participantId: "sauron",
-              equity: 100_000,
-              cash: 0,
-              realizedPl: 0,
-            },
-          ]),
+        readPulseHistory: () => Promise.resolve(PulseHistoryFold.of(samples)),
       };
       await serveWireJson(withHistory.res, "/api/wire", deps, false);
       const withHistoryTrades = JSON.parse(withHistory.out.body).wire.trades;
@@ -692,47 +686,35 @@ describe("serveWireJson", () => {
       await serveWireJson(
         withoutHistory.res,
         "/api/wire",
-        { ...deps, readHistory: undefined },
+        { ...deps, readPulseHistory: undefined },
         false,
       );
       const withoutHistoryTrades = JSON.parse(withoutHistory.out.body).wire.trades;
       expect(withoutHistoryTrades[0].vitals).toBeUndefined();
     });
 
-    it("reads the gauge off the Pulse fold, never the whole history, when both are wired (#4619)", async () => {
+    it("reads the gauge off the Pulse fold, the same gauge a sorted scan of the samples gives (#4619)", async () => {
       const samples = [
         { at: "2026-08-19T00:00:00.000Z", equity: 100_000 },
         { at: "2026-08-19T01:00:00.000Z", equity: 99_000 },
         { at: "2026-08-19T14:30:00.000Z", equity: 99_500 },
       ].map((s) => ({ ...s, participantId: "sauron", cash: 0, realizedPl: 0 }));
-      const deps: WireRouteDeps = {
-        hub: hubWith([snapshot()]),
-        readAllTradeActivity: () => Promise.resolve([record({ orderId: "ord-bot" })]),
-        findByOrderId: () => ({ record: decision, intent }),
-        readHistory: () => Promise.resolve(samples),
-      };
-      const fromHistory = capture();
-      await serveWireJson(fromHistory.res, "/api/wire", deps, false);
-
-      let wholeReads = 0;
+      const fill = record({ orderId: "ord-bot" });
       const fromFold = capture();
       await serveWireJson(
         fromFold.res,
         "/api/wire",
         {
-          ...deps,
-          readHistory: () => {
-            wholeReads += 1;
-            return Promise.resolve(samples);
-          },
+          hub: hubWith([snapshot()]),
+          readWireFeed: wireFeedOf({ records: [fill] }),
+          findByOrderId: () => ({ record: decision, intent }),
           readPulseHistory: () => Promise.resolve(PulseHistoryFold.of(samples)),
         },
         false,
       );
-      const gauge = (body: string) => JSON.parse(body).wire.trades[0].vitals.lossHeadroom;
-      expect(gauge(fromFold.out.body)).toEqual(gauge(fromHistory.out.body));
-      expect(gauge(fromFold.out.body).detailText).toBe("1.0% of 5.0% cap");
-      expect(wholeReads).toBe(0);
+      const gauge = JSON.parse(fromFold.out.body).wire.trades[0].vitals.lossHeadroom;
+      expect(gauge).toEqual(wireTradeVitalsFor(samples)(fill.at).lossHeadroom);
+      expect(gauge.detailText).toBe("1.0% of 5.0% cap");
     });
   });
 });

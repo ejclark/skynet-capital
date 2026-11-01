@@ -16,7 +16,6 @@ import {
 } from "../observatory/decision-json-view.js";
 import { deskLedger, realizedByOrder, roundTripLinks } from "../observatory/desk-data.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
-import { orderOriginIndex } from "../observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import { PulseHistoryFold } from "../observatory/pulse-history-fold.js";
 import { deskPulseViewOf, pulseTradesOf } from "../observatory/pulse-json-view.js";
@@ -135,12 +134,11 @@ async function activityPayload(
   params: URLSearchParams,
   owner: boolean,
 ): Promise<unknown> {
-  const [records, audit] = await Promise.all([
+  const [records, origins] = await Promise.all([
     config.readTradeActivity?.(found.id),
-    config.readOrderAudit?.(found.id),
+    config.readOrderOrigins?.(found.id, found.kind === "bot" ? "bot" : "human"),
   ]);
   if (!records) return { available: false, activity: [] };
-  const origins = orderOriginIndex(audit, found.kind === "bot" ? "bot" : "human");
   // Realized P/L per closing order — from the round-trip matcher over the full merged ledger,
   // so a paginated activity page still carries P/L computed from the complete fill history. The
   // same pass pairs each close with the orders it closed (#5317).
@@ -261,12 +259,12 @@ async function thesisPayload(
 ): Promise<unknown> {
   if (found.kind !== "bot") return { available: false, kind: found.kind };
   const id = found.id;
-  // The history is the Pulse fold when the server keeps one (#4619), as on `/pulse`: the fold
-  // already holds the drawdown and the bounded curve this tab draws, so no whole-history read.
+  // The history is the Pulse fold (#4619), as on `/pulse`: the fold already holds the drawdown and
+  // the bounded curve this tab draws, so no whole-history read. Unwired, the curve is empty.
   const [decisionRecords, activityRecords, history] = await Promise.all([
     config.readDecisions?.(id),
     config.readTradeActivity?.(id),
-    config.readPulseHistory ? config.readPulseHistory(id) : (config.readHistory?.(id) ?? []),
+    config.readPulseHistory?.(id) ?? [],
   ]);
   const decisions = decisionRecords
     ? decisionCyclesView(decisionRecords, { limit: MAX_PAGE_SIZE })
@@ -411,18 +409,15 @@ export async function serveDeskJson(
   if (sub === "pulse") {
     // Each pulse section owns its empty state (performance-view doctrine): no history wired means
     // a null curve that says "still accruing", never a missing page.
-    // The live fold when the server keeps one (#4619): Pulse then folds only what was appended
-    // since the last read, never the whole history again. The trade half likewise comes from the
-    // held answer while the ledger and the broker window are unchanged (`trade-ledger-cache.ts`).
+    // Only the live folds (#4619): Pulse folds what was appended since the last read, never the
+    // whole history again, and the trade half is the answer held while the ledger and the broker
+    // window are unchanged (`trade-ledger-cache.ts`). No ledger fold wired, the trades are the
+    // broker window's alone — there is no whole-read fallback on this path.
     const [history, trades] = await Promise.all([
-      config.readPulseHistory
-        ? config.readPulseHistory(id)
-        : (config.readHistory?.(id) ?? Promise.resolve([])).then((s) => PulseHistoryFold.of(s)),
+      config.readPulseHistory?.(id) ?? PulseHistoryFold.of([]),
       config.readHeldLedger
         ? config.readHeldLedger(found).then((held) => held.trades)
-        : (config.readTradeActivity?.(id) ?? Promise.resolve(undefined)).then((durable) =>
-            pulseTradesOf(found, durable),
-          ),
+        : pulseTradesOf(found),
     ]);
     res.end(
       JSON.stringify({

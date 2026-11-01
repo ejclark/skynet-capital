@@ -7,6 +7,7 @@ import { collapseActivity } from "../observatory/activity-store.js";
 import { fillsFrom } from "../observatory/desk-data.js";
 import { LIFECYCLE_STATUS } from "../trading/option-lifecycle.js";
 import { matchRoundTrips, type RoundTrip } from "../trading/round-trips.js";
+import { heldActivity } from "./held-activity.js";
 import {
   earliestPerMilestone,
   type LadderProgressEntry,
@@ -120,7 +121,7 @@ export async function detectAndRecordLadderProgress(
   participantId: string,
 ): Promise<readonly LadderProgressEntry[]> {
   const [records, logged] = await Promise.all([
-    activityStore.list(participantId),
+    heldActivity(activityStore)(participantId),
     progressStore.list(participantId),
   ]);
   const alreadyLogged = new Set(earliestPerMilestone(logged).keys());

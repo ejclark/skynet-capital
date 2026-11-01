@@ -1,0 +1,382 @@
+[
+  {
+    "id": "machine-halt-marker-misspelt",
+    "contract": "bots-running",
+    "file": "scripts/fitness.mjs",
+    "find": "metadata?.[\"skynet-halt\"]",
+    "replace": "metadata?.[\"skynet-halted\"]",
+    "why": "a machine a person deliberately halted (the marker bots-start-stopped.sh respects) is reported as a failure and an issue is assigned to the owner for their own decision"
+  },
+  {
+    "id": "machine-stopped-passes",
+    "contract": "bots-running",
+    "file": "scripts/fitness.mjs",
+    "find": "primary.state === \"started\" ? pass(\"started\")",
+    "replace": "primary.state !== \"destroyed\" ? pass(\"started\")",
+    "why": "a stopped primary, the 10-22 outage flyctl called a good state, reads as running"
+  },
+  {
+    "id": "stamp-fresh-units",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "const STAMP_FRESH_MS = 5 * 60_000;",
+    "replace": "const STAMP_FRESH_MS = 5 * 60;",
+    "why": "the freshness limit becomes 300 ms, so every live stamp reads stale and the owner gets a false alarm every tick"
+  },
+  {
+    "id": "stamp-age-boundary",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "if (ageMs > STAMP_FRESH_MS)",
+    "replace": "if (ageMs >= STAMP_FRESH_MS)",
+    "why": "a poll exactly at the limit must still pass; the boundary is the limit, not one tick before it"
+  },
+  {
+    "id": "stamp-missing-poll-passes",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "if (!Number.isFinite(ageMs)) return fail(\"the stamp has no controls poll\");",
+    "replace": "if (ageMs === undefined) return fail(\"the stamp has no controls poll\");",
+    "why": "a stamp that never polled has a NaN age, which no compare catches, so a process that never reached Mission Control reads as alive"
+  },
+  {
+    "id": "stamp-bridge-any-state",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "return stamp.bridge === \"armed\"",
+    "replace": "return stamp.bridge !== \"failed\"",
+    "why": "a bridge that is disarmed or still arming (the smoke signal that rolled back six releases) reads as reachable"
+  },
+  {
+    "id": "deploy-grace-units",
+    "contract": "main-deploys",
+    "file": "scripts/fitness.mjs",
+    "find": "const DEPLOY_GRACE_MS = 20 * 60_000;",
+    "replace": "const DEPLOY_GRACE_MS = 20 * 1_000;",
+    "why": "a 20 second grace makes every push read red for the minutes its own deploy takes, the 65 of 729 healthy ticks the study measured"
+  },
+  {
+    "id": "deploy-future-date-passes",
+    "contract": "main-deploys",
+    "file": "scripts/fitness.mjs",
+    "find": "else if (waitedMs < 0) undated.push(unknown(`the ${name} lag is dated in the future`));",
+    "replace": "else if (waitedMs < 0) continue;",
+    "why": "a lag dated ahead of the runner's clock passes as current for as long as the skew lasts, instead of being unknown"
+  },
+  {
+    "id": "deploy-bots-reads-dashboard-field",
+    "contract": "main-deploys",
+    "file": "scripts/fitness.mjs",
+    "find": "[\"bots\", lag.bots?.lagging, lag.bots?.since],",
+    "replace": "[\"bots\", lag.lagging, lag.since],",
+    "why": "the bots half judges the dashboard's lag, so a bots-only lag (the class of the four-day outage) is invisible"
+  },
+  {
+    "id": "alert-one-secret-enough",
+    "contract": "alerts-reach-owner",
+    "file": "scripts/fitness.mjs",
+    "find": "const ALERT_SECRETS = [\"SKYNET_ALERT_EMAIL_API_KEY\", \"SKYNET_ALERT_EMAIL_FROM\"];",
+    "replace": "const ALERT_SECRETS = [\"SKYNET_ALERT_EMAIL_API_KEY\"];",
+    "why": "delivery needs the sender address too; with only the key set the contract says configured while alerts reach nobody"
+  },
+  {
+    "id": "probe-bots-app-name",
+    "file": "scripts/fitness.mjs",
+    "find": "const BOTS_APP = \"skynet-capital-bots\";",
+    "replace": "const BOTS_APP = \"skynet-capital\";",
+    "why": "both bots probes read the dashboard app: its machine is judged as the fleet and the stamp exec targets the wrong app"
+  },
+  {
+    "id": "probe-secrets-wrong-app",
+    "contract": "alerts-reach-owner",
+    "file": "scripts/fitness.mjs",
+    "find": "[\"secrets\", \"list\", \"-a\", DASHBOARD_APP, \"--json\"]",
+    "replace": "[\"secrets\", \"list\", \"-a\", BOTS_APP, \"--json\"]",
+    "why": "the mail credential lives on the dashboard app; reading the bots app's secrets answers for the wrong app"
+  },
+  {
+    "id": "probe-machine-list-no-json-flag",
+    "contract": "bots-running",
+    "file": "scripts/fitness.mjs",
+    "find": "BOTS_APP, \"--json\"]);\n      return machines ? judgeMachine(machines)",
+    "replace": "BOTS_APP]);\n      return machines ? judgeMachine(machines)",
+    "why": "fly prints a table, the parse fails, and bots-running is unknown on every tick: blind forever, never a failure"
+  },
+  {
+    "id": "probe-exec-no-app-flag",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "\"cat /data/health.json\",\n        \"-a\",\n        BOTS_APP,",
+    "replace": "\"cat /data/health.json\",",
+    "why": "the exec goes to whatever app the checkout's fly.toml names, or none, so the stamp is never read and bots-responsive is blind"
+  },
+  {
+    "id": "probe-secret-name-field",
+    "contract": "alerts-reach-owner",
+    "file": "scripts/fitness.mjs",
+    "find": "secret.name ?? secret.Name",
+    "replace": "secret.name",
+    "why": "flyctl's JSON capitalises the field (the #1300 class of bug); every name reads undefined and the owner is told alerts reach nobody while they are configured"
+  },
+  {
+    "id": "probe-primary-id-field",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": ".length === 0)?.id;",
+    "replace": ".length === 0)?.ID;",
+    "why": "the machine id is never found, so the stamp is never read: unknown every tick, no failure ever"
+  },
+  {
+    "id": "probe-deploy-lag-no-json-flag",
+    "contract": "main-deploys",
+    "file": "scripts/fitness.mjs",
+    "find": "[join(HERE, \"deploy-lag.mjs\"), \"--json\"],",
+    "replace": "[join(HERE, \"deploy-lag.mjs\")],",
+    "why": "deploy-lag prints prose without the flag, the parse fails, and main-deploys is unknown forever"
+  },
+  {
+    "id": "probe-first-machine-not-primary",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "const id = machines?.find((m) => (m.config?.standbys ?? []).length === 0)?.id;",
+    "replace": "const id = machines?.[0]?.id;",
+    "why": "the first machine listed may be the standby, whose stale stamp is judged while the primary's state goes unread"
+  },
+  {
+    "id": "report-writes-off-ci",
+    "file": "scripts/fitness.mjs",
+    "find": "report(results, process.env.GITHUB_ACTIONS === \"true\")",
+    "replace": "report(results, true)",
+    "why": "a session under the owner's login files and self-assigns issues (#6501), which send no notice, instead of printing what it would do"
+  },
+  {
+    "id": "report-flag-misspelt",
+    "file": "scripts/fitness.mjs",
+    "find": "process.argv.includes(\"--report\")",
+    "replace": "process.argv.includes(\"--reports\")",
+    "why": "the catch-up job passes --report; nothing is filed, and a failure only turns a continue-on-error step red, so nobody hears"
+  },
+  {
+    "id": "report-open-label",
+    "file": "scripts/fitness.mjs",
+    "find": "\"--label\",\n            \"bug\",\n            ...(a.assign ? [\"--assignee\", OWNER] : []),\n            \"--body\",\n            issueBody(a.result),",
+    "replace": "\"--label\",\n            \"enhancement\",\n            ...(a.assign ? [\"--assignee\", OWNER] : []),\n            \"--body\",\n            issueBody(a.result),",
+    "why": "the report lists open issues by the bug label, so the issue it opened is never found again and a new one opens every tick"
+  },
+  {
+    "id": "report-no-assignee",
+    "file": "scripts/fitness.mjs",
+    "find": "...(a.assign ? [\"--assignee\", OWNER] : []),\n            \"--body\",\n            issueBody(a.result),",
+    "replace": "\"--body\",\n            issueBody(a.result),",
+    "why": "an unassigned issue reaches no phone or inbox, which is the whole reason the contract files one"
+  },
+  {
+    "id": "report-compare-keeps-digits",
+    "file": "scripts/fitness.mjs",
+    "find": ".replace(/\\d+/g, \"N\")",
+    "replace": ".replace(/\\s+/g, \" \")",
+    "why": "the minutes in a detail change every tick, so a standing failure comments every 15 minutes (70 comments in the 10-22 replay)"
+  },
+  {
+    "id": "report-touches-blind-issue",
+    "file": "scripts/fitness.mjs",
+    "find": "const issue = find(issueTitle(r.id));",
+    "replace": "const issue = find(blindTitle(r.reads));",
+    "why": "a failing contract comments on the unassigned cannot-read issue, or opens a duplicate of its own every tick because it never finds the one it opened"
+  },
+  {
+    "id": "report-pass-never-closes",
+    "file": "scripts/fitness.mjs",
+    "find": "} else if (r.status === \"pass\" && issue)",
+    "replace": "} else if (r.status === \"passed\" && issue)",
+    "why": "a recovered contract never closes its issue, so the owner keeps an alarm that is no longer true"
+  },
+  {
+    "id": "wiring-clock-reads-as-push",
+    "file": "scripts/fitness.mjs",
+    "find": "return env.GITHUB_EVENT_NAME === \"push\" ? \"push\" : \"clock\";",
+    "replace": "return env.GITHUB_EVENT_NAME === \"push\" ? \"clock\" : \"push\";",
+    "why": "the scheduled catch-up job reads as the push, every clock contract is not-here, nothing is probed or filed, and the step exits 0"
+  },
+  {
+    "id": "exit-fail-needs-every",
+    "file": "scripts/fitness.mjs",
+    "find": "else if (results.some((r) => r.status === \"fail\")) process.exitCode = 1;",
+    "replace": "else if (results.every((r) => r.status === \"fail\")) process.exitCode = 1;",
+    "why": "one failing contract among passing ones exits 0"
+  },
+  {
+    "id": "crash-is-plain-unknown",
+    "file": "scripts/fitness.mjs",
+    "find": "return { ...unknown(\"the probe crashed\"), crashed: true };",
+    "replace": "return unknown(\"the probe crashed\");",
+    "why": "a malformed reply that crashes a probe is a plain unknown: the run exits 0 and the crash is never red"
+  },
+  {
+    "id": "retry-result-discarded",
+    "file": "scripts/fitness.mjs",
+    "find": "\n      verdict = attempt({ ...contract, probe }, nowMs);",
+    "replace": "\n      attempt({ ...contract, probe }, nowMs);",
+    "why": "the retry's clean read is thrown away, so a blip still reports unknown and opens a blind issue"
+  },
+  {
+    "id": "spawn-has-no-deadline",
+    "file": "scripts/fitness.mjs",
+    "find": "    maxBuffer: 64 * 1024 * 1024,\n    timeout: timeoutMs,",
+    "replace": "    maxBuffer: 64 * 1024 * 1024,",
+    "why": "a hung fly or gh read hangs the whole tick instead of costing one contract"
+  },
+  {
+    "id": "assign-at-first-failure",
+    "file": "scripts/fitness.mjs",
+    "find": "kind: \"open\", result: r, assign: assignsAtOnce(r)",
+    "replace": "kind: \"open\", result: r, assign: true",
+    "why": "the bug this slice removes: every failing contract emails him before anything has tried to fix it"
+  },
+  {
+    "id": "assign-no-age-limit",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "nowMs - sinceMs >= OWNER_AFTER_MS",
+    "replace": "nowMs - sinceMs >= 0",
+    "why": "a failure with no script assigns him on the next tick rather than after two hours"
+  },
+  {
+    "id": "assign-limit-never-fires",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "nowMs - sinceMs >= OWNER_AFTER_MS",
+    "replace": "false",
+    "why": "a failure nothing fixes stays unassigned for ever"
+  },
+  {
+    "id": "assign-budget-off-by-one",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "spent >= r.attempts.max",
+    "replace": "spent >= r.attempts.max - 1",
+    "why": "he is assigned while the script still has a start left"
+  },
+  {
+    "id": "assign-budget-ignored",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "spent >= r.attempts.max",
+    "replace": "false",
+    "why": "a machine the script has given up on waits out the age limit"
+  },
+  {
+    "id": "assign-stranger-counts",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "c.type === \"Bot\" && ",
+    "replace": "c.type && ",
+    "why": "on a public repo a stranger's marker spends the budget or stops the email"
+  },
+  {
+    "id": "assign-window-ignored",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "nowMs - Date.parse(c.at) <= windowMs",
+    "replace": "true",
+    "why": "starts from last week spend today's budget"
+  },
+  {
+    "id": "assign-repeats-after-marker",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "if (askedAtOpen || asked) return null;",
+    "replace": "if (false) return null;",
+    "why": "he takes himself off a standing failure and is assigned again on the next tick"
+  },
+  {
+    "id": "assign-age-ignores-reopen",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "Math.max(Date.parse(thread.createdAt), ...reopenings)",
+    "replace": "Date.parse(thread.createdAt)",
+    "why": "a reopened thread is already past two hours, so the fix that did not hold emails him at once"
+  },
+  {
+    "id": "assign-unread-comments-assign",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "if (assigned(thread) || !thread.botComments) return null;",
+    "replace": "if (assigned(thread)) return null;",
+    "why": "comments that could not be read count as none, and the tick can assign on a guess"
+  },
+  {
+    "id": "reopen-window-ignored",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "nowMs - closedAt(i) <= REOPEN_WITHIN_MS",
+    "replace": "true",
+    "why": "a thread closed months ago reopens, or one with no close date does"
+  },
+  {
+    "id": "reopen-keeps-the-owner",
+    "file": "scripts/fitness.mjs",
+    "find": "...(a.removeOwner ? [removeOwner(a.number)] : []),",
+    "replace": "...[],",
+    "why": "reopening mails him as assignee before this failure's rung says so"
+  },
+  {
+    "id": "refused-assign-still-marks",
+    "file": "scripts/fitness.mjs",
+    "find": "if (!done.ok) break;",
+    "replace": "if (false) break;",
+    "why": "a refused assignment still posts the marker, so no later tick ever assigns him"
+  },
+  {
+    "id": "self-assignment-passes",
+    "file": "scripts/fitness.mjs",
+    "find": "issue.title.startsWith(\"[fitness] \") && newest && !byBot(newest)",
+    "replace": "false",
+    "why": "#6501's silent self-assignment reads as a working path",
+    "contract": "owner-assignment-path"
+  },
+  {
+    "id": "assignment-path-never-stale",
+    "file": "scripts/fitness.mjs",
+    "find": "return ageMs <= ASSIGNMENT_FRESH_MS",
+    "replace": "return ageMs <= Infinity",
+    "why": "a path nothing has used for a year reads as working",
+    "contract": "owner-assignment-path"
+  },
+  {
+    "id": "credential-not-noticed",
+    "file": "scripts/fitness.mjs",
+    "find": "if (DEAD_CREDENTIAL.test(readFailures.join(\" \"))) return { ...verdict, credential: true };",
+    "replace": "if (false) return { ...verdict, credential: true };",
+    "why": "a dead Fly token waits two hours for the only person who can replace it"
+  },
+  {
+    "id": "one-stop-two-issues",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "if (primary.state !== \"started\") {",
+    "replace": "if (false) {",
+    "why": "a stopped machine also reads as a blind source, so one stop leaves two threads"
+  },
+  {
+    "id": "start-script-own-thread",
+    "contract": "bots-running",
+    "file": "scripts/bots-start-stopped.sh",
+    "find": "ISSUE_TITLE=\"[fitness] bots-running\"",
+    "replace": "ISSUE_TITLE=\"[bots] machine found stopped\"",
+    "why": "the start script and the report keep separate threads, and the budget is read from neither"
+  },
+  {
+    "id": "start-script-budget-forgets-close",
+    "contract": "bots-running",
+    "file": "scripts/bots-start-stopped.sh",
+    "find": "(.closedAt // \"\") >= $cutoff",
+    "replace": "false",
+    "why": "each close starts a new thread, so crash, start, pass, close never spends the budget"
+  },
+  {
+    "id": "assign-repeats-after-open",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "if (askedAtOpen || asked) return null;",
+    "replace": "if (asked) return null;",
+    "why": "an issue that opened assigned has no comment marker, so he takes himself off and is assigned again"
+  },
+  {
+    "id": "restart-loop-reads-quiet",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "return starts.length === 1 && nowMs - starts[0] < windowMs;",
+    "replace": "return starts.length > 0 && nowMs - Math.max(...starts) < windowMs;",
+    "why": "a process restarting every few minutes always has a young start, so a dead fleet reads as quiet"
+  }
+]

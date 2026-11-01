@@ -5,8 +5,8 @@ description: >-
   rigor a second engineer would apply: check for an existing owner first, apply a bounded-trigger test,
   research how credible practitioners scope this kind of work, then draft in this repo's house format —
   or conclude, explicitly and on the record, that it shouldn't be built. Use before creating any
-  `.claude/agents/*.md` file, when someone proposes "we need an agent for X", or when an existing agent's
-  mandate has drifted and needs re-scoping. A REJECT verdict is a first-class, expected output, not a
+  `.claude/agents/*.md` file, when someone proposes "we need an agent for X", when an existing agent's
+  mandate has drifted and needs re-scoping, or for a sunset pass over agents that already exist. A REJECT verdict is a first-class, expected output, not a
   failure of the process — the filtering is usually the highest-value part of the work.
 ---
 
@@ -92,10 +92,10 @@ look for:
 
 Match the existing roster's shape exactly. Two canonical templates, pick the nearer fit:
 
-- **Gate-triggered debt agent** (`decomposer.md`, `mortician.md`) — frontmatter + a numbered Loop that
-  starts by pulling a target from a named script, ends in "verify by exit status, report, stop," plus
+- **Task agent** (`.claude/agents/dep-warden.md`, `.claude/agents/evals-expert.md`) — frontmatter + a
+  numbered Loop that starts from a named input, ends in "verify by exit status, report, stop," plus
   Hard Rules that name what it must never touch.
-- **Research-only agent** (`render-alchemist.md`) — no edits, cites real mechanisms not vibes, writes a
+- **Research-only agent** (`docs/agents/bench/render-alchemist.md`) — no edits, cites real mechanisms not vibes, writes a
   brief for another agent to build from, explicit about what it will NOT fabricate.
 
 Frontmatter fields: `name` (lowercase-hyphenated, matching the existing roster's naming register —
@@ -131,6 +131,35 @@ candidate, one line: what it was, why it doesn't survive (which step killed it),
 it should become instead (a rule inside an existing skill, a line in `CLAUDE.md`, nothing). For every
 accepted candidate, the one sentence from step 1 plus the specific evidence from step 2-4 that justified
 building it, not just that it seemed useful.
+
+## Sunset mode — is an agent that exists still earning its place?
+
+A procedure, run when someone asks or a dated check in an agent file comes due: never a cron, never a
+gate. Run it over one agent or the whole roster (`.claude/agents/` and `docs/agents/bench/`).
+
+1. **Count its use over the trailing 30 days, and name how.** A number with no method is a claim, and
+   usage here has been called dead wrongly before. Use every method that fits:
+   - **Sessions and workflows:** every subagent leaves an `agent-*.meta.json` holding its `agentType`,
+     and worktree sessions have their own folders, so count them all in one pass, about 10 minutes:
+     `find ~/.claude/projects/<project>* -name '*.meta.json' -mtime -30 -print0 | xargs -0 grep -ohE
+     '"agentType": ?"[^"]*"' | sort | uniq -c`. State how far back the retained transcripts reach.
+   - **CI and lanes:** `grep -rl <name> .github/workflows .github/prompts`; where one dispatches it,
+     count that workflow's runs. Transcripts on this machine never show these.
+   - **Debt agents:** PRs on its branch-prefix glob, with each PR's author and body read to tell a
+     dispatch from a human's own work, plus `git log --since=<window start> -- <its budget file>`,
+     because a ratchet is the only durable trace a rep leaves.
+2. **End in exactly one of three calls, with the number and the method beside it:**
+   - **keep** — it was used, or its dated trigger has not come yet.
+   - **merge** — another mechanism already runs the same loop, so the file is a second copy. Name it.
+   - **retire** — no use, and no route that would use it. Delete it, or bench it in
+     `docs/agents/bench/` when the work it does is real but has no ask today.
+3. **Cannot measure it? Say `unmeasured — <why>` and keep it.** Never retire on absence of evidence,
+   and transcript counts are a lower bound: a session can follow a file it read and leave no call.
+4. **Land the call in one PR:** the file, its row in `docs/COMPUTE.md`, every route naming it
+   (`node scripts/doc-rot-scan.mjs`, `grep -rn <name> CLAUDE.md .claude docs/process docs/grind`), and
+   a dated row in `docs/COACHES.md`.
+
+Due: linguist and the bench on 2026-12-31.
 
 ## Hard rules
 
