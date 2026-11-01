@@ -30,7 +30,8 @@ import {
 // Graded blind: tests/scripts/fixtures/fitness-heldout-bugs.json holds 30 deliberate bugs written
 // by a pass that never saw this spec; it caught 29 before the never-polled stamp seed was added.
 // That list is the regression list now (`node scripts/fitness-audit.mjs --bugs <it> --with ...`,
-// the --with files are the ones named below), so a new score needs bugs from a fresh blind pass.
+// the --with files are the ones named below, and the four src/ files decision-cycle loads, listed in
+// fitness-decision-cycle.spec.ts), so a new score needs bugs from a fresh blind pass.
 const SCRIPT = resolve("scripts/fitness.mjs");
 const REPLAY = resolve("tests/fixtures/fitness/replay-2026-10-22.json");
 const WORKFLOW = resolve(".github/workflows/bots-catchup.yml");
@@ -428,7 +429,12 @@ app() { [[ "$*" == *"-a $1"* ]] || { echo "Error: app not found" >&2; exit 1; };
 case "$1 $2" in
   "machine list") app "skynet-capital-bots --json" "$@"
     if [[ -f "$S/machines-first" ]]; then cat "$S/machines-first"; rm "$S/machines-first"; else cat "$S/machines"; fi ;;
-  "machine exec") app "skynet-capital-bots --timeout" "$@"; [[ -f "$S/exec-hang" ]] && sleep 5; cat "$S/stamp" ;;
+  "machine exec") app "skynet-capital-bots --timeout" "$@"; [[ -f "$S/exec-hang" ]] && sleep 5
+    case "$4" in
+      "ls -t /data/audit") echo sauron.jsonl ;;
+      "tail -n 1 "*) cat "$S/journal" ;;
+      *) cat "$S/stamp" ;;
+    esac ;;
   "secrets list") app "skynet-capital --json" "$@"; cat "$S/secrets" ;;
 esac
 `;
@@ -479,6 +485,9 @@ function fixture(world: World = {}) {
     join(stub, "stamp"),
     JSON.stringify({ lastControlsPollAt: iso(now - (world.stampAgeMs ?? MIN)), bridge: "armed" }),
   );
+  // These specs run at any hour, so decision-cycle must read healthy whenever the market is open.
+  // Its own seeds, with the clock pinned, are in fitness-decision-cycle.spec.ts.
+  writeFileSync(join(stub, "journal"), JSON.stringify({ at: now - 15_000 }));
   const secrets = world.secrets ?? ["SKYNET_ALERT_EMAIL_API_KEY", "SKYNET_ALERT_EMAIL_FROM"];
   writeFileSync(join(stub, "secrets"), JSON.stringify(secrets.map((name) => ({ Name: name }))));
   writeFileSync(join(stub, "issues"), JSON.stringify(world.issues ?? []));
@@ -628,8 +637,11 @@ describe("fitness wiring", () => {
     expect(r("main-deploys").status).toBe("pass");
     expect(r("alerts-reach-owner").status).toBe("pass");
     expect(res.stdout).toContain("::warning::fitness: bots-running probe crashed");
-    // A blip is read twice before it counts: two contracts list machines, each twice.
-    expect(lines(calls(stub, "fly"), "machine list")).toBe(4);
+    // A blip is read twice before it counts: two contracts list machines, each twice. A third,
+    // decision-cycle, lists once more while the market is open, and this spec runs at any hour.
+    const listed = lines(calls(stub, "fly"), "machine list");
+    expect(listed).toBeGreaterThanOrEqual(4);
+    expect(listed).toBeLessThanOrEqual(5);
     // A crash on the first read is still a crash when the retry reads clean: the run stays red
     // so the malformed reply is seen, while the contract itself reports what the retry found.
     const once = fixture();
