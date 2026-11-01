@@ -20,7 +20,7 @@
 export const meta = {
   name: 'review-replay',
   description: 'Replay one review lens over the labelled PRs, one reviewer each, and return the findings for scripts/review-replay.mjs to score',
-  whenToUse: 'When a review lens under docs/review/lenses needs a number before the post-merge audit may load it, or after a lens changes. Args: {lens: string, ids?: [string, ...], run?: string}. One worker per PR plus two lookups, near a 30k start each; refuses more than 40 PRs at once. Read-only. Save the return value and run node scripts/review-replay.mjs score --results <file>.',
+  whenToUse: 'When a review lens under docs/review/lenses needs a number before the post-merge audit may load it, or after a lens changes. Args: {lens: string, ids?: [string, ...], force?: true}. One worker per PR plus two lookups, near a 30k start each; refuses more than 40 PRs at once. Read-only. force: true is only for a run Eric typed. Save the return value and run node scripts/review-replay.mjs score --results <file>.',
   phases: [
     { title: 'Gate', detail: 'ask the work spigot, then list the PRs this lens runs on and their price' },
     { title: 'Review', detail: 'one worker per PR, base and head shas, the lens and none of the answer' },
@@ -35,8 +35,9 @@ const ids = (args?.ids ?? []).map(String)
 if (!ids.every((id) => /^[A-Z]\d+$/.test(id))) throw new Error('review-replay: args.ids must be case ids from docs/review/replay-set.json, like P04')
 if (ids.length > MAX_PRS) throw new Error(`review-replay: ${ids.length} ids is over the ${MAX_PRS} one run may review — run it in batches`)
 
-// Same reason and same refusals as grind.js → THE WORK SPIGOT: this file has no gh and no network, so
-// a cheap worker runs the gate's CLI. Nothing is ever silently dropped from a run.
+// THE WORK-MODE GATE: the same block as clear-path-flip and its siblings, because a workflow script
+// cannot import; tests/scripts/workflow-gate.spec.ts runs this one too. A named batch's width is known
+// here. A whole lens's width is only known after the `cases` read, so it is checked again below.
 const GATE_SCHEMA = {
   type: 'object',
   required: ['found'],
@@ -45,17 +46,34 @@ const GATE_SCHEMA = {
     dispatch: { type: 'boolean', description: 'the verdict JSON "dispatch" field, verbatim' },
     position: { type: 'string', description: 'the verdict JSON "position" field (halt/conserve/normal/surge)' },
     grindWidth: { type: 'number', description: 'the verdict JSON caps.grindWidth field, verbatim' },
+    until: { type: 'string', description: 'the verdict JSON "until" field, only when it is not null' },
     reason: { type: 'string', description: 'the verdict JSON "reason" field, verbatim' },
   },
 }
+const WIDTH = ids.length
+const PRICE = `${WIDTH ? `up to ${WIDTH + 2}` : 'at most 42'} agents, near a 30k start each: one reviewer per PR on opus, plus 2 lookups.`
 const gate = await agent(
-  'Run exactly: node scripts/moneypenny/work-gate.mjs\n\nIt prints one JSON object on stdout and status lines on stderr. Exit 0 means cleared to dispatch and exit 3 means refused: both are a real verdict and both print the JSON. Report "found": true plus the "dispatch", "position" and "reason" fields and caps.grindWidth, all verbatim.\n\nIf the command exits 1, prints no parseable JSON, or the object carries no caps.grindWidth, report "found": false and nothing else. Do nothing else: no exploration, no fixing, no editing any file.',
-  { schema: GATE_SCHEMA, effort: 'low', agentType: 'worker', label: 'work-mode', phase: 'Gate' },
-)
-if (!gate?.found || typeof gate.dispatch !== 'boolean' || !Number.isInteger(gate.grindWidth)) {
-  throw new Error('review-replay: could not read the work spigot via `node scripts/moneypenny/work-gate.mjs` — refusing to dispatch a run of unknown width. See #3960.')
+  'Run exactly: node scripts/moneypenny/work-gate.mjs\n\nIt prints one JSON object on stdout and status lines on stderr. Its exit code is part of the answer, not a failure: 0 means cleared to dispatch, 3 means refused (work-mode is halt, or the spend breaker is tripped) — BOTH are a real verdict and both print the JSON. Report "found": true plus that JSON object: the "dispatch", "position" and "reason" fields and caps.grindWidth, all verbatim, plus "until" only when it is not null.\n\nIf the command exits 1, prints no parseable JSON, or the object carries no caps.grindWidth, report "found": false and nothing else — never guess a position or a width. Do nothing else: no exploration, no fixing, no editing any file.',
+  { schema: GATE_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'low', label: 'work-mode', phase: 'Gate' },
+).catch(() => null) // A read that throws is an unread dial: refused below, or forced past.
+const dialRead = gate?.found === true && typeof gate.dispatch === 'boolean' && Number.isInteger(gate.grindWidth)
+const tooWide = (width) =>
+  `${width} PRs is over the ${gate.grindWidth} that work-mode=${gate.position} allows${gate.until ? ` (until ${gate.until})` : ''}: re-run with at most ${gate.grindWidth} PRs in args.ids, or flip the dial`
+const refusal = !dialRead
+  ? 'could not read the dial through `node scripts/moneypenny/work-gate.mjs`; exit 1 there means a malformed control to fix, not route around'
+  : !gate.dispatch
+    ? gate.reason || `work-mode=${gate.position}`
+    : WIDTH > gate.grindWidth
+      ? tooWide(WIDTH)
+      : null
+const FORCED = args?.force === true
+if (FORCED) {
+  log(`force: true${refusal ? `, past this: ${refusal}` : ', though the dial allowed it'}. Price: ${PRICE}`)
+} else if (refusal) {
+  throw new Error(`review-replay: refused — ${refusal}. Nothing dispatched. If Eric typed this run himself, re-run it with force: true.`)
+} else {
+  log(`work-mode=${gate.position}${gate.until ? ` (until ${gate.until})` : ''} · width ${WIDTH || 'the whole lens'}/${gate.grindWidth}`)
 }
-if (!gate.dispatch) throw new Error(`review-replay: refused by the work spigot — ${gate.reason || `work-mode=${gate.position}`}. Nothing dispatched.`)
 
 const CASES_SCHEMA = {
   type: 'object',
@@ -90,11 +108,16 @@ const CASES_SCHEMA = {
 const idsFlag = ids.length ? ` --ids ${ids.join(',')}` : ''
 const cases = await agent(
   `Run exactly: node scripts/review-replay.mjs cases --lens ${lens}${idsFlag}\n\nOn exit 0 it prints one JSON object. Report "found": true plus its "inputs" and "price" fields, verbatim. On any other exit report "found": false and its stderr as "why". Do nothing else: no exploration, no fixing, no editing any file.`,
-  { schema: CASES_SCHEMA, effort: 'low', agentType: 'worker', label: 'cases', phase: 'Gate' },
+  { schema: CASES_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'low', label: 'cases', phase: 'Gate' },
 )
-if (!cases?.found || !Array.isArray(cases.inputs)) throw new Error(`review-replay: could not list the cases for ${lens}: ${cases?.why ?? 'the lookup did not return'}`)
+// A lookup that died is one lost read, not a broken run: nothing was reviewed, and the return says so.
+if (cases == null) {
+  log(`${lens}: the cases lookup did not return; nothing reviewed`)
+  return { lens, results: [], price: null, notRun: 'the cases lookup did not return: re-run' }
+}
+if (!cases.found || !Array.isArray(cases.inputs)) throw new Error(`review-replay: could not list the cases for ${lens}: ${cases.why ?? 'no cases in the answer'}`)
 if (cases.inputs.length > MAX_PRS) throw new Error(`review-replay: ${cases.inputs.length} PRs is over the ${MAX_PRS} one run may review — name a batch in args.ids`)
-if (cases.inputs.length > gate.grindWidth) throw new Error(`review-replay: ${cases.inputs.length} PRs is over the ${gate.grindWidth} the work spigot allows at work-mode=${gate.position} — name a batch in args.ids, or flip the dial.`)
+if (!FORCED && cases.inputs.length > gate.grindWidth) throw new Error(`review-replay: refused — ${tooWide(cases.inputs.length)}. Nothing dispatched. If Eric typed this run himself, re-run it with force: true.`)
 log(`${lens}: ${cases.inputs.length} reviewers + 2 lookups, about ${cases.price?.startTokens ?? 'unknown'} tokens to start them, before what each reads`)
 
 const FINDINGS_SCHEMA = {

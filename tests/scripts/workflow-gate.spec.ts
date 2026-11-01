@@ -19,6 +19,12 @@ const CONDUCTORS: Record<
     width: 2,
     firstWork: /^analyze/,
   },
+  // Named ids, because a whole lens's width is only known after its `cases` lookup.
+  "review-replay": {
+    args: { lens: "performance", ids: ["P01", "P02", "P03"] },
+    width: 3,
+    firstWork: /^cases/,
+  },
   "symbol-sweep": {
     args: {
       today: "2026-11-01",

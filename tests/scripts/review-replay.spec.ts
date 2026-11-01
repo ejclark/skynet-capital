@@ -5,6 +5,7 @@ import { join } from "node:path";
 // @ts-expect-error — plain .mjs helper, no types.
 import { casesFor, promptFor, scoreRun } from "../../scripts/review-replay.mjs";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
+import { type Reply, runWorkflow } from "../support/run-workflow";
 
 // No model runs here. The runner's job is to hand a reviewer the change and none of the answer, then
 // count what came back honestly. These specs pin both halves on a fixture; what a real reviewer does
@@ -340,54 +341,11 @@ describe("the command line", () => {
   });
 });
 
-// The stub-harness pattern from tests/scripts/workflow-scratch.spec.ts: the real script text, with
-// the Workflow tool's hooks as stubs. It pins what each agent is told and what the run returns.
+// The real script text under stubbed hooks. tests/scripts/workflow-gate.spec.ts pins its dial block
+// with every other workflow; this pins what is its own: the cap, the prompt and the return value.
 describe("review-replay's workflow", () => {
-  type Opts = { label?: string; agentType?: string; model?: string };
-  type Reply = (prompt: string, opts: Opts) => unknown;
-  const AsyncFunction = (async () => undefined).constructor as new (
-    ...params: string[]
-  ) => (...values: unknown[]) => Promise<unknown>;
-
-  async function run(args: unknown, reply: Reply) {
-    const source = readFileSync(".claude/workflows/review-replay.js", "utf8").replace(
-      "export const meta",
-      "const meta",
-    );
-    const script = new AsyncFunction(
-      "args",
-      "agent",
-      "pipeline",
-      "parallel",
-      "log",
-      "phase",
-      source,
-    );
-    const calls: { prompt: string; opts: Opts }[] = [];
-    const agent = (prompt: string, opts: Opts = {}) => {
-      calls.push({ prompt, opts });
-      return Promise.resolve().then(() => reply(prompt, opts));
-    };
-    const parallel = (thunks: (() => unknown)[]) =>
-      Promise.all(
-        thunks.map((thunk) =>
-          Promise.resolve()
-            .then(thunk)
-            .catch(() => null),
-        ),
-      );
-    const noop = () => undefined;
-    const result = (await script(args, agent, noop, parallel, noop, noop)) as Record<string, never>;
-    return { result, calls };
-  }
-
   const GATE = { found: true, dispatch: true, position: "normal", grindWidth: 200 };
-  const input = (pr: number) => ({
-    pr,
-    base: `b${pr}`,
-    head: `h${pr}`,
-    caseIds: [`C${pr}`],
-  });
+  const input = (pr: number) => ({ pr, base: `b${pr}`, head: `h${pr}`, caseIds: [`C${pr}`] });
   const CASES = {
     found: true,
     inputs: [input(1), input(2)],
@@ -401,70 +359,77 @@ describe("review-replay's workflow", () => {
       if (label === "review #2" && "second" in over) return over.second;
       return { ran: true, findings: [] };
     };
+  const run = (args: unknown, answer: Reply) => runWorkflow("review-replay", args, answer);
 
   it("sends one worker per PR, each told to run the prompt the script prints", async () => {
     const { calls, result } = await run({ lens: "performance" }, reply());
     const reviews = calls.filter((c) => c.opts.label?.startsWith("review"));
     expect(reviews).toHaveLength(2);
     for (const c of reviews) {
-      expect(c.opts.agentType).toBe("worker");
-      expect(c.opts.model).toBe("opus");
+      expect(c.opts).toMatchObject({ agentType: "worker", model: "opus", effort: "high" });
       expect(c.prompt).toContain(
         "node scripts/review-replay.mjs prompt --lens performance --head h",
       );
       expect(c.prompt).not.toMatch(/#\d|--pr|C\d/);
     }
-    expect(result.lens).toBe("performance");
-    expect((result.results as unknown as unknown[]).length).toBe(2);
-    expect(result.price).toEqual(CASES.price);
-  });
-
-  it("asks the work spigot before it spends anything else", async () => {
-    const { calls } = await run({ lens: "performance" }, reply());
-    expect(calls[0]?.opts.label).toBe("work-mode");
-    expect(calls[0]?.prompt).toContain("node scripts/moneypenny/work-gate.mjs");
-  });
-
-  it("stops at a refusal from the spigot, and at a spigot it cannot read", async () => {
-    const refused = { ...GATE, dispatch: false, reason: "halted" };
-    await expect(run({ lens: "performance" }, reply({ gate: refused }))).rejects.toThrow(/halted/);
-    await expect(run({ lens: "performance" }, reply({ gate: { found: false } }))).rejects.toThrow(
-      /spigot/,
-    );
+    expect(result?.lens).toBe("performance");
+    expect(result?.price).toEqual(CASES.price);
   });
 
   it("refuses more than 40 cases at once, before it spends an agent", async () => {
     const ids = Array.from({ length: 41 }, (_, i) => `C${i}`);
-    const stub = await run({ lens: "performance", ids }, reply()).catch((error: Error) => error);
-    expect(String(stub)).toMatch(/41.*40/);
+    const { calls, error } = await run({ lens: "performance", ids }, reply());
+    expect(error?.message).toMatch(/41.*40/);
+    expect(calls).toEqual([]);
   });
 
-  it("refuses a run the set makes too wide, and one wider than the spigot allows", async () => {
+  it("refuses a run the set makes too wide, and one wider than the dial allows", async () => {
     const wide = { ...CASES, inputs: Array.from({ length: 41 }, (_, i) => input(i)) };
-    await expect(run({ lens: "performance" }, reply({ cases: wide }))).rejects.toThrow(/41.*40/);
+    const tooMany = await run({ lens: "performance" }, reply({ cases: wide }));
+    expect(tooMany.error?.message).toMatch(/41.*40/);
     const narrow = { ...GATE, position: "conserve", grindWidth: 1 };
-    await expect(run({ lens: "performance" }, reply({ gate: narrow }))).rejects.toThrow(/conserve/);
+    const { calls, error } = await run({ lens: "performance" }, reply({ gate: narrow }));
+    expect(error?.message).toContain("conserve");
+    expect(calls.some((c) => c.opts.label?.startsWith("review"))).toBe(false);
+  });
+
+  it("lets a typed run reach its reviewers when the dial could not be read", async () => {
+    const { calls, error } = await run({ lens: "performance", force: true }, reply({ gate: null }));
+    expect(error).toBeNull();
+    expect(calls.filter((c) => c.opts.label?.startsWith("review"))).toHaveLength(2);
   });
 
   it("requires a lens, and refuses one that could not be a file name", async () => {
-    await expect(run({}, reply())).rejects.toThrow(/lens/);
-    await expect(run({ lens: "x; rm -rf y" }, reply())).rejects.toThrow(/lens/);
-    await expect(run({ lens: "performance", ids: ["P1; x"] }, reply())).rejects.toThrow(/id/);
+    expect((await run({}, reply())).error?.message).toMatch(/lens/);
+    expect((await run({ lens: "x; rm -rf y" }, reply())).error?.message).toMatch(/lens/);
+    const badId = await run({ lens: "performance", ids: ["P1; x"] }, reply());
+    expect(badId.error?.message).toMatch(/ids/);
+    expect(badId.calls).toEqual([]);
+  });
+
+  it("says nothing was reviewed when the lookup dies, and stops when it reports a failure", async () => {
+    const dead = await run({ lens: "performance" }, reply({ cases: null }));
+    expect(dead.result).toMatchObject({ results: [], notRun: expect.stringContaining("re-run") });
+    const failed = await run(
+      { lens: "nope" },
+      reply({ cases: { found: false, why: "unknown lens" } }),
+    );
+    expect(failed.error?.message).toContain("unknown lens");
   });
 
   it("returns a reviewer that could not read its task as not returned, never as clean", async () => {
     const { result } = await run(
       { lens: "performance" },
-      reply({ second: { ran: false, findings: [] } }),
+      reply({ second: { ran: false, findings: [{ severity: "high" }] } }),
     );
-    expect(result.results).toEqual(
-      expect.arrayContaining([expect.objectContaining({ pr: 2, returned: false })]),
+    expect(result?.results).toEqual(
+      expect.arrayContaining([expect.objectContaining({ pr: 2, returned: false, findings: [] })]),
     );
   });
 
   it("returns a reviewer that died as not returned, so the score reads it as unknown", async () => {
     const { result } = await run({ lens: "performance" }, reply({ second: null }));
-    expect(result.results).toEqual([
+    expect(result?.results).toEqual([
       { pr: 1, head: "h1", caseIds: ["C1"], returned: true, findings: [] },
       { pr: 2, head: "h2", caseIds: ["C2"], returned: false, findings: [] },
     ]);
