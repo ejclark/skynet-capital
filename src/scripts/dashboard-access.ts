@@ -15,6 +15,7 @@ import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createCouncilRepliesStore } from "../server/council-replies-store.js";
 import { createCouncilStore } from "../server/council-store.js";
+import { createExitPlanStore } from "../server/exit-plan-store.js";
 import { createFilingCommentsStore } from "../server/filing-comments-store.js";
 import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import {
@@ -36,6 +37,7 @@ export interface AccessSetup {
   filingComments: ReturnType<typeof createFilingCommentsStore>;
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   savedPositions: ReturnType<typeof createSavedPositionsStore>;
+  exitPlans: ReturnType<typeof createExitPlanStore>;
   authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
   memberConvictions: ReturnType<typeof createMemberConvictionStore>;
   playMilestones: ReturnType<typeof createPlayMilestoneLedger>;
@@ -92,6 +94,9 @@ export function setupAccess(
   // volume beside the other member data (SKYNET_SAVED_POSITIONS_FILE → /data/saved-positions.json
   // in prod). Plain JSON — the same tier as a playbook subscription's capital allocation.
   const savedPositions = createSavedPositionsStore(env, (m) => console.error(m));
+  // Exit plans carried at purchase (#5709 slice 3) — a contract symbol and a timestamp per held
+  // call, a sibling of the subscriptions file (no new env var).
+  const exitPlans = createExitPlanStore(env, (m) => console.error(m));
   // Authored plays (#5457) — a member's draft playbooks, a sibling of the subscriptions file on the
   // same volume (no new env var). Plain JSON: a name, a ticker, a thesis and some numbers.
   const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
@@ -140,6 +145,7 @@ export function setupAccess(
     filingComments,
     subscriptions,
     savedPositions,
+    exitPlans,
     authoredPlays,
     memberConvictions,
     playMilestones,

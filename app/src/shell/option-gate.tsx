@@ -16,6 +16,7 @@ import { type PlayCode, rungForChainTap } from "../live/plays";
 import { formatExpiration } from "../live/straddle";
 import { type ChainPreset, lockedTapNote } from "./chain-section";
 import { ChainStraddle } from "./chain-straddle";
+import { ExitPlanReceipt, ExitPlanReview } from "./exit-plan-review";
 import { useFillFlare } from "./fill-flare";
 import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
@@ -216,6 +217,9 @@ export function OptionGate({
   /** Day unless picked (#3407 P1 slice 4) — the server previews the default it will send. */
   const [timeInForce, setTimeInForce] = useState<"day" | "gtc" | undefined>();
   const [state, setState] = useState<OptionGateState>({ step: "draft" });
+  /** Carry or Skip on the review's exit plan (#5709 slice 3) — unpicked on every new review, since
+   *  a choice was made against that review's numbers. */
+  const [carryPlan, setCarryPlan] = useState<boolean | undefined>();
   /** A locked-target chain-cell click fills strike but can't switch rungs (safety-critical, see the
    *  header comment) — this is the visible explanation the house rule requires ("Locked = visible,
    *  disabled, explained… never hidden, never silently dead", `ticket-nav.tsx`). Cleared on every
@@ -410,6 +414,12 @@ export function OptionGate({
   const resolvedOccSymbol =
     chainData?.rows.find((r) => String(r.strike) === strike)?.occSymbol ?? "";
 
+  /** The house's exit plan on the standing review — buying a call only, priced by the server. */
+  const reviewedPlan =
+    (state.step === "reviewed" || state.step === "submitting") && state.preview.ok
+      ? state.preview.exitPlan
+      : undefined;
+
   const draft = (): OptionDraft => ({
     kind: "open",
     participantId: deskId,
@@ -421,6 +431,7 @@ export function OptionGate({
     orderType,
     ...(orderType === "limit" && limitPrice !== "" ? { limitPrice: Number(limitPrice) } : {}),
     ...(timeInForce ? { timeInForce } : {}),
+    ...(carryPlan && reviewedPlan ? { exitPlan: "carry" as const } : {}),
   });
 
   const review = async () => {
@@ -428,6 +439,7 @@ export function OptionGate({
     // hand-typed strike's blur commit never fires from that click — commit it here instead, the
     // same `?strike=` write the blur would have made.
     if (strike !== "" && strike !== initialStrike) onStrikeCommit?.(strike);
+    setCarryPlan(undefined);
     setState({ step: "reviewing" });
     try {
       const { preview } = await reviewOption(draft());
@@ -579,6 +591,16 @@ export function OptionGate({
       <div className="gate" aria-live="polite">
         <OptionGateStatus state={state} fill={fill} />
       </div>
+      {reviewedPlan && (state.step === "reviewed" || state.step === "submitting") ? (
+        <ExitPlanReview
+          plan={reviewedPlan}
+          expiration={state.preview.expiration ?? expiration}
+          carry={carryPlan}
+          onCarry={setCarryPlan}
+          disabled={state.step === "submitting"}
+        />
+      ) : null}
+      {state.step === "done" ? <ExitPlanReceipt result={state.result} /> : null}
 
       <GateAction
         state={state}

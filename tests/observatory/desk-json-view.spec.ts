@@ -89,6 +89,31 @@ describe("deskView", () => {
     expect(view.positions[0]?.returnPct).toBe("+156%");
   });
 
+  // #5709 slice 3: a call bought with the house's exit plan carries it — the take-profit bid per
+  // share (2× the per-contract cost ÷ 100) and the time stop 45 days before expiry. A call bought
+  // without it, or a held put, carries none.
+  it("puts a carried exit plan on the held call, and on nothing else", () => {
+    const call = "AMD261120C00180000";
+    const put = "CRWV261106P00080000";
+    const view = deskView(
+      snapshot({
+        positions: [
+          { symbol: call, quantity: 2, avgPrice: 400, marketValue: 1_024 },
+          { symbol: put, quantity: 1, avgPrice: 255, marketValue: 300 },
+        ],
+      }),
+      undefined,
+      [],
+      undefined,
+      new Set(),
+      new Set([call, put]),
+    );
+    const byId = new Map(view.positions.map((p) => [p.symbol, p]));
+    expect(byId.get(call)?.exitPlan).toEqual({ takeProfit: 8, timeStop: "2026-10-06" });
+    expect(byId.get(put)?.exitPlan).toBeUndefined();
+    expect(deskView(snapshot()).positions.every((p) => p.exitPlan === undefined)).toBe(true);
+  });
+
   it("keeps a bought position's return against what it cost", () => {
     const view = deskView(snapshot());
     expect(view.positions[0]?.returnPct).toBe(

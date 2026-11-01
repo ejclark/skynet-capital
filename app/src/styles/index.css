@@ -42,6 +42,8 @@
 @import "./feedback.css";
 @import "./form-strip.css";
 @import "./gate.css";
+/* after gate.css, not alphabetical: the exit plan's Carry / Skip pair restyles its `.btn`. */
+@import "./exit-plan.css";
 @import "./heartbeat.css";
 /* after heartbeat.css, not alphabetical: the Playbooks section reuses its `.hb-*` log and link. */
 @import "./bot-playbooks.css";

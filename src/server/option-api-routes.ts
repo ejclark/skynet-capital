@@ -21,6 +21,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { serveGuidance } from "./guidance-route.js";
 import { serveChain } from "./option-chain-route.js";
+import { carriesExitPlan, exitPlanOnReview, settleExitPlan } from "./option-exit-plan.js";
 import type { DeskOptionRequest } from "./option-trade-service.js";
 import {
   boundedString,
@@ -259,7 +260,8 @@ async function reviewOption(
     });
     return;
   }
-  const refusal = optionOpenRefusal(request, progression, config.now?.() ?? new Date());
+  const now = config.now?.() ?? new Date();
+  const refusal = optionOpenRefusal(request, progression, now);
   if (refusal) {
     // The pure preview costs no broker read, so the gate can still SHOW the whole ticket — with
     // the ladder refusal in front, exactly where the legacy review put it.
@@ -278,17 +280,19 @@ async function reviewOption(
     request.expiration,
     play?.optionType ?? "call",
     request.strike,
-    config.now?.() ?? new Date(),
+    now,
   );
+  const preview = previewOptionOrder(request, {
+    ...base,
+    ...(estimates.premium !== undefined ? { premium: estimates.premium } : {}),
+    ...(estimates.spot !== undefined ? { underlyingPrice: estimates.spot } : {}),
+    ...(estimates.greeks ? { greeks: estimates.greeks } : {}),
+    ...(estimates.impliedVol !== undefined ? { impliedVol: estimates.impliedVol } : {}),
+    ...(estimates.daysToExpiry !== undefined ? { daysToExpiry: estimates.daysToExpiry } : {}),
+  });
+  // Buying a call: the house's exit plan, priced off this order (#5709 slice 3).
   sendJson(res, 200, {
-    preview: previewOptionOrder(request, {
-      ...base,
-      ...(estimates.premium !== undefined ? { premium: estimates.premium } : {}),
-      ...(estimates.spot !== undefined ? { underlyingPrice: estimates.spot } : {}),
-      ...(estimates.greeks ? { greeks: estimates.greeks } : {}),
-      ...(estimates.impliedVol !== undefined ? { impliedVol: estimates.impliedVol } : {}),
-      ...(estimates.daysToExpiry !== undefined ? { daysToExpiry: estimates.daysToExpiry } : {}),
-    }),
+    preview: { ...preview, ...exitPlanOnReview(request, preview, now) },
   });
 }
 
@@ -298,6 +302,8 @@ async function submitOption(
   config: DashboardServerConfig,
   requesterId: string | undefined,
   progression: ParticipantProgression | undefined,
+  /** The member tapped Carry on the review's exit plan (#5709 slice 3). */
+  carry: boolean,
 ): Promise<void> {
   if (request.kind === "open") {
     const refusal = optionOpenRefusal(request, progression, config.now?.() ?? new Date());
@@ -313,7 +319,8 @@ async function submitOption(
     });
     return;
   }
-  sendJson(res, 200, await config.submitOptionTrade(request, requesterId));
+  const result = await config.submitOptionTrade(request, requesterId);
+  sendJson(res, 200, { ...result, ...settleExitPlan(request, result, carry, config) });
 }
 
 /** The read-only GETs this family answers, each resolved against the requester's own account. */
@@ -383,6 +390,6 @@ export async function serveOptionApi(
     await reviewOption(res, request, snapshot, config, orderRequesterId, progression);
     return true;
   }
-  await submitOption(res, request, config, orderRequesterId, progression);
+  await submitOption(res, request, config, orderRequesterId, progression, carriesExitPlan(raw));
   return true;
 }
