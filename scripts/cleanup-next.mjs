@@ -78,7 +78,7 @@ export function rank(outputs, openPrFiles) {
   const unreadable = [];
   for (const { script, priceM, reps = picks } of EYES) {
     try {
-      if (!(script in outputs)) throw new Error("no output");
+      if (!(script in outputs)) throw new Error("failed, or printed something other than JSON");
       for (const r of reps(outputs[script])) {
         const openPr = r.files.map((f) => openPrFiles?.[f]).find(Boolean) ?? null;
         rows.push({ ...r, script, priceM, openPr });
