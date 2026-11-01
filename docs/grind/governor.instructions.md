@@ -104,8 +104,7 @@ it yourself; nothing substitutes them for you.
    | `spec-gap-scan.mjs` | `candidate.file` | the new spec file; `src` is never edited |
 
    **Note the number now, as `<before>`, for step 8.** It's the debt this eye counts: `debt` plus
-   `app.debt` where that exists, or for `arch-scan.mjs`, which prints no debt, the count on the first
-   line of `node scripts/arch-scan.mjs` (it exits non-zero while any file is over).
+   `app.debt` where that exists, from the same `node <eye> --candidate` output.
 
 3. **Collision — structural work never races feature work on the same file.** For each open PR from
    step 1, `gh api repos/{owner}/{repo}/pulls/<number>/files?per_page=100 --jq '.[].filename'`. If
@@ -140,10 +139,12 @@ it yourself; nothing substitutes them for you.
    so write its baseline first (worth 1, since one unit gone is what one rep is for):
    `npm run loop:ledger -- --add --loop governor-<drill> --baseline <before> --worth 1 --changed "debt before the first rep"`.
    Then the rep's row, in the same commit as the work:
-   `npm run loop:ledger -- --add --loop governor-<drill> --after <after> --tokens-m unknown --changed "<what>"`.
-   `<what>` names what moved in plain words. You can't read your own tokens, and an estimate must not
-   pass as a cost, so the caller fills them in at landing. A rep that skips writes no row, since
-   nothing moved and no PR would carry it.
+   `npm run loop:ledger -- --add --loop governor-<drill> --before <before> --after <after> --tokens-m unknown --changed "<what>"`.
+   `--before` is not optional here: other PRs move this debt between cycles, and without it the row
+   starts from the last row's number and charges their change to this rep. `<what>` names what moved
+   in plain words. You can't read your own tokens, and an estimate must not pass as a cost, so the
+   caller fills them in at landing. A rep that skips writes no row, since nothing moved and no PR
+   would carry it.
    Conventional-Commit subject, lowercase-led, ≤100
    characters (the drill's own spec names the shape). Report the pushed branch name in the `branch`
    field — the trailing `git ls-remote` step verifies it against origin rather than trusting your

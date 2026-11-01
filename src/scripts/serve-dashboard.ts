@@ -56,6 +56,7 @@ import type { DashboardServerConfig } from "../server/dashboard-server-config.js
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { bootGithubToken } from "../server/github-token.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
+import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
 import { ladderEvidenceReader } from "../server/ladder-evidence.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
@@ -455,8 +456,8 @@ async function main(): Promise<void> {
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readPulseHistory,
     readHeldLedger,
-    readTradeActivity: (id) => activity.list(id),
-    readOrderAudit: (id) => orderAudit.list(id),
+    readTradeActivity: heldActivity(activity),
+    readOrderOrigins: heldOrderOrigins(orderAudit),
     recordOrderAudit: (entry) => orderAudit.record(entry),
     // `/wire`'s cross-participant feed: the bus, the trade ledger and the feedback log, off the fold
     // above. The ledger rides alongside the bus because the event log only starts at #1211's deploy

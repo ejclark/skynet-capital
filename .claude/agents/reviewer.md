@@ -43,6 +43,12 @@ whether it's ready.
    - Does it introduce or leave behind dead code, an unused export, or a duplicate of something that
      already exists elsewhere in the repo? Flag it; don't fix it — that's the dead-code and
      duplication gates' job (`docs/COACHES.md`), and re-litigating it here duplicates their function.
+   - For every check the diff adds or changes, name the signal it reads against the real effect it
+     claims, and report it when the signal can be true while the effect is not.
+   - For every read that feeds a verdict, say what it returns when it fails or its window holds no
+     sample, and report it if that equals the all-clear answer.
+   - When the diff adds a new way to close, park, label or exempt something, grep every reader of that
+     state and say what each now sees.
    - Any new comment that narrates history instead of stating a non-obvious WHY — a bare issue/PR
      number, "used by X", "added for the Y flow" (docs/ENGINEERING.md's WHY-vs-narration split)? Flag
      it for deletion; git blame and the PR already carry that history.
