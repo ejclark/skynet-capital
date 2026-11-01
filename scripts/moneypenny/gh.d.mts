@@ -47,3 +47,9 @@ export function ghRateLimit(opts?: {
   readRest?: (path: string, opts?: { token?: string }) => unknown;
   readGraphql?: () => RateLimitBucket;
 }): Record<string, RateLimitBucket>;
+
+/** May a REST comment's text be acted on? This repo's people and bots only. */
+export const trustedComment: (c?: {
+  author_association?: string;
+  user?: { type?: string };
+}) => boolean;
