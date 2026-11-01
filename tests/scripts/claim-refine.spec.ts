@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +12,7 @@ import {
   prFor,
   proposalsOf,
 } from "../../src/scripts/claim-refine.js";
+import { run } from "../support/ship-run.js";
 
 /** #5482 criterion 6, its second half — `npm run research:refine` turns a failed claim's proposal
  *  into one ledger line and the body of its own held PR. It never adopts a pass. */
@@ -141,9 +141,8 @@ describe("prFor — the held PR's body", () => {
     try {
       const file = join(dir, "body.md");
       writeFileSync(file, prFor(found, "2026-11-10").body);
-      expect(() =>
-        execFileSync("bash", ["scripts/ship.sh", "checkbody", file], { stdio: "pipe" }),
-      ).not.toThrow();
+      // ship.sh stops at its token check before it reaches checkbody; `run` supplies a dummy one.
+      expect(run(["checkbody", file])).toMatchObject({ code: 0 });
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
