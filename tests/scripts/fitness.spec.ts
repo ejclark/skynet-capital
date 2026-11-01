@@ -14,6 +14,7 @@ import {
   CONTRACTS,
   HOMES,
   judgeAlertReach,
+  judgeAssignmentPath,
   judgeDeploys,
   judgeMachine,
   judgeStamp,
@@ -21,6 +22,14 @@ import {
   whereAmI,
   // @ts-expect-error plain .mjs script, no declarations
 } from "../../scripts/fitness.mjs";
+import {
+  ASSIGNED_MARKER,
+  OWNER_AFTER_MS,
+  REOPEN_WITHIN_MS,
+  REOPENED_MARKER,
+  RUNGS,
+  // @ts-expect-error plain .mjs script, no declarations
+} from "../../scripts/fitness-rungs.mjs";
 
 // #6470. The judges are pure and seeded below; the wiring (what fly and gh are asked, what the
 // script does with a bad reply, a hung read, a refused write, and where it writes at all) is driven
@@ -30,8 +39,12 @@ import {
 // Graded blind: tests/scripts/fixtures/fitness-heldout-bugs.json holds 30 deliberate bugs written
 // by a pass that never saw this spec; it caught 29 before the never-polled stamp seed was added.
 // That list is the regression list now (`node scripts/fitness-audit.mjs --bugs <it> --with ...`,
-// the --with files are the ones named below), so a new score needs bugs from a fresh blind pass.
+// the --with files are the ones named below, plus scripts/deploy-lag.mjs and
+// scripts/bot-relevant.mjs, scripts/bots-start-stopped.sh and scripts/fitness-rungs.mjs), so a new
+// score needs bugs from a fresh blind pass. The 19 after the first 30 attack the owner's assignment
+// and were written by the author of this spec, so they are a regression net and not a blind score.
 const SCRIPT = resolve("scripts/fitness.mjs");
+const START = resolve("scripts/bots-start-stopped.sh");
 const REPLAY = resolve("tests/fixtures/fitness/replay-2026-10-22.json");
 const WORKFLOW = resolve(".github/workflows/bots-catchup.yml");
 
@@ -196,7 +209,9 @@ describe("fitness reporting", () => {
   };
 
   it("opens one issue for a new failure", () => {
-    expect(reportActions([failing], [])).toEqual([{ kind: "open", result: failing }]);
+    expect(reportActions([failing], [])).toEqual([
+      { kind: "open", result: failing, assign: false },
+    ]);
   });
 
   it("stays quiet about a failure it already reported", () => {
@@ -243,7 +258,7 @@ describe("fitness reporting", () => {
         ),
       })),
     );
-    expect(tally).toEqual({ opens: 1, comments: 0, closes: 0 });
+    expect(tally).toEqual({ opens: 1, comments: 0, closes: 0, reopens: 0, assigns: 0 });
   });
 
   it("comments when a cause narrows: one app still undeployed is not the two it reported", () => {
@@ -359,13 +374,30 @@ describe("fitness reporting", () => {
     };
     const verdicts = ticks.map((tick) => ({
       tick,
+      at: Date.parse(tick),
       lag: lagAt(runs, Date.parse(tick)),
       ...judgeDeploys(lagAt(runs, Date.parse(tick)), Date.parse(tick)),
     }));
+    const assignedAt: number[] = [];
     const tally = simulate(
-      verdicts.map((v) => ({ ...failing, id: "main-deploys", reads: "GitHub", ...v })),
+      verdicts.map((v) => ({ ...contract("main-deploys"), ...v })),
+      (at) => assignedAt.push(at),
     );
-    expect(tally).toEqual({ opens: 2, comments: 0, closes: 1 });
+    // One thread: the second failure state reopens the first, with one line, instead of a new issue.
+    expect(tally).toEqual({ opens: 1, comments: 0, closes: 1, reopens: 1, assigns: 2 });
+    // Nobody is assigned until the failure has survived two hours, once per failure state. The
+    // bound above is one clock gap: the first tick past two hours does it, never a later one.
+    const reds = verdicts.filter((v) => v.status === "fail");
+    const redStates = reds.filter(
+      (v, i) => i === 0 || verdicts[verdicts.indexOf(v) - 1].status !== "fail",
+    );
+    expect(redStates).toHaveLength(2);
+    expect(assignedAt).toHaveLength(2);
+    redStates.forEach((red, i) => {
+      const waited = (assignedAt[i] ?? Number.NaN) - red.at;
+      expect(waited).toBeGreaterThanOrEqual(OWNER_AFTER_MS);
+      expect(waited).toBeLessThan(OWNER_AFTER_MS + 60 * MIN);
+    });
     // Detected within the grace plus one tick gap of the oldest undeployed commit landing.
     const firstRed = verdicts.find((v) => v.status === "fail");
     expect(firstRed).toBeDefined();
@@ -391,11 +423,34 @@ function lagAt(runs: Run[], now: number) {
 }
 
 /** Feed one contract's results tick by tick through reportActions, playing GitHub's part. */
-function simulate(ticks: { id: string; detail: string }[]) {
-  const tally = { opens: 0, comments: 0, closes: 0 };
-  let issue: { number: number; title: string; body: string; lastComment: string } | null = null;
-  for (const r of ticks) {
-    for (const a of reportActions([r], issue ? [issue] : [])) {
+function simulate(
+  ticks: { id: string; detail: string; at?: number }[],
+  onAssign?: (at: number) => void,
+) {
+  const tally = { opens: 0, comments: 0, closes: 0, reopens: 0, assigns: 0 };
+  type Thread = {
+    number: number;
+    title: string;
+    body: string;
+    lastComment: string;
+    createdAt: string;
+    assignees: { login: string }[];
+    botComments: { type: string; body: string; at: string }[];
+    state?: string;
+    closedAt?: string;
+  };
+  let issue: Thread | null = null;
+  let closed: Thread | null = null;
+  ticks.forEach((r, i) => {
+    const nowMs = r.at ?? NOW + i * 15 * MIN;
+    const say = (body: string) => {
+      issue?.botComments.push({ type: "Bot", body, at: iso(nowMs) });
+    };
+    const actions = reportActions([r], issue ? [issue] : [], {
+      nowMs,
+      closedIssues: closed ? [closed] : [],
+    });
+    for (const a of actions) {
       if (a.kind === "open") {
         tally.opens++;
         issue = {
@@ -403,20 +458,440 @@ function simulate(ticks: { id: string; detail: string }[]) {
           title: `[fitness] ${r.id}`,
           body: `**What failed:** ${r.detail}.`,
           lastComment: "",
+          createdAt: iso(nowMs),
+          assignees: [],
+          botComments: [],
         };
+      }
+      if (a.kind === "reopen" && closed) {
+        tally.reopens++;
+        issue = { ...closed, assignees: [], state: "OPEN" };
+        closed = null;
+        say(REOPENED_MARKER);
       }
       if (a.kind === "comment" && issue) {
         tally.comments++;
         issue.lastComment = `Still failing, and it changed: ${r.detail}.`;
       }
+      if (a.kind === "assign" && issue) {
+        tally.assigns++;
+        onAssign?.(nowMs);
+        issue.assignees = [{ login: "ejclark" }];
+        issue.lastComment = `Assigned to the owner: ${a.why}. Still failing: ${a.detail}.`;
+        say(ASSIGNED_MARKER);
+      }
       if (a.kind === "close") {
         tally.closes++;
+        if (issue) closed = { ...issue, state: "CLOSED", closedAt: iso(nowMs) };
         issue = null;
       }
     }
-  }
+  });
   return tally;
 }
+
+/** A real contract's fields, so a spec reads the rung the contract actually declares. */
+function contract(id: string) {
+  const found = CONTRACTS.find((c: { id: string }) => c.id === id);
+  if (!found) throw new Error(`no contract ${id}`);
+  const { probe: _probe, ...fields } = found;
+  return fields;
+}
+
+// Eric, 2026-11-01: the system corrects first and an issue assigned to him is the last step.
+describe("fitness: the owner is assigned last", () => {
+  const stopped = () => ({
+    ...contract("bots-running"),
+    status: "fail",
+    detail: "machine is stopped",
+  });
+  const stale = () => ({
+    ...contract("bots-responsive"),
+    status: "fail",
+    detail: "last controls poll 40 min ago",
+  });
+  const mail = () => ({
+    ...contract("alerts-reach-owner"),
+    status: "fail",
+    detail: "alerts reach nobody: SKYNET_ALERT_EMAIL_FROM not set",
+  });
+  const MARKER = "<!-- bots-start-stopped:start -->";
+  type Comment = { type: string; body: string | null; at: string };
+  const thread = (detail: string, over: Record<string, unknown> = {}) => ({
+    number: 7,
+    title: "[fitness] bots-running",
+    body: `**What failed:** ${detail}.`,
+    lastComment: "",
+    createdAt: iso(NOW - 10 * MIN),
+    assignees: [],
+    botComments: [] as Comment[],
+    ...over,
+  });
+  const starts = (n: number, agoMs = MIN, type = "Bot"): Comment[] =>
+    Array.from({ length: n }, () => ({ type, body: `start\n${MARKER}`, at: iso(NOW - agoMs) }));
+  const actionsFor = (r: unknown, issues: unknown[], closedIssues: unknown[] = []) =>
+    reportActions([r], issues, { nowMs: NOW, closedIssues });
+  const kinds = (actions: { kind: string }[]) => actions.map((a) => a.kind);
+
+  it("names each contract's rung in a field code reads", () => {
+    const rungs = Object.fromEntries(
+      CONTRACTS.map((c: { id: string; rung: string }) => [c.id, c.rung]),
+    );
+    expect(rungs).toEqual({
+      "bots-running": "script",
+      "bots-responsive": "wait",
+      "main-deploys": "wait",
+      "alerts-reach-owner": "owner",
+      "owner-assignment-path": "owner",
+      "memory-has-history": "session",
+    });
+    for (const c of CONTRACTS) expect(RUNGS).toContain(c.rung);
+  });
+
+  it("keeps the two-hour and fourteen-day numbers the issue text promises", () => {
+    expect(OWNER_AFTER_MS).toBe(120 * MIN);
+    expect(REOPEN_WITHIN_MS).toBe(14 * 24 * 60 * MIN);
+  });
+
+  it("opens unassigned while a script or the clock may still fix it, and assigned when only he can", () => {
+    expect(actionsFor(stopped(), [])[0]).toMatchObject({ kind: "open", assign: false });
+    expect(actionsFor(stale(), [])[0]).toMatchObject({ kind: "open", assign: false });
+    expect(actionsFor(mail(), [])[0]).toMatchObject({ kind: "open", assign: true });
+  });
+
+  it("holds the owner back through the script's budget, and assigns on the attempt that spends it", () => {
+    const at = (botComments: Comment[]) =>
+      actionsFor(stopped(), [thread("machine is stopped", { botComments })]);
+    expect(at(starts(2))).toEqual([]);
+    const spent = at(starts(3));
+    expect(kinds(spent)).toEqual(["assign"]);
+    expect(spent[0]).toMatchObject({ number: 7, detail: "machine is stopped" });
+    expect(spent[0].why).toBe("the automatic fix ran 3 times in 6 hours and this still fails");
+  });
+
+  it("counts only a bot's marked comment inside the window, because the repo is public", () => {
+    const at = (botComments: Comment[]) =>
+      actionsFor(stopped(), [thread("machine is stopped", { botComments })]);
+    expect(at(starts(3, MIN, "User"))).toEqual([]);
+    expect(at(starts(3, 6 * 60 * MIN + 1000))).toEqual([]);
+    expect(at(starts(3, 6 * 60 * MIN))).toHaveLength(1);
+    expect(at([{ type: "Bot", body: "unrelated", at: iso(NOW) }])).toEqual([]);
+    expect(at([{ type: "Bot", body: null, at: iso(NOW) }])).toEqual([]);
+  });
+
+  it("assigns a failure with no script only once it has survived two hours", () => {
+    const aged = (ms: number) =>
+      thread("last controls poll N min ago", {
+        title: "[fitness] bots-responsive",
+        createdAt: iso(NOW - ms),
+      });
+    expect(actionsFor(stale(), [aged(OWNER_AFTER_MS - 1000)])).toEqual([]);
+    const due = actionsFor(stale(), [aged(OWNER_AFTER_MS)]);
+    expect(kinds(due)).toEqual(["assign"]);
+    expect(due[0].why).toBe("it has not cleared on its own in 2 hours");
+  });
+
+  it("does not let a script that never acts hold the owner back forever", () => {
+    // A machine in a state the start script leaves alone spends no budget and stays failing.
+    const young = thread("machine is stopped");
+    expect(actionsFor(stopped(), [young])).toEqual([]);
+    const old = thread("machine is stopped", { createdAt: iso(NOW - OWNER_AFTER_MS) });
+    expect(kinds(actionsFor(stopped(), [old]))).toEqual(["assign"]);
+  });
+
+  it("goes straight to him on a credential, on a thread opened earlier", () => {
+    const due = actionsFor(mail(), [
+      thread("alerts reach nobody: SKYNET_ALERT_EMAIL_FROM not set", {
+        title: "[fitness] alerts-reach-owner",
+      }),
+    ]);
+    expect(kinds(due)).toEqual(["assign"]);
+    expect(due[0].why).toBe("only the owner can fix this");
+  });
+
+  it("assigns once: not again while he holds it, nor after he took himself off", () => {
+    const old = { createdAt: iso(NOW - 5 * 60 * MIN), botComments: starts(3) };
+    const held = thread("machine is stopped", { ...old, assignees: [{ login: "ejclark" }] });
+    expect(actionsFor(stopped(), [held])).toEqual([]);
+    const asked = {
+      ...old,
+      botComments: [...starts(3), { type: "Bot", body: ASSIGNED_MARKER, at: iso(NOW - MIN) }],
+    };
+    expect(actionsFor(stopped(), [thread("machine is stopped", asked)])).toEqual([]);
+    // A stranger's copy of the marker never stops the email.
+    const forged = {
+      ...old,
+      botComments: [...starts(3), { type: "User", body: ASSIGNED_MARKER, at: iso(NOW - MIN) }],
+    };
+    expect(kinds(actionsFor(stopped(), [thread("machine is stopped", forged)]))).toEqual([
+      "assign",
+    ]);
+  });
+
+  it("holds on a thread whose comments could not be read: it cannot prove the rung changed", () => {
+    const blindThread = thread("alerts reach nobody: SKYNET_ALERT_EMAIL_FROM not set", {
+      title: "[fitness] alerts-reach-owner",
+      botComments: undefined,
+      createdAt: iso(NOW - 5 * 60 * MIN),
+    });
+    expect(actionsFor(mail(), [blindThread])).toEqual([]);
+  });
+
+  it("says a changed cause once, and the assignment's own comment carries it when both land", () => {
+    const changed = { ...stopped(), detail: "no primary machine" };
+    expect(kinds(actionsFor(changed, [thread("machine is stopped")]))).toEqual(["comment"]);
+    const both = actionsFor(changed, [thread("machine is stopped", { botComments: starts(3) })]);
+    expect(kinds(both)).toEqual(["assign"]);
+    expect(both[0].detail).toBe("no primary machine");
+  });
+
+  it("reopens a thread closed within 14 days, and files a new one after", () => {
+    const closed = (ago: number, over: Record<string, unknown> = {}) => ({
+      ...thread("machine is stopped"),
+      state: "CLOSED",
+      closedAt: iso(NOW - ago),
+      ...over,
+    });
+    const day = 24 * 60 * MIN;
+    expect(actionsFor(stopped(), [], [closed(day)])[0]).toMatchObject({
+      kind: "reopen",
+      number: 7,
+      removeOwner: false,
+    });
+    expect(kinds(actionsFor(stopped(), [], [closed(14 * day)]))).toEqual(["reopen"]);
+    expect(kinds(actionsFor(stopped(), [], [closed(14 * day + 1000)]))).toEqual(["open"]);
+    // Someone else's closed issue, or one with no close date, is not this thread.
+    expect(
+      kinds(actionsFor(stopped(), [], [closed(day, { title: "[fitness] main-deploys" })])),
+    ).toEqual(["open"]);
+    expect(kinds(actionsFor(stopped(), [], [closed(day, { closedAt: undefined })]))).toEqual([
+      "open",
+    ]);
+    // Two closed threads: the newest holds the attempts.
+    const newest = actionsFor(stopped(), [], [closed(2 * day, { number: 8 }), closed(day)]);
+    expect(newest[0].number).toBe(7);
+  });
+
+  it("unassigns before a reopen, so a reopened thread does not mail him ahead of its rung", () => {
+    const held = {
+      ...thread("machine is stopped"),
+      state: "CLOSED",
+      closedAt: iso(NOW - MIN),
+      assignees: [{ login: "ejclark" }],
+    };
+    expect(actionsFor(stopped(), [], [held])).toEqual([
+      expect.objectContaining({ kind: "reopen", removeOwner: true }),
+    ]);
+    // An old assignment does not count against the new failure: this one starts its own clock.
+    const open = {
+      ...thread("last controls poll N min ago"),
+      title: "[fitness] bots-responsive",
+      createdAt: iso(NOW - 3 * 24 * 60 * MIN),
+      botComments: [
+        { type: "Bot", body: ASSIGNED_MARKER, at: iso(NOW - 2 * 24 * 60 * MIN) },
+        { type: "Bot", body: REOPENED_MARKER, at: iso(NOW - OWNER_AFTER_MS + 1000) },
+      ],
+    };
+    expect(actionsFor(stale(), [open])).toEqual([]);
+    const later = {
+      ...open,
+      botComments: [
+        { type: "Bot", body: ASSIGNED_MARKER, at: iso(NOW - 2 * 24 * 60 * MIN) },
+        { type: "Bot", body: REOPENED_MARKER, at: iso(NOW - OWNER_AFTER_MS) },
+      ],
+    };
+    expect(kinds(actionsFor(stale(), [later]))).toEqual(["assign"]);
+  });
+
+  it("reopens and assigns in one tick when the reopened thread's rung already says so", () => {
+    const closed = {
+      ...thread("machine is stopped"),
+      state: "CLOSED",
+      closedAt: iso(NOW - MIN),
+      botComments: starts(3),
+    };
+    expect(kinds(actionsFor(stopped(), [], [closed]))).toEqual(["reopen", "assign"]);
+    const mailThread = { ...closed, title: "[fitness] alerts-reach-owner", botComments: [] };
+    expect(kinds(actionsFor(mail(), [], [mailThread]))).toEqual(["reopen", "assign"]);
+    // A prior spent budget's comments unread: reopen now, decide on the next tick.
+    const unread = { ...closed, botComments: undefined };
+    expect(kinds(actionsFor(stopped(), [], [unread]))).toEqual(["reopen"]);
+  });
+
+  it("assigns a blind source at two hours, or at once on a dead credential", () => {
+    const blind = (over = {}) => ({
+      ...contract("bots-running"),
+      status: "unknown",
+      detail: "cannot read Fly",
+      ...over,
+    });
+    const quietIssue = (ms: number, over = {}) => ({
+      number: 12,
+      title: "[fitness] cannot read Fly",
+      body: "",
+      lastComment: "",
+      createdAt: iso(NOW - ms),
+      assignees: [],
+      botComments: [],
+      ...over,
+    });
+    expect(actionsFor(blind(), [])[0]).toMatchObject({ kind: "open-blind", assign: false });
+    expect(actionsFor(blind({ credential: true }), [])[0]).toMatchObject({
+      kind: "open-blind",
+      assign: true,
+    });
+    expect(actionsFor(blind(), [quietIssue(OWNER_AFTER_MS - 1000)])).toEqual([]);
+    const due = actionsFor(blind(), [quietIssue(OWNER_AFTER_MS)]);
+    expect(due).toEqual([
+      expect.objectContaining({ kind: "assign", number: 12, detail: "cannot read Fly" }),
+    ]);
+    expect(kinds(actionsFor(blind({ credential: true }), [quietIssue(MIN)]))).toEqual(["assign"]);
+    expect(
+      actionsFor(blind(), [
+        quietIssue(5 * 60 * MIN, {
+          botComments: [{ type: "Bot", body: ASSIGNED_MARKER, at: iso(NOW - MIN) }],
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("never opens, closes or escalates on a quiet read", () => {
+    const quiet = {
+      ...contract("bots-responsive"),
+      status: "quiet",
+      detail: "machine is stopped: bots-running reports this",
+    };
+    const open = thread("x", {
+      title: "[fitness] bots-responsive",
+      createdAt: iso(NOW - 9 * 60 * MIN),
+    });
+    expect(actionsFor(quiet, [])).toEqual([]);
+    expect(actionsFor(quiet, [open])).toEqual([]);
+    const blindFly = { ...open, title: "[fitness] cannot read Fly" };
+    expect(actionsFor(quiet, [blindFly])).toEqual([]);
+  });
+
+  it("re-assigns under the bot what a person assigned, and leaves the path's own thread unassigned", () => {
+    const self = {
+      ...contract("owner-assignment-path"),
+      ...judgeAssignmentPath(
+        {
+          assignable: true,
+          issues: [
+            {
+              number: 6501,
+              title: "[fitness] alerts-reach-owner",
+              state: "OPEN",
+              timelineItems: {
+                nodes: [
+                  {
+                    createdAt: iso(NOW - 60 * MIN),
+                    actor: { __typename: "User", login: "ejclark" },
+                    assignee: { login: "ejclark" },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        NOW,
+      ),
+    };
+    const actions = actionsFor(self, []);
+    expect(actions).toEqual([
+      expect.objectContaining({ kind: "open", assign: false }),
+      { kind: "reassign", number: 6501 },
+    ]);
+  });
+
+  describe("the assignment path judge", () => {
+    const event = (type: string | null, ago: number, to = "ejclark") => ({
+      createdAt: iso(NOW - ago),
+      actor: type ? { __typename: type, login: type === "Bot" ? "skynet-envoy" : "ejclark" } : null,
+      assignee: { login: to },
+    });
+    const held = (number: number, title: string, state: string, nodes: unknown[]) => ({
+      number,
+      title,
+      state,
+      timelineItems: { nodes },
+    });
+    const path = (issues: unknown[], assignable = true) =>
+      judgeAssignmentPath({ assignable, issues }, NOW);
+    const day = 24 * 60 * MIN;
+
+    it("passes on a bot's assignment inside 30 days, and fails a day past it", () => {
+      const at = (ago: number) => path([held(1, "work", "OPEN", [event("Bot", ago)])]);
+      expect(at(day).status).toBe("pass");
+      expect(at(30 * day).status).toBe("pass");
+      expect(at(30 * day + 1000).status).toBe("fail");
+      expect(at(30 * day + 1000).detail).toContain("no bot has assigned the owner");
+    });
+
+    it("fails when he cannot be assigned, whatever the history says", () => {
+      const r = path([held(1, "work", "OPEN", [event("Bot", day)])], false);
+      expect(r).toEqual({
+        status: "fail",
+        detail: "the owner cannot be assigned on this repository",
+      });
+    });
+
+    it("does not count a person's assignment, another assignee, or an actor GitHub cannot name", () => {
+      expect(path([]).status).toBe("fail");
+      expect(path([held(1, "work", "OPEN", [event("User", day)])]).status).toBe("fail");
+      expect(path([held(1, "work", "OPEN", [event("Bot", day, "someone")])]).status).toBe("fail");
+      expect(path([held(1, "work", "OPEN", [event(null, day)])]).status).toBe("fail");
+    });
+
+    it("fails on an open fitness issue he assigned himself, and names it for the re-assign", () => {
+      const r = path([
+        held(4, "work", "OPEN", [event("Bot", day)]),
+        held(6501, "[fitness] alerts-reach-owner", "OPEN", [event("User", MIN)]),
+      ]);
+      expect(r.status).toBe("fail");
+      expect(r.detail).toBe("a person assigned #6501, which sends no notice");
+      expect(r.reassign).toEqual([6501]);
+      expect(r.rung).toBe("script");
+    });
+
+    it("judges a fitness issue by its newest assignment, and ignores a closed one or other work", () => {
+      const after = held(9, "[fitness] x", "OPEN", [event("User", 2 * MIN), event("Bot", MIN)]);
+      expect(path([after]).status).toBe("pass");
+      const before = held(9, "[fitness] x", "OPEN", [event("Bot", 2 * MIN), event("User", MIN)]);
+      expect(path([before]).reassign).toEqual([9]);
+      const closed = held(9, "[fitness] x", "CLOSED", [event("Bot", day), event("User", MIN)]);
+      expect(path([closed]).status).toBe("pass");
+      const mine = [held(9, "my own task", "OPEN", [event("Bot", day), event("User", MIN)])];
+      expect(path(mine).status).toBe("pass");
+    });
+
+    it("says in its own words that it does not prove the email or the watch", () => {
+      const text = contract("owner-assignment-path").mustBeTrue;
+      expect(text).toContain("does not prove");
+      expect(text).toContain("watch");
+    });
+  });
+
+  it("leaves the mail contract reading the mail outcome: this path does not satisfy it", () => {
+    expect(contract("alerts-reach-owner").mustBeTrue).toBe(
+      "A critical alert reaches the owner when they are not looking",
+    );
+    expect(judgeAlertReach(["OTHER"]).status).toBe("fail");
+  });
+
+  (existsSync(START) ? it : it.skip)(
+    "keeps the start script and this contract on one thread with one budget",
+    () => {
+      const script = readFileSync(START, "utf8");
+      const { attempts } = contract("bots-running");
+      expect(script).toContain('ISSUE_TITLE="[fitness] bots-running"');
+      expect(script).toContain(`START_MARKER='${attempts.marker}'`);
+      expect(script).toContain(`MAX_STARTS=${attempts.max}`);
+      expect(script).toContain(`WINDOW_HOURS=${attempts.windowHours}`);
+      expect(script).toContain(REOPENED_MARKER);
+    },
+  );
+});
 
 // ---- wiring: the real entrypoint against stub fly and gh ------------------------------------------
 
@@ -429,6 +904,7 @@ case "$1 $2" in
   "machine list") app "skynet-capital-bots --json" "$@"
     if [[ -f "$S/machines-first" ]]; then cat "$S/machines-first"; rm "$S/machines-first"; else cat "$S/machines"; fi ;;
   "machine exec") app "skynet-capital-bots --timeout" "$@"; [[ -f "$S/exec-hang" ]] && sleep 5; cat "$S/stamp" ;;
+  "machine start") cp "$S/machines-up" "$S/machines" ;;
   "secrets list") app "skynet-capital --json" "$@"; cat "$S/secrets" ;;
 esac
 `;
@@ -437,11 +913,24 @@ esac
 const STUB_GH = `#!/usr/bin/env bash
 S="$STUB"; echo "$*" >> "$S/gh-calls"
 case "$1 $2" in
-  "issue list") cat "$S/issues" ;;
+  "issue list")
+    if [[ "$*" == *--search* ]]; then
+      [[ -f "$S/closed-dead" ]] && { echo "HTTP 502" >&2; exit 1; }
+      cat "$S/closed"
+    else cat "$S/issues"; fi ;;
   "issue create") [[ -f "$S/gh-refuse" ]] && { echo "HTTP 502" >&2; exit 1; }; echo "https://github.com/x/y/issues/99" ;;
-  "issue comment"|"issue close") ;;
+  "api --method") [[ -f "$S/edit-refuse" ]] && { echo "HTTP 403" >&2; exit 1; } ;;
+  "issue comment"|"issue close"|"issue reopen") ;;
   api*)
     case "$2" in
+      *assignees/*)
+        [[ -f "$S/not-assignable" ]] && { echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
+        [[ -f "$S/assign-dead" ]] && { echo "gh: HTTP 502" >&2; exit 1; } ;;
+      graphql) [[ -f "$S/graphql-dead" ]] && { echo "gh: HTTP 502" >&2; exit 1; }; cat "$S/graphql" ;;
+      *issues/*/comments*)
+        [[ -f "$S/comments-dead" ]] && { echo "gh: HTTP 502" >&2; exit 1; }
+        [[ "$2" =~ issues/([0-9]+)/comments ]]; f="$S/comments-\${BASH_REMATCH[1]}"
+        if [[ -f "$f" ]]; then jq -c "$5" "$f"; fi ;;
       *commits/main) cat "$S/api-head" ;;
       *pipeline.yml/runs*) cat "$S/api-runs" ;;
       *compare/*) cat "$S/api-compare" ;;
@@ -451,10 +940,109 @@ esac
 exit 0
 `;
 
+// One GitHub that remembers, for the replay: both scripts read and write the same thread. Anything
+// else (deploy-lag's reads, the assignment path) falls through to the plain stub above.
+const STATEFUL_GH = `#!/usr/bin/env node
+const fs = require("node:fs");
+const { join } = require("node:path");
+const { spawnSync } = require("node:child_process");
+const S = process.env.STUB;
+const file = join(S, "threads.json");
+const argv = process.argv.slice(2);
+const db = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : { issues: [] };
+const save = () => fs.writeFileSync(file, JSON.stringify(db));
+const flag = (name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : undefined);
+const stamp = () => new Date().toISOString().replace(/\\.\\d{3}Z$/, "Z");
+const find = () => db.issues.find((i) => i.number === Number(argv[2]));
+const say = (issue, body) => issue.comments.push({ body, created_at: stamp() });
+const shape = (i) => ({
+  number: i.number,
+  title: i.title,
+  body: i.body,
+  state: i.state,
+  closedAt: i.closedAt,
+  createdAt: i.createdAt,
+  assignees: i.assignees.map((login) => ({ login })),
+  comments: i.comments.map((c) => ({ body: c.body })),
+});
+const op = argv[0] + " " + argv[1];
+if (op === "issue list") {
+  const rows = flag("--search") ? db.issues : db.issues.filter((i) => i.state === "OPEN");
+  console.log(JSON.stringify(rows.map(shape)));
+} else if (op === "issue create") {
+  const number = db.issues.length + 1;
+  const assignee = flag("--assignee");
+  db.issues.push({
+    number,
+    title: flag("--title"),
+    body: flag("--body"),
+    state: "OPEN",
+    createdAt: stamp(),
+    assignees: assignee ? [assignee] : [],
+    assigned: assignee ? 1 : 0,
+    comments: [],
+  });
+  save();
+  console.log("https://github.com/o/r/issues/" + number);
+} else if (op === "issue comment") {
+  say(find(), flag("--body"));
+  save();
+} else if (op === "issue close" || op === "issue reopen") {
+  const issue = find();
+  issue.state = op === "issue close" ? "CLOSED" : "OPEN";
+  issue.closedAt = op === "issue close" ? stamp() : undefined;
+  say(issue, flag("--comment"));
+  save();
+} else if (op === "api --method") {
+  const number = Number(argv[3].match(/issues\\/(\\d+)\\/assignees/)[1]);
+  const issue = db.issues.find((i) => i.number === number);
+  const login = argv[5].replace("assignees[]=", "");
+  if (argv[2] === "DELETE") issue.assignees = issue.assignees.filter((a) => a !== login);
+  else if (!issue.assignees.includes(login)) {
+    issue.assignees.push(login);
+    issue.assigned++;
+  }
+  save();
+} else if (argv[0] === "api" && /issues\\/\\d+\\/comments/.test(argv[1])) {
+  const number = Number(argv[1].match(/issues\\/(\\d+)\\/comments/)[1]);
+  const issue = db.issues.find((i) => i.number === number);
+  const rows = (issue ? issue.comments : []).map((c) => ({ ...c, user: { type: "Bot" } }));
+  const res = spawnSync("jq", ["-c", flag("--jq")], { input: JSON.stringify(rows), encoding: "utf8" });
+  process.stdout.write(res.stdout);
+} else {
+  const res = spawnSync(join(S, "gh-plain"), argv, { encoding: "utf8", env: process.env });
+  process.stdout.write(res.stdout ?? "");
+  process.stderr.write(res.stderr ?? "");
+  process.exit(res.status ?? 1);
+}
+`;
+
 const HEAD = "aaaaaaa0000000000000000000000000000000aa";
 const NEXT = "bbbbbbb0000000000000000000000000000000bb";
 const landed = `{"jobs":[{"name":"release · deploy","conclusion":"success"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"success"},{"name":"Smoke test the bots release","conclusion":"success"}]}]}`;
 const skipped = `{"jobs":[{"name":"release · deploy","conclusion":"failure"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"skipped"}]}]}`;
+
+/** The assignment-path reply: one piece of work a bot assigned him at `at`. */
+function graphqlReply(at: number, extra: unknown[] = []) {
+  const nodes = [
+    {
+      number: 4612,
+      title: "some work",
+      state: "OPEN",
+      timelineItems: {
+        nodes: [
+          {
+            createdAt: iso(at),
+            actor: { __typename: "Bot", login: "skynet-envoy" },
+            assignee: { login: "ejclark" },
+          },
+        ],
+      },
+    },
+    ...extra,
+  ];
+  return { data: { repository: { issues: { nodes } } } };
+}
 
 type World = {
   machine?: string;
@@ -464,6 +1052,9 @@ type World = {
   deploy?: "current" | "young" | "late" | "future" | "unreadable";
   issues?: unknown[];
   memoryHistory?: boolean | "none";
+  closed?: unknown[];
+  comments?: Record<number, unknown[]>;
+  assignedAgoMs?: number;
 };
 
 /** A stub world. Healthy by default: machine started, fresh stamp, secrets set, deploys current. */
@@ -482,6 +1073,14 @@ function fixture(world: World = {}) {
   const secrets = world.secrets ?? ["SKYNET_ALERT_EMAIL_API_KEY", "SKYNET_ALERT_EMAIL_FROM"];
   writeFileSync(join(stub, "secrets"), JSON.stringify(secrets.map((name) => ({ Name: name }))));
   writeFileSync(join(stub, "issues"), JSON.stringify(world.issues ?? []));
+  writeFileSync(join(stub, "closed"), JSON.stringify(world.closed ?? []));
+  for (const [n, rows] of Object.entries(world.comments ?? {})) {
+    writeFileSync(join(stub, `comments-${n}`), JSON.stringify(rows));
+  }
+  writeFileSync(
+    join(stub, "graphql"),
+    JSON.stringify(graphqlReply(now - (world.assignedAgoMs ?? 24 * 60 * MIN))),
+  );
   const deploy = world.deploy ?? "current";
   if (deploy !== "unreadable") {
     const head = deploy === "current" ? HEAD : NEXT;
@@ -574,6 +1173,7 @@ describe("fitness wiring", () => {
     expect(r("bots-responsive").status).toBe("pass");
     expect(r("main-deploys")).toMatchObject({ status: "pass", detail: "both apps current" });
     expect(r("alerts-reach-owner").status).toBe("pass");
+    expect(r("owner-assignment-path").status).toBe("pass");
     expect(r("memory-has-history")).toMatchObject({ status: "not-here", home: "session" });
     const fly = calls(stub, "fly");
     expect(fly).toContain("machine list -a skynet-capital-bots --json");
@@ -583,6 +1183,10 @@ describe("fitness wiring", () => {
     expect(fly).toContain("secrets list -a skynet-capital --json");
     expect(fly).not.toContain("exec standby1");
     expect(calls(stub, "gh")).toContain("api repos/{owner}/{repo}/commits/main");
+    expect(calls(stub, "gh")).toContain("api repos/{owner}/{repo}/assignees/ejclark");
+    expect(calls(stub, "gh")).toMatch(
+      /api graphql -F owner=\{owner\} -F name=\{repo\} -F who=ejclark -F since=\d{4}-\d\d-\d\dT/,
+    );
   });
 
   it("runs only the session contract in a session, and reads nothing from Fly there", () => {
@@ -593,7 +1197,13 @@ describe("fitness wiring", () => {
       status: "pass",
       detail: "1 folder(s) versioned",
     });
-    for (const id of ["bots-running", "bots-responsive", "main-deploys", "alerts-reach-owner"]) {
+    for (const id of [
+      "bots-running",
+      "bots-responsive",
+      "main-deploys",
+      "alerts-reach-owner",
+      "owner-assignment-path",
+    ]) {
       expect(r(id).status).toBe("not-here");
       expect(r(id).detail).toBe("runs in the clock, and this is the session");
     }
@@ -614,7 +1224,7 @@ describe("fitness wiring", () => {
       "fitness: would open [fitness] bots-running (not on CI, so nothing is written)",
     );
     expect(calls(stub, "gh")).toContain(
-      "issue list --state open --label bug --json number,title,body,comments --limit 200",
+      "issue list --state open --label bug --json number,title,body,comments,createdAt,assignees --limit 200",
     );
     expect(calls(stub, "gh")).not.toContain("issue create");
   });
@@ -640,7 +1250,7 @@ describe("fitness wiring", () => {
     expect(recovered.stdout).toContain("::warning::fitness: bots-running probe crashed");
   });
 
-  it("reports a dead Fly as unknown with the cause kept, and opens one unassigned issue for it", () => {
+  it("reports a dead Fly token as unknown with the cause kept, and assigns its one issue at once", () => {
     const stub = fixture();
     writeFileSync(join(stub, "fly-dead"), "");
     const res = run(stub, ["--json", "--report"]);
@@ -654,10 +1264,25 @@ describe("fitness wiring", () => {
     expect(res.stdout).toContain("exited 1: Error: token expired");
     const gh = calls(stub, "gh");
     expect(lines(gh, "issue create")).toBe(1);
-    expect(gh).toContain("issue create --title [fitness] cannot read Fly --label bug --body");
-    expect(gh).not.toContain("--assignee");
+    // Only he can set a credential, so the blind issue goes straight to him.
+    expect(gh).toContain(
+      "issue create --title [fitness] cannot read Fly --label bug --assignee ejclark --body",
+    );
     expect(gh).not.toContain("[fitness] bots-running");
     expect(res.stdout).toContain("fitness: open-blind [fitness] cannot read Fly");
+  });
+
+  it("opens a blind issue unassigned when the read failed for any other reason", () => {
+    const stub = fixture();
+    writeFileSync(
+      join(stub, "fly"),
+      '#!/usr/bin/env bash\necho "$*" >> "$STUB/fly-calls"\necho "Error: 503 service unavailable" >&2\nexit 1\n',
+    );
+    run(stub, ["--report"]);
+    const gh = calls(stub, "gh");
+    expect(gh).toContain("issue create --title [fitness] cannot read Fly --label bug --body");
+    expect(gh).not.toContain("--assignee");
+    expect(gh).toContain("the owner, once these have been blind for 2 hours");
   });
 
   it("closes the blind issue once Fly reads again", () => {
@@ -709,20 +1334,251 @@ describe("fitness wiring", () => {
     expect(lines(calls(dead, "gh"), "commits/main")).toBe(2);
   });
 
-  it("opens a failing contract's issue on the clock, assigned to the owner, and exits 0 under --report", () => {
+  it("opens a failing contract's issue on the clock, unassigned, and exits 0 under --report", () => {
     const stub = fixture({ machine: "stopped" });
     const res = run(stub, ["--report"]);
     expect(res.status).toBe(0);
     expect(res.stdout).toContain("FAIL     bots-running: machine is stopped");
     expect(res.stdout).toContain("fitness: open [fitness] bots-running");
     const gh = calls(stub, "gh");
-    expect(gh).toContain(
-      "issue create --title [fitness] bots-running --label bug --assignee ejclark --body",
-    );
+    expect(gh).toContain("issue create --title [fitness] bots-running --label bug --body");
     expect(gh).toContain("**What failed:** machine is stopped.");
+    expect(gh).not.toContain("--assignee");
+    expect(gh).toContain("The owner is assigned only once those are spent");
     expect(lines(gh, "issue create")).toBe(1);
     // Without --report the failure is the exit code.
     expect(run(fixture({ machine: "stopped" }), []).status).toBe(1);
+  });
+
+  it("opens a credential contract's issue assigned to the owner, in the same call", () => {
+    const stub = fixture({ secrets: ["OTHER"] });
+    const res = run(stub, ["--report"]);
+    expect(res.status).toBe(0);
+    expect(calls(stub, "gh")).toContain(
+      "issue create --title [fitness] alerts-reach-owner --label bug --assignee ejclark --body",
+    );
+    expect(calls(stub, "gh")).toContain("Only the owner can fix this");
+  });
+
+  it("assigns under the clock's token, then says why once, with the marker the next tick reads", () => {
+    const open = {
+      number: 7,
+      title: "[fitness] bots-running",
+      body: "**What failed:** machine is stopped.",
+      comments: [],
+      createdAt: iso(Date.now() - 10 * MIN),
+      assignees: [],
+    };
+    const mine = { user: { type: "Bot" }, body: "<!-- bots-start-stopped:start -->" };
+    const stub = fixture({
+      machine: "stopped",
+      issues: [open],
+      comments: {
+        7: [1, 2, 3].map(() => ({ ...mine, created_at: iso(Date.now() - MIN) })),
+      },
+    });
+    const res = run(stub, ["--report"]);
+    expect(res.status).toBe(0);
+    const gh = calls(stub, "gh");
+    expect(gh).toContain("api repos/{owner}/{repo}/issues/7/comments?per_page=100 --paginate --jq");
+    const edit = gh.indexOf(
+      "api --method POST repos/{owner}/{repo}/issues/7/assignees -f assignees[]=ejclark",
+    );
+    const said = gh.indexOf("issue comment 7 --body Assigned to the owner:");
+    expect(edit).toBeGreaterThan(-1);
+    expect(said).toBeGreaterThan(edit);
+    expect(gh).toContain(ASSIGNED_MARKER);
+    expect(res.stdout).toContain("fitness: assign [fitness] bots-running");
+  });
+
+  it("does not claim an assignment GitHub refused: the next tick tries again", () => {
+    const open = {
+      number: 7,
+      title: "[fitness] alerts-reach-owner",
+      body: "**What failed:** alerts reach nobody: SKYNET_ALERT_EMAIL_FROM not set.",
+      comments: [],
+      createdAt: iso(Date.now() - 10 * MIN),
+      assignees: [],
+    };
+    const stub = fixture({ secrets: ["SKYNET_ALERT_EMAIL_API_KEY"], issues: [open] });
+    writeFileSync(join(stub, "edit-refuse"), "");
+    const res = run(stub, ["--report"]);
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("fitness: COULD NOT assign [fitness] alerts-reach-owner");
+    expect(calls(stub, "gh")).not.toContain("issue comment 7");
+  });
+
+  it("prints what it would assign in a session and writes nothing, since a self-assignment mails no one", () => {
+    const open = {
+      number: 7,
+      title: "[fitness] alerts-reach-owner",
+      body: "**What failed:** alerts reach nobody: SKYNET_ALERT_EMAIL_FROM not set.",
+      comments: [],
+      createdAt: iso(Date.now() - 10 * MIN),
+      assignees: [],
+    };
+    const stub = fixture({ secrets: ["SKYNET_ALERT_EMAIL_API_KEY"], issues: [open] });
+    const res = run(stub, ["--here", "clock", "--report"], { GITHUB_ACTIONS: "" });
+    expect(res.stdout).toContain("fitness: would assign [fitness] alerts-reach-owner");
+    const gh = calls(stub, "gh");
+    expect(gh).not.toContain("--method");
+    expect(gh).not.toContain("issue comment");
+  });
+
+  it("holds and warns when an unassigned thread's comments cannot be read", () => {
+    const open = {
+      number: 7,
+      title: "[fitness] alerts-reach-owner",
+      body: "**What failed:** alerts reach nobody: SKYNET_ALERT_EMAIL_FROM not set.",
+      comments: [],
+      createdAt: iso(Date.now() - 10 * MIN),
+      assignees: [],
+    };
+    const stub = fixture({ secrets: ["SKYNET_ALERT_EMAIL_API_KEY"], issues: [open] });
+    writeFileSync(join(stub, "comments-dead"), "");
+    const res = run(stub, ["--report"]);
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("::warning::fitness: cannot read the comments on #7");
+    expect(calls(stub, "gh")).not.toContain("--method");
+  });
+
+  it("spends no comment read on a thread he already holds", () => {
+    const open = {
+      number: 7,
+      title: "[fitness] alerts-reach-owner",
+      body: "**What failed:** alerts reach nobody: SKYNET_ALERT_EMAIL_FROM not set.",
+      comments: [],
+      createdAt: iso(Date.now() - 10 * MIN),
+      assignees: [{ login: "ejclark" }],
+    };
+    const stub = fixture({ secrets: ["SKYNET_ALERT_EMAIL_API_KEY"], issues: [open] });
+    run(stub, ["--report"]);
+    expect(calls(stub, "gh")).not.toContain("issues/7/comments");
+    expect(calls(stub, "gh")).not.toContain("--method");
+  });
+
+  it("reopens a recently closed thread with one line, through gh, and unassigns first", () => {
+    const thread = {
+      number: 7,
+      title: "[fitness] bots-responsive",
+      state: "CLOSED",
+      closedAt: iso(Date.now() - 60 * MIN),
+      createdAt: iso(Date.now() - 90 * MIN),
+      assignees: [{ login: "ejclark" }],
+    };
+    const stub = fixture({ stampAgeMs: 60 * MIN, closed: [thread] });
+    run(stub, ["--report"]);
+    const gh = calls(stub, "gh");
+    expect(gh).toContain("issue list --state all --search");
+    const removed = gh.indexOf(
+      "api --method DELETE repos/{owner}/{repo}/issues/7/assignees -f assignees[]=ejclark",
+    );
+    const reopened = gh.indexOf("issue reopen 7 --comment The fix did not hold:");
+    expect(removed).toBeGreaterThan(-1);
+    expect(reopened).toBeGreaterThan(removed);
+    expect(gh).toContain(REOPENED_MARKER);
+    expect(gh).not.toContain("issue create");
+    expect(gh).not.toContain("--method POST");
+  });
+
+  it("files a new issue with a warning when the closed threads cannot be read", () => {
+    const stub = fixture({ stampAgeMs: 60 * MIN });
+    writeFileSync(join(stub, "closed-dead"), "");
+    const res = run(stub, ["--report"]);
+    expect(res.stdout).toContain("::warning::fitness: cannot read closed fitness issues");
+    expect(calls(stub, "gh")).toContain("issue create --title [fitness] bots-responsive");
+  });
+
+  it("looks for closed threads only when a failure has no open issue", () => {
+    const quietWorld = fixture();
+    run(quietWorld, ["--report"]);
+    expect(calls(quietWorld, "gh")).not.toContain("--search");
+  });
+
+  it("reads bots-responsive as quiet while the machine is down, so one stop opens one issue", () => {
+    const stub = fixture({ machine: "stopped" });
+    const res = run(stub, ["--json", "--report"]);
+    const r = results(res);
+    expect(r("bots-responsive").status).toBe("quiet");
+    expect(calls(stub, "fly")).not.toContain("machine exec");
+    const gh = calls(stub, "gh");
+    expect(lines(gh, "issue create")).toBe(1);
+    expect(gh).toContain("issue create --title [fitness] bots-running");
+  });
+
+  it("gives a machine that just started until the stamp catches up, and no longer", () => {
+    const started = (agoMs: number) =>
+      `[{"id":"m1","state":"started","config":{},"events":[{"type":"exit","timestamp":${Date.now()}},{"type":"start","timestamp":${Date.now() - agoMs}}]}]`;
+    const fresh = results(
+      run(fixture({ machines: started(MIN), stampAgeMs: 60 * MIN }), ["--json"]),
+    );
+    expect(fresh("bots-responsive").status).toBe("quiet");
+    const late = results(
+      run(fixture({ machines: started(6 * MIN), stampAgeMs: 60 * MIN }), ["--json"]),
+    );
+    expect(late("bots-responsive").status).toBe("fail");
+    // The grace answers a stale stamp only: a fresh stamp still passes.
+    const ok = results(run(fixture({ machines: started(MIN) }), ["--json"]));
+    expect(ok("bots-responsive").status).toBe("pass");
+  });
+
+  it("reads the assignment path: a 404 fails, any other failed read is unknown, never a pass", () => {
+    const missing = fixture();
+    writeFileSync(join(missing, "not-assignable"), "");
+    expect(results(run(missing, ["--json"]))("owner-assignment-path")).toMatchObject({
+      status: "fail",
+      detail: "the owner cannot be assigned on this repository",
+    });
+    const dead = fixture();
+    writeFileSync(join(dead, "assign-dead"), "");
+    expect(results(run(dead, ["--json"]))("owner-assignment-path").status).toBe("unknown");
+    const blind = fixture();
+    writeFileSync(join(blind, "graphql-dead"), "");
+    expect(results(run(blind, ["--json"]))("owner-assignment-path")).toMatchObject({
+      status: "unknown",
+      detail: "cannot read GitHub",
+    });
+  });
+
+  it("files the assignment path's staleness as an issue assigned to him: that issue is the test", () => {
+    const stub = fixture({ assignedAgoMs: 31 * 24 * 60 * MIN });
+    run(stub, ["--report"]);
+    expect(calls(stub, "gh")).toContain(
+      "issue create --title [fitness] owner-assignment-path --label bug --assignee ejclark --body",
+    );
+  });
+
+  it("re-assigns a person-made assignment through gh: off, then on, then one line", () => {
+    const stub = fixture();
+    const self = {
+      number: 6501,
+      title: "[fitness] alerts-reach-owner",
+      state: "OPEN",
+      timelineItems: {
+        nodes: [
+          {
+            createdAt: iso(Date.now() - MIN),
+            actor: { __typename: "User", login: "ejclark" },
+            assignee: { login: "ejclark" },
+          },
+        ],
+      },
+    };
+    writeFileSync(join(stub, "graphql"), JSON.stringify(graphqlReply(Date.now(), [self])));
+    run(stub, ["--report"]);
+    const gh = calls(stub, "gh");
+    const off = gh.indexOf(
+      "api --method DELETE repos/{owner}/{repo}/issues/6501/assignees -f assignees[]=ejclark",
+    );
+    const on = gh.indexOf(
+      "api --method POST repos/{owner}/{repo}/issues/6501/assignees -f assignees[]=ejclark",
+    );
+    const said = gh.indexOf("issue comment 6501 --body Re-assigned under the bot");
+    expect(off).toBeGreaterThan(-1);
+    expect(on).toBeGreaterThan(off);
+    expect(said).toBeGreaterThan(on);
+    // The path's own thread opens unassigned: the re-assign is the one email.
+    expect(gh).toContain("issue create --title [fitness] owner-assignment-path --label bug --body");
   });
 
   it("comments on a changed cause and closes on a pass, through gh", () => {
@@ -755,6 +1611,96 @@ describe("fitness wiring", () => {
     run(healed, ["--report"]);
     expect(calls(healed, "gh")).toContain("issue close 7 --comment Passing again: started.");
   });
+
+  // The oracle for this slice: the real start script and the real report, tick after tick, against
+  // one GitHub that keeps state. The clock skips the report after the start script exits 3 until the
+  // held workflow change lands, so this is the order that change gives it.
+  (existsSync(START) ? it : it.skip)(
+    "replays a machine that keeps stopping: one thread, no assignment until the budget is spent, one comment for it",
+    () => {
+      const stub = fixture({ machine: "stopped" });
+      const plain = readFileSync(join(stub, "gh"), "utf8");
+      writeFileSync(join(stub, "gh-plain"), plain);
+      chmodSync(join(stub, "gh-plain"), 0o755);
+      writeFileSync(join(stub, "gh"), STATEFUL_GH);
+      chmodSync(join(stub, "gh"), 0o755);
+      const down = readFileSync(join(stub, "machines"), "utf8");
+      const up = down.replace(
+        '"state":"stopped","config":{"env"',
+        '"state":"started","config":{"env"',
+      );
+      expect(up).not.toBe(down);
+      writeFileSync(join(stub, "machines-up"), up);
+      const crash = () => writeFileSync(join(stub, "machines"), down);
+      const db = () =>
+        JSON.parse(readFileSync(join(stub, "threads.json"), "utf8")) as {
+          issues: {
+            number: number;
+            title: string;
+            state: string;
+            assignees: string[];
+            assigned: number;
+            comments: { body: string }[];
+          }[];
+        };
+      const tick = () => {
+        const started = spawnSync("bash", [START, "skynet-capital-bots", "--report"], {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            STUB: stub,
+            FLY_BIN: join(stub, "fly"),
+            GH_BIN: join(stub, "gh"),
+            BOTS_START_WAIT_SECS: "1",
+            BOTS_POLL_SECS: "1",
+          },
+        });
+        expect(run(stub, ["--report"]).status).toBe(0);
+        return started.status;
+      };
+      const onlyThread = () => {
+        const [thread, ...others] = db().issues;
+        expect(others).toEqual([]);
+        if (!thread) throw new Error("no thread was filed");
+        return thread;
+      };
+      const said = (needle: string) =>
+        db()
+          .issues.flatMap((i) => i.comments)
+          .filter((c) => c.body.includes(needle)).length;
+
+      // Three crashes, three starts. Each heals in its own tick, so the thread opens and closes
+      // three times, and he is never assigned.
+      for (const i of [0, 1, 2]) {
+        crash();
+        expect(tick()).toBe(0);
+        const thread = onlyThread();
+        expect(thread.title).toBe("[fitness] bots-running");
+        expect(thread.state).toBe("CLOSED");
+        expect(thread.assigned).toBe(0);
+        expect(said("<!-- bots-start-stopped:start -->")).toBe(i + 1);
+        expect(said(REOPENED_MARKER)).toBe(i);
+      }
+      // The fourth: the budget is spent, the machine stays down, and now he hears, exactly once.
+      crash();
+      expect(tick()).toBe(3);
+      const spent = onlyThread();
+      expect(spent.state).toBe("OPEN");
+      expect(spent.assignees).toEqual(["ejclark"]);
+      expect(spent.assigned).toBe(1);
+      expect(said(ASSIGNED_MARKER)).toBe(1);
+      // A standing failure says nothing more.
+      expect(tick()).toBe(3);
+      const standing = onlyThread();
+      expect(standing.comments).toHaveLength(spent.comments.length);
+      expect(standing.assigned).toBe(1);
+      expect(said(REOPENED_MARKER)).toBe(3);
+      // A pass closes it.
+      writeFileSync(join(stub, "machines"), up);
+      expect(tick()).toBe(0);
+      expect(onlyThread().state).toBe("CLOSED");
+    },
+  );
 
   it("prints a refused write and still exits 0, because the next tick retries it", () => {
     const stub = fixture({ machine: "stopped" });
