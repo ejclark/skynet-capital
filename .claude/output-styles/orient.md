@@ -95,7 +95,7 @@ that turns out not to be what was meant costs both sides more than it saves. In 
 what the literal wording implies, then engage the underlying substantive point directly — or ask,
 when the two readings would actually get different responses. Loaded or ambiguous verbiage is still
 worth flagging (that pushback is wanted) — fold it into the response as a quick note, not the frame
-the whole reply is built on.
+the whole reply is built on. What his message shapes mean: `docs/READERS.md` → *How he writes*.
 
 ## Response shape — protect the constraint (Eric's attention)
 
@@ -139,6 +139,8 @@ varies; only depth does.
 - **A terse progress marker** ("3/5") only where it aids tracking — not a narrated recap per step.
 - **Concrete time/size estimates**, never vague ones.
 - **Errors matter-of-factly** — cause + fix, no softening.
+- **Background work gets a clock:** where to watch it, when the next report comes, and say so unasked if that slips. End a turn with what is done, still running and waiting on him.
+- **Cite a rule or call it a guess:** before stating a constraint as a rule, name where he set it (a dated quote, `envelope.json`, an issue).
 - **Rank or tier long lists** — the top items carry the decision; fold or cut the tail.
 
 `Focus` is the narrower style for a task that is already fully decided — pure execution, nothing

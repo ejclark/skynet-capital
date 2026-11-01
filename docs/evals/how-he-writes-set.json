@@ -1,0 +1,569 @@
+{
+  "header": {
+    "what": "Real messages of Eric's, each with what a session reading it correctly would do, so the page in docs/READERS.md (How he writes) can be tested instead of assumed. Run with .claude/workflows/intent-replay.js; score with scripts/intent-replay.mjs.",
+    "built": "On 2026-11-01, from the typed chat messages and GitHub comments of his on this machine, split by session. Three analysts read one part and wrote the page. One case author read only the other part, never saw the page or its source, and wrote 29 cases, skipping 24 rows with no evidence or that he plainly did not type. Ground truth is his next message accepting, correcting or repeating; with no next message, only what the message itself plainly says. Words are his when short and safe, otherwise a paraphrase that keeps length, tone and shape.",
+    "adding": "When a correction of his recurs, /dream or /retro adds a case here in the same PR, with what his next message showed as the evidence. A capitalised word must be in wordsThatAreNotNames or the set fails: that is how a member's name is kept out, since a name has no shape.",
+    "howThisCouldFlatterThePage": [
+      "A gap of a point or two is noise: in the baseline one arm moved a point between its own two runs, and the page's lead was two points of 58.",
+      "The page and the cases come from one person over the same weeks. The split is by session, so a habit in both parts is learned from one and tested on the other, which is a fair test of the habit and no test of a new one.",
+      "A case added later through /dream or /retro is not blind if the page already holds that correction. The first 29 (M01 to M29) are the blind ones: read them apart once others join.",
+      "The judge reads answers unlabelled, but an answer that echoes the page's wording can still be told apart by its style, and the judge sees mustDo phrases written by one author, so it can reward a reading that author happened to share.",
+      "8 of the 29 cases have no next message, so their truth is the case author's reading of the words alone. That can flatter either arm.",
+      "It scores a one-line first move, not a whole turn. What the hand read found breaks his flow most (no status clock, faults he spots first, rules stated without a source) happens around a message, so this neither credits nor blames the page for those.",
+      "Both arms load the project's CLAUDE.md, so this measures the page on top of it, not the page against nothing. Any output style a worker inherits reaches both arms the same way.",
+      "The baseline answerers read the page from a file and could read others; a repeat embeds it in the prompt and forbids other reads, which is cleaner and could move the score by itself. Compare a repeat with the baseline loosely."
+    ],
+    "baseline": {
+      "date": "2026-11-01",
+      "runsPerArm": 2,
+      "cases": 29,
+      "of": 58,
+      "tier": "answerers opus at medium effort, judge opus at high effort",
+      "without": {
+        "route": 37,
+        "ask": 50,
+        "judged": 49
+      },
+      "with": {
+        "route": 36,
+        "ask": 49,
+        "judged": 51
+      },
+      "byRun": {
+        "without-1": {
+          "route": 19,
+          "ask": 24,
+          "judged": 25,
+          "answered": 29
+        },
+        "without-2": {
+          "route": 18,
+          "ask": 26,
+          "judged": 24,
+          "answered": 29
+        },
+        "with-1": {
+          "route": 18,
+          "ask": 24,
+          "judged": 26,
+          "answered": 29
+        },
+        "with-2": {
+          "route": 18,
+          "ask": 25,
+          "judged": 25,
+          "answered": 29
+        }
+      },
+      "reading": "The page did not move route or ask, and led the judged score by two points of 58, which is inside the noise. Its value as a reading aid is unproven."
+    },
+    "wordsThatAreNotNames": [
+      "Account",
+      "Actions",
+      "After",
+      "At",
+      "Banker",
+      "Between",
+      "Can",
+      "Council",
+      "Current",
+      "Deep",
+      "Done",
+      "Error",
+      "Fifth",
+      "First",
+      "Fourteen",
+      "Fourth",
+      "From",
+      "GitHub",
+      "He",
+      "His",
+      "In",
+      "It",
+      "Manually",
+      "Mid",
+      "My",
+      "No",
+      "Note",
+      "Nothing",
+      "Playbooks",
+      "Provide",
+      "Read",
+      "Right",
+      "Same",
+      "Session",
+      "Should",
+      "Shouldn",
+      "Ten",
+      "The",
+      "Thirty",
+      "This",
+      "To",
+      "Try",
+      "Tuesday",
+      "TypeScript",
+      "Use",
+      "We",
+      "Where",
+      "Which"
+    ]
+  },
+  "cases": [
+    {
+      "id": "M01",
+      "date": "2026-09-11",
+      "said": "I would like to consolidate the sections within Account to be accessible on a singular page/view. Use progressive disclosure techniques to make all the information easily accessible without overwhelming users by a firehose of information; user experience is the north star.",
+      "context": "First message of a fresh session, with a screenshot of the Account screen attached.",
+      "route": "act-now",
+      "ask": "may-ask",
+      "mustDo": [
+        "treat it as a go on redesigning the Account screen into one page with progressive disclosure",
+        "keep every existing section reachable from the one page"
+      ],
+      "mustNotDo": [
+        "ask him which sections to keep or which to show first",
+        "drop information to make the page shorter"
+      ],
+      "evidence": "No next message; the message itself states the target (one page), the technique (progressive disclosure) and the ranking rule (UX first).",
+      "confidence": "medium"
+    },
+    {
+      "id": "M02",
+      "date": "2026-10-01",
+      "said": "1. why do we have 4 items in WIP when we only allow 3 items? 2. why are all the columns reflect significant progress yet aren't in WIP lane?",
+      "context": "Session start, with a screenshot of the kanban board attached.",
+      "route": "question",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "answer both numbered questions with what the board actually shows",
+        "name which paths put work in progress without touching the WIP lane"
+      ],
+      "mustNotDo": [
+        "move cards or change the WIP limit",
+        "answer with an A/B/C option menu and a 'reply A, B or C' prompt"
+      ],
+      "evidence": "His next message was a third question ('what is the difference between work in progress and started'), not a pick from the A/B/C the session offered.",
+      "confidence": "high"
+    },
+    {
+      "id": "M03",
+      "date": "2026-10-01",
+      "said": "will all new work that gets started move into the WIP lane?",
+      "context": "Fourth question in a row about the board; the session had ended each previous answer with 'say go and I'll write the issue and build it'.",
+      "route": "question",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "give a plain yes or no",
+        "name the paths that start work without crossing the lane"
+      ],
+      "mustNotDo": ["end with another 'say go' pitch", "treat the question as a go to build"],
+      "evidence": "His next message used the answer: 'My gut tells me we should close a lot of these gaps', naming the paths the answer had listed.",
+      "confidence": "high"
+    },
+    {
+      "id": "M04",
+      "date": "2026-10-01",
+      "said": "My gut tells me we should close a lot of these gaps. The overall intent is to invest in process automation to enable me to focus more time and thought on research/planning. Manually starting a new session still has the capability to directly build a PR as mentioned, but it feels like we should be able to close off most-all of the other paths to effectively drive work through the kanban board",
+      "context": "After the session answered that several paths start work without crossing the board.",
+      "route": "act-now",
+      "ask": "may-ask",
+      "mustDo": [
+        "accept the intent: route all development work through the board",
+        "plan which bypass paths to close and start on it"
+      ],
+      "mustNotDo": [
+        "push back with a measurement taken before the board policy started",
+        "treat 'my gut tells me' as a hypothesis to shelve"
+      ],
+      "evidence": "His next message quoted the session's 7-day measurement and rejected it: board-driven work had started under 48 hours earlier, so the 7-day figure was meaningless.",
+      "confidence": "high"
+    },
+    {
+      "id": "M05",
+      "date": "2026-10-01",
+      "said": "He quoted the session's measured objection (579 PRs merged in 7 days, only 16% naming an issue) and wrote: the last half of last week was planning to build the backlog, Tuesday is when I told work to start through the kanban board, so we are not even 48 hours in and your 7 days of data mean nothing.",
+      "context": "The session had just raised a measured objection to routing all work through the board.",
+      "route": "correction",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "drop the objection and restart the measurement from the day the board policy began",
+        "proceed with closing the bypass paths"
+      ],
+      "mustNotDo": ["defend the 7-day figure", "ask for a fresh go"],
+      "evidence": "His next message began 'To be clear.. the intent is to drive development work through the kanban board' and restated the hypothesis, which means he still had to repeat himself.",
+      "confidence": "high"
+    },
+    {
+      "id": "M06",
+      "date": "2026-10-01",
+      "said": "To be clear.. the intent is to drive development work through the kanban board. My hypothesis - success on this front will significantly increase throughput and quality. Current state: * items in the backlog get actively worked * items in ready column get actively worked * items in WIP lane don't respect WIP limit",
+      "context": "After the session had replied 'Nothing new: that notice is the slice 1 report I already summarized above' to his previous message.",
+      "route": "declare",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "record the intent and the hypothesis as the plan's stated outcome",
+        "treat the three current-state lines as the gaps the plan closes"
+      ],
+      "mustNotDo": [
+        "reply that there is nothing new",
+        "treat the message as a notification or a duplicate"
+      ],
+      "evidence": "He re-sent the same message two minutes later with the hypothesis sharpened ('higher quality with a much more efficient token burn') after the session again answered 'Nothing new'.",
+      "confidence": "high"
+    },
+    {
+      "id": "M07",
+      "date": "2026-10-01",
+      "said": "if I refresh the page 1-2 times, I can consistently get a 502 error loading the page. I also get 502s when clicking around to a few links. It feels like our server is janky af.",
+      "context": "First message of a fresh session, with a screenshot of the error attached.",
+      "route": "act-now",
+      "ask": "may-ask",
+      "mustDo": [
+        "treat it as a production incident and find the causes",
+        "name each cause plainly so he can rank them"
+      ],
+      "mustNotDo": ["restart the server and call it fixed", "dismiss it as a transient blip"],
+      "evidence": "His next message ranked the causes the session had named (merge cadence, code before memory, why raw TypeScript is deployed), so naming causes was the right move.",
+      "confidence": "high"
+    },
+    {
+      "id": "M08",
+      "date": "2026-10-01",
+      "said": "1. research merging commits every minute feels beyond excessive - worth interrogating this process 2. lets optimize code first then reassess 3. why are we deploying raw ts/tsx? Shouldn't we be deploying production builds that are optimized for performance when deploying?",
+      "context": "The session had proposed three fixes for the 502s, including a memory bump, and asked 'Should I build all three now?'",
+      "route": "decision",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "build the code fix (compiled production build) first and hold the memory bump",
+        "question the once-a-minute research merge cadence as its own item"
+      ],
+      "mustNotDo": [
+        "build all three including the memory bump",
+        "answer item 3 as a pure question without acting on it"
+      ],
+      "evidence": "No next message; 'optimize code first then reassess' answers the 'all three now?' question with a no on the memory bump, and item 3 is a request wearing a question's shape.",
+      "confidence": "high"
+    },
+    {
+      "id": "M09",
+      "date": "2026-10-01",
+      "said": "I feel like a ton of PRs were merged today and a bunch of issues created, but am highly skeptical on the value to the customer that was actually deployed today - elevator pitch level recap?",
+      "context": "First message of a fresh session late in the evening.",
+      "route": "status-check",
+      "ask": "must-not-ask",
+      "mustDo": ["give a short recap of today's shipped work in member-value terms"],
+      "mustNotDo": ["list PRs by number or count", "defend the volume of merges"],
+      "evidence": "No next message; 'elevator pitch level recap' names the shape he wants, and 'skeptical on the value to the customer' names the lens.",
+      "confidence": "high"
+    },
+    {
+      "id": "M10",
+      "date": "2026-10-02",
+      "said": "nearly all, possibly all of our automatic trades are currently forced trades at the end of the day per instruction to make the best trades on the condition which served as a means to ensure trading capabilities was online and other similar behaviors. 1. I would like to ensure that all playbooks are online 2. I would like to observe all playbooks making trades 3. I would like to keep track of stats on trades executed as result of a playbook initiated action",
+      "context": "First message of a fresh session.",
+      "route": "act-now",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "take the three numbered items as the work list and start on them",
+        "verify every playbook is actually running, not just configured"
+      ],
+      "mustNotDo": ["ask which item to do first", "treat it as a discussion to plan"],
+      "evidence": "His next message, 39 minutes later, was a new idea; he did not correct the build the session had started on the list.",
+      "confidence": "high"
+    },
+    {
+      "id": "M11",
+      "date": "2026-10-02",
+      "said": "I would like to craft a playbook around high-premium stocks like one he named. I expect this to perform regular trades on the ongoing fluctuations. At a high level: lets you add a symbol to execute against; research on the symbol to understand cycles/signals and influence execution; eventually a path to multiple symbols, nice inside the playbook, but concerns about complications such as capital allocation competing by symbol.",
+      "context": "Mid-session, after the session reported progress on the earlier playbook work list.",
+      "route": "fan-out",
+      "ask": "may-ask",
+      "mustDo": [
+        "shape it into a plan with the open calls named (which bot runs it, where add-a-symbol lives)",
+        "propose an answer for each call rather than a bare list of questions"
+      ],
+      "mustNotDo": [
+        "start building multi-symbol support now",
+        "treat the hedged parts ('eventually', 'concerns') as settled requirements"
+      ],
+      "evidence": "His next message quoted one of the session's named calls ('Which bot runs it') and answered it with a requirement.",
+      "confidence": "high"
+    },
+    {
+      "id": "M12",
+      "date": "2026-10-02",
+      "said": "> Which bot runs it. I proposed the Banker, since its persona is already about income. The architecture needs to support a bot account to be able to subscribe and unsubscribe to a playbook through the web application. In season 2, this behavior will be opened up to all accounts (human and bot)",
+      "context": "He is answering, by quotation, the first open call the session listed on the playbook plan.",
+      "route": "decision",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "record the requirement on the plan: bot accounts subscribe and unsubscribe through the app, opened to all accounts in season 2",
+        "accept the bot choice as not the point"
+      ],
+      "mustNotDo": ["re-ask which bot", "build subscription for human accounts now"],
+      "evidence": "His next message quoted the session's next call and moved on; he never revisited this one.",
+      "confidence": "high"
+    },
+    {
+      "id": "M13",
+      "date": "2026-10-02",
+      "said": "> Where 'add a symbol' lives in the app. This needs more refinement/thought. From a usability perspective, it is desirable to funnel symbols towards strategies that match the characteristics of a stock. Playbooks define our strategy for a specific play execution catered for certain scenarios, so it makes sense to organize/group symbols onto that vehicle. Note - the event of adding a symbol into a playbook - some research to understand the behaviors, cycles, etc. feels warranted in order to influence behavior.",
+      "context": "He is answering, by quotation, the second open call on the playbook plan.",
+      "route": "decision",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "record the placement call: symbols are added inside a playbook, and adding one triggers research",
+        "mark it as a direction still being refined, not a final spec"
+      ],
+      "mustNotDo": [
+        "start building the add-a-symbol form",
+        "ask him to pick a page or route for it"
+      ],
+      "evidence": "His next message extended the same thread with a sub-structure inside playbooks, building on symbols-under-playbook as settled.",
+      "confidence": "medium"
+    },
+    {
+      "id": "M14",
+      "date": "2026-10-02",
+      "said": "Try again",
+      "context": "The session's previous turn ended in 'API Error: Can't reach the API server'.",
+      "route": "act-now",
+      "ask": "must-not-ask",
+      "mustDo": ["redo the turn that failed, from his last real message"],
+      "mustNotDo": [
+        "ask what to retry",
+        "treat 'Try again' as a new instruction about the product"
+      ],
+      "evidence": "The turn before it is an API error; his next message six minutes later was new content, with no complaint.",
+      "confidence": "high"
+    },
+    {
+      "id": "M15",
+      "date": "2026-10-02",
+      "said": "my primary goal for playbooks is to get a few playbooks configured and dialed in with detail to target getting more effective data points for further refinement. The forced action to buy stocks is a bare-minimum action that is not the best data point.",
+      "context": "After a long back-and-forth on playbook structure; the session had just queued a bug fix and research as next.",
+      "route": "declare",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "record the goal on the plan: a few well-configured playbooks producing signal-driven trades",
+        "put configuring real playbooks ahead of more structure work in the queue"
+      ],
+      "mustNotDo": ["count the forced end-of-day trades as playbooks trading"],
+      "evidence": "No usable next (an outage retry); the message plainly ranks real configured playbooks over the placeholder forced trades.",
+      "confidence": "medium"
+    },
+    {
+      "id": "M16",
+      "date": "2026-10-11",
+      "said": "Done with steering round design-5163-r0: 1 of 1 answered. Read it back.",
+      "context": "A Done press on a redesign round page, relayed as an artifact comment; the session had said a Done press would bring back his picks and notes.",
+      "route": "act-now",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "read back his picks and pinned notes, post them on the plan issue, and draw the next round"
+      ],
+      "mustNotDo": [
+        "ask him to confirm before reading back",
+        "answer the comment thread and stop there"
+      ],
+      "evidence": "The words say read it back; his next message a day later was a process change, not a repeat or a correction.",
+      "confidence": "high"
+    },
+    {
+      "id": "M17",
+      "date": "2026-10-11",
+      "said": "i wish the thumbs up/down/mixed signal form/process also allowed for commentary to expand on context",
+      "context": "Between two redesign rounds; the round page offered only keep/change/mixed reactions on each pin.",
+      "route": "fan-out",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "treat it as a request to change the review tool: a comment field beside each reaction",
+        "file or build it, and keep the current round going"
+      ],
+      "mustNotDo": [
+        "treat it as a design note about the screen being redesigned",
+        "ask whether he wants it built"
+      ],
+      "evidence": "Thirty-six hours later he told every open session the tool now has reactions plus comments and to use them.",
+      "confidence": "high"
+    },
+    {
+      "id": "M18",
+      "date": "2026-10-11",
+      "said": "Done with steering round design-5160-r4: 1 of 1 answered. Read it back.",
+      "context": "Fifth Done press on one screen's redesign; the session had re-asked the same round-1 a-or-b question in every read-back and he had never answered it.",
+      "route": "act-now",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "read back and draw the next round",
+        "stop re-asking the a-or-b question in prose; render it as options on the page or pick the default"
+      ],
+      "mustNotDo": [
+        "block the next round on the unanswered question",
+        "repeat the a-or-b question a fifth time"
+      ],
+      "evidence": "He pressed Done three more times without answering it, then asked for the remaining sections outright ('Provide artifacts to finish b and c').",
+      "confidence": "medium"
+    },
+    {
+      "id": "M19",
+      "date": "2026-10-12",
+      "said": "Provide artifacts to finish b and c",
+      "context": "The session had suggested doing section C first and asked him to answer the a-or-b question or say B or C.",
+      "route": "act-now",
+      "ask": "must-not-ask",
+      "mustDo": ["render both sections B and C as round pages"],
+      "mustNotDo": [
+        "insist on the a-or-b answer first",
+        "do only C because it was the suggested order"
+      ],
+      "evidence": "His next message, fifteen hours later, was a new architectural thought with no correction; the words say both.",
+      "confidence": "high"
+    },
+    {
+      "id": "M20",
+      "date": "2026-10-12",
+      "said": "I feel like this intersects with a bigger refactor that gets into architecture changes. The profile (not global/app) activities view was intended to revolve around events, a log view, lightly enriched, but had evolved into the ledger. We should rebrand the tab as such - properly named terminology will help ai inference.",
+      "context": "Deep into a redesign of the profile activity screen, after round 9.",
+      "route": "fan-out",
+      "ask": "may-ask",
+      "mustDo": [
+        "record the naming call: the tab is a ledger and should be named as one",
+        "file the bigger refactor as its own plan rather than folding it into the round"
+      ],
+      "mustNotDo": [
+        "rename the tab inside the current redesign round",
+        "ask whether he really wants it renamed"
+      ],
+      "evidence": "No correction followed; his next message ten hours later was a process broadcast. The words 'we should rebrand the tab' are a directive, 'bigger refactor' marks it as plan-sized.",
+      "confidence": "medium"
+    },
+    {
+      "id": "M21",
+      "date": "2026-10-13",
+      "said": "The process with the screenshots has been improved to enable more granular feedback with thumbs up/down/mixed icons and ability to add comments. please update to make use of these mechanisms.",
+      "context": "The identical message pasted into seven open redesign sessions within fifty seconds.",
+      "route": "act-now",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "switch this session's round page to the new reaction-plus-comment mechanism and republish it",
+        "report in one line when it is up"
+      ],
+      "mustNotDo": [
+        "ask what changed or where",
+        "treat it as feedback on the screen under redesign"
+      ],
+      "evidence": "Same text in seven sessions in under a minute is a broadcast; no session got a follow-up correction.",
+      "confidence": "high"
+    },
+    {
+      "id": "M22",
+      "date": "2026-10-14",
+      "said": "the web session has been updated to build: followed by the round page's link",
+      "context": "The session had reported round 16 had no answers yet and that an earlier pick was already filed.",
+      "route": "act-now",
+      "ask": "must-not-ask",
+      "mustDo": ["read the build pick off the page and file or trigger the build for it"],
+      "mustNotDo": ["wait for a Done press", "ask which problem he means"],
+      "evidence": "No next message; the words say the page now carries a build mark and the link says where.",
+      "confidence": "medium"
+    },
+    {
+      "id": "M23",
+      "date": "2026-10-25",
+      "said": "the council section gamifies in a way that encourages people to think they can time the market which is harmful and goes against the intent of the application to teach/coach/educate. The ability to create and test a thesis belongs as part of playbook creation where users can craft/codify strategies to be measured/refined.",
+      "context": "First message of a fresh session, with a screenshot of the Council section attached.",
+      "route": "decision",
+      "ask": "may-ask",
+      "mustDo": [
+        "propose retiring the Council section now",
+        "record thesis-testing as a requirement on the playbook plan for later"
+      ],
+      "mustNotDo": [
+        "soften the Council's copy instead of removing it",
+        "build thesis-testing inside playbooks now"
+      ],
+      "evidence": "His next message: 'lets retire the council as agreed on. as for the integration to the playbook, that will be a future refinement/redesign'.",
+      "confidence": "high"
+    },
+    {
+      "id": "M24",
+      "date": "2026-10-25",
+      "said": "lets retire the council as agreed on. as for the integration to the playbook, that will be a future refinement/redesign",
+      "context": "The session had just laid out retiring the Council and moving thesis-testing to playbooks.",
+      "route": "act-now",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "start removing the Council section now",
+        "park the playbook integration on its plan"
+      ],
+      "mustNotDo": ["ask for confirmation", "build the playbook side now"],
+      "evidence": "Fourteen minutes later he asked 'any updates?', expecting work already in motion.",
+      "confidence": "high"
+    },
+    {
+      "id": "M25",
+      "date": "2026-10-25",
+      "said": "any updates?",
+      "context": "Fourteen minutes after his go on retiring the Council; the session's last reply had been a list of issues filed, parked and corrected.",
+      "route": "status-check",
+      "ask": "must-not-ask",
+      "mustDo": ["one line on where the build is: claimed, building, PR open, or stuck"],
+      "mustNotDo": ["recap the filings again", "explain at length what the session cannot see"],
+      "evidence": "Ten minutes later he asked again, 'update?'.",
+      "confidence": "high"
+    },
+    {
+      "id": "M26",
+      "date": "2026-10-25",
+      "said": "the screenshot failures are from removing the section we stated to remove - this should be obviously fine.",
+      "context": "The Council-removal PR was red on screenshot comparison tests.",
+      "route": "correction",
+      "ask": "must-not-ask",
+      "mustDo": [
+        "accept the diffs as the expected result of the removal, refresh the baselines, and let the PR merge"
+      ],
+      "mustNotDo": ["investigate the failures as a bug", "ask whether to update the baselines"],
+      "evidence": "His next message fifteen minutes later moved on to a deploy failure with no further argument about the screenshots.",
+      "confidence": "high"
+    },
+    {
+      "id": "M27",
+      "date": "2026-10-25",
+      "said": "deployment failed: followed by a link to the failed Actions run",
+      "context": "Right after the Council-removal PR merged.",
+      "route": "act-now",
+      "ask": "must-not-ask",
+      "mustDo": ["read the failed run, name the cause, and fix or rerun it"],
+      "mustNotDo": ["ask what he wants done about it", "acknowledge without acting"],
+      "evidence": "No next message; a bare failure link is an incident handed over, nothing else.",
+      "confidence": "high"
+    },
+    {
+      "id": "M28",
+      "date": "2026-10-25",
+      "said": "walk me through the process again in github",
+      "context": "First message of a fresh session, with a screenshot attached.",
+      "route": "question",
+      "ask": "may-ask",
+      "mustDo": [
+        "explain the GitHub-side steps of the process shown in the picture, in order, plainly"
+      ],
+      "mustNotDo": ["change anything or file anything", "assume he wants the process redesigned"],
+      "evidence": "No next message; 'again' says he has seen it before and wants the steps re-explained, and the picture says which process.",
+      "confidence": "medium"
+    },
+    {
+      "id": "M29",
+      "date": "2026-11-01",
+      "said": "A2",
+      "context": "A GitHub comment on a plan issue where the session had laid out lettered and numbered options.",
+      "route": "decision",
+      "ask": "must-not-ask",
+      "mustDo": ["take A2 as his pick and proceed with it"],
+      "mustNotDo": ["ask him to confirm", "present the options again"],
+      "evidence": "No next message; a bare option label is a pick and nothing else.",
+      "confidence": "high"
+    }
+  ]
+}

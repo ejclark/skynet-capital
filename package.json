@@ -77,6 +77,7 @@
     "delivery:score": "node scripts/delivery-score.mjs",
     "meter": "node scripts/agent-meter.mjs",
     "meter:workers": "node scripts/agent-meter.mjs --worker-stages",
+    "meter:flow": "node scripts/agent-meter.mjs --flow",
     "steer:gather": "node scripts/steer/gather.mjs",
     "steer:build": "node scripts/steer/build.mjs",
     "steer:readback": "node scripts/steer/readback.mjs",
