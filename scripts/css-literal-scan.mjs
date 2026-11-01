@@ -204,8 +204,7 @@ for (const fam of Object.keys(FAMILIES)) {
 }
 counts.danglingVar = 0;
 counts.mismatchedFallback = 0;
-const perFileEquals = new Map();
-const perFileSwaps = new Map(); // file → the same token-equal literals, with their offsets
+const perFileSwaps = new Map(); // file → its token-equal literals, with their offsets
 for (const f of cssFiles) {
   if (f === THEME) continue;
   const file = rel(f);
@@ -248,7 +247,6 @@ for (const f of cssFiles) {
           literal: lit.text,
           token,
         });
-        perFileEquals.set(file, (perFileEquals.get(file) ?? 0) + 1);
         if (!perFileSwaps.has(file)) perFileSwaps.set(file, []);
         perFileSwaps.get(file).push({
           where: `${file}:${d.line}`,
@@ -274,8 +272,10 @@ const budgetKeys = Object.keys(counts).filter((k) => counts[k] !== null);
 function candidateMode() {
   // Cheapest high-leverage move: the file with the most literals that already equal a token —
   // each is a mechanical swap with no taste call. Fallback findings are listed beside it.
-  const [file, n] =
-    [...perFileEquals].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] ?? [];
+  const [file, literals] =
+    [...perFileSwaps].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))[0] ??
+    [];
+  const n = literals?.length;
   const swaps = findings.equalsToken.filter((x) => x.where.startsWith(`${file}:`));
   const candidate = file ? { file, equalsToken: n, swaps } : null;
   const fallback = findings.danglingVar[0] ?? findings.mismatchedFallback[0] ?? null;
