@@ -128,6 +128,7 @@ describe("the work-mode gate in the scripted workflows", () => {
         expect(error?.message).toContain(`${width}`);
         expect(error?.message).toContain(`${width - 1}`);
         expect(error?.message).toContain("conserve");
+        expect(error?.message).toContain(`at most ${width - 1} `);
         expect(worked(calls)).toEqual([]);
       });
 
@@ -156,6 +157,19 @@ describe("the work-mode gate in the scripted workflows", () => {
         expect(error).toBeNull();
         expect(logs.join("\n")).toContain("work-gate.mjs");
         expect(logs.join("\n")).toContain("Price");
+      });
+
+      it("treats a dial read that throws as unread: refused, or forced past", async () => {
+        const throwing: Reply = (prompt, opts) => {
+          if (opts.label === "work-mode") throw new Error("the read could not start");
+          return withDial(NORMAL)(prompt, opts);
+        };
+        const refused = await runWorkflow(name, args, throwing);
+        expect(refused.error?.message).toContain("work-gate.mjs");
+        expect(worked(refused.calls)).toEqual([]);
+        const forced = await runWorkflow(name, { ...args, force: true }, throwing);
+        expect(forced.error).toBeNull();
+        expect(worked(forced.calls)[0]?.opts.label).toMatch(firstWork);
       });
 
       it("prints the price on a typed run the dial would have allowed", async () => {

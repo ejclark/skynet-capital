@@ -77,14 +77,14 @@ const PRICE = `${prs.length * 2} agents to start: per PR a triage on sonnet and 
 const gate = await agent(
   'Run exactly: node scripts/moneypenny/work-gate.mjs\n\nIt prints one JSON object on stdout and status lines on stderr. Its exit code is part of the answer, not a failure: 0 means cleared to dispatch, 3 means refused (work-mode is halt, or the spend breaker is tripped) — BOTH are a real verdict and both print the JSON. Report "found": true plus that JSON object: the "dispatch", "position" and "reason" fields and caps.grindWidth, all verbatim, plus "until" only when it is not null.\n\nIf the command exits 1, prints no parseable JSON, or the object carries no caps.grindWidth, report "found": false and nothing else — never guess a position or a width. Do nothing else: no exploration, no fixing, no editing any file.',
   { schema: GATE_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'low', label: 'work-mode', phase: 'Triage' },
-)
+).catch(() => null) // A read that throws is an unread dial: refused below, or forced past.
 const dialRead = gate?.found === true && typeof gate.dispatch === 'boolean' && Number.isInteger(gate.grindWidth)
 const refusal = !dialRead
   ? 'could not read the dial through `node scripts/moneypenny/work-gate.mjs`; exit 1 there means a malformed control to fix, not route around'
   : !gate.dispatch
     ? gate.reason || `work-mode=${gate.position}`
     : WIDTH > gate.grindWidth
-      ? `${WIDTH} PRs is over the ${gate.grindWidth} that work-mode=${gate.position} allows${gate.until ? ` (until ${gate.until})` : ''}: re-run in batches of at most ${gate.grindWidth}, or flip the dial`
+      ? `${WIDTH} PRs is over the ${gate.grindWidth} that work-mode=${gate.position} allows${gate.until ? ` (until ${gate.until})` : ''}: re-run with at most ${gate.grindWidth} PRs, or flip the dial`
       : null
 if (args?.force === true) {
   log(`force: true${refusal ? `, past this: ${refusal}` : ', though the dial allowed it'}. Price: ${PRICE}`)
