@@ -1304,7 +1304,10 @@ cmd_platter_amend() {
   git diff --quiet && git diff --cached --quiet || {
     echo "ship platter: uncommitted changes — commit or drop them before amending" >&2; exit 1; }
   platter_require_current_script
-  git log --no-merges --format=%b "$PLATTER_BASE..HEAD" | grep -qxF "Platter-Item: $item" || {
+  # A here-string, for the reason at checkbody: a piped `grep -q` kills git on a match, and pipefail
+  # then reports the match as a miss, most often for the items boarded most recently.
+  local boarded; boarded="$(git log --no-merges --format=%b "$PLATTER_BASE..HEAD")"
+  grep -qxF "Platter-Item: $item" <<<"$boarded" || {
     echo "ship platter amend: no item '$item' is boarded in $PLATTER_BASE..HEAD — \`ship platter ledger\` lists the items." >&2
     exit 1; }
 

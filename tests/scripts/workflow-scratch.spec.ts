@@ -111,6 +111,87 @@ describe("grind's scratch folders", () => {
     expect(scratchOf(work?.prompt ?? "")).toMatch(/^runs\/2026-11-01-mine\//);
   });
 
+  // The prompt tells an agent that nobody else writes to its folder and that notes there are its own
+  // earlier try, so the name has to change with the work: the chain, the step and the item.
+  describe("a folder's name identifies the work", () => {
+    const done = (_p: string, { label }: Opts) =>
+      label === "work-mode" ? gate : { status: "done", summary: "ok" };
+    const folderOf = async (args: Record<string, unknown>, starts: string) => {
+      const { calls } = await run(
+        "grind",
+        { itemSource: grindArgs.itemSource, skipEnvelopeCheck: "not paths here", ...args },
+        done,
+      );
+      return calls.filter((c) => c.prompt.startsWith(starts)).map((c) => scratchOf(c.prompt));
+    };
+
+    it("differs between two prompts over the same list", async () => {
+      const [first] = await folderOf(
+        { items: ["a.ts"], promptTemplate: "add jsdoc to {item}" },
+        "add jsdoc",
+      );
+      const [second] = await folderOf(
+        { items: ["a.ts"], promptTemplate: "delete dead code in {item}" },
+        "delete dead",
+      );
+      expect(first).toBeTruthy();
+      expect(second).not.toBe(first);
+    });
+
+    it("stays the same when the same batch runs again, so a retry finds its notes", async () => {
+      const batch = { items: ["a.ts", "b.ts"], promptTemplate: "fix {item}" };
+      expect(await folderOf(batch, "fix ")).toEqual(await folderOf(batch, "fix "));
+    });
+
+    it("differs between two steps of one kind in a chain", async () => {
+      const folders = await folderOf(
+        {
+          items: ["a.ts"],
+          steps: [
+            { kind: "prompt", template: "go first on {item}" },
+            { kind: "prompt", template: "go second on {item}" },
+          ],
+        },
+        "go ",
+      );
+      expect(folders).toHaveLength(2);
+      expect(new Set(folders).size).toBe(2);
+    });
+
+    it("differs between two copies of one item", async () => {
+      const folders = await folderOf(
+        { items: ["a.ts", "a.ts"], promptTemplate: "fix {item}" },
+        "fix ",
+      );
+      expect(folders).toHaveLength(2);
+      expect(new Set(folders).size).toBe(2);
+    });
+
+    it("tells two dead steps of one kind apart in what the run returns", async () => {
+      const { result } = await run(
+        "grind",
+        {
+          items: ["a.ts"],
+          itemSource: grindArgs.itemSource,
+          skipEnvelopeCheck: "not paths here",
+          steps: [
+            { kind: "prompt", template: "go first on {item}" },
+            { kind: "prompt", template: "go second on {item}" },
+          ],
+        },
+        (prompt, { label }) => {
+          if (label === "work-mode") return gate;
+          if (label === READER) return { left: [] };
+          return prompt.startsWith("go ") ? null : { status: "done", summary: "ok" };
+        },
+      );
+      const dead = result.deadAgents as unknown as { agent: string; scratch: string }[];
+      expect(dead).toHaveLength(2);
+      expect(new Set(dead.map((row) => row.agent)).size).toBe(2);
+      expect(new Set(dead.map((row) => row.scratch)).size).toBe(2);
+    });
+  });
+
   it("returns what a dead agent left, and costs no reader on a clean run", async () => {
     const clean = await run("grind", grindArgs, (_p, { label }) =>
       label === "work-mode" ? gate : { status: "done", summary: "ok" },
