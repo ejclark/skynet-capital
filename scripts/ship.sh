@@ -19,7 +19,7 @@ set -euo pipefail
 #       job arms it once verify AND integration tests pass (#4094). `ship automerge` is only the
 #       fallback for a PR that job can't reach, and it refuses until integration tests passed.
 #
-#   scripts/ship.sh platter {open|board|ledger|landed} …
+#   scripts/ship.sh platter {open|board|ledger|landed|revert} …
 #       batch every change that needs Eric's merge onto ONE held PR per cadence, one commit per
 #       item (#1343). Full doctrine at the section header near the bottom of this file.
 #
@@ -800,6 +800,7 @@ cmd_merge() {
 #   scripts/ship.sh platter amend <item-branch> [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter ledger [--base <ref>] [--body]
 #   scripts/ship.sh platter sync
+#   scripts/ship.sh platter revert <pr> <sha>   # one item out of a landed platter, squashed or not
 #
 # `--closes` / `--part-of` name the issues the item finishes or advances; with neither, the item's
 # own PR's keywords are read, and a branch number alone is only ever `Part of` (#4562). They ride as
@@ -821,9 +822,12 @@ cmd_merge() {
 #     fine in order — a conflict is just an item that needs to catch up first.
 #
 # The one rule this script CANNOT enforce is the merge method: a PR does not choose how it is merged,
-# and by 2026-09-25 five of eleven landed platters had arrived as squashes, voiding their ledger's
-# revert column. The body now carries a top-level WARNING, and `node scripts/platter-merge-scan.mjs`
-# reads `main` afterwards and names any platter that landed flat (#3754).
+# and by 2026-11-01 twenty of twenty-seven landed platters had arrived as squashes despite a
+# top-level WARNING in the body (#3754) — a sentence cannot force a button. What holds either way:
+# GitHub keeps `refs/pull/<n>/head` after the branch is deleted, so every item commit stays
+# fetchable, and `git revert <sha>` needs a commit's parent and tree, never its ancestry in `main`.
+# `platter revert <pr> <sha>` (below) is that path, and `node scripts/platter-merge-scan.mjs` reads
+# `main` afterwards and reports only whether each landed item's commit is still fetchable.
 
 # Protected paths among the file names on stdin, space-separated (empty when none). The path-level
 # answer on purpose: envelope-scan's --base mode diffs the CHECKED-OUT HEAD, and the ledger column
@@ -953,35 +957,39 @@ $(platter_ledger_table)
 _Caption — the platter ledger, read from the boarded commits: each item, the evidence it was green, and the sha that reverts it alone._
 
 > [!WARNING]
-> **Land this with "Create a merge commit" — the squash button voids every revert sha above.**
-> A squashed platter arrives on \`main\` as one commit: the per-item shas live only on
-> \`$(git rev-parse --abbrev-ref HEAD)\`, which GitHub deletes at merge, so the only revert left is the whole platter at once.
-> This has already happened: as of 2026-09-25, five of the eleven landed platters were squashed. \`node scripts/platter-merge-scan.mjs\` reports the current count.
+> **Either button lands this.** "Create a merge commit" keeps every item in \`main\`'s history, so \`git revert <sha>\` from the table works at once;
+> "Squash and merge" collapses them into one commit, and one item then reverts through \`scripts/ship.sh platter revert <pr> <sha>\`.
+> The shas above stay fetchable either way: GitHub keeps \`refs/pull/<pr>/head\` after it deletes \`$(git rev-parse --abbrev-ref HEAD)\`.
+> By 2026-11-01, 20 of 27 landed platters were squashes; \`node scripts/platter-merge-scan.mjs\` reports whether each landed item's commit is still fetchable.
 
 ## Summary
 
 - One merge clears every protected-path change below; the boundary does not move, only its cost.
-- **Merge with "Create a merge commit", never squash** — one commit per item is what keeps revert granular.
+- **Either button lands it** — a merge commit keeps items in \`main\`; a squash reverts one through \`platter revert\`.
 - Each item was verified green on the union as it boarded; this PR is that union's first CI run.
 $(platter_summary_refs)
 
 <details>
 <summary><strong>How to land this, and how to drop one bad item</strong></summary>
 
-**Landing.** Use GitHub's **Create a merge commit** button. Squashing still lands the same tree, but
-it collapses the items into one commit and the per-item revert below is lost — the platter would
-then only revert as a whole. The repo's settings already put this PR's title and body (this ledger)
-on the merge commit, so \`main\`'s first-parent history reads as PRs and \`git log main\` reads as items.
+**Landing.** Either button. **Create a merge commit** keeps one commit per item in \`main\`'s
+history, so \`git log main\` reads as items and a plain \`git revert\` drops one. **Squash and merge**
+lands the same tree as one commit; the items then live on \`refs/pull/<pr>/head\`, which GitHub keeps
+after it deletes the branch. The repo's settings put this PR's title and body (this ledger) on the
+merge commit either way, so \`main\`'s first-parent history reads as PRs.
 
 **The revert path that actually exists, by how this lands.** Before the merge, every revert sha in
-the table is reachable on \`$(git rev-parse --abbrev-ref HEAD)\` — and only there. Merged as a merge
-commit, they become part of \`main\` and \`git revert <revert sha>\` drops one item. Squashed, the
-branch is deleted and those shas go with it: \`main\` holds one commit, so \`git revert\` takes the
-whole platter or nothing. The ledger's revert column is a promise the merge button keeps or breaks.
+the table is reachable on \`$(git rev-parse --abbrev-ref HEAD)\`. Merged as a merge commit, they are
+in \`main\` and \`git revert <revert sha>\` drops one item. Squashed, they are not in \`main\`'s history,
+but \`scripts/ship.sh platter revert <pr> <sha>\` fetches \`refs/pull/<pr>/head\` and reverts the one
+commit onto a fresh branch off \`main\` — a revert needs the commit's parent and tree, never its
+ancestry. The ledger's revert column holds under both buttons; only the command differs.
 
-**Dropping one item after the merge.** \`git revert <revert sha>\` from the table — no \`-m\`, because
-each item is an ordinary single-parent commit. An item a later item builds on may conflict; that is
-the honest limit of any ordered batch, not a defect of this one.
+**Dropping one item after the merge.** After a merge commit, \`git revert <revert sha>\` from the
+table — no \`-m\`, because each item is an ordinary single-parent commit. After a squash,
+\`scripts/ship.sh platter revert <pr> <revert sha>\`, then ship the branch it leaves you on. An item
+a later item builds on may conflict; that is the honest limit of any ordered batch, not a defect
+of this one.
 
 **Dropping one item before the merge.** Re-open the platter without it (\`ship platter open\` on a new
 name, then \`board\` the survivors in order). Nothing is ever fixed on the platter itself.
@@ -1336,6 +1344,37 @@ cmd_platter_sync() {
   platter_sync_body "$branch" || exit 1
 }
 
+# One item out of a LANDED platter, squashed or not (2026-11-01). GitHub keeps `refs/pull/<n>/head`
+# after it deletes the merged branch, so the item commits a squash left out of `main`'s history are
+# still fetchable, and `git revert <sha>` needs only the commit's parent and tree. This fetches that
+# ref, checks the sha really is one of the PR's commits (the ledger's revert column), cuts
+# `revert/platter-<pr>-<sha7>` off a fresh origin/main, and reverts the one commit onto it. Git's
+# own revert message (`Revert "<subject>"`) passes commitlint. Pure git, no token: ship the branch
+# it leaves you on with `scripts/ship.sh open`. Proven on #5852's item 21 (squashed 2026-11-01):
+# one revert onto a scratch branch, committed nowhere, then the branch deleted.
+cmd_platter_revert() {
+  local pr="${1:-}" sha="${2:-}"
+  case "$pr" in ''|*[!0-9]*)
+    echo "usage: scripts/ship.sh platter revert <pr> <sha> — the PR number and a revert sha from its ledger" >&2; exit 1 ;;
+  esac
+  [ -n "$sha" ] || { echo "usage: scripts/ship.sh platter revert <pr> <sha> — the sha is the ledger's revert column" >&2; exit 1; }
+  git diff --quiet && git diff --cached --quiet || {
+    echo "ship platter revert: uncommitted changes — commit or drop them first" >&2; exit 1; }
+  git fetch --quiet origin main || { echo "ship platter revert: cannot fetch origin/main" >&2; exit 1; }
+  git fetch --quiet origin "refs/pull/$pr/head" || {
+    echo "ship platter revert: refs/pull/$pr/head could not be fetched — is #$pr a pull request of this repo?" >&2; exit 1; }
+  local head full; head="$(git rev-parse FETCH_HEAD)"
+  full="$(git rev-parse --verify --quiet "${sha}^{commit}")" || {
+    echo "ship platter revert: $sha is not a commit here, even after fetching refs/pull/$pr/head" >&2; exit 1; }
+  git merge-base --is-ancestor "$full" "$head" || {
+    echo "ship platter revert: $sha is not on #$pr's head ($head) — the ledger's revert column names the platter's own item commits" >&2; exit 1; }
+  local branch="revert/platter-$pr-${full:0:7}"
+  git checkout -q -B "$branch" origin/main
+  git revert --no-edit "$full" || {
+    echo "ship platter revert: git revert $full conflicts with today's main — resolve it on $branch, commit, then ship" >&2; exit 1; }
+  echo "ship platter revert: reverted ${full:0:7} (#$pr) onto $branch, cut from origin/main — ship it with: scripts/ship.sh open '$(git log -1 --format=%s)'"
+}
+
 cmd_platter() {
   local sub="${1:-}"; shift || true
   case "$sub" in
@@ -1348,7 +1387,9 @@ cmd_platter() {
     # the record after landing, from the first-parent log, in whichever ending is true (merge commit
     # or squash) — posted as a comment on the landed PR by whoever reports it (the digest, a session).
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
-    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
+    # one item out of a landed platter, whichever button landed it — pure git, no token.
+    revert) cmd_platter_revert "$@" ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>] | revert <pr> <sha>}" >&2; exit 1 ;;
   esac
 }
 
@@ -1366,5 +1407,5 @@ case "${1:-}" in
   verifyrow) shift; verify_row_fields "$1"; echo ;;
   push) shift; cmd_push "$@" ;;
   platter) shift; cmd_platter "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | verifyrow <verify-log> | push <branch> | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | verifyrow <verify-log> | push <branch> | platter {open|board|ledger|landed|revert} ...}" >&2; exit 1 ;;
 esac

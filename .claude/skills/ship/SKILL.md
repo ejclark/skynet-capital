@@ -89,9 +89,13 @@ scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body),
 scripts/ship.sh platter sync                 # re-post the ledger; refuses if the range ≠ GitHub's count
 ```
 
-- **One commit per item, merged with "Create a merge commit"** — that is what keeps `git revert
-  <item sha>` able to drop a single item. Squashing the platter still lands the same tree but
-  collapses the items, and revert degrades to all-or-nothing. The PR body says so above the fold.
+- **One commit per item; either button lands it** (2026-11-01: 20 of 27 landings were squashes
+  despite a body that said never). A merge commit keeps the items in `main`'s history, so `git
+  revert <item sha>` drops one; a squash collapses them, and one item then reverts through
+  `scripts/ship.sh platter revert <pr> <sha>`, which fetches `refs/pull/<pr>/head` (GitHub keeps it
+  after deleting the branch) and reverts the one commit onto a fresh branch off `main`. The PR
+  body says so above the fold; `node scripts/platter-merge-scan.mjs` reports whether every landed
+  item's commit is still fetchable.
 - **Nothing red boards.** `board` runs `npm run verify` on the post-board tree and un-boards the
   item on red. This matters more than it looks: `pipeline.yml`'s `verify` triggers on `pull_request:
   branches: [main]`, so a PR based on a platter branch runs **no CI at all** — the platter PR is the

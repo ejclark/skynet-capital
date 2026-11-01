@@ -25,7 +25,7 @@ export interface PlatterLanding {
   sha: string;
   pr: number | null;
   subject: string;
-  /** True when the landing has fewer than two parents — a squash, so no item reverts alone. */
+  /** True when the landing has fewer than two parents — a squash; its items revert through `ship platter revert`. */
   flattened: boolean;
   items: PlatterItem[];
 }
@@ -38,5 +38,17 @@ export function isPlatterLanding(commit: Pick<PlatterCommit, "subject" | "body">
 export function prNumber(commit: Pick<PlatterCommit, "subject" | "body">): number | null;
 /** The ledger rows in a commit message, rejoining rows GitHub hard-wrapped mid-cell. */
 export function ledgerItems(body: string): PlatterItem[];
-/** Every platter landing in the log, each tagged with whether its items revert alone. */
+/** Every platter landing in the log, each tagged with the shape it landed in. */
 export function landings(records: PlatterCommit[]): PlatterLanding[];
+
+/** A landing whose items each carry whether their commit is still fetchable (null: not checked). */
+export interface CheckedLanding extends Omit<PlatterLanding, "items"> {
+  items: (PlatterItem & { fetchable: boolean | null })[];
+}
+
+/** Is each item's commit still fetchable — locally, or after one fetch of refs/pull/<pr>/head?
+ *  `fetch` answers true (fetched), false (failed) or null (not tried, as under --offline). */
+export function withFetchability(
+  landing: PlatterLanding,
+  reads: { exists: (sha: string) => boolean; fetch: (pr: number) => boolean | null },
+): CheckedLanding;
