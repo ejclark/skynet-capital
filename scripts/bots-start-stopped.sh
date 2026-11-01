@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Start the bots app's primary machine if it is stopped — the deploy path's missing step (#5955).
+#
+# flyctl leaves a stopped machine stopped and reports "a good state", so from 2026-10-22 every
+# deploy and rollback landed on a dead fleet: a crash fix merged on 10-25 and did not run until
+# 11-01, when one start brought the bots back. So the deploy job starts a stopped machine before
+# smoke judges it, and the rollback restores a running bot rather than a stopped one.
+#
+#   scripts/bots-start-stopped.sh <app>            start if stopped; deploy and rollback use this
+#   scripts/bots-start-stopped.sh <app> --report   also keep the evidence, for the catch-up job
+#
+# --report exists for a crash between merges, when no deploy will come. Before starting it records
+# the machine's exit event and log tail on one open issue, so the failure names its own cause, and
+# it spends a budget: MAX_STARTS comments in WINDOW_HOURS, then it stops and says so, because a
+# machine that keeps dying needs a person or a fix, not a fourth restart.
+#
+# Nothing in this repo halts the bots by stopping the machine (see scripts/bots-revive.sh), so a
+# stopped primary is a crash, a host event or a hand stop. A hand stop meant to survive this carries
+# the skynet-halt marker, which is always respected.
+#
+# Exit codes: 0 running, nothing to do, or deliberately left stopped · 1 start refused or never
+# reached started · 3 budget spent, left stopped. Env for specs: FLY_BIN, GH_BIN, BOTS_START_WAIT_SECS,
+# BOTS_POLL_SECS.
+set -uo pipefail
+
+APP="${1:?usage: bots-start-stopped.sh <app> [--report]}"
+REPORT="${2:-}"
+FLY="${FLY_BIN:-flyctl}"
+GH="${GH_BIN:-gh}"
+START_WAIT="${BOTS_START_WAIT_SECS:-90}"
+POLL="${BOTS_POLL_SECS:-5}"
+MAX_STARTS=3
+WINDOW_HOURS=6
+ISSUE_TITLE="[bots] machine found stopped"
+PRIMARY_FILTER='[.[] | select((.config.standbys // []) | length == 0)]' # = smoke-bots.sh
+
+say() { echo "[bots-start] $*"; }
+primary() { "$FLY" machine list -a "$APP" --json 2>/dev/null | jq -c "$PRIMARY_FILTER | .[0] // empty"; }
+
+M=$(primary)
+[[ -n "$M" ]] || { say "no primary machine in $APP"; exit 1; }
+ID=$(jq -r '.id' <<<"$M")
+STATE=$(jq -r '.state' <<<"$M")
+HALT=$(jq -r '.config.metadata["skynet-halt"] // empty' <<<"$M")
+
+if [[ "$STATE" != "stopped" ]]; then
+  say "machine $ID is $STATE, nothing to do"
+  exit 0
+fi
+if [[ -n "$HALT" ]]; then
+  say "machine $ID is deliberately halted ($HALT), leaving it stopped"
+  exit 0
+fi
+
+if [[ "$REPORT" == "--report" ]]; then
+  ISSUE=$("$GH" issue list --state open --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number // empty' 2>/dev/null)
+  if [[ -n "$ISSUE" ]]; then
+    SINCE=$(date -u -d "-$WINDOW_HOURS hours" +%FT%TZ 2>/dev/null || date -u -v-"$WINDOW_HOURS"H +%FT%TZ)
+    RECENT=$("$GH" issue view "$ISSUE" --json comments \
+      --jq "[.comments[] | select(.createdAt >= \"$SINCE\")] | length" 2>/dev/null || echo 0)
+    if ((RECENT >= MAX_STARTS)); then
+      say "$RECENT starts in ${WINDOW_HOURS}h, budget spent: leaving $ID stopped. See issue #$ISSUE."
+      echo "::error::bots machine keeps stopping: $RECENT starts in ${WINDOW_HOURS}h, left stopped. See issue #$ISSUE."
+      exit 3
+    fi
+  fi
+  EXIT=$(jq -c '[(.events // [])[] | select(.type == "exit")] | max_by(.timestamp // 0) | .request.exit_event // "none recorded"' <<<"$M" 2>/dev/null)
+  LOGS=$("$FLY" logs -a "$APP" -n 2>/dev/null | tail -n 40)
+  BODY=$(printf 'Found `%s` stopped and starting it.\n\nLast exit: `%s`\n\n<details><summary>Log tail</summary>\n\n```text\n%s\n```\n\n</details>\n\nStops here after %s starts in %s hours.\n' \
+    "$ID" "${EXIT:-none recorded}" "$LOGS" "$MAX_STARTS" "$WINDOW_HOURS")
+  if [[ -n "$ISSUE" ]]; then
+    "$GH" issue comment "$ISSUE" --body "$BODY" >/dev/null 2>&1 || say "could not comment on #$ISSUE"
+  else
+    "$GH" issue create --title "$ISSUE_TITLE" --label bug --body "$BODY" >/dev/null 2>&1 || say "could not file the issue"
+  fi
+fi
+
+say "machine $ID is stopped, starting it"
+if ! "$FLY" machine start "$ID" -a "$APP"; then
+  say "fly refused the start"
+  exit 1
+fi
+waited=0
+until [[ "$(primary | jq -r '.state')" == "started" ]]; do
+  if ((waited >= START_WAIT)); then
+    say "never reached started within ${START_WAIT}s"
+    exit 1
+  fi
+  sleep "$POLL"
+  waited=$((waited + POLL))
+done
+say "machine $ID started"
