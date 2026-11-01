@@ -7,7 +7,7 @@ description: >-
   screenshots of another app ("Fidelity's mobile app is amazing", "use this for inspiration",
   "reverse engineer this", "how does X do this?"), when a redesign names an outside reference,
   or when a concept should get on the radar before anyone builds. Not for reactions to OUR OWN
-  rendered frames (that is /telestrator), not for 3D fidelity references (render-alchemist), and
+  rendered frames (that is /telestrator), not for 3D fidelity references (render-alchemist, on the bench in docs/agents/bench), and
   never a substitute for the IA decision itself — a teardown feeds a plan issue, it does not
   replace one.
 ---

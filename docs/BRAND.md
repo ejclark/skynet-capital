@@ -214,6 +214,11 @@ pieces to 1 piece per row/week."* The handles, so the next request can be one ph
   mode calls for calm (logged-in "study mode") vs. the fast cinematic `/login` preview.
 - New motifs should connect to an existing metaphor or consciously extend the set; log the extension.
 - Honor `prefers-reduced-motion`; both themes must be legible.
+- **A standalone page** (field guide, dashboard, report) is built with the `artifact-design` skill and
+  these tokens, in both themes, from real content the author has read: never a placeholder.
+- **On such a page:** plain upright headlines, mono eyebrows for section labels. The generic-AI look
+  is a miss here: warm cream with serif, a purple gradient hero, italic accent words, numbered
+  01/02/03 labels.
 - When an element earns it (a backstory, an anchor), **bake in exquisite detail** — and record the
   refinement so it compounds.
 - **Celebration pairs with explanation.** No delight animation (a milestone banner, a future ceremony)

@@ -3,6 +3,7 @@ name: haiku-eval-replay
 description: blind-replay one sampled event's initial research assessment at a given model tier, for the S5 Haiku/Sonnet adequacy eval (#2946, slice 1 of #3264)
 effort: high
 isolation: none
+agentType: general-purpose
 ---
 
 # Blind-replay one event's initial research assessment

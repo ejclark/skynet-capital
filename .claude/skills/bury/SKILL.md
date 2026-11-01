@@ -4,7 +4,7 @@ description: >-
   Dispose of one knip-flagged dead-code finding — un-export, delete, or knip.json-ignore with a
   justification — behavior-preserving, verified green, the dead-code budget ratcheted. Use when the
   dead-code gate (scripts/dead-scan.mjs) names a target, when asked to "bury" or "remove dead code",
-  or as a /grind skill step fanned across a knip sweep. The corrective drill the mortician agent
+  or as a /grind skill step fanned across a knip sweep. The corrective drill the governor chore
   runs; also invokable as /bury. Takes its target (a file, or a file + symbol) as the argument.
 ---
 
@@ -13,13 +13,13 @@ description: >-
 The *correction* half of the dead-code Coach: the eye (`scripts/dead-scan.mjs` + `dead-budget.json`,
 reported (advisory, non-blocking) by `tests/arch/dead.spec.ts`) says a symbol is unreferenced; this
 drill decides what that actually means and lands the safe disposition. It is the **one** copy of the
-procedure — the `mortician` agent preloads this file and follows it, and a `/grind` run points
+procedure — `docs/grind/governor.instructions.md` reads this file and follows it, and a `/grind` run points
 `{kind: "skill", name: "bury"}` at it. Keep it the only copy: hand copies of a drill drift apart with
 nothing watching them.
 
 ## The target
 
-Whoever invokes the drill names the target. The `mortician` agent takes it from
+Whoever invokes the drill names the target. The governor chore takes it from
 `node scripts/dead-scan.mjs --candidate` (never hand-picked); a `/grind` item carries it as `{item}`,
 produced by `npx knip --no-exit-code --reporter compact`; a human passes it as the argument. The drill
 never re-derives the target from a fresh scan — a gate's output *is* the gate picking.
