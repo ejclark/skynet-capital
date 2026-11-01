@@ -1,6 +1,7 @@
 // Type surface for scripts/moneypenny/assignments.mjs (see index.d.mts for why scripts/ ships
 // hand-written declarations instead of `allowJs`).
 export const ASSIGN_MARKER: string;
+export const UNASSIGN_MARKER: string;
 export const HOLD_MERGE: string;
 export const HELD_PR_HOURS: number;
 export const ASSIGN_CAP: number;
@@ -74,9 +75,20 @@ export interface PlanInput {
 
 export function decisionLine(body?: string | null): string | null;
 export function assignmentComment(opts: { decision: string }): string;
+export function unassignmentComment(opts: { why: string }): string;
+/** A REST comment as `markedByComments` reads it: body plus the author fields `trustedComment` checks. */
+export interface MarkerComment {
+  body?: string | null;
+  author_association?: string;
+  user?: { type?: string; login?: string };
+}
+export function markedByComments(comments?: readonly MarkerComment[]): boolean;
 export function plan(input?: PlanInput): Planned;
 export function report(planned: Pick<Planned, "queue" | "actions">): string;
-export function gather(): Required<Pick<PlanInput, "issues" | "prs" | "markers">>;
+export function gather(opts?: {
+  /** Injected for specs; production reads through gh.mjs's `ghRestAll`. */
+  rest?: (path: string) => unknown[];
+}): Required<Pick<PlanInput, "issues" | "prs" | "markers">>;
 export function routeAssignments(deps?: {
   assignments?: Required<Pick<PlanInput, "issues" | "prs" | "markers">> | null;
   now?: number;
