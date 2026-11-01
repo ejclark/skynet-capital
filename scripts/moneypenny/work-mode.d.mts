@@ -22,11 +22,14 @@ export interface WorkModeConfig {
   readonly trackingIssue: number;
   readonly labelPrefix: string;
   readonly positions: Readonly<Record<Position, Caps>>;
+  /** One real weekly reset, as a time; the rest repeat from it at 7 days. */
+  readonly weeklyResetAnchor: string;
 }
 
 export interface WorkMode {
   readonly position: Position;
-  /** The ISO date the position holds through (inclusive, UTC); null for normal / an unexpiring halt. */
+  /** The ISO date the position holds through (inclusive, UTC), or the ISO time it ends at; null for
+   *  normal / an unexpiring halt. */
   readonly until: string | null;
   readonly caps: Caps;
   readonly reason: string;
@@ -41,6 +44,25 @@ export interface WorkMode {
 export type Exec = (cmd: string, args: readonly string[], opts?: Record<string, unknown>) => string;
 
 export const POSITIONS: readonly Position[];
+
+/** The first weekly reset strictly after `at` (ms), from one known reset. */
+export function nextWeeklyReset(anchor: string, at: number): number;
+/** A time as the dial writes it: UTC, to the second. */
+export function isoUntil(ms: number): string;
+/** One JSON object per line, as `gh api --jq '.[] | …'` prints across pages. */
+export function jsonLines(out: unknown): Record<string, unknown>[];
+/** The end date already written for this setting of the dial, if any. */
+export function writtenEndDate(opts: {
+  position: string;
+  comments?: ReadonlyArray<{
+    body?: string;
+    createdAt?: string;
+    author_association?: string;
+    user?: { type?: string };
+  }>;
+  events?: ReadonlyArray<{ label?: string; createdAt?: string }>;
+  config: WorkModeConfig;
+}): { until: string; endMs: number } | null;
 
 /** Fail-closed read of work-mode.json. Throws on a missing file, a malformed field, a non-zero
  *  halt, or a position looser than the one above it. */
