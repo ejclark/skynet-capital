@@ -74,6 +74,9 @@ export function publishingOrderAuditLog(log: OrderAuditLog, bus: ActivityEventBu
       }
     },
     list: (participantId) => log.list(participantId),
+    // Forwarded, or the ladder's held fold and Activity's order origins would quietly re-list the
+    // whole audit behind this wrapper on every read (#4619: both did until this line).
+    ...(log.since ? { since: log.since.bind(log) } : {}),
   };
 }
 

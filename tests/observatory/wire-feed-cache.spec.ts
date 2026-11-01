@@ -22,10 +22,7 @@ import {
 } from "../../src/observatory/feedback-event-feed.js";
 import { InMemoryActivityEventBus } from "../../src/observatory/in-memory-activity-event-bus.js";
 import { InMemoryActivityStore } from "../../src/observatory/in-memory-activity-store.js";
-import {
-  collapseMilestoneEvents,
-  deriveMilestoneEvents,
-} from "../../src/observatory/milestone-event-feed.js";
+import { collapseMilestoneEvents } from "../../src/observatory/milestone-event-feed.js";
 import { mergeLedgerIntoEvents } from "../../src/observatory/trade-event-feed.js";
 import { buildWireTradeRows } from "../../src/observatory/wire-data.js";
 import { type WireFeed, wireFeedReader } from "../../src/observatory/wire-feed-cache.js";
@@ -355,10 +352,7 @@ function otherKinds(feed: WireFeed) {
     development: collapseDevelopmentEvents(
       feed.events.filter((e) => e.target.kind === "development"),
     ),
-    milestones: collapseMilestoneEvents([
-      ...feed.events.filter((e) => e.target.kind === "milestone"),
-      ...deriveMilestoneEvents(feed.records, []),
-    ]),
+    milestones: collapseMilestoneEvents(feed.events.filter((e) => e.target.kind === "milestone")),
     ledgers: [...journals].map(([id, journal]) => [id, collapseActivity(journal)] as const),
   };
 }
@@ -477,7 +471,7 @@ describe("the Wire's append-aware fold (#4458)", () => {
       const shared: WireRouteDeps = {
         hub,
         readAllLadderProgress: () => Promise.resolve([]),
-        readAllOrderAudit: () => Promise.resolve([]),
+        readLadderEvidence: () => Promise.resolve({ earned: [], hasFill: false }),
       };
       // The oracle: every line of every file, unreduced — what the route read before the fold.
       const whole: WireRouteDeps = {

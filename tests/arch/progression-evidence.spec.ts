@@ -28,7 +28,8 @@ const STORE = "src/server/progression-store.ts";
 /**
  * BOTH hops from the durable stores to the service, because the wiring is a pass-through and
  * pinning only one end leaves the other free to substitute a broker read: `serve-dashboard.ts`
- * hands `setupCompanion` a reader over the `activity` and `orderAudit` stores, and
+ * builds one reader over the `activity` and `orderAudit` stores (shared with the Wire's milestones,
+ * #4619) and hands `setupCompanion` exactly that one, and
  * `dashboard-companion.ts` is where `createProgressionService` is actually constructed. Pinning the
  * outer hop alone was this gate's own first bug (caught in review before it shipped) — swapping
  * `deps.readEvidence` for a client read in the inner hop would have left it green. The third hop is
@@ -37,7 +38,10 @@ const STORE = "src/server/progression-store.ts";
 const WIRING: ReadonlyArray<{ file: string; patterns: readonly RegExp[] }> = [
   {
     file: "src/scripts/serve-dashboard.ts",
-    patterns: [/readEvidence:\s*ladderEvidenceReader\(\{\s*activity,\s*orderAudit\s*\}\)/],
+    patterns: [
+      /const readLadderEvidence = ladderEvidenceReader\(\{\s*activity,\s*orderAudit\s*\}\)/,
+      /readEvidence:\s*readLadderEvidence\b/,
+    ],
   },
   {
     file: "src/server/ladder-evidence.ts",

@@ -104,6 +104,11 @@ const optionFillWithoutAudit = (book, ids) => {
   );
 };
 
+/** One participant's ladder from the book's fills — the one reader the Learn page and the Wire's
+ *  milestones share, as production's do (`serve-dashboard.ts`). */
+const ladderOf = (book) => async (id) =>
+  ladderEvidenceFrom(book.activity[id] ?? [], await optionFillWithoutAudit(book, [id]));
+
 /**
  * The journey (#5208): production builds it on every boot (`dashboard-companion.ts`), so
  * `/api/learn` answers a linked member's own milestones from their fills. Without it the world
@@ -115,8 +120,7 @@ const optionFillWithoutAudit = (book, ids) => {
  */
 function progression(book) {
   return createProgressionService({
-    readEvidence: async (id) =>
-      ladderEvidenceFrom(book.activity[id] ?? [], await optionFillWithoutAudit(book, [id])),
+    readEvidence: ladderOf(book),
     readMessages: async () => [],
     readFeedback: async () => [],
     now: () => new Date(AT),
@@ -126,7 +130,6 @@ function progression(book) {
 /** The seams to spread into a world's server config. */
 export function leagueServices(book) {
   const allActivity = () => Object.values(book.activity).flat();
-  const humans = book.participants.filter((p) => p.kind === "human").map((p) => p.id);
   return {
     // The Activity feed: every account's fills, through the fold production wires (the bus is not
     // wired, so the ledger is the feed, and this world's members have filed nothing). Its other
@@ -139,7 +142,7 @@ export function leagueServices(book) {
     // leaving it off would print "isn't switched on in this deployment" (shell-artifacts.mjs).
     readWireFeed: wireFeedReader({ activity: { list: async () => allActivity() } }).read,
     readAllLadderProgress: async () => [],
-    readAllOrderAudit: () => optionFillWithoutAudit(book, humans),
+    readLadderEvidence: ladderOf(book),
     readMergedPullRequests: async () => [],
     // Feedback is switched on (production has its token); this world's members have filed nothing.
     submitFeedback: refuse("submitting feedback"),
