@@ -1,0 +1,105 @@
+diff --git a/.github/workflows/pipeline.yml b/.github/workflows/pipeline.yml
+index 384ea6e4..8f72869f 100644
+--- a/.github/workflows/pipeline.yml
++++ b/.github/workflows/pipeline.yml
+@@ -271,6 +271,83 @@ jobs:
+           path: playwright-report/
+           retention-days: 14
+ 
++  stability:
++    name: stability budget
++    # The memory gate (#4617, slice 5 of #4612): the built server in a 512 MB container on
++    # production-shaped data (180 days of history for 12 participants), every GET the shell fires on
++    # an Accounts open plus the common tabs, failing on an OOM kill, an exit, any 5xx, or peak RSS over
++    # 300 MB. This is the check whose absence let the Pulse OOM (`new Intl.DateTimeFormat` per sample)
++    # reach production: specs see a handful of rows and offline mode serves empty ledgers.
++    #
++    # Memory and breakage block; TIME does not (`--advisory-latency`, #4612's constraint: no blocking
++    # latency thresholds on a shared runner) — slow GETs print under the verdict in the job summary.
++    # `arm-auto-merge` waits on this job (#4094: native auto-merge honours only required checks).
++    #
++    # Runs only when the diff changes something the server ships — the same classifier the deploy
++    # preflight uses (scripts/dashboard-deploy-preflight.mjs --classify: tests, workflows and docs
++    # are image-irrelevant) — so a spec-only PR pays no container boot. ~3 minutes when it runs.
++    needs: verify
++    if: >-
++      ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
++          needs.verify.outputs.code == 'true' }}
++    runs-on: ubuntu-latest
++    timeout-minutes: 20
++    permissions:
++      contents: read
++    steps:
++      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
++        with:
++          fetch-depth: 0            # the classifier below diffs the PR's range
++
++      - name: Does this PR change what the server runs?
++        id: runtime
++        # Three dots, like every other diff in this file: the PR's own changes, not main's newer ones.
++        run: |
++          VERDICT=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} \
++            | node scripts/dashboard-deploy-preflight.mjs --classify)
++          echo "$VERDICT"
++          DECISION=$(head -n1 <<<"$VERDICT")
++          echo "run=$([ "$DECISION" = deploy ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
++          echo "stability budget: $([ "$DECISION" = deploy ] && echo ran || echo skipped) — $(tail -n1 <<<"$VERDICT")" >> "$GITHUB_STEP_SUMMARY"
++
++      - name: Set up Node (version from mise.toml)
++        if: ${{ steps.runtime.outputs.run == 'true' }}
++        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
++        with:
++          node-version-file: .nvmrc
++
++      - name: Restore npm cache
++        if: ${{ steps.runtime.outputs.run == 'true' }}
++        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
++        with:
++          path: ~/.npm
++          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app/package-lock.json') }}
++          restore-keys: |
++            npm-${{ runner.os }}-
++
++      - name: Install dependencies
++        if: ${{ steps.runtime.outputs.run == 'true' }}
++        run: |
++          npm ci --no-audit
++          npm ci --prefix app --no-audit
++
++      - name: Build the server bundle and the shell
++        if: ${{ steps.runtime.outputs.run == 'true' }}
++        run: |
++          npm run build:server
++          npm run build --prefix app
++
++      - name: Budget run — 512 MB container, 180 days x 12 participants
++        if: ${{ steps.runtime.outputs.run == 'true' }}
++        # The run prints one markdown report; the job summary carries it. A failing run keeps its
++        # exit code (the `|| code=$?` stops `-e` from skipping the summary write).
++        run: |
++          code=0
++          npm run stability:budget -- --advisory-latency > stability-budget.md || code=$?
++          cat stability-budget.md
++          cat stability-budget.md >> "$GITHUB_STEP_SUMMARY"
++          exit $code
++
+   arm-auto-merge:
+     name: arm auto-merge
+     # Mirrors .github/prompts/interactive.md's own merge policy (hold only for a protected path, an
+@@ -295,7 +372,7 @@ jobs:
+     # PR #4449 sat green, mergeable and unarmed for 29 hours that way. Keep this list and `types:`
+     # in sync: the check still earns its place as a guard against a FUTURE `types:` addition (a
+     # `labeled` event would arm off stale check results), which is why it is widened, not deleted.
+-    needs: [verify, e2e]
++    needs: [verify, e2e, stability]
+     # `!cancelled()` is load-bearing (found by #4169, 2026-09-30): `e2e` is skipped on a docs-only PR,
+     # and a job whose `needs:` include a skipped job is skipped too unless its `if:` calls a status
+     # function — so the `skipped` branch below never ran and docs PRs were never armed. With sessions
+@@ -304,6 +381,7 @@ jobs:
+     if: >-
+       ${{ !cancelled() && github.event_name == 'pull_request' && needs.verify.result == 'success' &&
+           (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
++          (needs.stability.result == 'success' || needs.stability.result == 'skipped') &&
+           github.event.pull_request.draft == false &&
+           contains(fromJSON('["opened","reopened","ready_for_review","synchronize","edited"]'), github.event.action) &&
+           !contains(github.event.pull_request.labels.*.name, 'hold-merge') }}
