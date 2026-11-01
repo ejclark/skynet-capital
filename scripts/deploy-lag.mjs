@@ -99,20 +99,26 @@ export function describeLag(lag, { released, head } = {}) {
  * recovery lever.
  *
  * @param {{head?: string, botsReleased?: string, botsChanged?: string[], botsRolledBack?: number,
- *          botsSince?: string}} state
+ *          botsFailed?: number, botsSince?: string}} state
  *   — botsReleased empty-string = scanned clean, no bots release that passed smoke; absent = the
- *   scan itself failed. botsRolledBack counts the newer releases that failed smoke and rolled back.
- *   botsSince dates the lag: the oldest undeployed bot-relevant commit, or the oldest rolled-back
- *   release.
+ *   scan itself failed. botsRolledBack counts the newer releases that failed smoke and rolled back,
+ *   botsFailed the newer ones whose deploy step failed. botsSince dates the lag: the oldest
+ *   undeployed bot-relevant commit, or the oldest of those failed releases.
  */
 export function botsDeployLag(state = {}) {
-  const { head, botsReleased, botsChanged, botsRolledBack = 0, botsSince } = state;
+  const { head, botsReleased, botsChanged, botsRolledBack = 0, botsFailed = 0, botsSince } = state;
   if (botsReleased === undefined || botsChanged === undefined) return { known: false };
-  if (!botsReleased && botsRolledBack > 0) {
-    // Every bots release in the scanned window failed smoke: not "never deployed", a dark fleet.
-    const reason = `the last ${botsRolledBack} bots release(s) all failed smoke and rolled back`;
+  const failures = botsRolledBack + botsFailed;
+  if (!botsReleased && failures > 0) {
+    // Every bots release in the scanned window failed: not "never deployed", a dark fleet.
+    const reason = botsFailed
+      ? `the last ${failures} bots release(s) all failed: ${botsFailed} at the deploy, ${botsRolledBack} at smoke`
+      : `the last ${botsRolledBack} bots release(s) all failed smoke and rolled back`;
     return { known: true, baseline: false, lagging: true, reason, since: botsSince };
   }
+  // Nothing landed and nothing failed in the runs read: every one skipped the bots deploy, so the
+  // last landing is further back than the read reaches. This says nothing about what the bots run,
+  // so a reader must take it as unknown, never as current (scripts/fitness.mjs judgeDeploys).
   if (!botsReleased) return { known: true, baseline: false, lagging: false };
   if (botsReleased === head || botsChanged.length === 0) {
     return { known: true, baseline: true, lagging: false };
@@ -150,7 +156,7 @@ export function describeBotsLag(lag, { botsReleased } = {}) {
   if (!lag.baseline && lag.lagging) {
     return `bots app is STALE — ${lag.reason}; check the machine is started (#5955)`;
   }
-  if (!lag.baseline) return "bots app: no deploy baseline yet (pre-cutover, or never deployed)";
+  if (!lag.baseline) return "bots app: no deploy baseline in the runs read — state unknown";
   if (!lag.lagging) {
     return `bots app is current — nothing bot-relevant since its last deploy (${short(botsReleased)})`;
   }
@@ -159,7 +165,15 @@ export function describeBotsLag(lag, { botsReleased } = {}) {
 
 const short = (sha) => String(sha ?? "").slice(0, 7) || "unknown";
 
-const gh = (args) => execFileSync("gh", args, { encoding: "utf8" });
+// A run list is about 17KB a run, so the window below sits near node's default 1MB output limit, and
+// passing it would read as a failed scan.
+const gh = (args) => execFileSync("gh", args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+
+// How many of main's Pipeline runs the baselines are read from. Reading stops at the first landing,
+// so a healthy tick spends one job read on this however wide it is. It must outlast a burst of pushes
+// that never touch the bots, or a healthy repo reads as having no baseline: the longest from
+// 2026-08-27 to 2026-11-01 was 30 commits, and cancelled runs take slots too.
+const RUNS_SCANNED = 40;
 
 /**
  * Impure boundary: read the real state, hand it to the pure half.
@@ -178,13 +192,15 @@ const gh = (args) => execFileSync("gh", args, { encoding: "utf8" });
 const notes = [];
 
 /**
- * What one run did to the bots app: "landed", "rolled back", or nothing (a preflight skip, a run
- * that never reached the deploy, a smoke test still running). A release whose smoke failed was rolled back, so the bots never
- * ran it (#5955: 16 such runs read as "bots app is current" while the machine sat stopped).
+ * What one run did to the bots app: "landed", "rolled back", "failed", or nothing (a preflight skip,
+ * a run that never reached the deploy, a cancelled deploy, a smoke test still running). A release
+ * whose smoke failed was rolled back, so the bots never ran it (#5955: 16 such runs read as "bots app
+ * is current" while the machine sat stopped).
  */
 function botsReleaseOutcome(jobs) {
   const steps = jobs.find((j) => j.name === "release · deploy bots")?.steps ?? [];
   const step = (name) => steps.find((s) => s.name === name)?.conclusion;
+  if (step("Deploy bots") === "failure") return "failed";
   if (step("Deploy bots") !== "success") return undefined;
   // Only a passed smoke is a landing: one still running (or cancelled) has proven nothing yet.
   const smoke = step("Smoke test the bots release");
@@ -200,16 +216,21 @@ function botsReleaseOutcome(jobs) {
  * preflight skip concludes the job green without deploying anything, and its smoke step must not
  * have failed, because a failed smoke rolls the release back. Throws on any API failure;
  * the caller decides what fails soft.
+ *
+ * Runs of every event, because a bots release also lands by catch-up's force_bots_deploy dispatch: a
+ * read of pushes alone calls that fleet behind until the next push lands one (2026-11-01, 99803f7).
+ * The dashboard's job is skipped on a dispatch, so its baseline is still only a push's.
  */
 function scanRunBaselines() {
   let released = "";
   let botsReleased;
-  const rolledBack = [];
+  const failures = { "rolled back": [], failed: [] };
+  const rolledBack = failures["rolled back"];
   const runs =
     JSON.parse(
       gh([
         "api",
-        "repos/{owner}/{repo}/actions/workflows/pipeline.yml/runs?event=push&branch=main&per_page=20",
+        `repos/{owner}/{repo}/actions/workflows/pipeline.yml/runs?branch=main&per_page=${RUNS_SCANNED}`,
       ]),
     ).workflow_runs ?? [];
   for (const run of runs) {
@@ -223,7 +244,7 @@ function scanRunBaselines() {
     if (botsReleased === undefined) {
       const outcome = botsReleaseOutcome(jobs);
       if (outcome === "landed") botsReleased = run.head_sha;
-      if (outcome === "rolled back") rolledBack.push({ sha: run.head_sha, at: run.created_at });
+      else if (outcome) failures[outcome].push({ sha: run.head_sha, at: run.created_at });
     }
   }
   if (rolledBack.length > 0) {
@@ -232,12 +253,13 @@ function scanRunBaselines() {
     );
   }
   // Scanned clean with no real bots deploy in the window: report "no baseline", not "unknown".
-  // Runs arrive newest first, so the last rolled-back one is when the fleet went dark.
+  // Runs arrive newest first, so the oldest failure read is as far back as the fleet is known dark.
   return {
     released,
     botsReleased: botsReleased ?? "",
     botsRolledBack: rolledBack.length,
-    rolledBackSince: rolledBack.at(-1)?.at,
+    botsFailed: failures.failed.length,
+    failedSince: oldest([...rolledBack, ...failures.failed].map((r) => r.at)),
   };
 }
 
@@ -264,11 +286,12 @@ function readState() {
   let botsReleased;
   let botsChanged;
   let botsRolledBack = 0;
+  let botsFailed = 0;
   let botsSince;
   try {
-    let rolledBackSince;
-    ({ released, botsReleased, botsRolledBack, rolledBackSince } = scanRunBaselines());
-    botsSince = rolledBackSince;
+    let failedSince;
+    ({ released, botsReleased, botsRolledBack, botsFailed, failedSince } = scanRunBaselines());
+    botsSince = failedSince;
     if (botsReleased && botsReleased !== head) {
       const cmp = compare(botsReleased, head);
       botsChanged = filesOf(cmp);
@@ -302,7 +325,16 @@ function readState() {
           mergedBy: c.author?.login ?? c.committer?.login ?? "",
           committedAt: landedAt(c),
         }));
-  return { head, released, stranded, botsReleased, botsChanged, botsRolledBack, botsSince };
+  return {
+    head,
+    released,
+    stranded,
+    botsReleased,
+    botsChanged,
+    botsRolledBack,
+    botsFailed,
+    botsSince,
+  };
 }
 
 /** Read a whole stdin stream synchronously — the `--explain` fixture channel. */
