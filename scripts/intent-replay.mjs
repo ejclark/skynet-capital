@@ -96,16 +96,12 @@ export function setProblems(set) {
   });
 }
 
+const sortedEntries = (row) => Object.entries(row).sort(([a], [b]) => (a < b ? -1 : 1));
+
 /** What a case holds, as a short hash a result can carry. Any edit changes it; key order does not. */
 export const caseDigest = (row) =>
   createHash("sha256")
-    .update(
-      JSON.stringify(
-        Object.keys(row)
-          .sort()
-          .map((key) => [key, row[key]]),
-      ),
-    )
+    .update(JSON.stringify(sortedEntries(row)))
     .digest("hex")
     .slice(0, 16);
 
@@ -248,13 +244,22 @@ function requireBothOrders(runs) {
   for (const arm of ["without", "with"]) {
     const ofArm = runs.filter((run) => run.arm === arm);
     const forward = ofArm.filter((run) => run.order === "forward").length;
-    if (!forward || forward * 2 !== ofArm.length) {
+    if (!forward || forward * 2 !== ofArm.length || ofArm.length * 2 !== runs.length) {
       throw new Error(
-        `the ${arm} arm read ${forward} of ${ofArm.length} runs forward: an arm has to read both orders equally, or order poses as the page`,
+        `the ${arm} arm read ${forward} of ${ofArm.length} runs forward, of ${runs.length} in all: the arms have to run equally and read both orders equally, or order poses as the page`,
       );
     }
   }
 }
+
+/** A judge that contradicts itself on a slot has not judged it, whichever row it wrote last. */
+const slotOf = (row) => `${row.id}:${row.slot}`;
+const withoutConflicts = (rows) =>
+  rows.map((row) =>
+    rows.some((other) => slotOf(other) === slotOf(row) && other.pass !== row.pass)
+      ? { ...row, pass: undefined }
+      : row,
+  );
 
 const tally = (of) => ({ route: 0, ask: 0, judged: 0, of, answered: 0, unjudged: 0 });
 
@@ -277,7 +282,8 @@ export function scoreReplay(set, result) {
   refuseUnsafe(set);
   requireSameCases(set, result ?? {});
   requireBothOrders(result.runs);
-  const { runs, verdicts = [] } = result;
+  const { runs } = result;
+  const verdicts = withoutConflicts(result.verdicts ?? []);
   const passOf = new Map(verdicts.map((row) => [`${row.id}:${row.slot}`, row]));
   const byRun = Object.fromEntries(runs.map((run) => [run.name, tally(set.cases.length)]));
   const perArm = runs.filter((run) => run.arm === "with").length * set.cases.length;
@@ -301,26 +307,20 @@ export function scoreReplay(set, result) {
     : arms.with.judged > arms.without.judged
       ? "page above"
       : "page not above";
-  return { arms, byRun, differs, verdict, baseline: set.header?.baseline ?? null };
+  // Over a missing answer, a difference between the arms would read as one arm losing the case.
+  const named = complete ? differs : [];
+  return { arms, byRun, differs: named, verdict, baseline: set.header?.baseline ?? null };
 }
 
 const armLine = (name, arm) =>
   `${name}: judged ${arm.judged} of ${arm.of} · route ${arm.route} · ask ${arm.ask}${arm.answered < arm.of ? ` · ${arm.of - arm.answered} never answered` : ""}${arm.unjudged ? ` · ${arm.unjudged} not judged` : ""}`;
 
-/** Why a score has no verdict, in counts, so an unknown can be read back to what is missing. */
-function whyUnknown({ without, with: withPage }) {
-  const missing = without.of - without.answered + (withPage.of - withPage.answered);
-  const unjudged = without.unjudged + withPage.unjudged;
-  return [
-    missing ? `${missing} never answered` : "",
-    unjudged ? `${unjudged} not judged` : "",
-  ].filter(Boolean);
-}
-
 function summary({ arms, differs, verdict, baseline }) {
   const lines = [armLine("without the page", arms.without), armLine("with the page", arms.with)];
   if (verdict === "unknown") {
-    lines.push(`verdict: unknown: ${whyUnknown(arms).join(", ")}, so the arms cannot be compared.`);
+    lines.push(
+      "verdict: unknown. The lines above say what is missing: no comparison stands on it.",
+    );
   } else {
     lines.push(
       `verdict: ${verdict}. A gap of a point or two is inside what one arm moves between its own two runs.`,

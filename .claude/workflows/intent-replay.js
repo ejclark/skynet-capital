@@ -115,7 +115,7 @@ if (cases == null) {
   log('the cases lookup did not return; nothing run')
   return { caseIds: [], caseDigests: [], runs: [], verdicts: [], price: null, notRun: 'the cases lookup did not return: re-run' }
 }
-if (!cases.found || !Array.isArray(cases.ids) || !Array.isArray(cases.runs) || cases.caseDigests?.length !== cases.ids.length) throw new Error(`intent-replay: could not list the cases: ${cases.why ?? 'no cases in the answer'}`)
+if (!cases.found || !Array.isArray(cases.ids) || !Array.isArray(cases.runs) || cases.caseDigests?.length !== cases.ids.length) throw new Error(`intent-replay: could not list the cases: ${cases.why ?? 'no cases, or no digest for each case, in the answer'}`)
 log(`${cases.ids.length} cases · ${cases.runs.length} answerers + 1 judge + 2 lookups, about ${cases.price?.startTokens ?? 'unknown'} tokens to start them`)
 
 const ANSWER_SCHEMA = {

@@ -189,11 +189,56 @@ describe("the score", () => {
     expect(() => scoreReplay(SET, result({ runs: armless }))).toThrow(/both orders/);
   });
 
+  it("refuses arms of unequal size, each balanced on its own, whose totals cannot compare", () => {
+    const extra = runsFor(4)
+      .filter((run: { arm: string }) => run.arm === "without")
+      .map((run: object) => ({ ...run, answers: IDS.map((id) => answer(id)) }));
+    const withArm = full().filter((run: { arm: string }) => run.arm === "with");
+    expect(() => scoreReplay(SET, result({ runs: [...extra, ...withArm] }))).toThrow(/both orders/);
+  });
+
+  it("reads a slot the judge contradicted itself on as unjudged, whichever came last", () => {
+    const base = verdicts(runs, () => false);
+    for (const [first, second] of [
+      [false, true],
+      [true, false],
+    ]) {
+      const report = scoreReplay(
+        SET,
+        result({
+          verdicts: [
+            ...base.filter((row: { id: string; slot: number }) => row.id !== "C1" || row.slot),
+            { id: "C1", slot: 0, pass: first, why: "w" },
+            { id: "C1", slot: 0, pass: second, why: "w" },
+          ],
+        }),
+      );
+      expect(report.verdict, String(first)).toBe("unknown");
+      expect(report.arms.without.unjudged, String(first)).toBe(1);
+    }
+  });
+
+  it("counts a slot the judge repeated itself on once, as what it said", () => {
+    const repeated = [...verdicts(runs, () => false), { id: "C1", slot: 0, pass: true, why: "w" }];
+    const report = scoreReplay(SET, result({ verdicts: repeated }));
+    expect(report.verdict).toBe("page not above");
+    expect(report.arms.without.judged).toBe(6);
+  });
+
   it("names the cases where the arms differ, so a number can be read back to a message", () => {
     const failing = verdicts(runs, (name, id) => name.startsWith("without") && id === "C3");
     expect(scoreReplay(SET, result({ verdicts: failing })).differs).toEqual([
       { id: "C3", without: 0, with: 2 },
     ]);
+  });
+
+  it("names no differences on an unknown score, where a missing answer would read as a loss", () => {
+    const rows = full();
+    rows[3].answers = null;
+    const failing = verdicts(runs, (name, id) => name.startsWith("without") && id === "C3");
+    const report = scoreReplay(SET, result({ runs: rows, verdicts: failing }));
+    expect(report.verdict).toBe("unknown");
+    expect(report.differs).toEqual([]);
   });
 
   it("refuses a result from a different set, since a slot means nothing against other cases", () => {

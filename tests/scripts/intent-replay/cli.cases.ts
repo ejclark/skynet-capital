@@ -149,7 +149,7 @@ describe("the command line", () => {
     const line = cli("score", "--results", results, "--set", setFile);
     expect(line.status).toBe(0);
     expect(line.stdout).toContain("verdict: unknown");
-    expect(line.stdout).toContain("12 not judged");
+    expect(line.stdout.match(/6 not judged/g)).toHaveLength(2);
     expect(line.stdout).not.toMatch(/page above|page not above/);
     expect(line.stdout).not.toMatch(/^differ:/m);
   });

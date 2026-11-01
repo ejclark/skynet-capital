@@ -189,7 +189,7 @@ const BRIEF_CHARS = 1200; // dream-digest's cap: an opening this long reached it
 
 // STAYS OPEN, with a spec for each, because a row holds nothing that would settle them:
 // - A long first message of his own reads as a brief and is dropped. Only its length and place tell the
-//   two apart, and counting every session's brief as him would move the share far more than this does.
+//   two apart, and a session's brief is what this filter exists to keep out of his count.
 // - A message he opens on a route ("/login doesn't load") reads as a slash command and is dropped. A
 //   route and a command have one shape, and telling them apart would mean a list of commands to keep.
 
