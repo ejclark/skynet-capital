@@ -18,7 +18,7 @@
   "deps": {
     "openIssues": [
       {
-        "number": 6098,
+        "number": 900,
         "title": "[ci] Moneypenny Events (event-research automation) — research due events",
         "labels": ["ci-failure"]
       }
