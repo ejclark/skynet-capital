@@ -37,9 +37,7 @@ const STORE = "src/server/progression-store.ts";
 const WIRING: ReadonlyArray<{ file: string; patterns: readonly RegExp[] }> = [
   {
     file: "src/scripts/serve-dashboard.ts",
-    patterns: [
-      /readEvidence:\s*ladderEvidenceReader\(\{\s*activity,\s*orderAudit\s*\}\)/,
-    ],
+    patterns: [/readEvidence:\s*ladderEvidenceReader\(\{\s*activity,\s*orderAudit\s*\}\)/],
   },
   {
     file: "src/server/ladder-evidence.ts",
@@ -52,10 +50,7 @@ const WIRING: ReadonlyArray<{ file: string; patterns: readonly RegExp[] }> = [
   },
   {
     file: "src/scripts/dashboard-companion.ts",
-    patterns: [
-      /createProgressionService\(\{/,
-      /readEvidence:\s*deps\.readEvidence/,
-    ],
+    patterns: [/createProgressionService\(\{/, /readEvidence:\s*deps\.readEvidence/],
   },
 ];
 

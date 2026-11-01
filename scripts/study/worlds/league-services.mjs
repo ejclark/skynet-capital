@@ -19,13 +19,13 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { wireFeedReader } from "../../../src/observatory/wire-feed-cache.ts";
 import { lastBotActivityAt } from "../../../src/scripts/dashboard-ops-status.ts";
+import { ladderEvidenceFrom } from "../../../src/server/ladder-evidence.ts";
 import {
   appDeploySignal,
   botsDeployLag,
   botsDeploySignal,
   deployLag,
 } from "../../../src/server/ops-status-deploy-verdict.ts";
-import { ladderEvidenceFrom } from "../../../src/server/ladder-evidence.ts";
 import { buildOpsStatus } from "../../../src/server/ops-status-service.ts";
 import { createProgressionService } from "../../../src/server/progression-service.ts";
 import { isOccSymbol } from "../../../src/trading/option-symbols.ts";
