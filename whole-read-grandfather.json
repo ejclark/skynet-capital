@@ -5,11 +5,5 @@
       "count": 1,
       "why": "the Alerts strip reads the owner's whole event log for the orders' recent lifecycle"
     }
-  },
-  "src/server/wire-routes.ts": {
-    "readAllOrderAudit()": {
-      "count": 1,
-      "why": "member milestones read each member's whole order audit (members only since #6503)"
-    }
   }
 }

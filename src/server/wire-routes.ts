@@ -3,7 +3,6 @@ import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderIntent } from "../domain/types.js";
 import type { ActivityEvent } from "../observatory/activity-event.js";
-import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import {
   collapseDevelopmentEvents,
   type DevelopmentFeedItem,
@@ -17,7 +16,7 @@ import {
 } from "../observatory/feedback-event-feed.js";
 import {
   collapseMilestoneEvents,
-  deriveMilestoneEvents,
+  earnedMilestoneEvents,
   type MemberMilestone,
   mergeLadderLogIntoEvents,
   toMemberMilestones,
@@ -35,9 +34,9 @@ import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import type { FetchMergedPullRequests } from "./development-activity.js";
 import type { FeedbackLogEntry } from "./feedback-log.js";
 import type { FetchFeedbackStatuses } from "./feedback-status.js";
+import type { LadderEvidence } from "./ladder-evidence.js";
 import type { LadderProgressEntry } from "./ladder-progress-log.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
-import type { OrderAuditRecord } from "./order-audit-log.js";
 import { nextLinkHeader, resolvePageSize } from "./pagination.js";
 import type { PlayMilestone } from "./play-milestone-ledger.js";
 
@@ -83,21 +82,18 @@ export interface WireRouteDeps {
    */
   readonly readAllLadderProgress?: () => Promise<readonly LadderProgressEntry[]>;
   /**
-   * Every participant's tagged submissions — the input that classifies an option fill to a ladder
-   * rung (`deriveEarned`). With the feed's trade ledger, the two ledgers the Learn page derives the
-   * trade ladder from, so the feed's milestone rows are synthesized from exactly what that page reads.
+   * A member's earned trade-ladder rungs — the fill-derived half of the milestone kind, and the very
+   * fold the Learn page reads (`ladderEvidenceReader`, `ladder-evidence.ts`), so a feed row exists
+   * exactly when that member's own ladder says the rung is earned. The fold is held per participant
+   * and advanced by the lines appended to the trade ledger and the order audit since its last read;
+   * the Wire used to re-derive every member's ladder from the whole audit on each request (#4619).
    *
    * The milestone kind needs BOTH this and `readAllLadderProgress`, and is absent — not empty — with
    * either missing: half the sources would render a record quietly missing real earns, which is the
-   * falsifier this kind exists not to trip.
-   *
-   * Handed participant ids, only theirs are needed (#4619): the Wire asks for its members alone,
-   * because a bot's earns never reach the feed. An implementation may still return everyone's; the
-   * route filters either way.
+   * falsifier this kind exists not to trip. Asked for members only: a bot's earns never reach the
+   * feed (`toMemberMilestones`).
    */
-  readonly readAllOrderAudit?: (
-    participantIds?: readonly string[],
-  ) => Promise<readonly OrderAuditRecord[]>;
+  readonly readLadderEvidence?: (participantId: string) => Promise<LadderEvidence>;
   /**
    * Authored-play milestones (#5457 slice 5, #809 slice 6) — a member's play starting its shadow test,
    * passing it, being promoted to trade, or paused. MEMBERS ONLY: `content-api-routes.ts` withholds
@@ -203,38 +199,31 @@ async function assembleDevelopment(
 
 /**
  * The milestone kind, off the same envelope (#784 slice 5). Both regimes fold into one list: logged
- * earns from the bus unioned with the ladder log (the bridge), and fill-derived earns synthesized
- * from the two ledgers the Learn page reads. Then only what the league-wide feed can honestly say —
- * a named member's earn of a milestone this app can title (`toMemberMilestones`) — bounded by the
- * same `per_page` every non-trade kind rides.
+ * earns from the bus unioned with the ladder log (the bridge), and fill-derived earns read from the
+ * Learn page's own held ladder (`readLadderEvidence`). Then only what the league-wide feed can
+ * honestly say — a named member's earn of a milestone this app can title (`toMemberMilestones`) —
+ * bounded by the same `per_page` every non-trade kind rides.
  *
- * Fill-derived earns are derived for the roster's members only (#4619). `toMemberMilestones` drops
- * every other participant's row, and an earn is derived from one participant's own fills and tags,
- * so deriving a bot's ladder only to discard it was most of this kind's cost: the bots hold about
- * 60% of both ledgers at 180 days. The page is the same either way.
+ * Fill-derived earns are read for the roster's members only (#4619): `toMemberMilestones` drops
+ * every other participant's row, and the bots hold about 60% of both ledgers at 180 days.
  */
 async function assembleMilestones(
   config: WireRouteDeps,
   events: readonly ActivityEvent[],
-  records: readonly TradeActivityRecord[],
   participants: readonly ParticipantSnapshot[],
   limit: number,
 ): Promise<readonly MemberMilestone[] | undefined> {
-  if (!(config.readAllLadderProgress && config.readAllOrderAudit)) return undefined;
+  const { readAllLadderProgress, readLadderEvidence } = config;
+  if (!(readAllLadderProgress && readLadderEvidence)) return undefined;
   const members = participants.filter((p) => p.kind === "human").map((p) => p.id);
-  const isMember = new Set(members);
-  const [logged, tags] = await Promise.all([
-    config.readAllLadderProgress(),
-    config.readAllOrderAudit(members),
+  const [logged, derived] = await Promise.all([
+    readAllLadderProgress(),
+    Promise.all(
+      members.map(async (id) => earnedMilestoneEvents(id, (await readLadderEvidence(id)).earned)),
+    ),
   ]);
   const milestoneOnly = events.filter((event) => event.target.kind === "milestone");
-  const all = [
-    ...mergeLadderLogIntoEvents(milestoneOnly, logged),
-    ...deriveMilestoneEvents(
-      records.filter((r) => isMember.has(r.participantId)),
-      tags.filter((t) => isMember.has(t.participantId)),
-    ),
-  ];
+  const all = [...mergeLadderLogIntoEvents(milestoneOnly, logged), ...derived.flat()];
   return toMemberMilestones(collapseMilestoneEvents(all), participants).slice(0, limit);
 }
 
@@ -257,15 +246,14 @@ async function assembleWire(
   const events = mergeLedgerIntoEvents(published, records);
   // `collapseFeedbackEvents` sorts newest-first before this is bounded — `list()`'s own order is
   // filesystem-dependent, so the page shown would otherwise be an arbitrary slice.
-  // `published`, not `events`: the trade ledger's translated lines carry no feedback or development
-  // kind, so handing them to any assembler would only make its fold walk them for nothing (the
-  // milestone kind takes the ledger as its own second input, for the derived ladder).
-  // All in flight at once — two end in an independent GitHub read and one in two ledger reads, so
+  // `published`, not `events`: the trade ledger's translated lines carry no feedback, development or
+  // milestone kind, so handing them to any assembler would only make its fold walk them for nothing.
+  // All in flight at once — two end in an independent GitHub read and one in the held ladders, so
   // serializing them would add round trips to every render of a `no-store` page for nothing.
   const [feedback, development, milestones] = await Promise.all([
     assembleFeedbackPulse(config, published, filings, limit),
     assembleDevelopment(config, published, limit),
-    assembleMilestones(config, published, records, participants, limit),
+    assembleMilestones(config, published, participants, limit),
   ]);
   // A bot's spread legs fold into the spread's row, so "the why" below joins on its order id.
   const { findSpreadLeg, findByOrderId } = config;
