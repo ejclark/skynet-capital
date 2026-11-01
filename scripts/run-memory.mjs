@@ -24,7 +24,11 @@
 //   run-memory hash <file>                   the read-time hash to hand back to promote
 //   run-memory promote <source> <target> --read-hash H
 //
-// Exit codes: 0 ok, 2 usage, 3 budget spent, 4 nothing changed, 5 target changed since read.
+// Exit codes: 0 ok, 2 usage, 3 budget spent, 4 nothing changed, 5 target changed since read,
+// 6 another promote still holds the target, 7 an index a session would cut off.
+//
+// Seam: AGENT_LOCK_WAIT_MS shortens the wait on a held lock, for specs.
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync,
@@ -36,11 +40,16 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { LockBusyError, withFileLock } from "./file-lock.mjs";
 
 export const BUDGET_PER_CLASS = 3;
 export const EMPTY_FILE_HASH = "absent";
+const INDEX_LINE_LIMIT = 200;
+const INDEX_BYTE_LIMIT = 25 * 1024;
+const LOCK_WAIT_MS = 10_000;
+const HISTORY_HOOK = new URL("./hooks/memory-history.mjs", import.meta.url);
 
 /** Decide whether another attempt may run. Pure, so the rule is specced apart from the file I/O. */
 export function checkAttempt(rows, next) {
@@ -64,6 +73,21 @@ export function checkAttempt(rows, next) {
     };
   }
   return { ok: true };
+}
+
+/**
+ * Why an index would be cut off when a session loads it, or null when it fits. Past the limit the
+ * harness drops the rest with no warning (docs/vendor/claude-code/memory.md). A final newline ends the
+ * last line and does not start another.
+ */
+export function indexOverLimit(text) {
+  const lines = text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
+  if (lines > INDEX_LINE_LIMIT)
+    return `${lines} lines; a session loads only the first ${INDEX_LINE_LIMIT}`;
+  const bytes = Buffer.byteLength(text);
+  if (bytes > INDEX_BYTE_LIMIT)
+    return `${bytes} bytes; a session loads only the first ${INDEX_BYTE_LIMIT}`;
+  return null;
 }
 
 /** The content hash promote compares, or a marker for a file that does not exist yet. */
@@ -174,23 +198,65 @@ function status(f) {
   }
 }
 
+/**
+ * A promote is a rename, so no tool hook fires for it, and the history hook stages only the file it
+ * is fired for. So promote fires it, and the hook itself ignores any path outside a memory folder.
+ * A missing version is reported and does not undo the promote, which has already landed.
+ */
+function recordVersion(target) {
+  const res = spawnSync(process.execPath, [fileURLToPath(HISTORY_HOOK)], {
+    input: JSON.stringify({
+      tool_name: "promote",
+      tool_input: { file_path: resolve(target) },
+      session_id: process.env.CLAUDE_CODE_SESSION_ID,
+      // This process cannot tell a sub-agent from the main session, so it names itself and not "main".
+      agent_type: "run-memory",
+      cwd: process.cwd(),
+    }),
+    stdio: ["pipe", "ignore", "pipe"],
+    encoding: "utf8",
+  });
+  if (res.status !== 0) console.error(res.stderr?.trim() || "run-memory: no version recorded");
+}
+
 function promote(f) {
   const [source, target] = f._;
   if (!(source && target) || typeof f["read-hash"] !== "string")
     fail(2, "promote needs <source> <target> --read-hash H");
   if (!existsSync(source)) fail(2, `no source file ${source}`);
-  if (hashOf(target) !== f["read-hash"]) {
+  if (basename(target) === "MEMORY.md") {
+    const over = indexOverLimit(readFileSync(source, "utf8"));
+    if (over) fail(7, `refusing: MEMORY.md would be ${over}. Move detail into topic files first.`);
+  }
+  mkdirSync(dirname(target), { recursive: true });
+  // The check and the rename are one step under the lock, or writers from the same read all pass the
+  // check and all rename. Nothing in here may call fail: process.exit would skip the release.
+  let outcome;
+  try {
+    outcome = withFileLock(
+      `${target}.lock`,
+      () => {
+        if (hashOf(target) !== f["read-hash"]) return { changed: true };
+        // A rename, so a reader never sees half a file.
+        const temp = `${target}.promote-${process.pid}`;
+        copyFileSync(source, temp);
+        renameSync(temp, target);
+        // Under the lock, so the version holds this promote's content and not the next one's.
+        recordVersion(target);
+        return { hash: hashOf(target) };
+      },
+      { waitMs: Number(process.env.AGENT_LOCK_WAIT_MS ?? LOCK_WAIT_MS) },
+    );
+  } catch (error) {
+    if (error instanceof LockBusyError) fail(6, `${error.message}. Try the promote again.`);
+    throw error;
+  }
+  if (outcome.changed)
     fail(
       5,
       `${target} changed since it was read. Re-read it, merge, and promote with the new hash.`,
     );
-  }
-  mkdirSync(dirname(target), { recursive: true });
-  // A rename, so a reader never sees half a file.
-  const temp = `${target}.promote-${process.pid}`;
-  copyFileSync(source, temp);
-  renameSync(temp, target);
-  console.log(hashOf(target));
+  console.log(outcome.hash);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

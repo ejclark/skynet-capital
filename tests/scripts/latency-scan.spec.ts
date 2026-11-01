@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { closeSync, openSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { describeNoTokenSkip } from "../support/no-token-skip.js";
 
 // Feedback-to-shipped latency (#896) — driven through the real entrypoint via `--explain`, same
 // pattern as deploy-lag.spec.ts: the state goes in as JSON on stdin instead of hitting GitHub, so
@@ -195,3 +196,5 @@ describe("latency-scan: when --explain cannot read its stdin", () => {
     }
   });
 });
+
+describeNoTokenSkip("latency-scan", ["", "--json", "--table"]);
