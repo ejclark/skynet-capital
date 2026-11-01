@@ -24,6 +24,21 @@ import { fileURLToPath } from "node:url";
 /** The banned commands, each with the doctrine line that bans it and the alternative to offer. */
 export const BANNED = [
   {
+    // 2026-11-01: a cleanup loop ran `git worktree remove "$w"` over a keep-list built in shell. An
+    // unquoted pipe left the list empty, `grep -E "^()"` then matched everything, and 115 worktrees
+    // went, most of them other sessions'. `npm run worktree:sweep` prints keep or remove and why for
+    // each entry first. One path typed out is still fine: a person can read what it will remove.
+    // Anchored to a command position, or `$G` in a script's shape, for the reason the rules around it
+    // are: its first draft refused the PR title that named it, on its first use.
+    name: "git worktree remove on a computed path",
+    test: (cmd) =>
+      /(^|[;&|(]\s*|\b(?:do|then)\s+|\bbash\s+-c\s+['"])(?:\S*\/)?(?:git|\$\{?\w+\}?)(?:\s+-C\s+\S+)?\s+worktree\s+remove\b[^;&|\n]*[$`]/m.test(
+        cmd,
+      ) || /\bxargs\b[^;&|\n]*\bworktree\s+remove\b/.test(cmd),
+    reason:
+      "`git worktree remove` on a computed path is refused (docs/LESSONS.md 2026-11-01: a bad filter removed 115). Run `npm run worktree:sweep` to see keep or remove and why, then `npm run worktree:sweep -- --apply`, or `--only <dir-or-branch>` for your own. To remove one, type its path out.",
+  },
+  {
     name: "git stash",
     // `git stash list` / `show` only read; every other subcommand (push, pop, apply, drop, clear,
     // the bare form) moves working-tree state through a shared stack — the failure the ban names.

@@ -122,6 +122,42 @@ describe("guard-bash — the verdict", () => {
   });
 });
 
+describe("guard-bash — removing worktrees", () => {
+  // 2026-11-01: an empty filter in a shell loop removed 115 worktrees, most of them other sessions'.
+  it("refuses a computed path, however the loop is written", () => {
+    for (const command of [
+      'git worktree remove "$w"',
+      '/usr/bin/git worktree remove "$w"',
+      '$G worktree remove "$R/$n"',
+      "for w in $(ls); do git worktree remove $w; done",
+      "git worktree remove $(pwd)/x",
+      "git worktree remove `pwd`/x",
+      'git -C "$P" worktree remove x/$n',
+      "bash -c 'git worktree remove \"$w\"'",
+      "ls | xargs -n1 git worktree remove",
+    ]) {
+      expect(guardVerdict(bash(command))).toMatchObject({
+        allow: false,
+        reason: expect.stringContaining("worktree:sweep"),
+      });
+    }
+  });
+
+  it("allows one path typed out, and everything that only reads", () => {
+    for (const command of [
+      "git worktree remove .claude/worktrees/my-agent",
+      "git worktree list",
+      "git worktree add .claude/worktrees/x main",
+      "npm run worktree:sweep -- --apply",
+      // Naming the command is not running it: its first draft refused this PR's own title.
+      'scripts/ship.sh open "fix(hooks): refuse git worktree remove on a computed path" --body-file $S/b.md',
+      'echo "git worktree remove $w" > notes.md',
+    ]) {
+      expect(guardVerdict(bash(command)).allow).toBe(true);
+    }
+  });
+});
+
 describe("guard-bash — the hook contract", () => {
   it("exits 2 with the reason on stderr for a banned command", () => {
     const { status, stderr } = run(JSON.stringify(bash("git stash")));
