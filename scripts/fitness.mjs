@@ -14,14 +14,20 @@
 //                reached nobody, because its mail credential was never set.
 //
 // A probe that cannot run reports "unknown", never a pass: an unknown is not health. This script
-// detects and reports. It changes nothing, so it is safe to run anywhere. `--json` for machines.
-// Exit codes: 0 all passing or unknown · 1 something fails.
+// detects and reports, and calls no corrector. `--json` for machines. `--report` keeps one issue per
+// failing contract, assigned to the owner: GitHub already delivers that to a phone and inbox, so
+// reaching them needs no new credential. The repo is public, so an issue carries only the contract's
+// own words and never a log line.
+// Exit codes: 0 all passing or unknown, or --report · 1 something fails.
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// CI installs the binary as flyctl; a laptop usually has fly.
+const FLY = process.env.FLY_BIN ?? (spawnSync("fly", ["version"]).status === 0 ? "fly" : "flyctl");
+const OWNER = "ejclark";
 const BOTS_APP = "skynet-capital-bots";
 const DASHBOARD_APP = "skynet-capital";
 const STAMP_FRESH_MS = 5 * 60_000;
@@ -112,9 +118,9 @@ export const CONTRACTS = [
     mustBeTrue: "The bots machine is running, unless a person deliberately halted it",
     corrector: "scripts/bots-start-stopped.sh",
     budget: "3 starts in 6 hours, then stop",
-    reaches: "an issue on GitHub",
+    reaches: "an issue assigned to the owner",
     probe: () => {
-      const machines = json("fly", ["machine", "list", "-a", BOTS_APP, "--json"]);
+      const machines = json(FLY, ["machine", "list", "-a", BOTS_APP, "--json"]);
       return machines ? judgeMachine(machines) : unknown("cannot read Fly");
     },
   },
@@ -123,12 +129,12 @@ export const CONTRACTS = [
     mustBeTrue: "The bots process is alive, polling, and reachable from Mission Control",
     corrector: null,
     budget: "none: needs a named cause first",
-    reaches: "nobody yet",
+    reaches: "an issue assigned to the owner",
     probe: (nowMs) => {
-      const machines = json("fly", ["machine", "list", "-a", BOTS_APP, "--json"]);
+      const machines = json(FLY, ["machine", "list", "-a", BOTS_APP, "--json"]);
       const id = machines?.find((m) => (m.config?.standbys ?? []).length === 0)?.id;
       if (!id) return unknown("cannot read Fly");
-      const stamp = json("fly", ["machine", "exec", id, "cat /data/health.json", "-a", BOTS_APP]);
+      const stamp = json(FLY, ["machine", "exec", id, "cat /data/health.json", "-a", BOTS_APP]);
       return stamp ? judgeStamp(stamp, nowMs) : unknown("cannot read the health stamp");
     },
   },
@@ -137,7 +143,7 @@ export const CONTRACTS = [
     mustBeTrue: "A merge to main reaches production",
     corrector: "the Moneypenny repair lane",
     budget: "once per failure signature",
-    reaches: "an issue on GitHub",
+    reaches: "an issue assigned to the owner",
     probe: () => {
       const runs = json("gh", [
         "run",
@@ -159,9 +165,9 @@ export const CONTRACTS = [
     mustBeTrue: "A critical alert reaches the owner when they are not looking",
     corrector: null,
     budget: "none: a credential is the owner's to set",
-    reaches: "nobody yet",
+    reaches: "an issue assigned to the owner",
     probe: () => {
-      const logs = run("fly", ["logs", "-a", DASHBOARD_APP, "--no-tail"]);
+      const logs = run(FLY, ["logs", "-a", DASHBOARD_APP, "--no-tail"]);
       return logs === null ? unknown("cannot read Fly") : judgeAlertReach(logs);
     },
   },
@@ -195,6 +201,93 @@ export const CONTRACTS = [
   },
 ];
 
+const issueTitle = (id) => `[fitness] ${id}`;
+
+/**
+ * What the issues should do, given results and the open fitness issues. Pure. A failure opens one
+ * issue or comments only when its detail changed, so a standing failure does not pile up comments.
+ * A pass closes the issue. An unknown touches nothing: it proves neither health nor failure.
+ */
+export function reportActions(results, openIssues) {
+  const actions = [];
+  for (const r of results) {
+    const issue = openIssues.find((i) => i.title === issueTitle(r.id));
+    if (r.status === "fail" && !issue) actions.push({ kind: "open", result: r });
+    else if (
+      r.status === "fail" &&
+      !issue.body.includes(r.detail) &&
+      !issue.lastComment?.includes(r.detail)
+    ) {
+      actions.push({ kind: "comment", number: issue.number, result: r });
+    } else if (r.status === "pass" && issue)
+      actions.push({ kind: "close", number: issue.number, result: r });
+  }
+  return actions;
+}
+
+function issueBody(r) {
+  return [
+    `**This must stay true:** ${r.mustBeTrue}.`,
+    `**What failed:** ${r.detail}.`,
+    `**What fixes it:** ${r.corrector ?? "nothing automatic yet"} (budget: ${r.budget}).`,
+    "",
+    "This issue closes itself once the check passes. Contract: `scripts/fitness.mjs`.",
+  ].join("\n");
+}
+
+function report(results) {
+  const listed = json("gh", [
+    "issue",
+    "list",
+    "--state",
+    "open",
+    "--search",
+    "[fitness] in:title",
+    "--json",
+    "number,title,body,comments",
+    "--limit",
+    "50",
+  ]);
+  if (!listed) {
+    console.error("fitness: cannot read GitHub issues, so nothing was reported");
+    return;
+  }
+  const open = listed.map((i) => ({ ...i, lastComment: i.comments?.at(-1)?.body ?? "" }));
+  for (const a of reportActions(results, open)) {
+    if (a.kind === "open") {
+      run("gh", [
+        "issue",
+        "create",
+        "--title",
+        issueTitle(a.result.id),
+        "--label",
+        "bug",
+        "--assignee",
+        OWNER,
+        "--body",
+        issueBody(a.result),
+      ]);
+    } else if (a.kind === "comment") {
+      run("gh", [
+        "issue",
+        "comment",
+        String(a.number),
+        "--body",
+        `Still failing, and it changed: ${a.result.detail}.`,
+      ]);
+    } else {
+      run("gh", [
+        "issue",
+        "close",
+        String(a.number),
+        "--comment",
+        `Passing again: ${a.result.detail}.`,
+      ]);
+    }
+    console.log(`fitness: ${a.kind} ${a.result.id}`);
+  }
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const now = Date.now();
   const results = CONTRACTS.map(({ probe, ...contract }) => ({ ...contract, ...probe(now) }));
@@ -206,5 +299,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         console.log(`        corrects: ${r.corrector ?? "nothing yet"} · reaches: ${r.reaches}`);
     }
   }
-  if (results.some((r) => r.status === "fail")) process.exitCode = 1;
+  if (process.argv.includes("--report")) report(results);
+  else if (results.some((r) => r.status === "fail")) process.exitCode = 1;
 }
