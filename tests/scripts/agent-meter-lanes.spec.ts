@@ -17,6 +17,7 @@ import {
   jobsFromZip,
   laneOf,
   laneRows,
+  listRuns,
   logStart,
   readLanes,
   runNeedsRead,
@@ -161,7 +162,8 @@ describe("lane rows from cached runs", () => {
 });
 
 /** A fake REST layer: canned bodies by path substring, every call counted like the real one. */
-function fakeRest(routes: [string | RegExp, string | Buffer][]) {
+type Body = string | Buffer | ((path: string) => string);
+function fakeRest(routes: [string | RegExp, Body][]) {
   const paths: string[] = [];
   const find = (path: string) => {
     const hit = routes.find(([key]) =>
@@ -177,7 +179,8 @@ function fakeRest(routes: [string | RegExp, string | Buffer][]) {
     api(path: string) {
       rest.calls += 1;
       paths.push(path);
-      return JSON.parse(String(find(path)));
+      const body = find(path);
+      return JSON.parse(String(typeof body === "function" ? body(path) : body));
     },
     zip(runId: number) {
       const path = `/actions/runs/${runId}/logs`;
@@ -193,6 +196,7 @@ const RUN = (id: number, started: string, minutes: number, conclusion = "success
   id,
   event: "workflow_dispatch",
   conclusion,
+  created_at: started,
   run_started_at: started,
   updated_at: new Date(Date.parse(started) + minutes * 60000).toISOString(),
 });
@@ -207,7 +211,7 @@ describe("reading the lanes over REST with a cache", () => {
     "research due events (a-1)/system.txt": "not a job log",
   });
   // Listings are per workflow and lane event; only the events dispatch listing has runs here.
-  const routes = (): [string | RegExp, string | Buffer][] => [
+  const routes = (): [string | RegExp, Body][] => [
     [
       /moneypenny-events\.yml\/runs\?.*event=workflow_dispatch/,
       JSON.stringify({
@@ -284,21 +288,30 @@ describe("reading the lanes over REST with a cache", () => {
     expect(saved).toEqual([1]);
   });
 
-  it("refuses a window past GitHub's listing cap by name instead of printing a floor", () => {
-    const full = JSON.stringify({
-      workflow_runs: Array.from({ length: 100 }, (_, i) => RUN(i, "2026-10-30T09:00:00Z", 1)),
-    });
-    const rest = fakeRest([[/moneypenny-events\.yml\/runs\?/, full]]);
-    expect(() =>
-      readLanes({
-        rest,
-        cache: { version: 1, runs: {}, pipeline: {} },
-        sinceMs: since,
-        untilMs: until,
-        maxRest: 100,
-      }),
-    ).toThrow(/listing cap/);
-    expect(rest.calls).toBe(10);
+  it("walks past GitHub's 1,000-run cap from the oldest run seen, keeping the window's tail", () => {
+    // Below the first cursor: ten full pages, one run a second; below a moved cursor: one old run.
+    const page = (path: string) => {
+      const cursor = decodeURIComponent(/created=([^&]+)/.exec(path)?.[1] ?? "").slice(1);
+      const n = Number(/&page=(\d+)/.exec(path)?.[1]);
+      if (Date.parse(cursor) > until)
+        return JSON.stringify({
+          workflow_runs: Array.from({ length: 100 }, (_, i) =>
+            RUN(
+              n * 1000 + i,
+              new Date(
+                Date.parse("2026-10-30T09:00:00Z") - ((n - 1) * 100 + i) * 1000,
+              ).toISOString(),
+              1,
+            ),
+          ),
+        });
+      return JSON.stringify({ workflow_runs: [RUN(1, "2026-10-01T00:00:00Z", 1)] });
+    };
+    const rest = fakeRest([[/moneypenny-events\.yml\/runs\?/, page]]);
+    const runs = listRuns(rest, "moneypenny-events.yml", since, until, "workflow_dispatch");
+    expect(runs).toHaveLength(1001);
+    expect(rest.calls).toBe(11);
+    expect(rest.paths[10]).toContain(encodeURIComponent("<2026-10-30T08:43:22Z"));
   });
 
   it("counts a run whose log cannot be read and leaves it out of the cache for next time", async () => {

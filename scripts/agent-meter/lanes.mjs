@@ -137,24 +137,43 @@ export function createRest() {
 }
 
 /**
- * A workflow's runs created from the window's start (less slack) up to now, newest first. Only
- * the `>=` form of `created` is honoured by this listing (a day or a range read as zero runs on
- * 2026-11-01), so a window past the 1,000-run cap cannot be chunked; it is refused by name.
+ * A workflow's runs created inside the window (plus slack), newest first. The listing honours
+ * `created=<T` and `>=T` but no two-sided range (a day or a range read as zero runs on
+ * 2026-11-01), and it returns at most 1,000 runs per query. So the window is walked backwards
+ * from its end: ten pages below a cursor, then the cursor moves to the oldest run seen and the
+ * walk goes on, until a run older than the window appears. The repair scans alone pass 1,000
+ * runs in five days, which is what the walk is for.
  */
-export function listRuns(rest, workflowFile, sinceMs, event = null) {
-  const created = new Date(sinceMs - LIST_SLACK_MS).toISOString().replace(/\.\d+Z$/, "Z");
-  const query = `created=${encodeURIComponent(`>=${created}`)}&per_page=100${event ? `&event=${event}` : ""}`;
+export function listRuns(rest, workflowFile, sinceMs, untilMs, event = null) {
+  const lowerMs = sinceMs - LIST_SLACK_MS;
+  const iso = (ms) => new Date(ms).toISOString().replace(/\.\d+Z$/, "Z");
+  const seen = new Set();
   const runs = [];
-  for (let page = 1; page <= LIST_PAGE_CAP; page += 1) {
-    const body = rest.api(
-      `repos/${REPO}/actions/workflows/${workflowFile}/runs?${query}&page=${page}`,
-    );
-    const items = body.workflow_runs ?? [];
-    runs.push(...items);
-    if (items.length < 100) return runs;
+  let cursorMs = untilMs + LIST_SLACK_MS;
+  for (let round = 0; round < 20; round += 1) {
+    const query = `created=${encodeURIComponent(`<${iso(cursorMs)}`)}&per_page=100${event ? `&event=${event}` : ""}`;
+    let oldestMs = cursorMs;
+    let fresh = 0;
+    for (let page = 1; page <= LIST_PAGE_CAP; page += 1) {
+      const body = rest.api(
+        `repos/${REPO}/actions/workflows/${workflowFile}/runs?${query}&page=${page}`,
+      );
+      const items = body.workflow_runs ?? [];
+      for (const run of items) {
+        oldestMs = Math.min(oldestMs, Date.parse(run.created_at));
+        if (seen.has(run.id)) continue;
+        seen.add(run.id);
+        fresh += 1;
+        runs.push(run);
+      }
+      if (items.length < 100 || oldestMs < lowerMs) return runs;
+    }
+    if (!fresh) break;
+    // Runs created in the cursor's own second are listed again and deduped, never skipped.
+    cursorMs = oldestMs + 1000;
   }
   throw new Error(
-    `${workflowFile}${event ? ` (${event})` : ""} has over ${LIST_PAGE_CAP * 100} runs in the window, past GitHub's listing cap: narrow the window`,
+    `${workflowFile}${event ? ` (${event})` : ""}: the listing walk stalled past ${LIST_PAGE_CAP * 100} runs of one second`,
   );
 }
 
@@ -252,7 +271,7 @@ export function readLanes({
       counts.unlisted.push(`${workflow} ${event}`);
       continue;
     }
-    for (const run of listRuns(rest, workflow, sinceMs, event).filter(inWindow)) {
+    for (const run of listRuns(rest, workflow, sinceMs, untilMs, event).filter(inWindow)) {
       const bucket = classify(run);
       counts[bucket] += 1;
       if (bucket !== "newRuns") continue;

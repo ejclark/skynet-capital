@@ -9,7 +9,7 @@ import { listRuns, noop, REPO } from "./lanes.mjs";
  */
 export function pipelineRuns(rest, cache, w, maxRest, persist = noop) {
   cache.pipeline ??= {};
-  const runs = listRuns(rest, "pipeline.yml", w.sinceMs).filter((run) => {
+  const runs = listRuns(rest, "pipeline.yml", w.sinceMs, w.untilMs).filter((run) => {
     const at = Date.parse(run.run_started_at);
     return at >= w.sinceMs && at <= w.untilMs;
   });
