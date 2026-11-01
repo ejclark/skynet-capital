@@ -7,6 +7,7 @@ import {
   capsuleIntents,
   capsuleTarget,
   closeProvenCapsule,
+  ERODED_MARKER,
   flagCapsuleOrphan,
   gatherCapsules,
   greenProof,
@@ -321,27 +322,26 @@ describe("hasLinkedPr — a PR that references the capsule, open or merged", () 
   });
 });
 
-describe("lookupsFor — the proof read for every capsule, the PR read only where an orphan could fire", () => {
-  it("asks for the run history of an escalated capsule, never the orphan read", () => {
+describe("lookupsFor — the PR read only where an orphan could fire", () => {
+  it("never asks the orphan read for an escalated capsule", () => {
     const issue = {
       labels: [{ name: "ci-failure" }, { name: "needs-eric" }],
       created_at: hoursAgo(1),
     };
-    expect(lookupsFor(issue, NOW)).toEqual({ orphan: false, proof: true });
+    expect(lookupsFor(issue, NOW)).toEqual({ orphan: false });
   });
 
   it("asks for the PR link of an unescalated capsule older than 24h", () => {
     expect(lookupsFor({ labels: ["ci-failure"], created_at: hoursAgo(25) }, NOW)).toEqual({
       orphan: true,
-      proof: true,
     });
   });
 
-  it("still asks for the proof on a young capsule, or one already flagged — green closes either", () => {
+  it("asks for nothing extra on a young capsule, or one already flagged", () => {
     const young = { labels: ["ci-failure"], created_at: hoursAgo(23) };
     const flagged = { labels: ["ci-failure", "stall-flagged"], created_at: hoursAgo(99) };
-    expect(lookupsFor(young, NOW)).toEqual({ orphan: false, proof: true });
-    expect(lookupsFor(flagged, NOW)).toEqual({ orphan: false, proof: true });
+    expect(lookupsFor(young, NOW)).toEqual({ orphan: false });
+    expect(lookupsFor(flagged, NOW)).toEqual({ orphan: false });
   });
 });
 
@@ -441,6 +441,25 @@ describe("capsuleIntents — a needs-eric capsule whose job went green", () => {
     expect(capsuleIntents({ capsules: [back] })).toEqual([]);
   });
 
+  it("speaks once: a capsule a person reopened after the close, or re-labelled after the old check, stays", () => {
+    const reopened = escalated({ comments: [`🌤 earlier\n${PROVEN_MARKER}`] });
+    expect(capsuleIntents({ capsules: [reopened] })).toEqual([]);
+    const relabelled = escalated({ comments: [`🌤 earlier\n${ERODED_MARKER}`] });
+    expect(capsuleIntents({ capsules: [relabelled] })).toEqual([]);
+    // A legacy eroded capsule nobody re-labelled is simply open and green: it closes.
+    const legacy = escalated({ labels: ["ci-failure"], comments: [`🌤 earlier\n${ERODED_MARKER}`] });
+    expect(capsuleIntents({ capsules: [legacy] }).map((i) => i.kind)).toEqual([
+      "close-proven-capsule",
+    ]);
+  });
+
+  it("closes a proven capsule even while a repair PR is open — the merge then lands on a closed issue", () => {
+    const withPr = escalated({ labels: ["ci-failure"], hasLinkedPr: true });
+    expect(capsuleIntents({ capsules: [withPr] }).map((i) => i.kind)).toEqual([
+      "close-proven-capsule",
+    ]);
+  });
+
   it("does nothing when it cannot tell which job the capsule tracks", () => {
     expect(greenProof(escalated({ body: "", title: "something else" }))).toBeNull();
   });
@@ -521,6 +540,30 @@ describe("gatherCapsules — REST reads, only where a condition could fire", () 
       ["flag-capsule-orphan", 1],
       ["close-proven-capsule", 3],
     ]);
+  });
+
+  it("reads each runs page and job list once per gather, however many capsules share the workflow", () => {
+    const io = fakeRest({
+      "issues?state=open&labels=ci-failure": [
+        issue(5, ["ci-failure", "needs-eric"], 48),
+        issue(6, ["ci-failure", "needs-eric"], 48),
+      ],
+      "issues/5/comments": [],
+      "issues/6/comments": [],
+      "actions/workflows?per_page=100": { workflows: [{ name: "Moneypenny Events", id: 77 }] },
+      [runsPath("push")]: pushRuns,
+      [runsPath("workflow_dispatch")]: { workflow_runs: [] },
+      "actions/runs/13/jobs?per_page=100": jobs("success"),
+      "actions/runs/11/jobs?per_page=100": jobs("success"),
+      "actions/runs/10/jobs?per_page=100": jobs("success"),
+    });
+    const capsules = gatherCapsules(NOW, io);
+    expect(capsuleIntents({ capsules }).map((i) => i.issueNumber)).toEqual([5, 6]);
+    const counts = new Map<string, number>();
+    for (const p of io.asked) counts.set(p, (counts.get(p) ?? 0) + 1);
+    expect(counts.get(runsPath("push"))).toBe(1);
+    expect(counts.get("actions/runs/13/jobs?per_page=100")).toBe(1);
+    expect(counts.get("actions/workflows?per_page=100")).toBe(1);
   });
 
   it("proves a workflow that runs on dispatch green from its dispatch runs (zero tokens)", () => {
@@ -722,12 +765,12 @@ describe("the writes — REST, and in an order that cannot storm", () => {
     closeProvenCapsule(proven, { run });
     expect(calls).toEqual([
       ["api", "-X", "DELETE", "repos/{owner}/{repo}/issues/9/labels/needs-eric"],
-      ["issue", "close", "9", "--reason", "completed", "--comment", "b"],
+      ["issue", "close", "9", "--reason", "not planned", "--comment", "b"],
     ]);
 
     calls.length = 0;
     closeProvenCapsule({ ...proven, clearNeedsEric: false }, { run });
-    expect(calls).toEqual([["issue", "close", "9", "--reason", "completed", "--comment", "b"]]);
+    expect(calls).toEqual([["issue", "close", "9", "--reason", "not planned", "--comment", "b"]]);
 
     // Label first and strict: a failed removal closes nothing, so no comment claims it happened.
     const failing = () => {

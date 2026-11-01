@@ -35,6 +35,9 @@ export const ORPHAN_AFTER_HOURS = 24;
 export const GREEN_PUSHES = 3;
 export const ORPHAN_MARKER = "<!-- moneypenny:capsule-orphan -->";
 export const PROVEN_MARKER = "<!-- moneypenny:capsule-proven -->";
+/** Left by the earlier label-only check. Still read: a capsule carrying it AND `needs-eric` is
+ *  one whose owner re-applied the label after that check spoke, which stays his call. */
+export const ERODED_MARKER = "<!-- moneypenny:capsule-eroded -->";
 
 const names = (labels = []) => labels.map((l) => (typeof l === "string" ? l : l?.name));
 const hours = (fromIso, nowMs) => Math.floor((nowMs - Date.parse(fromIso)) / 3_600_000);
@@ -133,14 +136,14 @@ export function hasLinkedPr(timeline = [], since) {
   });
 }
 
-/** What the gather needs to read for this capsule, from its labels and age alone. The proof is
- *  read for every open capsule — green closes any of them — and the costlier PR read only where
- *  the orphan flag could still fire. */
+/** Whether the gather needs the costlier PR read for this capsule, from its labels and age alone:
+ *  only where the orphan flag could still fire. The proof is read for every open capsule, since
+ *  green closes any of them. */
 export function lookupsFor(issue, nowMs, orphanAfterHours = ORPHAN_AFTER_HOURS) {
   const labels = names(issue.labels);
-  if (labels.includes(LABELS.needsEric.name)) return { orphan: false, proof: true };
+  if (labels.includes(LABELS.needsEric.name)) return { orphan: false };
   const old = hours(issue.created_at ?? issue.createdAt, nowMs) >= orphanAfterHours;
-  return { orphan: old && !labels.includes(LABELS.stall.name), proof: true };
+  return { orphan: old && !labels.includes(LABELS.stall.name) };
 }
 
 /**
@@ -203,9 +206,14 @@ export function capsuleIntents({ capsules = [], orphanAfterHours = ORPHAN_AFTER_
   for (const c of capsules) {
     const labels = names(c.labels);
     const posted = (c.comments ?? []).join("\n");
-    const proof = greenProof(c);
+    const escalated = labels.includes(LABELS.needsEric.name);
+    // This check speaks once. A proven comment on an OPEN capsule means a person reopened it; a
+    // legacy eroded comment beside a present `needs-eric` means the owner re-applied the label
+    // after that check removed it. Either is his call and stays, green or not.
+    const spoke = posted.includes(PROVEN_MARKER) || (escalated && posted.includes(ERODED_MARKER));
+    const proof = spoke ? null : greenProof(c);
     if (proof) {
-      const clearNeedsEric = labels.includes(LABELS.needsEric.name);
+      const clearNeedsEric = escalated;
       intents.push({
         kind: "close-proven-capsule",
         issueNumber: c.number,
@@ -216,7 +224,7 @@ export function capsuleIntents({ capsules = [], orphanAfterHours = ORPHAN_AFTER_
       continue;
     }
     // Not proven. An escalated capsule waits on its decision; the rest may be orphans.
-    if (labels.includes(LABELS.needsEric.name)) continue;
+    if (escalated) continue;
     if (c.ageHours < orphanAfterHours || c.hasLinkedPr !== false) continue;
     if (labels.includes(LABELS.stall.name)) continue;
     if (posted.includes(ORPHAN_MARKER)) continue;
@@ -270,9 +278,16 @@ function recentRuns(workflowId, target, cutMs, { rest }) {
   return runs;
 }
 
-/** Read every open capsule and the lookups each one needs. Loud on failure, like audit.mjs. */
+/** Read every open capsule and the lookups each one needs. Loud on failure, like audit.mjs.
+ *  Run pages and job lists are read once per gather, not once per capsule: three capsules on one
+ *  workflow (the study's shape) share every one of them. */
 export function gatherCapsules(nowMs, { rest = ghRest, restAll = ghRestAll } = {}) {
   const open = restAll(`issues?state=open&labels=${encodeURIComponent(LABELS.ciFailure.name)}`);
+  const once = new Map();
+  const cached = (path) => {
+    if (!once.has(path)) once.set(path, rest(path));
+    return once.get(path);
+  };
   let workflowIds;
   const capsules = [];
   for (const i of open.filter((x) => !x.pull_request)) {
@@ -293,13 +308,13 @@ export function gatherCapsules(nowMs, { rest = ghRest, restAll = ghRestAll } = {
     if (need.orphan) {
       c.hasLinkedPr = hasLinkedPr(restAll(`issues/${i.number}/timeline`), recurredAt);
     }
-    const target = need.proof && capsuleTarget(i);
+    const target = capsuleTarget(i);
     if (target) {
       workflowIds ??= new Map(
-        (rest("actions/workflows?per_page=100")?.workflows ?? []).map((w) => [w.name, w.id]),
+        (cached("actions/workflows?per_page=100")?.workflows ?? []).map((w) => [w.name, w.id]),
       );
       const id = workflowIds.get(target.workflow);
-      if (id) c.recentRuns = recentRuns(id, target, proofCut(c), { rest });
+      if (id) c.recentRuns = recentRuns(id, target, proofCut(c), { rest: cached });
     }
     capsules.push(c);
   }
@@ -343,8 +358,9 @@ export function flagCapsuleOrphan(i, { run = sh, ensure = ensureLabel } = {}) {
 /**
  * Label first and strict, like audit.mjs's `clearStaleInProgress`: if the `needs-eric` removal
  * fails, nothing closes and no comment claims it did. Then one `gh issue close` carries the comment
- * and the close together, so a closed capsule always says why. A capsule is an issue, never a PR,
- * so the issue subcommand is safe here.
+ * and the close together, so a closed capsule always says why. "Not planned", not "completed":
+ * no fix merged here, the failure stopped on its own, and the shipped sweep's merged-fix closes
+ * stay countable apart. A capsule is an issue, never a PR, so the issue subcommand is safe here.
  */
 export function closeProvenCapsule(i, { run = sh } = {}) {
   const n = String(i.issueNumber);
@@ -352,7 +368,7 @@ export function closeProvenCapsule(i, { run = sh } = {}) {
     const label = encodeURIComponent(LABELS.needsEric.name);
     run("gh", ["api", "-X", "DELETE", `${issuePath(i.issueNumber)}/labels/${label}`]);
   }
-  run("gh", ["issue", "close", n, "--reason", "completed", "--comment", i.body]);
+  run("gh", ["issue", "close", n, "--reason", "not planned", "--comment", i.body]);
   console.log(`::notice::closed #${n} — its failing job is green again`);
   return `🌤 closed #${n} — \`${i.title}\` is passing again`;
 }

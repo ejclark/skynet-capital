@@ -4,6 +4,7 @@ export const ORPHAN_AFTER_HOURS: number;
 export const GREEN_PUSHES: number;
 export const ORPHAN_MARKER: string;
 export const PROVEN_MARKER: string;
+export const ERODED_MARKER: string;
 export const RECURRENCE: string;
 
 type Label = { name?: string } | string;
@@ -66,7 +67,7 @@ export function lookupsFor(
   issue: { labels?: readonly Label[]; created_at?: string; createdAt?: string },
   nowMs: number,
   orphanAfterHours?: number,
-): { orphan: boolean; proof: boolean };
+): { orphan: boolean };
 export function provenRuns(
   runs: readonly CapsuleRun[] | undefined,
   target: Target,
