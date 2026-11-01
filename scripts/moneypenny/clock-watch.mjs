@@ -14,8 +14,8 @@
 // The open issue is found in the audit's own open-issue list, so the watch costs no second call.
 //
 // WHAT IT DOES. While the newest successful scheduled run is older than `CLOCK_STALE_HOURS` it keeps
-// exactly ONE issue, `[fitness] clock-running`, as a `bug` assigned to the owner — the same shape
-// and reach as the issues fitness.mjs files, since re-enabling a workflow is his click, not a
+// exactly ONE issue, `[fitness] clock-running`, as a `bug` assigned to the owner at once — the same
+// shape as the issues fitness.mjs files, and its owner rung, since re-enabling a workflow is his click, not a
 // lane's (the cut list of #6470 keeps the clock off the repair lane: every clock failure on record
 // was a flyctl install step, and a stopped schedule still reaches nobody). The open issue is its
 // own memory; when a successful scheduled run is fresh again the issue closes with the reason.
@@ -116,7 +116,7 @@ export function clockOrUnknown(nowMs, issues, { rest = ghRest, log = console.log
   }
 }
 
-/** The open act: one `gh issue create`, `bug` and assigned to the owner, as fitness.mjs files its own. */
+/** The open act: one `gh issue create`, `bug` and assigned to the owner, as fitness.mjs files a credential's. */
 export function openClockIssue(i, { run = sh } = {}) {
   const url = run("gh", [
     "issue",

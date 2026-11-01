@@ -42,14 +42,6 @@
     "readAllOrderAudit()": {
       "count": 1,
       "why": "member milestones read each member's whole order audit (members only since #6503)"
-    },
-    "readAllActivityEvents()": {
-      "count": 1,
-      "why": "fallback for the feed when readWireFeed is not wired; production wires it"
-    },
-    "readAllTradeActivity()": {
-      "count": 1,
-      "why": "fallback for the feed when readWireFeed is not wired; production wires it"
     }
   }
 }

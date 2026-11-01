@@ -8,7 +8,13 @@ export declare const BANNED: readonly BannedRule[];
 export interface HookInput {
   tool_name?: string;
   tool_input?: { command?: string; [key: string]: unknown };
+  cwd?: string;
+  agent_id?: string;
+  agent_type?: string;
 }
 export declare function guardVerdict(
   input: HookInput | null | undefined,
 ): { allow: true } | { allow: false; rule: string; reason: string };
+export declare function asWrittenInput(
+  input: HookInput | null | undefined,
+): { command?: string; [key: string]: unknown } | null;

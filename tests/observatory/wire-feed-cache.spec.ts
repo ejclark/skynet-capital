@@ -479,11 +479,14 @@ describe("the Wire's append-aware fold (#4458)", () => {
         readAllLadderProgress: () => Promise.resolve([]),
         readAllOrderAudit: () => Promise.resolve([]),
       };
+      // The oracle: every line of every file, unreduced — what the route read before the fold.
       const whole: WireRouteDeps = {
         ...shared,
-        readAllActivityEvents: () => sources.bus.list(),
-        readAllTradeActivity: () => sources.activity.list(),
-        readAllFeedback: () => sources.feedbackLog.list(),
+        readWireFeed: async () => ({
+          events: await sources.bus.list(),
+          records: await sources.activity.list(),
+          filings: await sources.feedbackLog.list(),
+        }),
       };
       const folded: WireRouteDeps = { ...shared, readWireFeed: wireFeedReader(sources).read };
 
