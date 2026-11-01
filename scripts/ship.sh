@@ -408,7 +408,14 @@ EOF_SHOTS
     # and a green run stamps the tree so the pre-push hook below skips a second verify of it. Logs
     # are per-process — a fixed /tmp name let two ships at once overwrite each other's tail.
     local verify_log="/tmp/ship-verify.$$.log"
-    bash scripts/verify-locked.sh --log "$verify_log" || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 "$verify_log"; exit 1; }
+    # Every outcome goes to scripts/agent-meter.mjs's log: a mistake caught here never reaches CI, so
+    # without this line the first-pass rate only sees what got past local verify (#6470).
+    local verify_ok=true
+    bash scripts/verify-locked.sh --log "$verify_log" || verify_ok=false
+    mkdir -p "${AGENT_RUNS_DIR:-$HOME/.claude/runs}" 2>/dev/null \
+      && printf '{"at":"%s","ok":%s,"branch":"%s"}\n' "$(date -u +%FT%TZ)" "$verify_ok" "$(git branch --show-current)" \
+        >> "${AGENT_RUNS_DIR:-$HOME/.claude/runs}/ship-verify.jsonl" 2>/dev/null || true
+    "$verify_ok" || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 "$verify_log"; exit 1; }
     echo "ship: verify green."
     # INTEGRATION TESTS TOO (2026-09-30, #4094). `verify` is unit/DOM-level; the Playwright suite is
     # CI's `integration tests` job, and #4151/#4155 merged while it was still running and later went
