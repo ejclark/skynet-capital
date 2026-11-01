@@ -19,8 +19,8 @@ import { createCompanionMessageLogStore } from "../server/companion-message-log.
 import { opaqueMemberId } from "../server/feedback-issue.js";
 import type { FeedbackLogStore } from "../server/feedback-log.js";
 import { resolveSimilarFeedback } from "../server/feedback-similar.js";
+import type { LadderEvidenceReader } from "../server/ladder-evidence.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
-import type { OrderAuditRecord } from "../server/order-audit-log.js";
 import { logKeyFor } from "../server/owner-link-store.js";
 import {
   createProgressionService,
@@ -33,7 +33,8 @@ import { resolveWorkStatus } from "../server/work-status.js";
 export interface CompanionSetupDeps {
   readonly hub: ObservatoryHub;
   readonly readFills: (id: string) => Promise<readonly TradeActivityRecord[]>;
-  readonly readTags: (id: string) => Promise<readonly OrderAuditRecord[]>;
+  /** What the ladder's two ledgers prove (`ladder-evidence.ts`) — held, advanced by appended lines. */
+  readonly readEvidence: LadderEvidenceReader;
   /** What a member has filed — #567's original engagement evidence, kept only to grandfather a
    *  member who filed before the message log existed (`progression-service.ts`'s `readFeedback`
    *  doc). */
@@ -66,8 +67,7 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
   const companionMessageLog = createCompanionMessageLogStore(env);
   const keyFor = (id: string) => logKeyFor(deps.ownerEmailFor, opaqueMemberId, id);
   const progression = createProgressionService({
-    readFills: deps.readFills,
-    readTags: deps.readTags,
+    readEvidence: deps.readEvidence,
     readMessages: (id) => companionMessageLog.list(keyFor(id)),
     readFeedback: (id) => deps.feedbackLog.list(keyFor(id)),
     store: createProgressionStore(env, (m) => console.error(m)),

@@ -25,6 +25,7 @@ import {
   botsDeploySignal,
   deployLag,
 } from "../../../src/server/ops-status-deploy-verdict.ts";
+import { ladderEvidenceFrom } from "../../../src/server/ladder-evidence.ts";
 import { buildOpsStatus } from "../../../src/server/ops-status-service.ts";
 import { createProgressionService } from "../../../src/server/progression-service.ts";
 import { isOccSymbol } from "../../../src/trading/option-symbols.ts";
@@ -114,8 +115,8 @@ const optionFillWithoutAudit = (book, ids) => {
  */
 function progression(book) {
   return createProgressionService({
-    readFills: async (id) => book.activity[id] ?? [],
-    readTags: (id) => optionFillWithoutAudit(book, [id]),
+    readEvidence: async (id) =>
+      ladderEvidenceFrom(book.activity[id] ?? [], await optionFillWithoutAudit(book, [id])),
     readMessages: async () => [],
     readFeedback: async () => [],
     now: () => new Date(AT),
