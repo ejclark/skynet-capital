@@ -1,0 +1,60 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "cwd": "/home/runner/work/skynet-capital/skynet-capital",
+    "session_id": "a8456e55-8c57-466c-99d2-6d379b02b7a5",
+    "model": "claude-sonnet-5-5"
+  },
+  {
+    "type": "rate_limit_event",
+    "rate_limit_info": {
+      "status": "allowed_warning",
+      "resetsAt": 1793025000,
+      "rateLimitType": "five_hour",
+      "utilization": 0.99,
+      "isUsingOverage": false,
+      "surpassedThreshold": 0.9,
+      "unifiedWindows": {
+        "five_hour": { "utilization": 0.99, "resetsAt": 1793025000 },
+        "seven_day": { "utilization": 0.41, "resetsAt": 1793077200 }
+      }
+    },
+    "uuid": "54f2c6e4-43e8-4b2b-9b7d-0235309e4fc7",
+    "session_id": "a8456e55-8c57-466c-99d2-6d379b02b7a5"
+  },
+  {
+    "type": "assistant",
+    "message": {
+      "model": "claude-sonnet-5-5",
+      "content": [{ "type": "text", "text": "(a turn)" }]
+    },
+    "session_id": "a8456e55-8c57-466c-99d2-6d379b02b7a5"
+  },
+  {
+    "type": "rate_limit_event",
+    "rate_limit_info": {
+      "status": "allowed_warning",
+      "resetsAt": 1793025000,
+      "rateLimitType": "five_hour",
+      "utilization": 0.99,
+      "isUsingOverage": false,
+      "surpassedThreshold": 0.9,
+      "unifiedWindows": {
+        "five_hour": { "utilization": 0.99, "resetsAt": 1793025000 },
+        "seven_day": { "utilization": 0.42, "resetsAt": 1793077200 }
+      }
+    },
+    "uuid": "6b0f1c2d-0000-4000-8000-000000000002",
+    "session_id": "a8456e55-8c57-466c-99d2-6d379b02b7a5"
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "duration_ms": 163654,
+    "num_turns": 39,
+    "total_cost_usd": 1.15,
+    "session_id": "a8456e55-8c57-466c-99d2-6d379b02b7a5"
+  }
+]

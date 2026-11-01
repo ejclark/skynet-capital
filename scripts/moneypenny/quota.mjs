@@ -38,7 +38,21 @@
 //
 // Pure where it decides; `tick` takes its reader injected, so a spec fakes `gh` and can assert the
 // only calls it makes are reads.
-import { readWorkMode } from "./work-mode.mjs";
+//
+// THE LANES PUBLISH THE READING (2026-11-01, #6470's study). `--publish-from <file>` is the one
+// writing mode, and it writes one thing: the weekly reading a lane's own result file carries,
+// into #4153's body under the marker pace-reading.mjs reads. Every Claude Code session streams a
+// `rate_limit_event` whose `unifiedWindows.seven_day.utilization` is the weekly percent, at zero
+// tokens, and the action leaves the whole stream in claude-execution-output.json; nothing read it.
+// The caveats, said plainly: the event carries no timestamp, so the reading is dated when the
+// step runs and may be as old as the session; every real sample so far came from a leg near a
+// limit, so whether a lane at plain `allowed` status carries it on CLI 2.1.286 is unverified until
+// the first run after this lands; and a reading never overwrites a fresher one. No reading in the
+// file means nothing is written. The dial is never touched here, by anything.
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { ghRest, sh } from "./gh.mjs";
+import { readingFrom, withReading } from "./pace-reading.mjs";
+import { loadWorkModeConfig, readWorkMode } from "./work-mode.mjs";
 
 const HOUR_MS = 3_600_000;
 const WEEK_MS = 168 * HOUR_MS;
@@ -137,6 +151,94 @@ export function tick({ reading = null, orders = [], now = Date.now(), readDial =
   return { line, verdict, position: mode.position };
 }
 
+/** The messages in a lane's claude-execution-output.json: a JSON array (the action's shape), one
+ *  object, or JSON lines. Anything unreadable is no messages, never a throw — a report step must
+ *  not fail a lane. */
+function messagesOf(text) {
+  const raw = String(text ?? "").trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return raw
+      .split("\n")
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  }
+}
+
+/**
+ * Pure: the weekly reading the newest `rate_limit_event` in a result file carries, as
+ * `{ used, at, resetsAt }` (percent, ms, ms), or null when no event carries a `seven_day` window.
+ * The last event wins: a session near a limit streams one at its first reply and one per status
+ * change, and the latest is the freshest. `at` is the caller's clock, since the event has none.
+ */
+export function readingFromExecutionOutput(text, { at = Date.now() } = {}) {
+  const windows = messagesOf(text)
+    .filter((m) => m?.type === "rate_limit_event")
+    .map((m) => m.rate_limit_info?.unifiedWindows?.seven_day)
+    .filter((w) => w && Number.isFinite(w.utilization) && Number.isFinite(w.resetsAt));
+  const last = windows.at(-1);
+  if (!last) return null;
+  const used = Math.round(last.utilization * 100);
+  if (used < 0 || used > 100) return null;
+  return { used, at, resetsAt: last.resetsAt * 1000 };
+}
+
+/**
+ * Write a reading into the tracking issue's body under the marker, unless the body already holds
+ * one at least as fresh. Returns what happened, for the log. Reads are through `read` (the issue
+ * as REST returns it) and the one write through `write(body)`, both injectable.
+ */
+export function publishReading(reading, { issue, source, read, write }) {
+  if (!reading) return { wrote: false, why: "no reading to publish" };
+  const current = read();
+  const held = readingFrom(current?.body);
+  if (held && held.at >= reading.at)
+    return {
+      wrote: false,
+      why: `#${issue} already holds a reading from ${new Date(held.at).toISOString()}`,
+    };
+  write(withReading(current?.body ?? "", { ...reading, source }));
+  return { wrote: true, why: `#${issue} now carries ${reading.used}% used (${source})` };
+}
+
+/** The real reads and the one write: REST for the body, `gh api -X PATCH` with the body in a file
+ *  so a long issue body never rides argv. */
+function publishFromFile(file, { source, issue, now }) {
+  let text;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch (err) {
+    return { wrote: false, why: `${file} could not be read (${err.message})` };
+  }
+  const reading = readingFromExecutionOutput(text, { at: now });
+  if (!reading)
+    return { wrote: false, why: `${file} carries no rate_limit_event with a seven_day window` };
+  const path = `issues/${issue}`;
+  const tmp = `${process.env.RUNNER_TEMP ?? "/tmp"}/pace-reading-body-${process.pid}.md`;
+  return publishReading(reading, {
+    issue,
+    source,
+    read: () => ghRest(path),
+    write: (body) => {
+      writeFileSync(tmp, body);
+      try {
+        sh("gh", ["api", "-X", "PATCH", `repos/{owner}/{repo}/${path}`, "-F", `body=@${tmp}`]);
+      } finally {
+        rmSync(tmp, { force: true });
+      }
+    },
+  });
+}
+
 /** The value after `--flag`, or undefined. */
 const flagValue = (argv, flag) => {
   const i = argv.indexOf(flag);
@@ -153,8 +255,22 @@ function readingFromFlags(argv, now) {
 }
 
 function main(argv) {
+  if (argv.includes("--publish-from")) {
+    const file = flagValue(argv, "--publish-from");
+    if (!file) {
+      console.error("quota.mjs: --publish-from needs a file");
+      process.exit(2);
+    }
+    const issue = Number(flagValue(argv, "--issue") ?? loadWorkModeConfig().trackingIssue);
+    const source = flagValue(argv, "--source") ?? "lane";
+    const result = publishFromFile(file, { source, issue, now: Date.now() });
+    console.log(`::notice::pace reading — ${result.why}${result.wrote ? "" : "; wrote nothing"}`);
+    return;
+  }
   if (!argv.includes("--tick")) {
-    console.error("usage: quota.mjs --tick [--used N --resets-at ISO [--read-at ISO]] [--now ISO]");
+    console.error(
+      "usage: quota.mjs --tick [--used N --resets-at ISO [--read-at ISO]] [--now ISO] | --publish-from <file> [--source S] [--issue N]",
+    );
     process.exit(2);
   }
   // Flags that name a reading must describe one, or the published number would answer for them.

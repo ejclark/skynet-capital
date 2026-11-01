@@ -153,7 +153,7 @@ describe("circuit breaker config — fail closed", () => {
 // swallowed result envelope with its own `"total_cost_usd"`, and the one rendered cost line.
 describe("the cost line as a run log really renders it (#6020)", () => {
   const realLog = readFileSync(
-    resolve("tests/fixtures/circuit-breaker/run-38985010210-opex-leg.log"),
+    resolve("tests/fixtures/circuit-breaker/run-38985010210-opex-leg.txt"),
     "utf8",
   );
 

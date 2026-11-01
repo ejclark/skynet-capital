@@ -38,6 +38,23 @@ export function reckon(
 ): Reckoning;
 export function paceLine(reckoning: Reckoning): string;
 export function wouldHaveDone(reckoning: Reckoning): string;
+/** Pure: the weekly reading the newest `rate_limit_event` in a lane's result file carries, or null. */
+export function readingFromExecutionOutput(
+  text: string | null | undefined,
+  opts?: { at?: number },
+): Reading | null;
+
+/** Write a reading into the tracking issue's body unless it already holds one at least as fresh. */
+export function publishReading(
+  reading: Reading | null,
+  deps: {
+    issue: number;
+    source: string;
+    read: () => { body?: string | null } | null;
+    write: (body: string) => void;
+  },
+): { wrote: boolean; why: string };
+
 export function tick(opts: {
   reading?: Reading | null;
   orders?: readonly Order[];
