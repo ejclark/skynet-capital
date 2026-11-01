@@ -18,8 +18,8 @@
 //
 // WHY ONE FILE PER LOOP, NOT ONE FILE. Every rep's PR appends a row, and two PRs appending to one file
 // conflict on GitHub, whose server-side merge honours no merge attribute: 12 of 14 research PRs sat
-// `dirty` that way, and #1449's fix was to split the file (the note in .gitattributes). One writer per
-// loop at a time means plain git merges this every time.
+// `dirty` that way, and #1449's fix was to split the file (the note in .gitattributes). Two PRs now
+// conflict only when they iterate the same loop at once, and those two should see each other's number.
 //
 // THE STOP RULE. A loop's first row is its baseline and states `worth`, how far one iteration must
 // move the number to have been worth running. Every later row is an iteration. A loop is `stopped`
@@ -134,8 +134,8 @@ export function readLedger(dir = LEDGER_DIR) {
  * The registry's due checks with no iteration on record. Only a check dated after the ledger began
  * can owe a row: warning on all 20 existing registry rows measures nothing. The start is the earliest
  * row's date, which is the day of the ledger's first commit because the seed rows landed in it. It
- * is read from the rows and not from `git log`, since on a shallow CI checkout that dates the file to
- * the checkout's own tip, which would keep moving the line forward so the warning never fired.
+ * is read from the rows and not from `git log` so this stays pure, and gives one answer in a shallow
+ * checkout too, where `git log` would date the file to the checkout's own tip.
  */
 export function unrecordedChecks({ today, registry, ledger }) {
   if (!ledger.length) return [];
@@ -147,7 +147,7 @@ export function unrecordedChecks({ today, registry, ledger }) {
 }
 
 /** Each loop's reading, in a stable order. */
-export function summarize(rows) {
+function summarize(rows) {
   const byLoop = new Map();
   for (const row of rows) byLoop.set(row.loop, [...(byLoop.get(row.loop) ?? []), row]);
   return [...byLoop].map(([loop, mine]) => ({
@@ -171,7 +171,7 @@ function priceText({ usdPerUnit, tokensMPerUnit, spentUsd, spentTokensM }) {
 }
 
 /** One printed line; a registry row naming `npm run loop:ledger` gets these in its posted check. */
-export const lineOf = (s) =>
+const lineOf = (s) =>
   `${s.loop}: baseline ${s.baseline}, latest ${s.latest}, ${s.iterations} iteration${s.iterations === 1 ? "" : "s"}, ${s.verdict.state} (${s.verdict.why}), ${priceText(s.price)}`;
 
 function refuse(message) {
@@ -193,6 +193,8 @@ const costOf = (name, raw) => (raw === undefined || raw === "unknown" ? null : n
 /** A loop's first row: the number it starts from and what an iteration must move to be worth it. */
 function baselineRow(values, stamp) {
   if (values.worth === undefined) refuse("a baseline needs --worth: the stop rule reads it");
+  // A mistyped aim left to fall through would read every good row of a climbing number as a loss.
+  if (values.aim !== undefined && values.aim !== "up") refuse('--aim takes only "up"');
   const number = numberOf("baseline", values.baseline);
   return {
     ...stamp,

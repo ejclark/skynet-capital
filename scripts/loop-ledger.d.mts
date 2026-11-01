@@ -30,16 +30,6 @@ export interface Price {
   spentTokensM: number;
 }
 
-export interface LoopSummary {
-  loop: string;
-  baseline: number;
-  latest: number;
-  iterations: number;
-  worth: number | null;
-  verdict: Verdict;
-  price: Price;
-}
-
 export function slugOf(loop: string): string;
 export function moved(first: Partial<LedgerRow>, row: Pick<LedgerRow, "before" | "after">): number;
 export function verdict(rows: Partial<LedgerRow>[]): Verdict;
@@ -51,5 +41,3 @@ export function unrecordedChecks(args: {
   registry: LoopRow[];
   ledger: LedgerRow[];
 }): LoopRow[];
-export function summarize(rows: LedgerRow[]): LoopSummary[];
-export function lineOf(summary: LoopSummary): string;

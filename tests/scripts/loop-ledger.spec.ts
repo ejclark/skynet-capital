@@ -271,6 +271,14 @@ describe("loop ledger — the command", () => {
     });
   });
 
+  it("refuses an aim it does not know, which would read a climbing number as falling", () => {
+    inDir((dir) => {
+      const seed = ["--add", "--loop", "x", "--baseline", "0", "--worth", "1", "--changed", "seed"];
+      expect(run(dir, ...seed, "--aim", "UP").status).toBe(2);
+      expect(run(dir, ...seed, "--aim", "up").status).toBe(0);
+    });
+  });
+
   it("refuses a number it cannot read and a flag it does not know", () => {
     inDir((dir) => {
       run(dir, "--add", "--loop", "x", "--baseline", "3", "--worth", "1", "--changed", "seed");
