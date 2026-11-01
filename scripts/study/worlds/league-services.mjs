@@ -17,6 +17,7 @@
 
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { wireFeedReader } from "../../../src/observatory/wire-feed-cache.ts";
 import { lastBotActivityAt } from "../../../src/scripts/dashboard-ops-status.ts";
 import {
   appDeploySignal,
@@ -126,15 +127,16 @@ export function leagueServices(book) {
   const allActivity = () => Object.values(book.activity).flat();
   const humans = book.participants.filter((p) => p.kind === "human").map((p) => p.id);
   return {
-    // The Activity feed: every account's fills (the bus is not wired, so the ledger is the feed).
-    // Its other kinds are on, as production's are. Milestones derive from the same fills and are
+    // The Activity feed: every account's fills, through the fold production wires (the bus is not
+    // wired, so the ledger is the feed, and this world's members have filed nothing). Its other
+    // kinds are on, as production's are. Milestones derive from the same fills and are
     // a member's only: a share fill earns its rung untagged, but a member's option fill needs its
     // order-audit tag, which no book carries yet — so a book with one refuses rather than render a
     // record quietly missing that earn (wire-routes.ts: the falsifier the kind exists not to
     // trip). A bot's option fill earns nothing on the feed either way. The builds
     // kind is on with no merge: the page prints no "nothing merged" claim for an empty list, where
     // leaving it off would print "isn't switched on in this deployment" (shell-artifacts.mjs).
-    readAllTradeActivity: async () => allActivity(),
+    readWireFeed: wireFeedReader({ activity: { list: async () => allActivity() } }).read,
     readAllLadderProgress: async () => [],
     readAllOrderAudit: () => optionFillWithoutAudit(book, humans),
     readMergedPullRequests: async () => [],
@@ -142,7 +144,6 @@ export function leagueServices(book) {
     submitFeedback: refuse("submitting feedback"),
     submitFollowup: refuse("a feedback follow-up"),
     readFeedback: async () => [],
-    readAllFeedback: async () => [],
     // The Council is on; nobody has spoken this week.
     council: {
       load: () => ({ weeks: {} }),

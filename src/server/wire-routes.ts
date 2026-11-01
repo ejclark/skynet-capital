@@ -50,48 +50,25 @@ import type { PlayMilestone } from "./play-milestone-ledger.js";
 export interface WireRouteDeps {
   readonly hub: ObservatoryHub;
   /**
-   * Every participant's events off the activity bus (#1211) — the feed's primary source since #784
-   * slice 1. Omit and the feed falls back to the durable ledger below, which is what every
-   * deployment did before the bus existed.
-   */
-  readonly readAllActivityEvents?: () => Promise<readonly ActivityEvent[]>;
-  /**
-   * All participants' durable trade activity, read ALONGSIDE the bus above and not instead of it:
-   * the event log only begins at #1211's deploy, so every fill booked before that lives here and
-   * nowhere else. `mergeLedgerIntoEvents` folds these in on the bus's own schema, deduplicated on
-   * the deterministic event id — see its header for why the union can't double-count and when this
-   * leg retires.
+   * The feed's three ledgers, folded once per process and then advanced by appended lines only
+   * (`wireFeedReader`, #4458): every participant's events off the activity bus (#1211), the
+   * durable trade ledger and every member's filed feedback. The ledger and the log ride ALONGSIDE
+   * the bus, not instead of it — the event log only begins at #1211's deploy (fills) and #784
+   * slice 2's (filings), so everything older lives there and nowhere else. `mergeLedgerIntoEvents`
+   * and `mergeFeedbackLogIntoEvents` fold them in on the bus's own schema, deduplicated on the
+   * deterministic event id. The reader hands the folds below the same inputs a whole read would,
+   * reduced to the lines that can still decide a row, so every page matches.
    *
-   * Omitting BOTH this and `readAllActivityEvents` renders the trading column's honest empty state
-   * instead of a feed. Omitting only this one is not an empty state — it is a feed quietly missing
-   * every pre-bus fill, so drop it only once the bus is confirmed to hold the ledger's full history.
-   */
-  readonly readAllTradeActivity?: () => Promise<readonly TradeActivityRecord[]>;
-  /**
-   * Every member's filed feedback, not just one member's own — read ALONGSIDE the bus above and
-   * not instead of it, for the same reason `readAllTradeActivity` is: the event log only begins
-   * when #784 slice 2 deploys, so every filing before that lives here and nowhere else.
-   * `mergeFeedbackLogIntoEvents` folds these in on the bus's own schema, deduplicated on the
-   * deterministic event id.
-   *
-   * Omitting BOTH this and `readAllActivityEvents` renders the pulse column's honest empty state
-   * instead of a feed. Omitting only this one is not an empty state — it is a pulse quietly
-   * missing every filing made before the bus existed, so drop it only once the bus is confirmed
-   * to hold the log's full history.
-   */
-  readonly readAllFeedback?: () => Promise<readonly FeedbackLogEntry[]>;
-  /**
-   * The three reads above, folded once per process and then advanced by appended lines only
-   * (`wireFeedReader`, #4458). Wired, it replaces all three — they stay as the fallback, the path the
-   * in-memory and test deployments take — and every page matches what they would render, because it
-   * hands the same folds below the same inputs, reduced to the lines that can still decide a row.
+   * The only feed path (#4619): the whole-read fallback it once sat beside is gone, since no
+   * production route ran it. Omit and the trading and pulse columns render their honest empty
+   * states. A spec or a harness wires `wireFeedReader` over in-memory stores.
    */
   readonly readWireFeed?: () => Promise<WireFeed>;
   readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
   /**
    * Recently merged pull requests — the feed's third kind (#784 slice 4), and the one source that is
    * NOT a local ledger: there is no development log in this app, so there is nothing to union here
-   * the way `readAllTradeActivity` and `readAllFeedback` are unioned above. Wired, this is also the
+   * the way the trade ledger and the feedback log are unioned above. Wired, this is also the
    * bus's development emitter (`publishingMergedPullRequests`), so calling it both reads GitHub and
    * publishes anything the bus has not seen.
    *
@@ -101,13 +78,13 @@ export interface WireRouteDeps {
   readonly readMergedPullRequests?: FetchMergedPullRequests;
   /**
    * Every participant's logged earns — the ladder detector's outcome milestones (#784 slice 5),
-   * read ALONGSIDE the bus for the reason `readAllTradeActivity` is: the detector only started
+   * read ALONGSIDE the bus for the reason the trade ledger is: the detector only started
    * publishing at this slice's deploy, so earlier earns live here and nowhere else.
    */
   readonly readAllLadderProgress?: () => Promise<readonly LadderProgressEntry[]>;
   /**
    * Every participant's tagged submissions — the input that classifies an option fill to a ladder
-   * rung (`deriveEarned`). With `readAllTradeActivity`, the two ledgers the Learn page derives the
+   * rung (`deriveEarned`). With the feed's trade ledger, the two ledgers the Learn page derives the
    * trade ladder from, so the feed's milestone rows are synthesized from exactly what that page reads.
    *
    * The milestone kind needs BOTH this and `readAllLadderProgress`, and is absent — not empty — with
@@ -261,20 +238,8 @@ async function assembleMilestones(
   return toMemberMilestones(collapseMilestoneEvents(all), participants).slice(0, limit);
 }
 
-/**
- * The bus, the trade ledger and the feedback log — off the per-process fold when it is wired, else
- * each read whole (the fallback; an unwired read is an empty leg, the honest empty state). All three
- * in flight at once on the fallback, so a `no-store` page never pays for them in series.
- */
-async function readFeed(config: WireRouteDeps): Promise<WireFeed> {
-  if (config.readWireFeed) return config.readWireFeed();
-  const [events, records, filings] = await Promise.all([
-    config.readAllActivityEvents ? config.readAllActivityEvents() : [],
-    config.readAllTradeActivity ? config.readAllTradeActivity() : [],
-    config.readAllFeedback ? config.readAllFeedback() : [],
-  ]);
-  return { events, records, filings };
-}
+/** Unwired, every leg is empty: the honest empty state, never a whole read (#4619). */
+const NO_FEED: WireFeed = { events: [], records: [], filings: [] };
 
 async function assembleWire(
   config: WireRouteDeps,
@@ -284,7 +249,11 @@ async function assembleWire(
   before?: string,
 ): Promise<AssembledWire> {
   const { participants } = config.hub.getState();
-  const { events: published, records, filings } = await readFeed(config);
+  const {
+    events: published,
+    records,
+    filings,
+  } = config.readWireFeed ? await config.readWireFeed() : NO_FEED;
   const events = mergeLedgerIntoEvents(published, records);
   // `collapseFeedbackEvents` sorts newest-first before this is bounded — `list()`'s own order is
   // filesystem-dependent, so the page shown would otherwise be an arbitrary slice.
