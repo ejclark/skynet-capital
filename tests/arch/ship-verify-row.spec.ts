@@ -23,7 +23,12 @@ describe("ship verifyrow — the failed step and first error line of a verify lo
   const row = (text: string) => {
     const log = join(dir, `${Math.random().toString(36).slice(2)}.log`);
     writeFileSync(log, text);
-    const out = execFileSync("bash", ["scripts/ship.sh", "verifyrow", log], { encoding: "utf8" });
+    // A placeholder token: ship.sh's guard stops before any subcommand on a runner with no token,
+    // and verifyrow only reads the log (tests/support/ship-run.ts does the same).
+    const out = execFileSync("bash", ["scripts/ship.sh", "verifyrow", log], {
+      encoding: "utf8",
+      env: { ...process.env, GH_TOKEN: "test-token-never-used" },
+    });
     return JSON.parse(`{${out.trim()}}`);
   };
   beforeAll(() => {
