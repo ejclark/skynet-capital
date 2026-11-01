@@ -87,7 +87,7 @@ describe("post-merge-audit's lens table", () => {
   const reviewers = (calls: { opts: { label?: string } }[]) =>
     calls.filter((c) => stageOf(c.opts.label) === "review").map((c) => c.opts.label);
 
-  it("holds only the correctness lens today, which reads every path", async () => {
+  it("reads a path no other lens names with correctness alone", async () => {
     const { calls, result } = await runWorkflow(
       "post-merge-audit",
       { prs: [6501] },
@@ -107,10 +107,12 @@ describe("post-merge-audit's lens table", () => {
     expect(reviewers(onItsPath.calls)).toEqual([
       "review #6501 correctness (deep)",
       "review #6501 security (deep)",
+      "review #6501 performance (deep)",
     ]);
     expect(((onItsPath.result?.confirmed ?? []) as { lens: string }[]).map((f) => f.lens)).toEqual([
       "correctness",
       "security",
+      "performance",
     ]);
 
     const elsewhere = await runWorkflow(
@@ -132,7 +134,7 @@ describe("post-merge-audit's lens table", () => {
       (prompt, opts) => (opts.label === "dead agents" ? { left: [] } : reply(prompt, opts)),
       withSecurity,
     );
-    expect(reviewers(calls)).toHaveLength(2);
+    expect(reviewers(calls)).toHaveLength(3);
   });
 
   it("keeps one lens's findings when another lens's reviewer dies", async () => {
@@ -142,7 +144,7 @@ describe("post-merge-audit's lens table", () => {
       return replyFor(["src/server/a.ts"])(prompt, opts);
     };
     const { result } = await runWorkflow("post-merge-audit", { prs: [6501] }, reply, withSecurity);
-    expect(result?.confirmed).toHaveLength(1);
+    expect(result?.confirmed).toHaveLength(2);
     expect(result?.deadAgents).toEqual([
       expect.objectContaining({ agent: expect.stringContaining("security") }),
     ]);
@@ -164,7 +166,10 @@ describe("post-merge-audit's lens table", () => {
         ? { merged: false, findings: [{ ...finding, summary: "from the wrong commit" }] }
         : replyFor(["src/server/a.ts"])(prompt, opts);
     const { result } = await runWorkflow("post-merge-audit", { prs: [6501] }, reply, withSecurity);
-    expect(result?.confirmed).toEqual([expect.objectContaining({ lens: "correctness" })]);
+    expect(((result?.confirmed ?? []) as { lens: string }[]).map((f) => f.lens)).toEqual([
+      "correctness",
+      "performance",
+    ]);
   });
 
   it("runs every lens when triage found the PR but no paths", async () => {
@@ -174,7 +179,7 @@ describe("post-merge-audit's lens table", () => {
       replyFor([]),
       withSecurity,
     );
-    expect(reviewers(calls)).toHaveLength(2);
+    expect(reviewers(calls)).toHaveLength(3);
   });
 
   it("calls a PR not found only when no reviewer found it", async () => {
