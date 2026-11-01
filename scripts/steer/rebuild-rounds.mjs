@@ -16,10 +16,12 @@
 // is that session's next step, each entry the arguments of one publish. A round page's store is
 // keyed by its round id, so his answers survive the republish.
 //
-// WHERE A PAGE'S INPUT COMES FROM. Newest first, and only with the exact round id the page shows
-// (older inputs must never overwrite a newer round):
-//   1. round-input.json, published beside every page built since #6607 (round-input.mjs). A session
-//      reads it with the Artifact tool into its scratchpad, and the next run finds it there.
+// WHERE A PAGE'S INPUT COMES FROM. Only with the exact round id the page shows (older inputs must
+// never overwrite a newer round):
+//   1. The page's own round-input.json, published beside every page built since #6607
+//      (round-input.mjs). A session reads it with the Artifact tool into its scratchpad, and the next
+//      run finds it there. Only this copy says what the page shows, so only it can say "current":
+//      the round-input.json a build leaves beside its files.json may never have been published.
 //   2. tp.json in a round's folder in a session scratchpad, while that folder survives. /tmp is
 //      purged and a cloud session's scratchpad is not on this machine, so this is a bonus, never the
 //      plan: on 2026-11-01 this machine held none for any of the 13 open pages.
@@ -30,6 +32,7 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
   statSync,
@@ -51,9 +54,15 @@ const CAPABILITIES = { db: {}, user: {}, comments: {} };
 const PAGE_TOOLING = [
   "scripts/steer",
   ":(exclude,glob)scripts/steer/*.d.mts",
-  ...["gather", "readback", "publish-reading", "build", "rebuild-rounds", "open-rounds"].map(
-    (f) => `:(exclude)scripts/steer/${f}.mjs`,
-  ),
+  ...[
+    "gather",
+    "readback",
+    "publish-reading",
+    "build",
+    "rebuild-rounds",
+    "open-rounds",
+    "round-input",
+  ].map((f) => `:(exclude)scripts/steer/${f}.mjs`),
 ];
 
 const git = (args) =>
@@ -73,9 +82,10 @@ function defaultRoots(env = {}) {
     .map((d) => join(base, d));
 }
 
-/** Round inputs under `roots`, by round id, newest first in each kind. A folder holding a checkout
- *  (specs and fixtures, no rounds) or a past rebuild's output (never published, so never what a page
- *  shows) is not walked. */
+/** Round inputs under `roots`, by round id: a copy read back from the page first, then newest. A
+ *  folder holding a checkout (specs and fixtures, no rounds) or a past rebuild's output (never
+ *  published, so never what a page shows) is not walked. A round-input.json beside a build's own
+ *  files is not the page's copy either, and adds nothing to the tp.json beside it. */
 function findInputs(roots) {
   const byId = new Map();
   const unreadable = [];
@@ -99,7 +109,9 @@ function findInputs(roots) {
     }
     const names = new Set(entries.map((e) => e.name));
     if (names.has("package.json") || names.has(PLAN_FILE)) return;
-    if (names.has(INPUT_FILE)) take(join(dir, INPUT_FILE), "published");
+    if (names.has(INPUT_FILE) && !names.has("tp.json") && !names.has("files.json")) {
+      take(join(dir, INPUT_FILE), "page");
+    }
     if (names.has("tp.json")) take(join(dir, "tp.json"), "scratchpad");
     if (depth <= 0) return;
     for (const e of entries) {
@@ -110,9 +122,7 @@ function findInputs(roots) {
   };
   for (const root of roots) walk(root, 8);
   for (const list of byId.values()) {
-    list.sort(
-      (a, b) => Number(b.kind === "published") - Number(a.kind === "published") || b.at - a.at,
-    );
+    list.sort((a, b) => Number(b.kind === "page") - Number(a.kind === "page") || b.at - a.at);
   }
   return { byId, unreadable: [...new Set(unreadable)] };
 }
@@ -130,9 +140,13 @@ function commitsSince({ sha, at }) {
   };
   const range = sha && known(sha) ? [`${sha}..HEAD`] : at ? [`--since=${at}`] : null;
   if (!range) return null;
-  return git(["log", "--format=%h %s", ...range, "--", ...PAGE_TOOLING])
-    .split("\n")
-    .filter(Boolean);
+  try {
+    return git(["log", "--format=%h %s", ...range, "--", ...PAGE_TOOLING])
+      .split("\n")
+      .filter(Boolean);
+  } catch {
+    return null;
+  }
 }
 
 /** Why a round's page has no input to render from: what is here instead, if anything. */
@@ -143,22 +157,24 @@ function noInput(round, byId) {
     : `no inputs on this machine for ${round.id}`;
 }
 
-/** The previous render of a scratchpad round, from the steer.html built beside its tp.json. */
-function earlierBuild(found) {
-  if (found.tp.built) return found.tp.built;
-  const beside = join(dirname(found.path), "steer.html");
-  if (!existsSync(beside)) return { sha: null, at: found.tp.generatedAt ?? null };
-  return { ...builtStamp(readFileSync(beside, "utf8")), at: found.tp.generatedAt ?? null };
+/** The tooling's render of a round's input and its pictures, or an error that says so. */
+function render(tp) {
+  try {
+    const pics = decisionPictures(tp);
+    for (const { pic, published } of pics) pic.local = published;
+    return { pics, html: renderPage(tp, { img: (pic) => pic.local ?? null }) };
+  } catch (err) {
+    throw new Error(`main's tooling cannot render its inputs: ${err.message}`);
+  }
 }
 
 /** Render one round from its input into `<out>/<id>/`: `{ page }`, or `{ current }` when main's
  *  tooling draws it no differently, so a re-run publishes nothing. */
 function rebuildOne(round, found, { out, tooling, now, commits }) {
   const { tp } = found;
-  const pics = decisionPictures(tp);
-  for (const { pic, published } of pics) pic.local = published;
-  const html = renderPage(tp, { img: (pic) => pic.local ?? null });
-  const was = earlierBuild(found);
+  const { pics, html } = render(tp);
+  // A scratchpad's tp.json says nothing of what the page shows, so it can never read as current.
+  const was = tp.built ?? { sha: null, at: tp.generatedAt ?? null };
   const built = builtStamp(html, { sha: tooling, at: now });
   if (was.pageSha256 === built.pageSha256) return { current: { issue: round.issue, id: round.id } };
 
@@ -190,7 +206,6 @@ function rebuildOne(round, found, { out, tooling, now, commits }) {
       files,
       capabilities: CAPABILITIES,
       keptOnPage,
-      bytes: { was: was.bytes ?? null, now: built.bytes },
       changed: commits(was),
     },
   };
@@ -226,10 +241,10 @@ export function rebuildRounds(rounds, { roots, out, tooling, now, commits = comm
     } else if (!round.id) {
       fail(round, "its issue does not say which round the page shows");
     } else {
+      result.fetch.push({ id: round.id, url: round.url, path: INPUT_FILE });
       const found = byId.get(round.id)?.[0];
       if (!found) {
         fail(round, noInput(round, byId));
-        result.fetch.push({ id: round.id, url: round.url, path: INPUT_FILE });
         continue;
       }
       try {
@@ -237,7 +252,7 @@ export function rebuildRounds(rounds, { roots, out, tooling, now, commits = comm
         if (done.current) result.current.push(done.current);
         else result.publish.push(done.page);
       } catch (err) {
-        fail(round, `main's tooling cannot render its inputs: ${err.message}`);
+        fail(round, err.message);
       }
     }
   }
@@ -273,7 +288,7 @@ export function reportText(r) {
   if (r.fetch.length) {
     lines.push(
       "",
-      `A page built since #6607 carries its own input. Artifact read each of these ${r.fetch.length} with path ${INPUT_FILE}, then run this again; a page with none reaches main at its next round. The list is in the plan's "fetch".`,
+      `Before publishing, Artifact read each of the plan's ${r.fetch.length} "fetch" entries with path ${INPUT_FILE}, then run this again. It says what each page shows, so a page already current drops off the list, and a publish is refused on a page this conversation has not read. A page with no such file was built before #6607: publish it from a scratchpad's input if it is listed above, otherwise it reaches main at its next round.`,
     );
   }
   if (r.unreadable.length) lines.push("", `Unreadable, skipped: ${r.unreadable.join(" · ")}`);
@@ -302,7 +317,8 @@ async function liveCensus() {
 function toolingOrRefuse(any) {
   if (any) return git(["rev-parse", "--short", "HEAD"]);
   git(["fetch", "origin", "main"]);
-  const differs = git(["diff", "--name-only", "origin/main", "HEAD", "--", ...PAGE_TOOLING]);
+  // Against the working tree, not HEAD: an uncommitted edit would render into every page too.
+  const differs = git(["diff", "--name-only", "origin/main", "--", ...PAGE_TOOLING]);
   if (differs) {
     throw new Error(
       `steer/rebuild-rounds: this checkout's page tooling is not origin/main's, so these pages would not be main's:\n${differs}\nCheck out origin/main, or pass --any-tooling for a look.`,
@@ -321,7 +337,7 @@ async function main(argv) {
   const census = censusFile ? JSON.parse(readFileSync(censusFile, "utf8")) : await liveCensus();
   const result = rebuildRounds(openRounds(census), {
     roots: flag("roots")?.split(",") ?? defaultRoots(),
-    out: resolve(flag("out") ?? join(tmpdir(), "steer-rebuild-rounds")),
+    out: resolve(flag("out") ?? mkdtempSync(join(tmpdir(), "steer-rebuild-rounds-"))),
     tooling,
     now: new Date().toISOString(),
   });

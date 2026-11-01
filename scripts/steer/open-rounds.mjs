@@ -11,18 +11,17 @@
 const URL_PART = String.raw`(https://claude\.ai/(?:code/)?artifact/[\w-]+)`;
 /** `round page: <url>` or `round page: [its name](<url>)`. */
 const ROUND_PAGE = new RegExp(String.raw`round page:?\s*(?:\[[^\]]*\]\()?${URL_PART}`, "i");
-/** `[Saved positions redesign · round 1](<url>)`, `[round 3](<url>)`. */
-const ROUND_LINK = new RegExp(
-  String.raw`\[[^\]]*\b(?:round|redesign)\b[^\]]*\]\(${URL_PART}\)`,
-  "i",
-);
+/** `[Saved positions redesign · round 1](<url>)`, `[round 3](<url>)`: a numbered round, because a
+ *  link that only says "redesign" could be the feedback board. */
+const ROUND_LINK = new RegExp(String.raw`\[[^\]]*\bround \d+\b[^\]]*\]\(${URL_PART}\)`, "i");
 /** A bare `page: <url>`, as a state line writes it. Not the steering page, nor an earlier one. */
 const BARE_PAGE = new RegExp(
   String.raw`(?<!steering |earlier |critique |board )\bpage:\s*(?:\[[^\]]*\]\()?${URL_PART}`,
   "i",
 );
 
-/** A state line saying nothing on the page waits for him: its screen's rounds are finished. */
+/** A state line opening on a finished screen: nothing on its page waits for him. Read in the line's
+ *  first part only, because a later part may record an earlier round's build beside an open round. */
 const SETTLED = /design rounds done|build filed|sitting is done|section \d+ done/i;
 
 const isState = (body) => /^(?:\*\*state\b|##\s*state block)/i.test(body.trim());
@@ -54,7 +53,7 @@ function roundOf({ number: issue, title, comments, error }) {
     newestFirst.map((b) => pageIn(b, [ROUND_PAGE, ROUND_LINK])).find(Boolean) ??
     null;
   const id = newestRound(state, issue) ?? newestRound(bodies.join("\n"), issue);
-  return { issue, title, url, id, settled: SETTLED.test(firstLine(state)) };
+  return { issue, title, url, id, settled: SETTLED.test(firstLine(state).split("·")[0] ?? "") };
 }
 
 /**

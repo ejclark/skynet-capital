@@ -11,7 +11,6 @@ export interface RebuiltPage {
   files: Record<string, string>;
   capabilities: Record<string, object>;
   keptOnPage: number;
-  bytes: { was: number | null; now: number };
   changed: string[] | null;
 }
 

@@ -103,6 +103,20 @@ describe("which rounds are open, read from the screens' issues", () => {
     expect(open(body)).toMatchObject({ url: PAGE("abc"), id: "design-5174-r3", settled: false });
   });
 
+  it("leaves an open round open when its state line records an earlier build", () => {
+    const body =
+      "**State** — round 5 up, awaiting taps · r4 build filed as #6082 · round page: https://claude.ai/artifact/abc";
+    expect(open(body).settled).toBe(false);
+  });
+
+  it("takes a link only when it names a numbered round: the board's could say redesign", () => {
+    const body = "On the [redesign board](https://claude.ai/artifact/board).";
+    expect(open(body).url).toBeNull();
+    expect(open("[Pulse redesign · round 2](https://claude.ai/artifact/abc)").url).toBe(
+      PAGE("abc"),
+    );
+  });
+
   it("never takes a page the state comment does not call a round page", () => {
     const body = "**State** — round 3 · steering page: https://claude.ai/artifact/steering";
     expect(open(body).url).toBeNull();
@@ -286,6 +300,38 @@ describe("the build leaves a page able to be rebuilt by any session", () => {
     writeFileSync(join(page, "tp.json"), JSON.stringify(fixture({ decisions: [] })));
     cli(["scripts/steer/build.mjs", join(page, "tp.json")]);
     expect(existsSync(join(page, INPUT_FILE))).toBe(false);
+  });
+
+  it("never calls a page current from a build that may not have been published", () => {
+    const census = openRounds([
+      { number: 5150, title: "redesign x", comments: [{ body: state(5150, 1) }] },
+    ]);
+    const local = rebuildRounds(census, {
+      roots: [root],
+      out: join(dir, "local-out"),
+      tooling: "abc1234",
+      commits: () => [],
+    });
+    expect(local.current).toEqual([]);
+    expect(local.publish.map((p) => p.source)).toEqual([tp]);
+  });
+
+  it("takes the page's own copy over a scratchpad's, and always asks for it first", () => {
+    const fetched = join(dir, "fetched-first");
+    mkdirSync(fetched, { recursive: true });
+    writeFileSync(join(fetched, INPUT_FILE), JSON.stringify(input));
+    const census = openRounds([
+      { number: 5150, title: "redesign x", comments: [{ body: state(5150, 1) }] },
+    ]);
+    const both = rebuildRounds(census, {
+      roots: [root, fetched],
+      out: join(dir, "both-out"),
+      tooling: "abc1234",
+      commits: () => [],
+    });
+    expect(both.current.map((r) => r.id)).toEqual(["design-5150-r1"]);
+    expect(both.fetch.map((f) => f.id)).toEqual(["design-5150-r1"]);
+    expect(reportText(both)).toContain("Before publishing, Artifact read");
   });
 
   it("a rebuild of an unchanged page says so, whichever session asks", () => {
