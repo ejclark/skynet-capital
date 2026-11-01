@@ -3,7 +3,10 @@ import {
   nextUnheld,
   pickupHoldReason,
   readPickupHold,
+  withoutBoarded,
 } from "../../../scripts/moneypenny/pickup-hold.mjs";
+import { platterClosesByIssue } from "../../../scripts/moneypenny/pr-issues.mjs";
+import { heldPlatter } from "../../support/platter-fixtures.js";
 
 // A PLAN WITH NOTHING TO BUILD IS NOT A PICK (#5707). 7 empty sessions on #4450, #4808 and #4535
 // (2026-10-18 → 10-20): each plan sat `ready` while its state block said `Next pickup: none …`,
@@ -172,5 +175,95 @@ describe("nextSubIssue — moved here from continuation.mjs, same rule", () => {
     ];
     const blockedBy = { 1: [{ state: "open" }], 2: [] };
     expect(nextSubIssue(subs, blockedBy)?.number).toBe(2);
+  });
+});
+
+// #6530: a boarded slice's sub-issue stays open until the platter merges, so the hold read it as
+// open work and the sweep claimed a plan whose block says `none — waiting on #950`.
+describe("a slice a held platter closes is not open work (#6530)", () => {
+  const P = 4808;
+  const S = 7002;
+  const WAITING = "**Next pickup:** none — waiting on #950.";
+  const platter = heldPlatter({ closes: [S], partOf: [P] });
+
+  it("withoutBoarded reads the boarded sub-issue as closed, naming its platter", () => {
+    const subs = [
+      { number: S, state: "open" },
+      { number: S + 1, state: "open" },
+    ];
+    expect(withoutBoarded(subs, platterClosesByIssue([platter]))).toEqual([
+      { number: S, state: "closed", boardedOn: 950 },
+      { number: S + 1, state: "open" },
+    ]);
+    expect(withoutBoarded(subs)).toBe(subs);
+  });
+
+  it("holds a plan whose only open slice is boarded", () => {
+    const why = pickupHoldReason({
+      issue: plan(P),
+      comments: [block(WAITING)],
+      subIssues: [{ number: S, state: "open" }],
+      blockedBy: { [S]: [] },
+      boardedOn: platterClosesByIssue([platter]),
+    });
+    expect(why).toContain("names no next pickup");
+    expect(why).toContain(`#${S} on #950`);
+  });
+
+  it("does not hold when the plan has another open, unblocked slice", () => {
+    const why = pickupHoldReason({
+      issue: plan(P),
+      comments: [block(WAITING)],
+      subIssues: [
+        { number: S, state: "open" },
+        { number: S + 1, state: "open" },
+      ],
+      blockedBy: { [S]: [], [S + 1]: [] },
+      boardedOn: platterClosesByIssue([platter]),
+    });
+    expect(why).toBeNull();
+  });
+
+  const reads = (pulls: unknown, subIssues: unknown[] = [{ number: S, state: "open" }]) => {
+    const asked: string[] = [];
+    const rows: Record<string, unknown> = {
+      [`issues/${P}/comments`]: [block(WAITING)],
+      [`issues/${P}/sub_issues`]: subIssues,
+      "pulls?state=open": pulls,
+    };
+    const readAll = (path: string) => {
+      asked.push(path);
+      const v = rows[path];
+      if (v instanceof Error) throw v;
+      return (v ?? []) as unknown[];
+    };
+    const read = (path: string) => {
+      asked.push(path);
+      return [];
+    };
+    return { readAll, read, asked, log: (_: string) => undefined };
+  };
+
+  it("the live read holds the plan once it sees the platter", () => {
+    const r = reads([platter]);
+    expect(readPickupHold(plan(P), r)).toContain(`#${S} on #950`);
+    expect(r.asked).toContain("pulls?state=open");
+  });
+
+  it("a platter naming only `Part of` the plan holds nothing", () => {
+    expect(readPickupHold(plan(P), reads([heldPlatter({ partOf: [P] })]))).toBeNull();
+  });
+
+  it("never reads the PR list when the answer is already a hold", () => {
+    const r = reads([platter], []);
+    expect(readPickupHold(plan(P), r)).not.toBeNull();
+    expect(r.asked).not.toContain("pulls?state=open");
+  });
+
+  it("a failed PR read is pullable, with a warning — fail-open", () => {
+    const lines: string[] = [];
+    const r = reads(new Error("HTTP 502"));
+    expect(readPickupHold(plan(P), { ...r, log: (l) => lines.push(l) })).toBeNull();
+    expect(lines[0]).toMatch(/^::warning::#4808's state block could not be read/);
   });
 });
