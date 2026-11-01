@@ -19,9 +19,9 @@ describe("compareFrames", () => {
   };
   // In the fake, a frame's content before a "~" is its pixels, so `a~1` and `a~2` are one image encoded
   // twice.
-  const pixelDiff = async (pathA: string, pathB: string) => {
+  const pixelDiff = (pathA: string, pathB: string) => {
     const pixels = (p: string) => readFileSync(p, "utf8").split("~")[0];
-    return { n: pixels(pathA) === pixels(pathB) ? 0 : 45, total: 100 };
+    return Promise.resolve({ n: pixels(pathA) === pixels(pathB) ? 0 : 45, total: 100 });
   };
 
   beforeEach(() => {
@@ -133,39 +133,43 @@ describe("compareFrames", () => {
 
 describe("steady", () => {
   const fakeChromium = () => {
-    const opened: Array<Record<string, unknown>> = [];
-    const shots: Array<Record<string, unknown>> = [];
+    const opened: Record<string, unknown>[] = [];
+    const shots: Record<string, unknown>[] = [];
     const clocks: string[] = [];
     const order: string[] = [];
     const idleFails = { value: false };
     const page = () => ({
-      screenshot: async (shot: Record<string, unknown> = {}) => {
+      screenshot: (shot: Record<string, unknown> = {}) => {
         order.push("shot");
         shots.push(shot);
+        return Promise.resolve();
       },
-      evaluate: async (_fn: unknown, selectors: string[] = []) => {
+      evaluate: (_fn: unknown, selectors: string[] = []) => {
         order.push("settled");
-        return selectors.slice(0, 1);
+        return Promise.resolve(selectors.slice(0, 1));
       },
-      waitForLoadState: async () => {
+      waitForLoadState: () => {
         order.push("idle");
-        if (idleFails.value) throw new Error("Timeout 2000ms exceeded");
+        return idleFails.value
+          ? Promise.reject(new Error("Timeout 2000ms exceeded"))
+          : Promise.resolve();
       },
       clock: {
-        setFixedTime: async (time: Date) => {
+        setFixedTime: (time: Date) => {
           clocks.push(time.toISOString());
+          return Promise.resolve();
         },
       },
     });
     const chromium = {
       launch: async () => ({
-        newPage: async (options: Record<string, unknown> = {}) => {
+        newPage: (options: Record<string, unknown> = {}) => {
           opened.push(options);
-          return page();
+          return Promise.resolve(page());
         },
-        newContext: async (options: Record<string, unknown> = {}) => {
+        newContext: (options: Record<string, unknown> = {}) => {
           opened.push(options);
-          return { newPage: async () => page() };
+          return Promise.resolve({ newPage: () => Promise.resolve(page()) });
         },
       }),
     };

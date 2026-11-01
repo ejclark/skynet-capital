@@ -15,6 +15,7 @@
 // stop working when the calendar passes them (`shoot:trade` from 2026-10-30): `clock` pins the page's
 // date to the one the fixtures were written for.
 //
+// A script's own `shot <path>` line still prints where it asked for the file, not the out folder.
 // Not reached: a locator's own `.screenshot()`, which `accounts`, `heartbeat-roll-call` and
 // `mermaid-pairs` use. Lives apart from the preload so a spec can drive it with a fake browser. A
 // file keeps its `.jpg` name and holds a PNG, since the name is what lines two passes up.
@@ -40,12 +41,16 @@ function matchingSelectors(selectors) {
  *  taken right after a resize or a fetch, not a fade. A page with a live stream never goes idle, so
  *  that wait is bounded and a timeout is not a failure. */
 async function settle(page) {
-  await page.waitForLoadState("networkidle", { timeout: 2000 }).catch(() => {});
-  await page.evaluate(() =>
+  const givenUp = () => null;
+  await page.waitForLoadState("networkidle", { timeout: 2000 }).catch(givenUp);
+  // Raced, and a throw is no failure: a page navigating right now loses this context, and a shoot that
+  // works plain must not crash under the preload. A paused page clock would stall the frames for good.
+  const frames = page.evaluate(() =>
     document.fonts.ready.then(
       () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
     ),
   );
+  await Promise.race([frames, new Promise((done) => setTimeout(done, 2000))]).catch(givenUp);
 }
 
 /**
