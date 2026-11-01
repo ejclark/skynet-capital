@@ -64,9 +64,10 @@ earned after the policy proves out over reps.
    distinct for bisectability). **Put the cost on the rows:** a rep cannot read its own tokens, so its
    row in `loop-iterations/governor-<drill>.jsonl` says `tokensM: null`. Read this run's total from
    `npm run meter -- --hours <since the run began> --json --max-rest 0`, at
-   `agents.tokensByWorkflow.<run>.total`, divide it by the green reps, and write that in millions over
-   each new row's null in one commit. It is an even split of what the run spent, skips included, so
-   say so in the PR body; if the run isn't listed, leave the null. Two reps on one coach under `surge`
+   `agents.tokensByWorkflow.grind.total`, divide it by the green reps, and write that in millions over
+   each new row's null in one commit. That key sums every `grind` run in the window, so if another
+   ran beside this one, leave the nulls. It is an even split of what the run spent, skips included,
+   so say so in the PR body. Two reps on one coach under `surge`
    conflict on that file: keep both rows, in order. `npm run loop:ledger` then prints the cycle's
    numbers, and they go in the PR body.
    Then verify green once, and open one PR titled
