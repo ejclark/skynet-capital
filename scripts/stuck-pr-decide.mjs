@@ -51,7 +51,7 @@ export function isGhostSuite(suite) {
 }
 
 /** The latest check run of each required name (a re-run supersedes the run it replaced). */
-function latestRequired(checkRuns, required) {
+export function latestRequired(checkRuns, required) {
   const byName = new Map();
   for (const run of checkRuns) {
     if (!required.includes(run.name)) continue;
