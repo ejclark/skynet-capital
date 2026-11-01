@@ -229,7 +229,8 @@ export function missingDepsInstall(text, hasDeps) {
 // The bot actor each token signs as. The App's actor is its slug (the Skynet Envoy App, minted by
 // `.github/actions/app-token`); GITHUB_TOKEN always acts as `github-actions`.
 const TOKEN_ACTORS = [
-  [/steps\.app-token\.outputs\.token/, "skynet-envoy"],
+  // `app-token-late` is the post-build re-mint (#5936): same App, a token minted after the session.
+  [/steps\.app-token(-late)?\.outputs\.token/, "skynet-envoy"],
   [/secrets\.GITHUB_TOKEN|github\.token/, "github-actions"],
 ];
 const SELF_DISPATCH = /\bgh workflow run\s+([\w.-]+\.ya?ml)\b/;

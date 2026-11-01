@@ -180,12 +180,28 @@ describe("the process-file lens", () => {
   });
 
   // Without this the lens's oracle (keep it if 3 of the next 10 reads find something) has no clock.
-  it("has a trigger in /ship that cites the scope module", () => {
-    const line = read(".claude/skills/ship/SKILL.md")
-      .split("\n")
-      .find((l) => l.includes("scripts/instructions/scope.mjs"));
-    expect(line).toBeDefined();
-    expect(line).toContain("reviewer");
+  // The trigger is narrower than the scope module on purpose: the module accepts every doc, about a
+  // fifth of all commits, and an agent whose floor is Fable at xhigh would then cost a read on each.
+  it("has a trigger in /ship on the three path sets, at a named per-call model", () => {
+    const trigger = read(".claude/skills/ship/SKILL.md")
+      .split("\n\n")
+      .find((p) => p.includes("process-file lens"));
+    expect(trigger).toBeDefined();
+    for (const path of ["`CLAUDE.md`", "`.claude/**`", "`.github/prompts/*.md`"]) {
+      expect(trigger).toContain(path);
+    }
+    expect(trigger).toContain("`reviewer`");
+    // A per-call model overrides the agent file's (docs/COMPUTE.md → Resolution order), so an
+    // unnamed model here means the file's Fable.
+    expect(trigger).toContain('model: "opus"');
+    expect(trigger).not.toContain("scope.mjs");
+  });
+
+  it("says in the reviewer which paths /ship asks on, and why not every doc", () => {
+    const section = bodyOf(join(AGENTS, "reviewer.md"));
+    expect(section).toMatch(
+      /`\/ship` asks only for `CLAUDE\.md`, `\.claude\/\*\*` and lane prompts/,
+    );
   });
 });
 

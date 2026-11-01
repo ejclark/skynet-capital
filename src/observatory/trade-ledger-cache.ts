@@ -60,7 +60,7 @@ export function heldLedgerReader(
   };
 }
 
-function heldLedgerOf(
+export function heldLedgerOf(
   snapshot: ParticipantSnapshot,
   durable: Parameters<typeof deskLedger>[1],
 ): HeldLedger {

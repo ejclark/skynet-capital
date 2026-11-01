@@ -141,7 +141,6 @@ describe("prFor — the held PR's body", () => {
     try {
       const file = join(dir, "body.md");
       writeFileSync(file, prFor(found, "2026-11-10").body);
-      // ship.sh stops at its token check before it reaches checkbody; `run` supplies a dummy one.
       expect(run(["checkbody", file])).toMatchObject({ code: 0 });
     } finally {
       rmSync(dir, { recursive: true, force: true });

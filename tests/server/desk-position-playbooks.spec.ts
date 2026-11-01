@@ -7,7 +7,8 @@ import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import type { OrderIntent } from "../../src/domain/types.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
 import { JsonlActivityStore } from "../../src/observatory/activity-store.js";
-import { heldLedgerReader } from "../../src/observatory/trade-ledger-cache.js";
+import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
+import { heldLedgerOf, heldLedgerReader } from "../../src/observatory/trade-ledger-cache.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveDeskJson } from "../../src/server/desk-json-routes.js";
 import { anOptionIntent } from "../support/builders.js";
@@ -119,7 +120,7 @@ interface Desk {
 }
 
 describe.each([
-  ["matched from the whole ledger", false],
+  ["matched fresh from the whole ledger", false],
   ["read from the held ledger", true],
 ])("a bot's positions name the playbook that opened them, %s", (_, held) => {
   let dir: string;
@@ -151,7 +152,9 @@ describe.each([
       resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
       now: () => new Date("2026-10-31T12:00:00.000Z"),
       readTradeActivity: async () => ledger,
-      ...(withHeld ? { readHeldLedger: heldLedgerReader(store) } : {}),
+      readHeldLedger: withHeld
+        ? heldLedgerReader(store)
+        : async (snapshot: ParticipantSnapshot) => heldLedgerOf(snapshot, ledger),
       findByOrderId: (id: string) => db.findByOrderId(id),
       findSpreadLeg: (id: string) => db.findSpreadLeg(id),
     } as unknown as DashboardServerConfig;

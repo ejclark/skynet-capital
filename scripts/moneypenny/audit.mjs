@@ -12,7 +12,7 @@ import { redLaneIntents, redLaneOrNone } from "./red-lane-pr.mjs";
 import { rearmIntents, strandedOrNone } from "./stranded-pr.mjs";
 import { stuckBranchesOrNone, updateIntents } from "./stuck-branch-update.mjs";
 import { loadWorkModeConfig, readWorkMode } from "./work-mode.mjs";
-import { workModeRetitle } from "./work-mode-title.mjs";
+import { endedDialTidy, workModeRetitle } from "./work-mode-title.mjs";
 
 /**
  * #1403 — how many times a conflicted PR gets re-dispatched before this lane stops trying and
@@ -309,8 +309,14 @@ export function audit(deps = {}) {
   //
   // #5729 — the instruction-drift chore's ticket: filed when due, refreshed while open, closed once
   // stamped. Decided in drift-chore.mjs (`driftChoreIntent`); the open ticket is its own memory.
+  // `endedDialTidy` is the label's half of the same catch-up, and it does write a comment: a label
+  // moving on the dial is something a person acts on.
   // Each is at most one intent, null when there is nothing to do.
-  intents.push(...[workModeRetitle(deps.workMode), deps.driftChore].filter(Boolean));
+  intents.push(
+    ...[workModeRetitle(deps.workMode), endedDialTidy(deps.workMode), deps.driftChore].filter(
+      Boolean,
+    ),
+  );
   // A green, armed PR held by a cancelled suite gets a new head (stuck-branch-update.mjs). `halt`
   // stops this too: a new head can land work.
   if (deps.workMode?.mode?.position !== "halt") intents.push(...updateIntents(deps.stuckBranches));

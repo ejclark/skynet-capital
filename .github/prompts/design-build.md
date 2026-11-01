@@ -116,6 +116,13 @@ genuine taste fork where guessing would be worse than asking. Nothing else.
    budget is zero, so a new `src/` file without one fails the suite.
 5. **Verify by exit status, never tailed output** — a pipeline exits with `tail`'s status, so
    `cmd | tail && …` will not halt on failure. `npm run typecheck`, `npm run lint`, `npm test`.
+   **A screen you changed on purpose is re-baselined here, not left for CI to fail** (#5994). If
+   the diff touches `app/` or `src/`, also run `npx playwright install --with-deps chromium` once,
+   then `npx playwright test`. A screenshot mismatch on a page this change set out to alter (a
+   section removed, a card added, copy reworded) is the change itself: re-run those specs with
+   `--update-snapshots`, commit the PNGs with the change, and name them in the PR body. Any other
+   mismatch is a regression to fix, never a baseline to replace. This runner is Linux, the platform
+   the baselines are cut on; skipping this opens every intentional visual change red.
 6. **A picture, from the real thing.** Add a `scripts/shoot/<name>.mjs` frame (and its `shoot:<name>`
    script in `package.json`) and put it in the PR's
    `## The picture`. Screenshot diffing cannot verify `/login` — its canvas rain is random, so the

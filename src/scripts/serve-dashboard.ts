@@ -452,7 +452,6 @@ async function main(): Promise<void> {
     readMessages: (id) => companionMessageLog.list(id),
     recordMessage: (id) => companionMessageLog.record(id),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
-    readHistory: (id) => history.list(id),
     readPulseHistory,
     readHeldLedger,
     readTradeActivity: (id) => activity.list(id),
@@ -534,9 +533,6 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
-    ...(insightsBridge.personasOfOrders
-      ? { personasOfOrders: insightsBridge.personasOfOrders }
-      : {}),
     readAccountPersonas,
     // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458),
     // and the misses until the table gains a row (#4619).

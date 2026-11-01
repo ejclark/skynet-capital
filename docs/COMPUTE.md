@@ -101,7 +101,9 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   (`scripts/moneypenny/admission.mjs`), the research lane's per-tick ceiling
   (`scripts/moneypenny/events.mjs` → `researchCapNow`), a `/governor` cycle's athlete allowance
   (`npm run work-gate`), a `/grind` run's fan-out width (`.claude/workflows/grind.js`, which
-  refuses a batch wider than the position's `grindWidth` rather than silently dropping items), and
+  refuses a batch wider than the position's `grindWidth` rather than silently dropping items), the
+  other scripted workflows (`dream`, `clear-path-flip`, `post-merge-audit`, `symbol-sweep`, which ask
+  the same way and take `force: true` on a run Eric typed, printing what it overrode and the price), and
   the slices one ready plan may continue into on its own in a day
   (`scripts/moneypenny/continuation.mjs` → `continuationsPerDay`; `halt` stops continuation dead).
   **The numbers live in `work-mode.json`, not in this doc** — citing the spigot is the whole point
@@ -182,7 +184,9 @@ a model or effort level means editing this block — never touching the agents. 
 agent; a new agent needs a row here (that itself is a useful "did you think about its tier?" gate). A
 file on the bench (`docs/agents/bench/README.md`) has no row until it comes back. `worker.md` has no
 `model:` line on purpose: a per-call model overrides an agent file's model, so the script sets the
-tier and the row is the floor for what it may set.
+tier and the row is the floor for what it may set. `/ship`'s process-file lens calls `reviewer` with
+`model: "opus"`: that read is the review class in the table above, and `reviewer`'s Fable floor is for
+its diff read.
 
 <!-- FLOOR-TABLE:START -->
 | agent | class | model floor | effort floor |

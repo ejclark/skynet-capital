@@ -1,11 +1,14 @@
+import { readFileSync } from "node:fs";
 import {
   type DialComment,
   executeDialTap,
+  executeDialTidy,
   type LabelEvent,
   planDialTap,
   routeDial,
 } from "../../../scripts/moneypenny/dial-tap.mjs";
 import { route } from "../../../scripts/moneypenny/index.mjs";
+import { FOOTER } from "../../../scripts/moneypenny/labels.mjs";
 import {
   loadWorkModeConfig,
   resolveWorkMode,
@@ -291,5 +294,123 @@ describe("the wiring", () => {
     };
     executeDialTap(intent("conserve", 99), { exec, config });
     expect(calls).toEqual([]);
+  });
+});
+
+// The push tick's half. The audit decided on a read a moment old, and in that moment someone may have
+// tapped a brake on, so the write reads again and every case below that must not write goes through
+// the same reader the lanes use.
+describe("executeDialTidy", () => {
+  const SET = "2026-10-27T10:00:00Z";
+  const WRITTEN = "2026-10-27T10:00:20Z";
+  const AFTER = Date.parse("2026-11-03T06:00:00Z");
+  const endDate = (text: string) => ({
+    body: text,
+    createdAt: WRITTEN,
+    author_association: "OWNER",
+    user: { type: "User" },
+  });
+  const intent = (position: string) => ({
+    kind: "tidy-ended-dial" as const,
+    issueNumber: 4153,
+    label: `work-mode:${position}`,
+    reason: "read a moment ago",
+  });
+
+  /** A fake `gh` over the issue as it is now. The writes change `labels`, so a second pass sees them. */
+  const fakeGh = (start: string[], comments: DialComment[], events: LabelEvent[]) => {
+    const labels = [...start];
+    const writes: string[][] = [];
+    const exec = (_cmd: string, args: readonly string[]) => {
+      const path = args.find((a) => a.startsWith("repos/")) ?? "";
+      if (args.includes("-X")) {
+        writes.push([...args]);
+        if (args.includes("DELETE"))
+          labels.splice(labels.indexOf(decodeURIComponent(path.split("/").at(-1) ?? "")), 1);
+        else if (path.endsWith("/labels")) labels.push("work-mode:normal");
+        return "";
+      }
+      if (path.includes("/events")) return events.map((e) => JSON.stringify(e)).join("\n");
+      if (path.includes("/comments")) return comments.map((c) => JSON.stringify(c)).join("\n");
+      return JSON.stringify({
+        title: "Work mode: SURGE",
+        labels: labels.map((name) => ({ name })),
+      });
+    };
+    return { exec, writes, labels };
+  };
+  const set = (position: string) => [{ label: `work-mode:${position}`, createdAt: SET }];
+
+  it("puts normal on, takes the ended label off, and leaves one footed comment", () => {
+    const { exec, writes, labels } = fakeGh(
+      ["work-mode:surge"],
+      [endDate(`surge until ${RESET}`)],
+      set("surge"),
+    );
+    executeDialTidy(intent("surge"), { exec, config, now: AFTER });
+    expect(writes.map((w) => w.slice(2, 4))).toEqual([
+      ["POST", "repos/{owner}/{repo}/issues/4153/labels"],
+      ["DELETE", "repos/{owner}/{repo}/issues/4153/labels/work-mode%3Asurge"],
+      ["POST", "repos/{owner}/{repo}/issues/4153/comments"],
+    ]);
+    expect(writes[0]).toContain("labels[]=work-mode:normal");
+    expect(labels).toEqual(["work-mode:normal"]);
+    const comment = writes[2]?.at(-1) ?? "";
+    expect(comment).toContain(FOOTER);
+    expect(comment).toContain("surge expired at");
+    // The reader takes any "until <date>" as an end date, and a later tap could read this one.
+    expect(comment).not.toMatch(/until/i);
+  });
+
+  it("does it once: a second pass reads normal and writes nothing", () => {
+    const { exec, writes } = fakeGh(
+      ["work-mode:surge"],
+      [endDate(`surge until ${RESET}`)],
+      set("surge"),
+    );
+    executeDialTidy(intent("surge"), { exec, config, now: AFTER });
+    executeDialTidy(intent("surge"), { exec, config, now: AFTER });
+    expect(writes).toHaveLength(3);
+  });
+
+  it.each([
+    // A brake with no end date, the state this must never release.
+    ["a halt with no end date", ["work-mode:halt"], [], set("halt"), "halt"],
+    // Tapped on after the audit read an ended surge. Releasing this one is the race the re-read closes.
+    ["a brake tapped on since the audit read", ["work-mode:halt"], [], set("halt"), "surge"],
+    [
+      "an end date still ahead",
+      ["work-mode:conserve"],
+      [endDate("conserve until 2026-11-04T05:00Z")],
+      set("conserve"),
+      "conserve",
+    ],
+    ["a surge with no end date", ["work-mode:surge"], [], set("surge"), "surge"],
+    ["two labels on the dial", ["work-mode:surge", "work-mode:normal"], [], [], "surge"],
+    ["a dial already at normal", ["work-mode:normal"], [], [], "surge"],
+  ] as [string, string[], DialComment[], LabelEvent[], string][])(
+    "writes nothing for %s",
+    (_what, start, comments, events, position) => {
+      const { exec, writes, labels } = fakeGh(start, comments, events);
+      executeDialTidy(intent(position), { exec, config, now: AFTER });
+      expect(writes).toEqual([]);
+      expect(labels).toEqual(start);
+    },
+  );
+
+  it("touches nothing for an intent naming another issue", () => {
+    const { exec, writes, labels } = fakeGh(
+      ["work-mode:surge"],
+      [endDate(`surge until ${RESET}`)],
+      set("surge"),
+    );
+    executeDialTidy({ ...intent("surge"), issueNumber: 99 }, { exec, config, now: AFTER });
+    expect(writes).toEqual([]);
+    expect(labels).toEqual(["work-mode:surge"]);
+  });
+
+  it("is what the push tick's intent runs", () => {
+    const source = readFileSync("scripts/moneypenny/index.mjs", "utf8");
+    expect(source).toContain(`"tidy-ended-dial": (i) => executeDialTidy(i)`);
   });
 });

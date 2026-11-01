@@ -229,6 +229,9 @@ Docker → set the same env vars (Render injects `PORT`, which the server honors
   still accepts the literal too, so the bots app can redeploy second without dropping the bridge;
   the boot line reads `auth: provisioned secret, literal still accepted`, and one
   `legacy bridge secret used` warning means the bots app has not picked the secret up yet (#4621).
+  On Fly this is a button, not a terminal step: **Actions → Autonomy ops → `set-bridge-secret`**
+  generates the value, sets it on the dashboard, and stages it on the bots app in that order. It
+  refuses if the bots app already has one, since a new dashboard value would then cut the bridge.
 - **Check the release** with `scripts/smoke.sh https://<your host>`.
 
 ## After deploying

@@ -1,5 +1,4 @@
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
-import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
 import {
   type DecisionPage,
   readAccountDecisions,
@@ -10,8 +9,8 @@ import {
  * `readAccountDecisions` (#3608 follow-up, found live 2026-09-24) — beta-scout trades on Sauron's
  * account while keeping its own decision history under `personaId: "beta-scout"`, so Sauron's own
  * `readDecisions("sauron")` never saw it. This pools in any OTHER persona the account's own trade
- * activity resolves to via `findByOrderId` — the same order-id join `playbook-performance.ts`
- * (PR 7d) already proves pools correctly across personas.
+ * activity resolves to — the order-id join, held per account by `account-personas-fold.ts`
+ * (#4619), whose own spec checks the join against a whole read.
  */
 
 const decision = (over: Partial<DecisionRecord> = {}): DecisionRecord => ({
@@ -24,22 +23,8 @@ const decision = (over: Partial<DecisionRecord> = {}): DecisionRecord => ({
   ...over,
 });
 
-const trade = (over: Partial<TradeActivityRecord> = {}): TradeActivityRecord =>
-  ({
-    orderId: "o1",
-    symbol: "NVDA",
-    side: "buy",
-    quantity: 10,
-    filledQuantity: 10,
-    status: "filled",
-    at: "2026-01-01T00:00:00Z",
-    participantId: "sauron",
-    source: "broker",
-    ...over,
-  }) as TradeActivityRecord;
-
 describe("readAccountDecisions", () => {
-  it("pools a foreign persona's full decision history when its trade lands on this account", async () => {
+  it("pools a foreign persona's full decision history when it trades on this account", async () => {
     const sauronRecords = [decision({ at: 1, personaId: "sauron" })];
     const betaRecords = [
       decision({ at: 2, personaId: "beta-scout" }),
@@ -47,75 +32,18 @@ describe("readAccountDecisions", () => {
     ];
     const records = await readAccountDecisions("sauron", {
       readDecisions: async (id) => (id === "sauron" ? sauronRecords : betaRecords),
-      readTradeActivity: async () => [trade({ orderId: "beta-order" })],
-      findByOrderId: (orderId) =>
-        orderId === "beta-order"
-          ? { record: decision({ personaId: "beta-scout" }), intent: {} as never }
-          : undefined,
+      readAccountPersonas: async () => ["sauron", "beta-scout"],
     });
     expect(records?.map((r) => r.at).sort()).toEqual([1, 2, 3]);
   });
 
-  it("never pools anything when every trade's origin already matches the account", async () => {
+  it("never pools anything when the only persona trading here is the account's own", async () => {
     const sauronRecords = [decision({ at: 1 })];
     const records = await readAccountDecisions("sauron", {
       readDecisions: async () => sauronRecords,
-      readTradeActivity: async () => [trade()],
-      findByOrderId: () => ({ record: decision({ at: 1 }), intent: {} as never }),
+      readAccountPersonas: async () => ["sauron"],
     });
     expect(records).toBe(sauronRecords);
-  });
-
-  it("asks for the personas of all the account's orders at once, when the store can say", async () => {
-    const asked: string[][] = [];
-    const records = await readAccountDecisions("sauron", {
-      readDecisions: async (id) =>
-        id === "sauron" ? [decision({ at: 1 })] : [decision({ at: 2, personaId: id })],
-      readTradeActivity: async () => [
-        trade({ orderId: "a" }),
-        trade({ orderId: "a" }),
-        trade({ orderId: "b" }),
-      ],
-      personasOfOrders: (ids) => {
-        asked.push([...ids]);
-        return ["sauron", "beta-scout"];
-      },
-      findByOrderId: () => {
-        throw new Error("a record per order is exactly what this path avoids");
-      },
-    });
-    expect(asked).toEqual([["a", "b"]]);
-    expect(records?.map((r) => r.at).sort()).toEqual([1, 2]);
-  });
-
-  it("takes the kept per-account answer when it is wired, and never reads the ledger itself (#4619)", async () => {
-    const records = await readAccountDecisions("sauron", {
-      readDecisions: async (id) =>
-        id === "sauron" ? [decision({ at: 1 })] : [decision({ at: 2, personaId: id })],
-      readAccountPersonas: async () => ["sauron", "beta-scout"],
-      readTradeActivity: () =>
-        Promise.reject(new Error("the whole ledger is exactly what this path avoids")),
-      personasOfOrders: () => {
-        throw new Error("the kept answer already joined the orders");
-      },
-    });
-    expect(records?.map((r) => r.at).sort()).toEqual([1, 2]);
-  });
-
-  it("dedupes a foreign persona discovered via multiple trades — one fetch, not two", async () => {
-    let betaFetches = 0;
-    const records = await readAccountDecisions("sauron", {
-      readDecisions: (id) => {
-        if (id === "beta-scout") betaFetches++;
-        return Promise.resolve(
-          id === "sauron" ? [decision({ at: 1 })] : [decision({ at: 2, personaId: "beta-scout" })],
-        );
-      },
-      readTradeActivity: async () => [trade({ orderId: "b1" }), trade({ orderId: "b2" })],
-      findByOrderId: () => ({ record: decision({ personaId: "beta-scout" }), intent: {} as never }),
-    });
-    expect(betaFetches).toBe(1);
-    expect(records?.map((r) => r.at).sort()).toEqual([1, 2]);
   });
 
   it("returns undefined — an honest absence — when the account has no decisions wired at all", async () => {
@@ -127,7 +55,7 @@ describe("readAccountDecisions", () => {
     const sauronRecords = [decision({ at: 1 })];
     const records = await readAccountDecisions("sauron", {
       readDecisions: async () => sauronRecords,
-      // no readTradeActivity, no findByOrderId — an older deployment, or a desk with no ledger
+      // no readAccountPersonas — no decision store to join against, so no whole-ledger join either
     });
     expect(records).toBe(sauronRecords);
   });
@@ -175,8 +103,7 @@ describe("readAccountDecisionsPage — the whole history, not the newest default
     const scout = [7, 151, 333, 459]; // a few forced picks, spread through the same span
     const deps = {
       ...store({ sauron, "beta-scout": scout }),
-      readTradeActivity: () => Promise.resolve([trade({ orderId: "scout-order" })]),
-      findByOrderId: () => ({ record: decision({ personaId: "beta-scout" }), intent: {} as never }),
+      readAccountPersonas: () => Promise.resolve(["sauron", "beta-scout"]),
     };
     const seen = (await walk(deps, 100)).flat();
     expect(seen.length).toBe(sauron.length + scout.length);

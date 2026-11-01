@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -133,5 +133,149 @@ describe("css-literal-scan — verdict and ratchet", () => {
     const noTheme = scan({ theme: null, budget: COUNTS });
     expect(noTheme.status).toBe(2);
     expect(noTheme.out).toContain("theme.css not found");
+  });
+});
+
+// --apply swaps a literal for the token it equals, one file at a time. Each case seeds its own
+// stylesheet and reads back what the run left on disk.
+type ApplySeed = {
+  css: string;
+  theme?: string;
+  shell?: string;
+  extraCss?: string;
+  args?: string[];
+};
+
+const fixtures: string[] = [];
+
+function apply({ css, theme = THEME, shell = SHELL, extraCss, args }: ApplySeed) {
+  const root = mkdtempSync(join(tmpdir(), "css-literal-apply-"));
+  const styles = join(root, "app/src/styles");
+  const run = (...flags: string[]) =>
+    spawnSync("node", [SCRIPT, ...flags], { cwd: root, encoding: "utf8" });
+  fixtures.push(root);
+  mkdirSync(styles, { recursive: true });
+  writeFileSync(join(styles, "theme.css"), theme);
+  writeFileSync(join(styles, "a.css"), css);
+  if (extraCss) writeFileSync(join(styles, "b.css"), extraCss);
+  writeFileSync(join(root, "app/src/shell.tsx"), shell);
+  const r = run(...(args ?? ["--apply", "app/src/styles/a.css"]));
+  return {
+    status: r.status,
+    out: r.stdout + r.stderr,
+    css: readFileSync(join(styles, "a.css"), "utf8"),
+    theme: readFileSync(join(styles, "theme.css"), "utf8"),
+    counts: () => JSON.parse(run("--json").stdout).counts,
+    again: () => run("--apply", "app/src/styles/a.css"),
+  };
+}
+
+afterEach(() => {
+  for (const root of fixtures.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+describe("css-literal-scan --apply", () => {
+  it("swaps a literal for the token it equals, and leaves every other value alone", () => {
+    const r = apply({ css: STYLES });
+    expect(r.status).toBe(0);
+    expect(JSON.parse(r.out)).toEqual({
+      file: "app/src/styles/a.css",
+      swapped: 2,
+      skipped: [],
+    });
+    expect(r.css).toBe(
+      STYLES.replace("padding: 8px 10px", "padding: var(--space-2) 10px").replace(
+        "font-size: 12.5px",
+        "font-size: var(--text-md)",
+      ),
+    );
+  });
+
+  it("drops the scan's count by exactly the swaps, and a second run swaps nothing", () => {
+    const r = apply({ css: STYLES });
+    expect(r.counts()).toMatchObject({
+      spacingEqualsToken: 0,
+      fontSizeEqualsToken: 0,
+      rawSpacing: 1,
+      rawFontSize: 0,
+    });
+    const second = r.again();
+    expect(JSON.parse(second.stdout).swapped).toBe(0);
+  });
+
+  it("swaps each literal in a shorthand, a calc and a multi-line value", () => {
+    const css = ".a {\n  margin: 8px 8px;\n  gap: calc(8px + 1px);\n  padding: 8px\n    10px;\n}\n";
+    const r = apply({ css });
+    expect(JSON.parse(r.out).swapped).toBe(4);
+    expect(r.css).toBe(
+      ".a {\n  margin: var(--space-2) var(--space-2);\n  gap: calc(var(--space-2) + 1px);\n" +
+        "  padding: var(--space-2)\n    10px;\n}\n",
+    );
+  });
+
+  it("finds a literal that follows a var() in the same value", () => {
+    const css = ".a {\n  margin: var(--space-2, 2px) 8px var(--space-2) 12.5px;\n}\n";
+    const r = apply({ css });
+    expect(JSON.parse(r.out).swapped).toBe(1);
+    expect(r.css).toBe(
+      ".a {\n  margin: var(--space-2, 2px) var(--space-2) var(--space-2) 12.5px;\n}\n",
+    );
+  });
+
+  it("never touches what only looks like the literal", () => {
+    const css = [
+      "/* padding: 8px; a comment */",
+      ".a {",
+      "  padding: 18px 8.5px;",
+      "  margin-left: -8px;",
+      "  gap: var(--space-2, 8px); /* gap: 8px */",
+      "  width: 8px;",
+      "  font-size: 8px;",
+      "  padding-top: 8rem;",
+      "}",
+      "",
+    ].join("\n");
+    const r = apply({ css });
+    expect(JSON.parse(r.out).swapped).toBe(0);
+    expect(r.css).toBe(css);
+  });
+
+  // The swap renders the same only if the token holds that one value everywhere it can apply.
+  it("skips a token with a second value in the theme, and names why", () => {
+    const theme = `${THEME}:root[data-density="compact"] {\n  --space-2: 6px;\n}\n`;
+    const css = ".a {\n  padding: 8px;\n  font-size: 12.5px;\n}\n";
+    const r = apply({ css, theme });
+    const report = JSON.parse(r.out);
+    expect(report.swapped).toBe(1);
+    expect(report.skipped).toEqual([
+      expect.objectContaining({
+        where: "app/src/styles/a.css:2",
+        token: "--space-2",
+        why: expect.stringContaining("more than one value"),
+      }),
+    ]);
+    expect(r.css).toBe(".a {\n  padding: 8px;\n  font-size: var(--text-md);\n}\n");
+  });
+
+  it("skips a token another stylesheet or the app's code sets", () => {
+    const css = ".a {\n  padding: 8px;\n}\n";
+    const inCss = apply({ css, extraCss: ".b {\n  --space-2: 6px;\n}\n" });
+    expect(JSON.parse(inCss.out).skipped[0].why).toContain("set outside theme.css");
+    expect(inCss.css).toBe(css);
+    const inCode = apply({ css, shell: 'export const s = { "--space-2": "6px" };\n' });
+    expect(JSON.parse(inCode.out).skipped[0].why).toContain("set outside theme.css");
+    expect(inCode.css).toBe(css);
+  });
+
+  it("refuses theme.css, a missing file and no file at all, without writing", () => {
+    const refused = (args: string[]) => apply({ css: STYLES, args });
+    const onTheme = refused(["--apply", "app/src/styles/theme.css"]);
+    expect(onTheme.status).toBe(2);
+    expect(onTheme.theme).toBe(THEME);
+    expect(refused(["--apply", "app/src/styles/nope.css"]).status).toBe(2);
+    expect(refused(["--apply", "../outside.css"]).status).toBe(2);
+    const noFile = refused(["--apply"]);
+    expect(noFile.status).toBe(2);
+    expect(noFile.css).toBe(STYLES);
   });
 });

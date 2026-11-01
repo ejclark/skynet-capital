@@ -465,6 +465,12 @@ flowchart TD
   (`scripts/shoot/feedback.mjs`, ~115 lines), swap the stubs and the frames, add its `shoot:<name>`
   npm script. #1308 and #1312 both shipped with "Picture: waived" because no script existed for the
   surface they changed — that is the cost this harness was built to remove (#1327).
+- **"Did this change any pixels?": `npm run shoot:steady -- scripts/shoot/<name>.mjs <outdir>`, then
+  `npm run shoot:diff -- <before> <after> --baseline <before-again>`.** A plain shoot can't answer it,
+  because passes of one clean build differ on their own. Shoot the before build at least twice, since
+  some frames flip between two images. Then break one rule by a pixel and see frames move, because a
+  rule can sit in the page and out of every frame: a clean diff from a shoot that can't see the change
+  says nothing. `SHOOT_CLOCK` pins the page's date when fixtures have aged past it.
 - **Before/after pairs of diagrams: `npm run shoot:mermaid-pairs -- <pairs.json> <outdir>`.** Use
   it when the argument *is* the comparison — a diagram grammar's before and after, a table redrawn
   as the diagram it should have been, a showcase contender for a colleague. It renders each pair
