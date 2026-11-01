@@ -20,6 +20,7 @@ import {
 import { type BotsOnlyGateView, botsOnlyGateView } from "../domain/playbook-bots-only.js";
 import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
+import { ADOPTED_HOLD } from "../playbooks/conviction-adoptions.js";
 import { CONVICTION_NOT_ON_VIEW, type ConvictionLookup } from "../playbooks/conviction-store.js";
 import { findPair, type Pair, type StrategyId } from "../playbooks/pair-table.js";
 import { findPlaybook } from "../playbooks/registry.js";
@@ -163,10 +164,14 @@ export const UNMOVED_CONVICTION_NOTE =
   "Opening nothing new: its conviction hasn't moved onto a view yet. Exits still run.";
 
 /** Why the bots hold a subscribed pair exits-only for its conviction (`rosterSteering`'s refusal):
- *  the words above for a ◆ pair with no view, else the bots' own reason. The owner's row and the
+ *  the words above for a ◆ pair with no view, an adopted hold's own sentence (its view still steers
+ *  the pair), else the bots' own reason. The owner's row and the
  *  roll call (`playbookRollCall`) both say it, so the two read alike. */
 export function convictionHoldNote(refused: string): string {
   if (refused === CONVICTION_NOT_ON_VIEW) return UNMOVED_CONVICTION_NOTE;
+  // An adopted hold (#5482 criterion 6): the view still steers the pair, so "can't steer it" would
+  // be false; its reason already names the failed claim and the day.
+  if (refused.startsWith(ADOPTED_HOLD)) return `Opening nothing new: ${refused}. Exits still run.`;
   return `Opening nothing new: its conviction view can't steer it (${refused}). Exits still run.`;
 }
 
