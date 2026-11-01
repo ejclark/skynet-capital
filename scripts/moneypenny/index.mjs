@@ -64,6 +64,7 @@ import {
   readOpenIssues,
   readOpenPlans,
   recheckPullable,
+  sweepHold,
   waitingPlans,
 } from "./admission.mjs";
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
@@ -97,7 +98,7 @@ import {
 } from "./labels.mjs";
 import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
 import { modelTier } from "./model-tier.mjs";
-import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
+import { nextUnheld } from "./pickup-hold.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { closeRedLanePr } from "./red-lane-pr.mjs";
@@ -714,7 +715,9 @@ export function peekNext(deps = {}) {
     readPrIssues = () => readOpenPrIssues(),
     readPlans = () => readOpenPlans(),
     continuation = () => continuationContext(),
-    readHold: holdOf = (issue) => readPickupHold(issue),
+    holdReads = {},
+    // The same holds as the claim, or a refused issue dispatches an empty run on every tick.
+    readHold: holdOf = sweepHold(holdReads),
   } = deps;
   const mode = readMode();
   const ready = withoutOpenPr(readReady(), readPrIssues());
@@ -740,7 +743,8 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readPlans = () => readOpenPlans(),
     claims = { plan: claimPlan, feedback: claimFeedback },
     continuation = () => continuationContext({ now: nowMs }),
-    readHold: holdOf = (issue) => readPickupHold(issue),
+    holdReads = {},
+    readHold: holdOf = sweepHold({ now: nowMs, ...holdReads }),
     ...admission
   } = deps;
   const mode = readMode();
