@@ -69,8 +69,10 @@ if [[ "$REPORT" == "--report" ]]; then
     SINCE=$(date -u -d "-$WINDOW_HOURS hours" +%FT%TZ 2>/dev/null || date -u -v-"$WINDOW_HOURS"H +%FT%TZ)
     # The REST comments route, not `issue view`: it carries the author's type, and only a bot's
     # comment with this script's own marker is a start. `gh issue view` shows a login alone.
-    RECENT=$("$GH" api "repos/{owner}/{repo}/issues/$ISSUE/comments?per_page=100" \
-      --jq "[.[] | select(.user.type == \"Bot\" and (.body | contains(\"$START_MARKER\")) and .created_at >= \"$SINCE\")] | length" 2>/dev/null || echo 0)
+    # `since` keeps the read to the window on the server side — the route pages oldest first, so
+    # on a long-lived issue the starts that matter would otherwise sit past the first page.
+    RECENT=$("$GH" api "repos/{owner}/{repo}/issues/$ISSUE/comments?per_page=100&since=$SINCE" \
+      --jq "[.[] | select(.user.type == \"Bot\" and ((.body // \"\") | contains(\"$START_MARKER\")) and .created_at >= \"$SINCE\")] | length" 2>/dev/null || echo 0)
     if ((RECENT >= MAX_STARTS)); then
       say "$RECENT starts in ${WINDOW_HOURS}h, budget spent: leaving $ID stopped. See issue #$ISSUE."
       echo "::error::bots machine keeps stopping: $RECENT starts in ${WINDOW_HOURS}h, left stopped. See issue #$ISSUE."

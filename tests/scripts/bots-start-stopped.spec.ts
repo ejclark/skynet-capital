@@ -182,6 +182,19 @@ describe("bots-start-stopped", () => {
     expect(res.stdout).toContain("budget spent");
     expect(flyCalls(stub)).not.toContain("machine start");
     expect(comments(stub)).toHaveLength(3);
+    // The read is narrowed to the window on the server side: the route pages oldest first, and a
+    // long-lived issue's recent starts would otherwise sit past the first page.
+    expect(ghCalls(stub)).toMatch(/issues\/42\/comments\?per_page=100&since=\d{4}-\d\d-\d\dT/);
+  });
+
+  it("a comment with no body does not break the count", () => {
+    const stub = fixture("stopped");
+    seed(stub, 3, { type: "Bot", body: `start\n${MARKER}` });
+    writeFileSync(
+      join(stub, "comments"),
+      `${readFileSync(join(stub, "comments"), "utf8")}${JSON.stringify({ user: { type: "Bot" }, body: null, created_at: new Date().toISOString() })}\n`,
+    );
+    expect(run(stub, "--report").status).toBe(3);
   });
 
   it("a stranger's comments never spend the budget — this repo is public", () => {
