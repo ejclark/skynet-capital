@@ -1,0 +1,56 @@
+diff --git a/.github/workflows/moneypenny-events.yml b/.github/workflows/moneypenny-events.yml
+index 2a025100..326fb311 100644
+--- a/.github/workflows/moneypenny-events.yml
++++ b/.github/workflows/moneypenny-events.yml
+@@ -146,6 +146,12 @@ jobs:
+         with:
+           fetch-depth: 0
+ 
++      # The session runs `npm run verify`, which carries Node-24-only checks; the runner's default
++      # node is 22, so without this a green change reads red (#6618). Same pin as `route`.
++      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
++        with:
++          node-version-file: .nvmrc
++
+       - id: app-token
+         uses: ./.github/actions/app-token
+         with:
+@@ -606,6 +612,12 @@ jobs:
+           # claude-code-action puts the App token in the remote URL (`github_token` below).
+           persist-credentials: false
+ 
++      # The session runs `npm run verify`, which carries Node-24-only checks; the runner's default
++      # node is 22, so without this a green change reads red (#6618). Same pin as `route`.
++      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
++        with:
++          node-version-file: .nvmrc
++
+       # Minted per-job (per matrix leg, here), same as `build` — the action revokes its token at
+       # job end.
+       - id: app-token
+@@ -792,6 +804,12 @@ jobs:
+           # claude-code-action puts the App token in the remote URL (`github_token` below).
+           persist-credentials: false
+ 
++      # The session runs `npm run verify`, which carries Node-24-only checks; the runner's default
++      # node is 22, so without this a green change reads red (#6618). Same pin as `route`.
++      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
++        with:
++          node-version-file: .nvmrc
++
+       - id: app-token
+         uses: ./.github/actions/app-token
+         with:
+@@ -959,6 +977,12 @@ jobs:
+           # claude-code-action puts the App token in the remote URL (`github_token` below).
+           persist-credentials: false
+ 
++      # The session runs `npm run verify`, which carries Node-24-only checks; the runner's default
++      # node is 22, so without this a green change reads red (#6618). Same pin as `route`.
++      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
++        with:
++          node-version-file: .nvmrc
++
+       - id: app-token
+         uses: ./.github/actions/app-token
+         with:
