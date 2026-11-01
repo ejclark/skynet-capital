@@ -111,6 +111,23 @@ describe("platter-refs: the Summary bullets, from the boarded commits", () => {
     ]);
   });
 
+  it("folds an amendment's refs onto the rows of the item it names, adding no row (#4616)", () => {
+    const log =
+      record("ci: a", ["Platter-Item: claude/issue-4616"]) +
+      record("fix: b", ["Platter-Item: fix/b", "Platter-Refs: #7"]) +
+      record("ci: a", ["Platter-Item: claude/issue-4616"]) +
+      record("chore(platter): amend", [
+        "Platter-Amends: claude/issue-4616",
+        "Platter-Closes: #4616",
+      ]) +
+      record("chore(platter): amend", ["Platter-Amends: fix/gone", "Platter-Closes: #8"]);
+    expect(parseBoarded(log)).toEqual([
+      { closes: [4616], refs: [] },
+      { closes: [], refs: [7] },
+      { closes: [4616], refs: [] },
+    ]);
+  });
+
   it("names each issue once with the ledger row that boarded it", () => {
     expect(
       summaryBullets([
