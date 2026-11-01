@@ -148,6 +148,35 @@ describe("post-merge-audit's lens table", () => {
     ]);
   });
 
+  it("lists the PR as still needing the lens that died, beside the other lens's findings", async () => {
+    const reply: Reply = (prompt, opts) => {
+      if (opts.label === "dead agents") return { left: [] };
+      if (opts.label?.includes("security")) return null;
+      return replyFor(["src/server/a.ts"])(prompt, opts);
+    };
+    const { result } = await runWorkflow("post-merge-audit", { prs: [6501] }, reply, withSecurity);
+    expect(result?.unreviewed).toEqual([{ pr: 6501, why: expect.stringContaining("security") }]);
+  });
+
+  it("drops findings from a reviewer that could not find the change", async () => {
+    const reply: Reply = (prompt, opts) =>
+      opts.label?.includes("security")
+        ? { merged: false, findings: [{ ...finding, summary: "from the wrong commit" }] }
+        : replyFor(["src/server/a.ts"])(prompt, opts);
+    const { result } = await runWorkflow("post-merge-audit", { prs: [6501] }, reply, withSecurity);
+    expect(result?.confirmed).toEqual([expect.objectContaining({ lens: "correctness" })]);
+  });
+
+  it("runs every lens when triage found the PR but no paths", async () => {
+    const { calls } = await runWorkflow(
+      "post-merge-audit",
+      { prs: [6501] },
+      replyFor([]),
+      withSecurity,
+    );
+    expect(reviewers(calls)).toHaveLength(2);
+  });
+
   it("calls a PR not found only when no reviewer found it", async () => {
     const reply: Reply = (prompt, opts) =>
       opts.label?.startsWith("review")

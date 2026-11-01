@@ -8,7 +8,7 @@
 // 2026-10-26 a surge session shipped 11 builds and audited them by hand: one reviewer per PR, then
 // two refuters per serious finding. This file is that loop, run by name:
 //
-//   review (one per PR)   → correctness-only findings, judged against CURRENT main, not the PR's
+//   review (one per PR, per lens) → correctness-only findings, judged against CURRENT main, not the PR's
 //                           base — a later merge may already have fixed it, or made it worse
 //   refute (two per high/medium finding, independent, different lenses)
 //     - trace:     walk a real caller or input to the failure in today's code
@@ -149,7 +149,8 @@ Judge every finding against the code as it is on origin/main NOW (read the curre
 // THE LENS TABLE — one row per way of reading a merged PR, chosen by the paths it touched. `roots` is
 // the same prefix list DEEP_ROOTS uses, and null means every path. Correctness is the only row today,
 // so a later lens (a security read of the trust-boundary paths, say) is one row and one prompt: the
-// refuters, the tier and the result shape below already apply to whatever a row finds.
+// refuters, the tier and the result shape below already apply to whatever a row finds. Nothing merges
+// two lenses' reports of one defect yet: that is the second row's to settle, once there are two.
 const LENSES = [
   { name: 'correctness', roots: null, prompt: reviewPrompt },
 ]
@@ -245,8 +246,8 @@ const results = await pipeline(
     const tier = t ? tierOf(n, t) : 'deep'
     if (tier === 'skip') return { pr: n, skipped: `docs-only: ${t.files.join(', ')}` }
     const dial = TIERS[tier]
-    // An unknown blast radius gets every lens, for the same reason it gets the deep tier.
-    const lenses = t ? lensesFor(t.files) : LENSES
+    // An unknown blast radius gets every lens, for the same reason a dead triage gets the deep tier.
+    const lenses = t?.files?.length ? lensesFor(t.files) : LENSES
     const reviews = await parallel(
       lenses.map((lens) => async () => {
         const review = await tracked(`review-${lens.name}-${n}`, lens.prompt(n), { label: `review #${n} ${lens.name} (${tier})`, phase: 'Review', schema: FINDINGS_SCHEMA, agentType: 'worker', ...dial.review })
@@ -256,7 +257,9 @@ const results = await pipeline(
     const returned = reviews.filter(Boolean)
     if (!returned.length) return { pr: n, unreviewed: 'no reviewer came back: re-run this PR' }
     if (!returned.some((r) => r.merged)) return { pr: n, unreviewed: 'not found on origin/main' }
-    const findings = returned.flatMap((r) => r.findings.map((f) => ({ lens: r.lens, ...f })))
+    const findings = returned.filter((r) => r.merged).flatMap((r) => r.findings.map((f) => ({ lens: r.lens, ...f })))
+    // A lens that did not come back is a read this PR still needs, even when another lens returned.
+    const missed = reviews.flatMap((r, i) => (r ? [] : [lenses[i].name]))
     const serious = findings.filter((f) => f.severity !== 'low')
     const low = findings.filter((f) => f.severity === 'low').map((f) => ({ pr: n, tier, ...f }))
     const judged = await parallel(
@@ -273,7 +276,7 @@ const results = await pipeline(
         return { pr: n, tier, ...f, confirmed: votes.every((v) => !v.refuted), ...(singleLens ? { singleLens } : {}), trace: votes[0].evidence, repro: votes[1].evidence }
       }),
     )
-    return { pr: n, tier, judged: judged.filter(Boolean), low }
+    return { pr: n, tier, judged: judged.filter(Boolean), low, ...(missed.length ? { unreviewed: `the ${missed.join(', ')} lens did not come back: re-run this PR` } : {}) }
   },
 )
 
