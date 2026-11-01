@@ -20,7 +20,7 @@ import { createHash } from "node:crypto";
 import { stripTypeScriptTypes } from "node:module";
 
 const ROOTS = ["src", "app/src"];
-const DEF = /^(?:export\s+)?(?:async\s+)?(?:function|const|class)\s+([A-Za-z_$][\w$]*)/gm;
+export const DEF = /^(?:export\s+)?(?:async\s+)?(?:function|const|class)\s+([A-Za-z_$][\w$]*)/gm;
 const IN_SCOPE = (path) =>
   ROOTS.some((root) => path.startsWith(`${root}/`)) &&
   (path.startsWith("app/") ? /\.tsx?$/ : /\.ts$/).test(path) &&
@@ -34,7 +34,9 @@ function statementAt(text, start) {
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     const wasInTemplate = inTemplate;
-    if ((line.match(/(?<!\\)`/g) ?? []).length % 2) inTemplate = !inTemplate;
+    // A comment's backtick opens nothing; inside a template the same line is text, and counts.
+    const isComment = !inTemplate && /^\s*(?:\/\/|\/?\*)/.test(line);
+    if (!isComment && (line.match(/(?<!\\)`/g) ?? []).length % 2) inTemplate = !inTemplate;
     if (inTemplate || wasInTemplate) continue;
     if (i === 0 && /[;}]\s*(?:\/\/.*)?$/.test(line)) return line;
     if (i > 0 && closes(line)) return lines.slice(0, i + 1).join("\n");
@@ -64,26 +66,23 @@ const normalized = (statement) =>
     .replace(/,([)}\]])/g, "$1");
 
 function definitions(text) {
-  const defs = new Map(); // name → { line, start }; an overload's last signature is its implementation
-  for (const match of text.matchAll(DEF)) {
-    const line = text.slice(0, match.index).split("\n").length;
-    defs.set(match[1], { line, start: match.index });
-  }
+  const defs = new Map(); // name → start; an overload's last signature is its implementation
+  for (const match of text.matchAll(DEF)) defs.set(match[1], match.index);
   return defs;
 }
 
 /** The normalized body of one top-level definition, or null when the text does not define it. */
 export function bodyOf(text, name) {
-  const def = definitions(text).get(name);
-  return def ? normalized(statementAt(text, def.start)) : null;
+  const start = definitions(text).get(name);
+  return start === undefined ? null : normalized(statementAt(text, start));
 }
 
 const hash = (body) => createHash("sha1").update(body).digest("hex");
 const pushTo = (map, key, value) => map.set(key, [...(map.get(key) ?? []), value]);
 
-function gitIn(cwd) {
+function gitIn(cwd, env) {
   return (...args) => {
-    const run = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 2 ** 30 });
+    const run = spawnSync("git", args, { cwd, env, encoding: "utf8", maxBuffer: 2 ** 30 });
     if (run.status !== 0) throw new Error(`git ${args[0]} failed: ${run.stderr.trim()}`);
     return run.stdout;
   };
@@ -111,7 +110,7 @@ function namesTouched(git, from, head, ignore) {
 }
 
 /** Every definer at head of the wanted names. One batch read, since it walks thousands of files. */
-function definersAt(cwd, git, head, wanted) {
+function definersAt({ cwd, env }, git, head, wanted) {
   const tree = git("ls-tree", "-r", "--full-tree", head, "--", ...ROOTS)
     .split("\n")
     .filter(Boolean)
@@ -119,6 +118,7 @@ function definersAt(cwd, git, head, wanted) {
     .filter(([, path]) => IN_SCOPE(path));
   const batch = spawnSync("git", ["cat-file", "--batch"], {
     cwd,
+    env,
     input: `${tree.map(([meta]) => meta.split(" ")[2]).join("\n")}\n`,
     maxBuffer: 2 ** 31 - 1,
   });
@@ -130,13 +130,10 @@ function definersAt(cwd, git, head, wanted) {
     const size = Number(batch.stdout.toString("latin1", offset, eol).split(" ")[2]);
     const text = batch.stdout.toString("utf8", eol + 1, eol + 1 + size);
     offset = eol + 1 + size + 1;
-    for (const [name, def] of definitions(text)) {
+    for (const [name, start] of definitions(text)) {
       if (!wanted.has(name)) continue;
-      pushTo(definers, name, {
-        file,
-        line: def.line,
-        body: normalized(statementAt(text, def.start)),
-      });
+      const line = text.slice(0, start).split("\n").length;
+      pushTo(definers, name, { file, line, body: normalized(statementAt(text, start)) });
     }
   }
   return definers;
@@ -156,24 +153,27 @@ function rowsFor(name, files, definers) {
     if (group.length >= 2) {
       rows.pastes.push({ name, added, existing: group.filter(isOld).map(location) });
     } else {
-      rows.sameName.push({ name, added, existing: definers.filter(isOld).map(location) });
+      const others = definers.filter((def) => !group.includes(def));
+      rows.sameName.push({ name, added, existing: others.map(location) });
     }
   }
   return rows;
 }
 
+/** `ignore` is the caller's: dupe-scan owns which conventional names are not duplication. */
 export function reuseDelta({
   cwd = process.cwd(),
+  env = process.env,
   base,
   head = "HEAD",
-  ignore = ["main", "Route"],
+  ignore = [],
 }) {
-  const git = gitIn(cwd);
+  const git = gitIn(cwd, env);
   const from = git("merge-base", base, head).trim();
   const { added, removed } = namesTouched(git, from, head, ignore);
   const delta = { base: from, head, pastes: [], sameName: [], moved: [] };
   if (!added.size) return delta;
-  const definers = definersAt(cwd, git, head, new Set(added.keys()));
+  const definers = definersAt({ cwd, env }, git, head, new Set(added.keys()));
   for (const [name, files] of added) {
     const all = definers.get(name) ?? [];
     if (all.length < 2) continue;

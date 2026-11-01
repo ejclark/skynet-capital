@@ -43,6 +43,10 @@ afterAll(() => {
   for (const dir of repos) rmSync(dir, { recursive: true, force: true });
 });
 
+/** Hermetic for the same reason `git` above is: under a hook, GIT_DIR would point at this repo. */
+const delta = ({ dir, base, head }: { dir: string; base: string; head: string }) =>
+  reuseDelta({ cwd: dir, env: hermeticGitEnv(), base, head, ignore: ["Route"] });
+
 const BLANK =
   "export const blank = (value: string | undefined) => !value || value.trim() === '';\n";
 
@@ -51,6 +55,19 @@ describe("the bodies a delta compares", () => {
     const typed = "export const blank = (value: string) => !value; // a helper\n";
     const bare = "const blank = (value) =>\n  // pasted\n  !value;\n";
     expect(bodyOf(typed, "blank")).toBe(bodyOf(bare, "blank"));
+  });
+
+  it("is not thrown by a lone backtick in a comment", () => {
+    const text = [
+      "export function f(a: number) {",
+      "  // the `a flag",
+      "  return a;",
+      "}",
+      "",
+      "export const after = 1;",
+      "",
+    ].join("\n");
+    expect(bodyOf(text, "f")).not.toContain("after");
   });
 
   it("tells apart two bodies that differ in what they do", () => {
@@ -78,10 +95,17 @@ describe("the bodies a delta compares", () => {
 });
 
 describe("reuse delta", () => {
+  it("still names the other file when both same-named definitions are new", () => {
+    const { dir, base, change } = repo({ "src/keep.ts": "export const keep = 1;\n" });
+    const head = change({ "src/x.ts": BLANK, "src/y.ts": "export const blank = (v) => v;\n" });
+    const { sameName } = delta({ dir, base, head });
+    expect(sameName[0].existing.map((row: { file: string }) => row.file)).toEqual(["src/y.ts"]);
+  });
+
   it("names a pasted helper and its existing home, on either side of the app boundary", () => {
     const { dir, base, change } = repo({ "src/a/existing.ts": BLANK });
     const head = change({ "app/src/b/new.ts": BLANK });
-    const { pastes } = reuseDelta({ cwd: dir, base, head });
+    const { pastes } = delta({ dir, base, head });
     expect(pastes).toEqual([
       {
         name: "blank",
@@ -94,15 +118,15 @@ describe("reuse delta", () => {
   it("keeps a same-named definition with a different body out of the pastes", () => {
     const { dir, base, change } = repo({ "src/a.ts": "export const rankOf = (r) => r.rank;\n" });
     const head = change({ "src/b.ts": "export const rankOf = (m) => m.get('rank') ?? 0;\n" });
-    const delta = reuseDelta({ cwd: dir, base, head });
-    expect(delta.pastes).toEqual([]);
-    expect(delta.sameName.map((row: { name: string }) => row.name)).toEqual(["rankOf"]);
+    const { pastes, sameName } = delta({ dir, base, head });
+    expect(pastes).toEqual([]);
+    expect(sameName.map((row: { name: string }) => row.name)).toEqual(["rankOf"]);
   });
 
   it("does not call a moved helper a copy", () => {
     const { dir, base, change } = repo({ "src/a.ts": BLANK });
     const head = change({ "src/a.ts": null, "src/b.ts": BLANK });
-    expect(reuseDelta({ cwd: dir, base, head }).pastes).toEqual([]);
+    expect(delta({ dir, base, head }).pastes).toEqual([]);
   });
 
   // The dedupe cycle's whole job: one new home while some copies stay for a later cycle. That is a
@@ -110,19 +134,19 @@ describe("reuse delta", () => {
   it("does not call a partial consolidation a copy", () => {
     const { dir, base, change } = repo({ "src/a.ts": BLANK, "src/b.ts": BLANK, "src/c.ts": BLANK });
     const head = change({ "src/a.ts": "export const other = 1;\n", "src/home.ts": BLANK });
-    expect(reuseDelta({ cwd: dir, base, head }).pastes).toEqual([]);
+    expect(delta({ dir, base, head }).pastes).toEqual([]);
   });
 
   it("does not fire on a definition the file already had", () => {
     const { dir, base, change } = repo({ "src/a.ts": BLANK, "src/b.ts": BLANK });
     const head = change({ "src/b.ts": `${BLANK}export const added = 1;\n` });
-    expect(reuseDelta({ cwd: dir, base, head }).pastes).toEqual([]);
+    expect(delta({ dir, base, head }).pastes).toEqual([]);
   });
 
   it("collapses one helper pasted into two new files to one row", () => {
     const { dir, base, change } = repo({ "src/keep.ts": "export const keep = 1;\n" });
     const head = change({ "src/x.ts": BLANK, "src/y.ts": BLANK });
-    const { pastes } = reuseDelta({ cwd: dir, base, head });
+    const { pastes } = delta({ dir, base, head });
     expect(pastes).toHaveLength(1);
     expect(pastes[0].added.map((a: { file: string }) => a.file)).toEqual(["src/x.ts", "src/y.ts"]);
   });
@@ -136,7 +160,7 @@ describe("reuse delta", () => {
       "src/b.gen.ts": BLANK,
       "src/c.d.ts": BLANK,
     });
-    expect(reuseDelta({ cwd: dir, base, head }).pastes).toEqual([]);
+    expect(delta({ dir, base, head }).pastes).toEqual([]);
   });
 });
 
@@ -192,6 +216,17 @@ describe("dupe-scan --diff", () => {
     expect(run.status).toBe(2);
     expect(run.stderr).toContain("no-such-ref");
     expect(scan(dir, "--diff").status).toBe(2);
+    expect(scan(dir, "--diff", "HEAD", "--head").status).toBe(2);
+    const typo = scan(dir, "--diff", "HEAD", "--head", "no-such-head");
+    expect(typo.status).toBe(2);
+    expect(typo.stderr).toContain("no-such-head");
+  });
+
+  it("leaves out what the scan's own lists ignore", () => {
+    const route = "export const Route = 1;\n";
+    const { dir, base, change } = repo({ "app/src/a.ts": route });
+    change({ "app/src/b.ts": route });
+    expect(scan(dir, "--diff", base).stdout).toBe("");
   });
 
   it("still runs the whole-tree report without the flag", () => {
