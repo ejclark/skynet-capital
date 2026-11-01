@@ -1,10 +1,40 @@
-import { describe, expect, it } from "@rstest/core";
+import { mkdtempSync, utimesSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "@rstest/core";
 // @ts-expect-error plain .mjs script, no declarations
-import { digestLines, memoryClaims, redact } from "../../scripts/dream-digest.mjs";
+import { digestLines, memoryClaims, recent, redact } from "../../scripts/dream-digest.mjs";
 
 const row = (value: unknown) => JSON.stringify(value);
 const typed = (text: string) =>
   row({ type: "user", timestamp: "2026-11-01T00:00:00Z", message: { content: text } });
+
+describe("which sessions a review reads", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dream-recent-"));
+  const session = (name: string, started: string, touched: string) => {
+    const path = join(dir, name);
+    writeFileSync(path, `${JSON.stringify({ type: "user", timestamp: started })}\n`);
+    utimesSync(path, new Date(touched), new Date(touched));
+    return path;
+  };
+  const old = session("old.jsonl", "2026-08-21T00:00:00Z", "2026-10-23T00:00:00Z");
+  const fresh = session("fresh.jsonl", "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+  const middle = session("middle.jsonl", "2026-10-20T00:00:00Z", "2026-10-21T00:00:00Z");
+  afterEach(() => {
+    delete process.env.AGENT_TRANSCRIPTS_DIR;
+  });
+
+  it("ranks by when a session started, not by when the file was last touched", () => {
+    process.env.AGENT_TRANSCRIPTS_DIR = dir;
+    expect(recent(3)).toEqual([fresh, middle, old]);
+    expect(recent(1)).toEqual([fresh]);
+  });
+
+  it("can keep only sessions started after a date, as the next review needs", () => {
+    process.env.AGENT_TRANSCRIPTS_DIR = dir;
+    expect(recent(20, "2026-11-01")).toEqual([fresh]);
+  });
+});
 
 describe("memory review digest", () => {
   it("keeps what a person typed and drops what the harness injected", () => {
