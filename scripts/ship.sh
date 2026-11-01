@@ -412,7 +412,9 @@ EOF_SHOTS
     # without this line the first-pass rate only sees what got past local verify (#6470).
     local verify_ok=true
     bash scripts/verify-locked.sh --log "$verify_log" || verify_ok=false
-    mkdir -p "${AGENT_RUNS_DIR:-$HOME/.claude/runs}" 2>/dev/null \
+    # Only for this repo: ship's own specs run it in throwaway repos, and those must not count.
+    git remote get-url origin 2>/dev/null | grep -q 'skynet-capital' \
+      && mkdir -p "${AGENT_RUNS_DIR:-$HOME/.claude/runs}" 2>/dev/null \
       && printf '{"at":"%s","ok":%s,"branch":"%s"}\n' "$(date -u +%FT%TZ)" "$verify_ok" "$(git branch --show-current)" \
         >> "${AGENT_RUNS_DIR:-$HOME/.claude/runs}/ship-verify.jsonl" 2>/dev/null || true
     "$verify_ok" || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 "$verify_log"; exit 1; }
