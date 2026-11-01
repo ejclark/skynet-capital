@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readFailures } from "../../../scripts/moneypenny/repair.mjs";
+import { limitRejected, readFailures } from "../../../scripts/moneypenny/repair.mjs";
 import {
   annotationLines,
   logArgVariants,
@@ -238,6 +238,77 @@ describe("moneypenny repair — routing a failed run", () => {
     rmSync(dir, { recursive: true, force: true });
 
     expect(JSON.parse(out)).toEqual([]);
+  });
+});
+
+// Study 2026-11-01 ("limit rejections are not faults"): a lane the usage limit refused dies as a
+// red run, and this lane read every such run as a fault — #6098 took 16 recurrence comments in 15
+// hours from one session limit, and #6336 was filed for a leg that ran 394 ms at zero cost. A
+// repair session cannot fix a refusal. The real log shapes, numbers only: the action's own result
+// print (is_error true, zero cost, one turn), the output file's `rate_limit_event` with status
+// rejected, and the envelope's `api_error_status` 429.
+describe("moneypenny repair — a usage-limit rejection is not a fault", () => {
+  const rejectedResult =
+    '{\n  "type": "result",\n  "subtype": "success",\n  "is_error": true,\n  "duration_ms": 394,\n  "num_turns": 1,\n  "total_cost_usd": 0,\n  "permission_denials_count": 0\n}\n';
+  const rejectedEvent =
+    '{\n  "type": "rate_limit_event",\n  "rate_limit_info": {\n    "status": "rejected",\n    "rateLimitType": "five_hour"\n  }\n}\n';
+  const realFailure =
+    '{\n  "type": "result",\n  "subtype": "success",\n  "is_error": true,\n  "duration_ms": 106446,\n  "num_turns": 25,\n  "total_cost_usd": 0.9303738000000001\n}\n{\n  "type": "rate_limit_event",\n  "rate_limit_info": {\n    "status": "allowed_warning"\n  }\n}\n';
+
+  it("reads each of the three shapes, and not a session that ran and then failed", () => {
+    expect(limitRejected(rejectedResult)).toBe(true);
+    expect(limitRejected(rejectedEvent)).toBe(true);
+    expect(limitRejected('"api_error_status": 429,')).toBe(true);
+    expect(limitRejected(realFailure)).toBe(false);
+    expect(limitRejected("")).toBe(false);
+    expect(limitRejected(undefined)).toBe(false);
+    // The lane's own script text mentions the field names; prose is not an envelope.
+    expect(limitRejected('COST=$(jq -r "$F | .total_cost_usd"); echo is_error=$ERR')).toBe(false);
+    // A transient 429 the CLI retried leaves this line too; alone it says nothing about the death.
+    expect(limitRejected('"error": "rate_limit",\n"is_api_error_message": true')).toBe(false);
+  });
+
+  it("a session that worked for 25 turns and then died on the limit is still a refusal", () => {
+    // #6098's longest legs: 25 turns, $0.93, then the five-hour window closed on them.
+    const spentThenRejected = `${realFailure.replace("allowed_warning", "rejected")}`;
+    expect(limitRejected(spentThenRejected)).toBe(true);
+    const payload = failedRun(
+      ["research due events (x)"],
+      ["[ci] Moneypenny Events (event-research automation) — research due events"],
+    );
+    payload.failures[0] = { ...payload.failures[0], logTail: spentThenRejected } as never;
+    expect(dryRunPayload(payload).map((i) => i.type)).toEqual(["skip"]);
+  });
+
+  it("skips the rejected leg: no capsule, no recurrence comment, no repair session", () => {
+    const intents = dryRun("workflow-run-limit-rejected.json");
+    expect(intents.map((i) => i.type)).toEqual(["skip"]);
+    expect(intents[0]?.reason).toContain("usage limit");
+    expect(intents[0]?.issue).toBe(6098);
+  });
+
+  it("opens nothing when no capsule is open either — a refusal never files one", () => {
+    const fixture = JSON.parse(
+      readFileSync("tests/fixtures/events/workflow-run-limit-rejected.json", "utf8"),
+    );
+    const intents = dryRunPayload({ ...fixture, deps: { openIssues: [] } });
+    expect(intents.map((i) => i.type)).toEqual(["skip"]);
+    expect(intents[0]?.issue).toBeUndefined();
+  });
+
+  it("still files a leg that spent real turns and money, whatever the limit warning says", () => {
+    const payload = failedRun(["research due events (x)"]);
+    payload.failures[0] = { ...payload.failures[0], logTail: realFailure } as never;
+    expect(dryRunPayload(payload).map((i) => i.type)).toEqual(["open-issue"]);
+  });
+
+  it("files the real leg of a matrix run whose other leg was refused, and only that one", () => {
+    const payload = failedRun(["research due events (a)", "research due events (b)"]);
+    payload.failures[0] = { ...payload.failures[0], logTail: rejectedResult } as never;
+    payload.failures[1] = { ...payload.failures[1], logTail: realFailure } as never;
+    const intents = dryRunPayload(payload);
+    expect(intents.map((i) => i.type)).toEqual(["open-issue"]);
+    expect(intents[0]?.body).not.toContain("research due events (a)");
   });
 });
 

@@ -15,6 +15,10 @@
 //     - reproduce: write a throwaway spec that fails on main because of it (isolated worktree)
 //   confirmed only if BOTH refuters returned and NEITHER refuted. A refuter that died counts as a
 //   refutation: a finding nobody could stand behind is not a confirmed one.
+//   A claim no spec or stub can exercise (what a prompt makes an agent do, how GitHub schedules a
+//   run) rests on the trace alone and comes back marked singleLens, so a reader can weigh it. Until
+//   2026-11-01 "cannot build a spec" read as a refutation, so the audit paid its highest rate on
+//   workflows and shell, then could not confirm anything it found there (#6330, #6470).
 //
 // Correctness only, never "find gaps" — a reviewer told to find gaps manufactures them (Orient).
 // Low findings are returned unverified and labelled so, never silently dropped. Writes nothing to
@@ -47,6 +51,8 @@ const prs = (args?.prs ?? []).map(Number).filter((n) => Number.isInteger(n) && n
 if (!prs.length) throw new Error('post-merge-audit requires args.prs: a non-empty array of merged PR numbers')
 if (prs.length > 40) throw new Error(`post-merge-audit: ${prs.length} PRs is over the 40-PR cap — run it in batches`)
 const forcedDeep = new Set((args?.deep ?? []).map(Number))
+const HAS_BUDGET = typeof budget !== 'undefined' && typeof budget.spent === 'function'
+const TOKENS_AT_START = HAS_BUDGET ? budget.spent() : null
 
 // Where a wrong line costs money, state or access. Grown from where the deep pass found what the
 // standard pass missed; widen it when a later audit finds the same gap elsewhere.
@@ -100,6 +106,7 @@ const VERDICT_SCHEMA = {
   required: ['refuted', 'evidence'],
   properties: {
     refuted: { type: 'boolean' },
+    cannotRun: { type: 'boolean', description: 'reproduce lens only: true when no spec or stub can exercise this claim at all' },
     evidence: { type: 'string', description: 'the trace, or the spec you ran and its output, in a few lines' },
   },
 }
@@ -148,7 +155,7 @@ const reproPrompt = (n, f) => `A reviewer claims merged PR #${n} in ejclark/skyn
 ${f.file}${f.line ? `:${f.line}` : ''} — ${f.summary}
 Failure scenario: ${f.failure_scenario}
 
-YOUR LENS — reproduce. You are in an isolated worktree. \`git fetch -q origin main && git checkout -q origin/main\`. Write ONE throwaway spec next to the nearest existing spec for that file (tests/**/*.spec.ts for root code, app/ for the app), asserting the CORRECT behaviour on the scenario above, and run only it (\`npx rstest run <path>\`, or \`npm test --prefix app -- <path>\` for app/). If it fails for the claimed reason, the defect reproduces: refuted=false. If it passes, or you cannot build a repro that exercises the claim, refuted=true. Delete the spec afterwards and never commit or push. Evidence: the assertion and the run's verdict line.`
+YOUR LENS — reproduce. You are in an isolated worktree. \`git fetch -q origin main && git checkout -q origin/main\`. Write ONE throwaway spec next to the nearest existing spec for that file (tests/**/*.spec.ts for root code, app/ for the app), asserting the CORRECT behaviour on the scenario above, and run only it (\`npx rstest run <path>\`, or \`npm test --prefix app -- <path>\` for app/). For a shell script, drive it with stub binaries (tests/scripts/bots-start-stopped.spec.ts shows the pattern). For a workflow file, read its text and assert the property the claim rests on (tests/arch/workflows.spec.ts). If it fails for the claimed reason, the defect reproduces: refuted=false. If it passes, or the claim can be exercised and your repro does not fail, refuted=true. If no spec or stub can exercise this claim at all, such as what a prompt makes an agent do or how GitHub schedules a run, set cannotRun=true and refuted=false and say why: that is a limit of this lens, not evidence against the claim. Delete the spec afterwards and never commit or push. Evidence: the assertion and the run's verdict line.`
 
 const results = await pipeline(
   prs,
@@ -174,7 +181,8 @@ const results = await pipeline(
           trace ?? { refuted: true, evidence: 'trace refuter did not return' },
           repro ?? { refuted: true, evidence: 'repro refuter did not return' },
         ]
-        return { pr: n, tier, ...f, confirmed: votes.every((v) => !v.refuted), trace: votes[0].evidence, repro: votes[1].evidence }
+        const singleLens = repro?.cannotRun === true && repro.refuted === false
+        return { pr: n, tier, ...f, confirmed: votes.every((v) => !v.refuted), ...(singleLens ? { singleLens } : {}), trace: votes[0].evidence, repro: votes[1].evidence }
       }),
     )
     return { pr: n, tier, judged: judged.filter(Boolean), low }
@@ -189,14 +197,18 @@ const out = {
   low: done.flatMap((r) => r.low ?? []),
   unreviewed: done.filter((r) => r.unreviewed).map((r) => ({ pr: r.pr, why: r.unreviewed })),
   skipped: done.filter((r) => r.skipped).map((r) => ({ pr: r.pr, why: r.skipped })),
+  outputTokens: HAS_BUDGET ? Math.max(0, budget.spent() - TOKENS_AT_START) : null,
 }
 const lost = prs.length - done.length
 if (lost) log(`${lost} PR(s) dropped by a failed stage — re-run them`)
 const deep = done.filter((r) => r.tier === 'deep').map((r) => `#${r.pr}`)
 log(`routed: ${deep.length} deep (${deep.join(' ') || 'none'}) · ${done.filter((r) => r.tier === 'standard').length} standard · ${out.skipped.length} skipped docs-only`)
-log(`${out.confirmed.length} confirmed · ${out.refuted.length} refuted · ${out.low.length} low (unverified) · ${out.unreviewed.length} unreviewed`)
+const reviewedCount = done.filter((r) => r.judged).length
+const withDefect = new Set(out.confirmed.map((f) => f.pr)).size
+const singleLensCount = out.confirmed.filter((f) => f.singleLens).length
+log(`${out.confirmed.length} confirmed (${singleLensCount} on the trace alone) across ${withDefect} of ${reviewedCount} reviewed PRs · ${out.refuted.length} refuted · ${out.low.length} low (unverified) · ${out.unreviewed.length} unreviewed`)
 // The meter counts defects only beside how many PRs were audited (#6470): record this run's
 // receipt, or the week's defect number reads unknown.
-const reviewed = done.filter((r) => !r.skipped && !r.unreviewed).map((r) => r.pr)
+const reviewed = done.filter((r) => r.judged).map((r) => r.pr)
 log(`record it: node scripts/agent-meter.mjs --audit-receipt --prs ${reviewed.join(',') || '<none>'} --confirmed ${out.confirmed.length}`)
 return out
