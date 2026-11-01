@@ -35,9 +35,9 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
-### A cleanup loop with an empty filter removed 115 worktrees, most of them other sessions'
+### A cleanup loop with an empty filter removed 115 worktrees, at least 51 of them other sessions'
 - **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
-- **SIGNAL:** the script's own last line said "removed 115 worktrees" where about 20 were this session's. Noticed on reading that line, about seven minutes after it ran. Nothing failed: the run exited 0.
+- **SIGNAL:** the script's own last line said "removed 115 worktrees". Its subagents' transcripts name 64 worktrees for that session, so at least 51 belonged to others. Noticed on reading that line, about seven minutes after it ran. Nothing failed: the run exited 0.
 - **ROOT CAUSE:** a session hand-rolled a loop over `.claude/worktrees/*` instead of using `npm run worktree:sweep`, which already exists and prints keep or remove and why. Its keep-list was built with an unquoted pipe (`ours=$(...)a|b|c`), so the assignment ran in a pipeline and the list stayed empty, and `grep -E "^()"` matches everything. Then it did not look at the target first: no dry run printed what would go. `git worktree remove` saved most of the work by refusing dirty folders, and branches survive it. What was lost: gitignored files in those folders (installed packages, logs, local data, any `.env` copies), and no local snapshot exists to restore them. One open session's worktree was among them, and it was put back on its branch at the same commit. Nothing running was hit. The 156 commits no ref pointed at are pinned under `refs/recovered/2026-11-01/`.
 - **PREVENTION:** gate. `scripts/hooks/guard-bash.mjs` refuses `git worktree remove` on a computed path or through `xargs`, and points at the sweep. It reads the command text, so a loop inside a script file still escapes it, and that is said here rather than implied away. The general rule stays a doctrine in the harness: before deleting, look at the target.
 - **SIDE QUESTS:** none.

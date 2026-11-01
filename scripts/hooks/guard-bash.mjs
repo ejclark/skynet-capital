@@ -26,7 +26,7 @@ export const BANNED = [
   {
     // 2026-11-01: a cleanup loop ran `git worktree remove "$w"` over a keep-list built in shell. An
     // unquoted pipe left the list empty, `grep -E "^()"` then matched everything, and 115 worktrees
-    // went, most of them other sessions'. `npm run worktree:sweep` prints keep or remove and why for
+    // went, at least 51 of them other sessions'. `npm run worktree:sweep` prints keep or remove and why for
     // each entry first. One path typed out is still fine: a person can read what it will remove.
     // Anchored to a command position, or `$G` in a script's shape, for the reason the rules around it
     // are: its first draft refused the PR title that named it, on its first use.
