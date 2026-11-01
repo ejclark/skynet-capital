@@ -39,3 +39,12 @@ export function executeDialTap(
   intent: DialIntent,
   deps?: { exec?: Exec; config?: WorkModeConfig },
 ): string;
+
+export function executeDialTidy(
+  intent: {
+    readonly kind: "tidy-ended-dial";
+    readonly issueNumber: number;
+    readonly label: string;
+  },
+  deps?: { exec?: Exec; config?: WorkModeConfig; now?: number },
+): string;

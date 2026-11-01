@@ -1,5 +1,9 @@
 import type { WorkMode } from "../../../scripts/moneypenny/work-mode.d.mts";
-import { workModeRetitle, workModeTitle } from "../../../scripts/moneypenny/work-mode-title.mjs";
+import {
+  endedDialTidy,
+  workModeRetitle,
+  workModeTitle,
+} from "../../../scripts/moneypenny/work-mode-title.mjs";
 
 // THE DIAL'S DASHBOARD (#3960 slice 4 — criterion 4's write half). The read half shipped in slice
 // 1: an expired position already resolves to `normal`, so no lane over-throttles. The write was
@@ -166,5 +170,37 @@ describe("workModeRetitle — only when the dashboard is actually stale", () => 
     ["an empty current title", { trackingIssue: 4153, title: "   ", mode: mode() }],
   ])("is silent with %s", (_what, input) => {
     expect(workModeRetitle(input)).toBeNull();
+  });
+});
+
+describe("endedDialTidy — the push tick's decision to take an ended label off", () => {
+  const ended = mode({
+    reason: "surge expired at 2026-11-03T05:00:00Z",
+    endedLabel: "work-mode:surge",
+  });
+
+  it("names the label and the issue when an end date has passed", () => {
+    expect(endedDialTidy({ trackingIssue: 4153, mode: ended })).toEqual({
+      kind: "tidy-ended-dial",
+      issueNumber: 4153,
+      label: "work-mode:surge",
+      reason: "surge expired at 2026-11-03T05:00:00Z",
+    });
+  });
+
+  it.each([
+    ["no state at all", null],
+    ["no tracking issue", { mode: ended }],
+    ["a dial with no ended label", { trackingIssue: 4153, mode: mode() }],
+    [
+      "a dial it could not read",
+      { trackingIssue: 4153, mode: { ...ended, unreadable: true as const } },
+    ],
+    [
+      "a position other than normal",
+      { trackingIssue: 4153, mode: { ...ended, position: "halt" as const } },
+    ],
+  ])("is silent with %s", (_what, input) => {
+    expect(endedDialTidy(input)).toBeNull();
   });
 });
