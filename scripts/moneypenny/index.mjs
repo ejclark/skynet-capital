@@ -83,7 +83,7 @@ import {
   routeContinuation,
 } from "./continuation.mjs";
 import { calloutGapComment, shouldPostCalloutGap } from "./decision-callout.mjs";
-import { executeDialTap, routeDial } from "./dial-tap.mjs";
+import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -1516,6 +1516,7 @@ const ONE_CALL_INTENTS = {
   "draft-lesson": (i) => draftLesson(i),
   "wake-next": (i) => wakeAfter(i.issueNumber),
   "route-dial": (i) => executeDialTap(i),
+  "tidy-ended-dial": (i) => executeDialTidy(i),
   // #5727 — the CI repair capsules' two stall checks, which live beside audit.mjs.
   "flag-capsule-orphan": (i) => flagCapsuleOrphan(i),
   "close-proven-capsule": (i) => closeProvenCapsule(i),

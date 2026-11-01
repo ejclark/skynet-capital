@@ -463,6 +463,14 @@ describe("audit() — syncing the work spigot's title", () => {
     expect(audit({ workMode: { ...expired, title: "Work mode: NORMAL" } })).toHaveLength(0);
   });
 
+  it("also takes an ended label off the dial, beside the retitle", () => {
+    const intents = audit({
+      workMode: { ...expired, mode: { ...expired.mode, endedLabel: "work-mode:conserve" } },
+    });
+    expect(intents.map((i) => i.kind)).toEqual(["retitle-work-mode", "tidy-ended-dial"]);
+    expect(intents[1]).toMatchObject({ issueNumber: 4153, label: "work-mode:conserve" });
+  });
+
   it("does not disturb the other audit lanes", () => {
     const intents = audit({
       workMode: expired,
