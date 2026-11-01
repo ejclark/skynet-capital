@@ -3,6 +3,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { QUIET_HOURS, quietReason, waitingWork } from "../../scripts/digest-scan.mjs";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // QUIET WITH WORK WAITING (#6470). The digest's due rule was 5 commits or 7 days, so a repo that
 // stopped moving read as "nothing to say": main sat 75.8h from 2026-10-27T13:37Z with research due
@@ -82,12 +83,14 @@ describe("digest-scan --due — the quiet reason, end to end", () => {
     dir = mkdtempSync(join(tmpdir(), "digest-quiet-"));
     log = join(dir, "gh.log");
     const repo = join(dir, "repo");
+    // hermeticGitEnv first (it scrubs every ambient GIT_* so a pre-push hook cannot point this at
+    // the real repository), then the fixture's own GIT_* on top — the throwaway repo is the point.
     const git = (args: string[]) =>
       execFileSync("git", args, {
         cwd: dir,
         encoding: "utf8",
         env: {
-          ...process.env,
+          ...hermeticGitEnv(),
           GIT_DIR: join(repo, ".git"),
           GIT_WORK_TREE: repo,
           GIT_AUTHOR_DATE: "2026-10-27T13:37:21Z",
@@ -126,10 +129,8 @@ describe("digest-scan --due — the quiet reason, end to end", () => {
       cwd: process.cwd(),
       encoding: "utf8",
       env: {
-        ...process.env,
-        PATH: `${dir}:${process.env.PATH}`,
+        ...hermeticGitEnv({ PATH: `${dir}:${process.env.PATH}`, READY_FIXTURE: fixture }),
         GIT_DIR: join(dir, "repo", ".git"),
-        READY_FIXTURE: fixture,
       },
     });
     // No log file means the fake `gh` was never run — the no-op case, not an error.
