@@ -8,6 +8,8 @@ export const REREAD_WAITS_MS: number[];
 export const STALE_WAITS_MS: number[];
 /** True only on GitHub's tell for a file it could not parse: zero jobs and a path-named run. */
 export function wasRejected(run: Run, jobs?: unknown[]): boolean;
+/** Does a failed leg's log say a usage limit refused the session before it worked? */
+export function limitRejected(logTail?: string | null): boolean;
 /** `failuresFrom` over a live read, re-reading while the read shows no failed job or throws. */
 export function readFailures(
   run: Run,

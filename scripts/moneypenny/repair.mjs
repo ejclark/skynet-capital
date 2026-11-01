@@ -28,6 +28,9 @@
 //   3. One open issue per failure signature: a recurrence comments, it never files again — and a
 //      matrix job's legs fold onto one signature (`normalizeJobName`), so one fault is one issue.
 //   4. Once a signature carries `needs-eric`, this lane goes quiet on it entirely.
+//   And one thing that is not a fault at all: a leg a usage limit refused before it worked
+//   (`limitRejected`) neither files, comments nor dispatches — a repair session cannot fix a
+//   refusal, and a recurrence comment per refused run is how #6098 took 16 in 15 hours.
 //
 // THE STALENESS GUARD, separate from the four above and deliberately not one of them (#4374): the
 // loop guards stop this lane feeding itself, this one stops it reporting a fault that is already
@@ -229,6 +232,61 @@ function staleEchoBody(run, failure, issue) {
 }
 
 /**
+ * Did a usage limit refuse this leg's session before it did any work? Three shapes, each measured
+ * on a real log (study 2026-11-01; #6098 took 16 recurrence comments in 15 hours from one session
+ * limit, #6336 was filed for a leg that ran 394 ms at zero cost):
+ *   - the output file's `rate_limit_event` with `status` rejected;
+ *   - the result envelope's `api_error_status` 429 or `"error": "rate_limit"`;
+ *   - the action's own result print: `is_error` true, every `num_turns` at most 1, every
+ *     `total_cost_usd` zero — the session was refused on its first call, whatever printed it.
+ * A session that spent turns and money and THEN failed is a fault (#6098's real legs ran 25 turns
+ * at $0.93 beside an `allowed_warning`), and so is anything this cannot read: unknown stays loud.
+ * The lane's own script text names these fields in prose; only the quoted JSON keys count.
+ */
+export function limitRejected(logTail) {
+  const log = String(logTail ?? "");
+  if (/"type":\s*"rate_limit_event"[\s\S]{0,200}?"status":\s*"rejected"/.test(log)) return true;
+  if (/"api_error_status":\s*429\b/.test(log) || /"error":\s*"rate_limit"/.test(log)) return true;
+  if (!/"is_error":\s*true/.test(log)) return false;
+  const turns = [...log.matchAll(/"num_turns":\s*(\d+)/g)].map((m) => Number(m[1]));
+  const costs = [...log.matchAll(/"total_cost_usd":\s*([\d.]+)/g)].map((m) => Number(m[1]));
+  return (
+    turns.length > 0 &&
+    costs.length > 0 &&
+    turns.every((t) => t <= 1) &&
+    costs.every((c) => c === 0)
+  );
+}
+
+/**
+ * Split a run's failures into the legs a usage limit refused and the real ones. A refused leg is
+ * not a fault: it neither files, comments nor dispatches, whatever is open for its signature — a
+ * repair session cannot fix a usage limit, and a recurrence comment per refused run is how #6098
+ * filled up. Split BEFORE folding, so a real leg beside a refused one in the same matrix still
+ * files on its own evidence and the refused leg is not listed as a sibling; a signature with only
+ * refused legs gets one `skip` intent naming the open capsule, if any. Pure.
+ */
+export function splitRefused(run, failures = [], open = []) {
+  const refused = new Set();
+  const real = [];
+  for (const failure of failures) {
+    if (limitRejected(failure.logTail)) refused.add(signature(run, failure.job));
+    else real.push(failure);
+  }
+  const skips = [];
+  for (const title of refused) {
+    if (real.some((f) => signature(run, f.job) === title)) continue;
+    skips.push({
+      type: "skip",
+      issue: open.find((i) => i.title === title)?.number,
+      title,
+      reason: "a usage limit refused the session before it worked — not a fault a repair can fix",
+    });
+  }
+  return { skips, real };
+}
+
+/**
  * Decide what to do about a completed run. Pure.
  *
  * @param ctx {{ run: object, defaultBranch: string, failures: {job: string, step?: string, logTail?: string}[] }}
@@ -243,8 +301,9 @@ export function routeFailure(ctx, deps = {}) {
   if (run.head_branch !== (ctx.defaultBranch || "main")) return [];
 
   const open = deps.openIssues ?? [];
-  const intents = [];
-  for (const failure of foldFailures(run, ctx.failures ?? [])) {
+  const { skips, real } = splitRefused(run, ctx.failures ?? [], open);
+  const intents = [...skips];
+  for (const failure of foldFailures(run, real)) {
     const title = signature(run, failure.job);
     const existing = open.find((i) => i.title === title);
     if (!existing) {
@@ -542,7 +601,8 @@ function execute(intents) {
   const filed = [];
   for (const intent of intents) {
     if (intent.type === "skip") {
-      console.log(`::notice::moneypenny-repair quiet on #${intent.issue} — ${intent.reason}`);
+      const on = intent.issue ? `#${intent.issue}` : `\`${intent.title}\``;
+      console.log(`::notice::moneypenny-repair quiet on ${on} — ${intent.reason}`);
       continue;
     }
     if (intent.type === "comment") {
