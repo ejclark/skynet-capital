@@ -38,6 +38,7 @@ import { decisionCyclesView } from "../../src/observatory/decision-json-view.ts"
 import { deskActivityView } from "../../src/observatory/desk-json-view.ts";
 import { PulseHistoryFold } from "../../src/observatory/pulse-history-fold.ts";
 import { spreadLookup } from "../../src/observatory/spread-activity.ts";
+import { wireFeedReader } from "../../src/observatory/wire-feed-cache.ts";
 import { reasoningForOrder } from "../../src/observatory/wire-reasoning.ts";
 import { lifecycleSweepPass } from "../../src/scripts/dashboard-option-lifecycle.ts";
 import { serveDeskJson } from "../../src/server/desk-json-routes.ts";
@@ -296,7 +297,7 @@ async function wireAndThesis() {
     hub: {
       getState: () => ({ generatedAt: "2026-10-07T15:00:00Z", participants, collisions: [] }),
     },
-    readAllTradeActivity: async () => ledger,
+    readWireFeed: wireFeedReader({ activity: { list: async () => ledger } }).read,
     readTradeActivity: async (id) => ledger.filter((line) => line.participantId === id),
     readDecisions: async () => [record],
     readPulseHistory: async (id) => PulseHistoryFold.of(id === "bot-sauron" ? history : []),

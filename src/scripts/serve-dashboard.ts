@@ -457,14 +457,9 @@ async function main(): Promise<void> {
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
     recordOrderAudit: (entry) => orderAudit.record(entry),
-    // `/wire`'s cross-participant feed: the same stores, called with no id. Activity's trade rows
-    // are built from the bus's `ActivityEvent` envelope (#784 slice 1); the ledger rides alongside
-    // it because the event log only starts at #1211's deploy and older fills live only on the
-    // ledger (`mergeLedgerIntoEvents` dedupes the overlap on the deterministic event id).
-    readAllActivityEvents: () => activityEventBus.list(),
-    readAllTradeActivity: () => activity.list(),
-    readAllFeedback: () => feedbackLog.list(),
-    // …and the same three, off the fold above; the reads above stay as the route's fallback.
+    // `/wire`'s cross-participant feed: the bus, the trade ledger and the feedback log, off the fold
+    // above. The ledger rides alongside the bus because the event log only starts at #1211's deploy
+    // and older fills live only on the ledger (`mergeLedgerIntoEvents` dedupes the overlap).
     readWireFeed,
     // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and the audit
     // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
