@@ -24,6 +24,7 @@ on:
 permissions:
   contents: read
   actions: write # dispatch pipeline.yml's force_bots_deploy — GITHUB_TOKEN may trigger workflow_dispatch
+  issues: write # bots-start-stopped.sh keeps a stopped machine's evidence on an issue
 
 concurrency:
   group: bots-catchup
@@ -42,6 +43,14 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
         with:
           version: 0.4.99
+
+      - name: Start the machine if it is stopped
+        # A crash between merges has no deploy coming to recover it (#5955). This keeps the exit
+        # record and log tail on an issue and stops after 3 starts in 6 hours.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
+        run: bash scripts/bots-start-stopped.sh skynet-capital-bots --report
 
       - name: Is a bot-relevant commit stranded?
         id: check
