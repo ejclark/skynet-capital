@@ -483,27 +483,54 @@ describe("tripBreaker", () => {
     };
     tripBreaker({ ...CONFIG, spentUsd: 123.45, exec });
     const subcommands = calls.map((a) => a.slice(0, 2).join(" "));
-    expect(subcommands).toEqual(["label create", "issue edit", "issue edit", "issue comment"]);
-    const commentBody = calls[3]?.at(-1) ?? "";
+    expect(subcommands).toEqual(["label create", "issue edit", "issue comment", "api --method"]);
+    const commentBody = calls[2]?.at(-1) ?? "";
     expect(commentBody).toContain("$123.45");
     expect(commentBody).toContain(`$${CONFIG.maxSpendUsd}`);
     expect(commentBody).toContain(CONFIG.trippedLabel);
   });
 
   // A trip used to be a label and a comment on #2946, which notify nobody; clearing it is Eric's
-  // hand alone. The fitness contracts reach him through a bot assignment (scripts/fitness.mjs,
-  // `--assignee`), which GitHub delivers as a notification — so does the trip now.
-  it("assigns Eric on the tracking issue, the same door the fitness contracts use", () => {
+  // hand alone. A bot assignment is what GitHub delivers as a notification, through the REST route
+  // every other assignment here uses (assignments.mjs): `gh issue edit --add-assignee` goes through
+  // a mutation no bot token has run in this repo.
+  it("assigns Eric on the tracking issue over REST, the route the other assignments use", () => {
     const calls: (readonly string[])[] = [];
     const exec = (_cmd: string, args: readonly string[]) => {
       calls.push(args);
       return "";
     };
     tripBreaker({ ...CONFIG, spentUsd: 123.45, position: "surge", exec });
-    const assign = calls.find((a) => a.includes("--add-assignee"));
-    expect(assign).toEqual(["issue", "edit", "2946", "--add-assignee", "ejclark"]);
-    expect(calls.at(-1)?.at(-1)).toContain("@ejclark");
-    expect(calls.at(-1)?.at(-1)).toContain("`surge`");
+    expect(calls.at(-1)).toEqual([
+      "api",
+      "--method",
+      "POST",
+      "repos/{owner}/{repo}/issues/2946/assignees",
+      "-f",
+      "assignees[]=ejclark",
+    ]);
+    expect(calls.some((a) => a.includes("--add-assignee"))).toBe(false);
+    const comment = calls.find((a) => a[0] === "issue" && a[1] === "comment");
+    expect(comment?.at(-1)).toContain("@ejclark");
+    expect(comment?.at(-1)).toContain("`surge`");
+  });
+
+  // The label is on by then, so a refused assignment that threw would leave a halt with no comment
+  // and no assignee: the state this door exists to end.
+  it("posts the comment first, and a refused assignment only warns", () => {
+    const calls: (readonly string[])[] = [];
+    const warnings: string[] = [];
+    const exec = (_cmd: string, args: readonly string[]) => {
+      calls.push(args);
+      if (args[0] === "api") throw new Error("HTTP 403: Resource not accessible by integration");
+      return "";
+    };
+    expect(() =>
+      tripBreaker({ ...CONFIG, spentUsd: 123.45, exec, warn: (m: string) => warnings.push(m) }),
+    ).not.toThrow();
+    expect(calls.some((a) => a[0] === "issue" && a[1] === "comment")).toBe(true);
+    expect(warnings.join("\n")).toMatch(/could not assign/);
+    expect(warnings.join("\n")).toContain("HTTP 403");
   });
 
   it("is idempotent — a label-create failure (already exists) does not block applying it", () => {
@@ -554,13 +581,15 @@ describe("checkCircuitBreaker — the orchestrator", () => {
     const calls: (readonly string[])[] = [];
     const custom = (_cmd: string, args: readonly string[]) => {
       calls.push(args);
+      // Both tracking issues answer alike: the brake's has no tripped label, the dial reads normal.
       if (args[0] === "api" && /\/issues\/\d+$/.test(String(args[1])))
-        return JSON.stringify({ labels: [] });
+        return JSON.stringify({ labels: [{ name: "work-mode:normal" }] });
       if (args[0] === "run" && args[1] === "list")
         return JSON.stringify([{ databaseId: 1, createdAt: nowIso, status: "completed" }]);
       if (args[0] === "run" && args[1] === "view")
         return `::notice::cost — event=big usd=${CONFIG.maxSpendUsd + 1} turns=150 duration_ms=999 is_error=false\n`;
       if (
+        args[0] === "api" ||
         args[0] === "label" ||
         (args[0] === "issue" && (args[1] === "edit" || args[1] === "comment"))
       )
@@ -627,17 +656,155 @@ describe("checkCircuitBreaker — the orchestrator", () => {
       });
       expect(result.dispatch).toBe(false);
       expect(result.reason).toContain("exceeds $100");
-      expect(calls.some((a) => a.includes("--add-assignee"))).toBe(true);
+      expect(calls.some((a) => a.includes("--add-label"))).toBe(true);
+      expect(calls.some((a) => String(a[3] ?? "").endsWith("/assignees"))).toBe(true);
     });
 
-    it("holds an unreadable dial to the narrower line, never surge's", () => {
+    // One GitHub blip during a surge must not become a label only a human can clear. The tick
+    // refuses, the next one reads the dial, and a real overspend trips then.
+    it.each([
+      ["unreadable", { position: "conserve", unreadable: true }],
+      ["ambiguous", { position: "conserve", ambiguous: true }],
+      ["missing", null],
+    ] as const)(
+      "refuses this tick without the label on a dial it could not read: %s",
+      (_, mode) => {
+        const calls: (readonly string[])[] = [];
+        const result = checkCircuitBreaker({
+          config: CONFIG,
+          exec: spending(calls),
+          readMode: () => mode,
+        });
+        expect(result.dispatch).toBe(false);
+        expect(result.reason).toMatch(/could not read the dial/);
+        expect(calls.some((a) => a.includes("--add-label"))).toBe(false);
+        expect(calls.some((a) => a[0] === "issue" && a[1] === "comment")).toBe(false);
+      },
+    );
+
+    it("dispatches under the narrower line whatever the dial says, unreadable or not", () => {
       const calls: (readonly string[])[] = [];
+      const under = (cmd: string, args: readonly string[]) =>
+        args[0] === "run" && args[1] === "view" ? "" : spending(calls)(cmd, args);
       const result = checkCircuitBreaker({
         config: CONFIG,
-        exec: spending(calls),
+        exec: under,
         readMode: () => ({ position: "conserve", unreadable: true }),
       });
-      expect(result.dispatch).toBe(false);
+      expect(result.dispatch).toBe(true);
+    });
+
+    // The window holds past spend but the dial reads now, so the end of a real surge must not read
+    // its own spend as a runaway: the surge's line holds until the window has rolled past its end.
+    describe("after a surge ends", () => {
+      const NOW = Date.now();
+      const HOUR = 3_600_000;
+      const check = (mode: Record<string, unknown>, surgeEvents = "") => {
+        const calls: (readonly string[])[] = [];
+        const exec = (cmd: string, args: readonly string[]) => {
+          if (args[0] === "api" && String(args[2]).includes("/events?")) {
+            calls.push(args);
+            return surgeEvents;
+          }
+          return spending(calls)(cmd, args);
+        };
+        const result = checkCircuitBreaker({
+          config: CONFIG,
+          exec,
+          now: NOW,
+          readMode: () => ({ position: "normal", ...mode }),
+        });
+        return { result, calls, tripped: calls.some((a) => a.includes("--add-label")) };
+      };
+      const iso = (ms: number) => new Date(ms).toISOString();
+
+      it("keeps the surge line while an ended surge still wears its label", () => {
+        const { result, tripped } = check({
+          endedLabel: "work-mode:surge",
+          endedAtMs: NOW - HOUR,
+        });
+        expect(result.dispatch).toBe(true);
+        expect(result.reason).toContain("of $200");
+        expect(result.reason).toContain("surge ended");
+        expect(tripped).toBe(false);
+      });
+
+      it("keeps the surge line once the label is off, from the event that took it off", () => {
+        const { result, calls, tripped } = check(
+          {},
+          `${iso(NOW - 2 * HOUR)}\n${iso(NOW - HOUR)}\n`,
+        );
+        expect(result.dispatch).toBe(true);
+        expect(result.reason).toContain("of $200");
+        expect(tripped).toBe(false);
+        const read = calls.find((a) => String(a[2]).includes("/events?"));
+        expect(read).toContain("repos/{owner}/{repo}/issues/4153/events?per_page=100");
+        expect(read?.at(-1)).toContain("work-mode:surge");
+      });
+
+      it("trips once the window has rolled past the surge's end", () => {
+        const { result, tripped } = check({}, `${iso(NOW - 25 * HOUR)}\n`);
+        expect(result.dispatch).toBe(false);
+        expect(result.reason).toContain("exceeds $100");
+        expect(tripped).toBe(true);
+      });
+
+      it("trips at normal when no surge ever ended", () => {
+        expect(check({}).tripped).toBe(true);
+      });
+
+      it("ignores a conserve that ended: only a surge widens the line", () => {
+        const { tripped } = check({ endedLabel: "work-mode:conserve", endedAtMs: NOW - HOUR });
+        expect(tripped).toBe(true);
+      });
+
+      it("holds the surge's own line in the tail, so a real runaway still trips", () => {
+        const calls: (readonly string[])[] = [];
+        const exec = (cmd: string, args: readonly string[]) =>
+          args[0] === "run" && args[1] === "view"
+            ? "##[notice]cost — event=big usd=250 turns=150 duration_ms=999 is_error=false\n"
+            : spending(calls)(cmd, args);
+        const result = checkCircuitBreaker({
+          config: CONFIG,
+          exec,
+          now: NOW,
+          readMode: () => ({
+            position: "normal",
+            endedLabel: "work-mode:surge",
+            endedAtMs: NOW - HOUR,
+          }),
+        });
+        expect(result.dispatch).toBe(false);
+        expect(result.reason).toContain("exceeds $200");
+        expect(calls.some((a) => a.includes("--add-label"))).toBe(true);
+      });
+
+      it("refuses without the label when the surge's end cannot be read", () => {
+        const calls: (readonly string[])[] = [];
+        const exec = (cmd: string, args: readonly string[]) => {
+          if (args[0] === "api" && String(args[2]).includes("/events?"))
+            throw new Error("HTTP 404: Not Found");
+          return spending(calls)(cmd, args);
+        };
+        const result = checkCircuitBreaker({
+          config: CONFIG,
+          exec,
+          now: NOW,
+          sleep: noSleep,
+          readMode: dialAt("normal"),
+        });
+        expect(result.dispatch).toBe(false);
+        expect(result.reason).toMatch(/could not read when the last surge ended/);
+        expect(calls.some((a) => a.includes("--add-label"))).toBe(false);
+      });
+
+      it("never reads the label events when the spend is under the line", () => {
+        const calls: (readonly string[])[] = [];
+        const under = (cmd: string, args: readonly string[]) =>
+          args[0] === "run" && args[1] === "view" ? "" : spending(calls)(cmd, args);
+        checkCircuitBreaker({ config: CONFIG, exec: under, readMode: dialAt("normal") });
+        expect(calls.some((a) => String(a[2]).includes("/events?"))).toBe(false);
+      });
     });
   });
 });

@@ -64,8 +64,9 @@ export function recentResearchSpend(opts: {
   now?: number;
 }): number;
 
-/** Applies the tripped label (creating it if absent), assigns the owner on the tracking issue, and
- *  posts one explanatory comment naming the measured spend, threshold, dial position and window. */
+/** Applies the tripped label (creating it if absent), posts one explanatory comment naming the
+ *  measured spend, threshold, dial position and window, then assigns the owner over REST. A refused
+ *  assignment only warns: the comment has already landed. */
 export function tripBreaker(opts: {
   trackingIssue: number;
   trippedLabel: string;
@@ -74,17 +75,38 @@ export function tripBreaker(opts: {
   windowHours: number;
   position?: string;
   exec?: Exec;
+  warn?: (message: string) => void;
 }): void;
+
+/** When the dial last stopped being at surge, in ms, or null if it never has. Throws when the label
+ *  events cannot be read. */
+export function lastSurgeEnd(opts: {
+  mode: { endedLabel?: string; endedAtMs?: number };
+  exec?: Exec;
+  sleep?: Sleep;
+  workMode?: { labelPrefix: string; trackingIssue: number };
+}): number | null;
 
 /** The one entry point the workflow calls. Checks the label first (cheap, no spend query when
  *  already tripped); if clear, measures spend, reads the dial for the line that applies, and
- *  trips the breaker on crossing it. Never throws on a normal trip — only when the breaker's own
- *  machinery is broken. */
+ *  trips the breaker on crossing it. Over the line with a dial it could not read, it refuses the
+ *  tick without tripping. A surge's line holds until the window has rolled past that surge's end.
+ *  Never throws on a normal trip — only when the breaker's own machinery is broken. */
 export function checkCircuitBreaker(opts?: {
   config?: BreakerConfig;
   exec?: Exec;
   sleep?: Sleep;
-  readMode?: () => { position?: string } | null | undefined;
+  now?: number;
+  readMode?: () =>
+    | {
+        position?: string;
+        unreadable?: boolean;
+        ambiguous?: boolean;
+        endedLabel?: string;
+        endedAtMs?: number;
+      }
+    | null
+    | undefined;
 }): {
   dispatch: boolean;
   reason: string;

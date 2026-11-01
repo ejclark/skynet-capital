@@ -48,7 +48,7 @@ export function ensureGhToken({ run = sh } = {}) {
  * single 500 from the relay's closed-issue read (run 38496303201, 2026-10-14). Only 5xx, as there.
  */
 const TRANSIENT_GH_ERROR =
-  /HTTP 5\d\d|returned error: 5\d\d\b|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|Something went wrong while executing your query/i;
+  /HTTP 5\d\d|returned error: 5\d\d\b|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN|stream error|Something went wrong while executing your query/i;
 
 export const isTransientGhError = (text) => TRANSIENT_GH_ERROR.test(String(text ?? ""));
 

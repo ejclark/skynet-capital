@@ -826,6 +826,7 @@ describe("naming the label an end date has passed", () => {
     const mode = resolve([label(position)], [until("2026-09-29")]);
     expect(mode.position).toBe("normal");
     expect(mode.endedLabel).toBe(`work-mode:${position}`);
+    expect(mode.endedAtMs).toEqual(expect.any(Number));
   });
 
   it("does not name a halt with no end date, which stays halted", () => {
@@ -851,6 +852,8 @@ describe("naming the label an end date has passed", () => {
   it("does not name a dial already at normal, or one that is not exactly one label", () => {
     expect(resolve([label("normal")]).endedLabel).toBeUndefined();
     expect(resolve([label("surge"), label("normal")]).endedLabel).toBeUndefined();
+    expect(resolve([label("surge"), label("normal")]).ambiguous).toBe(true);
+    expect(resolve([]).ambiguous).toBe(true);
     expect(resolve([]).endedLabel).toBeUndefined();
   });
 });
