@@ -1,7 +1,5 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
-import type { OrderIntent } from "../domain/types.js";
 import { maxOf, minOf } from "../math/num.js";
-import type { TradeActivityRecord } from "../observatory/activity-record.js";
 
 /** A keyset page of one persona's decisions: strictly older than `before`, newest first, at most
  *  `limit`. Omitted means the store's own default page — the newest few. */
@@ -15,15 +13,9 @@ export interface AccountDecisionsDeps {
     participantId: string,
     page?: DecisionPage,
   ) => Promise<readonly DecisionRecord[]>;
-  readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
-  readonly findByOrderId?: (
-    orderId: string,
-  ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
-  /** Preferred over `findByOrderId` when wired: persona ids for a batch of orders without
-   *  assembling a decision record per order. */
-  readonly personasOfOrders?: (orderIds: readonly string[]) => readonly string[];
-  /** Preferred over both when wired: the same answer, kept per account and advanced by only what
-   *  was appended (`account-personas-fold.ts`, #4619). */
+  /** Which other personas trade on an account — kept per account and advanced by only what was
+   *  appended (`account-personas-fold.ts`, #4619). Omit and the account's own decisions are all
+   *  it shows; there is no whole-ledger join to fall back on. */
   readonly readAccountPersonas?: (accountId: string) => Promise<readonly string[]>;
 }
 
@@ -38,10 +30,9 @@ export interface AccountDecisionsDeps {
  * that account's Decisions tab never saw beta-scout's reasoning at all, even though its trades
  * land right there on the account's own Activity feed (found live, 2026-09-24).
  *
- * Reuses `findByOrderId` — the exact, already-tested order-id join `wire-reasoning.ts` uses for
- * the single-row "why did that trade fire" case (PR 6), and that `playbook-performance.ts` proves
- * pools correctly across personas (PR 7d — its own test names sauron + beta-scout explicitly) —
- * rather than inventing a second cross-persona mechanism. For every order this account's own
+ * The join is the decision store's exact order-id index — the one `wire-reasoning.ts` uses for
+ * the single-row "why did that trade fire" case (PR 6) — held per account by
+ * `account-personas-fold.ts` (#4619). For every order this account's own
  * activity ledger holds, the join names which persona actually decided it; any persona other than
  * the account's own gets its FULL decision history pulled in too, so its quiet/refused cycles
  * surface alongside its placed trades, not just the trades themselves.
@@ -60,23 +51,11 @@ export async function readAccountDecisions(
   return [...ownRecords, ...foreignSets.flat()];
 }
 
-/** Every OTHER persona whose orders land on this account's ledger, found by the order-id join.
- *  Looked up once per unique order id, not once per ledger line — a partial fill posts several
- *  activity rows for the same order, and `findByOrderId` is a synchronous SQLite call (#4612
- *  slice 7, defect #9: "~10x faster" over unique ids on a 70-day ledger). */
+/** Every OTHER persona whose orders land on this account's ledger — the order-id join, held per
+ *  account by the fold (#4619). */
 async function foreignPersonas(accountId: string, deps: AccountDecisionsDeps): Promise<string[]> {
-  if (deps.readAccountPersonas)
-    return (await deps.readAccountPersonas(accountId)).filter((id) => id !== accountId);
-  if (!((deps.personasOfOrders || deps.findByOrderId) && deps.readTradeActivity)) return [];
-  const orderIds = [...new Set((await deps.readTradeActivity(accountId)).map((t) => t.orderId))];
-  if (deps.personasOfOrders)
-    return deps.personasOfOrders(orderIds).filter((id) => id !== accountId);
-  const found = new Set<string>();
-  for (const orderId of orderIds) {
-    const personaId = deps.findByOrderId?.(orderId)?.record.personaId;
-    if (personaId && personaId !== accountId) found.add(personaId);
-  }
-  return [...found];
+  if (!deps.readAccountPersonas) return [];
+  return (await deps.readAccountPersonas(accountId)).filter((id) => id !== accountId);
 }
 
 export interface AccountDecisionsPage {

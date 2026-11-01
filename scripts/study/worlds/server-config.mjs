@@ -19,6 +19,8 @@ import {
   sessionWeek,
 } from "../../../src/domain/market-session.ts";
 import { checkWeekWindow, WEEK_BUCKET_MS } from "../../../src/observatory/check-week-view.ts";
+import { PulseHistoryFold } from "../../../src/observatory/pulse-history-fold.ts";
+import { heldLedgerOf } from "../../../src/observatory/trade-ledger-cache.ts";
 import { INSTANT } from "./instant.mjs";
 import { leagueServices } from "./league-services.mjs";
 import { marketClient } from "./market.mjs";
@@ -181,7 +183,16 @@ export function serverConfig(book) {
     readDecisions: async (id, page) => pageOf(book.decisions[id] ?? [], page),
     readCheckWeek: (id) => checkWeek(book.decisions[id] ?? [], book.cadenceMs?.[id]),
     findByOrderId: (orderId) => byOrder.get(orderId),
-    readHistory: async (id) => book.history[id] ?? [],
+    // The folds production keeps (#4619), built from the book on each read — the routes have no
+    // whole-read fallback, so a world that wires only the raw reads would show no curve, no lots
+    // and no other persona's decisions.
+    readPulseHistory: async (id) => PulseHistoryFold.of(book.history[id] ?? []),
+    readHeldLedger: async (snapshot) => heldLedgerOf(snapshot, book.activity[snapshot.id] ?? []),
+    readAccountPersonas: async (id) => [
+      ...new Set(
+        (book.activity[id] ?? []).flatMap((t) => byOrder.get(t.orderId)?.record.personaId ?? []),
+      ),
+    ],
     // No account has set a per-playbook allocation yet (#4469): the store's empty state.
     subscriptions: {
       load: () => book.subscriptions,
