@@ -47,6 +47,13 @@ describe("--check normalizes the path it is given (#1355)", () => {
     expect(r.path).toBe("/definitely/not/in/this/repo/envelope.json");
     expect(r.protected).toBe(false);
   });
+  // The arm job passed `--check <files> --base <sha>` for a month and the sha came back as a row
+  // (envelope-scan.mjs:112-118 as of 2026-11-01). A flag's value is never a path to judge.
+  it("never reads a flag's value as a path to check", () => {
+    const rows = check("envelope.json", "--base", "0123456789abcdef0123456789abcdef01234567");
+    expect(rows.map((r) => r.path)).toEqual(["envelope.json"]);
+    expect(check("--lane", "feedback/1", "CLAUDE.md").map((r) => r.path)).toEqual(["CLAUDE.md"]);
+  });
 });
 
 // #6018 — process.exit() dropped stdout still queued on a pipe, cutting --check JSON at 64 KiB.
