@@ -23,7 +23,11 @@ describe("digest-scan contract", () => {
     });
     const s = JSON.parse(out);
     expect(typeof s.due).toBe("boolean");
-    expect([null, "no-digest", "threshold", "heartbeat"]).toContain(s.reason);
+    expect([null, "no-digest", "threshold", "heartbeat", "quiet-with-work"]).toContain(s.reason);
+    // The quiet rule's fields (#6470): hours always; the waiting read null below the threshold,
+    // or on a read that failed — then named, never a silent "not due".
+    expect(typeof s.quietHours).toBe("number");
+    expect(s.waiting === null || typeof s.waiting.researchDue === "number").toBe(true);
     // With docs/digests/ seeded, the volume fields are real numbers keyed to the newest digest.
     expect(s.lastDigest).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(typeof s.commitsSinceLast).toBe("number");
