@@ -77,6 +77,15 @@ describe("which cases a lens runs on", () => {
     expect(() => casesFor(SET, "vibes")).toThrow(/vibes/);
   });
 
+  it("still prints one reviewer's prompt when the lens as a whole is wider than one run", () => {
+    const wide = {
+      facets: {},
+      cases: Array.from({ length: 41 }, (_, i) => defect(`P${i}`, i, "performance", "src/a.ts")),
+    };
+    expect(promptFor(wide, "performance", "h40", "# Lens\n")).toContain("h40");
+    expect(casesFor(wide, "performance", { ids: ["P40"] }).inputs).toHaveLength(1);
+  });
+
   it("refuses more than 40 at once and never truncates", () => {
     const wide = {
       facets: {},
@@ -112,6 +121,8 @@ describe("what a reviewer is told", () => {
     expect(prompt).toContain("b3");
     expect(prompt).toContain("**Whole read.**");
     expect(prompt).toContain("How to run it");
+    expect(prompt).toContain("Read the budget table");
+    expect(prompt).toContain("at 262 ms");
   });
 
   it("carries none of the answer, and no sign of a defect or a control", () => {
@@ -170,6 +181,8 @@ describe("the score", () => {
   it("drops a hit a reader marked as the wrong mechanism", () => {
     const row = { pr: 1, findings: [finding("src/a.ts", "high", { mechanism: false })] };
     expect(score(withRow(row)).recall.hit).toBe(0);
+    expect(score(withRow(row)).recall.lowOnly).toEqual([]);
+    expect(score(withRow(row)).recall.missed).toContain(1);
   });
 
   it("reads a reviewer that never returned as unknown, not as a miss or a clean control", () => {
@@ -292,6 +305,18 @@ describe("the command line", () => {
     expect(report.facets.performance.recall.unknown).toEqual([2, 3]);
   });
 
+  it("scores two batches of one lens as one run", () => {
+    const write = (name: string, pr: number) => {
+      const file = join(dir, name);
+      const results = [{ pr, findings: [finding(`src/${pr === 1 ? "a" : "b"}.ts`)] }];
+      writeFileSync(file, JSON.stringify({ lens: "performance", results }));
+      return file;
+    };
+    const files = `${write("one.json", 1)},${write("two.json", 2)}`;
+    const run = cli("score", "--results", files, "--set", setFile, "--json");
+    expect(JSON.parse(run.stdout).facets.performance.recall.hit).toBe(2);
+  });
+
   it("refuses a results file it cannot read", () => {
     expect(cli("score", "--results", join(dir, "absent.json"), "--set", setFile).status).toBe(2);
   });
@@ -373,8 +398,8 @@ describe("review-replay's workflow", () => {
     (_prompt, { label }) => {
       if (label === "work-mode") return "gate" in over ? over.gate : GATE;
       if (label === "cases") return "cases" in over ? over.cases : CASES;
-      if (label === "review #2" && "dead" in over) return null;
-      return { findings: [] };
+      if (label === "review #2" && "second" in over) return over.second;
+      return { ran: true, findings: [] };
     };
 
   it("sends one worker per PR, each told to run the prompt the script prints", async () => {
@@ -427,8 +452,18 @@ describe("review-replay's workflow", () => {
     await expect(run({ lens: "performance", ids: ["P1; x"] }, reply())).rejects.toThrow(/id/);
   });
 
+  it("returns a reviewer that could not read its task as not returned, never as clean", async () => {
+    const { result } = await run(
+      { lens: "performance" },
+      reply({ second: { ran: false, findings: [] } }),
+    );
+    expect(result.results).toEqual(
+      expect.arrayContaining([expect.objectContaining({ pr: 2, returned: false })]),
+    );
+  });
+
   it("returns a reviewer that died as not returned, so the score reads it as unknown", async () => {
-    const { result } = await run({ lens: "performance" }, reply({ dead: true }));
+    const { result } = await run({ lens: "performance" }, reply({ second: null }));
     expect(result.results).toEqual([
       { pr: 1, head: "h1", caseIds: ["C1"], returned: true, findings: [] },
       { pr: 2, head: "h2", caseIds: ["C2"], returned: false, findings: [] },

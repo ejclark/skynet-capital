@@ -99,8 +99,9 @@ log(`${lens}: ${cases.inputs.length} reviewers + 2 lookups, about ${cases.price?
 
 const FINDINGS_SCHEMA = {
   type: 'object',
-  required: ['findings'],
+  required: ['ran', 'findings'],
   properties: {
+    ran: { type: 'boolean', description: 'true only if the command exited 0 and you did the task it printed' },
     findings: {
       type: 'array',
       items: {
@@ -120,7 +121,7 @@ const FINDINGS_SCHEMA = {
 const reviewed = await parallel(
   cases.inputs.map((input) => () =>
     agent(
-      `Run exactly: node scripts/review-replay.mjs prompt --lens ${lens} --head ${input.head}\n\nWhat it prints is your whole task. Do it, and return its findings in the schema you were given.`,
+      `Run exactly: node scripts/review-replay.mjs prompt --lens ${lens} --head ${input.head}\n\nWhat it prints is your whole task. Do it, and return its findings in the schema you were given, with "ran": true. If the command exits non-zero, return "ran": false and no findings: never review without what it prints.`,
       { schema: FINDINGS_SCHEMA, agentType: 'worker', model: 'opus', effort: 'high', label: `review #${input.pr}`, phase: 'Review' },
     ),
   ),
@@ -130,8 +131,9 @@ const results = cases.inputs.map((input, i) => ({
   pr: input.pr,
   head: input.head,
   caseIds: input.caseIds,
-  returned: reviewed[i] != null,
-  findings: reviewed[i]?.findings ?? [],
+  // A reviewer that could not read its task returns no findings too, and that must not score as clean.
+  returned: reviewed[i]?.ran === true,
+  findings: reviewed[i]?.ran === true ? (reviewed[i].findings ?? []) : [],
 }))
 log(`${results.filter((r) => r.returned).length} of ${results.length} reviewers returned · ${results.reduce((n, r) => n + r.findings.length, 0)} findings, unscored`)
 return { lens, results, price: cases.price }

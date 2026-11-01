@@ -44,7 +44,7 @@ const runsOn = (row, lens, facet) =>
     : row.facet === facet || (row.alsoFor ?? []).includes(lens);
 
 /** The PRs a lens runs on, one reviewer each: two defects on one PR share one read of it. */
-export function casesFor(set, lens, { ids } = {}) {
+function inputsFor(set, lens, ids) {
   const facet = facetOf(lens);
   const eligible = set.cases.filter((row) => runsOn(row, lens, facet));
   const unknown = (ids ?? []).filter((id) => !eligible.some((row) => row.id === id));
@@ -56,7 +56,13 @@ export function casesFor(set, lens, { ids } = {}) {
     input.caseIds.push(id);
     byPr.set(pr, input);
   }
-  const inputs = [...byPr.values()];
+  return [...byPr.values()];
+}
+
+/** One run of a lens, capped and priced. */
+export function casesFor(set, lens, { ids } = {}) {
+  const facet = facetOf(lens);
+  const inputs = inputsFor(set, lens, ids);
   if (inputs.length > MAX_PRS) {
     throw new Error(
       `${inputs.length} PRs is over the ${MAX_PRS} one run may review; name a batch with --ids`,
@@ -74,13 +80,11 @@ export function casesFor(set, lens, { ids } = {}) {
 
 /** A lens's real examples are drawn from this same set, so a lens read whole hands over the answer. */
 const withoutExamples = (lensText) =>
-  lensText
-    .replace(/\s*Real: [\s\S]*?(?=\n\s*\n|$)/g, "")
-    .replace(/\s*\(?#\d{3,5}\b[^)\n]*\)?/g, "");
+  lensText.replace(/\s*Real: [\s\S]*?(?=\n\s*\n|$)/g, "").replace(/#\d{3,5}\b/g, "a past change");
 
 /** Exactly what one reviewer is told: the shas and the lens. No PR number, label, note or file. */
 export function promptFor(set, lens, head, lensText) {
-  const input = casesFor(set, lens).inputs.find((row) => row.head === head);
+  const input = inputsFor(set, lens).find((row) => row.head === head);
   if (!input) throw new Error(`${lens} does not run on ${head}`);
   const { base } = input;
   return `Review one change as it stood when it merged. Read-only: write no file, and return only the schema you were given.
@@ -131,7 +135,9 @@ function scoreDefects(rows, seen) {
         defect: matched[0].defect.summary,
         found: result.findings.find((f) => onDefect(matched[0])(f) && counted(f)).summary,
       });
-    } else if (cases.some((row) => result.findings.some(onDefect(row)))) {
+    } else if (
+      cases.some((row) => result.findings.some((f) => onDefect(row)(f) && f.severity === "low"))
+    ) {
       recall.lowOnly.push(pr);
     } else {
       recall.missed.push(pr);
@@ -202,8 +208,8 @@ function checkSet(set) {
 const summary = ({ lens, recall, controls }) =>
   [
     `${lens}: recall ${recall.hit} of ${recall.reviewed} PRs reviewed (${recall.prs} labelled), by file match; read each hit`,
-    `  low only: ${recall.lowOnly.join(", ") || "none"} · missed: ${recall.missed.join(", ") || "none"} · never returned: ${recall.unknown.join(", ") || "none"}`,
-    `  controls: ${controls.clean} clean of ${controls.reviewed} reviewed; ${controls.flagged.length} high or medium counted against the lens, before any refuter; ${controls.traps.length} on a trap, to read; never returned: ${controls.unknown.join(", ") || "none"}`,
+    `  low only: ${recall.lowOnly.join(", ") || "none"} · missed: ${recall.missed.join(", ") || "none"} · not reviewed: ${recall.unknown.join(", ") || "none"}`,
+    `  controls: ${controls.clean} clean of ${controls.reviewed} reviewed; ${controls.flagged.length} high or medium counted against the lens, before any refuter; ${controls.traps.length} on a trap, to read; not reviewed: ${controls.unknown.join(", ") || "none"}`,
   ].join("\n");
 
 function flag(argv, name) {
@@ -212,10 +218,15 @@ function flag(argv, name) {
 }
 
 function scoreCommand(argv, set) {
-  const facets = {};
+  const runs = new Map(); // lens → its results: a lens re-batched over several runs scores as one
   for (const file of (flag(argv, "results") ?? "").split(",").filter(Boolean)) {
     const run = JSON.parse(readFileSync(file, "utf8"));
-    const report = scoreRun(set, { lens: run.lens ?? flag(argv, "lens"), results: run.results });
+    const lens = run.lens ?? flag(argv, "lens");
+    runs.set(lens, [...(runs.get(lens) ?? []), ...run.results]);
+  }
+  const facets = {};
+  for (const [lens, results] of runs) {
+    const report = scoreRun(set, { lens, results });
     facets[report.facet] = report;
   }
   if (!Object.keys(facets).length) throw new Error("score needs --results <file>");
