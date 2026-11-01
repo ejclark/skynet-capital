@@ -431,8 +431,14 @@ EOF_SHOTS
     local verify_log="/tmp/ship-verify.$$.log"
     # Every outcome goes to scripts/agent-meter.mjs's log: a mistake caught here never reaches CI, so
     # without this line the first-pass rate only sees what got past local verify (#6470).
-    local verify_ok=true
-    bash scripts/verify-locked.sh --log "$verify_log" || verify_ok=false
+    local verify_ok=true verify_rc=0
+    bash scripts/verify-locked.sh --log "$verify_log" || { verify_rc=$?; verify_ok=false; }
+    # 75 is the queue's wait running out: nothing ran, so there is no log to show and no mistake for
+    # the meter to count, and telling it from a red verify stops an agent hunting for a failure.
+    if [ "$verify_rc" = 75 ]; then
+      echo "ship: verify did not run — the queue wait ran out and nothing was pushed. Run this again."
+      exit 75
+    fi
     # A failed row also says which step failed and the first error line: a row that only said
     # ok=false left the meter unable to name what agents get wrong first (#6470).
     local verify_why=""
