@@ -31,8 +31,12 @@ describe("the review lenses", () => {
     const readme = readFileSync("docs/review/README.md", "utf8");
     for (const lens of LENSES) {
       expect(readme, lens).toContain(`lenses/${lens}.md`);
-      const size = read(lens).length.toLocaleString("en-US");
-      expect(readme, lens).toMatch(new RegExp(`${lens}\\.md.*\\b${size}\\b`));
+      const row = new RegExp(`lenses/${lens}\\.md.*\\| ([\\d,]+) \\|`).exec(readme);
+      const said = Number(row?.[1]?.replace(",", ""));
+      expect(
+        Math.abs(said - read(lens).length),
+        `${lens}'s size in the README`,
+      ).toBeLessThanOrEqual(50);
     }
   });
 

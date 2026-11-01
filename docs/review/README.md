@@ -21,11 +21,11 @@ spec holds each under 4,000 characters (`tests/arch/review-lenses.spec.ts`).
 
 | Lens | What it reads for | Fires on | Characters |
 |---|---|---|---|
-| [`lenses/adversarial.md`](lenses/adversarial.md) | The input that proves a PR wrong | every code path | 3,939 |
+| [`lenses/adversarial.md`](lenses/adversarial.md) | The input that proves a PR wrong | every code path | 3,931 |
 | [`lenses/performance.md`](lenses/performance.md) | A request or boot path whose cost grows with history | server, observatory, storage | 3,564 |
 | [`lenses/context-loop.md`](lenses/context-loop.md) | What a change costs every session, and whether it can be judged | instructions, workflows, the loop registry | 3,961 |
 | [`lenses/smells-and-patterns.md`](lenses/smells-and-patterns.md) | Code and architecture smells, and the pattern that answers each | `src/`, `app/src/`, when a file or an import is added | 3,986 |
-| [`lenses/security.md`](lenses/security.md) | A step toward a real attacker's goal | the trust boundary | 3,768 |
+| [`lenses/security.md`](lenses/security.md) | A step toward a real attacker's goal | the trust boundary | 3,792 |
 | [`lenses/reuse-composability.md`](lenses/reuse-composability.md) | One concept written twice, judged from what the script prints | only when `scripts/dupe-scan.mjs --diff` prints a row | 3,429 |
 
 A recognised pattern has one home: `docs/PATTERNS.md` → *The ledger — code smells*. Each lens also
@@ -34,9 +34,8 @@ to name is taste, however confident it sounds.
 
 **Where this stands.** The audit's lens table holds one row, correctness, and it does not read these
 files yet. A lens joins as one row, after its replay: performance, then smells and patterns, then
-context and loop, then security. `.claude/workflows/review-replay.js` scores a lens over
-labelled PRs before it joins; `docs/review/replay-set.json` opens with how that score could flatter
-it.
+context and loop, then security. The replay in #6555 scores a lens over labelled PRs before it joins, and its set opens with
+how that score could flatter a lens.
 
 ## Keep or kill
 

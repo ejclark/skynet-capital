@@ -3,9 +3,9 @@
 **Fires on:** every code path. It is the audit's correctness row, the only lens that always runs.
 
 **Kill rule:** under 0.1 confirmed findings per reviewed PR, or fewer than one in three surviving
-the refuters, after 40 PRs: rewrite it from the misses rather than leave the row with nothing to say.
+the refuters, after 40 PRs: stop running it on every PR, and keep it for the deep-tier paths.
 
-**Size:** 3,939 characters.
+**Size:** 3,931 characters.
 
 Assume the PR is wrong and look for the input that proves it, judged against main as it is now. That
 is not "find gaps": a reviewer told to find gaps manufactures them. A finding needs a concrete
