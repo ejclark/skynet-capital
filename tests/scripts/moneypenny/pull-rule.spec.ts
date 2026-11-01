@@ -217,6 +217,7 @@ describe("runCli — the admission CLI /work-issues asks", () => {
       readIssue: (n: number) => issue(n, ["ready", "feedback"]),
       readPlans: () => [],
       readHold: () => null,
+      readRetry: () => null,
       print: (l: string) => out.push(l),
       printErr: (l: string) => err.push(l),
       ...over,

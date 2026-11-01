@@ -84,7 +84,9 @@ export function claimNext(
     readReady?: () => AdmissionIssue[];
     readPrIssues?: () => Map<number, number>;
     claims?: Record<"plan" | "feedback", typeof claimPlan>;
-    /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or plans read GitHub. */
+    /** The REST reads behind the default hold (`sweepHold`), for a spec that keeps that default. */
+    holdReads?: { readAll?: (path: string) => unknown[]; read?: (path: string) => unknown };
+    /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or picks read GitHub. */
     readHold?: (issue: AdmissionIssue) => string | null;
   },
 ): ClaimResult & { lane?: "plan" | "feedback" };
@@ -102,7 +104,9 @@ export function peekNext(
     readPrIssues?: () => Map<number, number>;
     /** The continuation context `pickContinuation` reads; inject it, or the default reads GitHub. */
     continuation?: () => unknown;
-    /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or plans read GitHub. */
+    /** The REST reads behind the default hold (`sweepHold`), for a spec that keeps that default. */
+    holdReads?: { readAll?: (path: string) => unknown[]; read?: (path: string) => unknown };
+    /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or picks read GitHub. */
     readHold?: (issue: AdmissionIssue) => string | null;
   },
 ): AdmissionIssue | null;
