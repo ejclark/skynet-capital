@@ -680,10 +680,19 @@ jobs:
       # error text it carries), which is diagnostic, not transcript.
       - if: always() && steps.build.outcome == 'failure'
         name: Surface the swallowed Claude result on failure
+        # FILTERED, NEVER `cat` (2026-11-01, #6470's study): the file is the SDK's whole streamed
+        # message array, so a bare `cat` printed every assistant turn of a failed leg into a public
+        # run log — the transcript the comment above promised not to dump. Only the terminal
+        # envelope and the rate-limit events are diagnostic; everything else is dropped here.
         run: |
           echo "::group::Claude execution result (the action hides this by default)"
-          cat /home/runner/work/_temp/claude-execution-output.json 2>/dev/null || \
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == null or .type == "result" or .type == "rate_limit_event")' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
+          else
             echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API-level rejection)"
+          fi
           echo "::endgroup::"
 
       # THE COST METER (#2946). The step above prints the result envelope ONLY on failure, so the
