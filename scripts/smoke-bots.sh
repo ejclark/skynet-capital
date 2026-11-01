@@ -58,7 +58,9 @@ health_stamped() {
 
 bridge_armed() {
   # Stamp first; the bounded log read (never a stream) is the fallback — see the header.
-  health_stamped || flyctl logs -a "$APP" -n 2>/dev/null | grep -qF "$ARMED_MARKER"
+  # A here-string, not a pipe: under pipefail a match makes grep -q close the pipe, flyctl dies of
+  # SIGPIPE, and a healthy bots deploy reads as not armed.
+  health_stamped || grep -qF "$ARMED_MARKER" <<<"$(flyctl logs -a "$APP" -n 2>/dev/null)"
 }
 
 # ── the hold — a boot that dies seconds later is not a pass (#6004, #5955) ──────────────────────

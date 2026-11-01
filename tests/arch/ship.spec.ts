@@ -62,18 +62,14 @@ describe("no pipe into a quiet grep under pipefail", () => {
     expect(pipedQuietGreps("#!/usr/bin/env bash\na | grep -q x\n")).toEqual([]);
   });
 
-  // smoke-bots.sh is a protected path, so neither the fix nor an inline marker can land from a
-  // session. Its entry has to go when the line does, or a second site could hide behind it.
-  const WAITING_ON_A_PROTECTED_FIX = ["scripts/smoke-bots.sh"];
-
-  it("holds for every script, and names the one waiting on a protected fix", () => {
+  it("holds for every script", () => {
     const scripts = readdirSync("scripts", { recursive: true, encoding: "utf8" })
       .filter((path) => path.endsWith(".sh"))
       .map((path) => `scripts/${path}`);
     const flagged = scripts.filter(
       (path) => pipedQuietGreps(readFileSync(path, "utf8")).length > 0,
     );
-    expect(flagged.sort()).toEqual(WAITING_ON_A_PROTECTED_FIX);
+    expect(flagged).toEqual([]);
   });
 });
 
