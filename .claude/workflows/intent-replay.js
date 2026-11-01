@@ -4,11 +4,13 @@
 //
 // INTENT REPLAY — does the page on how Eric writes make a session read him better?
 //
-// Each arm answers docs/evals/how-he-writes-set.json N times, the arms in opposite orders, reading only
-// what `scripts/intent-replay.mjs prompt` prints: the same words, plus the page for one arm. Then one
-// judge reads every answer with no label on it, in an order that turns with the case, so it cannot learn
-// which slot read the page. That script holds the prompts and the scoring so a spec can pin them with no
-// model; this file cannot read a file, so a worker runs each command.
+// Each arm answers docs/evals/how-he-writes-set.json N times, the arms in opposite orders and each arm
+// reading both orders equally, so N is even: at N=1 an arm reads one direction and order poses as the
+// page. Each answerer reads only what `scripts/intent-replay.mjs prompt` prints: the same words, plus
+// the page for one arm. Then one judge reads every answer with no label on it, in an order that turns
+// with the case, so it cannot learn which slot read the page. That script holds the prompts and the
+// scoring so a spec can pin them with no model; this file cannot read a file, so a worker runs each
+// command.
 //
 // Writes nothing but its return value: no scratch folder, no comment, no label. Save the return value
 // as JSON and run `node scripts/intent-replay.mjs score --results <file>`. A run or a judge that died
@@ -21,7 +23,7 @@
 export const meta = {
   name: 'intent-replay',
   description: 'Replay real messages of Eric\'s with and without the page on how he writes, have one judge read the answers unlabelled, and return them for scripts/intent-replay.mjs to score',
-  whenToUse: 'When the how-he-writes page in docs/READERS.md changes, when docs/evals/how-he-writes-set.json gains cases, or at its dated check in docs/process/LEARNING-LOOP.md. Args: {n?: 1-5 passes per arm, default 2; force?: true}. At the default, 7 agents near a 30k start each. Read-only. force: true is only for a run Eric typed. Save the return value and run node scripts/intent-replay.mjs score --results <file>.',
+  whenToUse: 'When the how-he-writes page in docs/READERS.md changes, when docs/evals/how-he-writes-set.json gains cases, or at its dated check in docs/process/LEARNING-LOOP.md. Args: {n?: 2 or 4 passes per arm, default 2; force?: true}. At the default, 7 agents near a 30k start each. Read-only. force: true is only for a run Eric typed. Save the return value and run node scripts/intent-replay.mjs score --results <file>.',
   phases: [
     { title: 'Gate', detail: 'ask the work spigot, then list the cases and the price' },
     { title: 'Answer', detail: 'N passes without the page and N with it, in opposite orders' },
@@ -29,10 +31,11 @@ export const meta = {
   ],
 }
 
-const MAX_PASSES = 5
+const MAX_PASSES = 4
 const n = args?.n ?? 2
-// It goes into a command a worker runs, so it must be what it claims to be.
-if (!Number.isInteger(n) || n < 1 || n > MAX_PASSES) throw new Error(`intent-replay: args.n must be a whole number from 1 to ${MAX_PASSES}`)
+// It goes into a command a worker runs, so it must be what it claims to be, and even, so each arm reads
+// both orders equally. scripts/intent-replay.mjs casesFor holds the same rule; a spec runs them side by side.
+if (!Number.isInteger(n) || n < 2 || n > MAX_PASSES || n % 2 !== 0) throw new Error(`intent-replay: args.n must be an even number from 2 to ${MAX_PASSES}`)
 
 // THE WORK-MODE GATE: the same block as clear-path-flip and its siblings, because a workflow script
 // cannot import; tests/scripts/workflow-gate.spec.ts runs this one too. The width is known from n.
@@ -78,6 +81,7 @@ const CASES_SCHEMA = {
     found: { type: 'boolean', description: 'true only if the command exited 0 and printed JSON' },
     why: { type: 'string', description: 'the command\'s stderr, verbatim, when found is false' },
     ids: { type: 'array', items: { type: 'string' } },
+    caseDigests: { type: 'array', items: { type: 'string' }, description: 'a hash of each case, in the same order as ids, so a score can refuse a set rewritten since' },
     runs: {
       type: 'array',
       items: {
@@ -103,15 +107,15 @@ const CASES_SCHEMA = {
   },
 }
 const cases = await agent(
-  `Run exactly: node scripts/intent-replay.mjs cases --n ${n}\n\nOn exit 0 it prints one JSON object. Report "found": true plus its "ids", "runs" and "price" fields, verbatim and in the same order. On any other exit report "found": false and its stderr as "why". Do nothing else: no exploration, no fixing, no editing any file, and do not open the set it reads: it holds the answers.`,
+  `Run exactly: node scripts/intent-replay.mjs cases --n ${n}\n\nOn exit 0 it prints one JSON object. Report "found": true plus its "ids", "caseDigests", "runs" and "price" fields, verbatim and in the same order. On any other exit report "found": false and its stderr as "why". Do nothing else: no exploration, no fixing, no editing any file, and do not open the set it reads: it holds the answers.`,
   { schema: CASES_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'low', label: 'cases', phase: 'Gate' },
 )
 // A lookup that died is one lost read, not a broken run: nothing was answered, and the return says so.
 if (cases == null) {
   log('the cases lookup did not return; nothing run')
-  return { caseIds: [], runs: [], verdicts: [], price: null, notRun: 'the cases lookup did not return: re-run' }
+  return { caseIds: [], caseDigests: [], runs: [], verdicts: [], price: null, notRun: 'the cases lookup did not return: re-run' }
 }
-if (!cases.found || !Array.isArray(cases.ids) || !Array.isArray(cases.runs)) throw new Error(`intent-replay: could not list the cases: ${cases.why ?? 'no cases in the answer'}`)
+if (!cases.found || !Array.isArray(cases.ids) || !Array.isArray(cases.runs) || cases.caseDigests?.length !== cases.ids.length) throw new Error(`intent-replay: could not list the cases: ${cases.why ?? 'no cases in the answer'}`)
 log(`${cases.ids.length} cases · ${cases.runs.length} answerers + 1 judge + 2 lookups, about ${cases.price?.startTokens ?? 'unknown'} tokens to start them`)
 
 const ANSWER_SCHEMA = {
@@ -150,7 +154,7 @@ const runs = cases.runs.map((run, i) => ({
 
 // The judge sees every answer to a case with no label on it, and which run fills slot 0 moves on by one
 // with each case, so a slot never stands for a run. scripts/intent-replay.mjs runOfSlot holds the same
-// sum to undo it, and a spec round-trips the two.
+// sum to undo it, and a spec round-trips the two through this file, for every run and case, at each N.
 const blinded = cases.ids.map((id, caseIndex) => ({
   id,
   answers: runs.map((_, slot) => ({
@@ -184,4 +188,4 @@ const judged = await agent(
 ).catch(() => null) // The answers are already paid for: a judge that dies must not lose them.
 const verdicts = judged?.ran === true ? (judged.verdicts ?? []) : []
 log(`${runs.filter((r) => r.answers).length} of ${runs.length} answerers returned · ${verdicts.length} verdicts, unscored`)
-return { caseIds: cases.ids, runs, verdicts, price: cases.price }
+return { caseIds: cases.ids, caseDigests: cases.caseDigests, runs, verdicts, price: cases.price }

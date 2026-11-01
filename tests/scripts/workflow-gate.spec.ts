@@ -19,8 +19,8 @@ const CONDUCTORS: Record<
     width: 2,
     firstWork: /^analyze/,
   },
-  // One pass per arm plus the judge: its width is known from n alone, before any lookup.
-  "intent-replay": { args: { n: 1 }, width: 3, firstWork: /^cases/ },
+  // Two passes per arm plus the judge: its width is known from n alone, before any lookup.
+  "intent-replay": { args: { n: 2 }, width: 5, firstWork: /^cases/ },
   // Named ids, because a whole lens's width is only known after its `cases` lookup.
   "review-replay": {
     args: { lens: "performance", ids: ["P01", "P02", "P03"] },

@@ -202,13 +202,14 @@ function agents(a) {
 export function flowSection(f) {
   const lines = ["", "flow (his typed messages that manage a session, by rules)"];
   if (f.verdict === "unknown") return [...lines, `  unknown: ${f.line}`];
-  if (f.typed === 0) lines.push("  no typed message in the window: share unknown");
-  else
-    lines.push(
-      `  ${f.managing} of ${f.typed} typed messages (${f.share}%), over ${f.sessions} session(s)`,
-      `  ${counts(f.byKind)}`,
-      `  the same status question repeated in a session: ${f.repeatedStatus}`,
-    );
+  // Whatever it is handed: with no typed message there is nothing to state a share of.
+  if (!f.typed) return [...lines, "  unknown: no typed message was read in this window"];
+  lines.push(
+    `  ${f.managing} of ${f.typed} typed messages (${f.share}%), over ${f.sessions} session(s)`,
+    `  ${counts(f.byKind)}`,
+    `  the same status question repeated in a session: ${f.repeatedStatus}`,
+  );
+  if (f.undated) lines.push(`  ${f.undated} more had no readable time and are not in this count`);
   const hand = f.handRead;
   lines.push(
     `  hand read ${hand.date}: ${hand.managing} of ${hand.typed} (${Math.round((hand.managing / hand.typed) * 100)}%). These rules undercount: on those same messages they caught ${hand.rulesCaught} of ${hand.typed}, so compare a reading with an earlier reading, never with the hand read`,

@@ -9,12 +9,13 @@
 // model, so the fan-out lives in .claude/workflows/intent-replay.js, which calls this for its cases and
 // each answerer's prompt, and blinds the judge itself.
 //
-//   node scripts/intent-replay.mjs cases  [--n 2] [--set <file>]
-//   node scripts/intent-replay.mjs prompt --arm with|without --order forward|backward [--set <file>]
+//   node scripts/intent-replay.mjs cases  [--n 2|4] [--set <file>] [--page <file>]
+//   node scripts/intent-replay.mjs prompt --arm with|without --order forward|backward [--set <file>] [--page <file>]
 //   node scripts/intent-replay.mjs prompt --judge [--set <file>]
 //   node scripts/intent-replay.mjs score  --results <file> [--set <file>] [--json]
 //
 // What a score can and cannot say is in the set's own header: howThisCouldFlatterThePage.
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { POSITION_SHAPES } from "./intents.mjs";
@@ -22,7 +23,7 @@ import { POSITION_SHAPES } from "./intents.mjs";
 const SET_FILE = "docs/evals/how-he-writes-set.json";
 const PAGE_FILE = "docs/READERS.md";
 const DEFAULT_RUNS = 2;
-const MAX_RUNS = 5;
+const MAX_RUNS = 4;
 const START_TOKENS = 30_000; // what docs/COMPUTE.md gives for a worker's start; output is on top
 const LOOKUPS = 2; // the work-spigot read and the `cases` read, one mechanical agent each
 const ROUTES = [
@@ -39,10 +40,15 @@ const ROUTES = [
 const ASKS = ["must-not-ask", "may-ask", "should-ask"];
 const TEXT_FIELDS = ["said", "context", "evidence"];
 const LIST_FIELDS = ["mustDo", "mustNotDo"];
+const PAGE_SECTIONS = ["How he writes", "What breaks his flow"];
 
 // The repo is public. A person's name has no shape, so that check fails closed: a capitalised word is
 // a name until the set says otherwise, which makes adding a case cost one reviewed word in the header.
 // A name he typed in lowercase passes this, which the header says to read for.
+// STAYS OPEN, with a spec: the check is case-sensitive, so a name in capitals (PRIYA) passes it as well.
+// Firing on capitals would have to clear every acronym the cases hold, and the one thing that could
+// recognise a name is a list of the names, which would itself put them in a public repo. There is no
+// such list here, by design: a person reads a new case for a name, which the header says to do.
 // intents.mjs's first-person and "account" shapes are left out on purpose: "My gut tells me" is the
 // wording under test, and Account is a screen.
 const NEVER_PUBLIC = [
@@ -90,6 +96,19 @@ export function setProblems(set) {
   });
 }
 
+/** What a case holds, as a short hash a result can carry. Any edit changes it; key order does not. */
+export const caseDigest = (row) =>
+  createHash("sha256")
+    .update(
+      JSON.stringify(
+        Object.keys(row)
+          .sort()
+          .map((key) => [key, row[key]]),
+      ),
+    )
+    .digest("hex")
+    .slice(0, 16);
+
 /** N passes per arm. On each pass the arms read opposite orders, so order cannot pose as the page. */
 export function runsFor(n) {
   const pass = Array.from({ length: n }, (_, i) => i + 1);
@@ -98,17 +117,29 @@ export function runsFor(n) {
   return [...named("without", "forward", "backward"), ...named("with", "backward", "forward")];
 }
 
-/** One run's plan, priced. A set that fails the safety rule never reaches an agent. */
-export function casesFor(set, { n = DEFAULT_RUNS } = {}) {
-  if (!Number.isInteger(n) || n < 1 || n > MAX_RUNS) {
-    throw new Error(`--n must be a whole number from 1 to ${MAX_RUNS}, got ${n}`);
-  }
+/** A set that fails the safety rule goes no further: not to a plan, a prompt or a score. */
+function refuseUnsafe(set) {
   const problems = setProblems(set);
   if (problems.length) throw new Error(problems.join("; "));
+}
+
+/**
+ * One run's plan, priced. N is even because each arm has to read both orders equally often: at N=1 each
+ * arm reads one direction, so a gap between them could be the order and not the page, and an odd N only
+ * shrinks that. The workflow holds the same rule, and a spec runs the two side by side.
+ */
+export function casesFor(set, { n = DEFAULT_RUNS } = {}) {
+  if (!Number.isInteger(n) || n < 2 || n > MAX_RUNS || n % 2 !== 0) {
+    throw new Error(
+      `--n must be an even number from 2 to ${MAX_RUNS}, got ${n}: each arm has to read both orders equally`,
+    );
+  }
+  refuseUnsafe(set);
   const answerers = n * 2;
   const agents = answerers + 1 + LOOKUPS;
   return {
     ids: set.cases.map((row) => row.id),
+    caseDigests: set.cases.map(caseDigest),
     runs: runsFor(n),
     price: {
       answerers,
@@ -120,27 +151,48 @@ export function casesFor(set, { n = DEFAULT_RUNS } = {}) {
   };
 }
 
+const withoutHeadings = (text) =>
+  text
+    .split("\n")
+    .filter((line) => !line.startsWith("#"))
+    .join("\n")
+    .trim();
+
+/** What one section of the page says past its headings: empty when it is bare or gone. */
+function sectionBody(page, name) {
+  const section = page.split(/^#{2,3} /m).find((block) => block.startsWith(name));
+  return withoutHeadings(section?.split("\n").slice(1).join("\n") ?? "");
+}
+
 /**
  * The two sections an answerer reads, from where sessions read them. The dated replay result is left
- * out: it says what is being tested, and the baseline's page did not carry it either.
+ * out: it says what is being tested, and the baseline's page did not carry it either. A section with
+ * nothing in it throws, because both arms would then compare what is nearly one prompt, and a score on
+ * that would read as the page not helping when the page never reached anyone.
  */
 export function pageOf(readers) {
   const start = readers.indexOf("### How he writes");
   if (start === -1) throw new Error(`${PAGE_FILE} has no "How he writes" section`);
   const rest = readers.slice(start);
   const end = rest.search(/\n#{2,3} (?!How he writes|What breaks his flow)/);
-  return (end === -1 ? rest : rest.slice(0, end))
+  const page = (end === -1 ? rest : rest.slice(0, end))
     .split(/\n\s*\n/)
     .filter((paragraph) => !paragraph.startsWith("**Replay,"))
     .join("\n\n")
     .trim();
+  const bare = PAGE_SECTIONS.filter((name) => !sectionBody(page, name));
+  if (bare.length) throw new Error(`${PAGE_FILE} has nothing under: ${bare.join(", ")}`);
+  return page;
 }
 
 /** Exactly what one answerer is told: each message and its context, and for one arm the page. */
 export function answerPrompt(set, { arm, order, page }) {
   if (arm !== "with" && arm !== "without") throw new Error(`unknown arm ${arm}`);
   if (order !== "forward" && order !== "backward") throw new Error(`unknown order ${order}`);
-  if (arm === "with" && !page) throw new Error("the with arm needs the page, and it is empty");
+  if (arm === "with" && !withoutHeadings(page ?? "")) {
+    throw new Error("the with arm needs the page, and it is empty");
+  }
+  refuseUnsafe(set);
   const rows = order === "forward" ? set.cases : [...set.cases].reverse();
   const guide =
     arm === "with" ? `A guide to how he writes. Use it.\n\n${page}\n\n<<<end of guide>>>\n\n` : "";
@@ -158,6 +210,7 @@ ${guide}${messages}`;
 
 /** What the judge is told about each case. The answers come from the workflow, unlabelled. */
 export function judgePrompt(set) {
+  refuseUnsafe(set);
   const criteria = set.cases.map(({ id, said, context, mustDo, mustNotDo }) => ({
     id,
     said,
@@ -173,11 +226,33 @@ ${JSON.stringify(criteria)}`;
 /** Which run filled a slot on a case. The workflow's blinding holds the same sum; a spec round-trips it. */
 export const runOfSlot = (caseIndex, slot, runCount) => (slot + caseIndex) % runCount;
 
-function requireSameCases(set, { runs, caseIds }) {
+/** Same ids in the same order, each still holding what it held: a score means nothing otherwise. */
+function requireSameCases(set, { runs, caseIds, caseDigests }) {
   if (!(Array.isArray(runs) && runs.length)) throw new Error("score needs the runs a workflow ran");
   const ids = set.cases.map((row) => row.id);
   if (JSON.stringify(caseIds) !== JSON.stringify(ids)) {
     throw new Error(`these results ran on another set: ${caseIds} against ${ids}`);
+  }
+  if (!Array.isArray(caseDigests)) {
+    throw new Error("these results do not say what their cases held: run it again");
+  }
+  const changed = set.cases.filter((row, i) => caseDigests[i] !== caseDigest(row));
+  if (changed.length) {
+    const named = changed.map((row) => row.id).join(", ");
+    throw new Error(`the set was rewritten since these results ran: ${named} changed`);
+  }
+}
+
+/** A saved result can come from before the plan refused it, so the score holds the same rule. */
+function requireBothOrders(runs) {
+  for (const arm of ["without", "with"]) {
+    const ofArm = runs.filter((run) => run.arm === arm);
+    const forward = ofArm.filter((run) => run.order === "forward").length;
+    if (!forward || forward * 2 !== ofArm.length) {
+      throw new Error(
+        `the ${arm} arm read ${forward} of ${ofArm.length} runs forward: an arm has to read both orders equally, or order poses as the page`,
+      );
+    }
   }
 }
 
@@ -188,8 +263,9 @@ function addAnswer(row, answer, verdict, into) {
     counts.answered += 1;
     if (answer.route === row.route) counts.route += 1;
     if (answer.ask === row.ask) counts.ask += 1;
-    if (!verdict) counts.unjudged += 1;
-    else if (verdict.pass === true) counts.judged += 1;
+    // Only a boolean is a judgement. A row with no pass, or pass: "true", was not judged at all.
+    if (typeof verdict?.pass !== "boolean") counts.unjudged += 1;
+    else if (verdict.pass) counts.judged += 1;
   }
 }
 
@@ -198,7 +274,9 @@ function addAnswer(row, answer, verdict, into) {
  * did not, makes the comparison unknown: neither a low score nor a clean one.
  */
 export function scoreReplay(set, result) {
+  refuseUnsafe(set);
   requireSameCases(set, result ?? {});
+  requireBothOrders(result.runs);
   const { runs, verdicts = [] } = result;
   const passOf = new Map(verdicts.map((row) => [`${row.id}:${row.slot}`, row]));
   const byRun = Object.fromEntries(runs.map((run) => [run.name, tally(set.cases.length)]));
@@ -229,13 +307,26 @@ export function scoreReplay(set, result) {
 const armLine = (name, arm) =>
   `${name}: judged ${arm.judged} of ${arm.of} · route ${arm.route} · ask ${arm.ask}${arm.answered < arm.of ? ` · ${arm.of - arm.answered} never answered` : ""}${arm.unjudged ? ` · ${arm.unjudged} not judged` : ""}`;
 
+/** Why a score has no verdict, in counts, so an unknown can be read back to what is missing. */
+function whyUnknown({ without, with: withPage }) {
+  const missing = without.of - without.answered + (withPage.of - withPage.answered);
+  const unjudged = without.unjudged + withPage.unjudged;
+  return [
+    missing ? `${missing} never answered` : "",
+    unjudged ? `${unjudged} not judged` : "",
+  ].filter(Boolean);
+}
+
 function summary({ arms, differs, verdict, baseline }) {
-  const lines = [
-    armLine("without the page", arms.without),
-    armLine("with the page", arms.with),
-    `verdict: ${verdict}. A gap of a point or two is inside what one arm moves between its own two runs.`,
-    `differ: ${differs.map((d) => `${d.id} (${d.without} without, ${d.with} with)`).join(", ") || "none"}`,
-  ];
+  const lines = [armLine("without the page", arms.without), armLine("with the page", arms.with)];
+  if (verdict === "unknown") {
+    lines.push(`verdict: unknown: ${whyUnknown(arms).join(", ")}, so the arms cannot be compared.`);
+  } else {
+    lines.push(
+      `verdict: ${verdict}. A gap of a point or two is inside what one arm moves between its own two runs.`,
+      `differ: ${differs.map((d) => `${d.id} (${d.without} without, ${d.with} with)`).join(", ") || "none"}`,
+    );
+  }
   if (baseline) {
     lines.push(
       `baseline ${baseline.date}: judged ${baseline.without.judged} without, ${baseline.with.judged} with, of ${baseline.of}`,
@@ -249,10 +340,12 @@ function flag(argv, name) {
   return at === -1 ? undefined : argv[at + 1];
 }
 
+const readPage = (argv) => pageOf(readFileSync(flag(argv, "page") ?? PAGE_FILE, "utf8"));
+
 function promptCommand(argv, set) {
   if (argv.includes("--judge")) return judgePrompt(set);
   const arm = flag(argv, "arm");
-  const page = arm === "with" ? pageOf(readFileSync(PAGE_FILE, "utf8")) : "";
+  const page = arm === "with" ? readPage(argv) : "";
   return answerPrompt(set, { arm, order: flag(argv, "order"), page });
 }
 
@@ -261,7 +354,9 @@ function main(argv) {
   const set = JSON.parse(readFileSync(flag(argv, "set") ?? SET_FILE, "utf8"));
   if (command === "cases") {
     const n = flag(argv, "n");
-    console.log(JSON.stringify(casesFor(set, n === undefined ? {} : { n: Number(n) })));
+    const plan = casesFor(set, n === undefined ? {} : { n: Number(n) });
+    readPage(argv); // before a single arm is paid for, not after the arm without it has run
+    console.log(JSON.stringify(plan));
     return 0;
   }
   if (command === "prompt") {
