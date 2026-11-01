@@ -6,6 +6,7 @@
 //        [--closes 1,2] [--part-of 3] [--pr-body-file <f>]   # board time: the item's trailer lines
 //   git log --reverse --format=%H%x00%s%x00%b%x1e <base>..HEAD | \
 //        node scripts/platter-refs.mjs summary                # body time: the Summary bullets
+//                                                             # (items + `ship platter amend` notes)
 //
 // WHY. Boarding an item dropped its `Closes #N`: the platter body is regenerated from git on every
 // board, and a `platter/` branch names no issue by design (pr-issues.mjs → LANE_CLASSES). Measured
@@ -90,7 +91,16 @@ export function trailerLines({ closes = [], refs = [] } = {}) {
   ];
 }
 
-/** Boarded commits from `git log --reverse --format=%H%x00%s%x00%b%x1e`, each with its refs. */
+/**
+ * Boarded commits from `git log --reverse --format=%H%x00%s%x00%b%x1e`, each with its refs.
+ *
+ * A record carrying `Platter-Amends: <item>` is not an item — `ship platter amend` wrote it, empty,
+ * to add refs to an item that boarded without them (#4616: #5852's items 9 and 10 boarded before
+ * #6144 and carried none, so every board rebuilt the body without `Closes #4616` and the retry sweep
+ * woke a session to re-add it by hand, four times). Its refs fold onto every earlier row boarded
+ * under that item name, so no row number moves. One whose item is not boarded in the range adds
+ * nothing: an item off the platter closes nothing, and neither does a note about it.
+ */
 export function parseBoarded(log) {
   const items = [];
   for (const record of String(log ?? "").split("\x1e")) {
@@ -98,14 +108,29 @@ export function parseBoarded(log) {
     const body = record.replace(/^\n+/, "").split("\x00")[2] ?? "";
     const closes = [];
     const refs = [];
+    let item = "";
+    let amends = "";
     for (const line of body.split("\n")) {
+      const named = /^Platter-(Item|Amends):\s*(\S+)\s*$/.exec(line.trim());
+      if (named) {
+        if (named[1] === "Item") item = named[2];
+        else amends = named[2];
+        continue;
+      }
       const m = /^(Platter-Closes|Platter-Refs):\s*#?(\d+)\s*$/.exec(line.trim());
       if (!m) continue;
       (m[1] === CLOSES_TRAILER ? closes : refs).push(Number(m[2]));
     }
-    items.push({ closes: sorted(closes), refs: sorted(refs) });
+    if (amends) {
+      for (const row of items.filter((r) => r.item === amends)) {
+        row.closes = sorted([...row.closes, ...closes]);
+        row.refs = sorted([...row.refs, ...refs]);
+      }
+      continue;
+    }
+    items.push({ item, closes: sorted(closes), refs: sorted(refs) });
   }
-  return items;
+  return items.map(({ closes, refs }) => ({ closes, refs }));
 }
 
 /**
