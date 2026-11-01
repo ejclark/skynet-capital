@@ -1,0 +1,1 @@
+{"date":"2026-11-01","loop":"playbook-spec-gap","before":35,"after":35,"worth":1,"tokensM":null,"usd":null,"changed":"node scripts/spec-gap-scan.mjs --candidate: debt 35"}

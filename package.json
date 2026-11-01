@@ -84,6 +84,7 @@
     "research:proposals": "tsx src/scripts/claim-proposals.ts",
     "research:scorecard": "node scripts/research-scorecard.mjs",
     "lessons:held": "node scripts/fix-held.mjs",
+    "loop:ledger": "node scripts/loop-ledger.mjs",
     "bottleneck:baseline": "node scripts/bottleneck-baseline.mjs",
     "mermaid:lint": "node scripts/mermaid-lint.mjs",
     "arch:pages": "node scripts/architecture-pages.mjs",
