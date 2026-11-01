@@ -11,9 +11,11 @@
  * refuses to, for want of this study. The fence was written for one episode (one price, from the
  * 2026-10-16 run), so the study restates it as a rule any sale day can apply and replays the rule:
  *
- *   every 5th session on each basket name since 2005 (CRWV since listing), sell the put the wheel
- *   would sell: 0.15 |delta|, the latest Friday 14 to 45 days out that expires before the next
- *   print. Arm 1 sells it as is. Arm 2 caps the strike at close × (1 + the median further low of
+ *   every 5th session on each basket name since 2005 (CRWV since listing), sell the put
+ *   CRWV-WHEEL would sell, by CRWV-WHEEL's own settings on every name (the question is that pair's
+ *   setting; the other names are its sample, so they do not get their live 30-day minimum): 0.15
+ *   |delta|, the latest Friday 14 to 45 days out that expires before the next print, nothing on a
+ *   print's session or the one after. Arm 1 sells it as is. Arm 2 caps the strike at close × (1 + the median further low of
  *   that day's headline floor band), rebuilt from outcomes finished by that day. Both arms are
  *   held to expiry and scored per dollar of cash secured.
  *
@@ -26,7 +28,7 @@
  * routes an order. The pure half is `wheel-cap-math.mjs`.
  */
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import {
   ddBucket,
   drawdowns,
@@ -39,12 +41,13 @@ import {
   WARMUP,
 } from "./cycle-phase-math.mjs";
 import { bars, earningsDates } from "./market-data.mjs";
-import { annualizedVol } from "./premium-fit-math.mjs";
+import { annualizedVol, printCadence } from "./premium-fit-math.mjs";
 import {
   armStrikes,
   blockInterval,
   expiryFor,
   headlineFloor,
+  inPrintTail,
   quarterOf,
   saleResult,
   strikeForPutDelta,
@@ -53,8 +56,16 @@ import {
 const BASKET = ["NVDA", "CRWV", "NBIS", "MU", "AVGO", "AMD"];
 const SINCE = "2005-01-01";
 const STEP = 5;
-/** The live fence (claim 7's study, 2026-10-16), to set beside today's point-in-time reading. */
-const LIVE_FENCE = { sym: "CRWV", price: 53.67, on: "2026-10-16" };
+/** The live fence: claim 7's floor price as the studies ledger holds it (what the resolver reads,
+ *  `conviction-steering.ts` floorOf), set beside today's point-in-time reading. */
+function liveFence() {
+  const ledger = JSON.parse(readFileSync("src/playbooks/conviction-studies.json", "utf8"));
+  const claim = (ledger["ai-dip-2026-10"] ?? []).find((c) => c.statement?.startsWith("7. "));
+  const price = claim?.study?.verdict?.numbers?.floorAtMedian;
+  if (!(price > 0)) throw new Error("conviction-studies.json: claim 7 carries no floorAtMedian");
+  return { price, on: claim.study.dataDate };
+}
+const LIVE_FENCE = liveFence();
 
 const args = process.argv.slice(2);
 const flag = (k) => args.find((a) => a.startsWith(`--${k}=`))?.split("=")[1];
@@ -135,10 +146,11 @@ const sales = [];
 let dark = 0;
 for (const n of universe) {
   if (n.prints.length < 2) continue;
+  const dates = n.px.map((b) => b.date);
   for (let t = Math.max(start(n), 61); t < n.closes.length; t += STEP) {
     const date = n.px[t].date;
     const nextPrint = n.prints.find((p) => p > date) ?? null;
-    const exp = expiryFor(date, nextPrint);
+    const exp = inPrintTail(dates, t, n.prints) ? null : expiryFor(date, nextPrint);
     if (!exp) {
       dark++;
       continue;
@@ -272,11 +284,19 @@ const crwv = universe.find((n) => n.sym === "CRWV");
 const tNow = crwv.closes.length - 1;
 const sNow = stateAt(crwv, tNow);
 const fNow = headlineFloor({ sym: "CRWV", state: sNow, names, asOf: sNow.date });
-const nextKnown = crwv.prints.find((p) => p > sNow.date) ?? "2026-11-10";
-const expNow = expiryFor(sNow.date, nextKnown);
-// Where a 30-day 0.15-delta put strikes at today's vol, as a share of spot: the live fence binds
-// only once CRWV closes above fence / that share.
-const strikeShare = strikeForPutDelta(1, crwv.rv60[tNow], 30 / 365);
+// The next print: --next-print (the IR date, ahead of its 8-K), else a filed one, else the cadence
+// projection, and never a date already past, which would read every expiry as crossing it.
+const projected = printCadence(crwv.prints, sNow.date).projectedNext;
+const nextKnown =
+  flag("next-print") ??
+  crwv.prints.find((p) => p > sNow.date) ??
+  (projected > sNow.date ? projected : null);
+const crwvDates = crwv.px.map((b) => b.date);
+const expNow = inPrintTail(crwvDates, tNow, crwv.prints) ? null : expiryFor(sNow.date, nextKnown);
+// Where the next sale's 0.15-delta put strikes at today's vol, as a share of spot (a 30-day put
+// while the wheel is dark): the live fence binds only once CRWV closes above fence / that share.
+const tenor = expNow?.days ?? 30;
+const strikeShare = strikeForPutDelta(1, crwv.rv60[tNow], tenor / 365);
 const today = {
   date: sNow.date,
   close: crwv.closes[tNow],
@@ -286,14 +306,15 @@ const today = {
   liveFence: LIVE_FENCE,
   expiry: expNow,
   rv60: crwv.rv60[tNow],
+  tenor,
   strikeShare,
   fenceBindsAbove: LIVE_FENCE.price / strikeShare,
 };
 console.log(
-  `\nCRWV today (${today.date}): close ${today.close.toFixed(2)} · ${today.phase} · the rule's floor ${today.floor ? `$${today.floor.toFixed(2)} (${fNow.sample} · ${fNow.level}, ${fNow.units} units, median further low ${signed(fNow.p50, 1)})` : "none (no band reaches 8 units)"} · live fence $${LIVE_FENCE.price} (${LIVE_FENCE.on}) · ${expNow ? `next sale expires ${expNow.expiry}` : `no expiry 14–45 days out clears the ${nextKnown} print: the wheel is dark until after it`}`,
+  `\nCRWV today (${today.date}): close ${today.close.toFixed(2)} · ${today.phase} · the rule's floor ${today.floor ? `$${today.floor.toFixed(2)} (${fNow.sample} · ${fNow.level}, ${fNow.units} units, median further low ${signed(fNow.p50, 1)})` : "none (no band reaches 8 units)"} · live fence $${LIVE_FENCE.price.toFixed(2)} (${LIVE_FENCE.on}) · ${expNow ? `next sale expires ${expNow.expiry}` : `the wheel is dark: no expiry 14–45 days out clears the ${nextKnown ?? "next"} print, or it is the print's session or the one after`}`,
 );
 console.log(
-  `  at today's ${pct(today.rv60, 0)} realized vol a 30-day 0.15-delta put strikes ${pct(strikeShare, 0)} of spot, so the live fence binds only above a $${today.fenceBindsAbove.toFixed(2)} close`,
+  `  at today's ${pct(today.rv60, 0)} realized vol a ${tenor}-day 0.15-delta put strikes ${pct(strikeShare, 0)} of spot, so the live fence binds only above a $${today.fenceBindsAbove.toFixed(2)} close`,
 );
 out.today = today;
 console.log(

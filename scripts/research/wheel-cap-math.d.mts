@@ -21,6 +21,11 @@ export function saleResult(p: {
   years: number;
   closeAtExpiry: number;
 }): { sold: boolean; premium: number; assigned: boolean; pnl: number };
+export function inPrintTail(
+  dates: readonly string[],
+  t: number,
+  prints: readonly string[],
+): boolean;
 export function expiryFor(
   date: string,
   nextPrint: string | null,

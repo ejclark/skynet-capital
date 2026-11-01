@@ -106,6 +106,23 @@ export function saleResult({ strike, spot, vol, years, closeAtExpiry }) {
 }
 
 /**
+ * Whether session `t` sits in a print's blackout tail: the filing session itself or the one after
+ * it (`optionPrintBlackout` in `earnings-calendar.ts` ends at the session after the print, because
+ * an after-close print's move lands then). The wheel opens nothing on those days.
+ *
+ * @param {string[]} dates ascending session dates
+ * @param {number} t
+ * @param {string[]} prints ascending filing dates
+ */
+export function inPrintTail(dates, t, prints) {
+  const last = prints.filter((p) => p <= dates[t]).at(-1);
+  if (!last) return false;
+  let first = t;
+  while (first > 0 && dates[first - 1] >= last) first--;
+  return t - first <= 1;
+}
+
+/**
  * The latest Friday expiry inside [MIN_DTE, MAX_DTE] calendar days of `date` that falls strictly
  * before `nextPrint` (the wheel never holds a sold put across a print), or null when none does: the
  * wheel is dark that day.

@@ -5,6 +5,7 @@ import {
   expiryFor,
   type FloorEntry,
   headlineFloor,
+  inPrintTail,
   putAbsDelta,
   putValue,
   quarterOf,
@@ -128,6 +129,37 @@ describe("expiryFor", () => {
 
   it("is dark when no Friday in the window clears the print (CRWV before 11-10)", () => {
     expect(expiryFor("2026-10-30", "2026-11-10")).toBeNull();
+  });
+});
+
+describe("inPrintTail", () => {
+  const dates = ["2026-08-07", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13"];
+
+  it("blocks the print's session and the one after, as the live blackout does", () => {
+    const prints = ["2026-08-11"];
+    expect(dates.map((_, t) => inPrintTail(dates, t, prints))).toEqual([
+      false,
+      false,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it("counts from the first session on or after a print filed on a non-session day", () => {
+    // Filed on Saturday 08-08: the Monday is the print's session, the Tuesday the one after.
+    expect(dates.map((_, t) => inPrintTail(dates, t, ["2026-08-08"]))).toEqual([
+      false,
+      true,
+      true,
+      false,
+      false,
+    ]);
+  });
+
+  it("is clear with no print yet", () => {
+    expect(inPrintTail(dates, 2, [])).toBe(false);
+    expect(inPrintTail(dates, 2, ["2026-09-01"])).toBe(false);
   });
 });
 
