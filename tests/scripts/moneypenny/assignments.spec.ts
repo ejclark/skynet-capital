@@ -11,6 +11,7 @@ import {
   report,
   routeAssignments,
   UNASSIGN_MARKER,
+  unassignmentComment,
 } from "../../../scripts/moneypenny/assignments.mjs";
 import { routeSweep } from "../../../scripts/moneypenny/events.mjs";
 
@@ -389,6 +390,36 @@ describe("markedByComments: asked, and not since cleared by this lane", () => {
     });
     expect(his.markers.has(5955)).toBe(true);
     expect(plan({ ...his, now: NOW }).actions).toEqual([]);
+  });
+
+  it("gather: the same rule for a held PR — closed and unassigned, then reopened, it is asked again", () => {
+    const held = {
+      number: 10,
+      title: "platter",
+      state: "open",
+      draft: false,
+      created_at: new Date(NOW - 13 * 36e5).toISOString(),
+      labels: [{ name: "hold-merge" }],
+      assignees: [],
+      head: { ref: "platter/2026-11" },
+    };
+    const rest = (path: string) => {
+      if (path.startsWith("issues?state=")) return [];
+      if (path === "pulls?state=open") return [held];
+      if (path === "issues/10/comments")
+        return [bot(`ask\n${ASSIGN_MARKER}`), bot(`off\n${UNASSIGN_MARKER}`)];
+      throw new Error(`unexpected read ${path}`);
+    };
+    const deps = gather({ rest, now: NOW });
+    expect(deps.markers.has(10)).toBe(false);
+    expect(plan({ ...deps, now: NOW }).actions).toEqual([
+      expect.objectContaining({ kind: "assign", criterion: 4, number: 10 }),
+    ]);
+  });
+
+  it("says a closed issue is asked again on reopen, not on relabel", () => {
+    expect(unassignmentComment({ why: "issue closed" })).toContain("reopened");
+    expect(unassignmentComment({ why: "needs-eric removed" })).not.toContain("reopened");
   });
 });
 

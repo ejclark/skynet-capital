@@ -86,8 +86,9 @@ export function markedByComments(comments?: readonly MarkerComment[]): boolean;
 export function plan(input?: PlanInput): Planned;
 export function report(planned: Pick<Planned, "queue" | "actions">): string;
 export function gather(opts?: {
-  /** Injected for specs; production reads through gh.mjs's `ghRestAll`. */
+  /** Injected for specs; production reads through gh.mjs's `ghRestAll` at the wall clock. */
   rest?: (path: string) => unknown[];
+  now?: number;
 }): Required<Pick<PlanInput, "issues" | "prs" | "markers">>;
 export function routeAssignments(deps?: {
   assignments?: Required<Pick<PlanInput, "issues" | "prs" | "markers">> | null;
