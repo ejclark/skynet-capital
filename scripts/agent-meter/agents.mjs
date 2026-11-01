@@ -71,6 +71,22 @@ const FINISHED = new Set(["done", "pass", "passed", "ok", "success", "green"]);
  */
 const STOP_REPORT_MAX_CHARS = 600;
 
+function contentBlocks(line) {
+  try {
+    const content = JSON.parse(line).message?.content;
+    return Array.isArray(content) ? content : [];
+  } catch {
+    return [];
+  }
+}
+
+const isNoSuchTool = (block) =>
+  block.type === "tool_result" &&
+  block.is_error &&
+  NO_SUCH_TOOL.test(
+    typeof block.content === "string" ? block.content : JSON.stringify(block.content ?? ""),
+  );
+
 /**
  * Whether a stage stopped for a tool it lacks. Two signals, because a tool outside the stage's list
  * is usually never called: its return value says so, or its last tool call was the missing one. A
@@ -80,38 +96,25 @@ const STOP_REPORT_MAX_CHARS = 600;
  * each stopped stage for a reader to check.
  */
 export function missingToolStop(lines) {
-  let triedMissing = false;
-  let carriedOn = false;
-  let returned;
-  let lastText = "";
-  for (const line of lines) {
-    let row;
-    try {
-      row = JSON.parse(line);
-    } catch {
-      continue;
-    }
-    const content = Array.isArray(row.message?.content) ? row.message.content : [];
-    for (const block of content) {
-      if (block.type === "text") lastText = block.text ?? "";
-      if (block.type === "tool_use" && block.name === "StructuredOutput") returned = block.input;
-      else if (block.type === "tool_use" && triedMissing) carriedOn = true;
-      if (block.type === "tool_result" && block.is_error) {
-        const text =
-          typeof block.content === "string" ? block.content : JSON.stringify(block.content);
-        if (NO_SUCH_TOOL.test(text ?? "")) {
-          triedMissing = true;
-          carriedOn = false;
-        }
-      }
-    }
-  }
+  const blocks = lines.flatMap(contentBlocks);
+  const lastMissing = blocks.findLastIndex(isNoSuchTool);
+  const carriedOn = blocks
+    .slice(lastMissing + 1)
+    .some((b) => b.type === "tool_use" && b.name !== "StructuredOutput");
+  const triedMissing = lastMissing >= 0;
+  const returned = blocks.findLast(
+    (b) => b.type === "tool_use" && b.name === "StructuredOutput",
+  )?.input;
   const status = String(returned?.status ?? "").toLowerCase();
-  const finished = FINISHED.has(status);
-  const value = returned ? JSON.stringify(returned) : lastText;
+  const value = returned
+    ? JSON.stringify(returned)
+    : (blocks.findLast((b) => b.type === "text")?.text ?? "");
   const said =
     (status || value.length <= STOP_REPORT_MAX_CHARS) && REPORTS_MISSING_TOOL.test(value);
-  return { stopped: !finished && (said || (triedMissing && !carriedOn)), triedMissing };
+  return {
+    stopped: !FINISHED.has(status) && Boolean(said || (triedMissing && !carriedOn)),
+    triedMissing,
+  };
 }
 
 function p50(values) {
@@ -152,7 +155,7 @@ export function workerOracle(row) {
   if (n < WORKER_MIN_STAGES)
     return {
       verdict: "not yet",
-      line: `worker oracle: not yet: ${n} of the first ${WORKER_MIN_STAGES} stages have run`,
+      line: `worker oracle: not yet: ${n} stages in this window, ${WORKER_MIN_STAGES} needed; widen it with --days`,
     };
   const underCeiling = row.median < WORKER_MEDIAN_CEILING;
   const fewStops = row.stopped * WORKER_STOPS_ONE_IN <= n;
@@ -214,7 +217,7 @@ async function readLines(path) {
   return lines;
 }
 
-function listDirs(path) {
+export function listDirs(path) {
   if (!existsSync(path)) return [];
   return readdirSync(path, { withFileTypes: true })
     .filter((e) => e.isDirectory())

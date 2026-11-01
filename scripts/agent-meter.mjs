@@ -23,6 +23,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   agentSummary,
+  listDirs,
   scanWorkflowAgents,
   stagesByType,
   workerOracle,
@@ -326,7 +327,7 @@ async function workerStages(args, w) {
   const projectsDir = process.env.AGENT_PROJECTS_DIR ?? join(homedir(), ".claude", "projects");
   const stages = stagesByType(await scanWorkflowAgents(projectsDir, PROJECT, w.sinceMs, w.untilMs));
   // loop-check posts this from a runner, which holds no transcripts: unknown there, not "0 of 20".
-  const oracle = existsSync(projectsDir)
+  const oracle = listDirs(projectsDir).some((name) => name.startsWith(PROJECT))
     ? workerOracle(stages.find((row) => row.type === "worker"))
     : {
         verdict: "unknown",

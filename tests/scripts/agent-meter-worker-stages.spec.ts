@@ -184,7 +184,8 @@ describe("the worker's oracle", () => {
   it("says not yet below 20 stages, and when no worker has run", () => {
     expect(workerOracle(row(19, 90000, 5)).verdict).toBe("not yet");
     expect(workerOracle(undefined).verdict).toBe("not yet");
-    expect(workerOracle(undefined).line).toMatch(/0 of the first 20/);
+    // Counted in the window, so it must not read as the total ever run.
+    expect(workerOracle(undefined).line).toMatch(/0 stages in this window, 20 needed/);
   });
 });
 
@@ -263,13 +264,17 @@ describe("npm run meter -- --worker-stages", () => {
     // The fake gh refuses, so the REST sections read unavailable and this one still prints.
     const res = meter(dir, []);
     expect(res.status).toBe(0);
-    expect(res.stdout).toMatch(/workflow agents[^]*worker oracle: pass/);
+    expect(res.stdout).toMatch(/workflow agents[\s\S]*worker oracle: pass/);
   });
 
   it("reads unknown, not a count, on a machine with no transcripts", () => {
     const res = meter(join(dir, "no-such-folder"));
     expect(res.status).toBe(0);
     expect(res.stdout).toMatch(/worker oracle: unknown: no transcripts/);
+    // A folder of other projects' transcripts is the same answer, not "0 stages".
+    const others = join(dir, "others");
+    mkdirSync(join(others, "-home-runner-work-another-repo"), { recursive: true });
+    expect(meter(others).stdout).toMatch(/worker oracle: unknown: no transcripts/);
   });
 
   it("is named so the registry's check runs this and not the whole meter", () => {
