@@ -25,6 +25,7 @@ import {
 import {
   ASSIGNED_MARKER,
   OWNER_AFTER_MS,
+  REOPEN_LINE,
   REOPEN_WITHIN_MS,
   REOPENED_MARKER,
   RUNGS,
@@ -41,7 +42,7 @@ import {
 // That list is the regression list now (`node scripts/fitness-audit.mjs --bugs <it> --with ...`,
 // the --with files are the ones named below, plus scripts/deploy-lag.mjs and
 // scripts/bot-relevant.mjs, scripts/bots-start-stopped.sh and scripts/fitness-rungs.mjs), so a new
-// score needs bugs from a fresh blind pass. The 19 after the first 30 attack the owner's assignment
+// score needs bugs from a fresh blind pass. The 21 after the first 30 attack the owner's assignment
 // and were written by the author of this spec, so they are a regression net and not a blind score.
 const SCRIPT = resolve("scripts/fitness.mjs");
 const START = resolve("scripts/bots-start-stopped.sh");
@@ -618,6 +619,18 @@ describe("fitness: the owner is assigned last", () => {
       botComments: [...starts(3), { type: "Bot", body: ASSIGNED_MARKER, at: iso(NOW - MIN) }],
     };
     expect(actionsFor(stopped(), [thread("machine is stopped", asked)])).toEqual([]);
+    // A thread that opened assigned carries the marker in its body, and it counts until a reopen.
+    const opened = {
+      title: "[fitness] alerts-reach-owner",
+      body: `**What failed:** alerts reach nobody: SKYNET_ALERT_EMAIL_FROM not set.\n\n${ASSIGNED_MARKER}`,
+    };
+    const offAgain = thread("x", opened);
+    expect(actionsFor(mail(), [offAgain])).toEqual([]);
+    const reopened = thread("x", {
+      ...opened,
+      botComments: [{ type: "Bot", body: REOPENED_MARKER, at: iso(NOW - MIN) }],
+    });
+    expect(kinds(actionsFor(mail(), [reopened]))).toEqual(["assign"]);
     // A stranger's copy of the marker never stops the email.
     const forged = {
       ...old,
@@ -889,6 +902,8 @@ describe("fitness: the owner is assigned last", () => {
       expect(script).toContain(`MAX_STARTS=${attempts.max}`);
       expect(script).toContain(`WINDOW_HOURS=${attempts.windowHours}`);
       expect(script).toContain(REOPENED_MARKER);
+      // The one line both scripts post when a fix did not hold.
+      expect(script.replaceAll("$REOPEN_DAYS", "14")).toContain(REOPEN_LINE);
     },
   );
 });
@@ -1358,6 +1373,8 @@ describe("fitness wiring", () => {
       "issue create --title [fitness] alerts-reach-owner --label bug --assignee ejclark --body",
     );
     expect(calls(stub, "gh")).toContain("Only the owner can fix this");
+    // The marker in the body is what stops a second assignment if he takes himself off.
+    expect(calls(stub, "gh")).toContain(ASSIGNED_MARKER);
   });
 
   it("assigns under the clock's token, then says why once, with the marker the next tick reads", () => {
@@ -1517,6 +1534,11 @@ describe("fitness wiring", () => {
       run(fixture({ machines: started(6 * MIN), stampAgeMs: 60 * MIN }), ["--json"]),
     );
     expect(late("bots-responsive").status).toBe("fail");
+    // A second start inside the hour is a machine that keeps dying: no grace, or a restart loop
+    // reads as quiet on every tick.
+    const looping = `[{"id":"m1","state":"started","config":{},"events":[{"type":"start","timestamp":${Date.now() - 4 * MIN}},{"type":"start","timestamp":${Date.now() - MIN}}]}]`;
+    const loop = results(run(fixture({ machines: looping, stampAgeMs: 60 * MIN }), ["--json"]));
+    expect(loop("bots-responsive").status).toBe("fail");
     // The grace answers a stale stamp only: a fresh stamp still passes.
     const ok = results(run(fixture({ machines: started(MIN) }), ["--json"]));
     expect(ok("bots-responsive").status).toBe("pass");
@@ -1577,6 +1599,7 @@ describe("fitness wiring", () => {
     expect(off).toBeGreaterThan(-1);
     expect(on).toBeGreaterThan(off);
     expect(said).toBeGreaterThan(on);
+    expect(gh.slice(said)).toContain(ASSIGNED_MARKER);
     // The path's own thread opens unassigned: the re-assign is the one email.
     expect(gh).toContain("issue create --title [fitness] owner-assignment-path --label bug --body");
   });

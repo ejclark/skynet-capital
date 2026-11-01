@@ -83,6 +83,8 @@ const ALERT_SECRETS = ["SKYNET_ALERT_EMAIL_API_KEY", "SKYNET_ALERT_EMAIL_FROM"];
 // The `reaches` values report() understands. Any other value files nothing.
 const ISSUE_TO_OWNER = "an issue assigned to the owner";
 const HOMES = ["clock", "push", "session"];
+// A second start inside this is a machine that keeps dying, not one that just came back.
+const RESTART_LOOP_MS = 60 * 60_000;
 // How recent a bot's assignment must be for the assignment path to count as used. A longer quiet
 // costs one test email, which is the drill: the failure's own issue is the fresh assignment.
 const ASSIGNMENT_FRESH_MS = 30 * 24 * 60 * 60_000;
@@ -274,10 +276,16 @@ function memoryDirs() {
     .filter((dir) => existsSync(join(dir, "MEMORY.md")));
 }
 
-/** Whether Fly started this machine inside the window. No start event on record is not recent. */
-function startedWithin(machine, windowMs, nowMs) {
-  const starts = (machine.events ?? []).filter((e) => e.type === "start").map((e) => e.timestamp);
-  return starts.length > 0 && nowMs - Math.max(...starts) < windowMs;
+/**
+ * Whether Fly started this machine once, inside the window. Once matters: a process that dies and
+ * restarts every few minutes always has a young start and a stale stamp, and a grace for every
+ * start would read that loop as quiet on every tick. No start event on record is not recent.
+ */
+function startedOnceWithin(machine, windowMs, nowMs) {
+  const starts = (machine.events ?? [])
+    .filter((e) => e.type === "start" && nowMs - e.timestamp < RESTART_LOOP_MS)
+    .map((e) => e.timestamp);
+  return starts.length === 1 && nowMs - starts[0] < windowMs;
 }
 
 // One read for the whole assignment path: REST would be one call per issue held, every tick, and the
@@ -348,7 +356,7 @@ export const CONTRACTS = [
       const verdict = judgeStamp(stamp, nowMs);
       // The start script ran moments ago, so the stamp on disk is the dead process's. Give it the
       // stamp's own window to write a new one, rather than a second issue about the same stop.
-      return verdict.status === "fail" && startedWithin(primary, STAMP_FRESH_MS, nowMs)
+      return verdict.status === "fail" && startedOnceWithin(primary, STAMP_FRESH_MS, nowMs)
         ? quiet("the machine just started, so its stamp has not caught up")
         : verdict;
     },
@@ -475,8 +483,8 @@ const assignAction = (number, title, why, detail) => ({
 function firstFailureActions(r, closedIssues, nowMs) {
   const closed = reopenable(closedIssues, issueTitle(r.id), nowMs);
   if (!closed) return [{ kind: "open", result: r, assign: assignsAtOnce(r) }];
-  const removeOwner = (closed.assignees ?? []).some((a) => a.login === OWNER);
-  const actions = [{ kind: "reopen", number: closed.number, result: r, removeOwner }];
+  const heldByOwner = (closed.assignees ?? []).some((a) => a.login === OWNER);
+  const actions = [{ kind: "reopen", number: closed.number, result: r, removeOwner: heldByOwner }];
   // This reopening starts a new failure, and the assignment below is judged on that basis.
   const reopened = closed.botComments && {
     ...closed,
@@ -558,16 +566,19 @@ function issueBody(r) {
     `**What happens next:** ${whatHappensNext(r)}`,
     "",
     "This issue closes itself once the check passes, and reopens if it fails again within 14 days. Contract: `scripts/fitness.mjs`.",
+    ...(assignsAtOnce(r) ? ["", ASSIGNED_MARKER] : []),
   ].join("\n");
 }
 
 function blindBody(source, results) {
+  const credential = results.some((r) => r.credential);
   return [
     `**These checks are blind:** ${results.map((r) => r.id).join(", ")} cannot read ${source}.`,
     `**What the probes said:** ${[...new Set(results.map((r) => r.detail))].join(" · ")}.`,
-    `**Who hears:** ${whoHearsBlind(results.some((r) => r.credential))} This issue's age is how long the checks have been blind.`,
+    `**Who hears:** ${whoHearsBlind(credential)} This issue's age is how long the checks have been blind.`,
     "",
     `This issue closes itself once ${source} can be read again. Contract: \`scripts/fitness.mjs\`.`,
+    ...(credential ? ["", ASSIGNED_MARKER] : []),
   ].join("\n");
 }
 
@@ -648,7 +659,7 @@ function ghWrites(a) {
             "comment",
             String(a.number),
             "--body",
-            "Re-assigned under the bot: an assignment made under the owner's own login sends no notice.",
+            `Re-assigned under the bot: an assignment made under the owner's own login sends no notice.\n\n${ASSIGNED_MARKER}`,
           ],
         ],
       };

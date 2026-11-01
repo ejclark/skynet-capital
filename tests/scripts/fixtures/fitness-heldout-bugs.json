@@ -229,8 +229,8 @@
   {
     "id": "assign-at-first-failure",
     "file": "scripts/fitness.mjs",
-    "find": "actions.push({ kind: \"open\", result: r, assign: assignsAtOnce(r) })",
-    "replace": "actions.push({ kind: \"open\", result: r, assign: true })",
+    "find": "kind: \"open\", result: r, assign: assignsAtOnce(r)",
+    "replace": "kind: \"open\", result: r, assign: true",
     "why": "the bug this slice removes: every failing contract emails him before anything has tried to fix it"
   },
   {
@@ -278,7 +278,7 @@
   {
     "id": "assign-repeats-after-marker",
     "file": "scripts/fitness-rungs.mjs",
-    "find": "if (asked) return null;",
+    "find": "if (askedAtOpen || asked) return null;",
     "replace": "if (false) return null;",
     "why": "he takes himself off a standing failure and is assigned again on the next tick"
   },
@@ -322,14 +322,16 @@
     "file": "scripts/fitness.mjs",
     "find": "issue.title.startsWith(\"[fitness] \") && newest && !byBot(newest)",
     "replace": "false",
-    "why": "#6501's silent self-assignment reads as a working path"
+    "why": "#6501's silent self-assignment reads as a working path",
+    "contract": "owner-assignment-path"
   },
   {
     "id": "assignment-path-never-stale",
     "file": "scripts/fitness.mjs",
     "find": "return ageMs <= ASSIGNMENT_FRESH_MS",
     "replace": "return ageMs <= Infinity",
-    "why": "a path nothing has used for a year reads as working"
+    "why": "a path nothing has used for a year reads as working",
+    "contract": "owner-assignment-path"
   },
   {
     "id": "credential-not-noticed",
@@ -361,5 +363,20 @@
     "find": "(.closedAt // \"\") >= $cutoff",
     "replace": "false",
     "why": "each close starts a new thread, so crash, start, pass, close never spends the budget"
+  },
+  {
+    "id": "assign-repeats-after-open",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "if (askedAtOpen || asked) return null;",
+    "replace": "if (asked) return null;",
+    "why": "an issue that opened assigned has no comment marker, so he takes himself off and is assigned again"
+  },
+  {
+    "id": "restart-loop-reads-quiet",
+    "contract": "bots-responsive",
+    "file": "scripts/fitness.mjs",
+    "find": "return starts.length === 1 && nowMs - starts[0] < windowMs;",
+    "replace": "return starts.length > 0 && nowMs - Math.max(...starts) < windowMs;",
+    "why": "a process restarting every few minutes always has a young start, so a dead fleet reads as quiet"
   }
 ]

@@ -18,9 +18,9 @@
 //
 // A dead credential behind a read moves a verdict to the owner rung whatever its contract says.
 //
-// Moving past the first rung is one comment carrying ASSIGNED_MARKER, and that marker is what makes it
-// once: an owner who takes himself off a standing failure has answered, and is not asked again until
-// the thread closes and reopens. There is no quiet-hours rule. Whether a night's email is wanted is
+// Moving past the first rung is one comment carrying ASSIGNED_MARKER, or the marker in the body of
+// an issue that opened assigned, and that marker is what makes it once: an owner who takes himself
+// off a standing failure has answered, and is not asked again until the thread closes and reopens. There is no quiet-hours rule. Whether a night's email is wanted is
 // a question the plan holds open until there is data on how these emails are actually read.
 export const RUNGS = ["script", "wait", "owner", "session"];
 export const OWNER = "ejclark";
@@ -70,10 +70,12 @@ export const assignsAtOnce = (r) => Boolean(r.credential) || r.rung === "owner";
 export function ownerDue(r, thread, nowMs) {
   if (assigned(thread) || !thread.botComments) return null;
   const sinceMs = failingSinceMs(thread);
+  const askedAtOpen =
+    (thread.body ?? "").includes(ASSIGNED_MARKER) && Date.parse(thread.createdAt) >= sinceMs;
   const asked = marked(thread.botComments, ASSIGNED_MARKER).some(
     (c) => Date.parse(c.at) >= sinceMs,
   );
-  if (asked) return null;
+  if (askedAtOpen || asked) return null;
   if (assignsAtOnce(r)) return "only the owner can fix this";
   if (r.attempts) {
     const windowMs = r.attempts.windowHours * HOUR_MS;
