@@ -83,6 +83,9 @@ export interface DecisionDb {
    *  hop from that fill to the parent id `findByOrderId` does. Kept apart on purpose: a caller that
    *  scores fills per order (`playbook-performance.ts`) must not count a spread once per leg. */
   findSpreadLeg(legOrderId: string): OptionOrderLeg | undefined;
+  /** Moves exactly when the leg table gains a row, so a `findSpreadLeg` miss at one mark is still a
+   *  miss at the same mark — what lets the Wire stop re-asking every option fill (#4619). */
+  spreadLegMark(): number;
   /** Writes every entry with `record()`'s own idempotency guarantee, wrapped in one transaction —
    *  the app-side replication listener's insert path (PR 4). */
   recordBatch(entries: readonly DecisionRecord[]): void;
@@ -677,6 +680,8 @@ export function openDecisionDb(path: string): DecisionDb {
     orderJoinMark: () => (selectOrderJoinMark.get() as { mark: string }).mark,
 
     findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),
+
+    spreadLegMark: () => optionTables.legMark(),
 
     playbookObservations: (playbookId, opts) => observations.list(playbookId, opts),
 

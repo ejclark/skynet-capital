@@ -470,7 +470,12 @@ async function main(): Promise<void> {
     // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and the audit
     // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
     readAllLadderProgress,
-    readAllOrderAudit: () => orderAudit.list(),
+    // Handed ids, only those participants' files are read: the Wire asks for its members alone, so
+    // the bots' audit trails (most of the bytes) stay unread (#4619).
+    readAllOrderAudit: async (participantIds) =>
+      participantIds
+        ? (await Promise.all(participantIds.map((id) => orderAudit.list(id)))).flat()
+        : orderAudit.list(),
     // Absent without a GitHub token: the feed then renders no development kind and says so, rather
     // than letting an empty list imply the league has never merged anything.
     ...(developmentSink ? { readMergedPullRequests: developmentSink } : {}),
@@ -526,9 +531,15 @@ async function main(): Promise<void> {
       ? { personasOfOrders: insightsBridge.personasOfOrders }
       : {}),
     readAccountPersonas,
-    // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458).
+    // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458),
+    // and the misses until the table gains a row (#4619).
     ...(insightsBridge.findSpreadLeg
-      ? { findSpreadLeg: rememberSpreadLegs(insightsBridge.findSpreadLeg) }
+      ? {
+          findSpreadLeg: rememberSpreadLegs(
+            insightsBridge.findSpreadLeg,
+            insightsBridge.spreadLegMark,
+          ),
+        }
       : {}),
     // The decision funnel (PR 7b) — same replicated store, same no-JSONL-fallback posture as
     // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.

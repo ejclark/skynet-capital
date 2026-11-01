@@ -45,6 +45,10 @@ export interface LegOrders {
   /** Intent id → OCC symbol → leg order id, for every option intent of one decision. */
   forDecision(decisionId: number): ReadonlyMap<number, ReadonlyMap<string, string>>;
   find(legOrderId: string): OptionOrderLeg | undefined;
+  /** The newest row's rowid. It moves whenever a leg is mapped, and only then: the table is
+   *  `INSERT OR IGNORE` only, never updated or deleted, so an id `find` missed at one mark is still
+   *  missing at the same mark (#4619). */
+  mark(): number;
 }
 
 interface LegOrderRow {
@@ -67,6 +71,7 @@ export function openLegOrders(db: DatabaseSync): LegOrders {
     WHERE i.decision_id = ?
   `);
   const selectOne = db.prepare("SELECT * FROM option_order_legs WHERE leg_order_id = ?");
+  const selectMark = db.prepare("SELECT COALESCE(MAX(rowid), 0) AS mark FROM option_order_legs");
 
   return {
     write(result, legs) {
@@ -106,5 +111,7 @@ export function openLegOrders(db: DatabaseSync): LegOrders {
         ratio: row.ratio,
       };
     },
+
+    mark: () => Number((selectMark.get() as { mark: number | bigint }).mark),
   };
 }

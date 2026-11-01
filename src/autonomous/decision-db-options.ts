@@ -57,6 +57,8 @@ export interface OptionTables {
   forDecision(decisionId: number): ReadonlyMap<number, StoredOption>;
   /** The spread a leg order belongs to, by the leg's own broker id (`decision-db-leg-orders.ts`). */
   findLeg(legOrderId: string): OptionOrderLeg | undefined;
+  /** Moves exactly when a leg is mapped (`LegOrders.mark`). */
+  legMark(): number;
   /** Maps a spread's leg ids to its order — the same writer a result's own leg ids go through. */
   writeLegOrders: LegOrders["write"];
 }
@@ -218,6 +220,7 @@ export function openOptionTables(db: DatabaseSync): OptionTables {
     },
 
     findLeg: (legOrderId) => legOrders.find(legOrderId),
+    legMark: () => legOrders.mark(),
     writeLegOrders: (result, legs) => legOrders.write(result, legs),
   };
 }

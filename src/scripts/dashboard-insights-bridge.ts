@@ -100,6 +100,8 @@ export interface InsightsBridgeHandle {
   /** A spread leg's order id → its spread — the same store, filled by the same replicated
    *  records, so a leg resolves the moment its decision has landed. */
   readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;
+  /** Moves only when that leg table gains a row — same store (`DecisionDb.spreadLegMark`). */
+  readonly spreadLegMark?: () => number;
   /** The decision funnel (PR 7b, #2287) — same store, same dark-when-unset posture. */
   readonly funnelFor?: (personaId: string) => DecisionFunnel;
   /** This week's checks, grouped answers and placed trades (#5073 slice 2) — same store. */
@@ -270,6 +272,7 @@ export function startInsightsBridge(
           personasOfOrders: (orderIds: readonly string[]) => decisionDb.personasOfOrders(orderIds),
           orderJoinMark: () => decisionDb.orderJoinMark(),
           findSpreadLeg: (legOrderId: string) => decisionDb.findSpreadLeg(legOrderId),
+          spreadLegMark: () => decisionDb.spreadLegMark(),
           // Not remembered: the store folds each persona's funnel and reads only what was recorded
           // since (`decision-db-funnel.ts`, #4619), so every ask is ~2 ms and current.
           funnelFor: (personaId: string) => decisionDb.funnelFor(personaId),
