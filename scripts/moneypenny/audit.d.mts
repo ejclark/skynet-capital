@@ -68,6 +68,8 @@ export interface AuditDeps {
   driftChore?: AuditIntent | null;
   /** Green, unarmed PRs whose arm job failed — the re-arm act stage (stranded-pr.mjs). */
   stranded?: import("./stranded-pr.mjs").StrandedPr[];
+  /** The 15-minute clock as this tick read it (clock-watch.mjs, #6470) — null when unreadable. */
+  clock?: import("./clock-watch.mjs").ClockState | null;
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];

@@ -3,6 +3,7 @@
 // slice 3) joined 2026-08-29: a plan issue whose ready-flip comment never got claimed or built is
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
+import { clockIntents, clockOrUnknown } from "./clock-watch.mjs";
 import { driftChoreFromRepo } from "./drift-chore.mjs";
 import { ghRestAll, sh } from "./gh.mjs";
 import { FOOTER, LABELS, PARKING_LABELS } from "./labels.mjs";
@@ -311,6 +312,11 @@ export function audit(deps = {}) {
   // The stranded-PR act stage (stranded-pr.mjs): re-run a green PR's failed arm job, once per head.
   // `halt` stops every lane, so it stops this too — re-arming lands work.
   if (deps.workMode?.mode?.position !== "halt") intents.push(...rearmIntents(deps.stranded));
+  // The clock's watcher (clock-watch.mjs, #6470): one `[fitness] clock-running` issue while the
+  // 15-minute schedule's newest successful run is over 3h old, closed when it is back. Not gated on
+  // `halt`: a stopped clock under halt is still a stopped clock, and an issue is not work. Null
+  // means the Actions list could not be read this tick — `clockIntents` decides nothing on it.
+  intents.push(...clockIntents(deps.clock));
   return intents;
 }
 
@@ -593,6 +599,8 @@ export function gatherAuditDeps(nowMs) {
     workMode: workModeState(nowMs),
     driftChore: driftChoreFromRepo(issues),
     stranded: strandedOrNone(nowMs),
+    // One REST call; the open issue comes from the `issues` list already in hand.
+    clock: clockOrUnknown(nowMs, issues),
   };
 }
 
