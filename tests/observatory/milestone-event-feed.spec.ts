@@ -7,13 +7,15 @@ import {
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
 import {
   collapseMilestoneEvents,
-  deriveMilestoneEvents,
+  earnedMilestoneEvents,
   mergeLadderLogIntoEvents,
   milestoneFromEvent,
   toMemberMilestones,
 } from "../../src/observatory/milestone-event-feed.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
+import { ladderEvidenceFrom } from "../../src/server/ladder-evidence.js";
 import type { LadderProgressEntry } from "../../src/server/ladder-progress-log.js";
+import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 
 /**
  * The read half of #784's fourth kind (slice 5) — given envelopes and ledgers, who in the league earned
@@ -138,9 +140,26 @@ describe("mergeLadderLogIntoEvents", () => {
   });
 });
 
-describe("deriveMilestoneEvents", () => {
+/** Each participant's rungs as the Learn page's held ladder proves them, as feed events. */
+function derived(
+  fills: readonly TradeActivityRecord[],
+  tags: readonly OrderAuditRecord[],
+): ActivityEvent[] {
+  const ids = [...new Set(fills.map((f) => f.participantId))];
+  return ids.flatMap((id) =>
+    earnedMilestoneEvents(
+      id,
+      ladderEvidenceFrom(
+        fills.filter((f) => f.participantId === id),
+        tags.filter((t) => t.participantId === id),
+      ).earned,
+    ),
+  );
+}
+
+describe("earnedMilestoneEvents", () => {
   it("derives a member's first stock buy from the fill alone", () => {
-    const rows = collapseMilestoneEvents(deriveMilestoneEvents([fill()], []));
+    const rows = collapseMilestoneEvents(derived([fill()], []));
 
     expect(rows).toEqual([
       { participantId: "eric", milestoneId: "first-buy", orderId: "ord-1", at: fill().at },
@@ -150,7 +169,7 @@ describe("deriveMilestoneEvents", () => {
   it("derives NOTHING from an untagged option fill — the Learn page's own rule", () => {
     const optionFill = fill({ orderId: "p1", symbol: OCC_PUT, side: "sell" });
 
-    expect(deriveMilestoneEvents([optionFill], [])).toEqual([]);
+    expect(derived([optionFill], [])).toEqual([]);
   });
 
   it("derives a cash-secured put from an option fill the ticket tagged as opening one", () => {
@@ -163,16 +182,14 @@ describe("deriveMilestoneEvents", () => {
       intent: "open" as const,
     };
 
-    const ids = collapseMilestoneEvents(deriveMilestoneEvents([optionFill], [tag])).map(
-      (r) => r.milestoneId,
-    );
+    const ids = collapseMilestoneEvents(derived([optionFill], [tag])).map((r) => r.milestoneId);
 
     expect(ids).toEqual(["first-cash-secured-put"]);
   });
 
   it("never credits one member's fill to another member", () => {
     const rows = collapseMilestoneEvents(
-      deriveMilestoneEvents([fill(), fill({ orderId: "ord-2", participantId: "ada" })], []),
+      derived([fill(), fill({ orderId: "ord-2", participantId: "ada" })], []),
     );
 
     expect(rows.map((r) => `${r.participantId}:${r.orderId}`).sort()).toEqual([
@@ -182,11 +199,11 @@ describe("deriveMilestoneEvents", () => {
   });
 
   it("derives nothing from an order that never filled", () => {
-    expect(deriveMilestoneEvents([fill({ filledQuantity: 0, status: "new" })], [])).toEqual([]);
+    expect(derived([fill({ filledQuantity: 0, status: "new" })], [])).toEqual([]);
   });
 
   it("is never stored: every derived event says it was derived, not logged", () => {
-    const [event] = deriveMilestoneEvents([fill()], []);
+    const [event] = derived([fill()], []);
 
     expect(event?.source).toBe("derived");
   });
