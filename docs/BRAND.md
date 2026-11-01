@@ -204,6 +204,15 @@ pieces to 1 piece per row/week."* The handles, so the next request can be one ph
   plays get high-beta movers). No "iron condor on NVDA" mismatches.
 - Governance/credentials are the owner's call; the app builds mechanisms, never self-authorizes.
 
+## Where the brand is going
+
+The name and the identity are still forming (Eric, 2026-11-01: "this is a problem we can work towards
+resolution over time as we built new content and find our brand identity. Be on the lookout for ideas
+that we can weave into our brand!"). When work turns up a line, a mechanic, a joke or a way of talking
+that could carry the brand, add one row to the list in the first comment of #6616: what it is, where
+it came from, why it might carry. Propose only: no rename and no new name in member copy until he picks
+one. Quality over volume.
+
 ## Cohesion rules (how new work stays on-brand)
 
 - **Named patterns live in [`PATTERNS.md`](PATTERNS.md)** — the seed bank of UI patterns with a
