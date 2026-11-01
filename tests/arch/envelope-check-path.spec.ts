@@ -70,6 +70,10 @@ describe("--check normalizes the path it is given (#1355)", () => {
     expect(rows.map((r) => r.path)).toEqual(["CLAUDE.m", "--lane", "envelope.json"]);
     expect(rows.find((r) => r.path === "envelope.json")?.blocking).toBe(true);
   });
+  it("judges a name with a newline in it against a protected directory's rule", () => {
+    const [row] = check("--", ".github/workflows/x\ny.yml");
+    expect(row?.blocking).toBe(true);
+  });
   it("treats an unknown --word as the first path, so it cannot shield a flag behind it", () => {
     const rows = check("--aaa", "--base", "envelope.json");
     expect(rows.map((r) => r.path)).toEqual(["--aaa", "--base", "envelope.json"]);

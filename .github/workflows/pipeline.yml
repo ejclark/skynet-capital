@@ -478,6 +478,8 @@ jobs:
         # git quoting a non-ASCII name into a form no rule matches, and --no-renames keeps the source
         # of a rename out of a protected directory on the list. Into a file first, so a failed diff
         # fails this step (bash -e); a process substitution would read as an empty, unprotected diff.
+        # Names reach the log escaped and behind a word (%q, @json): the runner reads any line that
+        # starts with `::` as a workflow command, and this log prints what the PR named its files.
         run: |
           BASE="${{ github.event.pull_request.base.sha }}"
           GATE="$RUNNER_TEMP/envelope-gate"
@@ -485,12 +487,12 @@ jobs:
           git diff -z --name-only --no-renames "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" > "$GATE/files"
           FILES=()
           while IFS= read -r -d '' f; do FILES+=("$f"); done < "$GATE/files"
-          echo "changed files:"; printf '%s\n' "${FILES[@]}"
+          printf 'changed: %q\n' "${FILES[@]}"
           git show "$BASE:envelope.json" > "$GATE/envelope.json"
           git show "$BASE:scripts/envelope-scan.mjs" > "$GATE/scripts/envelope-scan.mjs"
           # Fail closed: a crashed scan or unparseable output fails this step (bash -e), never arms.
           SCAN=$(cd "$GATE" && node scripts/envelope-scan.mjs --check -- "${FILES[@]}")
-          HITS=$(printf '%s' "$SCAN" | jq -er '[.[] | select(.blocking) | .path] | join(" ")')
+          HITS=$(printf '%s' "$SCAN" | jq -er '[.[] | select(.blocking) | .path | @json] | join(" ")')
           if [ -n "$HITS" ]; then
             echo "::notice::not arming — protected paths need Eric's merge: $HITS"
             echo "blocking=true" >> "$GITHUB_OUTPUT"

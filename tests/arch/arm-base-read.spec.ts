@@ -122,6 +122,17 @@ describe("arm auto-merge reads the protected list and the scanner from the base 
     stage("rename-out", () => {
       git("mv", "secret/old.txt", "open/old.txt");
     });
+    // -z delivers a newline raw, and `.*` in a rule's regex stops at one.
+    stage("newline-name", () => {
+      writeFileSync(join(dir, "secret/a\nb.txt"), "stolen\n");
+    });
+    // Names the runner would read as workflow commands if they reached the log as they stand, one
+    // through the changed-files list and one through the not-arming notice.
+    stage("command-names", () => {
+      writeFileSync(join(dir, "::error::root"), "decoy\n");
+      writeFileSync(join(dir, "open/x\n::stop-commands::t"), "decoy\n");
+      writeFileSync(join(dir, "secret/y\n::error::notice"), "stolen\n");
+    });
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -170,13 +181,28 @@ describe("arm auto-merge reads the protected list and the scanner from the base 
     expect(r.written).toContain("blocking=false");
   });
 
-  for (const name of ["root-flag-file", "spaced-decoy", "non-ascii-name", "rename-out"]) {
+  for (const name of [
+    "root-flag-file",
+    "spaced-decoy",
+    "non-ascii-name",
+    "rename-out",
+    "newline-name",
+  ]) {
     it(`refuses to arm a diff that hides a protected path by its file names: ${name}`, () => {
       const r = armStep(smuggled[name] as string);
       expect(r.code).toBe(0);
       expect(r.written).toContain("blocking=true");
     });
   }
+
+  it("prints no file name the runner could read as a workflow command", () => {
+    const r = armStep(smuggled["command-names"] as string);
+    expect(r.code).toBe(0);
+    expect(r.written).toContain("blocking=true");
+    // The runner trims leading space before it looks for `::`, so indenting would not be enough.
+    const commands = r.stdout.split("\n").filter((l) => l.trimStart().startsWith("::"));
+    expect(commands.map((l) => l.split("::")[1])).toEqual(["notice"]);
+  });
 
   it("still arms an honest PR whose only oddity is a space in an open file's name", () => {
     const r = armStep(honestSpaced);

@@ -80,7 +80,8 @@ export function globToRegExp(pattern) {
       out += c;
     }
   }
-  return new RegExp(`^${out}$`);
+  // `s`: a file name can hold a newline, and `.*` must not stop at it (the arm job passes names raw).
+  return new RegExp(`^${out}$`, "s");
 }
 
 /** The rule a path breaches, or null. Pure — the specs drive this directly. */
