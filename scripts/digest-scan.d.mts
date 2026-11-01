@@ -14,10 +14,11 @@ export function waitingWork(input: {
   readyIssues?: (PullableIssue & { title?: string })[];
   researchDue?: number;
 }): WaitingWork;
-/** `quiet-with-work`, or null; `waiting: null` (an unknown read) is never due. */
+/** `quiet-with-work`, or null. A half that could not be read is null and counts as nothing;
+ *  `waiting: null` (nothing read) is never due. */
 export function quietReason(
   quietHours: number,
-  waiting: WaitingWork | null,
+  waiting: { ready: WaitingWork["ready"] | null; researchDue: number | null } | null,
 ): "quiet-with-work" | null;
 
 export function digestFiles(): string[];

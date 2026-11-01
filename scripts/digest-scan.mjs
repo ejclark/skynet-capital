@@ -122,53 +122,79 @@ export function waitingWork({ readyIssues = [], researchDue = 0 }) {
   return { ready, researchDue };
 }
 
-/** The third due reason, pure: `quiet-with-work` or null. An unknown read (`waiting: null`) is never due. */
+/**
+ * The third due reason, pure: `quiet-with-work` or null. A half that could not be read is `null`
+ * inside `waiting` and counts as nothing — never as due; `waiting: null` (nothing read) is never due.
+ */
 export function quietReason(quietHours, waiting) {
   if (quietHours < QUIET_HOURS || !waiting) return null;
-  return waiting.ready.length || waiting.researchDue ? "quiet-with-work" : null;
+  const ready = waiting.ready?.length ?? 0;
+  const research = waiting.researchDue ?? 0;
+  return ready > 0 || research > 0 ? "quiet-with-work" : null;
 }
 
 /**
- * The waiting read, made only past the quiet threshold: one `gh issue list` (the sweep's own
- * `readOpenIssues` shape) and one local event scan for `today`. Soft on failure, by design: this
- * runs inside a claude.ai Routine whose `--due` answer is the whole contract, and a GitHub blip
- * must cost one "unknown" line — printed on stderr, carried in the JSON — not a crashed clock or
- * a silent "not due". Mirrors `learningLine`'s `unlearnedRuns: null`.
+ * The open `ready` issues, as the sweep reads them: the same `gh api` call as admission.mjs's
+ * `readOpenIssues("ready")`, written here rather than imported because admission → rank →
+ * digest-scan is a cycle this file's top-level `await main()` would deadlock on (node exit 13).
+ * REST, not `gh issue list` — that is GraphQL, which a Claude Code cloud session is refused with a
+ * 403 (circuit-breaker.mjs:99, 2026-10-18), and the Routine that runs `--due` is one. One page of
+ * 100 is the sweep's own ceiling; a full page is said as unknown rather than read as the whole list.
+ */
+function readReadyIssues() {
+  const rows = JSON.parse(
+    execFileSync(
+      "gh",
+      [
+        "api",
+        "repos/{owner}/{repo}/issues?state=open&labels=ready&sort=created&direction=asc&per_page=100",
+      ],
+      { cwd: ROOT, encoding: "utf8" },
+    ) || "[]",
+  );
+  if (!Array.isArray(rows)) throw new Error("the open `ready` read did not return a list");
+  if (rows.length >= 100) throw new Error("100+ open `ready` issues — the list may be truncated");
+  return rows.filter((r) => !r.pull_request);
+}
+
+/**
+ * The waiting read, made only past the quiet threshold: the ready list above and one local event
+ * scan for `today`. Each half is soft on failure on its own, by design: this runs inside a
+ * claude.ai Routine whose `--due` answer is the whole contract, and a GitHub blip must cost one
+ * "unknown" half — printed on stderr, carried in the JSON — not a crashed clock, a silent "not
+ * due", or the other half's good read. Mirrors `learningLine`'s `unlearnedRuns: null`.
  */
 function readWaitingWork(today) {
-  try {
-    const ready = JSON.parse(
-      execFileSync(
-        "gh",
-        [
-          "issue",
-          "list",
-          "--label",
-          "ready",
-          "--state",
-          "open",
-          "--limit",
-          "200",
-          "--json",
-          "number,title,state,labels",
-        ],
-        { cwd: ROOT, encoding: "utf8" },
-      ) || "[]",
-    );
-    const due = JSON.parse(
+  const unknown = [];
+  const soft = (what, read) => {
+    try {
+      return read();
+    } catch (err) {
+      const why = String(err?.stderr || err?.message || err)
+        .trim()
+        .slice(0, 200);
+      console.error(`· ${what} unknown — ${why}`);
+      unknown.push(`${what}: ${why}`);
+      return null;
+    }
+  };
+  const readyIssues = soft("ready issues", readReadyIssues);
+  const due = soft("research due", () =>
+    JSON.parse(
       execFileSync("node", [join(ROOT, "scripts/event-scan.mjs"), "--due", `--today=${today}`], {
         cwd: ROOT,
         encoding: "utf8",
       }) || "[]",
-    );
-    return { waiting: waitingWork({ readyIssues: ready, researchDue: due.length }), unknown: null };
-  } catch (err) {
-    const why = String(err?.stderr || err?.message || err)
-      .trim()
-      .slice(0, 200);
-    console.error(`· work waiting unknown — ${why}`);
-    return { waiting: null, unknown: why };
-  }
+    ),
+  );
+  const counted = waitingWork({ readyIssues: readyIssues ?? [], researchDue: due?.length ?? 0 });
+  return {
+    waiting: {
+      ready: readyIssues ? counted.ready : null,
+      researchDue: due ? counted.researchDue : null,
+    },
+    unknown: unknown.length ? unknown.join(" · ") : null,
+  };
 }
 
 /** The digest's "Needs you" list from `plan()` output: one line per item Eric holds. Pure. */
@@ -261,8 +287,12 @@ function quietLine(s) {
   const base = ` · main quiet ${s.quietHours}h (quiet rule ${QUIET_HOURS}h with work waiting)`;
   if (s.quietHours < QUIET_HOURS) return base;
   if (!s.waiting) return `${base} — work waiting unknown: ${s.waitingUnknown}`;
-  const ready = s.waiting.ready.map((i) => `#${i.number}`).join(" ") || "none";
-  return `${base}: ready to start ${ready}, research due ${s.waiting.researchDue}`;
+  const ready = s.waiting.ready
+    ? s.waiting.ready.map((i) => `#${i.number}`).join(" ") || "none"
+    : "unknown";
+  const research = s.waiting.researchDue ?? "unknown";
+  const why = s.waitingUnknown ? ` (${s.waitingUnknown})` : "";
+  return `${base}: ready to start ${ready}, research due ${research}${why}`;
 }
 
 function validate() {

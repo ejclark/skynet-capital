@@ -20,10 +20,12 @@ the pull rule admits or a due research event sits unstarted — #6470, the 75.8h
 that no rule noticed), or Eric asks. The daily Routine (docs/ROUTINES.md) is just the clock; this
 skill is the procedure. **On `quiet-with-work`** the top headline is the quiet line itself
 (`main quiet Nh · ready to start #a #b · research due N`, from the JSON's `quietHours` and
-`waiting`), and Needs-you gets one item: press the scan button (Actions → Moneypenny Events →
-Run workflow → `scan`) or say here why the lanes should wait — every lane wakes only on a
-repository event, so a quiet main is lanes idle beside work until someone fires one.
-`waitingUnknown` set means the GitHub read failed: say so in Noise absorbed, never list it as due.
+`waiting`), and Needs-you gets one item, one line to paste:
+`gh workflow run moneypenny-events.yml --ref main -f command=scan` (the scan button, Actions →
+Moneypenny Events → Run workflow) — or say on the digest why the lanes should wait. Every lane
+wakes only on a repository event, so a quiet main is lanes idle beside work until someone fires
+one. `waitingUnknown` set means a read failed and that half is null: say so in Noise absorbed,
+never list the unknown half as waiting.
 
 **Collect** (facts, not memory): `git log origin/main --oneline --since=<last digest date>`; open
 PRs and issues; `docs/ROUTINES.md` states; new/changed `docs/research/events/*` ledgers and

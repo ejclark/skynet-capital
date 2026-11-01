@@ -57,14 +57,22 @@ describe("quietReason — the third due reason", () => {
 
   it("is never due on an unknown read — unknown is said, not counted", () => {
     expect(quietReason(80, null)).toBeNull();
+    expect(quietReason(80, { ready: null, researchDue: null })).toBeNull();
+  });
+
+  it("counts the half that was read when the other half failed", () => {
+    expect(quietReason(80, { ready: waiting.ready, researchDue: null })).toBe("quiet-with-work");
+    expect(quietReason(80, { ready: null, researchDue: 1 })).toBe("quiet-with-work");
+    expect(quietReason(80, { ready: null, researchDue: 0 })).toBeNull();
   });
 });
 
 // THE WIRING. `GIT_DIR` points the script's git at a throwaway history whose only commit on
 // `origin/main` is dated 2026-10-27T13:37:21Z (the real gap's first silent hour), and a fake `gh`
-// on PATH records its argv and answers the ready list from a fixture. docs/digests/ and
-// scripts/event-scan.mjs are the real ones in cwd, so the research count is whatever the scan says
-// for that day — asserted as a number, never pinned, because ledgers written since change it.
+// on PATH records its argv and answers the sweep's REST ready read from a fixture. docs/digests/
+// and scripts/event-scan.mjs are the real ones in cwd, so the research count is whatever the scan
+// says for that day — a number, or null if that scan refused the day — never pinned, because
+// ledgers written since change it; the ready half is asserted exactly and is read on its own.
 describe("digest-scan --due — the quiet reason, end to end", () => {
   let dir: string;
   let log: string;
@@ -100,7 +108,7 @@ describe("digest-scan --due — the quiet reason, end to end", () => {
         "#!/bin/sh",
         `printf '%s\\n' "$*" >> "${log}"`,
         'case "$*" in',
-        '  *"issue list"*) cat "$READY_FIXTURE" ;;',
+        '  *"api repos/{owner}/{repo}/issues?state=open&labels=ready"*) cat "$READY_FIXTURE" ;;',
         "  *) echo '[]' ;;",
         "esac",
         "",
@@ -139,10 +147,13 @@ describe("digest-scan --due — the quiet reason, end to end", () => {
     expect(out.reason).toBe("quiet-with-work");
     expect(out.due).toBe(true);
     expect(out.waiting.ready).toEqual([{ number: 6018, title: "issue 6018" }]);
-    expect(typeof out.waiting.researchDue).toBe("number");
-    // The ready read is the one the sweep makes: open `ready` issues with the labels the pull rule reads.
-    expect(calls.some((c) => c.includes("issue list") && c.includes("--label ready"))).toBe(true);
-    expect(calls.some((c) => c.includes("--json") && c.includes("labels"))).toBe(true);
+    expect(out.waiting.researchDue === null || typeof out.waiting.researchDue === "number").toBe(
+      true,
+    );
+    // The ready read is the sweep's own: REST (a cloud session is refused GraphQL), open `ready`.
+    expect(calls).toEqual([
+      "api repos/{owner}/{repo}/issues?state=open&labels=ready&sort=created&direction=asc&per_page=100",
+    ]);
   });
 
   it("WHEN main is 46h quiet but every ready issue is started or parked, THEN only due research counts", () => {
@@ -152,7 +163,7 @@ describe("digest-scan --due — the quiet reason, end to end", () => {
     );
     expect(status).toBe(0);
     expect(out.waiting.ready).toEqual([]);
-    expect(out.reason).toBe(out.waiting.researchDue > 0 ? "quiet-with-work" : null);
+    expect(out.reason).toBe((out.waiting.researchDue ?? 0) > 0 ? "quiet-with-work" : null);
   });
 
   it("WHEN main has been quiet under a day, THEN GitHub is not read at all — a no-op costs nothing", () => {
