@@ -1,44 +1,29 @@
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterAll, describe, expect, it } from "@rstest/core";
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "@rstest/core";
 import {
   answerPrompt,
+  caseDigest,
   casesFor,
   judgePrompt,
   pageOf,
-  runOfSlot,
   runsFor,
   scoreReplay,
   setProblems,
   shapeProblems,
   // @ts-expect-error plain .mjs script, no declarations
 } from "../../scripts/intent-replay.mjs";
-import { type Reply, runWorkflow } from "../support/run-workflow";
+import { kase, SET } from "./intent-replay/fixtures";
+// One spec with its parts beside it, split only for the 500-line cap: `fitness-audit --spec` runs one
+// file, so a bug list graded on this entry has to reach all of them (each part goes in a --with).
+import "./intent-replay/score.cases";
+import "./intent-replay/cli.cases";
+import "./intent-replay/workflow.cases";
 
 // No model runs here. A score says whether a page about how Eric writes helps a session read him, so
 // the runner has to hand each answerer the message and none of the answer, keep the judge from knowing
 // which answer read the page, and count what came back without flattering either side. These pin all
 // three on a fixture; what a real session does with the prompt is only known from a real run.
-const kase = (id: string, over = {}) => ({
-  id,
-  date: "2026-10-01",
-  said: `the words of ${id}`,
-  context: `the context of ${id}`,
-  route: "act-now",
-  ask: "must-not-ask",
-  mustDo: [`THE-MUST-DO of ${id}`],
-  mustNotDo: [`THE-MUST-NOT of ${id}`],
-  evidence: `THE-EVIDENCE of ${id}`,
-  confidence: "high",
-  ...over,
-});
-const SET = {
-  header: { wordsThatAreNotNames: [] },
-  cases: [kase("C1"), kase("C2", { route: "question" }), kase("C3")],
-};
-const IDS = ["C1", "C2", "C3"];
+const IDS = SET.cases.map((row) => row.id);
 
 describe("the set a public repo can hold", () => {
   const problemsOf = (over: Record<string, unknown>) =>
@@ -98,6 +83,30 @@ describe("the set a public repo can hold", () => {
     const bad = { ...SET, cases: [kase("C1", { said: "Priya" })] };
     expect(() => casesFor(bad)).toThrow(/Priya/);
   });
+
+  it("will not write a prompt from a set with a problem, nor score one", () => {
+    const bad = { ...SET, cases: [kase("C1", { said: "Priya" })] };
+    const page = "### How he writes\nA GUIDE ROW\n";
+    expect(() => answerPrompt(bad, { arm: "without", order: "forward", page })).toThrow(/Priya/);
+    expect(() => answerPrompt(bad, { arm: "with", order: "backward", page })).toThrow(/Priya/);
+    expect(() => judgePrompt(bad)).toThrow(/Priya/);
+    // Results that really did run on this set, so the refusal can only be the safety rule's.
+    const results = {
+      caseIds: ["C1"],
+      caseDigests: [caseDigest(bad.cases[0])],
+      runs: runsFor(2).map((run: object) => ({ ...run, answers: [] })),
+      verdicts: [],
+    };
+    expect(() => scoreReplay(bad, results)).toThrow(/Priya/);
+  });
+
+  // Written down here and in the script, and pinned so that closing it has to say so here. There is no
+  // list of real names behind this rule, and there will not be: that list would be the leak.
+  it("stays open: the name check reads capitals, so a name in all capitals or none passes it", () => {
+    expect(problemsOf({ said: "Priya wants the report" }).join()).toContain("Priya");
+    expect(problemsOf({ said: "PRIYA wants the report" })).toEqual([]);
+    expect(problemsOf({ said: "priya wants the report" })).toEqual([]);
+  });
 });
 
 describe("the runs", () => {
@@ -109,18 +118,33 @@ describe("the runs", () => {
       "with-2",
     ]);
     expect(casesFor(SET).runs).toHaveLength(4);
-    expect(casesFor(SET, { n: 3 }).runs).toHaveLength(6);
+    expect(casesFor(SET, { n: 4 }).runs).toHaveLength(8);
   });
 
   it("has each arm read both orders, and the two arms opposite on every pass", () => {
-    const orders = (arm: string) =>
-      runsFor(2)
+    const orders = (arm: string, n = 2) =>
+      runsFor(n)
         .filter((r: { arm: string }) => r.arm === arm)
         .map((r: { order: string }) => r.order);
     expect(orders("without")).toEqual(["forward", "backward"]);
     expect(orders("with")).toEqual(["backward", "forward"]);
-    const [without, withPage] = runsFor(1);
-    expect(without.order).not.toBe(withPage.order);
+    expect(orders("without", 4)).toEqual(["forward", "backward", "forward", "backward"]);
+    expect(orders("with", 4)).toEqual(["backward", "forward", "backward", "forward"]);
+  });
+
+  it("refuses an N that would leave an arm reading one order more than the other", () => {
+    // N=1 is the whole confound: each arm reads one direction, so order poses as the page.
+    for (const n of [1, 3, 5]) {
+      expect(() => casesFor(SET, { n }), String(n)).toThrow(/both orders/);
+    }
+    for (const n of [2, 4]) {
+      const { runs } = casesFor(SET, { n });
+      for (const arm of ["without", "with"]) {
+        const ofArm = runs.filter((r: { arm: string }) => r.arm === arm);
+        const forward = ofArm.filter((r: { order: string }) => r.order === "forward");
+        expect(forward.length * 2, `${arm} at ${n}`).toBe(ofArm.length);
+      }
+    }
   });
 
   it("prices the run and refuses an N it cannot mean", () => {
@@ -131,8 +155,17 @@ describe("the runs", () => {
       agents: 7,
       startTokens: 210_000,
     });
+    expect(casesFor(SET, { n: 4 }).price).toEqual({
+      answerers: 8,
+      judges: 1,
+      lookups: 2,
+      agents: 11,
+      startTokens: 330_000,
+    });
     expect(casesFor(SET).ids).toEqual(IDS);
-    for (const n of [0, -1, 1.5, 6]) expect(() => casesFor(SET, { n }), String(n)).toThrow(/n/);
+    for (const n of [0, -1, -2, 1.5, 6, Number.NaN]) {
+      expect(() => casesFor(SET, { n }), String(n)).toThrow(/--n must be/);
+    }
   });
 });
 
@@ -178,6 +211,15 @@ describe("what an answerer is told", () => {
     expect(() => answerPrompt(SET, { arm: "with", order: "up", page: PAGE })).toThrow(/order/);
     expect(() => answerPrompt(SET, { arm: "with", order: "forward", page: "" })).toThrow(/page/);
   });
+
+  it("refuses a page that is only blank lines or headings, which would leave the arms the same", () => {
+    for (const page of ["  \n\n", "### How he writes\n\n### What breaks his flow\n"]) {
+      expect(
+        () => answerPrompt(SET, { arm: "with", order: "forward", page }),
+        JSON.stringify(page),
+      ).toThrow(/page/);
+    }
+  });
 });
 
 describe("the page a run hands over", () => {
@@ -213,6 +255,31 @@ describe("the page a run hands over", () => {
   it("says so when the sections are gone, never scoring an empty page", () => {
     expect(() => pageOf("## Eric — the primary reader\n")).toThrow(/How he writes/);
   });
+
+  describe("a section that is only its heading, which would leave both arms the same prompt", () => {
+    const HOW = "### How he writes (reading his messages)";
+    const WHAT = "### What breaks his flow";
+    const NEXT = "### How he reads (the physical facts)\n\n| Fact |";
+    const REPLAY = "**Replay, 2026-11-01:** the numbers from the last run.";
+    const rows: [string, string, RegExp][] = [
+      ["both bare", [HOW, WHAT, NEXT].join("\n\n"), /How he writes.*What breaks his flow/],
+      ["the first bare", [HOW, WHAT, "| Kind |", NEXT].join("\n\n"), /How he writes/],
+      ["the second bare", [HOW, "| He writes |", WHAT, NEXT].join("\n\n"), /What breaks his flow/],
+      ["the second gone", [HOW, "| He writes |", NEXT].join("\n\n"), /What breaks his flow/],
+      ["the end of the file", [HOW, "| He writes |", WHAT].join("\n\n"), /What breaks his flow/],
+      ["only the replay's result", [HOW, REPLAY, WHAT, "| Kind |"].join("\n\n"), /How he writes/],
+      ["only sub-headings", [HOW, "#### A part", WHAT, "| Kind |"].join("\n\n"), /How he writes/],
+    ];
+    for (const [name, readers, names] of rows) {
+      it(`throws on ${name}`, () => {
+        expect(() => pageOf(readers)).toThrow(names);
+      });
+    }
+
+    it("passes when both sections have something in them", () => {
+      expect(pageOf([HOW, "| He writes |", WHAT, "| Kind |"].join("\n\n"))).toContain("| Kind |");
+    });
+  });
 });
 
 describe("what the judge is told", () => {
@@ -225,103 +292,6 @@ describe("what the judge is told", () => {
 
   it("names no arm or run, and no route or evidence that would lead it", () => {
     expect(prompt).not.toMatch(/without|with-\d|arm|guide|THE-EVIDENCE|"route"/i);
-  });
-});
-
-describe("the score", () => {
-  const runs = runsFor(2);
-  const answer = (id: string, over = {}) => ({
-    id,
-    route: id === "C2" ? "question" : "act-now",
-    ask: "must-not-ask",
-    firstMove: "m",
-    ...over,
-  });
-  const full = () => runs.map((r: object) => ({ ...r, answers: IDS.map((id) => answer(id)) }));
-  // Every answer of every run passes unless `fails` names its run.
-  const verdicts = (rows: { name: string }[], fails: (name: string, id: string) => boolean) =>
-    IDS.flatMap((id, i) =>
-      rows.map((_, slot) => ({
-        id,
-        slot,
-        pass: !fails(rows[runOfSlot(i, slot, rows.length)]?.name ?? "", id),
-        why: "w",
-      })),
-    );
-  const result = (over = {}) => ({
-    caseIds: IDS,
-    runs: full(),
-    verdicts: verdicts(runs, () => false),
-    ...over,
-  });
-
-  it("adds route, ask and judged per arm, each out of cases times runs", () => {
-    const { arms } = scoreReplay(SET, result());
-    expect(arms.without).toEqual({
-      route: 6,
-      ask: 6,
-      judged: 6,
-      of: 6,
-      answered: 6,
-      unjudged: 0,
-    });
-    expect(arms.with.judged).toBe(6);
-  });
-
-  it("gives each verdict to the run its slot held for that case, not to the slot", () => {
-    const failing = verdicts(runs, (name, id) => name === "with-2" && id !== "C1");
-    const { arms, byRun } = scoreReplay(SET, result({ verdicts: failing }));
-    expect(byRun["with-2"].judged).toBe(1);
-    expect(byRun["with-1"].judged).toBe(3);
-    expect(arms.with.judged).toBe(4);
-    expect(arms.without.judged).toBe(6);
-  });
-
-  it("counts a wrong route or ask only against that answer", () => {
-    const rows = full();
-    rows[0].answers[1] = answer("C2", { route: "park", ask: "should-ask" });
-    const { byRun } = scoreReplay(SET, result({ runs: rows }));
-    expect(byRun["without-1"]).toMatchObject({ route: 2, ask: 2 });
-    expect(byRun["without-2"]).toMatchObject({ route: 3, ask: 3 });
-  });
-
-  it("calls the page above only when every answer is judged and its arm scores higher", () => {
-    expect(scoreReplay(SET, result()).verdict).toBe("page not above");
-    const beaten = verdicts(runs, (name, id) => name === "without-1" && id === "C1");
-    expect(scoreReplay(SET, result({ verdicts: beaten })).verdict).toBe("page above");
-    const lost = verdicts(runs, (name, id) => name === "with-1" && id === "C1");
-    expect(scoreReplay(SET, result({ verdicts: lost })).verdict).toBe("page not above");
-  });
-
-  it("reads a run that died as unknown, never as a low score", () => {
-    const rows = full();
-    rows[3].answers = null;
-    const report = scoreReplay(SET, result({ runs: rows }));
-    expect(report.verdict).toBe("unknown");
-    expect(report.arms.with.answered).toBe(3);
-    expect(report.arms.with.of).toBe(6);
-  });
-
-  it("reads a dead judge as unknown, and gives no credit for a pass on a missing answer", () => {
-    const report = scoreReplay(SET, result({ verdicts: [] }));
-    expect(report.verdict).toBe("unknown");
-    expect(report.arms.without.unjudged).toBe(6);
-    const rows = full();
-    rows[0].answers = [];
-    expect(scoreReplay(SET, result({ runs: rows })).byRun["without-1"].judged).toBe(0);
-  });
-
-  it("names the cases where the arms differ, so a number can be read back to a message", () => {
-    const failing = verdicts(runs, (name, id) => name.startsWith("without") && id === "C3");
-    expect(scoreReplay(SET, result({ verdicts: failing })).differs).toEqual([
-      { id: "C3", without: 0, with: 2 },
-    ]);
-  });
-
-  it("refuses a result from a different set, since a slot means nothing against other cases", () => {
-    expect(() => scoreReplay(SET, result({ caseIds: ["C2", "C1", "C3"] }))).toThrow(/C2/);
-    expect(() => scoreReplay(SET, result({ caseIds: ["C1"] }))).toThrow(/set/);
-    expect(() => scoreReplay(SET, {})).toThrow(/runs/);
   });
 });
 
@@ -349,191 +319,5 @@ describe("the real set", () => {
     expect(page).toContain("He writes");
     expect(page).toContain("What breaks his flow");
     expect(shapeProblems(page)).toEqual([]);
-  });
-});
-
-describe("the command line", () => {
-  const dir = mkdtempSync(join(tmpdir(), "intent-replay-"));
-  const setFile = join(dir, "set.json");
-  writeFileSync(setFile, JSON.stringify(SET));
-  const cli = (...args: string[]) =>
-    spawnSync("node", ["scripts/intent-replay.mjs", ...args], { encoding: "utf8" });
-  afterAll(() => rmSync(dir, { recursive: true, force: true }));
-
-  it("prints the cases as JSON a workflow can read back", () => {
-    const run = cli("cases", "--n", "1", "--set", setFile);
-    expect(run.status).toBe(0);
-    expect(JSON.parse(run.stdout)).toMatchObject({ ids: IDS, price: { agents: 5 } });
-  });
-
-  it("prints an answerer's prompt and the judge's, from the real page", () => {
-    const answer = cli("prompt", "--arm", "with", "--order", "backward", "--set", setFile);
-    expect(answer.status).toBe(0);
-    expect(answer.stdout).toContain("He writes");
-    const judge = cli("prompt", "--judge", "--set", setFile);
-    expect(judge.status).toBe(0);
-    expect(judge.stdout).toContain("THE-MUST-DO of C1");
-  });
-
-  it("scores a workflow's return value read from a file", () => {
-    const runs = runsFor(1).map((r: object) => ({
-      ...r,
-      answers: IDS.map((id) => ({ id, route: "act-now", ask: "may-ask", firstMove: "m" })),
-    }));
-    const results = join(dir, "results.json");
-    writeFileSync(results, JSON.stringify({ caseIds: IDS, runs, verdicts: [] }));
-    const run = cli("score", "--results", results, "--set", setFile, "--json");
-    expect(run.status).toBe(0);
-    expect(JSON.parse(run.stdout).verdict).toBe("unknown");
-    const line = cli("score", "--results", results, "--set", setFile);
-    expect(line.stdout).toContain("unknown");
-    expect(line.stdout).toContain("of 3");
-  });
-
-  it("says unknown, with a non-zero exit, when it cannot read its inputs", () => {
-    const missing = cli("score", "--results", join(dir, "absent.json"), "--set", setFile);
-    expect(missing.status).toBe(2);
-    expect(missing.stderr).toContain("UNKNOWN");
-    const bad = join(dir, "bad.json");
-    writeFileSync(bad, JSON.stringify({ header: {}, cases: [kase("C1", { said: "Priya" })] }));
-    expect(cli("cases", "--set", bad).status).toBe(2);
-  });
-});
-
-// The real script text under stubbed hooks. tests/scripts/workflow-gate.spec.ts pins its dial block
-// with every other workflow; this pins what is its own: the two arms, the blinding and the return.
-describe("intent-replay's workflow", () => {
-  const GATE = { found: true, dispatch: true, position: "normal", grindWidth: 200 };
-  const LOOKUP = {
-    found: true,
-    ids: IDS,
-    runs: runsFor(2),
-    price: { answerers: 4, judges: 1, lookups: 2, agents: 7, startTokens: 210_000 },
-  };
-  const armOf = (label = "") => label.replace("answer ", "");
-  // Each answerer's first move names its own run, under a token no prompt could carry by accident.
-  const answers = (label?: string) => ({
-    ran: true,
-    answers: IDS.map((id) => ({
-      id,
-      route: "act-now",
-      ask: "must-not-ask",
-      firstMove: `token-${armOf(label).replace("without-", "a").replace("with-", "b")}`,
-    })),
-  });
-  // What each stage returns, by its label; a spec overrides one stage to kill or change it.
-  const reply =
-    (over: Record<string, unknown> = {}): Reply =>
-    (_prompt, { label = "" }) => {
-      const table: Record<string, unknown> = {
-        "work-mode": GATE,
-        cases: LOOKUP,
-        "blind judge": { ran: true, verdicts: [] },
-        ...over,
-      };
-      return label in table ? table[label] : answers(label);
-    };
-  const run = (args: unknown, answer: Reply) => runWorkflow("intent-replay", args, answer);
-
-  it("runs both arms on worker stages, each told to run the prompt the script prints", async () => {
-    const { calls } = await run({}, reply());
-    const answerers = calls.filter((c) => c.opts.label?.startsWith("answer "));
-    expect(answerers.map((c) => c.opts.label)).toEqual([
-      "answer without-1",
-      "answer without-2",
-      "answer with-1",
-      "answer with-2",
-    ]);
-    for (const c of answerers) {
-      expect(c.opts.agentType).toBe("worker");
-      expect(c.prompt).toContain("node scripts/intent-replay.mjs prompt --arm ");
-    }
-    expect(answerers[0]?.prompt).toContain("--arm without --order forward");
-    expect(answerers[3]?.prompt).toContain("--arm with --order forward");
-    expect(calls.at(-1)?.opts).toMatchObject({ label: "blind judge", agentType: "worker" });
-  });
-
-  it("passes N through to the lookup, and refuses one it cannot mean before spending", async () => {
-    const { calls } = await run({ n: 1 }, reply());
-    expect(calls.find((c) => c.opts.label === "cases")?.prompt).toContain("--n 1");
-    for (const n of [0, 6, "2; rm -rf x", 1.5]) {
-      const refused = await run({ n }, reply());
-      expect(refused.error?.message, String(n)).toMatch(/args\.n/);
-      expect(refused.calls).toEqual([]);
-    }
-  });
-
-  it("shows the judge unlabelled answers, whose order turns with the case", async () => {
-    const { calls } = await run({}, reply());
-    const judge = calls.find((c) => c.opts.label === "blind judge");
-    expect(judge?.prompt).not.toMatch(/without-\d|with-\d|"arm"|"run"|answer with/);
-    const blinded = JSON.parse(String(judge?.prompt.split("<<<answers>>>")[1]));
-    const seen = blinded.map((row: { answers: { firstMove: string }[] }) =>
-      row.answers.map((a) => a.firstMove),
-    );
-    expect(seen[0]).toEqual(["token-a1", "token-a2", "token-b1", "token-b2"]);
-    expect(seen[1]).toEqual(["token-a2", "token-b1", "token-b2", "token-a1"]);
-    expect(seen[2]).toEqual(["token-b1", "token-b2", "token-a1", "token-a2"]);
-  });
-
-  it("round-trips: what the judge says of a slot lands on the run that wrote it", async () => {
-    // A judge that passes only one run's words, without being told which run that is.
-    const judge = (prompt: string) => {
-      const blinded = JSON.parse(prompt.split("<<<answers>>>")[1] ?? "");
-      return {
-        ran: true,
-        verdicts: blinded.flatMap((row: { id: string; answers: Record<string, string>[] }) =>
-          row.answers.map((a) => ({
-            id: row.id,
-            slot: a.slot,
-            pass: a.firstMove === "token-b1",
-            why: "w",
-          })),
-        ),
-      };
-    };
-    const { result } = await run({}, (prompt, opts) =>
-      opts.label === "blind judge" ? judge(prompt) : reply()(prompt, opts),
-    );
-    const { byRun, arms } = scoreReplay(SET, result);
-    expect(byRun["with-1"].judged).toBe(3);
-    expect(byRun["with-2"].judged).toBe(0);
-    expect(arms.without.judged).toBe(0);
-  });
-
-  it("returns an answerer that died or could not read its task as no answers", async () => {
-    const dead = await run({}, reply({ "answer with-2": null }));
-    const failed = await run(
-      {},
-      reply({ "answer with-2": { ran: false, answers: [{ id: "C1" }] } }),
-    );
-    for (const { result } of [dead, failed]) {
-      const runs = (result?.runs ?? []) as unknown as { name: string; answers: unknown }[];
-      expect(runs.find((r) => r.name === "with-2")?.answers).toBeNull();
-      expect(scoreReplay(SET, result).verdict).toBe("unknown");
-    }
-  });
-
-  it("returns a judge that died as no verdicts, which the score reads as unknown", async () => {
-    const { result } = await run({}, reply({ "blind judge": null }));
-    expect(result?.verdicts).toEqual([]);
-    expect(scoreReplay(SET, result).verdict).toBe("unknown");
-  });
-
-  it("keeps the answers it paid for when the judge throws", async () => {
-    const { result, error } = await run({}, (prompt, opts) => {
-      if (opts.label === "blind judge") throw new Error("the judge could not start");
-      return reply()(prompt, opts);
-    });
-    expect(error).toBeNull();
-    expect(result?.verdicts).toEqual([]);
-    expect(result?.runs).toHaveLength(4);
-  });
-
-  it("says nothing was run when the lookup dies, and stops when it reports a failure", async () => {
-    const dead = await run({}, reply({ cases: null }));
-    expect(dead.result).toMatchObject({ runs: [], notRun: expect.stringContaining("re-run") });
-    const failed = await run({}, reply({ cases: { found: false, why: "a member's name" } }));
-    expect(failed.error?.message).toContain("a member's name");
   });
 });

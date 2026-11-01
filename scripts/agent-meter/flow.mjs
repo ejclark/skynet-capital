@@ -120,18 +120,30 @@ function kindsOf(typed) {
   });
 }
 
-/** A count of each kind, the share that manage the session, and the status questions asked again. */
+/** What a reading says when it has no typed message to divide by: a share needs at least one. */
+const nothingRead = (undated) =>
+  undated
+    ? `${undated} typed message${undated === 1 ? "" : "s"} had no readable time, so no typed message could be placed in this window`
+    : "no typed message was read in this window";
+
+/**
+ * A count of each kind, the share that manage the session, and the status questions asked again. With
+ * nothing typed in the window the verdict is unknown: transcripts that hold no message, rows with no
+ * time and rows in a shape nothing here recognises all arrive as nothing, and none of them means zero.
+ */
 export function flowOf(sessions, window) {
   const counted = new Set();
   const byKind = Object.fromEntries(KINDS.map((kind) => [kind, 0]));
   const spoken = new Set(); // the sessions he typed in during the window, not every file it touched
   let typed = 0;
   let repeatedStatus = 0;
+  let undated = 0;
   for (const session of sessions) {
     // Repeats are read on the whole session, so one asked before the window still makes a repeat in it.
     const kinds = kindsOf(session.typed);
     session.typed.forEach((message, i) => {
       const at = Date.parse(message.at);
+      if (Number.isNaN(at)) undated += 1;
       // Written this way round, a message with no readable time is outside every window.
       if (!(at >= window.sinceMs && at <= window.untilMs)) return;
       // A resumed session copies its rows into a new file, so the same message can be read twice.
@@ -146,13 +158,15 @@ export function flowOf(sessions, window) {
   }
   const managing = typed - byKind.other;
   return {
-    verdict: "read",
+    verdict: typed ? "read" : "unknown",
+    ...(typed ? {} : { line: nothingRead(undated) }),
     sessions: spoken.size,
     typed,
     managing,
     share: typed ? Math.round((managing / typed) * 100) : null,
     byKind,
     repeatedStatus,
+    undated,
     handRead: HAND_READ,
   };
 }
@@ -169,9 +183,15 @@ const NOT_TYPED = [
   /^Review (?:target|merged PR)\b/,
   /^(?:An independent|An earlier builder|A reviewer claims|Blind grader)\b/,
   /^# Orient\b/,
-  /^\/[a-z-]+\s*$/,
+  /^\/[a-z][\w:-]*(?:\s|$)/, // a slash command, with or without arguments: "/ship --hold"
 ];
 const BRIEF_CHARS = 1200; // dream-digest's cap: an opening this long reached it, so a session wrote it
+
+// STAYS OPEN, with a spec for each, because a row holds nothing that would settle them:
+// - A long first message of his own reads as a brief and is dropped. Only its length and place tell the
+//   two apart, and a session's brief is what this filter exists to keep out of his count.
+// - A message he opens on a route ("/login doesn't load") reads as a slash command and is dropped. A
+//   route and a command have one shape, and telling them apart would mean a list of commands to keep.
 
 /** A transcript's lines reduced to what he typed: the digest's filter, then a session's own briefs. */
 export function typedBy(lines) {
@@ -184,6 +204,8 @@ export function typedBy(lines) {
   );
 }
 
+const USER_ROW = /"type"\s*:\s*"user"/;
+
 /** Only user rows reach the digest here: a transcript can run to hundreds of megabytes of tool output. */
 async function userLines(path) {
   const lines = [];
@@ -191,11 +213,18 @@ async function userLines(path) {
     input: createReadStream(path),
     crlfDelay: Number.POSITIVE_INFINITY,
   });
-  for await (const line of reader) if (line.includes('"type":"user"')) lines.push(line);
+  // Any JSON writer's spacing: this only skips rows cheaply, and the digest parses what passes.
+  for await (const line of reader) if (USER_ROW.test(line)) lines.push(line);
   return lines;
 }
 
-const unknown = (window, line) => ({ verdict: "unknown", window, line, handRead: HAND_READ });
+const unknown = (window, line) => ({
+  verdict: "unknown",
+  window,
+  line,
+  share: null,
+  handRead: HAND_READ,
+});
 
 /**
  * The reading, or unknown: never zero, and never an error, since the full meter carries this section
