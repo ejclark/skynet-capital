@@ -143,6 +143,19 @@ describe("grind's scratch folders", () => {
       expect(await folderOf(batch, "fix ")).toEqual(await folderOf(batch, "fix "));
     });
 
+    it("stays the same when a retry only raises how hard a step runs", async () => {
+      const step = { kind: "prompt", template: "fix {item}" };
+      const first = await folderOf(
+        { items: ["a.ts"], steps: [{ ...step, effort: "high" }] },
+        "fix ",
+      );
+      const retry = await folderOf(
+        { items: ["a.ts"], steps: [{ ...step, effort: "xhigh", model: "opus" }] },
+        "fix ",
+      );
+      expect(retry).toEqual(first);
+    });
+
     it("differs between two steps of one kind in a chain", async () => {
       const folders = await folderOf(
         {

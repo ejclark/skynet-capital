@@ -137,7 +137,9 @@ describe("ship platter amend — refusals", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
 
+describe("ship platter amend — a boarded item", () => {
   // grep -q exits on its first match while git is still writing, git takes SIGPIPE, and under pipefail
   // the pipeline reports 141 on a match. A log far past the pipe buffer makes that certain rather than
   // a race: the newest item matches at once, with a megabyte of older commits still to write.
