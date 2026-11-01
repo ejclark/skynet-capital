@@ -11,7 +11,10 @@
 //     applied the label. The wiring lives in scripts/moneypenny/index.mjs (written on #3913; it
 //     lands after the held PR #4165, which owns that file).
 //
-// Eric's own issues are never bound (docs/ISSUES.md → "who it never binds") — he knows his ask.
+// Eric's own issues are never bound (docs/ISSUES.md → "who it never binds") — he knows his ask. A
+// session posts under his login too, so the author alone cannot say whose words these are; a body
+// carrying the attribution footer is a session's. On 2026-11-01, 4 of 8 open needs-eric issues were
+// session-written with no callout, and this exemption kept every one out of his queue unflagged.
 import { hasDecisionCallout } from "../issue-lint.mjs";
 import { FOOTER } from "./labels.mjs";
 
@@ -21,10 +24,13 @@ export const NEEDS_ERIC = "needs-eric";
 /** One comment per gap, not one per relabel — the marker is how the lane finds its own. */
 export const CALLOUT_GAP_MARKER = "<!-- moneypenny:callout-gap -->";
 
+/** The attribution line a session's issue body ends with (FOOTER, or the PR form of it). */
+const SESSION_FOOTER = /Generated (by|with) \[Claude Code\]/;
+
 /** True when the issue promises Eric a decision it never states. Pure. */
 export function missingDecisionCallout({ labels = [], body = "", author = "" } = {}) {
   if (!labels.includes(NEEDS_ERIC)) return false;
-  if (author === ERIC) return false;
+  if (author === ERIC && !SESSION_FOOTER.test(body ?? "")) return false;
   return !hasDecisionCallout(body ?? "");
 }
 
