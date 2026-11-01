@@ -19,6 +19,49 @@ corrects it; a row is never rewritten, only superseded by a later one.
 
 > **Back-tested rules:** [`docs/design/decision-rules.md`](design/decision-rules.md) holds 25 rules from his words, scored on later rounds. They anticipate about half his notes (use them in the critic pass), and they do **not** predict his Build picks (never decide for him).
 
+### How he writes (reading his messages)
+
+Use this to work out what a message from Eric asks for before you reply, so he does not have to repeat, correct or chase. It comes from about 190 messages he typed between 2026-08-21 and 2026-11-01, ranked by how much of his flow a right reading protects.
+
+**Replay, 2026-11-01:** sessions mostly read him correctly already, and this page's value as a reading aid is unproven. Of 184 typed chat messages read by hand, 141 were him managing a session rather than asking for work. A replay of 29 cases from messages the page's authors never saw, run twice each way, was judged 49 of 58 without the page and 51 of 58 with it, and the route and ask scores did not move, so a page is not the binding constraint. The flow breaks come from what surrounds a message: no status clock, faults he spots first, rules stated without a source. Repeat it with [`.claude/workflows/intent-replay.js`](../.claude/workflows/intent-replay.js) on [`docs/evals/how-he-writes-set.json`](evals/how-he-writes-set.json); watch the share with `npm run meter:flow`. The bet and its falsifier are the row in [`LEARNING-LOOP.md`](process/LEARNING-LOOP.md).
+
+| He writes | It means | Do this | Not this |
+|---|---|---|---|
+| "how's X going?", "progress update?", "25 minutes - what are you waiting on?" | He cannot see the job; a stated time means it should be done | One line: finished, running, finish time; repeat it unasked when the time moves | Re-list steps, defend the wait |
+| "5079 fails CI", "6020 fails lint", a link plus "doesn't load" | Yours to fix; he should not have been the one to spot it | Fix, report green, check siblings and what produced it | Explain it back, ask whether to fix |
+| ">" plus your own sentence plus his reaction | That sentence is the subject; about half dispute it | Answer it first; check the claim against the code or `envelope.json` | Restate it, defend a rule for being written |
+| "seems unnecessary", "feels backwards", "seems arbitrary" | A decision, politely put | Say what changes, then change it | Ask him to confirm |
+| "I'd rather", "I expect", "fwiw", "if it makes sense" | A directive; the hedge hands you where and how, never whether | Do it, keep any order he named, say where it went | Weigh it against your plan |
+| "no trades made today?", "shouldn't there be more?", "jw", "I'm skeptical" | An expectation is not being met, and he is often right | Check now, say if it holds, start the fix this turn | Answer only the words, reassure |
+| "done", "marked done in web", "Merged it" | The ball is yours; his answers are saved | Read the page or merge state now; give the next step and link | Ask what he answered |
+| "no idea what you're talking about", "What is X?", "the action is unclear" | What you sent failed; the step may not need to exist | Say what it does, why it is on him, the action, the link | Repeat the noun, send a command |
+| "do it", "yes", "keep pulling threads", "whichever is proper" | The named action, its siblings and its cause; no extra spend, no skipped question | Do it now, approval step included; on "whichever" take the long-term one | Confirm again, stop at one instance |
+| "what's next?", "what remains?", "anything else?" | Does this thread still owe him anything? | List what is open and who owns it; start the next in-scope piece | End on "want me to keep going?" |
+| "tangent thought", "food for thought", "For context,", "Additionally -" | Usually a change to the running plan; read the last sentence | Keep working; fold it in with his words; acknowledge in a line | Stop work, park it unless he says capture |
+| A numbered list; restarted numbers are a sub-level | Each number is its own ask; a reply maps onto your list | Give each an outcome; answer its questions before building | Merge into one theme |
+| "my intent is", "Expected outcomes:", "per the OP" | The outcome is the contract; OP is the session's first message | Copy that sentence into the plan; check the result against it | Run the named step and call it done |
+| "Wouldn't X have caught this?", "I suspect I need Y?" | Firm outcome, open guess; he wants pushback here | Test it against code or data; yes or no, with why | Build the guess, or cite a rule |
+| "mixed feelings", "still not settled", "needs more refinement" | Truly open: direction liked, shape not chosen; outranks a pick beside it | Keep what he liked; bring named options next round | Treat the pick as final |
+| "Try again" after an error or blank reply | The tool failed; not a new ask | Finish what was cut off, result first | Recap, apologise, ask what to retry |
+
+### What breaks his flow
+
+141 of his typed messages are him managing the session, not asking for work; 41 sit in one two-day study, so the top rows lean on it. Left out as seen once: quota alarms (5, one night) and page comments (13, one sitting).
+
+| Kind | Count | Cause | Cheapest prevention |
+|---|---|---|---|
+| He asks for status | 17 | Job with no clock; finish times slipped unannounced | At launch: live link and "next report by HH:MM" |
+| He spots the fault first | 16 | Stopped watching what shipped, or tested another scenario | Watch a PR until live; re-run his exact scenario |
+| He restates a settled call | 15 | Own rule stated as policy, or his decision lost | Cite where he set it, or call it a guess |
+| Failed turn, "Try again" | 14 | Overload, network or login; not a misreading | Retry in the client; no doc moves this |
+| He cannot tell what a page wants | 13 | No stated purpose, dead link, no picture | One tested link; one sentence on the reaction wanted |
+| Session stops at a safe edge | 13 | "Want me to keep going?", or fixed the instance only | Take the reversible step; priced fan-outs still ask |
+| He rebuilds where a thread stands | 13 | Turn ended on detail, nothing on what is open | Close with done, running, waiting on you |
+| He reports an act done elsewhere | 10 | Promised to notice, showed no proof | A visible "received" on the page |
+| He does not follow a word | 9 | Internal label, one-armed fork, steps with no result | Say what it does; lead with what he gets |
+| He carries news between sessions | 8 | Parked sessions never pull main | One script rebuilds every open round page |
+| A manual step lands on him | 8 | Terminal command, or "needs your merge" on an issue | Check the PR exists; use a form or a PR |
+
 ### How he reads (the physical facts)
 
 | Fact | Consequence for the author | Source |

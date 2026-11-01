@@ -198,6 +198,30 @@ function agents(a) {
   return lines;
 }
 
+/** How much of what Eric types manages a session, beside the hand read these rules cannot match. */
+export function flowSection(f) {
+  const lines = ["", "flow (his typed messages that manage a session, by rules)"];
+  if (f.verdict === "unknown") return [...lines, `  unknown: ${f.line}`];
+  if (f.typed === 0) lines.push("  no typed message in the window: share unknown");
+  else
+    lines.push(
+      `  ${f.managing} of ${f.typed} typed messages (${f.share}%), over ${f.sessions} session(s)`,
+      `  ${counts(f.byKind)}`,
+      `  the same status question repeated in a session: ${f.repeatedStatus}`,
+    );
+  const hand = f.handRead;
+  lines.push(
+    `  hand read ${hand.date}: ${hand.managing} of ${hand.typed} (${Math.round((hand.managing / hand.typed) * 100)}%). These rules undercount: on those same messages they caught ${hand.rulesCaught} of ${hand.typed}, so compare a reading with an earlier reading, never with the hand read`,
+  );
+  return lines;
+}
+
+/** `--flow` alone: this section, with no REST read. */
+export function renderFlow(f) {
+  const w = f.window;
+  return [`flow, ${w.hours} hours: ${w.since} to ${w.until}`, ...flowSection(f)].join("\n");
+}
+
 function startup(s) {
   const lines = [
     "",
@@ -219,7 +243,7 @@ export function render(m) {
   if (w.crossesRepeatedHour) lines.push(REPEATED_HOUR_NOTE);
   lines.push(...firstPass(m.firstPass), ...lanes(m.lanes), ...speed(m.speed));
   lines.push(...failureToFix(m.failureToFix), ...agents(m.agents));
-  lines.push(...startup(m.startup));
+  lines.push(...flowSection(m.flow), ...startup(m.startup));
   lines.push("", "limits");
   lines.push(`  CLAUDE.md: ${m.limits.claudeMdBytes} bytes; orient: ${m.limits.orientBytes} bytes`);
   lines.push(
