@@ -21,6 +21,14 @@
 // run today → this quarter) and counted in `multiLinked`, so the double-attribution is visible
 // rather than silently doubling the n.
 //
+// CONFIDENCE BY HORIZON, MATURED CALLS ONLY (2026-10-31 loop census, "scorecard-falsifier-fired").
+// The flat margins — high 75%, medium 76% — tie partly because medium calls sit at longer horizons,
+// and a long horizon's pass rate is the calls that resolved early (this quarter: 186 of 226 still
+// open). So the one comparison that may move the sizing rule is high against medium WITHIN a
+// horizon, over calls whose score-by date has passed. A cell with fewer than THIN_CELL decided
+// calls is printed as thin, never as a percentage: a lane reading 100% off two calls is the
+// misread this table exists to stop.
+//
 // PURE TEXT, like forward-test-pending.mjs: no network, no token, no `npm ci`. Grades calls; never
 // changes sizing (#3955 constraint — paper-only, educational).
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -46,6 +54,10 @@ const FT_MENTION = /FT-[\w.-]*\w/g;
 export const VERDICTS = ["pass", "kill", "void", "unscoreable", "open", "unread"];
 export const HORIZONS = ["today", "this week", "this month", "this quarter", "other"];
 export const GRADES = ["high", "medium-high", "medium", "low", "none", "ungraded"];
+/** Decided calls a matured cell needs before its pass rate is printed as a percentage. */
+export const THIN_CELL = 10;
+/** The grades the matured table compares — the ones a call sheet actually uses. */
+const COMPARED_GRADES = ["high", "medium-high", "medium", "low"];
 
 /** One Outcome cell → a verdict. The spellings in use (counted 2026-09-30): `—`, `_open_`, empty,
  *  `**pass** — …`, `PASSED.`, `CONFIRMED 2026-…`, `SCORED 2026-09-10 — FAIL`, `killed`, `VOID`,
@@ -76,12 +88,13 @@ export function verdictOf(outcome) {
   return best?.verdict ?? "unread";
 }
 
-/** Every forward-test row in one fragment, as `{ id, verdict }`. Same row rule as
+/** Every forward-test row in one fragment, as `{ id, verdict, scoreBy }`. Same row rule as
  *  forward-test-pending.mjs: the LAST cell leading with a date is the score-by, and everything
  *  after it is the outcome. A score-by that doesn't lead with a date (`~2026-08-28`, `2027-10`,
  *  `4 weeks after P1 merges`) falls back to the header's position — every fragment carries
  *  `| # | Hypothesis | Prediction | Kill switch | Score by | Outcome |`, so the outcome is cell 5
- *  onward (joined: a long outcome can carry an unescaped pipe). Never dropped: the total must
+ *  onward (joined: a long outcome can carry an unescaped pipe) — and its `scoreBy` is null, so
+ *  the matured table never guesses when such a call came due. Never dropped: the total must
  *  match the register. */
 export function parseForwardTests(md) {
   const rows = [];
@@ -96,7 +109,8 @@ export function parseForwardTests(md) {
         break;
       }
     const outcome = at === -1 ? row.slice(OUTCOME_AT).join(" ") : row.slice(at + 1).join(" ");
-    rows.push({ id, verdict: verdictOf(outcome) });
+    const scoreBy = at === -1 ? null : LEADING_DATE.exec(row[at])[1];
+    rows.push({ id, verdict: verdictOf(outcome), scoreBy });
   }
   return rows;
 }
@@ -150,8 +164,9 @@ export function parseCallLinks(md) {
 
 const emptyCounts = () => Object.fromEntries(VERDICTS.map((v) => [v, 0]));
 
-/** Fold tests + call links into the card. Pure: the CLI reads files, this only counts. */
-export function scorecard({ tests, links }) {
+/** Fold tests + call links into the card. Pure: the CLI reads files, this only counts. `today`
+ *  (YYYY-MM-DD) decides which linked calls have matured — score-by on or before it. */
+export function scorecard({ tests, links, today = new Date().toISOString().slice(0, 10) }) {
   const known = new Set(tests.map((t) => t.id));
   const first = new Map();
   const seen = new Map();
@@ -162,6 +177,10 @@ export function scorecard({ tests, links }) {
   }
   const byGrade = Object.fromEntries(GRADES.map((g) => [g, emptyCounts()]));
   const byHorizon = Object.fromEntries(HORIZONS.map((h) => [h, emptyCounts()]));
+  const cells = Object.fromEntries(
+    HORIZONS.map((h) => [h, Object.fromEntries(GRADES.map((g) => [g, emptyCounts()]))]),
+  );
+  const matured = { cells, notYet: 0, undated: 0, pastDueOpen: 0 };
   const unlinked = emptyCounts();
   const all = emptyCounts();
   let linked = 0;
@@ -175,6 +194,14 @@ export function scorecard({ tests, links }) {
     linked++;
     byGrade[link.grade][t.verdict]++;
     byHorizon[link.horizon][t.verdict]++;
+    // Matured means the call had its chance to be judged, whatever its outcome cell says — a
+    // decided-only cut would be the early-resolver bias the table exists to remove.
+    if (!t.scoreBy) matured.undated++;
+    else if (t.scoreBy > today) matured.notYet++;
+    else {
+      cells[link.horizon][link.grade][t.verdict]++;
+      if (t.verdict === "open") matured.pastDueOpen++;
+    }
   }
   const multiLinked = [...seen.values()].filter((n) => n > 1).length;
   const duplicateIds = tests.length - known.size;
@@ -187,6 +214,7 @@ export function scorecard({ tests, links }) {
     unlinked,
     byGrade,
     byHorizon,
+    matured,
   };
 }
 
@@ -213,9 +241,38 @@ function table(title, groups) {
   return lines.join("\n");
 }
 
+/** One matured cell: a percentage once it holds THIN_CELL decided calls, `thin: p/d` under that,
+ *  `—` with none decided. The thin form keeps the numbers visible without inviting a read. */
+export function maturedCell(c) {
+  const decided = c.pass + c.kill;
+  if (decided === 0) return "—";
+  if (decided < THIN_CELL) return `thin: ${c.pass}/${decided}`;
+  return `${pct(passRate(c))} (${c.pass}/${decided})`;
+}
+
+function maturedTable(card, today) {
+  const m = card.matured;
+  const lines = [
+    `| Matured by ${today} | ${COMPARED_GRADES.join(" | ")} |`,
+    `|---|${COMPARED_GRADES.map(() => "---").join("|")}|`,
+  ];
+  for (const h of HORIZONS) {
+    const row = m.cells[h];
+    if (COMPARED_GRADES.every((g) => sum(row[g]) === 0)) continue;
+    lines.push(`| ${h} | ${COMPARED_GRADES.map((g) => maturedCell(row[g])).join(" | ")} |`);
+  }
+  lines.push(
+    "",
+    `Matured = the call's score-by date has passed; a cell is pass ÷ (pass + kill) over those, and reads thin with fewer than ${THIN_CELL} decided. Compare grades across one row, never down a column: horizon sets the base rate. ${m.pastDueOpen} matured call(s) still open past their date; ${m.notYet} not yet due; ${m.undated} with no dated score-by.`,
+  );
+  return lines.join("\n");
+}
+
 export function renderMarkdown(card, today) {
   return [
     `**Research scorecard — ${today}.** ${card.total} forward tests; ${card.linked} are a call's registered falsifier (graded by that call's confidence and horizon), ${card.total - card.linked} unlinked. Pass rate = pass ÷ (pass + kill).`,
+    "",
+    maturedTable(card, today),
     "",
     table(
       "Confidence",
@@ -256,7 +313,8 @@ export function readCorpus(root = ROOT) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const card = scorecard(readCorpus());
+  const today = new Date().toISOString().slice(0, 10);
+  const card = scorecard({ ...readCorpus(), today });
   if (process.argv.includes("--json")) console.log(JSON.stringify(card, null, 2));
-  else console.log(renderMarkdown(card, new Date().toISOString().slice(0, 10)));
+  else console.log(renderMarkdown(card, today));
 }
