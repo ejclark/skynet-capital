@@ -547,7 +547,12 @@ export function runCli(argv = [], io = {}) {
         if (hold) printErr(`::notice::--queue — skipping #${i.number}, ${hold}`);
         return !hold;
       })
-      .map((i) => ({ number: i.number, title: i.title ?? "" }));
+      // `class` and `why` make the order legible: the registry's "Priority only with a reader"
+      // check (`npm run queue`) reads this to see a hand-set P-label land where the rule says.
+      .map((i) => {
+        const { cls, why } = rankOf(i);
+        return { number: i.number, title: i.title ?? "", class: cls, why };
+      });
     print(JSON.stringify(rows));
     return 0;
   }
