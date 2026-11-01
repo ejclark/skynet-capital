@@ -26,6 +26,11 @@ import {
 // script does with a bad reply, a hung read, a refused write, and where it writes at all) is driven
 // through the real entrypoint against stub binaries that record their arguments, because a spec
 // that only exercised the judges caught 0 of 15 deliberate bugs in the probes and the wiring.
+//
+// Graded blind: tests/scripts/fixtures/fitness-heldout-bugs.json holds 30 deliberate bugs written
+// by a pass that never saw this spec; it caught 29 before the seed above the stamp tests was added.
+// That list is the regression list now (`node scripts/fitness-audit.mjs --bugs <it> --with ...`,
+// the --with files are the ones named below), so a new score needs bugs from a fresh blind pass.
 const SCRIPT = resolve("scripts/fitness.mjs");
 const REPLAY = resolve("tests/fixtures/fitness/replay-2026-10-22.json");
 const WORKFLOW = resolve(".github/workflows/bots-catchup.yml");
@@ -75,6 +80,15 @@ describe("fitness judges", () => {
       judgeStamp({ lastControlsPollAt: iso(NOW - ms), bridge: "armed" }, NOW);
     expect(at(5 * MIN).status).toBe("pass");
     expect(at(5 * MIN + 1000).status).toBe("fail");
+  });
+
+  // The one bug of 30 the blind list got past the spec: a stamp that never polled has a NaN age,
+  // which no size compare catches, so an armed bridge alone read as alive.
+  it("fails a stamp that never polled, even with the bridge armed", () => {
+    const never = judgeStamp({ bridge: "armed" }, NOW);
+    expect(never).toEqual({ status: "fail", detail: "the stamp has no controls poll" });
+    const garbled = judgeStamp({ lastControlsPollAt: "not a date", bridge: "armed" }, NOW);
+    expect(garbled.status).toBe("fail");
   });
 
   it("reads deploys from what is running, and passes only when both apps are current", () => {
