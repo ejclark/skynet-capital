@@ -67,6 +67,7 @@ Rank, best first (this ordering is the doctrine; deviating needs a stated reason
    a gate that catches the whole class beats a fix for one instance. Build it with
    `.claude/skills/fitness/SKILL.md`: the incident becomes the outcome line, and the check is
    not done until a bug list it has not seen turns its spec red (`scripts/fitness-audit.mjs`).
+   The `evals-expert` agent can run the procedure, and writes that bug list in its blind mode.
 2. **A doctrine line** in `CLAUDE.md` / `docs/COACHES.md` / `docs/ENGINEERING.md` — loaded into
    every future session's context, so it steers the next decision rather than sitting unread.
 3. **A ledger entry alone** — only when mechanizing costs more than the expected damage. Say so.

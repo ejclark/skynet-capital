@@ -18,8 +18,14 @@
 // EVERY UNKNOWN READS AS PULLABLE: no block, a block with no next-pickup line, a failed read, a
 // block that names a slice, an open sub-issue whose blockers were not read. One empty session is
 // the status quo; a plan stalled silently by a read error is worse.
+//
+// A SLICE A HELD PLATTER CLOSES IS NOT OPEN WORK (#6530). Its sub-issue stays open until Eric merges
+// the platter, so `nextSubIssue` read it as the next slice and both this hold and continuation
+// started a build with nothing in it. `withoutBoarded` is the one place that rule lives; the map is
+// `platterClosesByIssue`'s, the same one `boardedReason` reads for the issue itself.
 import { ghRest, ghRestAll } from "./gh.mjs";
 import { LABELS, labelNames } from "./labels.mjs";
+import { platterClosesByIssue } from "./pr-issues.mjs";
 import { nextPickupOf, stateBlockOf } from "./state-block.mjs";
 
 /** How many open sub-issues' blocker lists one read asks for — the continuation gather's bound. */
@@ -48,6 +54,21 @@ export function nextSubIssue(subIssues = [], blockedBy = {}) {
   );
 }
 
+/**
+ * The sub-issues with every one a held platter closes read as closed, carrying `boardedOn` (the
+ * platter's number) so a caller can say why. Its blockers are untouched: a slice that waits on a
+ * boarded one still waits, because that work has not merged. Pure; no map means no change.
+ *
+ * @param boardedOn issue → the open platter PR whose body closes it (`platterClosesByIssue`)
+ */
+export function withoutBoarded(subIssues = [], boardedOn) {
+  if (!boardedOn?.size) return subIssues ?? [];
+  return (subIssues ?? []).map((s) => {
+    const platter = s && (s.state ?? "open") === "open" ? boardedOn.get(s.number) : undefined;
+    return platter ? { ...s, state: "closed", boardedOn: platter } : s;
+  });
+}
+
 const isPlan = (issue) => labelNames(issue?.labels).includes(LABELS.plan.name);
 
 /**
@@ -61,23 +82,30 @@ const saysNothingBuildable = (body) =>
 /**
  * Why this plan has nothing a build session can take, or null when it may be picked. Pure.
  * `subIssues` / `blockedBy` are read only when the block names nothing, so either may be absent:
- * absent means "not read", which holds nothing.
+ * absent means "not read", which holds nothing. `boardedOn` likewise: absent screens nothing.
  */
-export function pickupHoldReason({ issue, comments, subIssues, blockedBy } = {}) {
+export function pickupHoldReason({ issue, comments, subIssues, blockedBy, boardedOn } = {}) {
   if (!isPlan(issue)) return null;
   const block = stateBlockOf(comments);
   if (!(block && saysNothingBuildable(block.body))) return null;
   if (!subIssues) return null;
-  const open = subIssues.filter((s) => s && (s.state ?? "open") === "open");
+  const subs = withoutBoarded(subIssues, boardedOn);
+  const open = subs.filter((s) => s && (s.state ?? "open") === "open");
   // A slice past the read bound might be buildable; unknown is pullable.
   if (open.some((s) => !Object.hasOwn(blockedBy ?? {}, s.number))) return null;
   if (nextSubIssue(open, blockedBy)) return null;
-  return `its state block names no next pickup and no open, unblocked slice remains`;
+  const boarded = subs.filter((s) => s?.boardedOn).map((s) => `#${s.number} on #${s.boardedOn}`);
+  return (
+    `its state block names no next pickup and no open, unblocked slice remains` +
+    (boarded.length ? ` (boarded on a held platter: ${boarded.join(", ")})` : "")
+  );
 }
 
 /**
  * The live read behind `pickupHoldReason`, FAIL-OPEN: a non-plan costs nothing, a plan one
- * comments page, and a plan whose block names nothing also its sub-issues and their blockers.
+ * comments page, and a plan whose block names nothing also its sub-issues and their blockers. The
+ * open PR list is read last, and only when an open slice is all that keeps the plan pullable — the
+ * one case a platter can change the answer.
  */
 export function readPickupHold(
   issue,
@@ -96,7 +124,10 @@ export function readPickupHold(
       .slice(0, BLOCKER_READS)) {
       blockedBy[s.number] = read(`issues/${s.number}/dependencies/blocked_by`) ?? [];
     }
-    return pickupHoldReason({ issue, comments, subIssues, blockedBy });
+    const hold = pickupHoldReason({ issue, comments, subIssues, blockedBy });
+    if (hold || !subIssues.some((s) => (s?.state ?? "open") === "open")) return hold;
+    const boardedOn = platterClosesByIssue(readAll("pulls?state=open"));
+    return pickupHoldReason({ issue, comments, subIssues, blockedBy, boardedOn });
   } catch (err) {
     log(
       `::warning::#${n}'s state block could not be read — treating it as pullable: ${String(err?.message ?? err).slice(0, 200)}`,

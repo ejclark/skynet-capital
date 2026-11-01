@@ -4,7 +4,7 @@ description: >-
   Split a god file into smaller, cohesive modules — one safe, behavior-preserving move per PR, verified
   green and ratcheted. Use when the architecture fitness gate (scripts/arch-scan.mjs) flags a large or
   low-cohesion file, when a file feels like it's doing too many jobs, or when asked to "decompose",
-  "break up", or "extract from" a module. The corrective drill the decomposer agent runs; also invokable
+  "break up", or "extract from" a module. The corrective drill the governor chore runs; also invokable
   interactively as /decompose. Legacy over-cap files live in arch-grandfather.json, not a numbered budget.
 ---
 

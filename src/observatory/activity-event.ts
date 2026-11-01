@@ -1,6 +1,6 @@
+import type { FeedbackStatus } from "../domain/feedback-status.js";
 import type { EarnedMilestone } from "../domain/progression.js";
 import type { FeedbackLogEntry } from "../server/feedback-log.js";
-import type { FeedbackStatus } from "../server/feedback-status.js";
 import type { LadderProgressEntry, LadderProgressEvidence } from "../server/ladder-progress-log.js";
 import type { OrderAuditRecord } from "../server/order-audit-log.js";
 import type { JsonlTail } from "../storage/jsonl-store.js";

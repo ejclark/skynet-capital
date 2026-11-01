@@ -31,27 +31,27 @@ earned after the policy proves out over reps.
 3. **ROSTER.** The full athlete roster — every coach in `docs/COACHES.md` that has one. Walk **all** of
    them each cycle; a coach silently omitted here is a debt dimension that never gets worked.
 
-   | Athlete | Eye (`--candidate`) | Branch prefix (WIP glob) |
+   | Drill | Eye (`--candidate`) | Branch prefix (WIP glob) |
    |---|---|---|
-   | `decomposer` | `scripts/arch-scan.mjs` | `refactor/decompose-*` |
-   | `ui-librarian` | `scripts/dupe-scan.mjs` | `refactor/dedupe-*` |
-   | `mortician` | `scripts/dead-scan.mjs` | `refactor/bury-*` |
-   | `test-backfiller` | `scripts/spec-gap-scan.mjs` | `test/backfill-*` |
+   | `decompose` | `scripts/arch-scan.mjs` | `refactor/decompose-*` |
+   | `dedupe` | `scripts/dupe-scan.mjs` | `refactor/dedupe-*` |
+   | `bury` | `scripts/dead-scan.mjs` | `refactor/bury-*` |
+   | `backfill` | `scripts/spec-gap-scan.mjs` | `test/backfill-*` |
 
    Every other coach in `docs/COACHES.md` sits outside this cycle: it has no athlete (yet — it waits
    for the rule of three — or by design), or its athlete runs event-driven (Moneypenny's repair lane
    owns unlearned incidents). Their eyes still report where they exist; only the governed correction
    is missing.
 
-   For each athlete in the table:
+   For each drill in the table:
    - **WIP limit 1:** if its branch glob already has an open PR, skip it this cycle. Inventory is waste.
    - **TARGET:** `node <its eye> --candidate`. The gate picks; never hand-pick. No candidate (budget
      already met) → skip; that dimension is clean, which is the goal, not a failure.
    - **COLLISION:** if the target file is modified by ANY open PR (`gh`/MCP: list open PR files), skip
      this coach this cycle — structural work never races feature work on the same file.
-4. **DISPATCH.** Launch the athlete: cheap model tier (sonnet), isolated worktree, its standard contract
-   (branch off origin/main, `bash scripts/worktree-setup.sh`, gate-confirm target, drill, verify by exit
-   status, ratchet, push, report — no PR-opening; athletes carry no GitHub tooling).
+4. **DISPATCH.** Run `docs/grind/governor.instructions.md` through `/grind`, one item per coach: cheap
+   model tier (sonnet), isolated worktree, the chore's contract (branch off origin/main, gate-confirm
+   target, drill, verify by exit status, ratchet, push, report; a rep opens no PR).
 5. **LAND — one cycle, one PR.** Collect all green athlete reports and land them as a SINGLE cycle PR:
    merge each athlete's branch into one `refactor/governed-cycle-<n>` branch (their commits stay
    distinct for bisectability), verify green once, and open one PR titled

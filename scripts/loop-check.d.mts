@@ -18,7 +18,12 @@ export function dueChecks(state: {
   posted?: readonly string[];
 }): DueCheck[];
 export function checkBody(check: DueCheck, result: { ok: boolean; output: string } | null): string;
-export function loopCheck(opts?: { post?: boolean; today?: string; registry?: string }): number;
+export function loopCheck(opts?: {
+  post?: boolean;
+  today?: string;
+  registry?: string;
+  ledgerDir?: string;
+}): number;
 
 export const UNMOVED_DAYS: number;
 export const UNMOVED_MARKER: string;

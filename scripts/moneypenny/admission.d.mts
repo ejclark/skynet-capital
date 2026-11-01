@@ -86,6 +86,28 @@ export function nextAdmissible<T extends AdmissionIssue>(
   mode: AdmissionMode,
   waiting?: readonly AdmissionIssue[],
 ): T | null;
+/** How many builds the sweep starts on one issue in a UTC day with nothing merged. */
+export const MAX_STARTS_PER_DAY: number;
+/** Why the sweep leaves this issue alone for the rest of the UTC day, or null. Pure. */
+export function retryHoldReason(opts: {
+  events?: ReadonlyArray<{ event?: string; label?: { name?: string }; created_at?: string }>;
+  mergedMs?: number | null;
+  now: number;
+}): string | null;
+/** The live read behind `retryHoldReason`, fail-open, as a hold for `nextUnheld`. */
+export function retryHold(opts?: {
+  now?: number;
+  log?: (line: string) => void;
+  readAll?: (path: string) => unknown[];
+  read?: (path: string) => unknown;
+}): (issue: { number?: number }) => string | null;
+/** Everything the unattended sweep steps past at the pick. */
+export function sweepHold(opts?: {
+  now?: number;
+  log?: (line: string) => void;
+  readAll?: (path: string) => unknown[];
+  read?: (path: string) => unknown;
+}): (issue: AdmissionIssue & { number: number }) => string | null;
 /** The comment a refused issue gets. */
 export function queueNote(reason: string): string;
 /** Did this lane's newest queue note already carry this reason? */
@@ -137,6 +159,8 @@ export interface AdmissionCliIO {
   readPlans?: () => AdmissionIssue[];
   /** Why a plan has nothing to build (#5707, `readPickupHold`); inject it, or plans read GitHub. */
   readHold?: (issue: AdmissionIssue) => string | null;
+  /** `--next` only: the sweep's retry limit (`retryHold`); inject it, or `--next` reads GitHub. */
+  readRetry?: (issue: AdmissionIssue) => string | null;
   print?: (line: string) => void;
   printErr?: (line: string) => void;
 }
