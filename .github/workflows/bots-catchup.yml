@@ -72,6 +72,9 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           permission-issues: write
           permission-actions: write
+          # Reads only, for the wake below: the sweep's peek lists PRs and claim refs.
+          permission-pull-requests: read
+          permission-contents: read
 
       - name: Start the machine if it is stopped
         # A crash between merges has no deploy coming to recover it (#5955). This keeps the exit
@@ -127,6 +130,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/moneypenny/quota.mjs --tick
+
+      - name: Wake the lanes if the repo has gone quiet
+        # THE ONE CRON WAKE (2026-11-01, #6470's study), reversing docs/ROUTINES.md's "no crons"
+        # for this narrow case: lanes wake on pushes, issue events and freed slots, and when all
+        # three stop, main sat 75.8h with research due. If the events workflow has not run in 2h,
+        # the dial is not halt, and the sweep's peek or the due list names something admissible,
+        # this dispatches one `scan` — the same call the push tick makes — at most once per 2h,
+        # counted from the run list. The per-issue retry limit (#6526) is what makes it safe: a
+        # failed build is held after three starts in a day, so the clock cannot re-run it all
+        # night. The common case costs one REST read. App token only (a GITHUB_TOKEN dispatch
+        # hides the run from the repair lane), so a failed mint skips this step and nothing else.
+        if: ${{ !cancelled() && steps.app-token.outputs.token != '' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/clock-wake.mjs
 
       - name: Check what must stay true
         # Fitness contracts, probed from outside the apps, so a dead process cannot silence them. A
