@@ -261,10 +261,12 @@ async function thesisPayload(
 ): Promise<unknown> {
   if (found.kind !== "bot") return { available: false, kind: found.kind };
   const id = found.id;
-  const [decisionRecords, activityRecords, samples] = await Promise.all([
+  // The history is the Pulse fold when the server keeps one (#4619), as on `/pulse`: the fold
+  // already holds the drawdown and the bounded curve this tab draws, so no whole-history read.
+  const [decisionRecords, activityRecords, history] = await Promise.all([
     config.readDecisions?.(id),
     config.readTradeActivity?.(id),
-    config.readHistory?.(id) ?? [],
+    config.readPulseHistory ? config.readPulseHistory(id) : (config.readHistory?.(id) ?? []),
   ]);
   const decisions = decisionRecords
     ? decisionCyclesView(decisionRecords, { limit: MAX_PAGE_SIZE })
@@ -282,7 +284,7 @@ async function thesisPayload(
   // Null means "no pass on hand said which plays ran", which is never "no safeguards".
   const pass = latestVerdictPass(decisionRecords ?? []);
   const ladder = pass ? safeguardLadderView(pass.verdicts) : null;
-  const base = thesisView(found.personaId, decisions, activity, samples, config.findByOrderId);
+  const base = thesisView(found.personaId, decisions, activity, history, config.findByOrderId);
   // The bot's own play, drawn (#5327) — read off the same ladder, so it appears only when the
   // bot's own pass said the play ran. The owner's alone: the strip below drops it.
   const play = thesisPlayView(found.personaId, ladder, base.markers, config.signalWindows);

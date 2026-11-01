@@ -2,6 +2,7 @@ import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { decisionCyclesView } from "../../src/observatory/decision-json-view.js";
 import type { DeskActivityEvent } from "../../src/observatory/desk-json-view.js";
 import type { EquitySample } from "../../src/observatory/history-record.js";
+import { PulseHistoryFold } from "../../src/observatory/pulse-history-fold.js";
 import { personaThesis, thesisView } from "../../src/observatory/thesis-json-view.js";
 import { anOptionIntent } from "../support/builders.js";
 
@@ -266,6 +267,20 @@ describe("thesisView", () => {
       { t: "2026-09-10T00:00:00Z", value: 100_000 },
       { t: "2026-09-11T00:00:00Z", value: 99_000 },
     ]);
+  });
+
+  // #4619: the route hands over the Pulse fold, so the Thesis curve is the Pulse chart's own —
+  // bounded, every bucket keeping its low and high, and the same health as the raw samples give.
+  it("reads a long history's health and bounded curve the same from samples or their Pulse fold", () => {
+    const samples = Array.from({ length: 2_000 }, (_, i) =>
+      sample(new Date(Date.parse("2026-09-01T13:30:00Z") + i * 300_000).toISOString(), 100_000 - i),
+    );
+    const view = thesisView("sauron", { cycles: [] }, [], samples);
+    const viaFold = thesisView("sauron", { cycles: [] }, [], PulseHistoryFold.of(samples));
+    expect(viaFold).toEqual(view);
+    expect(view.equity.length).toBeLessThanOrEqual(640);
+    expect(view.equity.at(-1)).toEqual({ t: samples.at(-1)?.at, value: 98_001 });
+    expect(view.health).toMatchObject({ measured: true, label: "steady" });
   });
 
   it("attaches reasoning to a marker when findByOrderId resolves the fill's decision", () => {
