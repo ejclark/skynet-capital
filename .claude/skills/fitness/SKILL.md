@@ -48,7 +48,8 @@ header. Check `npm run work-gate` before any step that spends a model.
    call to the `evals-expert` agent in blind grader mode, given only the script and the outcome
    line): a spec graded on its author's list scored 39 of 40 on that list and 7 of 28 on fresh bugs. Run
    `node scripts/fitness-audit.mjs --bugs <file>`. A survivor gets a seed or a written reason; a
-   NOT APPLIED gets rewritten, never dropped. Stop at judges and probe arguments.
+   NOT APPLIED gets rewritten, never dropped. A NO VERDICT was not graded and is never a catch: re-run
+   it on a quieter machine or rewrite a bug that does not compile. Stop at judges and probe arguments.
 8. **Replay on real history, on the real tick times** where history exists. Count fires, false
    closes and notifications. State detection and reset times.
 9. **Wire the ending in code:** who hears, the corrector, its budget, the age at which an
