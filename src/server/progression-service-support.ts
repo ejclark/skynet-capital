@@ -2,7 +2,6 @@ import { COURSES, type CourseLevel, unlockedLevels } from "../domain/curriculum.
 import type { EarnedEngagement } from "../domain/engagement.js";
 import { ladderGated, nextUp, unlockedCodes } from "../domain/progression.js";
 import type { TradeTypeCode } from "../domain/trade-types.js";
-import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { ProgressionStore } from "./progression-store.js";
 
 /**
@@ -21,7 +20,7 @@ export function seedRecord(
   store: ProgressionStore | undefined,
   participantId: string,
   now: () => Date,
-  fills: readonly TradeActivityRecord[],
+  hasFill: boolean,
   alreadyTrue: readonly { readonly milestoneId: string }[],
 ) {
   const held = store?.get(participantId);
@@ -29,7 +28,7 @@ export function seedRecord(
   return store.set(
     participantId,
     {
-      trainingWheels: !fills.some((f) => f.filledQuantity > 0),
+      trainingWheels: !hasFill,
       acknowledged: alreadyTrue.map((m) => m.milestoneId),
       since: now().toISOString(),
     },

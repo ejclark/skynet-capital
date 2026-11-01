@@ -56,6 +56,7 @@ import type { DashboardServerConfig } from "../server/dashboard-server-config.js
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
 import { bootGithubToken } from "../server/github-token.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
+import { ladderEvidenceReader } from "../server/ladder-evidence.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { recordPasses } from "../server/play-milestone-sync.js";
@@ -335,7 +336,7 @@ async function main(): Promise<void> {
   } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
-    readTags: (id) => orderAudit.list(id),
+    readEvidence: ladderEvidenceReader({ activity, orderAudit }),
     feedbackLog,
     ownerEmailFor,
     botControls,
