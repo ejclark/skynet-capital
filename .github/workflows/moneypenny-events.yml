@@ -278,7 +278,7 @@ jobs:
           echo "::notice::circuit breaker: $BREAKER"
           if ! echo "$BREAKER" | jq -e '.dispatch' > /dev/null; then
             REASON=$(echo "$BREAKER" | jq -r '.reason')
-            echo "::warning::research circuit breaker is OPEN — dispatching nothing this tick ($REASON)."
+            echo "::warning::research circuit breaker refused this tick — dispatching nothing ($REASON)."
             echo "due=[]" >> "$GITHUB_OUTPUT"
             exit 0
           fi
