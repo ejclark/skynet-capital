@@ -42,7 +42,9 @@ import {
   decide,
   isStrongAdjacent,
   parseLedgerHeader,
+  splitIntents,
 } from "./event-material-decide.mjs";
+import { endOfDayUtc, forEvent, loadIntents } from "./intents.mjs";
 import { readCalendarDir } from "./market-events-read.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
@@ -196,6 +198,9 @@ async function buildState(id, today, opts = {}) {
   // full corridor is still recorded in the probe-ref either way.
   const byId = new Map(allEvents.map((e) => [e.id, e]));
   const adjacentStrongIds = adjacentIds.filter((id) => isStrongAdjacent(byId.get(id)));
+  // The last instant of `today`, so a record is still active on its Until day (scripts/intents.mjs).
+  const intents = forEvent(opts.intents ?? loadIntents(), id, endOfDayUtc(today) - 1);
+  const { pending: pendingIntents, capped: cappedIntents } = splitIntents(intents, ledgerText);
   const state = {
     event,
     today,
@@ -213,6 +218,8 @@ async function buildState(id, today, opts = {}) {
       opts.proposals ?? loadProposals(),
       answeredTextFor(id, { ledgerDir: LEDGER_DIR }),
     ).map((p) => p.key),
+    pendingIntents,
+    cappedIntents,
   };
   // Provenance travels BESIDE the readings, never inside them: `market.symbols` stays a plain
   // symbol->number map, because applyScreen serializes `decision.readings` verbatim into the
@@ -246,6 +253,7 @@ function runExplain() {
     readings: decision.readings,
     intervalDays: decision.intervalDays,
     daysOut: decision.daysOut,
+    cappedIntents: decision.cappedIntents,
   };
   if (decision.verdict === "screen" && typeof input.ledgerText === "string") {
     out.ledgerText = applyScreen(input.ledgerText, input, decision);
@@ -266,6 +274,16 @@ function warnOnFallbackPrices(label, priceAsOf) {
   }
 }
 
+/** A capped intent stopped buying sessions; the log and the row both say so, so it reads as a lane
+ *  that ignored the protocol and never as an intent nobody declared. */
+function warnOnCappedIntents(label, decision) {
+  for (const slug of decision.cappedIntents) {
+    console.error(
+      `event-material-scan: ${label} — declared intent ${slug} no longer trips: sessions landed without citing it`,
+    );
+  }
+}
+
 async function runSingle(id) {
   const today = arg("today") ?? new Date().toISOString().slice(0, 10);
   const { state, ledgerPath, ledgerText, priceAsOf } = await buildState(id, today);
@@ -274,6 +292,7 @@ async function runSingle(id) {
     writeFileSync(ledgerPath, applyScreen(ledgerText, state, decision));
   }
   warnOnFallbackPrices(id, priceAsOf);
+  warnOnCappedIntents(id, decision);
   console.log(JSON.stringify({ id, ...decision, priceAsOf }, null, 2));
   process.exit(decision.verdict === "screen" ? 0 : 1);
 }
@@ -284,6 +303,9 @@ async function runScreenDue() {
   const allEvents = loadEvents();
   const cadence = loadCadence();
   const proposals = loadProposals();
+  // Beside the calendar and cadence, not per event: a malformed record fails this run loudly once,
+  // where a per-event probe error would buy a session for every due pulse. Its spec gates the PR.
+  const intents = loadIntents();
   const stillDue = [];
   const screened = [];
   for (const item of due) {
@@ -296,12 +318,15 @@ async function runScreenDue() {
         allEvents,
         cadence,
         proposals,
+        intents,
       });
       const decision = decide(state);
       warnOnFallbackPrices(item.id, priceAsOf);
+      warnOnCappedIntents(item.id, decision);
       if (decision.verdict === "screen") {
         writeFileSync(ledgerPath, applyScreen(ledgerText, state, decision));
-        screened.push({ id: item.id, reasons: decision.reasons, priceAsOf });
+        const { cappedIntents } = decision;
+        screened.push({ id: item.id, reasons: decision.reasons, cappedIntents, priceAsOf });
       } else {
         stillDue.push({ ...item, materialReasons: decision.reasons, priceAsOf });
       }
