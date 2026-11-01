@@ -69,19 +69,23 @@ const isEric = (login) => String(login ?? "").toLowerCase() === ERIC;
  */
 export function decisionLine(body = "") {
   const lines = aboveFold(body ?? "").split("\n");
-  const start = lines.findIndex((l) => /^>\s*\[!IMPORTANT\]/.test(l));
-  if (start === -1) return null;
-  const callout = [];
-  for (const l of lines.slice(start + 1)) {
-    if (!/^>/.test(l)) break;
-    callout.push(l.replace(/^>\s?/, "").trim());
+  // Every alert, not only the first: a lane's ask can land below an unrelated note, and the rule
+  // (`hasDecisionCallout`) counts it, so this has to find it too or he is never asked.
+  for (const [start, line] of lines.entries()) {
+    if (!/^>\s*\[!IMPORTANT\]/.test(line)) continue;
+    const callout = [];
+    for (const l of lines.slice(start + 1)) {
+      if (!/^>/.test(l)) break;
+      callout.push(l.replace(/^>\s?/, "").trim());
+    }
+    const head = callout.findIndex((l) => /needs from you/i.test(l));
+    if (head === -1) continue;
+    const rest = callout.slice(head + 1).filter(Boolean);
+    const numbered = rest.find((l) => /^\d+\.\s+/.test(l));
+    const pick = numbered ?? rest[0];
+    return pick ? pick.replace(/^(\d+\.|[-*])\s+/, "") : null;
   }
-  const head = callout.findIndex((l) => /needs from you/i.test(l));
-  if (head === -1) return null;
-  const rest = callout.slice(head + 1).filter(Boolean);
-  const numbered = rest.find((l) => /^\d+\.\s+/.test(l));
-  const pick = numbered ?? rest[0];
-  return pick ? pick.replace(/^(\d+\.|[-*])\s+/, "") : null;
+  return null;
 }
 
 /** The comment criterion 1 posts: the ask quoted, the marker that makes criteria 2–3 work. The ask
@@ -389,7 +393,8 @@ export function withAskLease(number, lease, work) {
 /**
  * `executeAssignments`, once: the marker comments are re-read under the lease, because the plan was
  * made from a read that can be minutes old by now. Clearing the label also takes back any ask this
- * lane wrote into the body, so an answered question stops reading as open.
+ * lane wrote into the body, so an answered question stops reading as open. That comes first: the
+ * unassign marker ends this lane's interest in the issue, so a failure after it would never retry.
  */
 export function askOnce(
   intent,
@@ -401,13 +406,12 @@ export function askOnce(
     if (markedByComments(rest(`issues/${n}/comments`)) === asking) {
       return `· #${n} — another sweep already ${asking ? "asked" : "cleared this"}`;
     }
-    const line = executeAssignments(intent, { run, retry });
     if (!asking) {
       const body = retry(() => read(`issues/${n}`))?.body ?? "";
       const cleared = withoutLaneAsk(body);
       if (cleared !== body) writeIssueBody(n, cleared, { run, retry });
     }
-    return line;
+    return executeAssignments(intent, { run, retry });
   });
 }
 

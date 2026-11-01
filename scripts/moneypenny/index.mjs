@@ -610,7 +610,7 @@ export function checkCallout(ctx, deps = {}) {
   const readComments = deps.readComments ?? ((n) => ghRestAll(`issues/${n}/comments`));
   const post =
     deps.post ?? ((n, body) => sh("gh", ["issue", "comment", String(n), "--body", body]));
-  const readBody = deps.readBody ?? ((n) => ghRest(`issues/${n}`)?.body ?? "");
+  const readIssue = deps.readIssue ?? ((n) => ghRest(`issues/${n}`));
   const writeBody = deps.writeBody ?? writeIssueBody;
 
   const labels = (issue.labels ?? []).map((l) => l.name);
@@ -624,10 +624,13 @@ export function checkCallout(ctx, deps = {}) {
   const actor = ctx.payload?.sender?.login ?? ctx.actor;
   const said = askFromComments(comments, { actor, now: deps.now ?? Date.now() });
   if (said) {
-    const live = readBody(issue.number);
-    if (missingDecisionCallout({ labels, body: live })) {
-      writeBody(issue.number, withLaneAsk(live, said.line, said.url));
-    }
+    // Live labels and body, not the payload's: an answer may have cleared the label since, and this
+    // write replaces the whole body, so an empty read must not reach it.
+    const live = readIssue(issue.number);
+    if (!live) throw new Error(`#${issue.number}: could not read the issue to state its ask`);
+    const liveLabels = (live.labels ?? []).map((l) => l.name);
+    if (!missingDecisionCallout({ labels: liveLabels, body: live.body })) return nothing();
+    writeBody(issue.number, withLaneAsk(live.body, said.line, said.url));
     console.log(`::notice::#${issue.number} — stated the ask ${actor} just commented`);
     return { posted: false, lifted: true, actor };
   }

@@ -8,6 +8,7 @@ import {
   ASSIGN_MARKER,
   askOnce,
   assignmentComment,
+  decisionLine,
   executeAssignments,
   plan,
   UNASSIGN_MARKER,
@@ -110,6 +111,14 @@ describe("a plan the lane parks is in his queue, stated once, and holds no seat"
     expect(needsYou.map((n) => n.decision)).toEqual([
       expect.stringContaining("Resume this plan, or say what to fix first?"),
     ]);
+  });
+
+  it("refuses an empty read rather than writing the callout over the whole body", () => {
+    const { calls, run, retry } = stubGithub();
+    expect(() =>
+      executeStopContinuation(STOP, { run, retry, read: () => null, assign: noop as never }),
+    ).toThrow("could not read");
+    expect(calls).toEqual([]);
   });
 
   it("does nothing when another sweep already parked it", () => {
@@ -234,7 +243,7 @@ describe("a lane that comments and labels gets its ask lifted into the body", ()
       deps: {
         now: NOW,
         readComments: () => comments,
-        readBody: () => live,
+        readIssue: () => ({ body: live, labels: [{ name: "needs-eric" }] }),
         writeBody: (n: number, body: string) => void writes.push([n, body]),
         post: (n: number, body: string) => void posts.push([n, body]),
       },
@@ -290,6 +299,39 @@ describe("a lane that comments and labels gets its ask lifted into the body", ()
     expect(posts).toHaveLength(1);
   });
 
+  it("writes nothing when an answer cleared the label since the event", () => {
+    const { writes, posts, deps } = spy([said("Pick?")]);
+    const cleared = { ...deps, readIssue: () => ({ body: "**Ask.**", labels: [] }) };
+    expect(checkCallout(labeled(), cleared)).toMatchObject({ posted: false });
+    expect(writes).toEqual([]);
+    expect(posts).toEqual([]);
+  });
+
+  it("refuses an empty read rather than writing the callout over the whole body", () => {
+    const { writes, deps } = spy([said("Pick?")]);
+    expect(() => checkCallout(labeled(), { ...deps, readIssue: () => null })).toThrow(
+      "could not read",
+    );
+    expect(writes).toEqual([]);
+  });
+
+  it.each([
+    ["an outcome report", "**Sliced: #5 is open.** The pipeline merges it."],
+    ["a shipped report", "**Shipped** in #5."],
+  ])("does not read %s as the ask", (_why, text) => {
+    expect(askFromComments([said(text)], { actor: LANE, now: NOW })).toBeNull();
+  });
+
+  it("does not read a comment with an unreadable date as recent", () => {
+    const comment = said("Pick?", { created_at: "not a date" });
+    expect(askFromComments([comment], { actor: LANE, now: NOW })).toBeNull();
+  });
+
+  it("skips a code fence or a table row to reach the sentence", () => {
+    const comment = said("```\n| a | b |\nPick A or B?");
+    expect(askFromComments([comment], { actor: LANE, now: NOW })?.line).toBe("Pick A or B?");
+  });
+
   it("never lifts its own gap comment, and does not repeat it", () => {
     const { writes, posts, deps } = spy([said(`x\n${CALLOUT_GAP_MARKER}`)]);
     expect(checkCallout(labeled(), deps)).toMatchObject({ posted: false });
@@ -331,6 +373,32 @@ describe("the stall guard states what it parks", () => {
     expect(patch).toBeGreaterThanOrEqual(0);
     expect(patch).toBeLessThan(label);
     expect(stated(bodyWrites(calls)[0] as string)).toBe(true);
+  });
+});
+
+describe("the stall guard's alarm survives a failed body write", () => {
+  it("still comments and labels", () => {
+    const calls: string[][] = [];
+    const run = (cmd: string, args: readonly string[]) => {
+      if (args.includes("PATCH")) throw new Error("403");
+      calls.push([cmd, ...args]);
+      if (args[0] === "issue" && args[1] === "view") {
+        return JSON.stringify({ state: "OPEN", labels: [], comments: [{}], body: "**Ask.**" });
+      }
+      if (args[0] === "pr") return "[]";
+      return "";
+    };
+    guardFeedbackOutcome(9, "https://run/1", undefined, { run, ensure: noop });
+    expect(calls.some((c) => c.includes("comment"))).toBe(true);
+    expect(calls.some((c) => c.includes("--add-label"))).toBe(true);
+  });
+});
+
+describe("the ask below an unrelated alert still reaches him", () => {
+  it("is the decision the assignment lane reads", () => {
+    const body = withLaneAsk("> [!IMPORTANT]\n> A note about something else.\n", "Pick A or B?");
+    expect(stated(body)).toBe(true);
+    expect(decisionLine(body)).toBe("Pick A or B?");
   });
 });
 
@@ -443,6 +511,22 @@ describe("two overlapping sweeps post one ask", () => {
     askOnce(out, { ...gh, read: () => ({ body: "" }) });
     askOnce(out, { ...gh, read: () => ({ body: "" }) });
     expect(gh.comments.filter((c) => c.body.includes(UNASSIGN_MARKER))).toHaveLength(1);
+  });
+
+  it("cleans the body before the unassign marker, so a failed clean is retried next tick", () => {
+    const gh = github();
+    const out = {
+      kind: "unassign-eric",
+      number: 7,
+      criterion: 2,
+      why: "needs-eric removed",
+    } as const;
+    gh.comments.push({ body: `asked ${ASSIGN_MARKER}` });
+    const read = () => {
+      throw new Error("500");
+    };
+    expect(() => askOnce(out, { ...gh, read })).toThrow("500");
+    expect(gh.comments.filter((c) => c.body.includes(UNASSIGN_MARKER))).toEqual([]);
   });
 
   it("clearing the label also takes the lane's ask back out of the body", () => {

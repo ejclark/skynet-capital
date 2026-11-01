@@ -361,10 +361,12 @@ export function executeStopContinuation(
   const n = intent.issueNumber;
   return withAskLease(n, lease, () => {
     const live = retry(() => read(`issues/${n}`));
-    if (labelNames(live?.labels).includes(NEEDS_ERIC)) {
+    // Not `?? ""`: the write below replaces the whole body, so an empty read must not reach it.
+    if (!live) throw new Error(`#${n}: could not read the issue before stopping it`);
+    if (labelNames(live.labels).includes(NEEDS_ERIC)) {
       return `· #${n} — another sweep already stopped this plan`;
     }
-    const body = live?.body ?? "";
+    const body = live.body ?? "";
     const ask = `Resume this plan, or say what to fix first? — ${intent.reason}`;
     const stated = withLaneAsk(body, ask);
     if (stated !== body) writeIssueBody(n, stated, { run, retry });

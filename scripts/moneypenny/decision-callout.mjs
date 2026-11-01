@@ -97,8 +97,10 @@ export function withoutLaneAsk(body) {
   return tail ? head + tail : head.replace(/\n\n$/, "");
 }
 
-/** A comment that announces work and asks nothing. Lifting one would put a non-question in his queue. */
-const NOT_AN_ASK = /build session has started|^\**Continuing this plan/i;
+/** A comment that reports work and asks nothing. Lifting one would put a non-question in his queue. */
+const NOT_AN_ASK = /build session has started|^\**(?:Continuing this plan|Sliced|Shipped)\b/i;
+/** Lines that cannot carry the ask: a marker, a code fence, a table row, a rule. */
+const NOT_A_SENTENCE = /^(?:<!--|```|\||---)/;
 /** How recently a lane must have said it for the comment to belong to this label. */
 const ASK_WINDOW_MS = 15 * 60 * 1000;
 
@@ -113,13 +115,14 @@ export function askFromComments(comments = [], { actor, now = Date.now() } = {})
   if (!/\[bot\]$/.test(actor ?? "")) return null;
   const said = comments.filter((c) => c?.user?.login === actor);
   const last = said[said.length - 1];
-  if (!last || now - Date.parse(last.created_at ?? 0) > ASK_WINDOW_MS) return null;
+  // Written so an unreadable date fails the window instead of passing it.
+  if (!(last && now - Date.parse(last.created_at ?? "") <= ASK_WINDOW_MS)) return null;
   const text = last.body ?? "";
   if (text.includes(CALLOUT_GAP_MARKER) || NOT_AN_ASK.test(text)) return null;
   const line = text
     .split("\n")
     .map((l) => l.trim().replace(/^#+\s*/, ""))
-    .find((l) => l && !l.startsWith("<!--"));
+    .find((l) => l && !NOT_A_SENTENCE.test(l));
   return line ? { line, url: last.html_url } : null;
 }
 

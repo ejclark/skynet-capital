@@ -187,7 +187,13 @@ export function guardFeedbackOutcome(
     "Retry this build, or close the issue? — the session ended and said nothing anyone can see.";
   const body = view.body ?? "";
   const stated = withLaneAsk(body, ask);
-  if (stated !== body) writeIssueBody(n, stated, { run });
+  // This step runs once per build, so the alarm below must land even when the body write does not:
+  // the label then draws the gap comment, which is the smaller failure.
+  try {
+    if (stated !== body) writeIssueBody(n, stated, { run });
+  } catch (err) {
+    console.log(`::warning::feedback #${n} — could not state the ask: ${String(err?.message)}`);
+  }
   run("gh", ["issue", "comment", String(n), "--body", stallGuardComment(n, runUrl)]);
   run("gh", ["issue", "edit", String(n), "--add-label", LABELS.needsEric.name]);
   return { visible: false, handedOff, waitingOnMember };

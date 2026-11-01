@@ -48,7 +48,10 @@ export function checkCallout(
   deps?: {
     readComments?: (issueNumber: number) => unknown[];
     post?: (issueNumber: number, body: string) => void;
-    readBody?: (issueNumber: number) => string;
+    readIssue?: (issueNumber: number) => {
+      body?: string | null;
+      labels?: { name: string }[];
+    } | null;
     writeBody?: (issueNumber: number, body: string) => void;
     now?: number;
   },
