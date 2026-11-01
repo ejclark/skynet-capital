@@ -21,6 +21,7 @@ import {
 import { defectIssues, searchIssues } from "../../scripts/agent-meter/github.mjs";
 // @ts-expect-error plain .mjs script, no declarations
 import { failureToFix } from "../../scripts/agent-meter/render.mjs";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // THE ONE OUTCOME NOTHING MEASURED (#6470). Eric asked for faster verification and problem
 // resolution, and docs/process/PILLARS.md calls detection lag the measure of the measures, yet every
@@ -608,7 +609,7 @@ describe("npm run meter -- --failure-to-fix", () => {
       execFileSync("git", args, {
         cwd: join(dir, "repo"),
         env: {
-          ...process.env,
+          ...hermeticGitEnv(),
           GIT_AUTHOR_NAME: "t",
           GIT_AUTHOR_EMAIL: "t@example.test",
           GIT_COMMITTER_NAME: "t",
@@ -745,7 +746,7 @@ describe("npm run meter -- --failure-to-fix", () => {
     );
     chmodSync(join(dir, "bin", "gh"), 0o755);
     env = {
-      ...process.env,
+      ...hermeticGitEnv(),
       PATH: `${join(dir, "bin")}:${process.env.PATH}`,
       AGENT_RUNS_DIR: join(dir, "runs"),
       AGENT_GIT_DIR: join(dir, "repo"),
@@ -793,7 +794,9 @@ describe("npm run meter -- --failure-to-fix", () => {
 
   it("says so when a shallow checkout cut the history its links come from", () => {
     const shallow = join(dir, "shallow");
-    execFileSync("git", ["clone", "-q", "--depth", "1", `file://${join(dir, "repo")}`, shallow]);
+    execFileSync("git", ["clone", "-q", "--depth", "1", `file://${join(dir, "repo")}`, shallow], {
+      env: hermeticGitEnv(),
+    });
     const text = execFileSync(
       "node",
       [
