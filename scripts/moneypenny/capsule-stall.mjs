@@ -185,6 +185,25 @@ function orphanBody(c) {
   return `🧭 **No repair has reached this** — this capsule was filed **${c.ageHours}h** ago and has no linked PR and no \`${LABELS.needsEric.name}\`. The repair session either never ran or ended without opening a PR, and a recurrence only adds a comment here.\n\nTo move it: open a fix PR that says \`Closes #${c.number}\`, apply \`${LABELS.needsEric.name}\` with the reason if the fix is Eric's call, or close it if the job passes again.\n\n${ORPHAN_MARKER}\n\n${FOOTER}`;
 }
 
+/**
+ * The PR a capsule tracks, when it tracks one (red-session-pr.mjs writes the row). `main`'s runs say
+ * nothing about such a capsule: `integration tests` also runs on push, and three green pushes there
+ * would close a capsule on a PR still red. So its end is the PR's: closed, merged or not, leaves
+ * nothing to repair (#6605).
+ */
+export function redPrOf(issue = {}) {
+  const number = /^\| \*\*PR\*\* \| #(\d+) \|$/m.exec(String(issue.body ?? ""))?.[1];
+  return number ? Number(number) : null;
+}
+
+function prGoneBody(pr, clearNeedsEric) {
+  const how = pr.merged ? "merged" : "was closed";
+  const label = clearNeedsEric
+    ? ` \`${LABELS.needsEric.name}\` comes off with it: the decision it waited on was about that PR.`
+    : "";
+  return `🌤 **Closed with its PR** — #${pr.number} ${how}, so there is nothing left here to repair.${label}\n\n${PROVEN_MARKER}\n\n${FOOTER}`;
+}
+
 function provenBody(proof, clearNeedsEric) {
   const runs = proof.runs.map((r) => `[${r.id}](${r.url})`).join(", ");
   const ran = proof.step ? ` that ran \`${proof.step}\`` : "";
@@ -211,6 +230,17 @@ export function capsuleIntents({ capsules = [], orphanAfterHours = ORPHAN_AFTER_
     // legacy eroded comment beside a present `needs-eric` means the owner re-applied the label
     // after that check removed it. Either is his call and stays, green or not.
     const spoke = posted.includes(PROVEN_MARKER) || (escalated && posted.includes(ERODED_MARKER));
+    if (!spoke && c.redPr?.state === "closed") {
+      intents.push({
+        kind: "close-proven-capsule",
+        issueNumber: c.number,
+        title: c.title,
+        body: prGoneBody(c.redPr, escalated),
+        clearNeedsEric: escalated,
+        said: `closed with #${c.redPr.number}`,
+      });
+      continue;
+    }
     const proof = spoke ? null : greenProof(c);
     if (proof) {
       const clearNeedsEric = escalated;
@@ -308,7 +338,12 @@ export function gatherCapsules(nowMs, { rest = ghRest, restAll = ghRestAll } = {
     if (need.orphan) {
       c.hasLinkedPr = hasLinkedPr(restAll(`issues/${i.number}/timeline`), recurredAt);
     }
-    const target = capsuleTarget(i);
+    const redPr = redPrOf(i);
+    if (redPr) {
+      const pr = cached(`pulls/${redPr}`);
+      c.redPr = { number: redPr, state: pr?.state, merged: Boolean(pr?.merged) };
+    }
+    const target = redPr ? null : capsuleTarget(i);
     if (target) {
       workflowIds ??= new Map(
         (cached("actions/workflows?per_page=100")?.workflows ?? []).map((w) => [w.name, w.id]),
@@ -369,6 +404,7 @@ export function closeProvenCapsule(i, { run = sh } = {}) {
     run("gh", ["api", "-X", "DELETE", `${issuePath(i.issueNumber)}/labels/${label}`]);
   }
   run("gh", ["issue", "close", n, "--reason", "not planned", "--comment", i.body]);
-  console.log(`::notice::closed #${n} — its failing job is green again`);
-  return `🌤 closed #${n} — \`${i.title}\` is passing again`;
+  const said = i.said ?? "is passing again";
+  console.log(`::notice::closed #${n} — ${said}`);
+  return `🌤 closed #${n} — \`${i.title}\` ${said}`;
 }

@@ -35,6 +35,8 @@ export interface Capsule {
   recurredAt?: string;
   hasLinkedPr?: boolean;
   recentRuns?: readonly CapsuleRun[];
+  /** The PR a red-PR capsule tracks (#6605), as last read. */
+  redPr?: { number: number; state?: string; merged: boolean };
 }
 export interface CapsuleIntent {
   kind: "flag-capsule-orphan" | "close-proven-capsule";
@@ -43,6 +45,8 @@ export interface CapsuleIntent {
   body: string;
   /** On a close: the capsule carries `needs-eric`, which comes off before the close. */
   clearNeedsEric?: boolean;
+  /** On a close: what to report instead of "is passing again". */
+  said?: string;
 }
 export interface TimelineEvent {
   event?: string;
