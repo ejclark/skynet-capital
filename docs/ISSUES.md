@@ -109,7 +109,10 @@ Rules that make it work, in priority order:
    of surfacing it below the context). The rule holds **after filing too**: the label usually
    lands later, from another lane, so `issues.mjs update --add needs-eric` refuses a body with no
    callout, and the board keeps such an issue out of Blocked until the callout exists
-   (`scripts/moneypenny/decision-callout.mjs`, #3913). Eric's own issues are exempt.
+   (`scripts/moneypenny/decision-callout.mjs`, #3913). It binds every issue with the label, whoever
+   filed it: sessions post under Eric's login, so neither the author nor a footer can tell whose words
+   an issue is (#6584). A lane writes its ask into the callout when it applies the label. A parked plan
+   holds no started-plan seat, with or without the callout.
 8. **One decision, one line, no paragraph.** Each `Needs from you` item is numbered, phrased as a
    closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
    after an em dash — same anatomy as the procedure steps in CLAUDE.md's *When Eric's action IS

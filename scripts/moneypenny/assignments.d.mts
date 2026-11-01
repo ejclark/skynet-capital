@@ -94,6 +94,26 @@ export function routeAssignments(deps?: {
   assignments?: Required<Pick<PlanInput, "issues" | "prs" | "markers">> | null;
   now?: number;
 }): AssignIntent[];
+export const ASK_LEASE_MS: number;
+export interface AskLease {
+  claim: (slug: string) => { claimed: boolean; reason?: string };
+  release: (slug: string) => unknown;
+}
+export function withAskLease<T>(
+  number: number | string,
+  lease: AskLease | null | undefined,
+  work: () => T,
+): T | string;
+export function askOnce(
+  intent: AssignIntent,
+  opts?: {
+    run?: (cmd: string, args: readonly string[]) => string;
+    retry?: <T>(fn: () => T) => T;
+    rest?: (path: string) => unknown[];
+    read?: (path: string) => { body?: string | null } | null;
+    lease?: AskLease | null;
+  },
+): string;
 export function executeAssignments(
   intent: AssignIntent,
   opts?: {

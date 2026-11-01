@@ -29,11 +29,11 @@ describe("whole-read gate — this repo", () => {
 describe("whole-read scan — what counts as a site", () => {
   it("counts a call to a named read seam, optional or not", () => {
     const src = [
-      "const a = await config.readTradeActivity?.(id);",
+      "const a = await config.readAllTradeActivity?.(id);",
       "const b = await deps.readHistory(id);",
     ].join("\n");
     expect(sitesIn(src)).toEqual([
-      { read: "readTradeActivity()", line: 1 },
+      { read: "readAllTradeActivity()", line: 1 },
       { read: "readHistory()", line: 2 },
     ]);
   });
@@ -83,6 +83,13 @@ describe("whole-read scan — what counts as a site", () => {
     expect(sitesIn(src)).toEqual([{ read: "activity.list()", line: 2 }]);
   });
 
+  it("does not count the held ledger seams, but a root binding back to a whole list is a site", () => {
+    const held = ["const a = await config.readTradeActivity?.(id);", "readOrderOrigins: held,"];
+    expect(sitesIn(held.join("\n"))).toEqual([]);
+    const whole = ["const config = {", "  readTradeActivity: (id) => activity.list(id),", "};"];
+    expect(sitesIn(whole.join("\n"))).toEqual([{ read: "activity.list()", line: 2 }]);
+  });
+
   it("does not count a fold's fallback for a store with no append-aware read", () => {
     const src = [
       "function read(store: HistoryStore) {",
@@ -92,6 +99,19 @@ describe("whole-read scan — what counts as a site", () => {
       "    await advance(since);",
       "  } else {",
       "    replace(await store.list());",
+      "  }",
+      "}",
+    ].join("\n");
+    expect(sitesIn(src)).toEqual([]);
+  });
+
+  it("does not count the fallback of a fold over two stores, however the guard is spelled", () => {
+    const src = [
+      "function read(activity: ActivityStore, orderAudit: OrderAuditLog) {",
+      "  const since = activity.since?.bind(activity);",
+      "  const sinceTags = orderAudit.since?.bind(orderAudit);",
+      "  if (!(since && sinceTags)) {",
+      "    return fold(await activity.list(id), await orderAudit.list(id));",
       "  }",
       "}",
     ].join("\n");

@@ -86,6 +86,26 @@ export function createBootActivityStore(env: NodeJS.ProcessEnv, mode: string): A
  */
 export function collapseActivity(records: readonly TradeActivityRecord[]): TradeActivityRecord[] {
   const byOrder = new Map<string, TradeActivityRecord>();
+  foldLatestPerOrder(byOrder, records);
+  return newestFirst(byOrder);
+}
+
+/** The slice of a journal line the per-order fold compares — what `ladder-evidence.ts` keeps. */
+export interface FoldableFill {
+  readonly orderId: string;
+  readonly filledQuantity: number;
+  readonly at: string;
+}
+
+/**
+ * `collapseActivity`'s fold, one batch at a time: lines folded in file order onto `byOrder`, a
+ * later batch landing exactly as if it had been appended to the first. A held fold that advances
+ * by `since` stays identical to a whole read because both go through here.
+ */
+export function foldLatestPerOrder<T extends FoldableFill>(
+  byOrder: Map<string, T>,
+  records: readonly T[],
+): void {
   for (const record of records) {
     const held = byOrder.get(record.orderId);
     if (
@@ -96,6 +116,10 @@ export function collapseActivity(records: readonly TradeActivityRecord[]): Trade
       byOrder.set(record.orderId, record);
     }
   }
+}
+
+/** A per-order fold's lines, newest first by `at` — ties keep the fold's insertion order. */
+export function newestFirst<T extends { readonly at: string }>(byOrder: Map<string, T>): T[] {
   return [...byOrder.values()].sort((a, b) => b.at.localeCompare(a.at));
 }
 

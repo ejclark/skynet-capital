@@ -19,6 +19,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { wireFeedReader } from "../../../src/observatory/wire-feed-cache.ts";
 import { lastBotActivityAt } from "../../../src/scripts/dashboard-ops-status.ts";
+import { ladderEvidenceFrom } from "../../../src/server/ladder-evidence.ts";
 import {
   appDeploySignal,
   botsDeployLag,
@@ -114,8 +115,8 @@ const optionFillWithoutAudit = (book, ids) => {
  */
 function progression(book) {
   return createProgressionService({
-    readFills: async (id) => book.activity[id] ?? [],
-    readTags: (id) => optionFillWithoutAudit(book, [id]),
+    readEvidence: async (id) =>
+      ladderEvidenceFrom(book.activity[id] ?? [], await optionFillWithoutAudit(book, [id])),
     readMessages: async () => [],
     readFeedback: async () => [],
     now: () => new Date(AT),
