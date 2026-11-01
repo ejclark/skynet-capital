@@ -7,6 +7,7 @@ import { serveContentApi } from "../../src/server/content-api-routes.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveDeskJson } from "../../src/server/desk-json-routes.js";
 import { anOptionIntent } from "../support/builders.js";
+import { wireFeedOf } from "../support/wire-feed.js";
 
 /**
  * What the broker said about a bot's order (#4650 leftover, plan #4642) — "limit $2.10 not reached
@@ -75,7 +76,7 @@ const config = {
   resolveOwnerIds: (email: string) => (email === "owner@x" ? ["sauron"] : ["human-eric"]),
   readDecisions: () => Promise.resolve([pass]),
   readTradeActivity: async () => [canceled],
-  readAllTradeActivity: async () => [canceled],
+  readWireFeed: wireFeedOf({ records: [canceled] }),
   findByOrderId,
 } as unknown as DashboardServerConfig;
 

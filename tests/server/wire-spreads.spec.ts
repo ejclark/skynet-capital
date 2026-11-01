@@ -7,6 +7,7 @@ import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
 import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
 import { anOptionIntent } from "../support/builders.js";
+import { wireFeedOf } from "../support/wire-feed.js";
 
 /** `/api/wire` over the real decision store (#4650): a bot's spread fills as two leg lines, each
  *  under its leg's own order id. The league Wire lists it as ONE row — the spread in words, whole
@@ -123,7 +124,7 @@ async function wireTrades(config: Partial<WireRouteDeps>): Promise<WireRow[]> {
   } as unknown as ServerResponse;
   const full = {
     hub: { getState: () => ({ generatedAt: "t", participants, collisions: [] }) },
-    readAllTradeActivity: async () => ledger,
+    readWireFeed: wireFeedOf({ records: ledger }),
     ...config,
   } as unknown as WireRouteDeps;
   await serveWireJson(res, "/api/wire", full, false, () => true);
