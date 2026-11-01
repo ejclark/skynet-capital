@@ -87,11 +87,11 @@ function startLocked(dir: string, env: NodeJS.ProcessEnv, script: string) {
 const SLOW_BOX_MS = 60_000;
 
 /** Holds the lock until killed, and returns only once it is inside: a fixed sleep flakes under load. */
-async function holdLock(dir: string, env: NodeJS.ProcessEnv) {
+async function holdLock(dir: string, env: NodeJS.ProcessEnv, scriptArgs: string[] = []) {
   const inside = `${dir}.holding`;
   const child = spawn(
     "bash",
-    ["scripts/verify-locked.sh", "--", "sh", "-c", `: > "${inside}"; sleep 60`],
+    ["scripts/verify-locked.sh", ...scriptArgs, "--", "sh", "-c", `: > "${inside}"; sleep 60`],
     { cwd: dir, env, detached: true, stdio: "ignore" },
   );
   const deadline = performance.now() + SLOW_BOX_MS / 2;
@@ -131,6 +131,7 @@ describe("verify-locked — a lock tool that is there but broken", () => {
     expect(r.status).toBe(0);
     expect(r.stderr).toContain("could not take the lock (exit 2)");
     expect(r.stderr).not.toContain("gave up");
+    expect(r.stderr).not.toContain("verify: queued");
   });
 });
 
@@ -188,6 +189,33 @@ for (const { tool, on, path } of LOCK_TOOLS) {
         holder.killAll();
         expect(r.status).toBe(75);
         expect(r.stderr).toContain("gave up after 1s");
+      },
+      SLOW_BOX_MS,
+    );
+
+    it(
+      "queues across worktrees of one checkout, the case the lock exists for",
+      async () => {
+        const { dir, env, git, run } = repo();
+        const sibling = `${dir}-sibling`;
+        git("worktree", "add", "-q", sibling);
+        const holder = await holdLock(sibling, { ...env, ...path() });
+        const r = run(["--", "true"], { ...path(), VERIFY_LOCK_WAIT: "0" });
+        holder.killAll();
+        expect(r.status).toBe(75);
+      },
+      SLOW_BOX_MS,
+    );
+
+    it(
+      "keeps the lock from a logged verify's child too, once that verify's shell has died",
+      async () => {
+        const { dir, env, run } = repo();
+        const holder = await holdLock(dir, { ...env, ...path() }, ["--log", `${dir}.log`]);
+        holder.killShellOnly();
+        const r = run(["--", "true"], { ...path(), VERIFY_LOCK_WAIT: "30" });
+        holder.killAll();
+        expect(r.status).toBe(0);
       },
       SLOW_BOX_MS,
     );
@@ -265,6 +293,20 @@ describe("verify-locked — the green-tree stamp", () => {
       "skipped",
     );
     expect(runs()).toBe(3);
+  });
+
+  it("writes no stamp when the verify itself commits a different tree", () => {
+    const { dir, git, run } = repo();
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({
+        scripts: { verify: "echo x > during.txt && git add during.txt && git commit -qm during" },
+      }),
+    );
+    git("add", "-A");
+    git("commit", "-qm", "a verify that commits");
+    expect(run().status).toBe(0);
+    expect(() => readFileSync(join(dir, ".git", "verify-ok"))).toThrow();
   });
 
   it("writes no stamp for a failed verify, a dirty tree, or a command other than npm run verify", () => {
