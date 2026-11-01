@@ -18,6 +18,7 @@
 // pointed at the doctrine line; nothing else is touched.
 //
 // Exit codes: 0 allow (stdin unreadable, another tool, or no match) · 2 refuse (the reason on stderr).
+// A command the rtk hook would break also exits 0, with the input back as JSON on stdout (see below).
 import { fileURLToPath } from "node:url";
 
 /** The banned commands, each with the doctrine line that bans it and the alternative to offer. */
@@ -91,6 +92,42 @@ export function guardVerdict(input) {
   return { allow: true };
 }
 
+// WHY (2026-11-01, #6470): the user-level rtk hook rewrites a command before Claude Code runs it,
+// and two of its rewrites turn a working command into a failing one. These were the first-pass
+// errors on nearly every workflow agent that day; `docs/DELEGATION.md` rail 2 had the workaround.
+//   - An agent isolated in a worktree: `git status` becomes `rtk git status`, and the harness's own
+//     worktree check (not this file) refuses `rtk` with git among its operands, since it cannot
+//     tell where rtk would run it. rtk with a glob, a variable or a pipe in its operands is refused
+//     the same way. `/usr/bin/git` and the plain forms pass, because rtk leaves them alone.
+//   - Every session: `npx biome check x` and `npm run lint` become `rtk lint …`, which looks for
+//     ESLint (this repo has none) or takes `check` for a package name. Both exit 1 without linting.
+// So those commands go back exactly as written. Nothing is edited, so quoted text, a heredoc or a
+// commit message cannot be damaged, and the harness's worktree check still reads the final command:
+// `git -C <shared checkout>` is refused as before. Every other command keeps rtk's output savings.
+//
+// Claude Code runs matching PreToolUse hooks in parallel, and its docs do not say whose updatedInput
+// wins when two return one. This hook's won every live call on 2026-11-01, with the machine idle and
+// under a typecheck, and it finishes later (about 22ms against rtk's 8ms). If that changes, the
+// result is only the old behaviour: the refusal, and `/usr/bin/git` still works.
+const WORKTREE_CWD = /\/\.claude\/worktrees\/[^/]+(\/|$)/;
+// Text that makes the harness's check refuse a command once rtk is in front of it.
+const RTK_TRIPS_WORKTREE_CHECK = /\bgit\b|[*?$|]/;
+// At a command position, env prefixes allowed, the same anchoring as the rules above.
+const RTK_BREAKS_ANYWHERE =
+  /(^|[;&|(]\s*)(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:npx\s+biome\b|npm\s+run\s+lint(?=\s|$|[;&|)]))/m;
+
+/**
+ * The tool input to hand back as written, or null to leave the command to rtk. An isolated agent is
+ * named by its `agent_id` plus a working directory inside `.claude/worktrees/`.
+ */
+export function asWrittenInput(input) {
+  if (input?.tool_name !== "Bash") return null;
+  const cmd = String(input.tool_input?.command ?? "");
+  if (RTK_BREAKS_ANYWHERE.test(cmd)) return input.tool_input;
+  const isolated = Boolean(input.agent_id) && WORKTREE_CWD.test(String(input.cwd ?? ""));
+  return isolated && RTK_TRIPS_WORKTREE_CHECK.test(cmd) ? input.tool_input : null;
+}
+
 async function readStdin() {
   const chunks = [];
   for await (const c of process.stdin) chunks.push(c);
@@ -108,9 +145,16 @@ async function main() {
     return;
   }
   const v = guardVerdict(input);
-  if (v.allow) return;
-  process.stderr.write(`guard-bash refused ${v.rule}: ${v.reason}\n`);
-  process.exit(2);
+  if (!v.allow) {
+    process.stderr.write(`guard-bash refused ${v.rule}: ${v.reason}\n`);
+    process.exit(2);
+  }
+  const updatedInput = asWrittenInput(input);
+  if (!updatedInput) return;
+  // No permissionDecision: `allow` would skip the prompt, and this only undoes a rewrite.
+  process.stdout.write(
+    JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput } }),
+  );
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) await main();
