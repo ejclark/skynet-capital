@@ -575,7 +575,7 @@ await shootSymbolTier2("symbol-tier2-phone");
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?section=chain&symbol=NVDA&play=201`);
 await page.getByRole("region", { name: "NVDA options chain" }).waitFor();
-await page.getByText(/Tap a bid to sell it/).waitFor();
+await page.getByText(/Tap a bid to sell/).waitFor();
 await page.evaluate(() => window.scrollTo({ top: 0, left: 0 }));
 const shootChainSection = shooter(page, resolve("docs/shots/chain-section"));
 await shootChainSection("chain-section-phone");
