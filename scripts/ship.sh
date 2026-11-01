@@ -653,6 +653,19 @@ cmd_checkarm() {
   echo "ship checkarm: ✓ nothing in the irreversible class — auto-merge may arm."
 }
 
+# The state of the newest run in a check-runs response on stdin: its conclusion, its status while it
+# runs, or "not reported yet" when there is none.
+latest_check_state() {
+  python3 -c '
+import sys, json
+runs = json.load(sys.stdin).get("check_runs", [])
+if not runs: print("not reported yet")
+else:
+    r = max(runs, key=lambda r: r.get("started_at") or "")
+    print(r.get("conclusion") or r.get("status"))
+'
+}
+
 cmd_automerge() {
   local num="${1:-}"
   [ -n "$num" ] || { echo "ship automerge: PR number required" >&2; exit 1; }
@@ -697,17 +710,24 @@ cmd_automerge() {
   cresp="$(api GET "/commits/$head_sha/check-runs?check_name=integration%20tests&per_page=10")"
   chttp="$(http_of "$cresp")"; cbody="$(body_of "$cresp")"
   [ "$chttp" = 200 ] || { echo "ship automerge: GET check-runs returned HTTP $chttp — refusing to arm unproven." >&2; exit 6; }
-  e2e_state="$(printf '%s' "$cbody" | python3 -c '
-import sys, json
-runs = json.load(sys.stdin).get("check_runs", [])
-if not runs: print("not reported yet")
-else:
-    r = max(runs, key=lambda r: r.get("started_at") or "")
-    print(r.get("conclusion") or r.get("status"))
-')"
+  e2e_state="$(printf '%s' "$cbody" | latest_check_state)"
   case "$e2e_state" in
     success|skipped) ;;
     *) echo "ship automerge: integration tests on #$num are '$e2e_state' — refusing to arm. Only a passed (or skipped) run may merge (#4094)." >&2; exit 6 ;;
+  esac
+
+  # THE SAME LINE FOR THE STABILITY BUDGET. The arm job waits on it, and it is not a required check,
+  # so native auto-merge would not. Unlike integration tests a head may never have run it: a job added
+  # later has no run on an older head, and that reads as passing, as it does in stuck-pr-decide.mjs.
+  # A cancelled one is refused here and is not red there: this is an arm, and only a pass may arm.
+  local stability_state
+  cresp="$(api GET "/commits/$head_sha/check-runs?check_name=stability%20budget&per_page=10")"
+  chttp="$(http_of "$cresp")"; cbody="$(body_of "$cresp")"
+  [ "$chttp" = 200 ] || { echo "ship automerge: GET check-runs returned HTTP $chttp — refusing to arm unproven." >&2; exit 6; }
+  stability_state="$(printf '%s' "$cbody" | latest_check_state)"
+  case "$stability_state" in
+    success|skipped|"not reported yet") ;;
+    *) echo "ship automerge: stability budget on #$num is '$stability_state' — refusing to arm. Read that job, then re-run it or fix what it found." >&2; exit 6 ;;
   esac
 
   local q payload gql

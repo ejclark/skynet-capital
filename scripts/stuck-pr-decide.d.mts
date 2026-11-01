@@ -3,6 +3,8 @@
 // incident-runs.d.mts).
 
 export const REQUIRED_CHECKS: string[];
+export const ARM_GATE_CHECKS: string[];
+export const RED: Set<string>;
 export const DEFAULT_HOURS: number;
 
 export interface Suite {
