@@ -45,6 +45,20 @@ const dryRunPayload = (payload: object): Intent[] => {
   }
 };
 
+/** issue-lint exits non-zero on a problem, and execFileSync throws on that. */
+const lintCapsule = (intent: Intent | undefined): string => {
+  const dir = mkdtempSync(join(tmpdir(), "repair-body-"));
+  const file = join(dir, "body.md");
+  writeFileSync(file, intent?.body ?? "");
+  try {
+    return execFileSync("node", ["scripts/issue-lint.mjs", "--title", intent?.title ?? "", file], {
+      encoding: "utf8",
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+};
+
 /** A failed run on `main`, with whatever failing jobs the case is about. */
 const failedRun = (jobs: string[], openIssues: Intent["title"][] = []) => ({
   repository: { default_branch: "main" },
@@ -314,17 +328,43 @@ describe("moneypenny repair — a usage-limit rejection is not a fault", () => {
   it("keeps the note inside the capsule contract", () => {
     const payload = failedRun(["research due events (x)"]);
     payload.failures[0] = { ...payload.failures[0], logTail: shortPrint } as never;
-    const [intent] = dryRunPayload(payload);
-    const dir = mkdtempSync(join(tmpdir(), "repair-note-"));
-    const file = join(dir, "body.md");
-    writeFileSync(file, intent?.body ?? "");
-    const out = execFileSync(
-      "node",
-      ["scripts/issue-lint.mjs", "--title", intent?.title ?? "", file],
-      { encoding: "utf8" },
-    );
-    rmSync(dir, { recursive: true, force: true });
-    expect(out).toContain("satisfies the capsule contract");
+    expect(lintCapsule(dryRunPayload(payload)[0])).toContain("satisfies the capsule contract");
+  });
+
+  // A limit can only end a step that runs a Claude session. A failing spec's code frame or a printed
+  // fixture can carry these exact strings in any job's log, and that is a test failure, not a limit.
+  it("does not read a job that ran no Claude session as a limit, whatever its log quotes", () => {
+    const quoted = `expect(limitRejected('"api_error_status": 429,')).toBe(true);\n${rejectedEvent}`;
+    const payload = {
+      ...failedRun(["verify"]),
+      failures: [{ job: "verify", step: "Run npm test", logTail: quoted }],
+    };
+    expect(dryRunPayload(payload).map((i) => i.type)).toEqual(["open-issue"]);
+
+    const unnamed = { ...payload, failures: [{ job: "verify", logTail: quoted }] };
+    expect(dryRunPayload(unnamed).map((i) => i.type)).toEqual(["open-issue"]);
+  });
+
+  it("does not send a job that ran no Claude session to check its token", () => {
+    const payload = {
+      ...failedRun(["verify"]),
+      failures: [{ job: "verify", step: "Run npm test", logTail: shortPrint }],
+    };
+    expect(dryRunPayload(payload)[0]?.body).not.toContain("no API status in this log");
+  });
+
+  it("knows the step as the real workflows name it, pin and all", () => {
+    const payload = {
+      ...failedRun(["build plan issue"]),
+      failures: [
+        {
+          job: "build plan issue",
+          step: "Run anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc",
+          logTail: rejectedEvent,
+        },
+      ],
+    };
+    expect(dryRunPayload(payload).map((i) => i.type)).toEqual(["skip"]);
   });
 
   it("a session that worked for 25 turns and then died on the limit is still a refusal", () => {
@@ -523,19 +563,8 @@ describe("moneypenny repair — a matrix job is one fault, not one per leg", () 
 describe("moneypenny repair — the issue it writes", () => {
   it("satisfies the capsule contract it asks humans to follow (docs/ISSUES.md)", () => {
     const [intent] = dryRun("workflow-run-failed.json");
-    const dir = mkdtempSync(join(tmpdir(), "repair-body-"));
-    const file = join(dir, "body.md");
-    writeFileSync(file, intent?.body ?? "");
 
-    // issue-lint exits non-zero on a problem; execFileSync throws on that.
-    const out = execFileSync(
-      "node",
-      ["scripts/issue-lint.mjs", "--title", intent?.title ?? "", file],
-      { encoding: "utf8" },
-    );
-    rmSync(dir, { recursive: true, force: true });
-
-    expect(out).toContain("satisfies the capsule contract");
+    expect(lintCapsule(intent)).toContain("satisfies the capsule contract");
   });
 
   it("puts the evidence in a fold, not above it", () => {
@@ -726,17 +755,18 @@ describe("moneypenny repair — a run already fixed while it was in flight", () 
   describe("through the live gather, against a gh that returns only the fields it is asked for", () => {
     const liveRun = (stateReason: string) => {
       const dir = mkdtempSync(join(tmpdir(), "repair-gh-"));
-      const log = join(dir, "gh.log");
-      const out = join(dir, "output");
-      const closed = {
-        number: 4359,
-        title: signature,
-        closedAt: "2026-11-01T12:41:24Z",
-        stateReason,
-      };
-      writeFileSync(
-        join(dir, "gh"),
-        `#!/usr/bin/env node
+      try {
+        const log = join(dir, "gh.log");
+        const out = join(dir, "output");
+        const closed = {
+          number: 4359,
+          title: signature,
+          closedAt: "2026-11-01T12:41:24Z",
+          stateReason,
+        };
+        writeFileSync(
+          join(dir, "gh"),
+          `#!/usr/bin/env node
 const fs = require("node:fs");
 const args = process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify(args) + "\\n");
@@ -750,31 +780,33 @@ if (args[0] === "issue" && args[1] === "list") {
   console.log("[]");
 }
 `,
-        { mode: 0o755 },
-      );
-      const event = join(dir, "event.json");
-      const { deps: _deps, ...payload } = inFlight(
-        "2026-11-01T12:38:50Z",
-        "2026-11-01T12:41:24Z",
-        signature,
-        stateReason,
-      );
-      writeFileSync(event, JSON.stringify(payload));
-      execFileSync("node", ["scripts/moneypenny/repair.mjs", "--event", event], {
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          PATH: `${dir}${delimiter}${process.env.PATH}`,
-          GITHUB_OUTPUT: out,
-        },
-      });
-      const calls: string[][] = readFileSync(log, "utf8")
-        .trim()
-        .split("\n")
-        .map((line) => JSON.parse(line));
-      const dispatched = existsSync(out) ? readFileSync(out, "utf8") : "";
-      rmSync(dir, { recursive: true, force: true });
-      return { calls, dispatched };
+          { mode: 0o755 },
+        );
+        const event = join(dir, "event.json");
+        const { deps: _deps, ...payload } = inFlight(
+          "2026-11-01T12:38:50Z",
+          "2026-11-01T12:41:24Z",
+          signature,
+          stateReason,
+        );
+        writeFileSync(event, JSON.stringify(payload));
+        execFileSync("node", ["scripts/moneypenny/repair.mjs", "--event", event], {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            PATH: `${dir}${delimiter}${process.env.PATH}`,
+            GITHUB_OUTPUT: out,
+          },
+        });
+        const calls: string[][] = readFileSync(log, "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line));
+        const dispatched = existsSync(out) ? readFileSync(out, "utf8") : "";
+        return { calls, dispatched };
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     };
     const did = (calls: string[][], verb: string) =>
       calls.some(([cmd, sub]) => cmd === "issue" && sub === verb);

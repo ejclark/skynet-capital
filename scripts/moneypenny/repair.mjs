@@ -165,8 +165,7 @@ function legLines(siblings = [], primaryStep) {
  * that produced this log is a row below it, because that is what it is — evidence for one fault.
  */
 export function issueBody(run, failure) {
-  const log = failure.logTail ?? "";
-  const tail = log.slice(-LOG_TAIL_CHARS).trim();
+  const tail = (failure.logTail ?? "").slice(-LOG_TAIL_CHARS).trim();
   const siblings = failure.siblings ?? [];
   const job = normalizeJobName(failure.job);
   return [
@@ -184,7 +183,7 @@ export function issueBody(run, failure) {
       : []),
     "",
     `- Triggered by \`${run.event}\` on \`${run.head_branch}\`; the run's own conclusion is failure.`,
-    ...(diedWithoutReason(log)
+    ...(diedWithoutReason(failure)
       ? [
           "- The session errored with no API status in this log. A limit or a dead token reads this way: check those first.",
         ]
@@ -281,12 +280,23 @@ export function limitRejected(logTail) {
 }
 
 /**
+ * Did this failure die in a step that runs a Claude session? GitHub names the unnamed `uses:` step
+ * `Run anthropics/claude-code-action@<pin>`. Only there can a log's limit or result fields be about
+ * a session: any other job's log can quote them, and a failing repair.spec.ts prints them in its
+ * code frame. An unknown step is not one, so it stays a fault.
+ */
+function ranClaude(failure) {
+  return /claude-code-action/.test(failure.step ?? "");
+}
+
+/**
  * The action's short result with nothing behind it: the session errored and no API status says why.
  * Not a limit and not proof of one, so it stays a fault; this only tells the capsule's reader what
  * this print cannot rule out, since a dead token is the one thing a repair session cannot fix.
  */
-function diedWithoutReason(log) {
-  return /"is_error":\s*true/.test(log) && !apiStatuses(log).length;
+function diedWithoutReason(failure) {
+  const log = failure.logTail ?? "";
+  return ranClaude(failure) && /"is_error":\s*true/.test(log) && !apiStatuses(log).length;
 }
 
 /**
@@ -301,8 +311,9 @@ export function splitRefused(run, failures = [], open = []) {
   const refused = new Set();
   const real = [];
   for (const failure of failures) {
-    if (limitRejected(failure.logTail)) refused.add(signature(run, failure.job));
-    else real.push(failure);
+    if (ranClaude(failure) && limitRejected(failure.logTail)) {
+      refused.add(signature(run, failure.job));
+    } else real.push(failure);
   }
   const skips = [];
   for (const title of refused) {
