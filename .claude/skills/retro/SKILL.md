@@ -64,7 +64,9 @@ Rank, best first (this ordering is the doctrine; deviating needs a stated reason
 
 1. **A gate or a script.** The drift becomes mechanically impossible or is caught in seconds. One
    build cost, free forever. Prefer *shortening detection lag* over preventing the specific bug —
-   a gate that catches the whole class beats a fix for one instance.
+   a gate that catches the whole class beats a fix for one instance. Build it with
+   `.claude/skills/fitness/SKILL.md`: the incident becomes the outcome line, and the check is
+   not done until a bug list it has not seen turns its spec red (`scripts/fitness-audit.mjs`).
 2. **A doctrine line** in `CLAUDE.md` / `docs/COACHES.md` / `docs/ENGINEERING.md` — loaded into
    every future session's context, so it steers the next decision rather than sitting unread.
 3. **A ledger entry alone** — only when mechanizing costs more than the expected damage. Say so.
