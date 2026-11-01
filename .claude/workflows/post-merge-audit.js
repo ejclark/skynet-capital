@@ -195,4 +195,8 @@ if (lost) log(`${lost} PR(s) dropped by a failed stage — re-run them`)
 const deep = done.filter((r) => r.tier === 'deep').map((r) => `#${r.pr}`)
 log(`routed: ${deep.length} deep (${deep.join(' ') || 'none'}) · ${done.filter((r) => r.tier === 'standard').length} standard · ${out.skipped.length} skipped docs-only`)
 log(`${out.confirmed.length} confirmed · ${out.refuted.length} refuted · ${out.low.length} low (unverified) · ${out.unreviewed.length} unreviewed`)
+// The meter counts defects only beside how many PRs were audited (#6470): record this run's
+// receipt, or the week's defect number reads unknown.
+const reviewed = done.filter((r) => !r.skipped && !r.unreviewed).map((r) => r.pr)
+log(`record it: node scripts/agent-meter.mjs --audit-receipt --prs ${reviewed.join(',') || '<none>'} --confirmed ${out.confirmed.length}`)
 return out
