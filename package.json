@@ -75,6 +75,7 @@
     "work-gate": "node scripts/moneypenny/work-gate.mjs",
     "pace": "node scripts/moneypenny/quota.mjs --tick",
     "delivery:score": "node scripts/delivery-score.mjs",
+    "meter": "node scripts/agent-meter.mjs",
     "steer:gather": "node scripts/steer/gather.mjs",
     "steer:build": "node scripts/steer/build.mjs",
     "steer:readback": "node scripts/steer/readback.mjs",
