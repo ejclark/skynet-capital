@@ -25,6 +25,9 @@
 //   - Human-paced logs (feedback filings, companion messages, ladder milestones, play milestones).
 //     They grow at the rate a member types, not the rate a sampler ticks or a bot trades.
 //   - `readDecisions`: the decision store pages in SQL (DEFAULT_PAGE/MAX_PAGE in decision-db.ts).
+//   - `readTradeActivity` and `readOrderOrigins`: the composition root binds a held fold of the
+//     ledger and of the audit (`src/server/held-activity.ts`, #4619), not a `list()`. A root
+//     binding that goes back to `activity.list(id)` under either key is a site at the root.
 //   - A fold's fallback for a store with no append-aware read (`if (!since)`, `if (!(since && …))`,
 //     `if (since) … else`): that is the in-memory store tests use; the JSONL stores production runs
 //     always have `since`.
@@ -52,9 +55,7 @@ const GRANDFATHER_FILE = "whole-read-grandfather.json";
 /** The read seams, each bound in `src/scripts/serve-dashboard.ts` to a whole `list()`. */
 const SEAMS = new Map([
   ["readHistory", "one participant's every equity sample (HistoryStore.list)"],
-  ["readTradeActivity", "one participant's whole trade ledger (ActivityStore.list)"],
   ["readFills", "one participant's whole trade ledger (ActivityStore.list)"],
-  ["readOrderAudit", "one participant's whole order audit (OrderAuditLog.list)"],
   ["readTags", "one participant's whole order audit (OrderAuditLog.list)"],
   ["readAllActivityEvents", "every participant's event log (ActivityEventBus.list)"],
   ["readAllTradeActivity", "every participant's trade ledger (ActivityStore.list)"],
