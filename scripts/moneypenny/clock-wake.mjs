@@ -16,9 +16,13 @@
 // WHAT MAKES IT SAFE. The scan claims through the same admission the push tick uses: the dial's
 // in-flight cap, the fast-track-first order, and the per-issue retry limit (#6526, admission.mjs
 // `retryHoldReason`: three starts in a UTC day with nothing merged holds the issue until
-// midnight). That limit is what keeps a build that fails every time from being started 12 times a
-// night by this clock, and the peek applies it before anything is dispatched. A dispatch is at
-// most one per `QUIET_HOURS`, counted from the run list itself: the scan this starts is a run, so
+// midnight), and the peek applies that limit before anything is dispatched. The bound on a build that
+// fails every time is not three, though. Two barred issues with nothing merging read as a lane
+// outage, which allows one start an hour, up to `OUTAGE_DAY_CAP` (9) each (retry-hold-outage.mjs),
+// and that retry waits for a sweep, which this clock now supplies on a quiet day. So a quiet day can
+// run up to 12 scans of such builds, each within the dial's in-flight cap, where it used to run none;
+// the spend brake counts research legs only, so nothing bounds those sessions in dollars. A dispatch
+// is at most one per `QUIET_HOURS`, counted from the run list itself: the scan this starts is a run, so
 // the next tick reads "ran 15 minutes ago" and stops at its first read.
 //
 // WHAT IT COSTS, per tick. The common case — the events workflow ran within the window — is ONE
