@@ -202,6 +202,39 @@ describe("the post-merge audit's row", () => {
     expect(row).toMatchObject({ runs: 1, tokens: 400, perVerified: 400 });
   });
 
+  it("counts one audit recorded twice once, so it cannot claim an older run's tokens", () => {
+    const row = auditJob(
+      [
+        agent({ run: "no-receipt", spent: 3_000, firstAt: "2026-11-01T08:00:00.000Z" }),
+        agent({ run: "receipted", spent: 9_000, firstAt: "2026-11-01T11:00:00.000Z" }),
+      ],
+      receipts(
+        { ...receipt(3), prs: [1, 2] },
+        { ...receipt(3, "2026-11-01T13:00:00.000Z"), prs: [1, 2] },
+      ),
+      WINDOW,
+      true,
+    );
+    expect(row).toMatchObject({ verified: 3, perVerified: 3000, floor: true });
+    expect(row.notes.join(" ")).toMatch(/1 receipt repeats another/);
+  });
+
+  it("keeps two audits of different PRs apart, even with the same count", () => {
+    const row = auditJob(
+      [
+        agent({ run: "a", spent: 100, firstAt: "2026-11-01T01:00:00.000Z" }),
+        agent({ run: "b", spent: 100, firstAt: "2026-11-01T05:00:00.000Z" }),
+      ],
+      receipts(
+        { ...receipt(1, "2026-11-01T02:00:00.000Z"), prs: [1] },
+        { ...receipt(1, "2026-11-01T06:00:00.000Z"), prs: [2] },
+      ),
+      WINDOW,
+      true,
+    );
+    expect(row).toMatchObject({ verified: 2, perVerified: 100, floor: false });
+  });
+
   it("reads tokens unknown on a machine with no transcripts, whatever the receipts say", () => {
     const row = auditJob([], receipts(receipt(24)), WINDOW, false);
     expect(row).toMatchObject({ runs: null, tokens: null, verified: 24, perVerified: null });
@@ -427,6 +460,15 @@ describe("how it prints", () => {
     expect(lineOf(text, "c ")).toMatch(/none, a script\s+2\s+no model tokens/);
   });
 
+  it("will not say none verified while a run is still unread", () => {
+    const text = renderJobs({
+      window: WINDOW,
+      rows: [{ ...unknownRow, job: "a", runs: 2, tokens: 1000, verified: 0, floor: true }],
+    });
+    expect(lineOf(text, "a ")).toMatch(/at least 0\s+unknown/);
+    expect(text).not.toMatch(/none verified/);
+  });
+
   it("names what a job's tokens leave out, and states the score is information, not a bar", () => {
     const text = renderJobs({ window: WINDOW, rows: [{ ...unknownRow, notes: ["a note"] }] });
     expect(text).toMatch(/fix a failure: a note/);
@@ -445,6 +487,7 @@ describe("the audit's receipt", () => {
     const dir = mkdtempSync(join(tmpdir(), "agent-meter-receipt-"));
     try {
       expect(() => writeAuditReceipt(dir, { prs: "1,2" })).toThrow(/--confirmed/);
+      expect(() => writeAuditReceipt(dir, { prs: "1,2", confirmed: " " })).toThrow(/--confirmed/);
       expect(() => writeAuditReceipt(dir, { prs: "1,2", confirmed: "many" })).toThrow(
         /--confirmed/,
       );
@@ -564,6 +607,36 @@ describe("npm run meter -- --jobs", () => {
     const reading = JSON.parse(res.stdout);
     const audit = reading.rows.find((r: { job: string }) => r.job === "post-merge audit");
     expect(audit).toMatchObject({ tokens: 4000, verified: 2, perVerified: 2000 });
+  });
+
+  it("reads unknown, and still prints the board, when a transcript or a log cannot be read", () => {
+    const broken = join(dir, "broken");
+    const runFolder = join(
+      broken,
+      "projects",
+      "-Users-eric-Developer-skynet-capital-wt",
+      "s",
+      "subagents",
+      "workflows",
+      "run-x",
+    );
+    // A directory where a file belongs: EISDIR on read, as a swept file would be ENOENT.
+    mkdirSync(join(runFolder, "agent-x.jsonl"), { recursive: true });
+    mkdirSync(join(broken, "runs", "ship-verify.jsonl"), { recursive: true });
+    const res = meter(
+      {
+        AGENT_PROJECTS_DIR: join(broken, "projects"),
+        AGENT_RUNS_DIR: join(broken, "runs"),
+        AGENT_TRANSCRIPTS_DIR: join(dir, "transcripts"),
+      },
+      "--json",
+    );
+    expect(res.status).toBe(0);
+    const rows = JSON.parse(res.stdout).rows;
+    const of = (job: string) => rows.find((r: { job: string }) => r.job === job);
+    expect(of("post-merge audit")).toMatchObject({ runs: null, tokens: null });
+    expect(of("workflow stages")).toMatchObject({ runs: null, tokens: null });
+    expect(of("full verify")).toMatchObject({ runs: null, verified: null });
   });
 
   it("reads unknown across the board on a machine with nothing to read, and exits 0", () => {

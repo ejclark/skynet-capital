@@ -10,7 +10,7 @@
 // own context on every call, so they grow with how long it ran and swamp what the job produced (the
 // week's audit: 13.7M spent, 109M cache reads). The audit's row reproduces the plan's hand reading,
 // 412k per confirmed defect, on this basis. The meter's workflow section totals them in.
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { listDirs, scanWorkflowAgents, stagesByType } from "./agents.mjs";
 import { readFlow } from "./flow.mjs";
@@ -54,10 +54,14 @@ export function parseRows(text) {
   return { present: true, rows, unreadable };
 }
 
-const readLog = (path) =>
-  existsSync(path)
-    ? parseRows(readFileSync(path, "utf8"))
-    : { present: false, rows: [], unreadable: 0 };
+/** Absent and unreadable are one answer: this machine cannot say. */
+function readLog(path) {
+  try {
+    return parseRows(readFileSync(path, "utf8"));
+  } catch {
+    return { present: false, rows: [], unreadable: 0 };
+  }
+}
 
 /** A log's rows inside the window, and how many more could not be placed in any window. */
 function placed(log, w) {
@@ -85,6 +89,18 @@ function auditRuns(agents, w) {
 
 const isCount = (n) => Number.isInteger(n) && n >= 0;
 
+/** One audit recorded twice: same PRs, same count. Left in, it would claim an older run's tokens. */
+function distinctReceipts(receipts) {
+  const seen = new Set();
+  return receipts.filter((receipt) => {
+    if (!Array.isArray(receipt.prs)) return true;
+    const key = JSON.stringify([receipt.prs, receipt.confirmed]);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /**
  * Tokens per confirmed defect: two refuters stand behind each one, and the receipt carries the count.
  * Only a run with a readable receipt enters the ratio. Each receipt goes to the newest run that began
@@ -94,7 +110,8 @@ const isCount = (n) => Number.isInteger(n) && n >= 0;
 export function auditJob(agents, log, w, hasTranscripts) {
   const row = job("post-merge audit", "two refuters");
   const runs = auditRuns(agents, w);
-  const { rows: receipts, unplaced } = placed(log, w);
+  const { rows, unplaced } = placed(log, w);
+  const receipts = distinctReceipts(rows);
   let orphans = 0;
   for (const receipt of receipts) {
     const run = runs.findLast((r) => r.found === null && r.began <= Date.parse(receipt.at));
@@ -116,8 +133,15 @@ export function auditJob(agents, log, w, hasTranscripts) {
     // Receipts with no run in sight: their tokens exist, and this reading did not see them.
     row.tokens = runs.length || !receipts.length ? sumOf(runs, (r) => r.tokens) : null;
     row.cacheRead = sumOf(runs, (r) => r.cacheRead);
-  } else row.notes.push("no transcripts on this machine, so runs and tokens read unknown");
+  } else
+    row.notes.push("no transcripts could be read on this machine, so runs and tokens read unknown");
 
+  if (rows.length > receipts.length) {
+    const n = rows.length - receipts.length;
+    row.notes.push(
+      `${n} ${plural(n, "receipt repeats", "receipts repeat")} another and counted once`,
+    );
+  }
   if (noReceipt.length) {
     const n = noReceipt.length;
     row.notes.push(
@@ -139,7 +163,7 @@ export function auditJob(agents, log, w, hasTranscripts) {
 export function verifyJob(log, w) {
   const row = job("full verify", "its exit status", { spendsTokens: false });
   if (!log.present) {
-    row.notes.push("no verify log on this machine");
+    row.notes.push("no verify log could be read on this machine");
     return row;
   }
   const { rows, unplaced } = placed(log, w);
@@ -165,7 +189,11 @@ export function stageJobs(agents, w, hasTranscripts) {
     (a) => a.workflow !== AUDIT_WORKFLOW && within(Date.parse(a.firstAt), w),
   );
   if (!hasTranscripts)
-    return [job("workflow stages", "nothing yet", { notes: ["no transcripts on this machine"] })];
+    return [
+      job("workflow stages", "nothing yet", {
+        notes: ["no transcripts could be read on this machine"],
+      }),
+    ];
   if (!stages.length) return [job("workflow stages", "nothing yet", { runs: 0, tokens: 0 })];
   return stagesByType(stages).map((type) => {
     const ofType = stages.filter((a) => a.agentType === type.type);
@@ -216,13 +244,19 @@ export function flowJob(flow) {
 
 /** Every row. Local files, except `readFixes`, which the caller prices and wraps. */
 export async function readJobs({ w, projectsDir, project, runsDir, readFixes }) {
-  const hasTranscripts = listDirs(projectsDir).some((name) => name.startsWith(project));
-  const agents = await scanWorkflowAgents(
-    projectsDir,
-    project,
-    w.sinceMs - RUN_LOOKAROUND_MS,
-    w.untilMs + RUN_LOOKAROUND_MS,
-  );
+  let hasTranscripts = listDirs(projectsDir).some((name) => name.startsWith(project));
+  let agents = [];
+  try {
+    agents = await scanWorkflowAgents(
+      projectsDir,
+      project,
+      w.sinceMs - RUN_LOOKAROUND_MS,
+      w.untilMs + RUN_LOOKAROUND_MS,
+    );
+  } catch {
+    // Worktree folders are swept while this runs: a part of the set is no reading of the whole.
+    hasTranscripts = false;
+  }
   const fixes = readFixes();
   return {
     window: w,

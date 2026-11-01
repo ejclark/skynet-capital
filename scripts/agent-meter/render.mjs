@@ -230,7 +230,7 @@ const count = (n) => (n === null ? UNKNOWN : String(n));
 function perVerifiedCell(row) {
   if (!row.spendsTokens) return "no model tokens";
   if (row.perVerified !== null) return k(row.perVerified);
-  return row.verified === 0 ? "none verified" : UNKNOWN;
+  return row.verified === 0 && !row.floor ? "none verified" : UNKNOWN;
 }
 
 /** One job's cells. Unknown is spelled out, and a floor says so, since either could pass for a count. */
