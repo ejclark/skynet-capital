@@ -191,7 +191,7 @@ describe("deploy lag", () => {
         botsSince: "2026-10-22T16:44:52Z",
       });
       expect(failed.text).toContain(
-        "bots app is STALE — the last 5 bots release(s) all failed: 3 at the deploy, 2 at smoke",
+        "bots app is STALE — the last 5 bots release(s) all failed: 3 before smoke, 2 at smoke",
       );
       expect(failed.verdict.bots).toMatchObject({
         known: true,
@@ -416,6 +416,7 @@ describe("deploy lag — which runs it reads", () => {
         { name: "release · deploy", conclusion: "success" },
         {
           name: "release · deploy bots",
+          conclusion: [deploy, smoke].includes("failure") ? "failure" : deploy,
           steps: [
             { name: "Deploy bots", conclusion: deploy },
             ...(smoke ? [{ name: "Smoke test the bots release", conclusion: smoke }] : []),
@@ -517,9 +518,53 @@ describe("deploy lag — which runs it reads", () => {
       known: true,
       baseline: false,
       lagging: true,
-      reason: "the last 2 bots release(s) all failed: 2 at the deploy, 0 at smoke",
+      reason: "the last 2 bots release(s) all failed: 2 before smoke, 0 at smoke",
       since: "2026-11-01T07:00:00Z",
     });
+  });
+
+  // The Resolve image step fails hard on purpose, and every step after a failure is skipped, so the
+  // Deploy bots step reads the same as a preflight skip. Only the job says which it was.
+  it("counts a job that failed before its deploy step, which leaves that step skipped", () => {
+    const early = JSON.stringify({
+      jobs: [
+        { name: "release · deploy", conclusion: "success" },
+        {
+          name: "release · deploy bots",
+          conclusion: "failure",
+          steps: [
+            { name: "Resolve image", conclusion: "failure" },
+            { name: "Deploy bots", conclusion: "skipped" },
+            { name: "Smoke test the bots release", conclusion: "skipped" },
+          ],
+        },
+      ],
+    });
+    const { verdict } = read("early", [{ jobs: early, at: "2026-11-01T07:00:00Z" }]);
+    expect(verdict.bots).toMatchObject({
+      baseline: false,
+      lagging: true,
+      since: "2026-11-01T07:00:00Z",
+    });
+  });
+
+  it("counts a deploy that succeeded and then failed before smoke, which proved nothing", () => {
+    const stopped = JSON.stringify({
+      jobs: [
+        { name: "release · deploy", conclusion: "success" },
+        {
+          name: "release · deploy bots",
+          conclusion: "failure",
+          steps: [
+            { name: "Deploy bots", conclusion: "success" },
+            { name: "Start the bots machine if it landed stopped", conclusion: "failure" },
+            { name: "Smoke test the bots release", conclusion: "skipped" },
+          ],
+        },
+      ],
+    });
+    const { verdict } = read("stopped", [{ jobs: stopped, at: "2026-11-01T07:00:00Z" }]);
+    expect(verdict.bots).toMatchObject({ baseline: false, lagging: true });
   });
 
   it("does not count a cancelled deploy as a failed one", () => {

@@ -7,6 +7,7 @@
 // carries the parts it does:
 //
 //   mustBeTrue   an outcome, not a proxy. A green deploy step reported "current" over a dead fleet.
+//                A contract that can only read a proxy says so in these words (alerts-reach-owner).
 //   probe        reads the real thing, from outside it. A check inside the process dies with it.
 //   reads        the source the probe depends on. One issue per source that cannot be read, so a
 //                Fly outage opens one issue and not three.

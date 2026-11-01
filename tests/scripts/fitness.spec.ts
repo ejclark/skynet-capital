@@ -1093,7 +1093,7 @@ const landed = `{"jobs":[{"name":"release · deploy","conclusion":"success"},{"n
 const skipped = `{"jobs":[{"name":"release · deploy","conclusion":"failure"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"skipped"}]}]}`;
 /** The dashboard deployed; the bots step did what it says, with its smoke not reached. */
 const botsStep = (conclusion: string) =>
-  `{"jobs":[{"name":"release · deploy","conclusion":"success"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"${conclusion}"}]}]}`;
+  `{"jobs":[{"name":"release · deploy","conclusion":"success"},{"name":"release · deploy bots","conclusion":"${conclusion}","steps":[{"name":"Deploy bots","conclusion":"${conclusion}"}]}]}`;
 /** A dispatched landing: the dashboard's job is skipped on a dispatch, the bots deploy and smoke pass. */
 const dispatchLanded = `{"jobs":[{"name":"release · deploy","conclusion":"skipped"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"success"},{"name":"Smoke test the bots release","conclusion":"success"}]}]}`;
 
@@ -1240,12 +1240,12 @@ const results = (res: ReturnType<typeof run>) => {
 };
 
 /** Runs the scan reads, newest first, with one set of jobs each. Main sits on the newest run's sha. */
-function runsWindow(stub: string, jobs: string[], minutesApart = 3) {
+function runsWindow(stub: string, jobs: string[]) {
   const now = Date.now();
   const runs = jobs.map((_, i) => ({
     id: i + 1,
     head_sha: `sha${i + 1}`,
-    created_at: iso(now - (i + 1) * minutesApart * MIN),
+    created_at: iso(now - (i + 1) * 3 * MIN),
   }));
   writeFileSync(join(stub, "api-head"), JSON.stringify({ sha: "sha1" }));
   writeFileSync(join(stub, "api-runs"), JSON.stringify({ workflow_runs: runs }));

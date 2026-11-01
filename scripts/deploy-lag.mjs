@@ -102,7 +102,7 @@ export function describeLag(lag, { released, head } = {}) {
  *          botsFailed?: number, botsSince?: string}} state
  *   — botsReleased empty-string = scanned clean, no bots release that passed smoke; absent = the
  *   scan itself failed. botsRolledBack counts the newer releases that failed smoke and rolled back,
- *   botsFailed the newer ones whose deploy step failed. botsSince dates the lag: the oldest
+ *   botsFailed the newer ones whose job failed before smoke. botsSince dates the lag: the oldest
  *   undeployed bot-relevant commit, or the oldest of those failed releases.
  */
 export function botsDeployLag(state = {}) {
@@ -112,7 +112,7 @@ export function botsDeployLag(state = {}) {
   if (!botsReleased && failures > 0) {
     // Every bots release in the scanned window failed: not "never deployed", a dark fleet.
     const reason = botsFailed
-      ? `the last ${failures} bots release(s) all failed: ${botsFailed} at the deploy, ${botsRolledBack} at smoke`
+      ? `the last ${failures} bots release(s) all failed: ${botsFailed} before smoke, ${botsRolledBack} at smoke`
       : `the last ${botsRolledBack} bots release(s) all failed smoke and rolled back`;
     return { known: true, baseline: false, lagging: true, reason, since: botsSince };
   }
@@ -169,10 +169,11 @@ const short = (sha) => String(sha ?? "").slice(0, 7) || "unknown";
 // passing it would read as a failed scan.
 const gh = (args) => execFileSync("gh", args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
 
-// How many of main's Pipeline runs the baselines are read from. Reading stops at the first landing,
-// so a healthy tick spends one job read on this however wide it is. It must outlast a burst of pushes
-// that never touch the bots, or a healthy repo reads as having no baseline: the longest from
-// 2026-08-27 to 2026-11-01 was 30 commits, and cancelled runs take slots too.
+// How many of main's Pipeline runs the baselines are read from. It must outlast a burst of pushes that
+// never touch the bots, or a healthy repo reads as having no baseline: the longest from 2026-08-27 to
+// 2026-11-01 was 30 commits, and cancelled runs take slots too. The scan reads one job list per run
+// back to the newest landing, so a landing inside the old 20 costs no more reads than it did, and a
+// sustained outage costs 40 a tick.
 const RUNS_SCANNED = 40;
 
 /**
@@ -198,14 +199,17 @@ const notes = [];
  * is current" while the machine sat stopped).
  */
 function botsReleaseOutcome(jobs) {
-  const steps = jobs.find((j) => j.name === "release · deploy bots")?.steps ?? [];
-  const step = (name) => steps.find((s) => s.name === name)?.conclusion;
-  if (step("Deploy bots") === "failure") return "failed";
-  if (step("Deploy bots") !== "success") return undefined;
-  // Only a passed smoke is a landing: one still running (or cancelled) has proven nothing yet.
-  const smoke = step("Smoke test the bots release");
-  if (smoke === "failure") return "rolled back";
-  return smoke === "success" ? "landed" : undefined;
+  const job = jobs.find((j) => j.name === "release · deploy bots");
+  const step = (name) => job?.steps?.find((s) => s.name === name)?.conclusion;
+  if (step("Deploy bots") === "success") {
+    // Only a passed smoke is a landing: one still running (or cancelled) has proven nothing yet.
+    const smoke = step("Smoke test the bots release");
+    if (smoke === "failure") return "rolled back";
+    if (smoke === "success") return "landed";
+  }
+  // Read from the job, not the Deploy bots step: a failure in an earlier step leaves that step
+  // skipped, the same as a preflight skip, and only the job's conclusion tells them apart.
+  return job?.conclusion === "failure" ? "failed" : undefined;
 }
 
 /**
