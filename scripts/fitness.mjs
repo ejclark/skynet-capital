@@ -87,14 +87,16 @@ const ALERT_SECRETS = ["SKYNET_ALERT_EMAIL_API_KEY", "SKYNET_ALERT_EMAIL_FROM"];
 // The `reaches` values report() understands. Any other value files nothing.
 const ISSUE_TO_OWNER = "an issue assigned to the owner";
 const HOMES = ["clock", "push", "session"];
-// Where the bots write one JSONL file per persona (SKYNET_AUDIT_DIR in fly.bots.toml). A live file
-// only: `<persona>.<stamp>.jsonl.gz` is a rotated archive, and a name is checked before it is
-// passed back to the machine.
+// Where the bots write one JSONL file per persona (SKYNET_AUDIT_DIR in fly.bots.toml). A name is
+// checked before it is passed back to the machine. `<persona>.<stamp>.jsonl.gz` is a rotated archive
+// and never matches. The same archive is plain `<persona>.<stamp>.jsonl` while its gzip runs, or for
+// good if the gzip failed, and that one does: mid-rotation it holds the persona's newest record.
 const JOURNAL_DIR = "/data/audit";
 const JOURNAL_FILE = /^[\w.-]+\.jsonl$/;
 // The scouts file records under their own persona ids when they pick or close. A scout writing says
-// nothing about the bots' cycles, so its record must not read as the fleet deciding.
-const SCOUT_JOURNALS = new Set(["beta-scout.jsonl", "cond-scout.jsonl"]);
+// nothing about the bots' cycles, so its record must not read as the fleet deciding. Matched on the
+// name before its first dot, which also covers a scout's plain archive.
+const SCOUT_JOURNALS = new Set(["beta-scout", "cond-scout"]);
 // The node .nvmrc names, and the one the session clock is proven on. The clock job's own pin is on a
 // held platter PR, so until it lands this contract reads unknown and says why.
 const SESSION_CLOCK_NODE = 24;
@@ -354,8 +356,13 @@ function journalRead(id, command) {
     "--timeout",
     String(EXEC_TIMEOUT_S),
   ]);
-  if (res.ok) return res.out;
-  readFailures.push(res.why.split(":")[0]);
+  if (!res.ok) {
+    readFailures.push(res.why.split(":")[0]);
+    return null;
+  }
+  // flyctl prints a remote command's failure as this line on stdout and exits 0.
+  if (!/^Exit code: \d+/m.test(res.out)) return res.out;
+  readFailures.push("the command failed on the machine");
   return null;
 }
 
@@ -367,14 +374,15 @@ function newestDecision(id) {
   const newestFile = listing
     .split("\n")
     .map((name) => name.trim())
-    .find((name) => JOURNAL_FILE.test(name) && !SCOUT_JOURNALS.has(name));
+    .find((name) => JOURNAL_FILE.test(name) && !SCOUT_JOURNALS.has(name.split(".")[0]));
   if (!newestFile) return null;
-  const line = journalRead(id, `tail -n 1 ${JOURNAL_DIR}/${newestFile}`);
-  if (line === null) return cannotRead;
-  if (!line.trim()) return null;
-  const newest = parseDecisionLine(line);
+  // Two lines: a crash or a full disk tears the newest first, and a stall must not hide behind that.
+  const lines = journalRead(id, `tail -n 2 ${JOURNAL_DIR}/${newestFile}`);
+  if (lines === null) return cannotRead;
+  if (!lines.trim()) return null;
+  const newest = lines.trim().split("\n").reverse().map(parseDecisionLine).find(Boolean);
   if (newest) return newest;
-  // A crash mid-append leaves a torn last line, so this is worth the one retry a blip gets.
+  // A short file whose only line is torn may be mid-append, so this is worth the retry a blip gets.
   readFailures.push("unreadable");
   return unknown("the newest decision record is unreadable");
 }
@@ -405,11 +413,19 @@ export function loadStallRule(version = process.versions.node) {
       },
     });
     const load = createRequire(join(HERE, "fitness.mjs"));
-    const { botAlerts, sessionAt } = load("../src/alerts/bot-watch.ts");
+    const { BOT_STALL_AFTER_MS, botAlerts, sessionAt } = load("../src/alerts/bot-watch.ts");
     const { MARKET_CLOSURES } = load("../src/domain/market-calendar.ts");
-    stallRule = { botAlerts, sessionAt, calendarEnds: MARKET_CLOSURES.at(-1).date };
-  } catch {
-    stallRule = { why: `node ${version} could not load the session clock` };
+    stallRule = {
+      botAlerts,
+      sessionAt,
+      stallAfterMs: BOT_STALL_AFTER_MS,
+      calendarEnds: MARKET_CLOSURES.at(-1).date,
+    };
+  } catch (err) {
+    // The code or name and not the message, which can print this machine's paths into a public issue.
+    stallRule = {
+      why: `node ${version} could not load the session clock (${err?.code ?? err?.name})`,
+    };
   }
   return stallRule;
 }
@@ -520,7 +536,7 @@ export const CONTRACTS = [
     budget: "none: past restarts did not fix this class, so it needs a named cause first",
     rung: "wait",
     reaches: ISSUE_TO_OWNER,
-    gap: "A fresh record from one bot passes for the whole fleet, a cycle that decided on frozen prices passes, a fleet held by a breaker reads quiet, which includes every evaluation failing once five in a row trip the errors breaker, a stall reads quiet for the first ten minutes of a session, and one in the session's last ten stays quiet until ten minutes past the next open",
+    gap: "A fresh record from one bot passes for the whole fleet, a cycle that decided on frozen prices passes, a fleet in observe mode passes because it decides and places nothing, a fleet held by a breaker reads quiet, which includes every evaluation failing once five in a row trip the errors breaker, a running machine still carrying a person's halt mark reads quiet, a stall reads quiet for the first ten minutes of a session, and one in the session's last twenty minutes, which the 15-minute clock cannot read ten minutes on, stays quiet until ten minutes past the next open. A journal write that fails on a full volume reads as a stall while cycles run",
     // Reads the outcome's own trace, "every decision cycle is a durable line". The older reads pass
     // the 10-08 class: started and polling, with no decision for days. Class: an atomic read of a
     // fleet-wide outcome (the gap above is the difference), continual on the 15-minute clock, dynamic,
@@ -546,7 +562,12 @@ export const CONTRACTS = [
         return quiet(`machine is ${primary.state}: bots-running reports this`);
       }
       const newest = newestDecision(primary.id);
-      return newest?.status ? newest : judgeDecisionCycle(newest, nowMs, rule);
+      const verdict = newest?.status ? newest : judgeDecisionCycle(newest, nowMs, rule);
+      // The start script ran moments ago, so the newest record is the dead process's. Give the new
+      // one the stall window, rather than a second issue about the same stop.
+      return verdict.status === "fail" && startedOnceWithin(primary, rule.stallAfterMs, nowMs)
+        ? quiet("the machine just started, so it has not had the stall window yet")
+        : verdict;
     },
   },
   {

@@ -941,7 +941,7 @@ case "$1 $2" in
   "machine exec") app "skynet-capital-bots --timeout" "$@"; [[ -f "$S/exec-hang" ]] && sleep 5
     case "$4" in
       "ls -t /data/audit") echo sauron.jsonl ;;
-      "tail -n 1 "*) cat "$S/journal" ;;
+      "tail -n 2 "*) cat "$S/journal" ;;
       *) cat "$S/stamp" ;;
     esac ;;
   "machine start") cp "$S/machines-up" "$S/machines" ;;

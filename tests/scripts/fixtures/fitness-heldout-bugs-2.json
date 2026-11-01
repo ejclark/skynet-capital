@@ -85,8 +85,8 @@
     "contract": "decision-cycle",
     "on": "origin/feat/fitness-decision-cycle",
     "file": "scripts/fitness.mjs",
-    "find": "const line = journalRead(id, `tail -n 1 ${JOURNAL_DIR}/${newestFile}`);",
-    "replace": "const line = journalRead(id, `head -n 1 ${JOURNAL_DIR}/${newestFile}`);",
+    "find": "const lines = journalRead(id, `tail -n 2 ${JOURNAL_DIR}/${newestFile}`);",
+    "replace": "const lines = journalRead(id, `head -n 2 ${JOURNAL_DIR}/${newestFile}`);",
     "why": "the file's oldest record is judged, so a fleet deciding all day reads as stalled once its file is older than the stall window"
   },
   {

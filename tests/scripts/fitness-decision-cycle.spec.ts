@@ -378,10 +378,11 @@ case "$1 $2" in
       "ls -t /data/audit")
         [[ -f "$S/list-refused" ]] && { cat "$S/list-refused" >&2; exit 1; }
         cat "$S/listing" ;;
-      "tail -n 1 /data/audit/"*)
+      "tail -n "[0-9]" /data/audit/"*)
         [[ -f "$S/tail-refused" ]] && { cat "$S/tail-refused" >&2; exit 1; }
         [[ -f "$S/tail-hang" ]] && sleep 5
-        if [[ -f "$S/tail-first" ]]; then cat "$S/tail-first"; rm "$S/tail-first"; else cat "$S/tail-\${4##*/}"; fi ;;
+        read -r _ _ count _ <<<"$4"
+        if [[ -f "$S/tail-first" ]]; then cat "$S/tail-first"; rm "$S/tail-first"; else tail -n "$count" "$S/tail-\${4##*/}"; fi ;;
       *) echo "refused: $4" >&2; exit 1 ;;
     esac ;;
   *) echo "refused: $*" >&2; exit 1 ;;
@@ -506,7 +507,7 @@ describe("decision-cycle wiring", () => {
     const fly = flyCalls(stub);
     expect(fly).toContain("machine exec m1 ls -t /data/audit -a skynet-capital-bots --timeout 30");
     expect(fly).toContain(
-      "machine exec m1 tail -n 1 /data/audit/sauron.jsonl -a skynet-capital-bots --timeout 30",
+      "machine exec m1 tail -n 2 /data/audit/sauron.jsonl -a skynet-capital-bots --timeout 30",
     );
     expect(fly).not.toContain("exec standby1");
     expect(fly).not.toContain("day-trader.jsonl");
@@ -518,7 +519,7 @@ describe("decision-cycle wiring", () => {
     run(stub, THE_10_08);
     for (const line of flyCalls(stub).trim().split("\n")) {
       expect(line).toMatch(
-        /^(machine list -a skynet-capital-bots --json|secrets list -a skynet-capital --json|machine exec m1 (cat \/data\/health\.json|ls -t \/data\/audit|tail -n 1 \/data\/audit\/sauron\.jsonl) -a skynet-capital-bots --timeout 30)$/,
+        /^(machine list -a skynet-capital-bots --json|secrets list -a skynet-capital --json|machine exec m1 (cat \/data\/health\.json|ls -t \/data\/audit|tail -n 2 \/data\/audit\/sauron\.jsonl) -a skynet-capital-bots --timeout 30)$/,
       );
     }
   });
@@ -533,7 +534,7 @@ describe("decision-cycle wiring", () => {
       listing: "sauron.20261103T1650Z.jsonl.gz\nweird name.jsonl\nsauron.jsonl\n",
     });
     expect(verdict(stub, MIDDAY).status).toBe("pass");
-    expect(flyCalls(stub)).toContain("tail -n 1 /data/audit/sauron.jsonl");
+    expect(flyCalls(stub)).toContain("tail -n 2 /data/audit/sauron.jsonl");
     expect(flyCalls(stub)).not.toContain(".gz");
     expect(flyCalls(stub)).not.toContain("weird");
   });
@@ -547,8 +548,28 @@ describe("decision-cycle wiring", () => {
     writeFileSync(join(stub, "tail-cond-scout.jsonl"), `{"at":${THE_10_08 - 15_000}}\n`);
     writeFileSync(join(stub, "tail-beta-scout.jsonl"), `{"at":${THE_10_08 - 15_000}}\n`);
     expect(verdict(stub, THE_10_08).status).toBe("fail");
-    expect(flyCalls(stub)).toContain("tail -n 1 /data/audit/sauron.jsonl");
+    expect(flyCalls(stub)).toContain("tail -n 2 /data/audit/sauron.jsonl");
     expect(flyCalls(stub)).not.toContain("scout.jsonl -a");
+  });
+
+  it("skips a scout's plain archive too: its gzip may be running, or may have failed", () => {
+    // jsonl-rotation.ts renames to <stem>.<stamp>.jsonl first, and a failed gzip leaves it there.
+    const archive = "cond-scout.2026-10-08T17-59-00-000Z.jsonl";
+    const stub = world({
+      now: THE_10_08,
+      listing: `${archive}\nsauron.jsonl\n`,
+      record: `{"at":${FEED_DIED}}\n`,
+    });
+    writeFileSync(join(stub, `tail-${archive}`), `{"at":${THE_10_08 - 15_000}}\n`);
+    expect(verdict(stub, THE_10_08).status).toBe("fail");
+    expect(flyCalls(stub)).not.toContain(archive);
+  });
+
+  it("reads a bot's own plain archive while its gzip runs: the rotation's newest record is there", () => {
+    const archive = "sauron.2026-11-03T16-59-00-000Z.jsonl";
+    const stub = world({ now: MIDDAY, listing: `${archive}\ncond-scout.jsonl\n` });
+    writeFileSync(join(stub, `tail-${archive}`), `{"at":${MIDDAY - 15_000}}\n`);
+    expect(verdict(stub, MIDDAY).status).toBe("pass");
   });
 
   it("reads a journal only the scouts wrote as no record: unknown, not a pass", () => {
@@ -584,7 +605,16 @@ describe("decision-cycle wiring", () => {
 
   it("names every state it passes or goes quiet on in the issue's words", () => {
     const { gap } = CONTRACTS.find((c: { id: string }) => c.id === "decision-cycle");
-    for (const state of ["one bot", "frozen prices", "breaker", "first ten minutes"]) {
+    for (const state of [
+      "one bot",
+      "frozen prices",
+      "observe mode",
+      "breaker",
+      "halt mark",
+      "first ten minutes",
+      "last twenty minutes",
+      "full volume",
+    ]) {
       expect(gap).toContain(state);
     }
   });
@@ -609,6 +639,65 @@ describe("decision-cycle wiring", () => {
     expect(verdict(missing, MIDDAY).status).toBe("unknown");
     const blank = world({ now: MIDDAY, record: "\n" });
     expect(verdict(blank, MIDDAY).status).toBe("unknown");
+  });
+
+  it("reads a failure flyctl prints with a clean exit as a failed read, and retries it", () => {
+    // flyctl's machine exec prints "Exit code: N" on stdout and exits 0 when the remote command fails.
+    const listing = world({ now: MIDDAY, listing: "Exit code: 2\n" });
+    expect(verdict(listing, MIDDAY)).toMatchObject({
+      status: "unknown",
+      detail: "cannot read the decision journal",
+    });
+    expect(flyCalls(listing).match(/ls -t/g)).toHaveLength(2);
+    const tail = world({ now: MIDDAY, record: "Exit code: 1\n" });
+    expect(verdict(tail, MIDDAY)).toMatchObject({
+      status: "unknown",
+      detail: "cannot read the decision journal",
+    });
+    expect(flyCalls(tail).match(/tail -n/g)).toHaveLength(2);
+  });
+
+  it("ages the record before a torn last line, so a stall is not hidden as blind", () => {
+    // A crash or a full disk tears the newest line first; readLastJsonlEntry walks back past it too.
+    const stale = world({
+      now: THE_10_08,
+      record: `{"at":${FEED_DIED},"halted":"x"}\n{"at":${THE_10_08},"rawIntents":[{"sym`,
+    });
+    const res = verdict(stale, THE_10_08);
+    expect(res.status).toBe("fail");
+    expect(res.detail).toContain(iso(FEED_DIED));
+    expect(res.detail).toContain("halted yes");
+    const fresh = world({
+      now: MIDDAY,
+      record: `{"at":${MIDDAY - 15_000}}\n{"at":${MIDDAY},"rawIntents":[{"sym`,
+    });
+    expect(verdict(fresh, MIDDAY).status).toBe("pass");
+  });
+
+  it("gives a machine that just started the stall window, so one stop is one report", () => {
+    // The start script runs moments before this on the clock, so the record is the dead process's.
+    const machine = (...startsAgo: number[]) =>
+      JSON.stringify([
+        {
+          id: "m1",
+          state: "started",
+          config: {},
+          events: startsAgo.map((ago) => ({ type: "start", timestamp: THE_10_08 - ago })),
+        },
+      ]);
+    const stale = `{"at":${FEED_DIED}}\n`;
+    const read = (machines: string) =>
+      verdict(world({ now: THE_10_08, record: stale, machines }), THE_10_08).status;
+    expect(read(machine(MIN))).toBe("quiet");
+    expect(read(machine(BOT_STALL_AFTER_MS - 1))).toBe("quiet");
+    // Past the window the new process has had its chance, and a stall is a stall.
+    expect(read(machine(BOT_STALL_AFTER_MS))).toBe("fail");
+    // A second start inside the hour is a machine that keeps dying, not one that came back.
+    expect(read(machine(4 * MIN, MIN))).toBe("fail");
+    // Only a stall gets the allowance: a read that passes still closes an open issue.
+    expect(verdict(world({ now: THE_10_08, machines: machine(MIN) }), THE_10_08).status).toBe(
+      "pass",
+    );
   });
 
   it("reads a future timestamp through the wire as unknown", () => {
@@ -643,7 +732,7 @@ describe("decision-cycle wiring", () => {
     }
     expect(seen).toContain(iso(FEED_DIED));
     expect(seen).toContain("halted yes");
-    expect(seen).toContain(`${Buffer.byteLength(record)} bytes`);
+    expect(seen).toContain(`${Buffer.byteLength(record.trim())} bytes`);
   });
 
   it('prints "unreadable" with no excerpt for a line it cannot parse, after one retry', () => {
@@ -655,7 +744,7 @@ describe("decision-cycle wiring", () => {
     expect(res.stdout).toContain("unreadable");
     expect(output(res)).not.toContain("SECRET-SYMBOL");
     expect(res.status).toBe(0);
-    expect(flyCalls(stub).match(/tail -n 1/g)).toHaveLength(2);
+    expect(flyCalls(stub).match(/tail -n 2/g)).toHaveLength(2);
   });
 
   it("recovers on the retry when a torn line was only mid-append", () => {
@@ -738,6 +827,9 @@ describe("decision-cycle wiring", () => {
     const r = resultsOf(res);
     expect(r("decision-cycle").status).toBe("unknown");
     expect(r("decision-cycle").detail).toContain("session clock");
+    // The cause, as a code or a name and not the message: that one can print this machine's paths.
+    expect(r("decision-cycle").detail).toContain("(SyntaxError)");
+    expect(r("decision-cycle").detail).not.toContain(resolve("."));
     expect(res.stdout).toContain("::warning::fitness: decision-cycle");
     expect(res.status).toBe(0);
     expect(r("bots-running").status).toBe("pass");
