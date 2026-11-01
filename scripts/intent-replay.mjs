@@ -42,6 +42,7 @@ const LIST_FIELDS = ["mustDo", "mustNotDo"];
 
 // The repo is public. A person's name has no shape, so that check fails closed: a capitalised word is
 // a name until the set says otherwise, which makes adding a case cost one reviewed word in the header.
+// A name he typed in lowercase passes this, which the header says to read for.
 // intents.mjs's first-person and "account" shapes are left out on purpose: "My gut tells me" is the
 // wording under test, and Account is a screen.
 const NEVER_PUBLIC = [

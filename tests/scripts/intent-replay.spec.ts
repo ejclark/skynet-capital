@@ -520,6 +520,16 @@ describe("intent-replay's workflow", () => {
     expect(scoreReplay(SET, result).verdict).toBe("unknown");
   });
 
+  it("keeps the answers it paid for when the judge throws", async () => {
+    const { result, error } = await run({}, (prompt, opts) => {
+      if (opts.label === "blind judge") throw new Error("the judge could not start");
+      return reply()(prompt, opts);
+    });
+    expect(error).toBeNull();
+    expect(result?.verdicts).toEqual([]);
+    expect(result?.runs).toHaveLength(4);
+  });
+
   it("says nothing was run when the lookup dies, and stops when it reports a failure", async () => {
     const dead = await run({}, reply({ cases: null }));
     expect(dead.result).toMatchObject({ runs: [], notRun: expect.stringContaining("re-run") });

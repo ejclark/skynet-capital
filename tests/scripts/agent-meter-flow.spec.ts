@@ -91,6 +91,9 @@ describe("what kind of message it is", () => {
         "I would like to consolidate the sections onto one page and keep every part of it reachable.",
         // A failure word inside a long message is usually the subject of real work, not a spotted fault.
         "the tests that fail on the review step should read the same rules the server reads, because a member sees the same plan in both places",
+        // A status word in an instruction asks for work.
+        "update the docs for this",
+        "waiting on the PR is fine",
         // Long, so it is thinking out loud about status rather than asking for one.
         "I wonder whether the status of all the plans on the board could be drawn as a single picture for the phone?",
       ],
@@ -230,6 +233,33 @@ describe("the reading", () => {
     expect(reading.repeatedStatus).toBe(1);
   });
 
+  it("leaves a kind a rule named alone when it is asked twice", () => {
+    const reading = flowOf(
+      [session(msg("What is a held PR?", 5), msg("What is a held PR?", 6))],
+      WINDOW,
+    );
+    expect(reading.byKind["word-confusion"]).toBe(2);
+    expect(reading.byKind.status).toBe(0);
+    expect(reading.repeatedStatus).toBe(0);
+  });
+
+  it("counts a session only when he typed in it during the window", () => {
+    const reading = flowOf(
+      [
+        { path: "a.jsonl", typed: [msg("yes")] },
+        { path: "quiet.jsonl", typed: [] },
+        { path: "old.jsonl", typed: [{ at: "2026-09-01T00:00:00Z", text: "yes" }] },
+      ],
+      WINDOW,
+    );
+    expect(reading.sessions).toBe(1);
+  });
+
+  it("keeps a message with no readable time out of every window", () => {
+    const reading = flowOf([session({ at: undefined as unknown as string, text: "yes" })], WINDOW);
+    expect(reading.typed).toBe(0);
+  });
+
   it("states no share for a window with no typed message, rather than 0", () => {
     const reading = flowOf([session()], WINDOW);
     expect(reading.typed).toBe(0);
@@ -323,6 +353,16 @@ describe("reading the transcripts", () => {
   it("reads unknown when the folder is missing or holds no session", async () => {
     expect((await readFrom(join(dir, "absent"))).verdict).toBe("unknown");
     expect((await readFrom(empty)).verdict).toBe("unknown");
+  });
+
+  it("reads unknown rather than throwing when a transcript cannot be read", async () => {
+    const broken = mkdtempSync(join(tmpdir(), "flow-broken-"));
+    mkdirSync(join(broken, "a-folder.jsonl"));
+    try {
+      expect((await readFrom(broken)).verdict).toBe("unknown");
+    } finally {
+      rmSync(broken, { recursive: true, force: true });
+    }
   });
 
   it("answers on the command line: the section alone, as text or JSON", () => {

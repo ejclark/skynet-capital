@@ -15,12 +15,16 @@ import { createReadStream, statSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { digestLines, recent } from "../dream-digest.mjs";
 
-/** The first (and only) hand read, and what these rules made of the same messages. */
+/**
+ * The first (and only) hand read, and what these rules made of the same messages. Those messages are
+ * private and stay on the machine they came from, so no spec can recount rulesCaught: a change to a rule
+ * below recounts it by hand, or the printed line stops being true.
+ */
 export const HAND_READ = Object.freeze({
   date: "2026-11-01",
   managing: 141,
   typed: 184,
-  rulesCaught: 72,
+  rulesCaught: 71,
 });
 
 const KINDS = [
@@ -36,6 +40,7 @@ const KINDS = [
 // A message's length is most of the signal: past these, a failure word or "status" is the subject of
 // real work or of thinking out loud, not him stopping to manage the session.
 const STATUS_WORDS = 12;
+const BARE_STATUS_WORDS = 2;
 const FAULT_WORDS = 15;
 const SHORT_QUESTION_WORDS = 8;
 const DONE_WORDS = 8;
@@ -45,6 +50,7 @@ const WHAT_IS_WORDS = 7;
 
 const STATUS =
   /\b(?:progress|status|updates?|eta|how'?s|how is|waiting|what'?s next|what remains|anything else|still (?:running|working)|where are we|where do we stand|(?:any|anything)(?: \w+){0,2} (?:left|remaining))\b/i;
+const QUESTION_OPENING = /^(?:how'?s|how is|any|where|still|what'?s)\b/i;
 const FAULT =
   /\b(?:fail(?:s|ed|ing|ure)?|broken?|(?:does|is|wo)n'?t (?:load|work|render|accessible)|not (?:loading|working|accessible)|crash(?:es|ed|ing)?|50[0-9]|404|error)\b/i;
 const DONE = /^(?:all )?(?:done|merged|marked done|submitted|answered|approved)\b|\bdone[.!]?$/i;
@@ -61,6 +67,12 @@ const wordsIn = (text) =>
     .split(/\s+/)
     .filter(Boolean).length;
 
+/** A status word only counts in a question or on its own: "update the docs" asks for work. */
+const asksProgress = (text, words) =>
+  words <= STATUS_WORDS &&
+  STATUS.test(text) &&
+  (text.endsWith("?") || words <= BARE_STATUS_WORDS || QUESTION_OPENING.test(text));
+
 /** One message's kind, from its words alone. The first rule that matches wins. */
 export function classify(raw) {
   // A phone types a curly apostrophe, and a reply from a page arrives under a marker comment.
@@ -72,7 +84,7 @@ export function classify(raw) {
   if (text.startsWith(">")) return "quote-back";
   if (words <= TRY_AGAIN_WORDS && /\b(?:try again|retry)\b/i.test(text)) return "try-again";
   if (words <= DONE_WORDS && (DONE.test(text) || OWN_DONE.test(text))) return "done-report";
-  if (words <= STATUS_WORDS && STATUS.test(text)) return "status";
+  if (asksProgress(text, words)) return "status";
   if (words <= CONFUSION_WORDS && CONFUSED.test(text)) return "word-confusion";
   if (words <= WHAT_IS_WORDS && WHAT_IS.test(text)) return "word-confusion";
   if (words <= FAULT_WORDS && FAULT.test(text)) return "spotted-fault";
@@ -89,15 +101,21 @@ const stem = (text) =>
     .map((word) => word.replace(/s$/, ""))
     .join(" ");
 
-/** A session's kinds in order: a short question he asks again is status, whatever its words. */
+/**
+ * A session's kinds in order. A short question he asks again is status, whatever its words, unless a
+ * rule already named it: "What is X?" asked twice is still a word he does not follow.
+ */
 function kindsOf(typed) {
   const asked = new Set();
   return typed.map(({ text }) => {
-    const form = stem(text);
-    const isShortQuestion = wordsIn(text) <= SHORT_QUESTION_WORDS && text.trim().endsWith("?");
     const ruled = classify(text);
-    const repeat = asked.has(form) && (ruled === "status" || isShortQuestion);
-    if (ruled === "status" || isShortQuestion) asked.add(form);
+    const shortQuestion = wordsIn(text) <= SHORT_QUESTION_WORDS && text.trim().endsWith("?");
+    if (ruled !== "status" && !(ruled === "other" && shortQuestion)) {
+      return { kind: ruled, repeat: false };
+    }
+    const form = stem(text);
+    const repeat = asked.has(form);
+    asked.add(form);
     return { kind: repeat ? "status" : ruled, repeat };
   });
 }
@@ -106,6 +124,7 @@ function kindsOf(typed) {
 export function flowOf(sessions, window) {
   const counted = new Set();
   const byKind = Object.fromEntries(KINDS.map((kind) => [kind, 0]));
+  const spoken = new Set(); // the sessions he typed in during the window, not every file it touched
   let typed = 0;
   let repeatedStatus = 0;
   for (const session of sessions) {
@@ -113,11 +132,13 @@ export function flowOf(sessions, window) {
     const kinds = kindsOf(session.typed);
     session.typed.forEach((message, i) => {
       const at = Date.parse(message.at);
-      if (at < window.sinceMs || at > window.untilMs) return;
+      // Written this way round, a message with no readable time is outside every window.
+      if (!(at >= window.sinceMs && at <= window.untilMs)) return;
       // A resumed session copies its rows into a new file, so the same message can be read twice.
       const key = `${message.at}|${message.text.slice(0, 40)}`;
       if (counted.has(key)) return;
       counted.add(key);
+      spoken.add(session.path);
       typed += 1;
       byKind[kinds[i].kind] += 1;
       if (kinds[i].repeat) repeatedStatus += 1;
@@ -126,7 +147,7 @@ export function flowOf(sessions, window) {
   const managing = typed - byKind.other;
   return {
     verdict: "read",
-    sessions: sessions.length,
+    sessions: spoken.size,
     typed,
     managing,
     share: typed ? Math.round((managing / typed) * 100) : null,
@@ -174,9 +195,13 @@ async function userLines(path) {
   return lines;
 }
 
-const NO_TRANSCRIPTS = "no transcripts on this machine; read it where the sessions ran";
+const unknown = (window, line) => ({ verdict: "unknown", window, line, handRead: HAND_READ });
 
-/** The reading, or unknown when this machine holds no transcripts: never zero. */
+/**
+ * The reading, or unknown: never zero, and never an error, since the full meter carries this section
+ * beside numbers it paid REST calls for. Worktree folders are swept while this runs, so a file can go
+ * between listing and reading. These lines can reach a public comment, so no error text goes in them.
+ */
 export async function readFlow(window) {
   let all;
   try {
@@ -184,10 +209,14 @@ export async function readFlow(window) {
   } catch {
     all = [];
   }
-  if (!all.length) return { verdict: "unknown", window, line: NO_TRANSCRIPTS, handRead: HAND_READ };
-  // A file last written before the window began holds nothing in it.
-  const inWindow = all.filter((path) => statSync(path).mtimeMs >= window.sinceMs);
-  const sessions = [];
-  for (const path of inWindow) sessions.push({ path, typed: typedBy(await userLines(path)) });
-  return { window, ...flowOf(sessions, window) };
+  if (!all.length) return unknown(window, "no transcripts on this machine; read it where they are");
+  try {
+    // A file last written before the window began holds nothing in it.
+    const inWindow = all.filter((path) => statSync(path).mtimeMs >= window.sinceMs);
+    const sessions = [];
+    for (const path of inWindow) sessions.push({ path, typed: typedBy(await userLines(path)) });
+    return { window, ...flowOf(sessions, window) };
+  } catch {
+    return unknown(window, "a transcript could not be read in this run; run it again");
+  }
 }

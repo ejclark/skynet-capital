@@ -181,7 +181,7 @@ const VERDICT_SCHEMA = {
 const judged = await agent(
   `Run exactly: node scripts/intent-replay.mjs prompt --judge\n\nWhat it prints is your task: the rule, and what each case must and must not do. Return one verdict for every slot of every case below, with "ran": true. Stay in your turn until this is done. If the command exits non-zero, return "ran": false and no verdicts: never judge without what it prints. These are the answers, each case with its slots, after the marker:\n<<<answers>>>${JSON.stringify(blinded)}`,
   { schema: VERDICT_SCHEMA, agentType: 'worker', model: 'opus', effort: 'high', label: 'blind judge', phase: 'Judge' },
-)
+).catch(() => null) // The answers are already paid for: a judge that dies must not lose them.
 const verdicts = judged?.ran === true ? (judged.verdicts ?? []) : []
 log(`${runs.filter((r) => r.answers).length} of ${runs.length} answerers returned · ${verdicts.length} verdicts, unscored`)
 return { caseIds: cases.ids, runs, verdicts, price: cases.price }
