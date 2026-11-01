@@ -15,6 +15,7 @@ import type { ActivityEventBus } from "../observatory/activity-event.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CapitalFlowReader } from "../observatory/capital-flow-ledger.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
+import type { OrderOriginIndex } from "../observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import type { HeldLedger } from "../observatory/trade-ledger-cache.js";
 import type { AlertDeliveryPort, AlertDeliveryStorePort } from "../ports/alert-delivery.js";
@@ -224,7 +225,9 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they
-   * stay honest about it via the backfill caveat.
+   * stay honest about it via the backfill caveat. Every reader folds the lines to the latest per
+   * order before it uses them, so the composition root binds a held fold of the ledger
+   * (`held-activity.ts`, #4619) rather than a whole `list()`: the lines come back already collapsed.
    */
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
   /** What Pulse and the blotter take from the ledger — weekly bars, trade stats, open lots — held
@@ -232,11 +235,16 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    *  #4619). Omit and both build it from `readTradeActivity` on every request. */
   readonly readHeldLedger?: (snapshot: ParticipantSnapshot) => Promise<HeldLedger>;
   /**
-   * Reads a participant's per-order audit lines (`order-audit-log.ts`) so the record views can say
-   * WHO placed each order, not just how the ledger learned about it (`order-origin.ts`, #782).
-   * Omit and every row classifies `unknown` — no marker, exactly today's rendering.
+   * A participant's order-origin evidence (`order-origin.ts`), so the record views can say WHO
+   * placed each order, not just how the ledger learned about it (#782). Built from the per-order
+   * audit (`order-audit-log.ts`) by a fold that reads only the lines appended since its last read
+   * (`held-activity.ts`, #4619). Omit and every row classifies `unknown` — no marker, exactly
+   * today's rendering.
    */
-  readonly readOrderAudit?: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
+  readonly readOrderOrigins?: (
+    participantId: string,
+    kind: "human" | "bot",
+  ) => Promise<OrderOriginIndex>;
   /** Appends one audit line — the cancel route's write to the same trail the desk seam writes
    *  on submit (#3407 P1). Omit and a cancel still reaches the broker, unrecorded here. */
   readonly recordOrderAudit?: (entry: OrderAuditRecord) => Promise<void>;
