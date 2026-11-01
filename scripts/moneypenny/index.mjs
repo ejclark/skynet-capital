@@ -83,6 +83,7 @@ import {
   routeContinuation,
 } from "./continuation.mjs";
 import { calloutGapComment, shouldPostCalloutGap } from "./decision-callout.mjs";
+import { executeDialTap, routeDial } from "./dial-tap.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -152,7 +153,9 @@ export const slugify = (s) =>
 export function route(ctx, deps = {}) {
   if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
   // #5056 slice 2: `in-progress` coming off is a freed build slot, and wakes the queue (wake.mjs).
-  if (ctx.eventName === "issues") return [...routeLessonDraft(ctx), ...routeWake(ctx)];
+  // One tap on the dial clears the others and writes the end time (dial-tap.mjs).
+  if (ctx.eventName === "issues")
+    return [...routeLessonDraft(ctx), ...routeWake(ctx), ...routeDial(ctx)];
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
     return routeRelease(ctx);
   }
@@ -1508,6 +1511,7 @@ const ONE_CALL_INTENTS = {
   },
   "draft-lesson": (i) => draftLesson(i),
   "wake-next": (i) => wakeAfter(i.issueNumber),
+  "route-dial": (i) => executeDialTap(i),
   // #5727 — the CI repair capsules' two stall checks, which live beside audit.mjs.
   "flag-capsule-orphan": (i) => flagCapsuleOrphan(i),
   "close-proven-capsule": (i) => closeProvenCapsule(i),
