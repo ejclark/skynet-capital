@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "@rstest/core";
+// @ts-expect-error plain .mjs script, no declarations
 import { EYES } from "../../scripts/cleanup-next.mjs";
 
 // The sort over what the clean-up scans print, driven through the real entrypoint via `--explain`.
@@ -137,10 +138,8 @@ describe("cleanup-next: says what it could not read", () => {
 });
 
 describe("cleanup-next: wiring", () => {
-  it.each(EYES.map((e) => [e.script, e.flag ?? "--candidate"] as const))(
-    "%s takes %s",
-    (script, flag) => {
-      expect(readFileSync(`scripts/${script}.mjs`, "utf8")).toContain(`"${flag}"`);
-    },
-  );
+  const eyes: { script: string; flag?: string }[] = EYES;
+  it.each(eyes)("$script takes the flag this reads", ({ script, flag = "--candidate" }) => {
+    expect(readFileSync(`scripts/${script}.mjs`, "utf8")).toContain(`"${flag}"`);
+  });
 });

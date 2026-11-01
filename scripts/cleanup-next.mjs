@@ -73,7 +73,7 @@ export const EYES = [
 const perM = (r) => (r.priceM === 0 ? Infinity : r.moves / r.priceM);
 
 /** Pure. `outputs` maps a script to what it printed; a missing key means nothing usable. */
-export function rank(outputs, openPrFiles) {
+function rank(outputs, openPrFiles) {
   const rows = [];
   const unreadable = [];
   for (const { script, priceM, reps = picks } of EYES) {
