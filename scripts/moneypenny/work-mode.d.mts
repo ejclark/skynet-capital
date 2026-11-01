@@ -35,6 +35,8 @@ export interface WorkMode {
   /** Only on the one state where the position is a FALLBACK, not a reading: the tracking issue
    *  itself could not be read. A warning alone does not imply this (a forgotten expiry warns too). */
   readonly unreadable?: true;
+  /** The weekly reading published on the tracking issue's body (pace-reading.mjs), or null. */
+  readonly reading?: { used: number; at: number; resetsAt: number; source?: string } | null;
 }
 
 /** An injectable stand-in for `child_process.execFileSync`, so specs fake `gh` without a network. */

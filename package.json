@@ -78,6 +78,7 @@
     "steer:gather": "node scripts/steer/gather.mjs",
     "steer:build": "node scripts/steer/build.mjs",
     "steer:readback": "node scripts/steer/readback.mjs",
+    "steer:reading": "node scripts/steer/publish-reading.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "research:lockups": "node scripts/research/lockup-discovery.mjs",
     "research:claims": "tsx src/scripts/claim-studies.ts",

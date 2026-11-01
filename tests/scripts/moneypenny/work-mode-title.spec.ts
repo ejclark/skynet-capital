@@ -37,6 +37,58 @@ describe("workModeTitle — the plan's status-at-a-glance format", () => {
   });
 });
 
+describe("the pace suffix, derived from the published reading", () => {
+  const READ_AT = Date.parse("2026-11-01T13:40:00Z");
+  const reading = {
+    used: 34,
+    at: READ_AT,
+    resetsAt: Date.parse("2026-11-03T05:00:00Z"),
+    source: "get_usage",
+  };
+
+  it("adds the reading to the title, and leaves it off with none", () => {
+    expect(workModeTitle(mode({ reading }), READ_AT + 60_000)).toBe(
+      "Work mode: NORMAL · pace: week 34% used, 77% gone, behind pace by 43, resets 11-03 05:00Z",
+    );
+    expect(workModeTitle(mode({ reading: null }), READ_AT)).toBe("Work mode: NORMAL");
+  });
+
+  it("keeps the suffix through the tick: a title already carrying it is left alone", () => {
+    const m = mode({ reading });
+    const state = { trackingIssue: 4153, mode: m, now: READ_AT + 3_600_000 };
+    const title = workModeTitle(m, state.now);
+    expect(workModeRetitle({ ...state, title })).toBeNull();
+  });
+
+  it("does not rewrite the title as the clock moves within a fresh reading", () => {
+    const m = mode({ reading });
+    const early = workModeTitle(m, READ_AT + 60_000);
+    expect(workModeTitle(m, READ_AT + 11 * 3_600_000)).toBe(early);
+  });
+
+  it("restores a suffix a person or an old title dropped", () => {
+    const intent = workModeRetitle({
+      trackingIssue: 4153,
+      title: "Work mode: NORMAL",
+      mode: mode({ reading }),
+      now: READ_AT,
+    });
+    expect(intent?.newTitle).toContain("week 34% used");
+  });
+
+  it("prints a reading older than 12 hours as stale, never as fresh", () => {
+    const title = workModeTitle(mode({ reading }), READ_AT + 12 * 3_600_000 + 60_000);
+    expect(title).toBe("Work mode: NORMAL · pace: STALE, 34% used when read 11-01 13:40Z");
+    expect(title).not.toContain("behind pace");
+  });
+
+  it("carries the position and its end beside the reading", () => {
+    expect(
+      workModeTitle(mode({ position: "conserve", until: "2026-11-03", reading }), READ_AT),
+    ).toMatch(/^Work mode: CONSERVE until 2026-11-03 · pace: week 34% used/);
+  });
+});
+
 describe("workModeRetitle — only when the dashboard is actually stale", () => {
   const state = (title: string | null, over: Partial<WorkMode> = {}) => ({
     trackingIssue: 4153,

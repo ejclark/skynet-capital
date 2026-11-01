@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { withReading } from "../../../scripts/moneypenny/pace-reading.mjs";
 import {
   ACTOR_RULES,
   loadWorkModeConfig,
@@ -432,6 +433,24 @@ describe("readWorkMode — REST reads, never a throw on a bad read", () => {
     expect(calls.flat()).not.toContain("view");
     expect(mode.position).toBe("conserve");
     expect(mode.until).toBe("2026-10-06");
+  });
+
+  it("carries the published reading off the issue's body, at no extra call", () => {
+    const body = withReading("The dial.", {
+      used: 34,
+      at: NOW,
+      resetsAt: at("2026-11-03T05:00:00Z"),
+      source: "get_usage",
+    });
+    const { exec, calls } = fakeExec([JSON.stringify({ body, labels: [label("normal")] })]);
+    expect(readWorkMode(exec, CONFIG, NOW).reading?.used).toBe(34);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.at(-1)).toContain("body");
+  });
+
+  it("reads a body with no reading as no reading", () => {
+    const { exec } = fakeExec([JSON.stringify({ body: "prose", labels: [label("normal")] })]);
+    expect(readWorkMode(exec, CONFIG, NOW).reading).toBeNull();
   });
 
   it("reads who wrote each comment, because the end date rule needs it", () => {

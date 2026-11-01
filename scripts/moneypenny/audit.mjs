@@ -629,7 +629,7 @@ function workModeState(nowMs) {
     // title sync corrects the DISPLAY without fixing the cause. Print it here so the push run that
     // retitles also says why it had to.
     if (mode.warning) console.log(`::warning::${mode.warning}`);
-    return { trackingIssue: config.trackingIssue, title: title ?? null, mode };
+    return { trackingIssue: config.trackingIssue, title: title ?? null, mode, now: nowMs };
   } catch (err) {
     console.log(`::warning::work-mode title sync skipped — ${String(err.message).slice(0, 200)}`);
     return null;

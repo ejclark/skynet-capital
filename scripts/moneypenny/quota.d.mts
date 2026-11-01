@@ -42,5 +42,5 @@ export function tick(opts: {
   reading?: Reading | null;
   orders?: readonly Order[];
   now?: number;
-  readDial?: () => Pick<WorkMode, "position" | "unreadable">;
+  readDial?: () => Pick<WorkMode, "position" | "unreadable" | "reading">;
 }): { line: string; verdict: Reckoning; position: string };
