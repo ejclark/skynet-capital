@@ -90,7 +90,9 @@ After each wave merges, run **`.claude/workflows/post-merge-audit.js`** (`{prs: 
 PRs; it routes money/state/auth PRs to the deep tier and skips docs-only ones by itself. Ration
 `fast-track` to high-severity or member/money findings and send lane-machinery findings through the
 clear-path flip instead: a 20-issue fast-track wave drew 162 Moneypenny runs in one hour and spent
-the App's REST limit (#6319).
+the App's REST limit (#6319). File each row of the result's `prevention.proposals` as one `feedback`
+issue through `/issue`: it is the spec, gate line or reviewer line for a cause seen twice, and the
+workflow writes nothing itself.
 
 **Split a big audit across child sessions.** A cloud container has 4 CPUs, so a workflow runs 2
 agents at once: 37 PRs in one run is hours of deep reviews. Give each child 6–9 PRs (one
@@ -125,8 +127,8 @@ reverts.
    merged by lane, Needs Eric in order with a predicted answer each, headlines, the self-ready
    record against `docs/ISSUES.md`'s falsifier (2026-11-19).
 2. **Dial back to `normal`** if the reset has not come yet and the spare quota is spent. After the
-   reset it already reads `normal`, but the label stays on: tap `work-mode:normal` so next week's
-   tap on surge adds the label instead of removing it.
+   reset it already reads `normal`, and the next push to `main` replaces the label with
+   `work-mode:normal` and says so on #4153, so next week's tap on surge adds the label.
 3. **One census line** in `docs/process/LEARNING-LOOP.md` → *The loop census*: which stage a
    person still did by hand this surge.
 4. Archive the children whose PRs are merged or closed (the `issue:<n>` group sweep), then self.

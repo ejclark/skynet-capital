@@ -16,7 +16,7 @@ export const meta = {
   whenToUse: 'When {items: [...]} arrive — braces and "quotes" in a string are just characters',
   phases: [{ title: 'One', detail: 'first' }, { title: 'Two' }],
 }
-const x = await agent('go')
+const x = await agent('Run exactly: node scripts/moneypenny/work-gate.mjs')
 return x
 `;
 
@@ -73,6 +73,28 @@ describe("workflow-meta scanner behavior", () => {
 
   it("flags a script with no meta export at all", () => {
     expect(scanWorkflowMeta("const x = 1\n", "x/demo.js")[0]).toContain("no `export const meta");
+  });
+
+  // The other half of this scan: a fan-out that never asks the dial ignores `halt` (#3960).
+  const NO_GATE = PURE.replace("Run exactly: node scripts/moneypenny/work-gate.mjs", "go");
+
+  it("flags a script that never names the work-mode gate", () => {
+    expect(scanWorkflowMeta(NO_GATE, "x/demo.js").some((p) => p.includes("work-gate"))).toBe(true);
+  });
+
+  it("accepts the gate named in a template string, as a prompt built from values would", () => {
+    const src = NO_GATE.replace("agent('go')", "agent(`Run: work-gate.mjs`)");
+    expect(scanWorkflowMeta(src, "x/demo.js")).toEqual([]);
+  });
+
+  it("does not take a comment as the gate", () => {
+    const src = `// asks work-gate first, honest\n${NO_GATE}`;
+    expect(scanWorkflowMeta(src, "x/demo.js").some((p) => p.includes("work-gate"))).toBe(true);
+  });
+
+  it("does not take a mention in meta as the gate", () => {
+    const src = NO_GATE.replace("description: 'A demo'", "description: 'Reads work-gate'");
+    expect(scanWorkflowMeta(src, "x/demo.js").some((p) => p.includes("work-gate"))).toBe(true);
   });
 
   it("flags a phase without a string title", () => {

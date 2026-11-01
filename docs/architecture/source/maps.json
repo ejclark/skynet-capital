@@ -936,7 +936,7 @@
         "id": "ops_buttons",
         "label": "Ops buttons",
         "technology": "GitHub Actions workflow_dispatch, flyctl 0.4.99, the autonomy-ops GitHub Environment (required reviewers)",
-        "responsibility": "Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode), fly-logs (filtered log pull), companion-eval (replay eval on a ref with the key fetched live from Fly)",
+        "responsibility": "Phone-operable, reviewer-gated operations: autonomy-ops (status, machine-status, logs, bootstrap-bots-app, flip-mode, set-bridge-secret), fly-logs (filtered log pull), companion-eval (replay eval on a ref with the key fetched live from Fly)",
         "code_roots": [
           ".github/workflows/autonomy-ops.yml",
           ".github/workflows/fly-logs.yml",
@@ -1358,7 +1358,7 @@
             "id": "audit",
             "label": "Stall and conflict audit",
             "path": "scripts/moneypenny/audit.mjs",
-            "responsibility": "audit() emits flag-stall / silent-feedback / plan-ready-stall / flag-conflict / clear-in-progress / clear-stall / retitle-work-mode / close-red-lane-pr intents with stall-flagged and conflict-flagged labels as memory (silent-feedback times the wait, not the filing; plan-stall times the latest ready-flip and counts next-slice, a parking label, in-progress or a withdrawn ready as an answer; both clear their flag once answered, #6042); CONFLICT_REPAIR_CAP 3 escalates to needs-eric, workModeRetitle keeps the spigot's tracking-issue title in step with the position the lanes read, and rearm-stranded (`stranded-pr.mjs`) re-runs a green, unarmed PR's failed `arm auto-merge` job once per head sha (marker comment as memory; skips held, envelope-protected and platter-boarded PRs, and stops at `halt`)"
+            "responsibility": "audit() emits flag-stall / silent-feedback / plan-ready-stall / flag-conflict / clear-in-progress / clear-stall / retitle-work-mode / tidy-ended-dial / close-red-lane-pr intents with stall-flagged and conflict-flagged labels as memory (silent-feedback times the wait, not the filing; plan-stall times the latest ready-flip and counts next-slice, a parking label, in-progress or a withdrawn ready as an answer; both clear their flag once answered, #6042); CONFLICT_REPAIR_CAP 3 escalates to needs-eric, workModeRetitle keeps the spigot's tracking-issue title in step with the position the lanes read, and rearm-stranded (`stranded-pr.mjs`) re-runs a green, unarmed PR's failed `arm auto-merge` job once per head sha (marker comment as memory; skips held, envelope-protected and platter-boarded PRs, and stops at `halt`)"
           },
           {
             "id": "wake",

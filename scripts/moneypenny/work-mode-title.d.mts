@@ -23,6 +23,22 @@ export interface RetitleIntent {
   readonly reason: string;
 }
 
+/** The audit intent that takes a label off the dial once its end date has passed. */
+export interface DialTidyIntent {
+  readonly kind: "tidy-ended-dial";
+  readonly issueNumber: number;
+  readonly label: string;
+  readonly reason: string;
+}
+
+/** Pure: the tidy intent when `mode.endedLabel` says an end date passed, else null. */
+export function endedDialTidy(
+  state?: {
+    trackingIssue?: number;
+    mode?: Partial<WorkMode>;
+  } | null,
+): DialTidyIntent | null;
+
 /** `Work mode: CONSERVE until 2026-09-29` — the plan's "status at a glance" format. */
 export function workModeTitle(
   mode: Pick<WorkMode, "position" | "until" | "reading">,
