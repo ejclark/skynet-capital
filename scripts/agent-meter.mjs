@@ -15,6 +15,7 @@
 //   npm run meter -- --audit-receipt --prs 6307,6323 --confirmed N
 //   npm run meter -- --failure-to-fix [--json] [--days N | ...] [--write-ledger [--date D] [--ledger DIR]]
 //   npm run meter:workers -- [--json] [--days N | ...]   # exits 1 if the worker's oracle fails
+//   npm run meter:flow -- [--json] [--days N | ...]      # the same as npm run meter -- --flow
 //
 // Seams (env, so a spec can drive it): AGENT_RUNS_DIR, AGENT_TRANSCRIPTS_DIR, AGENT_PROJECTS_DIR,
 // AGENT_MEMORY_DIR, AGENT_GIT_DIR; `gh` on PATH is the REST layer.
@@ -31,6 +32,7 @@ import {
 } from "./agent-meter/agents.mjs";
 import { auditedInWindow, defectsFromIssues, writeAuditReceipt } from "./agent-meter/defects.mjs";
 import { quantile, readFailureToFix, writeLedgerRow } from "./agent-meter/failure-to-fix.mjs";
+import { readFlow } from "./agent-meter/flow.mjs";
 import { defectIssues, mergedPrs, pipelineRuns } from "./agent-meter/github.mjs";
 import {
   createRest,
@@ -39,7 +41,12 @@ import {
   SESSION_FLOOR_SEC,
   saveCache,
 } from "./agent-meter/lanes.mjs";
-import { render, renderFailureToFix, renderWorkerStages } from "./agent-meter/render.mjs";
+import {
+  render,
+  renderFailureToFix,
+  renderFlow,
+  renderWorkerStages,
+} from "./agent-meter/render.mjs";
 
 export { quantile };
 
@@ -313,6 +320,7 @@ async function measure(w, { maxRest }) {
       note: "open-to-merge excludes local verify and agent time; run rows are the fuller measure",
     },
     failureToFix,
+    flow: await readFlow(w),
     agents: agentSummary(agents),
     startup: {
       recentFirstCalls: startups.map((s) => s.firstCall),
@@ -391,6 +399,10 @@ async function main(args) {
     });
   const w = windowFromArgs(args);
   if (args.includes("--worker-stages")) return workerStages(args, w);
+  if (args.includes("--flow")) {
+    const reading = await readFlow(w);
+    return args.includes("--json") ? JSON.stringify(reading, null, 2) : renderFlow(reading);
+  }
   const maxRest = Number(flag(args, "--max-rest") ?? DEFAULT_MAX_REST);
   if (args.includes("--failure-to-fix")) return failureToFixOnly(args, w, maxRest);
   const m = await measure(w, { maxRest });

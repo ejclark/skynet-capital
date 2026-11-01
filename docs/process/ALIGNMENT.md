@@ -38,4 +38,10 @@ alignment has come — and the evidence that lets a class stop asking.
 | 2026-10-18 | engineering gates | #5730 · raise 11 over-budget debt gates to today's counts? | Yes (high) | — | pending |
 | 2026-10-18 | session housekeeping | Archive this session? (asked with the archive audit's all-green table) | Yes, archive (high) | Yes, archive | match |
 | 2026-10-26 | member onboarding | Is Narayan joining as a member, a code contributor, or both? | both, member first (medium) | member first, through the Moneypenny chat; GitHub guided; a subscription maybe later | match |
-| 2026-10-26 | spend limits | #6020 · the research spend breaker never counted; trip at $60/4h scaled by the dial, keep $15, or leave it? | $60/4h scaled by the dial (medium) | — | pending |
+| 2026-10-26 | spend limits | #6020 · the research spend breaker never counted; trip at $60/4h scaled by the dial, keep $15, or leave it? | $60/4h scaled by the dial (medium) | A2 on 2026-11-01, not this line | miss; a measurement replaced this prediction before he answered, see the 2026-11-01 row |
+| 2026-11-01 | spend limits | #6020 · trip the research spend breaker at A2, $100 per 4h and $200 at surge? | A2 (medium-high) | A2 | match |
+| 2026-11-01 | member trade surfaces | #5709 · where does a long call's exit plan show: in the ticket (A), at review (B), after the fill (C), or not at all (D)? | A, in the ticket (medium) | B: a strategy carries its exit plan before the trade, and it shows at review | miss |
+| 2026-11-01 | credentials | #4621 · press the button that sets the bridge password, and approve the run it starts? (first wording) | Yes (high) | "what is there to approve?" | unclear |
+| 2026-11-01 | credentials | #4621 · Same, asked again in chat | Yes (high) | Yes, in chat | match |
+
+The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.

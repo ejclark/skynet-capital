@@ -24,6 +24,7 @@ export interface Intent {
 
 export function endOfDayUtc(s: string | null | undefined): number | null;
 export function parseIntent(slug: string, text: string): Intent;
+export const POSITION_SHAPES: [RegExp, string][];
 export function publicHalfProblems(text: string): string[];
 export function stateOf(intent: Intent, now?: number): "active" | "lapsed" | "closed";
 export function loadIntents(dir?: string): Intent[];

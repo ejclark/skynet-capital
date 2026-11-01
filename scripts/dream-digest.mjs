@@ -42,6 +42,8 @@ const HARNESS_PREFIXES = [
   "<command-",
   "<local-command",
   "[SYSTEM NOTIFICATION",
+  "[Request interrupted",
+  "This session is being continued",
   "Caveat:",
 ];
 const SECRET_SHAPES = [
@@ -94,7 +96,7 @@ export function digestLines(lines) {
     }
     if (row.isCompactSummary || row.subtype === "compact_boundary") digest.compactions += 1;
     const content = row.message?.content;
-    if (row.type === "user" && !row.isSidechain) {
+    if (row.type === "user" && !row.isSidechain && !row.isMeta) {
       const text = textOf(content);
       if (isTyped(text))
         digest.typed.push({ at: row.timestamp, text: redact(text.slice(0, MAX_USER_CHARS)) });

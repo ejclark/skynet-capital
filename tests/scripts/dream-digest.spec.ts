@@ -46,7 +46,10 @@ describe("memory review digest", () => {
       typed("why does this keep failing"),
       typed("<task-notification>done</task-notification>"),
       typed("  <system-reminder>noise</system-reminder>"),
+      typed("[Request interrupted by user]"),
+      typed("This session is being continued from a previous conversation that ran out."),
       row({ type: "user", isSidechain: true, message: { content: "a sub-agent prompt" } }),
+      row({ type: "user", isMeta: true, message: { content: "a skill's own text" } }),
     ]);
     expect(digest.typed.map((t: { text: string }) => t.text)).toEqual([
       "why does this keep failing",

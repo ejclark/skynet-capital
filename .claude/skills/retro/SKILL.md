@@ -101,6 +101,8 @@ them exact, and never leave `STATUS: open` — an open entry fails the build by 
 `npm run lessons:held` — it lists unlearned runs on the same workflow as earlier lessons, as leads,
 and scores whether gate-type preventions recur less than doctrine-only ones.
 
+**A correction of Eric's that recurs** also adds a case to `docs/evals/how-he-writes-set.json` in the same PR, with what his next message showed as the evidence.
+
 ## 7. Verify and ratchet
 
 ```bash

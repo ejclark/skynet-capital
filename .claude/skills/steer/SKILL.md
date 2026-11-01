@@ -67,6 +67,7 @@ The stable page's URL is in #5056's state block; the first publish puts it there
    empty — or, when a drawing can't be finished this touch point, publish anyway: the page names
    each one as "being drawn and comes next page" and the read-back rolls it over untouched. A held
    PR is the one exception: it stays a link to GitHub, where the PR opens with its own picture.
+   Every review ask carries one tested link and one sentence on what reaction is wanted, and before writing "needs you", confirm the PR or approval exists.
 5. **Build** — `npm run steer:build -- <dir>/tp.json` → `<dir>/steer.html` + `<dir>/files.json`.
    Optional single look: open it at 390 (the page must not scroll sideways) and fix what is broken.
 6. **Publish** — the Artifact tool, `file_path: <dir>/steer.html`, `files` from `files.json`,
