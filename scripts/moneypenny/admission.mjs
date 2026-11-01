@@ -48,7 +48,6 @@
 // wakes the sweep, and the sweep picks the same top-ranked issue again: #4621 started every 3 minutes
 // for 38 minutes on 2026-10-27 and held the queue behind it the whole time.
 import { classOf } from "../rank.mjs";
-import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ensureGhToken, ghRest, ghRestAll, sh } from "./gh.mjs";
 import {
   boardedReason,
@@ -138,6 +137,12 @@ export function parentNumberOf(issue) {
  * come from, so the cap and the column a human reads never disagree (the in-flight cap's rule:
  * `normal.inFlightCap` 3 is the board's own WIP limit). A blocked plan reads Blocked, not
  * Waiting, and so is not counted: it is waiting on a decision, not on a builder.
+ *
+ * THE ONE PLACE THE TWO PART, ON PURPOSE. A parked plan with no callout reads Waiting on the board
+ * until someone writes the ask (rule 7), but it holds no seat here. `needs-eric` makes it unpullable
+ * however the label landed, so no builder can finish it, and whether the ask is worded yet cannot
+ * change that. When the seat followed the callout, four parked plans under his login could refuse
+ * every fresh plan with `queued: 4 started plans waiting` (#6584).
  */
 export function waitingPlans(openPlans = []) {
   return (openPlans ?? []).filter((p) => {
@@ -147,11 +152,6 @@ export function waitingPlans(openPlans = []) {
       state: String(p.state ?? "open").toLowerCase(),
       labels,
       subIssues: subIssueCounts(p),
-      decisionCalloutMissing: missingDecisionCallout({
-        labels,
-        body: p.body,
-        author: p.user?.login ?? p.author,
-      }),
     });
     return column === WAITING;
   });
@@ -428,7 +428,6 @@ export function readOpenPlans(readAll = ghRestAll) {
       createdAt: r.created_at,
       sub_issues_summary: r.sub_issues_summary,
       parent_issue_url: r.parent_issue_url,
-      user: r.user ? { login: r.user.login } : undefined,
     }))
     .map((plan) => withOpenSubIssues(plan, readAll));
 }

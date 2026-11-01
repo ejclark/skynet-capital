@@ -322,7 +322,8 @@ delta from `budget.spent()`. Print it verbatim; paste it into the issue or PR th
 
 **What a dead agent left.** Every agent that does the work has its own folder,
 `runs/<run>/<agent>` in the session scratchpad, named in its prompt. The run folder comes from the
-batch, or from `args.run` when two batches need telling apart. A run where an agent died returns
+chain and the items, so only a re-run of the same batch finds earlier notes, or from `args.run` to
+name it yourself. A run where an agent died returns
 `deadAgents`: each one's folder and what its notes show. A clean run returns an empty list and pays
 for no reader. One-command steps, the envelope check and the run's own lookups get no folder.
 
