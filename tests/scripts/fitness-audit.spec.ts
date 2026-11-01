@@ -3,8 +3,14 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
-// @ts-expect-error plain .mjs script, no declarations
-import { applyBug, attribute, bugDeadlineMs, validateBugs } from "../../scripts/fitness-audit.mjs";
+import {
+  applyBug,
+  attribute,
+  bugDeadlineMs,
+  validateBugs,
+  verdictOf,
+  // @ts-expect-error plain .mjs script, no declarations
+} from "../../scripts/fitness-audit.mjs";
 
 // #6470. The audit grades a check by breaking it on purpose: each bug in a list is applied to a
 // temporary copy of the files and the spec is run there. Driven end to end through the real CLI
@@ -261,5 +267,177 @@ describe("fitness audit: a slow machine is not a caught bug", () => {
     const run = audit([...TARGET, "--bugs", `${FIXTURE}/bugs.json`, "--json"]);
     const caught = parseReport(run).bugs.find((b: { id: string }) => b.id === "count-needs-two");
     expect(caught.caughtBy).toContain("passes one machine and fails none");
+  });
+});
+
+// A red run only shows a bug was noticed when a test said so for a reason of its own. These are the
+// runs that used to read as caught with no test having judged anything, each one bug away from a toy.
+const WAITING = `export const DELAY = 0;
+export const judge = () => "pass";
+`;
+const WAITING_SPEC = `import { expect, it } from "@rstest/core";
+import { DELAY, judge } from "./waiting.mjs";
+
+it('says "pass"', async () => {
+  await new Promise((done) => setTimeout(done, DELAY));
+  expect(judge()).toBe("pass");
+}, 1000);
+`;
+
+function gradeOne(find: string, replace: string, flags: string[] = []) {
+  const root = mkdtempSync(join(tmpdir(), "fitness-audit-verdict-"));
+  writeFileSync(join(root, "waiting.mjs"), WAITING);
+  writeFileSync(join(root, "waiting.check.ts"), WAITING_SPEC);
+  const bug = { id: "the-bug", file: "waiting.mjs", find, replace, why: "under test" };
+  writeFileSync(join(root, "bugs.json"), JSON.stringify([bug]));
+  return audit([
+    "--script",
+    "waiting.mjs",
+    "--spec",
+    "waiting.check.ts",
+    "--bugs",
+    "bugs.json",
+    "--root",
+    root,
+    ...flags,
+  ]);
+}
+
+describe("fitness audit: a red run that no test judged is not a catch", () => {
+  const expectNoVerdict = (run: ReturnType<typeof audit>, said: string) => {
+    const report = parseReport(run);
+    expect(report.bugs[0]).toMatchObject({ result: "no-verdict" });
+    expect(report.bugs[0].note).toContain(said);
+    expect(report).toMatchObject({ caught: 0, survived: 0, noVerdict: 1, total: 1 });
+    expect(run.status).toBe(1);
+    expect(run.err).toContain("NO VERDICT the-bug");
+  };
+
+  it("still calls an assertion going red caught, and names the test exactly", () => {
+    const run = gradeOne('() => "pass"', '() => "fail"', ["--json"]);
+    const report = parseReport(run);
+    expect(report.bugs[0]).toMatchObject({ result: "caught", caughtBy: 'says "pass"' });
+    expect(run.status).toBe(0);
+  });
+
+  it("gives no verdict when the spec runs out of time", () => {
+    const run = gradeOne('() => "pass"', "() => { while (true) {} }", [
+      "--json",
+      "--bug-timeout",
+      "2",
+    ]);
+    expectNoVerdict(run, "ran out of time");
+  });
+
+  it("gives no verdict when a test only ran past its own limit", () => {
+    expectNoVerdict(gradeOne("DELAY = 0", "DELAY = 5000", ["--json"]), "timed out in 1000ms");
+  });
+
+  it("gives no verdict when the bug does not compile", () => {
+    expectNoVerdict(gradeOne('() => "pass";', "() => {{", ["--json"]), "Module build failed");
+  });
+
+  it("gives no verdict when the bug throws before any test runs", () => {
+    const run = gradeOne("DELAY = 0;", 'DELAY = 0; throw new Error("at load");', ["--json"]);
+    expectNoVerdict(run, "at load");
+  });
+
+  it("gives no verdict when the worker is killed under a test's name", () => {
+    const run = gradeOne(
+      WAITING,
+      `import { execSync } from "node:child_process";
+export const DELAY = 0;
+export const judge = () => execSync(\`kill -9 \${process.pid}\`);
+`,
+      ["--json"],
+    );
+    expectNoVerdict(run, "Worker killed");
+  });
+
+  it("prints the row and the count in the plain report", () => {
+    const run = gradeOne("DELAY = 0", "DELAY = 5000");
+    expect(run.status).toBe(1);
+    expect(run.out).toContain("NO VERDICT");
+    expect(run.out).toContain("caught 0");
+    expect(run.out).toContain("no verdict 1");
+  });
+});
+
+describe("fitness audit: reading a finished run", () => {
+  const failure = (fullName: string, ...messages: string[]) =>
+    `\n\`\`\`json\n${JSON.stringify({ fullName, errors: messages.map((message) => ({ message })) }, null, 2)}\n\`\`\`\n`;
+  const report = (...failures: string[]) => `# Report\n\n## Failures\n${failures.join("")}`;
+
+  it("reads a run killed by a signal as no verdict, whatever its report said", () => {
+    const run = { status: 1, signal: "SIGKILL", report: report(failure("real", "expected 1")) };
+    expect(verdictOf(run).result).toBe("no-verdict");
+    expect(verdictOf(run).note).toContain("SIGKILL");
+  });
+
+  it("reads an exit with no report as no verdict", () => {
+    expect(verdictOf({ status: 143, report: "" })).toMatchObject({ result: "no-verdict" });
+    expect(verdictOf({ status: 1 }).note).toContain("exited 1");
+  });
+
+  it("ignores a line shaped like a failure printed before the report", () => {
+    const stray = '  "fullName": "an imposter",\n';
+    const run = { status: 1, report: stray + report(failure("the real one", "expected 1")) };
+    expect(verdictOf(run)).toMatchObject({ result: "caught", caughtBy: "the real one" });
+  });
+
+  it("takes the first test that failed for a reason of its own", () => {
+    const run = {
+      status: 1,
+      report: report(failure("slow", "test timed out in 5000ms"), failure("red", "expected 1")),
+    };
+    expect(verdictOf(run)).toMatchObject({ result: "caught", caughtBy: "red" });
+  });
+
+  it("calls a test that timed out and also failed an assertion caught", () => {
+    const run = { status: 1, report: report(failure("both", "test timed out in 5000ms", "no")) };
+    expect(verdictOf(run)).toMatchObject({ result: "caught", caughtBy: "both" });
+  });
+
+  it("keeps an assertion that merely mentions a timeout as caught", () => {
+    const said = "expected 'probe timed out in 300ms' to be 'pass'";
+    const run = { status: 1, report: report(failure("the probe's verdict", said)) };
+    expect(verdictOf(run)).toMatchObject({ result: "caught", caughtBy: "the probe's verdict" });
+  });
+
+  it("is not thrown by a failure message that quotes a report", () => {
+    const run = { status: 1, report: report(failure("the real one", "got\n## Failures\nin it")) };
+    expect(verdictOf(run)).toMatchObject({ result: "caught", caughtBy: "the real one" });
+  });
+
+  it("does not read a report it cannot parse as a catch", () => {
+    const run = { status: 1, report: "\n## Failures\n\n```json\n{ not json\n```\n" };
+    expect(verdictOf(run).result).toBe("no-verdict");
+  });
+
+  it("reads exit 0 as survived", () => {
+    expect(verdictOf({ status: 0, report: "" })).toEqual({ result: "survived" });
+  });
+});
+
+describe("fitness audit: time limits as written", () => {
+  const limit = (flag: string, value: string) =>
+    audit([...TARGET, "--bugs", `${FIXTURE}/bugs.json`, flag, value]);
+
+  it("takes a fraction of a second that does not land on a whole millisecond", () => {
+    const res = limit("--timeout", "0.07");
+    expect(res.err).toContain("baseline ran out of time");
+    expect(res.err).not.toContain("out of range");
+  });
+
+  it("refuses a limit that never ends", () => {
+    const res = limit("--timeout", "Infinity");
+    expect(res.status).toBe(2);
+    expect(res.err).toContain("--timeout needs a positive number");
+  });
+
+  it("refuses a bug limit that is not a positive number", () => {
+    const res = limit("--bug-timeout", "soon");
+    expect(res.status).toBe(2);
+    expect(res.err).toContain("--bug-timeout needs a positive number");
   });
 });

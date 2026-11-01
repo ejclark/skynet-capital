@@ -40,8 +40,9 @@ Input: the check's script path, its outcome line, and its spec's path as a value
    folder: a short, curated list, each bug naming in `why` a behaviour a person cares about. Stop at
    judges and probe arguments.
 3. **Run it:** `node scripts/fitness-audit.mjs --bugs <file> --script <path> --spec <path>`. A NOT
-   APPLIED gets rewritten, never dropped. Report caught and survived as the script prints them, and
-   keep every bug in the count, including the ones the spec caught.
+   APPLIED gets rewritten, never dropped. A NO VERDICT was not graded and is never a catch: re-run it
+   or rewrite the bug. Report caught and survived as the script prints them, and keep every bug in
+   the count, including the ones the spec caught.
 4. **Attack the check:** find states of the world that pass it while the outcome fails. Start from
    the outcome line, not the code: a stopped fleet behind a green deploy step, a fresh health stamp
    from a process that makes no decisions, both alert secrets set and nothing delivered. Each repro
