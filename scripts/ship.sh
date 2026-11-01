@@ -773,6 +773,7 @@ cmd_merge() {
 #   scripts/ship.sh platter open <item-branch> [--name platter/<date>] [--subject S] [--no-verify]
 #                                [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter board <item-branch> [--subject S] [--no-verify] [--closes …] [--part-of …]
+#   scripts/ship.sh platter amend <item-branch> [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter ledger [--base <ref>] [--body]
 #   scripts/ship.sh platter sync
 #
@@ -836,12 +837,16 @@ cmd_platter_ledger() {
 # #5852's ledger grew to 986 rows over 20 real items (#6252). Merges and main's commits carry no
 # trailer, so they never become rows; the range itself is checked against GitHub's own count before
 # a body is posted (platter_sync_body).
+# An optional argument names more trailer keys to keep: the Summary also reads `ship platter amend`'s
+# notes (Platter-Amends:), which add refs to a row and are never rows themselves.
 platter_items_log() {
-  git log --reverse --no-merges --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" | python3 -c '
-import sys
+  git log --reverse --no-merges --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" |
+    PLATTER_KEYS="Platter-Item: ${1-}" python3 -c '
+import os, sys
+keys = tuple(os.environ["PLATTER_KEYS"].split())
 for record in sys.stdin.read().split("\x1e"):
     body = record.split("\x00")[-1]
-    if any(line.strip().startswith("Platter-Item:") for line in body.splitlines()):
+    if any(line.strip().startswith(keys) for line in body.splitlines()):
         sys.stdout.write(record + "\x1e")
 '
 }
@@ -903,9 +908,10 @@ platter_picture() {
 }
 
 # The issues the boarded items close or are part of, one Summary bullet each (#4562). Read from the
-# same commits as the ledger, so dropping an item (re-opening without it) drops its close too.
+# same commits as the ledger, so dropping an item (re-opening without it) drops its close too —
+# plus any `ship platter amend` note, which platter-refs folds onto the rows of the item it names.
 platter_summary_refs() {
-  platter_items_log | node "$(dirname "$0")/platter-refs.mjs" summary
+  platter_items_log "Platter-Amends:" | node "$(dirname "$0")/platter-refs.mjs" summary
 }
 
 platter_body() {
@@ -1200,6 +1206,22 @@ cmd_platter_open() {
   platter_close_item "$item" "$name" "$(git rev-parse --short HEAD)" || exit 1
 }
 
+# The board guards live in the copy of this file being run, and that copy is the PLATTER's
+# checkout — a main up to a week old. A guard merged since is simply absent: #6032's stale-base
+# refusal merged at 10:57 on 2026-10-26, and at 11:52 a platter still on the older ship.sh boarded
+# a 3-file item as 95 files (#5852). Refuse until the platter runs main's copy.
+platter_require_current_script() {
+  git fetch --quiet origin main || {
+    echo "ship platter: cannot fetch origin/main to check this script is current" >&2; exit 1; }
+  local main_ship; main_ship="$(git rev-parse --verify --quiet origin/main:scripts/ship.sh || true)"
+  if [ -n "$main_ship" ] && [ "$main_ship" != "$(git hash-object "$0")" ]; then
+    echo "ship platter: this scripts/ship.sh is not origin/main's — the platter's copy is stale and" >&2
+    echo "  may lack board guards merged since. Catch the platter up first, then re-board:" >&2
+    echo "  git merge origin/main --no-edit" >&2
+    exit 1
+  fi
+}
+
 cmd_platter_board() {
   local item="${1:-}"; shift || true
   [ -n "$item" ] || { echo "ship platter board: an item branch is required" >&2; exit 1; }
@@ -1217,19 +1239,7 @@ cmd_platter_board() {
     echo "ship platter board: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
     exit 1 ;;
   esac
-  # The board guards live in the copy of this file being run, and that copy is the PLATTER's
-  # checkout — a main up to a week old. A guard merged since is simply absent: #6032's stale-base
-  # refusal merged at 10:57 on 2026-10-26, and at 11:52 a platter still on the older ship.sh boarded
-  # a 3-file item as 95 files (#5852). Refuse until the platter runs main's copy.
-  git fetch --quiet origin main || {
-    echo "ship platter: cannot fetch origin/main to check this script is current" >&2; exit 1; }
-  local main_ship; main_ship="$(git rev-parse --verify --quiet origin/main:scripts/ship.sh || true)"
-  if [ -n "$main_ship" ] && [ "$main_ship" != "$(git hash-object "$0")" ]; then
-    echo "ship platter: this scripts/ship.sh is not origin/main's — the platter's copy is stale and" >&2
-    echo "  may lack board guards merged since. Catch the platter up first, then re-board:" >&2
-    echo "  git merge origin/main --no-edit" >&2
-    exit 1
-  fi
+  platter_require_current_script
   platter_board_item "$item" "$subject" "$verify" "$closes" "$partof" "$closes_set" "$partof_set"
   local sha; sha="$(git rev-parse --short HEAD)"
   echo "ship platter: pushing ${branch}…"
@@ -1241,6 +1251,54 @@ cmd_platter_board() {
   }
   platter_close_item "$item" "$branch" "$sha" || failed=1
   [ "$failed" = 0 ] || exit 1
+}
+
+# Add issue refs to an item already boarded without them (#4616). The body is rebuilt from the
+# commits on every board, so a `Closes #N` typed into it by hand lasts only until the next board —
+# #5852 lost #4616's four times, and each loss let the retry sweep wake a session to re-type it.
+# Re-boarding refuses (the item adds nothing) and amending the item commit means a force-push, so
+# the refs ride an EMPTY commit instead: `Platter-Amends: <item>` plus the usual trailers. It is
+# never a ledger row and touches no file; platter-refs folds its refs onto the item's own rows.
+cmd_platter_amend() {
+  local item="${1:-}"; shift || true
+  [ -n "$item" ] || { echo "ship platter amend: an item branch is required" >&2; exit 1; }
+  local closes="" partof="" closes_set=0 partof_set=0
+  while [ $# -gt 0 ]; do case "$1" in
+    --closes) closes="$2"; closes_set=1; shift 2 ;;
+    --part-of) partof="$2"; partof_set=1; shift 2 ;;
+    *) echo "ship platter amend: unknown arg $1" >&2; exit 1 ;;
+  esac; done
+  [ "$closes_set" = 1 ] || [ "$partof_set" = 1 ] || {
+    echo "ship platter amend: pass --closes N and/or --part-of N — an amendment that names no issue changes nothing" >&2
+    exit 1; }
+
+  local branch; branch="$(git rev-parse --abbrev-ref HEAD)"
+  case "$branch" in platter/*) ;; *)
+    echo "ship platter amend: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
+    exit 1 ;;
+  esac
+  git diff --quiet && git diff --cached --quiet || {
+    echo "ship platter: uncommitted changes — commit or drop them before amending" >&2; exit 1; }
+  platter_require_current_script
+  git log --no-merges --format=%b "$PLATTER_BASE..HEAD" | grep -qxF "Platter-Item: $item" || {
+    echo "ship platter amend: no item '$item' is boarded in $PLATTER_BASE..HEAD — \`ship platter ledger\` lists the items." >&2
+    exit 1; }
+
+  local args=(trailers --item "$item" --subject "chore(platter): amend")
+  [ "$closes_set" = 1 ] && args+=(--closes "$closes")
+  [ "$partof_set" = 1 ] && args+=(--part-of "$partof")
+  local refs; refs="$(node "$(dirname "$0")/platter-refs.mjs" "${args[@]}")" || exit 1
+  local msg="/tmp/ship-platter-amend-msg.txt"
+  { printf "chore(platter): amend the issue refs of a boarded item\n\n"
+    printf 'Platter-Amends: %s\n' "$item"
+    printf '%s\n' "$refs"; } > "$msg"
+  git commit --quiet --allow-empty -F "$msg"
+  echo "ship platter: amended $item with $(printf '%s' "$refs" | tr '\n' ' ')"
+  echo "ship platter: pushing ${branch}…"
+  cmd_push "$branch"
+  platter_sync_body "$branch" || {
+    echo "ship platter: the amendment is pushed, but the PR body sync FAILED — run \`scripts/ship.sh platter sync\`." >&2
+    exit 1; }
 }
 
 cmd_platter_sync() {
@@ -1259,13 +1317,14 @@ cmd_platter() {
   case "$sub" in
     open) need_token; cmd_platter_open "$@" ;;
     board) need_token; cmd_platter_board "$@" ;;
+    amend) need_token; cmd_platter_amend "$@" ;;
     ledger) cmd_platter_ledger "$@" ;;
     # re-post the checked-out platter's body without boarding — the recovery after a refused sync.
     sync) need_token; cmd_platter_sync ;;
     # the record after landing, from the first-parent log, in whichever ending is true (merge commit
     # or squash) — posted as a comment on the landed PR by whoever reports it (the digest, a session).
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
-    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
   esac
 }
 
