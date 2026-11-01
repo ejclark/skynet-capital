@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { FeedbackStatus } from "../../src/domain/feedback-status.js";
 import type {
   ActivityEventBus,
@@ -23,7 +26,7 @@ import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import { InMemoryFeedbackLogStore } from "../../src/server/feedback-log-memory-store.js";
 import type { LadderProgressEntry } from "../../src/server/ladder-progress-log.js";
 import { InMemoryLadderProgressLogStore } from "../../src/server/ladder-progress-log-memory-store.js";
-import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
+import { JsonlOrderAuditLog, type OrderAuditRecord } from "../../src/server/order-audit-log.js";
 import { InMemoryOrderAuditLog } from "../../src/server/order-audit-memory-log.js";
 
 const tradeRecord: TradeActivityRecord = {
@@ -96,6 +99,37 @@ describe("publishingOrderAuditLog", () => {
     await wrapped.record(auditRecord);
 
     expect(await bus.list("sauron")).toMatchObject([{ visibility: "owner-only" }]);
+  });
+
+  // #4619: without it, the ladder's held fold and Activity's order origins fell back to re-listing
+  // the whole audit on every read in production, and every spec (built on the bare log) stayed green.
+  it("forwards the wrapped log's append-aware read, so a held fold never falls back to a whole read", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "audit-publishing-"));
+    try {
+      const wrapped = publishingOrderAuditLog(
+        new JsonlOrderAuditLog(dir),
+        new InMemoryActivityEventBus(),
+      );
+      await wrapped.record(auditRecord);
+      const first = await wrapped.since?.("sauron", 0);
+      await wrapped.record({ ...auditRecord, orderId: "ord-2" });
+
+      expect(first?.entries).toEqual([auditRecord]);
+      expect((await wrapped.since?.("sauron", first?.offset ?? 0))?.entries).toEqual([
+        { ...auditRecord, orderId: "ord-2" },
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("offers no append-aware read over a log that has none", () => {
+    const wrapped = publishingOrderAuditLog(
+      new InMemoryOrderAuditLog(),
+      new InMemoryActivityEventBus(),
+    );
+
+    expect(wrapped.since).toBeUndefined();
   });
 });
 

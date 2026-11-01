@@ -219,15 +219,15 @@ describe("serverRead", () => {
   });
 
   it("refuses a member's option fill the book has no order audit for, never a bot's", async () => {
-    type Audit = () => Promise<unknown[]>;
-    expect(await (config.readAllOrderAudit as Audit)()).toEqual([]);
+    type Ladder = (id: string) => Promise<unknown>;
     const human = book.participants.find((p) => p.kind === "human")?.id ?? "";
+    await expect((config.readLadderEvidence as Ladder)(human)).resolves.toBeDefined();
     const withPut = structuredClone(book);
     withPut.activity[human] = [
       { orderId: "put-1", symbol: "CRWV261106P00080000", at: "2026-10-08T15:00:00Z" },
     ];
-    const audit = serverConfig(withPut).readAllOrderAudit as Audit;
-    await expect(audit()).rejects.toThrow(/member's option fill/);
+    const ladder = serverConfig(withPut).readLadderEvidence as Ladder;
+    await expect(ladder(human)).rejects.toThrow(/member's option fill/);
   });
 
   it("is undefined for a path no handler claims", async () => {

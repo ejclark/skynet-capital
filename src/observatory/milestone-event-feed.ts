@@ -1,14 +1,12 @@
 import { type MilestoneCard, milestoneCard } from "../domain/milestone-catalog.js";
-import { deriveEarned } from "../domain/progression.js";
+import type { EarnedMilestone } from "../domain/progression.js";
 import type { LadderProgressEntry } from "../server/ladder-progress-log.js";
-import type { OrderAuditRecord } from "../server/order-audit-log.js";
 import {
   type ActivityEvent,
   activityEventFromEarnedMilestone,
   activityEventFromLadderEntry,
   PUBLIC_ONLY,
 } from "./activity-event.js";
-import { collapseActivity, type TradeActivityRecord } from "./activity-store.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 
 /**
@@ -22,9 +20,10 @@ import type { ParticipantSnapshot } from "./participant-snapshot.js";
  *   ladder progress log itself, by `mergeLadderLogIntoEvents` — the bridge slices 1 and 2 built, for
  *   the same reason: the log predates its publisher, and the bus alone would drop every earn logged
  *   before this deploy.
- * - **Derived earns** are synthesized here, at read time, by `deriveMilestoneEvents` — the same
- *   `deriveEarned` over the same two ledgers the Learn page reads (`progression-service.ts`), so a
- *   feed row exists exactly when the member's own ladder says the rung is earned. Nothing is written.
+ * - **Derived earns** are the Learn page's own: `earnedMilestoneEvents` wraps the rungs its held
+ *   ladder (`ladder-evidence.ts`, `deriveEarned` over the trade ledger and the order audit) already
+ *   proved, so a feed row exists exactly when the member's own ladder says the rung is earned.
+ *   Nothing is written.
  *
  * THE HONESTY RULE THIS KIND HAS TO KEEP (#784's criterion; progression's own rule — "proof is a
  * fill, never a claim"): no row for a milestone that was not earned. Both sources carry the order
@@ -91,34 +90,17 @@ export function mergeLadderLogIntoEvents(
   return [...events, ...entries.map(activityEventFromLadderEntry)];
 }
 
-function byParticipant<T extends { readonly participantId: string }>(
-  rows: readonly T[],
-): Map<string, T[]> {
-  const grouped = new Map<string, T[]>();
-  for (const row of rows) {
-    const held = grouped.get(row.participantId);
-    if (held) held.push(row);
-    else grouped.set(row.participantId, [row]);
-  }
-  return grouped;
-}
-
 /**
- * The trade ladder's earns, synthesized at read time from the two ledgers `deriveEarned` reads on
- * the Learn page — per participant, because a fill only proves a rung for whoever filled it. An
- * untagged option fill (pre-tag history, a bot's) earns nothing here exactly as it earns nothing
- * there, so the feed and the ladder cannot disagree about who has done what.
+ * One member's earned trade-ladder rungs as feed events — read from the same held ladder the Learn
+ * page reads (`ladder-evidence.ts`), never re-derived here, so the feed and the ladder cannot
+ * disagree about who has done what. An untagged option fill (pre-tag history) earns nothing there,
+ * so it earns nothing here.
  */
-export function deriveMilestoneEvents(
-  records: readonly TradeActivityRecord[],
-  tags: readonly OrderAuditRecord[],
+export function earnedMilestoneEvents(
+  participantId: string,
+  earned: readonly EarnedMilestone[],
 ): ActivityEvent[] {
-  const tagsByParticipant = byParticipant(tags);
-  return [...byParticipant(records)].flatMap(([participantId, journal]) =>
-    deriveEarned(collapseActivity(journal), tagsByParticipant.get(participantId) ?? []).map(
-      (earned) => activityEventFromEarnedMilestone(participantId, earned),
-    ),
-  );
+  return earned.map((rung) => activityEventFromEarnedMilestone(participantId, rung));
 }
 
 /**
