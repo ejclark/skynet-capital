@@ -53,8 +53,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/hooks/memory-history.mjs 2>/dev/null || true",
-            "async": true
+            "command": "node scripts/hooks/memory-history.mjs",
+            "asyncRewake": true
           }
         ]
       }
