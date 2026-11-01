@@ -51,7 +51,10 @@ _The contract: each arrow is a place the bots outage broke._
 **The measure of the measures is detection lag** ([`COACHES.md`](../COACHES.md)): time from when a failure
 could be noticed to when it was. The roster in `COACHES.md` watches the code; these watch the running
 system. A gate blocks a merge and a contract keeps production true, so a contract never blocks anyone's
-PR. A contract that never fires gets retired, as harnesses decay too.
+PR. A contract that never fires gets retired, as harnesses decay too. `npm run meter -- --failure-to-fix`
+reads it per failure and by source, with what follows it: filed to fix merged, and failure to verified.
+Main CI and audit findings have a reading. A contract's lag reads unknown, because the read that fails is
+the read that files, and when the failure began is stored nowhere.
 
 **The first run, 2026-11-01:** bots running, bots responsive, main deploys and memory history passed.
 Alerts reaching the owner failed. Startup size read unknown until its budget merges.

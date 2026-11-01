@@ -35,6 +35,13 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### Every worktree agent's first git command was refused for weeks, and the blame sat on the wrong guard
+- **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
+- **SIGNAL:** nearly every builder in one day's #6470 batch reported that plain `git` is refused and `npx biome` fails with "could not determine executable". A count over 148 agent transcripts: 114 refusals with `rtk` named in them, across 24 agents, and 14 failed biome or lint runs across 5. `docs/DELEGATION.md` had carried the workaround since #5055.
+- **ROOT CAUSE:** neither failure was in this repo. The user-level rtk hook rewrites a command before the harness's worktree check reads it. `git status` became `rtk git status`, which the check refuses because it cannot tell where rtk would run it; a glob, variable or pipe in rtk's operands is refused the same way. `npx biome check x` and `npm run lint` became `rtk lint …`, which looks for ESLint or a package called `check`, in every session and not just worktrees. Reports called it "the guard", so the fix was first looked for in `scripts/hooks/guard-bash.mjs`, whose text never matched the refusal. Grepping for the refusal's own words is what showed it was not ours.
+- **PREVENTION:** script. `scripts/hooks/guard-bash.mjs` hands back as written any isolated agent's command that names git (96 of the 114 refusals) and, in every session, biome and the lint script; `tests/scripts/guard-bash.spec.ts` pins it. Globs and variables handed to `rtk grep` stay with rtk on purpose, since taking them too would give up its savings on 85% of agent commands, and the absolute path passes there. The harness's check still reads the result, so aiming git at the shared checkout stays refused. A hook racing another hook is not a guarantee, so the lasting fix for biome and lint is user-level and Eric's: an rtk exclusion for `npx biome` and `npm run lint`.
+- **SIDE QUESTS:** agents still lose calls to the check's own shape rules (a loop or `$(…)` around git, `bash f; echo $?`, a variable passed to sed or node), and the rule never reached an agent's prompt: it lived only in `docs/DELEGATION.md`.
+
 ### A merged crash fix stayed dark for days because its last step was a paste nobody ran
 - **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
 - **SIGNAL:** an unrelated audit of agent memory (#6470) found no green push of `pipeline.yml` in 200 runs and `fly status` showing the bots machine `stopped`. The second stop dates from about 10-25, so the fleet was down for most of a week, while #5955 sat on `needs-eric` asking for a terminal paste.
