@@ -4,6 +4,7 @@
 //   node scripts/feedback-scan.mjs                     # human-readable table
 //   node scripts/feedback-scan.mjs --json              # machine-readable, for the digest
 //   node scripts/feedback-scan.mjs --fixture f.json    # score a fixture, no gh, no network
+//   ... --now 2026-10-27T12:00:00Z                     # deterministic clock for the 24h row
 //
 // WHY: until 2026-08-22 the only number describing this lane was a sentence someone hand-counted by
 // reading GitHub — `.github/prompts/feedback-build.md` said "exactly one reached a merge without a
@@ -27,6 +28,11 @@ import { LABELS } from "./moneypenny/index.mjs";
 // concrete consequence that issue names: it classifies by label, so a label it spells differently
 // from the lane that applies one is an issue that appears in no queue and no digest.
 const TERMINAL = [LABELS.needsInfo.name, LABELS.nextSlice.name, LABELS.needsEric.name];
+
+// A member filing has a state once one of these lands (`statusFromIssue`'s open half, #6316):
+// picked (`ready`), building (`in-progress`), a question back, or a first slice shipped.
+const STATE_LABELS = [LABELS.ready.name, LABELS.inProgress.name, ...TERMINAL];
+const UNSEEN_AFTER_HOURS = 24;
 
 const gh = (args) => execFileSync("gh", args, { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
 
@@ -197,6 +203,35 @@ export function roundsOf(body = "", onMalformed) {
   }
 }
 
+/**
+ * Every open member filing (a `member-*` label — the app's own filings) older than 24h that still
+ * has no state, oldest first (#6316, from #6271's evidence: 2 app filings in 30 days, 0 readied,
+ * 19 and 1.9 days in Backlog). Nothing builds a filing until `ready` lands, so one with no state
+ * is one nobody has looked at — this row is how none sits unseen. `now` is injectable. Pure.
+ */
+export function unseenFilings(issues, now = Date.now()) {
+  const out = [];
+  for (const issue of issues) {
+    if (issue.state !== "OPEN") continue;
+    const labels = (issue.labels ?? []).map((l) => l.name);
+    if (!labels.some((l) => l.startsWith("member-"))) continue;
+    if (labels.some((l) => STATE_LABELS.includes(l))) continue;
+    const ageHours = (now - Date.parse(issue.createdAt)) / 3_600_000;
+    if (!(ageHours > UNSEEN_AFTER_HOURS)) continue;
+    out.push({
+      number: issue.number,
+      title: issue.title,
+      ageHours: Math.round(ageHours * 10) / 10,
+    });
+  }
+  return out.sort((a, b) => b.ageHours - a.ageHours);
+}
+
+/** "3.2d" past a day, "20h" under one — the age as the row and the digest both print it. Pure. */
+export function ageText(hours) {
+  return hours >= 24 ? `${Math.round((hours / 24) * 10) / 10}d` : `${Math.round(hours)}h`;
+}
+
 /** Roll the per-issue rows into the numbers worth reporting. Pure. */
 export function scoreboard(rows) {
   const answered = rows.filter((r) => r.answered);
@@ -227,6 +262,11 @@ export function scoreboard(rows) {
 
 function main(argv) {
   const fixture = argv[argv.indexOf("--fixture") + 1];
+  const nowArg = argv.includes("--now") ? Date.parse(argv[argv.indexOf("--now") + 1]) : Date.now();
+  if (!Number.isFinite(nowArg)) {
+    console.error("feedback-scan: --now must be an ISO date-time");
+    process.exit(2);
+  }
   let issues;
   if (argv.includes("--fixture") && fixture) {
     issues = JSON.parse(readFileSync(fixture, "utf8"));
@@ -245,8 +285,9 @@ function main(argv) {
   const rows = issues.map((issue) => outcomeOf(issue, notes));
   for (const note of notes) console.error(`· feedback-scan: ${note}`);
   const score = scoreboard(rows);
+  const unseen = unseenFilings(issues, nowArg);
   if (argv.includes("--json")) {
-    console.log(JSON.stringify({ score, rows }, null, 2));
+    console.log(JSON.stringify({ score, rows, unseen }, null, 2));
     return;
   }
   console.log("📮 Feedback lane — did the member get an answer?\n");
@@ -267,6 +308,15 @@ function main(argv) {
   if (score.rounds) {
     console.log(
       `  coach rounds: n=${score.rounds.n} median=${score.rounds.median} max=${score.rounds.max}`,
+    );
+  }
+  console.log(
+    `\n  member filings older than ${UNSEEN_AFTER_HOURS}h with no state: ${unseen.length}` +
+      (unseen.length ? "" : " — every one has been looked at"),
+  );
+  for (const u of unseen) {
+    console.log(
+      `  #${String(u.number).padEnd(4)} ${ageText(u.ageHours).padStart(6)}  ${u.title.slice(0, 60)}`,
     );
   }
 }

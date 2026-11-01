@@ -63,11 +63,13 @@ in code — only as a host secret, exactly like the Alpaca keys.
    `src/server/feedback-attribution.ts`) — every issue here is filed by the same bot token, so
    GitHub's own `author:` search can't isolate one member's items; `label:member-<id>` (or clicking
    the label) can, the same way `author:` would on a normal repo.
-5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (In the build queue ·
-   Waiting on your answer · Waiting on Eric's decision · First part shipped · Shipped · Closed, not
+5. On the Profile page's Feedback section (`/app/accounts?section=feedback`), "Your recent feedback" shows a live status badge per filing (Filed — waiting to be
+   picked · Up next · Being built · Waiting on your answer · Waiting on Eric's decision · First part shipped · Shipped · Closed, not
    built) once
    `SKYNET_FEEDBACK_GITHUB_TOKEN` is set — `resolveFeedbackStatus` in `src/server/feedback-status.ts`
-   reads it straight off the issue's current state and triage label, so there's nothing local to
+   reads it straight off the issue's current state and triage label (the mapping is
+   `statusFromIssue` in `src/domain/feedback-status.ts`, the one Moneypenny answers with: no
+   `ready` reads as waiting, `ready` as up next, `in-progress` as being built — #6316), so there's nothing local to
    keep in sync across a deploy.
 6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
    they already filed without leaving the app. It posts a GitHub comment (never edits the original
