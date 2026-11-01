@@ -42,7 +42,9 @@ export function sinceOf(argv, now = Date.now()) {
     };
   }
   const since = argv[at + 1];
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(since ?? "")) throw new Error(USAGE);
+  // Shape and calendar both: `2026-13-45` has the shape, and a NaN sinceMs would page every PR.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(since ?? "") || Number.isNaN(Date.parse(`${since}T00:00:00Z`)))
+    throw new Error(USAGE);
   return { since, defaulted: false };
 }
 
@@ -258,8 +260,8 @@ function main() {
   const { since, defaulted } = sinceOf(argv);
   ensureGhToken();
   const rows = live(since);
-  const window = defaulted ? ` (the default: ${DEFAULT_WINDOW_DAYS} days back)` : "";
-  console.log(renderTable(rows, `Handed off since ${since}${window}, scored live`));
+  const chosen = defaulted ? ` (the default: ${DEFAULT_WINDOW_DAYS} days back)` : "";
+  console.log(renderTable(rows, `Handed off since ${since}${chosen}, scored live`));
   if (argv.includes("--compare")) {
     const a = agreement(
       Object.fromEntries(rows.map((r) => [r.n, r.outcome])),

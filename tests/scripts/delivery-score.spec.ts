@@ -153,6 +153,7 @@ describe("delivery score: the default window", () => {
 
   it("refuses a malformed date rather than scoring since the epoch", () => {
     expect(() => sinceOf(["--since", "yesterday"], now)).toThrow(/usage/);
+    expect(() => sinceOf(["--since", "2026-13-45"], now)).toThrow(/usage/);
     expect(() => sinceOf(["--since"], now)).toThrow(/usage/);
   });
 });
@@ -198,12 +199,14 @@ esac
   };
 
   it("exits 0 with no argument and names the window it scored", () => {
+    // Read the clock on both sides of the run, so a midnight rollover between them cannot flake.
+    const before = sinceOf([], Date.now()).since;
     const { out, status } = run([]);
+    const after = sinceOf([], Date.now()).since;
     expect(status).toBe(0);
-    const { since } = sinceOf([], Date.now());
-    expect(out).toContain(
-      `**Handed off since ${since} (the default: ${DEFAULT_WINDOW_DAYS} days back), scored live**`,
-    );
+    const heading = (since: string) =>
+      `**Handed off since ${since} (the default: ${DEFAULT_WINDOW_DAYS} days back), scored live**`;
+    expect(out.includes(heading(before)) || out.includes(heading(after))).toBe(true);
   });
 
   it("reads events only for an issue something merged builds", () => {

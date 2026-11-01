@@ -42,6 +42,11 @@ describe("closedWithOpenSlices", () => {
     expect(md).toContain("| #3811 | plan 3811 | 2026-10-01 | 1 of 4 | #4316 |");
     expect(renderReport([], {})).toContain("0 closed plans with an open sub-issue");
   });
+
+  it("keeps a title with a pipe in one cell", () => {
+    const rows = closedWithOpenSlices([plan(5, 2, 1, { title: "a | b" })]);
+    expect(renderReport(rows, {})).toContain("| #5 | a \\| b | 2026-10-01 | 1 of 2 | — |");
+  });
 });
 
 describe("the CLI, against a stub GitHub", () => {

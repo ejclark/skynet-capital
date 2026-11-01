@@ -30,6 +30,9 @@ export function closedWithOpenSlices(issues) {
     }));
 }
 
+/** A title is free text; a pipe in it would split the row. */
+const cell = (s) => String(s ?? "").replace(/\|/g, "\\|");
+
 /** The markdown table, or the one line that says the rule held. `openSlices` maps a plan number
  *  to the open sub-issue numbers read for it. */
 export function renderReport(rows, openSlices = {}) {
@@ -41,7 +44,7 @@ export function renderReport(rows, openSlices = {}) {
     "|---|---|---|---|---|",
     ...rows.map(
       (r) =>
-        `| #${r.number} | ${r.title} | ${r.closedAt} | ${r.open} of ${r.total} | ${(openSlices[r.number] ?? []).map((n) => `#${n}`).join(", ") || "—"} |`,
+        `| #${r.number} | ${cell(r.title)} | ${r.closedAt} | ${r.open} of ${r.total} | ${(openSlices[r.number] ?? []).map((n) => `#${n}`).join(", ") || "—"} |`,
     ),
   ].join("\n");
 }
