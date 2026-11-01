@@ -7,8 +7,14 @@
 // with. It has two modes, and the first proves the second is wired right:
 //
 //   node scripts/delivery-score.mjs --fixture          # replay the frozen study cohort (84% vs 68%)
+//   node scripts/delivery-score.mjs                    # re-score the last DEFAULT_WINDOW_DAYS, live
 //   node scripts/delivery-score.mjs --since 2026-10-01 # re-score issues handed off since a date, live
 //   node scripts/delivery-score.mjs --since 2026-08-15 --compare  # agreement with the frozen cohort
+//
+// THE DEFAULT WINDOW (2026-10-31 loop census). Two registry rows name bare `npm run delivery:score`,
+// and the push-tick check (loop-check.mjs) runs a row's command with no arguments — so with no
+// default, every posted check could only read "did not finish". The default is a window ending
+// today, and the heading says which date it chose, so the posted output names its own cohort.
 //
 // CLEAN means closed completed with no rework signal: no reopen, no needs-info after the build,
 // no first attempt closed unmerged, and no fix/revert PR citing the issue within 7 days of its first
@@ -17,10 +23,30 @@
 // live number against a hand count.
 import { readFileSync } from "node:fs";
 import { declaredPrs, readinessNotes, sizeCell } from "./issue-readiness.mjs";
-import { ghRest } from "./moneypenny/gh.mjs";
+import { ensureGhToken, ghRest } from "./moneypenny/gh.mjs";
 
 const H = 3600e3;
 const FIXTURE = new URL("../tests/fixtures/delivery/cohort-2026-09-29.json", import.meta.url);
+/** How far back a bare run scores. Long enough for a cohort past the rows' "≥30 items", short
+ *  enough that the events read per scored issue fits the push tick's command budget. */
+export const DEFAULT_WINDOW_DAYS = 30;
+const USAGE = "usage: delivery-score.mjs --fixture | [--since YYYY-MM-DD] [--compare]";
+
+/** The window to score: `--since` when named (and well-formed), else DEFAULT_WINDOW_DAYS ago. */
+export function sinceOf(argv, now = Date.now()) {
+  const at = argv.indexOf("--since");
+  if (at === -1) {
+    return {
+      since: new Date(now - DEFAULT_WINDOW_DAYS * 24 * H).toISOString().slice(0, 10),
+      defaulted: true,
+    };
+  }
+  const since = argv[at + 1];
+  // Shape and calendar both: `2026-13-45` has the shape, and a NaN sinceMs would page every PR.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(since ?? "") || Number.isNaN(Date.parse(`${since}T00:00:00Z`)))
+    throw new Error(USAGE);
+  return { since, defaulted: false };
+}
 
 // ─── pure core ───────────────────────────────────────────────────────────────────────────────────
 
@@ -207,6 +233,10 @@ function live(since) {
   for (const issue of issues) {
     const labels = issue.labels.map((l) => l.name);
     if (labels.includes("event-research") || labels.includes("ci-failure")) continue;
+    // `classify` returns null whatever the events say when nothing merged builds the issue, and
+    // the events read is the one REST call per issue — skipping it for the issues outside the
+    // cohort is what keeps a 30-day window inside the push tick's command budget.
+    if (!prs.some((p) => p.merged_at && buildsIssue(p, issue.number))) continue;
     const events = ghRest(`issues/${issue.number}/events?per_page=100`);
     const scored = classify({ issue, events, prs, now });
     if (!scored || scored.handoff < sinceMs || scored.outcome === "IN-FLIGHT") continue;
@@ -227,11 +257,11 @@ function main() {
   const frozen = JSON.parse(readFileSync(FIXTURE, "utf8")).rows;
   if (argv.includes("--fixture"))
     return console.log(renderTable(frozen, "Frozen study cohort, main 25b8c6e8"));
-  const at = argv.indexOf("--since");
-  if (at === -1)
-    throw new Error("usage: delivery-score.mjs --fixture | --since YYYY-MM-DD [--compare]");
-  const rows = live(argv[at + 1]);
-  console.log(renderTable(rows, `Handed off since ${argv[at + 1]}, scored live`));
+  const { since, defaulted } = sinceOf(argv);
+  ensureGhToken();
+  const rows = live(since);
+  const chosen = defaulted ? ` (the default: ${DEFAULT_WINDOW_DAYS} days back)` : "";
+  console.log(renderTable(rows, `Handed off since ${since}${chosen}, scored live`));
   if (argv.includes("--compare")) {
     const a = agreement(
       Object.fromEntries(rows.map((r) => [r.n, r.outcome])),
