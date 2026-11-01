@@ -235,18 +235,21 @@ function staleEchoBody(run, failure, issue) {
  * Did a usage limit refuse this leg's session before it did any work? Three shapes, each measured
  * on a real log (study 2026-11-01; #6098 took 16 recurrence comments in 15 hours from one session
  * limit, #6336 was filed for a leg that ran 394 ms at zero cost):
- *   - the output file's `rate_limit_event` with `status` rejected;
- *   - the result envelope's `api_error_status` 429 or `"error": "rate_limit"`;
+ *   - the output file's `rate_limit_event` with `status` rejected — the window closed, whether on
+ *     the first call or on turn 25 (#6098's longest legs ran 25 turns at $0.93 and then died on it);
+ *   - the result envelope's `api_error_status` 429, the same death as GitHub prints it;
  *   - the action's own result print: `is_error` true, every `num_turns` at most 1, every
  *     `total_cost_usd` zero — the session was refused on its first call, whatever printed it.
- * A session that spent turns and money and THEN failed is a fault (#6098's real legs ran 25 turns
- * at $0.93 beside an `allowed_warning`), and so is anything this cannot read: unknown stays loud.
- * The lane's own script text names these fields in prose; only the quoted JSON keys count.
+ * A session that failed for any other reason, however many turns it ran, is a fault, and so is
+ * anything this cannot read: unknown stays loud. A bare assistant-message `"error": "rate_limit"`
+ * is NOT a signal on its own — a transient 429 the CLI retried leaves the same line, and in every
+ * saved log it rides beside one of the two above. The lane's own script text names these fields
+ * in prose; only the quoted JSON keys count.
  */
 export function limitRejected(logTail) {
   const log = String(logTail ?? "");
   if (/"type":\s*"rate_limit_event"[\s\S]{0,200}?"status":\s*"rejected"/.test(log)) return true;
-  if (/"api_error_status":\s*429\b/.test(log) || /"error":\s*"rate_limit"/.test(log)) return true;
+  if (/"api_error_status":\s*429\b/.test(log)) return true;
   if (!/"is_error":\s*true/.test(log)) return false;
   const turns = [...log.matchAll(/"num_turns":\s*(\d+)/g)].map((m) => Number(m[1]));
   const costs = [...log.matchAll(/"total_cost_usd":\s*([\d.]+)/g)].map((m) => Number(m[1]));

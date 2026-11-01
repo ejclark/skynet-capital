@@ -264,6 +264,20 @@ describe("moneypenny repair — a usage-limit rejection is not a fault", () => {
     expect(limitRejected(undefined)).toBe(false);
     // The lane's own script text mentions the field names; prose is not an envelope.
     expect(limitRejected('COST=$(jq -r "$F | .total_cost_usd"); echo is_error=$ERR')).toBe(false);
+    // A transient 429 the CLI retried leaves this line too; alone it says nothing about the death.
+    expect(limitRejected('"error": "rate_limit",\n"is_api_error_message": true')).toBe(false);
+  });
+
+  it("a session that worked for 25 turns and then died on the limit is still a refusal", () => {
+    // #6098's longest legs: 25 turns, $0.93, then the five-hour window closed on them.
+    const spentThenRejected = `${realFailure.replace("allowed_warning", "rejected")}`;
+    expect(limitRejected(spentThenRejected)).toBe(true);
+    const payload = failedRun(
+      ["research due events (x)"],
+      ["[ci] Moneypenny Events (event-research automation) — research due events"],
+    );
+    payload.failures[0] = { ...payload.failures[0], logTail: spentThenRejected } as never;
+    expect(dryRunPayload(payload).map((i) => i.type)).toEqual(["skip"]);
   });
 
   it("skips the rejected leg: no capsule, no recurrence comment, no repair session", () => {
