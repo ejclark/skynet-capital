@@ -44,7 +44,7 @@
 // never asks, and is still counted — its PR names the issue, which derives `in-progress` (#4402).
 import { classOf } from "../rank.mjs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
-import { ghRestAll, sh } from "./gh.mjs";
+import { ensureGhToken, ghRestAll, sh } from "./gh.mjs";
 import {
   boardedReason,
   FOOTER,
@@ -621,5 +621,9 @@ function checkOne(issue, { inFlight, mode, readPlans, readHold }) {
   return hold ? { admit: false, reason: `not buildable now: ${hold}` } : verdict;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  // A session signed in only through `gh` has no token for the curl reads. Every plan row then read
+  // as a 401, failed open and stayed listed, so --queue named plans --check refused (#6326's audit).
+  ensureGhToken();
   process.exitCode = runCli(process.argv.slice(2));
+}
