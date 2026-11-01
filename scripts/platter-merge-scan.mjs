@@ -77,7 +77,7 @@ export function ledgerItems(body) {
     if (line.startsWith("|")) {
       rows.push(line);
     } else if (rows.length === 0) {
-      // the blank line between the heading and the table: keep looking
+      // anything above the table: keep looking
     } else if (!line.trim() || line.startsWith("_")) {
       break; // the blank line, or the caption, below the table
     } else {
