@@ -17,6 +17,13 @@ The mechanics live in `scripts/ship.sh` (a one-time build cost, ~free per run). 
 
 Before writing the body: the picture grammar is `docs/PICTURES.md`, drawing it is `/mermaid`, and who reads it is `docs/READERS.md`.
 
+The body has to pass `checkbody`, so write to it from the first draft: `## The picture` holds media
+or the line `Picture: waived — <reason>`, media gets a filled caption line, Summary bullets stay
+within 120 characters, `raw.githubusercontent.com` URLs pin a commit, every mermaid block renders,
+and closing keywords sit only in Summary bullets. Check a draft with `scripts/ship.sh checkbody
+<file>`, which needs no network. These limits put what every reader pays for on top and the rest
+behind the fold, read on demand (`.claude/skills/issue/SKILL.md`, step 4).
+
 ## Why (the constraint this protects)
 
 `git` and repo-scoped **REST** run on your machine / the **core** bucket (15k/hr, barely touched).
@@ -25,6 +32,11 @@ The GitHub **MCP** spends **GraphQL** (5k/hr) — one MCP PR-create+auto-merge+r
 drained it. See `docs/COACHES.md` → *Resource cost is a fitness dimension*.
 
 ## The flow
+
+**`CLAUDE.md`, `.claude/**` or `.github/prompts/*.md` in the diff** → before opening, ask `reviewer`
+for its process-file lens with `model: "opus"` on the call, and put `Process-file lens: <n> findings`
+in the PR body's details. The per-call model overrides the file's Fable, and `docs/COMPUTE.md` routes
+a review to Opus. Other docs stay out: taking them too would be about four times the reads.
 
 1. **Verify locally first.** `scripts/ship.sh open` runs `npm run verify` (parity with CI) and
    refuses to push on red — never spend a runner or a PR on a known loser.

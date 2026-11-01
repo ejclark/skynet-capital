@@ -36,14 +36,20 @@
 // decides whether it may start NOW. A live session — the claim lanes ask through `gateAdmission`,
 // `/work-issues` through the read-only CLI at the foot of this file:
 //   node scripts/moneypenny/admission.mjs --check <n>   # {admit, reason, queuedBehind?}; exit 0 | 3
-//   (`--check` and `--next` also step past a plan whose state block names nothing to build, #5707)
+//   (`--check`, `--next` and `--queue` all step past a plan whose state block names nothing to
+//   build, #5707 — so the listing never names a row `--check` refuses, #6279)
 //   node scripts/moneypenny/admission.mjs --next        # the sweep's pick, same JSON; exit 0 | 3
 //   node scripts/moneypenny/admission.mjs --queue       # the Ready column, in pick order (JSON)
 // The CLI never comments and never labels. A session Eric starts by hand is the EXPEDITE class: it
 // never asks, and is still counted — its PR names the issue, which derives `in-progress` (#4402).
+//
+// THE RETRY LIMIT is not a rule above, because it costs a read per pick: it is a hold, asked at the
+// pick like #5707's (`retryHold`, `sweepHold`). A build that fails frees its slot, the freed slot
+// wakes the sweep, and the sweep picks the same top-ranked issue again: #4621 started every 3 minutes
+// for 38 minutes on 2026-10-27 and held the queue behind it the whole time.
 import { classOf } from "../rank.mjs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
-import { ghRestAll, sh } from "./gh.mjs";
+import { ensureGhToken, ghRest, ghRestAll, sh } from "./gh.mjs";
 import {
   boardedReason,
   FOOTER,
@@ -53,7 +59,7 @@ import {
   pullable,
 } from "./labels.mjs";
 import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
-import { platterClosesByIssue } from "./pr-issues.mjs";
+import { derivePrIssues, platterClosesByIssue } from "./pr-issues.mjs";
 import { isStartedPlan, statusForIssue, subIssueCounts, WAITING } from "./projects.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
@@ -249,6 +255,91 @@ export function checkAdmission({ issue, inFlight = [], mode, waiting, interactiv
   const notPullable = notPullableReason(issue, { interactive });
   if (notPullable) return { admit: false, reason: `not pullable: ${notPullable}` };
   return admitBuild({ issue, inFlight, mode, waiting });
+}
+
+// ── the retry limit (#6470) ──────────────────────────────────────────────────────────────────────
+
+/** How many builds the sweep starts on one issue in a UTC day with nothing merged to show for it. */
+export const MAX_STARTS_PER_DAY = 3;
+
+/**
+ * Why the sweep leaves this issue alone for the rest of the UTC day, or null. Pure over the REST
+ * issue events, so the count survives a runner: nothing is written to keep it.
+ *
+ * A START IS `in-progress` GOING ON. Every claim path writes it, whether the build then dies in 30
+ * seconds or runs to the end, and it costs no new label or comment. It is also why a green build
+ * that did nothing counts: an issue still `ready` after three goes needs something a fourth will not
+ * bring. A merged PR naming the issue says the builds are working, so only the starts after it count
+ * (`mergedMs`); a plan shipping slices all day is never refused. An open PR never gets this far:
+ * `withoutOpenPr` drops it from the pool first.
+ */
+export function retryHoldReason({ events = [], mergedMs = null, now }) {
+  const day = new Date(now);
+  const from = Math.max(
+    Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()),
+    mergedMs ?? 0,
+  );
+  const starts = (events ?? []).filter((e) => {
+    const at = Date.parse(e?.created_at ?? "");
+    return e?.event === "labeled" && e.label?.name === LABELS.inProgress.name && at >= from;
+  }).length;
+  return starts >= MAX_STARTS_PER_DAY
+    ? `${starts} builds started today with nothing merged since, so the sweep tries it again after midnight UTC`
+    : null;
+}
+
+/** Issue → when a PR naming it last merged, in ms, from the most recently updated closed PRs. */
+function readMergedAt(read) {
+  const merged = new Map();
+  const rows = read("pulls?state=closed&sort=updated&direction=desc&per_page=100") ?? [];
+  for (const pr of rows) {
+    const at = Date.parse(pr?.merged_at ?? "");
+    if (Number.isNaN(at)) continue;
+    for (const n of derivePrIssues({ title: pr.title, body: pr.body, headRef: pr.head?.ref })) {
+      merged.set(n, Math.max(merged.get(n) ?? 0, at));
+    }
+  }
+  return merged;
+}
+
+/**
+ * The live read behind `retryHoldReason`, as a hold for `nextUnheld`. FAIL-OPEN, `readPickupHold`'s
+ * doctrine: one more retry is the status quo, and a queue stalled by a read error is worse.
+ *
+ * WHAT THIS COSTS (#6319, the App's bucket ran out once), each time the queue is read: nothing when
+ * no pick is admissible; one call for a healthy pick; for a refused pick one call, plus the merged-PR
+ * list once however many are refused. A push tick's peek and the run it dispatches each read the
+ * queue once. Only the sweep and `--next` ask. A `ready` label event is someone asking for this build
+ * now, and `--check` is a live session, which is not the lane that is retrying.
+ *
+ * @returns {(issue: {number: number}) => string | null}
+ */
+export function retryHold({
+  now = Date.now(),
+  log = console.log,
+  readAll = ghRestAll,
+  read = ghRest,
+} = {}) {
+  let merged;
+  return (issue) => {
+    try {
+      const events = readAll(`issues/${issue.number}/events`);
+      if (!retryHoldReason({ events, now })) return null;
+      merged ??= readMergedAt(read);
+      return retryHoldReason({ events, mergedMs: merged.get(issue.number), now });
+    } catch (err) {
+      log(
+        `::warning::#${issue.number}'s build history could not be read — treating it as pullable: ${String(err?.message ?? err).slice(0, 200)}`,
+      );
+      return null;
+    }
+  };
+}
+
+/** Everything the unattended sweep steps past at the pick: nothing to build, or retried enough. */
+export function sweepHold({ now = Date.now(), ...rest } = {}) {
+  const retried = retryHold({ now, ...rest });
+  return (issue) => readPickupHold(issue, rest) ?? retried(issue);
 }
 
 /** The first body line a queue note carries — also the dedupe key. */
@@ -520,6 +611,7 @@ export function runCli(argv = [], io = {}) {
     readHold = (issue) => readPickupHold(issue, { log: printErr }),
     print = (line) => console.log(line),
     printErr = (line) => console.error(line),
+    readRetry = retryHold({ log: printErr }), // `--next` only: it mirrors the sweep
   } = io;
   const out = (verdict) => {
     print(JSON.stringify(verdict));
@@ -537,10 +629,21 @@ export function runCli(argv = [], io = {}) {
     }
     // `--queue` and `--check` are /work-issues' reads — a live session, so `needs-session` is
     // its to build (#5236). `--next` mirrors the unattended sweep and keeps refusing it.
-    const rows = pullQueue(ready, { interactive: true }).map((i) => ({
-      number: i.number,
-      title: i.title ?? "",
-    }));
+    // A held plan (#5707) is dropped here too: `--check` refuses it, and /work-issues ends its pass
+    // on a refusal, so listing it would stop the pass before any row behind it is built (#6279).
+    // The hold read costs nothing on a non-plan row.
+    const rows = pullQueue(ready, { interactive: true })
+      .filter((i) => {
+        const hold = readHold(i);
+        if (hold) printErr(`::notice::--queue — skipping #${i.number}, ${hold}`);
+        return !hold;
+      })
+      // `class` and `why` make the order legible: the registry's "Priority only with a reader"
+      // check (`npm run queue`) reads this to see a hand-set P-label land where the rule says.
+      .map((i) => {
+        const { cls, why } = rankOf(i);
+        return { number: i.number, title: i.title ?? "", class: cls, why };
+      });
     print(JSON.stringify(rows));
     return 0;
   }
@@ -571,7 +674,8 @@ export function runCli(argv = [], io = {}) {
       return refuse("the open plans could not be read", err);
     }
     const pickOf = (rest) => nextAdmissible(rest, inFlight, mode, waiting);
-    const { pick } = nextUnheld(ready, pickOf, readHold, { log: printErr });
+    const holdOf = (issue) => readHold(issue) ?? readRetry(issue);
+    const { pick } = nextUnheld(ready, pickOf, holdOf, { log: printErr });
     if (!pick) {
       const why = `nothing admissible (${pullQueue(ready).length} pullable, ${inFlight.length} in flight, ${waiting.length} plans waiting, work-mode=${mode.position})`;
       return out({ admit: false, reason: why });
@@ -609,5 +713,9 @@ function checkOne(issue, { inFlight, mode, readPlans, readHold }) {
   return hold ? { admit: false, reason: `not buildable now: ${hold}` } : verdict;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  // A session signed in only through `gh` has no token for the curl reads. Every plan row then read
+  // as a 401, failed open and stayed listed, so --queue named plans --check refused (#6326's audit).
+  ensureGhToken();
   process.exitCode = runCli(process.argv.slice(2));
+}

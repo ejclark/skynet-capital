@@ -5,6 +5,7 @@ import {
   type Decision,
   executeStopContinuation,
   nextSubIssue,
+  openPrsByIssue,
   pickContinuation,
   postContinuationReceipt,
   routeContinuation,
@@ -12,7 +13,7 @@ import {
   STOP_CAP,
   stopComment,
 } from "../../../scripts/moneypenny/continuation.mjs";
-import { derivePrIssues } from "../../../scripts/moneypenny/pr-issues.mjs";
+import { derivePrIssues, platterClosesByIssue } from "../../../scripts/moneypenny/pr-issues.mjs";
 import {
   blockFingerprint,
   nextPickupOf,
@@ -21,6 +22,7 @@ import {
   receiptsOf,
   stateBlockOf,
 } from "../../../scripts/moneypenny/state-block.mjs";
+import { heldPlatter } from "../../support/platter-fixtures.js";
 
 // CONTINUATION (#3818 slice 8, #4295 — criteria 9–10). A plan's slice merges; the build session
 // removes `in-progress` and ends; the plan's lease outlives it, so the retry sweep steps past the
@@ -267,6 +269,27 @@ describe("criterion 9 — when a plan continues itself", () => {
     ).toContain(4450);
   });
 
+  it("a held platter is in flight only for what it closes, never its `Part of` items (#6282)", () => {
+    const platter = {
+      number: 950,
+      title: "chore(platter): 2026-10-27 (#4999)",
+      body: "## Summary\n- Closes #4246 — boarded as item 1.\n- Part of #4535 — boarded as item 2.",
+      head: { ref: "platter/2026-10-27" },
+    };
+    const slice = { number: 951, title: "feat(x)", body: "Part of #4450", head: { ref: "feat/x" } };
+    expect([...openPrsByIssue([platter, slice])]).toEqual([
+      [4246, 950],
+      [4450, 951],
+    ]);
+  });
+
+  it("the in-flight skip names the open PR, not a branch it may not be on", () => {
+    const d = decide({ openPlanPr: 950 });
+
+    expect(d.reason).toContain("open PR #950 still names #");
+    expect(d.reason).not.toContain("plan/");
+  });
+
   it("stops at the dial's daily cap, counting only the last 24h", () => {
     const stale = { block: "stale0000000" }; // the block moved after each, so criterion 10 is clear
     const capped = decide({
@@ -299,6 +322,83 @@ describe("criterion 9 — when a plan continues itself", () => {
 
     expect(d.action).toBe("skip");
     expect(d.reason).toContain("no next pickup");
+  });
+});
+
+// #6530: a boarded slice's sub-issue stays open until Eric merges the platter, so `sliceToTake`
+// read it as the next slice and continuation started a build with nothing in it — then parked the
+// plan `needs-eric` on the next tick, over a plan only waiting on his merge.
+describe("a slice a held platter closes is not the next slice (#6530)", () => {
+  const P = 3818;
+  const S = 7002;
+  const boarded = (platter: ReturnType<typeof heldPlatter>) => ({
+    openPlanPr: openPrsByIssue([platter]).get(P),
+    boardedOn: platterClosesByIssue([platter]),
+  });
+  const waiting = block("**Next pickup:** none — waiting on #950.");
+  const sub = (number: number, title = `slice ${number - S + 2}`) => ({
+    number,
+    state: "open",
+    title,
+  });
+
+  it("skips a plan whose only open slice its platter closes — the house `Closes` + `Part of` shape", () => {
+    const d = decide({
+      comments: [waiting],
+      subIssues: [sub(S)],
+      blockedBy: { [S]: [] },
+      ...boarded(heldPlatter({ closes: [S], partOf: [P] })),
+    });
+
+    expect(d.action).toBe("skip");
+    expect(d.reason).toContain("no open, unblocked slice remains");
+  });
+
+  it("still continues into the plan's other slice — a platter blocks only what it closes (#6327)", () => {
+    const d = decide({
+      comments: [waiting],
+      subIssues: [sub(S), sub(S + 1)],
+      blockedBy: { [S]: [], [S + 1]: [] },
+      ...boarded(heldPlatter({ closes: [S], partOf: [P] })),
+    });
+
+    expect(d.action).toBe("continue");
+    expect(d.target).toBe(S + 1);
+  });
+
+  it("a platter naming only `Part of #P` blocks none of the plan's slices", () => {
+    const d = decide({
+      comments: [waiting],
+      subIssues: [sub(S)],
+      blockedBy: { [S]: [] },
+      ...boarded(heldPlatter({ partOf: [P] })),
+    });
+
+    expect(d.action).toBe("continue");
+    expect(d.target).toBe(S);
+  });
+
+  it("a pickup line naming the boarded slice is refused, and says the platter holds it", () => {
+    const d = decide({
+      comments: [block("**Next pickup:** slice 2, the protected part.")],
+      subIssues: [{ number: S, state: "open", title: "slice 2: the protected part" }],
+      blockedBy: { [S]: [] },
+      ...boarded(heldPlatter({ closes: [S], partOf: [P] })),
+    });
+
+    expect(d.action).toBe("skip");
+    expect(d.reason).toContain(`#${S} is boarded on held platter #950`);
+  });
+
+  it("a slice blocked by the boarded one still waits — that work has not merged", () => {
+    const d = decide({
+      comments: [waiting],
+      subIssues: [sub(S), sub(S + 1)],
+      blockedBy: { [S]: [], [S + 1]: [{ state: "open" }] },
+      ...boarded(heldPlatter({ closes: [S], partOf: [P] })),
+    });
+
+    expect(d.action).toBe("skip");
   });
 });
 

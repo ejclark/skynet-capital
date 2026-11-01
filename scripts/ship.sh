@@ -40,7 +40,13 @@ set -euo pipefail
 # to the permission matcher, which cost a human approval tap per ship (Eric, 2026-09-10: "stop
 # asking for permission of trivial tasks like this").
 TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}}"
-[ -n "$TOKEN" ] || { echo "ship: no GH_TOKEN/GITHUB_TOKEN in env and no gh login" >&2; exit 1; }
+# Asked for by the commands that call GitHub, never at load: a check up here stopped the pure ones
+# too, so a spec shelling out to `checkbody` passed on a laptop with a gh login and failed on CI
+# (#6440, red for 39h). In the dispatch, not in api(): api() runs inside $(...), where exit only
+# leaves the subshell.
+need_token() {
+  [ -n "$TOKEN" ] || { echo "ship: no GH_TOKEN/GITHUB_TOKEN in env and no gh login" >&2; exit 1; }
+}
 API="https://api.github.com"
 
 # owner/repo from origin, handling both the proxy URL (.../git/OWNER/REPO) and normal remotes.
@@ -120,6 +126,21 @@ cmd_push() {
 # Prints one word: real (success/failure/…), pending (queued/in progress), stale (latest is
 # skipped or cancelled), none (no verify check yet). "Latest" is the highest id — the order GitHub
 # created them in, which is the order branch protection reads.
+# The failed step and the first error line of a verify log, as two JSON string fields for the row
+# scripts/agent-meter.mjs reads (#6470). The step is run-p's `ERROR: "<name>" exited with` line; the
+# error line prefers a compiler or test failure over an advisory ✗, which green runs print too.
+# Quotes, backslashes and control characters are dropped so the row stays one JSON line.
+verify_row_fields() {
+  local log="$1" step err
+  # Under set -e, a grep with no match would abort the ship; an empty field is the honest answer.
+  step=$(grep -m1 -o 'ERROR: "[^"]*" exited with' "$log" 2>/dev/null | sed 's/ERROR: "\([^"]*\)".*/\1/' || true)
+  err=$(grep -m1 -E 'error TS[0-9]+|AssertionError|FAIL |✖|Error:' "$log" 2>/dev/null || true)
+  [ -n "$err" ] || err=$(grep -m1 '✗' "$log" 2>/dev/null || true)
+  [ -n "$err" ] || err=$(grep -m1 'exited with' "$log" 2>/dev/null || true)
+  err=$(printf '%s' "$err" | sed 's/\x1b\[[0-9;]*m//g' | tr -d '"\\' | tr -d '\000-\037' | cut -c1-160)
+  printf '"step":"%s","error":"%s"' "$step" "$err"
+}
+
 cmd_checkverify() {
   python3 -c '
 import sys, json
@@ -408,7 +429,20 @@ EOF_SHOTS
     # and a green run stamps the tree so the pre-push hook below skips a second verify of it. Logs
     # are per-process — a fixed /tmp name let two ships at once overwrite each other's tail.
     local verify_log="/tmp/ship-verify.$$.log"
-    bash scripts/verify-locked.sh --log "$verify_log" || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 "$verify_log"; exit 1; }
+    # Every outcome goes to scripts/agent-meter.mjs's log: a mistake caught here never reaches CI, so
+    # without this line the first-pass rate only sees what got past local verify (#6470).
+    local verify_ok=true
+    bash scripts/verify-locked.sh --log "$verify_log" || verify_ok=false
+    # A failed row also says which step failed and the first error line: a row that only said
+    # ok=false left the meter unable to name what agents get wrong first (#6470).
+    local verify_why=""
+    "$verify_ok" || verify_why=",$(verify_row_fields "$verify_log")"
+    # Only for this repo: ship's own specs run it in throwaway repos, and those must not count.
+    git remote get-url origin 2>/dev/null | grep -q 'skynet-capital' \
+      && mkdir -p "${AGENT_RUNS_DIR:-$HOME/.claude/runs}" 2>/dev/null \
+      && printf '{"at":"%s","ok":%s,"branch":"%s"%s}\n' "$(date -u +%FT%TZ)" "$verify_ok" "$(git branch --show-current)" "$verify_why" \
+        >> "${AGENT_RUNS_DIR:-$HOME/.claude/runs}/ship-verify.jsonl" 2>/dev/null || true
+    "$verify_ok" || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 "$verify_log"; exit 1; }
     echo "ship: verify green."
     # INTEGRATION TESTS TOO (2026-09-30, #4094). `verify` is unit/DOM-level; the Playwright suite is
     # CI's `integration tests` job, and #4151/#4155 merged while it was still running and later went
@@ -488,6 +522,11 @@ EOF_SHOTS
   # forbids it, this just makes drift back into it visible. Advisory only — a real system boundary
   # can be a legitimate exception a script can't judge.
   node scripts/test-quality-scan.mjs "$branch" --base "$base" 2>/dev/null || true
+
+  # Reuse advisory: a helper this change pasted, named while the fix is still one import. No REST
+  # call, silent when there is no copy. Only a body match prints; scripts/dupe-delta.mjs holds the
+  # measured precision and the number that removes this line.
+  node scripts/dupe-scan.mjs --diff "origin/$base" 2>/dev/null || true
 
   # Braces are load-bearing: stock macOS bash (3.2) reads the ellipsis bytes as identifier
   # characters, so a bare $branch… is the undefined variable "branch…" and set -u kills the run
@@ -758,6 +797,7 @@ cmd_merge() {
 #   scripts/ship.sh platter open <item-branch> [--name platter/<date>] [--subject S] [--no-verify]
 #                                [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter board <item-branch> [--subject S] [--no-verify] [--closes …] [--part-of …]
+#   scripts/ship.sh platter amend <item-branch> [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter ledger [--base <ref>] [--body]
 #   scripts/ship.sh platter sync
 #
@@ -821,12 +861,16 @@ cmd_platter_ledger() {
 # #5852's ledger grew to 986 rows over 20 real items (#6252). Merges and main's commits carry no
 # trailer, so they never become rows; the range itself is checked against GitHub's own count before
 # a body is posted (platter_sync_body).
+# An optional argument names more trailer keys to keep: the Summary also reads `ship platter amend`'s
+# notes (Platter-Amends:), which add refs to a row and are never rows themselves.
 platter_items_log() {
-  git log --reverse --no-merges --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" | python3 -c '
-import sys
+  git log --reverse --no-merges --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" |
+    PLATTER_KEYS="Platter-Item: ${1-}" python3 -c '
+import os, sys
+keys = tuple(os.environ["PLATTER_KEYS"].split())
 for record in sys.stdin.read().split("\x1e"):
     body = record.split("\x00")[-1]
-    if any(line.strip().startswith("Platter-Item:") for line in body.splitlines()):
+    if any(line.strip().startswith(keys) for line in body.splitlines()):
         sys.stdout.write(record + "\x1e")
 '
 }
@@ -888,9 +932,10 @@ platter_picture() {
 }
 
 # The issues the boarded items close or are part of, one Summary bullet each (#4562). Read from the
-# same commits as the ledger, so dropping an item (re-opening without it) drops its close too.
+# same commits as the ledger, so dropping an item (re-opening without it) drops its close too —
+# plus any `ship platter amend` note, which platter-refs folds onto the rows of the item it names.
 platter_summary_refs() {
-  platter_items_log | node "$(dirname "$0")/platter-refs.mjs" summary
+  platter_items_log "Platter-Amends:" | node "$(dirname "$0")/platter-refs.mjs" summary
 }
 
 platter_body() {
@@ -1185,6 +1230,22 @@ cmd_platter_open() {
   platter_close_item "$item" "$name" "$(git rev-parse --short HEAD)" || exit 1
 }
 
+# The board guards live in the copy of this file being run, and that copy is the PLATTER's
+# checkout — a main up to a week old. A guard merged since is simply absent: #6032's stale-base
+# refusal merged at 10:57 on 2026-10-26, and at 11:52 a platter still on the older ship.sh boarded
+# a 3-file item as 95 files (#5852). Refuse until the platter runs main's copy.
+platter_require_current_script() {
+  git fetch --quiet origin main || {
+    echo "ship platter: cannot fetch origin/main to check this script is current" >&2; exit 1; }
+  local main_ship; main_ship="$(git rev-parse --verify --quiet origin/main:scripts/ship.sh || true)"
+  if [ -n "$main_ship" ] && [ "$main_ship" != "$(git hash-object "$0")" ]; then
+    echo "ship platter: this scripts/ship.sh is not origin/main's — the platter's copy is stale and" >&2
+    echo "  may lack board guards merged since. Catch the platter up first, then re-board:" >&2
+    echo "  git merge origin/main --no-edit" >&2
+    exit 1
+  fi
+}
+
 cmd_platter_board() {
   local item="${1:-}"; shift || true
   [ -n "$item" ] || { echo "ship platter board: an item branch is required" >&2; exit 1; }
@@ -1202,19 +1263,7 @@ cmd_platter_board() {
     echo "ship platter board: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
     exit 1 ;;
   esac
-  # The board guards live in the copy of this file being run, and that copy is the PLATTER's
-  # checkout — a main up to a week old. A guard merged since is simply absent: #6032's stale-base
-  # refusal merged at 10:57 on 2026-10-26, and at 11:52 a platter still on the older ship.sh boarded
-  # a 3-file item as 95 files (#5852). Refuse until the platter runs main's copy.
-  git fetch --quiet origin main || {
-    echo "ship platter: cannot fetch origin/main to check this script is current" >&2; exit 1; }
-  local main_ship; main_ship="$(git rev-parse --verify --quiet origin/main:scripts/ship.sh || true)"
-  if [ -n "$main_ship" ] && [ "$main_ship" != "$(git hash-object "$0")" ]; then
-    echo "ship platter: this scripts/ship.sh is not origin/main's — the platter's copy is stale and" >&2
-    echo "  may lack board guards merged since. Catch the platter up first, then re-board:" >&2
-    echo "  git merge origin/main --no-edit" >&2
-    exit 1
-  fi
+  platter_require_current_script
   platter_board_item "$item" "$subject" "$verify" "$closes" "$partof" "$closes_set" "$partof_set"
   local sha; sha="$(git rev-parse --short HEAD)"
   echo "ship platter: pushing ${branch}…"
@@ -1226,6 +1275,54 @@ cmd_platter_board() {
   }
   platter_close_item "$item" "$branch" "$sha" || failed=1
   [ "$failed" = 0 ] || exit 1
+}
+
+# Add issue refs to an item already boarded without them (#4616). The body is rebuilt from the
+# commits on every board, so a `Closes #N` typed into it by hand lasts only until the next board —
+# #5852 lost #4616's four times, and each loss let the retry sweep wake a session to re-type it.
+# Re-boarding refuses (the item adds nothing) and amending the item commit means a force-push, so
+# the refs ride an EMPTY commit instead: `Platter-Amends: <item>` plus the usual trailers. It is
+# never a ledger row and touches no file; platter-refs folds its refs onto the item's own rows.
+cmd_platter_amend() {
+  local item="${1:-}"; shift || true
+  [ -n "$item" ] || { echo "ship platter amend: an item branch is required" >&2; exit 1; }
+  local closes="" partof="" closes_set=0 partof_set=0
+  while [ $# -gt 0 ]; do case "$1" in
+    --closes) closes="$2"; closes_set=1; shift 2 ;;
+    --part-of) partof="$2"; partof_set=1; shift 2 ;;
+    *) echo "ship platter amend: unknown arg $1" >&2; exit 1 ;;
+  esac; done
+  [ "$closes_set" = 1 ] || [ "$partof_set" = 1 ] || {
+    echo "ship platter amend: pass --closes N and/or --part-of N — an amendment that names no issue changes nothing" >&2
+    exit 1; }
+
+  local branch; branch="$(git rev-parse --abbrev-ref HEAD)"
+  case "$branch" in platter/*) ;; *)
+    echo "ship platter amend: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
+    exit 1 ;;
+  esac
+  git diff --quiet && git diff --cached --quiet || {
+    echo "ship platter: uncommitted changes — commit or drop them before amending" >&2; exit 1; }
+  platter_require_current_script
+  git log --no-merges --format=%b "$PLATTER_BASE..HEAD" | grep -qxF "Platter-Item: $item" || {
+    echo "ship platter amend: no item '$item' is boarded in $PLATTER_BASE..HEAD — \`ship platter ledger\` lists the items." >&2
+    exit 1; }
+
+  local args=(trailers --item "$item" --subject "chore(platter): amend")
+  [ "$closes_set" = 1 ] && args+=(--closes "$closes")
+  [ "$partof_set" = 1 ] && args+=(--part-of "$partof")
+  local refs; refs="$(node "$(dirname "$0")/platter-refs.mjs" "${args[@]}")" || exit 1
+  local msg="/tmp/ship-platter-amend-msg.txt"
+  { printf "chore(platter): amend the issue refs of a boarded item\n\n"
+    printf 'Platter-Amends: %s\n' "$item"
+    printf '%s\n' "$refs"; } > "$msg"
+  git commit --quiet --allow-empty -F "$msg"
+  echo "ship platter: amended $item with $(printf '%s' "$refs" | tr '\n' ' ')"
+  echo "ship platter: pushing ${branch}…"
+  cmd_push "$branch"
+  platter_sync_body "$branch" || {
+    echo "ship platter: the amendment is pushed, but the PR body sync FAILED — run \`scripts/ship.sh platter sync\`." >&2
+    exit 1; }
 }
 
 cmd_platter_sync() {
@@ -1242,15 +1339,16 @@ cmd_platter_sync() {
 cmd_platter() {
   local sub="${1:-}"; shift || true
   case "$sub" in
-    open) cmd_platter_open "$@" ;;
-    board) cmd_platter_board "$@" ;;
+    open) need_token; cmd_platter_open "$@" ;;
+    board) need_token; cmd_platter_board "$@" ;;
+    amend) need_token; cmd_platter_amend "$@" ;;
     ledger) cmd_platter_ledger "$@" ;;
     # re-post the checked-out platter's body without boarding — the recovery after a refused sync.
-    sync) cmd_platter_sync ;;
+    sync) need_token; cmd_platter_sync ;;
     # the record after landing, from the first-parent log, in whichever ending is true (merge commit
     # or squash) — posted as a comment on the landed PR by whoever reports it (the digest, a session).
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
-    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>]}" >&2; exit 1 ;;
   esac
 }
 
@@ -1258,14 +1356,15 @@ cmd_platter() {
 [ "${BASH_SOURCE[0]}" = "$0" ] || return 0
 
 case "${1:-}" in
-  open) shift; cmd_open "$@" ;;
-  merge) shift; cmd_merge "$@" ;;
-  automerge) shift; cmd_automerge "$@" ;;
+  open) shift; need_token; cmd_open "$@" ;;
+  merge) shift; need_token; cmd_merge "$@" ;;
+  automerge) shift; need_token; cmd_automerge "$@" ;;
   checkbody) shift; cmd_checkbody "$@" ;;
   pinshots) shift; cmd_pinshots "$@" ;;
   checkarm) shift; cmd_checkarm "$@" ;;
   checkverify) shift; cmd_checkverify "$@" ;;
+  verifyrow) shift; verify_row_fields "$1"; echo ;;
   push) shift; cmd_push "$@" ;;
   platter) shift; cmd_platter "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | push <branch> | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | pinshots <body-file> <sha> | checkarm <path...> | checkverify < check-runs.json | verifyrow <verify-log> | push <branch> | platter {open|board|ledger|landed} ...}" >&2; exit 1 ;;
 esac

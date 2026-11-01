@@ -2,6 +2,7 @@ import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "n
 import type { ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { FeedbackStatus } from "../../src/domain/feedback-status.js";
 import { JsonlActivityEventBus } from "../../src/observatory/activity-bus.js";
 import {
   type ActivityEvent,
@@ -29,7 +30,6 @@ import { mergeLedgerIntoEvents } from "../../src/observatory/trade-event-feed.js
 import { buildWireTradeRows } from "../../src/observatory/wire-data.js";
 import { type WireFeed, wireFeedReader } from "../../src/observatory/wire-feed-cache.js";
 import { type FeedbackLogEntry, JsonlFeedbackLogStore } from "../../src/server/feedback-log.js";
-import type { FeedbackStatus } from "../../src/server/feedback-status.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
 import type { JsonlTail } from "../../src/storage/jsonl-store.js";
@@ -492,7 +492,7 @@ describe("the Wire's append-aware fold (#4458)", () => {
         expect(expected.length).toBeGreaterThan(10);
         expect(await routeWalk(folded, url)).toEqual(expected);
       }
-    });
+    }, 30_000); // Every page of a large fixture, read twice: over the 5s default on a loaded verify.
   });
 
   describe("when lines are appended after the fold is warm", () => {

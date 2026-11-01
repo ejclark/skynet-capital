@@ -164,3 +164,18 @@
   cursor: pointer;
   white-space: nowrap;
 }
+
+/* The way out while step 1 is open (#6317): sign-in lands a member with no account here, so the
+   leaderboard stays one quiet line below the steps — muted words, the link carries the accent and
+   an underline, so it never leans on hue alone. */
+.ob-look-around {
+  margin: 12px 2px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.ob-look-around a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

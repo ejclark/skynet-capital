@@ -15,8 +15,17 @@ docs/plans/secretary.md. This is the subordination step of ToC applied to the fe
 ## 1. The digest (the standing instrument)
 
 **When:** `node scripts/digest-scan.mjs --due` says so (threshold of autonomous changes since the
-last digest, or the heartbeat), or Eric asks. The daily Routine (docs/ROUTINES.md) is just the
-clock; this skill is the procedure.
+last digest, the heartbeat, or `quiet-with-work`: main quiet a day or more while a `ready` issue
+the pull rule admits or a due research event sits unstarted — #6470, the 75.8h gap of 2026-10-27
+that no rule noticed), or Eric asks. The daily Routine (docs/ROUTINES.md) is just the clock; this
+skill is the procedure. **On `quiet-with-work`** the top headline is the quiet line itself
+(`main quiet Nh · ready to start #a #b · research due N`, from the JSON's `quietHours` and
+`waiting`), and Needs-you gets one item, one line to paste:
+`gh workflow run moneypenny-events.yml --ref main -f command=scan` (the scan button, Actions →
+Moneypenny Events → Run workflow) — or say on the digest why the lanes should wait. Every lane
+wakes only on a repository event, so a quiet main is lanes idle beside work until someone fires
+one. `waitingUnknown` set means a read failed and that half is null: say so in Noise absorbed,
+never list the unknown half as waiting.
 
 **Collect** (facts, not memory): `git log origin/main --oneline --since=<last digest date>`; open
 PRs and issues; `docs/ROUTINES.md` states; new/changed `docs/research/events/*` ledgers and
@@ -66,6 +75,10 @@ shape for tooling; without `--file` it drafts and says so, never posts.
    never as a "run `/retro`" item under Needs you** (#4212). A repair capsule's close drafts its
    own LESSONS entry (`scripts/moneypenny/lesson-draft.mjs`), so the count drains without him; a
    number that stops falling is a retro for this pipeline, not a step on his list.
+   **Member filings with no state go here too, as `node scripts/digest-scan.mjs
+   --member-filings`'s one line** (#6316) — every open `member-*` filing older than 24h that
+   carries none of ready / in-progress / needs-info / needs-eric / next-slice, counted, the oldest
+   named. A count above zero is the clear-path judge's next input, not a step on his list.
 
 **Measure the digest's own channel** (#456): `node scripts/comms-scan.mjs --table` emits one row
 per PR merged since the last digest — which picture form it used (or waived, with the reason),

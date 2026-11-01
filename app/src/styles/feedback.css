@@ -203,9 +203,10 @@
   font-size: 11px;
   color: var(--muted);
 }
-/* The track: three same-size steps (filed · being built · shipped). Filled = done, striped =
- * paused, half-filled = part shipped, outlined and empty = not yet. Every step keeps a --text
- * outline so an empty one is still a visible shape, not a tone shift (BRAND → Accessibility). */
+/* The track: three same-size steps (filed · being built · shipped). Filled = done, filled with a
+ * halo = underway now (the lit middle step, #6316), striped = paused, half-filled = part shipped,
+ * outlined and empty = not yet. Every step keeps a --text outline so an empty one is still a
+ * visible shape, not a tone shift (BRAND → Accessibility). */
 .fb-track {
   grid-area: track;
   justify-self: end;
@@ -221,6 +222,12 @@
 }
 .fb-step-done {
   background: var(--text);
+}
+/* Lit: the one step with a halo, so "underway" is a shape (a glow ring), not only the accent. */
+.fb-step-now {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 40%, transparent);
 }
 .fb-step-paused {
   background: repeating-linear-gradient(135deg, var(--text) 0 2px, transparent 2px 4px);

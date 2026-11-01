@@ -1,0 +1,27 @@
+{
+  "repository": { "default_branch": "main" },
+  "workflow_run": {
+    "id": 40306000001,
+    "name": "Moneypenny Events (event-research automation)",
+    "conclusion": "failure",
+    "event": "workflow_dispatch",
+    "head_branch": "main",
+    "html_url": "https://github.com/ejclark/skynet-capital/actions/runs/40306000001"
+  },
+  "failures": [
+    {
+      "job": "research due events (treasury-2y-note-2026-10-26)",
+      "step": "Run claude-code-action",
+      "logTail": "{\n  \"type\": \"system\",\n  \"subtype\": \"init\",\n  \"message\": \"Claude Code initialized\"\n}\n{\n  \"type\": \"result\",\n  \"subtype\": \"success\",\n  \"is_error\": true,\n  \"duration_ms\": 758,\n  \"num_turns\": 1,\n  \"total_cost_usd\": 0,\n  \"permission_denials_count\": 0,\n  \"modelUsage\": {}\n}\n##[error]Claude result reported subtype success with is_error:true (run did not complete successfully)\n##[error]Action failed with error: Claude execution failed: result is_error:true\n##[error]Process completed with exit code 1.\n##[group]Run cat /home/runner/work/_temp/claude-execution-output.json\n[\n  {\n    \"type\": \"rate_limit_event\",\n    \"rate_limit_info\": {\n      \"status\": \"rejected\",\n      \"resetsAt\": 1793025000,\n      \"rateLimitType\": \"five_hour\",\n      \"overageStatus\": \"rejected\",\n      \"isUsingOverage\": false,\n      \"unifiedWindows\": {\n        \"five_hour\": {\n          \"utilization\": 1,\n          \"resetsAt\": 1793025000\n        },\n        \"seven_day\": {\n          \"utilization\": 0.42,\n          \"resetsAt\": 1793077200\n        }\n      }\n    }\n  },\n  {\n    \"type\": \"assistant\",\n    \"error\": \"rate_limit\",\n    \"is_api_error_message\": true\n  },\n  {\n    \"duration_api_ms\": 0,\n    \"total_cost_usd\": 0,\n    \"is_error\": true,\n    \"num_turns\": 1,\n    \"subtype\": \"success\",\n    \"api_error_status\": 429,\n    \"type\": \"result\",\n    \"duration_ms\": 758\n  }\n]::endgroup::\n##[notice]cost — event=treasury-2y-note-2026-10-26 usd=0 turns=1 duration_ms=758 is_error=true\n"
+    }
+  ],
+  "deps": {
+    "openIssues": [
+      {
+        "number": 6098,
+        "title": "[ci] Moneypenny Events (event-research automation) — research due events",
+        "labels": ["ci-failure"]
+      }
+    ]
+  }
+}

@@ -217,6 +217,7 @@ describe("runCli — the admission CLI /work-issues asks", () => {
       readIssue: (n: number) => issue(n, ["ready", "feedback"]),
       readPlans: () => [],
       readHold: () => null,
+      readRetry: () => null,
       print: (l: string) => out.push(l),
       printErr: (l: string) => err.push(l),
       ...over,
@@ -280,7 +281,7 @@ describe("runCli — the admission CLI /work-issues asks", () => {
     const handedOff = issue(7, ["ready", "feedback", "needs-session"]);
     const s = setup({ readReady: () => [handedOff], readIssue: () => handedOff });
     expect(runCli(["--queue"], s.io)).toBe(0);
-    expect(s.json()).toEqual([{ number: 7, title: "" }]);
+    expect(s.json()).toMatchObject([{ number: 7, title: "" }]);
     const c = setup({ readReady: () => [handedOff], readIssue: () => handedOff });
     expect(runCli(["--check", "7"], c.io)).toBe(0);
     expect(c.json()).toMatchObject({ number: 7, admit: true });
@@ -304,6 +305,24 @@ describe("runCli — the admission CLI /work-issues asks", () => {
     expect(n.json()).toMatchObject({ number: 4, admit: true });
   });
 
+  // #6279: `--queue` listed the held plan first (P1 over P2), `--check` refused it, and the
+  // /work-issues pass ended there without building #42. The listing and the check now agree.
+  it("--queue drops a held plan, so its head is a row --check admits", () => {
+    const held = issue(4808, ["ready", "plan", "P1"]);
+    const feedback = issue(42, ["ready", "feedback", "P2"]);
+    const hold = (i: { number?: number }) =>
+      i.number === 4808 ? "its state block names no next pickup" : null;
+    const q = setup({ readReady: () => [feedback, held], readHold: hold });
+    expect(runCli(["--queue"], q.io)).toBe(0);
+    expect(q.json()).toMatchObject([{ number: 42, title: "" }]);
+    expect(q.err.join("\n")).toContain("skipping #4808");
+    const c = setup({ readIssue: () => feedback, readHold: hold });
+    expect(runCli(["--check", String(q.json()[0].number)], c.io)).toBe(0);
+    const unheld = setup({ readReady: () => [feedback, held] });
+    expect(runCli(["--queue"], unheld.io)).toBe(0);
+    expect(unheld.json().map((r: { number: number }) => r.number)).toEqual([4808, 42]);
+  });
+
   it("--check never reads the block of an issue the gate already refused", () => {
     let reads = 0;
     const s = setup({
@@ -320,7 +339,21 @@ describe("runCli — the admission CLI /work-issues asks", () => {
   it("--queue: prints the Ready column only, exit 0", () => {
     const s = setup();
     expect(runCli(["--queue"], s.io)).toBe(0);
-    expect(s.json()).toEqual([{ number: 4, title: "" }]);
+    expect(s.json()).toMatchObject([{ number: 4, title: "" }]);
+  });
+
+  // The registry's "Priority only with a reader" row (#4056) asks whether lanes read the priority
+  // Eric sets. `npm run queue` is its check: the sweep's own pick order, each row saying which
+  // class put it there and whether a hand set it — so a hand-set P1 sitting behind a P2 is visible.
+  it("--queue: each row carries its class and why, so a hand-set priority shows", () => {
+    const s = setup({
+      readReady: () => [issue(4, ["ready", "feedback"]), issue(9, ["ready", "feedback", "P1"])],
+    });
+    expect(runCli(["--queue"], s.io)).toBe(0);
+    expect(s.json()).toEqual([
+      { number: 9, title: "", class: "P1", why: "set by hand" },
+      { number: 4, title: "", class: "P2", why: "improves a surface or a process" },
+    ]);
   });
 
   it("exit 2 with usage on a missing or bad issue number", () => {

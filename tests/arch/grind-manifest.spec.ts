@@ -137,6 +137,18 @@ describe("checked-in chores are held to a stricter bar than ad-hoc files", () =>
 });
 
 describe("--args emission (the preflight a caller pastes)", () => {
+  it("reads a chore's agentType, and only the web research chores need one today", () => {
+    expect(manifestOf(CHORE).agentType).toBeNull();
+    const out = execFileSync("node", [SCRIPT], { cwd: process.cwd(), encoding: "utf8" });
+    const named = JSON.parse(out)
+      .filter((m: ChoreManifest) => m.agentType)
+      .map((m: ChoreManifest) => [m.name, m.agentType]);
+    expect(named.sort()).toEqual([
+      ["haiku-eval-replay", "general-purpose"],
+      ["research-bottleneck", "general-purpose"],
+    ]);
+  });
+
   it("fills the tier into the instructions step and appends the outcome check", () => {
     expect(argsFor(manifestOf(CHORE), ["a.ts", "b.ts"], "demo scan")).toEqual({
       items: ["a.ts", "b.ts"],

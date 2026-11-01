@@ -58,6 +58,17 @@ export async function deskHealthView(
   });
 }
 
+/** An account's open lots, untagged — the desk route's lot breakdown and both health readers
+ *  judge a book by them. Held while the ledger and broker window are unchanged
+ *  (`trade-ledger-cache.ts`, #4619); undefined with no ledger fold wired — never a whole-ledger
+ *  match per request. */
+export async function openLotsOf(
+  found: ParticipantSnapshot,
+  config: DashboardServerConfig,
+): Promise<readonly OpenLot[] | undefined> {
+  return config.readHeldLedger ? (await config.readHeldLedger(found)).open : undefined;
+}
+
 export async function deskHealthPayload(
   found: ParticipantSnapshot,
   config: DashboardServerConfig,

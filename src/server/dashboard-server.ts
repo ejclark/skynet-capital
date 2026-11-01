@@ -22,6 +22,7 @@ import { serveCouncilApi } from "./council-api-routes.js";
 import { serveCouncilRepliesApi } from "./council-replies-api-routes.js";
 import { gateRequest } from "./dashboard-auth-gate.js";
 import { servePublicRoute } from "./dashboard-board-routes.js";
+import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskAlertsApi } from "./desk-alerts-route.js";
 import { serveDeskEventsApi } from "./desk-events-route.js";
@@ -111,6 +112,22 @@ function parseCompareParams(params: URLSearchParams): Pick<StandingsOptions, "aI
   };
 }
 
+/**
+ * A signed-in member with no linked account starts on their Profile, which opens the onboarding
+ * chapter for them (#6317, #6271 outcome 1) — the leaderboard has no way in to connect one. Only
+ * when the answer is known: auth on, an ownership resolver wired, and zero ids back. A standings
+ * link (`?by=`, `?a=`/`?b=`) is a member asking for the board, so it keeps today's path.
+ */
+function startsOnOnboarding(
+  params: URLSearchParams,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): boolean {
+  if (!(config.auth && session && (config.resolveOwnerIds || config.resolveOwnerId))) return false;
+  if (params.has("by") || params.has("a") || params.has("b")) return false;
+  return resolveOwnedIds(session, config).length === 0;
+}
+
 /** The front door: every sign-in and every bare visit lands in the shell. */
 function serveHomePage(
   res: ServerResponse,
@@ -123,8 +140,14 @@ function serveHomePage(
   // Sign-in still lands here first (OAuth's callback redirects to /), so the "joined" stamp stays
   // on this hop — idempotent, fails silently, never blocking the redirect it rides.
   if (session) config.invite?.store.markJoined(session.email, new Date().toISOString());
-  // ?by= and the compare params carry over verbatim — the shell's Standings speaks them.
-  res.writeHead(302, { location: `/app/${new URL(url, "http://localhost").search}` });
+  const { search, searchParams } = new URL(url, "http://localhost");
+  // Bare `/app/accounts`: Profile's own default opens Milestones on the onboarding chapter while
+  // nothing is linked, so the hop never restates that rule in a query string.
+  // Otherwise ?by= and the compare params carry over verbatim — the shell's Standings speaks them.
+  const location = startsOnOnboarding(searchParams, config, session)
+    ? "/app/accounts"
+    : `/app/${search}`;
+  res.writeHead(302, { location });
   res.end();
   return true;
 }

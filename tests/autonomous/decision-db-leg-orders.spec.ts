@@ -204,6 +204,40 @@ describe("DecisionDb — a spread's leg orders", () => {
     expect(db.findByOrderId("put-1")?.intent.option?.structure).toBe("cash-secured-put");
   });
 
+  it("moves its mark when a leg is mapped, and only then (#4619)", () => {
+    const empty = db.spreadLegMark();
+    db.record(spreadRecord(1, { status: "working", orderId: "mleg-1" }));
+    // A spread recorded `working` with no leg ids yet maps nothing, so every miss still holds.
+    expect(db.spreadLegMark()).toBe(empty);
+
+    db.recordSettlements([
+      {
+        orderId: "mleg-1",
+        status: "filled",
+        filledQuantity: 1,
+        filledPrice: 3.35,
+        legs: [
+          { occSymbol: LOW, orderId: "leg-low", filledQuantity: 1, filledPrice: 5.1 },
+          { occSymbol: HIGH, orderId: "leg-high", filledQuantity: 1, filledPrice: 1.75 },
+        ],
+        settledAt: "2026-10-07T14:31:00.000Z",
+      },
+    ]);
+    const settled = db.spreadLegMark();
+    expect(settled).not.toBe(empty);
+
+    // A replay of the same legs maps nothing new.
+    db.record(spreadRecord(2, filled()));
+    expect(db.spreadLegMark()).toBe(settled);
+    db.record(
+      spreadRecord(3, {
+        ...filled([{ occSymbol: LOW, orderId: "leg-low-3" }]),
+        orderId: "mleg-3",
+      }),
+    );
+    expect(db.spreadLegMark()).not.toBe(settled);
+  });
+
   it("reaches a database created before the leg map existed", () => {
     db.close();
     const raw = new DatabaseSync(dbPath);

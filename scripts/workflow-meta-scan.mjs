@@ -20,12 +20,28 @@
 //
 // Enforced in CI via tests/arch/workflow-meta.spec.ts (blocking — a dropped workflow is a broken
 // contract, not debt to ratchet).
+//
+// WHAT ELSE IT CHECKS (2026-11-01): that the script's code names work-gate. Only grind.js asked the
+// work-mode dial, so `halt` stopped none of the other fan-outs, and a new script would repeat that by
+// default (#3960, #6470). A script has no imports, so the step is a copy and only a scan can see it
+// missing. Comments and meta do not count, because neither one asks anything. This reads the name,
+// not the behaviour: tests/scripts/workflow-gate.spec.ts runs each script against a halt fixture.
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as acorn from "acorn";
 
 const LITERAL_NODES = new Set(["ObjectExpression", "ArrayExpression", "Property", "Literal"]);
+const GATE = "work-gate";
+
+/** True when a string in this code names the gate. The parser has already dropped the comments. */
+function namesGate(node) {
+  if (Array.isArray(node)) return node.some(namesGate);
+  if (!node || typeof node !== "object") return false;
+  if (node.type === "Literal") return typeof node.value === "string" && node.value.includes(GATE);
+  if (node.type === "TemplateElement") return node.value.raw.includes(GATE);
+  return Object.values(node).some(namesGate);
+}
 
 /** The dotted-path segment for an object property (`?` for anything that isn't a plain key). */
 function propertyKey(p) {
@@ -164,6 +180,11 @@ export function scanWorkflowMeta(source, file) {
       });
     }
   }
+  if (!namesGate(ast.body.filter((node) => node !== exp))) {
+    problems.push(
+      `${file}: never names ${GATE}, so it would fan out under \`halt\`. Copy the gate step from .claude/workflows/symbol-sweep.js, with its typed-run override`,
+    );
+  }
   return problems;
 }
 
@@ -183,14 +204,16 @@ function main() {
   const { files, problems } = scanWorkflowDir(dir);
   if (problems.length === 0) {
     console.log(
-      `workflow-meta-scan: ${files.length} workflow script(s) have a pure-literal meta the registry can read.`,
+      `workflow-meta-scan: ${files.length} workflow script(s) have a pure-literal meta the registry can read, and each names ${GATE}.`,
     );
     return;
   }
-  console.error("✗ workflow-meta-scan — a meta the Workflow registry would silently drop:");
+  console.error(
+    "✗ workflow-meta-scan — a meta the Workflow registry would silently drop, or a script that never asks the work-mode dial:",
+  );
   for (const p of problems) console.error(`  ${p}`);
   console.error(
-    "\nFix: make `export const meta` a pure literal (strings, numbers, booleans, arrays, objects — no `+`, template strings, identifiers, calls, or spreads) and keep it the first statement.",
+    "\nFix: make `export const meta` a pure literal (strings, numbers, booleans, arrays, objects — no `+`, template strings, identifiers, calls, or spreads) and keep it the first statement. For the dial, add the gate step the message above names.",
   );
   process.exit(1);
 }

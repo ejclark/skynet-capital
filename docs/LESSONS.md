@@ -35,6 +35,33 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A merged crash fix stayed dark for days because its last step was a paste nobody ran
+- **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
+- **SIGNAL:** an unrelated audit of agent memory (#6470) found no green push of `pipeline.yml` in 200 runs and `fly status` showing the bots machine `stopped`. The second stop dates from about 10-25, so the fleet was down for most of a week, while #5955 sat on `needs-eric` asking for a terminal paste.
+- **ROOT CAUSE:** two gaps, stacked. flyctl reports a stopped machine as a good state, so no deploy could start it, and the crash fix from #6004 could not run. And the human step was wrong for its human: `CLAUDE.md` still prescribed a paste, two days after Eric ruled terminal commands out in a memory autonomous lanes cannot read. One `fly machine update` and one start restored the fleet on the first attempt. The second stop's own cause was not recovered: the log buffer had rolled off.
+- **PREVENTION:** script. `scripts/bots-start-stopped.sh` starts a stopped machine on deploy, rollback and catch-up, keeps the exit record and a named cause on an issue, and stops after 3 starts in 6 hours (held PR #6476). Doctrine: `CLAUDE.md` now states the no-terminal rule. A silent machine that is still running stays uncaught, which the first `/dream` review proposed as a market-hours alarm.
+- **SIDE QUESTS:** my first draft of the script posted raw log lines to an issue in this public repo, and app logs can carry member emails. A read of `.github/workflows/fly-logs.yml`'s header caught it before merge. A rule worth keeping: anything a lane posts to GitHub is public.
+
+### `(the failed job could not be read)` red on main: keep re-reading a run's jobs while one still reads as running
+- **SHA:** 39d7201   **DATE:** 2026-10-30   **STATUS:** closed
+- **COVERS:** fd87f45
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `(the failed job could not be read)` on `main`, the first [41121443220](https://github.com/ejclark/skynet-capital/actions/runs/41121443220) at 2026-10-30T20:13:03Z. Repair capsule #6406 filed 2026-10-30T20:21:38Z, closed 18m later by #6413.
+- **ROOT CAUSE:** Pipeline run 41121443220 failed at `release · deploy bots` → `Smoke test the bots release` — the same stopped-machine fault #5955 already tracks (`needs-eric`, the `bots-revive.sh` paste). Its `deploy bots` job completed 20:17:56 and the run concluded 20:20:21, but every jobs read from 20:20:27 to 20:21:38 still showed that job `in_progress`. #6356's one-minute re-read ran out, so the lane filed #6406 under the unread signature instead of commenting the recurrence on #5955, and dispatched this repair session to re-diagnose a known fault. A job still running on a concluded run is positive proof the read is stale, so that case — and only that case — earns a longer wait.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/repair.spec.ts` (#6413).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
+### `(the workflow never started)` red on main: never file a parsed run as a rejected workflow file
+- **SHA:** d350998   **DATE:** 2026-10-30   **STATUS:** closed
+- **COVERS:** ae01b5f
+- **SIGNAL:** 1 failed run(s) of `Pipeline` → `(the workflow never started)` on `main`, the first [41103012157](https://github.com/ejclark/skynet-capital/actions/runs/41103012157) at 2026-10-30T17:59:45Z. Repair capsule #6356 filed 2026-10-30T18:10:29Z, closed 18m later by #6358.
+- **ROOT CAUSE:** Pipeline run 41103012157 failed at `release · deploy bots` with the same signature as #5955. The bots machine is `stopped`, waiting on Eric's revive paste. The triage read the run's jobs 48s after it completed and saw no failed job; GitHub's jobs read was lagging, and the same endpoint answered 502 minutes later. The lane then fell through to `parseFailure` and filed #6356, "the workflow never started". The run was named `Pipeline` and had five jobs; its own evidence text claimed the name was the file path. Two costs followed. A repair session went hunting for a syntax error that `workflow-lint` says does not exist. The real recurrence also never reached #5955, which carries `needs-eric`, s…
+- **PREVENTION:** spec — `tests/scripts/moneypenny/repair.spec.ts` (#6358).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `sync project status` red on main: keep github's reason when a rest read fails, so a rate limit skips the board sync
 - **SHA:** 872cb69   **DATE:** 2026-10-26   **STATUS:** closed
 - **COVERS:** 09e8710 3c47942

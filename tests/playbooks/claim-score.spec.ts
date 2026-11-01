@@ -1,6 +1,9 @@
+import { loadProposals } from "../../scripts/conviction-proposals.mjs";
 import {
   type ClaimScore,
   type FalsifierCheck,
+  type ForwardLink,
+  type ForwardRow,
   outcomeOf,
   scoreAll,
   scoreClaim,
@@ -40,6 +43,15 @@ const REACH: FalsifierCheck = {
   after: "2026-10-16",
   by: "2027-02-01",
   level: 63.15,
+};
+
+type PutsCheck = Extract<FalsifierCheck, { kind: "puts-expire" }>;
+
+const P6: ForwardLink = {
+  event: "midterm-elections-2026-11-03",
+  ref: "ai-dip-2026-10/P6",
+  onPass: "fail",
+  onKill: "pass",
 };
 
 const bar = (date: string, close: number): TapeBar => ({ date, close });
@@ -155,6 +167,105 @@ describe("scoreClaim — a level the closes must reach", () => {
   });
 });
 
+describe("scoreClaim — sold puts that must expire worthless", () => {
+  const PUTS: PutsCheck = {
+    kind: "puts-expire",
+    symbol: "CRWV",
+    puts: [{ expiry: "2026-11-06", strike: 54 }],
+    unnamed: 0,
+  };
+  const claimPuts = (check: FalsifierCheck = PUTS) =>
+    claim({ statement: "2a. Sell puts before the print.", scoreBy: "2026-11-06", check });
+  const closing = (close: number, on = "2026-11-06") => [
+    bar("2026-11-05", 60),
+    bar(on, close),
+    bar("2026-11-09", 40),
+  ];
+
+  it("fails when the close on expiry is under the strike, naming the close", () => {
+    const score = scoreClaim(claimPuts(), ctx("2026-11-07", closing(53.99)));
+    expect(score).toEqual({
+      outcome: "fail",
+      basis:
+        "CRWV closed at $53.99 on 2026-11-06, under the $54.00 2026-11-06 put's strike: it finished in the money.",
+      dueOn: "2026-11-06",
+      scoredOn: "2026-11-07",
+    });
+  });
+
+  it("passes when every put expires worthless and none is left unnamed; the strike itself is worthless", () => {
+    const score = scoreClaim(claimPuts(), ctx("2026-11-07", closing(54)));
+    expect(score.outcome).toBe("pass");
+    expect(score.basis).toContain("expired worthless");
+  });
+
+  it("reads only the expiry's close: a dip before it or after it decides nothing", () => {
+    const tape = [bar("2026-11-05", 40), bar("2026-11-06", 58), bar("2026-11-09", 40)];
+    expect(scoreClaim(claimPuts(), ctx("2026-11-09", tape)).outcome).toBe("pass");
+  });
+
+  it("stays pending after a worthless expiry while puts it names are still unnamed", () => {
+    const score = scoreClaim(claimPuts({ ...PUTS, unnamed: 2 }), ctx("2026-11-07", closing(58)));
+    expect(score.outcome).toBe("pending");
+    expect(score.scoredOn).toBeUndefined();
+    expect(score.basis).toContain("it expired worthless.");
+    expect(score.basis).toContain("2 more puts it names are not listed yet");
+  });
+
+  it("still fails on the first put while later ones are unnamed", () => {
+    const score = scoreClaim(claimPuts({ ...PUTS, unnamed: 2 }), ctx("2026-11-07", closing(50)));
+    expect(score.outcome).toBe("fail");
+  });
+
+  it("fails on whichever put finishes in the money, reading them in expiry order", () => {
+    const two: FalsifierCheck = {
+      ...PUTS,
+      puts: [
+        { expiry: "2026-12-04", strike: 50 },
+        { expiry: "2026-11-06", strike: 54 },
+      ],
+    };
+    const tape = [bar("2026-11-06", 58), bar("2026-12-04", 49), bar("2026-12-07", 60)];
+    const score = scoreClaim(claimPuts(two), ctx("2026-12-07", tape));
+    expect(score.outcome).toBe("fail");
+    expect(score.basis).toContain("$50.00 2026-12-04 put");
+  });
+
+  it("reads the session before an expiry the exchange is shut on", () => {
+    const sat: FalsifierCheck = { ...PUTS, puts: [{ expiry: "2026-11-07", strike: 54 }] };
+    const score = scoreClaim(claimPuts(sat), ctx("2026-11-09", closing(50)));
+    expect(score.outcome).toBe("fail");
+    expect(score.basis).toContain("on 2026-11-06");
+  });
+
+  it("waits, and says why, when the tape ends before the expiry", () => {
+    const score = scoreClaim(claimPuts(), ctx("2026-11-06", [bar("2026-11-05", 50)]));
+    expect(score).toMatchObject({
+      outcome: "pending",
+      basis:
+        "The CRWV tape ends 2026-11-05; the $54.00 2026-11-06 put's close on 2026-11-06 counts once a later session is on it.",
+    });
+  });
+
+  it("never decides off a tape that ends on the expiry: that bar may be a mid-session price", () => {
+    const live = [bar("2026-11-05", 60), bar("2026-11-06", 50)];
+    expect(scoreClaim(claimPuts(), ctx("2026-11-07", live)).outcome).toBe("pending");
+    expect(scoreClaim(claimPuts(), ctx("2026-11-07", closing(50))).outcome).toBe("fail");
+  });
+
+  it("waits rather than read an older close when the expiry's own close is missing", () => {
+    const gap = [bar("2026-11-05", 50), bar("2026-11-09", 60)];
+    const score = scoreClaim(claimPuts(), ctx("2026-11-09", gap));
+    expect(score.outcome).toBe("pending");
+    expect(score.basis).toBe("No CRWV close on 2026-11-06 to read the $54.00 2026-11-06 put.");
+  });
+
+  it("waits when the symbol's tape cannot be read at all", () => {
+    const score = scoreClaim(claimPuts(), { today: "2026-11-07", tape: () => undefined });
+    expect(score).toMatchObject({ outcome: "pending", basis: "No CRWV price history to read." });
+  });
+});
+
 describe("scoreClaim — a study re-run (the reading can flip)", () => {
   const studied = (reading: "supports" | "mixed" | "against", dataDate: string): ClaimStudy => ({
     disposition: "studied",
@@ -204,6 +315,122 @@ describe("scoreClaim — a study re-run (the reading can flip)", () => {
   it("waits when the claim carries no study at all", () => {
     const { study: _drop, ...bare } = rerun(studied("supports", "2026-11-20"));
     expect(scoreClaim(bare, ctx("2026-11-21")).outcome).toBe("pending");
+  });
+});
+
+describe("scoreClaim — the forward test an event lane registered", () => {
+  const P1: ForwardLink = {
+    event: "crwv-2026-11-10-print",
+    ref: "ai-dip-2026-10/P1",
+    onPass: "pass",
+    onKill: "fail",
+  };
+  const P2: ForwardLink = { ...P1, ref: "ai-dip-2026-10/P2", onKill: "pending" };
+  const forward = (rows: Record<string, ForwardRow>) => ({
+    today: "2026-11-25",
+    forwardTest: (link: ForwardLink) => rows[link.ref],
+  });
+  const scored = (tests: readonly ForwardLink[], rows: Record<string, ForwardRow>) =>
+    scoreClaim(
+      claim({
+        statement: "2b. Buy calls after the print.",
+        scoreBy: "2026-11-25",
+        check: { kind: "forward-tests", tests },
+      }),
+      forward(rows),
+    );
+
+  it("is pending, naming the proposal, while the lane has not registered it", () => {
+    expect(scored([P1], {})).toEqual({
+      outcome: "pending",
+      basis:
+        "Due 2026-11-25. ai-dip-2026-10/P1 is not registered in crwv-2026-11-10-print's forward tests yet.",
+      dueOn: "2026-11-25",
+    });
+  });
+
+  it("stays pending while the registered row is open or void, naming the row", () => {
+    const open = scored([P1], {
+      "ai-dip-2026-10/P1": { id: "FT-crwv-2026-11-10-print-7", verdict: "open" },
+    });
+    expect(open.outcome).toBe("pending");
+    expect(open.basis).toContain(
+      "FT-crwv-2026-11-10-print-7 (registered from ai-dip-2026-10/P1) reads open.",
+    );
+    expect(scored([P1], { "ai-dip-2026-10/P1": { id: "FT-x-1", verdict: "void" } }).outcome).toBe(
+      "pending",
+    );
+  });
+
+  it("passes when the test passes, and fails when it is killed", () => {
+    const pass = scored([P1], { "ai-dip-2026-10/P1": { id: "FT-x-1", verdict: "pass" } });
+    expect(pass).toEqual({
+      outcome: "pass",
+      basis: "FT-x-1 (registered from ai-dip-2026-10/P1) passed: this claim held.",
+      dueOn: "2026-11-25",
+      scoredOn: "2026-11-25",
+    });
+    const fail = scored([P1], { "ai-dip-2026-10/P1": { id: "FT-x-1", verdict: "kill" } });
+    expect(fail.outcome).toBe("fail");
+    expect(fail.basis).toBe(
+      "FT-x-1 (registered from ai-dip-2026-10/P1) was killed: this claim's falsifier landed.",
+    );
+  });
+
+  it("reads an inverted link the claim's way: the test passing is the falsifier landing", () => {
+    expect(scored([P6], { "ai-dip-2026-10/P6": { id: "FT-m-4", verdict: "pass" } }).outcome).toBe(
+      "fail",
+    );
+    expect(scored([P6], { "ai-dip-2026-10/P6": { id: "FT-m-4", verdict: "kill" } }).outcome).toBe(
+      "pass",
+    );
+  });
+
+  it("leaves the claim pending when a test that is one reading of several is killed", () => {
+    const score = scored([P2], { "ai-dip-2026-10/P2": { id: "FT-x-2", verdict: "kill" } });
+    expect(score.outcome).toBe("pending");
+    expect(score.basis).toContain("was killed: that alone does not decide this claim.");
+  });
+
+  it("fails on any failing link, and passes only when every link passes", () => {
+    const pass = { id: "FT-x-1", verdict: "pass" } as const;
+    const kill = { id: "FT-x-2", verdict: "kill" } as const;
+    const mixed = scored([P1, { ...P2, onKill: "fail" }], {
+      "ai-dip-2026-10/P1": pass,
+      "ai-dip-2026-10/P2": kill,
+    });
+    expect(mixed.outcome).toBe("fail");
+    expect(mixed.basis).not.toContain("FT-x-1");
+    const waiting = scored([P1, P2], { "ai-dip-2026-10/P1": pass });
+    expect(waiting.outcome).toBe("pending");
+    expect(waiting.basis).toBe(
+      "Due 2026-11-25. FT-x-1 (registered from ai-dip-2026-10/P1) passed: this claim held. ai-dip-2026-10/P2 is not registered in crwv-2026-11-10-print's forward tests yet.",
+    );
+    expect(
+      scored([P1, P2], {
+        "ai-dip-2026-10/P1": pass,
+        "ai-dip-2026-10/P2": { ...pass, id: "FT-x-2" },
+      }).outcome,
+    ).toBe("pass");
+  });
+
+  it("says the forward tests were not read, never 'not registered', when no reader is wired", () => {
+    const score = scoreClaim(
+      claim({ scoreBy: "2026-11-25", check: { kind: "forward-tests", tests: [P1] } }),
+      { today: "2026-11-25" },
+    );
+    expect(score.outcome).toBe("pending");
+    expect(score.basis).toBe("Due 2026-11-25. ai-dip-2026-10/P1: this pass read no forward tests.");
+  });
+
+  it("names a row linked by its own id without repeating it", () => {
+    const ft: ForwardLink = {
+      ...P1,
+      event: "nvda-2026-11-18-print",
+      ref: "FT-nvda-2026-11-18-print-3",
+    };
+    const score = scored([ft], { [ft.ref]: { id: ft.ref, verdict: "pass" } });
+    expect(score.basis).toBe("FT-nvda-2026-11-18-print-3 passed: this claim held.");
   });
 });
 
@@ -267,9 +494,30 @@ describe("the AI-dip record's checks", () => {
     );
     expect(kinds).toEqual({
       "1.": "rerun",
+      "2a": "puts-expire",
+      "2b": "forward-tests",
+      "4.": "forward-tests",
+      "5.": "forward-tests",
       "7.": "closes-within",
       "8.": "closes-reach",
+      "9.": "forward-tests",
     });
+  });
+
+  it("links each forward claim to a proposal its call sheet makes for that claim, on that event", () => {
+    const proposals = loadProposals();
+    for (const c of AI_DIP_2026_10.claims) {
+      if (c.check?.kind !== "forward-tests") continue;
+      for (const link of c.check.tests) {
+        if (link.ref.startsWith("FT-")) {
+          expect(c.falsifier).toContain(link.ref);
+          expect(link.ref.startsWith(`FT-${link.event}-`)).toBe(true);
+          continue;
+        }
+        const p = proposals.find((x) => x.key === link.ref);
+        expect(p?.fragment, link.ref).toBe(link.event);
+      }
+    }
   });
 
   it("refuses a check with a malformed window or band", () => {
@@ -282,6 +530,71 @@ describe("the AI-dip record's checks", () => {
     );
     expect(bad({ ...WITHIN, low: 70 })).toContain("claim 1: check band must run low to high");
     expect(bad({ ...REACH, symbol: " " })).toContain("claim 1: check names no symbol");
+  });
+
+  it("scores claim 2a against its own falsifier: a $54 put assigned on 11-06 fails the sell-puts claim", () => {
+    const twoA = AI_DIP_2026_10.claims.find((c) => c.statement.startsWith("2a."));
+    if (!twoA) throw new Error("claim 2a is missing");
+    const { score: _score, ...unscored } = twoA;
+    const on1106 = (close: number) =>
+      ctx("2026-11-09", [bar("2026-11-06", close), bar("2026-11-09", 60)]);
+    expect(scoreClaim(unscored, on1106(52)).outcome).toBe("fail");
+    // Expiring worthless is one of the three puts it names, so it decides nothing alone.
+    expect(scoreClaim(unscored, on1106(58)).outcome).toBe("pending");
+    expect(scoreClaim(unscored, ctx("2026-11-05", [bar("2026-11-05", 52)])).outcome).toBe(
+      "pending",
+    );
+  });
+
+  it("refuses a puts check with no put, a bad expiry or strike, or a split count", () => {
+    const bad = (check: FalsifierCheck) =>
+      convictionProblems({ ...AI_DIP_2026_10, claims: [claim({ check })] }).filter((p) =>
+        p.startsWith("claim 1:"),
+      );
+    const ok: PutsCheck = {
+      kind: "puts-expire",
+      symbol: "CRWV",
+      puts: [{ expiry: "2026-11-06", strike: 54 }],
+      unnamed: 2,
+    };
+    expect(bad(ok)).toEqual([]);
+    expect(bad({ ...ok, puts: [] })).toContain("claim 1: check names no put");
+    expect(bad({ ...ok, symbol: "" })).toContain("claim 1: check names no symbol");
+    expect(bad({ ...ok, puts: [{ expiry: "11-06", strike: 54 }] })).toContain(
+      "claim 1: a put's expiry 11-06 is not a calendar day",
+    );
+    expect(bad({ ...ok, puts: [{ expiry: "2026-11-06", strike: 0 }] })).toContain(
+      "claim 1: the 2026-11-06 put's strike is not a price",
+    );
+    expect(bad({ ...ok, puts: [...ok.puts, ...ok.puts] })).toContain(
+      "claim 1: check names two puts on one expiry",
+    );
+    expect(bad({ ...ok, unnamed: 1.5 })).toContain(
+      "claim 1: check's unnamed puts is not a whole number",
+    );
+  });
+
+  it("refuses a forward-test check with no test, a bad ref, or a link that decides nothing", () => {
+    const bad = (check: FalsifierCheck) =>
+      convictionProblems({ ...AI_DIP_2026_10, claims: [claim({ check })] }).filter((p) =>
+        p.startsWith("claim 1:"),
+      );
+    expect(bad({ kind: "forward-tests", tests: [] })).toContain(
+      "claim 1: check names no forward test",
+    );
+    expect(bad({ kind: "forward-tests", tests: [{ ...P6, ref: "P6" }] })).toContain(
+      "claim 1: P6 is neither an FT id nor a proposal token",
+    );
+    expect(bad({ kind: "forward-tests", tests: [{ ...P6, event: " " }] })).toContain(
+      "claim 1: ai-dip-2026-10/P6: its event is not an event id",
+    );
+    expect(bad({ kind: "forward-tests", tests: [{ ...P6, event: "../../README" }] })).toContain(
+      "claim 1: ai-dip-2026-10/P6: its event is not an event id",
+    );
+    expect(
+      bad({ kind: "forward-tests", tests: [{ ...P6, onPass: "pending", onKill: "pending" }] }),
+    ).toContain("claim 1: ai-dip-2026-10/P6 scores the claim the same whichever way it goes");
+    expect(bad({ kind: "forward-tests", tests: [P6] })).toEqual([]);
   });
 
   it("starts with nothing decided: eight claims waiting on their day, six untestable at size zero", () => {

@@ -1,6 +1,7 @@
+import type { FeedbackStatus } from "../domain/feedback-status.js";
 import type { FetchMergedPullRequests } from "../server/development-activity.js";
 import type { FeedbackLogEntry, FeedbackLogStore } from "../server/feedback-log.js";
-import type { FeedbackStatus, FetchFeedbackStatuses } from "../server/feedback-status.js";
+import type { FetchFeedbackStatuses } from "../server/feedback-status.js";
 import type { LadderProgressEntry, LadderProgressLogStore } from "../server/ladder-progress-log.js";
 import type { OrderAuditLog, OrderAuditRecord } from "../server/order-audit-log.js";
 import { createBootActivityEventBus } from "./activity-bus.js";
@@ -55,7 +56,9 @@ export function publishingActivityStore(
     },
     list: (participantId) => store.list(participantId),
     latest: (participantId) => store.latest(participantId),
-    // Forwarded, or the Wire's fold would quietly re-list the whole ledger behind this wrapper.
+    // Forwarded, or the Wire's fold and Pulse's trade memo would quietly re-list the whole ledger
+    // behind this wrapper.
+    ...(store.since ? { since: store.since.bind(store) } : {}),
     ...(store.sinceAll ? { sinceAll: store.sinceAll.bind(store) } : {}),
   };
 }

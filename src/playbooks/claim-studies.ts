@@ -257,8 +257,28 @@ export function withStudies(
   return {
     ...conviction,
     claims: conviction.claims.map((claim) => {
-      const study = byStatement.get(claim.statement);
+      // The entry as written must keep the contract, and so must what is served from it.
+      const found = byStatement.get(claim.statement);
+      const ok = found && studyProblems(found).length === 0;
+      const study = ok ? carryFalsifier(found, claim) : undefined;
       return study && studyProblems(study).length === 0 ? { ...claim, study } : claim;
     }),
   };
+}
+
+/**
+ * The study with the claim's own falsifier on it. A verdict (or an offered forward test) carries
+ * the claim's falsifier, copied when the study ran (`claim-study.ts`); the claim is its source. So
+ * a falsifier corrected on the claim shows on the study it already has, without a re-run: a re-run
+ * is never a free edit, because claim 7's reading is CRWV-WHEEL's live strike ceiling (#5482,
+ * claims 1 and 2a's falsifiers, 2026-10-30).
+ */
+function carryFalsifier(study: ClaimStudy, claim: ConvictionClaim): ClaimStudy {
+  const { falsifier } = claim;
+  if (study.disposition === "studied")
+    return { ...study, verdict: { ...study.verdict, falsifier } };
+  if (study.disposition === "offer") {
+    return { ...study, forwardTest: { ...study.forwardTest, falsifier } };
+  }
+  return study;
 }

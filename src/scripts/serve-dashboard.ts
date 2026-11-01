@@ -38,6 +38,7 @@ import type { EquitySample } from "../observatory/history-record.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { pulseHistoryReader } from "../observatory/pulse-history-cache.js";
 import { rememberSpreadLegs } from "../observatory/spread-activity.js";
+import { heldLedgerReader } from "../observatory/trade-ledger-cache.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { wireFeedReader } from "../observatory/wire-feed-cache.js";
 import { mergeRoster } from "../participants/participant.js";
@@ -45,6 +46,7 @@ import { createParticipantStore } from "../participants/participant-store.js";
 import { createIvHistoryStore } from "../research/iv-sampler.js";
 import { createSpotChecks } from "../research/spot-checks.js";
 import { resolveDataSource } from "../runtime/data-source.js";
+import { accountPersonasFrom } from "../server/account-personas-fold.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { createBookHealthHistoryStore } from "../server/book-health-history-store.js";
 import { startBookHealthSampler } from "../server/book-health-sampler.js";
@@ -142,6 +144,9 @@ async function main(): Promise<void> {
     process.env,
     dataSource.mode,
   );
+  // What Pulse and the blotter read off each trade ledger (#4619): held per participant until its
+  // ledger or broker window moves.
+  const readHeldLedger = heldLedgerReader(activity);
   // Ladder milestone auto-completion — never a client claim; see the wiring module.
   const {
     onActivity,
@@ -285,6 +290,9 @@ async function main(): Promise<void> {
     { hub, activity, authConfigured: Boolean(auth) },
     credentialsBridge,
   );
+  // The Decisions tab's "who else trades on this account" (#4619): kept per account, advanced by
+  // only what each ledger appends, asked again only when the decision store gains a joinable row.
+  const readAccountPersonas = accountPersonasFrom(activity, insightsBridge);
   // Broker slow-sync + per-order audit log + desk trading (dashboard-desk-wiring.ts).
   const { brokerSync, orderAudit, desk } = wireDeskTrading({
     env: process.env,
@@ -444,8 +452,8 @@ async function main(): Promise<void> {
     readMessages: (id) => companionMessageLog.list(id),
     recordMessage: (id) => companionMessageLog.record(id),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
-    readHistory: (id) => history.list(id),
     readPulseHistory,
+    readHeldLedger,
     readTradeActivity: (id) => activity.list(id),
     readOrderAudit: (id) => orderAudit.list(id),
     recordOrderAudit: (entry) => orderAudit.record(entry),
@@ -461,7 +469,19 @@ async function main(): Promise<void> {
     // Milestones, the fourth kind (#784 slice 5): logged earns from the ladder log, and the audit
     // trail the fill-derived ladder is classified from — the same two inputs the Learn page reads.
     readAllLadderProgress,
-    readAllOrderAudit: () => orderAudit.list(),
+    // Handed ids, only those participants' files are read: the Wire asks for its members alone, so
+    // the bots' audit trails (most of the bytes) stay unread (#4619). Each read keeps its own id's
+    // lines, so two ids that share a file name never return its lines twice.
+    readAllOrderAudit: async (participantIds) =>
+      participantIds
+        ? (
+            await Promise.all(
+              participantIds.map(async (id) =>
+                (await orderAudit.list(id)).filter((r) => r.participantId === id),
+              ),
+            )
+          ).flat()
+        : orderAudit.list(),
     // Absent without a GitHub token: the feed then renders no development kind and says so, rather
     // than letting an empty list imply the league has never merged anything.
     ...(developmentSink ? { readMergedPullRequests: developmentSink } : {}),
@@ -513,12 +533,16 @@ async function main(): Promise<void> {
     // symbol+side+time match (`decision-context.ts`) is a different code path entirely, and only
     // the replicated store supports an exact order-id index.
     ...(insightsBridge.findByOrderId ? { findByOrderId: insightsBridge.findByOrderId } : {}),
-    ...(insightsBridge.personasOfOrders
-      ? { personasOfOrders: insightsBridge.personasOfOrders }
-      : {}),
-    // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458).
+    readAccountPersonas,
+    // A leg once matched never changes (the leg table is insert-only), so remember the hits (#4458),
+    // and the misses until the table gains a row (#4619).
     ...(insightsBridge.findSpreadLeg
-      ? { findSpreadLeg: rememberSpreadLegs(insightsBridge.findSpreadLeg) }
+      ? {
+          findSpreadLeg: rememberSpreadLegs(
+            insightsBridge.findSpreadLeg,
+            insightsBridge.spreadLegMark,
+          ),
+        }
       : {}),
     // The decision funnel (PR 7b) — same replicated store, same no-JSONL-fallback posture as
     // `findByOrderId`: a full-history SQL aggregation has no JSONL-store equivalent.
@@ -580,19 +604,37 @@ async function main(): Promise<void> {
     );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
     telemetry.listening();
-    // Then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read.
+    // Pulse's history folds, then its trade half for each participant (the held answer's first
+    // build is the whole-ledger read: ~90 ms for Sauron at 180 days, #4619),
+    // then `/wire`'s fold, once, so the first Activity open after a deploy is not the cold read,
+    // then each bot's decision funnel and who trades on its account, so the first Decisions open
+    // is not either (#4619).
     // Best effort: a failed warm leaves the fold to the first request, which reads it the same way.
-    void warmPulseFolds(
+    const { funnelFor } = insightsBridge;
+    const bots = roster.filter((p) => p.kind === "bot").map((p) => p.id);
+    void warmFolds(
       roster.map((p) => p.id),
       readPulseHistory,
-    ).then(() => readWireFeed().catch(() => undefined));
+    )
+      .then(() =>
+        warmFolds(
+          roster.map((p) => p.id),
+          async (id) => {
+            const snapshot = hub.getState().participants.find((p) => p.id === id);
+            if (snapshot) await readHeldLedger(snapshot);
+          },
+        ),
+      )
+      .then(() => readWireFeed().catch(() => undefined))
+      .then(() => warmFolds(bots, async (id) => funnelFor?.(id)))
+      .then(() => warmFolds(bots, async (id) => readAccountPersonas?.(id)));
   });
 }
 
 /** Fold each participant's history one at a time after `listen`, yielding between them so the
  *  first requests after a deploy are never queued behind all twelve (#4619). Best effort: a
- *  failed warm leaves that participant to fold on its first Pulse, exactly as before. */
-async function warmPulseFolds(
+ *  failed warm leaves that participant to fold on its first request, exactly as before. */
+async function warmFolds(
   ids: readonly string[],
   read: (id: string) => Promise<unknown>,
 ): Promise<void> {

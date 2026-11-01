@@ -68,12 +68,18 @@ export function parseProposals(slug, text) {
     }));
 }
 
+/** Whether `text` cites the token `key` as a whole token: `…/P1` is not cited by `…/P10` or
+ *  `…/P1b`, nor `ai-dip-…/P1` by `xai-dip-…/P1`. Shared with the claim scorer
+ *  (`src/scripts/claim-scoring-run.ts`), so a proposal is answered by the row that scores it. */
+export function citesToken(key, text) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\w-])${escaped}(?![\\w])`).test(text);
+}
+
 /** The proposals for `eventId` still waiting on its lane. Pure: `answeredText` is the event's
- *  fragment plus its ledger, concatenated; a token anywhere in it is an answer — a whole token,
- *  so `…/P1` is not answered by `…/P10`. */
+ *  fragment plus its ledger, concatenated; a whole token anywhere in it is an answer. */
 export function pendingFor(eventId, today, proposals, answeredText) {
-  const answered = (key) =>
-    new RegExp(`${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\d)`).test(answeredText);
+  const answered = (key) => citesToken(key, answeredText);
   return proposals.filter(
     (p) =>
       p.fragment === eventId &&

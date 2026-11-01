@@ -8,6 +8,8 @@ export interface WorkModeState {
   readonly trackingIssue: number;
   readonly title: string | null;
   readonly mode: WorkMode;
+  /** The clock a stale reading is judged by; the audit passes its own. */
+  readonly now?: number;
 }
 
 /** The audit intent that rewrites the tracking issue's title (#3960 criterion 4). */
@@ -21,11 +23,35 @@ export interface RetitleIntent {
   readonly reason: string;
 }
 
+/** The audit intent that takes a label off the dial once its end date has passed. */
+export interface DialTidyIntent {
+  readonly kind: "tidy-ended-dial";
+  readonly issueNumber: number;
+  readonly label: string;
+  readonly reason: string;
+}
+
+/** Pure: the tidy intent when `mode.endedLabel` says an end date passed, else null. */
+export function endedDialTidy(
+  state?: {
+    trackingIssue?: number;
+    mode?: Partial<WorkMode>;
+  } | null,
+): DialTidyIntent | null;
+
 /** `Work mode: CONSERVE until 2026-09-29` — the plan's "status at a glance" format. */
-export function workModeTitle(mode: Pick<WorkMode, "position" | "until">): string;
+export function workModeTitle(
+  mode: Pick<WorkMode, "position" | "until" | "reading">,
+  now?: number,
+): string;
 
 /** Pure: the retitle intent for a stale dashboard, or null when the title is already right, the
  *  tracking issue could not be read (`mode.unreadable`), or there is no current title to compare. */
 export function workModeRetitle(
-  state?: { trackingIssue?: number; title?: string | null; mode?: Partial<WorkMode> } | null,
+  state?: {
+    trackingIssue?: number;
+    title?: string | null;
+    mode?: Partial<WorkMode>;
+    now?: number;
+  } | null,
 ): RetitleIntent | null;

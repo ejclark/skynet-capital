@@ -170,6 +170,11 @@ function looksStructured(text: string): boolean {
 /** Said inside the fold wherever a brief stopped short, so a lost section is never silent (#6205). */
 const CUT_OFF_LINE = "_(the rest of this brief was cut off before the coach finished writing it.)_";
 
+/** Said instead when the cap landed after the brief's fold had already closed (#6286): the brief is
+ *  whole, and what was lost is the spec the reply writes after it. */
+const SPEC_CUT_LINE =
+  "_(the brief above is complete; the coach's reply was cut off after it, so the acceptance criteria that follow it were lost.)_";
+
 /**
  * The capsule always ends by closing its fold, so a brief that opened one and never closed it did
  * not finish. Two ways in, one tell: the token cap cuts the JSON mid-string, or — the #6007 case —
@@ -184,19 +189,35 @@ const isCutShort = (details: string): boolean =>
  * Close a cut brief honestly: the cut-off line, then the member's own words verbatim, then every
  * fold the model opened (an unclosed `<details>` swallows the issue template below it). With no
  * fold opened at all, one is opened so the member's words still ride inside the capsule's brief.
+ * With every fold already closed, the brief is whole — the cap landed in the spec fields `details`
+ * precedes (#6286) — so the note says that, inside the last fold, and no close is added: the old
+ * unconditional close left an orphan `</details>` and the note loose outside the capsule's fold.
  */
 const closeCutFold = (details: string, memberWords = ""): string => {
   const opened = (details.match(/<details[^>]*>/gi) ?? []).length;
   const closed = (details.match(/<\/details>/gi) ?? []).length;
   const words = memberWords.trim();
+  const said = words ? ["", "**In the member's own words**", "", blockquote(words)] : [];
+  const brief = details.trimEnd();
+  if (opened > 0 && opened <= closed) {
+    const lastClose = brief.toLowerCase().lastIndexOf("</details>");
+    return [
+      brief.slice(0, lastClose).trimEnd(),
+      "",
+      SPEC_CUT_LINE,
+      ...said,
+      "",
+      brief.slice(lastClose),
+    ].join("\n");
+  }
   return [
-    details.trimEnd(),
+    brief,
     ...(opened === 0 ? ["", "<details><summary><strong>The brief</strong></summary>"] : []),
     "",
     CUT_OFF_LINE,
-    ...(words ? ["", "**In the member's own words**", "", blockquote(words)] : []),
+    ...said,
     "",
-    "</details>\n".repeat(Math.max(1, opened - closed)).trim(),
+    "</details>\n".repeat(opened === 0 ? 1 : opened - closed).trim(),
   ].join("\n");
 };
 

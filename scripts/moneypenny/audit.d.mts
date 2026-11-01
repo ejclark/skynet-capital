@@ -67,7 +67,13 @@ export interface AuditDeps {
   /** The instruction-drift chore's ticket intent (#5729), from `driftChoreIntent` — null for none. */
   driftChore?: AuditIntent | null;
   /** Green, unarmed PRs whose arm job failed — the re-arm act stage (stranded-pr.mjs). */
+  /** Green, armed PRs held by a cancelled suite — the update act stage (stuck-branch-update.mjs). */
+  stuckBranches?: import("./stuck-branch-update.mjs").StuckBranch[];
   stranded?: import("./stranded-pr.mjs").StrandedPr[];
+  /** Lane PRs red past the age limit, their sessions over (red-lane-pr.mjs). */
+  redLanePrs?: import("./red-lane-pr.mjs").RedLanePr[];
+  /** The 15-minute clock as this tick read it (clock-watch.mjs, #6470) — null when unreadable. */
+  clock?: import("./clock-watch.mjs").ClockState | null;
   unclaimedIssues?: UnclaimedIssue[];
   silentFeedback?: SilentFeedbackIssue[];
   readyPlans?: ReadyPlanCandidate[];
@@ -112,7 +118,8 @@ export const CONFLICT_MARKER: RegExp;
 export function answered(issue?: AuditIssue): boolean;
 /** A `ready` feedback issue with no PR and no terminal label — what the stall audit pings (#5667). */
 export function owedAnswer(issue?: AuditIssue): boolean;
-/** When the issue last began waiting for an answer, from its REST timeline; `fallback` if never (#6042). */
+/** When the issue last began waiting for an answer — `ready`/`feedback` added, any parking label or
+ *  `next-slice` removed — from its REST timeline; `fallback` if never (#6042, #6287). */
 export function waitingSince(timeline?: TimelineEvent[], fallback?: string): string | undefined;
 /** The silent-feedback candidates, timed from `waitingSince`, minus `in-progress` and already-flagged. */
 export function silentFeedbackFrom(
@@ -154,4 +161,7 @@ export const OPEN_ISSUE_LIMIT: number;
 /** Pass a `gh … list --limit` result through, or throw when it came back at the limit (may be truncated). */
 export function untruncated<T>(rows: T[] | undefined, limit: number, label: string): T[];
 /** Read the real audit dependencies over `gh` — network, not fixture-drivable. */
-export function gatherAuditDeps(nowMs: number): AuditDeps;
+export function gatherAuditDeps(
+  nowMs: number,
+  hourly?: { takeHourlyLease?: (nowMs: number) => boolean },
+): AuditDeps;

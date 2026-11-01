@@ -5,6 +5,8 @@ have discovered several useful patterns already… there are good patterns to be
 plant seeds to let them marinade… this builds intuition for when to apply patterns once you're
 aware of said pattern."*
 
+One section is for code rather than screens: [*The ledger — code smells*](#the-ledger--code-smells), which the review lenses read.
+
 This page is where the seeds sit. Vocabulary is produced per teardown (`/teardown`), per pattern
 doc ([`FOG-OF-WAR.md`](FOG-OF-WAR.md) keeps its own instance ledger) and per call sheet; left
 uncollected, a pattern named in June is unknown to the session designing in September. One
@@ -328,6 +330,26 @@ for a named reason is worth more to the next session than a shape that simply lo
 | **Sector ring** | A donut of equal arcs, one per category, the covered ones drawn heavier, the count in the middle. | proposed for R&D → Coverage, shape E | #3811's brief | placed as H's summary tile — R&D → Coverage, 2026-10-26 (falsifier: Eric drops the ring on his first live look); **declined-here** as a *shape* — eleven labels do not fit around a 390px donut, so it needs a legend beside it and the legend is shape B. Two further tells: a ring of eleven arcs has no twelfth, so the Unclassified row (where the only holding on file, EEM, actually lands) cannot be drawn at all. Banked as a one-tile **summary** at the top of another shape, which is how H uses it (2026-10-07, Eric: "a high-level read of how balanced or unbalanced our coverage and holdings are"). Labelled by fund ticker, the eleven labels fit at 390. Unclassified is named in the readout beside the ring |
 | **Slotted rows** | A desk-width matrix that reflows at phone width into one row per subject, with the columns kept as fixed slots in the same place on every row, so a column can still be scanned straight down. A list you read like a list and compare like a grid. | proposed for R&D → Coverage, shape H's phone layout (`docs/design/lofi/sector-coverage.html#hybrid/none/390`) | Eric, 2026-10-07: B "the most intuitive", A "a uniform view to compare sectors" | placed — R&D → Coverage at phone width, 2026-10-26. Red pass: with the ring above it, 6 of 12 rows sit above a 390 phone's fold (4 with a linked account), against all 12 for C |
 | **Absence is named, never dropped** (instance) | — see the discovery ledger's row | R&D → Coverage's Unclassified row, in all five shapes | #617 | seeded here — the strongest instance yet: Unclassified is not a defensive nicety on this surface, it is where a real holding lands |
+
+## The ledger — code smells
+
+A smell is a shape that has already cost something here; the pattern is what answers it. A reviewer
+who recognises one names its row (`docs/review/lenses/smells-and-patterns.md` reads this table, and
+it is the row's one home), and a new one gets a row in the same finding. Eric's placement rule below
+is for screens: a row here enters when a reviewer shows a real instance and its cost. **Lens** says
+which reference in `docs/review/lenses/` holds how to spot it, the fix and when not to.
+
+| Pattern | The cost when it is missing | What answers it | Where the good shape lives | Lens | Status |
+|---|---|---|---|---|---|
+| **Second rule beside the predicate** | Two readers of one state disagree, and the second is in a file the PR never touched | One predicate both import; widen it if it lacks the case | `pullable` in `scripts/moneypenny/labels.mjs`, `src/engine/guards.ts` | smells-and-patterns | placed — #6063, #6209, #6144, #6089 each shipped the disagreement |
+| **Hand-synced copy** | A fix lands in one copy and the other keeps the bug | One module both import, or a spec that compares the two | None yet: a spec comparing `scripts/deploy-lag.mjs` with its port would be the first | smells-and-patterns | seeded — #6053 fixed one copy and not `src/server/ops-status-deploy-lag.ts` |
+| **Helper with no named home** | The next file pastes it, because nothing can be found by its concept | Name the concept and give it a module | `src/domain/time.ts`, `src/domain/percent.ts`, `src/playbooks/claim-blank.ts` | smells-and-patterns | placed — the governed clean-up cycles, #6034, #6052, #6207 |
+| **Dependency pointing up** | A lower layer cannot be read or tested without the one above it | Move the function down, or pass the value in | The folder map in `docs/ENGINEERING.md` | smells-and-patterns | seeded — `src/personas/registry.ts:6` |
+| **God file in the making** | The split costs a session later instead of a seam now | Name the seam in the PR that grows it | `scripts/arch-scan.mjs` holds the cap; the seam is the reader's | smells-and-patterns | placed — `scripts/shoot/trade.mjs`, #6040, #6114, #6207 |
+| **Port bypassed** | The call skips the shared token and rate-limit handling | Go through the port | `scripts/moneypenny/gh.mjs`, `src/adapters/` | smells-and-patterns | seeded — `scripts/clear-path-post.mjs:124` |
+| **Fold, not a whole read** | A request costs more every day it runs | A fold per participant that reads only appended lines | `src/observatory/pulse-history-fold.ts` | performance | placed — #6232, #6348 |
+| **Three states, never two** | "Could not read" tells a member "nothing there", or a check "passed" | Read, empty and unreadable as three answers, reported and counted | `cannotRun` in `.claude/workflows/post-merge-audit.js` | adversarial, context-loop | placed — #6507 |
+| **Script finds, reader judges** | A gate that fires on a name is noise; a reader on every diff manufactures | A script prints only what it can prove; a lens judges only those rows | `scripts/dupe-delta.mjs` beside `docs/review/lenses/reuse-composability.md` | reuse-composability | placed 2026-11-01 — falsifier: its precision falls under 50% on a fresh sample of 20 |
 
 ## How a pattern enters
 

@@ -49,7 +49,9 @@ export function validateDraftAccount(
     putCash([...book, ...legs]) - putCash(book),
   );
 
-  if (cash > context.cash) {
+  // An order that sets aside nothing leaves the account's cash no worse, even when that cash is
+  // negative (an assignment can drain it) — every close lands here (#6328).
+  if (cash > 0 && cash > context.cash) {
     refusals.push(
       `This order needs $${cash.toLocaleString("en-US")} set aside and you have $${Math.floor(context.cash).toLocaleString("en-US")}. Fewer contracts, a narrower spread, or more cash.`,
     );

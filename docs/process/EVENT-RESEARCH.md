@@ -187,6 +187,16 @@ Either answer is final: the token in your fragment or ledger is what the reader 
 proposal stops printing and stops making your pulses material. You never edit the conviction doc.
 A proposal whose score-by has passed drops out by itself.
 
+**Declared intents — read yours before the method.** In any mode, run
+`node scripts/intents.mjs --event=<your-event-id>`. Each slug it prints is an outcome Eric declared,
+with a date, that names your event (`docs/intents/<slug>.md`). Read its **Check** and make this pass
+move it: a proposal it names gets answered, a re-run it names gets run, a claim it names gets scored.
+Cite the slug in your ledger row (`per declared intent <slug>`), even when there is nothing to move
+today, and say so. The slug in your ledger is what the reader looks for, so it stops making your
+pulses material. If two sessions land without citing it, the screen stops asking and says so in its
+row. A record is a study goal: paper trading and education only, never advice. You never edit the
+record.
+
 **Not every `interval-elapsed` pulse reaches a session** — see "Deterministic screening" below.
 
 ### `event-passed-unscored` → close-out
@@ -196,7 +206,8 @@ actually happened vs the stance, scored **from re-run instrument data, never fro
 tape**. Score any forward tests this event carried — its own fragment
 [`forward-tests/<event-id>.md`](../research/forward-tests.md) (fill the Outcome cell; a scored
 kill moves to the sweep doc's kill list), plus any legacy `FT-N` row about this event in
-`docs/research/forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the
+`docs/research/forward-tests/legacy.md`. Then pass your scores on to any conviction that reads
+them (*Conviction claims*, under the next mode). Once `## Outcome` exists the scanner goes silent on the
 event — with exactly one door back in: a registered forward test whose `Score by` has since arrived re-opens it
 as `forward-test-due` (#2884, the mode below). The assessment is closed for good; the *register*
 is not.
@@ -268,6 +279,28 @@ Leaving the row `_open_` sends the same session back on the next tick — which 
 pressure, not a bug. If a row genuinely needs a later date than it was registered with, write
 `unscoreable — settles <date>, <source>` rather than editing the `Score by` cell.
 
+**Conviction claims — pass your scores on** (#5482 criterion 6). A conviction's claim can be
+scored by a row in your fragment (a row registered from one of its proposals, or cited by id), and
+nothing else runs that scoring on a schedule. So whenever you score a row, in this mode or at
+close-out, run `npm run research:claims -- --event <your-event-id>` after the Outcome cells are
+written, and commit whatever it changed in the same PR. It picks only the convictions whose claims
+read your event; when none does it prints `nothing written` and you are done. It scores every claim
+of those convictions that is due (from your rows, and from the cached tape for a price check), and
+writes `src/playbooks/conviction-scores.json`, changing only the claims it newly decides
+(pending to pass or fail; a decided score is final). It never re-runs a study, because a study's
+reading can set a pair's live narrowing; a claim scored by a re-run stays pending until a full
+`npm run research:claims`. When a claim it decides is one a pair's fence rests on, it also writes
+`docs/research/convictions/refinements/<conviction-id>.md`, the change that result proposes for that
+pair (criterion 6): commit it too, and add a Summary bullet naming the pair and the proposal, so the
+reviewer of your PR sees it. It is text for review and changes no setting. Never hand-edit either
+file, and never edit the conviction doc or its record: the score is the command's, not yours.
+Never run `npm run research:refine` in your PR either: adopting a proposal is its own held PR,
+opened by a build session after yours merges, because you ship one PR.
+**The scores file is shared** with every lane that scores a linked row, the one exception to
+one-file-per-owner here, and it is safe for the same reason appends are: each lane changes a
+different claim's entry, once. On a merge conflict in it or in a refinements file, take `main`'s
+copy and run the command again.
+
 ## Deterministic screening (issue #724) — not every due pulse spends a session
 
 `scripts/event-scan.mjs` decides **when** a pulse is due; `scripts/event-material-scan.mjs`
@@ -309,6 +342,7 @@ in that file's header):
 | Staleness ceiling | every 3rd consecutive screen is forced material regardless of readings | an event can never coast on screens forever; a real session re-establishes the baseline at least that often |
 | No reference block | always material (`no-reference-baseline`) | nothing to diff against — the safe default, never a guess |
 | Conviction proposal | an unanswered proposal naming this event is material (`conviction-proposal:<token>`), whatever the tape did | only a session can register or decline it; a screen would leave it unread (AI-dip's six rows sat unread for 11 days through screens and full sessions alike, #5482) |
+| Declared intent | an active record naming this event that its ledger does not cite is material (`declared-intent:<slug>`), whatever the tape did; it stops after 2 sessions land without citing it, and the screen row says so | a screen cannot read a record's Check, so the first pulse after he declares gets a session and the citation quiets later pulses; the cap keeps a lane that ignores this from buying sessions |
 | Probe fetch failure | always material (loud failure) | "broken ≠ quiet" — the same doctrine `event-scan.mjs` already enforces |
 
 **The honesty invariant.** A screened row is a mechanical check, never a verdict — it is worded

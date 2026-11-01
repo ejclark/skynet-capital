@@ -1,3 +1,5 @@
+import { PulseHistoryFold } from "../../src/observatory/pulse-history-fold.js";
+import { thesisView } from "../../src/observatory/thesis-json-view.js";
 import { serveDeskJson } from "../../src/server/desk-json-routes.js";
 import { answered, configWith, fakeRes } from "../support/desk-json-fixtures.js";
 
@@ -114,6 +116,33 @@ describe("serveDeskJson", () => {
     await serveDeskJson(res, "/api/desk/sauron/thesis", "/api/desk/sauron/thesis", configWith());
     expect(answered(out).ladder).toBeNull();
     expect(answered(out).ladderAsOf).toBeUndefined();
+  });
+
+  // #4619: the Pulse fold the server keeps is the history /thesis reads — never the whole file —
+  // and it answers exactly what the view draws from the samples it folded.
+  it("draws /thesis's health and curve from the Pulse fold, as the samples themselves would", async () => {
+    const samples = Array.from({ length: 900 }, (_, i) => ({
+      participantId: "sauron",
+      at: new Date(Date.parse("2026-09-01T13:30:00Z") + i * 300_000).toISOString(),
+      equity: 100_000 + 4_000 * Math.sin(i / 37) - i * 3,
+      cash: 50_000,
+      realizedPl: 0,
+    }));
+    const thesisFrom = async (over: Parameters<typeof configWith>[0]) => {
+      const { res, out } = fakeRes();
+      await serveDeskJson(
+        res,
+        "/api/desk/sauron/thesis",
+        "/api/desk/sauron/thesis",
+        configWith(over),
+      );
+      return (answered(out) as { thesis: { health: unknown; equity: unknown[] } }).thesis;
+    };
+    const whole = thesisView(undefined, { cycles: [] }, [], samples);
+    const folded = await thesisFrom({ readPulseHistory: async () => PulseHistoryFold.of(samples) });
+    expect(folded.health).toEqual(whole.health);
+    expect(folded.equity).toEqual(whole.equity);
+    expect(folded.equity.length).toBeLessThanOrEqual(640);
   });
 
   it("attaches each bot activity row's decision, and never a human row's (#3687 slice 4)", async () => {

@@ -104,20 +104,49 @@ export function spreadLookup(deps: SpreadLookupDeps): SpreadOf {
 /**
  * `findSpreadLeg`, remembering every hit for the process (#4458 AC 10). The Wire asks it once per
  * option fill on every `no-store` request; the leg table is insert-only (`INSERT OR IGNORE`, keyed by
- * the leg's own id — `decision-db-leg-orders.ts`), so an answer once found never changes. A miss is
- * not remembered: a spread recorded `working` gets its legs from a late settlement, and the next
- * request must see them. The spread's own decision stays a per-request read (`spreadLookup`), because
- * its net appears only once the fill is confirmed.
+ * the leg's own id — `decision-db-leg-orders.ts`), so an answer once found never changes. The spread's
+ * own decision stays a per-request read (`spreadLookup`), because its net appears only once the fill
+ * is confirmed.
+ *
+ * A miss is remembered only while `legMark` holds still (#4619). Nearly every option fill is a miss —
+ * about 5,300 per request at 180 days, ~25 ms of `/api/wire` — and a miss can turn into a hit only
+ * when a leg is written: a spread recorded `working` gets its legs from a late settlement, and the
+ * next request must see them. That write moves the mark, which forgets every miss at once.
+ *
+ * The mark is read once per synchronous pass, not once per fill (that would cost what the misses
+ * did): a fold asks for all its fills in one turn, and the held mark is dropped when the microtasks
+ * already queued behind that turn have run. So a leg written in the meantime can be missed by at most
+ * a request that was already running. That request shows the legs as the separate contract fills
+ * they are, which is true, and the next one folds them. With no `legMark`, no miss is remembered.
  */
 export function rememberSpreadLegs(
   findSpreadLeg: (legOrderId: string) => OptionOrderLeg | undefined,
+  legMark?: () => number,
 ): (legOrderId: string) => OptionOrderLeg | undefined {
   const found = new Map<string, OptionOrderLeg>();
+  const missed = new Set<string>();
+  let missedAt: number | undefined;
+  let markThisPass: number | undefined;
+  const missedNow = (legOrderId: string, readMark: () => number): boolean => {
+    if (markThisPass === undefined) {
+      markThisPass = readMark();
+      queueMicrotask(() => {
+        markThisPass = undefined;
+      });
+    }
+    if (markThisPass !== missedAt) {
+      missed.clear();
+      missedAt = markThisPass;
+    }
+    return missed.has(legOrderId);
+  };
   return (legOrderId) => {
     const held = found.get(legOrderId);
     if (held) return held;
+    if (legMark && missedNow(legOrderId, legMark)) return undefined;
     const leg = findSpreadLeg(legOrderId);
     if (leg) found.set(legOrderId, leg);
+    else if (legMark) missed.add(legOrderId);
     return leg;
   };
 }

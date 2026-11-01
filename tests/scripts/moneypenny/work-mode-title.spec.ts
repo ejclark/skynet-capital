@@ -1,5 +1,9 @@
 import type { WorkMode } from "../../../scripts/moneypenny/work-mode.d.mts";
-import { workModeRetitle, workModeTitle } from "../../../scripts/moneypenny/work-mode-title.mjs";
+import {
+  endedDialTidy,
+  workModeRetitle,
+  workModeTitle,
+} from "../../../scripts/moneypenny/work-mode-title.mjs";
 
 // THE DIAL'S DASHBOARD (#3960 slice 4 — criterion 4's write half). The read half shipped in slice
 // 1: an expired position already resolves to `normal`, so no lane over-throttles. The write was
@@ -34,6 +38,58 @@ describe("workModeTitle — the plan's status-at-a-glance format", () => {
     [mode({ position: "halt", until: null }), "Work mode: HALT"],
   ])("renders %#", (m, expected) => {
     expect(workModeTitle(m)).toBe(expected);
+  });
+});
+
+describe("the pace suffix, derived from the published reading", () => {
+  const READ_AT = Date.parse("2026-11-01T13:40:00Z");
+  const reading = {
+    used: 34,
+    at: READ_AT,
+    resetsAt: Date.parse("2026-11-03T05:00:00Z"),
+    source: "get_usage",
+  };
+
+  it("adds the reading to the title, and leaves it off with none", () => {
+    expect(workModeTitle(mode({ reading }), READ_AT + 60_000)).toBe(
+      "Work mode: NORMAL · pace: week 34% used, 77% gone, behind pace by 43, resets 11-03 05:00Z",
+    );
+    expect(workModeTitle(mode({ reading: null }), READ_AT)).toBe("Work mode: NORMAL");
+  });
+
+  it("keeps the suffix through the tick: a title already carrying it is left alone", () => {
+    const m = mode({ reading });
+    const state = { trackingIssue: 4153, mode: m, now: READ_AT + 3_600_000 };
+    const title = workModeTitle(m, state.now);
+    expect(workModeRetitle({ ...state, title })).toBeNull();
+  });
+
+  it("does not rewrite the title as the clock moves within a fresh reading", () => {
+    const m = mode({ reading });
+    const early = workModeTitle(m, READ_AT + 60_000);
+    expect(workModeTitle(m, READ_AT + 11 * 3_600_000)).toBe(early);
+  });
+
+  it("restores a suffix a person or an old title dropped", () => {
+    const intent = workModeRetitle({
+      trackingIssue: 4153,
+      title: "Work mode: NORMAL",
+      mode: mode({ reading }),
+      now: READ_AT,
+    });
+    expect(intent?.newTitle).toContain("week 34% used");
+  });
+
+  it("prints a reading older than 12 hours as stale, never as fresh", () => {
+    const title = workModeTitle(mode({ reading }), READ_AT + 12 * 3_600_000 + 60_000);
+    expect(title).toBe("Work mode: NORMAL · pace: STALE, 34% used when read 11-01 13:40Z");
+    expect(title).not.toContain("behind pace");
+  });
+
+  it("carries the position and its end beside the reading", () => {
+    expect(
+      workModeTitle(mode({ position: "conserve", until: "2026-11-03", reading }), READ_AT),
+    ).toMatch(/^Work mode: CONSERVE until 2026-11-03 · pace: week 34% used/);
   });
 });
 
@@ -114,5 +170,37 @@ describe("workModeRetitle — only when the dashboard is actually stale", () => 
     ["an empty current title", { trackingIssue: 4153, title: "   ", mode: mode() }],
   ])("is silent with %s", (_what, input) => {
     expect(workModeRetitle(input)).toBeNull();
+  });
+});
+
+describe("endedDialTidy — the push tick's decision to take an ended label off", () => {
+  const ended = mode({
+    reason: "surge expired at 2026-11-03T05:00:00Z",
+    endedLabel: "work-mode:surge",
+  });
+
+  it("names the label and the issue when an end date has passed", () => {
+    expect(endedDialTidy({ trackingIssue: 4153, mode: ended })).toEqual({
+      kind: "tidy-ended-dial",
+      issueNumber: 4153,
+      label: "work-mode:surge",
+      reason: "surge expired at 2026-11-03T05:00:00Z",
+    });
+  });
+
+  it.each([
+    ["no state at all", null],
+    ["no tracking issue", { mode: ended }],
+    ["a dial with no ended label", { trackingIssue: 4153, mode: mode() }],
+    [
+      "a dial it could not read",
+      { trackingIssue: 4153, mode: { ...ended, unreadable: true as const } },
+    ],
+    [
+      "a position other than normal",
+      { trackingIssue: 4153, mode: { ...ended, position: "halt" as const } },
+    ],
+  ])("is silent with %s", (_what, input) => {
+    expect(endedDialTidy(input)).toBeNull();
   });
 });

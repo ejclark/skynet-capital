@@ -19,11 +19,17 @@ export function nextSubIssue<T extends HoldSubIssue>(
   subIssues?: readonly T[],
   blockedBy?: Record<number, readonly { state?: string }[]>,
 ): T | null;
+/** Sub-issues a held platter closes read as closed, with `boardedOn` set to the platter (#6530). */
+export function withoutBoarded<T extends HoldSubIssue>(
+  subIssues?: readonly T[] | null,
+  boardedOn?: ReadonlyMap<number, number>,
+): Array<T & { boardedOn?: number }>;
 export function pickupHoldReason(input?: {
   issue?: HoldIssue;
   comments?: readonly RestComment[];
   subIssues?: readonly HoldSubIssue[];
   blockedBy?: Record<number, readonly { state?: string }[]>;
+  boardedOn?: ReadonlyMap<number, number>;
 }): string | null;
 export function readPickupHold(
   issue: HoldIssue,

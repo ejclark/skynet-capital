@@ -2,9 +2,8 @@ import { createDefaultPersonas } from "../personas/registry.js";
 import { RESTRICT_DRAWDOWN_PCT } from "../risk/risk-ladder.js";
 import type { DecisionCyclesPage, DecisionCycleView } from "./decision-json-view.js";
 import type { DeskActivityEvent } from "./desk-json-view.js";
-import { downsampleMinMax } from "./downsample.js";
-import { equityDrawdown } from "./equity-sparkline.js";
 import type { EquitySample } from "./history-record.js";
+import { PulseHistoryFold } from "./pulse-history-fold.js";
 import type { ThesisPlay } from "./thesis-play-view.js";
 import {
   reasoningForOrder,
@@ -135,8 +134,8 @@ function callFor(page: DecisionCyclesPage): ThesisCall {
 /** Peak-to-trough drawdown against the risk ladder's own restrict-rung cap — same honest proxy
  *  `vitals.ts`'s `lossHeadroomGauge` uses, for the same reason: reconstructing the ladder's own
  *  day-open-baseline reading needs a day-boundary index this view doesn't have. */
-function healthFor(samples: readonly EquitySample[]): ThesisHealth {
-  const dd = equityDrawdown(samples);
+function healthFor(history: PulseHistoryFold): ThesisHealth {
+  const dd = history.drawdown();
   if (!dd) return { measured: false, label: "not yet measured" };
   const ddFraction = dd.ddPct / 100;
   const label = ddFraction >= RESTRICT_DRAWDOWN_PCT ? "drawing down" : "steady";
@@ -191,27 +190,33 @@ function markersFrom(
   });
 }
 
-/** Bounded like `pulse-json-view.ts`'s curve — the backdrop line, not `health`'s drawdown read,
- *  is what grows unboundedly with history (#4612 slice 7, #13). */
-function equityPoints(samples: readonly EquitySample[]): ThesisEquityPoint[] {
-  const sorted = [...samples].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-  return downsampleMinMax(sorted, (s) => s.equity).map((s) => ({ t: s.at, value: s.equity }));
+/** Pulse's own bounded curve (`PulseHistoryFold.curve`) — the backdrop line, not `health`'s
+ *  drawdown read, is what grows unboundedly with history (#4612 slice 7, #13). */
+function equityPoints(history: PulseHistoryFold): ThesisEquityPoint[] {
+  return history.curve().map((s) => ({ t: s.at, value: s.equity }));
 }
 
+/**
+ * The Thesis tab's view. `history` is the bot's equity history: the server hands over the Pulse
+ * fold it already keeps up to date (#4619), so this tab no longer parses, sorts and downsamples
+ * every sample per request; a plain list of samples (offline, specs) is folded here first. Both
+ * give the same drawdown, and the same curve as the desk's Pulse chart.
+ */
 export function thesisView(
   personaId: string | undefined,
   decisions: DecisionCyclesPage,
   activity: readonly DeskActivityEvent[],
-  equitySamples: readonly EquitySample[],
+  history: PulseHistoryFold | readonly EquitySample[],
   findByOrderId?: WireReasoningDeps["findByOrderId"],
 ): ThesisView {
   const thesis = personaThesis(personaId);
+  const fold = history instanceof PulseHistoryFold ? history : PulseHistoryFold.of(history);
   return {
     ...(personaId ? { personaId } : {}),
     ...(thesis ? { thesis } : {}),
     call: callFor(decisions),
-    health: healthFor(equitySamples),
-    equity: equityPoints(equitySamples),
+    health: healthFor(fold),
+    equity: equityPoints(fold),
     markers: markersFrom(activity, findByOrderId),
   };
 }

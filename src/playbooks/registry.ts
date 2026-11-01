@@ -15,6 +15,7 @@ import { callSpread } from "./call-spread.js";
 import { COND_SCOUT } from "./cond-scout.js";
 import { dipBounce } from "./dip-bounce-play.js";
 import { longCall } from "./long-call.js";
+import { longLeap } from "./long-leap.js";
 import type { EnabledPlaybook, Playbook } from "./playbook.js";
 import { SAURON } from "./sauron-rules.js";
 import { eventPlay, prePrintRunUp } from "./templates.js";
@@ -208,6 +209,25 @@ export const CRWV_LONG_CALL: Playbook = longCall({
 });
 
 /**
+ * NVDA-LONG-LEAP (#6340) — calls about two years out near 0.80 / 0.70 / 0.60 delta, bought once NVDA
+ * closes 15% under its 252-session high; half sold at double, the rest with six months left. The
+ * study (`docs/research/long-leap-dip-2026-10.md`) found the dip itself adds no measured edge, so the
+ * pair row is a ◆ conviction checked on 2028-01-31, the study's forward-test date. Dark until an
+ * owner subscribes, like every option play.
+ */
+export const NVDA_LONG_LEAP: Playbook = longLeap({
+  symbol: "NVDA",
+  thesis:
+    "Buy NVDA calls about two years out near 0.80 delta once it closes 15% under its high of the " +
+    "past year; sell half at double the cost and the rest with six months left — run on its " +
+    "owner's conviction.",
+  bet:
+    "Its owner's view (2026-10-30): NVDA's long-term growth carries a two-year call through a " +
+    "pullback. Our study found buying after a dip did about as well as buying on any other day; " +
+    "every option number in it is modeled. It is checked on 2028-01-31.",
+});
+
+/**
  * MU-DIP-BOUNCE and NBIS-DIP-BOUNCE (#5489 slice 2) — buy a dip two ranges below session VWAP, sell
  * one range higher, DARK on both: the study (`docs/research/intraday-dip-bounce-2026-10.md`) calls
  * MU "build it dark; size zero" and NBIS "observe beside MU", both at low confidence over one
@@ -238,6 +258,7 @@ const ROSTER: readonly Playbook[] = [
   TACO_DJT,
   CRWV_WHEEL,
   CRWV_LONG_CALL,
+  NVDA_LONG_LEAP,
   NVDA_CALL_SPREAD,
   SAURON,
   BETA_SCOUT,

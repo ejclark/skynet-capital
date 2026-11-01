@@ -1,0 +1,55 @@
+{
+  "$comment": "Whole reads of a growing ledger still on the dashboard server's request/boot paths (scripts/whole-read-scan.mjs, #4619). Per file, per read: how many call sites and why. Only shrinks — a lower count in the code fails until it is lowered here. #4619's bar is a total of 3 or fewer.",
+  "src/server/desk-alerts-route.ts": {
+    "log.list()": {
+      "count": 1,
+      "why": "the Alerts strip reads the owner's whole event log for the orders' recent lifecycle"
+    }
+  },
+  "src/server/desk-json-routes.ts": {
+    "readTradeActivity()": {
+      "count": 2,
+      "why": "Activity needs every closed trade for realized P/L; Thesis matches spread legs over the ledger"
+    },
+    "readOrderAudit()": {
+      "count": 1,
+      "why": "Activity reads the whole audit to say who placed each row"
+    }
+  },
+  "src/server/ladder-activity-detector.ts": {
+    "activityStore.list()": {
+      "count": 1,
+      "why": "after each recorded fill, re-derives ladder milestones from the participant's whole ledger"
+    }
+  },
+  "src/server/playbook-performance.ts": {
+    "readTradeActivity()": {
+      "count": 1,
+      "why": "the Playbooks stats rebuild every participant's round trips from the whole ledger"
+    }
+  },
+  "src/server/progression-service.ts": {
+    "readFills()": {
+      "count": 2,
+      "why": "the Learn page and the course acknowledge derive earned milestones from the whole ledger"
+    },
+    "readTags()": {
+      "count": 2,
+      "why": "the same two reads take the whole order audit for the playbook tags"
+    }
+  },
+  "src/server/wire-routes.ts": {
+    "readAllOrderAudit()": {
+      "count": 1,
+      "why": "member milestones read each member's whole order audit (members only since #6503)"
+    },
+    "readAllActivityEvents()": {
+      "count": 1,
+      "why": "fallback for the feed when readWireFeed is not wired; production wires it"
+    },
+    "readAllTradeActivity()": {
+      "count": 1,
+      "why": "fallback for the feed when readWireFeed is not wired; production wires it"
+    }
+  }
+}

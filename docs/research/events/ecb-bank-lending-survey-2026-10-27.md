@@ -330,3 +330,48 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.93,"daysBand":"low:0+","adjacentIds":["consumer-confidence-2026-10-27","durable-goods-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29"],"screenStreak":0,"blocked":[{"url":"https://www.ecb.europa.eu/press/calendars/statscal/mfm/html/stpbls","status":404,"at":"2026-10-26"}]} -->
+
+## Outcome
+
+*Close-out, **2026-10-30** (D+3). Price figures are **re-run instrument data** (caches busted first:
+`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`; Yahoo adjusted daily
+bars via `scripts/research/market-data.mjs`, baseline 2023-01-01 → 2026-09-04, the same window the
+initial research used). Survey and statement wording is from **ECB primaries fetched direct
+2026-10-30** (plain curl, HTTP 200): the Q3 2026 BLS report page and the 2026-10-29 introductory
+statement. Never memory of the tape.*
+
+**Verdict: the stand-aside was right and both forward tests PASS — but FT-1 was always the weak one.**
+The survey published on its estimated date, the euro tape treated 10-27 as the **quietest session of
+its week**, and the ECB read the survey aloud two days later exactly as leg 3 said it would.
+
+| Check | Result |
+|---|---|
+| **Date (estimate → held)** | The ECB's Q3 2026 BLS report is dated **27 October 2026**; Day 1 was 28/10 (14 of 14 became 15 of 15). Stays `estimate` per the no-self-confirm limit |
+| **Release day, `EXV1.DE`** | **+0.13%** vs 0.952% baseline = **0.14×**; the 4 other sessions in the 10-21 → 10-27 window ran +1.36 / −3.59 / −0.25 / +1.32 |
+| **Other instruments, 10-27** | `^STOXX50E` +0.79% (1.12×) · `^GDAXI` +0.71% (1.02×) · `EURUSD=X` −0.39% (1.20×) · `^VIX` −4.73% (0.89×) · `^GSPC` +0.60% (0.92×) |
+| **What the survey said** | Net tightening of credit standards to firms **9%** (Q2: 7%; banks had expected **5%**; historical average 8%); housing 0%, consumer credit 14% tighter; loan demand fell. Conducted **21 Sep → 6 Oct 2026** |
+| **Interpreter** | The 10-29 introductory statement: *"Credit standards for loans to firms tightened in the third quarter, as reported in our latest bank lending survey, with banks citing concern about the economic risks faced by their customers."* Rates were kept unchanged |
+| **Collision** | M3 / monetary developments (`BSI`, Sep-2026) published **2026-10-27** (ECB release index `isoDate`), same day as the survey; I did not re-confirm the MFI balance-sheet sibling after the fact, so attribution stayed impossible by construction |
+
+**Kill switches, scored.** *Null kill* — not fired (+0.13% vs the 1.90% line). *Interpreter kill* — not
+fired (named in the statement). *Date kill* — not fired. *Staleness kill* — not fired (conduct window
+closed **10-06**, before the 10-14 line). *Collision kill* — not fired (M3 stayed on 10-27). *Channel
+kill* — not fired: `AVGO` +4.00%, `MRVL` +4.19% and `CRWV` +7.94% cleared 2% on 10-27, but no source
+located ties any of them to the euro-area survey and the survey itself was a small *surprise to the
+downside* in credit (9% vs 5% expected) with a flat euro-bank tape; **recorded unattributed**, the
+move belongs to the AI-infrastructure tape and the FOMC Day 1 session, not to this release.
+
+**The one thing worth carrying forward.** Leg 5 said the null was structural: the round is old news by
+construction and has no consensus to surprise. This round tested it with the cleanest surprise on the
+record (**9% vs the banks' own 5% expectation**, a 4-point miss in the direction the ledger's Q1 2026 note called a surprise)
+and euro bank equities returned **+0.13%** — a second data point for leg 5 beside the Q1 2026 round's +0.86%. n is
+still 15 releases and no significance test is run; the honest claim is "no evidence of a daily
+effect", not "excluded".
+
+**Limits.** Daily close-to-close cannot see an intraday spike that faded. The 10-27 session carried
+FOMC Day 1, US durable goods and consumer confidence, so FT-1's pass is the weak kind its own
+registration said it would be. `2026-10-30` bars are today's and may be partial; no claim here rests
+on them. Search summaries were used only to locate the primaries above, never as the scoring source.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":21.22,"daysBand":"low:0+","adjacentIds":["consumer-confidence-2026-10-27","durable-goods-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","treasury-2y-note-2026-10-26","treasury-5y-tips-2026-10-22"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29"],"screenStreak":0,"blocked":[{"url":"https://www.ecb.europa.eu/press/calendars/statscal/mfm/html/stpbls","status":404,"at":"2026-10-30"}]} -->
