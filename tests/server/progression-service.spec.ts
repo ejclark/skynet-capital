@@ -8,13 +8,10 @@ import type { TradeActivityRecord } from "../../src/observatory/activity-store.j
 import type { CompanionMessageLogEntry } from "../../src/server/companion-message-log.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
-import {
-  createProgressionService,
-  type ParticipantProgression,
-  playLocked,
-} from "../../src/server/progression-service.js";
+import { type ParticipantProgression, playLocked } from "../../src/server/progression-service.js";
 import { openLadder, openLevels } from "../../src/server/progression-service-support.js";
 import { ProgressionStore } from "../../src/server/progression-store.js";
+import { createProgressionService } from "../support/progression-fixtures.js";
 
 const journalLine = (over: Partial<TradeActivityRecord>): TradeActivityRecord => ({
   orderId: "o1",

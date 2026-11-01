@@ -88,7 +88,7 @@ else
   echo "  ✓ set (this restarts the app, which is how it picks them up)"
   have="$("$FLY" secrets list --app "$APP" 2>/dev/null || true)"
   for n in SKYNET_ALERT_EMAIL_API_KEY SKYNET_ALERT_EMAIL_FROM; do
-    printf '%s' "$have" | grep -q "$n" || die "$n is missing from the app's secrets after setting it"
+    grep -q "$n" <<<"$have" || die "$n is missing from the app's secrets after setting it"
   done
   echo "  ✓ both present on $APP"
 fi

@@ -14,6 +14,7 @@
 //   npm run meter -- --row "<loop>" --before N --after N --tokens N [--usd N] [--minutes N]
 //   npm run meter -- --audit-receipt --prs 6307,6323 --confirmed N
 //   npm run meter -- --failure-to-fix [--json] [--days N | ...] [--write-ledger [--date D] [--ledger DIR]]
+//   npm run meter:workers -- [--json] [--days N | ...]   # exits 1 if the worker's oracle fails
 //
 // Seams (env, so a spec can drive it): AGENT_RUNS_DIR, AGENT_TRANSCRIPTS_DIR, AGENT_PROJECTS_DIR,
 // AGENT_MEMORY_DIR, AGENT_GIT_DIR; `gh` on PATH is the REST layer.
@@ -21,7 +22,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { agentSummary, scanWorkflowAgents } from "./agent-meter/agents.mjs";
+import {
+  agentSummary,
+  listDirs,
+  scanWorkflowAgents,
+  stagesByType,
+  workerOracle,
+} from "./agent-meter/agents.mjs";
 import { auditedInWindow, defectsFromIssues, writeAuditReceipt } from "./agent-meter/defects.mjs";
 import { quantile, readFailureToFix, writeLedgerRow } from "./agent-meter/failure-to-fix.mjs";
 import { defectIssues, mergedPrs, pipelineRuns } from "./agent-meter/github.mjs";
@@ -32,7 +39,7 @@ import {
   SESSION_FLOOR_SEC,
   saveCache,
 } from "./agent-meter/lanes.mjs";
-import { render, renderFailureToFix } from "./agent-meter/render.mjs";
+import { render, renderFailureToFix, renderWorkerStages } from "./agent-meter/render.mjs";
 
 export { quantile };
 
@@ -325,6 +332,22 @@ async function measure(w, { maxRest }) {
   };
 }
 
+/** Local transcripts only, so the worker's oracle is free to read as often as a check wants. */
+async function workerStages(args, w) {
+  const projectsDir = process.env.AGENT_PROJECTS_DIR ?? join(homedir(), ".claude", "projects");
+  const stages = stagesByType(await scanWorkflowAgents(projectsDir, PROJECT, w.sinceMs, w.untilMs));
+  // loop-check posts this from a runner, which holds no transcripts: unknown there, not "0 of 20".
+  const oracle = listDirs(projectsDir).some((name) => name.startsWith(PROJECT))
+    ? workerOracle(stages.find((row) => row.type === "worker"))
+    : {
+        verdict: "unknown",
+        line: "worker oracle: unknown: no transcripts on this machine; run it where the stages ran",
+      };
+  if (oracle.verdict === "fail") process.exitCode = 1;
+  const reading = { window: w, stages, oracle };
+  return args.includes("--json") ? JSON.stringify(reading, null, 2) : renderWorkerStages(reading);
+}
+
 /** This section alone: a 30-day baseline must not pay for 30 days of lane logs. */
 function failureToFixOnly(args, w, maxRest) {
   const runsDir = process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs");
@@ -367,6 +390,7 @@ async function main(args) {
       confirmed: flag(args, "--confirmed"),
     });
   const w = windowFromArgs(args);
+  if (args.includes("--worker-stages")) return workerStages(args, w);
   const maxRest = Number(flag(args, "--max-rest") ?? DEFAULT_MAX_REST);
   if (args.includes("--failure-to-fix")) return failureToFixOnly(args, w, maxRest);
   const m = await measure(w, { maxRest });

@@ -18,6 +18,7 @@
 //   npm run build:server && npm run build --prefix app        # the bundle under test
 //   npm run stability:budget                                   # 180 days × 12, budget 300 MB
 //   npm run stability:budget -- --root ../base --days 56        # another tree's bundle, 56 days
+//   npm run stability:budget -- --advisory-latency               # CI: memory and breakage block, times print
 //   npm run stability:budget -- --port 8831 --prefix stab1- --keep --json /tmp/run.json
 //
 // The common-GET budgets are #4619's Done-when (every GET at a p50 ≤ 150 ms; Activity, Playbooks
@@ -73,6 +74,8 @@ const budgets = {
   pulseMs: Number(opt("pulse-ms", "150")),
   getMb: Number(opt("get-mb", "20")),
   getMs: Number(opt("get-ms", "150")),
+  // CI's shared runner: time budgets are printed, never red (#4612: no blocking latency there).
+  advisoryLatency: opt("advisory-latency", false),
 };
 const memory = opt("memory", "512m");
 const port = Number(opt("port", "8799"));

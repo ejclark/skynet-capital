@@ -25,7 +25,10 @@ skill is the procedure. **On `quiet-with-work`** the top headline is the quiet l
 Moneypenny Events → Run workflow) — or say on the digest why the lanes should wait. Every lane
 wakes only on a repository event, so a quiet main is lanes idle beside work until someone fires
 one. `waitingUnknown` set means a read failed and that half is null: say so in Noise absorbed,
-never list the unknown half as waiting.
+never list the unknown half as waiting. **On `quiet-unknown`** (`due: null`: main quiet, nothing
+read as waiting, and a failed read might have been the work) write no digest: push-notify one line,
+`main quiet Nh · could not read what is waiting: <waitingUnknown>`, and stop. It is neither a digest
+nor "no digest due"; the next day's tick asks again.
 
 **Collect** (facts, not memory): `git log origin/main --oneline --since=<last digest date>`; open
 PRs and issues; `docs/ROUTINES.md` states; new/changed `docs/research/events/*` ledgers and

@@ -13,6 +13,8 @@ export interface RedLanePr {
   failedUrl: string;
   /** How many earlier red PRs were closed on this issue, from the marker on its comments. */
   priorCloses: number;
+  /** The issue's newest state block, to correct: a feedback issue or an older plan has none. */
+  block?: { id: number; body: string } | null;
 }
 export interface RedLaneIntent extends AuditIntent {
   kind: "close-red-lane-pr";
@@ -20,12 +22,16 @@ export interface RedLaneIntent extends AuditIntent {
   issueNumber: number;
   branch: string;
   handToSession: boolean;
+  /** The block's corrected text, and the issue comment's line for whether that edit landed. */
+  blockEdit: { commentId: number; body: string; said: string; saidIfFailed: string } | null;
   prBody: string;
   issueBody: string;
 }
 
 export const RED_PR_HOURS: number;
 export const RED_CLOSE_CAP: number;
+/** The block with its next-pickup line naming the closed PR's work first. Pure. */
+export function blockAfterClose(body: string, prNumber: number): string;
 export function redLaneIntents(candidates?: RedLanePr[]): RedLaneIntent[];
 export function gatherRedLanePrs(
   nowMs: number,
@@ -37,5 +43,5 @@ export function redLaneOrNone(
 ): RedLanePr[];
 export function closeRedLanePr(
   i: RedLaneIntent,
-  opts?: { run?: (cmd: string, args: string[]) => string },
+  opts?: { run?: (cmd: string, args: string[]) => string; log?: (line: string) => void },
 ): string;
