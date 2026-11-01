@@ -31,7 +31,11 @@ that gets a well-shaped issue filed without a second pass.
 2. **Write the one-line ask first** — imperative, ≤120 chars, outcome not provenance. If it will not
    fit, the issue is two issues.
 3. **Tabulate the metadata** (type · surface · size · blocked-on). Never prose.
-4. **Draft 2–4 talking points**, ≤120 chars each.
+4. **Draft 2–4 talking points**, ≤120 chars each. Everything above the `<details>`, picture included,
+   stays within 1,200 characters (`MAX_ABOVE_FOLD`, `scripts/issue-lint.mjs`). The top is the
+   frontmatter every reader pays for, and the fold is read on demand (Eric, 2026-11-01: "the initial
+   context is built to frontload frontmatter of the topic. The context below the fold progressively
+   discloses deeper context on demand; efficient tokenomics").
 5. **Add the picture, or waive it out loud** (drawing one → `/mermaid`; who reads it → `docs/READERS.md`). Plan → `flowchart LR` of the end-state; route →
    `sequenceDiagram`; gate/mode → `stateDiagram-v2`; options to settle → a table; one-liner →
    `Picture: waived — <reason>`. Caption a proposed diagram as proposed
@@ -44,7 +48,9 @@ that gets a well-shaped issue filed without a second pass.
    ```
    It refuses on a lint problem (fold, bullet length, duplicate paste, mermaid, unpinned raw URL,
    empty-calorie title) and on an open issue with the same ask (`--force` overrides, `--dry-run`
-   checks without filing). Notes are advisory. Prints `#N [Board status] title`.
+   checks without filing). Notes are advisory. Prints `#N [Board status] title`. Pass `--dry-run` on
+   the first draft: limits met only after a refusal cost 9 first-pass failures across 5 sessions (the
+   first memory review, 2026-11-01).
 8. **Everything after filing uses the same command**, never the GraphQL MCP for bulk work:
    `update N --add a --remove b --body-file f --comment-file c --close completed`,
    `search "words" --label x`, `show N`. The board column follows labels (the sync job maps
