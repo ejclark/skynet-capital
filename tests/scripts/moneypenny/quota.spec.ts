@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
+import { withReading } from "../../../scripts/moneypenny/pace-reading.mjs";
 import {
   BAND_POINTS,
   type Order,
@@ -224,6 +225,53 @@ describe("the tick is report-only", () => {
       readDial: () => ({ position: "conserve", unreadable: true }),
     });
     expect(verdict.state).toBe("ahead");
+  });
+
+  it("reads the reading the last touch point published when the flags give none", () => {
+    const { verdict, line } = tick({
+      now: READ.at,
+      readDial: () => ({ position: "normal", reading: READ }),
+    });
+    expect(verdict.state).toBe("ahead");
+    expect(line).toContain("ahead of pace by");
+    const flags = tick({
+      reading: { ...READ, used: 0 },
+      now: READ.at,
+      readDial: () => ({ position: "normal", reading: READ }),
+    });
+    expect(flags.verdict.state).toBe("behind");
+  });
+
+  it("over the real CLI, reads the published reading off the issue and prints it as JSON", () => {
+    const dir = mkdtempSync(join(tmpdir(), "quota-gh-"));
+    try {
+      const gh = join(dir, "gh");
+      const body = withReading("The dial.", { ...READ, source: "get_usage" });
+      writeFileSync(join(dir, "issue.json"), JSON.stringify({ title: "t", body, labels: [] }));
+      writeFileSync(gh, `#!/bin/sh\ncat "${join(dir, "issue.json")}"\n`);
+      chmodSync(gh, 0o755);
+      const out = execFileSync(
+        process.execPath,
+        ["scripts/moneypenny/quota.mjs", "--tick", "--json", "--now", "2026-10-30T05:00:00Z"],
+        {
+          encoding: "utf8",
+          env: { ...process.env, PATH: `${dir}${delimiter}${process.env.PATH}` },
+        },
+      );
+      expect(JSON.parse(out).pace).toContain("week 60% used");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("over the real CLI, refuses reading flags it cannot read rather than using the published one", () => {
+    const run = () =>
+      execFileSync(
+        process.execPath,
+        ["scripts/moneypenny/quota.mjs", "--tick", "--used", "34", "--resets-at", "11-tuesday"],
+        { encoding: "utf8", stdio: "pipe" },
+      );
+    expect(run).toThrow(/--used needs a number/);
   });
 
   it("over the real CLI, only ever calls gh to read", () => {

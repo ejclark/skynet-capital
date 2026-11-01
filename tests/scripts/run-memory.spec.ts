@@ -1,8 +1,13 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
+// @ts-expect-error plain .mjs script, no declarations
+import { pause } from "../../scripts/file-lock.mjs";
+// @ts-expect-error plain .mjs script, no declarations
+import { EMPTY_FILE_HASH } from "../../scripts/run-memory.mjs";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 const SCRIPT = resolve("scripts/run-memory.mjs");
 
@@ -112,5 +117,169 @@ describe("run memory", () => {
     const readHash = cli(dir, "hash", target).stdout.trim();
     expect(cli(dir, "promote", source, target, "--read-hash", readHash).status).toBe(0);
     expect(readFileSync(target, "utf8")).toBe("fresh\n");
+  });
+
+  // A large target widens the gap between the check and the rename, which is where writers from the
+  // same read used to all pass the check and all rename (20 MB, 20 writers: 16 winners).
+  it("lets exactly one of many writers with the same read win", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "runs-"));
+    const target = join(dir, "shared.md");
+    const source = join(dir, "next.md");
+    const pad = "x".repeat(20 * 1024 * 1024);
+    writeFileSync(target, `${pad}\nbase\n`);
+    writeFileSync(source, `${pad}\nnext\n`);
+    const readHash = cli(dir, "hash", target).stdout.trim();
+    const codes = await Promise.all(
+      Array.from(
+        { length: 12 },
+        () =>
+          new Promise<number | null>((done) => {
+            spawn("node", [SCRIPT, "promote", source, target, "--read-hash", readHash], {
+              stdio: "ignore",
+            }).on("close", done);
+          }),
+      ),
+    );
+    const winners = codes.filter((code) => code === 0).length;
+    const refused = codes.filter((code) => code === 5).length;
+    const lockLeft = existsSync(`${target}.lock`);
+    rmSync(dir, { recursive: true }); // 40 MB, and the suite runs often.
+    expect(winners).toBe(1);
+    expect(refused).toBe(11);
+    expect(lockLeft).toBe(false);
+  }, 60_000);
+
+  it("leaves no lock behind when it refuses", () => {
+    const dir = mkdtempSync(join(tmpdir(), "runs-"));
+    const target = join(dir, "shared.md");
+    const source = join(dir, "s.md");
+    writeFileSync(target, "base\n");
+    writeFileSync(source, "new\n");
+    expect(cli(dir, "promote", source, target, "--read-hash", "stale").status).toBe(5);
+    expect(existsSync(`${target}.lock`)).toBe(false);
+  });
+
+  it("is not blocked forever by a writer killed while holding the lock", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "runs-"));
+    const target = join(dir, "shared.md");
+    const source = join(dir, "s.md");
+    writeFileSync(target, "base\n");
+    writeFileSync(source, "new\n");
+    const holder = spawn("node", [
+      "--input-type=module",
+      "-e",
+      `import { withFileLock } from ${JSON.stringify(resolve("scripts/file-lock.mjs"))};
+       withFileLock(${JSON.stringify(`${target}.lock`)}, () => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 60000));`,
+    ]);
+    for (let tries = 0; tries < 2000 && !existsSync(`${target}.lock`); tries += 1) pause(5);
+    expect(existsSync(`${target}.lock`)).toBe(true);
+    await new Promise((done) => {
+      holder.on("close", done);
+      holder.kill("SIGKILL");
+    });
+    expect(existsSync(`${target}.lock`)).toBe(true);
+
+    const readHash = cli(dir, "hash", target).stdout.trim();
+    expect(cli(dir, "promote", source, target, "--read-hash", readHash).status).toBe(0);
+    expect(readFileSync(target, "utf8")).toBe("new\n");
+    expect(existsSync(`${target}.lock`)).toBe(false);
+  }, 30_000);
+
+  it("gives up with its own exit code while a live writer holds the lock", () => {
+    const dir = mkdtempSync(join(tmpdir(), "runs-"));
+    const target = join(dir, "shared.md");
+    const source = join(dir, "s.md");
+    writeFileSync(target, "base\n");
+    writeFileSync(source, "new\n");
+    writeFileSync(`${target}.lock`, `${process.pid} ${Date.now()}\n`);
+    const readHash = cli(dir, "hash", target).stdout.trim();
+    const res = spawnSync("node", [SCRIPT, "promote", source, target, "--read-hash", readHash], {
+      encoding: "utf8",
+      env: { ...process.env, AGENT_LOCK_WAIT_MS: "50" },
+    });
+    expect(res.status).toBe(6);
+    expect(readFileSync(target, "utf8")).toBe("base\n");
+    expect(existsSync(`${target}.lock`)).toBe(true);
+  });
+
+  // A session reads MEMORY.md only to line 200 or 25 KB, so past that a promote silently hides rules.
+  describe("the memory index's read limit", () => {
+    function promoteIndex(body: string, name = "MEMORY.md") {
+      const dir = mkdtempSync(join(tmpdir(), "runs-"));
+      const source = join(dir, "next.md");
+      const target = join(dir, name);
+      writeFileSync(source, body);
+      return {
+        res: cli(dir, "promote", source, target, "--read-hash", EMPTY_FILE_HASH),
+        target,
+      };
+    }
+    const linesOf = (count: number) => "- a line\n".repeat(count);
+
+    it("takes an index of exactly 200 lines, with or without a final newline", () => {
+      expect(promoteIndex(linesOf(200)).res.status).toBe(0);
+      expect(promoteIndex(linesOf(200).trimEnd()).res.status).toBe(0);
+    });
+
+    it("refuses 201 lines with its own exit code and leaves the target alone", () => {
+      const { res, target } = promoteIndex(linesOf(201));
+      expect(res.status).toBe(7);
+      expect(res.stderr).toContain("201 lines");
+      expect(existsSync(target)).toBe(false);
+    });
+
+    it("takes exactly 25,600 bytes and refuses one more", () => {
+      expect(promoteIndex("x".repeat(25_600)).res.status).toBe(0);
+      const over = promoteIndex("x".repeat(25_601)).res;
+      expect(over.status).toBe(7);
+      expect(over.stderr).toContain("25601 bytes");
+    });
+
+    it("counts bytes, not characters", () => {
+      expect(promoteIndex("é".repeat(12_801)).res.status).toBe(7);
+    });
+
+    it("leaves every other file to its own size", () => {
+      expect(promoteIndex(linesOf(300), "topic.md").res.status).toBe(0);
+    });
+  });
+
+  // A promote is a rename, which fires no tool hook, so without this /dream's taken changes have no
+  // version: the history hook stages only the file it was fired for.
+  it("versions a promote into a memory folder and names the session", () => {
+    const root = mkdtempSync(join(tmpdir(), "projects-"));
+    const memory = join(root, "proj", "memory");
+    mkdirSync(memory, { recursive: true });
+    const source = join(root, "next.md");
+    const target = join(memory, "topic.md");
+    writeFileSync(source, "taken\n");
+    const env = hermeticGitEnv({ AGENT_MEMORY_ROOT: root, CLAUDE_CODE_SESSION_ID: "s-dream" });
+    const res = spawnSync(
+      "node",
+      [SCRIPT, "promote", source, target, "--read-hash", EMPTY_FILE_HASH],
+      { encoding: "utf8", env },
+    );
+    expect(res.status).toBe(0);
+    const log = spawnSync("git", ["-C", memory, "log", "--format=%B", "--", "topic.md"], {
+      encoding: "utf8",
+      env,
+    }).stdout;
+    expect(log).toContain("promote topic.md");
+    expect(log).toContain("session: s-dream");
+    expect(log).toContain("agent: run-memory");
+  });
+
+  it("creates no history for a promote outside a memory folder", () => {
+    const dir = mkdtempSync(join(tmpdir(), "runs-"));
+    const source = join(dir, "s.md");
+    const target = join(dir, "plain.md");
+    writeFileSync(source, "new\n");
+    const res = spawnSync(
+      "node",
+      [SCRIPT, "promote", source, target, "--read-hash", EMPTY_FILE_HASH],
+      { encoding: "utf8", env: hermeticGitEnv({ AGENT_MEMORY_ROOT: join(dir, "projects") }) },
+    );
+    expect(res.status).toBe(0);
+    expect(existsSync(join(dir, ".git"))).toBe(false);
   });
 });

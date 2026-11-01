@@ -41,6 +41,8 @@ export interface Stuck {
 }
 
 export function isGhostSuite(suite: Suite | undefined): boolean;
+/** Does the head carry an Actions suite that was cancelled, or a no-job suite? */
+export function hasCancelledSuite(suites?: Suite[]): boolean;
 export function judgePr(input: {
   pr: PrFacts;
   checkRuns: CheckRun[];

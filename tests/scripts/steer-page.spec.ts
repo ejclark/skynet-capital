@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "@rstest/core";
 import { VERBS } from "../../scripts/steer/html.mjs";
 import { renderPage, TITLE } from "../../scripts/steer/render.mjs";
@@ -41,6 +42,43 @@ describe("the irreversible class is a link to GitHub, never a button", () => {
     expect(q).toMatch(/Work is halted/);
     expect(q.slice(0, q.indexOf("</section>"))).not.toContain("<button");
     expect(halted.indexOf("Work is halted")).toBeLessThan(halted.indexOf('id="shipped"'));
+  });
+});
+
+describe("the page shows one pace line", () => {
+  it("sits at the top of the queue section, once", () => {
+    expect(section("queue")).toContain("week 34% used, 77% gone, behind pace by 43");
+    expect(html.match(/id="pace"/g)).toHaveLength(1);
+  });
+
+  it("still shows under halt, when it matters most", () => {
+    const base = fixture();
+    const halted = renderPage(
+      fixture({ queue: { ...base.queue, position: "halt", halt: true, items: [] } }),
+    );
+    expect(halted).toContain("behind pace by 43");
+  });
+
+  it("shows a stale reading as stale, word for word from the reader", () => {
+    const base = fixture();
+    const stale = renderPage(
+      fixture({
+        queue: { ...base.queue, pace: "pace: STALE, 34% used when read 11-01 13:40Z" },
+      }),
+    );
+    expect(stale).toContain("pace: STALE, 34% used when read 11-01 13:40Z");
+    expect(stale).not.toContain("behind pace");
+  });
+
+  it("is absent, not invented, when no reading was gathered", () => {
+    const base = fixture();
+    const none = renderPage(fixture({ queue: { ...base.queue, pace: undefined } }));
+    expect(none).not.toContain('id="pace"');
+  });
+
+  it("is gathered from the pace reader, not computed a second time", () => {
+    const gather = readFileSync("scripts/steer/gather.mjs", "utf8");
+    expect(gather).toContain('script("scripts/moneypenny/quota.mjs", ["--tick", "--json"]).pace');
   });
 });
 

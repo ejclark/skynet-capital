@@ -1,7 +1,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+// @ts-expect-error plain .mjs script, no declarations
+import { oldestRelevantIndex } from "../../scripts/deploy-lag.mjs";
 
 // "Is `main` actually deployed?" — driven through the real entrypoint, the way every other script
 // spec here works, so the argument plumbing is covered too and no `.d.ts` is invented for an
@@ -277,5 +279,106 @@ describe("deploy lag — missing inputs", () => {
     expect(r.stderr).toContain(
       "1 newer bots release(s) failed smoke and rolled back (latest 4f234c0)",
     );
+  });
+});
+
+// #6470: scripts/fitness.mjs judges a lag by how long its oldest undeployed commit has waited, so
+// each half dates its lag. The bots half finds that commit by halving over prefix compares.
+describe("deploy lag — when it began", () => {
+  const dir = mkdtempSync(join(tmpdir(), "deploy-lag-since-"));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const cli = (args: string[], path: string) =>
+    spawnSync(process.execPath, ["scripts/deploy-lag.mjs", ...args], {
+      encoding: "utf8",
+      env: { ...process.env, PATH: path },
+    });
+
+  it("dates the dashboard lag from the oldest stranded commit, whatever order they arrive in", () => {
+    const { verdict } = explain({
+      head: HEAD,
+      released: RELEASED,
+      stranded: [
+        { ...STRANDED[1], committedAt: "2026-10-22T18:00:00Z" },
+        { ...STRANDED[0], committedAt: "2026-10-22T17:10:00Z" },
+      ],
+    });
+    expect(verdict.since).toBe("2026-10-22T17:10:00Z");
+    expect(explain({ head: RELEASED, released: RELEASED }).verdict.since).toBeUndefined();
+    // Undated stranded commits give no date: the reader must say unknown, not young.
+    expect(
+      explain({ head: HEAD, released: RELEASED, stranded: STRANDED }).verdict.since,
+    ).toBeUndefined();
+  });
+
+  it("dates the bots lag only when it is lagging, including a window of rolled-back releases", () => {
+    const current = { head: HEAD, released: HEAD };
+    const stale = explain({
+      ...current,
+      botsReleased: RELEASED,
+      botsChanged: ["src/domain/types.ts"],
+      botsSince: "2026-10-22T17:10:00Z",
+    });
+    expect(stale.verdict.bots).toMatchObject({ lagging: true, since: "2026-10-22T17:10:00Z" });
+    const fine = explain({
+      ...current,
+      botsReleased: RELEASED,
+      botsChanged: ["docs/IDEAS.md"],
+      botsSince: "2026-10-22T17:10:00Z",
+    });
+    expect((fine.verdict.bots as { since?: string }).since).toBeUndefined();
+    const dark = explain({
+      ...current,
+      botsReleased: "",
+      botsChanged: [],
+      botsRolledBack: 3,
+      botsSince: "2026-10-22T16:44:52Z",
+    });
+    expect(dark.verdict.bots).toMatchObject({ lagging: true, since: "2026-10-22T16:44:52Z" });
+  });
+
+  it("halves to the oldest commit that made the range bot-relevant", () => {
+    const first = (n: number, from: number) => oldestRelevantIndex(n, (i: number) => i >= from);
+    expect(first(5, 2)).toBe(2);
+    expect(first(5, 0)).toBe(0);
+    expect(first(5, 4)).toBe(4);
+    expect(first(1, 0)).toBe(0);
+  });
+
+  // Live wiring: three commits past the last bots deploy, the middle one touching the runtime.
+  // The prefix compares say: up to c1 docs only, up to c2 and up to c3 bot-relevant.
+  it("reads the bots lag date through prefix compares, about log2(n) of them", () => {
+    const bin = join(dir, "bin-since");
+    mkdirSync(bin);
+    const c = (n: number, date: string) =>
+      `{"sha":"c${n}","commit":{"message":"x","committer":{"date":"${date}"}},"author":{"login":"ejclark"}}`;
+    const commits = `[${c(1, "2026-10-22T17:00:00Z")},${c(2, "2026-10-22T17:10:00Z")},${c(3, "2026-10-22T17:20:00Z")}]`;
+    const landed = `{"jobs":[{"name":"release · deploy","conclusion":"success"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"success"},{"name":"Smoke test the bots release","conclusion":"success"}]}]}`;
+    writeFileSync(
+      join(bin, "gh"),
+      [
+        "#!/bin/sh",
+        `echo "$*" >> "${bin}/calls"`,
+        'case "$*" in',
+        `  *commits/main*) echo '{"sha":"c3"}' ;;`,
+        `  *per_page=20*) echo '{"workflow_runs":[{"id":1,"head_sha":"${RELEASED}","created_at":"2026-10-22T16:00:00Z"}]}' ;;`,
+        `  *runs/1/jobs*) echo '${landed}' ;;`,
+        `  *compare/*...c1) echo '{"commits":${commits},"files":[{"filename":"docs/IDEAS.md"}]}' ;;`,
+        `  *compare/*) echo '{"commits":${commits},"files":[{"filename":"docs/IDEAS.md"},{"filename":"src/domain/types.ts"}]}' ;;`,
+        "  *) exit 1 ;;",
+        "esac",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(join(bin, "gh"), 0o755);
+    const r = cli(["--json"], `${bin}:${process.env.PATH}`);
+    expect(r.status).toBe(0);
+    const verdict = JSON.parse(r.stdout);
+    expect(verdict.bots).toMatchObject({ lagging: true, since: "2026-10-22T17:10:00Z" });
+    expect(verdict.since).toBe("2026-10-22T17:00:00Z");
+    const compares = readFileSync(join(bin, "calls"), "utf8")
+      .split("\n")
+      .filter((l) => l.includes("compare/"));
+    // One for the range, one for the dashboard's stranded list, and at most two prefix reads.
+    expect(compares.length).toBeLessThanOrEqual(4);
   });
 });

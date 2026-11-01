@@ -8,6 +8,8 @@ export interface WorkModeState {
   readonly trackingIssue: number;
   readonly title: string | null;
   readonly mode: WorkMode;
+  /** The clock a stale reading is judged by; the audit passes its own. */
+  readonly now?: number;
 }
 
 /** The audit intent that rewrites the tracking issue's title (#3960 criterion 4). */
@@ -22,10 +24,18 @@ export interface RetitleIntent {
 }
 
 /** `Work mode: CONSERVE until 2026-09-29` — the plan's "status at a glance" format. */
-export function workModeTitle(mode: Pick<WorkMode, "position" | "until">): string;
+export function workModeTitle(
+  mode: Pick<WorkMode, "position" | "until" | "reading">,
+  now?: number,
+): string;
 
 /** Pure: the retitle intent for a stale dashboard, or null when the title is already right, the
  *  tracking issue could not be read (`mode.unreadable`), or there is no current title to compare. */
 export function workModeRetitle(
-  state?: { trackingIssue?: number; title?: string | null; mode?: Partial<WorkMode> } | null,
+  state?: {
+    trackingIssue?: number;
+    title?: string | null;
+    mode?: Partial<WorkMode>;
+    now?: number;
+  } | null,
 ): RetitleIntent | null;
