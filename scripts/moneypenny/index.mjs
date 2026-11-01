@@ -70,6 +70,7 @@ import { executeAssignments, gather as gatherAssignmentDeps } from "./assignment
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { capsuleAudit, clearErodedNeedsEric, flagCapsuleOrphan } from "./capsule-stall.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
+import { closeClockIssue, openClockIssue } from "./clock-watch.mjs";
 import {
   CONTINUED_MODEL,
   continuationContext,
@@ -1506,6 +1507,9 @@ const ONE_CALL_INTENTS = {
   // #5727 — the CI repair capsules' two stall checks, which live beside audit.mjs.
   "flag-capsule-orphan": (i) => flagCapsuleOrphan(i),
   "clear-eroded-needs-eric": (i) => clearErodedNeedsEric(i),
+  // #6470 — the clock's watcher: the writes live in clock-watch.mjs beside the decision.
+  "open-clock-issue": (i) => openClockIssue(i),
+  "close-clock-issue": (i) => closeClockIssue(i),
 };
 
 /**
