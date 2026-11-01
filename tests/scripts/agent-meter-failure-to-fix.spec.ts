@@ -142,7 +142,7 @@ describe("the issue searches", () => {
   it("asks for issues only, so a PR quoting the two fields is not a finding", () => {
     const rest = paged([0]);
     defectIssues(rest, at("2026-11-01T00:00:00Z"));
-    expect(decodeURIComponent(rest.paths[0])).toContain("is:issue");
+    expect(decodeURIComponent(rest.paths[0] ?? "")).toContain("is:issue");
   });
 });
 
