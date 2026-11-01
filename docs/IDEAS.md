@@ -18,6 +18,10 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Notice when the harness changes the memory index limit.** `scripts/run-memory.mjs` holds 25,000,
+  read by hand from Claude Code 2.1.263, and an upgrade could change it unseen. A check of the
+  installed binary needs a pattern that survives minified names.
+  _(src: Claude · while: fixing the index limit the post-merge audit confirmed, #6583)_
 - **The dupe scan counts same-named per-route constants as copies.** Three of today's dupe
   candidates were names, not code: `BODY_CAP_BYTES` (six routes, six different caps, 1–16 KB),
   `MAX_ID` (next in line, likely the same), and half of `num`/`pct`. The athlete has to diff every
