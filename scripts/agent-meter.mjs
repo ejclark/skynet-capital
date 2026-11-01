@@ -13,15 +13,24 @@
 //   npm run meter -- [--json] [--hours N | --days N | --since ISO [--until ISO]] [--max-rest N]
 //   npm run meter -- --row "<loop>" --before N --after N --tokens N [--usd N] [--minutes N]
 //   npm run meter -- --audit-receipt --prs 6307,6323 --confirmed N
+//   npm run meter -- --failure-to-fix [--json] [--days N | ...] [--write-ledger [--date D] [--ledger DIR]]
+//   npm run meter:workers -- [--json] [--days N | ...]   # exits 1 if the worker's oracle fails
 //
 // Seams (env, so a spec can drive it): AGENT_RUNS_DIR, AGENT_TRANSCRIPTS_DIR, AGENT_PROJECTS_DIR,
-// AGENT_MEMORY_DIR; `gh` on PATH is the REST layer.
+// AGENT_MEMORY_DIR, AGENT_GIT_DIR; `gh` on PATH is the REST layer.
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { agentSummary, scanWorkflowAgents } from "./agent-meter/agents.mjs";
+import {
+  agentSummary,
+  listDirs,
+  scanWorkflowAgents,
+  stagesByType,
+  workerOracle,
+} from "./agent-meter/agents.mjs";
 import { auditedInWindow, defectsFromIssues, writeAuditReceipt } from "./agent-meter/defects.mjs";
+import { quantile, readFailureToFix, writeLedgerRow } from "./agent-meter/failure-to-fix.mjs";
 import { defectIssues, mergedPrs, pipelineRuns } from "./agent-meter/github.mjs";
 import {
   createRest,
@@ -30,7 +39,9 @@ import {
   SESSION_FLOOR_SEC,
   saveCache,
 } from "./agent-meter/lanes.mjs";
-import { render } from "./agent-meter/render.mjs";
+import { render, renderFailureToFix, renderWorkerStages } from "./agent-meter/render.mjs";
+
+export { quantile };
 
 const CHARS_PER_TOKEN = 4;
 const PROJECT = "-Users-eric-Developer-skynet-capital";
@@ -78,13 +89,6 @@ export function crossesRepeatedHour(sinceMs, untilMs) {
   return (
     sinceMs < Date.parse("2026-11-01T08:00:00Z") && untilMs > Date.parse("2026-11-01T06:00:00Z")
   );
-}
-
-/** The value at quantile q of a list of numbers, or null when the list is empty. */
-export function quantile(values, q) {
-  if (!values.length) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
 }
 
 /** Non-cancelled CI runs split by trigger, so a main-only outage cannot pose as agent mistakes. */
@@ -258,6 +262,18 @@ async function measure(w, { maxRest }) {
   const lanes = attempt(() =>
     readLanes({ rest, cache, sinceMs: w.sinceMs, untilMs: w.untilMs, maxRest, persist }),
   );
+  const failureToFix = attempt(() =>
+    readFailureToFix({
+      rest,
+      cache,
+      w,
+      maxRest,
+      persist,
+      mainRuns: typeof pipeline === "string" ? undefined : pipeline.main,
+      auditIssues: typeof issues === "string" ? undefined : issues,
+      gitDir: process.env.AGENT_GIT_DIR,
+    }),
+  );
   persist();
 
   const runRows = existsSync(runsDir)
@@ -296,6 +312,7 @@ async function measure(w, { maxRest }) {
       runs: runRows,
       note: "open-to-merge excludes local verify and agent time; run rows are the fuller measure",
     },
+    failureToFix,
     agents: agentSummary(agents),
     startup: {
       recentFirstCalls: startups.map((s) => s.firstCall),
@@ -313,6 +330,45 @@ async function measure(w, { maxRest }) {
     },
     rest: { calls: rest.calls, cap: maxRest },
   };
+}
+
+/** Local transcripts only, so the worker's oracle is free to read as often as a check wants. */
+async function workerStages(args, w) {
+  const projectsDir = process.env.AGENT_PROJECTS_DIR ?? join(homedir(), ".claude", "projects");
+  const stages = stagesByType(await scanWorkflowAgents(projectsDir, PROJECT, w.sinceMs, w.untilMs));
+  // loop-check posts this from a runner, which holds no transcripts: unknown there, not "0 of 20".
+  const oracle = listDirs(projectsDir).some((name) => name.startsWith(PROJECT))
+    ? workerOracle(stages.find((row) => row.type === "worker"))
+    : {
+        verdict: "unknown",
+        line: "worker oracle: unknown: no transcripts on this machine; run it where the stages ran",
+      };
+  if (oracle.verdict === "fail") process.exitCode = 1;
+  const reading = { window: w, stages, oracle };
+  return args.includes("--json") ? JSON.stringify(reading, null, 2) : renderWorkerStages(reading);
+}
+
+/** This section alone: a 30-day baseline must not pay for 30 days of lane logs. */
+function failureToFixOnly(args, w, maxRest) {
+  const runsDir = process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs");
+  mkdirSync(runsDir, { recursive: true });
+  const cachePath = join(runsDir, "agent-meter-cache.json");
+  const cache = loadCache(cachePath);
+  const reading = readFailureToFix({
+    rest: createRest(),
+    cache,
+    w,
+    maxRest,
+    persist: () => saveCache(cachePath, cache),
+    gitDir: process.env.AGENT_GIT_DIR,
+  });
+  saveCache(cachePath, cache);
+  if (args.includes("--write-ledger"))
+    return writeLedgerRow(reading, {
+      dir: flag(args, "--ledger"),
+      date: flag(args, "--date") ?? new Date().toISOString().slice(0, 10),
+    });
+  return args.includes("--json") ? JSON.stringify(reading, null, 2) : renderFailureToFix(reading);
 }
 
 async function main(args) {
@@ -334,7 +390,9 @@ async function main(args) {
       confirmed: flag(args, "--confirmed"),
     });
   const w = windowFromArgs(args);
+  if (args.includes("--worker-stages")) return workerStages(args, w);
   const maxRest = Number(flag(args, "--max-rest") ?? DEFAULT_MAX_REST);
+  if (args.includes("--failure-to-fix")) return failureToFixOnly(args, w, maxRest);
   const m = await measure(w, { maxRest });
   return args.includes("--json") ? JSON.stringify(m, null, 2) : render(m);
 }

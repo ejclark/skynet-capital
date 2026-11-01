@@ -25,8 +25,9 @@
 //   - Human-paced logs (feedback filings, companion messages, ladder milestones, play milestones).
 //     They grow at the rate a member types, not the rate a sampler ticks or a bot trades.
 //   - `readDecisions`: the decision store pages in SQL (DEFAULT_PAGE/MAX_PAGE in decision-db.ts).
-//   - A fold's fallback for a store with no append-aware read (`if (!since)` / `if (since) … else`):
-//     that is the in-memory store tests use; the JSONL stores production runs always have `since`.
+//   - A fold's fallback for a store with no append-aware read (`if (!since)`, `if (!(since && …))`,
+//     `if (since) … else`): that is the in-memory store tests use; the JSONL stores production runs
+//     always have `since`.
 //
 // Known blind spot: a store reached through a name none of the three rules know — a parameter
 // typed inline, a destructured field — is not seen. The budget run (`npm run stability:budget`)
@@ -122,7 +123,7 @@ function enclosingKey(lines, at, column) {
 /** True when the line sits in a fold's fallback for a store without an append-aware read. */
 function inNoSinceFallback(lines, at) {
   for (let i = at; i >= Math.max(0, at - 12); i--) {
-    if (/\bif\s*\(\s*!\s*since\b/.test(lines[i])) return true;
+    if (/\bif\s*\(\s*!\s*\(?\s*since\b/.test(lines[i])) return true;
     if (/\bif\s*\(\s*since\s*\)/.test(lines[i])) {
       return lines.slice(i, at + 1).some((l) => /\belse\b/.test(l));
     }

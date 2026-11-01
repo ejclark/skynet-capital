@@ -28,16 +28,6 @@
       "why": "the Playbooks stats rebuild every participant's round trips from the whole ledger"
     }
   },
-  "src/server/progression-service.ts": {
-    "readFills()": {
-      "count": 2,
-      "why": "the Learn page and the course acknowledge derive earned milestones from the whole ledger"
-    },
-    "readTags()": {
-      "count": 2,
-      "why": "the same two reads take the whole order audit for the playbook tags"
-    }
-  },
   "src/server/wire-routes.ts": {
     "readAllOrderAudit()": {
       "count": 1,

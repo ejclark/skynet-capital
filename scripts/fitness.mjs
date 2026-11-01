@@ -15,6 +15,9 @@
 //                neither health nor blindness; a contract is never hidden, only placed.
 //   corrector    what fixes it, or null. A check with no corrector is only an alarm.
 //   budget       how often the corrector may act before it must stop and ask.
+//   rung         when a failure reaches the owner: scripts/fitness-rungs.mjs. Correcting comes
+//                first and the email comes last, in his words of 11-01.
+//   attempts     the budget in a form code reads, counted from marked bot comments on the issue.
 //   reaches      who hears a failure, read by report(): only a contract that reaches an issue
 //                files one. The market-hours stall alert detected correctly from 10-18 and
 //                reached nobody, because its mail credential was never set.
@@ -22,19 +25,22 @@
 //                printed on its issue so whoever reads a stall knows what the check cannot see.
 //
 // A probe that cannot run reports "unknown", never a pass: an unknown is not health. A blip is
-// retried once inside the tick; an unknown that persists opens one quiet, unassigned issue per
-// unreadable source, whose age is how long the checks were blind. A probe reads "quiet" when there
-// is nothing here to judge (a closed market, a fault another contract owns): neither health nor a
-// failure, so a stall at 15:50 does not read as healed at 16:00. Each probe runs in its own
-// try/catch with a ::warning:: line, so one malformed reply cannot blind the others. Every spawn
-// has a deadline: a hung read must cost one contract, not the tick.
+// retried once inside the tick; an unknown that persists opens one issue per unreadable source,
+// whose age is how long the checks were blind and which takes the same two-hour limit. A dead
+// credential behind the read goes straight to the owner. A probe reads "quiet" when there is nothing
+// here to judge (a closed market, a fault another contract owns): neither health nor a failure, so
+// one stop is one report and a stall at 15:50 does not read as healed at 16:00. Each probe runs in
+// its own try/catch with a ::warning:: line, so one malformed reply cannot blind the others. Every
+// spawn has a deadline: a hung read must cost one contract, not the tick.
 //
-// This script detects and reports, and calls no corrector. `--json` for machines. `--report`
-// keeps one issue per failing contract, assigned to the owner: GitHub already delivers that to a
-// phone and inbox, so reaching them needs no new credential. It writes only when GITHUB_ACTIONS is
-// true (a session running it under the owner's login filed #6501, and a self-assignment sends no
-// notice); elsewhere it prints what it would do. The repo is public, so an issue carries only the
-// contract's own words and never a log line.
+// This script detects and reports. The start script runs before it on the clock, so the correction
+// has happened or been refused by the time this reads. `--json` for machines. `--report` keeps one
+// issue per failing contract, unassigned until its rung says otherwise, and reopens a thread closed
+// in the last 14 days rather than starting another. An assignment is what GitHub delivers to a phone
+// and inbox, so reaching him needs no new credential, and a bot must make it. So it writes only when
+// GITHUB_ACTIONS is true (a session running it under the owner's login filed #6501, and a
+// self-assignment sends no notice); elsewhere it prints what it would do. The repo is public, so an
+// issue carries only the contract's own words and never a log line.
 //
 // Exit codes: 0 all passing, unknown, quiet or not-here, or --report · 1 something fails, or a
 // probe crashed. A write that GitHub refused is printed, not fatal: the next tick retries it.
@@ -44,6 +50,17 @@ import nodeModule, { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  ASSIGNED_MARKER,
+  assignsAtOnce,
+  OWNER,
+  ownerDue,
+  REOPEN_LINE,
+  REOPENED_MARKER,
+  reopenable,
+  whatHappensNext,
+  whoHearsBlind,
+} from "./fitness-rungs.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Deadlines. The exec also gets flyctl's own --timeout, because its session can outlive ours.
@@ -56,7 +73,6 @@ const FLY =
   process.env.FLY_BIN ??
   (spawnSync("fly", ["version"], { timeout: SPAWN_TIMEOUT_MS }).status === 0 ? "fly" : "flyctl");
 const GH = process.env.GH_BIN ?? "gh";
-const OWNER = "ejclark";
 const BOTS_APP = "skynet-capital-bots";
 const DASHBOARD_APP = "skynet-capital";
 const STAMP_FRESH_MS = 5 * 60_000;
@@ -79,6 +95,15 @@ const JOURNAL_FILE = /^[\w.-]+\.jsonl$/;
 // The node .nvmrc names, and the one the session clock is proven on. The clock job's own pin is on a
 // held platter PR, so until it lands this contract reads unknown and says why.
 const SESSION_CLOCK_NODE = 24;
+// A second start inside this is a machine that keeps dying, not one that just came back.
+const RESTART_LOOP_MS = 60 * 60_000;
+// How recent a bot's assignment must be for the assignment path to count as used. A longer quiet
+// costs one test email, which is the drill: the failure's own issue is the fresh assignment.
+const ASSIGNMENT_FRESH_MS = 30 * 24 * 60 * 60_000;
+// What a read's failure says when only the owner can fix it. Not a bare 403: the shared REST bucket
+// answers that when it runs out, which has happened twice in a day and is nobody's credential.
+const DEAD_CREDENTIAL =
+  /token[^.]*(expired|invalid|revoked)|unauthori[sz]ed|not authorized|must be authenticated|HTTP 401|bad credentials/i;
 
 const pass = (detail) => ({ status: "pass", detail });
 const fail = (detail) => ({ status: "fail", detail });
@@ -211,6 +236,49 @@ export function parseDecisionLine(text) {
   }
   if (!Number.isFinite(record?.at) || record.at <= 0) return null;
   return { at: record.at, halted: Boolean(record.halted), bytes: Buffer.byteLength(text) };
+}
+
+/**
+ * Judge the path that emails him when a contract fails: he can be assigned, a bot made the
+ * assignment, and one exists from the last 30 days. It proves those three links and no more: no API
+ * shows a delivered email or a buzzing watch, and #5955 was assigned at +10 minutes and first answered
+ * at +90 hours. `issues` are the issues he holds, with their assigned events from GitHub's timeline.
+ *
+ * A person's own assignment does not count, and on an open fitness issue it fails, because that
+ * issue's one notice never went out (#6501). report() re-assigns it under the bot, so that verdict
+ * starts on the script rung rather than mailing him twice. Other work he took himself is his business.
+ */
+export function judgeAssignmentPath({ assignable, issues }, nowMs) {
+  if (!assignable) return fail("the owner cannot be assigned on this repository");
+  const toOwner = (issue) =>
+    (issue.timelineItems?.nodes ?? [])
+      .filter((event) => event.assignee?.login === OWNER)
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const byBot = (event) => event.actor?.__typename === "Bot";
+  const selfAssigned = issues.filter((issue) => {
+    const newest = toOwner(issue)[0];
+    return (
+      issue.state === "OPEN" && issue.title.startsWith("[fitness] ") && newest && !byBot(newest)
+    );
+  });
+  if (selfAssigned.length) {
+    const names = selfAssigned.map((issue) => `#${issue.number}`).join(", ");
+    return {
+      ...fail(`a person assigned ${names}, which sends no notice`),
+      rung: "script",
+      reassign: selfAssigned.map((issue) => issue.number),
+    };
+  }
+  const newestMs = Math.max(
+    ...issues
+      .flatMap(toOwner)
+      .filter(byBot)
+      .map((event) => Date.parse(event.createdAt)),
+  );
+  const ageMs = nowMs - newestMs;
+  return ageMs <= ASSIGNMENT_FRESH_MS
+    ? pass(`a bot assigned the owner ${Math.floor(ageMs / 86_400_000)} days ago`)
+    : fail("no bot has assigned the owner in the last 30 days, so this issue is the test");
 }
 
 /**
@@ -351,6 +419,35 @@ function memoryDirs() {
     .filter((dir) => existsSync(join(dir, "MEMORY.md")));
 }
 
+/**
+ * Whether Fly started this machine once, inside the window. Once matters: a process that dies and
+ * restarts every few minutes always has a young start and a stale stamp, and a grace for every
+ * start would read that loop as quiet on every tick. No start event on record is not recent.
+ */
+function startedOnceWithin(machine, windowMs, nowMs) {
+  const starts = (machine.events ?? [])
+    .filter((e) => e.type === "start" && nowMs - e.timestamp < RESTART_LOOP_MS)
+    .map((e) => e.timestamp);
+  return starts.length === 1 && nowMs - starts[0] < windowMs;
+}
+
+// One read for the whole assignment path: REST would be one call per issue held, every tick, and the
+// shared bucket has run out twice in a day. A person's assignment and a bot's differ only in the
+// actor's type, which the issues list does not carry.
+const ASSIGNMENTS_QUERY = `query($owner: String!, $name: String!, $who: String!, $since: DateTime!) {
+  repository(owner: $owner, name: $name) {
+    issues(first: 100, orderBy: { field: UPDATED_AT, direction: DESC },
+           filterBy: { assignee: $who, since: $since, states: [OPEN, CLOSED] }) {
+      nodes {
+        number title state
+        timelineItems(itemTypes: [ASSIGNED_EVENT], last: 10) {
+          nodes { ... on AssignedEvent { createdAt actor { __typename } assignee { ... on User { login } } } }
+        }
+      }
+    }
+  }
+}`;
+
 // One contract per thing that must stay true. Order is the order they matter.
 export const CONTRACTS = [
   {
@@ -360,6 +457,9 @@ export const CONTRACTS = [
     reads: "Fly",
     corrector: "scripts/bots-start-stopped.sh",
     budget: "3 starts in 6 hours, then stop",
+    rung: "script",
+    // The same numbers as the script, which a spec holds equal: the script spends, this reads.
+    attempts: { marker: "<!-- bots-start-stopped:start -->", max: 3, windowHours: 6 },
     reaches: ISSUE_TO_OWNER,
     probe: () => {
       const machines = json(FLY, ["machine", "list", "-a", BOTS_APP, "--json"]);
@@ -373,11 +473,18 @@ export const CONTRACTS = [
     reads: "Fly",
     corrector: null,
     budget: "none: needs a named cause first",
+    rung: "wait",
     reaches: ISSUE_TO_OWNER,
     probe: (nowMs) => {
       const machines = json(FLY, ["machine", "list", "-a", BOTS_APP, "--json"]);
       const id = machines?.find((m) => (m.config?.standbys ?? []).length === 0)?.id;
       if (!id) return unknown("cannot read Fly");
+      // One stop, one report: a machine that is down has no process to ask, and a deliberate halt
+      // is no fault at all. bots-running reports the first and passes the second.
+      const primary = machines.find((m) => m.id === id);
+      if (primary.state !== "started") {
+        return quiet(`machine is ${primary.state}: bots-running reports this`);
+      }
       const stamp = json(FLY, [
         "machine",
         "exec",
@@ -388,7 +495,13 @@ export const CONTRACTS = [
         "--timeout",
         String(EXEC_TIMEOUT_S),
       ]);
-      return stamp ? judgeStamp(stamp, nowMs) : unknown("cannot read the health stamp");
+      if (!stamp) return unknown("cannot read the health stamp");
+      const verdict = judgeStamp(stamp, nowMs);
+      // The start script ran moments ago, so the stamp on disk is the dead process's. Give it the
+      // stamp's own window to write a new one, rather than a second issue about the same stop.
+      return verdict.status === "fail" && startedOnceWithin(primary, STAMP_FRESH_MS, nowMs)
+        ? quiet("the machine just started, so its stamp has not caught up")
+        : verdict;
     },
   },
   {
@@ -399,10 +512,10 @@ export const CONTRACTS = [
     // Its own source: a job whose node cannot load the clock has read Fly perfectly well.
     reads: "the decision journal",
     // A stall has no script: neither recorded one would be fixed by a restart, and a restart is a
-    // state-destroying action, never a probe. When the ladder (#6569) lands this takes its `wait`
-    // rung. Add a corrector only after a /retro names a hang.
+    // state-destroying action, never a probe. Add a corrector only after a /retro names a hang.
     corrector: null,
     budget: "none: past restarts did not fix this class, so it needs a named cause first",
+    rung: "wait",
     reaches: ISSUE_TO_OWNER,
     gap: "A fresh record from one bot passes for the whole fleet, a cycle that decided on frozen prices passes, and a fleet held by a breaker reads quiet, which includes every evaluation failing once five in a row trip the errors breaker",
     // Reads the outcome's own trace, "every decision cycle is a durable line". The older reads pass
@@ -440,6 +553,7 @@ export const CONTRACTS = [
     reads: "GitHub",
     corrector: "the Moneypenny repair lane",
     budget: "once per failure signature",
+    rung: "wait",
     reaches: ISSUE_TO_OWNER,
     // deploy-lag reads the deploy jobs and what the bots machine runs; bots-deploy-preflight is
     // not a judge, because it says skip on a debounce or after three failed deploys.
@@ -460,12 +574,52 @@ export const CONTRACTS = [
     reads: "Fly",
     corrector: null,
     budget: "none: a credential is the owner's to set",
+    rung: "owner",
     reaches: ISSUE_TO_OWNER,
     probe: () => {
       const secrets = json(FLY, ["secrets", "list", "-a", DASHBOARD_APP, "--json"]);
       return secrets
         ? judgeAlertReach(secrets.map((secret) => secret.name ?? secret.Name))
         : unknown("cannot read Fly");
+    },
+  },
+  {
+    // Separate from alerts-reach-owner on purpose: that contract reads whether the mail alert can be
+    // delivered, and passing this one does not satisfy it (#6470 study, corrected finding).
+    id: "owner-assignment-path",
+    mustBeTrue:
+      "The owner can be assigned, a bot made the assignment, and one exists from the last 30 days. This does not prove an email arrived or that a watch buzzed: no API shows that",
+    home: "clock",
+    reads: "GitHub",
+    corrector: "the report re-assigns under the bot what a person assigned",
+    budget: "once per failing tick, and only on an open fitness issue",
+    rung: "owner",
+    reaches: ISSUE_TO_OWNER,
+    probe: (nowMs) => {
+      const can = run(GH, ["api", `repos/{owner}/{repo}/assignees/${OWNER}`]);
+      if (!(can.ok || /HTTP 404/.test(can.why))) {
+        readFailures.push(can.why);
+        return unknown("cannot read GitHub");
+      }
+      const reply = json(GH, [
+        "api",
+        "graphql",
+        "-F",
+        "owner={owner}",
+        "-F",
+        "name={repo}",
+        "-F",
+        `who=${OWNER}`,
+        "-F",
+        `since=${new Date(nowMs - ASSIGNMENT_FRESH_MS).toISOString()}`,
+        "-f",
+        `query=${ASSIGNMENTS_QUERY}`,
+      ]);
+      if (!reply) return unknown("cannot read GitHub");
+      return judgeAssignmentPath(
+        { assignable: can.ok, issues: reply.data.repository.issues.nodes },
+        nowMs,
+      );
     },
   },
   {
@@ -477,6 +631,7 @@ export const CONTRACTS = [
     reads: "this machine",
     corrector: "scripts/hooks/memory-history.mjs",
     budget: "every write",
+    rung: "session",
     reaches: "the session",
     probe: () => {
       const dirs = memoryDirs();
@@ -501,36 +656,89 @@ const shape = (text) => String(text ?? "").replace(/\d+/g, "N");
 const said = (text, detail) => shape(text).includes(` ${shape(detail)}.`);
 const seen = (issue, detail) => said(issue.body, detail) || said(issue.lastComment, detail);
 
+const assignAction = (number, title, why, detail) => ({
+  kind: "assign",
+  number,
+  title,
+  why,
+  detail,
+});
+
+/** A failure with no open issue: reopen its recent thread if there is one, else open a new one. */
+function firstFailureActions(r, closedIssues, nowMs) {
+  const closed = reopenable(closedIssues, issueTitle(r.id), nowMs);
+  if (!closed) return [{ kind: "open", result: r, assign: assignsAtOnce(r) }];
+  const heldByOwner = (closed.assignees ?? []).some((a) => a.login === OWNER);
+  const actions = [{ kind: "reopen", number: closed.number, result: r, removeOwner: heldByOwner }];
+  // This reopening starts a new failure, and the assignment below is judged on that basis.
+  const reopened = closed.botComments && {
+    ...closed,
+    assignees: [],
+    botComments: [
+      ...closed.botComments,
+      { type: "Bot", body: REOPENED_MARKER, at: new Date(nowMs).toISOString() },
+    ],
+  };
+  const why = reopened && ownerDue(r, reopened, nowMs);
+  if (why) actions.push(assignAction(closed.number, issueTitle(r.id), why, r.detail));
+  return actions;
+}
+
+/** A failure with an open issue. The assignment's comment carries the detail, so one comment says both. */
+function standingFailureActions(r, issue, nowMs) {
+  const why = ownerDue(r, issue, nowMs);
+  if (why) return [assignAction(issue.number, issueTitle(r.id), why, r.detail)];
+  return seen(issue, r.detail) ? [] : [{ kind: "comment", number: issue.number, result: r }];
+}
+
+/** One issue per source nobody at home could read, on the same order as a failure with no script. */
+function blindActions(source, filing, issue, nowMs) {
+  const blind = filing.filter((r) => r.reads === source && r.status === "unknown");
+  const read = filing.some(
+    (r) => r.reads === source && (r.status === "pass" || r.status === "fail"),
+  );
+  const credential = blind.some((r) => r.credential);
+  if (blind.length && !issue) {
+    return [{ kind: "open-blind", source, results: blind, assign: credential }];
+  }
+  if (blind.length) {
+    const why = ownerDue({ rung: credential ? "owner" : "wait" }, issue, nowMs);
+    return why
+      ? [assignAction(issue.number, blindTitle(source), why, `cannot read ${source}`)]
+      : [];
+  }
+  return read && issue ? [{ kind: "close-blind", number: issue.number, source }] : [];
+}
+
 /**
  * What the issues should do, given results and the open fitness issues. Pure. A failure opens one
- * issue or comments only when its cause changed, so a standing failure does not pile up comments.
- * A pass closes the issue. Unknown and not-here touch a contract's own issue not at all: they
- * prove neither health nor failure. Instead, a source nobody at home could read gets one quiet
- * issue, closed once any contract reads it again. Only a contract whose `reaches` is an issue
- * takes part.
+ * issue, reopening a thread closed in the last 14 days rather than starting another, and comments
+ * only when its cause changed, so a standing failure does not pile up comments. The owner is
+ * assigned when its rung says so (scripts/fitness-rungs.mjs), and that assignment is the one comment
+ * for moving up. A pass closes the issue. Unknown, quiet and not-here touch a contract's own issue
+ * not at all: they prove neither health nor failure. Instead, a source nobody at home could read
+ * gets one issue, closed once any contract reads it again. Only a contract whose `reaches` is an
+ * issue takes part.
+ *
+ * `botComments` on a thread are its comments in the REST shape's fields, or undefined when they
+ * could not be read, which holds the assignment for a tick that can.
  */
-export function reportActions(results, openIssues) {
+export function reportActions(results, openIssues, { nowMs = Date.now(), closedIssues = [] } = {}) {
   const actions = [];
   const find = (title) => openIssues.find((i) => i.title === title);
   const filing = results.filter(filesIssue);
   for (const r of filing) {
     const issue = find(issueTitle(r.id));
-    if (r.status === "fail" && !issue) actions.push({ kind: "open", result: r });
-    else if (r.status === "fail" && !seen(issue, r.detail)) {
-      actions.push({ kind: "comment", number: issue.number, result: r });
+    if (r.status === "fail" && !issue) {
+      actions.push(...firstFailureActions(r, closedIssues, nowMs));
+    } else if (r.status === "fail") {
+      actions.push(...standingFailureActions(r, issue, nowMs));
     } else if (r.status === "pass" && issue)
       actions.push({ kind: "close", number: issue.number, result: r });
+    for (const number of r.reassign ?? []) actions.push({ kind: "reassign", number });
   }
   for (const source of new Set(filing.map((r) => r.reads))) {
-    const blind = filing.filter((r) => r.reads === source && r.status === "unknown");
-    const read = filing.some(
-      (r) => r.reads === source && (r.status === "pass" || r.status === "fail"),
-    );
-    const issue = find(blindTitle(source));
-    if (blind.length && !issue) actions.push({ kind: "open-blind", source, results: blind });
-    else if (!blind.length && read && issue) {
-      actions.push({ kind: "close-blind", number: issue.number, source });
-    }
+    actions.push(...blindActions(source, filing, find(blindTitle(source)), nowMs));
   }
   return actions;
 }
@@ -540,86 +748,211 @@ function issueBody(r) {
     `**This must stay true:** ${r.mustBeTrue}.`,
     `**What failed:** ${r.detail}.`,
     `**What fixes it:** ${r.corrector ?? "nothing automatic yet"} (budget: ${r.budget}).`,
+    `**What happens next:** ${whatHappensNext(r)}`,
     ...(r.gap ? [`**What this cannot see:** ${r.gap}.`] : []),
     "",
-    "This issue closes itself once the check passes. Contract: `scripts/fitness.mjs`.",
+    "This issue closes itself once the check passes, and reopens if it fails again within 14 days. Contract: `scripts/fitness.mjs`.",
+    ...(assignsAtOnce(r) ? ["", ASSIGNED_MARKER] : []),
   ].join("\n");
 }
 
 function blindBody(source, results) {
+  const credential = results.some((r) => r.credential);
   return [
     `**These checks are blind:** ${results.map((r) => r.id).join(", ")} cannot read ${source}.`,
     `**What the probes said:** ${[...new Set(results.map((r) => r.detail))].join(" · ")}.`,
-    "**Who hears:** nobody yet. This issue's age is how long the checks have been blind.",
+    `**Who hears:** ${whoHearsBlind(credential)} This issue's age is how long the checks have been blind.`,
     "",
     `This issue closes itself once ${source} can be read again. Contract: \`scripts/fitness.mjs\`.`,
+    ...(credential ? ["", ASSIGNED_MARKER] : []),
   ].join("\n");
 }
 
-/** The gh command one action needs, and the name the log prints for it. */
-function ghWrite(a) {
+// The REST route the assignment lane uses, so the write is the one already on record under a bot.
+const ownerOn = (method, number) => [
+  "api",
+  "--method",
+  method,
+  `repos/{owner}/{repo}/issues/${number}/assignees`,
+  "-f",
+  `assignees[]=${OWNER}`,
+];
+const addOwner = (number) => ownerOn("POST", number);
+const removeOwner = (number) => ownerOn("DELETE", number);
+
+/**
+ * The gh commands one action needs, run in order and stopping at the first refusal, and the name the
+ * log prints. The order carries meaning. An assignment comes before the comment marking it made, so
+ * a refused assignment leaves no marker and the next tick tries again. The owner comes off before a
+ * reopen, because reopening mails an assignee and this failure has not reached that rung yet.
+ */
+function ghWrites(a) {
   switch (a.kind) {
     case "open":
       return {
         name: issueTitle(a.result.id),
-        args: [
-          "issue",
-          "create",
-          "--title",
-          issueTitle(a.result.id),
-          "--label",
-          "bug",
-          "--assignee",
-          OWNER,
-          "--body",
-          issueBody(a.result),
+        commands: [
+          [
+            "issue",
+            "create",
+            "--title",
+            issueTitle(a.result.id),
+            "--label",
+            "bug",
+            ...(a.assign ? ["--assignee", OWNER] : []),
+            "--body",
+            issueBody(a.result),
+          ],
+        ],
+      };
+    case "reopen":
+      return {
+        name: issueTitle(a.result.id),
+        commands: [
+          ...(a.removeOwner ? [removeOwner(a.number)] : []),
+          [
+            "issue",
+            "reopen",
+            String(a.number),
+            "--comment",
+            `${REOPEN_LINE} What failed: ${a.result.detail}.\n\n${REOPENED_MARKER}`,
+          ],
+        ],
+      };
+    case "assign":
+      return {
+        name: a.title,
+        commands: [
+          addOwner(a.number),
+          [
+            "issue",
+            "comment",
+            String(a.number),
+            "--body",
+            `Assigned to the owner: ${a.why}. Still failing: ${a.detail}.\n\n${ASSIGNED_MARKER}`,
+          ],
+        ],
+      };
+    case "reassign":
+      // He already holds it, so a plain add changes nothing and sends nothing: off first, then on.
+      return {
+        name: `#${a.number}`,
+        commands: [
+          removeOwner(a.number),
+          addOwner(a.number),
+          [
+            "issue",
+            "comment",
+            String(a.number),
+            "--body",
+            `Re-assigned under the bot: an assignment made under the owner's own login sends no notice.\n\n${ASSIGNED_MARKER}`,
+          ],
         ],
       };
     case "comment":
       return {
         name: issueTitle(a.result.id),
-        args: [
-          "issue",
-          "comment",
-          String(a.number),
-          "--body",
-          `Still failing, and it changed: ${a.result.detail}.`,
+        commands: [
+          [
+            "issue",
+            "comment",
+            String(a.number),
+            "--body",
+            `Still failing, and it changed: ${a.result.detail}.`,
+          ],
         ],
       };
     case "close":
       return {
         name: issueTitle(a.result.id),
-        args: [
-          "issue",
-          "close",
-          String(a.number),
-          "--comment",
-          `Passing again: ${a.result.detail}.`,
+        commands: [
+          ["issue", "close", String(a.number), "--comment", `Passing again: ${a.result.detail}.`],
         ],
       };
     case "open-blind":
-      // Unassigned on purpose: who hears a blind check, and when, is a separate decision.
       return {
         name: blindTitle(a.source),
-        args: [
-          "issue",
-          "create",
-          "--title",
-          blindTitle(a.source),
-          "--label",
-          "bug",
-          "--body",
-          blindBody(a.source, a.results),
+        commands: [
+          [
+            "issue",
+            "create",
+            "--title",
+            blindTitle(a.source),
+            "--label",
+            "bug",
+            ...(a.assign ? ["--assignee", OWNER] : []),
+            "--body",
+            blindBody(a.source, a.results),
+          ],
         ],
       };
     case "close-blind":
       return {
         name: blindTitle(a.source),
-        args: ["issue", "close", String(a.number), "--comment", `${a.source} can be read again.`],
+        commands: [
+          ["issue", "close", String(a.number), "--comment", `${a.source} can be read again.`],
+        ],
       };
     default:
       throw new Error(`no gh command for ${a.kind}`);
   }
+}
+
+/**
+ * A thread's comments in the fields ownerDue reads, or undefined with a warning. From the REST route
+ * because it carries the author's type and the issues list carries only a login, and a marker counts
+ * only from a bot.
+ */
+function threadComments(number) {
+  const res = run(GH, [
+    "api",
+    `repos/{owner}/{repo}/issues/${number}/comments?per_page=100`,
+    "--paginate",
+    "--jq",
+    ".[] | {type: .user.type, body: .body, at: .created_at}",
+  ]);
+  try {
+    if (!res.ok) throw new Error(res.why);
+    return res.out
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  } catch (err) {
+    console.log(
+      `::warning::fitness: cannot read the comments on #${number}, so its assignment waits (${firstLine(err.message)})`,
+    );
+    return undefined;
+  }
+}
+
+/**
+ * The closed threads a failure with no open issue might reopen. Read only then, so a healthy tick
+ * spends nothing. A failed read files a new issue rather than nothing: a second thread is tidier to
+ * lose than a failure is to hide.
+ */
+function closedThreads(titles) {
+  readFailures.length = 0;
+  const listed = json(GH, [
+    "issue",
+    "list",
+    "--state",
+    "all",
+    "--search",
+    '"[fitness]" in:title sort:updated-desc',
+    "--json",
+    "number,title,state,closedAt,createdAt,assignees",
+    "--limit",
+    "50",
+  ]);
+  if (!Array.isArray(listed)) {
+    console.log(
+      `::warning::fitness: cannot read closed fitness issues, so a new one may be filed (${readFailures.join("; ")})`,
+    );
+    return [];
+  }
+  return listed
+    .filter((i) => i.state === "CLOSED" && titles.includes(i.title))
+    .map((i) => ({ ...i, botComments: threadComments(i.number) }));
 }
 
 function report(results, write) {
@@ -633,7 +966,7 @@ function report(results, write) {
     "--label",
     "bug",
     "--json",
-    "number,title,body,comments",
+    "number,title,body,comments,createdAt,assignees",
     "--limit",
     "200",
   ]);
@@ -645,17 +978,28 @@ function report(results, write) {
     );
     return;
   }
-  const open = listed.map((i) => ({
-    ...i,
-    lastComment: i.comments?.at(-1)?.body ?? "",
-  }));
-  for (const a of reportActions(results, open)) {
-    const { name, args } = ghWrite(a);
+  const open = listed.map((i) => {
+    const thread = { ...i, lastComment: i.comments?.at(-1)?.body ?? "" };
+    // Only a fitness thread nobody holds can still move up, so only that one spends a read.
+    const unheld = i.title.startsWith("[fitness] ") && !i.assignees?.some((a) => a.login === OWNER);
+    return unheld ? { ...thread, botComments: threadComments(i.number) } : thread;
+  });
+  const unfiled = results
+    .filter((r) => filesIssue(r) && r.status === "fail")
+    .map((r) => issueTitle(r.id))
+    .filter((title) => !open.some((i) => i.title === title));
+  const closedIssues = unfiled.length ? closedThreads(unfiled) : [];
+  for (const a of reportActions(results, open, { nowMs: Date.now(), closedIssues })) {
+    const { name, commands } = ghWrites(a);
     if (!write) {
       console.log(`fitness: would ${a.kind} ${name} (not on CI, so nothing is written)`);
       continue;
     }
-    const done = run(GH, args);
+    let done = { ok: true };
+    for (const args of commands) {
+      done = run(GH, args);
+      if (!done.ok) break;
+    }
     console.log(
       `fitness: ${done.ok ? "" : "COULD NOT "}${a.kind} ${name}${done.ok ? "" : ` (${done.why})`}`,
     );
@@ -674,6 +1018,8 @@ function attempt(contract, nowMs) {
     if (verdict.status === "unknown") {
       const why = readFailures.length ? ` (${readFailures.join("; ")})` : "";
       console.log(`::warning::fitness: ${contract.id} ${verdict.detail}${why}`);
+      // The words stay in the log. The issue only learns that only the owner can act.
+      if (DEAD_CREDENTIAL.test(readFailures.join(" "))) return { ...verdict, credential: true };
     }
     return verdict;
   } catch (err) {
@@ -717,7 +1063,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     for (const r of results) {
       console.log(`${r.status.toUpperCase().padEnd(9)}${r.id}: ${r.detail}`);
       if (r.status === "fail")
-        console.log(`         corrects: ${r.corrector ?? "nothing yet"} · reaches: ${r.reaches}`);
+        console.log(
+          `         corrects: ${r.corrector ?? "nothing yet"} · reaches: ${r.reaches} · rung: ${r.rung}`,
+        );
     }
   }
   if (process.argv.includes("--report")) report(results, process.env.GITHUB_ACTIONS === "true");

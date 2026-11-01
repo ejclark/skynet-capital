@@ -453,6 +453,10 @@ describe("npm run meter — the lane and main-failure wiring", () => {
       byJob: { "release · deploy bots › smoke": 1 },
     });
     expect(cold.firstPass.defects.audited).toBeNull();
+    // The full meter reuses the runs it already listed for the failure-to-fix section.
+    expect(cold.failureToFix.sources.mainCi.episodes).toEqual([
+      expect.objectContaining({ id: "run 30", name: "release · deploy bots › smoke" }),
+    ]);
     expect(existsSync(join(dir, "runs", "agent-meter-cache.json"))).toBe(true);
     const coldCalls = cold.rest.calls;
     expect(coldCalls).toBeGreaterThanOrEqual(7);

@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
-import { createProgressionService } from "../../src/server/progression-service.js";
 import { ProgressionStore } from "../../src/server/progression-store.js";
+import { createProgressionService } from "../support/progression-fixtures.js";
 
 /**
  * Course-graduation ceremonies (#469 slice 4) — split out of `progression-service.spec.ts` at the

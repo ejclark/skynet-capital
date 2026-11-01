@@ -30,6 +30,7 @@ export interface Price {
   spentTokensM: number;
 }
 
+export const LEDGER_DIR: string;
 export function slugOf(loop: string): string;
 export function moved(first: Partial<LedgerRow>, row: Pick<LedgerRow, "before" | "after">): number;
 export function verdict(rows: Partial<LedgerRow>[]): Verdict;

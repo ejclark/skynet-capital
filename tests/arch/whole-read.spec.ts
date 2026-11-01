@@ -98,6 +98,19 @@ describe("whole-read scan — what counts as a site", () => {
     expect(sitesIn(src)).toEqual([]);
   });
 
+  it("does not count the fallback of a fold over two stores, however the guard is spelled", () => {
+    const src = [
+      "function read(activity: ActivityStore, orderAudit: OrderAuditLog) {",
+      "  const since = activity.since?.bind(activity);",
+      "  const sinceTags = orderAudit.since?.bind(orderAudit);",
+      "  if (!(since && sinceTags)) {",
+      "    return fold(await activity.list(id), await orderAudit.list(id));",
+      "  }",
+      "}",
+    ].join("\n");
+    expect(sitesIn(src)).toEqual([]);
+  });
+
   it("ignores a read named only in a comment", () => {
     const src = [
       "// config.readHistory?.(id) used to run here",
