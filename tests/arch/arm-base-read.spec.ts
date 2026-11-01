@@ -35,6 +35,8 @@ describe("arm auto-merge reads the protected list and the scanner from the base 
   let base: string;
   let attack: string;
   let honest: string;
+  let honestSpaced: string;
+  const smuggled: Record<string, string> = {};
   const env = hermeticGitEnv();
   const git = (...args: string[]) =>
     execFileSync("git", ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args], {
@@ -49,11 +51,18 @@ describe("arm auto-merge reads the protected list and the scanner from the base 
     mkdirSync(join(dir, "secret"));
     mkdirSync(join(dir, "open"));
     git("init", "-q", "-b", "main");
-    // The base: a manifest protecting secret/**, and the real scanner.
+    // The base: a manifest protecting secret/** and one exact path, and the real scanner.
     writeFileSync(
       join(dir, "envelope.json"),
-      JSON.stringify({ lanes: [], protected: [{ pattern: "secret/**", why: "the crown jewels" }] }),
+      JSON.stringify({
+        lanes: [],
+        protected: [
+          { pattern: "secret/**", why: "the crown jewels" },
+          { pattern: "exact.txt", why: "one exact path" },
+        ],
+      }),
     );
+    writeFileSync(join(dir, "secret/old.txt"), "old\n");
     writeFileSync(
       join(dir, "scripts/envelope-scan.mjs"),
       readFileSync("scripts/envelope-scan.mjs"),
@@ -79,6 +88,51 @@ describe("arm auto-merge reads the protected list and the scanner from the base 
     git("add", "-A");
     git("commit", "-q", "-m", "honest");
     honest = git("rev-parse", "HEAD");
+    // An honest PR whose only oddity is a space in an open file's name: it must still arm.
+    git("checkout", "-q", "-b", "honest-spaced", base);
+    writeFileSync(join(dir, "open/has space.txt"), "fine\n");
+    git("add", "-A");
+    git("commit", "-q", "-m", "honest spaced");
+    honestSpaced = git("rev-parse", "HEAD");
+    // The diff shapes that hide a protected path by what the file NAMES do to the scan's argv or
+    // to git's own printing. Each is one commit off the base; none touches the list or the scanner.
+    const stage = (name: string, change: () => void) => {
+      git("checkout", "-q", "-b", name, base);
+      change();
+      git("add", "-A");
+      git("commit", "-q", "-m", name);
+      smuggled[name] = git("rev-parse", "HEAD");
+    };
+    // `--base` sorts before every other path, so the flag parser ate whatever came next.
+    stage("root-flag-file", () => {
+      writeFileSync(join(dir, "--base"), "decoy\n");
+      writeFileSync(join(dir, "secret/key.txt"), "stolen\n");
+    });
+    // One name, two argv words once word-split; ' ' sorts before 't', so it lands right before
+    // the exact path it hides. Works once per exact rule, wherever that rule's file sits.
+    stage("spaced-decoy", () => {
+      writeFileSync(join(dir, "exact.tx --lane"), "decoy\n");
+      writeFileSync(join(dir, "exact.txt"), "stolen\n");
+    });
+    // git prints a non-ASCII path quoted and escaped, and the quoted form matches no rule.
+    stage("non-ascii-name", () => {
+      writeFileSync(join(dir, "secret/naïve.txt"), "stolen\n");
+    });
+    // Rename detection prints only the destination, so moving a file out reads as an open path.
+    stage("rename-out", () => {
+      git("mv", "secret/old.txt", "open/old.txt");
+    });
+    // -z delivers a newline raw, and `.*` in a rule's regex stops at one.
+    stage("newline-name", () => {
+      writeFileSync(join(dir, "secret/a\nb.txt"), "stolen\n");
+    });
+    // Names the runner would read as workflow commands if they reached the log as they stand, one
+    // through the changed-files list and one through the not-arming notice.
+    stage("command-names", () => {
+      writeFileSync(join(dir, "::error::root"), "decoy\n");
+      writeFileSync(join(dir, "open/x\n::stop-commands::t"), "decoy\n");
+      writeFileSync(join(dir, "secret/y\n::error::notice"), "stolen\n");
+    });
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -123,6 +177,35 @@ describe("arm auto-merge reads the protected list and the scanner from the base 
 
   it("still arms an honest PR off the same base", () => {
     const r = armStep(honest);
+    expect(r.code).toBe(0);
+    expect(r.written).toContain("blocking=false");
+  });
+
+  for (const name of [
+    "root-flag-file",
+    "spaced-decoy",
+    "non-ascii-name",
+    "rename-out",
+    "newline-name",
+  ]) {
+    it(`refuses to arm a diff that hides a protected path by its file names: ${name}`, () => {
+      const r = armStep(smuggled[name] as string);
+      expect(r.code).toBe(0);
+      expect(r.written).toContain("blocking=true");
+    });
+  }
+
+  it("prints no file name the runner could read as a workflow command", () => {
+    const r = armStep(smuggled["command-names"] as string);
+    expect(r.code).toBe(0);
+    expect(r.written).toContain("blocking=true");
+    // The runner trims leading space before it looks for `::`, so indenting would not be enough.
+    const commands = r.stdout.split("\n").filter((l) => l.trimStart().startsWith("::"));
+    expect(commands.map((l) => l.split("::")[1])).toEqual(["notice"]);
+  });
+
+  it("still arms an honest PR whose only oddity is a space in an open file's name", () => {
+    const r = armStep(honestSpaced);
     expect(r.code).toBe(0);
     expect(r.written).toContain("blocking=false");
   });

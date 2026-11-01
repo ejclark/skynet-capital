@@ -399,6 +399,14 @@ describe("ship checkarm — the irreversible class never auto-merges", () => {
     expect(stdout).toContain("auto-merge may arm");
   });
 
+  it("still refuses when a file named --base sits right before the protected path", () => {
+    // `ship automerge` passes the PR's own file names here, so a name must never read as a flag.
+    const { code, stderr } = run(["checkarm", "--base", "src/server/account-identity-gate.ts"]);
+
+    expect(code).toBe(5);
+    expect(stderr).toContain("src/server/account-identity-gate.ts");
+  });
+
   it("refuses to answer at all with no paths, rather than clearing an empty question", () => {
     // An empty argument list must never read as "nothing protected".
     expect(run(["checkarm"]).code).toBe(1);

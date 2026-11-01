@@ -7,7 +7,7 @@
 // it rides the existing `verify` job — no workflow file touched, so this lands as an ordinary PR.
 //   node scripts/envelope-scan.mjs             # enforce for the current branch (exit 1 on breach)
 //   node scripts/envelope-scan.mjs --list      # print the protected list (no git, always exit 0)
-//   node scripts/envelope-scan.mjs --check <paths...>   # protected?
+//   node scripts/envelope-scan.mjs --check [--] <paths...>   # protected? (-- when paths come from a diff)
 //   node scripts/envelope-scan.mjs --lane feedback/9 --base origin/main   # explicit, for specs
 // Exit 1 also means "could not verify" — a missing manifest, an undiffable base, an unnameable
 // branch, an unreadable base package.json — each printed as its own UNKNOWN, never as a pass.
@@ -80,7 +80,8 @@ export function globToRegExp(pattern) {
       out += c;
     }
   }
-  return new RegExp(`^${out}$`);
+  // `s`: a file name can hold a newline, and `.*` must not stop at it (the arm job passes names raw).
+  return new RegExp(`^${out}$`, "s");
 }
 
 /** The rule a path breaches, or null. Pure — the specs drive this directly. */
@@ -107,23 +108,18 @@ export const normalizeCheckPath = (given, root = process.cwd()) => {
   return rel === "" || rel === ".." || rel.startsWith("../") ? given : rel;
 };
 
-/** Flags that take a value, so `--check a b --base <sha>` never reads the sha as a path (the arm
- *  job passed exactly that for a month and got a harmless extra row — harmless only because a sha
- *  matches no rule; a flag value that happened to match one would have been a false hit). */
+/** Flags that take a value. They count only BEFORE the first path, and `--` ends them: the arm job's
+ *  paths are file NAMES a PR chooses, so parsing a flag anywhere let a file named `--base`, or a
+ *  decoy named `x --lane` once word-split, swallow the protected path after it (2026-11-01). */
 const FLAGS_WITH_VALUE = ["--base", "--lane"];
 
-/** Pure: the paths among `--check`'s arguments, flags and their values left out. */
+/** Pure: the paths among `--check`'s arguments, up-front flags and their values left out. An unknown
+ *  `--word` is the first path, not a flag, so it cannot shield a real flag behind it. */
 export function checkPaths(args) {
-  const paths = [];
-  for (let i = 0; i < args.length; i += 1) {
-    const a = args[i];
-    if (FLAGS_WITH_VALUE.includes(a)) {
-      i += 1;
-    } else if (!a.startsWith("--")) {
-      paths.push(a);
-    }
-  }
-  return paths;
+  let i = 0;
+  while (FLAGS_WITH_VALUE.includes(args[i])) i += 2;
+  if (args[i] === "--") i += 1;
+  return args.slice(i);
 }
 
 // --check: is this path (or these paths) protected? JSON out, always exit 0 — the build session

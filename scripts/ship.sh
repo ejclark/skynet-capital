@@ -591,7 +591,7 @@ EOF_SHOTS
     # The arming usually happens through the MCP tool, which never runs this script — so the
     # instruction printed here is the last place the envelope answer can reach the session that
     # arms. Print the REFUSAL as the next step when the diff is in the irreversible class.
-    elif ! opened_hits="$(git diff --name-only "origin/$base...HEAD" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check --base "origin/$base" | python3 -c '
+    elif ! opened_hits="$(git diff -z --name-only --no-renames "origin/$base...HEAD" | xargs -0 -r node "$(dirname "$0")/envelope-scan.mjs" --check -- | python3 -c '
 import sys, json
 rows = json.load(sys.stdin)
 hits = [r for r in rows if r.get("blocking")]
@@ -623,13 +623,10 @@ sys.exit(1 if hits else 0)
 # Prints one indented line per protected path; returns 1 when any was found. Never exits, so a
 # caller can ASK the question without being killed by the answer.
 #
-# Filters on `blocking`, not `protected`: a diffAware rule (envelope.json $diffAwareComment) whose
-# real diff is a provably safe pure insertion comes back protected=true but blocking=false, and
-# should arm. Pass --base <ref> (paths before it) to get that real-diff answer; without --base,
-# `blocking` just mirrors `protected` (today's behavior — used by the bare `checkarm <paths>` CLI
-# form, which has no base to diff against).
+# Filters on `blocking`, not `protected`, the field the arm job reads. The paths go after `--`
+# because `ship automerge` passes the PR's own file names, and a name must never read as a flag.
 envelope_hits() {
-  node "$(dirname "$0")/envelope-scan.mjs" --check "$@" | python3 -c '
+  node "$(dirname "$0")/envelope-scan.mjs" --check -- "$@" | python3 -c '
 import sys, json
 rows = json.load(sys.stdin)
 hits = [r for r in rows if r.get("blocking")]
@@ -684,7 +681,7 @@ cmd_automerge() {
     echo "Split the PR, or arm it by hand after checking envelope-scan yourself." >&2
     exit 5
   fi
-  cmd_checkarm "${paths[@]}" --base "origin/$base_ref"
+  cmd_checkarm "${paths[@]}"
 
   # NEVER ARM PAST INTEGRATION TESTS (2026-09-30, #4094). Native auto-merge waits only on REQUIRED
   # checks, and only `verify` was required then — so arming here the moment a PR opened let #4151, #4155
@@ -845,7 +842,7 @@ cmd_merge() {
 platter_protected() {
   local names; names="$(cat)"
   [ -n "$names" ] || return 0
-  printf '%s\n' "$names" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check | python3 -c '
+  printf '%s\n' "$names" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check -- | python3 -c '
 import sys, json
 print(" ".join(r["path"] for r in json.load(sys.stdin) if r.get("protected")))
 '

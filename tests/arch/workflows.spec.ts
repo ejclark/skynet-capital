@@ -726,7 +726,7 @@ jobs:
 describe("pipeline — PR diffs are the PR's own changes (three-dot)", () => {
   const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
   const range =
-    /git diff --name-only "?\$\{\{ github\.event\.pull_request\.base\.sha \}\}(\.\.\.|"? "?)\$\{\{ github\.event\.pull_request\.head\.sha \}\}/g;
+    /git diff (?:-z )?--name-only (?:--no-renames )?"?\$\{\{ github\.event\.pull_request\.base\.sha \}\}(\.\.\.|"? "?)\$\{\{ github\.event\.pull_request\.head\.sha \}\}/g;
 
   it("every base..head diff in pipeline.yml uses the merge-base range", () => {
     const seps = [...pipeline.matchAll(range)].map((m) => m[1]);
@@ -739,7 +739,7 @@ describe("pipeline — PR diffs are the PR's own changes (three-dot)", () => {
     const body = step.slice(0, step.indexOf("- name:", 10));
     // The scan runs from the base commit's own copy of the list and the scanner — the attack it
     // closes and the proof it still refuses are in tests/arch/arm-base-read.spec.ts.
-    expect(body).toContain("node scripts/envelope-scan.mjs --check $FILES");
+    expect(body).toContain('node scripts/envelope-scan.mjs --check -- "${FILES[@]}"');
     expect(body).toContain("jq -er");
     expect(body).toContain("::notice::not arming");
   });
