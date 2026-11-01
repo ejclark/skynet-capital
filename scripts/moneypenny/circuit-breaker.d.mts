@@ -3,6 +3,8 @@
 
 export interface BreakerConfig {
   readonly maxSpendUsd: number;
+  /** The line while the work-mode dial reads `surge`; never under `maxSpendUsd` (#6020). */
+  readonly surgeMaxSpendUsd: number;
   readonly windowHours: number;
   readonly trackingIssue: number;
   readonly trippedLabel: string;
@@ -49,11 +51,14 @@ export function tripBreaker(opts: {
 
 /** The one entry point the workflow calls. Checks the label first (cheap, no spend query when
  *  already tripped); if clear, measures spend and trips the breaker on crossing the threshold.
- *  Never throws on a normal trip — only when the breaker's own machinery is broken. */
+ *  Never throws on a normal trip — only when the breaker's own machinery is broken. The line is
+ *  `surgeMaxSpendUsd` when `readPosition` answers `surge` (asked only once spend passes
+ *  `maxSpendUsd`), else `maxSpendUsd`; it defaults to the live work-mode dial. */
 export function checkCircuitBreaker(opts?: {
   config?: BreakerConfig;
   exec?: Exec;
   sleep?: Sleep;
+  readPosition?: () => string;
 }): {
   dispatch: boolean;
   reason: string;

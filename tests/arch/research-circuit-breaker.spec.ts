@@ -29,6 +29,7 @@ import {
 
 const CONFIG = {
   maxSpendUsd: 100,
+  surgeMaxSpendUsd: 200,
   windowHours: 24,
   trackingIssue: 2946,
   trippedLabel: "research-circuit-breaker-tripped",
@@ -72,20 +73,73 @@ describe("circuit breaker config — fail closed", () => {
   });
 
   it.each([
-    ["zero maxSpendUsd", { maxSpendUsd: 0, windowHours: 24, trackingIssue: 1, trippedLabel: "x" }],
+    [
+      "zero maxSpendUsd",
+      {
+        maxSpendUsd: 0,
+        surgeMaxSpendUsd: 200,
+        windowHours: 24,
+        trackingIssue: 1,
+        trippedLabel: "x",
+      },
+    ],
     [
       "negative maxSpendUsd",
-      { maxSpendUsd: -5, windowHours: 24, trackingIssue: 1, trippedLabel: "x" },
+      {
+        maxSpendUsd: -5,
+        surgeMaxSpendUsd: 200,
+        windowHours: 24,
+        trackingIssue: 1,
+        trippedLabel: "x",
+      },
     ],
     [
       "fractional windowHours",
-      { maxSpendUsd: 100, windowHours: 24.5, trackingIssue: 1, trippedLabel: "x" },
+      {
+        maxSpendUsd: 100,
+        surgeMaxSpendUsd: 200,
+        windowHours: 24.5,
+        trackingIssue: 1,
+        trippedLabel: "x",
+      },
     ],
-    ["zero windowHours", { maxSpendUsd: 100, windowHours: 0, trackingIssue: 1, trippedLabel: "x" }],
-    ["missing trackingIssue", { maxSpendUsd: 100, windowHours: 24, trippedLabel: "x" }],
+    [
+      "zero windowHours",
+      {
+        maxSpendUsd: 100,
+        surgeMaxSpendUsd: 200,
+        windowHours: 0,
+        trackingIssue: 1,
+        trippedLabel: "x",
+      },
+    ],
+    [
+      "missing trackingIssue",
+      { maxSpendUsd: 100, surgeMaxSpendUsd: 200, windowHours: 24, trippedLabel: "x" },
+    ],
+    [
+      "missing surgeMaxSpendUsd",
+      { maxSpendUsd: 100, windowHours: 4, trackingIssue: 1, trippedLabel: "x" },
+    ],
+    [
+      "a surge line under the normal one",
+      {
+        maxSpendUsd: 100,
+        surgeMaxSpendUsd: 50,
+        windowHours: 4,
+        trackingIssue: 1,
+        trippedLabel: "x",
+      },
+    ],
     [
       "empty trippedLabel",
-      { maxSpendUsd: 100, windowHours: 24, trackingIssue: 1, trippedLabel: "" },
+      {
+        maxSpendUsd: 100,
+        surgeMaxSpendUsd: 200,
+        windowHours: 24,
+        trackingIssue: 1,
+        trippedLabel: "",
+      },
     ],
   ])("refuses a config with %s rather than guessing", (_label, bad) => {
     const file = join(mkdtempSync(join(tmpdir(), "breaker-")), "breaker.json");
@@ -101,11 +155,20 @@ describe("circuit breaker config — fail closed", () => {
     const cfg = JSON.parse(readFileSync("research-circuit-breaker.json", "utf8"));
     expect(loadBreakerConfig()).toEqual({
       maxSpendUsd: cfg.maxSpendUsd,
+      surgeMaxSpendUsd: cfg.surgeMaxSpendUsd,
       windowHours: cfg.windowHours,
       trackingIssue: cfg.trackingIssue,
       trippedLabel: cfg.trippedLabel,
     });
     expect(cfg.maxSpendUsd).toBeGreaterThan(0);
+  });
+
+  // Eric's `A2` on #6020 (2026-11-01): surge is 2x the one line every other mode shares. Moving
+  // either number is his call (the file is in envelope.json), so the ratio is pinned here too.
+  it("ships a surge line twice the normal one, over a 4h window", () => {
+    const cfg = loadBreakerConfig();
+    expect(cfg.surgeMaxSpendUsd).toBe(2 * cfg.maxSpendUsd);
+    expect(cfg.windowHours).toBe(4);
   });
 });
 
@@ -194,6 +257,38 @@ describe("recentResearchSpend", () => {
       throw new Error(`unexpected call: ${args.join(" ")}`);
     };
     expect(recentResearchSpend({ windowHours: 24, exec: custom })).toBeCloseTo(6.35, 2);
+  });
+
+  // #6020: every fixture above is in the `::notice::` form the workflow WRITES. The log GitHub
+  // serves back renders it as `##[notice]`, so the breaker read $0.00 on every real tick. This
+  // fixture is a real research leg's cost step (run 41279014389, 2026-11-01), the echoed script
+  // source included: its `usd=$COST` lines carry no number and must never count.
+  it("reads the cost line from a real job log, where GitHub renders it as ##[notice]", () => {
+    const realLog = readFileSync(
+      "tests/fixtures/circuit-breaker/research-leg-cost-step.txt",
+      "utf8",
+    );
+    const custom = (_cmd: string, args: readonly string[]) => {
+      if (args[1] === "list")
+        return JSON.stringify([{ databaseId: 1, createdAt: nowIso, status: "completed" }]);
+      if (args[1] === "view") return realLog;
+      throw new Error(`unexpected call: ${args.join(" ")}`);
+    };
+    expect(recentResearchSpend({ windowHours: 4, exec: custom })).toBeCloseTo(0.3147416, 6);
+  });
+
+  // #6020: the newest 50 runs of EVERY event type looked back less than 4h on 155 of 187 ticks.
+  // Research legs run only on dispatch, and no 4h has held more than 68 dispatch runs.
+  it("lists dispatch runs only, enough of them to cover the window", () => {
+    let listArgs: readonly string[] = [];
+    const custom = (_cmd: string, args: readonly string[]) => {
+      if (args[1] !== "list") throw new Error(`unexpected call: ${args.join(" ")}`);
+      listArgs = args;
+      return "[]";
+    };
+    recentResearchSpend({ windowHours: 4, exec: custom });
+    expect(listArgs[listArgs.indexOf("--event") + 1]).toBe("workflow_dispatch");
+    expect(Number(listArgs[listArgs.indexOf("--limit") + 1])).toBeGreaterThanOrEqual(200);
   });
 
   it("excludes runs outside the window and runs that never completed", () => {
@@ -427,13 +522,66 @@ describe("checkCircuitBreaker — the orchestrator", () => {
         return "";
       throw new Error(`unexpected: ${args.join(" ")}`);
     };
-    const result = checkCircuitBreaker({ config: CONFIG, exec: custom });
+    const result = checkCircuitBreaker({
+      config: CONFIG,
+      exec: custom,
+      readPosition: () => "normal",
+    });
     expect(result.dispatch).toBe(false);
     expect(result.reason).toMatch(/breaker tripped/);
     // The trip actually fired — the label-apply call happened, not just the decision.
     expect(
       calls.some((a) => a[0] === "issue" && a[1] === "edit" && a.includes(CONFIG.trippedLabel)),
     ).toBe(true);
+  });
+
+  // THE SURGE LINE (#6020, Eric's `A2`): one line at halt, conserve and normal, twice it at surge.
+  describe("picks its line from the work-mode dial", () => {
+    const spending = (usd: number) => {
+      const nowIso = new Date().toISOString();
+      const calls: (readonly string[])[] = [];
+      const exec = (_cmd: string, args: readonly string[]) => {
+        calls.push(args);
+        if (args[0] === "api") return JSON.stringify({ labels: [] });
+        if (args[1] === "list")
+          return JSON.stringify([{ databaseId: 1, createdAt: nowIso, status: "completed" }]);
+        if (args[1] === "view") return `##[notice]cost — event=e usd=${usd} turns=1\n`;
+        return ""; // the trip's label and comment writes
+      };
+      return { exec, calls };
+    };
+    const tripped = (calls: (readonly string[])[]) =>
+      calls.some((a) => a[0] === "issue" && a[1] === "edit");
+
+    it("holds a spend between the two lines at surge", () => {
+      const { exec, calls } = spending(150);
+      const result = checkCircuitBreaker({ config: CONFIG, exec, readPosition: () => "surge" });
+      expect(result).toEqual({ dispatch: true, reason: "spend $150.00 of $200 (surge) over 24h" });
+      expect(tripped(calls)).toBe(false);
+    });
+
+    it.each(["normal", "conserve", "halt"])("trips the same spend at %s", (position) => {
+      const { exec, calls } = spending(150);
+      const result = checkCircuitBreaker({ config: CONFIG, exec, readPosition: () => position });
+      expect(result.dispatch).toBe(false);
+      expect(result.reason).toBe("spend $150.00 over 24h exceeds $100 — breaker tripped");
+      expect(tripped(calls)).toBe(true);
+    });
+
+    it("trips at surge once spend passes the surge line, naming that line", () => {
+      const { exec, calls } = spending(201);
+      const result = checkCircuitBreaker({ config: CONFIG, exec, readPosition: () => "surge" });
+      expect(result.reason).toMatch(/exceeds \$200 \(surge\)/);
+      expect(calls.find((a) => a[1] === "comment")?.at(-1)).toContain("$200 threshold");
+    });
+
+    it("never reads the dial while spend is under the normal line", () => {
+      const { exec } = spending(40);
+      const readPosition = () => {
+        throw new Error("the dial should not be read");
+      };
+      expect(checkCircuitBreaker({ config: CONFIG, exec, readPosition }).dispatch).toBe(true);
+    });
   });
 
   // FAIL CLOSED at the orchestrator level too — a broken breaker must never silently permit

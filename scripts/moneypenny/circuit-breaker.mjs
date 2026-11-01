@@ -27,6 +27,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { sleepSync, withRetry } from "./gh.mjs";
+import { readWorkMode } from "./work-mode.mjs";
 
 const CONFIG_FILE = join(process.cwd(), "research-circuit-breaker.json");
 
@@ -40,10 +41,16 @@ export function loadBreakerConfig(file = CONFIG_FILE) {
         "ceiling — see issue #2946. Restore the file rather than removing the breaker.",
     );
   const cfg = JSON.parse(readFileSync(file, "utf8"));
-  const { maxSpendUsd, windowHours, trackingIssue, trippedLabel } = cfg;
+  const { maxSpendUsd, surgeMaxSpendUsd, windowHours, trackingIssue, trippedLabel } = cfg;
   if (!(typeof maxSpendUsd === "number" && maxSpendUsd > 0))
     throw new Error(
       `moneypenny: ${file} maxSpendUsd must be a positive number, got ${JSON.stringify(maxSpendUsd)}.`,
+    );
+  // Surge only ever RAISES the line; a surge figure under the normal one is a typo, not a policy.
+  if (!(typeof surgeMaxSpendUsd === "number" && surgeMaxSpendUsd >= maxSpendUsd))
+    throw new Error(
+      `moneypenny: ${file} surgeMaxSpendUsd must be a number at least maxSpendUsd, got ` +
+        `${JSON.stringify(surgeMaxSpendUsd)}.`,
     );
   if (!(Number.isInteger(windowHours) && windowHours >= 1))
     throw new Error(
@@ -57,7 +64,7 @@ export function loadBreakerConfig(file = CONFIG_FILE) {
     throw new Error(
       `moneypenny: ${file} trippedLabel must be a non-empty string, got ${JSON.stringify(trippedLabel)}.`,
     );
-  return { maxSpendUsd, windowHours, trackingIssue, trippedLabel };
+  return { maxSpendUsd, surgeMaxSpendUsd, windowHours, trackingIssue, trippedLabel };
 }
 
 /** Real `gh` calls by default; every function below takes `exec` so specs can inject a fake one
@@ -120,13 +127,16 @@ export function isBreakerTripped({
 
 /** Total `total_cost_usd` across every matrix-leg research session that completed within the
  *  rolling window, read from real GitHub Actions run logs — the cost meter (#2979) already writes
- *  one greppable `::notice::cost — event=<id> usd=<n> ...` line per session, on every outcome.
+ *  one greppable cost line per session, on every outcome.
  *
  *  COST OF THIS CHECK, stated plainly (house doctrine: never hide a resource cost). One
  *  `gh run list` (cheap, a single list call), then one `gh run view --log` PER RUN in the window
  *  — not per matrix leg, since a single run's log already carries every leg's cost line, so this
- *  is bounded by TICK frequency, not by session count. `--limit 50` caps the worst case even
- *  during a real runaway, which is exactly when this needs to keep working cheaply. This is a
+ *  is bounded by TICK frequency, not by session count. The list is dispatch runs only, because
+ *  research legs run on nothing else, and `--limit 200` sits well over the most dispatch runs any
+ *  4h has held (68, #6020's 14-day count). It used to be the newest 50 runs of EVERY event type,
+ *  and a push-heavy 4h holds 78 to 390 of those, so 155 of 187 ticks looked back less than 4h
+ *  (#6020, 2026-10-26: at the 10-19 02:05Z peak it saw $4.50 over 32 minutes of a $50.34 window). This is a
  *  read-only safety check, not speculative polling — the free-diagnostics-first doctrine
  *  (CLAUDE.md) governs probes that COULD avoid spending the resource; there is no cheaper way to
  *  learn what a session actually cost than reading what it reported. */
@@ -140,10 +150,12 @@ export function recentResearchSpend({ windowHours, exec = defaultExec, sleep = s
         "run",
         "list",
         "--workflow=moneypenny-events.yml",
+        "--event",
+        "workflow_dispatch",
         "--json",
         "databaseId,createdAt,status",
         "--limit",
-        "50",
+        "200",
       ],
       sleep,
     );
@@ -163,7 +175,6 @@ export function recentResearchSpend({ windowHours, exec = defaultExec, sleep = s
   const inWindow = runs.filter((r) => r.status === "completed" && r.createdAt >= sinceIso);
 
   let totalUsd = 0;
-  const COST_LINE = /::notice::cost — event=\S+ usd=([\d.]+)/g;
   for (const run of inWindow) {
     let log;
     try {
@@ -178,6 +189,14 @@ export function recentResearchSpend({ windowHours, exec = defaultExec, sleep = s
   }
   return totalUsd;
 }
+
+/** One session's cost line as the log GitHub serves back. The workflow WRITES `::notice::cost —
+ *  event=<id> usd=<n> …` to stdout, but `gh run view --log` renders that command as `##[notice]cost
+ *  — …`, so a pattern for the written form read $0.00 on every tick from #2946 to #6020 (2026-10-19
+ *  01:37Z: "spend $0.00 of $15" after about $29 in the prior 75 minutes). Both forms are accepted.
+ *  The step also echoes its own source into the log, `usd=$COST` with no number, so the pattern
+ *  insists on a digit after `usd=` (tests/fixtures/circuit-breaker/ is a real leg's log). */
+const COST_LINE = /(?:##\[notice\]|::notice::)cost — event=\S+ usd=([\d.]+)/g;
 
 /** Matrix legs of the `build-events` job — the only job that writes a cost line. GitHub names
  *  each leg "<job name> (<matrix value>)", and an unexpanded skipped matrix keeps the bare name. */
@@ -266,13 +285,21 @@ export function tripBreaker({
  *  throws on a NORMAL trip (that is the expected, correct outcome, not a failure); throws only
  *  when the breaker's own machinery (config, GH queries) is itself broken, per the fail-closed
  *  doctrine above. Checks the label FIRST and returns immediately if already tripped, so a repeat
- *  tick after a trip costs one cheap label read, never a spend query. */
+ *  tick after a trip costs one cheap label read, never a spend query.
+ *
+ *  THE SURGE LINE (#6020, Eric picked `A2` 2026-11-01): `maxSpendUsd` holds at halt, conserve and
+ *  normal, and `surgeMaxSpendUsd` holds while the work-mode dial reads `surge`. One line for every
+ *  mode but surge, because spend per 4h follows how often ticks run, not how many legs each tick
+ *  takes: 10-16, under conserve, was the dearest day measured. The dial is read only once spend is
+ *  past the normal line, since surge can only raise it, so a quiet tick costs no extra call. An
+ *  unreadable dial reads `conserve` (work-mode.mjs), which keeps the lower line. */
 export function checkCircuitBreaker({
   config = loadBreakerConfig(),
   exec = defaultExec,
   sleep = sleepSync,
+  readPosition = () => readWorkMode().position,
 } = {}) {
-  const { maxSpendUsd, windowHours, trackingIssue, trippedLabel } = config;
+  const { maxSpendUsd, surgeMaxSpendUsd, windowHours, trackingIssue, trippedLabel } = config;
 
   if (isBreakerTripped({ trackingIssue, trippedLabel, exec, sleep }))
     return {
@@ -281,16 +308,19 @@ export function checkCircuitBreaker({
     };
 
   const spentUsd = recentResearchSpend({ windowHours, exec, sleep });
-  if (spentUsd > maxSpendUsd) {
-    tripBreaker({ trackingIssue, trippedLabel, spentUsd, maxSpendUsd, windowHours, exec });
+  const surge = spentUsd > maxSpendUsd && readPosition() === "surge";
+  const lineUsd = surge ? surgeMaxSpendUsd : maxSpendUsd;
+  const lineName = surge ? `$${lineUsd} (surge)` : `$${lineUsd}`;
+  if (spentUsd > lineUsd) {
+    tripBreaker({ trackingIssue, trippedLabel, spentUsd, maxSpendUsd: lineUsd, windowHours, exec });
     return {
       dispatch: false,
-      reason: `spend $${spentUsd.toFixed(2)} over ${windowHours}h exceeds $${maxSpendUsd} — breaker tripped`,
+      reason: `spend $${spentUsd.toFixed(2)} over ${windowHours}h exceeds ${lineName} — breaker tripped`,
     };
   }
 
   return {
     dispatch: true,
-    reason: `spend $${spentUsd.toFixed(2)} of $${maxSpendUsd} over ${windowHours}h`,
+    reason: `spend $${spentUsd.toFixed(2)} of ${lineName} over ${windowHours}h`,
   };
 }
