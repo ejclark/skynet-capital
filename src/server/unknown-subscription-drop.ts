@@ -11,7 +11,7 @@ import {
   type SettingsChange,
   type SettingsChangeLog,
 } from "./settings-change-log.js";
-import { subscriptionSummary } from "./subscription-changes.js";
+import { change, subscriptionSummary } from "./subscription-changes.js";
 import type { SubscriptionStore } from "./subscription-store.js";
 
 /**
@@ -32,8 +32,11 @@ import type { SubscriptionStore } from "./subscription-store.js";
  * tries again. A failure on one account never stops the others.
  *
  * THE LIMIT: the registry read is this build's. An app rolled back past the commit that added a
- * playbook would drop subscriptions to it, each with its line (its settings as they were, for
- * resubscribing by hand). Paper money, recoverable, and said here rather than guarded against.
+ * playbook would drop subscriptions to it, and an owner's own view on that pair goes with them on
+ * the same poll (`prunePairViews`). So would an app that seeds an id only a newer bots build knows,
+ * in a bots-first deploy, and the seed's marker stops it coming back. Each drop has its line, with
+ * the settings as they were, for resubscribing by hand: paper money, recoverable, and said here
+ * rather than guarded against.
  */
 
 /** Who drops a subscription when no person did; the Settings card reads it as the app's own. */
@@ -59,7 +62,7 @@ function withAccount(
  */
 export function dropUnknownSubscriptions(
   subscriptions: SubscriptionStore,
-  changes: SettingsChangeLog | undefined,
+  changes: SettingsChangeLog,
   members: MemberConvictionStore | undefined,
   at = new Date(),
   onError: (message: string) => void = (message) => process.emitWarning(message),
@@ -67,22 +70,20 @@ export function dropUnknownSubscriptions(
   const state = subscriptions.loadIfReadable();
   if (!state) return [];
   const accounts = Object.entries(state).filter(([, subs]) => subs.some(isUnknown));
-  if (accounts.length === 0 || changes?.readable() === false) return [];
+  if (accounts.length === 0 || !changes.readable()) return [];
 
   const viewOf = ownViewsOf(members);
   const names = convictionNames(members);
-  const lineFor = (setting: string, before: string | null): SettingsChange => ({
-    at: at.toISOString(),
-    setting,
-    before,
-    after: null,
-    proposedBy: UNKNOWN_PLAYBOOK_RULE_AUTHOR,
-    approvedBy: UNKNOWN_PLAYBOOK_RULE_AUTHOR,
-  });
   const linesFor = (accountId: string, sub: PlaybookSubscription): SettingsChange[] => {
     const moved = pointerMove(accountId, sub, undefined);
     return [
-      lineFor(`subscription:${sub.playbookId}`, subscriptionSummary(sub, viewOf)),
+      change(
+        `subscription:${sub.playbookId}`,
+        subscriptionSummary(sub, viewOf),
+        null,
+        UNKNOWN_PLAYBOOK_RULE_AUTHOR,
+        at,
+      ),
       ...(moved ? [pointerChange(moved, names, UNKNOWN_PLAYBOOK_RULE_AUTHOR, at)] : []),
     ];
   };
@@ -108,7 +109,7 @@ export function dropUnknownSubscriptions(
       dropped.push(...gone.map((sub) => `${accountId}/${sub.playbookId}`));
     } catch (err) {
       onError(
-        `[subscriptions] left ${accountId}'s subscriptions to unknown playbooks in place, for the next poll: ${String(err)}`,
+        `[subscriptions] could not finish dropping ${accountId}'s subscriptions to unknown playbooks, the next poll tries again: ${String(err)}`,
       );
     }
   }

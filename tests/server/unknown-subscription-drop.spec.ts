@@ -10,10 +10,12 @@ import { resolveBotRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import { BotControlsStore } from "../../src/server/bot-controls-store.js";
 import { botSettingsView } from "../../src/server/bot-settings-route.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
+import { MemberConvictionStore } from "../../src/server/member-conviction-store.js";
 import { SettingsChangeLog } from "../../src/server/settings-change-log.js";
 import { pollSeedsFromEnv } from "../../src/server/subscription-seed-store.js";
 import { SubscriptionStore } from "../../src/server/subscription-store.js";
 import { dropUnknownSubscriptions } from "../../src/server/unknown-subscription-drop.js";
+import { pairView } from "../../src/subscriptions/pair-conviction.js";
 
 /**
  * #6599 — a subscription whose playbook id no registry entry knows (HC-SAURON, dissolved 2026-10-16)
@@ -151,6 +153,28 @@ describe("the controls poll drops a subscription no registry entry knows", () =>
         [`conviction:${STALE}`, "gone-view-2026-10", null],
         [`subscription:${STALE}`, "on · standard · no budget", null],
       ]),
+    );
+  });
+
+  it("takes an owner's own view on the dropped pair on the same poll, its day still in the line", () => {
+    const members = new MemberConvictionStore(join(dir, "member-convictions.json"));
+    const view = pairView({
+      accountId: "sauron",
+      playbookId: STALE,
+      conviction: { reason: "An old call", checkOn: "2027-01-29" },
+      owner: "Sauron",
+      statedOn: "2026-10-01",
+    });
+    expect(members.statePairs([{ accountId: "sauron", playbookId: STALE, view }], NOW)).toEqual([
+      `sauron/${STALE}`,
+    ]);
+    subs.replace({ sauron: [sub(STALE, { convictionId: view.id }), sub("S1-NVDA")] });
+
+    poll(controlsPollReport({}), NOW);
+
+    expect(new MemberConvictionStore(join(dir, "member-convictions.json")).load()).toEqual({});
+    expect(card().find((c) => c.setting === `subscription:${STALE}`)?.before).toBe(
+      "on · standard · no budget · conviction checked 2027-01-29",
     );
   });
 
