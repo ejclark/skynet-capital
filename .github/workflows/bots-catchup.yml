@@ -14,6 +14,18 @@
 #  - any pipeline run in progress → skip (its own deploy-bots job is about to answer);
 #  - main's HEAD without a successful dashboard deploy → skip (the recovery lever reuses the
 #    dashboard's image, which would not yet contain HEAD).
+#
+# THE CLOCK'S ORDER (2026-11-01, #6470's study). Every step after the first runs on `!cancelled()`,
+# because a failed start — the start script exits 3 when its 3-starts-in-6h budget is spent — must
+# not skip the catch-up deploy, and must not skip the one step that can tell the owner. The fitness
+# contracts run LAST with no `continue-on-error`: they used to run second behind the start step, so
+# all six went dark exactly when a corrector had failed, and `continue-on-error` hid a crash as a
+# green step. What each outcome means now: `fitness.mjs --report` exits 0 on a failed contract, whose
+# delivery is its issue, assigned to the owner; a red run means a step crashed or the start's budget
+# is spent. Nothing listens for that red run beyond the Actions page, because moneypenny-repair.yml
+# does not watch this workflow. The App token is minted beside the Fly token here, so it is scoped to
+# the two writes this job makes (issues, actions) and nothing else the App can do; a failed mint
+# falls back to GITHUB_TOKEN rather than skipping anything (the mint carries `continue-on-error`).
 name: Bots deploy catch-up
 
 on:
@@ -33,37 +45,58 @@ concurrency:
 jobs:
   catch-up:
     runs-on: ubuntu-latest
+    # Sized from the 40 most recent successful scheduled runs (read 2026-11-01): 13s min, 21s
+    # median, 26s p90, 29s max. Ten minutes is about twenty times the slowest run and under the
+    # 15-minute tick, so a hung Fly or GitHub read ends before the next tick queues behind it.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0 # the preflight diffs from the machine's stamped GIT_SHA
 
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc # the one source of truth for CI's Node; the scripts below run on it
+
       - name: Set up flyctl
+        id: flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
         with:
           version: 0.4.99
 
+      # Scoped to the two writes this job makes. `continue-on-error` so a failed mint can never
+      # skip the start step: an empty token below falls back to GITHUB_TOKEN.
+      - id: app-token
+        continue-on-error: true
+        uses: ./.github/actions/app-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-issues: write
+          permission-actions: write
+          # Reads only, for the wake below: the sweep's peek lists PRs and claim refs.
+          permission-pull-requests: read
+          permission-contents: read
+
       - name: Start the machine if it is stopped
         # A crash between merges has no deploy coming to recover it (#5955). This keeps the exit
-        # record and a named cause on an issue and stops after 3 starts in 6 hours.
+        # record and a named cause on an issue and stops after 3 starts in 6 hours. Its own timeout
+        # (the script waits 90s for a start at most): the job's timeout is a cancellation, which would
+        # take the contracts below with it, and a step's is a failure, which leaves them their run.
+        timeout-minutes: 3
         env:
           GH_TOKEN: ${{ github.token }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
         run: bash scripts/bots-start-stopped.sh skynet-capital-bots --report
 
-      - name: Check what must stay true
-        # Fitness contracts, probed from outside the apps, so a dead process cannot silence them. A
-        # failure keeps one issue assigned to the owner, which needs no mail credential; a stall
-        # alert detected correctly for two weeks and reached nobody without one (#6470).
-        continue-on-error: true # a reporter must never stop the recovery lever below
-        env:
-          GH_TOKEN: ${{ github.token }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
-        run: node scripts/fitness.mjs --report
-
       - name: Is a bot-relevant commit stranded?
+        # Only on a flyctl that was set up: with none, the machine read below comes back empty, the
+        # preflight says deploy on "no baseline", and the lever restarts the bots from the image they
+        # already run, on every tick. A failed start is still fine here; that is what `!cancelled()` is for.
         id: check
+        if: ${{ !cancelled() && steps.flyctl.outcome == 'success' }}
+        timeout-minutes: 3
         env:
           GH_TOKEN: ${{ github.token }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
@@ -89,9 +122,50 @@ jobs:
           echo "dispatch=$([ "$DECISION" = deploy ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
       - name: Pull the recovery lever
-        if: ${{ steps.check.outputs.dispatch == 'true' }}
+        if: ${{ !cancelled() && steps.check.outputs.dispatch == 'true' }}
+        # The App token when the mint succeeded: a GITHUB_TOKEN dispatch hides the run it starts
+        # from the repair lane (docs/LESSONS.md, 2026-09-08). GITHUB_TOKEN may still dispatch.
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
         run: |
           gh workflow run pipeline.yml --ref main -f force_bots_deploy=true
           echo "::notice::bots app behind main — dispatched pipeline.yml force_bots_deploy (#5006)"
+
+      - name: Where the week stands (report only)
+        # The weekly pace reading against the dial, printed on every tick so it is on record
+        # between touch points (#6470). It writes nothing anywhere, and a failed read must not
+        # cost the contracts below their run.
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/moneypenny/quota.mjs --tick
+
+      - name: Wake the lanes if the repo has gone quiet
+        # THE ONE CRON WAKE (2026-11-01, #6470's study), reversing docs/ROUTINES.md's "no crons"
+        # for this narrow case: lanes wake on pushes, issue events and freed slots, and when all
+        # three stop, main sat 75.8h with research due. If the events workflow has not run in 2h,
+        # the dial is not halt, and the sweep's peek or the due list names something admissible,
+        # this dispatches one `scan` — the same call the push tick makes — at most once per 2h,
+        # counted from the run list. The per-issue retry limit (#6526) is what bounds it: a failed
+        # build is held after three starts in a day, or nine each if two barred issues read as a lane
+        # outage, the bound clock-wake.mjs's header works through. The common case costs one REST
+        # read. App token only (a GITHUB_TOKEN dispatch hides the run from the repair lane), so a
+        # failed mint skips this step and nothing else.
+        if: ${{ !cancelled() && steps.app-token.outputs.token != '' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: node scripts/moneypenny/clock-wake.mjs
+
+      - name: Check what must stay true
+        # Fitness contracts, probed from outside the apps, so a dead process cannot silence them. A
+        # failure keeps one issue assigned to the owner, which needs no mail credential; a stall
+        # alert detected correctly for two weeks and reached nobody without one (#6470). Last, on
+        # `!cancelled()`, with no `continue-on-error`: see the header. The App token's issue
+        # writes wake the lanes (a GITHUB_TOKEN label write starts no run); GITHUB_TOKEN is the
+        # fallback when the mint failed, so a report still lands.
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
+        run: node scripts/fitness.mjs --report

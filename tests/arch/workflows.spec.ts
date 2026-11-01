@@ -726,7 +726,7 @@ jobs:
 describe("pipeline — PR diffs are the PR's own changes (three-dot)", () => {
   const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
   const range =
-    /git diff --name-only "?\$\{\{ github\.event\.pull_request\.base\.sha \}\}(\.\.\.|"? "?)\$\{\{ github\.event\.pull_request\.head\.sha \}\}/g;
+    /git diff (?:-z )?--name-only (?:--no-renames )?"?\$\{\{ github\.event\.pull_request\.base\.sha \}\}(\.\.\.|"? "?)\$\{\{ github\.event\.pull_request\.head\.sha \}\}/g;
 
   it("every base..head diff in pipeline.yml uses the merge-base range", () => {
     const seps = [...pipeline.matchAll(range)].map((m) => m[1]);
@@ -737,7 +737,9 @@ describe("pipeline — PR diffs are the PR's own changes (three-dot)", () => {
   it("the envelope step fails closed and says why it did not arm", () => {
     const step = pipeline.slice(pipeline.indexOf("name: Is the diff protected?"));
     const body = step.slice(0, step.indexOf("- name:", 10));
-    expect(body).toContain("SCAN=$(node scripts/envelope-scan.mjs");
+    // The scan runs from the base commit's own copy of the list and the scanner — the attack it
+    // closes and the proof it still refuses are in tests/arch/arm-base-read.spec.ts.
+    expect(body).toContain('node scripts/envelope-scan.mjs --check -- "${FILES[@]}"');
     expect(body).toContain("jq -er");
     expect(body).toContain("::notice::not arming");
   });
@@ -771,6 +773,83 @@ describe("moneypenny-events — build lanes push as the App, never the persisted
       expect(jobBody(name)).toContain("github_token: ${{ steps.app-token.outputs.token }}");
     });
   }
+});
+
+// The 2026-11-01 audit of #6476: the step that starts a stopped bots machine failed the job before
+// smoke, and the rollback keys on smoke's conclusion, so an image Fly refused to start stayed on the
+// machine with nothing judging it. Smoke has to stay the judge.
+describe("deploy-bots — a machine that will not start still reaches smoke and the rollback", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const job = pipeline.slice(pipeline.indexOf("\n  deploy-bots:"));
+  const step = (name: string) => {
+    const start = job.indexOf(`- name: ${name}`);
+    return job.slice(start, job.indexOf("\n      - name: ", start + 1));
+  };
+
+  it("does not let the start step fail the job", () => {
+    expect(step("Start the bots machine if it landed stopped")).toMatch(
+      /^\s+continue-on-error: true$/m,
+    );
+  });
+
+  it("keeps the start step ahead of smoke, and the rollback keyed on smoke", () => {
+    expect(job.indexOf("- name: Start the bots machine")).toBeLessThan(
+      job.indexOf("- name: Smoke test the bots release"),
+    );
+    expect(step("Roll back bots to previous image")).toContain(
+      "steps.smoke-bots.conclusion == 'failure'",
+    );
+  });
+});
+
+// The dashboard job closed this in #6293; the bots job kept the gap. flyctl can fail `Deploy bots` with
+// the machine already on the new image, smoke is then skipped, and a rollback keyed only on smoke
+// leaves the bad image running until the next deploy.
+describe("deploy-bots — a failed deploy step rolls back exactly as a failed smoke does", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const job = pipeline.slice(pipeline.indexOf("\n  deploy-bots:"));
+  const step = (name: string) => {
+    const start = job.indexOf(`- name: ${name}`);
+    return job.slice(start, job.indexOf("\n      - name: ", start + 1));
+  };
+  const condition =
+    step("Roll back bots to previous image").match(/^\s+if: \$\{\{ (.+) \}\}$/m)?.[1] ?? "";
+
+  type Outcome = "success" | "failure" | "skipped";
+  const rollsBack = (deploy: Outcome, smoke: Outcome, prevImage = "registry.fly.io/app:prev") => {
+    const js = condition
+      .replace(/failure\(\)/g, String(deploy === "failure" || smoke === "failure"))
+      .replace(/steps\.deploy-bots\.conclusion/g, JSON.stringify(deploy))
+      .replace(/steps\.smoke-bots\.conclusion/g, JSON.stringify(smoke))
+      .replace(/steps\.prev-bots\.outputs\.image/g, JSON.stringify(prevImage))
+      .replace(/'([^']*)'/g, (_m, s: string) => JSON.stringify(s))
+      .replace(/!=/g, "!==")
+      .replace(/([^!=])==([^=])/g, "$1===$2");
+    if (!/^[\s\w"./:()|&!=-]+$/.test(js)) throw new Error(`unreadable condition: ${js}`);
+    return new Function(`return (${js});`)() as boolean;
+  };
+
+  it("gives the deploy step the id the rollback reads", () => {
+    expect(step("Deploy bots")).toMatch(/^\s+id: deploy-bots$/m);
+    expect(condition).toContain("steps.deploy-bots.conclusion");
+  });
+
+  it("rolls back when the deploy step fails and smoke is therefore skipped", () => {
+    expect(rollsBack("failure", "skipped")).toBe(true);
+  });
+
+  it("still rolls back when the deploy succeeds and smoke fails", () => {
+    expect(rollsBack("success", "failure")).toBe(true);
+  });
+
+  it("never rolls back a deploy that succeeded, or one the preflight skipped", () => {
+    expect(rollsBack("success", "success")).toBe(false);
+    expect(rollsBack("skipped", "skipped")).toBe(false);
+  });
+
+  it("does not roll back when there is no previous image to go to", () => {
+    expect(rollsBack("failure", "skipped", "")).toBe(false);
+  });
 });
 
 // #6293 (found 2026-10-27): #6039's production-access gate refuses a boot, flyctl fails the

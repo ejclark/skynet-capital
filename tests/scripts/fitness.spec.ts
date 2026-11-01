@@ -24,11 +24,13 @@ import {
 } from "../../scripts/fitness.mjs";
 import {
   ASSIGNED_MARKER,
+  assignsAtOnce,
   OWNER_AFTER_MS,
   REOPEN_LINE,
   REOPEN_WITHIN_MS,
   REOPENED_MARKER,
   RUNGS,
+  whatHappensNext,
   // @ts-expect-error plain .mjs script, no declarations
 } from "../../scripts/fitness-rungs.mjs";
 
@@ -41,9 +43,10 @@ import {
 // by a pass that never saw this spec; it caught 29 before the never-polled stamp seed was added.
 // That list is the regression list now (`node scripts/fitness-audit.mjs --bugs <it> --with ...`,
 // the --with files are the ones named below, plus scripts/deploy-lag.mjs and
-// scripts/bot-relevant.mjs, scripts/bots-start-stopped.sh and scripts/fitness-rungs.mjs), so a new
-// score needs bugs from a fresh blind pass. The 21 after the first 30 attack the owner's assignment
-// and were written by the author of this spec, so they are a regression net and not a blind score.
+// scripts/bot-relevant.mjs, scripts/bots-start-stopped.sh, scripts/fitness-rungs.mjs and the four
+// src/ files decision-cycle loads, listed in fitness-decision-cycle.spec.ts), so a new score needs
+// bugs from a fresh blind pass. The 21 after the first 30 attack the owner's assignment and were
+// written by the author of this spec, so they are a regression net and not a blind score.
 const SCRIPT = resolve("scripts/fitness.mjs");
 const START = resolve("scripts/bots-start-stopped.sh");
 const REPLAY = resolve("tests/fixtures/fitness/replay-2026-10-22.json");
@@ -67,6 +70,14 @@ describe("fitness judges", () => {
     expect(judgeMachine([standby, { state: "stopped", config: {} }]).status).toBe("fail");
     expect(judgeMachine([standby, { state: "started", config: {} }]).status).toBe("pass");
     expect(judgeMachine([standby]).status).toBe("fail");
+  });
+
+  it("fails every state that is not started, not only stopped", () => {
+    for (const state of ["suspended", "replacing", "failed", "destroying", "created"]) {
+      const verdict = judgeMachine([standby, { state, config: {} }]);
+      expect(verdict.status).toBe("fail");
+      expect(verdict.detail).toContain(state);
+    }
   });
 
   it("passes a stop a person marked", () => {
@@ -595,6 +606,7 @@ describe("fitness: the owner is assigned last", () => {
     expect(rungs).toEqual({
       "bots-running": "script",
       "bots-responsive": "wait",
+      "decision-cycle": "wait",
       "main-deploys": "wait",
       "alerts-reach-owner": "owner",
       "owner-assignment-path": "owner",
@@ -662,6 +674,14 @@ describe("fitness: the owner is assigned last", () => {
     ]);
     expect(kinds(due)).toEqual(["assign"]);
     expect(due[0].why).toBe("only the owner can fix this");
+  });
+
+  it("moves a verdict to the owner when a dead credential is behind it, whatever its rung", () => {
+    // The rungs file's own rule. No fail verdict carries `credential` today, since only a blind read
+    // does and blindActions sets the owner rung itself, so this pins the rule for the next caller.
+    expect(assignsAtOnce({ rung: "wait", credential: true })).toBe(true);
+    expect(assignsAtOnce({ rung: "wait" })).toBe(false);
+    expect(whatHappensNext({ rung: "script", credential: true })).toContain("assigned now");
   });
 
   it("assigns once: not again while he holds it, nor after he took himself off", () => {
@@ -972,7 +992,12 @@ app() { [[ "$*" == *"-a $1"* ]] || { echo "Error: app not found" >&2; exit 1; };
 case "$1 $2" in
   "machine list") app "skynet-capital-bots --json" "$@"
     if [[ -f "$S/machines-first" ]]; then cat "$S/machines-first"; rm "$S/machines-first"; else cat "$S/machines"; fi ;;
-  "machine exec") app "skynet-capital-bots --timeout" "$@"; [[ -f "$S/exec-hang" ]] && sleep 5; cat "$S/stamp" ;;
+  "machine exec") app "skynet-capital-bots --timeout" "$@"; [[ -f "$S/exec-hang" ]] && sleep 5
+    case "$4" in
+      "ls -t /data/audit") echo sauron.jsonl ;;
+      "tail -n 2 "*) cat "$S/journal" ;;
+      *) cat "$S/stamp" ;;
+    esac ;;
   "machine start") cp "$S/machines-up" "$S/machines" ;;
   "secrets list") app "skynet-capital --json" "$@"; cat "$S/secrets" ;;
 esac
@@ -1145,6 +1170,9 @@ function fixture(world: World = {}) {
     join(stub, "stamp"),
     JSON.stringify({ lastControlsPollAt: iso(now - (world.stampAgeMs ?? MIN)), bridge: "armed" }),
   );
+  // These specs run at any hour, so decision-cycle must read healthy whenever the market is open.
+  // Its own seeds, with the clock pinned, are in fitness-decision-cycle.spec.ts.
+  writeFileSync(join(stub, "journal"), JSON.stringify({ at: now - 15_000 }));
   const secrets = world.secrets ?? ["SKYNET_ALERT_EMAIL_API_KEY", "SKYNET_ALERT_EMAIL_FROM"];
   writeFileSync(join(stub, "secrets"), JSON.stringify(secrets.map((name) => ({ Name: name }))));
   writeFileSync(join(stub, "issues"), JSON.stringify(world.issues ?? []));
@@ -1370,8 +1398,11 @@ describe("fitness wiring", () => {
     expect(r("main-deploys").status).toBe("pass");
     expect(r("alerts-reach-owner").status).toBe("pass");
     expect(res.stdout).toContain("::warning::fitness: bots-running probe crashed");
-    // A blip is read twice before it counts: two contracts list machines, each twice.
-    expect(lines(calls(stub, "fly"), "machine list")).toBe(4);
+    // A blip is read twice before it counts: two contracts list machines, each twice. A third,
+    // decision-cycle, lists once more while the market is open, and this spec runs at any hour.
+    const listed = lines(calls(stub, "fly"), "machine list");
+    expect(listed).toBeGreaterThanOrEqual(4);
+    expect(listed).toBeLessThanOrEqual(5);
     // A crash on the first read is still a crash when the retry reads clean: the run stays red
     // so the malformed reply is seen, while the contract itself reports what the retry found.
     const once = fixture();

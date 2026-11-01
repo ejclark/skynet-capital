@@ -77,8 +77,9 @@ export interface BotWatchInput {
   readonly records: readonly Pick<DecisionRecord, "at" | "halted">[];
 }
 
-/** Today's regular session, when `now` is inside one. Built from the calendar helpers. */
-function sessionAt(
+/** Today's regular session, when `now` is inside one. Built from the calendar helpers. Also read by
+ *  `scripts/fitness.mjs`, which judges this rule from outside the bots. */
+export function sessionAt(
   now: number,
 ): { readonly date: string; readonly openAt: number; readonly closeAt: number } | undefined {
   return sessionWeek(new Date(now))

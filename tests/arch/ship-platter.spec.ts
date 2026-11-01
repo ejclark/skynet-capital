@@ -105,28 +105,34 @@ describe("ship platter — the ledger is a pure function of the boarded commits"
     expect(stdout).toContain("passes the picture/format contract");
   });
 
-  it("tells Eric to merge with a merge commit — squashing is what loses per-item revert", () => {
-    expect(ledger(["--base", base, "--body"])).toContain("never squash");
+  // 2026-11-01: 20 of 27 landed platters were squashes despite "never squash" in this spot, so the
+  // body stopped asking. Either button lands it; what differs is the revert command, and both exist.
+  it("tells Eric either button lands it, and which revert each button leaves", () => {
+    const body = ledger(["--base", base, "--body"]);
+    expect(body).toContain("Either button lands");
+    expect(body).not.toContain("never squash");
+    expect(body).toContain("scripts/ship.sh platter revert <pr> <sha>");
   });
 
-  // #3754: the merge-method instruction was a Summary bullet and a paragraph below the fold, and it
-  // failed on five of eleven landings. A `> [!WARNING]` is the one thing docs/PICTURES.md reserves
-  // for an irreversible touch, and it sits above `## Summary` where the merge dialog is read.
-  it("carries the merge method as a top-level WARNING, not only as a bullet", () => {
+  // #3754: the merge-method note was a Summary bullet and a paragraph below the fold. A
+  // `> [!WARNING]` is the one thing docs/PICTURES.md reserves for an irreversible touch, and it
+  // sits above `## Summary` where the merge dialog is read — now naming both buttons' reverts.
+  it("carries both buttons' revert paths as a top-level WARNING, not only as a bullet", () => {
     const body = ledger(["--base", base, "--body"]);
     const warning = body.indexOf("> [!WARNING]");
     expect(warning).toBeGreaterThan(-1);
     expect(warning).toBeLessThan(body.indexOf("## Summary"));
     expect(body.slice(warning, warning + 400)).toMatch(/Create a merge commit/);
+    expect(body.slice(warning, warning + 400)).toMatch(/platter revert/);
     expect(body.slice(warning, warning + 400)).not.toContain("<details>");
   });
 
   it("states the revert path that actually exists, for both ways this can land", () => {
     // An honest ledger names what the revert column is worth BEFORE the merge (branch-only),
-    // after a merge commit (per item), and after a squash (the platter, whole or nothing).
+    // after a merge commit (git revert), and after a squash (platter revert, from the PR head ref).
     const body = ledger(["--base", base, "--body"]);
     expect(body).toContain("The revert path that actually exists");
-    expect(body).toMatch(/whole platter or nothing/);
+    expect(body).toMatch(/refs\/pull\/<pr>\/head/);
     expect(body).toContain("scripts/platter-merge-scan.mjs");
   });
 

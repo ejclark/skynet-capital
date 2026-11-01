@@ -47,6 +47,37 @@ describe("--check normalizes the path it is given (#1355)", () => {
     expect(r.path).toBe("/definitely/not/in/this/repo/envelope.json");
     expect(r.protected).toBe(false);
   });
+  // Flags count only before the first path, and `--` ends them. Parsing them anywhere was the hole:
+  // the arm job's paths are file NAMES a PR chooses, so a file named `--base` ate the protected
+  // path after it. A flag's value is still never a path when a caller gives it up front.
+  it("takes a flag's value only before the first path", () => {
+    const rows = check("--base", "0123456789abcdef0123456789abcdef01234567", "envelope.json");
+    expect(rows.map((r) => r.path)).toEqual(["envelope.json"]);
+    expect(check("--lane", "feedback/1", "CLAUDE.md").map((r) => r.path)).toEqual(["CLAUDE.md"]);
+  });
+  it("keeps a caller's up-front flag and still reads every path after -- as a path", () => {
+    const rows = check("--base", "origin/main", "--", "--base", "envelope.json");
+    expect(rows.map((r) => r.path)).toEqual(["--base", "envelope.json"]);
+  });
+  it("judges a protected path behind a root file named --base, after --", () => {
+    const rows = check("--", "--base", "envelope.json");
+    expect(rows.map((r) => r.path)).toEqual(["--base", "envelope.json"]);
+    expect(rows.find((r) => r.path === "envelope.json")?.blocking).toBe(true);
+  });
+  it("judges a protected path behind a decoy that word-splits into a flag", () => {
+    // `git diff --name-only` prints "CLAUDE.m --lane" unquoted; word-split it is two arguments.
+    const rows = check("CLAUDE.m", "--lane", "envelope.json");
+    expect(rows.map((r) => r.path)).toEqual(["CLAUDE.m", "--lane", "envelope.json"]);
+    expect(rows.find((r) => r.path === "envelope.json")?.blocking).toBe(true);
+  });
+  it("judges a name with a newline in it against a protected directory's rule", () => {
+    const [row] = check("--", ".github/workflows/x\ny.yml");
+    expect(row?.blocking).toBe(true);
+  });
+  it("treats an unknown --word as the first path, so it cannot shield a flag behind it", () => {
+    const rows = check("--aaa", "--base", "envelope.json");
+    expect(rows.map((r) => r.path)).toEqual(["--aaa", "--base", "envelope.json"]);
+  });
 });
 
 // #6018 — process.exit() dropped stdout still queued on a pipe, cutting --check JSON at 64 KiB.

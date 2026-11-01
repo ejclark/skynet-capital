@@ -130,16 +130,7 @@ iteration stops moving the number (`LEARNING-LOOP.md` field 14).
   a note in the relevant surface doc *before* an implementation PR opens — the PR then executes an
   already-settled call instead of re-litigating it live. This is a process step, not a gate: a trivial
   single-link move with no structural ambiguity doesn't need its own decision doc.
-- **Fog of war is a first-class reveal pattern, with written criteria** (Eric, 2026-09-06, on the
-  research day lens: "a spot on / perfect scenario"). Withhold a *capability* behind an earnable
-  rung, never *information* a member needs to stay safe; draw the door visible · named · disabled ·
-  counted. The decision tree and the instance ledger live in
-  [`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything. **The general rule this instance taught:** Claude *proposes* patterns it
-  knows how to deliver, rendered on a candidate surface; Eric *places* them. A rejected placement
-  banks the pattern (`docs/IDEAS.md` inbox), never the idea — fog of war was declined for the
-  ticket on 2026-09-05 and landed on the research day lens a day later. Once a textbook case is
-  found, run its criteria across the app: the same tree finds the other candidates *and* strips the
-  gates that were never the pattern, which is how the emerging design gets its noise removed.
+- **Fog of war:** withhold a capability behind an earnable rung, never information a member needs to stay safe ([`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md)). Claude proposes patterns rendered on a candidate surface; Eric places them, and a rejected placement banks the pattern, never the idea. Full rule: [`docs/process/WORKING-AGREEMENTS.md`](docs/process/WORKING-AGREEMENTS.md).
 - **A surface decision arrives as 3–5 named shapes, and every named pattern lands in the ledger**
   (Eric, 2026-09-06: "3-5 design choices seems like a good pattern when building out UI design…
   there are good patterns to become aware of which plant seeds to let them marinade… this builds
@@ -535,4 +526,4 @@ is expected and fine; the docs are the memory.
   a variable as an argument to sed or node, `find` with `( … )`. On 2026-11-01 those cost 148 agents 129 failed calls.
   Spell paths out, even long ones. The tool already reports a non-zero exit, so `echo $?` adds
   nothing. Anything longer goes in a script file in your scratchpad, run as `bash <file>`, aimed at
-  your own worktree. Rail 2 of [`docs/DELEGATION.md`](docs/DELEGATION.md) has the rest.
+  your own worktree. Rail 2 of [`docs/DELEGATION.md`](docs/DELEGATION.md) has the rest. A workflow agent that ends its turn is done: wait in `until` loops.

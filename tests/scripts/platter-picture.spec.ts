@@ -62,12 +62,12 @@ describe("platter picture — the choice at open time", () => {
 });
 
 describe("platter picture — the record after landing", () => {
-  it("draws the squash ending for a single-parent landing, naming the defect", () => {
+  it("draws the squash ending for a single-parent landing, naming the revert that exists", () => {
     const landing = findLanding(LOG, 3711);
     expect(landing?.flattened).toBe(true);
     const pic = landedPicture(landing as NonNullable<typeof landing>);
-    expect(pic).toContain("no item reverts alone");
-    expect(pic).toContain("#3754");
+    expect(pic).toContain("an item reverts by ship revert");
+    expect(pic).not.toContain("#3754");
     expect(pic).toContain("1 + 2");
     expect(pic).toContain("update the review<br/>action");
     expect(lint(pic).status).toBe(0);

@@ -38,6 +38,19 @@ interrogation pass is the adversarial half, this is the generative half. Evidenc
 place: the fog-of-war audit and the propose-then-place rule both came out of the banter *after* the
 research brief, not from the research itself.
 
+## Fog of war
+
+**Fog of war is a first-class reveal pattern, with written criteria** (Eric, 2026-09-06, on the
+research day lens: "a spot on / perfect scenario"). Withhold a *capability* behind an earnable
+rung, never *information* a member needs to stay safe; draw the door visible · named · disabled ·
+counted. The decision tree and the instance ledger live in
+[`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything. **The general rule this instance taught:** Claude *proposes* patterns it
+knows how to deliver, rendered on a candidate surface; Eric *places* them. A rejected placement
+banks the pattern (`docs/IDEAS.md` inbox), never the idea — fog of war was declined for the
+ticket on 2026-09-05 and landed on the research day lens a day later. Once a textbook case is
+found, run its criteria across the app: the same tree finds the other candidates *and* strips the
+gates that were never the pattern, which is how the emerging design gets its noise removed.
+
 ## Plans live in GitHub issues
 
 **Plans live in GitHub issues, never in the repo** (Eric, 2026-08-21: _"plans belong in github

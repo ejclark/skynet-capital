@@ -742,9 +742,10 @@ describe("the committed work-mode.json", () => {
   // #3960 slice 4, the third pair of this shape: the dial's `normal` number must equal whatever the
   // consumer already did, or "normal changes nothing" stops being true. grind.js's MAX_ITEMS is its
   // own sanity ceiling, so a `normal` grindWidth below it would silently narrow every grind run.
-  // #4437: surge's research cap was a guess until a week of ::notice::cost lines priced a tick —
-  // ~$1.01 a session, linear, so 2x normal is ~$12 a tick and 3x (~$18) would cross the spend
-  // breaker's $15/4h line on one tick alone. Pinned as a ratio so a lane PR cannot quietly raise it.
+  // #4437: surge's research cap was a guess until a week of cost lines priced a tick — ~$1.01 a
+  // session, linear, so 2x normal is ~$12 a tick. The spend breaker's surge line is 2x its normal
+  // line too (#6020, A2: $100 per 4h, $200 at surge), so the ratio rides the brake's. Pinned as a
+  // ratio so a lane PR cannot quietly raise it.
   it("keeps surge's research cap at the measured 2x normal (#4437)", () => {
     expect(committed.positions.surge.researchPerTick).toBe(
       2 * committed.positions.normal.researchPerTick,
@@ -825,6 +826,7 @@ describe("naming the label an end date has passed", () => {
     const mode = resolve([label(position)], [until("2026-09-29")]);
     expect(mode.position).toBe("normal");
     expect(mode.endedLabel).toBe(`work-mode:${position}`);
+    expect(mode.endedAtMs).toEqual(expect.any(Number));
   });
 
   it("does not name a halt with no end date, which stays halted", () => {
@@ -850,6 +852,8 @@ describe("naming the label an end date has passed", () => {
   it("does not name a dial already at normal, or one that is not exactly one label", () => {
     expect(resolve([label("normal")]).endedLabel).toBeUndefined();
     expect(resolve([label("surge"), label("normal")]).endedLabel).toBeUndefined();
+    expect(resolve([label("surge"), label("normal")]).ambiguous).toBe(true);
+    expect(resolve([]).ambiguous).toBe(true);
     expect(resolve([]).endedLabel).toBeUndefined();
   });
 });
