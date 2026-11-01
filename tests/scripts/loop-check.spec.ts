@@ -1,4 +1,7 @@
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   checkBody,
   commandOf,
@@ -9,6 +12,7 @@ import {
   unmovedChecks,
   unmovedIssue,
 } from "../../scripts/loop-check.mjs";
+import { parseLoopList } from "../../scripts/loop-list-decide.mjs";
 
 // The learning-loop registry checks itself (2026-10-18 loop census): a due row posts once per date.
 const row = (
@@ -29,6 +33,72 @@ describe("loop-check — the registry's due checks run themselves", () => {
   it("names the command a question carries, or none for a check done by hand", () => {
     expect(commandOf("Pass rates? `npm run research:scorecard`")).toBe("research:scorecard");
     expect(commandOf("Is ownership the limit?")).toBeNull();
+  });
+
+  // 2026-10-31 loop census: five proposed rows named `npm run meter`, which did not exist, and the
+  // live row naming bare `npm run delivery:score` hit its usage error — either way the posted check
+  // reads "did not finish". A row may only name a command package.json actually has.
+  it("every command the live registry names is an npm script", () => {
+    const md = readFileSync(
+      new URL("../../docs/process/LEARNING-LOOP.md", import.meta.url),
+      "utf8",
+    );
+    const scripts = JSON.parse(
+      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+    ).scripts;
+    const named = (parseLoopList(md) ?? [])
+      .map((r) => commandOf(r.question))
+      .filter((c): c is string => c !== null);
+    expect(named.length).toBeGreaterThanOrEqual(4);
+    expect(named.filter((c) => !scripts[c])).toEqual([]);
+  });
+
+  // Two #4056 rows name `npm run delivery:score`, and a bare run is 357 REST calls over about four
+  // minutes (measured 2026-11-01). On a tick where both are due the command runs once. Driven
+  // through a stub `npm` on PATH, since the spawn is the thing being counted.
+  it("runs a command named by two due rows once per tick", () => {
+    const dir = mkdtempSync(join(tmpdir(), "loop-check-"));
+    try {
+      writeFileSync(
+        join(dir, "npm"),
+        `#!/usr/bin/env bash\necho "$*" >> "${join(dir, "calls")}"\necho "scored"\n`,
+        { mode: 0o755 },
+      );
+      writeFileSync(join(dir, "calls"), "");
+      writeFileSync(
+        join(dir, "LEARNING-LOOP.md"),
+        [
+          "## Loops running now",
+          "",
+          "| Loop | The question | Owning issue | State | Next check |",
+          "|---|---|---|---|---|",
+          "| A | Flagged worse? `npm run delivery:score` | #1 | running | 2020-01-01 — wrong if |",
+          "| B | Format predicts? `npm run delivery:score` | #1 | running | 2020-01-01 — wrong if |",
+          "",
+        ].join("\n"),
+      );
+      const out = execFileSync(
+        "node",
+        ["scripts/loop-check.mjs", "--registry", join(dir, "LEARNING-LOOP.md")],
+        {
+          encoding: "utf8",
+          stdio: "pipe",
+          env: {
+            ...process.env,
+            PATH: `${dir}:${process.env.PATH}`,
+            GH_TOKEN: "",
+            GITHUB_TOKEN: "",
+          },
+        },
+      );
+      expect(out).toContain("loop-check: 2 due check(s) listed.");
+      expect(out.match(/scored/g)).toHaveLength(2);
+      expect(readFileSync(join(dir, "calls"), "utf8").trim().split("\n")).toEqual([
+        "run -s delivery:score",
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("reads the tracker issue from the registry's own text", () => {
