@@ -189,6 +189,35 @@ describe("smoke-bots.sh — a pass must hold, not just happen once", () => {
     }
   });
 
+  // The attempt's exec can fail once and the log carry it, then the hold's read the stamp after all.
+  // A stamp read at any point outranks the log, or the fallback passes what the stamp refuses.
+  it("fails in the hold when the stamp it can finally read says the bridge did not arm", () => {
+    const down = stamp({ bridge: "unreachable" });
+    const both = smoke({ list: machine(), "exec.1": "not json", exec: down, logs: MARKER });
+    expect(both.code).toBe(1);
+    expect(both.err).toContain("the health stamp says the bridge is unreachable");
+    const last = smoke({
+      list: machine(),
+      "exec.1": "not json",
+      "exec.2": "not json",
+      exec: down,
+      logs: MARKER,
+    });
+    expect(last.code).toBe(1);
+    expect(last.err).toContain("the health stamp says the bridge is unreachable");
+  });
+
+  it("fails in the hold when the stamp it can finally read is the previous release's", () => {
+    const r = smoke({
+      list: machine(),
+      "exec.1": "not json",
+      exec: stamp({ gitSha: "old0000" }),
+      logs: MARKER,
+    });
+    expect(r.code).toBe(1);
+    expect(r.err).toContain(`the health stamp no longer names ${SHA}`);
+  });
+
   it("still fails a primary that never starts on the expected commit", () => {
     const r = smoke({ list: machine({ sha: "old0000" }), exec: stamp() });
     expect(r.code).toBe(1);

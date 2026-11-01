@@ -77,6 +77,8 @@ bridge_armed() {
 # reads HOLD seconds apart, and the second must show the SAME process still running:
 #   - still `started`, same primary id, still stamped with the expected GIT_SHA;
 #   - no new machine event across the hold (Fly appends exit/start events on a process restart);
+#   - a stamp read at any point names this commit and says the bridge armed, even on a pass that came
+#     from the log fallback: a stamp outranks the log whenever one can be read;
 #   - when the pass came from the stamp: same `pid` and `bootedAt` (no restart inside the machine),
 #     and — only if a controls poll was due inside the hold — `updatedAt`/`lastControlsPollAt` moved.
 # Two `started` reads alone prove nothing: a crash-looping machine reads `started` on every pass.
@@ -113,9 +115,10 @@ hold_breach() {
     elif $b.id != $a.id then "the started primary changed (\($a.id) -> \($b.id))"
     elif $b.sha != $sha then "the primary no longer carries GIT_SHA=\($sha)"
     elif $b.lastEvent != $a.lastEvent then "the machine logged a new event during the hold (exit/restart)"
+    elif $b.health != null and $b.health.gitSha != $sha then "the health stamp no longer names \($sha)"
+    elif $b.health != null and $b.health.bridge != "armed" then "the health stamp says the bridge is \($b.health.bridge)"
     elif $a.health == null then empty
     elif $b.health == null then "the health stamp went unreadable"
-    elif $b.health.gitSha != $sha then "the health stamp no longer names \($sha)"
     elif $b.health.pid != $a.health.pid or $b.health.bootedAt != $a.health.bootedAt
       then "the process restarted (pid \($a.health.pid) -> \($b.health.pid), bootedAt \($a.health.bootedAt) -> \($b.health.bootedAt))"
     elif $poll_due and ($b.health.updatedAt == $a.health.updatedAt or $b.health.lastControlsPollAt == $a.health.lastControlsPollAt)
