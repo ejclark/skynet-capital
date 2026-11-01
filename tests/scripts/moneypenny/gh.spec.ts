@@ -30,6 +30,15 @@ describe("moneypenny gh retry", () => {
   });
 
   // #4675: GitHub's GraphQL internal error names no HTTP status, so `item-edit` got one attempt.
+  // 2026-10-30: two runs died on this reading a run log, and a re-read minutes later was clean.
+  it("treats a dropped HTTP/2 stream as transient", () => {
+    expect(
+      isTransientGhError(
+        "failed to get run log: stream error: stream ID 1; CANCEL; received from peer",
+      ),
+    ).toBe(true);
+  });
+
   it("classifies GraphQL's status-less internal error as transient", () => {
     const GH_SAID =
       "GraphQL: Something went wrong while executing your query on 2026-10-05T23:26:22Z. " +

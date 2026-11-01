@@ -34,12 +34,18 @@
 // (2026-11-01T14:31Z, "A2": $100 per 4h, $200 at surge), read off the work-mode dial so a surge he
 // set gets the wider line and nothing else does. A trip now also assigns him on the tracking issue
 // — the same door the fitness contracts use — because a label and a comment reached nobody.
+//
+// A trip needs a human to clear it, so it is never spent on a reading the brake is unsure of. The
+// window holds past spend while the dial reads now, so two things read as a runaway that were not:
+// a dial it could not read (refused for this tick, with no label; the next tick reads it again), and
+// the end of a real surge, whose spend sits in the window under the narrower line (the surge's line
+// holds until the window has rolled past its end).
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ERIC } from "./decision-callout.mjs";
 import { sleepSync, withRetry } from "./gh.mjs";
-import { readWorkMode } from "./work-mode.mjs";
+import { loadWorkModeConfig, readWorkMode } from "./work-mode.mjs";
 
 const CONFIG_FILE = join(process.cwd(), "research-circuit-breaker.json");
 
@@ -296,13 +302,14 @@ function costLegLogs(runId, cause, exec, sleep) {
 }
 
 /** Trips the breaker: applies the label (creating it first if the repo doesn't have it yet — a
- *  fresh repo or a first-ever trip may not), assigns the owner on the tracking issue, and posts one
- *  comment naming the spend and window so the clearing human has the number, not just the fact.
+ *  fresh repo or a first-ever trip may not), posts one comment naming the spend and window so the
+ *  clearing human has the number, not just the fact, then assigns the owner on the tracking issue.
  *  The assignment is what reaches him: a label and a comment on #2946 notify nobody, and clearing
- *  the breaker is his hand alone — so the trip goes through the same door the fitness contracts
- *  use (scripts/fitness.mjs, `--assignee`), a bot assignment GitHub delivers as a notification.
+ *  the breaker is his hand alone. It goes through REST, the route every other assignment here uses
+ *  (assignments.mjs, fitness.mjs), and last, so a refused one costs a warning and never the comment:
+ *  the label is on by then, and a throw would leave a halt that explains itself to nobody.
  *  Idempotent — safe to call on a tick that finds itself over threshold again before anyone has
- *  cleared it; `--add-label` and `--add-assignee` on what is already there are no-ops. */
+ *  cleared it; `--add-label` and a POST of an existing assignee are no-ops. */
 export function tripBreaker({
   trackingIssue,
   trippedLabel,
@@ -311,6 +318,7 @@ export function tripBreaker({
   windowHours,
   position = "normal",
   exec = defaultExec,
+  warn = console.error,
 }) {
   try {
     exec("gh", [
@@ -328,7 +336,6 @@ export function tripBreaker({
     // --add-label call immediately after, so this is deliberately not fail-closed on its own.
   }
   exec("gh", ["issue", "edit", String(trackingIssue), "--add-label", trippedLabel]);
-  exec("gh", ["issue", "edit", String(trackingIssue), "--add-assignee", ERIC]);
   exec("gh", [
     "issue",
     "comment",
@@ -341,6 +348,52 @@ export function tripBreaker({
       `window recomputes to later. @${ERIC} is assigned because clearing it is his: remove the ` +
       `\`${trippedLabel}\` label from this issue to resume.`,
   ]);
+  try {
+    exec("gh", [
+      "api",
+      "--method",
+      "POST",
+      `repos/{owner}/{repo}/issues/${trackingIssue}/assignees`,
+      "-f",
+      `assignees[]=${ERIC}`,
+    ]);
+  } catch (err) {
+    // stderr: the workflow parses this process's stdout as the verdict's JSON.
+    warn(
+      `::warning::circuit breaker: could not assign ${ERIC} on #${trackingIssue} (${err.message})`,
+    );
+  }
+}
+
+/** When the dial last stopped being at surge, in ms, or null if it never has. An ended surge keeps
+ *  its label until the next push takes it off, and the reader says when it ended; after that the
+ *  dial reads a plain `normal` (one REST call, nothing about the past), and the label event that
+ *  took it off is the only record. So this read is made only when a total is already over the
+ *  narrower line, never on an ordinary tick. Throws when the events cannot be read. */
+export function lastSurgeEnd({
+  mode,
+  exec = defaultExec,
+  sleep = sleepSync,
+  workMode = loadWorkModeConfig(),
+}) {
+  const label = `${workMode.labelPrefix}surge`;
+  if (mode.endedLabel === label) return mode.endedAtMs;
+  const out = ghRead(
+    exec,
+    [
+      "api",
+      "--paginate",
+      `repos/{owner}/{repo}/issues/${workMode.trackingIssue}/events?per_page=100`,
+      "--jq",
+      `.[] | select(.event == "unlabeled" and .label.name == "${label}") | .created_at`,
+    ],
+    sleep,
+  );
+  const ends = String(out ?? "")
+    .split("\n")
+    .map((line) => Date.parse(line))
+    .filter((ms) => !Number.isNaN(ms));
+  return ends.length > 0 ? Math.max(...ends) : null;
 }
 
 /** The one function the workflow calls. Returns `{ dispatch: boolean, reason: string }` — never
@@ -352,9 +405,9 @@ export function checkCircuitBreaker({
   config = loadBreakerConfig(),
   exec = defaultExec,
   sleep = sleepSync,
+  now = Date.now(),
   // The dial decides which line applies (surge's, or everyone else's). Read only once a spend
-  // total exists to compare — a tripped breaker still costs one label read and nothing more. An
-  // unreadable dial reads `conserve` (work-mode.mjs's own fallback), which is the narrower line.
+  // total exists to compare — a tripped breaker still costs one label read and nothing more.
   readMode = () => readWorkMode(exec),
 } = {}) {
   const { windowHours, trackingIssue, trippedLabel } = config;
@@ -365,9 +418,36 @@ export function checkCircuitBreaker({
       reason: `circuit breaker already tripped on issue #${trackingIssue}`,
     };
 
-  const spentUsd = recentResearchSpend({ windowHours, exec, sleep });
-  const position = readMode()?.position ?? "conserve";
-  const maxSpendUsd = thresholdFor(position, config);
+  const spentUsd = recentResearchSpend({ windowHours, exec, sleep, now });
+  const spent = `spend $${spentUsd.toFixed(2)} over ${windowHours}h`;
+  const mode = readMode();
+  // Under the narrower line every position agrees, so only an overspend needs the dial's real word.
+  const unsure = !mode || mode.unreadable || mode.ambiguous;
+  const position = mode?.position ?? "conserve";
+  let maxSpendUsd = thresholdFor(position, config);
+  let dial = position;
+  if (spentUsd > maxSpendUsd) {
+    if (unsure)
+      return {
+        dispatch: false,
+        reason: `${spent} is over $${maxSpendUsd} and the brake could not read the dial — refusing this tick without tripping`,
+      };
+    if (position !== "surge") {
+      let endedAt;
+      try {
+        endedAt = lastSurgeEnd({ mode, exec, sleep });
+      } catch (err) {
+        return {
+          dispatch: false,
+          reason: `${spent} is over $${maxSpendUsd} and the brake could not read when the last surge ended (${err.message}) — refusing this tick without tripping`,
+        };
+      }
+      if (endedAt !== null && now - endedAt < windowHours * 3_600_000) {
+        maxSpendUsd = thresholdFor("surge", config);
+        dial = `${position}, a surge ended inside the window`;
+      }
+    }
+  }
   if (spentUsd > maxSpendUsd) {
     tripBreaker({
       trackingIssue,
@@ -375,17 +455,17 @@ export function checkCircuitBreaker({
       spentUsd,
       maxSpendUsd,
       windowHours,
-      position,
+      position: dial,
       exec,
     });
     return {
       dispatch: false,
-      reason: `spend $${spentUsd.toFixed(2)} over ${windowHours}h exceeds $${maxSpendUsd} (dial at ${position}) — breaker tripped`,
+      reason: `${spent} exceeds $${maxSpendUsd} (dial at ${dial}) — breaker tripped`,
     };
   }
 
   return {
     dispatch: true,
-    reason: `spend $${spentUsd.toFixed(2)} of $${maxSpendUsd} over ${windowHours}h (dial at ${position})`,
+    reason: `spend $${spentUsd.toFixed(2)} of $${maxSpendUsd} over ${windowHours}h (dial at ${dial})`,
   };
 }

@@ -245,14 +245,17 @@ export function resolveWorkMode({
   if (dial.length !== 1) {
     const what = dial.length === 0 ? "no" : `${dial.length} (${dial.join(", ")})`;
     const warning = `work-mode: ${what} ${labelPrefix}* labels on the tracking issue — acting as conserve until exactly one is set`;
+    // `ambiguous`: the labels read fine and still name no one position, as during a flip. A reader
+    // that would act on the position beyond throttling (the spend brake) must not take it as a word.
     return settle("conserve", "fail-closed: the dial is not set to exactly one position", {
       warning,
+      ambiguous: true,
     });
   }
   const position = dial[0].slice(labelPrefix.length);
   if (!POSITIONS.includes(position)) {
     const warning = `work-mode: unknown position "${dial[0]}" — acting as conserve`;
-    return settle("conserve", "fail-closed: unknown position", { warning });
+    return settle("conserve", "fail-closed: unknown position", { warning, ambiguous: true });
   }
   if (position === "normal") return settle("normal", "set to normal");
 
@@ -274,7 +277,7 @@ export function resolveWorkMode({
         : `${position} expired at the end of ${expiry.until} (UTC)`,
       // The one state whose label may be taken off for it (work-mode-title.mjs). A position with no
       // end date also reads normal, but its date may be a second behind its label.
-      { endedLabel: dial[0] },
+      { endedLabel: dial[0], endedAtMs: expiry.endMs },
     );
   return { ...settle(position, `set to ${position} until ${expiry.until}`), until: expiry.until };
 }
