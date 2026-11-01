@@ -101,6 +101,7 @@ import { modelTier } from "./model-tier.mjs";
 import { nextUnheld } from "./pickup-hold.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
+import { closeRedLanePr } from "./red-lane-pr.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
@@ -1501,6 +1502,7 @@ const ONE_CALL_INTENTS = {
     console.log(`· commented on #${i.issueNumber}`);
     return `commented on #${i.issueNumber}`;
   },
+  "close-red-lane-pr": (i) => closeRedLanePr(i),
   "edit-issue-body": (i) => {
     sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
     console.log(`· refreshed the body of #${i.issueNumber}`);
