@@ -185,7 +185,11 @@ ${FIND(n)}
 
 ${SHARED_TREE}
 
-Judge every finding against the code as it is on origin/main NOW (read the current files, not just the diff): a later merge may already have fixed it, or the PR may have broken a caller it never touched. Report a finding only when you can name a concrete failure scenario. Severity: high = wrong money/P&L/state, data loss, crash on a common path, a broken gate or lane; medium = wrong on a real but narrower path; low = edge cases you are unsure anyone hits. Zero findings is a normal answer.`
+Judge every finding against the code as it is on origin/main NOW (read the current files, not just the diff): a later merge may already have fixed it, or the PR may have broken a caller it never touched.
+
+For every check the PR adds or changes, name the signal it reads against the real effect it claims, and report it when the signal can be true while the effect is not. For every read that feeds a verdict, say what it returns when it fails or its window holds no sample, and report it if that equals the all-clear answer. When the PR adds a new way to close, park, label or exempt something, grep every reader of that state and say what each now sees.
+
+Report a finding only when you can name a concrete failure scenario. Severity: high = wrong money/P&L/state, data loss, crash on a common path, a broken gate or lane; medium = wrong on a real but narrower path; low = edge cases you are unsure anyone hits. Zero findings is a normal answer.`
 
 // THE LENS TABLE — one row per way of reading a merged PR, chosen by the paths it touched. `roots` is
 // the same prefix list DEEP_ROOTS uses, and null means every path. Correctness is the only row today,

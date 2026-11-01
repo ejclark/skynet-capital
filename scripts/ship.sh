@@ -438,7 +438,7 @@ EOF_SHOTS
     local verify_why=""
     "$verify_ok" || verify_why=",$(verify_row_fields "$verify_log")"
     # Only for this repo: ship's own specs run it in throwaway repos, and those must not count.
-    git remote get-url origin 2>/dev/null | grep -q 'skynet-capital' \
+    grep -q 'skynet-capital' <<<"$(git remote get-url origin 2>/dev/null)" \
       && mkdir -p "${AGENT_RUNS_DIR:-$HOME/.claude/runs}" 2>/dev/null \
       && printf '{"at":"%s","ok":%s,"branch":"%s"%s}\n' "$(date -u +%FT%TZ)" "$verify_ok" "$(git branch --show-current)" "$verify_why" \
         >> "${AGENT_RUNS_DIR:-$HOME/.claude/runs}/ship-verify.jsonl" 2>/dev/null || true
@@ -455,7 +455,11 @@ EOF_SHOTS
     # Same reasoning for the PLATFORM (2026-10-02, PR #4519): screenshot baselines are
     # `*-chromium-linux.png` only, so on macOS Playwright writes fresh `-darwin` files and fails
     # every `matches the known-good page screenshot` spec — false-red. Local e2e runs on Linux only.
-    if git diff --name-only "origin/$base...HEAD" | grep -qvE '(\.md$|^docs/)'; then
+    # Not piped: a kill by SIGPIPE on a match would read as a docs-only diff and skip these tests. An
+    # empty diff must stay false, and a here-string would hand `grep -v` one blank line to match. A
+    # diff that fails says nothing about what changed, so it runs the tests rather than skipping them.
+    local changed; changed="$(git diff --name-only "origin/$base...HEAD")" || changed="the diff failed"
+    if [ -n "$changed" ] && grep -qvE '(\.md$|^docs/)' <<<"$changed"; then
       if [ "$(uname -s)" != "Linux" ]; then
         echo "ship: ⚠ local integration tests NOT run — screenshot baselines are Linux-only and this is $(uname -s). CI's \`integration tests\` is the gate: the pipeline arms only after it passes. Do not arm by hand."
       elif node -e 'const {chromium}=require("playwright-core");process.exit(require("fs").existsSync(chromium.executablePath())?0:1)' 2>/dev/null; then
