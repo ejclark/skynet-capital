@@ -48,16 +48,16 @@ function lanes(l) {
       `  ${lane}: ${usd(row.usd)} (${row.jobs} jobs${row.unpriced ? `, ${row.unpriced} unpriced` : ""})`,
     );
   const c = l.counts;
-  if (c.unreadRuns)
+  if (c.unreadRuns || c.unlisted.length)
     lines.push(
-      `  no totals: ${c.unreadRuns} run(s) left unread at the REST cap — run again to continue from the cache`,
+      `  no totals: ${c.unreadRuns} run(s) left unread at the REST cap${c.unlisted.length ? ` and ${c.unlisted.join(", ")} not listed` : ""} — run again to continue from the cache`,
     );
   if (c.unreadableRuns)
     lines.push(
       `  floor, not the week: ${c.unreadableRuns} run(s) had no readable log today and are retried next run`,
     );
   lines.push(
-    `  runs: ${c.newRuns} read now, ${c.cachedRuns} from cache, ${c.inProgress} in flight, ${c.skippedShort} under ${l.floorSec}s (no session sets up that fast)`,
+    `  runs: ${c.newRuns} read now, ${c.cachedRuns} from cache, ${c.inProgress} in flight; skipped ${c.skippedEvent} on route-only events, ${c.skippedCancelled} cancelled, ${c.skippedShort} under ${l.floorSec}s`,
   );
   return lines;
 }

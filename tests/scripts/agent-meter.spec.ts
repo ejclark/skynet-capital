@@ -97,10 +97,19 @@ describe("the iteration row", () => {
     ).toBe("- 2026-11-01 · x · iteration · 1 → 1 · 900 tokens · $3.40 · 12 min");
   });
 
-  it("refuses a row with a number missing", () => {
+  it("refuses a row with a number missing or not a number", () => {
     expect(() => iterationRow({ loop: "x", before: 1, tokens: 1, date: "2026-11-01" })).toThrow(
       /after/,
     );
+    expect(() =>
+      iterationRow({
+        loop: "x",
+        before: Number("twelve"),
+        after: 1,
+        tokens: 1,
+        date: "2026-11-01",
+      }),
+    ).toThrow(/--before needs a number/);
   });
 });
 
@@ -155,14 +164,19 @@ describe("agent meter", () => {
           },
           { at: "2026-10-02T01:00:00Z", ok: true },
           { at: "2026-10-02T02:00:00Z", ok: false },
+          { at: "2026-10-02T03:00:00Z", ok: false, step: "", error: "" },
           { at: "2026-09-02T00:00:00Z", ok: false },
         ],
         since,
       ),
     ).toEqual({
-      runs: 3,
-      failed: 2,
-      bySteps: { "typecheck:app": 1, "unknown (row predates the step field)": 1 },
+      runs: 4,
+      failed: 3,
+      bySteps: {
+        "typecheck:app": 1,
+        "unknown (row predates the step field)": 1,
+        "unknown (no step named)": 1,
+      },
     });
   });
 

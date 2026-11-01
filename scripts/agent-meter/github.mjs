@@ -1,13 +1,13 @@
 // The meter's other REST reads (#6470): pipeline runs for the first-pass split, and merged PRs for
 // open-to-merge. Both go through the same counted layer as the lanes, so the run's REST total is
 // one number.
-import { listRuns, REPO } from "./lanes.mjs";
+import { listRuns, noop, REPO } from "./lanes.mjs";
 
 /**
  * Pipeline runs in the window, with each failed main push's job list read once and cached: twelve
  * straight failures on 2026-10-31 were one bots deploy, and only the job name says so.
  */
-export function pipelineRuns(rest, cache, w, maxRest) {
+export function pipelineRuns(rest, cache, w, maxRest, persist = noop) {
   cache.pipeline ??= {};
   const runs = listRuns(rest, "pipeline.yml", w.sinceMs).filter((run) => {
     const at = Date.parse(run.run_started_at);
@@ -24,6 +24,7 @@ export function pipelineRuns(rest, cache, w, maxRest) {
         job: j.name,
         step: j.steps?.find((s) => s.conclusion === "failure")?.name ?? null,
       }));
+    persist();
   }
   return {
     all: runs,

@@ -16,7 +16,7 @@
 //
 // Seams (env, so a spec can drive it): AGENT_RUNS_DIR, AGENT_TRANSCRIPTS_DIR, AGENT_PROJECTS_DIR,
 // AGENT_MEMORY_DIR; `gh` on PATH is the REST layer.
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -132,7 +132,9 @@ export function localVerify(rows, sinceMs) {
   const recent = rows.filter((row) => Date.parse(row.at) >= sinceMs);
   const bySteps = {};
   for (const row of recent.filter((r) => r.ok === false)) {
-    const step = row.step || "unknown (row predates the step field)";
+    const step =
+      row.step ||
+      ("step" in row ? "unknown (no step named)" : "unknown (row predates the step field)");
     bySteps[step] = (bySteps[step] ?? 0) + 1;
   }
   return { runs: recent.length, failed: recent.filter((row) => row.ok === false).length, bySteps };
@@ -194,6 +196,9 @@ export function iterationRow({ loop, before, after, tokens, usd, minutes, date }
   for (const [name, value] of Object.entries({ loop, before, after, tokens, date }))
     if (value === undefined || value === null || value === "")
       throw new Error(`--${name} is required for an iteration row`);
+  for (const [name, value] of Object.entries({ before, after, tokens, usd, minutes }))
+    if (value !== undefined && !Number.isFinite(Number(value)))
+      throw new Error(`--${name} needs a number, got "${value}"`);
   const k = (n) =>
     n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n);
   const tail = [
@@ -243,13 +248,17 @@ async function measure(w, { maxRest }) {
     }
   };
 
-  const pipeline = attempt(() => pipelineRuns(rest, cache, w, maxRest));
+  // The cache is written as runs are read, so a cold run cut short keeps what it paid for.
+  mkdirSync(runsDir, { recursive: true });
+  const persist = () => saveCache(cachePath, cache);
+
+  const pipeline = attempt(() => pipelineRuns(rest, cache, w, maxRest, persist));
   const prs = attempt(() => mergedPrs(rest, w.sinceMs));
   const issues = attempt(() => defectIssues(rest, w.sinceMs));
   const lanes = attempt(() =>
-    readLanes({ rest, cache, sinceMs: w.sinceMs, untilMs: w.untilMs, maxRest }),
+    readLanes({ rest, cache, sinceMs: w.sinceMs, untilMs: w.untilMs, maxRest, persist }),
   );
-  if (existsSync(runsDir)) saveCache(cachePath, cache);
+  persist();
 
   const runRows = existsSync(runsDir)
     ? readdirSync(runsDir)

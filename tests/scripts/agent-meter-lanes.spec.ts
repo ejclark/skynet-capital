@@ -212,6 +212,8 @@ describe("reading the lanes over REST with a cache", () => {
           RUN(10, "2026-10-30T09:58:00Z", 22),
           RUN(11, "2026-10-30T12:00:00Z", 0.3), // route-only: 18 seconds, never read
           RUN(12, "2026-10-30T13:00:00Z", 30, null as unknown as string), // still running
+          { ...RUN(13, "2026-10-30T14:00:00Z", 5), event: "push" }, // a push only routes
+          RUN(14, "2026-10-30T15:00:00Z", 5, "cancelled"), // never carries a price
         ],
       }),
     ],
@@ -234,6 +236,8 @@ describe("reading the lanes over REST with a cache", () => {
     expect(first.counts).toMatchObject({
       newRuns: 1,
       skippedShort: 1,
+      skippedEvent: 1,
+      skippedCancelled: 1,
       inProgress: 1,
       unreadRuns: 0,
     });
@@ -258,7 +262,40 @@ describe("reading the lanes over REST with a cache", () => {
     const rest = fakeRest(routes());
     const out = await readLanes({ rest, cache, sinceMs: since, untilMs: until, maxRest: 1 });
     expect(out.counts.unreadRuns).toBe(1);
+    expect(out.counts.unlisted).toEqual(["moneypenny-repair.yml", "claude.yml"]);
     expect(out.rows.research).toBeUndefined();
+  });
+
+  it("saves each run as it is read, so a cold run cut short keeps what it paid for", async () => {
+    const cache = { version: 1, runs: {}, pipeline: {} };
+    const saved: number[] = [];
+    const persist = () => saved.push(Object.keys(cache.runs).length);
+    await readLanes({
+      rest: fakeRest(routes()),
+      cache,
+      sinceMs: since,
+      untilMs: until,
+      maxRest: 100,
+      persist,
+    });
+    expect(saved).toEqual([1]);
+  });
+
+  it("refuses a window past GitHub's listing cap by name instead of printing a floor", () => {
+    const full = JSON.stringify({
+      workflow_runs: Array.from({ length: 100 }, (_, i) => RUN(i, "2026-10-30T09:00:00Z", 1)),
+    });
+    const rest = fakeRest([["/workflows/moneypenny-events.yml/runs", full]]);
+    expect(() =>
+      readLanes({
+        rest,
+        cache: { version: 1, runs: {}, pipeline: {} },
+        sinceMs: since,
+        untilMs: until,
+        maxRest: 100,
+      }),
+    ).toThrow(/listing cap/);
+    expect(rest.calls).toBe(10);
   });
 
   it("counts a run whose log cannot be read and leaves it out of the cache for next time", async () => {

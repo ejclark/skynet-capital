@@ -18,6 +18,20 @@ export const REPO = "ejclark/skynet-capital";
 export const LANE_WORKFLOWS = ["moneypenny-events.yml", "moneypenny-repair.yml", "claude.yml"];
 /** The shortest run that carried a priced session was 53s of job after a 15s route job. */
 export const SESSION_FLOOR_SEC = 40;
+/**
+ * Events whose runs have carried a lane job (every priced job on record, 10-25 to 11-01). A push
+ * run only routes, a schedule run only scans, and reading their logs was 161 of the first 184
+ * zips for nothing. A cancelled run has never carried a price: the session's envelope is lost.
+ */
+export const LANE_EVENTS = new Set([
+  "workflow_dispatch",
+  "issue_comment",
+  "issues",
+  "pull_request",
+  "workflow_run",
+]);
+/** GitHub's listing returns at most 1,000 runs per query; past that the oldest vanish silently. */
+const LIST_PAGE_CAP = 10;
 /** Lane by job-name prefix; a matrix leg is "<job> (<event id>)" and still matches. */
 const LANES = [
   ["research due events", "research"],
@@ -28,6 +42,8 @@ const LANES = [
 ];
 /** Listings use the API's clock, which read an hour late on 2026-11-01; the log's clock decides. */
 const LIST_SLACK_MS = 2 * 3600000;
+/** The default for the cache-save hook: a caller with no cache file saves nothing. */
+export const noop = () => undefined;
 
 export function laneOf(jobName) {
   if (jobName === "claude") return "claude.yml";
@@ -77,12 +93,6 @@ export function jobFiles(names) {
     .filter((entry) => entry.name !== entry.file);
 }
 
-export function runNeedsRead(run, floorSec = SESSION_FLOOR_SEC) {
-  if (!run.conclusion) return false;
-  const seconds = (Date.parse(run.updated_at) - Date.parse(run.run_started_at)) / 1000;
-  return seconds >= floorSec;
-}
-
 /** Sums by lane for jobs whose log start falls inside the window; unpriced jobs are counted, not $0. */
 export function laneRows(runs, sinceMs, untilMs) {
   const rows = {};
@@ -126,22 +136,33 @@ export function createRest() {
   return rest;
 }
 
-/** A workflow's runs created from the window's start (less slack) up to now, newest first. */
-export function listRuns(rest, workflowFile, sinceMs, filters = {}) {
+/**
+ * A workflow's runs created from the window's start (less slack) up to now, newest first. Only
+ * the `>=` form of `created` is honoured by this listing (a day or a range read as zero runs on
+ * 2026-11-01), so a window past the 1,000-run cap cannot be chunked; it is refused by name.
+ */
+export function listRuns(rest, workflowFile, sinceMs) {
   const created = new Date(sinceMs - LIST_SLACK_MS).toISOString().replace(/\.\d+Z$/, "Z");
-  const query = Object.entries({ created: `>=${created}`, per_page: 100, ...filters })
-    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
-    .join("&");
+  const query = `created=${encodeURIComponent(`>=${created}`)}&per_page=100`;
   const runs = [];
-  for (let page = 1; page <= 20; page += 1) {
+  for (let page = 1; page <= LIST_PAGE_CAP; page += 1) {
     const body = rest.api(
       `repos/${REPO}/actions/workflows/${workflowFile}/runs?${query}&page=${page}`,
     );
     const items = body.workflow_runs ?? [];
     runs.push(...items);
-    if (items.length < 100) break;
+    if (items.length < 100) return runs;
   }
-  return runs;
+  throw new Error(
+    `${workflowFile} has over ${LIST_PAGE_CAP * 100} runs in the window, past GitHub's listing cap: narrow the window`,
+  );
+}
+
+/** A completed run on an event that carries lane jobs, and long enough to have set one up. */
+export function runNeedsRead(run, floorSec = SESSION_FLOOR_SEC) {
+  if (!run.conclusion) return false;
+  const seconds = (Date.parse(run.updated_at) - Date.parse(run.run_started_at)) / 1000;
+  return seconds >= floorSec;
 }
 
 /** The lane jobs inside one run's log zip, each priced from its own rendered log. */
@@ -187,20 +208,33 @@ export function jobsFromZip(zipBytes, run) {
  * Read every lane workflow's runs in the window, pricing the ones the cache has not seen. The
  * cache holds completed runs only; the counts say what was skipped, in flight, or left unread.
  */
-export function readLanes({ rest, cache, sinceMs, untilMs, maxRest, jobsOf = jobsFromZip }) {
+export function readLanes({
+  rest,
+  cache,
+  sinceMs,
+  untilMs,
+  maxRest,
+  jobsOf = jobsFromZip,
+  persist = noop,
+}) {
   const counts = {
     newRuns: 0,
     cachedRuns: 0,
+    skippedEvent: 0,
+    skippedCancelled: 0,
     skippedShort: 0,
     inProgress: 0,
     unreadRuns: 0,
     unreadableRuns: 0,
+    unlisted: [],
   };
   cache.runs ??= {};
-  /** Which counter a listed run lands in; only "read" spends a call. */
+  /** Which counter a listed run lands in; only "newRuns" spends a call. */
   const classify = (run) => {
     if (cache.runs[run.id]) return "cachedRuns";
     if (!run.conclusion) return "inProgress";
+    if (!LANE_EVENTS.has(run.event)) return "skippedEvent";
+    if (run.conclusion === "cancelled") return "skippedCancelled";
     if (!runNeedsRead(run)) return "skippedShort";
     return rest.calls >= maxRest ? "unreadRuns" : "newRuns";
   };
@@ -209,13 +243,18 @@ export function readLanes({ rest, cache, sinceMs, untilMs, maxRest, jobsOf = job
     return startedMs <= untilMs + LIST_SLACK_MS && startedMs >= sinceMs - LIST_SLACK_MS;
   };
   for (const workflow of LANE_WORKFLOWS) {
-    if (rest.calls >= maxRest) break;
+    // A workflow never listed is as unread as a run left behind: the totals are withheld.
+    if (rest.calls >= maxRest) {
+      counts.unlisted.push(workflow);
+      continue;
+    }
     for (const run of listRuns(rest, workflow, sinceMs).filter(inWindow)) {
       const bucket = classify(run);
       counts[bucket] += 1;
       if (bucket !== "newRuns") continue;
       // A run whose log cannot be read today is counted and left out of the cache, so the next
-      // run tries it again instead of carrying a hole forward as a zero.
+      // run tries it again instead of carrying a hole forward as a zero. Each run read is saved
+      // at once, so a cold run cut short keeps what it paid for.
       try {
         cache.runs[run.id] = {
           workflow,
@@ -224,13 +263,15 @@ export function readLanes({ rest, cache, sinceMs, untilMs, maxRest, jobsOf = job
           startedAt: run.run_started_at,
           jobs: jobsOf(rest.zip(run.id), run),
         };
+        persist();
       } catch {
         counts.unreadableRuns += 1;
       }
     }
   }
   // An unread run makes every lane total a floor, not the week: say so instead of printing one.
-  const rows = counts.unreadRuns ? {} : laneRows(cache.runs, sinceMs, untilMs);
+  const complete = !(counts.unreadRuns || counts.unlisted.length);
+  const rows = complete ? laneRows(cache.runs, sinceMs, untilMs) : {};
   return { rows, counts };
 }
 
