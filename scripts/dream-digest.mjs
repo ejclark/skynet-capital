@@ -12,12 +12,20 @@
 // token-shaped strings are removed before it leaves here.
 //
 //   node scripts/dream-digest.mjs --session <path.jsonl>      one session's digest
-//   node scripts/dream-digest.mjs --recent N                  paths of the newest N transcripts
+//   node scripts/dream-digest.mjs --recent N [--since DATE]   paths of the N newest-started sessions
 //   node scripts/dream-digest.mjs --memory <dir>              stale candidates in a memory folder
 //   node scripts/dream-digest.mjs --checksums <dir>           a hash per file, to prove inputs held
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  statSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +34,7 @@ const PROJECT = "-Users-eric-Developer-skynet-capital";
 const MAX_USER_CHARS = 1200;
 const MAX_ERROR_CHARS = 300;
 const MAX_FINAL_CHARS = 1500;
+const HEAD_BYTES = 64 * 1024;
 
 const HARNESS_PREFIXES = [
   "<task-notification",
@@ -112,51 +121,162 @@ export function digestLines(lines) {
   return digest;
 }
 
-/** Paths and issue numbers a memory cites: the claims a stale check can test mechanically. */
+// A command is a script run with something after it, or an npm script. A path closed off by a backtick
+// is a citation, not a command: "(`scripts/steer/design.mjs` shape)" takes no flags.
+const COMMAND_OR_FLAG =
+  /(?:\bnpm run (?:-{1,2}[a-z]+ )*(?<npm>[\w:-]+))|(?:(?<![\w./-])(?<script>scripts\/[\w./-]+\.(?:mjs|sh))(?=\s))|(?:(?<![\w-])--(?<flag>[a-z][a-z-]+)\b)/g;
+// Wording that waits on an issue. Plain "merged" stays out: "after #5135 merged" is history.
+const WAITS_ON_ISSUE =
+  /\b(?:once|until|when|after|before) #(\d{3,5})\b[^.\n]{0,40}?\b(?:merges?|lands?|closes?|ships?|has (?:merged|landed|closed|shipped)|is (?:merged|closed|in))\b/gi;
+
+/**
+ * Each flag on a line, tied to the nearest command to its left. A flag with none is not a claim. A
+ * code span holding anything else ends the command, so `gh pr merge --squash` after a script of ours
+ * is not read as that script's flag; a span of bare flags ("then `--apply`") carries on from it.
+ */
+function flagsOnLine(line) {
+  const flags = [];
+  let command = null;
+  for (const [i, part] of line.split("`").entries()) {
+    const tokens = [...part.matchAll(COMMAND_OR_FLAG)].map((m) => m.groups);
+    const isCode = i % 2 === 1;
+    if (isCode && !part.startsWith("-") && !tokens.some((t) => t.npm || t.script)) command = null;
+    for (const token of tokens) {
+      if (token.npm) command = { npm: token.npm };
+      else if (token.script) command = { script: token.script };
+      else if (command) flags.push({ ...command, flag: token.flag });
+    }
+  }
+  return flags;
+}
+
+/** What a memory cites that a stale check can test mechanically, at no model tokens. */
 export function memoryClaims(text) {
+  const commands = [...text.matchAll(COMMAND_OR_FLAG)].map((m) => m.groups);
   const paths = [...text.matchAll(/`([\w./-]+\.(?:mjs|ts|tsx|sh|md|yml|json|js))`/g)]
     .map((m) => m[1])
-    .filter((p) => p.includes("/"));
+    .filter((p) => p.includes("/"))
+    .concat(commands.flatMap((c) => c.script ?? []));
   const issues = [...text.matchAll(/(?:^|[\s(])#(\d{3,5})\b/g)].map((m) => Number(m[1]));
-  return { paths: [...new Set(paths)], issues: [...new Set(issues)] };
+  const npmScripts = commands.flatMap((c) => c.npm ?? []);
+  const flags = text.split("\n").flatMap(flagsOnLine);
+  const futureOnIssue = [...text.matchAll(WAITS_ON_ISSUE)].map((m) => Number(m[1]));
+  return {
+    paths: [...new Set(paths)],
+    issues: [...new Set(issues)],
+    npmScripts: [...new Set(npmScripts)],
+    flags,
+    futureOnIssue: [...new Set(futureOnIssue)],
+  };
 }
 
-function transcriptsDir() {
-  return process.env.AGENT_TRANSCRIPTS_DIR ?? join(homedir(), ".claude", "projects", PROJECT);
+/** The folders holding this project's session transcripts: the main checkout's and one per worktree. */
+function transcriptDirs() {
+  if (process.env.AGENT_TRANSCRIPTS_DIR) return [process.env.AGENT_TRANSCRIPTS_DIR];
+  const root = join(homedir(), ".claude", "projects");
+  return readdirSync(root)
+    .filter((name) => name === PROJECT || name.startsWith(`${PROJECT}-`))
+    .map((name) => join(root, name));
 }
 
-function recent(count) {
-  const dir = transcriptsDir();
-  return readdirSync(dir)
-    .filter((name) => name.endsWith(".jsonl"))
-    .map((name) => ({ path: join(dir, name), mtime: statSync(join(dir, name)).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime)
+/** When a session started: the first timestamp in its transcript, read from the file's head. */
+function startedAt(path) {
+  const fd = openSync(path, "r");
+  try {
+    const head = Buffer.alloc(HEAD_BYTES);
+    const read = readSync(fd, head, 0, HEAD_BYTES, 0);
+    const stamp = /"timestamp":"([^"]+)"/.exec(head.toString("utf8", 0, read))?.[1];
+    const at = Date.parse(stamp ?? "");
+    return Number.isNaN(at) ? statSync(path).mtimeMs : at;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * The sessions a review should read, newest started first. File times will not do: transcripts were
+ * bulk-touched on 10-21 to 10-23, so the first review's "20 newest" reached back to 08-21, 14 of the
+ * 20 predated 10-18, and it saw no session started in a worktree (#6470's study).
+ */
+export function recent(count, since = null) {
+  const after = since ? Date.parse(since) : Number.NEGATIVE_INFINITY;
+  return transcriptDirs()
+    .flatMap((dir) =>
+      readdirSync(dir)
+        .filter((name) => name.endsWith(".jsonl"))
+        .map((name) => join(dir, name)),
+    )
+    .map((path) => ({ path, at: startedAt(path) }))
+    .filter((file) => file.at >= after)
+    .sort((a, b) => b.at - a.at)
     .slice(0, count)
     .map((file) => file.path);
 }
 
+/** A file on origin/main, once per run, or null when main has no such file. */
+const onMain = memo((path) => {
+  const res = spawnSync("git", ["show", `origin/main:${path}`], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return res.status === 0 ? res.stdout : null;
+});
+
+/** One gh call per issue however many memories cite it: this bucket is shared with every lane. */
+const isClosed = memo((n) => {
+  const res = spawnSync("gh", ["issue", "view", String(n), "--json", "state", "--jq", ".state"], {
+    encoding: "utf8",
+  });
+  return res.stdout?.trim() === "CLOSED";
+});
+
+function memo(read) {
+  const seen = new Map();
+  return (key) => {
+    if (!seen.has(key)) seen.set(key, read(key));
+    return seen.get(key);
+  };
+}
+
+/** The script an npm script runs, or null when it runs something that is not ours to read. */
+function scriptOfNpm(scripts, name) {
+  if (!Object.hasOwn(scripts, name)) return null;
+  return scripts[name].match(/\bscripts\/[\w./-]+\.(?:mjs|sh)\b/)?.[0] ?? null;
+}
+
+/**
+ * Flags no longer in the script they are passed to. A name anywhere in the source counts as present,
+ * since scripts read flags in many ways (`flag("prev")`, a usage line). That misses a flag only its
+ * helper reads and never names, and it keeps this report from telling a review to remove a working one.
+ */
+function deadFlags(claims, scripts) {
+  const rows = claims.flags.flatMap(({ script, npm, flag }) => {
+    const path = script ?? scriptOfNpm(scripts, npm);
+    const source = path && onMain(path);
+    return source && !source.includes(flag) ? `--${flag} on ${path}` : [];
+  });
+  return [...new Set(rows)];
+}
+
 function staleCandidates(dir) {
+  // No package.json on main means no answer, not that every npm script is gone.
+  const pkg = onMain("package.json");
+  const scripts = pkg ? (JSON.parse(pkg).scripts ?? {}) : null;
   const out = [];
   for (const name of readdirSync(dir).filter((n) => n.endsWith(".md"))) {
     const claims = memoryClaims(readFileSync(join(dir, name), "utf8"));
     const missing = claims.paths.filter(
-      (path) =>
-        !(path.startsWith("/") || path.startsWith("~")) &&
-        spawnSync("git", ["cat-file", "-e", `origin/main:${path}`]).status !== 0,
+      (path) => !(path.startsWith("/") || path.startsWith("~")) && onMain(path) === null,
     );
-    const closed = claims.issues.filter((n) => {
-      const res = spawnSync(
-        "gh",
-        ["issue", "view", String(n), "--json", "state", "--jq", ".state"],
-        { encoding: "utf8" },
-      );
-      return res.stdout?.trim() === "CLOSED";
-    });
+    const closed = claims.issues.filter(isClosed);
     out.push({
       file: name,
       modified: statSync(join(dir, name)).mtime.toISOString().slice(0, 10),
       missingPaths: missing,
       closedIssues: closed,
+      missingNpmScripts: scripts ? claims.npmScripts.filter((s) => !Object.hasOwn(scripts, s)) : [],
+      flagsNotInScript: scripts ? deadFlags(claims, scripts) : [],
+      futureOnClosedIssue: claims.futureOnIssue.filter(isClosed),
     });
   }
   return out;
@@ -177,17 +297,19 @@ function checksums(dir) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const [flag, value] = process.argv.slice(2);
+  const [flag, value, option, optionValue] = process.argv.slice(2);
   if (flag === "--session" && existsSync(value)) {
     console.log(JSON.stringify(digestLines(readFileSync(value, "utf8").split("\n")), null, 1));
   } else if (flag === "--recent") {
-    console.log(recent(Number(value)).join("\n"));
+    console.log(recent(Number(value), option === "--since" ? optionValue : null).join("\n"));
   } else if (flag === "--memory") {
     console.log(JSON.stringify(staleCandidates(value), null, 1));
   } else if (flag === "--checksums") {
     console.log(JSON.stringify(checksums(value), null, 1));
   } else {
-    console.error("usage: dream-digest --session F | --recent N | --memory DIR | --checksums DIR");
+    console.error(
+      "usage: dream-digest --session F | --recent N [--since DATE] | --memory DIR | --checksums DIR",
+    );
     process.exit(2);
   }
 }

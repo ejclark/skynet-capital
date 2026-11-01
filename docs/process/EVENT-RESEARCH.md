@@ -187,6 +187,16 @@ Either answer is final: the token in your fragment or ledger is what the reader 
 proposal stops printing and stops making your pulses material. You never edit the conviction doc.
 A proposal whose score-by has passed drops out by itself.
 
+**Declared intents — read yours before the method.** In any mode, run
+`node scripts/intents.mjs --event=<your-event-id>`. Each slug it prints is an outcome Eric declared,
+with a date, that names your event (`docs/intents/<slug>.md`). Read its **Check** and make this pass
+move it: a proposal it names gets answered, a re-run it names gets run, a claim it names gets scored.
+Cite the slug in your ledger row (`per declared intent <slug>`), even when there is nothing to move
+today, and say so. The slug in your ledger is what the reader looks for, so it stops making your
+pulses material. If two sessions land without citing it, the screen stops asking and says so in its
+row. A record is a study goal: paper trading and education only, never advice. You never edit the
+record.
+
 **Not every `interval-elapsed` pulse reaches a session** — see "Deterministic screening" below.
 
 ### `event-passed-unscored` → close-out
@@ -284,6 +294,8 @@ reading can set a pair's live narrowing; a claim scored by a re-run stays pendin
 pair (criterion 6): commit it too, and add a Summary bullet naming the pair and the proposal, so the
 reviewer of your PR sees it. It is text for review and changes no setting. Never hand-edit either
 file, and never edit the conviction doc or its record: the score is the command's, not yours.
+Never run `npm run research:refine` in your PR either: adopting a proposal is its own held PR,
+opened by a build session after yours merges, because you ship one PR.
 **The scores file is shared** with every lane that scores a linked row, the one exception to
 one-file-per-owner here, and it is safe for the same reason appends are: each lane changes a
 different claim's entry, once. On a merge conflict in it or in a refinements file, take `main`'s
@@ -330,6 +342,7 @@ in that file's header):
 | Staleness ceiling | every 3rd consecutive screen is forced material regardless of readings | an event can never coast on screens forever; a real session re-establishes the baseline at least that often |
 | No reference block | always material (`no-reference-baseline`) | nothing to diff against — the safe default, never a guess |
 | Conviction proposal | an unanswered proposal naming this event is material (`conviction-proposal:<token>`), whatever the tape did | only a session can register or decline it; a screen would leave it unread (AI-dip's six rows sat unread for 11 days through screens and full sessions alike, #5482) |
+| Declared intent | an active record naming this event that its ledger does not cite is material (`declared-intent:<slug>`), whatever the tape did; it stops after 2 sessions land without citing it, and the screen row says so | a screen cannot read a record's Check, so the first pulse after he declares gets a session and the citation quiets later pulses; the cap keeps a lane that ignores this from buying sessions |
 | Probe fetch failure | always material (loud failure) | "broken ≠ quiet" — the same doctrine `event-scan.mjs` already enforces |
 
 **The honesty invariant.** A screened row is a mechanical check, never a verdict — it is worded

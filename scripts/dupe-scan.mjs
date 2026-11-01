@@ -80,7 +80,7 @@ const { dupes, debt } = results.root;
 
 if (process.argv.includes("--candidate")) {
   // Highest leverage = the symbol pasted across the most files; consolidating it removes the most
-  // copies. `candidate`/`runnerUp`/`debt` stay the root scope's — /dedupe and ui-librarian read them.
+  // copies. `candidate`/`runnerUp`/`debt` stay the root scope's — /dedupe and the governor chore read them.
   const a = results.app;
   const app = { candidate: a.dupes[0] ?? null, runnerUp: a.dupes[1] ?? null, debt: a.debt };
   console.log(

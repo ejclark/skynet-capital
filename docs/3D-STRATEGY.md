@@ -92,7 +92,8 @@ is never pasted into a generator; it measurably degrades output).
 
 Complex models are built the way this repo already pays down debt: **decomposed into small pieces,
 one green rep per athlete invocation**, with the register as the shared prompt engine. Four agents
-(`.claude/agents/`), one relay:
+(benched in [`docs/agents/bench/`](agents/bench/README.md) until a scene ask arrives; one `git mv`
+brings them back), one relay:
 
 1. **`art-director`** — decomposes a scene ask into a **build sheet**: the piece list (each piece a
    bounded module in `src/three/pieces/`), the silhouette hierarchy (what must read at 200m vs 20m),

@@ -29,3 +29,8 @@ export function agreement(
   theirs: Record<string, string>,
 ): { shared: number; same: number; pct: number };
 export function renderTable(rows: Record<string, unknown>[], heading: string): string;
+export const DEFAULT_WINDOW_DAYS: number;
+export function sinceOf(
+  argv: readonly string[],
+  now?: number,
+): { since: string; defaulted: boolean };

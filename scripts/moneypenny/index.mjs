@@ -64,12 +64,14 @@ import {
   readOpenIssues,
   readOpenPlans,
   recheckPullable,
+  sweepHold,
   waitingPlans,
 } from "./admission.mjs";
 import { executeAssignments, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
-import { capsuleAudit, clearErodedNeedsEric, flagCapsuleOrphan } from "./capsule-stall.mjs";
+import { capsuleAudit, closeProvenCapsule, flagCapsuleOrphan } from "./capsule-stall.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
+import { closeClockIssue, openClockIssue } from "./clock-watch.mjs";
 import {
   CONTINUED_MODEL,
   continuationContext,
@@ -81,6 +83,7 @@ import {
   routeContinuation,
 } from "./continuation.mjs";
 import { calloutGapComment, shouldPostCalloutGap } from "./decision-callout.mjs";
+import { executeDialTap, routeDial } from "./dial-tap.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -96,13 +99,15 @@ import {
 } from "./labels.mjs";
 import { draftLesson, routeLessonDraft } from "./lesson-draft.mjs";
 import { modelTier } from "./model-tier.mjs";
-import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
+import { nextUnheld } from "./pickup-hold.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
+import { closeRedLanePr } from "./red-lane-pr.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { rearmStranded } from "./stranded-pr.mjs";
+import { updateStuckBranch } from "./stuck-branch-update.mjs";
 import { endBuild, routeWake, wakeNext } from "./wake.mjs";
 import { readWorkMode } from "./work-mode.mjs";
 
@@ -150,7 +155,9 @@ export const slugify = (s) =>
 export function route(ctx, deps = {}) {
   if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
   // #5056 slice 2: `in-progress` coming off is a freed build slot, and wakes the queue (wake.mjs).
-  if (ctx.eventName === "issues") return [...routeLessonDraft(ctx), ...routeWake(ctx)];
+  // One tap on the dial clears the others and writes the end time (dial-tap.mjs).
+  if (ctx.eventName === "issues")
+    return [...routeLessonDraft(ctx), ...routeWake(ctx), ...routeDial(ctx)];
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
     return routeRelease(ctx);
   }
@@ -712,7 +719,9 @@ export function peekNext(deps = {}) {
     readPrIssues = () => readOpenPrIssues(),
     readPlans = () => readOpenPlans(),
     continuation = () => continuationContext(),
-    readHold: holdOf = (issue) => readPickupHold(issue),
+    holdReads = {},
+    // The same holds as the claim, or a refused issue dispatches an empty run on every tick.
+    readHold: holdOf = sweepHold(holdReads),
   } = deps;
   const mode = readMode();
   const ready = withoutOpenPr(readReady(), readPrIssues());
@@ -738,7 +747,8 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
     readPlans = () => readOpenPlans(),
     claims = { plan: claimPlan, feedback: claimFeedback },
     continuation = () => continuationContext({ now: nowMs }),
-    readHold: holdOf = (issue) => readPickupHold(issue),
+    holdReads = {},
+    readHold: holdOf = sweepHold({ now: nowMs, ...holdReads }),
     ...admission
   } = deps;
   const mode = readMode();
@@ -1482,6 +1492,7 @@ function executeSweepIntent(i) {
  * needed one more kind (`wake-next`). Moving the four one-liners here takes it back under.
  */
 const ONE_CALL_INTENTS = {
+  "update-stuck-branch": (i) => updateStuckBranch(i),
   noop: (i) => {
     console.log(`· nothing to do (${i.reason})`);
     return `noop — ${i.reason}`;
@@ -1496,6 +1507,7 @@ const ONE_CALL_INTENTS = {
     console.log(`· commented on #${i.issueNumber}`);
     return `commented on #${i.issueNumber}`;
   },
+  "close-red-lane-pr": (i) => closeRedLanePr(i),
   "edit-issue-body": (i) => {
     sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
     console.log(`· refreshed the body of #${i.issueNumber}`);
@@ -1503,9 +1515,13 @@ const ONE_CALL_INTENTS = {
   },
   "draft-lesson": (i) => draftLesson(i),
   "wake-next": (i) => wakeAfter(i.issueNumber),
+  "route-dial": (i) => executeDialTap(i),
   // #5727 — the CI repair capsules' two stall checks, which live beside audit.mjs.
   "flag-capsule-orphan": (i) => flagCapsuleOrphan(i),
-  "clear-eroded-needs-eric": (i) => clearErodedNeedsEric(i),
+  "close-proven-capsule": (i) => closeProvenCapsule(i),
+  // #6470 — the clock's watcher: the writes live in clock-watch.mjs beside the decision.
+  "open-clock-issue": (i) => openClockIssue(i),
+  "close-clock-issue": (i) => closeClockIssue(i),
 };
 
 /**
@@ -1759,8 +1775,10 @@ function main(argv) {
 
   const deps = fixtureDeps ?? (dry ? {} : gatherDeps(ctx));
   const auditMode = argv.includes("--audit") || ctx.inputs?.command === "audit";
+  // A dry run writes nothing, so it takes no lease; the update pass then stops at the list.
+  const hourly = dry ? {} : { takeHourlyLease: takeUpdateBranchLease };
   const intents = auditMode
-    ? [...audit(fixtureDeps ?? gatherAuditDeps(Date.now())), ...capsuleAudit(fixtureDeps)]
+    ? [...audit(fixtureDeps ?? gatherAuditDeps(Date.now(), hourly)), ...capsuleAudit(fixtureDeps)]
     : route(ctx, deps);
 
   if (dry) {
@@ -1769,6 +1787,15 @@ function main(argv) {
   }
   execute(intents);
   if (auditMode && !fixtureDeps) postLoopChecks();
+}
+
+/**
+ * True at most once an hour across runners. It is the claim lease with a one-hour life, and it lives
+ * here because this file owns the lease: the audit tick runs on every push, and the branch-update
+ * pass must not read every armed PR's suites that often. Nothing releases it, so it simply ages out.
+ */
+function takeUpdateBranchLease(nowMs) {
+  return claimHandoff("update-branch-scan", process.env.GITHUB_SHA ?? "", nowMs, 36e5).claimed;
 }
 
 /** The learning-loop registry's due checks, posted on the push tick (scripts/loop-check.mjs). Never

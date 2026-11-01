@@ -89,6 +89,43 @@ describe("feedback scoreboard", () => {
  */
 const SOURCE = readFileSync("scripts/feedback-scan.mjs", "utf8");
 
+// #6316: nothing builds a filing until `ready` lands, so a member filing with no state after a day
+// is one nobody has looked at. The scan names each, oldest first, so none sits unseen.
+describe("member filings older than 24h with no state", () => {
+  const scan = (args: string[]) =>
+    execFileSync(
+      "node",
+      [
+        "scripts/feedback-scan.mjs",
+        "--fixture",
+        "tests/fixtures/events/feedback-member-filings.json",
+        "--now",
+        "2026-10-27T12:00:00Z",
+        ...args,
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+
+  it("lists only open member filings past 24h that carry no state, oldest first, with their age", () => {
+    const { unseen } = JSON.parse(scan(["--json"])) as {
+      unseen: { number: number; ageHours: number }[];
+    };
+    // Left out: an hour-old filing, one each with ready / in-progress / needs-info, a filing
+    // with no member label, and a closed one.
+    expect(unseen).toEqual([
+      { number: 4861, title: "Option rungs never unlock", ageHours: 468 },
+      { number: 6007, title: "Paste a screenshot into the chat", ageHours: 60 },
+    ]);
+  });
+
+  it("prints the count and each filing's age in the human report", () => {
+    const out = scan([]);
+    expect(out).toContain("member filings older than 24h with no state: 2");
+    expect(out).toMatch(/#4861\s+19.5d\s+Option rungs never unlock/);
+    expect(out).toMatch(/#6007\s+2.5d\s+Paste a screenshot/);
+  });
+});
+
 describe("the closing-PR rename", () => {
   it("queries the field gh knows, not the one it dropped", () => {
     expect(SOURCE).toContain("closedByPullRequestsReferences,body");

@@ -1,10 +1,12 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { withReading } from "../../../scripts/moneypenny/pace-reading.mjs";
 import {
   ACTOR_RULES,
   loadWorkModeConfig,
   mayActorSet,
+  nextWeeklyReset,
   noticeLine,
   readWorkMode,
   resolveWorkMode,
@@ -24,6 +26,7 @@ import {
 const CONFIG: WorkModeConfig = {
   trackingIssue: 4153,
   labelPrefix: "work-mode:",
+  weeklyResetAnchor: "2026-11-03T05:00:00Z",
   positions: {
     halt: {
       inFlightCap: 0,
@@ -63,12 +66,15 @@ const CONFIG: WorkModeConfig = {
 const at = (iso: string) => Date.parse(iso);
 const NOW = at("2026-09-30T12:00:00Z");
 const label = (position: string) => ({ name: `work-mode:${position}` });
-const until = (date: string, createdAt = "2026-09-29T00:00:00Z") => ({
+const until = (date: string, createdAt = "2026-09-29T07:00:00Z") => ({
   body: `Setting the spigot. until ${date}`,
   createdAt,
+  author_association: "OWNER",
 });
+const setBefore = (labels: Array<{ name: string }>) =>
+  labels.map((l) => ({ label: l.name, createdAt: "2026-09-29T06:00:00Z" }));
 const resolve = (labels: Array<{ name: string }>, comments: Array<{ body: string }> = []) =>
-  resolveWorkMode({ labels, comments, now: NOW, config: CONFIG });
+  resolveWorkMode({ labels, comments, events: setBefore(labels), now: NOW, config: CONFIG });
 
 describe("reading the dial — one label is one position", () => {
   it("never marks a dial it actually read as unreadable, however it warns", () => {
@@ -130,9 +136,9 @@ describe("reading the dial — one label is one position", () => {
       },
     ],
   ])("reads %s with its caps while its expiry is ahead", (position, caps) => {
-    const mode = resolve([label(position)], [until("2026-10-06")]);
+    const mode = resolve([label(position)], [until("2026-10-05")]);
     expect(mode.position).toBe(position);
-    expect(mode.until).toBe("2026-10-06");
+    expect(mode.until).toBe("2026-10-05");
     expect(mode.caps).toEqual(caps);
     expect(mode.warning).toBeUndefined();
   });
@@ -189,9 +195,11 @@ describe("expiry — non-normal positions end on their until date", () => {
 
   it("holds through the whole of the until day, in UTC", () => {
     const comments = [until("2026-09-30")];
+    const events = setBefore([label("surge")]);
     const late = resolveWorkMode({
       labels: [label("surge")],
       comments,
+      events,
       now: at("2026-09-30T23:59:59Z"),
       config: CONFIG,
     });
@@ -199,6 +207,7 @@ describe("expiry — non-normal positions end on their until date", () => {
     const next = resolveWorkMode({
       labels: [label("surge")],
       comments,
+      events,
       now: at("2026-10-01T00:00:00Z"),
       config: CONFIG,
     });
@@ -219,8 +228,12 @@ describe("expiry — non-normal positions end on their until date", () => {
 
   it("matches case-insensitively and inside backticks, skipping comments with no date", () => {
     const comments = [
-      { body: "UNTIL `2026-10-02` — the Tuesday reset", createdAt: "2026-09-28T00:00:00Z" },
-      { body: "looks good to me", createdAt: "2026-09-29T00:00:00Z" },
+      {
+        body: "UNTIL `2026-10-02` — the Tuesday reset",
+        createdAt: "2026-09-29T07:00:00Z",
+        author_association: "MEMBER",
+      },
+      { body: "looks good to me", createdAt: "2026-09-29T08:00:00Z" },
     ];
     expect(resolve([label("conserve")], comments).until).toBe("2026-10-02");
   });
@@ -255,8 +268,194 @@ describe("no expiry at all — the brake holds, the throttle and the surge do no
   });
 });
 
+// #4153's real end dates and label events, up to 2026-10-27. Before this rule, any old date on the
+// issue won: a bare halt tap read "halt expired at the end of 2026-10-27", position normal, with no
+// warning, and any stranger could release a brake with one comment.
+describe("an end date counts only if it was written for this setting of the dial", () => {
+  const owner = { author_association: "OWNER", user: { type: "User" } };
+  const REAL_COMMENTS = [
+    {
+      ...owner,
+      body: 'Conserve until 2026-10-21 — Eric, 2026-10-14: "Now I have to conserve tokens"',
+      createdAt: "2026-10-15T04:37:18Z",
+    },
+    {
+      ...owner,
+      body: "work-mode: **surge** until `2026-10-26`",
+      createdAt: "2026-10-26T09:42:08Z",
+    },
+    {
+      ...owner,
+      body: "work-mode: **surge** until `2026-10-27`",
+      createdAt: "2026-10-26T23:12:35Z",
+    },
+  ];
+  const REAL_EVENTS = [
+    { label: "work-mode:normal", createdAt: "2026-09-30T04:19:34Z" },
+    { label: "work-mode:conserve", createdAt: "2026-10-15T04:37:17Z" },
+    { label: "work-mode:normal", createdAt: "2026-10-18T06:14:42Z" },
+    { label: "work-mode:surge", createdAt: "2026-10-26T09:42:09Z" },
+    { label: "work-mode:normal", createdAt: "2026-10-27T05:52:17Z" },
+  ];
+  const TAP = "2026-11-01T10:00:00Z";
+  const AFTER_TAP = at("2026-11-01T10:05:00Z");
+  const tapped = (
+    position: string,
+    comments: Record<string, unknown>[] = REAL_COMMENTS,
+    now = AFTER_TAP,
+  ) =>
+    resolveWorkMode({
+      labels: [label(position)],
+      comments,
+      events: [...REAL_EVENTS, { label: `work-mode:${position}`, createdAt: TAP }],
+      now,
+      config: CONFIG,
+    });
+
+  it("holds a bare halt tap on the real issue, whatever old dates it carries", () => {
+    const mode = tapped("halt");
+    expect(mode.position).toBe("halt");
+    expect(mode.until).toBeNull();
+    expect(mode.caps.inFlightCap).toBe(0);
+  });
+
+  it.each(["conserve", "surge"])(
+    "reads a bare %s tap as having no end date, not as expired",
+    (position) => {
+      const mode = tapped(position);
+      expect(mode.position).toBe("normal");
+      expect(mode.warning).toMatch(new RegExp(`${position} has no "until`));
+    },
+  );
+
+  it("counts a date posted a second before the label, the real 2026-10-26 order", () => {
+    const mode = resolveWorkMode({
+      labels: [label("surge")],
+      comments: REAL_COMMENTS,
+      events: REAL_EVENTS.slice(0, 4),
+      now: at("2026-10-26T12:00:00Z"),
+      config: CONFIG,
+    });
+    expect(mode.position).toBe("surge");
+    expect(mode.until).toBe("2026-10-27T05:00:00Z");
+  });
+
+  it("lets a later comment extend a standing setting, as the real 23:12Z one did", () => {
+    const mode = resolveWorkMode({
+      labels: [label("surge")],
+      comments: REAL_COMMENTS,
+      events: REAL_EVENTS.slice(0, 4),
+      now: at("2026-10-27T00:30:00Z"),
+      config: CONFIG,
+    });
+    expect(mode.until).toBe("2026-10-27T05:00:00Z");
+  });
+
+  it("ends the real 2026-10-26 surge at the reset, not 19 hours into the new week", () => {
+    const read = (now: string) =>
+      resolveWorkMode({
+        labels: [label("surge")],
+        comments: REAL_COMMENTS,
+        events: REAL_EVENTS.slice(0, 4),
+        now: at(now),
+        config: CONFIG,
+      });
+    expect(read("2026-10-27T04:59:59Z").position).toBe("surge");
+    expect(read("2026-10-27T05:00:00Z").position).toBe("normal");
+    expect(read("2026-10-27T05:00:00Z").reason).toBe("surge expired at 2026-10-27T05:00:00Z");
+  });
+
+  it("counts the limit from the comment, since an ended surge keeps its label and a re-add fires nothing", () => {
+    const read = (body: string, createdAt: string, now: string) =>
+      resolveWorkMode({
+        labels: [label("surge")],
+        comments: [{ ...owner, body, createdAt }],
+        events: REAL_EVENTS.slice(0, 4),
+        now: at(now),
+        config: CONFIG,
+      });
+    // The label went on 10-26. A week later /surge writes a new end date over the same label.
+    const nextWeek = read(
+      "surge until 2026-11-03T05:00:00Z",
+      "2026-11-02T10:00:00Z",
+      "2026-11-02T11:00:00Z",
+    );
+    expect(nextWeek.position).toBe("surge");
+    expect(nextWeek.until).toBe("2026-11-03T05:00:00Z");
+    // The same comment with a date past that reset is still held to it.
+    const held = read("until 2026-11-20", "2026-11-02T10:00:00Z", "2026-11-03T05:00:00Z");
+    expect(held.position).toBe("normal");
+  });
+
+  it("holds only a surge to the reset: a conserve keeps its written date", () => {
+    const stated = { ...owner, body: "until 2026-11-20", createdAt: TAP };
+    expect(tapped("conserve", [stated]).until).toBe("2026-11-20");
+  });
+
+  it("lets a surge's own end time win when it is sooner than the reset", () => {
+    const stated = { ...owner, body: "surge until 2026-11-02T20:00:00Z", createdAt: TAP };
+    expect(tapped("surge", [stated]).until).toBe("2026-11-02T20:00:00Z");
+  });
+
+  it("does not count a date written well before the label, even for the same position", () => {
+    const stale = { ...owner, body: "halt until 2026-10-20", createdAt: "2026-10-15T00:00:00Z" };
+    expect(tapped("halt", [stale]).position).toBe("halt");
+  });
+
+  it("does not let a stranger release a brake or stretch a surge", () => {
+    const stranger = {
+      body: "until 2026-10-02",
+      createdAt: "2026-11-01T10:01:00Z",
+      author_association: "NONE",
+      user: { type: "User" },
+    };
+    expect(tapped("halt", [stranger]).position).toBe("halt");
+    const forever = { ...stranger, body: "until 2099-01-01" };
+    const surge = { ...owner, body: "until 2026-11-01", createdAt: TAP };
+    expect(tapped("surge", [surge, forever]).until).toBe("2026-11-01");
+  });
+
+  it("counts a date a bot posted, since lanes write end dates there", () => {
+    const lane = {
+      body: "until 2026-11-03",
+      createdAt: TAP,
+      author_association: "NONE",
+      user: { type: "Bot" },
+    };
+    expect(tapped("surge", [lane]).position).toBe("surge");
+    expect(tapped("conserve", [lane]).until).toBe("2026-11-03");
+  });
+
+  it("ignores a date that names another position, even written moments before the tap", () => {
+    const justBefore = {
+      ...owner,
+      body: "work-mode: **surge** until `2026-12-01`",
+      createdAt: "2026-11-01T09:59:30Z",
+    };
+    expect(tapped("halt", [justBefore]).position).toBe("halt");
+    expect(tapped("halt", [justBefore]).until).toBeNull();
+  });
+
+  it("ties the name to the date it sits beside, not to an earlier mention", () => {
+    const both = {
+      ...owner,
+      body: "It was surge until the reset. Now halt until 2026-11-05.",
+      createdAt: TAP,
+    };
+    expect(tapped("halt", [both]).until).toBe("2026-11-05");
+  });
+
+  it("counts nothing it cannot date: no label event, or a comment with no time", () => {
+    const fresh = { ...owner, body: "until 2026-11-05", createdAt: TAP };
+    const noEvents = { labels: [label("halt")], comments: [fresh], now: AFTER_TAP, config: CONFIG };
+    expect(resolveWorkMode(noEvents).until).toBeNull();
+    expect(resolveWorkMode({ ...noEvents, events: [] }).until).toBeNull();
+    expect(tapped("halt", [{ ...owner, body: "until 2026-11-05" }]).until).toBeNull();
+  });
+});
+
 /** A fake `exec` that returns canned output or throws, recording the args it saw. An array is one
- *  answer per call, in order (the issue read, then the comments read). */
+ *  answer per call, in order (the issue read, then the comments read, then the label events). */
 function fakeExec(result: string | Error | string[]) {
   const calls: string[][] = [];
   const exec = (_cmd: string, args: readonly string[]) => {
@@ -268,19 +467,73 @@ function fakeExec(result: string | Error | string[]) {
 }
 
 describe("readWorkMode — REST reads, never a throw on a bad read", () => {
-  it("reads the tracking issue's labels, then its comments, over REST (no GraphQL)", () => {
+  it("reads the tracking issue's labels, comments and label events, over REST (no GraphQL)", () => {
     const { exec, calls } = fakeExec([
       JSON.stringify({ labels: [label("conserve")] }),
       `${JSON.stringify({ body: "older note" })}\n${JSON.stringify(until("2026-10-06"))}\n`,
+      `${JSON.stringify({ label: "work-mode:conserve", createdAt: "2026-09-28T00:00:00Z" })}\n`,
     ]);
     const mode = readWorkMode(exec, CONFIG, NOW);
     expect(calls.map((a) => a.slice(0, 3))).toEqual([
       ["api", "repos/{owner}/{repo}/issues/4153", "--jq"],
       ["api", "--paginate", "repos/{owner}/{repo}/issues/4153/comments?per_page=100"],
+      ["api", "--paginate", "repos/{owner}/{repo}/issues/4153/events?per_page=100"],
     ]);
     expect(calls.flat()).not.toContain("view");
     expect(mode.position).toBe("conserve");
     expect(mode.until).toBe("2026-10-06");
+  });
+
+  it("carries the published reading off the issue's body, at no extra call", () => {
+    const body = withReading("The dial.", {
+      used: 34,
+      at: NOW,
+      resetsAt: at("2026-11-03T05:00:00Z"),
+      source: "get_usage",
+    });
+    const { exec, calls } = fakeExec([JSON.stringify({ body, labels: [label("normal")] })]);
+    expect(readWorkMode(exec, CONFIG, NOW).reading?.used).toBe(34);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.at(-1)).toContain("body");
+  });
+
+  it("reads a body with no reading as no reading", () => {
+    const { exec } = fakeExec([JSON.stringify({ body: "prose", labels: [label("normal")] })]);
+    expect(readWorkMode(exec, CONFIG, NOW).reading).toBeNull();
+  });
+
+  it("reads who wrote each comment, because the end date rule needs it", () => {
+    const { exec, calls } = fakeExec([JSON.stringify({ labels: [label("halt")] }), "", ""]);
+    readWorkMode(exec, CONFIG, NOW);
+    expect(calls[1]?.at(-1)).toContain("author_association");
+    expect(calls[1]?.at(-1)).toContain(".user.type");
+  });
+
+  it("costs one call at normal, where the dial looks at neither list", () => {
+    const { exec, calls } = fakeExec([JSON.stringify({ labels: [label("normal")] })]);
+    expect(readWorkMode(exec, CONFIG, NOW).position).toBe("normal");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("falls back to conserve when the label events cannot be read", () => {
+    let call = 0;
+    const exec = () => {
+      call += 1;
+      if (call === 1) return JSON.stringify({ labels: [label("halt")] });
+      if (call === 2) return "";
+      throw new Error("HTTP 502");
+    };
+    const mode = readWorkMode(exec, CONFIG, NOW);
+    expect(mode.position).toBe("conserve");
+    expect(mode.unreadable).toBe(true);
+  });
+
+  it("hands back the issue's title, so the title sync needs no second read", () => {
+    const { exec, calls } = fakeExec([
+      JSON.stringify({ title: "Work mode: NORMAL", labels: [label("normal")] }),
+    ]);
+    expect(readWorkMode(exec, CONFIG, NOW).title).toBe("Work mode: NORMAL");
+    expect(calls[0]?.at(-1)).toContain("title");
   });
 
   it.each([
@@ -303,6 +556,67 @@ describe("readWorkMode — REST reads, never a throw on a bad read", () => {
       startedPlanCap: 2,
     });
     expect(mode.warning).toMatch(/could not read issue #4153/);
+  });
+});
+
+describe("until takes a time as well as a date", () => {
+  const owner = { author_association: "OWNER", createdAt: "2026-10-30T00:00:00Z" };
+  const events = [{ label: "work-mode:conserve", createdAt: "2026-10-30T00:00:00Z" }];
+  const read = (body: string, now: string) =>
+    resolveWorkMode({
+      labels: [label("conserve")],
+      comments: [{ ...owner, body }],
+      events,
+      now: at(now),
+      config: CONFIG,
+    });
+
+  it("ends at that instant, not at the end of the day", () => {
+    const body = "conserve until 2026-11-03T05:00:00Z";
+    expect(read(body, "2026-11-03T04:59:59Z").position).toBe("conserve");
+    expect(read(body, "2026-11-03T04:59:59Z").until).toBe("2026-11-03T05:00:00Z");
+    const after = read(body, "2026-11-03T05:00:00Z");
+    expect(after.position).toBe("normal");
+    expect(after.reason).toBe("conserve expired at 2026-11-03T05:00:00Z");
+  });
+
+  it.each([
+    "until 2026-11-03T05:00Z",
+    "until `2026-11-03T05:00:00.000Z`",
+    "UNTIL 2026-11-03t05:00z",
+  ])("reads %s", (body) => {
+    expect(read(body, "2026-11-03T04:59:00Z").position).toBe("conserve");
+    expect(read(body, "2026-11-03T05:01:00Z").position).toBe("normal");
+  });
+
+  it.each(["until 2026-11-03T05:00-06:00", "until 2026-11-03T05:00", "until 2026-11-03T25:00Z"])(
+    "treats %s as no end date, rather than guessing its zone",
+    (body) => {
+      const mode = read(body, "2026-11-03T04:59:00Z");
+      expect(mode.position).toBe("normal");
+      expect(mode.warning).toMatch(/no "until/);
+    },
+  );
+
+  it("still reads a bare date through the end of its day", () => {
+    expect(read("until 2026-11-03", "2026-11-03T23:59:59Z").position).toBe("conserve");
+    expect(read("until 2026-11-03", "2026-11-04T00:00:00Z").position).toBe("normal");
+  });
+});
+
+describe("the next weekly reset", () => {
+  const ANCHOR = "2026-11-03T05:00:00Z";
+
+  it.each([
+    ["the moment before the anchor", "2026-11-03T04:59:59Z", "2026-11-03T05:00:00Z"],
+    ["the anchor itself, which has passed", "2026-11-03T05:00:00Z", "2026-11-10T05:00:00Z"],
+    ["a week on", "2026-11-05T00:00:00Z", "2026-11-10T05:00:00Z"],
+    ["weeks before", "2026-10-26T09:42:09Z", "2026-10-27T05:00:00Z"],
+    ["exactly on an earlier reset", "2026-10-27T05:00:00Z", "2026-11-03T05:00:00Z"],
+  ])("from %s", (_case, atTime, expected) => {
+    expect(new Date(nextWeeklyReset(ANCHOR, at(atTime))).toISOString()).toBe(
+      new Date(at(expected)).toISOString(),
+    );
   });
 });
 
@@ -331,6 +645,8 @@ describe("work-mode config — fail closed", () => {
     ["no trackingIssue", { ...CONFIG, trackingIssue: undefined }],
     ["a zero trackingIssue", { ...CONFIG, trackingIssue: 0 }],
     ["an empty labelPrefix", { ...CONFIG, labelPrefix: "" }],
+    ["no weekly reset", { ...CONFIG, weeklyResetAnchor: undefined }],
+    ["a weekly reset that is not a time", { ...CONFIG, weeklyResetAnchor: "tuesday" }],
     ["no positions", { ...CONFIG, positions: undefined }],
     ["a missing position", { ...CONFIG, positions: { ...CONFIG.positions, surge: undefined } }],
     [
@@ -403,6 +719,12 @@ describe("the committed work-mode.json", () => {
   it("points at the tracking issue and the dial's prefix", () => {
     expect(committed.trackingIssue).toBe(4153);
     expect(committed.labelPrefix).toBe("work-mode:");
+  });
+
+  it("anchors the reset on a real one: Tuesday 05:00Z, the time every reset on record fell", () => {
+    const anchor = new Date(committed.weeklyResetAnchor);
+    expect(anchor.getUTCDay()).toBe(2);
+    expect(anchor.getUTCHours()).toBe(5);
   });
 
   it("keeps normal at the board's In Progress limit of 3 (Eric, 2026-09-30)", () => {

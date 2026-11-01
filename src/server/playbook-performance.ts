@@ -1,6 +1,9 @@
 import type { OptionOrderLeg } from "../autonomous/decision-db-leg-orders.js";
+import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { PlaybookFunnelRow, PlaybookFunnelView } from "../autonomous/playbook-funnel.js";
+import type { OrderIntent } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
+import type { TradeActivityRecord } from "../observatory/activity-record.js";
 import { REFUSAL_LABEL } from "../observatory/decision-json-view.js";
 import { deskLedger } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
@@ -40,6 +43,10 @@ import { type AccountDecisionsDeps, readAccountDecisions } from "./decision-acco
  */
 
 export interface PlaybookPerformanceDeps extends AccountDecisionsDeps {
+  readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
+  readonly findByOrderId?: (
+    orderId: string,
+  ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
   /** A spread leg's own order id → its spread's order (`DecisionDb.findSpreadLeg`): a leg's fill
    *  carries the leg's id, which `findByOrderId` never matches. */
   readonly findSpreadLeg?: (legOrderId: string) => OptionOrderLeg | undefined;

@@ -38,6 +38,8 @@ export interface Candidate {
   readonly subIssues?: readonly SubIssue[];
   readonly blockedBy?: Record<number, readonly { state?: string }[]>;
   readonly openPlanPr?: number;
+  /** Issue → the held platter that closes it; such a sub-issue is not a slice to take (#6530). */
+  readonly boardedOn?: ReadonlyMap<number, number>;
   readonly runs?: Record<string, RunOutcome>;
 }
 

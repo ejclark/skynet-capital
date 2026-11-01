@@ -47,8 +47,13 @@ import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
 import { DEFAULT_MODEL } from "./model-tier.mjs";
-import { BLOCKER_READS, nextSubIssue } from "./pickup-hold.mjs";
-import { derivePrIssues, keywordIssuesOf, laneClassOf } from "./pr-issues.mjs";
+import { BLOCKER_READS, nextSubIssue, withoutBoarded } from "./pickup-hold.mjs";
+import {
+  derivePrIssues,
+  keywordIssuesOf,
+  laneClassOf,
+  platterClosesByIssue,
+} from "./pr-issues.mjs";
 import {
   allReceiptsOf,
   blockFingerprint,
@@ -125,11 +130,14 @@ const isOpen = (s) => (s?.state ?? "open") === "open";
  * block has already moved past; and with no sub-issue to take, `shipped` is the closed sub-issue
  * proving the pickup line's slice already landed, so the line is not a target.
  *
+ * A sub-issue a held platter closes counts as closed (#6530, `withoutBoarded`): its work is built
+ * and waits only on Eric's merge, so it is neither the next slice nor a pickup line's target.
+ *
  * @returns {{ sub: object | null, shipped: object | null }}
  */
-function sliceToTake({ subIssues = [], blockedBy } = {}, pickup) {
+function sliceToTake({ subIssues = [], blockedBy, boardedOn } = {}, pickup) {
   const named = sliceOf(pickup);
-  const subs = subIssues ?? [];
+  const subs = withoutBoarded(subIssues, boardedOn);
   if (named === null) return { sub: nextSubIssue(subs, blockedBy), shipped: null };
   const live = subs.filter((s) => !isOpen(s) || (subSliceOf(s) ?? named) >= named);
   const sub = nextSubIssue(live, blockedBy);
@@ -190,7 +198,7 @@ function runUrlFor(runId) {
 /**
  * One plan's verdict. Pure — every read is already in `candidate`.
  *
- * @param candidate { plan, comments, subIssues, blockedBy, openPlanPr, runs }
+ * @param candidate { plan, comments, subIssues, blockedBy, openPlanPr, boardedOn, runs }
  * @returns {{ number, action: "continue"|"stop"|"skip", reason, ... }}
  */
 export function continuationDecision(candidate = {}, { caps = {}, now = Date.now() } = {}) {
@@ -232,6 +240,13 @@ export function continuationDecision(candidate = {}, { caps = {}, now = Date.now
   if (!(sub || pickup)) {
     return skip(
       `#${plan.number}'s block names no next pickup and no open, unblocked slice remains`,
+    );
+  }
+  if (shipped?.boardedOn) {
+    return skip(
+      `#${plan.number}'s block names slice ${sliceOf(pickup)} as the next pickup, but its ` +
+        `sub-issue #${shipped.number} is boarded on held platter #${shipped.boardedOn} — nothing is ` +
+        `left to build; edit its next-pickup line`,
     );
   }
   if (shipped) {
@@ -391,7 +406,9 @@ const restOr = (path, fallback) => {
  * bullet per boarded item with work left, and the item's own PR is closed on boarding (#6266), so
  * reading that bullet as "a build of #n" parked #n for the platter's whole hold — up to a digest
  * week. `platterClosesByIssue`'s rule (#6193) applies instead: a `Closes #n` issue waits on the
- * merge; a `Part of #n` issue still has work left, which a puller may take.
+ * merge; a `Part of #n` issue still has work left, which a puller may take. The slices such a
+ * plan's platter closes are screened separately, as `boardedOn` (#6530): the plan continues, but
+ * never into a sub-issue whose build is already boarded.
  */
 export function openPrsByIssue(openPrs = []) {
   const byIssue = new Map();
@@ -433,6 +450,7 @@ export function gatherContinuationDeps({ now = Date.now(), mode = readWorkMode()
   const open = ghRest("pulls?state=open&per_page=100") ?? [];
   const closed = ghRest("pulls?state=closed&sort=updated&direction=desc&per_page=100") ?? [];
   const inFlightPr = openPrsByIssue(open);
+  const boardedOn = platterClosesByIssue(open);
   const merged = new Map();
   for (const pr of closed) {
     const mergedMs = Date.parse(pr?.merged_at ?? "");
@@ -445,7 +463,7 @@ export function gatherContinuationDeps({ now = Date.now(), mode = readWorkMode()
   const candidates = [...merged.entries()]
     .slice(0, MAX_CANDIDATES)
     .map(([n, mergedMs]) =>
-      readCandidate(plans.get(n), { openPlanPr: inFlightPr.get(n), mergedMs }),
+      readCandidate(plans.get(n), { openPlanPr: inFlightPr.get(n), boardedOn, mergedMs }),
     );
   return { candidates, caps: mode.caps ?? {} };
 }
@@ -467,7 +485,7 @@ function readRunOutcome(runId) {
 
 /** Everything one candidate plan's verdict reads, as plain data. The plan issue itself came from
  *  the screen's own paged read, so this adds the per-plan calls and nothing else. */
-function readCandidate(plan, { openPlanPr, mergedMs }) {
+function readCandidate(plan, { openPlanPr, boardedOn, mergedMs }) {
   const n = plan.number;
   const comments = ghRestAll(`issues/${n}/comments`);
   const subIssues = restOr(`issues/${n}/sub_issues?per_page=100`, []) ?? [];
@@ -480,7 +498,7 @@ function readCandidate(plan, { openPlanPr, mergedMs }) {
   const last = receiptsOf(comments).slice(-1)[0];
   const runs = {};
   if (last?.runId) runs[last.runId] = readRunOutcome(last.runId);
-  return { plan, comments, subIssues, blockedBy, openPlanPr, mergedMs, runs };
+  return { plan, comments, subIssues, blockedBy, openPlanPr, boardedOn, mergedMs, runs };
 }
 
 /** `gatherContinuationDeps` plus the live admission inputs — what both call sites need. */

@@ -4,6 +4,7 @@ description: research one bottleneck-labelled issue and leave a call sheet plus 
 model: fable
 effort: high
 isolation: none
+agentType: general-purpose
 outcomeCheck: 'test "$(curl -sSf -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/ejclark/skynet-capital/issues/{item}/comments?per_page=100" | grep -c -- "!-- bottleneck-research --")" -gt 0'
 ---
 
@@ -13,7 +14,8 @@ outcomeCheck: 'test "$(curl -sSf -H "Authorization: Bearer $GITHUB_TOKEN" -H "Ac
 `node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/research-bottleneck.instructions.md`
 rather than transcribing these values by hand. `model: fable` + `effort: high` because this is research, not a mechanical chore, and
 grind's cheap defaults are the wrong fit. `isolation: none` is deliberate (no checkout, no file
-edits). Nothing is pushed; the deliverable is one comment on the issue plus a label, so the
+edits). `agentType: general-purpose` because step 3 reads primary sources through `context7` and the
+web, which the worker cannot reach or is unproven on. Nothing is pushed; the deliverable is one comment on the issue plus a label, so the
 `outcomeCheck` greps the comment's marker line rather than looking for a branch.
 
 Items are open issues carrying the `bottleneck` label, passed as plain issue numbers (`"1318"`), so

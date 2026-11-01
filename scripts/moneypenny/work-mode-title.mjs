@@ -16,6 +16,11 @@
 // the mode `resolveWorkMode` already returned, and the only actor is the audit lane (the push-driven
 // one that already rides every merge to `main` — "the next lane run", in the criterion's words).
 //
+// THE PACE SUFFIX (#6470). The reading a touch point publishes lives in the issue's body, and the title
+// is derived from it here, so this sync keeps it rather than erasing it on the next push. Gone is
+// worked out at the time of the reading, so the suffix holds still between readings and costs no write
+// per tick; the one change the clock makes on its own is a reading going stale, which says so.
+//
 // TWO DELIBERATE SILENCES — this never fires when it cannot be sure the title is wrong:
 //   - `mode.unreadable`: the tracking issue itself could not be read, so `conserve` is a FALLBACK
 //     rather than a reading of the dial, and retitling on it would turn a GitHub blip into a
@@ -27,12 +32,16 @@
 //   - a missing or empty current title means `gh` gave us nothing to compare, so there is nothing
 //     to correct.
 
+import { paceLine, reckon } from "./quota.mjs";
+
 /** The title the tracking issue should carry for a resolved mode — the plan's own format
  *  ("Status at a glance": `Work mode: CONSERVE until 2026-09-29`). The expiry is part of the title
- *  only when the position actually holds one, so `normal` reads as a bare `Work mode: NORMAL`. */
-export function workModeTitle(mode) {
+ *  only when the position actually holds one, so `normal` reads as a bare `Work mode: NORMAL`, and
+ *  the pace line only when a reading has been published. */
+export function workModeTitle(mode, now = Date.now()) {
   const position = String(mode?.position ?? "").toUpperCase();
-  return `Work mode: ${position}${mode?.until ? ` until ${mode.until}` : ""}`;
+  const dial = `Work mode: ${position}${mode?.until ? ` until ${mode.until}` : ""}`;
+  return mode?.reading ? `${dial} · ${paceLine(reckon(mode.reading, { now }))}` : dial;
 }
 
 /**
@@ -51,12 +60,12 @@ export function workModeTitle(mode) {
  * @returns a `retitle-work-mode` intent, or null when the title is already right (the common case).
  */
 export function workModeRetitle(state) {
-  const { trackingIssue, title, mode } = state ?? {};
+  const { trackingIssue, title, mode, now } = state ?? {};
   if (!Number.isInteger(trackingIssue) || trackingIssue <= 0) return null;
   if (!mode?.position || mode.unreadable) return null;
   if (typeof title !== "string" || !title.trim()) return null;
   const current = title.trim();
-  const desired = workModeTitle(mode);
+  const desired = workModeTitle(mode, now);
   if (current === desired) return null;
   return {
     kind: "retitle-work-mode",

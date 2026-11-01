@@ -23,15 +23,16 @@ const filing = (issueNumber, title, kind, filedAt, status) => ({
   status,
 });
 
-// A ledger with one filing in each state the badge row can show — the mix is the point: two still
-// moving, one waiting on the member, one with Eric, one closed unbuilt (words, no track — #5253),
+// A ledger with one filing in each state the badge row can show — the mix is the point: one filed
+// and waiting to be picked, one up next, one being built (the lit middle step, #6316), one part
+// shipped, one waiting on the member, one with Eric, one closed unbuilt (words, no track — #5253),
 // and two already shipped (hidden by default).
 const feedback = {
   enabled: true,
   coachEnabled: true,
   followupEnabled: true,
   appVersion: "1.129.0",
-  feedbackCount: 7,
+  feedbackCount: 9,
   celebrating: [],
   recent: [
     filing(
@@ -41,6 +42,14 @@ const feedback = {
       "2026-09-03",
       "open",
     ),
+    filing(
+      1199,
+      "Show the fill price on the ticket's done state",
+      "feature",
+      "2026-09-03",
+      "up-next",
+    ),
+    filing(1196, "Rung 101 should say it waits for the open", "bug", "2026-09-02", "building"),
     filing(
       1188,
       "Standings sorts by equity — I want return",

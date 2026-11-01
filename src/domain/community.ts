@@ -28,7 +28,7 @@ export const COMMUNITY_MILESTONES: readonly CommunityMilestone[] = [
     id: "first-feedback",
     title: "File your first feedback",
     detail:
-      "Report a bug, request a feature, or drop a wild idea — every filing becomes a real GitHub issue on the build queue.",
+      "Report a bug, request a feature, or drop a wild idea — every filing becomes a real GitHub issue, and Profile → Feedback shows where it stands.",
     points: 15,
   },
 ];
