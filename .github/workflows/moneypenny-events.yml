@@ -726,6 +726,24 @@ jobs:
           echo "::notice::cost — event=$ID usd=$COST turns=$TURNS duration_ms=$MS is_error=$ERR"
           echo "- \`$ID\` — **\$$COST** (imputed, Max 20 flat-fee — not a literal charge) · $TURNS turns · ${MS}ms · is_error=$ERR" >> "$GITHUB_STEP_SUMMARY"
 
+      # THE LANE PUBLISHES ITS USAGE READING (2026-11-01, #6470's study). Every session streams a
+      # `rate_limit_event` whose `unifiedWindows.seven_day.utilization` is the weekly percent, into
+      # the same file the cost step reads, at zero tokens; nothing read it. This writes it into
+      # #4153's body under the marker scripts/moneypenny/pace-reading.mjs reads (#6544), so the
+      # pace line is current between touch points. GITHUB_TOKEN on purpose: the App token minted
+      # above may have expired after a long build (#5936), and a body edit fires no workflow
+      # (this file's `issues:` types are label and state changes). Report only, never the dial;
+      # `continue-on-error` because a report must not fail a lane; a file with no reading writes
+      # nothing. Unverified until the first run: every real sample came from a leg near a limit,
+      # so whether a lane at plain `allowed` status carries the event on CLI 2.1.286 is settled by
+      # the first run after this lands, not by this comment.
+      - if: always()
+        name: Publish the session's usage reading (report only)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/moneypenny/quota.mjs --publish-from /home/runner/work/_temp/claude-execution-output.json --source "lane:build-events"
+
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue
   # `feedback` — that label event is the work order (Eric: "I expected the issues to get received
@@ -807,6 +825,24 @@ jobs:
             The feedback issue is #${{ needs.route.outputs.feedback_issue }} in this repo.
 
             Resume reply comment id: ${{ needs.route.outputs.feedback_reply || 'none' }}
+
+      # THE LANE PUBLISHES ITS USAGE READING (2026-11-01, #6470's study). Every session streams a
+      # `rate_limit_event` whose `unifiedWindows.seven_day.utilization` is the weekly percent, into
+      # the same file the cost step reads, at zero tokens; nothing read it. This writes it into
+      # #4153's body under the marker scripts/moneypenny/pace-reading.mjs reads (#6544), so the
+      # pace line is current between touch points. GITHUB_TOKEN on purpose: the App token minted
+      # above may have expired after a long build (#5936), and a body edit fires no workflow
+      # (this file's `issues:` types are label and state changes). Report only, never the dial;
+      # `continue-on-error` because a report must not fail a lane; a file with no reading writes
+      # nothing. Unverified until the first run: every real sample came from a leg near a limit,
+      # so whether a lane at plain `allowed` status carries the event on CLI 2.1.286 is settled by
+      # the first run after this lands, not by this comment.
+      - if: always()
+        name: Publish the session's usage reading (report only)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/moneypenny/quota.mjs --publish-from /home/runner/work/_temp/claude-execution-output.json --source "lane:build-feedback"
 
       # THE MECHANICAL "DID ANYTHING VISIBLE HAPPEN?" GUARD (#1028). The session's own contract
       # (feedback-build.md: "exactly one of four visible endings, always, never silence") is a
@@ -922,6 +958,24 @@ jobs:
             complete instruction set for this run.
 
             The plan issue is #${{ needs.route.outputs.plan_issue }} in this repo.
+
+      # THE LANE PUBLISHES ITS USAGE READING (2026-11-01, #6470's study). Every session streams a
+      # `rate_limit_event` whose `unifiedWindows.seven_day.utilization` is the weekly percent, into
+      # the same file the cost step reads, at zero tokens; nothing read it. This writes it into
+      # #4153's body under the marker scripts/moneypenny/pace-reading.mjs reads (#6544), so the
+      # pace line is current between touch points. GITHUB_TOKEN on purpose: the App token minted
+      # above may have expired after a long build (#5936), and a body edit fires no workflow
+      # (this file's `issues:` types are label and state changes). Report only, never the dial;
+      # `continue-on-error` because a report must not fail a lane; a file with no reading writes
+      # nothing. Unverified until the first run: every real sample came from a leg near a limit,
+      # so whether a lane at plain `allowed` status carries the event on CLI 2.1.286 is settled by
+      # the first run after this lands, not by this comment.
+      - if: always()
+        name: Publish the session's usage reading (report only)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/moneypenny/quota.mjs --publish-from /home/runner/work/_temp/claude-execution-output.json --source "lane:build-plan"
       # A SECOND MINT FOR THE POST-BUILD STEPS (#5936). An App installation token lives one hour,
       # and the one minted at the top of this job is the session's: a build past 60 minutes (92 min
       # on 2026-10-20, run 39441909089) left `--end-build` logging `HTTP 401: Bad credentials` as a
