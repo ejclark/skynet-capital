@@ -450,7 +450,8 @@ jobs:
       #
       # GITHUB_TOKEN, deliberately, where every step around it uses the App token: those steps WRITE
       # LABELS and need the resulting event to start another run, which GITHUB_TOKEN suppresses. This
-      # one only comments, and a comment that woke another lane would be a loop, not a feature. Never
+      # one only comments or lifts a lane's ask into the body, and an event from either that woke
+      # another lane would be a loop, not a feature. Never
       # `sync-project`'s PAT either — that is Eric's, so the comment would read as him talking to
       # himself about his own missing ask.
       - name: Check the decision callout when needs-eric lands

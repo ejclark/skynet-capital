@@ -30,9 +30,10 @@ nothing before this lane ever acted on.
 [`docs/process/EVENT-RESEARCH.md`](../../docs/process/EVENT-RESEARCH.md) and
 [`event-research.md`](event-research.md), shipped and auto-merge armed the usual way), possibly
 after you fix a script/data bug that was silently killing every prior attempt — or
-(b) a `needs-eric` label on the issue plus one comment stating precisely what fails, the evidence
-(run id, failing step, error text), and why it is not safe or not possible for this lane to resolve
-unattended. Silence is not an option, and neither is a comment that promises a fix you did not
+(b) one comment stating precisely what fails, the evidence (run id, failing step, error text), and
+why it is not safe or not possible for this lane to resolve unattended, and after that comment a
+`needs-eric` label on the issue: labelling first draws the missing-callout comment instead of
+lifting this one into the issue's body. Silence is not an option, and neither is a comment that promises a fix you did not
 ship. End every comment with a `— Moneypenny` signature line above the Claude Code attribution
 footer.
 
