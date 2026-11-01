@@ -14,14 +14,21 @@ const SOURCE = readFileSync(".claude/workflows/grind.js", "utf8").replace(
 );
 const noop = () => undefined;
 
-async function dispatched(args: Record<string, unknown>): Promise<Opts[]> {
+const reads: Opts[] = [];
+
+async function dispatched(
+  args: Record<string, unknown>,
+  manifest: Record<string, string> = {},
+): Promise<Opts[]> {
   const calls: Opts[] = [];
   const agent = (_prompt: string, opts: Opts) => {
     if (opts.label === "work-mode") {
+      reads.push(opts);
       return { found: true, dispatch: true, position: "normal", grindWidth: 50 };
     }
     if (opts.label?.startsWith("manifest:")) {
-      return { found: true, effort: "high", isolation: "none", model: "sonnet" };
+      reads.push(opts);
+      return { found: true, effort: "high", isolation: "none", model: "sonnet", ...manifest };
     }
     calls.push(opts);
     return { status: "done", summary: "ok", branch: "b" };
@@ -112,6 +119,31 @@ describe("grind's stage agent", () => {
       ],
     });
     expect(calls.map((c) => c.agentType)).toEqual(["general-purpose", "general-purpose"]);
+  });
+
+  // Two chores do real web research and one names an MCP tool: the chore declares the agent, so a
+  // generated call and a hand-written one both get it.
+  it("lets a chore's front matter name its agent, below an explicit step", async () => {
+    const chore = { kind: "instructions", path: "docs/grind/research-bottleneck.instructions.md" };
+    const fromChore = await dispatched(
+      { ...base, steps: [chore] },
+      { agentType: "general-purpose" },
+    );
+    expect(fromChore[0]?.agentType).toBe("general-purpose");
+    const fromStep = await dispatched(
+      { ...base, steps: [{ ...chore, agentType: "reviewer" }] },
+      { agentType: "general-purpose" },
+    );
+    expect(fromStep[0]?.agentType).toBe("reviewer");
+  });
+
+  it("runs the work-mode and manifest reads as the worker too, since each only runs a command", async () => {
+    reads.length = 0;
+    await dispatched({
+      ...base,
+      steps: [{ kind: "instructions", path: "docs/grind/fix-doc-rot.instructions.md" }],
+    });
+    expect(reads.map((r) => r.agentType)).toEqual(["worker", "worker"]);
   });
 
   // The agent file has no model line because the script sets the tier: a default that dropped the

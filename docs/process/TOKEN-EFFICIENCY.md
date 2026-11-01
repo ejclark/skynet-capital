@@ -87,7 +87,7 @@ in the claude-api skill's shared/models.md, not here)
 ## The agent roster — built; the gap is the mining loop
 
 Eric's instinct (2026-08-28: "shouldn't we be creating a collection of agents and sub-agents?") is
-already the standing architecture: **six chartered agents** in `.claude/agents/`, the roster in
+already the standing architecture: **chartered agents** in `.claude/agents/`, the roster in
 `docs/COACHES.md` → *Roster pass, 2026-11-01*, each with model/effort floors enforced by
 `scripts/config-audit.mjs`, created only through `/charter` (which rejects unbounded mandates on purpose). Delegation is also exactly
 the context-isolation lever the docs prescribe — a subagent's reads stay in *its* window.

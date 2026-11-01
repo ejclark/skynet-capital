@@ -139,10 +139,10 @@ gate. Run it over one agent or the whole roster (`.claude/agents/` and `docs/age
 
 1. **Count its use over the trailing 30 days, and name how.** A number with no method is a claim, and
    usage here has been called dead wrongly before. Use every method that fits:
-   - **Sessions and workflows:** across `~/.claude/projects/<project>*` (worktree sessions have their
-     own folders), count files holding `"subagent_type":"<name>"` in session transcripts and
-     `"agentType":"<name>"` in workflow journals (`**/workflows/*/journal.jsonl`). State how far back
-     the retained transcripts reach.
+   - **Sessions and workflows:** every subagent leaves an `agent-*.meta.json` holding its `agentType`,
+     and worktree sessions have their own folders, so count them all in one pass, about 10 minutes:
+     `find ~/.claude/projects/<project>* -name '*.meta.json' -mtime -30 -print0 | xargs -0 grep -ohE
+     '"agentType": ?"[^"]*"' | sort | uniq -c`. State how far back the retained transcripts reach.
    - **CI and lanes:** `grep -rl <name> .github/workflows .github/prompts`; where one dispatches it,
      count that workflow's runs. Transcripts on this machine never show these.
    - **Debt agents:** PRs on its branch-prefix glob, with each PR's author and body read to tell a

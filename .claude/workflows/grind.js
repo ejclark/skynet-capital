@@ -100,7 +100,7 @@ const GATE_SCHEMA = {
 }
 const gate = await agent(
   'Run exactly: node scripts/moneypenny/work-gate.mjs\n\nIt prints one JSON object on stdout and status lines on stderr. Its exit code is part of the answer, not a failure: 0 means cleared to dispatch, 3 means refused (work-mode is halt, or the spend breaker is tripped) — BOTH are a real verdict and both print the JSON. Report "found": true plus that JSON object: the "dispatch", "position" and "reason" fields and caps.grindWidth, all verbatim, plus "until" only when it is not null.\n\nIf the command exits 1, prints no parseable JSON, or the object carries no caps.grindWidth, report "found": false and nothing else — never guess a position or a width. Do nothing else: no exploration, no fixing, no editing any file.',
-  { schema: GATE_SCHEMA, effort: 'low', label: 'work-mode', phase: 'Grind' },
+  { schema: GATE_SCHEMA, effort: 'low', agentType: 'worker', label: 'work-mode', phase: 'Grind' },
 )
 if (!gate?.found || typeof gate.dispatch !== 'boolean' || !Number.isInteger(gate.grindWidth)) {
   throw new Error(
@@ -183,6 +183,7 @@ const MANIFEST_SCHEMA = {
     effort: { type: 'string' },
     model: { type: 'string' },
     isolation: { type: 'string' },
+    agentType: { type: 'string' },
   },
 }
 const manifests = new Map()
@@ -191,10 +192,11 @@ if (CHORE_PATHS.length) {
     CHORE_PATHS.map((path) => async () => [
       path,
       await agent(
-        `Run exactly: node scripts/grind-manifest.mjs "${path}"\n\nOn success it prints a JSON array holding exactly one chore-manifest object with "effort" (one of low/medium/high/xhigh/max), "model" (one of haiku/sonnet/opus/fable, or null), and "isolation" (worktree or none). Report "found": true plus that object's "effort" and "isolation" values verbatim, and its "model" value ONLY when it is not null (omit the "model" field from your report when it is null — never report the string "null"). If the command exits non-zero, or you cannot find a real "effort"/"isolation" pair in its output, report "found": false and nothing else — never guess a tier.`,
+        `Run exactly: node scripts/grind-manifest.mjs "${path}"\n\nOn success it prints a JSON array holding exactly one chore-manifest object with "effort" (one of low/medium/high/xhigh/max), "model" (one of haiku/sonnet/opus/fable, or null), and "isolation" (worktree or none). Report "found": true plus that object's "effort" and "isolation" values verbatim, and its "model" value ONLY when it is not null (omit the "model" field from your report when it is null — never report the string "null"). Do the same for "agentType": report it only when it is not null. If the command exits non-zero, or you cannot find a real "effort"/"isolation" pair in its output, report "found": false and nothing else — never guess a tier.`,
         {
           schema: MANIFEST_SCHEMA,
           effort: 'low',
+          agentType: 'worker',
           label: `manifest:${path.split('/').pop().replace(/\.instructions\.md$/, '')}`,
           phase: 'Grind',
         },
@@ -229,7 +231,8 @@ const modelFor = (step) => step.model || RUN_MODEL || manifestFor(step)?.model |
 // skill step needs the Skill tool, so it keeps the default even when the whole run names a type;
 // only its own agentType moves it. The model above still applies: a per-call model overrides the
 // agent file, and worker.md has no model line for that reason.
-const agentTypeFor = (step) => step.agentType || (step.kind === 'skill' ? undefined : args.agentType || 'worker')
+const agentTypeFor = (step) =>
+  step.agentType || (step.kind === 'skill' ? undefined : args.agentType || manifestFor(step)?.agentType || 'worker')
 // Isolation costs ~200-500ms + disk per agent — only pay it when items mutate shared files/branches
 // in parallel (e.g. each item does its own `git checkout -B`). A step's own `isolation` (boolean —
 // exactly what `grind-manifest.mjs --args` already emits) beats the whole-run `args.isolation`

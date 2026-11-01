@@ -133,8 +133,10 @@ checks all four."
 envelope and branch checks, dispatch as the `worker` agent (`.claude/agents/worker.md`: file and
 shell tools, about 30k tokens at start against 82k for the default workflow agent). A `skill` step
 keeps the default agent because it needs the Skill tool. A stage that needs Agent, ReportFindings or
-an MCP tool sets `agentType: 'general-purpose'` on the step; `args.agentType` sets it for the whole
-run except `skill` steps. The model and effort rules below still apply, since a per-call model
+an MCP tool sets `agentType: 'general-purpose'` on the step, or a chore declares it in its front
+matter; `args.agentType` sets it for the whole run except `skill` steps. Whether WebFetch and
+WebSearch work in a narrow agent is not yet proven by a real run, so the two chores that depend on
+the web declare the default-weight agent until one does. The model and effort rules below still apply, since a per-call model
 overrides the agent file.
 
 Every step after the first gets the prior step's `{status, summary}` result as `{prev}` in its

@@ -33,7 +33,8 @@ drained it. See `docs/COACHES.md` → *Resource cost is a fitness dimension*.
 
 ## The flow
 
-**A process file in the diff** (`scripts/instructions/scope.mjs`, `isInstructionFile`) → before opening, ask `reviewer` for its process-file lens, and put `Process-file lens: <n> findings` in the PR body's details.
+**A process file in the diff** (`scripts/instructions/scope.mjs`) → before opening, ask `reviewer`
+for its process-file lens, and put `Process-file lens: <n> findings` in the PR body's details.
 
 1. **Verify locally first.** `scripts/ship.sh open` runs `npm run verify` (parity with CI) and
    refuses to push on red — never spend a runner or a PR on a known loser.

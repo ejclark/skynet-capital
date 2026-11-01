@@ -522,7 +522,7 @@ to 3,536.
 |---|---|---|---|---|
 | `worker` | one workflow stage that needs only files and shell | `.claude/workflows/grind.js` for every step but `skill`; any `agent()` call that names it | new | **add** |
 | `evals-expert` | writes a check, or grades one blind | a person or session on request; `/fitness` steps 7 and 10 and `/retro` point at it; nothing automatic | new | **add, on demand** |
-| `reviewer` | reads a diff against this repo's standards; on request, a process file the way the next session will | sessions, and `/ship` asks for the process-file lens | 3 | **keep, extend** |
+| `reviewer` | reads a diff against this repo's standards; on request, a process file the way the next session will | sessions, and `/ship` asks for the process-file lens | 3, and a 4th on 11-01 that tested per-call model precedence | **keep, extend** |
 | `red-team` | attacks a bounded diff for security | sessions; the feedback and plan lanes cite its hypothesis rule | 1 | **keep** |
 | `dep-warden` | reviews dependency-update PRs | `moneypenny-events.yml`, on every dependabot PR | 27 PRs since 10-01, in CI | **keep** |
 | `linguist` | checks whether text lands for its reader | `orient.md` and `reviewer`'s boundary name it; nothing runs it | 0 | **keep, shorter; `/charter` pass 2026-12-31** |
