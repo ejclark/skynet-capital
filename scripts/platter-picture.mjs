@@ -14,7 +14,8 @@
 // log with the same parser scripts/platter-merge-scan.mjs uses to count squashed landings.
 //
 // The ink mode dress (docs/PICTURES.md, promoted by Eric 2026-09-26): paper for what exists, gold on
-// the one decision, seal red on the defect. The snippet is copied whole from the page, never a hex
+// the one decision. Seal red once marked the squash ending as the defect (#3754); since 2026-11-01
+// a squashed item reverts through `ship platter revert`, so both endings are paper. The snippet is copied whole from the page, never a hex
 // chosen here, and the lint's registry check keeps it that way. Labels say what things do; the house
 // noun stays in this file's name and the ship script.
 //
@@ -80,10 +81,9 @@ flowchart TD
     pr@{ shape: stadium, label: "**one held PR**<br/>one click by Eric,<br/>never auto-merged" }
     items ==> pr ==> button{"\`**which button lands it?**<br/>the click decides<br/>what can be undone\`"}
     button ==>|Create a merge commit| merged@{ shape: cyl, label: "${merged}" }
-    button -->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>reverts only as<br/>a block, #3754" }
-    class items,pr,merged paper
+    button -->|Squash and merge| squashed@{ shape: cyl, label: "**main: one commit**<br/>an item reverts<br/>by ship revert" }
+    class items,pr,merged,squashed paper
     class button gold
-    class squashed defect
 ${INK}
     ${FONT}`;
 }
@@ -103,16 +103,15 @@ export function landedPicture(landing) {
   const pr = landing.pr ? `PR #${landing.pr}` : `commit ${landing.sha}`;
   if (landing.flattened) {
     return `---
-title: "${pr}: no item reverts alone"
+title: "${pr}: an item reverts by ship revert"
 ${CONFIG}
 ---
 flowchart TD
     subgraph held ["the held PR"]
 ${nodes}
     end
-    held ==>|Squash and merge| main@{ shape: cyl, label: "main: ${n === 1 ? "1" : Array.from({ length: n }, (_, i) => i + 1).join(" + ")}<br/>as one commit,<br/>reverts only<br/>as a block, #3754" }
-    class ${items.map((_, i) => `i${i + 1}`).join(",")} paper
-    class main defect
+    held ==>|Squash and merge| main@{ shape: cyl, label: "main: ${n === 1 ? "1" : Array.from({ length: n }, (_, i) => i + 1).join(" + ")}<br/>as one commit;<br/>an item reverts<br/>by ship revert" }
+    class ${items.map((_, i) => `i${i + 1}`).join(",")},main paper
 ${INK}
     ${FONT}`;
   }
