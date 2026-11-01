@@ -104,7 +104,7 @@ const SOURCES = [
     "contracts",
     "[fitness] contracts",
     (s) =>
-      `${s.episodes.length} failed; the failing read files the issue and when the failure began is stored nowhere, so lag is unknown`,
+      `${s.episodes.length} failed${s.blind ? `, ${s.blind} could not read their source` : ""}; the failing read files the issue and when the failure began is stored nowhere, so lag is unknown`,
   ],
   [
     "audit",
@@ -125,7 +125,7 @@ function failureRow(e) {
     e.failedAt ? `failed ${e.failedAt.slice(0, 16)}Z` : null,
     "capsule" in e ? (e.capsule ? `capsule #${e.capsule}` : "no capsule") : null,
     `lag ${when(e.lagMs)}`,
-    e.fix ? `fix #${e.fix}` : "fix unknown",
+    e.fix ? `fix #${e.fix}` : e.fixedAt ? "fix merged, no PR number" : "fix unknown",
     `filed to fix ${when(e.filedToFixMs)}`,
     `to verified ${e.floor ? "at least " : ""}${when(e.toVerifiedMs)}`,
   ];
@@ -136,7 +136,8 @@ function failureRow(e) {
 export function failureToFix(f, { perFailure = false } = {}) {
   const lines = ["", "failure to fix (failed → filed → fix merged → verified)"];
   if (typeof f === "string") return [...lines, `  ${f}`];
-  if (f.commits !== "origin/main") lines.push(`  ${f.commits}: every fix link reads unknown`);
+  if (f.commits !== "origin/main")
+    lines.push(`  ${f.commits}: fix and Introduced in links read unknown`);
   for (const [key, label, summary] of SOURCES) {
     const source = f.sources[key];
     lines.push(`  ${label}: ${summary(source)}`);

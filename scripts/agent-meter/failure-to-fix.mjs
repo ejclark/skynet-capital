@@ -33,8 +33,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LEDGER_DIR, parseLedger, slugOf } from "../loop-ledger.mjs";
 import { FOUND_BY, introducedIn } from "./defects.mjs";
-import { defectIssues, searchIssues } from "./github.mjs";
-import { listRuns, noop, REPO } from "./lanes.mjs";
+import { defectIssues, failedJobsOf, searchIssues } from "./github.mjs";
+import { listRuns, noop } from "./lanes.mjs";
 
 const MINUTE = 60000;
 const HOUR = 60 * MINUTE;
@@ -82,14 +82,17 @@ export function parseCommitLog(text) {
 }
 
 function readCommits(cwd) {
-  const res = spawnSync("git", ["log", "--first-parent", `--format=${LOG_FORMAT}`, "origin/main"], {
-    cwd,
-    encoding: "utf8",
-    maxBuffer: 512 * 1024 * 1024,
-  });
-  return res.status === 0
-    ? { commits: parseCommitLog(res.stdout), ref: "origin/main" }
-    : { commits: parseCommitLog(""), ref: "unavailable: origin/main could not be read" };
+  const git = (...args) =>
+    spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 512 * 1024 * 1024 });
+  const res = git("log", "--first-parent", `--format=${LOG_FORMAT}`, "origin/main");
+  if (res.status !== 0)
+    return { commits: parseCommitLog(""), ref: "unavailable: origin/main could not be read" };
+  // A shallow log succeeds with one commit, so without this every link reads unknown for no reason.
+  const shallow = git("rev-parse", "--is-shallow-repository").stdout.trim() === "true";
+  return {
+    commits: parseCommitLog(res.stdout),
+    ref: shallow ? "shallow checkout: origin/main's history is cut" : "origin/main",
+  };
 }
 
 // ── the episodes ───────────────────────────────────────────────────────────────────────────────
@@ -341,13 +344,7 @@ function namedMainRuns(rest, cache, w, maxRest, persist) {
   for (const streak of redStreaks(runs)) {
     const [first] = streak.runs;
     if (cache.pipeline[first.id] || rest.calls >= maxRest) continue;
-    const jobs = rest.api(`repos/${REPO}/actions/runs/${first.id}/jobs?per_page=100`).jobs ?? [];
-    cache.pipeline[first.id] = jobs
-      .filter((j) => j.conclusion === "failure")
-      .map((j) => ({
-        job: j.name,
-        step: j.steps?.find((s) => s.conclusion === "failure")?.name ?? null,
-      }));
+    cache.pipeline[first.id] = failedJobsOf(rest, first.id);
     persist();
   }
   return runs.map((run) => ({ ...run, failedJobs: cache.pipeline[run.id] ?? null }));
@@ -387,7 +384,11 @@ export function readFailureToFix({
           (c) => !pipelineCapsules.includes(c) && inWindow(c, w),
         ).length,
       }),
-      contracts: sourceOf(contractEpisodes(fitness, commits, w)),
+      contracts: sourceOf(contractEpisodes(fitness, commits, w), {
+        // A check that could not read its source is neither a pass nor a failure, so it is a count.
+        blind: fitness.filter((i) => /^\[fitness\] cannot read /.test(i.title) && inWindow(i, w))
+          .length,
+      }),
       audit: sourceOf(auditEpisodes(audit, commits, w)),
     },
     rest: { calls: rest.calls, cap: maxRest },

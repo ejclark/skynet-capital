@@ -3,6 +3,17 @@
 // one number.
 import { listRuns, noop, REPO } from "./lanes.mjs";
 
+/** One run's failing jobs and the step each died at: the shape `cache.pipeline` holds. */
+export function failedJobsOf(rest, runId) {
+  const jobs = rest.api(`repos/${REPO}/actions/runs/${runId}/jobs?per_page=100`).jobs ?? [];
+  return jobs
+    .filter((j) => j.conclusion === "failure")
+    .map((j) => ({
+      job: j.name,
+      step: j.steps?.find((s) => s.conclusion === "failure")?.name ?? null,
+    }));
+}
+
 /**
  * Pipeline runs in the window, with each failed main push's job list read once and cached: twelve
  * straight failures on 2026-10-31 were one bots deploy, and only the job name says so.
@@ -17,13 +28,7 @@ export function pipelineRuns(rest, cache, w, maxRest, persist = noop) {
   for (const run of main) {
     if (run.conclusion !== "failure" || cache.pipeline[run.id]) continue;
     if (rest.calls >= maxRest) break;
-    const jobs = rest.api(`repos/${REPO}/actions/runs/${run.id}/jobs?per_page=100`).jobs ?? [];
-    cache.pipeline[run.id] = jobs
-      .filter((j) => j.conclusion === "failure")
-      .map((j) => ({
-        job: j.name,
-        step: j.steps?.find((s) => s.conclusion === "failure")?.name ?? null,
-      }));
+    cache.pipeline[run.id] = failedJobsOf(rest, run.id);
     persist();
   }
   return {
@@ -47,10 +52,13 @@ export function mergedPrs(rest, sinceMs) {
   return prs;
 }
 
-/** Issue search, paged: the shared search bucket is small, so a page under 100 ends it. */
+/**
+ * Issue search, paged to the API's own limit of 1,000 results. A page under 100 ends it, so the
+ * small search bucket pays only for what exists.
+ */
 export function searchIssues(rest, query) {
   const items = [];
-  for (let page = 1; page <= 3; page += 1) {
+  for (let page = 1; page <= 10; page += 1) {
     const q = encodeURIComponent(`repo:${REPO} ${query}`);
     const batch = rest.api(`search/issues?q=${q}&per_page=100&page=${page}`).items ?? [];
     items.push(...batch);
@@ -62,5 +70,6 @@ export function searchIssues(rest, query) {
 /** Issues carrying the audit's `Introduced in` field, created since the window's first day. */
 export function defectIssues(rest, sinceMs) {
   const day = new Date(sinceMs).toISOString().slice(0, 10);
-  return searchIssues(rest, `"Introduced in" in:body created:>=${day}`);
+  // is:issue, because a PR that quotes the two fields is not a finding.
+  return searchIssues(rest, `"Introduced in" in:body is:issue created:>=${day}`);
 }

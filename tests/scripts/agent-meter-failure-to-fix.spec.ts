@@ -17,6 +17,10 @@ import {
   stagesOf,
   // @ts-expect-error plain .mjs script, no declarations
 } from "../../scripts/agent-meter/failure-to-fix.mjs";
+// @ts-expect-error plain .mjs script, no declarations
+import { defectIssues, searchIssues } from "../../scripts/agent-meter/github.mjs";
+// @ts-expect-error plain .mjs script, no declarations
+import { failureToFix } from "../../scripts/agent-meter/render.mjs";
 
 // THE ONE OUTCOME NOTHING MEASURED (#6470). Eric asked for faster verification and problem
 // resolution, and docs/process/PILLARS.md calls detection lag the measure of the measures, yet every
@@ -98,6 +102,8 @@ describe("the Introduced in cell", () => {
       ),
     ).toEqual({ prs: [6335], floor: true });
     expect(introducedIn("no such field")).toBeNull();
+    // A plan issue describing the audit's format quotes the template. It names no PR.
+    expect(introducedIn("| **Introduced in** | #N … |")).toBeNull();
   });
 
   it("counts a 'before #N' finding as confirmed without blaming #N for it", () => {
@@ -112,6 +118,31 @@ describe("the Introduced in cell", () => {
     );
     expect(out.confirmed).toBe(2);
     expect(out.prsWithDefect).toBe(1);
+  });
+});
+
+describe("the issue searches", () => {
+  const paged = (sizes: number[]) => {
+    const paths: string[] = [];
+    return {
+      paths,
+      api: (path: string) => {
+        paths.push(path);
+        return { items: Array.from({ length: sizes[paths.length - 1] ?? 0 }, (_, i) => ({ i })) };
+      },
+    };
+  };
+
+  it("pages until a short page, so a busy window is not cut at an arbitrary count", () => {
+    const rest = paged([100, 100, 100, 100, 7]);
+    expect(searchIssues(rest, "x")).toHaveLength(407);
+    expect(rest.paths).toHaveLength(5);
+  });
+
+  it("asks for issues only, so a PR quoting the two fields is not a finding", () => {
+    const rest = paged([0]);
+    defectIssues(rest, at("2026-11-01T00:00:00Z"));
+    expect(decodeURIComponent(rest.paths[0])).toContain("is:issue");
   });
 });
 
@@ -482,6 +513,28 @@ describe("the three stages of a source", () => {
   });
 });
 
+describe("a failure's own row", () => {
+  it("does not say fix unknown beside a fix time it knows", () => {
+    const episode = {
+      id: "run 3",
+      name: "verify › test",
+      failedAt: "2026-10-10T09:10:00.000Z",
+      fixedAt: "2026-10-10T10:00:00.000Z",
+      fix: null,
+      lagMs: null,
+      filedToFixMs: 12 * MIN,
+      toVerifiedMs: 60 * MIN,
+    };
+    const source = { episodes: [episode], stages: stagesOf([episode]) };
+    const text = failureToFix(
+      { commits: "origin/main", sources: { mainCi: source, contracts: source, audit: source } },
+      { perFailure: true },
+    ).join("\n");
+    expect(text).toContain("fix merged, no PR number");
+    expect(text).not.toContain("fix unknown");
+  });
+});
+
 describe("the ledger row", () => {
   const reading = {
     window: { until: "2026-11-01T00:00:00Z", hours: 720 },
@@ -649,6 +702,13 @@ describe("npm run meter -- --failure-to-fix", () => {
             closed_at: null,
             state_reason: null,
           },
+          {
+            number: 6502,
+            title: "[fitness] cannot read the bots app",
+            created_at: "2026-10-30T09:12:00Z",
+            closed_at: null,
+            state_reason: null,
+          },
         ],
       }),
     );
@@ -723,10 +783,30 @@ describe("npm run meter -- --failure-to-fix", () => {
     ]);
     expect(reading.sources.mainCi.otherWorkflowCapsules).toBe(1);
     expect(reading.sources.contracts.stages.detectionLag.p50Min).toBeNull();
+    expect(reading.sources.contracts.episodes).toHaveLength(1);
+    expect(reading.sources.contracts.blind).toBe(1);
     expect(reading.sources.audit.episodes[0]).toMatchObject({ id: "#6530", fix: 6537 });
     expect(reading.sources.audit.stages.toVerified.n).toBe(1);
     expect(reading.rest.calls).toBeGreaterThan(0);
     expect(reading.commits).toBe("origin/main");
+  });
+
+  it("says so when a shallow checkout cut the history its links come from", () => {
+    const shallow = join(dir, "shallow");
+    execFileSync("git", ["clone", "-q", "--depth", "1", `file://${join(dir, "repo")}`, shallow]);
+    const text = execFileSync(
+      "node",
+      [
+        "scripts/agent-meter.mjs",
+        "--failure-to-fix",
+        "--since",
+        "2026-10-27T05:00:00Z",
+        "--until",
+        "2026-11-01T00:00:00Z",
+      ],
+      { cwd: process.cwd(), encoding: "utf8", env: { ...env, AGENT_GIT_DIR: shallow } },
+    );
+    expect(text).toMatch(/shallow checkout: .*links read unknown/);
   });
 
   it("spends a job read once, then reads it from the meter's cache", () => {
