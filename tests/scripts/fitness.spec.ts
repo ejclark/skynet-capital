@@ -13,7 +13,11 @@ import {
 const NOW = Date.parse("2026-11-01T06:00:00Z");
 const standby = { state: "stopped", config: { standbys: ["m1"] } };
 
-const failing = { id: "bots-running", status: "fail", detail: "machine is stopped" };
+const failing = {
+  id: "bots-running",
+  status: "fail",
+  detail: "machine is stopped",
+};
 
 describe("fitness reporting", () => {
   const issue = {
@@ -48,7 +52,11 @@ describe("fitness reporting", () => {
   });
 
   it("does nothing on an unknown, which proves neither health nor failure", () => {
-    const blind = { id: "bots-running", status: "unknown", detail: "cannot read Fly" };
+    const blind = {
+      id: "bots-running",
+      status: "unknown",
+      detail: "cannot read Fly",
+    };
     expect(reportActions([blind], [issue])).toEqual([]);
     expect(reportActions([blind], [])).toEqual([]);
   });
@@ -61,7 +69,10 @@ describe("fitness contracts", () => {
   });
 
   it("passes a stop a person marked", () => {
-    const halted = { state: "stopped", config: { metadata: { "skynet-halt": "eric paused" } } };
+    const halted = {
+      state: "stopped",
+      config: { metadata: { "skynet-halt": "eric paused" } },
+    };
     expect(judgeMachine([halted]).status).toBe("pass");
   });
 
@@ -92,21 +103,15 @@ describe("fitness contracts", () => {
 
   it("treats no evidence as unknown, never as a pass", () => {
     expect(judgeDeploys([{ conclusion: "cancelled" }]).status).toBe("unknown");
-    expect(judgeAlertReach("nothing relevant").status).toBe("unknown");
     expect(judgeClaudeMd(10, "no budget here").status).toBe("unknown");
   });
 
   it("fails an alarm that can reach nobody, the 10-18 to 11-01 gap", () => {
-    const off = "app [info]Alert delivery: off — no mail credential is set on this deployment";
-    expect(judgeAlertReach(off).status).toBe("fail");
-    expect(judgeAlertReach("[info]Alert delivery: on (email as a@b, sweep 60m)").status).toBe(
-      "pass",
-    );
-  });
-
-  it("reads the newest boot line when delivery has changed", () => {
-    const logs = "Alert delivery: off — none\nAlert delivery: on (email)";
-    expect(judgeAlertReach(logs).status).toBe("pass");
+    const key = "SKYNET_ALERT_EMAIL_API_KEY";
+    const from = "SKYNET_ALERT_EMAIL_FROM";
+    expect(judgeAlertReach(["OTHER"]).status).toBe("fail");
+    expect(judgeAlertReach([key]).detail).toBe(`alerts reach nobody: ${from} not set`);
+    expect(judgeAlertReach([key, from]).status).toBe("pass");
   });
 
   it("holds the size budget in one place", () => {

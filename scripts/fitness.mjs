@@ -31,7 +31,9 @@ const OWNER = "ejclark";
 const BOTS_APP = "skynet-capital-bots";
 const DASHBOARD_APP = "skynet-capital";
 const STAMP_FRESH_MS = 5 * 60_000;
-const NO_MAIL_LINE = "Alert delivery: off";
+// What src/adapters/email-alert-delivery.ts needs. Read as names, never values. The boot line said the
+// same thing, but it aged out of the log buffer within hours and the contract went blind.
+const ALERT_SECRETS = ["SKYNET_ALERT_EMAIL_API_KEY", "SKYNET_ALERT_EMAIL_FROM"];
 
 const pass = (detail) => ({ status: "pass", detail });
 const fail = (detail) => ({ status: "fail", detail });
@@ -71,12 +73,11 @@ export function judgeDeploys(runs) {
 }
 
 /** Judge whether an alert can reach anyone, from the app's own boot line. */
-export function judgeAlertReach(logText) {
-  const lines = logText.split("\n").filter((line) => line.includes("Alert delivery:"));
-  if (!lines.length) return unknown("no boot line in the log buffer");
-  return lines.at(-1).includes(NO_MAIL_LINE)
-    ? fail("no mail credential, so alerts reach nobody")
-    : pass("delivery is on");
+export function judgeAlertReach(secretNames) {
+  const missing = ALERT_SECRETS.filter((name) => !secretNames.includes(name));
+  return missing.length
+    ? fail(`alerts reach nobody: ${missing.join(" and ")} not set`)
+    : pass("delivery is configured");
 }
 
 /** Judge the size budget from config-audit's constant, so the number has one home. */
@@ -89,7 +90,10 @@ export function judgeClaudeMd(bytes, auditSource) {
 }
 
 function run(bin, args) {
-  const res = spawnSync(bin, args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const res = spawnSync(bin, args, {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
   return res.status === 0 ? res.stdout : null;
 }
 
@@ -167,8 +171,10 @@ export const CONTRACTS = [
     budget: "none: a credential is the owner's to set",
     reaches: "an issue assigned to the owner",
     probe: () => {
-      const logs = run(FLY, ["logs", "-a", DASHBOARD_APP, "--no-tail"]);
-      return logs === null ? unknown("cannot read Fly") : judgeAlertReach(logs);
+      const secrets = json(FLY, ["secrets", "list", "-a", DASHBOARD_APP, "--json"]);
+      return secrets
+        ? judgeAlertReach(secrets.map((secret) => secret.name ?? secret.Name))
+        : unknown("cannot read Fly");
     },
   },
   {
@@ -236,61 +242,67 @@ function issueBody(r) {
 }
 
 function report(results) {
+  // Listed by label, not --search: the search index lags a new issue, which would open a duplicate.
   const listed = json("gh", [
     "issue",
     "list",
     "--state",
     "open",
-    "--search",
-    "[fitness] in:title",
+    "--label",
+    "bug",
     "--json",
     "number,title,body,comments",
     "--limit",
-    "50",
+    "200",
   ]);
   if (!listed) {
     console.error("fitness: cannot read GitHub issues, so nothing was reported");
     return;
   }
-  const open = listed.map((i) => ({ ...i, lastComment: i.comments?.at(-1)?.body ?? "" }));
+  const open = listed.map((i) => ({
+    ...i,
+    lastComment: i.comments?.at(-1)?.body ?? "",
+  }));
   for (const a of reportActions(results, open)) {
-    if (a.kind === "open") {
-      run("gh", [
-        "issue",
-        "create",
-        "--title",
-        issueTitle(a.result.id),
-        "--label",
-        "bug",
-        "--assignee",
-        OWNER,
-        "--body",
-        issueBody(a.result),
-      ]);
-    } else if (a.kind === "comment") {
-      run("gh", [
-        "issue",
-        "comment",
-        String(a.number),
-        "--body",
-        `Still failing, and it changed: ${a.result.detail}.`,
-      ]);
-    } else {
-      run("gh", [
-        "issue",
-        "close",
-        String(a.number),
-        "--comment",
-        `Passing again: ${a.result.detail}.`,
-      ]);
-    }
-    console.log(`fitness: ${a.kind} ${a.result.id}`);
+    const done =
+      a.kind === "open"
+        ? run("gh", [
+            "issue",
+            "create",
+            "--title",
+            issueTitle(a.result.id),
+            "--label",
+            "bug",
+            "--assignee",
+            OWNER,
+            "--body",
+            issueBody(a.result),
+          ])
+        : a.kind === "comment"
+          ? run("gh", [
+              "issue",
+              "comment",
+              String(a.number),
+              "--body",
+              `Still failing, and it changed: ${a.result.detail}.`,
+            ])
+          : run("gh", [
+              "issue",
+              "close",
+              String(a.number),
+              "--comment",
+              `Passing again: ${a.result.detail}.`,
+            ]);
+    console.log(`fitness: ${done === null ? "COULD NOT " : ""}${a.kind} ${a.result.id}`);
   }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const now = Date.now();
-  const results = CONTRACTS.map(({ probe, ...contract }) => ({ ...contract, ...probe(now) }));
+  const results = CONTRACTS.map(({ probe, ...contract }) => ({
+    ...contract,
+    ...probe(now),
+  }));
   if (process.argv.includes("--json")) console.log(JSON.stringify(results, null, 2));
   else {
     for (const r of results) {
