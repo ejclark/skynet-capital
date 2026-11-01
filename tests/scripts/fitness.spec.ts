@@ -6,11 +6,53 @@ import {
   judgeDeploys,
   judgeMachine,
   judgeStamp,
+  reportActions,
   // @ts-expect-error plain .mjs script, no declarations
 } from "../../scripts/fitness.mjs";
 
 const NOW = Date.parse("2026-11-01T06:00:00Z");
 const standby = { state: "stopped", config: { standbys: ["m1"] } };
+
+const failing = { id: "bots-running", status: "fail", detail: "machine is stopped" };
+
+describe("fitness reporting", () => {
+  const issue = {
+    number: 7,
+    title: "[fitness] bots-running",
+    body: "machine is stopped",
+    lastComment: "",
+  };
+
+  it("opens one issue for a new failure", () => {
+    expect(reportActions([failing], [])).toEqual([{ kind: "open", result: failing }]);
+  });
+
+  it("stays quiet about a failure it already reported", () => {
+    expect(reportActions([failing], [issue])).toEqual([]);
+  });
+
+  it("comments once when a standing failure changes", () => {
+    const changed = { ...failing, detail: "no primary machine" };
+    expect(reportActions([changed], [issue])).toEqual([
+      { kind: "comment", number: 7, result: changed },
+    ]);
+    expect(
+      reportActions([changed], [{ ...issue, lastComment: "it changed: no primary machine." }]),
+    ).toEqual([]);
+  });
+
+  it("closes the issue when the check passes", () => {
+    const ok = { id: "bots-running", status: "pass", detail: "started" };
+    expect(reportActions([ok], [issue])).toEqual([{ kind: "close", number: 7, result: ok }]);
+    expect(reportActions([ok], [])).toEqual([]);
+  });
+
+  it("does nothing on an unknown, which proves neither health nor failure", () => {
+    const blind = { id: "bots-running", status: "unknown", detail: "cannot read Fly" };
+    expect(reportActions([blind], [issue])).toEqual([]);
+    expect(reportActions([blind], [])).toEqual([]);
+  });
+});
 
 describe("fitness contracts", () => {
   it("fails a stopped machine, whatever a standby is doing", () => {
