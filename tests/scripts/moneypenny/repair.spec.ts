@@ -443,10 +443,9 @@ describe("moneypenny repair — only a lane that prints the evidence can show a 
     expect(leg(`${buildLegPrint}${printedEvidence(401, "allowed")}`)[0]?.type).toBe("open-issue");
   });
 
-  // The print is a workflow edit, so it cannot land here (`.github/workflows/**` is protected). This
-  // pins the gap from growing: a new lane cannot ship without the print, and the two names below
-  // come off when the edit lands. `dep-warden` only runs on `pull_request`, and `routeFailure`
-  // ignores those, so its print could never be read.
+  // By the step's name, not the file's: the usage reading step names the same file and prints nothing
+  // a failure can be read from. `dep-warden` only runs on `pull_request`, and `routeFailure` ignores
+  // those, so its print could never be read.
   it("lets no new Claude lane on main ship without printing what ended its session", () => {
     const workflow = readFileSync(".github/workflows/moneypenny-events.yml", "utf8");
     // One block per job (two-space keys under `jobs:`), comments out: they mention the file too.
@@ -457,13 +456,11 @@ describe("moneypenny repair — only a lane that prints the evidence can show a 
       .map((block) => block.replace(/^\s*#.*$/gm, ""));
     const runsClaude = jobs.filter((job) => job.includes("uses: anthropics/claude-code-action@"));
     const silent = runsClaude
-      .filter((job) => !job.includes("claude-execution-output.json"))
+      .filter((job) => !job.includes("Surface the swallowed Claude result on failure"))
       .map((job) => job.trim().split(":")[0] ?? "");
 
     expect(runsClaude.length).toBeGreaterThanOrEqual(4);
-    expect(
-      silent.filter((n) => !["dep-warden", "build-feedback", "build-plan"].includes(n)),
-    ).toEqual([]);
+    expect(silent.filter((n) => n !== "dep-warden")).toEqual([]);
   });
 });
 

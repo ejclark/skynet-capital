@@ -802,6 +802,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — feedback issue #${{ needs.route.outputs.feedback_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for feedback-${{ needs.route.outputs.feedback_issue }} and re-apply the label."
 
       - if: steps.gate.outputs.armed == 'true'
+        id: build
         uses: anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           # WHO MAY START A BUILD (Eric's call, 2026-08-22). The action discards a bot-initiated run
@@ -837,6 +838,22 @@ jobs:
             The feedback issue is #${{ needs.route.outputs.feedback_issue }} in this repo.
 
             Resume reply comment id: ${{ needs.route.outputs.feedback_reply || 'none' }}
+
+      # The same print as build-events' (THE SWALLOWED-ERROR FIX above): the terminal envelope and the
+      # rate-limit events, never the transcript. scripts/moneypenny/repair.mjs needs them to tell a
+      # usage limit from a dead token, and this lane used to file either one as a plain failure (#6579).
+      - if: always() && steps.build.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          echo "::group::Claude execution result (the action hides this by default)"
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == null or .type == "result" or .type == "rate_limit_event")' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
+          else
+            echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API failure)"
+          fi
+          echo "::endgroup::"
 
       # THE LANE PUBLISHES ITS USAGE READING (2026-11-01, #6470's study). Every session streams a
       # `rate_limit_event` whose `unifiedWindows.seven_day.utilization` is the weekly percent, into
@@ -952,6 +969,7 @@ jobs:
           blocked-message: "CLAUDE_CODE_OAUTH_TOKEN missing — plan issue #${{ needs.route.outputs.plan_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for plan-${{ needs.route.outputs.plan_issue }} and comment ready again."
 
       - if: steps.gate.outputs.armed == 'true'
+        id: build
         uses: anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc  # v1 tag, installs Claude Code 2.1.286 (first CLI to know both Opus 5.5 and Sonnet 5.5 is 2.1.284; floating v1 once broke native-binary install, see docs/LESSONS.md)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -970,6 +988,22 @@ jobs:
             complete instruction set for this run.
 
             The plan issue is #${{ needs.route.outputs.plan_issue }} in this repo.
+
+      # The same print as build-events' (THE SWALLOWED-ERROR FIX above): the terminal envelope and the
+      # rate-limit events, never the transcript. scripts/moneypenny/repair.mjs needs them to tell a
+      # usage limit from a dead token, and this lane used to file either one as a plain failure (#6579).
+      - if: always() && steps.build.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          echo "::group::Claude execution result (the action hides this by default)"
+          F=/home/runner/work/_temp/claude-execution-output.json
+          if [ -f "$F" ]; then
+            jq -c 'if type=="array" then .[] else . end | select(.type == null or .type == "result" or .type == "rate_limit_event")' "$F" \
+              || echo "(execution-output.json is not JSON the result filter can read — nothing printed, by design: this log is public)"
+          else
+            echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API failure)"
+          fi
+          echo "::endgroup::"
 
       # THE LANE PUBLISHES ITS USAGE READING (2026-11-01, #6470's study). Every session streams a
       # `rate_limit_event` whose `unifiedWindows.seven_day.utilization` is the weekly percent, into
