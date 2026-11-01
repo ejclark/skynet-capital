@@ -100,14 +100,17 @@ export function retryHold(opts?: {
   log?: (line: string) => void;
   readAll?: (path: string) => unknown[];
   read?: (path: string) => unknown;
-}): (issue: { number?: number }) => string | null;
+  /** Writes the note on a barred issue. Only the claim passes it; absent writes nothing. */
+  run?: (cmd: string, args: string[]) => string;
+}): (issue: { number?: number }, pool?: readonly AdmissionIssue[]) => string | null;
 /** Everything the unattended sweep steps past at the pick. */
 export function sweepHold(opts?: {
   now?: number;
   log?: (line: string) => void;
   readAll?: (path: string) => unknown[];
   read?: (path: string) => unknown;
-}): (issue: AdmissionIssue & { number: number }) => string | null;
+  run?: (cmd: string, args: string[]) => string;
+}): (issue: AdmissionIssue & { number: number }, pool?: readonly AdmissionIssue[]) => string | null;
 /** The comment a refused issue gets. */
 export function queueNote(reason: string): string;
 /** Did this lane's newest queue note already carry this reason? */

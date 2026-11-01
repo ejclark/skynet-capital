@@ -56,15 +56,20 @@ describe("quietReason — the third due reason", () => {
     expect(quietReason(QUIET_HOURS - 0.1, waiting)).toBeNull();
   });
 
-  it("is never due on an unknown read — unknown is said, not counted", () => {
+  it("a quiet main with a failed read is its own answer, neither due nor not due", () => {
+    expect(quietReason(80, { ready: null, researchDue: null })).toBe("quiet-unknown");
+    expect(quietReason(80, { ready: null, researchDue: 0 })).toBe("quiet-unknown");
+    expect(quietReason(80, { ready: [], researchDue: null })).toBe("quiet-unknown");
+  });
+
+  it("is not unknown under the threshold, where nothing was read and nothing needed to be", () => {
+    expect(quietReason(QUIET_HOURS - 0.1, { ready: null, researchDue: null })).toBeNull();
     expect(quietReason(80, null)).toBeNull();
-    expect(quietReason(80, { ready: null, researchDue: null })).toBeNull();
   });
 
   it("counts the half that was read when the other half failed", () => {
     expect(quietReason(80, { ready: waiting.ready, researchDue: null })).toBe("quiet-with-work");
     expect(quietReason(80, { ready: null, researchDue: 1 })).toBe("quiet-with-work");
-    expect(quietReason(80, { ready: null, researchDue: 0 })).toBeNull();
   });
 });
 
@@ -110,6 +115,7 @@ describe("digest-scan --due — the quiet reason, end to end", () => {
       [
         "#!/bin/sh",
         `printf '%s\\n' "$*" >> "${log}"`,
+        'if [ -n "$GH_REFUSES" ]; then echo "HTTP 403: forbidden" >&2; exit 1; fi',
         'case "$*" in',
         '  *"api repos/{owner}/{repo}/issues?state=open&labels=ready"*) cat "$READY_FIXTURE" ;;',
         "  *) echo '[]' ;;",
@@ -122,14 +128,18 @@ describe("digest-scan --due — the quiet reason, end to end", () => {
 
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-  const due = (readyIssues: unknown[], now: string) => {
+  const due = (readyIssues: unknown[], now: string, refuses = false, ...args: string[]) => {
     const fixture = join(dir, "ready.json");
     writeFileSync(fixture, JSON.stringify(readyIssues));
-    const r = spawnSync("node", [SCRIPT, "--due", `--now=${now}`], {
+    const r = spawnSync("node", [SCRIPT, "--due", `--now=${now}`, ...args], {
       cwd: process.cwd(),
       encoding: "utf8",
       env: {
-        ...hermeticGitEnv({ PATH: `${dir}:${process.env.PATH}`, READY_FIXTURE: fixture }),
+        ...hermeticGitEnv({
+          PATH: `${dir}:${process.env.PATH}`,
+          READY_FIXTURE: fixture,
+          ...(refuses ? { GH_REFUSES: "1" } : {}),
+        }),
         GIT_DIR: join(dir, "repo", ".git"),
       },
     });
@@ -164,7 +174,58 @@ describe("digest-scan --due — the quiet reason, end to end", () => {
     );
     expect(status).toBe(0);
     expect(out.waiting.ready).toEqual([]);
-    expect(out.reason).toBe((out.waiting.researchDue ?? 0) > 0 ? "quiet-with-work" : null);
+    const researched = out.waiting.researchDue;
+    expect(out.reason).toBe(
+      researched === null ? "quiet-unknown" : researched > 0 ? "quiet-with-work" : null,
+    );
+  });
+
+  // The audit's scenario (#6513), on its day: the event scan listed nothing for 2026-11-01, so the
+  // failed read decides it. The Routine's prompt stops on `"due": false`, so a failed read answering
+  // that reached nobody. The research half is the real scan's: a ledger written since that lists the
+  // day answers `quiet-with-work` instead, and what stays pinned is that the answer is never `false`.
+  it("WHEN main is 46h quiet and the ready read fails, THEN the answer is never `due:false`", () => {
+    const { status, out } = due([], "2026-11-03T12:00:00Z", true, "--today=2026-11-01");
+    expect(status).toBe(0);
+    expect(out.waiting.ready).toBeNull();
+    expect(out.waitingUnknown).toContain("HTTP 403");
+    expect(out.due).not.toBe(false);
+    if ((out.waiting.researchDue ?? 0) > 0) {
+      expect(out.reason).toBe("quiet-with-work");
+      expect(out.due).toBe(true);
+    } else {
+      expect(out.reason).toBe("quiet-unknown");
+      expect(out.due).toBeNull();
+    }
+  });
+
+  it("WHEN the ready read fails, THEN the human report says unknown, not a quiet nothing", () => {
+    const fixture = join(dir, "ready.json");
+    writeFileSync(fixture, "[]");
+    const r = spawnSync("node", [SCRIPT, "--now=2026-11-03T12:00:00Z", "--today=2026-11-01"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        ...hermeticGitEnv({
+          PATH: `${dir}:${process.env.PATH}`,
+          READY_FIXTURE: fixture,
+          GH_REFUSES: "1",
+        }),
+        GIT_DIR: join(dir, "repo", ".git"),
+      },
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("HTTP 403");
+    expect(r.stdout).toMatch(/UNKNOWN|DUE/);
+  });
+
+  // The contract that reads the answer: the Routine's row and the skill it hands to both have to
+  // know the third answer, or the script's honesty stops at its own stdout.
+  it("the Routine's row and the digest skill both say what the third answer means", () => {
+    expect(readFileSync("docs/ROUTINES.md", "utf8")).toMatch(/due:null[^|]*waitingUnknown/);
+    expect(readFileSync(".claude/skills/secretary/SKILL.md", "utf8")).toMatch(
+      /quiet-unknown[\s\S]{0,400}waitingUnknown/,
+    );
   });
 
   it("WHEN main has been quiet under a day, THEN GitHub is not read at all — a no-op costs nothing", () => {

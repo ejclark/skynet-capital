@@ -147,7 +147,7 @@ export function nextUnheld(pool, pickOf, holdOf, { who = "pick", log = console.l
   for (;;) {
     const pick = pickOf(rest);
     if (!pick) return { pick: null, pool: rest };
-    const hold = holdOf(pick);
+    const hold = holdOf(pick, rest);
     if (!hold) return { pick, pool: rest };
     log(`::notice::${who} — skipping #${pick.number}, ${hold}`);
     rest = rest.filter((i) => i.number !== pick.number);

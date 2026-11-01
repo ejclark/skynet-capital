@@ -42,6 +42,7 @@ export function readPickupHold(
 export function nextUnheld<T extends { number?: number }>(
   pool: T[],
   pickOf: (rest: T[]) => T | null | undefined,
-  holdOf: (pick: T) => string | null,
+  /** `rest` is the pool still in play, this pick included. */
+  holdOf: (pick: T, rest: T[]) => string | null,
   opts?: { who?: string; log?: (line: string) => void },
 ): { pick: T | null; pool: T[] };

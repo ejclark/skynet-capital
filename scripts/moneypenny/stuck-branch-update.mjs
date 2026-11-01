@@ -11,9 +11,16 @@
 // cause is found and fixed, this pass should stop finding anything and can go.
 //
 // WHAT IT TOUCHES. A branch update is a merge commit from main, with no force and no merge to main;
-// a new head runs the whole Pipeline, so the arm job's own checks still decide. Dependabot's PR gets
-// `@dependabot rebase` instead, because a merge commit stops it maintaining the PR. It skips held PRs,
+// a new head runs the whole Pipeline, so the arm job's own checks still decide. It skips held PRs,
 // protected diffs and platter-boarded branches (`exemptReason`), as the re-arm does.
+//
+// DEPENDABOT'S PR GETS AN EMPTY COMMIT. A merge commit stops dependabot maintaining the PR, and it
+// refuses `@dependabot rebase` from this App: "Sorry, only users with push access can use that
+// command", on #6314 twice (10-27, 11-01). That refusal is a reply and the comment itself exits 0, so
+// the receipt said the head had moved when it had not, and the marker burned the head's only try.
+// GitHub's documented way to push to its branch and keep it maintained is a commit message carrying
+// `[dependabot skip]`, so this adds a commit with the same tree on top of the head. Nothing changes in
+// the diff, and moving the ref without force is refused if the head moved since the read.
 //
 // THREE LIMITS. At most hourly across runners, by a lease (`takeHourlyLease`), and a tick with no
 // armed old PR never asks for it. Once per head, by a marker on the PR. And `UPDATE_CAP` heads per
@@ -40,6 +47,9 @@ const TRIED_MARKER = /<!-- moneypenny:update-branch sha=(\S+) -->/;
 
 const DEPENDABOT = "dependabot[bot]";
 
+/** Dependabot rebases over a commit carrying this; without it, it stops touching the PR. */
+const NEW_HEAD_MESSAGE = "chore: a new head to clear a cancelled check suite [dependabot skip]";
+
 /** Pure: which candidates get a new head, and the comment each carries. */
 export function updateIntents(candidates = []) {
   return candidates
@@ -49,6 +59,7 @@ export function updateIntents(candidates = []) {
       prNumber: c.number,
       title: c.title,
       headSha: c.headSha,
+      headRef: c.headRef,
       hours: c.hours,
       dependabot: c.dependabot,
       body: `🔁 **Asking for a new head on this PR** (try ${c.triedShas.length + 1} of ${UPDATE_CAP}): it has been green and armed for **${c.hours}h**, but GitHub still reads it as blocked, and its head carries a cancelled check suite. A new commit cleared the same state on #5221. This is a workaround: why that run was cancelled is not explained yet. If it stays stuck, it stays in \`npm run pr:stuck\`.\n\n<!-- moneypenny:update-branch sha=${c.headSha} -->\n\n${FOOTER}`,
@@ -96,6 +107,7 @@ export function gatherStuckBranches(
       title: listed.title,
       hours: verdict.hours,
       headSha: sha,
+      headRef: listed.head.ref,
       dependabot: listed.user?.login === DEPENDABOT,
       triedShas: comments.flatMap((c) => TRIED_MARKER.exec(c?.body ?? "")?.[1] ?? []),
     });
@@ -116,17 +128,38 @@ export function stuckBranchesOrNone(nowMs, { log = console.log, ...opts } = {}) 
   }
 }
 
+/** The empty commit on dependabot's branch. Each step throws on refusal, so the receipt is true. */
+function emptyCommitOnHead(i, run) {
+  const repo = "repos/{owner}/{repo}/git";
+  const tree = run("gh", ["api", `${repo}/commits/${i.headSha}`, "--jq", ".tree.sha"]);
+  const sha = run("gh", [
+    "api",
+    "-X",
+    "POST",
+    `${repo}/commits`,
+    "-f",
+    `message=${NEW_HEAD_MESSAGE}`,
+    "-f",
+    `tree=${tree}`,
+    "-f",
+    `parents[]=${i.headSha}`,
+    "--jq",
+    ".sha",
+  ]);
+  run("gh", ["api", "-X", "PATCH", `${repo}/refs/heads/${i.headRef}`, "-f", `sha=${sha}`]);
+}
+
 /**
  * The act. The marker goes first: if the update is then refused, this head is still marked and
- * nothing loops. A refusal is reported, not thrown. `expected_head_sha` makes GitHub refuse if the
- * head moved since the read, and a red audit run would file a repair capsule for what is only a
+ * nothing loops. A refusal is reported, not thrown. `expected_head_sha` and the unforced ref move make
+ * GitHub refuse if the head moved since the read, and a red audit run would file a repair capsule for what is only a
  * workaround that did not take; the PR stays in stuck-pr-scan's report.
  */
 export function updateStuckBranch(i, { run = sh, log = console.log } = {}) {
   run("gh", ["pr", "comment", String(i.prNumber), "--body", i.body]);
   try {
     if (i.dependabot) {
-      run("gh", ["pr", "comment", String(i.prNumber), "--body", "@dependabot rebase"]);
+      emptyCommitOnHead(i, run);
     } else {
       run("gh", [
         "api",

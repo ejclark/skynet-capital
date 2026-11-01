@@ -8,7 +8,7 @@
 // Routine is just the schedule).
 //
 //   node scripts/digest-scan.mjs               # human report
-//   node scripts/digest-scan.mjs --due         # JSON {due, reason, ...} (due:false = no-op)
+//   node scripts/digest-scan.mjs --due         # JSON {due, reason, ...} (due:false = no-op, due:null = could not tell)
 //   node scripts/digest-scan.mjs --validate    # digest docs satisfy the template contract
 //   node scripts/digest-scan.mjs --needs-you   # the "Needs you" list, from the assignment query
 //   node scripts/digest-scan.mjs --learning    # the unlearned-incident line for "Noise absorbed"
@@ -27,6 +27,12 @@
 // Quiet with NOTHING waiting is not a reason — a quiet weekend is not a failure. The waiting read
 // is made only once the quiet threshold is crossed, so an ordinary day costs no GitHub call, and a
 // read that fails is said as unknown, never counted as due or as nothing.
+//
+// SO "NOT DUE" NEEDS A READ THAT SAID SO. Main quiet, what was read shows nothing waiting, and a half
+// failed: that is `due: null`, reason `quiet-unknown`, a third answer. The Routine's contract stops on
+// `due:false`, so counting the failed half as nothing (#6513) reached nobody until the heartbeat, and
+// a persistent `gh` failure switched this rule off with no signal. It is not a digest either: nothing
+// is known to report, so the skill sends one line and stops.
 //
 // NEEDS YOU (#3818 criterion 12, #4293): the list is `plan().needsYou` from
 // scripts/moneypenny/assignments.mjs — the same call the assignment dry run makes, never a second
@@ -124,14 +130,16 @@ export function waitingWork({ readyIssues = [], researchDue = 0 }) {
 }
 
 /**
- * The third due reason, pure: `quiet-with-work` or null. A half that could not be read is `null`
- * inside `waiting` and counts as nothing — never as due; `waiting: null` (nothing read) is never due.
+ * The third due reason, pure. `quiet-with-work` when what was read shows work; `quiet-unknown` when it
+ * shows none and a half (`null` inside `waiting`) could not be read, because that half might have
+ * been the work; null when both halves read empty. `waiting: null` means no read was needed.
  */
 export function quietReason(quietHours, waiting) {
   if (quietHours < QUIET_HOURS || !waiting) return null;
   const ready = waiting.ready?.length ?? 0;
   const research = waiting.researchDue ?? 0;
-  return ready > 0 || research > 0 ? "quiet-with-work" : null;
+  if (ready > 0 || research > 0) return "quiet-with-work";
+  return waiting.ready === null || waiting.researchDue === null ? "quiet-unknown" : null;
 }
 
 /**
@@ -162,8 +170,9 @@ function readReadyIssues() {
  * The waiting read, made only past the quiet threshold: the ready list above and one local event
  * scan for `today`. Each half is soft on failure on its own, by design: this runs inside a
  * claude.ai Routine whose `--due` answer is the whole contract, and a GitHub blip must cost one
- * "unknown" half — printed on stderr, carried in the JSON — not a crashed clock, a silent "not
- * due", or the other half's good read. Mirrors `learningLine`'s `unlearnedRuns: null`.
+ * "unknown" half — printed on stderr, carried in the JSON, answered `quiet-unknown` when it decides
+ * the answer — not a crashed clock, a silent "not due", or the other half's good read. Mirrors
+ * `learningLine`'s `unlearnedRuns: null`.
  */
 function readWaitingWork(today) {
   const unknown = [];
@@ -285,7 +294,7 @@ function status(today, nowMs) {
         ? "heartbeat"
         : quietReason(quietHours, waiting);
   return {
-    due: reason !== null,
+    due: reason === "quiet-unknown" ? null : reason !== null,
     reason,
     lastDigest: lastDate,
     commitsSinceLast: commits,
@@ -384,12 +393,13 @@ async function main() {
     return;
   }
 
-  const mark = s.due ? "▶" : "·";
+  const mark = s.due ? "▶" : s.due === null ? "?" : "·";
   console.log(
     `${mark} last digest: ${s.lastDigest ?? "never"} · ${s.commitsTruncated ? "≥" : ""}` +
       `${s.commitsSinceLast ?? "?"} commit(s) since ` +
       `(threshold ${COMMIT_THRESHOLD}) · ${s.daysSinceLast ?? "?"}d elapsed (heartbeat ${HEARTBEAT_DAYS}d)` +
-      `${quietLine(s)}${s.due ? ` — DUE (${s.reason}); run /secretary` : ""}`,
+      `${quietLine(s)}${s.due ? ` — DUE (${s.reason}); run /secretary` : ""}` +
+      `${s.due === null ? " — UNKNOWN: a read failed, so this cannot say not due" : ""}`,
   );
 }
 

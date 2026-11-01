@@ -91,7 +91,11 @@ export function claimNext(
     readPrIssues?: () => Map<number, number>;
     claims?: Record<"plan" | "feedback", typeof claimPlan>;
     /** The REST reads behind the default hold (`sweepHold`), for a spec that keeps that default. */
-    holdReads?: { readAll?: (path: string) => unknown[]; read?: (path: string) => unknown };
+    holdReads?: {
+      readAll?: (path: string) => unknown[];
+      read?: (path: string) => unknown;
+      run?: (cmd: string, args: string[]) => string;
+    };
     /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or picks read GitHub. */
     readHold?: (issue: AdmissionIssue) => string | null;
   },

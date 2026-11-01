@@ -60,6 +60,12 @@ import {
 import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
 import { derivePrIssues, platterClosesByIssue } from "./pr-issues.mjs";
 import { isStartedPlan, statusForIssue, subIssueCounts, WAITING } from "./projects.mjs";
+import {
+  mayRetryThroughOutage,
+  noteRetryHold,
+  startsFrom,
+  utcMidnight,
+} from "./retry-hold-outage.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
 
 /** Hidden marker on every queue note, so the dedupe finds this lane's own comments. */
@@ -274,24 +280,15 @@ export const MAX_STARTS_PER_DAY = 3;
  * `withoutOpenPr` drops it from the pool first.
  */
 export function retryHoldReason({ events = [], mergedMs = null, now }) {
-  const day = new Date(now);
-  const from = Math.max(
-    Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()),
-    mergedMs ?? 0,
-  );
-  const starts = (events ?? []).filter((e) => {
-    const at = Date.parse(e?.created_at ?? "");
-    return e?.event === "labeled" && e.label?.name === LABELS.inProgress.name && at >= from;
-  }).length;
+  const starts = startsFrom(events, Math.max(utcMidnight(now), mergedMs ?? 0)).length;
   return starts >= MAX_STARTS_PER_DAY
     ? `${starts} builds started today with nothing merged since, so the sweep tries it again after midnight UTC`
     : null;
 }
 
 /** Issue → when a PR naming it last merged, in ms, from the most recently updated closed PRs. */
-function readMergedAt(read) {
+function mergedAtOf(rows) {
   const merged = new Map();
-  const rows = read("pulls?state=closed&sort=updated&direction=desc&per_page=100") ?? [];
   for (const pr of rows) {
     const at = Date.parse(pr?.merged_at ?? "");
     if (Number.isNaN(at)) continue;
@@ -310,23 +307,41 @@ function readMergedAt(read) {
  * no pick is admissible; one call for a healthy pick; for a refused pick one call, plus the merged-PR
  * list once however many are refused. A push tick's peek and the run it dispatches each read the
  * queue once. Only the sweep and `--next` ask. A `ready` label event is someone asking for this build
- * now, and `--check` is a live session, which is not the lane that is retrying.
+ * now, and `--check` is a live session, which is not the lane that is retrying. Once a refused pick's
+ * last start is an hour old, up to `OUTAGE_PEER_READS` more histories (retry-hold-outage.mjs), which also
+ * holds what tells one issue's failing build from a lane outage. `run` writes the note on the issue;
+ * only the claim passes it, so a peek and the CLI stay read-only.
  *
- * @returns {(issue: {number: number}) => string | null}
+ * @returns {(issue: {number: number}, pool?: object[]) => string | null}
  */
 export function retryHold({
   now = Date.now(),
   log = console.log,
   readAll = ghRestAll,
   read = ghRest,
+  run,
 } = {}) {
+  let closed;
   let merged;
-  return (issue) => {
+  const seen = new Map();
+  const eventsOf = (n) => {
+    if (!seen.has(n)) seen.set(n, readAll(`issues/${n}/events`));
+    return seen.get(n);
+  };
+  return (issue, pool = []) => {
     try {
-      const events = readAll(`issues/${issue.number}/events`);
+      const events = eventsOf(issue.number);
       if (!retryHoldReason({ events, now })) return null;
-      merged ??= readMergedAt(read);
-      return retryHoldReason({ events, mergedMs: merged.get(issue.number), now });
+      closed ??= read("pulls?state=closed&sort=updated&direction=desc&per_page=100") ?? [];
+      merged ??= mergedAtOf(closed);
+      const mergedMs = merged.get(issue.number);
+      const reason = retryHoldReason({ events, mergedMs, now });
+      if (!reason) return null;
+      const peersOf = () => pullQueue(pool);
+      const ctx = { issue, events, mergedMs, closed, peersOf, seen, eventsOf, now, log };
+      if (mayRetryThroughOutage({ ...ctx, limit: MAX_STARTS_PER_DAY })) return null;
+      if (run) noteRetryHold({ issue, reason, now, readAll, run, log });
+      return reason;
     } catch (err) {
       log(
         `::warning::#${issue.number}'s build history could not be read — treating it as pullable: ${String(err?.message ?? err).slice(0, 200)}`,
@@ -339,7 +354,7 @@ export function retryHold({
 /** Everything the unattended sweep steps past at the pick: nothing to build, or retried enough. */
 export function sweepHold({ now = Date.now(), ...rest } = {}) {
   const retried = retryHold({ now, ...rest });
-  return (issue) => readPickupHold(issue, rest) ?? retried(issue);
+  return (issue, pool) => readPickupHold(issue, rest) ?? retried(issue, pool);
 }
 
 /** The first body line a queue note carries — also the dedupe key. */
@@ -673,7 +688,7 @@ export function runCli(argv = [], io = {}) {
       return refuse("the open plans could not be read", err);
     }
     const pickOf = (rest) => nextAdmissible(rest, inFlight, mode, waiting);
-    const holdOf = (issue) => readHold(issue) ?? readRetry(issue);
+    const holdOf = (issue, pool) => readHold(issue) ?? readRetry(issue, pool);
     const { pick } = nextUnheld(ready, pickOf, holdOf, { log: printErr });
     if (!pick) {
       const why = `nothing admissible (${pullQueue(ready).length} pullable, ${inFlight.length} in flight, ${waiting.length} plans waiting, work-mode=${mode.position})`;
