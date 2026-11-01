@@ -1406,7 +1406,7 @@
             "id": "screen",
             "label": "Deterministic screen",
             "path": "scripts/event-material-scan.mjs, scripts/event-material-decide.mjs, scripts/moneypenny/open-screen-pr.mjs",
-            "responsibility": "For interval-elapsed pulses, probes price/VIX movement; quiet ones get a ledger row committed on a moneypenny/screen-* branch and a screen PR (never a direct push, never a session)"
+            "responsibility": "For interval-elapsed pulses, probes price/VIX movement and reads declared intents (`scripts/intents.mjs`); quiet ones get a ledger row committed on a moneypenny/screen-* branch and a screen PR (never a direct push, never a session)"
           },
           {
             "id": "shipped",
