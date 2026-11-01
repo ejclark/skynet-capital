@@ -92,7 +92,10 @@ export function clockIntents(state) {
  * `created_at` is the run's start as the API reports it — the same field `gh run list` shows.
  */
 export function readClock(nowMs, issues = [], { rest = ghRest } = {}) {
-  const runs = rest(CLOCK_RUNS_PATH)?.workflow_runs ?? [];
+  const runs = rest(CLOCK_RUNS_PATH)?.workflow_runs;
+  // A body without the list is unknown, never "no run on record": an empty 200 (ghRest parses it
+  // to null) must cost one skipped watch, not an issue assigned to him while the clock is healthy.
+  if (!Array.isArray(runs)) throw new Error(`${CLOCK_RUNS_PATH} did not return a runs list`);
   const newest = runs[0]?.created_at ?? null;
   const hoursSince = newest ? (nowMs - Date.parse(newest)) / 3_600_000 : null;
   const openIssue = (issues ?? []).find((i) => i?.title === CLOCK_ISSUE_TITLE) ?? null;

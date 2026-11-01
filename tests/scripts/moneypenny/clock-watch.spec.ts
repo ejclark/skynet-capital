@@ -84,6 +84,14 @@ describe("readClock — one REST call per tick, the newest successful scheduled 
     expect(c.openIssue).toEqual(open);
   });
 
+  it("reads a body without the runs list as unknown (throws), never as a stopped clock", () => {
+    expect(() => readClock(NOW, [], { rest: () => null })).toThrow("did not return a runs list");
+    expect(() => readClock(NOW, [], { rest: () => ({ message: "oops" }) })).toThrow();
+    const warned: string[] = [];
+    expect(clockOrUnknown(NOW, [], { rest: () => null, log: (m) => warned.push(m) })).toBeNull();
+    expect(warned).toHaveLength(1);
+  });
+
   it("reads an empty list as no successful scheduled run, not as fresh", () => {
     const c = readClock(NOW, [], { rest: () => ({ total_count: 0, workflow_runs: [] }) });
     expect(c.hoursSince).toBeNull();
