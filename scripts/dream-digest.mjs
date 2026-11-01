@@ -121,13 +121,53 @@ export function digestLines(lines) {
   return digest;
 }
 
-/** Paths and issue numbers a memory cites: the claims a stale check can test mechanically. */
+// A command is a script run with something after it, or an npm script. A path closed off by a backtick
+// is a citation, not a command: "(`scripts/steer/design.mjs` shape)" takes no flags.
+const COMMAND_OR_FLAG =
+  /(?:\bnpm run (?:-{1,2}[a-z]+ )*(?<npm>[\w:-]+))|(?:(?<![\w./-])(?<script>scripts\/[\w./-]+\.(?:mjs|sh))(?=\s))|(?:(?<![\w-])--(?<flag>[a-z][a-z-]+)\b)/g;
+// Wording that waits on an issue. Plain "merged" stays out: "after #5135 merged" is history.
+const WAITS_ON_ISSUE =
+  /\b(?:once|until|when|after|before) #(\d{3,5})\b[^.\n]{0,40}?\b(?:merges?|lands?|closes?|ships?|has (?:merged|landed|closed|shipped)|is (?:merged|closed|in))\b/gi;
+
+/**
+ * Each flag on a line, tied to the nearest command to its left. A flag with none is not a claim. A
+ * code span holding anything else ends the command, so `gh pr merge --squash` after a script of ours
+ * is not read as that script's flag; a span of bare flags ("then `--apply`") carries on from it.
+ */
+function flagsOnLine(line) {
+  const flags = [];
+  let command = null;
+  for (const [i, part] of line.split("`").entries()) {
+    const tokens = [...part.matchAll(COMMAND_OR_FLAG)].map((m) => m.groups);
+    const isCode = i % 2 === 1;
+    if (isCode && !part.startsWith("-") && !tokens.some((t) => t.npm || t.script)) command = null;
+    for (const token of tokens) {
+      if (token.npm) command = { npm: token.npm };
+      else if (token.script) command = { script: token.script };
+      else if (command) flags.push({ ...command, flag: token.flag });
+    }
+  }
+  return flags;
+}
+
+/** What a memory cites that a stale check can test mechanically, at no model tokens. */
 export function memoryClaims(text) {
+  const commands = [...text.matchAll(COMMAND_OR_FLAG)].map((m) => m.groups);
   const paths = [...text.matchAll(/`([\w./-]+\.(?:mjs|ts|tsx|sh|md|yml|json|js))`/g)]
     .map((m) => m[1])
-    .filter((p) => p.includes("/"));
+    .filter((p) => p.includes("/"))
+    .concat(commands.flatMap((c) => c.script ?? []));
   const issues = [...text.matchAll(/(?:^|[\s(])#(\d{3,5})\b/g)].map((m) => Number(m[1]));
-  return { paths: [...new Set(paths)], issues: [...new Set(issues)] };
+  const npmScripts = commands.flatMap((c) => c.npm ?? []);
+  const flags = text.split("\n").flatMap(flagsOnLine);
+  const futureOnIssue = [...text.matchAll(WAITS_ON_ISSUE)].map((m) => Number(m[1]));
+  return {
+    paths: [...new Set(paths)],
+    issues: [...new Set(issues)],
+    npmScripts: [...new Set(npmScripts)],
+    flags,
+    futureOnIssue: [...new Set(futureOnIssue)],
+  };
 }
 
 /** The folders holding this project's session transcripts: the main checkout's and one per worktree. */
@@ -173,28 +213,70 @@ export function recent(count, since = null) {
     .map((file) => file.path);
 }
 
+/** A file on origin/main, once per run, or null when main has no such file. */
+const onMain = memo((path) => {
+  const res = spawnSync("git", ["show", `origin/main:${path}`], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return res.status === 0 ? res.stdout : null;
+});
+
+/** One gh call per issue however many memories cite it: this bucket is shared with every lane. */
+const isClosed = memo((n) => {
+  const res = spawnSync("gh", ["issue", "view", String(n), "--json", "state", "--jq", ".state"], {
+    encoding: "utf8",
+  });
+  return res.stdout?.trim() === "CLOSED";
+});
+
+function memo(read) {
+  const seen = new Map();
+  return (key) => {
+    if (!seen.has(key)) seen.set(key, read(key));
+    return seen.get(key);
+  };
+}
+
+/** The script an npm script runs, or null when it runs something that is not ours to read. */
+function scriptOfNpm(scripts, name) {
+  if (!Object.hasOwn(scripts, name)) return null;
+  return scripts[name].match(/\bscripts\/[\w./-]+\.(?:mjs|sh)\b/)?.[0] ?? null;
+}
+
+/**
+ * Flags no longer in the script they are passed to. A name anywhere in the source counts as present,
+ * since scripts read flags in many ways (`flag("prev")`, a usage line). That misses a flag only its
+ * helper reads and never names, and it keeps this report from telling a review to remove a working one.
+ */
+function deadFlags(claims, scripts) {
+  const rows = claims.flags.flatMap(({ script, npm, flag }) => {
+    const path = script ?? scriptOfNpm(scripts, npm);
+    const source = path && onMain(path);
+    return source && !source.includes(flag) ? `--${flag} on ${path}` : [];
+  });
+  return [...new Set(rows)];
+}
+
 function staleCandidates(dir) {
+  // No package.json on main means no answer, not that every npm script is gone.
+  const pkg = onMain("package.json");
+  const scripts = pkg ? (JSON.parse(pkg).scripts ?? {}) : null;
   const out = [];
   for (const name of readdirSync(dir).filter((n) => n.endsWith(".md"))) {
     const claims = memoryClaims(readFileSync(join(dir, name), "utf8"));
     const missing = claims.paths.filter(
-      (path) =>
-        !(path.startsWith("/") || path.startsWith("~")) &&
-        spawnSync("git", ["cat-file", "-e", `origin/main:${path}`]).status !== 0,
+      (path) => !(path.startsWith("/") || path.startsWith("~")) && onMain(path) === null,
     );
-    const closed = claims.issues.filter((n) => {
-      const res = spawnSync(
-        "gh",
-        ["issue", "view", String(n), "--json", "state", "--jq", ".state"],
-        { encoding: "utf8" },
-      );
-      return res.stdout?.trim() === "CLOSED";
-    });
+    const closed = claims.issues.filter(isClosed);
     out.push({
       file: name,
       modified: statSync(join(dir, name)).mtime.toISOString().slice(0, 10),
       missingPaths: missing,
       closedIssues: closed,
+      missingNpmScripts: scripts ? claims.npmScripts.filter((s) => !Object.hasOwn(scripts, s)) : [],
+      flagsNotInScript: scripts ? deadFlags(claims, scripts) : [],
+      futureOnClosedIssue: claims.futureOnIssue.filter(isClosed),
     });
   }
   return out;

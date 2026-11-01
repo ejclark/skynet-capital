@@ -58,7 +58,9 @@ export const PRICE_MOVE_THRESHOLD = 0.05;
 export const VIX_MOVE_THRESHOLD = 3;
 export const ADJACENCY_WINDOW_DAYS = 5;
 export const STALENESS_CEILING = 3;
+export const INTENT_TRIP_CAP = 2;
 
+const SCREEN_ROW_MARK = "**Deterministic screen (no Claude session).**";
 const STRONG_ADJACENT_IMPACTS = new Set(["critical", "high"]);
 
 /** "Strong" = the only adjacency allowed to trip a material verdict (#2946's filter): a confirmed
@@ -159,6 +161,8 @@ function tripReasons(event, probeRef, market, adjacentStrongIds, band) {
  *
  * `state.pendingProposals` (optional, conviction-proposal tokens such as `ai-dip-2026-10/P3`) each
  * add a `conviction-proposal:<token>` reason — see scripts/conviction-proposals.mjs.
+ * `state.pendingIntents` (optional, slugs under docs/intents/) each add a `declared-intent:<slug>`
+ * reason, and `state.cappedIntents` are named in the screen row instead — see splitIntents.
  */
 export function decide(state) {
   const { event, today, cadence, ledger, market = {}, adjacentIds = [], adjacentStrongIds } = state;
@@ -176,6 +180,8 @@ export function decide(state) {
     // An unanswered conviction proposal (scripts/conviction-proposals.mjs) is material whatever the
     // tape did: only a session can register or decline it, and a screen would leave it unread.
     ...(state.pendingProposals ?? []).map((key) => `conviction-proposal:${key}`),
+    // A declared intent (scripts/intents.mjs) likewise: a screen cannot read its Check.
+    ...(state.pendingIntents ?? []).map((slug) => `declared-intent:${slug}`),
   ];
 
   const verdict = reasons.length ? "material" : "screen";
@@ -185,6 +191,7 @@ export function decide(state) {
     reasons,
     intervalDays: band.intervalDays,
     daysOut,
+    cappedIntents: state.cappedIntents ?? [],
     readings: {
       symbols: market.symbols ?? {},
       vix: market.vix ?? null,
@@ -193,6 +200,41 @@ export function decide(state) {
       adjacentStrongIds: [...strong].sort(),
       screenStreak,
     },
+  };
+}
+
+/**
+ * Which active intents naming this event still make its pulses material. Pure.
+ *
+ * ONCE, THEN QUIET. A session answers an intent by citing its slug in the ledger (the conviction-
+ * proposal rule, docs/process/EVENT-RESEARCH.md), and a cited intent never trips again.
+ *
+ * THE CAP. A lane that ignores the protocol's paragraph must not be able to buy sessions forever,
+ * so an intent stops tripping once INTENT_TRIP_CAP sessions have landed since it was stated without
+ * citing it. That count comes from the ledger's own rows, because a material verdict writes nothing
+ * (a session writes its own row and probe-ref, and one that ignored the paragraph would not write a
+ * counter either). A row dated on the Stated day may predate the record, so only later days count;
+ * the cost is at most one extra session in the safe direction. Screen rows are not sessions, and one
+ * naming a capped slug is the scan speaking, never a citation, so they are left out of both reads.
+ *
+ * A session that crashes lands no row and so is not counted. Its pulse is still due and re-dispatches
+ * on the next push, the same exposure every material reason has.
+ */
+export function splitIntents(intents, ledgerText) {
+  const lines = ledgerText.split("\n").filter((line) => !line.includes(SCREEN_ROW_MARK));
+  const start = lines.findIndex((line) => line.startsWith("## Assessment ledger"));
+  // Up to the next section: a close-out's ## Outcome table can open with a date too.
+  const end = lines.findIndex((line, i) => i > start && line.startsWith("## "));
+  const rowDates = (start === -1 ? [] : lines.slice(start, end === -1 ? undefined : end))
+    .map((line) => /^\|\s*(\d{4}-\d{2}-\d{2})\b/.exec(line)?.[1])
+    .filter(Boolean);
+  // Whole words, hyphens included: citesToken would let `a-study-2` answer `a-study`.
+  const words = new Set(lines.join("\n").split(/[^\w-]+/));
+  const uncited = intents.filter((i) => !words.has(i.slug));
+  const ignored = (i) => rowDates.filter((date) => date > i.stated).length >= INTENT_TRIP_CAP;
+  return {
+    pending: uncited.filter((i) => !ignored(i)).map((i) => i.slug),
+    capped: uncited.filter(ignored).map((i) => i.slug),
   };
 }
 
@@ -246,6 +288,12 @@ function describeReadings(state, decision) {
       `new in corridor since last pulse: ${named}${freshIds.length > 6 ? ` +${freshIds.length - 6} more` : ""} (recorded, not assessed)`,
     );
   }
+  bits.push(
+    ...decision.cappedIntents.map(
+      (slug) =>
+        `declared intent \`${slug}\` no longer trips (${INTENT_TRIP_CAP} sessions landed without citing it)`,
+    ),
+  );
   return `Readings — ${bits.join(", ")}. Nothing tracked crossed its threshold.`;
 }
 
@@ -300,7 +348,7 @@ export function applyScreen(ledgerText, state, decision) {
     throw new Error("event-material-scan: ledger is missing the '**Last assessed:**' line");
   }
   const row =
-    `| ${today} | D-${decision.daysOut} | **Deterministic screen (no Claude session).** ` +
+    `| ${today} | D-${decision.daysOut} | ${SCREEN_ROW_MARK} ` +
     `${describeReadings(state, decision)} | — (screen; no assessment made) | ` +
     `${addDays(today, decision.intervalDays)} |`;
   const text = insertLedgerRow(ledgerText, row);
