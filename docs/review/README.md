@@ -21,7 +21,7 @@ spec holds each under 4,000 characters (`tests/arch/review-lenses.spec.ts`).
 
 | Lens | What it reads for | Fires on | Characters |
 |---|---|---|---|
-| [`lenses/adversarial.md`](lenses/adversarial.md) | The input that proves a PR wrong | every code path | 3,931 |
+| [`lenses/adversarial.md`](lenses/adversarial.md) | The input that proves a PR wrong | every code path | 3,968 |
 | [`lenses/performance.md`](lenses/performance.md) | A request or boot path whose cost grows with history | server, observatory, storage | 3,564 |
 | [`lenses/context-loop.md`](lenses/context-loop.md) | What a change costs every session, and whether it can be judged | instructions, workflows, the loop registry | 3,961 |
 | [`lenses/smells-and-patterns.md`](lenses/smells-and-patterns.md) | Code and architecture smells, and the pattern that answers each | `src/`, `app/src/`, when a file or an import is added | 3,986 |

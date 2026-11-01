@@ -42,8 +42,8 @@
 // than re-deriving the regexes. Every branch is specced from data in
 // tests/scripts/moneypenny/continuation.spec.ts.
 import { admitBuild, readInFlight } from "./admission.mjs";
-import { ASSIGN_MARKER, executeAssignments } from "./assignments.mjs";
-import { ERIC, NEEDS_ERIC } from "./decision-callout.mjs";
+import { ASSIGN_MARKER, executeAssignments, withAskLease } from "./assignments.mjs";
+import { ERIC, NEEDS_ERIC, withLaneAsk, writeIssueBody } from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
 import { DEFAULT_MODEL } from "./model-tier.mjs";
@@ -341,26 +341,49 @@ export function pickContinuation(deps = {}) {
   );
 }
 
-/** Carry out one criterion-10 stop: park the plan FIRST, then assign and say why.
+/** Carry out one criterion-10 stop: state the ask, park the plan, then assign and say why.
  *
- *  Order matters and is not symmetry. `needs-eric` is what makes the plan unpullable (labels.mjs's
- *  one pull rule), so landing it first means a scan racing this write cannot claim a plan this lane
- *  has already judged dead. The assignment and its comment reuse `executeAssignments` outright —
- *  assign-then-comment, each retried for a 5xx, for the reasons that function's own header records. */
-export function executeStopContinuation(intent, { run = sh, retry = withRetry, assign } = {}) {
-  retry(() => run("gh", ["issue", "edit", String(intent.issueNumber), "--add-label", NEEDS_ERIC]));
-  (assign ?? executeAssignments)(
-    {
-      kind: "assign-eric",
-      number: intent.issueNumber,
-      title: intent.title,
-      criterion: 10,
-      why: intent.reason,
-      body: intent.body,
-    },
-    { run, retry },
-  );
-  return `🛑 stopped continuing #${intent.issueNumber} — ${intent.reason} (assigned @${ERIC})`;
+ *  Order matters and is not symmetry. The ask goes first so the `labeled` event's payload already
+ *  carries it: rule 7's check reads that payload, and the board reads the body, so the plan lands in
+ *  Blocked with no gap comment. A failed write leaves the plan unlabelled, and the next tick judges
+ *  it again. `needs-eric` then makes the plan unpullable (labels.mjs's one pull rule), so a scan
+ *  racing the rest cannot claim a plan this lane has already judged dead. The assignment and its
+ *  comment reuse `executeAssignments` outright — assign-then-comment, each retried for a 5xx, for the
+ *  reasons that function's own header records.
+ *
+ *  The live read is the second half of holding one stop to one comment, beside the lease: a plan
+ *  already carrying the label was parked since this sweep's gather. The body comes from the same read,
+ *  because the gather's copy can be minutes old and this write replaces the whole body. */
+export function executeStopContinuation(
+  intent,
+  { run = sh, retry = withRetry, assign, read = ghRest, lease = null } = {},
+) {
+  const n = intent.issueNumber;
+  return withAskLease(n, lease, () => {
+    const live = retry(() => read(`issues/${n}`));
+    // Not `?? ""`: the write below replaces the whole body, so an empty read must not reach it.
+    if (!live) throw new Error(`#${n}: could not read the issue before stopping it`);
+    if (labelNames(live.labels).includes(NEEDS_ERIC)) {
+      return `· #${n} — another sweep already stopped this plan`;
+    }
+    const body = live.body ?? "";
+    const ask = `Resume this plan, or say what to fix first? — ${intent.reason}`;
+    const stated = withLaneAsk(body, ask);
+    if (stated !== body) writeIssueBody(n, stated, { run, retry });
+    retry(() => run("gh", ["issue", "edit", String(n), "--add-label", NEEDS_ERIC]));
+    (assign ?? executeAssignments)(
+      {
+        kind: "assign-eric",
+        number: n,
+        title: intent.title,
+        criterion: 10,
+        why: intent.reason,
+        body: intent.body,
+      },
+      { run, retry },
+    );
+    return `🛑 stopped continuing #${n} — ${intent.reason} (assigned @${ERIC})`;
+  });
 }
 
 /** Post the receipt for a dispatched continuation. Called after the claim wins, never before. */
