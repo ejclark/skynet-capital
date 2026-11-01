@@ -22,13 +22,25 @@ function numberField(payload: Readonly<Record<string, unknown>>, key: string): n
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+/**
+ * A frame with no status is the app's own audit line, not the broker's report (#6529): a member's
+ * cancel reaches the ticket as `order.submitted` with `intent: "cancel"`, usually after the
+ * broker's own `canceled` update, so it is the frame the ticket keeps. The broker accepted the
+ * cancel but has not confirmed it in this frame, and any part already filled stays filled — so it
+ * reads "cancel requested", never "filled". Any other status-less frame earns nothing.
+ */
+function cancelRequested(fill: DeskOrderEvent): boolean {
+  return typeof fill.payload.status !== "string" && fill.payload.intent === "cancel";
+}
+
 export function fillHeadline(order: SubmittedOrder, fill: DeskOrderEvent | undefined): string {
-  if (!fill || fill.orderId !== order.orderId) {
-    const tif = tifLabel(order.timeInForce);
-    return `Order ${order.orderId} ${order.status} — ${order.symbol}${tif ? ` · ${tif}` : ""}`;
-  }
-  const status = typeof fill.payload.status === "string" ? fill.payload.status : "filled";
-  const word = fill.eventType === "order.filled" ? "filled" : status.replace(/_/g, " ");
+  const tif = tifLabel(order.timeInForce);
+  const echo = `Order ${order.orderId} ${order.status} — ${order.symbol}${tif ? ` · ${tif}` : ""}`;
+  if (!fill || fill.orderId !== order.orderId) return echo;
+  if (cancelRequested(fill)) return `Order ${order.orderId} cancel requested — ${order.symbol}`;
+  const status = typeof fill.payload.status === "string" ? fill.payload.status : undefined;
+  if (fill.eventType !== "order.filled" && status === undefined) return echo;
+  const word = fill.eventType === "order.filled" ? "filled" : (status ?? "").replace(/_/g, " ");
   const quantity = numberField(fill.payload, "filledQuantity");
   const price = numberField(fill.payload, "price");
   const symbol = typeof fill.payload.symbol === "string" ? fill.payload.symbol : order.symbol;
@@ -50,6 +62,9 @@ export function doneNote(fill: DeskOrderEvent | undefined, market: MarketSession
     fill !== undefined &&
     (fill.eventType === "order.filled" || (numberField(fill.payload, "filledQuantity") ?? 0) > 0);
   if (filled) return "SIM account — simulated fill, real discipline.";
+  if (fill && cancelRequested(fill)) {
+    return "Cancel requested at the paper broker — anything already filled stays filled.";
+  }
   const status = typeof fill?.payload.status === "string" ? fill.payload.status : "";
   if (TERMINAL.has(status)) {
     const word =
