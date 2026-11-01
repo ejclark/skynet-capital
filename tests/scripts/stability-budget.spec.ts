@@ -5,9 +5,11 @@ import {
   accountsBurst,
   accountsOpen,
   type BudgetPhase,
+  commonGets,
   flyCommand,
   flyEnv,
   procMemory,
+  repeatedRow,
   summary,
   verdict,
 } from "../../scripts/stability/budget-lib.mjs";
@@ -28,7 +30,7 @@ import { createOrderAuditLog } from "../../src/server/order-audit-log.js";
  */
 
 const FLY = readFileSync(new URL("../../fly.toml", import.meta.url), "utf8");
-const budgets = { peakMb: 300, pageMb: 30, pulseMb: 30, pulseMs: 150 };
+const budgets = { peakMb: 300, pageMb: 30, pulseMb: 30, pulseMs: 150, getMb: 20, getMs: 150 };
 const alive = { running: true, oomKilled: false, exitCode: 0 };
 const pulse = (addMb: number, ms: number) => ({
   path: "/api/desk/a/pulse",
@@ -77,6 +79,40 @@ describe("accountsOpen / accountsBurst — what a member's Accounts click fires"
       "/api/desk/human-m1/pulse",
     ]);
     expect(burst.some((p) => p.startsWith("/events"))).toBe(false);
+  });
+});
+
+describe("commonGets / repeatedRow — the other GETs, each fired several times", () => {
+  it("clicks every tab of a bot's desk, Activity and Thesis included", () => {
+    const gets = commonGets("sauron");
+    for (const tab of ["", "/activity", "/thesis", "/decisions", "/heartbeat"])
+      expect(gets).toContain(`/api/desk/sauron${tab}`);
+    expect(gets).toContain("/api/playbooks");
+    expect(gets).toContain("/api/wire");
+  });
+
+  it("keeps the median time with every time beside it, and the largest memory added", () => {
+    const hit = (ms: number, addMb: number) => ({ path: "/api/wire", status: 200, ms, addMb });
+    expect(repeatedRow([hit(240, 6), hit(90, 1), hit(110, 0)])).toEqual({
+      path: "/api/wire",
+      status: 200,
+      ms: 110,
+      msEach: [240, 90, 110],
+      addMb: 6,
+    });
+  });
+
+  it("carries the worst status, so one 5xx among the hits still fails the run", () => {
+    const rows = [200, 502, 200].map((status) => ({ path: "/api/wire", status, ms: 5 }));
+    expect(repeatedRow(rows).status).toBe(502);
+    const died = repeatedRow([
+      { path: "/api/wire", status: 200, ms: 5, addMb: 1, peakMb: 200 },
+      { path: "/api/wire", status: "ERR UND_ERR_SOCKET", ms: 9 },
+    ]);
+    expect(died.status).toBe("ERR UND_ERR_SOCKET");
+    expect(
+      verdict({ phases: [phase({ name: "common", rows: [died] })], state: alive, budgets }).ok,
+    ).toBe(false);
   });
 });
 
@@ -147,6 +183,19 @@ describe("verdict", () => {
       peakMb: 180,
     });
     expect(verdict({ phases: [quick], state: alive, budgets }).ok).toBe(true);
+  });
+
+  it("holds every other common GET to a median of 150 ms and 20 MB added (#4619)", () => {
+    const rows = [
+      { path: "/api/desk/s/activity", status: 200, ms: 151, msEach: [151, 160, 140], addMb: 21 },
+      { path: "/api/playbooks", status: 200, ms: 150, msEach: [400, 150, 20], addMb: 20 },
+    ];
+    expect(
+      verdict({ phases: [phase({ name: "common", rows })], state: alive, budgets }).failures,
+    ).toEqual([
+      "common: /api/desk/s/activity took 151 ms (median) > budget 150 ms",
+      "common: /api/desk/s/activity added 21 MB > budget 20 MB",
+    ]);
   });
 
   it("skips the page budget for a phase the server died in — it has no peak to read", () => {

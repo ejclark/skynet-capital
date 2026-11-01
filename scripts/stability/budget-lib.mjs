@@ -55,19 +55,49 @@ export function accountsBurst(ownerId, participantIds) {
   return [...accountsOpen(ownerId).filter((p) => !p.endsWith("/pulse")), ...pulses];
 }
 
-/** A handful of other common GETs: the landing board, a bot's desk, the ladder and the Wire. */
+/** A handful of other common GETs: the landing board, a bot's desk and its tabs (Activity, Thesis,
+ *  Decisions, Heartbeat), the ladder and the Wire. The bot is the one with the longest ledgers. */
 export function commonGets(botId) {
   const bot = encodeURIComponent(botId);
   return [
     "/app/leaderboard",
     "/api/board?by=equity",
     `/api/desk/${bot}`,
+    `/api/desk/${bot}/activity`,
+    `/api/desk/${bot}/thesis`,
     `/api/desk/${bot}/decisions`,
     `/api/desk/${bot}/heartbeat`,
     "/api/learn",
     "/api/playbooks",
     "/api/wire",
   ];
+}
+
+/** How many times the runner fires each common GET: the time judged is the median of these, so
+ *  one slow answer on a noisy host never fails the run, and the memory judged is the largest. */
+export const COMMON_REPEAT = 3;
+
+/**
+ * One common GET fired `COMMON_REPEAT` times, as one row: the median time (#4619's Done-when is a
+ * p50) with every time kept beside it, the largest memory added, and the worst status — a 5xx on
+ * any one of the hits still fails the run.
+ */
+export function repeatedRow(hits) {
+  const ms = hits.map((h) => h.ms);
+  const sorted = [...ms].sort((a, b) => a - b);
+  const bad = hits.find((h) => typeof h.status !== "number" || h.status >= 500);
+  const most = (key) =>
+    hits.some((h) => h[key] !== undefined) ? Math.max(...hits.map((h) => h[key] ?? 0)) : undefined;
+  const addMb = most("addMb");
+  const peakMb = most("peakMb");
+  return {
+    ...hits[0],
+    status: (bad ?? hits.at(-1)).status,
+    ms: sorted[Math.floor((sorted.length - 1) / 2)],
+    msEach: ms,
+    ...(addMb !== undefined ? { addMb } : {}),
+    ...(peakMb !== undefined ? { peakMb } : {}),
+  };
 }
 
 const KB = (text, key) => Number(new RegExp(`^${key}:\\s+(\\d+)\\s*kB`, "m").exec(text)?.[1] ?? 0);
@@ -82,7 +112,8 @@ export function procMemory(status) {
  * The verdict. Fails on what kills or breaks the server — an OOM kill, an exit, a 5xx or a refused
  * connection — and on the numbers the budget names: peak RSS for the whole run; what opening
  * Accounts adds and how long its Pulse takes inside that load (#4613's Done-when: ≤ 30 MB,
- * ≤ 150 ms at 180 days × 12); and the same two numbers for each Pulse fired alone.
+ * ≤ 150 ms at 180 days × 12); the same two numbers for each Pulse fired alone; and the same two
+ * for every other common GET (#4619's Done-when: a median ≤ 150 ms, ≤ 20 MB added).
  */
 export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
   const failures = [];
@@ -107,7 +138,21 @@ export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
     if (row.ms > budgets.pulseMs)
       failures.push(`${row.path} took ${row.ms} ms > budget ${budgets.pulseMs} ms`);
   }
+  failures.push(...commonFailures(phases.find((p) => p.name === "common")?.rows ?? [], budgets));
   return { ok: failures.length === 0, peakMb: peak, failures };
+}
+
+/** The other common GETs, each fired alone (#4619's Done-when): every one answers at a median of
+ *  `getMs` or less, and none adds more than `getMb`. */
+function commonFailures(rows, budgets) {
+  const out = [];
+  for (const row of rows) {
+    if (row.ms > budgets.getMs)
+      out.push(`common: ${row.path} took ${row.ms} ms (median) > budget ${budgets.getMs} ms`);
+    if (row.addMb > budgets.getMb)
+      out.push(`common: ${row.path} added ${row.addMb} MB > budget ${budgets.getMb} MB`);
+  }
+  return out;
 }
 
 /** The Accounts open as one page: what the whole load added, and its Pulse's time within it. */
@@ -131,8 +176,9 @@ export function phaseTable(phase) {
     "| request | status | ms | KB | +MB |",
     "|---|--:|--:|--:|--:|",
   ];
+  const time = (r) => (r.msEach ? `${r.ms} (${r.msEach.join(" · ")})` : r.ms);
   const rows = phase.rows.map(
-    (r) => `| \`${r.path}\` | ${r.status} | ${r.ms} | ${r.kb ?? "—"} | ${r.addMb ?? "—"} |`,
+    (r) => `| \`${r.path}\` | ${r.status} | ${time(r)} | ${r.kb ?? "—"} | ${r.addMb ?? "—"} |`,
   );
   const foot =
     phase.peakMb === undefined

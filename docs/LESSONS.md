@@ -35,6 +35,13 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A merged crash fix stayed dark for days because its last step was a paste nobody ran
+- **SHA:** n/a   **DATE:** 2026-11-01   **STATUS:** closed
+- **SIGNAL:** an unrelated audit of agent memory (#6470) found no green push of `pipeline.yml` in 200 runs and `fly status` showing the bots machine `stopped`. The second stop dates from about 10-25, so the fleet was down for most of a week, while #5955 sat on `needs-eric` asking for a terminal paste.
+- **ROOT CAUSE:** two gaps, stacked. flyctl reports a stopped machine as a good state, so no deploy could start it, and the crash fix from #6004 could not run. And the human step was wrong for its human: `CLAUDE.md` still prescribed a paste, two days after Eric ruled terminal commands out in a memory autonomous lanes cannot read. One `fly machine update` and one start restored the fleet on the first attempt. The second stop's own cause was not recovered: the log buffer had rolled off.
+- **PREVENTION:** script. `scripts/bots-start-stopped.sh` starts a stopped machine on deploy, rollback and catch-up, keeps the exit record and a named cause on an issue, and stops after 3 starts in 6 hours (held PR #6476). Doctrine: `CLAUDE.md` now states the no-terminal rule. A silent machine that is still running stays uncaught, which the first `/dream` review proposed as a market-hours alarm.
+- **SIDE QUESTS:** my first draft of the script posted raw log lines to an issue in this public repo, and app logs can carry member emails. A read of `.github/workflows/fly-logs.yml`'s header caught it before merge. A rule worth keeping: anything a lane posts to GitHub is public.
+
 ### `(the failed job could not be read)` red on main: keep re-reading a run's jobs while one still reads as running
 - **SHA:** 39d7201   **DATE:** 2026-10-30   **STATUS:** closed
 - **COVERS:** fd87f45
