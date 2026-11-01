@@ -310,3 +310,71 @@ describe("rememberSpreadLegs — the Wire's leg hop, remembered once matched (#4
     expect(decisions).toEqual(["mleg-1", "mleg-1"]);
   });
 });
+
+describe("rememberSpreadLegs — misses held until the leg table moves (#4619)", () => {
+  /** The leg store with its mark: the mark moves exactly when a leg is written, as the table's does. */
+  const markedStore = () => {
+    const legs: Record<string, OptionOrderLeg> = {};
+    const asked: string[] = [];
+    let mark = 0;
+    let markReads = 0;
+    return {
+      asked,
+      reads: () => markReads,
+      write(leg: OptionOrderLeg) {
+        legs[leg.legOrderId] = leg;
+        mark += 1;
+      },
+      find: (id: string) => {
+        asked.push(id);
+        return legs[id];
+      },
+      mark: () => {
+        markReads += 1;
+        return mark;
+      },
+    };
+  };
+  /** One request's end: the synchronous pass is over, so the next ask reads the mark afresh. */
+  const nextRequest = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+  it("asks the store about a miss once while no leg is written, however many requests ask", async () => {
+    const store = markedStore();
+    const find = rememberSpreadLegs(store.find, store.mark);
+
+    expect(find("fill-1")).toBeUndefined();
+    await nextRequest();
+    expect(find("fill-1")).toBeUndefined();
+    await nextRequest();
+    expect(find("fill-1")).toBeUndefined();
+
+    expect(store.asked).toEqual(["fill-1"]);
+  });
+
+  it("forgets every miss once a leg is written, so a late settlement's leg shows on the next request", async () => {
+    const store = markedStore();
+    const find = rememberSpreadLegs(store.find, store.mark);
+
+    expect(find("leg-high")).toBeUndefined();
+    expect(find("fill-1")).toBeUndefined();
+    await nextRequest();
+    store.write(LEGS["leg-high"] as OptionOrderLeg);
+
+    expect(find("leg-high")).toEqual(LEGS["leg-high"]);
+    expect(find("fill-1")).toBeUndefined();
+    expect(store.asked).toEqual(["leg-high", "fill-1", "leg-high", "fill-1"]);
+  });
+
+  it("reads the mark once per request, not once per fill", async () => {
+    const store = markedStore();
+    const find = rememberSpreadLegs(store.find, store.mark);
+
+    for (const id of ["fill-1", "fill-2", "fill-3"]) find(id);
+    expect(store.reads()).toBe(1);
+    await nextRequest();
+    for (const id of ["fill-1", "fill-2", "fill-3"]) find(id);
+
+    expect(store.reads()).toBe(2);
+    expect(store.asked).toEqual(["fill-1", "fill-2", "fill-3"]);
+  });
+});

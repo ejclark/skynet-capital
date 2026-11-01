@@ -48,6 +48,7 @@ import { mergeOptionDemand } from "./option-demand.js";
 import {
   type EnabledPlaybook,
   type PlaybookEvent,
+  type PlaybookReads,
   playbookIntents,
   playbookVerdicts,
 } from "./playbook.js";
@@ -57,6 +58,7 @@ import { oneRunUpBet } from "./run-up-bet.js";
 function optionSurface(
   enabled: readonly EnabledPlaybook[],
   calendar: readonly EarningsPrint[],
+  reads: PlaybookReads,
 ): Pick<Persona, "optionUnderlyings" | "optionDemand"> {
   const optionPlays = enabled.filter((e) => e.playbook.options !== undefined);
   if (optionPlays.length === 0) return {};
@@ -72,7 +74,8 @@ function optionSurface(
       mergeOptionDemand(
         optionPlays.map(
           ({ playbook, mode }) =>
-            playbook.optionDemand?.(asOfIso, portfolio, listed, calendar, mode) ?? NO_OPTION_DEMAND,
+            playbook.optionDemand?.(asOfIso, portfolio, listed, calendar, mode, reads) ??
+            NO_OPTION_DEMAND,
         ),
       ),
   };
@@ -113,6 +116,9 @@ export function withPlaybooks(
    *  synchronous read of the feed's cache; asking for a ticker is what makes the feed fetch it.
    *  Defaults to no bars, so a roster built without a feed records its verdict and nothing else. */
   intradayBars: IntradayBarsOf = () => undefined,
+  /** What a `decide` playbook may read beyond the context — the daily high, its own memory
+   *  (`PlaybookReads`). Defaults to none, and a play reads an absent read as "unknown". */
+  reads: PlaybookReads = {},
 ): Persona {
   if (enabled.length === 0) {
     return base;
@@ -146,7 +152,7 @@ export function withPlaybooks(
     decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
       const plays = oneRunUpBet(
         others,
-        playbookIntents(others, context, portfolio, calendar, events),
+        playbookIntents(others, context, portfolio, calendar, events, reads),
         portfolio,
         refuseRunUp,
       );
@@ -178,6 +184,6 @@ export function withPlaybooks(
             ),
         }
       : {}),
-    ...optionSurface(enabled, calendar),
+    ...optionSurface(enabled, calendar, reads),
   };
 }

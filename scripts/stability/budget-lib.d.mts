@@ -3,6 +3,8 @@ export interface BudgetRow {
   path: string;
   status: number | string;
   ms: number;
+  /** Every time, when the row is one GET fired several times and `ms` is their median. */
+  msEach?: number[];
   kb?: number;
   addMb?: number;
   peakMb?: number;
@@ -20,12 +22,16 @@ export interface Budgets {
   pageMb: number;
   pulseMb: number;
   pulseMs: number;
+  getMb: number;
+  getMs: number;
 }
 export function flyEnv(toml: string): Record<string, string>;
 export function flyCommand(toml: string): string;
 export function accountsOpen(ownerId: string): string[];
 export function accountsBurst(ownerId: string, participantIds: readonly string[]): string[];
 export function commonGets(botId: string): string[];
+export const COMMON_REPEAT: number;
+export function repeatedRow(hits: readonly BudgetRow[]): BudgetRow;
 export function procMemory(status: string): { rss: number; hwm: number; anon: number };
 export function verdict(input: {
   phases: readonly BudgetPhase[];

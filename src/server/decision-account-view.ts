@@ -22,6 +22,9 @@ export interface AccountDecisionsDeps {
   /** Preferred over `findByOrderId` when wired: persona ids for a batch of orders without
    *  assembling a decision record per order. */
   readonly personasOfOrders?: (orderIds: readonly string[]) => readonly string[];
+  /** Preferred over both when wired: the same answer, kept per account and advanced by only what
+   *  was appended (`account-personas-fold.ts`, #4619). */
+  readonly readAccountPersonas?: (accountId: string) => Promise<readonly string[]>;
 }
 
 /**
@@ -62,6 +65,8 @@ export async function readAccountDecisions(
  *  activity rows for the same order, and `findByOrderId` is a synchronous SQLite call (#4612
  *  slice 7, defect #9: "~10x faster" over unique ids on a 70-day ledger). */
 async function foreignPersonas(accountId: string, deps: AccountDecisionsDeps): Promise<string[]> {
+  if (deps.readAccountPersonas)
+    return (await deps.readAccountPersonas(accountId)).filter((id) => id !== accountId);
   if (!((deps.personasOfOrders || deps.findByOrderId) && deps.readTradeActivity)) return [];
   const orderIds = [...new Set((await deps.readTradeActivity(accountId)).map((t) => t.orderId))];
   if (deps.personasOfOrders)

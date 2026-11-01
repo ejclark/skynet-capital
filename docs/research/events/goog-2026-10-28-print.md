@@ -229,6 +229,7 @@ close-out can price what the confirmation gate cost on this cycle, from instrume
 | 2026-10-22 | D-6 | Adjacency sweep; full session on `event-material-scan`'s own reasons: **band critical:8+ → critical:0+** and **GOOG −5.2% vs the D-8 read** (**$322.65** 2026-10-22 *intraday* ~13:35 ET via Yahoo meta.regularMarketPrice — not a close; $340.16 → $322.63; VIX **19.13** probe / 19.20 Yahoo intraday, +0.7pt vs 18.44, inside the 3-pt bar; adjacentIds 52 → 53, strong 7 unchanged). **Headline: the AI-capex-financing sell-off resumed on META's print, and GOOG is trading with it — but the call has no position to defend and does not move.** **Tape (Yahoo daily bars, direct):** GOOG 10-20 $336.40 (−1.10%), 10-21 $330.95 (−1.62%) vs QQQ −0.10% / **+1.05%** — GOOG lagged the index by ~1.0 and ~2.7 pts on two sessions *before* META reported; I searched for a GOOG-specific cause and found none (search hits were 2025 stories), so it is **unexplained, not attributed**. 10-22 intraday: GOOG −2.5% vs QQQ **−2.6%** (706.17) — in line with the index. **Peer read-through (the first mega-cap print of the cycle):** META reported 10-21 after the close (IR-dated, `earnings-calendar`) and trades **$646.83 intraday, −7.3%** (Yahoo; press recaps put the regular-session move near −6%, Nasdaq Composite ~−2.2%). Press (Yahoo Finance live blog, Investing.com, Forbes, AOL — secondary): a revenue beat, then the sell-off on ~$825B of AI infrastructure commitments (up from ~$700B in July), the capex range's floor raised to $135–145B and a new non-voting Class C share class to finance buildout; oil at a five-month high on Mideast escalation, midterms under two weeks out. **This is the same fight the July GOOG print lost** (beat → fell on capex/FCF) — a second observation that the tape punishes the capex number over the beat, and it lands six days before GOOG's own. It does not touch S2 (never hold the print; flat by the Oct-26 close) — it is the live example of why. **Date leg:** SEC EDGAR submissions feed for CIK 1652044 re-fetched direct 2026-10-22 (data.sec.gov, HTTP 200): newest 8-K still **2026-08-10** (Item 8.01), then 07-22 (2.02) — **no Q3-date 8-K**, newest filing of any form 10-15 (Form 4); abc.xyz/investor and /investor/events **HTTP 403** to a browser-headed curl (recorded in `probe-ref.blocked`); search summaries still say 10-28 4:30pm ET "not officially confirmed". `earnings-calendar.ts` still carries 10-28 as `confirmed` on a `CAL:` source quoting Nasdaq's "expected" — the discrepancy flagged 10-20 is **unchanged and still not mine to edit**; this ledger keeps **estimate**. **Peers:** MSFT 10-28 AMC (IR-sourced in the calendar), AMZN 10-29 — unchanged from D-8; MSFT trades $523.79 intraday (−1.7%), no print yet. **Macro/Geo:** oil to a five-month high on Mideast escalation (press, secondary); no new CPI/FOMC datum since D-8 — FOMC 10-28 (estimated print day) still the shared-day collision; FedWatch hike odds disagree across secondaries (54% vs ~44% at D-10/D-8), **not reconciled**. **Overhangs:** FTC YouTube — newest coverage still "final stages" of a potential suit, no filing found; ad-tech Final Judgment — no signing found; talent flight and capex/equity supply — nothing new found beyond the META read-through above. **Interim reads, not scores:** FT-1 (score-by 10-09, still `—`; the close-out scores it from re-run instrument data); FT-2 (score-by 10-30): 09-30 close $340.74 → 10-21 close $330.95 = **−2.87%**, vs the +4.99% line — still far below it, and the window ends 10-27 (est.), five sessions away. **Does the stance survive? Yes** — no entry exists, the run-up leg stays closed, S2 flat-by-Oct-26 stands; a VIX near 19–20 and an index drawing down on capex-financing fear reprice any options-shaped play, and a lower price into the print says nothing about the overnight verdict (modern gap win 57%, p10 −7.03%). Beyond the horizon: nothing dated found. **No new dated adjacency to propose** (no proposal file written) — the corridor is already on the calendar (`--on-date=2026-10-28` lists 7 entries, including this one). Probe-ref appended; screen streak reset to 0. | — (no stance change; flat / stand-aside and S2 flat-by-Oct-26 reaffirmed; META's capex-led sell-off is a second data point for S2, not a new call) | 2026-10-23 (critical, band 0+ every 1d); score FT-2 at the 10-27 close; watch for an Alphabet IR/8-K date posting |
 | 2026-10-26 | D-2 | **Deterministic screen (no Claude session).** Readings — GOOG $314.78 (-2.4% since last), VIX 18.6 (-0.5pt since last), band unchanged (critical:0+), 56 adjacent event(s) tracked, new in corridor since last pulse: `intc-fq3-2026-results-2026-10-29`, `sp-global-manufacturing-pmi-2026-11-02`, `sp-global-pmi-commodity-price-supply-2026-11-02` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-27 |
 | 2026-10-27 | D-1 | **Deterministic screen (no Claude session).** Readings — GOOG $314.19 (-0.2% since last), VIX 18.4 (-0.3pt since last), band unchanged (critical:0+), 56 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-10-28 |
+| 2026-10-30 | D+2 | **Close-out (full session, `event-passed-unscored`).** Cache busted, `earnings-cycle` and `intraday-edges` re-run, then the print scored by hand from the same Yahoo bars because the instrument is still blind to it (its list ends 2026-07-22). **Headline: the 10-28 estimate held, and the stock gapped −11.82% on a GAAP EPS miss over a Cloud doubling — the stand-aside and S2 no-hold calls were right, the unplayed run-up leg would have lost −5.53%.** Details, sources and both forward-test scores are in `## Outcome` below. Conviction proposals: none open (`conviction-proposals.mjs --event` printed `[]`). Next: none; this closes the assessment. | Closed — `## Outcome` written; FT-1 and FT-2 scored pass, legacy FT-16 fail (obs. 1 of 3), FT-17 VOID | — |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
@@ -267,3 +268,68 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-27
 <!-- probe-ref: {"symbols":{"GOOG":314.19},"vix":18.39,"daysBand":"critical:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-10-30, D+2; inside `closeOutWithinDays`).** Both instruments re-run on a busted cache
+(`earnings-cycle.mjs GOOG --bench QQQ --peers MSFT,META,AMZN`, 44 prints; `intraday-edges.mjs GOOG`, 722
+sessions). **Scope limits, stated first:** the study's newest print is still **2026-07-22**, so every
+instrument cell below reproduces the pre-print state and does **not** include this print; the October
+numbers are computed by hand from the same cached Yahoo daily bars. **2026-10-30 is not a closed session**
+at assessment time (the GOOG bar is the live $276.15 at ~14:20 ET), so nothing here scores D+2 as a close.
+
+**The date.** The 10-28 estimate held. Alphabet's 8-K (Item 2.02) was accepted by EDGAR on
+**2026-10-28 at 16:01 ET**, accession
+[0001652044-26-000080](https://www.sec.gov/Archives/edgar/data/1652044/000165204426000080/goog-20261028.htm),
+and the 10-Q followed 10-29. `earnings-calendar.ts` already carried 10-28 as `confirmed`; this ledger kept
+**estimate** until the filing and does not edit that entry.
+
+**What printed (8-K Exhibit 99.1, primary).** Revenue **$127.6B (+25%)** against MarketBeat's $127.25B
+consensus (secondary, as logged 10-06); Cloud **$30.7B (+103%)**, Cloud operating income $11.1B vs $3.6B;
+Search & other +12%; operating margin 31.8%. **Diluted EPS $2.12 vs $2.87** a year ago and vs MarketBeat's
+$3.04 (secondary): other income swung to **−$8.2B** from +$12.8B, so the miss sits below the operating line.
+The equity-supply overhang the stance tracked kept going: **$12.4B of ATM stock** (12M Class A + 24M Class C) and
+**$28.7B of senior notes** in the quarter, $27.6B of ATM still available. Press (secondary, aggregators
+disagree on size): capex about $51B in the quarter and an FY26 guide of $195–205B; one outlet reports 2027 capex
+above $300B, which no second source confirms and which is not relied on here.
+
+**What the tape did (Yahoo daily bars, GOOG vs QQQ).**
+
+| Window | GOOG | QQQ | Note |
+|---|---|---|---|
+| D-20 → D (09-30 → 10-28 close) | **−5.53%** | −1.91% | the run-up leg, never played; excess −3.62% |
+| D-10 → D / D-5 → D | −6.33% / −2.74% | −0.46% / +0.06% | the whole pre-print drift was down |
+| D → D+1 open (the gap) | **−11.82%** ($321.89 → $283.84) | | modern-era gap p10 is −7.03%, p90 +6.89% |
+| D+1 open → close (fade) | −0.54% | | no pop to fade; it closed at $282.32 |
+| D → D+1 close | **−12.29%** | −1.42% | excess −10.87% |
+| D+2 (10-30, **intraday, not a close**) | −2.19% to $276.15 | −4.15% | broad sell-off, VIX 22.06 vs 17.20; cause not researched |
+
+Peer read-through is not clean: MSFT −0.16%, META +1.96%, AMZN −4.25% on 10-29, but AMZN's own print is
+dated 10-29 after the close in this ledger's adjacency list, so its move is not a reaction to GOOG.
+
+**Stance scorecard.**
+
+- **Stand aside / flat through the print (S2): right.** The gap was 4.8 points beyond the modern-era
+  p10 (−7.03%). A beat on revenue and Cloud was again sold: this is the second consecutive GOOG print in which
+  headline growth was not enough (07-22 and 10-28, the capex and financing bill the common thread), consistent
+  with the "never hold the print" rule.
+- **Run-up leg closed for this cycle: right, and it would have lost.** The D-20 window ran −5.53%. The plan's
+  −3.39% p10 sizing stop would have fired. Adding this window to the instrument's 44 by hand: modern D-20 → D goes
+  from n=15 mean +7.17% win 87% to about n=16, +6.4%, 13 of 16 positive; pooled from +4.85% to about +4.6%. One
+  observation does not meet the kill list's ≥3-print bar, and the sweep's own bar is untouched, but it is the
+  first run-up failure under the capex/equity-supply regime the 08-17 row said the leg had never been tested against.
+- **Overhang watch: the "priced in" read held for ad-tech, not for capex.** FT-1 passed (no ≥2.0% excess on either
+  ad-tech date). The capex/financing overhang is the one that moved the stock, which is what the stance listed
+  as the live risk.
+
+**Forward tests scored.** `FT-goog-2026-10-28-print-1` **pass**; `-2` **pass** (−7.02% vs the +4.99% line);
+legacy `FT-16` **fail**, observation 1 of the next 3 (the kill needs 2 of 3, so not killed); legacy `FT-17`
+**VOID** (META printed 10-21, off the window), pooled range 1.42× measured anyway. None is a scored kill, so the
+sweep doc's kill list is unchanged. The Outcome cells carry the numbers.
+
+**Unresolved, said plainly.** The 10-01 session (−2.01% excess before the registered ad-tech date) has no found
+cause. The 10-30 sell-off is unattributed. The study will include the 10-28 print once its event list catches up;
+that re-run, not this hand computation, is the number to cite after that.
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{"GOOG":276.15},"vix":22.06,"daysBand":"critical:0+","adjacentIds":["aapl-2026-10-29-print","aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","ism-manufacturing-2026-11-02","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-20y30y-2026-10-27","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23"],"adjacentStrongIds":["amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->

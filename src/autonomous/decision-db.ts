@@ -4,8 +4,8 @@ import { DatabaseSync } from "node:sqlite";
 import type { OrderSettlement } from "../domain/order-settlement.js";
 import type { PlaybookObservation } from "../domain/playbook-observation.js";
 import type { OrderIntent, PlaybookVerdict } from "../domain/types.js";
-import type { GuardRefusalReason } from "../engine/guards.js";
 import type { NormalizedLifecycleActivity } from "../trading/option-lifecycle.js";
+import { openFunnelFold } from "./decision-db-funnel.js";
 import type { OptionOrderLeg } from "./decision-db-leg-orders.js";
 import { openObservationTables } from "./decision-db-observations.js";
 import { OPTION_TABLES_SQL, openOptionTables } from "./decision-db-options.js";
@@ -17,7 +17,6 @@ import { decisionFrom, fateOf, intentParams, intentRowToStored } from "./decisio
 import { CORE_TABLES_SQL } from "./decision-db-schema.js";
 import {
   openSettlements,
-  SETTLED_JOIN,
   SETTLEMENTS_SQL,
   type SequencedSettlement,
   type SettledIntent,
@@ -25,7 +24,7 @@ import {
 } from "./decision-db-settlements.js";
 import { openVerdictRunReads, type VerdictRunStart } from "./decision-db-verdict-run.js";
 import { type CheckWeekRows, openCheckWeekReads } from "./decision-db-week.js";
-import { computeFunnel, type DecisionFunnel } from "./decision-funnel.js";
+import type { DecisionFunnel } from "./decision-funnel.js";
 import { openOptionLedger, type SequencedLifecycle } from "./decision-option-ledger.js";
 import type { DecisionRecord } from "./decision-record.js";
 
@@ -74,11 +73,19 @@ export interface DecisionDb {
    *  1.5 s a request at 180 days (#4612 slice 7). Same join as `findByOrderId`: the intent's own
    *  order id, or a working order's settlement. */
   personasOfOrders(orderIds: readonly string[]): string[];
+  /** Moves whenever a row `personasOfOrders` can match is added: an intent carrying an order id,
+   *  an option intent carrying a client id, a settlement. Unchanged means every past answer still
+   *  holds, because none of those tables is ever rewritten (#4619) — `account-personas-fold.ts`
+   *  re-asks only when it moves. Observed intents, written every pass, never move it. */
+  orderJoinMark(): string;
   /** A spread leg's own broker order id → the spread order it belongs to. The account
    *  reports each leg's fill under the leg's id, which `findByOrderId` never matches; this is the
    *  hop from that fill to the parent id `findByOrderId` does. Kept apart on purpose: a caller that
    *  scores fills per order (`playbook-performance.ts`) must not count a spread once per leg. */
   findSpreadLeg(legOrderId: string): OptionOrderLeg | undefined;
+  /** Moves exactly when the leg table gains a row, so a `findSpreadLeg` miss at one mark is still a
+   *  miss at the same mark — what lets the Wire stop re-asking every option fill (#4619). */
+  spreadLegMark(): number;
   /** Writes every entry with `record()`'s own idempotency guarantee, wrapped in one transaction —
    *  the app-side replication listener's insert path (PR 4). */
   recordBatch(entries: readonly DecisionRecord[]): void;
@@ -96,7 +103,8 @@ export interface DecisionDb {
   /** The decision funnel (PR 7b) — cycles → raw → survived guards → placed → filled → closed,
    *  plus refusals by reason. A single SQL aggregation over the FULL history, never bounded by
    *  `MAX_PAGE` the way `listByPersona`/`listRetrospectives` are — a funnel undercounting its own
-   *  totals would be a worse lie than a slow query. */
+   *  totals would be a worse lie than a slow query. Folded per persona and advanced by only the
+   *  intents recorded since the last read (`decision-db-funnel.ts`, #4619). */
   funnelFor(personaId: string): DecisionFunnel;
   /** One persona's passes, grouped verdicts and placed trades in `[from, to)` (#5073 slice 2) —
    *  the week strip and each playbook's lane. Bounded by the window, never a page: see
@@ -126,6 +134,14 @@ export interface DecisionDb {
    *  positions IT opened stay on the book (#5609), without claiming a position the bot's own rules
    *  hold in the same name. Empty when it has placed nothing. */
   symbolsPlacedByPlaybook(personaId: string, playbookId: string): ReadonlySet<string>;
+  /** The OCC symbols this persona placed an option order on under one playbook and one strategy
+   *  tag (#6340) — a play's memory of what it already did to a contract, such as the long-LEAP's
+   *  one profit trim. Empty when it has placed nothing under that tag. */
+  occSymbolsPlacedUnder(
+    personaId: string,
+    playbookId: string,
+    strategy: string,
+  ): ReadonlySet<string>;
   /** How the sold puts one playbook opened under one strategy tag have ended for one persona
    *  (#4469 criterion 12, the wheel's retire test): `closed` is those the expiry or assignment
    *  reports ended, `assigned` the ones that finished in the money. A put bought back early or
@@ -213,6 +229,7 @@ export function openDecisionDb(path: string): DecisionDb {
   const verdictRun = openVerdictRunReads(db);
   const playbookFunnel = openPlaybookFunnelReads(db);
   const retrospectives = openRetrospectiveReads(db);
+  const funnel = openFunnelFold(db, retrospectives.closedCount);
 
   const insertDecision = db.prepare(
     "INSERT OR IGNORE INTO decisions (at, persona_id, mode, halted, context_json) VALUES (?, ?, ?, ?, ?)",
@@ -283,22 +300,28 @@ export function openDecisionDb(path: string): DecisionDb {
       .all(...ids) as { persona_id: string }[];
     for (const row of [...direct, ...settled]) into.add(row.persona_id);
   }
-  const selectCycleCount = db.prepare("SELECT COUNT(*) AS n FROM decisions WHERE persona_id = ?");
-  // Grouped, not one row per intent (#4612 slice 7, defect #9: "+205 MB at 12 × 180 days" on this
-  // path) — the distinct (guard_reason, action, result_status) combinations are few no matter how
-  // long a persona's history runs, so the count SQLite already has to compute for GROUP BY is the
-  // whole result, never a row pulled per intent.
-  const selectFunnelGrouped = db.prepare(`
-    SELECT i.guard_reason AS guard_reason, i.action AS action,
-           COALESCE(s.status, i.result_status) AS result_status, COUNT(*) AS n
-    FROM intents i JOIN decisions ON decisions.id = i.decision_id ${SETTLED_JOIN}
-    WHERE decisions.persona_id = ?
-    GROUP BY i.guard_reason, i.action, COALESCE(s.status, i.result_status)
-  `);
+  // Each part walks only the non-null end of its own index, never the observed intents: left to
+  // itself the planner walks `intents` backward by id, past every pass since the last placed
+  // order (7 ms at 180 days, against 0.45 ms down the index).
+  const selectOrderJoinMark = db.prepare(`
+    SELECT (SELECT COALESCE(MAX(id), 0) FROM intents INDEXED BY intents_order
+        WHERE order_id IS NOT NULL) || ':' ||
+      (SELECT COALESCE(MAX(intent_id), 0) FROM intent_options INDEXED BY intent_options_client
+        WHERE client_order_id IS NOT NULL) || ':' ||
+      (SELECT COALESCE(MAX(seq), 0) FROM order_settlements) AS mark`);
   const selectSymbolsPlacedByPlaybook = db.prepare(`
     SELECT DISTINCT intents.symbol AS symbol
     FROM intents JOIN decisions ON decisions.id = intents.decision_id
     WHERE intents.playbook_id = ? AND decisions.persona_id = ? AND intents.action = 'placed'
+  `);
+
+  const selectOccPlacedUnder = db.prepare(`
+    SELECT DISTINCT legs.occ_symbol AS occ
+    FROM intents
+    JOIN decisions ON decisions.id = intents.decision_id
+    JOIN intent_option_legs legs ON legs.intent_id = intents.id
+    WHERE intents.playbook_id = ? AND decisions.persona_id = ? AND intents.strategy = ?
+      AND intents.action = 'placed'
   `);
 
   const optionLedger = openOptionLedger(db, retrospectives.write);
@@ -556,26 +579,7 @@ export function openDecisionDb(path: string): DecisionDb {
 
     playbookFunnel: (from, to) => playbookFunnel.read(from, to),
 
-    funnelFor(personaId): DecisionFunnel {
-      const cycles = (selectCycleCount.get(personaId) as { n: number }).n;
-      const closed = retrospectives.closedCount(personaId);
-      const rows = selectFunnelGrouped.all(personaId) as {
-        guard_reason: string | null;
-        action: string | null;
-        result_status: string | null;
-        n: number;
-      }[];
-      return computeFunnel(
-        cycles,
-        closed,
-        rows.map((r) => ({
-          guardReason: r.guard_reason as GuardRefusalReason | null,
-          action: r.action,
-          resultStatus: r.result_status,
-          count: r.n,
-        })),
-      );
-    },
+    funnelFor: (personaId) => funnel.read(personaId),
 
     recordOptionLifecycle(personaId, activities): number {
       db.exec("BEGIN");
@@ -633,6 +637,11 @@ export function openDecisionDb(path: string): DecisionDb {
       return new Set(rows.map((r) => r.symbol));
     },
 
+    occSymbolsPlacedUnder(personaId, playbookId, strategy): ReadonlySet<string> {
+      const rows = selectOccPlacedUnder.all(playbookId, personaId, strategy) as { occ: string }[];
+      return new Set(rows.map((r) => r.occ));
+    },
+
     putOutcomesForPlaybook: (personaId, playbookId, strategy) =>
       retrospectives.putOutcomesForPlaybook(personaId, playbookId, strategy),
 
@@ -668,7 +677,11 @@ export function openDecisionDb(path: string): DecisionDb {
       return [...found];
     },
 
+    orderJoinMark: () => (selectOrderJoinMark.get() as { mark: string }).mark,
+
     findSpreadLeg: (legOrderId) => optionTables.findLeg(legOrderId),
+
+    spreadLegMark: () => optionTables.legMark(),
 
     playbookObservations: (playbookId, opts) => observations.list(playbookId, opts),
 

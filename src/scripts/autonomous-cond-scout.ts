@@ -54,7 +54,8 @@ export function condScoutUniverse(
   return wanted.filter((s) => carried.has(s));
 }
 
-function barsClient(creds: AlpacaCredentials): AlpacaOptionsClient {
+/** The paper + data client the scout's bar reads use; the long-LEAP daily high reads through it too. */
+export function barsClient(creds: AlpacaCredentials): AlpacaOptionsClient {
   return new AlpacaOptionsClient(
     new FetchAlpacaTradingTransport({ ...creds, baseUrl: ALPACA_PAPER_BASE_URL }),
     new FetchAlpacaTradingTransport({ ...creds, baseUrl: ALPACA_DATA_BASE_URL }),

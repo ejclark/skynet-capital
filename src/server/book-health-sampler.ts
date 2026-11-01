@@ -1,7 +1,6 @@
 import { sampleOf } from "../observatory/book-health-history.js";
-import { deskLedger } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
-import { deskHealthView } from "./book-health-payload.js";
+import { deskHealthView, openLotsOf } from "./book-health-payload.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
 /**
@@ -29,8 +28,7 @@ export async function sampleBookHealth(opts: BookHealthSamplerOptions): Promise<
   let recorded = 0;
   for (const found of opts.participants()) {
     try {
-      const durable = await config.readTradeActivity?.(found.id);
-      const openLots = durable ? deskLedger(found, durable).open : undefined;
+      const openLots = await openLotsOf(found, config);
       const view = await deskHealthView(found, config, openLots);
       if (!view) continue;
       history.record(found.id, sampleOf(view.asOf, view.findings));

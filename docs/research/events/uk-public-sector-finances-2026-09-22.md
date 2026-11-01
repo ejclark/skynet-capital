@@ -355,6 +355,26 @@ This event is now scored. The scanner goes quiet on it permanently, with the one
 EVENT-RESEARCH.md already describes: FT-1 and FT-4 reopen it as `forward-test-due` once their
 2026-10-29 score-by date arrives.
 
+**Forward-test scoring note (2026-10-30, `forward-test-due`).** The Autumn Budget and the OBR's
+*Economic and fiscal outlook* both landed on 2026-10-28, so FT-1 and FT-4 were scored from the EFO
+itself, read through the gov.uk copy (obr.uk returned 403 again; same document, HTTP 200):
+
+- **FT-1 — KILL.** The fiscal forecast closed **2026-09-18**, four days *before* this print and 40
+  days before the Budget (the registered projection was 34–36). Its outturn anchor is the **21
+  August** bulletin; the 22 September release enters only as *"ONS estimates of revisions that would
+  arise in the 22 September release"*, so the August borrowing figure was not in the forecast. This
+  print was **outside**, not on the boundary. The "boundary" framing in the stance above is replaced
+  by that fact; the stance itself (stand aside, no position) is unchanged, since the test never
+  carried a market claim.
+- **FT-4 — PASS.** The pre-measures economy forecast was completed **2026-09-08**, 22 days before the
+  30 September national accounts, and no incorporation of them is stated. Limit: the page was
+  truncated before Box 2.2 (ONS productivity revisions), so the pass rests on the absence of an
+  affirmative statement plus the stated 8 September completion.
+
+The siblings that lean on this placement ([`uk-public-sector-finances-2026-10-21`](uk-public-sector-finances-2026-10-21.md)
+and `uk-autumn-budget-2026-10-28`) belong to their own lanes and were not edited; the 18 September
+close is the number they should be re-read against.
+
 ## Stance & kill switches
 
 **Stance (2026-09-09, D-13; date `estimate`): stand aside completely, and spend the run-in settling
@@ -451,3 +471,7 @@ memory — after which this doc goes quiet.
      (EVENT-RESEARCH.md → "Deterministic screening") rather than left stale; adjacentIds is empty
      because a closed event is never screened again, so there is no future pulse for a corridor list
      to serve. -->
+
+**Last assessed:** 2026-10-30
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:0+","adjacentIds":[],"adjacentStrongIds":[],"screenStreak":0} -->
+<!-- Closed: scoring pass only (FT-1 kill, FT-4 pass); no further pulse will read this block. -->

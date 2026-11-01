@@ -53,6 +53,10 @@ export class JsonlActivityStore implements ActivityStore {
     return this.store.latest(participantId);
   }
 
+  since(participantId: string, offset: number): Promise<JsonlTail<TradeActivityRecord>> {
+    return this.store.since(participantId, offset);
+  }
+
   sinceAll(
     from: ReadonlyMap<string, number>,
   ): Promise<ReadonlyMap<string, JsonlTail<TradeActivityRecord>>> {

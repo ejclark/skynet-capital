@@ -55,7 +55,9 @@ export function publishingActivityStore(
     },
     list: (participantId) => store.list(participantId),
     latest: (participantId) => store.latest(participantId),
-    // Forwarded, or the Wire's fold would quietly re-list the whole ledger behind this wrapper.
+    // Forwarded, or the Wire's fold and Pulse's trade memo would quietly re-list the whole ledger
+    // behind this wrapper.
+    ...(store.since ? { since: store.since.bind(store) } : {}),
     ...(store.sinceAll ? { sinceAll: store.sinceAll.bind(store) } : {}),
   };
 }

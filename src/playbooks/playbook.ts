@@ -51,6 +51,8 @@
  * is deliberately left to its own follow-up PR, gated by the characterization specs proving every
  * OTHER playbook stays untouched (#3194's step-1 safety net, still doing its job).
  */
+
+import type { DailyHighOf } from "../domain/daily-high.js";
 import {
   daysUntil,
   type EarningsPrint,
@@ -73,6 +75,20 @@ import type {
 import type { Steerable } from "./conviction-steering.js";
 import type { MixedSignalsDial } from "./mixed-signals.js";
 import type { PlayTargetBounds } from "./play-target.js";
+
+/**
+ * What a `decide` playbook may read beyond the cycle's market context (#6340) — each a synchronous
+ * read of something the live wiring keeps fresh, absent wherever nothing is wired (a spec, the
+ * Store's preflight). A play must treat an absent read as "unknown" and do the safe thing: the
+ * long-LEAP play buys nothing without a daily high, and takes no profit without its memory.
+ */
+export interface PlaybookReads {
+  /** A ticker's last completed close and its 252-session high (`daily-high-feed.ts`). */
+  readonly dailyHigh?: DailyHighOf;
+  /** The OCC symbols this bot has placed an order on under one strategy tag for one playbook —
+   *  a play's memory of what it already did, read off the decision store. */
+  readonly placedUnder?: (playbookId: string, strategy: string) => ReadonlySet<string>;
+}
 
 /** What a playbook wants its book to look like at a moment in time. */
 type DesiredState = "long" | "flat" | "no-window";
@@ -241,6 +257,7 @@ export interface Playbook {
     listed: ListedExpirations,
     calendar: readonly EarningsPrint[],
     mode: PlaybookMode,
+    reads?: PlaybookReads,
   ): OptionDemand;
   /**
    * Optional — DARK (#5489 slice 2): the playbook records its verdict ("observing") every pass and
@@ -276,6 +293,7 @@ export interface Playbook {
     portfolio: Portfolio,
     calendar: readonly EarningsPrint[],
     mode: PlaybookMode,
+    reads?: PlaybookReads,
   ): readonly OrderIntent[];
 }
 
@@ -452,9 +470,10 @@ function decidedIntents(
   portfolio: Portfolio,
   calendar: readonly EarningsPrint[],
   trippedSymbols: ReadonlySet<string>,
+  reads: PlaybookReads,
 ): OrderIntent[] {
   const intents: OrderIntent[] = [];
-  for (const intent of playbook.decide?.(context, portfolio, calendar, mode) ?? []) {
+  for (const intent of playbook.decide?.(context, portfolio, calendar, mode, reads) ?? []) {
     if (!playbook.symbols.includes(intent.symbol) || trippedSymbols.has(intent.symbol)) continue;
     intents.push({ ...intent, playbookId: playbook.id, playbookMode: mode });
   }
@@ -512,12 +531,13 @@ export function playbookIntents(
   portfolio: Portfolio,
   calendar: readonly EarningsPrint[],
   events: readonly PlaybookEvent[] = [],
+  reads: PlaybookReads = {},
 ): OrderIntent[] {
   const { intents: safetyIntents } = exitSafetyIntents(enabled, context, portfolio);
   const trippedSymbols = new Set(safetyIntents.map((i) => i.symbol));
   const intents: OrderIntent[] = [...safetyIntents];
   for (const entry of enabled) {
-    const own = entryIntents(entry, context, portfolio, calendar, events, trippedSymbols);
+    const own = entryIntents(entry, context, portfolio, calendar, events, trippedSymbols, reads);
     // A paused entry (#4651) opens nothing new: its exits, and a covered call, only.
     intents.push(...(entry.exitsOnly ? own.filter(pausedMayPlace) : own));
   }
@@ -533,11 +553,12 @@ function entryIntents(
   calendar: readonly EarningsPrint[],
   events: readonly PlaybookEvent[],
   trippedSymbols: ReadonlySet<string>,
+  reads: PlaybookReads,
 ): OrderIntent[] {
   // Dark: it records a verdict and places nothing, whatever its own rules would answer.
   if (playbook.observeOnly) return [];
   if (playbook.decide) {
-    return decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols);
+    return decidedIntents(playbook, mode, context, portfolio, calendar, trippedSymbols, reads);
   }
   // One shared condition per cycle, applied to every symbol in the basket — see the `symbols`
   // field doc: desiredState is not an independent state machine per symbol.

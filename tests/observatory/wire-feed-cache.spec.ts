@@ -492,7 +492,7 @@ describe("the Wire's append-aware fold (#4458)", () => {
         expect(expected.length).toBeGreaterThan(10);
         expect(await routeWalk(folded, url)).toEqual(expected);
       }
-    });
+    }, 30_000); // Every page of a large fixture, read twice: over the 5s default on a loaded verify.
   });
 
   describe("when lines are appended after the fold is warm", () => {

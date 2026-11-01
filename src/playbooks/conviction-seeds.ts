@@ -23,6 +23,11 @@ const SCORES = scoreLedger as unknown as ScoreLedger;
  * own (slice 6). Each is transcribed from its call sheet under `docs/research/convictions/`, one
  * claim per row, and the sheet stays the source: a re-read there is a change here.
  *
+ * A claim's falsifier is the claim's own: the observation that proves the member's view wrong
+ * (`claim-score.ts`). Where a sheet row's falsifier is the house call's instead (claims 1 and 2a,
+ * whose call is "stand aside", so it names what would prove standing aside wrong), the record
+ * carries its inverse, or a put assigned on its expiry would score the sell-puts claim a pass.
+ *
  * Paper only; educational. Nothing here sizes or places a trade.
  */
 
@@ -70,8 +75,10 @@ const AI_DIP_STATED: Conviction = {
       bucket: "tested",
       evidence:
         "Premium fit re-run 2026-10-16: 30-day implied vol 93.2%, 63rd pct of CRWV's next-30-day outcomes (6th on 10-02); Δ0.20 put priced 20.1% vs 24.8% historical. Half right: cheap to fair, not rich (docs/research/crwv-premium-fit.md).",
+      // The sheet's falsifier is call 1's flip (both parts clear), which proves standing aside wrong;
+      // the claim's is the re-run still saying stand aside.
       falsifier:
-        "A premium-fit re-run on or after 2026-11-13 shows implied vol at or above the 50th pct and priced assignment odds above the historical.",
+        "A premium-fit re-run on or after 2026-11-13 still says stand aside: CRWV puts are not rich enough to sell.",
       scoreBy: "2026-11-20",
       // The re-run on data from the due day decides: it backs the claim, cuts against it, or splits.
       check: { kind: "rerun" },
@@ -82,9 +89,19 @@ const AI_DIP_STATED: Conviction = {
       bucket: "tested",
       evidence:
         "The only expiry before the ~11-09 print is 11-06, 21 days out, under the wheel's 30-day minimum. Its $54 put is priced at 20% odds; analogs finished under it 16–24%.",
+      // The sheet's falsifier (all three expire worthless) proves standing aside wrong; the claim's
+      // is its inverse, any one of them finishing in the money.
       falsifier:
-        "The $54 11-06 put and the next 2 pre-print Δ0.20 puts all expire worthless, the first on 2026-11-06.",
+        "Any of the $54 11-06 put and the next 2 pre-print Δ0.20 puts finishes in the money (CRWV closes under its strike at expiry), the first on 2026-11-06.",
       scoreBy: "2026-11-06",
+      // The 11-06 put can fail the claim alone. Expiring worthless, it holds the claim pending: the
+      // next 2 pre-print puts (the ~Feb and ~May 2027 prints) have no strike or expiry yet.
+      check: {
+        kind: "puts-expire",
+        symbol: "CRWV",
+        puts: [{ expiry: "2026-11-06", strike: 54 }],
+        unnamed: 2,
+      },
     },
     {
       tag: "underrated",
@@ -96,6 +113,18 @@ const AI_DIP_STATED: Conviction = {
       falsifier:
         "CRWV's close from the day after the ~11-09 print to 5 sessions later is positive.",
       scoreBy: "2026-11-25",
+      // P1 predicts the bleed, and its kill switch is this falsifier word for word.
+      check: {
+        kind: "forward-tests",
+        tests: [
+          {
+            event: "crwv-2026-11-10-print",
+            ref: "ai-dip-2026-10/P1",
+            onPass: "pass",
+            onKill: "fail",
+          },
+        ],
+      },
     },
     {
       tag: "underrated",
@@ -115,6 +144,19 @@ const AI_DIP_STATED: Conviction = {
       falsifier:
         "The AI-infrastructure basket beats QQQ from close 11-03 to close 11-06 by more than its own 3-session 75th pct.",
       scoreBy: "2026-11-09",
+      // Inverted on purpose: P6's prediction IS this falsifier (the call is "don't size on it, the
+      // selloff hasn't been political"), so P6 passing fails the claim and P6 killed holds it.
+      check: {
+        kind: "forward-tests",
+        tests: [
+          {
+            event: "midterm-elections-2026-11-03",
+            ref: "ai-dip-2026-10/P6",
+            onPass: "fail",
+            onKill: "pass",
+          },
+        ],
+      },
     },
     {
       tag: "underrated",
@@ -125,6 +167,17 @@ const AI_DIP_STATED: Conviction = {
       falsifier:
         "Close D-20 to print-day close is negative this print (FT-nvda-2026-11-18-print-3).",
       scoreBy: "2026-11-30",
+      check: {
+        kind: "forward-tests",
+        tests: [
+          {
+            event: "nvda-2026-11-18-print",
+            ref: "FT-nvda-2026-11-18-print-3",
+            onPass: "pass",
+            onKill: "fail",
+          },
+        ],
+      },
     },
     {
       tag: "underrated",
@@ -179,6 +232,19 @@ const AI_DIP_STATED: Conviction = {
       falsifier:
         "The ~11-09 print and the next 2 all move less than their priced straddle, the first read by 2026-11-17.",
       scoreBy: "2026-11-17",
+      // P2 reads the first of the three prints: a move past the straddle means the falsifier can no
+      // longer land, but a move inside it is one of three, so it decides nothing alone.
+      check: {
+        kind: "forward-tests",
+        tests: [
+          {
+            event: "crwv-2026-11-10-print",
+            ref: "ai-dip-2026-10/P2",
+            onPass: "pass",
+            onKill: "pending",
+          },
+        ],
+      },
     },
     // Re-stated 2026-10-18 (the call sheet's "Re-stated" block): four more claims, all size zero.
     {

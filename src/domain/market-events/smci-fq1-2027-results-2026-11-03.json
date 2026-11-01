@@ -1,0 +1,11 @@
+{
+  "id": "smci-fq1-2027-results-2026-11-03",
+  "kind": "sector",
+  "title": "Super Micro fiscal Q1 2027 results (call 5 p.m. ET) — the AI-server builder reports in the same after-close window as AMD",
+  "date": "2026-11-03",
+  "status": "confirmed",
+  "source": "IR: ir.supermicro.com/news/news-details/2026/Supermicro-Provides-First-Quarter-of-Fiscal-Year-2027-Preliminary-Business-Update — the company's own 2026-10-20 release, fetched direct 2026-10-30, reads verbatim 'schedules earnings call for November 3rd at 5pm EST' and 'Supermicro will present a live audio webcast of our conference call ... on Tuesday, November 3, 2026, at 5:00 p.m. ET / 2:00 p.m. PT'. The same release's 8-K Exhibit 99.1 (sec.gov/Archives/edgar/data/0001375365/000137536526000025/smcifirstquarterfy2027busi.htm) agrees and pre-announces Q1 FY2027 revenue of $18.5B to $19.5B and gross margin of 12.0% to 12.5%. Promoted from estimate by its own lane on the company primary; the sibling lane that proposed it could not self-confirm an event it discovered in-sweep",
+  "impact": "medium",
+  "symbols": ["SMCI"],
+  "notes": "Discovered during the amd-fq3-2026-results-2026-11-03 pulse (2026-10-30). Same evening as AMD's print, so the two reactions share one tape and one read-through for AI-accelerator server demand. Revenue and gross margin are pre-announced, so the call's guidance is the new information. Not an earnings-calendar entry."
+}

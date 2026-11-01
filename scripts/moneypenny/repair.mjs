@@ -397,9 +397,48 @@ function lostRunnerNote(run, job, step) {
 }
 
 /**
+ * Did GitHub reject this workflow file? Only when its tell is present: zero jobs AND a run named
+ * after the file path, because a file GitHub could not parse has no `name:` to read (LESSONS.md,
+ * 2026-08-22). A run carrying its workflow's real name parsed — "no failing job" there is
+ * something else, and calling it a syntax error sends a repair session hunting one (#6356).
+ */
+export function wasRejected(run, jobs = []) {
+  if (jobs.length) return false;
+  const name = String(run?.name ?? "");
+  return name === run?.path || /\.ya?ml$/i.test(name);
+}
+
+/** `jobsUnread`'s label — `readFailures` re-reads while this is all it has. */
+const UNREAD_JOB = "(the failed job could not be read)";
+
+/**
+ * A run that parsed and concluded failure, but whose jobs, as read, show no failed one (#6356).
+ * Measured 2026-10-30: Pipeline run 41103012157 failed at `release · deploy bots`, the triage read
+ * its jobs 48s after it completed, found no failed job, and filed "GitHub rejected the workflow
+ * file" for a run named `Pipeline` with five jobs. The same jobs endpoint answered 502 minutes
+ * later, so GitHub's read was lagging. Its own signature, loud and honest about what is unknown.
+ */
+export function jobsUnread(run, jobs = []) {
+  const seen = jobs.map((j) => `\`${j.name}\` (${j.conclusion ?? j.status ?? "no status"})`);
+  return {
+    job: UNREAD_JOB,
+    step: "the jobs API showed no failed job for a run that parsed and concluded failure",
+    logTail: [
+      `Run ${run.id} ("${run.name}") completed with conclusion "failure", but no job read as failed.`,
+      `Jobs as read: ${seen.length ? seen.join(", ") : "none"}.`,
+      "",
+      "The run carries its workflow's real name, so the file parsed. This is a stale or failed",
+      "read of the jobs, not a syntax error. Read them again and file the real job:",
+      `  gh run view ${run.id} --json jobs --jq '.jobs[] | "\\(.name) \\(.conclusion)"'`,
+    ].join("\n"),
+  };
+}
+
+/**
  * Turn a run's jobs into the failures to report. Pure — `logOf` is the only impure part and is
- * injected. Jobs that failed are the normal case; a failed run with none of those is either starved
- * of runners (`runnerStarved`) or rejected outright (`parseFailure`) — never "nothing to report".
+ * injected. Jobs that failed are the normal case; a failed run with none of those is starved of
+ * runners (`runnerStarved`), rejected outright (`parseFailure`), or read too early (`jobsUnread`)
+ * — never "nothing to report".
  */
 export function failuresFrom(run, jobs = [], logOf = () => "") {
   const failed = jobs
@@ -416,8 +455,57 @@ export function failuresFrom(run, jobs = [], logOf = () => "") {
     });
   if (failed.length || run.conclusion !== "failure") return failed;
   const starved = jobs.filter(neverAcquired);
-  return starved.length ? [runnerStarved(run, starved)] : [parseFailure(run)];
+  if (starved.length) return [runnerStarved(run, starved)];
+  return [wasRejected(run, jobs) ? parseFailure(run) : jobsUnread(run, jobs)];
 }
+
+/** How long to wait before each re-read of a run's jobs — about a minute in all. */
+export const REREAD_WAITS_MS = [10_000, 20_000, 30_000];
+
+/**
+ * The further waits, earned only by a read that PROVES itself stale: a job still `in_progress` or
+ * `queued` on a run that already concluded (#6406). Measured 2026-10-30: Pipeline run 41121443220's
+ * `release · deploy bots` completed 20:17:56, the run concluded 20:20:21, and every read from
+ * 20:20:27 to 20:21:38 still said `in_progress` — so the minute above ran out and the lane filed
+ * "(the failed job could not be read)" beside the open capsule (#5955) the real job already had,
+ * and dispatched a repair session to re-diagnose it. Three more minutes is cheap next to that.
+ */
+export const STALE_WAITS_MS = [60_000, 60_000, 60_000];
+
+/** A job the API still reports as running. On a concluded run, that is a stale read by definition. */
+function stillRunning(job) {
+  return Boolean(job?.status) && job.status !== "completed";
+}
+
+/**
+ * `failuresFrom` over a live read, re-reading while the read is the unread shape or throws (a 502
+ * on the jobs endpoint, #6356). Once any read shows a job still running, the budget extends by
+ * `staleWaits` (#6406). A read that still fails after the last wait throws, so the triage job goes
+ * red instead of filing a guess. `fetchJobs` and `sleep` are injected so a spec drives it.
+ */
+export function readFailures(
+  run,
+  { fetchJobs, logOf, sleep, waits = REREAD_WAITS_MS, staleWaits = STALE_WAITS_MS },
+) {
+  const schedule = [...waits, ...staleWaits];
+  let attempt = 0;
+  let stale = false;
+  const budget = () => (stale ? schedule.length : waits.length);
+  for (;;) {
+    try {
+      const jobs = fetchJobs(run.id);
+      const failures = failuresFrom(run, jobs, logOf);
+      if (failures[0]?.job !== UNREAD_JOB) return failures;
+      stale ||= jobs.some(stillRunning);
+      if (attempt >= budget()) return failures;
+    } catch (err) {
+      if (attempt >= budget()) throw err;
+    }
+    sleep(schedule[attempt++]);
+  }
+}
+
+const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 /** The jobs of a run, as the API reports them. */
 function fetchJobs(runId) {
@@ -496,6 +584,7 @@ function main(argv) {
   const raw = eventFile && existsSync(eventFile) ? JSON.parse(readFileSync(eventFile, "utf8")) : {};
   const fixture = raw.deps;
   const run = raw.workflow_run ?? raw.run ?? {};
+  const live = !(raw.failures || raw.jobs || dry);
 
   const ctx = {
     run,
@@ -504,7 +593,9 @@ function main(argv) {
     // from the API. A failed run with no failing job is still a failure — `failuresFrom` says which.
     failures:
       raw.failures ??
-      failuresFrom(run, raw.jobs ?? (dry ? [] : fetchJobs(run.id)), dry ? undefined : jobLog),
+      (live
+        ? readFailures(run, { fetchJobs, logOf: jobLog, sleep: sleepSync })
+        : failuresFrom(run, raw.jobs ?? [], dry ? undefined : jobLog)),
   };
   const deps = fixture ?? (dry ? {} : { openIssues: openIssues(), closedIssues: closedIssues() });
   const intents = routeFailure(ctx, deps);

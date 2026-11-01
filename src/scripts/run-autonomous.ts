@@ -90,6 +90,7 @@ import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { bridgeReplication } from "./autonomous-bridge-replication.js";
 import { armCondScout } from "./autonomous-cond-scout.js";
 import { convictionsHolder } from "./autonomous-convictions.js";
+import { dailyHighFeed } from "./autonomous-daily-high.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
 import { ignoredEnvSettings } from "./autonomous-env-ignored.js";
 import { watchHardcore } from "./autonomous-hardcore-live.js";
@@ -372,6 +373,9 @@ async function runLive(): Promise<void> {
   // The 5-minute bars the dark dip-to-bounce playbooks record their would-be orders from (#5489):
   // Alpaca's data host on the shared data credential, fetched only once a playbook asks for a name.
   const intradayBars = intradayBarsFeed(currentCredentials);
+  // The daily close and 252-session high the long-LEAP playbook buys on (#6340): the same data host,
+  // read only once a playbook asks for a name, at most every 30 minutes.
+  const dailyHigh = dailyHighFeed(currentCredentials);
   // What one bot trades under — at boot and on every swap: its roster, its own options level, and
   // (decision store on) its realized P/L per playbook.
   const rosterFor = (r: BotRoster) =>
@@ -383,6 +387,16 @@ async function runLive(): Promise<void> {
       {
         runsScout: scoutPicks() > 0 && r.bot.persona.id === scoutHostId,
         intradayBars: intradayBars.barsOf,
+        // The daily high, and (decision store on) a play's memory of what it already placed (#6340).
+        reads: {
+          dailyHigh: dailyHigh.highOf,
+          ...(decisionDb
+            ? {
+                placedUnder: (playbookId: string, strategy: string) =>
+                  decisionDb.occSymbolsPlacedUnder(r.bot.persona.id, playbookId, strategy),
+              }
+            : {}),
+        },
         // An unsubscribed playbook keeps its exits while it still owns an open position (#5609).
         ...(decisionDb
           ? {
@@ -649,6 +663,7 @@ async function runLive(): Promise<void> {
     evaluating = true;
     const context = contextNow();
     void intradayBars.refresh(); // never awaited: a slow bar read can't stall a cycle, it lands next one
+    void dailyHigh.refresh(); // the same: a daily high read late lands on the next cycle
     // guard() never rethrows, so a failed cycle can no longer latch `evaluating` forever (#4995).
     await cycleWatch.guard(() => runner.runCycle(context));
     void condScoutPass(context); // never awaited: the shadow scout can't stall a real cycle
