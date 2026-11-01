@@ -38,12 +38,18 @@ esac
 const STUB_GH = `#!/usr/bin/env bash
 S="$STUB"; echo "$*" >> "$S/gh-calls"
 case "$1 $2" in
-  "issue list") [[ -f "$S/issue" ]] && cat "$S/issue" ;;
-  "issue create") echo 42 > "$S/issue"; echo "https://github.com/o/r/issues/42" ;;
+  "issue list") if [[ -f "$S/issue" ]]; then cat "$S/issue"; else echo '[]'; fi ;;
+  "issue create")
+    echo '[{"number":42,"title":"[fitness] bots-running","state":"OPEN"}]' > "$S/issue"
+    echo "$8" > "$S/frame"
+    echo "https://github.com/o/r/issues/42" ;;
+  "issue reopen")
+    jq -c 'map(.state = "OPEN")' "$S/issue" > "$S/issue.next"; mv "$S/issue.next" "$S/issue" ;;
   "issue comment")
     body="$5"
     jq -cn --arg b "$body" --arg t "$(date -u +%FT%TZ)" '{user:{type:"Bot"},body:$b,created_at:$t}' >> "$S/comments" ;;
   "issue view") cat "$S/recent" 2>/dev/null ;;
+  "api --method") ;;
   api*)
     # \`gh api <path> --jq <filter>\`: the filter runs over the stored comments, as gh would run it.
     filter="$4"
@@ -90,13 +96,34 @@ const comments = (stub: string) =>
 
 /** Seed an open issue carrying `n` comments of one shape, each from now-ish. */
 function seed(stub: string, n: number, shape: { type: "Bot" | "User"; body: string }) {
-  writeFileSync(join(stub, "issue"), "42");
+  openThread(stub);
   const at = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const rows = Array.from({ length: n }, () =>
     JSON.stringify({ user: { type: shape.type }, body: shape.body, created_at: at }),
   );
   writeFileSync(join(stub, "comments"), `${rows.join("\n")}\n`);
 }
+
+const TITLE = "[fitness] bots-running";
+const thread = (over: Record<string, unknown> = {}) => ({
+  number: 42,
+  title: TITLE,
+  state: "OPEN",
+  ...over,
+});
+const openThread = (stub: string) => writeFileSync(join(stub, "issue"), JSON.stringify([thread()]));
+const closedThread = (stub: string, agoDays: number) =>
+  writeFileSync(
+    join(stub, "issue"),
+    JSON.stringify([
+      thread({
+        state: "CLOSED",
+        closedAt: new Date(Date.now() - agoDays * 86_400_000)
+          .toISOString()
+          .replace(/\.\d{3}Z$/, "Z"),
+      }),
+    ]),
+  );
 
 /** Stop the machine again so the next run finds it stopped. */
 const stopAgain = (stub: string) => writeFileSync(join(stub, "state"), "stopped");
@@ -208,6 +235,78 @@ describe("bots-start-stopped", () => {
     const stub = fixture("stopped");
     seed(stub, 3, { type: "Bot", body: "Failed again — unrelated lane noise" });
     expect(run(stub, "--report").status).toBe(0);
+    expect(flyCalls(stub)).toContain("machine start m1");
+  });
+
+  it("files under the same title the fitness report keeps, unassigned, in the report's own shape", () => {
+    const stub = fixture("stopped");
+    expect(run(stub, "--report").status).toBe(0);
+    const calls = ghCalls(stub);
+    expect(calls).toContain(`issue create --title ${TITLE} --label bug --body`);
+    expect(calls).not.toContain("--assignee");
+    // The report reads a cause it finds on the thread as already said, so it stays quiet.
+    expect(readFileSync(join(stub, "frame"), "utf8")).toContain(
+      "**What failed:** machine is stopped.",
+    );
+    expect(comments(stub)[0]).toContain("**What failed:** machine is stopped.");
+  });
+
+  it("reads the thread by its exact title, whatever else the search returns", () => {
+    const stub = fixture("stopped");
+    writeFileSync(
+      join(stub, "issue"),
+      JSON.stringify([thread({ number: 7, title: "[fitness] bots-running again" })]),
+    );
+    expect(run(stub, "--report").status).toBe(0);
+    expect(ghCalls(stub)).toContain("issue create");
+    expect(ghCalls(stub)).not.toContain("issue comment 7");
+  });
+
+  it("reopens a thread closed in the last 14 days, unassigning first, with one line", () => {
+    const stub = fixture("stopped");
+    closedThread(stub, 3);
+    expect(run(stub, "--report").status).toBe(0);
+    const calls = ghCalls(stub);
+    expect(calls).not.toContain("issue create");
+    const off = calls.indexOf(
+      "api --method DELETE repos/{owner}/{repo}/issues/42/assignees -f assignees[]=ejclark",
+    );
+    const back = calls.indexOf("issue reopen 42 --comment The fix did not hold:");
+    expect(off).toBeGreaterThan(-1);
+    expect(back).toBeGreaterThan(off);
+    expect(calls).toContain("<!-- fitness:reopened -->");
+    expect(calls).toContain("issue comment 42");
+    expect(flyCalls(stub)).toContain("machine start m1");
+  });
+
+  it("files a new thread once the closed one is older than 14 days", () => {
+    const stub = fixture("stopped");
+    closedThread(stub, 15);
+    expect(run(stub, "--report").status).toBe(0);
+    expect(ghCalls(stub)).toContain("issue create");
+    expect(ghCalls(stub)).not.toContain("issue reopen");
+  });
+
+  it("keeps the budget across a close: the report closing the thread cannot buy a fourth start", () => {
+    const stub = fixture("stopped");
+    const outcomes: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      stopAgain(stub);
+      // Each start's pass closes the thread, as the report does right after this script.
+      if (existsSync(join(stub, "issue"))) closedThread(stub, 0);
+      outcomes.push(run(stub, "--report").status ?? -1);
+    }
+    expect(outcomes).toEqual([0, 0, 0, 3]);
+    expect(flyCalls(stub).match(/machine start m1/g)).toHaveLength(3);
+    // The refused one still reopens, so a machine left down has an open thread for the report.
+    expect(JSON.parse(readFileSync(join(stub, "issue"), "utf8"))[0].state).toBe("OPEN");
+  });
+
+  it("files an issue when the thread cannot be read: a second thread beats silence", () => {
+    const stub = fixture("stopped");
+    writeFileSync(join(stub, "issue"), "not json");
+    expect(run(stub, "--report").status).toBe(0);
+    expect(ghCalls(stub)).toContain("issue create");
     expect(flyCalls(stub)).toContain("machine start m1");
   });
 
