@@ -12,12 +12,20 @@
 // token-shaped strings are removed before it leaves here.
 //
 //   node scripts/dream-digest.mjs --session <path.jsonl>      one session's digest
-//   node scripts/dream-digest.mjs --recent N                  paths of the newest N transcripts
+//   node scripts/dream-digest.mjs --recent N [--since DATE]   paths of the N newest-started sessions
 //   node scripts/dream-digest.mjs --memory <dir>              stale candidates in a memory folder
 //   node scripts/dream-digest.mjs --checksums <dir>           a hash per file, to prove inputs held
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  statSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +34,7 @@ const PROJECT = "-Users-eric-Developer-skynet-capital";
 const MAX_USER_CHARS = 1200;
 const MAX_ERROR_CHARS = 300;
 const MAX_FINAL_CHARS = 1500;
+const HEAD_BYTES = 64 * 1024;
 
 const HARNESS_PREFIXES = [
   "<task-notification",
@@ -121,16 +130,45 @@ export function memoryClaims(text) {
   return { paths: [...new Set(paths)], issues: [...new Set(issues)] };
 }
 
-function transcriptsDir() {
-  return process.env.AGENT_TRANSCRIPTS_DIR ?? join(homedir(), ".claude", "projects", PROJECT);
+/** The folders holding this project's session transcripts: the main checkout's and one per worktree. */
+function transcriptDirs() {
+  if (process.env.AGENT_TRANSCRIPTS_DIR) return [process.env.AGENT_TRANSCRIPTS_DIR];
+  const root = join(homedir(), ".claude", "projects");
+  return readdirSync(root)
+    .filter((name) => name === PROJECT || name.startsWith(`${PROJECT}-`))
+    .map((name) => join(root, name));
 }
 
-function recent(count) {
-  const dir = transcriptsDir();
-  return readdirSync(dir)
-    .filter((name) => name.endsWith(".jsonl"))
-    .map((name) => ({ path: join(dir, name), mtime: statSync(join(dir, name)).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime)
+/** When a session started: the first timestamp in its transcript, read from the file's head. */
+function startedAt(path) {
+  const fd = openSync(path, "r");
+  try {
+    const head = Buffer.alloc(HEAD_BYTES);
+    const read = readSync(fd, head, 0, HEAD_BYTES, 0);
+    const stamp = /"timestamp":"([^"]+)"/.exec(head.toString("utf8", 0, read))?.[1];
+    const at = Date.parse(stamp ?? "");
+    return Number.isNaN(at) ? statSync(path).mtimeMs : at;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * The sessions a review should read, newest started first. File times will not do: transcripts were
+ * bulk-touched on 10-21 to 10-23, so the first review's "20 newest" reached back to 08-21, 14 of the
+ * 20 predated 10-18, and it saw no session started in a worktree (#6470's study).
+ */
+export function recent(count, since = null) {
+  const after = since ? Date.parse(since) : Number.NEGATIVE_INFINITY;
+  return transcriptDirs()
+    .flatMap((dir) =>
+      readdirSync(dir)
+        .filter((name) => name.endsWith(".jsonl"))
+        .map((name) => join(dir, name)),
+    )
+    .map((path) => ({ path, at: startedAt(path) }))
+    .filter((file) => file.at >= after)
+    .sort((a, b) => b.at - a.at)
     .slice(0, count)
     .map((file) => file.path);
 }
@@ -177,17 +215,19 @@ function checksums(dir) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const [flag, value] = process.argv.slice(2);
+  const [flag, value, option, optionValue] = process.argv.slice(2);
   if (flag === "--session" && existsSync(value)) {
     console.log(JSON.stringify(digestLines(readFileSync(value, "utf8").split("\n")), null, 1));
   } else if (flag === "--recent") {
-    console.log(recent(Number(value)).join("\n"));
+    console.log(recent(Number(value), option === "--since" ? optionValue : null).join("\n"));
   } else if (flag === "--memory") {
     console.log(JSON.stringify(staleCandidates(value), null, 1));
   } else if (flag === "--checksums") {
     console.log(JSON.stringify(checksums(value), null, 1));
   } else {
-    console.error("usage: dream-digest --session F | --recent N | --memory DIR | --checksums DIR");
+    console.error(
+      "usage: dream-digest --session F | --recent N [--since DATE] | --memory DIR | --checksums DIR",
+    );
     process.exit(2);
   }
 }
