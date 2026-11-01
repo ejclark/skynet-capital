@@ -6,8 +6,9 @@
 // Accounts opened on a cold server exactly as the shell fires it, the same load with every
 // participant's Pulse at once (twice), each Pulse alone, and a handful of other common GETs. It
 // prints one markdown table per phase and exits non-zero on an OOM kill, a process exit, any 5xx,
-// peak RSS over `--budget-mb`, an Accounts open that adds more than `--page-mb`, or a Pulse (inside
-// that open, or fired alone) that takes longer than `--pulse-ms` or, alone, adds over `--pulse-mb`.
+// peak RSS over `--budget-mb`, an Accounts open that adds more than `--page-mb`, a Pulse (inside
+// that open, or fired alone) that takes longer than `--pulse-ms` or, alone, adds over `--pulse-mb`,
+// or another common GET whose median of three takes longer than `--get-ms` or adds over `--get-mb`.
 //
 // Why it exists: the Accounts click that OOM-killed production was invisible to every check we
 // had — offline mode serves empty in-memory ledgers, specs run on a handful of rows, and the
@@ -19,9 +20,8 @@
 //   npm run stability:budget -- --root ../base --days 56        # another tree's bundle, 56 days
 //   npm run stability:budget -- --port 8831 --prefix stab1- --keep --json /tmp/run.json
 //
-// The default run is red until #4612 slice 7 (#4619) lands: at 180 days boot's whole-history read
-// alone peaks near 300 MB and the Accounts open shares its loop with ops-status's whole-ledger read.
-// It passes at 56 days, production's depth on 2026-10-04 (`--days 56`).
+// The common-GET budgets are #4619's Done-when (every GET at a p50 ≤ 150 ms; Activity, Playbooks
+// and Decisions ≤ 20 MB — held here for every common GET, since none on 2026-11-01 added over 5).
 //
 // How: the server runs in LIVE mode against stub-broker.mjs (offline mode would swap the ledgers
 // out) on a private docker network; files reach the containers by `docker cp`, so nothing depends
@@ -36,10 +36,12 @@ import { mintSession } from "../crawl/mint-session.ts";
 import {
   accountsBurst,
   accountsOpen,
+  COMMON_REPEAT,
   commonGets,
   flyCommand,
   flyEnv,
   procMemory,
+  repeatedRow,
   summary,
   verdict,
 } from "./budget-lib.mjs";
@@ -69,6 +71,8 @@ const budgets = {
   pageMb: Number(opt("page-mb", "30")),
   pulseMb: Number(opt("pulse-mb", "30")),
   pulseMs: Number(opt("pulse-ms", "150")),
+  getMb: Number(opt("get-mb", "20")),
+  getMs: Number(opt("get-ms", "150")),
 };
 const memory = opt("memory", "512m");
 const port = Number(opt("port", "8799"));
@@ -199,8 +203,9 @@ async function hit(path) {
   }
 }
 
-/** Fire `paths` together (a page load) or one by one, each with its own reset peak and delta. */
-async function phase(name, note, paths, together) {
+/** Fire `paths` together (a page load) or one by one, each with its own reset peak and delta —
+ *  one by one, each path `repeat` times in a row, kept as one row (`repeatedRow`). */
+async function phase(name, note, paths, together, repeat = 1) {
   server.resetPeak();
   const beforeMb = mem().rss;
   const start = performance.now();
@@ -208,15 +213,19 @@ async function phase(name, note, paths, together) {
   if (together) rows.push(...(await Promise.all(paths.map(hit))));
   else
     for (const path of paths) {
-      server.resetPeak();
-      const pre = mem().rss;
-      const row = await hit(path);
-      if (!server.state().running) {
-        rows.push(row);
-        break;
+      const hits = [];
+      for (let i = 0; i < repeat && server.state().running; i++) {
+        server.resetPeak();
+        const pre = mem().rss;
+        const row = await hit(path);
+        if (!server.state().running) hits.push(row);
+        else {
+          const peak = mem().hwm;
+          hits.push({ ...row, addMb: peak - pre, peakMb: peak });
+        }
       }
-      const peak = mem().hwm;
-      rows.push({ ...row, addMb: peak - pre, peakMb: peak });
+      rows.push(repeat > 1 ? repeatedRow(hits) : hits[0]);
+      if (!server.state().running) break;
     }
   const wallMs = Math.round(performance.now() - start);
   const alive = server.state().running;
@@ -248,8 +257,11 @@ async function measure() {
     ["pulse-each", "each participant's Pulse, alone", burst.filter((p) => p.endsWith("/pulse"))],
     ["common", "other common GETs, one by one", commonGets(bot)],
   ];
-  for (const [name, note, paths] of plan)
-    if (!(await phase(name, note, paths, !["pulse-each", "common"].includes(name)))) break;
+  for (const [name, note, paths] of plan) {
+    const together = !["pulse-each", "common"].includes(name);
+    const repeat = name === "common" ? COMMON_REPEAT : 1;
+    if (!(await phase(name, note, paths, together, repeat))) break;
+  }
 
   report.state = server.state();
   if (report.state.running) report.cgroupPeakMb = server.cgroupPeakMb();
