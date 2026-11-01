@@ -74,6 +74,10 @@ check with nothing found, apply with nothing left to land. Both are good results
    to its `branch`, because wt-start resumes an existing branch and the old commits would stack under the
    new ones. One that still cannot finish holds the stamp back: recording past it would drop its
    file from every later run until it changed again.
+6. Write the round's row in the wave PR: `npm run loop:ledger -- --add --loop instruction-drift
+   --after <the loop's latest plus the edits this round applied> --tokens-m <millions, or unknown>
+   --changed "round <n>: <applied> applied by <agents> agents"`. The number is applied edits, so
+   `npm run loop:ledger` prices the sweep per applied edit.
 
 The next run re-reads what this wave changed; a run that finds nothing ends the loop. The work
 spigot refuses a run wider than its position allows (`work-mode.json`), and a `--release` run
