@@ -65,7 +65,10 @@ check with nothing found, apply with nothing left to land. Both are good results
    each role's guidance adding `Protected item.` (so apply reports `done` · `platter` rather than
    `blocked`), and the surviving branch boarded on the platter.
 4. List every flag that held in the wave PR body under **Flags — a person decides**;
-   `git log origin/main..origin/<branch> --format=%B` prints them.
+   `git log origin/main..origin/<branch> --format=%B` prints them. Report the round's yield there
+   too, or in the stamp's own PR when the round landed nothing: `Round <n> of 2: <applied> applied
+   edits by <agents> agents, <per agent> per agent`, where `<agents>` counts every check, refute and
+   apply that ran.
 5. Stamp it, once every item (grind's and the protected ones) ended `done` or `skipped`:
    `node scripts/instruction-drift-scan.mjs --record --at <the scan's at>` in the wave PR
    (`--release` too after a full run). A run that landed nothing still records its stamp, in a PR
@@ -75,8 +78,16 @@ check with nothing found, apply with nothing left to land. Both are good results
    new ones. One that still cannot finish holds the stamp back: recording past it would drop its
    file from every later run until it changed again.
 
-The next run re-reads what this wave changed; a run that finds nothing ends the loop. The work
-spigot refuses a run wider than its position allows (`work-mode.json`), and a `--release` run
+**A sweep is at most two rounds:** round 1, then one re-read of what its wave changed, run from
+`--json` because `--due` answers only the weekly question. Stop after round 2 even when round 2
+applied edits, and after round 1 when it applied none. Re-running a blocked item with `-r2` belongs
+to the round it blocked, and round 2's PR names round 1's ticket as `Part of #<n>`. Applied edits per agent over the four rounds
+of one sweep were 1.21, 0.68, 0.25 and 0.23, and rounds 3 and 4 cost 55.1M tokens for 33 edits
+(study, 2026-11-01). Stopping loses no file: what round 2 changed sits after the stamp, so the next
+`--due` run reads it. This cap is wrong if, within 30 days of a capped sweep, a drift a third round
+would have caught causes a filed bug.
+
+The work spigot refuses a run wider than its position allows (`work-mode.json`), and a `--release` run
 (~135 items) needs `normal`. Edits under `.claude/` are never auto-approved outside
 `bypassPermissions` (`README.md` → *Known limitations*), so check and apply on those items wait
 for an approval: run them attended.
