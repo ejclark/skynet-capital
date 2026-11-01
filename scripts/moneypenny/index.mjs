@@ -83,7 +83,7 @@ import {
   routeContinuation,
 } from "./continuation.mjs";
 import { calloutGapComment, shouldPostCalloutGap } from "./decision-callout.mjs";
-import { executeDialTap, routeDial } from "./dial-tap.mjs";
+import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -1620,6 +1620,7 @@ function executeOne(i, stallRepairs = []) {
     console.log(`::notice::work-mode title → ${i.newTitle} (${i.reason})`);
     return `🪧 retitled #${i.issueNumber} — \`${i.title}\` → \`${i.newTitle}\``;
   }
+  if (i.kind === "tidy-ended-dial") return executeDialTidy(i);
   if (i.kind === "rearm-stranded") return rearmStranded(i);
   if (i.kind === "flag-conflict-cap") {
     commentAndFlagConflictCap(i);

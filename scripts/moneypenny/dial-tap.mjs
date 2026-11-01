@@ -35,6 +35,7 @@ import {
   mayActorSet,
   nextWeeklyReset,
   POSITIONS,
+  readWorkMode,
   writtenEndDate,
 } from "./work-mode.mjs";
 
@@ -116,4 +117,38 @@ export function executeDialTap(intent, { exec = sh, config = loadWorkModeConfig(
   if (plan.comment)
     exec("gh", ["api", "-X", "POST", `${path}/comments`, "-f", `body=${plan.comment}`]);
   return `🎚️ dial tap ${label} on #${issueNumber} — ${plan.why}`;
+}
+
+/** No "until" anywhere in it: the reader takes that word and a date as an end date. */
+const tidyComment = (label, reason) =>
+  `**\`${label}\` came off the dial and \`work-mode:normal\` went on.** Its end date had passed (${reason}), so every lane already read normal. Left on, the next tap on it would have taken it off, and no label at all reads as conserve.\n\n${FOOTER}`;
+
+/**
+ * Takes an ended label off the dial, the push tick's half of `endedDialTidy`. Reads the issue again
+ * first: the audit decided a moment ago, and a brake tapped on since must not lose to that. Normal goes
+ * on first because that order heals. If the removal fails, the new label's own event runs a tap, which
+ * clears the other one, and this write is not repeated, since two labels carry no `endedLabel`. The
+ * comment goes last so a failure before it cannot post it twice.
+ */
+export function executeDialTidy(
+  intent,
+  { exec = sh, config = loadWorkModeConfig(), now = Date.now() } = {},
+) {
+  const { issueNumber, label } = intent;
+  const mode = readWorkMode(exec, config, now);
+  if (mode.endedLabel !== label)
+    return `🎚️ left ${label} on #${issueNumber}: the dial reads ${mode.position} (${mode.reason})`;
+  const path = `repos/{owner}/{repo}/issues/${issueNumber}`;
+  exec("gh", ["api", "-X", "POST", `${path}/labels`, "-f", `labels[]=${config.labelPrefix}normal`]);
+  exec("gh", ["api", "-X", "DELETE", `${path}/labels/${encodeURIComponent(label)}`]);
+  exec("gh", [
+    "api",
+    "-X",
+    "POST",
+    `${path}/comments`,
+    "-f",
+    `body=${tidyComment(label, mode.reason)}`,
+  ]);
+  console.log(`::notice::dial tidied: ${label} → ${config.labelPrefix}normal (${mode.reason})`);
+  return `🎚️ tidied the dial on #${issueNumber} — ${label} → ${config.labelPrefix}normal`;
 }
