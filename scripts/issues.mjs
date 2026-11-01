@@ -151,7 +151,6 @@ export const boardStatus = (issue) =>
     decisionCalloutMissing: missingDecisionCallout({
       labels: labelNames(issue),
       body: issue.body,
-      author: issue.user?.login,
     }),
   });
 
@@ -394,7 +393,7 @@ function update({ positional, flags }) {
     patch.body = withFooter(readBody(flags["body-file"]));
     lintOrDie({ title: flags.title ?? current.title, body: patch.body, labels });
   } else if (csv(flags.add).includes("needs-eric")) {
-    calloutOrDie({ labels, body: current.body, author: current.user?.login });
+    calloutOrDie({ labels, body: current.body });
   }
   if (flags.close) Object.assign(patch, { state: "closed", state_reason: flags.close });
   if (flags.reopen) patch.state = "open";

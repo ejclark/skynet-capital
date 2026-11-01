@@ -1,16 +1,20 @@
 # Adversarial lens (correctness, attacked)
 
-**Fires on:** every code path. It is the audit's correctness row, the only lens that always runs.
+**Fires on:** every code path.
 
 **Kill rule:** under 0.1 confirmed findings per reviewed PR, or fewer than one in three surviving
 the refuters, after 40 PRs: stop running it on every PR, and keep it for the deep-tier paths.
 
-**Size:** 3,931 characters.
+**Size:** 3,968 characters.
 
 Assume the PR is wrong and look for the input that proves it, judged against main as it is now. That
 is not "find gaps": a reviewer told to find gaps manufactures them. A finding needs a concrete
-failure: the input or state, and the wrong output or crash. Zero findings is a normal answer. On
-record: 22 confirmed over about 110 merges on 2026-10-27, 2 of 37 in the last batch, all one surge.
+failure: the input or state, and the wrong output or crash. Zero findings is a normal answer.
+
+Name the signal a check reads against the real effect it claims, and report it when the signal can be
+true while the effect is not. Say what a read returns when it fails or its window holds no sample, and
+report it if that equals the all-clear answer. When a PR adds a new way to close, park, label or
+exempt something, grep every reader of that state and say what each now sees.
 
 ## Smells
 
@@ -60,5 +64,4 @@ structure, coverage, debt, prose, and anything whose scenario starts "a future c
 ## How to run it
 
 One reviewer per PR, against current main; two refuters per high or medium finding: trace and
-reproduce. Confirmed only when both return and neither refutes. Where no spec can exercise a claim,
-reproduce says it cannot run, and the finding reads as confirmed on the trace alone.
+reproduce.

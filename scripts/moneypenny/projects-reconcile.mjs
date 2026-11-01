@@ -108,11 +108,7 @@ export function boardIssueNumber(item, repo = REPO) {
 export function wantedStatusOf(issue, columns = STATUS_OPTIONS) {
   const labels = (issue?.labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
   if (!isBacklogCandidate({ labels })) return null;
-  const decisionCalloutMissing = missingDecisionCallout({
-    labels,
-    body: issue?.body,
-    author: issue?.user?.login,
-  });
+  const decisionCalloutMissing = missingDecisionCallout({ labels, body: issue?.body });
   return statusForIssue({
     state: issue?.state ?? "open",
     labels,
