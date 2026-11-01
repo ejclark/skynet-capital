@@ -94,7 +94,7 @@ Exactly one, always visible, never silence.
 | **Shipped** | Open the PR (the `arm auto-merge` job arms it on green — never by hand), reply on the canvas thread with the link | no |
 | **Nothing marked** | Stop silently. A fire with no marked board is the normal case | no |
 | **Sliced** | Ship the first coherent slice; say what remains on the canvas thread; label `next-slice` | no |
-| **Needs Eric** | Comment one paragraph; label `needs-eric`; stop | **yes — only this** |
+| **Needs Eric** | Write the decision as the body's `Needs from you` callout (`docs/ISSUES.md` rule 7), comment one paragraph, then label `needs-eric`; stop | **yes — only this** |
 
 `needs-eric` is for a protected path named by `envelope-scan`, a credential, a spend cap, or a
 genuine taste fork where guessing would be worse than asking. Nothing else.
