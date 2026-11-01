@@ -12,6 +12,7 @@ import {
   recordControlsChange,
   type SettingsChange,
 } from "./settings-change-log.js";
+import { UNKNOWN_PLAYBOOK_RULE_AUTHOR } from "./unknown-subscription-drop.js";
 
 /**
  * A BOT'S OWN SETTINGS, CHANGED BY ITS OWNER (#4535 slice 3b) — the hardcore build and the forced
@@ -140,7 +141,8 @@ export async function serveBotSettings(
 
 /** Who made a change, as the browser may see it: the viewer, someone else who owns the bot, the
  *  one-time copy of the bots app's own setting (#4535 slice 4c, `env-settings-seed.ts`), or the
- *  poll moving a conviction pointer by its own rule (#5482, `conviction-pointer-changes.ts`). */
+ *  poll acting by its own rule: moving a conviction pointer (#5482, `conviction-pointer-changes.ts`)
+ *  or dropping a subscription no registry entry knows (#6599, `unknown-subscription-drop.ts`). */
 type ChangeAuthor =
   | "you"
   | "another owner"
@@ -177,7 +179,9 @@ export function botSettingsView(
   const stored = config.controls.store.load().bots[botId] ?? {};
   const author = (who: string): ChangeAuthor => {
     if (who === ENV_SEED_AUTHOR) return "the operations setting, copied once";
-    if (who === POINTER_RULE_AUTHOR) return "the app, on its own";
+    if (who === POINTER_RULE_AUTHOR || who === UNKNOWN_PLAYBOOK_RULE_AUTHOR) {
+      return "the app, on its own";
+    }
     return viewerEmail !== undefined && who.toLowerCase() === viewerEmail.toLowerCase()
       ? "you"
       : "another owner";

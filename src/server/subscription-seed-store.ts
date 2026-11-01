@@ -46,6 +46,7 @@ import {
   type SubscriptionStore,
   subscriptionsFilePath,
 } from "./subscription-store.js";
+import { dropUnknownSubscriptions } from "./unknown-subscription-drop.js";
 
 /**
  * The dashboard's half of the subscription seeds (`subscription-seed.ts` holds the rules): on each
@@ -340,6 +341,11 @@ export function pollSeedsFromEnv(
         "marked for the shadow scout's names seed, nothing added (already held)",
       ),
       ...(report.houseRoster ? envSettings(report.houseRoster, at) : []),
+      // Before the prune, so an owner's own view on a pair dropped here goes on the same poll.
+      ...lines(
+        dropUnknownSubscriptions(subscriptions, changes, memberConvictions, at, onReadError),
+        "dropped a subscription to a playbook no registry entry knows",
+      ),
       ...lines(
         prunePairViews(subscriptions, memberConvictions),
         "dropped an owner's own view on a pair the account no longer subscribes to",
