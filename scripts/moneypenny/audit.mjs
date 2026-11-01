@@ -10,6 +10,7 @@ import { FOOTER, LABELS, PARKING_LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
 import { redLaneIntents, redLaneOrNone } from "./red-lane-pr.mjs";
 import { rearmIntents, strandedOrNone } from "./stranded-pr.mjs";
+import { stuckBranchesOrNone, updateIntents } from "./stuck-branch-update.mjs";
 import { loadWorkModeConfig, readWorkMode } from "./work-mode.mjs";
 import { workModeRetitle } from "./work-mode-title.mjs";
 
@@ -310,6 +311,9 @@ export function audit(deps = {}) {
   // stamped. Decided in drift-chore.mjs (`driftChoreIntent`); the open ticket is its own memory.
   // Each is at most one intent, null when there is nothing to do.
   intents.push(...[workModeRetitle(deps.workMode), deps.driftChore].filter(Boolean));
+  // A green, armed PR held by a cancelled suite gets a new head (stuck-branch-update.mjs). `halt`
+  // stops this too: a new head can land work.
+  if (deps.workMode?.mode?.position !== "halt") intents.push(...updateIntents(deps.stuckBranches));
   // The stranded-PR act stage (stranded-pr.mjs): re-run a green PR's failed arm job, once per head.
   // `halt` stops every lane, so it stops this too — re-arming lands work.
   if (deps.workMode?.mode?.position !== "halt") intents.push(...rearmIntents(deps.stranded));
@@ -451,7 +455,7 @@ export function untruncated(rows, limit, label) {
 /** Audit-mode dependencies: unclaimed dispatch issues. Loud on failure, same doctrine as
  *  gatherDeps. `now` injected for the day math (never Date.now() in a testable path — the caller
  *  passes it). */
-export function gatherAuditDeps(nowMs) {
+export function gatherAuditDeps(nowMs, hourly = {}) {
   const json = (label, args) => {
     let out;
     try {
@@ -602,6 +606,8 @@ export function gatherAuditDeps(nowMs) {
     alreadyFlaggedPRs,
     workMode: workModeState(nowMs),
     driftChore: driftChoreFromRepo(issues),
+    // One REST call on a tick with no armed PR past 3h; the rest of its reads run at most hourly.
+    stuckBranches: stuckBranchesOrNone(nowMs, hourly),
     stranded: strandedOrNone(nowMs),
     // One REST call; the open issue comes from the `issues` list already in hand.
     clock: clockOrUnknown(nowMs, issues),

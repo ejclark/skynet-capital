@@ -50,6 +50,21 @@ export function isGhostSuite(suite) {
   );
 }
 
+/**
+ * Does the head carry an Actions suite that was cancelled, or a no-job suite? The act stage asks this
+ * (stuck-branch-update.mjs). It is wider than a ghost on purpose: the cancelled run behind #6325 is
+ * unexplained, so this does not assume the next one will come with no jobs.
+ */
+export function hasCancelledSuite(suites = []) {
+  return suites.some(
+    (s) =>
+      isGhostSuite(s) ||
+      (s?.app?.slug === "github-actions" &&
+        s.status === "completed" &&
+        s.conclusion === "cancelled"),
+  );
+}
+
 /** The latest check run of each required name (a re-run supersedes the run it replaced). */
 export function latestRequired(checkRuns, required) {
   const byName = new Map();
