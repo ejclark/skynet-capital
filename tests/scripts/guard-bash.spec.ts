@@ -165,12 +165,6 @@ describe("guard-bash — commands rtk would break are handed back as written", (
     }
   });
 
-  it("keeps the shell text rtk's operand check trips on, for that same agent", () => {
-    for (const cmd of ["ls scripts/*.mjs", 'grep -n "a|b" package.json', "ls $HOME"]) {
-      expect(asWrittenInput(agentBash(cmd))?.command, cmd).toBe(cmd);
-    }
-  });
-
   it("carries every other tool input field, because the hook's input replaces the whole object", () => {
     const input = {
       ...agentBash("git status"),
@@ -179,8 +173,18 @@ describe("guard-bash — commands rtk would break are handed back as written", (
     expect(asWrittenInput(input)).toEqual(input.tool_input);
   });
 
-  it("leaves rtk's output savings alone where the rewrite does no harm", () => {
-    for (const cmd of ["grep -n foo package.json", "ls scripts", "npm test", "cat README.md"]) {
+  // A wider rule that also took globs, variables and pipes caught 18 more of 114 refusals but took
+  // 85% of agent commands away from rtk, so a pipeline with no git in it must stay rtk's.
+  it("leaves rtk's output savings on every command that does not name git", () => {
+    for (const cmd of [
+      "grep -n foo package.json",
+      "ls scripts",
+      "npm test",
+      "cat README.md",
+      "grep -n foo package.json | head -5",
+      "ls scripts/*.mjs",
+      "ls $HOME",
+    ]) {
       expect(asWrittenInput(agentBash(cmd)), cmd).toBeNull();
     }
   });
@@ -201,8 +205,10 @@ describe("guard-bash — commands rtk would break are handed back as written", (
       "npx biome check .",
       "npx biome format --write a.ts",
       "cd app && npx biome check src",
+      "FOO=1 npx biome check .",
       "npm run lint",
       "npm run typecheck && npm run lint",
+      "time npm run lint",
     ]) {
       expect(asWrittenInput(bash(cmd))?.command, cmd).toBe(cmd);
     }

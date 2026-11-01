@@ -97,8 +97,10 @@ export function guardVerdict(input) {
 // errors on nearly every workflow agent that day; `docs/DELEGATION.md` rail 2 had the workaround.
 //   - An agent isolated in a worktree: `git status` becomes `rtk git status`, and the harness's own
 //     worktree check (not this file) refuses `rtk` with git among its operands, since it cannot
-//     tell where rtk would run it. rtk with a glob, a variable or a pipe in its operands is refused
-//     the same way. `/usr/bin/git` and the plain forms pass, because rtk leaves them alone.
+//     tell where rtk would run it. `/usr/bin/git` passes, because rtk leaves it alone. Only commands
+//     naming git are taken: over 7,345 agent commands that is 35%, and it catches 96 of the 114
+//     refusals that named rtk. Also taking globs, variables and pipes (rtk's operands trip the check
+//     there too) caught the other 18 but took 85%, which would give up rtk's savings nearly everywhere.
 //   - Every session: `npx biome check x` and `npm run lint` become `rtk lint …`, which looks for
 //     ESLint (this repo has none) or takes `check` for a package name. Both exit 1 without linting.
 // So those commands go back exactly as written. Nothing is edited, so quoted text, a heredoc or a
@@ -110,11 +112,10 @@ export function guardVerdict(input) {
 // under a typecheck, and it finishes later (about 22ms against rtk's 8ms). If that changes, the
 // result is only the old behaviour: the refusal, and `/usr/bin/git` still works.
 const WORKTREE_CWD = /\/\.claude\/worktrees\/[^/]+(\/|$)/;
-// Text that makes the harness's check refuse a command once rtk is in front of it.
-const RTK_TRIPS_WORKTREE_CHECK = /\bgit\b|[*?$|]/;
-// At a command position, env prefixes allowed, the same anchoring as the rules above.
+const NAMES_GIT = /\bgit\b/;
+// At a command position, env and `time` prefixes allowed, the same anchoring as the rules above.
 const RTK_BREAKS_ANYWHERE =
-  /(^|[;&|(]\s*)(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:npx\s+biome\b|npm\s+run\s+lint(?=\s|$|[;&|)]))/m;
+  /(^|[;&|(]\s*)(?:time\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:npx\s+biome\b|npm\s+run\s+lint(?=\s|$|[;&|)]))/m;
 
 /**
  * The tool input to hand back as written, or null to leave the command to rtk. An isolated agent is
@@ -125,7 +126,7 @@ export function asWrittenInput(input) {
   const cmd = String(input.tool_input?.command ?? "");
   if (RTK_BREAKS_ANYWHERE.test(cmd)) return input.tool_input;
   const isolated = Boolean(input.agent_id) && WORKTREE_CWD.test(String(input.cwd ?? ""));
-  return isolated && RTK_TRIPS_WORKTREE_CHECK.test(cmd) ? input.tool_input : null;
+  return isolated && NAMES_GIT.test(cmd) ? input.tool_input : null;
 }
 
 async function readStdin() {
