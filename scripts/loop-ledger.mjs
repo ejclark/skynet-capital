@@ -35,7 +35,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { overdueLoops } from "./loop-list-decide.mjs";
 
-const LEDGER_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "loop-iterations");
+export const LEDGER_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "loop-iterations");
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A loop's name as its file and its rows carry it; a registry row's name gives the same slug. */

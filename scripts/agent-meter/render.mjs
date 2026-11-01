@@ -1,4 +1,5 @@
 // The meter's text form. One line per number, each saying what it leaves out (#6470).
+import { formatDuration, formatStage } from "./failure-to-fix.mjs";
 
 const k = (n) =>
   n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n);
@@ -8,6 +9,9 @@ const counts = (obj) =>
     .sort((a, b) => b[1] - a[1])
     .map(([name, n]) => `${name} ×${n}`)
     .join(", ");
+
+const REPEATED_HOUR_NOTE =
+  "  note: the window crosses the repeated hour of 2026-11-01 (06:00 to 08:00Z); the API's times there read an hour late, so a figure near that edge can sit on either side";
 
 function firstPass(fp) {
   const lines = ["", "first-pass"];
@@ -78,6 +82,84 @@ function speed(s) {
   return lines;
 }
 
+const SOURCES = [
+  [
+    "mainCi",
+    "main CI, pipeline.yml",
+    (s) => {
+      const count = (test) => s.episodes.filter(test).length;
+      const notes = [
+        [count((e) => e.stillRed), "still red"],
+        [count((e) => e.startedBeforeWindow), "began before the window"],
+        [count((e) => e.recurrence), "recurred under an open capsule"],
+        [count((e) => e.greenBeforeFix), "went green before any linked fix merged"],
+      ].flatMap(([n, what]) => (n ? [`${n} ${what}`] : []));
+      const others = s.otherWorkflowCapsules
+        ? `; ${s.otherWorkflowCapsules} capsule(s) on lane workflows not read here`
+        : "";
+      return `${s.episodes.length} red streak(s)${notes.length ? `, ${notes.join(", ")}` : ""}${others}; verified is the next green run, a floor, since a push with nothing to deploy also reads green`;
+    },
+  ],
+  [
+    "contracts",
+    "[fitness] contracts",
+    (s) =>
+      `${s.episodes.length} failed; the failing read files the issue and when the failure began is stored nowhere, so lag is unknown`,
+  ],
+  [
+    "audit",
+    "post-merge audit, time the defect sat on main",
+    (s) => {
+      const floors = s.episodes.filter((e) => e.floor).length;
+      return `${s.episodes.length} finding(s)${floors ? `, ${floors} a floor ("before #N")` : ""}`;
+    },
+  ],
+];
+
+const when = (ms) => (ms === null ? "unknown" : formatDuration(ms / 60000));
+
+function failureRow(e) {
+  const parts = [
+    e.id,
+    e.name,
+    e.failedAt ? `failed ${e.failedAt.slice(0, 16)}Z` : null,
+    "capsule" in e ? (e.capsule ? `capsule #${e.capsule}` : "no capsule") : null,
+    `lag ${when(e.lagMs)}`,
+    e.fix ? `fix #${e.fix}` : "fix unknown",
+    `filed to fix ${when(e.filedToFixMs)}`,
+    `to verified ${e.floor ? "at least " : ""}${when(e.toVerifiedMs)}`,
+  ];
+  return `    ${parts.filter(Boolean).join(" · ")}`;
+}
+
+/** Each source's three stages; `perFailure` adds a row per failure, so a number can be checked. */
+export function failureToFix(f, { perFailure = false } = {}) {
+  const lines = ["", "failure to fix (failed → filed → fix merged → verified)"];
+  if (typeof f === "string") return [...lines, `  ${f}`];
+  if (f.commits !== "origin/main") lines.push(`  ${f.commits}: every fix link reads unknown`);
+  for (const [key, label, summary] of SOURCES) {
+    const source = f.sources[key];
+    lines.push(`  ${label}: ${summary(source)}`);
+    lines.push(`    ${formatStage("detection lag", source.stages.detectionLag)}`);
+    lines.push(`    ${formatStage("filed to fix merged", source.stages.filedToFix)}`);
+    lines.push(`    ${formatStage("failure to verified", source.stages.toVerified)}`);
+    if (perFailure) lines.push(...source.episodes.map(failureRow));
+  }
+  return lines;
+}
+
+/** `--failure-to-fix` alone: this section, per failure, with no lane log read. */
+export function renderFailureToFix(f) {
+  const w = f.window;
+  return [
+    `failure to fix, ${w.hours} hours: ${w.since} to ${w.until}`,
+    ...(w.crossesRepeatedHour ? [REPEATED_HOUR_NOTE] : []),
+    ...failureToFix(f, { perFailure: true }),
+    "",
+    `rest calls this run: ${f.rest.calls} (cap ${f.rest.cap})`,
+  ].join("\n");
+}
+
 function agents(a) {
   const lines = ["", "workflow agents (local transcripts, deduped by message id)"];
   if (!a.agents) return [...lines, "  none in the window"];
@@ -113,11 +195,9 @@ function startup(s) {
 export function render(m) {
   const w = m.window;
   const lines = [`agent meter, ${w.hours} hours: ${w.since} to ${w.until}`];
-  if (w.crossesRepeatedHour)
-    lines.push(
-      "  note: the window crosses the repeated hour of 2026-11-01 (06:00 to 08:00Z); the API's times there read an hour late, so a figure near that edge can sit on either side",
-    );
-  lines.push(...firstPass(m.firstPass), ...lanes(m.lanes), ...speed(m.speed), ...agents(m.agents));
+  if (w.crossesRepeatedHour) lines.push(REPEATED_HOUR_NOTE);
+  lines.push(...firstPass(m.firstPass), ...lanes(m.lanes), ...speed(m.speed));
+  lines.push(...failureToFix(m.failureToFix), ...agents(m.agents));
   lines.push(...startup(m.startup));
   lines.push("", "limits");
   lines.push(`  CLAUDE.md: ${m.limits.claudeMdBytes} bytes; orient: ${m.limits.orientBytes} bytes`);

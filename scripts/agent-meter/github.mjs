@@ -47,9 +47,20 @@ export function mergedPrs(rest, sinceMs) {
   return prs;
 }
 
+/** Issue search, paged: the shared search bucket is small, so a page under 100 ends it. */
+export function searchIssues(rest, query) {
+  const items = [];
+  for (let page = 1; page <= 3; page += 1) {
+    const q = encodeURIComponent(`repo:${REPO} ${query}`);
+    const batch = rest.api(`search/issues?q=${q}&per_page=100&page=${page}`).items ?? [];
+    items.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return items;
+}
+
 /** Issues carrying the audit's `Introduced in` field, created since the window's first day. */
 export function defectIssues(rest, sinceMs) {
   const day = new Date(sinceMs).toISOString().slice(0, 10);
-  const q = encodeURIComponent(`repo:${REPO} "Introduced in" in:body created:>=${day}`);
-  return rest.api(`search/issues?q=${q}&per_page=100`).items;
+  return searchIssues(rest, `"Introduced in" in:body created:>=${day}`);
 }

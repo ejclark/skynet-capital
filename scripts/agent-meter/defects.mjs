@@ -6,8 +6,19 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const FOUND_BY = /\*\*Found by\*\*\s*\|\s*([^|\n]+)/;
-const INTRODUCED_IN = /\*\*Introduced in\*\*\s*\|\s*#(\d+)/;
+export const FOUND_BY = /\*\*Found by\*\*\s*\|\s*([^|\n]+)/;
+const INTRODUCED_IN = /\*\*Introduced in\*\*\s*\|\s*([^|\n]+)/;
+
+/**
+ * The PRs an Introduced in cell names, or null with no cell. "before #6335" (#6529) says the defect
+ * predates that PR, so #6335 is no culprit, and a time measured from it is a floor.
+ */
+export function introducedIn(body) {
+  const cell = INTRODUCED_IN.exec(body);
+  if (!cell) return null;
+  const prs = [...cell[1].matchAll(/#(\d+)/g)].map((m) => Number(m[1]));
+  return { prs, floor: /^\s*before\b/i.test(cell[1]) };
+}
 
 /** Issues carrying both fields and created in the window: how many, by finder, and distinct PRs. */
 export function defectsFromIssues(issues, sinceMs, untilMs) {
@@ -18,10 +29,10 @@ export function defectsFromIssues(issues, sinceMs, untilMs) {
     const at = Date.parse(issue.created_at);
     if (!(at >= sinceMs && at <= untilMs)) continue;
     const found = FOUND_BY.exec(issue.body ?? "");
-    const introduced = INTRODUCED_IN.exec(issue.body ?? "");
+    const introduced = introducedIn(issue.body ?? "");
     if (!(found && introduced)) continue;
     confirmed += 1;
-    prs.add(introduced[1]);
+    if (!introduced.floor && introduced.prs.length) prs.add(introduced.prs[0]);
     // "post-merge audit 2026-10-30, two refuters" names its finder before the date.
     const finder = found[1]
       .trim()
