@@ -54,9 +54,11 @@ into separate lint, typecheck and per-suite calls (#5191).
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
    (#5240, #5245). **A long or retried task keeps run memory:** `scripts/run-memory.mjs` gives a run
    a contract, an attempt log that refuses a retry changing nothing, and one scratch pad per agent,
-   outside any worktree so a resumed session or sibling agent can pick it up (#6470). Pass a workflow
-   agent its path from `run-memory scratch <run> <agent>`, and reach shared files through `promote`,
-   which refuses when the target changed since it was read. **Stop only your own processes:** `pkill -P $$ -f rstest`, never a bare
+   outside any worktree so a resumed session or sibling agent can pick it up (#6470). A workflow agent's
+   own folder is `runs/<run>/<agent>` in the session scratchpad, carried in its prompt (grind,
+   post-merge-audit, symbol-sweep), because `.claude` is a protected path whose writes are never
+   auto-approved. Reach shared files through `promote`, which refuses when the target changed since it
+   was read. **Stop only your own processes:** `pkill -P $$ -f rstest`, never a bare
    `pkill -f rstest` — that kills every sibling worktree's test run too. You never need it to clear
    load: full verifies queue one at a time per checkout (`scripts/verify-locked.sh`, #5548), and the
    pre-push hook skips a tree `ship.sh open` already verified green.
