@@ -10,7 +10,7 @@
 #   scripts/bots-start-stopped.sh <app> --report   also keep the evidence, for the catch-up job
 #
 # --report exists for a crash between merges, when no deploy will come. Before starting it records
-# the machine's exit event and log tail on one open issue, so the failure names its own cause, and
+# the machine's exit event and a named cause on one open issue, so the failure names its own cause, and
 # it spends a budget: MAX_STARTS comments in WINDOW_HOURS, then it stops and says so, because a
 # machine that keeps dying needs a person or a fix, not a fourth restart.
 #
@@ -35,6 +35,13 @@ ISSUE_TITLE="[bots] machine found stopped"
 PRIMARY_FILTER='[.[] | select((.config.standbys // []) | length == 0)]' # = smoke-bots.sh
 
 say() { echo "[bots-start] $*"; }
+crash_type() {
+  if grep -qE 'heap out of memory|Reached heap limit' <<<"$1"; then echo heap-oom
+  elif grep -qE 'Out of memory: Killed|oom_killed=true' <<<"$1"; then echo oom-killed
+  elif grep -qE 'Autonomous trading failed' <<<"$1"; then echo boot-error
+  elif grep -qE 'max restart count' <<<"$1"; then echo max-restarts
+  fi
+}
 primary() { "$FLY" machine list -a "$APP" --json 2>/dev/null | jq -c "$PRIMARY_FILTER | .[0] // empty"; }
 
 M=$(primary)
@@ -65,9 +72,12 @@ if [[ "$REPORT" == "--report" ]]; then
     fi
   fi
   EXIT=$(jq -c '[(.events // [])[] | select(.type == "exit")] | max_by(.timestamp // 0) | .request.exit_event // "none recorded"' <<<"$M" 2>/dev/null)
-  LOGS=$("$FLY" logs -a "$APP" -n 2>/dev/null | tail -n 40)
-  BODY=$(printf 'Found `%s` stopped and starting it.\n\nLast exit: `%s`\n\n<details><summary>Log tail</summary>\n\n```text\n%s\n```\n\n</details>\n\nStops here after %s starts in %s hours.\n' \
-    "$ID" "${EXIT:-none recorded}" "$LOGS" "$MAX_STARTS" "$WINDOW_HOURS")
+  # This repo is public and app logs can carry member emails, so the issue gets only a named cause
+  # and the exit record, never a log line. .github/workflows/fly-logs.yml pulls the detail on demand.
+  LOGS=$("$FLY" logs -a "$APP" -n 2>/dev/null | tail -n 80)
+  CAUSE=$(crash_type "$LOGS")
+  BODY=$(printf 'Found `%s` stopped and starting it.\n\n- Last exit: `%s`\n- Cause named in the logs: `%s`\n\nDetail: run the Fly logs workflow. Starts stop after %s in %s hours.\n' \
+    "$ID" "${EXIT:-none recorded}" "${CAUSE:-none}" "$MAX_STARTS" "$WINDOW_HOURS")
   if [[ -n "$ISSUE" ]]; then
     "$GH" issue comment "$ISSUE" --body "$BODY" >/dev/null 2>&1 || say "could not comment on #$ISSUE"
   else

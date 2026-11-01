@@ -22,7 +22,7 @@ JSON
   "machine start")
     [[ -f "$S/refuse" ]] && exit 1
     [[ -f "$S/never" ]] || echo started > "$S/state" ;;
-  "logs -a") echo "heap out of memory" ;;
+  "logs -a") printf 'member@example.test rejected\nheap out of memory\n' ;;
 esac
 `;
 
@@ -103,13 +103,15 @@ describe("bots-start-stopped", () => {
     expect(run(stub).status).toBe(1);
   });
 
-  it("files the exit record and logs before starting, so the failure names its cause", () => {
+  it("files the exit record and a named cause, never a log line, because this repo is public", () => {
     const stub = fixture("stopped");
     expect(run(stub, "--report").status).toBe(0);
     const calls = ghCalls(stub);
     expect(calls).toContain("issue create");
     expect(calls).toContain("oom_killed");
-    expect(calls).toContain("heap out of memory");
+    expect(calls).toContain("heap-oom");
+    expect(calls).not.toContain("member@example.test");
+    expect(calls).not.toContain("heap out of memory");
     expect(flyCalls(stub)).toContain("machine start m1");
   });
 
