@@ -118,8 +118,14 @@ export interface WireRouteDeps {
    * The milestone kind needs BOTH this and `readAllLadderProgress`, and is absent — not empty — with
    * either missing: half the sources would render a record quietly missing real earns, which is the
    * falsifier this kind exists not to trip.
+   *
+   * Handed participant ids, only theirs are needed (#4619): the Wire asks for its members alone,
+   * because a bot's earns never reach the feed. An implementation may still return everyone's; the
+   * route filters either way.
    */
-  readonly readAllOrderAudit?: () => Promise<readonly OrderAuditRecord[]>;
+  readonly readAllOrderAudit?: (
+    participantIds?: readonly string[],
+  ) => Promise<readonly OrderAuditRecord[]>;
   /**
    * Authored-play milestones (#5457 slice 5, #809 slice 6) — a member's play starting its shadow test,
    * passing it, being promoted to trade, or paused. MEMBERS ONLY: `content-api-routes.ts` withholds
@@ -233,6 +239,11 @@ async function assembleDevelopment(
  * from the two ledgers the Learn page reads. Then only what the league-wide feed can honestly say —
  * a named member's earn of a milestone this app can title (`toMemberMilestones`) — bounded by the
  * same `per_page` every non-trade kind rides.
+ *
+ * Fill-derived earns are derived for the roster's members only (#4619). `toMemberMilestones` drops
+ * every other participant's row, and an earn is derived from one participant's own fills and tags,
+ * so deriving a bot's ladder only to discard it was most of this kind's cost: the bots hold about
+ * 60% of both ledgers at 180 days. The page is the same either way.
  */
 async function assembleMilestones(
   config: WireRouteDeps,
@@ -242,14 +253,19 @@ async function assembleMilestones(
   limit: number,
 ): Promise<readonly MemberMilestone[] | undefined> {
   if (!(config.readAllLadderProgress && config.readAllOrderAudit)) return undefined;
+  const members = participants.filter((p) => p.kind === "human").map((p) => p.id);
+  const isMember = new Set(members);
   const [logged, tags] = await Promise.all([
     config.readAllLadderProgress(),
-    config.readAllOrderAudit(),
+    config.readAllOrderAudit(members),
   ]);
   const milestoneOnly = events.filter((event) => event.target.kind === "milestone");
   const all = [
     ...mergeLadderLogIntoEvents(milestoneOnly, logged),
-    ...deriveMilestoneEvents(records, tags),
+    ...deriveMilestoneEvents(
+      records.filter((r) => isMember.has(r.participantId)),
+      tags.filter((t) => isMember.has(t.participantId)),
+    ),
   ];
   return toMemberMilestones(collapseMilestoneEvents(all), participants).slice(0, limit);
 }

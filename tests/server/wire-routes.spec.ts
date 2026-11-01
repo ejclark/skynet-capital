@@ -444,6 +444,32 @@ describe("serveWireJson", () => {
       expect(milestones).toEqual([]);
     });
 
+    it("asks for the members' audit trails only, and shows the same rows when a store returns everyone's (#4619)", async () => {
+      const asked: (readonly string[] | undefined)[] = [];
+      const fills = [record({ participantId: "eric" }), record({ orderId: "bot-1" })];
+      const deps = (audit: WireRouteDeps["readAllOrderAudit"]) =>
+        wired({
+          hub: hubWith([member, snapshot()]),
+          readAllTradeActivity: () => Promise.resolve(fills),
+          readAllOrderAudit: audit,
+        });
+      const everyone = [
+        { participantId: "sauron", orderId: "bot-1", tag: "x" },
+      ] as unknown as Awaited<ReturnType<NonNullable<WireRouteDeps["readAllOrderAudit"]>>>;
+
+      const filtered = await milestonesOf(
+        deps((ids) => {
+          asked.push(ids);
+          return Promise.resolve(everyone);
+        }),
+      );
+      const plain = await milestonesOf(deps(() => Promise.resolve([])));
+
+      expect(asked).toEqual([["eric"]]);
+      expect(filtered.milestones).toEqual(plain.milestones);
+      expect(filtered.milestones).toEqual([expect.objectContaining({ who: "Eric" })]);
+    });
+
     it("says the kind is off when either source is unwired, rather than sending an empty list", async () => {
       const noAudit = await milestonesOf({
         hub: hubWith([member]),
