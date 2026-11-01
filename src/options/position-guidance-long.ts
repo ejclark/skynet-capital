@@ -102,7 +102,7 @@ function hold(c: HeldLongOption, bid: number | undefined): Verdict {
         `${c.planCarried ? "Your plan's" : "The"} time stop falls due ${dayText(timeStopDay(c.expiration))}, with ${EXIT_DTE} days left.`,
       ),
     ],
-    provesWrong: `If the bid reaches ${usd(target)} → the take-profit rule fires; if the stock fades first, the time stop still falls due on ${dayText(timeStopDay(c.expiration))}.`,
+    provesWrong: `If the bid reaches ${usd(target)} → ${c.planCarried ? "your plan's take-profit" : "the take-profit rule"} fires; if the stock fades first, the time stop still falls due on ${dayText(timeStopDay(c.expiration))}.`,
     until: {
       date: timeStopDay(c.expiration),
       why: `the time stop falls due — or come back once the bid reaches ${usd(target)}`,

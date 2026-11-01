@@ -68,10 +68,12 @@ export class ExitPlanStore {
     }));
   }
 
-  /** Forget a contract's plan — a fresh purchase of a contract no longer held, bought without one,
-   *  must not inherit the plan an earlier, closed position carried. */
-  drop(deskId: string, occSymbol: string): boolean {
-    if (!this.carried(deskId).has(occSymbol)) return true;
+  /** Forget a contract's plan — its position closed, or a fresh purchase of a contract no longer
+   *  held must not inherit the plan an earlier, closed position carried. `onlyIf` sees when the plan
+   *  was carried, so a caller can keep one still waiting on its own order to fill. */
+  drop(deskId: string, occSymbol: string, onlyIf?: (carriedAt: string) => boolean): boolean {
+    const plan = this.file.load()[deskId]?.[occSymbol];
+    if (!plan || (onlyIf && !onlyIf(plan.carriedAt))) return true;
     return this.rewrite(deskId, (plans) =>
       Object.fromEntries(Object.entries(plans).filter(([occ]) => occ !== occSymbol)),
     );

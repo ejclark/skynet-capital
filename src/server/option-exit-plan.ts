@@ -1,3 +1,4 @@
+import { marketDayKey } from "../domain/market-day.js";
 import { type LongCallPlan, longCallPlan } from "../playbooks/long-call-rules.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import type { DeskOptionRequest } from "./option-trade-service.js";
@@ -13,8 +14,12 @@ import { parseJsonRecord } from "./page-shell.js";
  *    premium and expiry and puts it on the preview, beside the payoff the review already shows.
  *  - SUBMIT: when the member tapped Carry and the order was accepted, the plan is recorded against
  *    the contract (`exit-plan-store.ts`) and the receipt says so — or says it could not be saved.
- *    Bought without it, a contract the desk does not already hold drops any stale plan, so a new
- *    position never inherits the plan of an earlier, closed one.
+ *    A call already inside the time stop was offered no plan, so none is recorded for it.
+ *  - STALE PLANS: an accepted close of the whole holding drops its plan; a purchase without the
+ *    plan, of a contract the desk does not hold, drops a plan carried on an earlier market day (one
+ *    carried today may still be waiting on its own order to fill). The desk snapshot can lag a
+ *    fill, and a contract re-bought through another door (a spread, a bot) is not seen here — so
+ *    only the owner reads "your plan" (`desk-json-routes.ts`), and the rules read are the same.
  *
  * Calls only: the house has no rule for a bought put. Nothing here places, changes or sells an
  * order; the plan is offered, and a carried plan is something the app reads back, never runs.
@@ -38,7 +43,7 @@ export function exitPlanOnReview(
       paid: preview.estPremium,
       contracts: request.contracts,
       expiration: request.expiration,
-      today: now.toISOString().slice(0, 10),
+      today: marketDayKey(now.toISOString()),
     }),
   };
 }
@@ -56,26 +61,46 @@ export function settleExitPlan(
   request: DeskOptionRequest,
   result: { readonly ok: boolean; readonly symbol?: string },
   carry: boolean,
-  config: Pick<DashboardServerConfig, "exitPlans" | "hub">,
+  config: Pick<DashboardServerConfig, "exitPlans" | "hub" | "now">,
 ): { readonly exitPlan?: "carried" | "not-saved" } {
-  if (!(request.kind === "open" && request.code === BUY_CALL && result.ok && result.symbol)) {
+  const store = config.exitPlans;
+  if (!result.ok) return {};
+  if (request.kind === "close") {
+    const contracts = heldContracts(config, request.participantId, request.occSymbol);
+    if (store && (request.contracts ?? contracts) >= contracts) {
+      store.drop(request.participantId, request.occSymbol);
+    }
     return {};
   }
-  const store = config.exitPlans;
-  if (carry)
+  if (!(request.code === BUY_CALL && result.symbol)) return {};
+  const today = marketDayKey((config.now?.() ?? new Date()).toISOString());
+  if (carry) {
+    if (!offered(request, today)) return {};
     return {
       exitPlan: store?.carry(request.participantId, result.symbol) ? "carried" : "not-saved",
     };
-  if (store && !held(config, request, result.symbol))
-    store.drop(request.participantId, result.symbol);
+  }
+  if (store && heldContracts(config, request.participantId, result.symbol) === 0) {
+    store.drop(request.participantId, result.symbol, (at) => marketDayKey(at) < today);
+  }
   return {};
 }
 
-function held(
+/** Whether the review offered a plan to carry: the time stop is still ahead. The premium plays no
+ *  part in the day count, so any positive one prices it. */
+function offered(request: OpenRequest, today: string): boolean {
+  return (
+    longCallPlan({ paid: 1, contracts: 1, expiration: request.expiration, today }).holdDays > 0
+  );
+}
+
+/** Contracts of `occSymbol` the desk holds long, by its last snapshot. */
+function heldContracts(
   config: Pick<DashboardServerConfig, "hub">,
-  request: OpenRequest,
+  deskId: string,
   occSymbol: string,
-): boolean {
-  const desk = config.hub.getState().participants.find((p) => p.id === request.participantId);
-  return desk?.positions.some((p) => p.symbol === occSymbol && p.quantity > 0) ?? false;
+): number {
+  const desk = config.hub.getState().participants.find((p) => p.id === deskId);
+  const position = desk?.positions.find((p) => p.symbol === occSymbol && p.quantity > 0);
+  return position?.quantity ?? 0;
 }

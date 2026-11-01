@@ -169,11 +169,45 @@ describe("the exit plan on submit", () => {
     expect(await readFile(path, "utf8")).toBe(unreadable);
   });
 
-  it("a fresh purchase without the plan drops a stale plan on a contract no longer held", async () => {
+  it("a fresh purchase without the plan drops a plan carried on an earlier day for a contract no longer held", async () => {
     const exitPlans = new ExitPlanStore(path);
-    exitPlans.carry("human-ann", OCC, NOW);
+    exitPlans.carry("human-ann", OCC, new Date("2026-10-20T15:00:00Z"));
     const result = await call("/api/trade/option/submit", buyCall(), config({ exitPlans }));
     expect(result.exitPlan).toBeUndefined();
+    expect(exitPlans.carried("human-ann").size).toBe(0);
+  });
+
+  it("keeps a plan carried today — its own order may still be waiting to fill", async () => {
+    const exitPlans = new ExitPlanStore(path);
+    exitPlans.carry("human-ann", OCC, NOW);
+    await call("/api/trade/option/submit", buyCall(), config({ exitPlans }));
+    expect([...exitPlans.carried("human-ann")]).toEqual([OCC]);
+  });
+
+  it("records no plan for a call already inside the time stop — the review offered none", async () => {
+    const exitPlans = new ExitPlanStore(path);
+    const result = await call(
+      "/api/trade/option/submit",
+      { ...buyCall({ expiration: "2026-12-04" }), exitPlan: "carry" },
+      config({ exitPlans }),
+    );
+    expect(result.exitPlan).toBeUndefined();
+    expect(exitPlans.carried("human-ann").size).toBe(0);
+  });
+
+  it("an accepted close of the whole holding drops its plan; a partial close keeps it", async () => {
+    const exitPlans = new ExitPlanStore(path);
+    exitPlans.carry("human-ann", OCC, NOW);
+    const close = (contracts?: number) => ({
+      kind: "close",
+      participantId: "human-ann",
+      occSymbol: OCC,
+      ...(contracts !== undefined ? { contracts } : {}),
+    });
+    const holding = config({ exitPlans }, [{ symbol: OCC, quantity: 2 }]);
+    await call("/api/trade/option/submit", close(1), holding);
+    expect([...exitPlans.carried("human-ann")]).toEqual([OCC]);
+    await call("/api/trade/option/submit", close(), holding);
     expect(exitPlans.carried("human-ann").size).toBe(0);
   });
 
@@ -212,5 +246,12 @@ describe("ExitPlanStore", () => {
     store.carry("human-ann", OCC, NOW);
     expect(store.drop("human-ann", OCC)).toBe(true);
     expect(store.carried("human-ann").size).toBe(0);
+  });
+
+  it("keeps a plan its drop condition spares", () => {
+    const store = new ExitPlanStore(path);
+    store.carry("human-ann", OCC, NOW);
+    store.drop("human-ann", OCC, () => false);
+    expect([...store.carried("human-ann")]).toEqual([OCC]);
   });
 });

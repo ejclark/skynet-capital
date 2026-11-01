@@ -452,7 +452,8 @@ export async function serveDeskJson(
         playbookStoreCatalog(),
         config.now,
         subscribedForIdeas(found, config, owner),
-        config.exitPlans?.carried(found.id),
+        // "Your plan" is the owner's copy alone; anyone else reads the house's rules (#5709 slice 3).
+        owner ? config.exitPlans?.carried(found.id) : undefined,
       ),
       ...(empire.landmark
         ? { landmark: { power: empire.landmark.prominence, health: empireHealth(found) } }
