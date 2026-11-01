@@ -24,11 +24,13 @@ import {
 } from "../../scripts/fitness.mjs";
 import {
   ASSIGNED_MARKER,
+  assignsAtOnce,
   OWNER_AFTER_MS,
   REOPEN_LINE,
   REOPEN_WITHIN_MS,
   REOPENED_MARKER,
   RUNGS,
+  whatHappensNext,
   // @ts-expect-error plain .mjs script, no declarations
 } from "../../scripts/fitness-rungs.mjs";
 
@@ -68,6 +70,14 @@ describe("fitness judges", () => {
     expect(judgeMachine([standby, { state: "stopped", config: {} }]).status).toBe("fail");
     expect(judgeMachine([standby, { state: "started", config: {} }]).status).toBe("pass");
     expect(judgeMachine([standby]).status).toBe("fail");
+  });
+
+  it("fails every state that is not started, not only stopped", () => {
+    for (const state of ["suspended", "replacing", "failed", "destroying", "created"]) {
+      const verdict = judgeMachine([standby, { state, config: {} }]);
+      expect(verdict.status).toBe("fail");
+      expect(verdict.detail).toContain(state);
+    }
   });
 
   it("passes a stop a person marked", () => {
@@ -610,6 +620,14 @@ describe("fitness: the owner is assigned last", () => {
     ]);
     expect(kinds(due)).toEqual(["assign"]);
     expect(due[0].why).toBe("only the owner can fix this");
+  });
+
+  it("moves a verdict to the owner when a dead credential is behind it, whatever its rung", () => {
+    // The rungs file's own rule. No fail verdict carries `credential` today, since only a blind read
+    // does and blindActions sets the owner rung itself, so this pins the rule for the next caller.
+    expect(assignsAtOnce({ rung: "wait", credential: true })).toBe(true);
+    expect(assignsAtOnce({ rung: "wait" })).toBe(false);
+    expect(whatHappensNext({ rung: "script", credential: true })).toContain("assigned now");
   });
 
   it("assigns once: not again while he holds it, nor after he took himself off", () => {

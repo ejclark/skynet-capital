@@ -23,11 +23,20 @@ import { MARKET_CLOSURES } from "../../src/domain/market-calendar";
 // probe may send, with Date.now pinned from outside by a preload, so the script itself has no clock
 // seam to leave behind.
 //
-// Grading it (the stall rule and calendar files are read at run time, so the audit must copy them):
+// Graded blind on 2026-11-01 by tests/scripts/fixtures/fitness-heldout-bugs-2.json, 30 bugs from a
+// pass that never saw this spec, with this spec and fitness.spec.ts as they stood: 15 of the 30 here,
+// which is all 14 aimed at this contract and one shared, and 28 of 30 across the two. The other two
+// were seeded in fitness.spec.ts. That list is a regression list now, so the next score needs a fresh
+// blind pass.
+//
+// Grading it (the stall rule, the calendar and the scouts' names are read at run time, so the audit
+// must copy them):
 //   node scripts/fitness-audit.mjs --bugs <file> --spec tests/scripts/fitness-decision-cycle.spec.ts \
 //     --with src/alerts/bot-watch.ts --with src/domain/market-session.ts \
 //     --with src/domain/market-calendar.ts --with src/domain/intl-format.ts --with fly.bots.toml \
-//     --with tests/fixtures/fitness/replay-2026-10-22.json --with scripts/deploy-lag.mjs
+//     --with tests/fixtures/fitness/replay-2026-10-22.json --with scripts/deploy-lag.mjs \
+//     --with scripts/bot-relevant.mjs --with scripts/fitness-rungs.mjs \
+//     --with src/autonomous/live-cycle.ts --with src/autonomous/cond-scout-runner.ts
 const SCRIPT = resolve("scripts/fitness.mjs");
 const REPLAY = resolve("tests/fixtures/fitness/replay-2026-10-22.json");
 const FLY_TOML = resolve("fly.bots.toml");
@@ -527,6 +536,57 @@ describe("decision-cycle wiring", () => {
     expect(flyCalls(stub)).toContain("tail -n 1 /data/audit/sauron.jsonl");
     expect(flyCalls(stub)).not.toContain(".gz");
     expect(flyCalls(stub)).not.toContain("weird");
+  });
+
+  it("skips a scout's journal: a scout writing is not the fleet deciding", () => {
+    const stub = world({
+      now: THE_10_08,
+      listing: "cond-scout.jsonl\nbeta-scout.jsonl\nsauron.jsonl\n",
+      record: `{"at":${FEED_DIED}}\n`,
+    });
+    writeFileSync(join(stub, "tail-cond-scout.jsonl"), `{"at":${THE_10_08 - 15_000}}\n`);
+    writeFileSync(join(stub, "tail-beta-scout.jsonl"), `{"at":${THE_10_08 - 15_000}}\n`);
+    expect(verdict(stub, THE_10_08).status).toBe("fail");
+    expect(flyCalls(stub)).toContain("tail -n 1 /data/audit/sauron.jsonl");
+    expect(flyCalls(stub)).not.toContain("scout.jsonl -a");
+  });
+
+  it("reads a journal only the scouts wrote as no record: unknown, not a pass", () => {
+    const stub = world({ now: MIDDAY, listing: "cond-scout.jsonl\nbeta-scout.jsonl\n" });
+    expect(verdict(stub, MIDDAY).status).toBe("unknown");
+    expect(flyCalls(stub)).not.toContain("tail");
+  });
+
+  it("names the scouts the app files records under, so a renamed one breaks here", () => {
+    expect(readFileSync(resolve("src/autonomous/live-cycle.ts"), "utf8")).toContain(
+      'BETA_SCOUT_PERSONA_ID = "beta-scout"',
+    );
+    expect(readFileSync(resolve("src/autonomous/cond-scout-runner.ts"), "utf8")).toContain(
+      'COND_SCOUT_PERSONA_ID = "cond-scout"',
+    );
+  });
+
+  it("KNOWN GAP: one bot's fresh record passes for the fleet", () => {
+    // Only the newest live journal is read. The roster is the owner's controls plus the machine's
+    // env, so nothing outside the bots can yet say which file ought to be fresh; the `gap` field
+    // says so, and closing this flips this seed.
+    const stub = world({ now: MIDDAY, listing: "sauron.jsonl\nday-trader.jsonl\n" });
+    writeFileSync(join(stub, "tail-day-trader.jsonl"), `{"at":${FEED_DIED}}\n`);
+    expect(verdict(stub, MIDDAY).status).toBe("pass");
+    expect(flyCalls(stub)).not.toContain("day-trader");
+  });
+
+  it("KNOWN GAP: a cycle that decided on frozen prices passes", () => {
+    // The parser keeps the time, a flag and a size, and a record names no quote's age.
+    const frozen = JSON.stringify({ at: MIDDAY - 15_000, context: { quotes: { SPY: 500 } } });
+    expect(verdict(world({ now: MIDDAY, record: `${frozen}\n` }), MIDDAY).status).toBe("pass");
+  });
+
+  it("names every state it passes or goes quiet on in the issue's words", () => {
+    const { gap } = CONTRACTS.find((c: { id: string }) => c.id === "decision-cycle");
+    for (const state of ["one bot", "frozen prices", "breaker", "first ten minutes"]) {
+      expect(gap).toContain(state);
+    }
   });
 
   it("makes no journal read outside the session: Saturday, Thanksgiving and an early close", () => {

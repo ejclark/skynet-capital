@@ -92,6 +92,9 @@ const HOMES = ["clock", "push", "session"];
 // passed back to the machine.
 const JOURNAL_DIR = "/data/audit";
 const JOURNAL_FILE = /^[\w.-]+\.jsonl$/;
+// The scouts file records under their own persona ids when they pick or close. A scout writing says
+// nothing about the bots' cycles, so its record must not read as the fleet deciding.
+const SCOUT_JOURNALS = new Set(["beta-scout.jsonl", "cond-scout.jsonl"]);
 // The node .nvmrc names, and the one the session clock is proven on. The clock job's own pin is on a
 // held platter PR, so until it lands this contract reads unknown and says why.
 const SESSION_CLOCK_NODE = 24;
@@ -364,7 +367,7 @@ function newestDecision(id) {
   const newestFile = listing
     .split("\n")
     .map((name) => name.trim())
-    .find((name) => JOURNAL_FILE.test(name));
+    .find((name) => JOURNAL_FILE.test(name) && !SCOUT_JOURNALS.has(name));
   if (!newestFile) return null;
   const line = journalRead(id, `tail -n 1 ${JOURNAL_DIR}/${newestFile}`);
   if (line === null) return cannotRead;
@@ -517,7 +520,7 @@ export const CONTRACTS = [
     budget: "none: past restarts did not fix this class, so it needs a named cause first",
     rung: "wait",
     reaches: ISSUE_TO_OWNER,
-    gap: "A fresh record from one bot passes for the whole fleet, a cycle that decided on frozen prices passes, and a fleet held by a breaker reads quiet, which includes every evaluation failing once five in a row trip the errors breaker",
+    gap: "A fresh record from one bot passes for the whole fleet, a cycle that decided on frozen prices passes, a fleet held by a breaker reads quiet, which includes every evaluation failing once five in a row trip the errors breaker, a stall reads quiet for the first ten minutes of a session, and one in the session's last ten stays quiet until ten minutes past the next open",
     // Reads the outcome's own trace, "every decision cycle is a durable line". The older reads pass
     // the 10-08 class: started and polling, with no decision for days. Class: an atomic read of a
     // fleet-wide outcome (the gap above is the difference), continual on the 15-minute clock, dynamic,

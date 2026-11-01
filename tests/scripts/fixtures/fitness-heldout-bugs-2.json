@@ -1,0 +1,272 @@
+[
+  {
+    "id": "dc-future-record-passes",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "return unknown(\"the newest record is dated in the future\");",
+    "replace": "return pass(\"the newest record is dated in the future\");",
+    "why": "a record stamped minutes ahead of the clock cannot be aged, yet reads as a fresh decision: a fleet whose last line is mis-stamped never raises a stall"
+  },
+  {
+    "id": "dc-stall-reads-quiet",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "return fail(`no decision cycle finished in ${minutes} min of open market: ${read}`);",
+    "replace": "return quiet(`no decision cycle finished in ${minutes} min of open market: ${read}`);",
+    "why": "the stall, the one failure this contract exists to catch, files nothing, closes nothing and exits green"
+  },
+  {
+    "id": "dc-halted-alert-instead-of-stalled",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": ".find((alert) => alert.dedupeKey.startsWith(\"stalled:\"));",
+    "replace": ".find((alert) => alert.dedupeKey.startsWith(\"halted:\"));",
+    "why": "a breaker halt opens a stall issue and a real stall never does; the halted alert is a different question a person may have chosen"
+  },
+  {
+    "id": "dc-dead-since-friday-passes",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "return quiet(\"no cycle has finished since the open, and the stall window has not run out\");",
+    "replace": "return pass(\"no cycle has finished since the open, and the stall window has not run out\");",
+    "why": "a fleet dead since Friday closes its open issue at 09:35 every morning as passing again, then reopens it once the window runs out"
+  },
+  {
+    "id": "dc-empty-journal-passes",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "if (!newest) return unknown(\"the decision journal holds no record\");",
+    "replace": "if (!newest) return pass(\"the decision journal holds no record\");",
+    "why": "a journal never written, or whose live file is empty, reads as a deciding fleet in open market"
+  },
+  {
+    "id": "dc-calendar-last-year-blind",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "if (new Date(nowMs).getUTCFullYear() > Number(rule.calendarEnds.slice(0, 4))) {",
+    "replace": "if (new Date(nowMs).getUTCFullYear() >= Number(rule.calendarEnds.slice(0, 4))) {",
+    "why": "the whole of the closures table's last year, which is this year, reads unknown: the contract never fires until the table is extended"
+  },
+  {
+    "id": "dc-closed-session-fails",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "return rule.sessionAt(nowMs) ? null : quiet(\"the regular session is closed\");",
+    "replace": "return rule.sessionAt(nowMs) ? null : fail(\"the regular session is closed\");",
+    "why": "every evening and weekend tick opens a stall issue; the open closes it and the close reopens it, two emails a day about nothing"
+  },
+  {
+    "id": "dc-halted-flag-dropped",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "return { at: record.at, halted: Boolean(record.halted), bytes: Buffer.byteLength(text) };",
+    "replace": "return { at: record.at, halted: false, bytes: Buffer.byteLength(text) };",
+    "why": "a breaker-halted fleet, whose records say halted, reads as cycles running and closes the stall issue as passing again"
+  },
+  {
+    "id": "dc-oldest-persona-not-newest",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "const listing = journalRead(id, `ls -t ${JOURNAL_DIR}`);",
+    "replace": "const listing = journalRead(id, `ls ${JOURNAL_DIR}`);",
+    "why": "the persona that sorts first by name is judged, not the one that wrote last: a retired first persona raises a stall on a working fleet, and a working one hides a dead rest"
+  },
+  {
+    "id": "dc-first-record-not-last",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "const line = journalRead(id, `tail -n 1 ${JOURNAL_DIR}/${newestFile}`);",
+    "replace": "const line = journalRead(id, `head -n 1 ${JOURNAL_DIR}/${newestFile}`);",
+    "why": "the file's oldest record is judged, so a fleet deciding all day reads as stalled once its file is older than the stall window"
+  },
+  {
+    "id": "dc-skew-sign-flipped",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "if (newest.at - nowMs > STAMP_FRESH_MS)",
+    "replace": "if (nowMs - newest.at > STAMP_FRESH_MS)",
+    "why": "any record older than five minutes is dated in the future, so a stall reads unknown and opens a blind issue for the journal instead of a stall issue assigned to anyone"
+  },
+  {
+    "id": "dc-stopped-machine-double-report",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "return quiet(`machine is ${primary.state}: bots-running reports this`);\n      }\n      const newest = newestDecision(primary.id);",
+    "replace": "return fail(`machine is ${primary.state}: bots-running reports this`);\n      }\n      const newest = newestDecision(primary.id);",
+    "why": "one stopped machine opens two issues, bots-running's and this one, and the second says nothing the first did not"
+  },
+  {
+    "id": "dc-fly-blind-charged-to-journal",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "if (!Array.isArray(machines)) return { ...unknown(\"cannot read Fly\"), reads: \"Fly\" };",
+    "replace": "if (!Array.isArray(machines)) return unknown(\"cannot read Fly\");",
+    "why": "a Fly outage opens a second blind issue, cannot read the decision journal, beside the one for Fly"
+  },
+  {
+    "id": "dc-wrong-node-reads-quiet",
+    "contract": "decision-cycle",
+    "on": "origin/feat/fitness-decision-cycle",
+    "file": "scripts/fitness.mjs",
+    "find": "if (rule.why) return unknown(rule.why);",
+    "replace": "if (rule.why) return quiet(rule.why);",
+    "why": "a clock job on an older node reads quiet for ever: no blind issue says the contract never ran, and nobody learns it"
+  },
+  {
+    "id": "rung-third-start-not-spent",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "if (spent >= r.attempts.max) {",
+    "replace": "if (spent > r.attempts.max) {",
+    "why": "the script's third start of three spends its budget, but the owner is not assigned until a fourth the script will never make, so he waits the two hours instead"
+  },
+  {
+    "id": "rung-window-ignored",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "(c) => nowMs - Date.parse(c.at) <= windowMs,",
+    "replace": "(c) => Number.isFinite(Date.parse(c.at)),",
+    "why": "starts from last week count against today's six-hour budget, so the owner is assigned on the first stop before the script has acted once"
+  },
+  {
+    "id": "rung-anyones-marker-counts",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "comments.filter((c) => c.type === \"Bot\" && (c.body ?? \"\").includes(marker));",
+    "replace": "comments.filter((c) => (c.body ?? \"\").includes(marker));",
+    "why": "a person quoting the marker in a reply counts as the bot's assignment, so the next failure on that thread never reaches the owner, and a quoted start marker spends a budget the script never used"
+  },
+  {
+    "id": "rung-reopen-not-a-new-failure",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "return Math.max(Date.parse(thread.createdAt), ...reopenings);",
+    "replace": "return Date.parse(thread.createdAt);",
+    "why": "a thread reopened today counts from its first opening, so the old assignment marker still says the owner was asked and the reopened failure never reaches him"
+  },
+  {
+    "id": "rung-dead-credential-waits",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "export const assignsAtOnce = (r) => Boolean(r.credential) || r.rung === \"owner\";",
+    "replace": "export const assignsAtOnce = (r) => r.rung === \"owner\";",
+    "why": "a revoked token behind the reads waits two hours before the owner hears, though only he can set one and every check is blind the whole time"
+  },
+  {
+    "id": "rung-reopen-window-hours",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "export const REOPEN_WITHIN_MS = 14 * 24 * HOUR_MS;",
+    "replace": "export const REOPEN_WITHIN_MS = 14 * HOUR_MS;",
+    "why": "a fix that did not hold after a day starts a new thread, so the spent starts stay on the old one and the script restarts the machine three more times before the owner hears"
+  },
+  {
+    "id": "rung-marked-body-outlives-reopen",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness-rungs.mjs",
+    "find": "(thread.body ?? \"\").includes(ASSIGNED_MARKER) && Date.parse(thread.createdAt) >= sinceMs;",
+    "replace": "(thread.body ?? \"\").includes(ASSIGNED_MARKER);",
+    "why": "an owner-rung thread that opened assigned and reopens later still reads as asked, so the owner is never re-assigned on the reopened failure"
+  },
+  {
+    "id": "wire-standing-failure-never-assigns",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness.mjs",
+    "find": "const why = ownerDue(r, issue, nowMs);",
+    "replace": "const why = null;",
+    "why": "a standing failure never moves up its rung: the two-hour limit and a spent budget assign nobody, and the issue sits unassigned for as long as it fails"
+  },
+  {
+    "id": "wire-owner-rung-opens-unassigned-marked",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness.mjs",
+    "find": "return [{ kind: \"open\", result: r, assign: assignsAtOnce(r) }];",
+    "replace": "return [{ kind: \"open\", result: r, assign: false }];",
+    "why": "a credential failure opens unassigned while its body's marker says the owner was asked, so he is never assigned at all"
+  },
+  {
+    "id": "wire-refused-write-continues",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness.mjs",
+    "find": "if (!done.ok) break;",
+    "replace": "if (!done.ok) continue;",
+    "why": "an assignment GitHub refused still posts the marker comment, so the next tick reads the owner as asked and never tries again"
+  },
+  {
+    "id": "wire-no-thread-comments-read",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness.mjs",
+    "find": "const unheld = i.title.startsWith(\"[fitness] \") && !i.assignees?.some((a) => a.login === OWNER);",
+    "replace": "const unheld = false;",
+    "why": "no open thread's comments are ever read, so every assignment holds until a tick can read them, which is never: a standing failure never reaches the owner"
+  },
+  {
+    "id": "wire-comment-type-is-login",
+    "contract": "ladder",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness.mjs",
+    "find": "\".[] | {type: .user.type, body: .body, at: .created_at}\",",
+    "replace": "\".[] | {type: .user.login, body: .body, at: .created_at}\",",
+    "why": "no comment reads as a bot's, so three spent starts count as none and the owner waits the full two hours; and once he takes himself off a thread he is asked again on the next tick"
+  },
+  {
+    "id": "wire-no-assignment-in-30-days-passes",
+    "contract": "owner-assignment-path",
+    "on": "origin/main (#6569)",
+    "file": "scripts/fitness.mjs",
+    "find": "return ageMs <= ASSIGNMENT_FRESH_MS",
+    "replace": "return ageMs >= 0",
+    "why": "with no bot assignment in thirty days, or none ever, the assignment path reads as proven and the one contract meant to exercise the email never does"
+  },
+  {
+    "id": "shared-quiet-closes-issue",
+    "contract": "shared",
+    "on": "both",
+    "file": "scripts/fitness.mjs",
+    "find": "} else if (r.status === \"pass\" && issue)",
+    "replace": "} else if ((r.status === \"pass\" || r.status === \"quiet\") && issue)",
+    "why": "a stall at 15:50 reads quiet at 16:00 when the market closes, and that quiet closes the issue as passing again with nothing fixed"
+  },
+  {
+    "id": "shared-undated-half-hides-late",
+    "contract": "main-deploys",
+    "on": "both",
+    "file": "scripts/fitness.mjs",
+    "find": "if (late.length) return fail(late.join(\", \"));\n  if (undated.length) return undated[0];",
+    "replace": "if (undated.length) return undated[0];\n  if (late.length) return fail(late.join(\", \"));",
+    "why": "a bots lag with no date hides a dashboard merge that has waited an hour: the half this cannot date must never hide the other's failure"
+  },
+  {
+    "id": "shared-any-state-but-stopped-passes",
+    "contract": "bots-running",
+    "on": "both",
+    "file": "scripts/fitness.mjs",
+    "find": "return primary.state === \"started\" ? pass(\"started\") : fail(`machine is ${primary.state}`);",
+    "replace": "return primary.state !== \"stopped\" ? pass(\"started\") : fail(`machine is ${primary.state}`);",
+    "why": "a machine that is suspended, replacing or failed passes as running, and nothing starts it"
+  }
+]
