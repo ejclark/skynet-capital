@@ -68,7 +68,7 @@ describe("ship with no token and no gh login", () => {
     });
 
     it("checkarm reads the envelope", () => {
-      const r = ship(["checkarm", "docs/COMPUTE.md"]);
+      const r = ship(["checkarm", "a/path/nothing/protects.txt"]);
       expect(r.stderr).not.toContain(NO_TOKEN);
       expect(r.status).toBe(0);
     });
