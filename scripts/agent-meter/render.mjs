@@ -1,7 +1,7 @@
 // The meter's text form. One line per number, each saying what it leaves out (#6470).
 import { formatDuration, formatStage } from "./failure-to-fix.mjs";
 
-const k = (n) =>
+export const k = (n) =>
   n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n);
 const usd = (n) => `$${n.toFixed(2)}`;
 const counts = (obj) =>
@@ -221,6 +221,48 @@ export function flowSection(f) {
 export function renderFlow(f) {
   const w = f.window;
   return [`flow, ${w.hours} hours: ${w.since} to ${w.until}`, ...flowSection(f)].join("\n");
+}
+
+const UNKNOWN = "unknown";
+
+const count = (n) => (n === null ? UNKNOWN : String(n));
+
+function perVerifiedCell(row) {
+  if (!row.spendsTokens) return "no model tokens";
+  if (row.perVerified !== null) return k(row.perVerified);
+  return row.verified === 0 ? "none verified" : UNKNOWN;
+}
+
+/** One job's cells. Unknown is spelled out, and a floor says so, since either could pass for a count. */
+const jobCells = (row) => [
+  row.job,
+  count(row.runs),
+  row.spendsTokens ? (row.tokens === null ? UNKNOWN : k(row.tokens)) : "none, a script",
+  row.floor ? `at least ${row.verified}` : count(row.verified),
+  perVerifiedCell(row),
+  row.verifiedBy,
+];
+
+/** `--jobs` alone: tokens per verified result, by kind of job. */
+export function renderJobs({ window: w, rows, rest }) {
+  const table = [
+    ["job", "runs", "tokens", "verified", "tokens per verified", "verified by"],
+    ...rows.map(jobCells),
+  ];
+  const widths = table[0].map((_, col) => Math.max(...table.map((cells) => cells[col].length)));
+  const lines = [`agent jobs, ${w.hours} hours: ${w.since} to ${w.until}`];
+  if (w.crossesRepeatedHour) lines.push(REPEATED_HOUR_NOTE);
+  for (const cells of table)
+    lines.push(`  ${cells.map((cell, col) => cell.padEnd(widths[col])).join("  ")}`.trimEnd());
+  const notes = rows.flatMap((row) => row.notes.map((note) => `  ${row.job}: ${note}`));
+  if (notes.length) lines.push("", ...notes);
+  lines.push(
+    "",
+    "  tokens are input + cache write + output; cache reads are apart, in --json, since an agent rereads its own context on every call",
+    "  a result counts only when something the agent cannot edit verified it. This is information, not a bar to clear",
+  );
+  if (rest) lines.push("", `rest calls this run: ${rest.calls} (cap ${rest.cap})`);
+  return lines.join("\n");
 }
 
 function startup(s) {

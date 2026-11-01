@@ -536,6 +536,7 @@ to 3,536.
 | `piece-wright` | built one 3D piece | the same | 0 | **benched** |
 | `set-dresser` | added one detail layer to a 3D piece | the same | 0 | **benched** |
 | `render-alchemist` | researched a render technique | the same | 0 | **benched** |
+| a standing gamification agent | would score agents' own work | nothing: `npm run meter -- --jobs` does the scoring (#6609), and `evals-expert` designs each check | 0 | **rejected, `/charter` 2026-11-01** |
 
 Benched files sit in [`docs/agents/bench/`](agents/bench/README.md), and one `git mv` restores them.
 
