@@ -204,6 +204,20 @@ describe("when it cannot attempt, one line says why", () => {
     expect(says(only({}, { failures }))).toMatch(/outside this PR's own changes/);
   });
 
+  it("does not call a workflow file the PR changed outside its diff", () => {
+    const rules = [{ pattern: ".github/workflows/**", why: "x" }];
+    const failures = [{ job: "(the workflow never started)", step: "GitHub rejected the file" }];
+    const body = says(only({ files: [".github/workflows/pipeline.yml"], rules }, { failures }));
+    expect(body).not.toMatch(/outside this PR's own changes/);
+    expect(body).toContain("`.github/workflows/pipeline.yml`");
+    expect(says(only({}, { failures }))).toMatch(/outside this PR's own changes/);
+  });
+
+  it("does not call an unread job outside the diff: it sends a session to read the run", () => {
+    const failures = [{ job: "(the failed job could not be read)", step: "the jobs API lagged" }];
+    expect(only({}, { failures }).type).toBe("open-issue");
+  });
+
   it("attempts an install failure when the PR changed the dependencies", () => {
     const intent = only(
       { files: ["package-lock.json"] },
@@ -248,9 +262,10 @@ describe("when it cannot attempt, one line says why", () => {
     expect(body).toContain(markerFor(SHA, false));
   });
 
-  it("counts an open capsule as the attempt, when its line on the PR was lost", () => {
-    const openIssues = [{ number: 700, title: capsuleTitle(NUMBER) }];
-    expect(says(only({ openIssues }))).toContain("#700");
+  it("counts a capsule as the attempt, open or closed, when its line on the PR was lost", () => {
+    const capsule = [{ number: 700, title: capsuleTitle(NUMBER) }];
+    expect(says(only({ openIssues: capsule }))).toContain("#700");
+    expect(says(only({ closedIssues: capsule }))).toContain("#700");
   });
 });
 
@@ -262,8 +277,13 @@ describe("it speaks once per head", () => {
   });
 
   it("stays quiet on a re-run of a head it has already spoken about", () => {
-    expect(only({ comments: [spoke(SHA, false)] }).type).toBe("skip");
     expect(only({ comments: [spoke(SHA, true)] }).type).toBe("skip");
+    const failures = [{ job: "verify", step: "Set up job" }];
+    expect(only({ comments: [spoke(SHA, false)] }, { failures }).type).toBe("skip");
+  });
+
+  it("still attempts when a re-run of that head fails on the PR's code", () => {
+    expect(only({ comments: [spoke(SHA, false)] }).type).toBe("open-issue");
   });
 
   it("does not take a marker from a stranger's comment, in a public repo", () => {
@@ -328,6 +348,26 @@ describe("gatherRedSessionPr — reads only what the decision can use", () => {
     });
     expect(gather({ pull_requests: [] }).pr?.number).toBe(NUMBER);
     expect(calls[0]).toBe(`commits/${SHA}/pulls`);
+  });
+
+  it("takes the PR aimed at main when the head sits on two", () => {
+    const { gather } = fake(readable);
+    const pull_requests = [
+      { number: 1, base: { ref: "platter/x" } },
+      { number: NUMBER, base: { ref: "main" } },
+    ];
+    expect(gather({ pull_requests }).pr?.number).toBe(NUMBER);
+  });
+
+  it("does not look up a fork's head: the read can refuse it and it is not this lane's", () => {
+    const { gather, calls } = fake();
+    const r = {
+      pull_requests: [],
+      head_repository: { full_name: "someone/fork" },
+      repository: { full_name: "ejclark/skynet-capital" },
+    };
+    expect(gather(r)).toEqual({});
+    expect(calls).toEqual([]);
   });
 
   it("turns a gate that throws into a refusal rather than a dead triage", () => {

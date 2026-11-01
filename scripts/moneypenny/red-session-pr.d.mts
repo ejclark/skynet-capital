@@ -28,6 +28,7 @@ export interface RedPrDeps {
   gate?: RedPrGate;
   rules?: { pattern: string; why?: string }[];
   openIssues?: { number: number; title: string }[];
+  closedIssues?: { number: number; title: string }[];
 }
 
 export const RED_ATTEMPT_CAP: number;

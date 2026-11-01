@@ -13,8 +13,8 @@
 // the work dial and the spend breaker, so a build that stays red costs one session and then one line.
 //
 // THE REST IS ONE LINE ON THE PR: a check that died before it read the PR's code (said, not fixed), a PR
-// that changes a protected path, an attempt already spent, a gate that refused. A second look at the
-// same head stays quiet, so a re-run never repeats itself.
+// that changes a protected path, an attempt already spent, a gate that refused. One head gets one line,
+// so a re-run never repeats itself, but a re-run that fails on the PR's code can still earn the attempt.
 //
 // WHAT IT LEAVES ALONE, silently: a `hold-merge` PR (never touched), a lane's or the repair lane's own PR
 // (red-lane-pr.mjs owns the first, and the second is the loop guard), dependabot, a stranger, a fork.
@@ -43,7 +43,6 @@ export const RED_ATTEMPT_CAP = 1;
 export const CAPSULE_SLOT = "{capsule}";
 
 const HOLDING = [...REQUIRED_CHECKS, ...ARM_GATE_CHECKS];
-const TRUSTED_AUTHORS = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 /** The last line of every session's PR body (`ship.sh checkbody`, .github/pull_request_template.md). */
 const SESSION_FOOTER = /Generated (?:with|by) \[Claude Code\]/;
 
@@ -52,6 +51,10 @@ const BEFORE_THE_CODE = /^(?:Set up |Restore |Install |Run actions\/|Post |Compl
 const DEPENDENCY_FILE = /(?:^|\/)(?:package(?:-lock)?\.json|\.nvmrc|mise\.toml)$/;
 /** repair.mjs's `LOST_RUNNER` note; red-session-pr.spec.ts pins that the two still agree. */
 const RUNNER_WENT_AWAY = /the runner went away/;
+/** repair.mjs's `runnerStarved` and `parseFailure` labels. A file GitHub rejected may be this PR's. */
+const NO_RUNNER = /^\(no runner/;
+const REJECTED = /^\(the workflow never started/;
+const WORKFLOW_FILE = /^\.github\//;
 
 const MARKER = /<!-- moneypenny:red-session-pr sha=(\w+) attempted=([01]) -->/;
 /** The hidden memory on the PR: which heads this lane spoke about, and which got a session. */
@@ -83,7 +86,7 @@ function notOursReason(pr, run, defaultBranch = "main") {
   }
   if (pr.base?.ref !== defaultBranch) return `#${pr.number} is aimed at \`${pr.base?.ref}\``;
   if (pr.head?.sha !== run.head_sha) return `a newer push replaced the head that failed`;
-  if (pr.user?.type !== "User" || !TRUSTED_AUTHORS.has(pr.author_association)) {
+  if (pr.user?.type !== "User" || !trustedComment(pr)) {
     return `#${pr.number} was opened by ${pr.user?.login}, not by a session on this repo`;
   }
   if (!SESSION_FOOTER.test(pr.body ?? "")) return `#${pr.number} has no session's footer`;
@@ -94,7 +97,12 @@ function notOursReason(pr, run, defaultBranch = "main") {
 
 /** Pure: why this failure says nothing about the PR's own code, or null. */
 function outsideReason(failure, files = []) {
-  if (unnamedJob(failure)) return failure.step ?? failure.job;
+  // A job that could not be read says nothing either way, so it is not called outside the diff.
+  if (NO_RUNNER.test(failure.job)) return failure.step ?? failure.job;
+  if (REJECTED.test(failure.job)) {
+    return files.some((f) => WORKFLOW_FILE.test(f)) ? null : (failure.step ?? failure.job);
+  }
+  if (unnamedJob(failure)) return null;
   const step = failure.step ?? "";
   if (RUNNER_WENT_AWAY.test(step)) return step;
   if (!BEFORE_THE_CODE.test(step)) return null;
@@ -114,7 +122,7 @@ function capsuleBody(run, pr, failure, red, files) {
   const rest = files.length - shown.length;
   const others = red.filter((f) => f !== failure);
   return [
-    `**\`${failure.job}\` failed on PR #${pr.number}, and the session that opened it has ended.**`,
+    `**\`${failure.job}\` failed on PR #${pr.number}, a session's PR that no lane owns.**`,
     "",
     "| | |",
     "|---|---|",
@@ -157,7 +165,8 @@ function capsuleBody(run, pr, failure, red, files) {
 export function routeRedSessionPr(ctx, deps = {}) {
   const run = ctx.run ?? {};
   const red = redChecks(run, ctx.failures);
-  const { pr, files = [], comments = [], gate, rules = [], openIssues = [] } = deps;
+  const { pr, files = [], comments = [], gate, rules = [] } = deps;
+  const capsules = [...(deps.openIssues ?? []), ...(deps.closedIssues ?? [])];
   if (!(red.length && pr)) return [];
 
   const skip = (reason) => [{ type: "skip", issue: pr.number, reason }];
@@ -168,11 +177,11 @@ export function routeRedSessionPr(ctx, deps = {}) {
     .filter(trustedComment)
     .map((c) => MARKER.exec(c.body ?? ""))
     .filter(Boolean);
-  if (spoken.some((m) => m[1] === run.head_sha)) return skip("already spoke about this head");
-
-  const say = (sentence) => [
-    { type: "say-on-pr", number: pr.number, body: line(run, sentence, false) },
-  ];
+  const saidThisHead = spoken.some((m) => m[1] === run.head_sha);
+  const say = (sentence) =>
+    saidThisHead
+      ? skip("already spoke about this head")
+      : [{ type: "say-on-pr", number: pr.number, body: line(run, sentence, false) }];
   const checks = named(red);
 
   const inside = red.filter((f) => !outsideReason(f, files));
@@ -194,10 +203,11 @@ export function routeRedSessionPr(ctx, deps = {}) {
   }
 
   const title = capsuleTitle(pr.number);
-  const open = openIssues.find((i) => i.title === title);
+  // A capsule is the attempt, open or closed: its line on the PR is soft, so it may be all there is.
+  const filed = capsules.find((i) => i.title === title);
   const attempts = spoken.filter((m) => m[2] === "1").length;
-  if (open || attempts >= RED_ATTEMPT_CAP) {
-    const where = open ? ` (#${open.number})` : "";
+  if (filed || attempts >= RED_ATTEMPT_CAP) {
+    const where = filed ? ` (#${filed.number})` : "";
     return noSession(`this PR already had its repair session${where}`);
   }
   if (!gate) return noSession("the work dial could not be read");
@@ -222,10 +232,13 @@ export function routeRedSessionPr(ctx, deps = {}) {
   ];
 }
 
-/** The PR behind a run: its own payload's number, or whichever open PR holds that head. */
-function prNumberOf(run, read) {
-  const carried = run.pull_requests?.[0]?.number;
+/** The PR behind a run: the one its payload names on this base, or whichever open PR holds that
+ *  head. A fork's head is not looked up: it is not this lane's, and the read can refuse it. */
+function prNumberOf(run, read, defaultBranch) {
+  const listed = run.pull_requests ?? [];
+  const carried = (listed.find((p) => p.base?.ref === defaultBranch) ?? listed[0])?.number;
   if (carried) return carried;
+  if (run.head_repository?.full_name !== run.repository?.full_name) return undefined;
   const held = read(`commits/${run.head_sha}/pulls`) ?? [];
   return held.find((p) => p.state === "open")?.number;
 }
@@ -253,7 +266,7 @@ export function gatherRedSessionPr(
 ) {
   if (!redChecks(run, failures).length) return {};
   const read = (path) => withRetry(() => rest(path));
-  const number = prNumberOf(run, read);
+  const number = prNumberOf(run, read, defaultBranch);
   if (!number) return {};
   const pr = read(`pulls/${number}`);
   if (notOursReason(pr, run, defaultBranch)) return { pr };
