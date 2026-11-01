@@ -197,7 +197,7 @@ describe("the process-file lens", () => {
     expect(trigger).not.toContain("scope.mjs");
   });
 
-  it("says in the reviewer that /ship asks on a narrower set than the lens can read", () => {
+  it("says in the reviewer which paths /ship asks on, and why not every doc", () => {
     const section = bodyOf(join(AGENTS, "reviewer.md"));
     expect(section).toMatch(
       /`\/ship` asks only for `CLAUDE\.md`, `\.claude\/\*\*` and lane prompts/,
