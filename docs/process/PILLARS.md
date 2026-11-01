@@ -89,7 +89,7 @@ Rejecting is the expected outcome, and each rejection names what would reopen it
 | Candidate agent | Verdict | Why | Reopen when |
 |---|---|---|---|
 | Loop engineer | Reject | a library every agent uses, with no input or output of its own | never as an agent |
-| Memory keeper | Reject | a tool and a hook; 0 collisions in 20 writes across 32 sessions | a lost write shows up in the history |
+| Memory keeper | Reject | a tool and a hook; 0 collisions in 20 writes across 32 sessions | a lock failure, or a commit naming the wrong session (under load the hook lost provenance, never content, so a lost write cannot show up) |
 | Dreamer | Reject for now | `dream.js` already isolates its reads with sub-agents, and one run does not earn a standing role | a second conductor needs the same transcript analysis |
 | Context curator | Reject for now | the size gate can name a target, but the file is under budget with nothing to work | the budget trips twice in a month |
 | Self-healer | Reject, existing owner | Moneypenny's repair lane owns this ([`MONEYPENNY.md`](../MONEYPENNY.md)), though the lane has no Fly token today | a stop class recurs that scripted steps can't resolve |
