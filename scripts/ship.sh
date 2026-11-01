@@ -40,7 +40,13 @@ set -euo pipefail
 # to the permission matcher, which cost a human approval tap per ship (Eric, 2026-09-10: "stop
 # asking for permission of trivial tasks like this").
 TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}}"
-[ -n "$TOKEN" ] || { echo "ship: no GH_TOKEN/GITHUB_TOKEN in env and no gh login" >&2; exit 1; }
+# Asked for by the commands that call GitHub, never at load: a check up here stopped the pure ones
+# too, so a spec shelling out to `checkbody` passed on a laptop with a gh login and failed on CI
+# (#6440, red for 39h). In the dispatch, not in api(): api() runs inside $(...), where exit only
+# leaves the subshell.
+need_token() {
+  [ -n "$TOKEN" ] || { echo "ship: no GH_TOKEN/GITHUB_TOKEN in env and no gh login" >&2; exit 1; }
+}
 API="https://api.github.com"
 
 # owner/repo from origin, handling both the proxy URL (.../git/OWNER/REPO) and normal remotes.
@@ -1251,11 +1257,11 @@ cmd_platter_sync() {
 cmd_platter() {
   local sub="${1:-}"; shift || true
   case "$sub" in
-    open) cmd_platter_open "$@" ;;
-    board) cmd_platter_board "$@" ;;
+    open) need_token; cmd_platter_open "$@" ;;
+    board) need_token; cmd_platter_board "$@" ;;
     ledger) cmd_platter_ledger "$@" ;;
     # re-post the checked-out platter's body without boarding — the recovery after a refused sync.
-    sync) cmd_platter_sync ;;
+    sync) need_token; cmd_platter_sync ;;
     # the record after landing, from the first-parent log, in whichever ending is true (merge commit
     # or squash) — posted as a comment on the landed PR by whoever reports it (the digest, a session).
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
@@ -1267,9 +1273,9 @@ cmd_platter() {
 [ "${BASH_SOURCE[0]}" = "$0" ] || return 0
 
 case "${1:-}" in
-  open) shift; cmd_open "$@" ;;
-  merge) shift; cmd_merge "$@" ;;
-  automerge) shift; cmd_automerge "$@" ;;
+  open) shift; need_token; cmd_open "$@" ;;
+  merge) shift; need_token; cmd_merge "$@" ;;
+  automerge) shift; need_token; cmd_automerge "$@" ;;
   checkbody) shift; cmd_checkbody "$@" ;;
   pinshots) shift; cmd_pinshots "$@" ;;
   checkarm) shift; cmd_checkarm "$@" ;;
