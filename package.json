@@ -52,6 +52,7 @@
     "typecheck:app": "npm run typecheck --prefix app",
     "test:app": "npm test --prefix app",
     "dead:scan": "node scripts/dead-scan.mjs",
+    "dial:spend": "node scripts/dial-spend.mjs",
     "depgraph:scan": "node scripts/dep-graph-scan.mjs",
     "spec:gap": "node scripts/spec-gap-scan.mjs",
     "incident:scan": "node scripts/incident-scan.mjs",
