@@ -67,7 +67,8 @@ describe("the audit's lens table", () => {
       replyFor(["src/storage/x.ts"], [], []),
     );
     const prompt = (reviews(calls)[1] as unknown as { prompt: string }).prompt;
-    expect(prompt).toContain("docs/review/lenses/performance.md");
+    // Through git, because the shared tree may be on a branch that predates the lens.
+    expect(prompt).toContain("git show origin/main:docs/review/lenses/performance.md");
     expect(prompt).toContain("origin/main NOW");
     expect(prompt).toContain("Zero findings is a normal answer");
   });
@@ -85,6 +86,46 @@ describe("the audit's lens table", () => {
       replyFor(["src/server/x.ts"], [at("src/server/x.ts", 40)], [at("src/server/x.ts", 90)]),
     );
     expect(traces(different.calls)).toHaveLength(2);
+  });
+
+  it("never lets a low report hide a serious one from another lens", async () => {
+    const { calls } = await runWorkflow(
+      "post-merge-audit",
+      { prs: [6501] },
+      replyFor(
+        ["src/server/x.ts"],
+        [{ ...at("src/server/x.ts", 40), severity: "low" }],
+        [at("src/server/x.ts", 42)],
+      ),
+    );
+    expect(traces(calls)).toHaveLength(1);
+  });
+
+  it("keeps a folded report visible in the low list, saying which lens it folded into", async () => {
+    const { result } = await runWorkflow(
+      "post-merge-audit",
+      { prs: [6501] },
+      replyFor(["src/server/x.ts"], [at("src/server/x.ts", 40)], [at("src/server/x.ts", 42)]),
+    );
+    expect(result?.low).toEqual([
+      expect.objectContaining({ lens: "performance", line: 42, sameAs: "correctness" }),
+    ]);
+  });
+
+  it("asks a lens's refuters whether the cost matters, at the dial the lens was scored at", async () => {
+    const { calls } = await runWorkflow(
+      "post-merge-audit",
+      { prs: [6501] },
+      replyFor(["src/server/x.ts"], [at("src/server/a.ts", 1)], [at("src/server/b.ts", 9)]),
+    );
+    const [ofCorrectness, ofLens] = traces(calls) as unknown as {
+      prompt: string;
+      opts: object;
+    }[];
+    expect(ofCorrectness?.prompt).not.toContain("negligible");
+    expect(ofCorrectness?.opts).toMatchObject({ model: "fable" });
+    expect(ofLens?.prompt).toContain("negligible");
+    expect(ofLens?.opts).toMatchObject({ model: "opus", effort: "high" });
   });
 
   it("keeps two reports from one lens, even on the same line: the lens meant two defects", async () => {
