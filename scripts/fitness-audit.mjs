@@ -17,6 +17,8 @@
 //   node scripts/fitness-audit.mjs --bugs <file> --candidate     # the weakest contract as JSON
 //   --script <path> --spec <path>   another check and its spec, relative to the repo root
 //   --with <path>                   another file the check or spec reads at run time (repeatable)
+//   --env NAME=VALUE                set for the spec run (repeatable). FLY_BIN=/usr/bin/false is
+//                                   always set, so scripts/fitness.mjs never looks for a real fly
 //   --root <dir>                    read the files from another checkout (the spec uses this)
 //
 // Results: caught (the spec went red), survived (the spec stayed green: the gap is the finding),
@@ -60,7 +62,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -77,6 +79,7 @@ function parseArgs(argv) {
     bugs: null,
     root: process.cwd(),
     with: [],
+    env: [],
     json: false,
     candidate: false,
   };
@@ -84,9 +87,12 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--json") opts.json = true;
     else if (arg === "--candidate") opts.candidate = true;
-    else if (arg === "--with") opts.with.push(argv[++i]);
-    else if (arg.startsWith("--") && arg.slice(2) in opts) opts[arg.slice(2)] = argv[++i];
-    else throw new Error(`unknown argument ${arg}`);
+    else if (arg.startsWith("--") && arg.slice(2) in opts) {
+      const value = argv[++i];
+      if (value === undefined || value.startsWith("--")) throw new Error(`${arg} needs a value`);
+      if (Array.isArray(opts[arg.slice(2)])) opts[arg.slice(2)].push(value);
+      else opts[arg.slice(2)] = value;
+    } else throw new Error(`unknown argument ${arg}`);
   }
   if (!opts.bugs) throw new Error("--bugs <file> is required");
   return opts;
@@ -141,7 +147,8 @@ export function applyBug(bug, source) {
   const count = source.split(bug.find).length - 1;
   if (count === 0) return { note: `find text is not in ${bug.file}` };
   return {
-    source: source.replace(bug.find, bug.replace),
+    // A function replacer: a string one would read `$&`, `$'` and `$1` in the bug as patterns.
+    source: source.replace(bug.find, () => bug.replace),
     note: count > 1 ? `find text matches ${count} times; the first was replaced` : "",
   };
 }
@@ -170,15 +177,16 @@ export function candidateOf(ids, bugs) {
 /** A path under root, or an error: a bug list must not reach outside the checkout. */
 function inside(root, path) {
   const abs = resolve(root, path);
-  if (relative(root, abs).startsWith("..") || abs.split(sep).includes("..")) {
-    throw new Error(`${path} is outside the repo root`);
-  }
+  if (relative(root, abs).startsWith("..")) throw new Error(`${path} is outside the repo root`);
   if (!existsSync(abs)) throw new Error(`${path} does not exist`);
   return abs;
 }
 
-/** A temporary tree holding only the files named, with the repo's node_modules beside them. */
-function stage(root, files) {
+/**
+ * A temporary tree holding only the files named, the repo's node_modules beside them, and a test
+ * config of its own: the spec runs whatever its name, and nothing else in the tree does.
+ */
+function stage(root, files, spec) {
   const dir = mkdtempSync(join(tmpdir(), "fitness-audit-"));
   for (const rel of files) {
     const dest = join(dir, rel);
@@ -187,23 +195,35 @@ function stage(root, files) {
   }
   symlinkSync(join(REPO, "node_modules"), join(dir, "node_modules"), "dir");
   writeFileSync(join(dir, "package.json"), '{ "type": "module", "private": true }\n');
-  return dir;
-}
-
-/** Run the spec in the staged tree. Green is 0; a red or crashed or hung spec is non-zero. */
-function runSpec(dir, spec) {
-  // Its own config, so the spec runs whatever its name, and nothing else in the tree does.
   writeFileSync(
     join(dir, "rstest.config.mjs"),
     `export default { globals: true, testEnvironment: "node", include: [${JSON.stringify(spec)}] };\n`,
   );
+  return dir;
+}
+
+/** `NAME=VALUE` pairs as an object; the default keeps scripts/fitness.mjs from looking for fly. */
+function specEnv(pairs) {
+  const env = { ...process.env, FLY_BIN: "/usr/bin/false" };
+  for (const pair of pairs) {
+    const eq = pair.indexOf("=");
+    if (eq < 1) throw new Error(`--env needs NAME=VALUE, got ${pair}`);
+    env[pair.slice(0, eq)] = pair.slice(eq + 1);
+  }
+  return env;
+}
+
+/** Run the spec in the staged tree. Green is 0; a red, crashed or hung spec is non-zero. */
+function runSpec(dir, spec, env) {
   const res = spawnSync(process.execPath, [RSTEST, "run", spec], {
     cwd: dir,
     encoding: "utf8",
     timeout: SPEC_TIMEOUT_MS,
-    env: { ...process.env, FLY_BIN: "/usr/bin/false" },
+    env,
   });
   if (res.error?.code === "ETIMEDOUT") return { status: 1, note: "the spec hung" };
+  // Anything else is the runner failing, never the spec: rstest missing, a dead node_modules link.
+  if (res.error) throw new Error(`cannot run rstest: ${res.error.message}`);
   return { status: res.status ?? 1, out: `${res.stdout}\n${res.stderr}` };
 }
 
@@ -211,9 +231,10 @@ export function audit(opts) {
   const root = resolve(opts.root);
   const bugs = validateBugs(JSON.parse(readFileSync(resolve(root, opts.bugs), "utf8")));
   const files = [...new Set([opts.script, opts.spec, ...opts.with, ...bugs.map((b) => b.file)])];
-  const dir = stage(root, files);
+  const env = specEnv(opts.env ?? []);
+  const dir = stage(root, files, opts.spec);
   try {
-    const baseline = runSpec(dir, opts.spec);
+    const baseline = runSpec(dir, opts.spec, env);
     if (baseline.status !== 0) {
       throw new Error(
         `baseline is red: ${opts.spec} fails before any bug is applied\n${baseline.out}`,
@@ -226,13 +247,13 @@ export function audit(opts) {
       const applied = applyBug(bug, original);
       const row = {
         id: bug.id,
-        contract: attribute(bug, bug.file === opts.script ? script : original),
+        contract: attribute(bug, original),
         why: bug.why,
         note: applied.note,
       };
       if (!applied.source) return { ...row, result: "not-applied" };
       writeFileSync(target, applied.source);
-      const run = runSpec(dir, opts.spec);
+      const run = runSpec(dir, opts.spec, env);
       writeFileSync(target, original);
       return {
         ...row,

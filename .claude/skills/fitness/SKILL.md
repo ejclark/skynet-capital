@@ -4,9 +4,9 @@ description: >-
   Write or audit one check so that it fails when the outcome fails, and so that a deliberate bug
   in it turns its spec red. Use when /retro picks a gate or a script as the prevention, when a
   contract in scripts/fitness.mjs is added or changed, when a [fitness] issue closes, when
-  `node scripts/fitness-audit.mjs --candidate` names a target, or when asked "how would we know
-  if this broke". Invokable as /fitness. Takes the check (a script and its spec) or the incident
-  as the argument.
+  `node scripts/fitness-audit.mjs --bugs <held-out list> --candidate` names a target, or when
+  asked "how would we know if this broke". Invokable as /fitness. Takes the check (a script and
+  its spec) or the incident as the argument.
 ---
 
 # Fitness — is this check any good?

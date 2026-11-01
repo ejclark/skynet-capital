@@ -21,10 +21,19 @@ function audit(args: string[], cwd = process.cwd()) {
   return { status: res.status, out: res.stdout, err: res.stderr };
 }
 
+/** The --json report, or the script's own stderr when it crashed instead of reporting. */
+function parseReport(run: ReturnType<typeof audit>) {
+  try {
+    return JSON.parse(run.out);
+  } catch {
+    throw new Error(`fitness-audit gave no report (exit ${run.status}): ${run.err}`);
+  }
+}
+
 describe("fitness audit", () => {
   const before = readFileSync(resolve(FIXTURE, "toy.mjs"), "utf8");
   const run = audit([...TARGET, "--bugs", `${FIXTURE}/bugs.json`, "--json"]);
-  const report = JSON.parse(run.out);
+  const report = parseReport(run);
   const byId = Object.fromEntries(report.bugs.map((b: { id: string }) => [b.id, b]));
 
   it("reports every bug as caught, survived or not applied", () => {
@@ -79,6 +88,28 @@ describe("fitness audit refusals", () => {
     const res = audit([...TARGET, "--bugs", `${FIXTURE}/bugs.json`, "--root", root]);
     expect(res.status).toBe(2);
     expect(res.err).toContain("baseline");
+  });
+
+  it("refuses a flag with no value as a usage error", () => {
+    const res = audit([...TARGET, "--bugs"]);
+    expect(res.status).toBe(2);
+    expect(res.err).toContain("--bugs needs a value");
+  });
+
+  it("applies a replacement with a `$` in it as written", () => {
+    // String.replace would read `$'` as "the rest of the file"; the audit must not.
+    const dir = mkdtempSync(join(tmpdir(), "fitness-audit-dollar-"));
+    const file = join(dir, "bugs.json");
+    const bug = {
+      id: "dollar-literal",
+      file: `${FIXTURE}/toy.mjs`,
+      find: "const FRESH_MS = 300;",
+      replace: "const FRESH_MS = 300; const TAIL = `$'`;",
+      why: "an unused literal with a dollar sign changes nothing, so the spec stays green",
+    };
+    writeFileSync(file, JSON.stringify([bug]));
+    const res = audit([...TARGET, "--bugs", file, "--json"]);
+    expect(parseReport(res).bugs[0].result).toBe("survived");
   });
 
   it("refuses a bug list missing a field, naming the bug", () => {
