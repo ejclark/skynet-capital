@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 // @ts-expect-error plain .mjs script, no declarations
-import { LockBusyError, lockIsDead, withFileLock } from "../../scripts/file-lock.mjs";
+import { LockBusyError, lockIsDead, pause, withFileLock } from "../../scripts/file-lock.mjs";
 
 const lockPath = () => join(mkdtempSync(join(tmpdir(), "file-lock-")), "x.lock");
 // A pid that has certainly exited: the child is gone by the time spawnSync returns.
@@ -76,7 +76,9 @@ describe("file lock", () => {
       `import { withFileLock } from ${JSON.stringify(resolve("scripts/file-lock.mjs"))};
        withFileLock(${JSON.stringify(lock)}, () => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 400));`,
     ]);
-    while (!existsSync(lock)) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5);
+    // Bounded: a synchronous loop is out of reach of the test's timeout if the child never starts.
+    for (let tries = 0; tries < 2000 && !existsSync(lock); tries += 1) pause(5);
+    expect(existsSync(lock)).toBe(true);
     const since = withFileLock(lock, () => Number(readFileSync(lock, "utf8").split(" ")[1]));
     holder.kill();
     // The holder ran for 400 ms, so a stamp taken at the turn is well past the moment we began.

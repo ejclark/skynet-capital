@@ -17,7 +17,8 @@ import { linkSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:
 /** Thrown when the lock is still held by a live writer after the wait. */
 export class LockBusyError extends Error {}
 
-const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+/** A synchronous sleep, for short scripts with nothing else to do while they wait. */
+export const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 function read(path) {
   try {
@@ -83,15 +84,15 @@ export function withFileLock(lock, body, { waitMs = 10_000, deadAfterMs = 60_000
   let content = tryTake(lock);
   while (content === null) {
     const seen = read(lock);
-    if (seen !== null && lockIsDead(seen, deadAfterMs)) {
+    if (seen === null) {
+      content = tryTake(lock); // Just released: go now, and only now, so a queue stays read-only.
+    } else if (lockIsDead(seen, deadAfterMs)) {
       clearDead(lock, seen);
+    } else if (Date.now() > deadline) {
+      throw new LockBusyError(`${lock} still held after ${waitMs} ms (holder: ${seen.trim()})`);
     } else {
-      if (Date.now() > deadline) {
-        throw new LockBusyError(`${lock} still held after ${waitMs} ms (holder: ${seen?.trim()})`);
-      }
       pause(10 + Math.random() * 40); // Jitter, so waiters do not all retry on the same beat.
     }
-    content = tryTake(lock);
   }
   try {
     return body();
