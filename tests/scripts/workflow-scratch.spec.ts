@@ -56,6 +56,9 @@ async function run(name: string, args: unknown, reply: Reply) {
 
 const scratchOf = (prompt: string) => /`(runs\/[^`]+)`/.exec(prompt)?.[1];
 const READER = "dead agents";
+// The read of the work-mode dial runs one command. It keeps no notes, so it gets no folder.
+const DIAL = "work-mode";
+const CLEARED = { found: true, dispatch: true, position: "normal", grindWidth: 200 };
 
 /** The stub for the one agent that reads what dead agents left. */
 function readerReply(prompt: string) {
@@ -140,6 +143,7 @@ describe("post-merge-audit's scratch folders", () => {
   const reply =
     (dead: string): Reply =>
     (prompt, { label }) => {
+      if (label === DIAL) return CLEARED;
       if (label === READER) return readerReply(prompt);
       if (label?.startsWith(dead)) return null;
       if (label?.startsWith("triage")) return { merged: true, files: ["x.ts"], protected: false };
@@ -149,8 +153,10 @@ describe("post-merge-audit's scratch folders", () => {
 
   it("gives every agent its own folder", async () => {
     const { calls } = await run("post-merge-audit", { prs: [6501] }, reply("nobody"));
-    const folders = calls.map((c) => scratchOf(c.prompt));
-    expect(calls.map((c) => c.label)).toHaveLength(4);
+    const dial = calls.filter((c) => c.label === DIAL);
+    expect(dial.map((c) => scratchOf(c.prompt))).toEqual([undefined]);
+    const folders = calls.filter((c) => c.label !== DIAL).map((c) => scratchOf(c.prompt));
+    expect(folders).toHaveLength(4);
     expect(folders.every(Boolean)).toBe(true);
     expect(new Set(folders).size).toBe(4);
   });
@@ -191,6 +197,7 @@ describe("post-merge-audit's scratch folders", () => {
 
   it("reports a PR a failed stage dropped, by number", async () => {
     const { result } = await run("post-merge-audit", { prs: [6501] }, (_p, { label }) => {
+      if (label === DIAL) return CLEARED;
       if (label?.startsWith("triage")) return { merged: true, files: ["x.ts"], protected: false };
       throw new Error("out of budget");
     });
@@ -209,6 +216,7 @@ describe("symbol-sweep's scratch folders", () => {
   const reply =
     (dead: string): Reply =>
     (prompt, { label }) => {
+      if (label === DIAL) return CLEARED;
       if (label === READER) return readerReply(prompt);
       if (label === dead) return null;
       return label === "synthesize" ? { matrix: [] } : { symbol: "s" };
@@ -216,8 +224,8 @@ describe("symbol-sweep's scratch folders", () => {
 
   it("gives every agent its own folder, under a run named for the day and the symbols", async () => {
     const { calls } = await run("symbol-sweep", sweepArgs, reply("nobody"));
-    const folders = calls.map((c) => scratchOf(c.prompt));
-    expect(calls).toHaveLength(5);
+    const folders = calls.filter((c) => c.label !== DIAL).map((c) => scratchOf(c.prompt));
+    expect(folders).toHaveLength(5);
     expect(new Set(folders).size).toBe(5);
     for (const folder of folders)
       expect(folder).toMatch(/^runs\/symbol-sweep-2026-11-01-AAA-BBB\//);

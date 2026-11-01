@@ -61,6 +61,46 @@ const forcedDeep = new Set((args?.deep ?? []).map(Number))
 const HAS_BUDGET = typeof budget !== 'undefined' && typeof budget.spent === 'function'
 const TOKENS_AT_START = HAS_BUDGET ? budget.spent() : null
 
+// THE WORK-MODE GATE (#3960, #6470). The same read grind.js makes, and its comment says why it has to
+// be an agent: a script has no filesystem, `gh` or network. A refusal is loud and refuses the whole run,
+// never a silent cut to the list. `force: true` is the override, for a run Eric typed himself: a gate
+// that only threw would refuse his own command, so it goes on and prints what it overrode and the
+// price. A lane never sets it. The same block sits in dream, clear-path-flip, post-merge-audit and
+// symbol-sweep, because a workflow script cannot import; tests/scripts/workflow-gate.spec.ts runs each.
+const GATE_SCHEMA = {
+  type: 'object',
+  required: ['found'],
+  properties: {
+    found: { type: 'boolean', description: 'true only if you read a real verdict back from the command' },
+    dispatch: { type: 'boolean', description: 'the verdict JSON "dispatch" field, verbatim' },
+    position: { type: 'string', description: 'the verdict JSON "position" field (halt/conserve/normal/surge)' },
+    grindWidth: { type: 'number', description: 'the verdict JSON caps.grindWidth field, verbatim' },
+    until: { type: 'string', description: 'the verdict JSON "until" field, only when it is not null' },
+    reason: { type: 'string', description: 'the verdict JSON "reason" field, verbatim' },
+  },
+}
+const WIDTH = prs.length
+const PRICE = `${prs.length * 2} agents to start: per PR a triage on sonnet and a review on the session's model, or fable on the deep tier; then 2 refuters per high or medium finding. The 2026-11-01 run over 10 PRs used 26 agents and 3.9M tokens on the default agent.`
+const gate = await agent(
+  'Run exactly: node scripts/moneypenny/work-gate.mjs\n\nIt prints one JSON object on stdout and status lines on stderr. Its exit code is part of the answer, not a failure: 0 means cleared to dispatch, 3 means refused (work-mode is halt, or the spend breaker is tripped) — BOTH are a real verdict and both print the JSON. Report "found": true plus that JSON object: the "dispatch", "position" and "reason" fields and caps.grindWidth, all verbatim, plus "until" only when it is not null.\n\nIf the command exits 1, prints no parseable JSON, or the object carries no caps.grindWidth, report "found": false and nothing else — never guess a position or a width. Do nothing else: no exploration, no fixing, no editing any file.',
+  { schema: GATE_SCHEMA, agentType: 'worker', model: 'sonnet', effort: 'low', label: 'work-mode', phase: 'Triage' },
+).catch(() => null) // A read that throws is an unread dial: refused below, or forced past.
+const dialRead = gate?.found === true && typeof gate.dispatch === 'boolean' && Number.isInteger(gate.grindWidth)
+const refusal = !dialRead
+  ? 'could not read the dial through `node scripts/moneypenny/work-gate.mjs`; exit 1 there means a malformed control to fix, not route around'
+  : !gate.dispatch
+    ? gate.reason || `work-mode=${gate.position}`
+    : WIDTH > gate.grindWidth
+      ? `${WIDTH} PRs is over the ${gate.grindWidth} that work-mode=${gate.position} allows${gate.until ? ` (until ${gate.until})` : ''}: re-run with at most ${gate.grindWidth} PRs, or flip the dial`
+      : null
+if (args?.force === true) {
+  log(`force: true${refusal ? `, past this: ${refusal}` : ', though the dial allowed it'}. Price: ${PRICE}`)
+} else if (refusal) {
+  throw new Error(`post-merge-audit: refused — ${refusal}. Nothing dispatched. If Eric typed this run himself, re-run it with force: true.`)
+} else {
+  log(`work-mode=${gate.position}${gate.until ? ` (until ${gate.until})` : ''} · width ${WIDTH}/${gate.grindWidth}`)
+}
+
 // Where a wrong line costs money, state or access. Grown from where the deep pass found what the
 // standard pass missed; widen it when a later audit finds the same gap elsewhere.
 const DEEP_ROOTS = [
