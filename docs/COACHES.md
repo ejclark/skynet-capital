@@ -290,6 +290,8 @@ the #3754 platter promise showed what a prose-only status costs.
 | Security review | *(adopted)* | `/security-review` | — | ✅ bundled |
 | Simplification | *(adopted)* | `/simplify` | — | ✅ bundled |
 
+**Pillars** — the layers that compose these loops into larger systems, each with one shape: [`docs/process/PILLARS.md`](process/PILLARS.md).
+
 ## Special teams — situational units
 
 Not every play is a down-in/down-out defensive loop. Special teams are situational crews with their own playbooks, run occasionally:
