@@ -52,6 +52,16 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
         run: bash scripts/bots-start-stopped.sh skynet-capital-bots --report
 
+      - name: Check what must stay true
+        # Fitness contracts, probed from outside the apps, so a dead process cannot silence them. A
+        # failure keeps one issue assigned to the owner, which needs no mail credential; a stall
+        # alert detected correctly for two weeks and reached nobody without one (#6470).
+        continue-on-error: true # a reporter must never stop the recovery lever below
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
+        run: node scripts/fitness.mjs --report
+
       - name: Is a bot-relevant commit stranded?
         id: check
         env:
