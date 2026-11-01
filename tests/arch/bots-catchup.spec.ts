@@ -92,8 +92,24 @@ describe("bots-catchup — the App token is scoped and cannot skip the start ste
     expect(mint?.text).toContain("continue-on-error: true");
     expect(mint?.text).toContain("permission-issues: write");
     expect(mint?.text).toContain("permission-actions: write");
-    expect(mint?.text).not.toContain("permission-contents");
-    expect(mint?.text).not.toContain("permission-pull-requests");
+    // Reads for the wake's peek; never a write.
+    expect(mint?.text).toContain("permission-pull-requests: read");
+    expect(mint?.text).toContain("permission-contents: read");
+    expect(mint?.text).not.toMatch(/permission-(pull-requests|contents): write/);
+  });
+
+  it("wakes the lanes from the clock only under the App token, between the pace tick and the contracts", () => {
+    const name = "Wake the lanes if the repo has gone quiet";
+    const wake = steps.find((s) => s.name === name);
+    expect(wake?.text).toContain("node scripts/moneypenny/clock-wake.mjs");
+    expect(wake?.text).toContain("steps.app-token.outputs.token != ''");
+    expect(wake?.text).toContain("GH_TOKEN: ${{ steps.app-token.outputs.token }}");
+    expect(wake?.text).not.toContain("github.token");
+    const at = steps.findIndex((s) => s.name === name);
+    expect(at).toBeGreaterThan(
+      steps.findIndex((s) => s.name === "Where the week stands (report only)"),
+    );
+    expect(at).toBeLessThan(steps.findIndex((s) => s.name === "Check what must stay true"));
   });
 
   it("hands the token to the fitness step and the lever, with GITHUB_TOKEN as the fallback", () => {

@@ -115,7 +115,13 @@ export function peekNext(
     /** The continuation context `pickContinuation` reads; inject it, or the default reads GitHub. */
     continuation?: () => unknown;
     /** The REST reads behind the default hold (`sweepHold`), for a spec that keeps that default. */
-    holdReads?: { readAll?: (path: string) => unknown[]; read?: (path: string) => unknown };
+    holdReads?: {
+      readAll?: (path: string) => unknown[];
+      read?: (path: string) => unknown;
+      /** The clock the retry limit counts a UTC day from; `Date.now()` unless a spec pins it. */
+      now?: number;
+      log?: (line: string) => void;
+    };
     /** Why a pick has nothing to build (#5707, `readPickupHold`); inject it, or picks read GitHub. */
     readHold?: (issue: AdmissionIssue) => string | null;
   },
