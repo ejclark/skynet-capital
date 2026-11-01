@@ -19,11 +19,48 @@ flowchart TD
 
 _How the pillars stack: each uses the layers beneath it, and the head coach schedules them._
 
+## Fitness contracts — what the layers are for
+
+Eric, 2026-11-01: fitness functions define "the test that needs to pass", and when they don't, AI must
+detect, correct and maintain; "fitness tests define self healing systems." So a fitness contract is the
+top of every pillar. Run memory is how a correction retries, dreaming is how a new contract gets found,
+and a charter's objective trigger is a failing contract. `scripts/fitness.mjs` holds them.
+
+```mermaid
+flowchart LR
+  A["Must stay true"] --> B["Probe the real outcome,<br/>from outside it"]
+  B -->|"passes"| A
+  B -->|"fails"| C["Corrector, within budget"]
+  C --> B
+  C -->|"budget spent, or no corrector"| D["Reaches a person"]
+  D --> E["Remembered:<br/>lesson, or a new contract"]
+  E --> A
+```
+
+_The contract: each arrow is a place the bots outage broke._
+
+| Part | The failure that taught it |
+|---|---|
+| **An outcome, not a proxy** | a green deploy step reported "current" over a stopped fleet for days |
+| **Probed from outside** | a check inside the process dies with the process |
+| **A corrector, or it is only an alarm** | a machine needing one start stayed down for lack of anyone to start it |
+| **A budget** | catch-up redeployed every 15 minutes, 91 times, onto a machine that could not start |
+| **It reaches someone** | the market-hours stall alert detected correctly from 10-18 and reached nobody, because its mail credential was never set |
+| **Unknown is not a pass** | an erosion check read a skipped run as proof the failure had stopped |
+
+**The measure of the measures is detection lag** ([`COACHES.md`](../COACHES.md)): time from when a failure
+could be noticed to when it was. The roster in `COACHES.md` watches the code; these watch the running
+system. A gate blocks a merge and a contract keeps production true, so a contract never blocks anyone's
+PR. A contract that never fires gets retired, as harnesses decay too.
+
+**The first run, 2026-11-01:** bots running, bots responsive, main deploys and memory history passed.
+Alerts reaching the owner failed. Startup size read unknown until its budget merges.
+
 ## The shape of a pillar
 
 | Part | What it is | Why this form |
 |---|---|---|
-| **Something that measures it** | a number, gate or log | no number means no way to tell whether it helped |
+| **Something that measures it** | a fitness contract, gate or number | no number means no way to tell whether it helped |
 | **A procedure** | a skill, loaded only when needed | deep detail without a standing context cost |
 | **A conductor** | a scripted workflow | the plan lives in code, so conductors compose predictably |
 | **A worker agent** | a chartered `.claude/agents/*.md` | only where `/charter` passes it |
@@ -57,6 +94,8 @@ Rejecting is the expected outcome, and each rejection names what would reopen it
 | Context curator | Reject for now | the size gate can name a target, but the file is under budget with nothing to work | the budget trips twice in a month |
 | Self-healer | Reject, existing owner | Moneypenny's repair lane owns this ([`MONEYPENNY.md`](../MONEYPENNY.md)), though the lane has no Fly token today | a stop class recurs that scripted steps can't resolve |
 | Research intake | Reject, existing owner | a procedure, with no isolation benefit worth an agent; `render-alchemist` and the event lane cover their own domains | links arrive in batches that outgrow a session |
+
+**Fitness contracts change what would reopen these.** `/charter` refuses an autonomous agent with no objective gate to name its target, and a failing contract with no corrector is exactly that gate. The trigger for a pillar's agent is therefore written down: it fails repeatedly, and scripted correction has run out of budget.
 
 **This is a hypothesis with a falsifier.** Eric's instinct was one orchestration agent per pillar. If by
 2026-12-31 a pillar's work repeatedly stalls for want of a standing owner, or two conductors have
