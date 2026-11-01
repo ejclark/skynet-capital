@@ -182,7 +182,9 @@ a model or effort level means editing this block — never touching the agents. 
 agent; a new agent needs a row here (that itself is a useful "did you think about its tier?" gate). A
 file on the bench (`docs/agents/bench/README.md`) has no row until it comes back. `worker.md` has no
 `model:` line on purpose: a per-call model overrides an agent file's model, so the script sets the
-tier and the row is the floor for what it may set.
+tier and the row is the floor for what it may set. `/ship`'s process-file lens calls `reviewer` with
+`model: "opus"`: that read is the review class in the table above, and `reviewer`'s Fable floor is for
+its diff read.
 
 <!-- FLOOR-TABLE:START -->
 | agent | class | model floor | effort floor |
