@@ -129,6 +129,14 @@ checks all four."
   earned its own file yet (rule of three: write it inline once, promote to `instructions` on the
   second recurrence — same rule COACHES.md applies to skills vs. agents).
 
+**Which agent runs a step.** `script`, `instructions` and `prompt` steps, and the automatic
+envelope and branch checks, dispatch as the `worker` agent (`.claude/agents/worker.md`: file and
+shell tools, about 30k tokens at start against 82k for the default workflow agent). A `skill` step
+keeps the default agent because it needs the Skill tool. A stage that needs Agent, ReportFindings or
+an MCP tool sets `agentType: 'general-purpose'` on the step; `args.agentType` sets it for the whole
+run except `skill` steps. The model and effort rules below still apply, since a per-call model
+overrides the agent file.
+
 Every step after the first gets the prior step's `{status, summary}` result as `{prev}` in its
 prompt, so a chain can react to what came before (a script step's failing output feeding an
 `instructions` step that's meant to fix it, for example).
@@ -161,14 +169,15 @@ prose ("the target below") rather than trying to template inside the instruction
 
 - **`/bury` and `/backfill`** (`.claude/skills/bury/SKILL.md`, `.claude/skills/backfill/SKILL.md`)
   — the dead-code and spec-gap drills, fanned with `{kind: "skill"}`. The
-  `mortician`/`test-backfiller` agents and grind share that one copy (#1326). Each skill's body
-  carries its grind calling convention.
+  governor chore and grind share that one copy (#1326). Each skill's body carries its grind
+  calling convention.
 - [`governor.instructions.md`](governor.instructions.md) — one coach's athlete rep: WIP check, the
   gate's own `--candidate`, the open-PR file-collision check, then the drill's `SKILL.md`. The
   dispatch half of `/governor`'s cycle (steps 3–4) expressed as a chore, with **one item per coach**
   as the fence that keeps two reps off one ratchet file. The sunset review in `docs/COACHES.md`
-  (2026-10-03) is why: the four athlete agents ran once between them in 30 days while their gates
-  carried real debt, so the dispatch layer is the part that was idle, not the drills. Landing the
+  (2026-10-03) is why: the four agents that used to wrap the drills ran once between them in 30 days
+  while their gates carried real debt, so the dispatch layer was the idle part, not the drills, and
+  the agent files are gone. Landing the
   wave as one cycle PR stays the caller's job — a rep opens nothing.
 - [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one doc's dead references
   flagged by `scripts/doc-rot-scan.mjs`.

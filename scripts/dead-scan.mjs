@@ -77,7 +77,7 @@ function candidateOf({ files, perFile }) {
 }
 
 if (process.argv.includes("--candidate")) {
-  // `candidate`/`debt` stay the root scope's — the mortician and /bury read those keys.
+  // `candidate`/`debt` stay the root scope's — the governor chore and /bury read those keys.
   const app = { candidate: candidateOf(scopes.app), debt: scopes.app.debt };
   console.log(
     JSON.stringify({ candidate: candidateOf(scopes.root), debt: scopes.root.debt, app }, null, 2),

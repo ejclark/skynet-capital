@@ -29,8 +29,8 @@ seats with distinct jobs:
   **ratchet-down-only budget** in CI. Prose audits drift; evals don't.
 - **Drill (skill):** the repeatable corrective procedure, invokable as a slash command by a human or
   loaded by an agent. One safe, behavior-preserving move per PR.
-- **Athlete (agent):** a scoped background worker that runs eye → drill → small green PR, off the
-  critical path.
+- **Athlete:** whatever runs eye → drill → small green PR, off the critical path: a chore
+  (`docs/grind/governor.instructions.md`), a lane, or an agent where `/charter` passes one.
 
 Slop accumulates precisely in the dimensions no defensive loop watches. Growing this roster *is* the
 quality strategy (audit: `docs/ENGINEERING-AUDIT-2026-07.md`).
@@ -263,18 +263,18 @@ caller and row with #3769 slice 2. The rule is zpratt/lousy-agents' "Partial bea
 (its capability matrix counts a thing shipped only with release notes *and* tests), adopted after
 the #3754 platter promise showed what a prose-only status costs.
 
-| Coach | Eye (eval + budget) | Drill (skill) | Athlete (agent) | Status |
+| Coach | Eye (eval + budget) | Drill (skill) | Athlete (who runs the drill) | Status |
 |---|---|---|---|---|
 | **Agent surface** (a skill whose frontmatter name is not its directory, an agent without a description or `Use when`, a hook wired to an event Claude Code does not fire — each silent at runtime; and, as notes only, history in a rule file — `scripts/instructions/history.mjs`, the rule `docs/ENGINEERING.md` → *Instruction files*) | `scripts/agent-surface-scan.mjs` + `tests/arch/agent-surface.spec.ts` (advisory in `npm test`; `npm run agent-surface:scan`; hook events read from `docs/vendor/claude-code/hooks.md`, never memory; no vendored doc → UNKNOWN, exit 2) | fix the file; `/charter` for an agent, the skill's own `Use when` for a skill | none (recruit on recurrence #3) | ✅ live |
 | **Config/capability drift** (capabilities nothing routes to, owner claims that contradict CLAUDE.md, recurring corrections that want a template) | `scripts/config-audit.mjs` + `tests/arch/config-audit.spec.ts` (advisory in `npm test`; proposals only, writes nothing; `npm run config:audit`; the secretary digest carries its five sections — ⑤, product/UX loop freshness, is lane work and lands in Noise absorbed, `tests/arch/config-audit-loop-freshness.spec.ts`) | a human approves each proposal from the digest (`/secretary`) | none — proposals are a human's by construction | ✅ live |
-| **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts`. It is the codebase's only size cap (#1713) and counts **code lines** (`scripts/code-lines.mjs`): 300 across `src`, `app/src`, `scripts`, 500 in `tests` — Biome's `noExcessiveLinesPerFile` is off: it charged full price for `//` lines while collapsing template literals to one | `/decompose` | `decomposer` | ✅ live |
+| **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts`. It is the codebase's only size cap (#1713) and counts **code lines** (`scripts/code-lines.mjs`): 300 across `src`, `app/src`, `scripts`, 500 in `tests` — Biome's `noExcessiveLinesPerFile` is off: it charged full price for `//` lines while collapsing template literals to one | `/decompose` | `docs/grind/governor.instructions.md` reads the drill | ✅ live |
 | **Whole reads** (a dashboard request or boot path reading a growing ledger end to end — equity history, trade ledger, order audit, event bus; the class that OOM-killed production, #4612) | `scripts/whole-read-scan.mjs` + `whole-read-grandfather.json` (per file and read: a count and a reason; only shrinks — a count the code no longer reaches fails as stale) + `tests/arch/whole-read.spec.ts` — **blocking**, because it guards a crash, not debt (#4612 criterion 6). Syntactic: named read seams plus `.list(` on growing-store names; the budget run (`npm run stability:budget`) measures what text can't. Baseline 2026-11-01: 18 sites, 7 of them fallbacks for an unwired fold; #4619's bar is ≤ 3 | a bounded read (`latest`, a paged query) or a fold over appended lines (`since`), then lower the count | none (recruit on recurrence #3) | ✅ live |
-| **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` — two scopes, two budgets: root `src/**/*.ts` (`duplicateDefs`) and the React shell `app/src/**/*.{ts,tsx}` (`appDuplicateDefs`, counted within the app; baseline 92 on 2026-10-14) | `/dedupe` | `ui-librarian` | ✅ live |
-| **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` (root `src`, `clones`) + `.jscpd.app.json` (`app/src` .ts/.tsx/.css, `appClones`; baseline 70 on 2026-10-14 — 36 of them CSS) + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
+| **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` — two scopes, two budgets: root `src/**/*.ts` (`duplicateDefs`) and the React shell `app/src/**/*.{ts,tsx}` (`appDuplicateDefs`, counted within the app; baseline 92 on 2026-10-14) | `/dedupe` | `docs/grind/governor.instructions.md` reads the drill | ✅ live |
+| **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` (root `src`, `clones`) + `.jscpd.app.json` (`app/src` .ts/.tsx/.css, `appClones`; baseline 70 on 2026-10-14 — 36 of them CSS) + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | the governor chore could extend later | ✅ live |
 | **CSS literals** (type, spacing, radius and letter-spacing written as raw px/rem/em in `app/src/styles` instead of the `theme.css` ladders; `var()` fallbacks that name no token or disagree with it — the token layer covers ~99% of colour and almost nothing else) | `scripts/css-literal-scan.mjs` + `css-literal-budget.json` + `tests/arch/css-literal.spec.ts` (advisory budget check; the fixture specs are blocking; `npm run css-literal:scan`, `--json`, `--candidate` names the file with the most literals that already equal a token). Baseline 2026-10-14: raw font-size 637 (318 equal a `--text-*`), spacing 1,570 (676 equal a `--space-*`), radius 260 and letter-spacing 128 (no token yet, so no equals count), 3 dangling `var()`, 2 mismatched fallbacks | swap the literal for its ladder token (the equals count first: no taste call), fix the fallback, then `--update`; a family's first token seeds its equals key with `--update` | none yet (recruit on recurrence #3) | ✅ live |
-| **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` — `knip.json` has two workspaces: `.` (`deadCode`) and `app` (`appDeadCode`; entries are the file routes and app specs, `main.tsx` comes from knip's rsbuild plugin; baseline 92 on 2026-10-14) | `/bury` (judge: un-export / delete / justify-ignore) | `mortician` (recruited on recurrence #3, per the rule of three; preloads `/bury`) | ✅ live |
+| **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` — `knip.json` has two workspaces: `.` (`deadCode`) and `app` (`appDeadCode`; entries are the file routes and app specs, `main.tsx` comes from knip's rsbuild plugin; baseline 92 on 2026-10-14) | `/bury` (judge: un-export / delete / justify-ignore) | `docs/grind/governor.instructions.md` reads the drill | ✅ live |
 | **Dep-graph** (cycles/orphans/layering) | `scripts/dep-graph-scan.mjs` (dependency-cruiser, adopted) + `.dependency-cruiser.cjs` + `dep-graph-budget.json` + `tests/arch/dep-graph.spec.ts` | judge: break cycle / wire-or-delete orphan / restore layer direction (`/decompose` when a cycle wants a split) | none yet (recruit on recurrence #3) | ✅ live |
-| **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | `/backfill` (BDD specs per ENGINEERING.md) | `test-backfiller` (preloads `/backfill`) | ✅ live |
+| **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | `/backfill` (BDD specs per ENGINEERING.md) | `docs/grind/governor.instructions.md` reads the drill | ✅ live |
 | **Unlearned incidents** (detection lag) | `scripts/incident-scan.mjs` + `incident-budget.json` + `tests/arch/lessons.spec.ts` (offline half: ledger integrity; remote half: failed `main` runs with no lesson) | `/retro` | **Moneypenny (repair)** — `.github/workflows/moneypenny-repair.yml` + `scripts/moneypenny/repair.mjs` (event-driven, not dispatched by the governor; formerly "CI Medic") | ✅ live |
 | **CI install duration** (verify job's dependency-install wall-clock) | `scripts/ci-install-duration-scan.mjs` + `ci-install-duration-budget.json` + `tests/arch/ci-install-duration.spec.ts` (median over recent successful runs, no-op offline) | check for a missing `Cache restored` line, fix the cache scope/key, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Forward-test id collisions** (two `docs/research/forward-tests/*.md` rows sharing one `FT-...` id — the event-research lane's concurrent-sessions race) | `scripts/forward-test-id-scan.mjs` + `forward-test-id-budget.json` + `tests/arch/forward-test-id.spec.ts` (pure text-file check, no token/network, always runnable); its `--contract` mode is the BLOCKING placement gate (`tests/arch/forward-tests-fragments.spec.ts`: one fragment per event, no rows in the index — #1449) | renumber the colliding row, then ratchet; new registrations use `.github/prompts/event-research.md`'s event-namespaced `FT-<event-id>-<n>` scheme so this never fires on a fresh id again | none yet (recruit on recurrence #3) | ✅ live |
@@ -297,6 +297,7 @@ the #3754 platter promise showed what a prose-only status costs.
 
 Not every play is a down-in/down-out defensive loop. Special teams are situational crews with their own playbooks, run occasionally:
 
+- **evals-expert** — writes a check, or grades one blind, on request: `.claude/agents/evals-expert.md`.
 - **dep-warden** — reviews dependency-update PRs: reads changelogs, runs the suite, merges patch/minor on green, escalates majors. Built: `.claude/agents/dep-warden.md`.
 - **Layout-resize audit** — a phone rotation (load, scroll, resize with no reload) on every
   rail-bearing `/app/*` route, checking whether anything inside `.rail` leaks past its own box or
@@ -474,13 +475,10 @@ to price the candidates: the digest clock that already exists, a standing issue 
 queue, a scheduled workflow, or a native GitHub feature. Exactly ToC's own corollary — elevate one
 constraint and the next binds.
 
-**Still pending, and deliberately not done here.** The `merge` verdicts above are *recorded, not yet
-executed*: deleting the four agent files and adding sunset mode to `/charter` are both writes under
-`.claude/`, a Claude Code protected directory an unattended lane cannot write to at all (probed
-2026-10-03, refused; `docs/grind/README.md` → *Known limitations* says to route it to an interactive
-session). Until [#4526](https://github.com/ejclark/skynet-capital/issues/4526) lands, the four agent
-files still exist and still work — the roster table above is accurate as written, and `/governor`
-remains invokable exactly as before. Nothing is removed by a doc.
+**Executed 2026-11-01.** The `merge` verdicts above waited for a hands-on session, because `.claude/`
+is a Claude Code protected directory an unattended lane cannot write to (`docs/grind/README.md` →
+*Known limitations*). The four files are gone and `/charter` has its sunset mode; see *Roster pass,
+2026-11-01* below.
 
 ### The board half, 2026-10-05 (#3939 slice 4)
 
@@ -511,3 +509,49 @@ and read the off-the-shelf thing from here?** A native feature that only a human
 is not a smaller system than a pure function with a spec — it is the same system with its
 configuration moved somewhere nothing can assert on it. Count that cost before counting the lines
 saved.
+
+## Roster pass, 2026-11-01
+
+Which agents should exist, counted the way `/charter` → *Sunset mode* now says to: 1,048 retained
+transcripts (2026-08-21 to 2026-11-01) plus each agent's CI and branch trail. The call is a roster of
+what something actually dispatches. Nine files left the listing without losing a capability, and two
+came in. The listing every context with the Agent tool loads fell from 7,022 description characters
+to 3,536.
+
+| Agent | What it does | Who dispatches it | Runs | Call |
+|---|---|---|---|---|
+| `worker` | one workflow stage that needs only files and shell | `.claude/workflows/grind.js` for every step but `skill`; any `agent()` call that names it | new | **add** |
+| `evals-expert` | writes a check, or grades one blind | a person or session on request; `/fitness` steps 7 and 10 and `/retro` point at it; nothing automatic | new | **add, on demand** |
+| `reviewer` | reads a diff against this repo's standards; on request, a process file the way the next session will | sessions, and `/ship` asks for the process-file lens | 3 | **keep, extend** |
+| `red-team` | attacks a bounded diff for security | sessions; the feedback and plan lanes cite its hypothesis rule | 1 | **keep** |
+| `dep-warden` | reviews dependency-update PRs | `moneypenny-events.yml`, on every dependabot PR | 27 PRs since 10-01, in CI | **keep** |
+| `linguist` | checks whether text lands for its reader | `orient.md` and `reviewer`'s boundary name it; nothing runs it | 0 | **keep, shorter; `/charter` pass 2026-12-31** |
+| `decomposer` | wrapped `/decompose` | `docs/grind/governor.instructions.md` reads the drill | 0 | **retired** (#4526) |
+| `ui-librarian` | wrapped `/dedupe` | the same chore | 0 | **retired** (#4526) |
+| `mortician` | wrapped `/bury` | the same chore | 0 | **retired** (#4526) |
+| `test-backfiller` | wrapped `/backfill` | the same chore | 0 | **retired** (#4526) |
+| `artifact-smith` | built a standalone page | sessions build pages with the `artifact-design` skill; its rules moved to `docs/BRAND.md` | 0 | **retired** |
+| `art-director` | decomposed a scene ask into a build sheet | a scene ask, once one arrives | 0 | **benched** |
+| `piece-wright` | built one 3D piece | the same | 0 | **benched** |
+| `set-dresser` | added one detail layer to a 3D piece | the same | 0 | **benched** |
+| `render-alchemist` | researched a render technique | the same | 0 | **benched** |
+
+Benched files sit in [`docs/agents/bench/`](agents/bench/README.md), and one `git mv` restores them.
+
+**Candidates that stay rejected:** one conductor agent per pillar, a skeptic kept apart from the
+generator, a separate context reviewer, a healer and a research-intake agent. Conductors are scripts,
+and the missing piece is a scheduler rather than an agent (#4527). The reasons and reopen conditions
+are in [`docs/process/PILLARS.md`](process/PILLARS.md).
+
+**The evals expert differs from the panel's call on purpose.** The panel said to reject it for now.
+Eric asked for "an agentic expert for crafting evals" in those words. The panel's objections (no gate
+names its target, nothing schedules it) hold against a standing autonomous agent, and this one is
+neither: `scripts/fitness-audit.mjs --candidate` now exists, a changed contract or gate file comes up
+about four times a week, and the value is isolation, since a bug list written without reading the spec
+is what the study found honest (39 of 40 on the author's list, 7 of 28 on fresh bugs). The check attack
+moved here from `red-team`, because mixing attack classes dilutes both.
+
+**What proves this wrong:** a governor rep fails at its drill step for something a retired file carried;
+a scene ask costs more than one `git mv` to staff; the first 20 `worker` stages have a median first
+call over 40k tokens, or more than 1 in 20 stop for a missing tool. Any one and that part reverts. The
+rows in [`LEARNING-LOOP.md`](process/LEARNING-LOOP.md) carry the dates.
