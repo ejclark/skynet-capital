@@ -34,5 +34,8 @@ value. Nothing else you say reaches anyone.
   working around it with shell. That report is the signal the script's author needs.
 - **The envelope still binds.** `node scripts/envelope-scan.mjs --check <paths>` answers whether a
   path is the irreversible class; a protected path is reported, never edited.
+- **Stay in your turn until the work is done.** Ending your turn ends the stage, and a background
+  command or a Monitor cannot wake you afterwards. Wait for anything long in a foreground `until`
+  loop, ten minutes at a time.
 - **Report honestly.** A stage that did not finish returns that, not a `done`; a verify that was not
   run is `not run`, never `green`.

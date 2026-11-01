@@ -84,6 +84,8 @@ function startLocked(dir: string, env: NodeJS.ProcessEnv, script: string) {
   );
 }
 
+const SLOW_BOX_MS = 60_000;
+
 /** Holds the lock until killed, and returns only once it is inside: a fixed sleep flakes under load. */
 async function holdLock(dir: string, env: NodeJS.ProcessEnv) {
   const inside = `${dir}.holding`;
@@ -92,7 +94,13 @@ async function holdLock(dir: string, env: NodeJS.ProcessEnv) {
     ["scripts/verify-locked.sh", "--", "sh", "-c", `: > "${inside}"; sleep 60`],
     { cwd: dir, env, detached: true, stdio: "ignore" },
   );
-  while (!existsSync(inside)) await new Promise((r) => setTimeout(r, 25));
+  const deadline = performance.now() + SLOW_BOX_MS / 2;
+  while (!existsSync(inside)) {
+    if (performance.now() > deadline || child.exitCode !== null) {
+      throw new Error(`the holder never got inside the lock (exit ${child.exitCode})`);
+    }
+    await new Promise((r) => setTimeout(r, 25));
+  }
   return {
     killShellOnly: () => child.kill("SIGKILL"),
     killAll: () => {
@@ -105,14 +113,24 @@ async function holdLock(dir: string, env: NodeJS.ProcessEnv) {
   };
 }
 
-const SLOW_BOX_MS = 60_000;
-
 describe("verify-locked — a machine with no way to lock", () => {
   it("runs the verify unlocked and says so, instead of failing", () => {
     const { run } = repo();
     const r = run(["--", "true"], { PATH: pathWith() });
     expect(r.status).toBe(0);
     expect(r.stderr).toContain("no flock or perl on this machine");
+  });
+});
+
+describe("verify-locked — a lock tool that is there but broken", () => {
+  it("still runs the verify and says it ran unlocked, rather than reading as a long wait", () => {
+    const { run } = repo();
+    const bin = pathWith();
+    writeFileSync(join(bin, "perl"), "#!/bin/sh\nexit 2\n", { mode: 0o755 });
+    const r = run(["--", "true"], { PATH: bin });
+    expect(r.status).toBe(0);
+    expect(r.stderr).toContain("could not take the lock (exit 2)");
+    expect(r.stderr).not.toContain("gave up");
   });
 });
 
@@ -170,6 +188,18 @@ for (const { tool, on, path } of LOCK_TOOLS) {
         holder.killAll();
         expect(r.status).toBe(75);
         expect(r.stderr).toContain("gave up after 1s");
+      },
+      SLOW_BOX_MS,
+    );
+
+    it(
+      "takes a wait of zero as try once, not as no limit",
+      async () => {
+        const { dir, env, run } = repo();
+        const holder = await holdLock(dir, { ...env, ...path() });
+        const r = run(["--", "true"], { ...path(), VERIFY_LOCK_WAIT: "0" });
+        holder.killAll();
+        expect(r.status).toBe(75);
       },
       SLOW_BOX_MS,
     );
