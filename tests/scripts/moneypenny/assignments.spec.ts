@@ -5,9 +5,13 @@ import {
   assignmentComment,
   decisionLine,
   executeAssignments,
+  gather,
+  markedByComments,
   plan,
   report,
   routeAssignments,
+  UNASSIGN_MARKER,
+  unassignmentComment,
 } from "../../../scripts/moneypenny/assignments.mjs";
 import { routeSweep } from "../../../scripts/moneypenny/events.mjs";
 
@@ -296,20 +300,21 @@ describe("executeAssignments: the two writes", () => {
       { kind: "unassign-eric", number: 7, criterion: 2, why: "w" },
       { run, retry },
     );
-    expect(wrapped).toBe(3);
+    expect(wrapped).toBe(4);
   });
 
-  it("removes an assignment with one DELETE and no comment", () => {
+  it("removes an assignment with a DELETE, then leaves its own unassign marker", () => {
     const { calls, run } = spy();
     const line = executeAssignments(
       { kind: "unassign-eric", number: 7, criterion: 2, why: "issue closed" },
       { run },
     );
-    expect(calls).toHaveLength(1);
-    expect((calls[0] ?? []).slice(2, 4)).toEqual([
-      "DELETE",
-      "repos/{owner}/{repo}/issues/7/assignees",
+    expect(calls.map((a) => [a[2], a[3]])).toEqual([
+      ["DELETE", "repos/{owner}/{repo}/issues/7/assignees"],
+      ["POST", "repos/{owner}/{repo}/issues/7/comments"],
     ]);
+    expect(calls[1]?.at(-1)).toContain(UNASSIGN_MARKER);
+    expect(calls[1]?.at(-1)).toContain("issue closed");
     expect(line).toContain("issue closed");
   });
 
@@ -321,6 +326,100 @@ describe("executeAssignments: the two writes", () => {
     );
     expect(calls.every((a) => a[0] === "api")).toBe(true);
     expect(calls.every((a) => !a.includes("issue"))).toBe(true);
+  });
+});
+
+// #5955 (study 2026-11-01, "escalation keeps asking"): the lane unassigned Eric when `needs-eric`
+// came off at 10-25T02:20, the label came back at 10-26T11:40, and for six days the capsule carried
+// the marker, had nobody assigned and was absent from every digest — the code read the marker as
+// "he unassigned himself". The marker is still the memory; the lane's own unassign now writes a
+// second marker, and "marked" means the newest of the two is an ask.
+describe("markedByComments: asked, and not since cleared by this lane", () => {
+  const bot = (body: string) => ({ body, user: { type: "Bot" }, author_association: "NONE" });
+  const eric = (body: string) => ({ body, user: { type: "User" }, author_association: "OWNER" });
+  const stranger = (body: string) => ({
+    body,
+    user: { type: "User" },
+    author_association: "NONE",
+  });
+
+  it("is marked after an ask, and unmarked once this lane's unassign follows it", () => {
+    expect(markedByComments([bot(`ask\n${ASSIGN_MARKER}`)])).toBe(true);
+    expect(markedByComments([bot(`ask\n${ASSIGN_MARKER}`), bot(`off\n${UNASSIGN_MARKER}`)])).toBe(
+      false,
+    );
+  });
+
+  it("is marked again once a later ask follows the unassign", () => {
+    const thread = [
+      bot(`ask\n${ASSIGN_MARKER}`),
+      bot(`off\n${UNASSIGN_MARKER}`),
+      eric(`ask again\n${ASSIGN_MARKER}`),
+    ];
+    expect(markedByComments(thread)).toBe(true);
+  });
+
+  it("is unmarked with no comments, and ignores a stranger's marker on this public repo", () => {
+    expect(markedByComments([])).toBe(false);
+    expect(markedByComments([stranger(`x\n${ASSIGN_MARKER}`)])).toBe(false);
+    expect(
+      markedByComments([bot(`ask\n${ASSIGN_MARKER}`), stranger(`x\n${UNASSIGN_MARKER}`)]),
+    ).toBe(true);
+  });
+
+  // The wiring, not just the rule: `gather()` is what both the sweep and the digest plan from.
+  it("gather: a returning label on a capsule this lane unassigned asks again and reaches the digest", () => {
+    const thread = [bot(`ask\n${ASSIGN_MARKER}`), bot(`off\n${UNASSIGN_MARKER}`)];
+    const returned = issue({ number: 5955, title: "[ci] Pipeline — release · deploy bots" });
+    const rest = (path: string) => {
+      if (path.startsWith("issues?state=open&labels=needs-eric")) return [returned];
+      if (path.startsWith("issues?state=all&assignee=")) return [];
+      if (path === "pulls?state=open") return [];
+      if (path === "issues/5955/comments") return thread;
+      throw new Error(`unexpected read ${path}`);
+    };
+    const deps = gather({ rest });
+    expect(deps.markers.has(5955)).toBe(false);
+    const { actions, needsYou } = plan({ ...deps, now: NOW });
+    expect(actions).toEqual([expect.objectContaining({ kind: "assign", number: 5955 })]);
+    expect(needsYou.map((n) => n.number)).toEqual([5955]);
+
+    // And the opposite half still holds: an ask he answered by unassigning himself stays quiet.
+    const his = gather({
+      rest: (p: string) => (p === "issues/5955/comments" ? [thread[0]] : rest(p)),
+    });
+    expect(his.markers.has(5955)).toBe(true);
+    expect(plan({ ...his, now: NOW }).actions).toEqual([]);
+  });
+
+  it("gather: the same rule for a held PR — closed and unassigned, then reopened, it is asked again", () => {
+    const held = {
+      number: 10,
+      title: "platter",
+      state: "open",
+      draft: false,
+      created_at: new Date(NOW - 13 * 36e5).toISOString(),
+      labels: [{ name: "hold-merge" }],
+      assignees: [],
+      head: { ref: "platter/2026-11" },
+    };
+    const rest = (path: string) => {
+      if (path.startsWith("issues?state=")) return [];
+      if (path === "pulls?state=open") return [held];
+      if (path === "issues/10/comments")
+        return [bot(`ask\n${ASSIGN_MARKER}`), bot(`off\n${UNASSIGN_MARKER}`)];
+      throw new Error(`unexpected read ${path}`);
+    };
+    const deps = gather({ rest, now: NOW });
+    expect(deps.markers.has(10)).toBe(false);
+    expect(plan({ ...deps, now: NOW }).actions).toEqual([
+      expect.objectContaining({ kind: "assign", criterion: 4, number: 10 }),
+    ]);
+  });
+
+  it("says a closed issue is asked again on reopen, not on relabel", () => {
+    expect(unassignmentComment({ why: "issue closed" })).toContain("reopened");
+    expect(unassignmentComment({ why: "needs-eric removed" })).not.toContain("reopened");
   });
 });
 
