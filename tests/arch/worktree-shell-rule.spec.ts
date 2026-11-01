@@ -15,7 +15,7 @@ describe("the worktree shell rule reaches every agent", () => {
   it.each([
     ["a loop or subshell around git", "a loop or `$(…)` around git"],
     ["bash chained to an exit status", "`bash file; echo $?`"],
-    ["bash given shell text", "`bash -c '…'`"],
+    ["bash given text that names git", "`bash -c` whose text names git"],
     ["a variable handed to sed or node", "a variable as an argument to sed or node"],
     ["find with a grouped expression", "`find` with `( … )`"],
   ])("names %s as refused", (_name, shape) => {

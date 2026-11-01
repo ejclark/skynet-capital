@@ -531,8 +531,8 @@ is expected and fine; the docs are the memory.
   `pipeline.yml` arm their squash auto-merge is the expected loop.
 - **An agent isolated in a worktree: Claude Code's worktree check reads every Bash command** and
   refuses what it cannot show stays inside: git aimed at another checkout (the real protection, never
-  worked around), a loop or `$(…)` around git, `bash file; echo $?`, `bash -c '…'`, a variable as an
-  argument to sed or node, `find` with `( … )`. On 2026-11-01 those cost 148 agents 129 failed calls.
+  worked around), a loop or `$(…)` around git, `bash file; echo $?`, `bash -c` whose text names git,
+  a variable as an argument to sed or node, `find` with `( … )`. On 2026-11-01 those cost 148 agents 129 failed calls.
   Spell paths out, even long ones. The tool already reports a non-zero exit, so `echo $?` adds
   nothing. Anything longer goes in a script file in your scratchpad, run as `bash <file>`, aimed at
   your own worktree. Rail 2 of [`docs/DELEGATION.md`](docs/DELEGATION.md) has the rest.
