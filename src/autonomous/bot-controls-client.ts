@@ -87,6 +87,15 @@ function relay<T>(
   }
 }
 
+/** The kind a refused subscriptions snapshot claimed, for its warning: since #5482's contract
+ *  step closed the bots read `subscriptions.v4` only, so an app rolled back past #6000 (or one
+ *  ahead of its bots) is named in the log instead of leaving the roster frozen without a word. */
+function subscriptionsKind(body: unknown): string {
+  const raw = isRecord(body) ? body.subscriptions : undefined;
+  const kind = isRecord(raw) ? raw.kind : undefined;
+  return typeof kind === "string" ? kind.slice(0, 40) : "no kind";
+}
+
 const DISABLED_CLIENT: BotControlsClient = {
   fetchOnce: async () => null,
   start: () => undefined,
@@ -115,7 +124,7 @@ export function resolveBotControls(
    *  for the same reason the cursor above is: it is not part of the persisted `ControlsState`
    *  shape. An app build that predates the field, or a payload that fails
    *  `parseSubscriptionsSnapshot`, simply never fires this — which leaves the fleet on the last
-   *  roster it received, never on a partial one. */
+   *  roster it received, never on a partial one. A payload that is there but fails is warned. */
   onSubscriptions?: (snapshot: SubscriptionsSnapshot) => void,
   /** Fires after every AUTHENTICATED poll whose body carried a well-formed set of shadow tests
    *  (`authored-shadow-wire.ts`, #5457 slice 2) — the whole set every time, so a play taken out of
@@ -192,7 +201,11 @@ export function resolveBotControls(
           ),
         );
         relay(body, "authoredPlays", parseAuthoredPlaysWire, onAuthoredPlays);
-        relay(body, "subscriptions", parseSubscriptionsSnapshot, onSubscriptions);
+        relay(body, "subscriptions", parseSubscriptionsSnapshot, onSubscriptions, () =>
+          process.emitWarning(
+            `[playbooks] the dashboard's subscriptions (${subscriptionsKind(body)}) did not read whole — the bots keep the roster in force`,
+          ),
+        );
         relay(body, "authoredShadow", parseShadowOrders, onAuthoredShadow);
         return parsed;
       } finally {

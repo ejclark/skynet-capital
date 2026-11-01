@@ -356,8 +356,8 @@ export interface PlaybookSubscription {
    * that steers several pairs, checked on one date (`conviction-store.ts` `statedCheck`). It is a
    * subscription's whole conviction: an owner's own reason and day live as their view on the pair
    * (`subscriptions/pair-conviction.ts`), and a pointer the bots cannot use runs the pair exits-only
-   * (`steeredBy`). Behavioral only on a `subscriptions.v3` snapshot or later, the first whose
-   * version names it.
+   * (`steeredBy`). Behavioral since `subscriptions.v3`, the first kind whose version names it; the
+   * bots read `subscriptions.v4` only since the contract step closed.
    *
    * There is no inline conviction beside it any more (#5482, the contract step's last piece): the
    * `{reason, checkOn}` a subscription once carried (#4469 slice 3c) moved onto views, the live

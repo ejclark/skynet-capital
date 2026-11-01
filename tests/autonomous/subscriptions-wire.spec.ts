@@ -226,8 +226,8 @@ describe("the kinds before v4 are read as not reported", () => {
     s.mode,
     s.capitalAllocated,
     s.enabled,
-    null,
-    false,
+    s.symbols ? [...s.symbols].sort() : null,
+    s.compoundAllocation === true,
   ];
   const legacy: Record<string, (s: PlaybookSubscription) => unknown[]> = {
     "subscriptions.v1": v1,
