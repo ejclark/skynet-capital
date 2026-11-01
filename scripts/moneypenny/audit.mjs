@@ -8,7 +8,7 @@ import { ghRestAll, sh } from "./gh.mjs";
 import { FOOTER, LABELS, PARKING_LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
 import { rearmIntents, strandedOrNone } from "./stranded-pr.mjs";
-import { loadWorkModeConfig, resolveWorkMode } from "./work-mode.mjs";
+import { loadWorkModeConfig, readWorkMode } from "./work-mode.mjs";
 import { workModeRetitle } from "./work-mode-title.mjs";
 
 /**
@@ -590,7 +590,7 @@ export function gatherAuditDeps(nowMs) {
     staleStallFlags: [...staleStallFlags(issues), ...plans.staleFlags],
     alreadyFlagged,
     alreadyFlaggedPRs,
-    workMode: workModeState(nowMs, json),
+    workMode: workModeState(nowMs),
     driftChore: driftChoreFromRepo(issues),
     stranded: strandedOrNone(nowMs),
   };
@@ -599,8 +599,7 @@ export function gatherAuditDeps(nowMs) {
 /**
  * The dial as the audit needs to see it (#3960 slice 4): the tracking issue's CURRENT title beside
  * the position the lanes resolve, so `workModeRetitle` can tell a stale dashboard from a fresh one.
- * One `gh issue view` — title, labels and comments in a single call — and the same pure resolver
- * every lane uses, so this can never disagree with them about what the position is.
+ * The same reader every lane uses, so this can never disagree with them about what the position is.
  *
  * SOFT ON FAILURE, unlike `dueEventIds`' loud throw above, and deliberately so: this is the only
  * thing in this file that is a DISPLAY rather than a pair of eyes. Every lane that acts on the dial
@@ -608,27 +607,15 @@ export function gatherAuditDeps(nowMs) {
  * cost one stale title — not the stall, silent-feedback, plan-stall and conflict checks that ride
  * the same run. The warning says so out loud rather than failing silently.
  */
-function workModeState(nowMs, json) {
+function workModeState(nowMs) {
   try {
     const config = loadWorkModeConfig();
-    const view = json(`gh issue view (work-mode, #${config.trackingIssue})`, [
-      "issue",
-      "view",
-      String(config.trackingIssue),
-      "--json",
-      "title,labels,comments",
-    ]);
-    const mode = resolveWorkMode({
-      labels: view.labels,
-      comments: view.comments,
-      now: nowMs,
-      config,
-    });
+    const { title, ...mode } = readWorkMode(undefined, config, nowMs);
     // A dial read fine but misconfigured — two labels, a forgotten `until` — still warns, and the
     // title sync corrects the DISPLAY without fixing the cause. Print it here so the push run that
     // retitles also says why it had to.
     if (mode.warning) console.log(`::warning::${mode.warning}`);
-    return { trackingIssue: config.trackingIssue, title: view.title ?? null, mode };
+    return { trackingIssue: config.trackingIssue, title: title ?? null, mode };
   } catch (err) {
     console.log(`::warning::work-mode title sync skipped — ${String(err.message).slice(0, 200)}`);
     return null;

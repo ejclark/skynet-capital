@@ -17,7 +17,7 @@
 // REST only (the core bucket — gh.mjs `ghRest` says why), and one comment per capsule per condition,
 // deduped by a hidden marker in the comment itself. Pure core (`capsuleIntents` and its helpers) +
 // a thin gather/act shell, so every branch is fixture-drivable.
-import { ghRest, ghRestAll, sh } from "./gh.mjs";
+import { ghRest, ghRestAll, sh, trustedComment } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS } from "./labels.mjs";
 import { LOST_RUNNER, normalizeJobName } from "./repair.mjs";
 
@@ -214,11 +214,6 @@ export function capsuleIntents({ capsules = [], orphanAfterHours = ORPHAN_AFTER_
 
 // ── the impure half ───────────────────────────────────────────────────────────
 
-/** Comments the markers may be read from: this repo's people and bots. The repo is public, and a
- *  stranger's comment carrying a marker must not switch a check off (#2224). */
-const TRUSTED = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
-const trusted = (c) => TRUSTED.has(c?.author_association) || c?.user?.type === "Bot";
-
 /** A run counts toward "the last pushes" only if it actually tested something. */
 const DECIDED = new Set(["success", "failure"]);
 
@@ -253,7 +248,7 @@ export function gatherCapsules(nowMs, { rest = ghRest, restAll = ghRestAll } = {
   for (const i of open.filter((x) => !x.pull_request)) {
     const need = lookupsFor(i, nowMs);
     if (!(need.orphan || need.eroded)) continue;
-    const read = restAll(`issues/${i.number}/comments`).filter(trusted);
+    const read = restAll(`issues/${i.number}/comments`).filter(trustedComment);
     const comments = read.map((c) => c.body ?? "");
     const lastRecurrence = read.filter((c) => recurrence(c.body)).at(-1)?.created_at;
     const c = {
