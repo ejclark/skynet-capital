@@ -96,6 +96,25 @@ describe("gatherRedLanePrs — which PR has nobody left to own it", () => {
     });
   });
 
+  // The arm job waits on it, so a lane PR red on it alone never merges, and nothing else re-runs it.
+  it("names a lane PR whose only red check is the stability budget", () => {
+    const checks = [
+      run("verify", "success"),
+      run("integration tests", "success"),
+      run("stability budget", "failure"),
+    ];
+    expect(gather(listed(), { checks })[0]).toMatchObject({
+      number: 6440,
+      failed: "stability budget",
+      failedUrl: "https://github.com/x/actions/runs/1/job/stability budget",
+    });
+  });
+
+  it("leaves a cancelled stability budget alone, which says nothing about the code", () => {
+    const checks = [run("verify", "success"), run("stability budget", "cancelled")];
+    expect(gather(listed(), { checks })).toEqual([]);
+  });
+
   it("feedback lane branches count too", () => {
     const pr = listed({ head: { ref: "feedback/5482", sha: SHA } });
     expect(gather(pr)).toHaveLength(1);

@@ -65,9 +65,10 @@ export function deployLag(state = {}) {
     // the fix is the credential. A mixed or human-merged set means something else is wrong, and
     // saying "unknown" is more useful than guessing the familiar answer.
     cause: stranded.length > 0 && silent.length === stranded.length ? "silent-merge" : "unknown",
-    // When the lag began: the oldest stranded commit's landing. A reader with a grace window
-    // (scripts/fitness.mjs) judges this age, not the bare fact of a lag, because every push lags
-    // for the minutes its own deploy takes.
+    // When the lag began: the oldest stranded commit's landing, which readState gives only to the
+    // commits on main's own line (landingLine). A reader with a grace window (scripts/fitness.mjs)
+    // judges this age, not the bare fact of a lag, because every push lags for the minutes its own
+    // deploy takes.
     since: oldest(stranded.map((c) => c.committedAt)),
   };
 }
@@ -131,6 +132,22 @@ export function botsDeployLag(state = {}) {
     reason: verdict.reason,
     ...(verdict.deploy ? { since: botsSince } : {}),
   };
+}
+
+/**
+ * Pure. The commits on main's own line, oldest first, walked from `head` by first parents: the ones
+ * that landed something. A merge commit brings its branch's commits with it, each still carrying the
+ * committer date from when it was made (a platter's items, from when each was boarded), so only the
+ * merge commit's own date says when they reached main. A squash range is every commit. A range this
+ * cannot walk (compare's commits with no parents, or the head past compare's page) reads as every
+ * commit, which is what this read before.
+ */
+export function landingLine(commits = [], head) {
+  if (!commits.every((c) => Array.isArray(c.parents))) return commits;
+  const bySha = new Map(commits.map((c) => [c.sha, c]));
+  const line = [];
+  for (let c = bySha.get(head); c; c = bySha.get(c.parents[0]?.sha)) line.unshift(c);
+  return line.length ? line : commits;
 }
 
 /**
@@ -278,10 +295,11 @@ const landedAt = (c) => c.commit?.committer?.date;
  * was, so this halves over prefix compares (about log2(n) reads, never one per commit), and only
  * runs once the aggregate already says the bots are behind: a healthy tick reads nothing extra.
  */
-function botsLagSince(botsReleased, commits) {
-  if (!commits.length) return undefined;
-  const relevantUpTo = (i) => classify(filesOf(compare(botsReleased, commits[i].sha))).deploy;
-  return landedAt(commits[oldestRelevantIndex(commits.length, relevantUpTo)]);
+function botsLagSince(botsReleased, commits, head) {
+  const line = landingLine(commits, head);
+  if (!line.length) return undefined;
+  const relevantUpTo = (i) => classify(filesOf(compare(botsReleased, line[i].sha))).deploy;
+  return landedAt(line[oldestRelevantIndex(line.length, relevantUpTo)]);
 }
 
 function readState() {
@@ -299,7 +317,9 @@ function readState() {
     if (botsReleased && botsReleased !== head) {
       const cmp = compare(botsReleased, head);
       botsChanged = filesOf(cmp);
-      if (classify(botsChanged).deploy) botsSince = botsLagSince(botsReleased, cmp.commits ?? []);
+      if (classify(botsChanged).deploy) {
+        botsSince = botsLagSince(botsReleased, cmp.commits ?? [], head);
+      }
     } else botsChanged = [];
   } catch (err) {
     // Optional input: fail SOFT on the scan. The dashboard baseline falls back to the pre-split
@@ -320,15 +340,19 @@ function readState() {
         ]),
       ).workflow_runs?.[0]?.head_sha ?? "";
   }
-  const stranded =
-    head === released
-      ? []
-      : compare(released, head).commits.map((c) => ({
-          sha: c.sha,
-          subject: String(c.commit?.message ?? "").split("\n")[0],
-          mergedBy: c.author?.login ?? c.committer?.login ?? "",
-          committedAt: landedAt(c),
-        }));
+  let stranded = [];
+  if (head !== released) {
+    const { commits } = compare(released, head);
+    const onTheLine = new Set(landingLine(commits, head).map((c) => c.sha));
+    stranded = commits.map((c) => ({
+      sha: c.sha,
+      subject: String(c.commit?.message ?? "").split("\n")[0],
+      mergedBy: c.author?.login ?? c.committer?.login ?? "",
+      // Only a commit on main's own line has a date that says when it landed; a merged branch's
+      // commits land with the merge, so they carry none (deployLag's `since` skips an undated one).
+      committedAt: onTheLine.has(c.sha) ? landedAt(c) : undefined,
+    }));
+  }
   return {
     head,
     released,

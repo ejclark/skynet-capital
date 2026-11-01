@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 // @ts-expect-error plain .mjs script, no declarations
-import { oldestRelevantIndex } from "../../scripts/deploy-lag.mjs";
+import { landingLine, oldestRelevantIndex } from "../../scripts/deploy-lag.mjs";
 
 // "Is `main` actually deployed?" — driven through the real entrypoint, the way every other script
 // spec here works, so the argument plumbing is covered too and no `.d.ts` is invented for an
@@ -402,6 +402,77 @@ describe("deploy lag — when it began", () => {
       .filter((l) => l.includes("compare/"));
     // One for the range, one for the dashboard's stranded list, and at most two prefix reads.
     expect(compares.length).toBeLessThanOrEqual(4);
+  });
+});
+
+// A platter lands as a merge commit: the range holds every item, each dated when it was boarded,
+// hours or days before the merge. Read as they stood, main-deploys filed a false "undeployed N min".
+describe("deploy lag — a merge commit lands the range when it merges", () => {
+  const dir = mkdtempSync(join(tmpdir(), "deploy-lag-merge-"));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const c = (sha: string, parents: string[]) => ({
+    sha,
+    parents: parents.map((p) => ({ sha: p })),
+  });
+
+  it("walks first parents back from the head, oldest first", () => {
+    const commits = [c("i1", ["r"]), c("i2", ["i1"]), c("m", ["s", "i2"]), c("s", ["r"])];
+    expect(landingLine(commits, "m").map((x: { sha: string }) => x.sha)).toEqual(["s", "m"]);
+  });
+
+  it("reads a squash-merged range as every commit", () => {
+    const commits = [c("a", ["r"]), c("b", ["a"]), c("c", ["b"])];
+    expect(landingLine(commits, "c").map((x: { sha: string }) => x.sha)).toEqual(["a", "b", "c"]);
+  });
+
+  it("falls back to every commit when the line cannot be walked", () => {
+    const commits = [c("a", ["r"]), c("b", ["a"])];
+    expect(landingLine(commits, "not-in-the-range")).toEqual(commits);
+    const noParents = [{ sha: "a" }, { sha: "b" }];
+    expect(landingLine(noParents, "b")).toEqual(noParents);
+  });
+
+  // Two items boarded hours before their merge; the bots baseline is the same release.
+  it("dates both halves from the merge, not from when the items were boarded", () => {
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    const commit = (sha: string, date: string, parents: string[]) =>
+      JSON.stringify({
+        sha,
+        parents: parents.map((p) => ({ sha: p })),
+        commit: { message: sha, committer: { date } },
+        author: { login: "ejclark" },
+      });
+    const commits = [
+      commit("item1", "2026-11-01T15:41:00Z", [RELEASED]),
+      commit("item2", "2026-11-01T17:00:00Z", ["item1"]),
+      commit("merge", "2026-11-01T21:00:00Z", [RELEASED, "item2"]),
+    ].join(",");
+    const landed = `{"jobs":[{"name":"release · deploy","conclusion":"success"},{"name":"release · deploy bots","steps":[{"name":"Deploy bots","conclusion":"success"},{"name":"Smoke test the bots release","conclusion":"success"}]}]}`;
+    writeFileSync(
+      join(bin, "gh"),
+      [
+        "#!/bin/sh",
+        'case "$*" in',
+        `  *commits/main*) echo '{"sha":"merge"}' ;;`,
+        `  *pipeline.yml/runs*) echo '{"workflow_runs":[{"id":1,"head_sha":"${RELEASED}","created_at":"2026-11-01T14:00:00Z"}]}' ;;`,
+        `  *runs/1/jobs*) echo '${landed}' ;;`,
+        `  *compare/*) echo '{"commits":[${commits}],"files":[{"filename":"src/domain/types.ts"}]}' ;;`,
+        "  *) exit 1 ;;",
+        "esac",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(join(bin, "gh"), 0o755);
+    const r = spawnSync(process.execPath, ["scripts/deploy-lag.mjs", "--json"], {
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    });
+    expect(r.status).toBe(0);
+    const verdict = JSON.parse(r.stdout);
+    expect(verdict.since).toBe("2026-11-01T21:00:00Z");
+    expect(verdict.bots).toMatchObject({ lagging: true, since: "2026-11-01T21:00:00Z" });
+    expect(verdict.behind).toBe(3);
   });
 });
 

@@ -1,5 +1,8 @@
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 /**
  * A HOLD THAT HOLDS (2026-09-25, #3735). pipeline.yml's arm job reads the labels in the triggering
@@ -184,6 +187,78 @@ describe("ship — a curl that sends a body declares it as JSON", () => {
  * pipeline's own arm job already waits for it — so `ship open` stops telling sessions to arm, runs
  * the Playwright suite locally first, and `ship automerge` (the fallback) holds the same line.
  */
+// The arm job waits on `stability budget`, and native auto-merge waits only on required checks, which
+// it is not. So this fallback holds the same line, run for real against a stub `curl` playing GitHub.
+describe("ship automerge — refuses on the stability budget the arm job waits on", () => {
+  const STUB_CURL = `#!/usr/bin/env bash
+url=""
+for a in "$@"; do case "$a" in http*) url="$a" ;; esac; done
+case "$url" in
+  *check_name=stability*) out="$STABILITY" ;;
+  *check_name=integration*) out='{"check_runs":[{"conclusion":"success","started_at":"2026-11-01T00:00:00Z"}]}' ;;
+  *graphql*) printf '{"data":{}}'; exit 0 ;;
+  */files*) out='[{"filename":"docs/IDEAS.md"}]' ;;
+  */pulls/9) out='{"node_id":"N","base":{"ref":"main"},"head":{"sha":"abc"},"auto_merge":{"merge_method":"squash"}}' ;;
+  *) out='{}' ;;
+esac
+printf '%s\\n__SHIP_HTTP__200' "$out"
+`;
+
+  const arm = (stabilityRuns: string) => {
+    const root = mkdtempSync(join(tmpdir(), "ship-automerge-"));
+    try {
+      const bin = join(root, "bin");
+      mkdirSync(bin);
+      writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
+      const env = hermeticGitEnv({
+        GH_TOKEN: "test-token-never-used",
+        PATH: `${bin}:${process.env.PATH ?? ""}`,
+        STABILITY: stabilityRuns,
+      });
+      const work = join(root, "work");
+      mkdirSync(work);
+      writeFileSync(join(work, "envelope.json"), readFileSync("envelope.json"));
+      execFileSync("git", ["init", "-q", "-b", "main", "."], { cwd: work, env, stdio: "pipe" });
+      execFileSync("git", ["remote", "add", "origin", join(root, "none.git")], {
+        cwd: work,
+        env,
+        stdio: "pipe",
+      });
+      const r = spawnSync("bash", [resolve("scripts/ship.sh"), "automerge", "9"], {
+        cwd: work,
+        encoding: "utf8",
+        env,
+      });
+      return { code: r.status, out: `${r.stdout}${r.stderr}` };
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+  const runs = (conclusion: string | null, status = "completed") =>
+    JSON.stringify({ check_runs: [{ conclusion, status, started_at: "2026-11-01T00:00:00Z" }] });
+
+  it.each(["failure", "timed_out", "cancelled"])("refuses to arm on %s", (conclusion) => {
+    const r = arm(runs(conclusion));
+    expect(r.code).toBe(6);
+    expect(r.out).toContain("stability budget");
+    expect(r.out).toContain(conclusion);
+  });
+
+  it("refuses to arm while it is still running", () => {
+    const r = arm(runs(null, "in_progress"));
+    expect(r.code).toBe(6);
+    expect(r.out).toContain("in_progress");
+  });
+
+  it.each(["success", "skipped"])("arms past %s", (conclusion) => {
+    expect(arm(runs(conclusion)).code).toBe(0);
+  });
+
+  it("arms a head that never ran it, as every head before the job did", () => {
+    expect(arm(JSON.stringify({ check_runs: [] })).code).toBe(0);
+  });
+});
+
 describe("ship — integration tests gate every merge path", () => {
   const source = readFileSync("scripts/ship.sh", "utf8");
   const automerge = source.slice(source.indexOf("cmd_automerge()"));

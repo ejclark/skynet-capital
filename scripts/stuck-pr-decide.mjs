@@ -24,6 +24,17 @@
 /** Branch protection on `main` requires exactly these (app 15368). Mirrors the live rule. */
 export const REQUIRED_CHECKS = ["verify", "integration tests"];
 
+/**
+ * Not in branch protection, and pipeline.yml's arm job still waits on it, so red here holds a PR as
+ * surely as a red required check: the arm job is skipped, not failed, and nothing re-runs it. So
+ * whatever reads "red" or "green" reads these too. A head may carry none: a job added later has no
+ * run on an older head, and that reads as passing, which is what the arm job's `needs` did for it.
+ */
+export const ARM_GATE_CHECKS = ["stability budget"];
+
+/** What red means. A cancelled check says nothing about the code; #6325's sat beside a green one. */
+export const RED = new Set(["failure", "timed_out"]);
+
 /** A merge that is healthy takes minutes; 144 of 144 sampled fast PRs merged inside 3 hours. */
 export const DEFAULT_HOURS = 3;
 
@@ -111,15 +122,22 @@ export function judgePr({
   const ghosts = (suites ?? []).filter(isGhostSuite);
   const latest = latestRequired(checkRuns ?? [], required);
   const runs = [...latest.values()];
+  const gates = [...latestRequired(checkRuns ?? [], ARM_GATE_CHECKS).values()];
 
   // Red is somebody else's signal and a running check is in flight; only two heads are ours: every
-  // required check green, or none reported at all with a ghost sitting on the head.
+  // required check green, or none reported at all with a ghost sitting on the head. A cancelled
+  // gate stays ours: the arm job did not run and nothing has said the code is bad, so the report is
+  // the one place left to say so (stuck-branch-update reads armed PRs, stranded-pr a failed arm job).
   const allGreen =
     required.every((name) => latest.has(name)) &&
-    runs.every(({ run }) => run.status === "completed" && PASSING.has(run.conclusion ?? ""));
+    runs.every(({ run }) => run.status === "completed" && PASSING.has(run.conclusion ?? "")) &&
+    gates.every(({ run }) => run.status === "completed" && !RED.has(run.conclusion ?? ""));
   if (allGreen) {
-    const greenAt = Math.max(...runs.map((v) => v.at));
-    return judgeGreen({ pr, ghosts, age: (now - greenAt) / 3.6e6, hours });
+    const greenAt = Math.max(...[...runs, ...gates].map((v) => v.at));
+    const unfinished = gates
+      .filter(({ run }) => !PASSING.has(run.conclusion ?? ""))
+      .map(({ run }) => run.name);
+    return judgeGreen({ pr, ghosts, age: (now - greenAt) / 3.6e6, hours, unfinished });
   }
   if (ghosts.length && runs.length === 0) {
     const oldest = Math.min(...ghosts.map((g) => Date.parse(g.created_at ?? 0) || now));
@@ -128,8 +146,9 @@ export function judgePr({
   return null;
 }
 
-/** Every required check is green: stuck if armed-and-blocked, or never armed. */
-function judgeGreen({ pr, ghosts, age, hours }) {
+/** Every required check is green: stuck if armed-and-blocked, or never armed. `unfinished` names the
+ *  arm job's other checks that were cancelled, which is why it never ran. */
+function judgeGreen({ pr, ghosts, age, hours, unfinished = [] }) {
   if (age < hours) return null;
   const armed = pr.auto_merge != null;
   const state = pr.mergeable_state ?? "unknown";
@@ -144,6 +163,17 @@ function judgeGreen({ pr, ghosts, age, hours }) {
         : `green and armed for ${h}h but "blocked", and no ghost suite explains it — look for an unresolved conversation or a rule change`,
       ghosts,
       fix: ghosts.length ? FIX_REAL_IDENTITY : "read the PR's Merge box: the blocker is not a run",
+    };
+  }
+  if (!armed && state !== "dirty" && unfinished.length) {
+    const names = unfinished.map((name) => `\`${name}\``).join(", ");
+    return {
+      number: pr.number,
+      kind: "unarmed",
+      hours: h,
+      why: `green for ${h}h, but ${names} was cancelled, so the arm job never ran`,
+      ghosts,
+      fix: "re-run the cancelled job from the PR's Checks tab; the arm job follows it. Nothing re-runs it on its own, and an arm by hand refuses a cancelled run",
     };
   }
   if (!armed && state !== "dirty") {

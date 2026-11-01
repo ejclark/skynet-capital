@@ -235,6 +235,69 @@ describe("judgePr — a re-run supersedes the run it replaced", () => {
   });
 });
 
+// The arm job waits on `stability budget` and branch protection does not know it, so a head green on
+// the two required checks and red on this one was reported "green … the arm job did not reach it",
+// with a fix line that armed past the failure. It is red, and red-lane-pr.mjs owns a red lane PR.
+describe("judgePr — the check the arm job waits on beside the required two", () => {
+  const unarmed = pr({ auto_merge: null, mergeable_state: "clean" });
+  const stability = (conclusion: string | null, h = 5, status = "completed") => ({
+    name: "stability budget",
+    status,
+    conclusion,
+    completed_at: status === "completed" ? ago(h) : null,
+    started_at: ago(h + 0.1),
+  });
+  const judged = (run: ReturnType<typeof stability>) =>
+    judgePr({ pr: unarmed, checkRuns: [...green(5), run], suites: [realSuite], now: NOW });
+
+  it.each(["failure", "timed_out"])("does not call a head green when it reads %s", (conclusion) => {
+    expect(judged(stability(conclusion))).toBeNull();
+  });
+
+  it("does not call a head green while it is still running", () => {
+    expect(judged(stability(null, 5, "in_progress"))).toBeNull();
+  });
+
+  it.each(["success", "skipped"])("still reports a head stuck when it reads %s", (conclusion) => {
+    expect(judged(stability(conclusion))?.kind).toBe("unarmed");
+  });
+
+  // Not red, and the arm job still does not run. Nothing clears this on its own: stuck-branch-update
+  // reads only armed PRs, and stranded-pr re-runs only a failed arm job, so the report is all there is
+  // and it has to name the move that works. `ship automerge` refuses a cancelled run.
+  it("names a cancelled run and the re-run that clears it, not the arm that would refuse", () => {
+    const verdict = judged(stability("cancelled"));
+    expect(verdict?.kind).toBe("unarmed");
+    expect(verdict?.why).toContain("`stability budget` was cancelled");
+    expect(verdict?.fix).toMatch(/re-run/i);
+    expect(verdict?.fix).not.toContain("ship.sh automerge <n>`");
+  });
+
+  it("still reports a head that never ran it, as every head before the job did", () => {
+    const verdict = judgePr({
+      pr: unarmed,
+      checkRuns: green(5),
+      suites: [realSuite],
+      now: NOW,
+    });
+    expect(verdict?.kind).toBe("unarmed");
+  });
+
+  it("ages the stall from its finish, when the arm job could first have run", () => {
+    expect(judged(stability("success", 1))).toBeNull();
+  });
+
+  it("takes a re-run's answer over the run it replaced", () => {
+    const verdict = judgePr({
+      pr: unarmed,
+      checkRuns: [...green(5), stability("failure", 9), stability("success", 5)],
+      suites: [realSuite],
+      now: NOW,
+    });
+    expect(verdict?.kind).toBe("unarmed");
+  });
+});
+
 describe("the digest line", () => {
   it("says unknown, never none, when GitHub could not be read", () => {
     expect(stuckLine(null)).toContain("unknown");

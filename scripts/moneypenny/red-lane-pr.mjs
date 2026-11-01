@@ -1,6 +1,7 @@
 // A RED LANE PR WHOSE SESSION HAS ENDED HAS NO OWNER — this gives it one, in the audit path.
 //
-// WHY (2026-11-01). A lane session opens its PR and ends. If `verify` then fails, nothing comes back
+// WHY (2026-11-01). A lane session opens its PR and ends. If a check that holds it then fails (`verify`,
+// `integration tests`, or the `stability budget` the arm job waits on), nothing comes back
 // to it: the repair lane leaves a pull_request run alone (repair.mjs `routeFailure`, guard 2), and the
 // sweep stays off any issue an open PR names with no age limit (`withoutOpenPr`, index.mjs). So one
 // failing spec parks the whole issue for as long as nobody looks. #6440 went red on 10-30 over a
@@ -29,9 +30,11 @@
 import { readFileSync } from "node:fs";
 import { breachOf } from "../envelope-scan.mjs";
 import {
+  ARM_GATE_CHECKS,
   boardedBranches,
   exemptReason,
   latestRequired,
+  RED,
   REQUIRED_CHECKS,
 } from "../stuck-pr-decide.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
@@ -39,7 +42,7 @@ import { FOOTER, LABELS, notPullableReason } from "./labels.mjs";
 import { stateBlockOf } from "./state-block.mjs";
 
 /**
- * How long a required check stays red before the PR counts as nobody's. A lane session runs for
+ * How long a check that holds the PR stays red before the PR counts as nobody's. A lane session runs for
  * hours at most, and #6440's failure was readable the minute it landed, so a day is well past any
  * session that could still be fixing it. The clock is the failed check's own, and a comment or push
  * inside the window also leaves the PR alone: that is someone on it.
@@ -56,12 +59,11 @@ const CLOSED_MARKER = /<!-- moneypenny:red-pr-closed pr=\d+ -->/;
 const LANE_BOT = "skynet-envoy[bot]";
 const LANE_BRANCH = /^(?:plan|feedback)\/(\d+)$/;
 
-/** A cancelled check says nothing about the code; #6325's cancelled run sat beside a green one. */
-const RED = new Set(["failure", "timed_out"]);
-
-/** Pure: the head's newest failed required check, or null (a re-run in flight supersedes the red). */
+/** Pure: the head's newest failed check of those that hold it, or null (a re-run in flight supersedes
+ *  the red). */
 function redCheck(checkRuns, nowMs) {
-  const failed = [...latestRequired(checkRuns, REQUIRED_CHECKS).values()].filter(
+  const holding = [...REQUIRED_CHECKS, ...ARM_GATE_CHECKS];
+  const failed = [...latestRequired(checkRuns, holding).values()].filter(
     ({ run }) => run.status === "completed" && RED.has(run.conclusion ?? ""),
   );
   if (failed.length === 0) return null;
