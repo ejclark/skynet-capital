@@ -144,6 +144,7 @@ export function fixture(over: Partial<TouchPointData> = {}): TouchPointData {
       halt: false,
       inFlightCap: 3,
       dialLink: "https://github.com/ejclark/skynet-capital/issues/4153",
+      pace: "pace: week 34% used, 77% gone, behind pace by 43, resets 11-03 05:00Z",
       nextPick: { number: 4437, admit: true, reason: "admitted" },
       items: [
         {

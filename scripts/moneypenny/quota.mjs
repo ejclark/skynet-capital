@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 // THE WEEKLY PACE READING, REPORT-ONLY (#6470).
 //
+//   node scripts/moneypenny/quota.mjs --tick
 //   node scripts/moneypenny/quota.mjs --tick --used 21 --resets-at 2026-11-03T05:00:00Z
+//
+// With no flags the tick reads what the last touch point published on #4153's body (pace-reading.mjs);
+// `--json` is what the steering page reads.
 //
 // One sum: the percent of the weekly limit used against the percent of the week gone. Nothing else
 // in the repo computes it, and the dial on #4153 has only ever moved on Eric's word. `--tick` prints
@@ -103,7 +107,8 @@ export function paceLine(reckoning) {
   if (state === "blind") {
     if (why === "no reading") return "pace: no reading";
     const when = `read ${shortTime(reading.at)}Z`;
-    return `pace: STALE, ${reading.used}% used when ${when} (${why})`;
+    const beyond = why === "stale" ? "" : ` (${why})`;
+    return `pace: STALE, ${reading.used}% used when ${when}${beyond}`;
   }
   const numbers = `week ${reading.used}% used, ${Math.round(gone)}% gone`;
   return `pace: ${numbers}, ${standing(reckoning)}, resets ${shortTime(reading.resetsAt)}Z`;
@@ -127,7 +132,7 @@ const dialHand = (mode) =>
  */
 export function tick({ reading = null, orders = [], now = Date.now(), readDial = readWorkMode }) {
   const mode = readDial();
-  const verdict = reckon(reading, { orders, hand: dialHand(mode), now });
+  const verdict = reckon(reading ?? mode.reading ?? null, { orders, hand: dialHand(mode), now });
   const line = `${paceLine(verdict)} · dial ${mode.position} · ${wouldHaveDone(verdict)}${orders.length ? "" : " (his dated words not read)"} · report only, wrote nothing`;
   return { line, verdict, position: mode.position };
 }
@@ -152,13 +157,24 @@ function main(argv) {
     console.error("usage: quota.mjs --tick [--used N --resets-at ISO [--read-at ISO]] [--now ISO]");
     process.exit(2);
   }
+  // Flags that name a reading must describe one, or the published number would answer for them.
+  const named = argv.includes("--used") || argv.includes("--resets-at");
+  if (named && readingFromFlags(argv, 0) === null) {
+    console.error("quota.mjs: --used needs a number and --resets-at a time");
+    process.exit(2);
+  }
   const nowFlag = flagValue(argv, "--now");
   const now = nowFlag ? Date.parse(nowFlag) : Date.now();
   if (Number.isNaN(now)) {
     console.error(`quota.mjs: --now is not a date: ${nowFlag}`);
     process.exit(2);
   }
-  console.log(tick({ reading: readingFromFlags(argv, now), now }).line);
+  const { line, verdict } = tick({ reading: readingFromFlags(argv, now), now });
+  if (argv.includes("--json")) {
+    console.log(JSON.stringify({ pace: paceLine(reckon(verdict.reading, { now })) }));
+    return;
+  }
+  console.log(line);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));

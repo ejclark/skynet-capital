@@ -42,6 +42,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { trustedComment } from "./gh.mjs";
+import { readingFrom } from "./pace-reading.mjs";
 
 const CONFIG_FILE = join(process.cwd(), "work-mode.json");
 
@@ -297,7 +298,9 @@ export function readWorkMode(exec = defaultExec, config = loadWorkModeConfig(), 
   let issue;
   try {
     const path = `repos/{owner}/{repo}/issues/${config.trackingIssue}`;
-    issue = JSON.parse(exec("gh", ["api", path, "--jq", "{title, labels: [.labels[] | {name}]}"]));
+    issue = JSON.parse(
+      exec("gh", ["api", path, "--jq", "{title, body, labels: [.labels[] | {name}]}"]),
+    );
     if (!issue || typeof issue !== "object") throw new Error("not a JSON object");
     const dial = dialLabels(issue.labels, config.labelPrefix);
     if (dial.length === 1 && dial[0] !== `${config.labelPrefix}normal`) {
@@ -345,6 +348,7 @@ export function readWorkMode(exec = defaultExec, config = loadWorkModeConfig(), 
       config,
     }),
     title: issue.title,
+    reading: readingFrom(issue.body),
   };
 }
 

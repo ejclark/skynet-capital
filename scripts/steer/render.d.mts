@@ -35,6 +35,8 @@ export interface TouchPointData {
     halt: boolean;
     inFlightCap: number | null;
     dialLink: string;
+    /** One line: the week's percent used against the percent gone, or that the reading is stale. */
+    pace?: string;
     nextPick?: { number?: number; admit: boolean; reason: string } | null;
     items: { number: number; title: string; cls: string | null; why: string }[];
     [k: string]: unknown;

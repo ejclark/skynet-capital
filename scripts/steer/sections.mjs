@@ -74,8 +74,9 @@ export function reelHtml(reel, img) {
 export function queueHtml(q, next) {
   const head = `<h2>Queued until ${e(next.label)}</h2>`;
   const dial = `<a href="${e(q.dialLink)}" ${ext}>change the dial on GitHub</a>`;
+  const pace = q.pace ? `<p class="muted" id="pace">${e(q.pace)}</p>` : "";
   if (q.halt) {
-    return `<section class="block" id="queue">${head}<p class="halt">Work is halted: nothing builds and nothing is queued until the dial moves (${dial}).</p></section>`;
+    return `<section class="block" id="queue">${head}${pace}<p class="halt">Work is halted: nothing builds and nothing is queued until the dial moves (${dial}).</p></section>`;
   }
   const pick = q.nextPick?.admit
     ? `next to start: #${q.nextPick.number}`
@@ -91,7 +92,7 @@ export function queueHtml(q, next) {
     )
     .join("");
   return (
-    `<section class="block" id="queue">${head}<p class="lede">${plural(q.items.length, "item")} ready to build over the next ~${next.hours}h · ` +
+    `<section class="block" id="queue">${head}${pace}<p class="lede">${plural(q.items.length, "item")} ready to build over the next ~${next.hours}h · ` +
     `${q.inFlightCap} at a time at the dial's ${e(q.position)} setting · ${pick} · ${dial}.</p>` +
     (items
       ? `<ol class="queue">${items}</ol>`
