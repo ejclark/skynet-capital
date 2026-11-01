@@ -1,8 +1,66 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run } from "../support/ship-run.js";
+
+// A pipe into a quiet grep under pipefail: grep exits on its match, the writer takes SIGPIPE, and the
+// pipeline reports 141, so the match reads as a miss. It races on output size and load, so a passing
+// run proves little, and this reads the source instead. Here-strings have no pipeline to signal.
+const PIPED_QUIET_GREP = /(?<!\|)\|&?\s*grep\s+(?:-\S+\s+)*(?:-[a-zA-Z]*q[a-zA-Z]*|--quiet)\b/;
+const ALLOW_MARKER = "pipefail-grep-ok:";
+
+function pipedQuietGreps(source: string) {
+  if (!/^\s*set -[a-zA-Z]*o pipefail/m.test(source)) return [];
+  return source
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => !line.startsWith("#"))
+    .filter((line) => !line.includes(ALLOW_MARKER))
+    .filter((line) => PIPED_QUIET_GREP.test(line));
+}
+
+describe("no pipe into a quiet grep under pipefail", () => {
+  const under = (line: string) => `#!/usr/bin/env bash\nset -euo pipefail\n${line}\n`;
+
+  it.each([
+    'git log --format=%b | grep -qxF "x" || exit 1',
+    "git diff --name-only | grep -qvE '^docs/'",
+    "a | grep -E -q x",
+    "a | grep --quiet x",
+    "a |& grep -q x",
+  ])("flags %s", (line) => {
+    expect(pipedQuietGreps(under(line))).toEqual([line]);
+  });
+
+  it.each([
+    'grep -q "x" <<<"$y"',
+    'a || grep -q "x" <<<"$y"',
+    "a | grep x > /dev/null",
+    "# never `printf | grep -q` here",
+    "a | grep -q x # pipefail-grep-ok: the writer has finished by the time grep can match",
+  ])("leaves %s alone", (line) => {
+    expect(pipedQuietGreps(under(line))).toEqual([]);
+  });
+
+  it("leaves a script without pipefail alone", () => {
+    expect(pipedQuietGreps("#!/usr/bin/env bash\na | grep -q x\n")).toEqual([]);
+  });
+
+  // smoke-bots.sh is a protected path, so neither the fix nor an inline marker can land from a
+  // session. Its entry has to go when the line does, or a second site could hide behind it.
+  const WAITING_ON_A_PROTECTED_FIX = ["scripts/smoke-bots.sh"];
+
+  it("holds for every script, and names the one waiting on a protected fix", () => {
+    const scripts = readdirSync("scripts", { recursive: true, encoding: "utf8" })
+      .filter((path) => path.endsWith(".sh"))
+      .map((path) => `scripts/${path}`);
+    const flagged = scripts.filter(
+      (path) => pipedQuietGreps(readFileSync(path, "utf8")).length > 0,
+    );
+    expect(flagged.sort()).toEqual(WAITING_ON_A_PROTECTED_FIX);
+  });
+});
 
 describe("ship open — the PR-title contract", () => {
   it("refuses a title commitlint would reject in CI, before anything is pushed", () => {
