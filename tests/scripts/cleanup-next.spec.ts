@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "@rstest/core";
 // @ts-expect-error plain .mjs script, no declarations
 import { EYES } from "../../scripts/cleanup-next.mjs";
@@ -141,5 +143,78 @@ describe("cleanup-next: wiring", () => {
   const eyes: { script: string; flag?: string }[] = EYES;
   it.each(eyes)("$script takes the flag this reads", ({ script, flag = "--candidate" }) => {
     expect(readFileSync(`scripts/${script}.mjs`, "utf8")).toContain(`"${flag}"`);
+  });
+});
+
+// A list nobody reads orders nothing, and a cycle with no row leaves no number to judge the next one
+// by. These pin the reading, and run the ledger lines the chore tells a rep to run.
+describe("a governor cycle reads this list and leaves its numbers", () => {
+  const skill = readFileSync(".claude/skills/governor/SKILL.md", "utf8");
+  const chore = readFileSync("docs/grind/governor.instructions.md", "utf8");
+
+  it.each([
+    ["the skill", skill],
+    ["the chore", chore],
+  ])("%s takes its order from the list", (_name, text) => {
+    expect(text).toContain("node scripts/cleanup-next.mjs --json");
+  });
+
+  it("orders only scans the list reads, in both files", () => {
+    const listed = new Set((EYES as { script: string }[]).map((e) => e.script));
+    const inTable = [...skill.matchAll(/\| `scripts\/([a-z-]+)\.mjs` \|/g)].map((m) => m[1]);
+    const inItems = [...chore.matchAll(/"eye": "scripts\/([a-z-]+)\.mjs"/g)].map((m) => m[1]);
+    expect(inTable).toHaveLength(4);
+    expect(inItems.sort()).toEqual([...inTable].sort());
+    for (const script of inTable) expect(listed.has(script as string)).toBe(true);
+  });
+
+  it("gives a rep ledger lines that write a baseline, then a row that says what moved", () => {
+    const lines = [...chore.matchAll(/`npm run loop:ledger -- (--add [^`]+)`/g)].map((m) => m[1]);
+    expect(lines).toHaveLength(2);
+    const dir = mkdtempSync(join(tmpdir(), "governor-ledger-"));
+    try {
+      for (const line of lines) {
+        const filled = String(line)
+          .replace("<drill>", "bury")
+          .replace("<before>", "164")
+          .replace("<after>", "161")
+          .replace("<what>", "3 unused exports in a file");
+        const r = spawnSync(
+          "bash",
+          ["-c", `node scripts/loop-ledger.mjs ${filled} --ledger ${dir}`],
+          {
+            encoding: "utf8",
+          },
+        );
+        expect(r.stderr).toBe("");
+        expect(r.status).toBe(0);
+      }
+      const rows = readFileSync(join(dir, "governor-bury.jsonl"), "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(l));
+      expect(rows[0]).toMatchObject({ before: 164, after: 164, worth: 1 });
+      // Unknown stays null, never 0: a real 0 is a codemod's price (scripts/loop-ledger.mjs).
+      expect(rows[1]).toMatchObject({ before: 164, after: 161, tokensM: null });
+      expect(rows[1].changed).toContain("3 unused exports");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("has the caller put the run's cost on the rows, from the meter", () => {
+    expect(skill).toContain("tokensByWorkflow");
+    expect(skill).toContain("--max-rest 0");
+  });
+
+  // What starts a cycle stays a person or a session for now: the skill's own ladder says a schedule is
+  // earned once the policy has proved out over reps.
+  it("is started by nothing automatic", () => {
+    for (const file of readdirSync(".github/workflows")) {
+      expect(readFileSync(join(".github/workflows", file), "utf8")).not.toMatch(
+        /skills\/governor|governor\.instructions/,
+      );
+    }
+    expect(skill).toContain("a *drill* someone invokes");
   });
 });
