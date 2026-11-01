@@ -38,6 +38,7 @@ const asked = (calls: { prompt: string; opts: { label?: string } }[]) =>
 type Prevention = {
   proposals: { cause: string; findings: { summary: string }[]; lesson?: string }[];
   otherCauses: string[];
+  notRun?: string;
 };
 const prevention = (result: unknown) => (result as { prevention: Prevention }).prevention;
 
@@ -76,7 +77,7 @@ describe("the audit's prevention step", () => {
     expect(logs.join("\n")).toContain("1 proposal");
   });
 
-  // The rule stays a rule: an agent cannot talk a one-off into a proposal.
+  // The rule stays a rule: without a lesson on the row, a one-off is not a proposal, whatever was drafted.
   it("keeps a cause seen once out of the proposals, even when the agent drafted one", async () => {
     const { result } = await audit([finding("a"), finding("b")], {
       causes: [
@@ -135,6 +136,7 @@ describe("the audit's prevention step", () => {
     const died = await audit([finding("a"), finding("b")], null);
     expect(died.result?.confirmed).toHaveLength(2);
     expect(prevention(died.result).proposals).toEqual([]);
+    expect(prevention(died.result).notRun).toContain("did not come back");
     expect(died.result?.deadAgents).toEqual([
       expect.objectContaining({ agent: expect.stringContaining("prevention") }),
     ]);
@@ -147,5 +149,20 @@ describe("the audit's prevention step", () => {
     expect(threw.error).toBeNull();
     expect(threw.result?.confirmed).toHaveLength(2);
     expect(prevention(threw.result).proposals).toEqual([]);
+    expect(prevention(threw.result).notRun).toContain("out of budget");
+  });
+
+  it("keeps the run's findings when the answer has the wrong shape", async () => {
+    const { error, result } = await audit([finding("a"), finding("b")], {
+      causes: [{ cause: "bad", findings: 5 }],
+    });
+    expect(error).toBeNull();
+    expect(result?.confirmed).toHaveLength(2);
+    expect(prevention(result).notRun).toBeTruthy();
+  });
+
+  it("says nothing ran only when nothing ran", async () => {
+    const { result } = await audit([finding("a"), finding("b")], { causes: [] });
+    expect(prevention(result).notRun).toBeUndefined();
   });
 });
