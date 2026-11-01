@@ -453,6 +453,46 @@ describe("instruction-drift scan — seeded repos", () => {
   });
 });
 
+// The chore's caller decides when to repeat a sweep, so the rule lives in the text it follows. Rounds 3
+// and 4 of a repeat sweep cost 55.1M tokens for 33 edits under "a run that finds nothing ends the
+// loop", which is an instruction to keep going. This goes red if that wording returns or the cap or
+// the number that judges it leaves the caller's steps.
+describe("instruction-drift chore — when a repeat sweep stops", () => {
+  const doc = readFileSync(
+    join(process.cwd(), "docs/grind/instruction-drift.instructions.md"),
+    "utf8",
+  );
+  // Whitespace collapsed: rewrapping the paragraph is not a change to the rule.
+  const callerSteps = doc
+    .slice(doc.indexOf("**After the run"), doc.indexOf("## Goal"))
+    .replace(/\s+/g, " ");
+
+  it("caps a sweep at two rounds, even when the second round applied edits", () => {
+    expect(callerSteps).toMatch(/at most two rounds/i);
+    expect(callerSteps).toMatch(/even when round 2 applied edits/i);
+    expect(callerSteps).not.toMatch(/finds nothing ends the loop/i);
+  });
+
+  it("has the wave PR report applied edits per agent", () => {
+    expect(callerSteps).toContain(
+      "Round <n> of 2: <applied> applied edits by <agents> agents, <per agent> per agent",
+    );
+  });
+
+  it("does not let a blocked item's -r2 retry count as the second round", () => {
+    expect(callerSteps).toContain("with `-r2` belongs to the round it blocked");
+  });
+
+  it("gives the yield a home when a round landed nothing, and round 2's PR an issue", () => {
+    expect(callerSteps).toContain("in the stamp's own PR when the round landed nothing");
+    expect(callerSteps).toContain("names round 1's ticket as `Part of #<n>`");
+  });
+
+  it("says where a stopped sweep's leftovers go, so stopping loses nothing silently", () => {
+    expect(callerSteps).toMatch(/next `--due` run reads/);
+  });
+});
+
 describe("instruction-drift scan — the real repo", () => {
   it("--scope lists the files the chore may edit at HEAD: no ledgers, no generated pages", () => {
     const out = execFileSync("node", [SCRIPT, "--scope", "--at", "HEAD"], {
