@@ -188,8 +188,10 @@ async function serveChat(
         res.write(sseFrame("{}", "done", seq++));
         res.end();
       },
-      onError: (message) => {
-        res.write(sseFrame(JSON.stringify({ error: message }), "error", seq++));
+      // `refused` rides the frame only when set (#6214) — the rail drops a declined partial line.
+      onError: (message, detail) => {
+        const frame = detail?.refused ? { error: message, refused: true } : { error: message };
+        res.write(sseFrame(JSON.stringify(frame), "error", seq++));
         res.end();
       },
       // A drafted filing for the rail to hold — the member's reply there is what files it.
