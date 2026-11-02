@@ -35,12 +35,10 @@ const OWN_SPEC = "tests/arch/ignored-fixture.spec.ts";
 
 // A quoted literal with no interpolation, no whitespace and no scheme: "a/b.log", './x.json'.
 const LITERAL = /(["'`])([^"'`\s$\\]+)\1/g;
+// Not a fixture path: a URL or `node:` specifier, an absolute or home path, a scoped package.
+const NOT_A_PATH = /^(?:[a-z][a-z0-9+.-]*:|[/~@])/i;
 const PATH_SHAPED = (text) =>
-  !/^[a-z][a-z0-9+.-]*:/i.test(text) && // no URL, no node: specifier
-  !text.startsWith("/") &&
-  !text.startsWith("~") &&
-  !text.startsWith("@") &&
-  (text.includes("/") || /\.[A-Za-z0-9]{1,8}$/.test(text));
+  !NOT_A_PATH.test(text) && (text.includes("/") || /\.[A-Za-z0-9]{1,8}$/.test(text));
 
 /** Every path-shaped literal in one file's source, with its 1-based line. */
 export function pathLiterals(source) {

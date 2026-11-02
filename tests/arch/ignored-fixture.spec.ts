@@ -126,7 +126,8 @@ describe("ignored-fixture-scan: which literals count", () => {
   it("reads quoted paths, and skips interpolation, URLs, specifiers and absolute paths", () => {
     const source = [
       'readFileSync("tests/fixtures/a.json")',
-      "readFileSync(`tests/${name}.log`)",
+      // An interpolated path, written with \u0024 so the source holds no template placeholder.
+      "readFileSync(`tests/\u0024{name}.log`)",
       'fetch("https://example.com/a.log")',
       'import x from "node:fs"',
       'import y from "@rstest/core"',
