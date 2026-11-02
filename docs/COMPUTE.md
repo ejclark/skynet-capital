@@ -103,7 +103,8 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   (`npm run work-gate`), a `/grind` run's fan-out width (`.claude/workflows/grind.js`, which
   refuses a batch wider than the position's `grindWidth` rather than silently dropping items), the
   other scripted workflows (`dream`, `clear-path-flip`, `post-merge-audit`, `symbol-sweep`, which ask
-  the same way and take `force: true` on a run Eric typed, printing what it overrode and the price), and
+  the same way; every one, grind included, takes `force: true` on a run Eric typed, printing what it
+  overrode and the price, and grind's ledger records it), and
   the slices one ready plan may continue into on its own in a day
   (`scripts/moneypenny/continuation.mjs` → `continuationsPerDay`; `halt` stops continuation dead).
   **The numbers live in `work-mode.json`, not in this doc** — citing the spigot is the whole point

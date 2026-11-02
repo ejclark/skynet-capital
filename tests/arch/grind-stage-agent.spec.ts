@@ -21,7 +21,8 @@ async function dispatched(
   manifest: Record<string, string> = {},
 ): Promise<Opts[]> {
   const calls: Opts[] = [];
-  const agent = (_prompt: string, opts: Opts) => {
+  // Async like the real hook: the gate read chains .catch on what agent() returns.
+  const agent = async (_prompt: string, opts: Opts) => {
     if (opts.label === "work-mode") {
       reads.push(opts);
       return { found: true, dispatch: true, position: "normal", grindWidth: 50 };
