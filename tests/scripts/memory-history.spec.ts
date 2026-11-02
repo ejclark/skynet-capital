@@ -170,8 +170,8 @@ describe("memory history hook", () => {
   // A filesystem failure in the lock costs a version like any other, so it must not exit 0. The lock
   // lives beside the memory folder, so a file where the project folder belongs stops the lock and
   // nothing before it, for every user. A read-only parent stopped it for everyone but root, and cloud
-  // sessions run as root: there the hook took the lock, so this test failed every verify
-  // (governed cycle 7, 2026-11-02).
+  // sessions run as root: there the hook took the lock, so this case failed every local verify until
+  // #6699 skipped it as root. This fixture runs it as root too (governed cycle 7, 2026-11-02).
   it("exits 2 when it cannot take its turn at all", () => {
     const root = mkdtempSync(join(tmpdir(), "projects-"));
     writeFileSync(join(root, "proj"), "a file where the project folder belongs\n");
