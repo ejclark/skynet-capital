@@ -7,21 +7,18 @@ import { type Reply, runWorkflow } from "../support/run-workflow";
 // the mention of it. Which fan-outs a real `halt` stops is what the dial's label on #4153 decides; the
 // stub only stands in for reading it. A typed run has to get through, because a gate that only throws
 // would refuse Eric's own command, so the override is pinned here too, with its price.
+const GRIND_ARGS = {
+  items: ["a.ts", "b.ts", "c.ts"],
+  itemSource: "three hand-picked paths for this spec",
+  skipEnvelopeCheck: "the gate is under test here, not the envelope",
+  promptTemplate: "fix {item}",
+};
 const CONDUCTORS: Record<
   string,
   { args: Record<string, unknown>; width: number; firstWork: RegExp }
 > = {
   // The original gate, and the one that writes: a run's width is its item count (#6470).
-  grind: {
-    args: {
-      items: ["a.ts", "b.ts", "c.ts"],
-      itemSource: "three hand-picked paths for this spec",
-      skipEnvelopeCheck: "the gate is under test here, not the envelope",
-      promptTemplate: "fix {item}",
-    },
-    width: 3,
-    firstWork: /^a\.ts/,
-  },
+  grind: { args: GRIND_ARGS, width: 3, firstWork: /^a\.ts/ },
   "post-merge-audit": { args: { prs: [1, 2, 3] }, width: 3, firstWork: /^triage/ },
   "clear-path-flip": { args: { issues: [1, 2, 3] }, width: 3, firstWork: /^judge/ },
   dream: {
@@ -210,7 +207,7 @@ describe("the work-mode gate in the scripted workflows", () => {
 // What only grind adds. Its runs can write and push, so a forced one leaves the override in the ledger
 // callers paste into the issue or PR, and its price counts the chain it will really run (#6470).
 describe("grind's forced run", () => {
-  const { args } = CONDUCTORS.grind;
+  const args = GRIND_ARGS;
   // A run that crashed has no ledger: "" fails every toContain below rather than passing a not.
   const ledgerOf = (result: unknown) => (result as { ledger?: string } | null)?.ledger ?? "";
 
