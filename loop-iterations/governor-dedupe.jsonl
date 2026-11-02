@@ -1,2 +1,2 @@
 {"date":"2026-11-02","loop":"governor-dedupe","before":294,"after":294,"worth":1,"tokensM":null,"usd":null,"changed":"debt before the first rep"}
-{"date":"2026-11-02","loop":"governor-dedupe","before":294,"after":290,"tokensM":null,"usd":null,"changed":"dollars: three whole-dollar copies and the usdWhole in play-target became src/ui/usd-whole.ts; two cents formatters renamed for what they do"}
+{"date":"2026-11-02","loop":"governor-dedupe","before":294,"after":290,"tokensM":2.16,"usd":null,"changed":"dollars: three whole-dollar copies and the usdWhole in play-target became src/ui/usd-whole.ts; two cents formatters renamed for what they do"}
