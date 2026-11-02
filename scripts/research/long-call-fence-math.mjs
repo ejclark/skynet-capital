@@ -32,6 +32,7 @@
  */
 
 import { rankQuantile } from "./cycle-phase-math.mjs";
+import { addDays, daysBetween } from "./premium-fit-math.mjs";
 import { headlineSample, normCdf } from "./wheel-cap-math.mjs";
 
 /** The window the long call buys in, calendar days to expiry (`long-call.ts` MIN_DTE, MAX_DTE). */
@@ -54,11 +55,20 @@ export const PRINT_GAP_DAYS = 91;
 /** An expiry floor no listed expiry can meet: the rule leaves nothing to buy. */
 export const NEVER = "9999-12-31";
 
-const DAY_MS = 864e5;
-const parse = (iso) => Date.parse(`${iso}T00:00:00Z`);
 const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
-export const addDays = (from, n) => iso(parse(from) + n * DAY_MS);
-export const daysBetween = (from, to) => Math.round((parse(to) - parse(from)) / DAY_MS);
+
+export { addDays, daysBetween };
+
+/** `n` weekdays after `from`, holidays not skipped: a session count past the tape, approximately. */
+export function weekdaysAfter(from, n) {
+  let day = from;
+  for (let left = n; left > 0; ) {
+    day = addDays(day, 1);
+    const wd = new Date(`${day}T00:00:00Z`).getUTCDay();
+    if (wd !== 0 && wd !== 6) left--;
+  }
+  return day;
+}
 
 const d1Of = (spot, strike, vol, years) =>
   (Math.log(spot / strike) + 0.5 * vol * vol * years) / (vol * Math.sqrt(years));
@@ -223,15 +233,7 @@ export function recoveryBand({ sym, state, names, asOf, q = 0.75 }) {
  */
 export function expiryFloor(dates, t, sessions) {
   if (!Number.isFinite(sessions)) return NEVER;
-  let edge = dates[t + sessions];
-  if (!edge) {
-    let ms = parse(dates.at(-1));
-    for (let left = t + sessions - (dates.length - 1); left > 0; ) {
-      ms += DAY_MS;
-      const wd = new Date(ms).getUTCDay();
-      if (wd !== 0 && wd !== 6) left--;
-    }
-    edge = iso(ms);
-  }
+  const edge =
+    dates[t + sessions] ?? weekdaysAfter(dates.at(-1), t + sessions - (dates.length - 1));
   return addDays(edge, EXIT_DTE);
 }

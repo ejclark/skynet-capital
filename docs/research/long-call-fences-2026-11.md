@@ -82,7 +82,9 @@ zero (nothing bought), never drops out.
 | Pullback, single-name | 565 | 65% | +19.7% | +27.5% | +5.1% | −17.9% (−28.1..−7.3) |
 | Not a pullback | 2,277 | 52% | +44.4% | +44.4% | +44.4% | −23.3% (−30.9..−15.9) |
 
-Most of the blocking (47 of the 52 points) is a band where over a quarter of past episodes never got
+Outside a pullback the three means match to the decimal (44.42%, 44.44%, 44.40%): there the floor
+skips calls no worse or better than it keeps, so it only costs their share. Most of the blocking
+(47 of the 52 points) is a band where over a quarter of past episodes never got
 back to entry within 126 sessions. The rule then asks for an expiry no listed call has. The
 variants agree:
 
@@ -125,6 +127,9 @@ from the high.
 
 - **No real call prices.** The crush is modeled from past print moves, not read from quotes. The
   wait's result moves with that model (+1.8% with no crush, +4.6% with prints priced 1.25×).
+- **Which close the crush lands on.** EDGAR gives no time of day, so a print counts as ahead
+  through its filing session's close. Counting it as behind from that close moves every headline
+  by 0.2 points or less (D+7 − D+2 at 0.8×: +2.7% → +2.5%), and no call changes.
 - **The floor's restatement is one reading.** The live fence is one date from one band read. A
   floor that capped itself at 200 days would buy the same call, the same as no floor, so either way
   the floor adds nothing the playbook keeps.

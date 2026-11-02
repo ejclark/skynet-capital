@@ -14,6 +14,7 @@ export const NEVER: string;
 
 export function addDays(from: string, n: number): string;
 export function daysBetween(from: string, to: string): number;
+export function weekdaysAfter(from: string, n: number): string;
 export function callValue(spot: number, strike: number, vol: number, years: number): number;
 export function callDelta(spot: number, strike: number, vol: number, years: number): number;
 export function strikeForCallDelta(

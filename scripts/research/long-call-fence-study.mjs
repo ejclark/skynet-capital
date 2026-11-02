@@ -41,7 +41,6 @@ import {
   WARMUP,
 } from "./cycle-phase-math.mjs";
 import {
-  addDays,
   daysBetween,
   entryExpiry,
   eventMove,
@@ -53,6 +52,7 @@ import {
   NEVER,
   QUIET_SESSIONS,
   recoveryBand,
+  weekdaysAfter,
 } from "./long-call-fence-math.mjs";
 import { bars, earningsDates } from "./market-data.mjs";
 import { annualizedVol, printCadence } from "./premium-fit-math.mjs";
@@ -297,12 +297,13 @@ for (const [label, opts] of [
 // ── Question 2: the expiry floor ──────────────────────────────────────────────────────────────
 function entryRows(opts = {}) {
   const rows = [];
-  let unlisted = 0;
+  const unlisted = {};
   for (const n of sellers) {
+    unlisted[n.sym] = 0;
     for (let t = Math.max(start(n), VOL_WINDOW + 2); t < n.closes.length; t += STEP) {
       if (n.baseVol[t] == null || heldBack(n.printAt, t, 1)) continue;
       if (!entryExpiry(n.dates[t], { scheme: opts.scheme })) {
-        unlisted++;
+        unlisted[n.sym]++;
         continue;
       }
       const trade = buy(n, t, opts);
@@ -364,7 +365,10 @@ function floorRow(label, rows) {
   return row;
 }
 
-function floorSection(title, { rows, unlisted }, phases = true) {
+/** One Q2 section; `only` keeps one name's entries, and its own unlisted days. */
+function floorSection(title, { rows: all, unlisted: bySym }, { phases = true, only } = {}) {
+  const rows = only ? all.filter((r) => r.sym === only) : all;
+  const unlisted = only ? (bySym[only] ?? 0) : Object.values(bySym).reduce((a, b) => a + b, 0);
   console.log(`\n=== ${title} (${unlisted} days had nothing listed 120–200 days out) ===`);
   const groups = [
     ["all entries", rows],
@@ -375,19 +379,19 @@ function floorSection(title, { rows, unlisted }, phases = true) {
 
 const base = entryRows();
 floorSection("Q2 · basket, floor at the recovery band's p75 (the fence as a rule)", base);
-floorSection("Q2 · CRWV alone", { rows: base.rows.filter((r) => r.sym === "CRWV"), unlisted: 0 });
-floorSection(
-  "Q2 · NVDA alone",
-  { rows: base.rows.filter((r) => r.sym === "NVDA"), unlisted: 0 },
-  false,
-);
+floorSection("Q2 · CRWV alone", base, { only: "CRWV" });
+floorSection("Q2 · NVDA alone", base, { only: "NVDA", phases: false });
 floorSection(
   "Q2 · basket, a thin chain (March cycle + January only)",
   entryRows({ scheme: "quarterly" }),
-  false,
+  { phases: false },
 );
-floorSection("Q2 · basket, floor at the band's median (shallower)", entryRows({ q: 0.5 }), false);
-floorSection("Q2 · basket, floor at the band's p90 (deeper)", entryRows({ q: 0.9 }), false);
+floorSection("Q2 · basket, floor at the band's median (shallower)", entryRows({ q: 0.5 }), {
+  phases: false,
+});
+floorSection("Q2 · basket, floor at the band's p90 (deeper)", entryRows({ q: 0.9 }), {
+  phases: false,
+});
 
 // ── Today on CRWV, and the live fence re-derived ──────────────────────────────────────────────
 const crwv = universe.find((n) => n.sym === "CRWV");
@@ -397,6 +401,8 @@ const ruleOn = (t) => {
   return { date: s.date, band, floor: band ? expiryFloor(crwv.dates, t, band.sessions) : null };
 };
 const tRead = crwv.dates.findIndex((d) => d >= LIVE_FLOOR.readOn);
+if (tRead < 0)
+  throw new Error(`CRWV's tape ends before ${LIVE_FLOOR.readOn}: clear the bars cache`);
 const tNow = crwv.closes.length - 1;
 const read = ruleOn(tRead);
 const now = ruleOn(tNow);
@@ -406,17 +412,8 @@ const expNow = entryExpiry(now.date);
 // filed print or the cadence projection as a one-day window, never a date already past.
 const projected = printCadence(crwv.prints, now.date).projectedNext;
 const one = crwv.prints.find((p) => p > now.date) ?? (projected > now.date ? projected : null);
-const [winStart, winEnd] = flag("print-window")?.split("..") ?? [one, one];
-/** `n` weekdays after `from`, holidays not skipped: a session count, approximately. */
-const weekdaysAfter = (from, n) => {
-  let day = from;
-  for (let left = n; left > 0; ) {
-    day = addDays(day, 1);
-    const wd = new Date(`${day}T00:00:00Z`).getUTCDay();
-    if (wd !== 0 && wd !== 6) left--;
-  }
-  return day;
-};
+// A single date is a one-day window, the same as a filed print.
+const [winStart, winEnd = winStart] = flag("print-window")?.split("..") ?? [one];
 const printWindow = winEnd && {
   start: winStart,
   end: winEnd,
@@ -431,7 +428,7 @@ console.log(
   `\nThe live fence re-derived on ${read.date}: ${bandLine(read)} (live: ${LIVE_FLOOR.day})`,
 );
 console.log(
-  `CRWV today (${now.date}, close ${crwv.closes[tNow].toFixed(2)}, ${phaseRow(crwv, tNow, stateAt(crwv, tNow))}): ${bandLine(now)} · the playbook's expiry ${expNow ? `${expNow.expiry} (${expNow.days} days)` : "none listed"} · live fence ${expNow && expNow.expiry >= LIVE_FLOOR.day ? "does not bind" : "binds"}${now.floor ? `, the rule ${expNow && expNow.expiry >= now.floor ? "does not bind" : "binds"}` : ""}`,
+  `CRWV today (${now.date}, close ${crwv.closes[tNow].toFixed(2)}, ${phaseRow(crwv, tNow, stateAt(crwv, tNow))}): ${bandLine(now)} · the playbook's expiry ${expNow ? `${expNow.expiry} (${expNow.days} days)` : "none listed"}${expNow ? ` · live fence ${expNow.expiry >= LIVE_FLOOR.day ? "does not bind" : "binds"}${now.floor ? `, the rule ${expNow.expiry >= now.floor ? "does not bind" : "binds"}` : ""}` : ", so neither fence is what stops a buy"}`,
 );
 if (printWindow)
   console.log(
