@@ -4,6 +4,7 @@ import type { StrategyId } from "../playbooks/pair-table.js";
 import { pointerMove } from "../subscriptions/conviction-pointer.js";
 import { asOwnConviction, type OwnerReadSubscription } from "../subscriptions/pair-conviction.js";
 import type { SubscriptionsState } from "../subscriptions/subscription-state.js";
+import { usdWhole } from "../ui/usd-whole.js";
 import { convictionNames, pointerChange } from "./conviction-pointer-changes.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { type OwnViews, ownViewsOf } from "./pair-conviction-write.js";
@@ -33,8 +34,6 @@ import {
 
 const MAX_SYMBOLS_NAMED = 6;
 
-const dollars = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
-
 /** One subscription in words, at most `MAX_SETTING_TEXT` long; `null` when there is none. With
  *  `viewOf`, a pointer at the owner's own view on the pair reads as the conviction it states, so the
  *  line says "conviction checked …" as it did when that day was kept inline (#5482). */
@@ -52,7 +51,7 @@ export function subscriptionSummary(
   const parts = [
     sub.enabled ? "on" : "paused",
     sub.mode,
-    sub.capitalAllocated === undefined ? "no budget" : dollars(sub.capitalAllocated),
+    sub.capitalAllocated === undefined ? "no budget" : usdWhole(sub.capitalAllocated),
     ...(named ? [named] : []),
     ...(sub.compoundAllocation ? ["compounding"] : []),
     ...(sub.conviction ? [`conviction checked ${sub.conviction.checkOn}`] : []),

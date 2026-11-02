@@ -300,9 +300,9 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | A conviction stated on a form matches a record when the record steers its pair and states the same check day (it only chooses the pointer, and is never kept on the subscription); a pointer is written on a subscribe or edit, migrated on the poll, and never replaces one already there unless it is stale (a record that no longer steers the pair, or an id no record or member view holds); a member's view handed over outranks the owner's own view on the pair | `src/subscriptions/conviction-pointer.ts:82-183`, `src/server/subscription-seed-store.ts:275-306` | grounded |
 | An owner's conviction stated on the subscribe or conviction form is kept as their own view on that one pair (`scope: "pair"`, one per account and pair, steering on that account) and pointed at, unless its day is a seeded record's on a pair that record steers (then the record, whose narrowings it keeps); with no views file wired, any other day is refused; the owner's row reads it as the reason and day they typed; an unsubscribe drops it, and the poll drops one whose subscription is gone | `src/subscriptions/pair-conviction.ts:48-120`, `src/server/pair-conviction-write.ts:35-66`, `src/server/member-conviction-store.ts:257-347` | grounded |
 | On each controls poll, a ◆ subscription the pointer rule leaves unpointed (no single record steers it) gets its row's conviction as its owner's own view on that pair, named for the account's bot and stated today (or, past its check day, on the subscription's start day, else the day before the check); the pointer pass then points at it and logs the move. A view the store's rules refuse, that would not read back, or past the controls wire's room is not written, and the bots hold the pair exits-only | `src/subscriptions/pair-conviction-migration.ts:60-108`, `src/server/subscription-seed-store.ts:225-242`, `src/server/member-conviction-store.ts:274-317` | grounded |
-| A record's check adds its steered pairs' net P/L (a paused pair still counts); below $0 stops new entries on every one; a strategy's retire test stops only its own pair | `src/playbooks/conviction-check.ts:127-164`, `src/playbooks/with-conviction-gate.ts:73-197` | grounded |
-| Ticker budgets fit inside the strategy allocation; lowering is never refused | `src/subscriptions/strategy-budgets.ts:12-30`, `src/subscriptions/strategy-budgets.ts:85-108` | grounded |
-| A conviction's check day is a future market day within a year | `src/subscriptions/strategy-budgets.ts:129-138` | grounded |
+| A record's check adds its steered pairs' net P/L (a paused pair still counts); below $0 stops new entries on every one; a strategy's retire test stops only its own pair | `src/playbooks/conviction-check.ts:128-165`, `src/playbooks/with-conviction-gate.ts:73-197` | grounded |
+| Ticker budgets fit inside the strategy allocation; lowering is never refused | `src/subscriptions/strategy-budgets.ts:13-31`, `src/subscriptions/strategy-budgets.ts:84-107` | grounded |
+| A conviction's check day is a future market day within a year | `src/subscriptions/strategy-budgets.ts:128-136` | grounded |
 
 ### Decision surface
 
@@ -329,17 +329,17 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 | `derivesFrom`: the spread declares its run-up pair; unaudited | `src/playbooks/playbook.ts:169-172`, `src/playbooks/call-spread.ts:454` | grounded |
 | Mixed signals: observe-only, opt-in, falsifier 30 observations or 2026-11-30 | `src/playbooks/mixed-signals.ts:1-31`, `src/playbooks/mixed-signals.ts:44-48`, `src/playbooks/registry.ts:34-39` | grounded |
 | Exit-safety: one level per mode, `enforce` or `alert-only`; drawdown from cost basis, not peak | `src/playbooks/playbook.ts:102-105`, `src/playbooks/playbook.ts:264-278` | grounded |
-| Conviction check: gate only; net P/L and the retire test; latched | `src/playbooks/with-conviction-gate.ts:21-63`, `src/playbooks/conviction-check.ts:99-106`, `src/playbooks/conviction-check.ts:127-164` | grounded |
+| Conviction check: gate only; net P/L and the retire test; latched | `src/playbooks/with-conviction-gate.ts:21-63`, `src/playbooks/conviction-check.ts:100-107`, `src/playbooks/conviction-check.ts:128-165` | grounded |
 | A non-✓ pair with no conviction keeps trading, labelled | `src/playbooks/conviction-check.ts:39-50` | grounded |
 | Compounding is the only automatic budget tilt | `src/domain/types.ts:336-346` | grounded |
-| The play target band as two-level thresholds, observe-only on one bot, and the same reading served by the book-health view (#5493 slice 4) | `src/playbooks/play-target.ts:49`, `src/playbooks/play-target.ts:86`, `src/playbooks/play-target.ts:188`, `src/playbooks/play-reading.ts:41`, `src/playbooks/play-reading.ts:67`, `src/playbooks/play-reading.ts:99`, `src/playbooks/with-target-observation.ts:138`, `src/observatory/book-health-imbalance.ts:29`, `src/scripts/autonomous-live-wiring.ts:389`, `src/domain/types.ts:371` | grounded (observe-only; lean has no source) |
+| The play target band as two-level thresholds, observe-only on one bot, and the same reading served by the book-health view (#5493 slice 4) | `src/playbooks/play-target.ts:50`, `src/playbooks/play-target.ts:87`, `src/playbooks/play-target.ts:186`, `src/playbooks/play-reading.ts:41`, `src/playbooks/play-reading.ts:67`, `src/playbooks/play-reading.ts:99`, `src/playbooks/with-target-observation.ts:138`, `src/observatory/book-health-imbalance.ts:29`, `src/scripts/autonomous-live-wiring.ts:389`, `src/domain/types.ts:371` | grounded (observe-only; lean has no source) |
 | The hand-off, holding place, tilt, phase reading, weighting, and acting on a band | #5483 criteria 1–4, 9, 10 and amendments 1 and 3; #5482 criteria 1–4 and its amendment; this page §4 and §6 | proposed, not in code |
 
 ### Invariants
 
 | # | Cited at | Verdict |
 |---|---|---|
-| 1 | `src/engine/option-guards.ts:46-47`, `src/engine/guards.ts:278-286`, `src/playbooks/with-conviction-gate.ts:186-194`, `src/playbooks/playbook.ts:237-251`, `src/subscriptions/strategy-budgets.ts:91-95` | grounded |
+| 1 | `src/engine/option-guards.ts:46-47`, `src/engine/guards.ts:278-286`, `src/playbooks/with-conviction-gate.ts:186-194`, `src/playbooks/playbook.ts:237-251`, `src/subscriptions/strategy-budgets.ts:90-94` | grounded |
 | 2 | see Layers: wheel and spread by type shape; windows unchecked | partly grounded |
 | 3 | `src/playbooks/option-ownership.ts:3-47`, `src/playbooks/option-ownership.ts:58-76` | grounded |
 | 4 | `src/bots/bot.ts:14`; `envelope.json` → `$openOnPurpose` (paper-only is a judgment stop, not a path) | grounded as default and policy; there is no code-level refusal of a live URL |

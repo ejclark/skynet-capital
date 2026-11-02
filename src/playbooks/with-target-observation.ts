@@ -35,6 +35,7 @@ import type {
   Portfolio,
 } from "../domain/types.js";
 import type { Persona } from "../personas/persona.js";
+import { usdWhole } from "../ui/usd-whole.js";
 import { ceilingOf, FIRST_RUN_PLAY_TARGETS, readPlay, targetFor } from "./play-reading.js";
 import {
   type BandLevel,
@@ -42,7 +43,6 @@ import {
   type PlayReading,
   type ResolvedPlayTarget,
   tripMoves,
-  usdWhole,
 } from "./play-target.js";
 import type { EnabledPlaybook } from "./playbook.js";
 
