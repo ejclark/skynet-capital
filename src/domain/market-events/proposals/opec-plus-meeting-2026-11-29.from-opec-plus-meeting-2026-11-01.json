@@ -1,0 +1,11 @@
+{
+  "id": "opec-plus-meeting-2026-11-29",
+  "kind": "geopolitical",
+  "title": "OPEC+ meetings (January quotas; full-group 2027 baselines expected) — the pause's handover",
+  "date": "2026-11-29",
+  "status": "estimate",
+  "source": "EST: the seven participating countries' own primary. opec.org/pr-detail/620-1-november-2026.html, fetched direct 2026-11-02 (HTTP 200), records that Saudi Arabia, Russia, Iraq, Kuwait, Kazakhstan, Algeria and Oman 'decided to maintain September 2026 required production for December 2026', will 'continue to hold monthly meetings', and closes 'The next meeting will be held on 29 November 2026.' CNBC (2026-10-31, cnbc.com/2026/10/31/opec-oil-output-targets-december.html) separately reports that all 21 OPEC+ members meet on 29 November, when analysts expect 2027 quotas to be decided, after a capacity review now expected by mid-November; the 68th JMMC statement of 2026-10-04 set the 69th JMMC for the same day. Filed estimate because market-events-data.ts defines no trusted opec.org prefix and this lane may not self-confirm an event it discovered in-sweep, not because the date is in doubt. Checked 2026-11-02",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Discovered during the opec-plus-meeting-2026-11-01 close-out (2026-11-02). Named but not filed in that ledger's 10-16 and 10-26 rows because it was then past the horizon (D-34); it is D-27 today, inside the 30-day all-impacts band. It is the meeting the 11-01 ledger's whole structural framing pointed at: the first forum after the capacity review, where 2027 baselines (and so Iran's war-suppressed Aug-Oct reference number) can be argued. Filed medium to match the family; the researching lane may re-tier it if the baselines are confirmed on the agenda."
+}

@@ -386,6 +386,7 @@ ISM lead — direction agreement with the 11-02 national print). See
 | 2026-10-26 | D-4 | **Full session (`days-band-transition:medium:8+->medium:0+`, plus new strong adjacents: MSFT/GOOG/AMZN prints now high, ISM Manufacturing 11-02, AMD 11-03). The print is four days out; no October consensus exists yet, and the stance holds.** **(1) Source re-check, unchanged:** MNI's publication calendar re-fetched direct today (mnimarkets.com/chicago-business-barometer-publication-calendar) still reads `"October 30" | "09:45"` with no schedule note (fourth confirmation); stays `estimate` (no confirmed-source prefix exists for MNI; ISM-Chicago's own page is SSO-gated). **(2) Consensus:** a search for an October consensus found none (only the August 47.1 miss and the July 57.6 beat surfaced); no October level view registered, per the 09-05 refusal. September printed 58.8 (see the 10-14 row), so 10-30 remains a reversion test, not a signal. **Adjacency sweep — peers:** n/a, `symbols: []`; the MSFT 10-27, GOOG 10-28, META (printed 10-21), AMZN 10-29 corridor is unchanged in shape (AAPL moved to 11-02 per the fomc sibling, Nasdaq-sourced). **Macro since 10-14:** Sep CPI printed 3.7% y/y vs 3.6% exp, core +0.3% m/m vs 0.2% (BLS API, per the [cpi-2026-10-14 close-out](cpi-2026-10-14.md); S&P −1.1%). FOMC 10-28 is a hold-favored event: the [fomc sibling](fomc-2026-10-28.md)'s 10-22 read had Polymarket no-change 94% / hike 6% (direct), and a search-relayed Kalshi line today reads hold ~83% (secondary, venues not reconciled); December-hike odds ~72% (secondary). Dallas Fed Manufacturing (10-26, 10:30 ET) had not printed at fetch time, so it is not read here; its [own ledger](dallas-fed-mfg-2026-10-26.md) owns it. **Volatility regime:** VIX **18.15** (10-26 bar, Yahoo direct) vs 15.27 at the 10-14 row, **+2.9pt, just under the 3-point material bar** and inside the 17.3–19.5 range of the last six sessions (peak 19.99 on 10-16 after hedge-fund distress rumors; 10-22 META-led tech sell-off). Regime is elevated but not new. **Tape:** S&P 500 7,671.15 (10-26) vs 7,805.45 (10-13), about −1.7%. **Geopolitical / energy:** Brent **110.12** (10-26) vs 106.35 at the 10-14 row, peaking 116.72 on 10-23; WTI 100.96 vs 94.79. The energy premise behind Prices Paid has widened again, but FT-chicago-pmi-2026-09-30-2's kill showed it did not transmit to this survey in September, so 'read Prices Paid first' stays at Medium confidence. **Structural confound, restated:** FOMC 10-28 · PCE + GDP-advance 10-29 · ECI 10-30 08:30 · BoJ 10-30 · month-end Russell recap · ISM 11-02 leave Chicago's 09:45 slot the third straight confounded session; the ISM lead is one business day. **Calendar sweep:** `event-scan.mjs --on-date=2026-10-30` lists 11 entries (BoE DMP, BoJ, ECB SPF, ECI, G20 FMs, Tokyo CPI flash, Russell capping, TIC SHCA, UK Blue and Pink Books, this event), all already tracked. **Proposals:** none; nothing new dated inside the horizon surfaced. | None — **Stand aside** (High) unchanged; 09:45–09:50 null-footprint call (Medium) unchanged; no October level view. | 2026-10-28 |
 | 2026-10-26 | D-4 | **Full session (band transition `medium:8+` → `medium:0+`, interval 7d → 2d; VIX +3.0pt vs the 10-14 row; five newly strong adjacents).** **Date:** MNI's publication calendar re-fetched direct today (mnimarkets.com/chicago-business-barometer-publication-calendar, HTTP 200) still reads `"October 30"` at `"09:45"` (ET), no schedule footnote — fourth confirmation; stays `estimate` (no MNI/ISM-Chicago confirmed-source prefix; ISM-Chicago's page is SSO-gated). **Event tape:** tradingeconomics (direct) shows September **58.8** vs 51.2 consensus and only a Q4 model forecast (50.0) — still **no October consensus**, so no level view is registered, as the 09-05 refusal row committed; the October print stays a reversion test off +11.7pt (trailing σ ≈ 7.6). **Macro since 10-14:** per sibling ledgers (read, not re-derived) — PPI 10-15 hot (+1.3% m/m), META-led tech sell-off 10-21/22, 10Y back under 5%; no CPI/jobs/FOMC datum since. **Fed leg (D-30 correction now reversed):** October-meeting hold is ~94% on Polymarket (sibling [fomc-2026-10-28](fomc-2026-10-28.md), 10-22 direct read; one search-relayed line says ~83%, unreconciled), December hike still favored — the hike-favored corridor risk this doc flagged at D-30 is gone; the 10-28 meeting is a hold-favored event and never a channel to this print. **Volatility regime:** VIX **18.30** (Yahoo daily, 10-26 intraday) vs 15.27 at the 10-14 row, **+3.03** — past the 3pt screen band, peak 19.99 (10-16, AI-financing scare), 19.45 on 10-23; elevated, not a Chicago-specific shock; S&P 500 7,680.65 vs 7,718.94 (−0.5%). **Geopolitical / energy:** Brent **109.68** vs 106.35 at 10-14 (+3.1%; 116.72 intraday-high close 10-23), copper **6.53** vs 6.58 (flat) — the energy premise behind 'read Prices Paid first' has widened, not unwound; confidence stays Medium (Prices Paid fell 3.7 in September despite the same premise). **Peers:** `symbols: []`; Dallas Fed (10-26) and S&P flash PMI searches surfaced only prior-year releases, so nothing was used. **Corridor:** `--on-date=2026-10-30` lists 11 entries, all tracked (ECI 08:30 confirmed/high, BoJ, ECB SPF, Tokyo CPI, BoE DMP, Russell capping, TIC SHCA, UK Blue/Pink Books, G20 FMs); strong set now MSFT 10-27, GOOG 10-28, AMZN 10-29, AMD 11-03 (new), plus FOMC/PCE/GDP/ECI/ISM-mfg; AAPL moved to 11-02 and META printed 10-21 per siblings (not mine to edit). **Proposals:** none; nothing dated beyond the horizon surfaced. **Kill switches:** none fires; FT-1/-2/-3 stay `_open_` (score by 10-30/10-31/11-02). | None — **Stand aside** (High) unchanged; 09:45–09:50 null-footprint call (Medium) unchanged; no October level view. | 2026-10-28 (medium, 0+ band: every 2d) |
 | 2026-10-30 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 20.9 (+2.6pt since last), band unchanged (medium:0+), 62 adjacent event(s) tracked, new in corridor since last pulse: `smci-fq1-2027-results-2026-11-03` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-01 |
+| 2026-11-02 | D+3 | **Close-out session (`event-passed-unscored`).** The print landed: **October Chicago Business Barometer 55.3**, −3.5 from September's 58.8, a **~0.5–0.8 point miss** against a consensus that the sources do not agree on (55.8 Teleborsa/ForexFactory · 56.0 RTT · 56.1 tradingeconomics · 56 FactSet via Boursedirect) — read as a small miss, not a surprise. Release text read direct from the MNI republication (mondovisione.com, dated 30/10/2026) and cross-read on tradingeconomics and Teleborsa (published 10:18 ET, consistent with the 09:45 slot): Prices Paid **+8.9, highest since Dec 2021**; Employment +10.3 (highest since Apr 2021); Supplier Deliveries −10.3; Production −5.2; Order Backlogs −4.4; New Orders −0.6; the survey ran 10-01 → 10-13, three weeks before the 11-03 midterms, so the election-discount leg had no field time to bite (a correction to leg 6, recorded in `## Outcome`). **FT-1 scored PASS** (SPY 09:45 bar \|ret\| 0.031%, 22nd percentile; QQQ 0.032%, 22nd; TLT 0.024%, 19th — all far inside the 75th), **FT-2 scored PASS** (55.3 ≥ 50), **FT-3 left `_open_` on purpose**: the Chicago leg is in (−3.5, negative) but the 11-02 ISM Manufacturing print (10:00 ET) had not happened at this session's clock (2026-11-02 00:35 UTC), so the row cannot be scored from data yet. **Tape:** the 10-30 session itself was a bad one — S&P 500 7,720.39 → **7,580.07 (−1.82%)**, VIX 17.20 → **19.42**, Brent **117.64** (vs 89.31 at the initial-research baseline), 10Y 4.93 — and the release's own bar sat at the 22nd percentile of 59 prior sessions' 09:45 bars, which is the leg-2 point in one picture: a session-level read would have credited a down day to a survey that did not move the tape. ECI Q3 (08:30, BLS) printed +0.8% q/q vs +0.8% expected (investinglive, search result; BLS archive page reachable but headline not read) — no surprise to confound. **Kill switches:** none fires (Brent far above $87; the 10-30 bar is nowhere near the 75th percentile). **Conviction proposals / declared intents:** `conviction-proposals.mjs --event` and `intents.mjs --event` both print `[]` — nothing to answer or cite. **Adjacency sweep:** n/a beyond the above; `symbols: []`; **Proposals: none** (nothing new dated inside the horizon; `--on-date=2026-11-02` lists only entries already tracked). Full scoring and accounting in `## Outcome`. | None — **Stand aside** held; null-footprint call **confirmed** on the registered threshold; "read Prices Paid first" **vindicated** this month (the line that moved most) | closed — `## Outcome` exists; only FT-3 (score by 2026-11-02, awaits ISM 10:00 ET) can re-open it as `forward-test-due` |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
@@ -410,3 +411,163 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-10-30
 <!-- probe-ref: {"symbols":{},"vix":20.89,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":1} -->
+
+## Outcome
+
+**Close-out (2026-11-02, D+3 — inside the `closeOutWithinDays: 6` window).** Macro-print mode carries
+no `earnings-cycle`/`intraday-edges` instrument (`symbols: []`); the cache-bust command was run
+regardless. "Re-run instrument data" here is the release itself and fresh SPY/QQQ/TLT 5-minute bars
+(Yahoo chart API, `range=60d`, 4,681 bars per symbol, 2026-08-07 → 2026-10-30, 60 sessions each with
+a complete 09:45 ET bar, timestamps converted to America/New_York so the bar labelled 09:45 spans
+09:45:00–09:49:59), all fetched this session — none carried from the ledger's earlier text. The
+measurement script is two dozen lines of Node over those bars; it is not committed (see *Loop stage
+still done by hand*).
+
+### What printed
+
+| Line | October | Change vs September |
+|---|---|---|
+| Headline (Business Barometer) | **55.3** | **−3.5** (from 58.8; second month in expansion) |
+| Supplier Deliveries | — | −10.3 (lowest since Feb; 21st month >50) |
+| Production | — | −5.2 |
+| Order Backlogs | — | −4.4 (4th month in contraction) |
+| New Orders | — | −0.6 |
+| Employment | — | **+10.3** (highest since Apr 2021; back above 50) |
+| Prices Paid | — | **+8.9 — highest since Dec 2021** (chemical/petroleum inputs, fuel surcharges, freight; eighth month with no respondent reporting lower prices) |
+| Inventories | — | +4.0 (3rd month in contraction) |
+
+Source: MNI's own release text as republished verbatim by Mondo Visione (dated 30/10/2026, HTTP 200),
+cross-read against tradingeconomics (HTTP 200, same figures) and Teleborsa (HTTP 200, timestamped
+10:18 ET — consistent with a 09:45 ET release). Absolute subcomponent levels are not published free
+(ISM-Chicago's report stays SSO-gated, as at every earlier row). **Consensus is not one number:**
+55.8 (Teleborsa, ForexFactory) · 56.0 (RTT) · 56.1 (tradingeconomics) · 56 (FactSet via Boursedirect)
+— a miss of 0.5–0.8 points on every version, small against a trailing σ of ~7.6. The release time
+was announced (MNI calendar, re-fetched direct throughout) and is consistent with the wire timestamps;
+it was not independently timestamped to the second here. The date stays `estimate`: the print
+happened on the calendar date, but no MNI/ISM-Chicago confirmed-tier source prefix exists, so nothing
+here flips it (the schema gap named at initial research is unchanged).
+
+### Forward tests, scored
+
+| Test | Prediction | Measured | Verdict |
+|---|---|---|---|
+| FT-chicago-pmi-2026-10-30-1 (09:45-bar \|ret\| ≤ 75th percentile of SPY's trailing sessions) | SPY ≤ p75 (kill: SPY **and** QQQ above p75) | SPY **0.031%** vs p75 0.099% → **22nd percentile**; QQQ 0.032% vs p75 0.189% → 22nd; TLT 0.024% vs p75 0.087% → 19th | **PASSED** |
+| FT-chicago-pmi-2026-10-30-2 (headline ≥ 50) | ≥ 50, direction only | **55.3** | **PASSED** |
+| FT-chicago-pmi-2026-10-30-3 (Chicago m/m sign = ISM Mfg m/m sign) | same sign across 10-30 / 11-02 | Chicago leg **−3.5 (negative)**; ISM Manufacturing Oct (Sep = 54.5) **not yet published** | **left `_open_`** — scores today after 10:00 ET |
+
+**FT-1 passes, and not narrowly.** The release-containing bar sat at the 22nd percentile on SPY and
+QQQ and the 19th on TLT of the trailing 59 prior sessions' own 09:45-bar distribution (strict-below
+percentile; the "trailing 60" in the registration is 59 here because Yahoo's 5-minute history is
+capped at 60 sessions *including* 10-30 — a one-session difference that cannot move a 22nd-percentile
+reading across a 75th-percentile line). The kill needed both SPY and QQQ above their 75th; neither
+came close. The registered void clauses did not fire: MNI published on 10-30 at the announced slot,
+5-minute bars exist for the session, and no exogenous headline was identified inside 09:40–09:55 ET.
+**Named qualifier:** QQQ's 09:40 bar (−0.195%) was larger than its 09:45 bar (+0.032%) and sits just
+above that distribution's 75th percentile (0.189%) — the move preceded the release rather than
+following it, the same pattern as 2026-07-31 in the initial research.
+
+**The null, re-tallied honestly with the bars now in reach.** Yahoo's 60-session window has rolled
+past 06-30 and 07-31, so the percentiles below use the *current* window and differ from the
+initial-research table for the one date that is in both (08-28: SPY 50th now vs 43rd then):
+
+| Release | Headline | SPY 09:45 bar | QQQ | TLT |
+|---|---|---|---|---|
+| 2026-08-28 | 47.1 (−10.5pt) | −0.057% · 50th | −0.094% · 53rd | +0.039% · 35th |
+| 2026-09-30 | 58.8 (+11.7pt) | +0.115% · **83rd** | +0.003% · 0th | +0.051% · 48th |
+| 2026-10-30 | 55.3 (−3.5pt) | +0.031% · 22nd | +0.032% · 22nd | −0.024% · 19th |
+
+One reading in the whole record now exceeds the 75th percentile: SPY on 09-30 (83rd), the quarter-end
+session with PCE and GDP-third in the 08:30 slot, and QQQ did not agree (0th), so the registered
+two-instrument kill would not have fired there either. Across the five releases measured at
+initial research and now (06-30, 07-31, 08-28, 09-30, 10-30; windows differ), SPY exceeded the 75th
+once and QQQ never. The null is reinforced, still on a small n and with an in-sample baseline; it is
+not promoted from Medium.
+
+**The session, which is the point.** 10-30 was a down day — S&P 500 7,720.39 → **7,580.07 (−1.82%)**,
+VIX 17.20 → **19.42**, Brent **117.64**, 10-year 4.93% (own Yahoo daily bars, fetched 2026-11-02;
+the cause of the move was not investigated here). The release's own bar sat at the 22nd percentile of
+the 59 prior sessions' 09:45 bars (SPY and QQQ). Read at session level, this print would have been
+credited with a −1.8% day; read at the bar that contains it, it did nothing. That is the structural
+confound (leg 3) working exactly as described, and the measurement discipline (leg 2) cutting through
+it. ECI Q3 (08:30, BLS-confirmed) printed +0.8% q/q against +0.8% expected per investinglive (search
+result; the BLS archive page was reachable but its headline was not read) — no surprise in the
+08:30 slot for this print to be confused with.
+
+**FT-2 passes on the letter, and the contaminant it named did not exist.** The registration warned
+that a soft October might be election-uncertainty sentiment. MNI states the survey ran **10-01 →
+10-13**, three weeks before the 11-03 midterms, and the print was not soft. Leg 6's premise that the
+field period "runs directly into" the midterms was wrong; the discount-by-the-election instruction
+carried in Signals & conditions had nothing to discount. Recorded as a correction to the initial
+research, not an edit to it.
+
+**FT-3: pending, and why it is not unscoreable.** The registration's pass condition is that
+sign(Chicago Oct − Sep) = sign(ISM Mfg Oct − Sep). Chicago fell 3.5, so the pair passes only if the
+national index also falls below September's **54.5** (tradingeconomics: 54.50 vs 54.60 prior; one
+calendar source carries a ~55.0 forecast, so a rise is the likelier consensus path and the
+disagreement kill is live). ISM Manufacturing (`ism-manufacturing-2026-11-02`, confirmed, 10:00 ET)
+had not printed at this session's clock, 2026-11-02 00:35 UTC; searches for the result found nothing,
+as expected. The row's data will exist today, so the honest verdict is "not yet", not
+`unscoreable`: it stays `_open_` and the scanner's `forward-test-due` door (score-by 2026-11-02)
+re-dispatches the owning lane to score it from the published figure. Void conditions are unchanged
+(either print unpublished by 11-04, the ISM date slipping, or an exactly-zero change).
+
+### Stance, scored
+
+- **Stand aside (High) — held.** No position was opened, closed or sized off this print; nothing
+  that happened argues for one.
+- **"The 10-30 print leaves no identifiable footprint in its own window" (Medium) — confirmed** on the
+  registered threshold, by a wide margin, and re-tallied above. Confidence stays Medium (n is still
+  small and the baseline is in-sample).
+- **"Read Prices Paid before the headline" — vindicated this month.** The line that moved most was
+  Prices Paid (+8.9, a four-year high), not the headline (−3.5), with Brent at 117.64. Last month the
+  same instruction failed (Prices Paid fell 3.7 against a rising energy backdrop, per the 09-30
+  close-out), so the honest record across two prints is one hit and one miss: Medium confidence is
+  right, High was never earned.
+- **"Headline is a probe on the 11-02 ISM" — undecided** until FT-3 scores.
+
+### Kill switches, resolved at close
+
+- **10-30 bar above the 75th percentile on SPY and QQQ — did not fire** (22nd and 22nd).
+- **Sub-50 print on 09-30 — resolved earlier, did not fire** (58.8, per the sibling's close-out).
+- **Chicago/ISM disagreeing in direction — open**, with FT-3.
+- **Brent below ~$87 before 10-30 — did not fire** (117.64 on 10-30).
+- **Primary-tier source for the MNI schedule — unchanged**: still a schema gap, not a sourcing one.
+
+### Never traded
+
+Medium impact, `estimate` date throughout, no macro-keyed house playbook. No position at any point.
+Paper-trading and education only; nothing here is advice.
+
+### Loop stage still done by hand
+
+**Verify.** The 09:45-bar percentile was re-derived by a throwaway script each time (initial research,
+now). It is the same twenty lines for every 09:45/10:00 survey this calendar tracks; if a third
+macro-print leg asks for it, it earns a committed instrument under `scripts/research/` that scores the
+registered threshold from the fragment's own text. Not built here: one line of evidence, and a
+process lane's own call to make.
+
+### Honest accounting
+
+Two of three registered tests scored: one clean pass on the measured null (FT-1), one clean pass on a
+threshold the base rate favoured (FT-2). The third waits on a print that had not happened when this
+ran. The document's two corrections are both about its own premises, not its calls: the field period
+did not run into the midterms (leg 6), and the date stayed `estimate` despite being correct, which
+is the schema gap and not a research failure. The measured answer to "does this survey move the
+tape?" is the same one it had at D-55.
+
+**Last assessed:** 2026-11-02
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
+
+### Forward-test re-dispatch (2026-11-02, 07:29 UTC)
+
+The scanner re-opened this event as `forward-test-due` for FT-chicago-pmi-2026-10-30-3 (score-by
+2026-11-02). Its only missing input is the ISM Manufacturing October headline, released at 10:00 ET
+(15:00 UTC) — 02:29 ET at this session's clock. A web search for the October figure returned only
+the September reading (54.5, PNC) and calendars listing the 10:00 ET slot; nothing is published.
+Under the terminal-verdict rule the row is filed `unscoreable — settles 2026-11-02` with the decision
+rule written down (pass iff ISM Oct < 54.5; kill iff > 54.5; void iff exactly 54.5), not scored from a
+guess. FT-1 and FT-2 are unchanged. No stance, kill switch or prediction was edited. A claim-scoring
+run (`npm run research:claims`) was not needed: no row was decided.
+
+**Last assessed:** 2026-11-02
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->

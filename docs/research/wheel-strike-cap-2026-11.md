@@ -32,7 +32,7 @@ helped only when puts were underpriced, and then the better move is not selling 
 **What happens next:**
 
 - A passed claim 1, 2a or 7 does **not** carry the fence into CRWV-WHEEL. `research:refine` keeps
-  refusing those pass keys; #6598 slice 3 makes the refusal cite this study.
+  refusing those pass keys, and each refusal cites this study (`src/playbooks/fence-studies.ts`, #6598 slice 3).
 - The fence stays as the view's own narrowing, unchanged: this study judges the pair's setting, not
   Eric's view.
 - Note for the view's owner: the rule reads $44.36 today (10-30), $9 under the live fence. Neither
