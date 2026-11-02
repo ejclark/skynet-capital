@@ -12,21 +12,21 @@ flowchart TD
   A -.->|"intended"| D["Self-healing"]
   A -.->|"intended"| E["Context engineering"]
   A -.->|"intended"| F["Research"]
-  G["/governor<br/>runs only when someone types it"] -.->|"intended: schedules"| C
+  G["/governor<br/>runs only when a session is told to"] -.->|"intended: schedules"| C
   G -.->|"intended"| D
   G -.->|"intended"| E
 ```
 
 _How the pillars are meant to stack. Solid lines run today; dashed lines are intended and not built.
 No lane calls run memory: only `/dream` starts a run, and a person starts `/dream`. Nothing triggers
-`/governor` on its own (#4527). The meter, `npm run meter`, is read by hand._
+`/governor` on its own: a person or a surge session starts each cycle (#4527). The meter, `npm run meter`, is read by hand._
 
 ## Fitness contracts — what the layers are for
 
 Eric, 2026-11-01: fitness functions define "the test that needs to pass", and when they don't, AI must
 detect, correct and maintain; "fitness tests define self healing systems." So a fitness contract is the
-top of every pillar. Run memory is how a correction retries, dreaming is how a new contract gets found,
-and a charter's objective trigger is a failing contract. `scripts/fitness.mjs` holds them.
+top of every pillar. Run memory is meant to be how a correction retries (not built yet), dreaming is
+how a new contract gets found, and a charter's objective trigger is a failing contract. `scripts/fitness.mjs` holds them.
 
 ```mermaid
 flowchart LR
