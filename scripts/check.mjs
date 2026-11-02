@@ -15,7 +15,8 @@
 // unstaged and untracked. (`biome --changed` skips uncommitted edits, and an agent between two
 // edits has nothing committed yet.) Tests are the root and app suites' `rstest --related` set —
 // the import graph, both directions — plus any spec named after a changed file, because a script
-// spec drives its `.mjs` through a subprocess and so never imports it.
+// spec drives its `.mjs` through a subprocess and so never imports it. A change under
+// docs/architecture/ adds a `pages` gate: the storybook is rendered from JSON nothing imports.
 //
 // Output: one summary line (`✓ lint · ✓ typecheck · ✗ tests 2 failed`), then only the failing
 // diagnostics, capped at CAP lines; full logs live outside the repo, named after the cap. Not a
@@ -51,6 +52,23 @@ export function formatReport(gates, { cap = CAP } = {}) {
     );
   }
   return out.join("\n");
+}
+
+/**
+ * The architecture pages are rendered from docs/architecture/source/, and nothing imports them, so
+ * `--related` never picks their spec: two builders passed check and failed verify on page drift
+ * alone (#6684). Any changed path under the storybook, or its generator, runs the pages gate.
+ */
+export const PAGES_SCRIPT = "scripts/architecture-pages.mjs";
+export function touchesPages(paths) {
+  return paths.some((p) => p.startsWith("docs/architecture/") || p === PAGES_SCRIPT);
+}
+
+/** The pages the generator's write mode named as regenerated; [] when every page matched. */
+export function pagesRegenerated(text) {
+  return (
+    text.match(/regenerated \d+ page\(s\) in docs\/architecture\/: (.+)/)?.[1].split(", ") ?? []
+  );
 }
 
 /** Biome errors (`×`) from `--reporter=concise`; warnings (`!`) never fail the gate. */
@@ -106,13 +124,18 @@ const git = (...args) => {
   return r.stdout.trim();
 };
 
-/** Files differing from the merge-base with origin/main, including uncommitted and untracked. */
+/**
+ * Files differing from the merge-base with origin/main, including uncommitted and untracked.
+ * `touched` also keeps deletions, as repo-relative paths: a deleted page is drift too.
+ */
 function changedFiles(root) {
   const base = git("merge-base", "origin/main", "HEAD");
   const diffed = git("diff", "--name-only", "--diff-filter=d", base).split("\n");
+  const deleted = git("diff", "--name-only", "--diff-filter=D", base).split("\n");
   const untracked = git("ls-files", "--others", "--exclude-standard").split("\n");
   const files = [...new Set([...diffed, ...untracked])].filter(Boolean);
-  return { base, files: files.map((f) => resolve(root, f)) };
+  const touched = [...files, ...deleted.filter(Boolean)];
+  return { base, files: files.map((f) => resolve(root, f)), touched };
 }
 
 /** Spec files named after a changed file — `scripts/foo.mjs` → any `foo.spec.ts` under tests/. */
@@ -177,6 +200,36 @@ async function lintGate(root, { files, fix, logDir }) {
     ok: r.code === 0,
     note: notes.filter(Boolean).join(" "),
     lines,
+    logs: [r.log],
+  };
+}
+
+/**
+ * Fix mode regenerates the pages and names them, the way lint names its fixes; then a `--check`
+ * pass decides the gate (a stale page the render no longer makes survives a rewrite). `--no-fix`
+ * runs only the check. About a second, node built-ins only, so no verify lock.
+ */
+async function pagesGate(root, { fix, logDir }) {
+  const script = join(root, PAGES_SCRIPT);
+  const regenerated = fix
+    ? pagesRegenerated(
+        (await run(process.execPath, [script], { cwd: root, log: join(logDir, "pages-write.log") }))
+          .text,
+      )
+    : [];
+  const r = await run(process.execPath, [script, "--check"], {
+    cwd: root,
+    log: join(logDir, "pages.log"),
+  });
+  const notes = [
+    r.code !== 0 && "drift",
+    regenerated.length > 0 && `(regenerated ${regenerated.join(", ")})`,
+  ];
+  return {
+    name: "pages",
+    ok: r.code === 0,
+    note: notes.filter(Boolean).join(" "),
+    lines: r.code === 0 ? [] : r.text.trim().split("\n").slice(-10),
     logs: [r.log],
   };
 }
@@ -277,25 +330,29 @@ async function main(argv) {
   mkdirSync(logDir, { recursive: true });
 
   let files = null;
+  let pages = full;
   if (!full) {
     const changed = changedFiles(root);
-    if (changed.files.length === 0) {
+    if (changed.touched.length === 0) {
       console.log(
         `nothing changed since origin/main (${changed.base.slice(0, 8)}) — nothing to check`,
       );
       return 0;
     }
     files = changed.files;
+    pages = touchesPages(changed.touched);
   }
   const withApp = full || files.some((f) => relative(root, f).startsWith("app/"));
 
-  // Lint first and alone: its fixes are what the typecheck and the tests must see.
+  // Lint first and alone: its fixes are what the typecheck and the tests must see. The pages gate
+  // follows it for the same reason — biome may reformat source/*.json, which the render reads.
   const lint = await lintGate(root, { files, fix, logDir });
+  const pagesGates = pages ? [await pagesGate(root, { fix, logDir })] : [];
   const [typecheck, tests] = await Promise.all([
     typecheckGate(root, { withApp, logDir }),
     testGate(root, { files, logDir }),
   ]);
-  const gates = [lint, typecheck, tests];
+  const gates = [lint, ...pagesGates, typecheck, tests];
   console.log(formatReport(gates));
   return gates.every((g) => g.ok) ? 0 : 1;
 }
