@@ -34,7 +34,7 @@ describe("claim lease ref namespace", () => {
   });
 
   it("keeps pointing the lease at a stamped tag object, so it carries its own age", () => {
-    expect(source()).toContain("claimStamp(slug, sha, nowMs)");
+    expect(source()).toContain("claimStamp(slug, sha, nowMs, holder)");
   });
 });
 

@@ -10,6 +10,7 @@
 // calls that carries no such pin: the TTL, the age computation, the tag stamp, and the failure
 // classifier.
 import { sh } from "./gh.mjs";
+import { holderLine, holderOf, LANE_HOLDER } from "./session-hold.mjs";
 
 /**
  * ATOMIC CLAIM (Eric, 2026-08-17: "waiting for commits to a doc file — seems flimsy af"). He was
@@ -54,9 +55,9 @@ export function claimFailureReason(err) {
   return `could not create the lease — ${detail || "no error text"}`;
 }
 
-/** Committer date of the claim's commit, for lease age. */
 /**
- * When was this lease TAKEN? Not "when was the commit it points at authored" — that was the bug.
+ * When was this lease TAKEN, and by whom? Not "when was the commit it points at authored" — that
+ * was the bug.
  *
  * Until 2026-08-22 the ref pointed at `GITHUB_SHA` (main's head at claim time) and the age was read
  * from that COMMIT's committer date. Two ways wrong, in opposite directions: on a quiet repo the
@@ -67,24 +68,37 @@ export function claimFailureReason(err) {
  * The fix is an annotated tag object, whose `tagger.date` we set to the claim moment — the one
  * primitive git gives us for "a ref that carries its own timestamp". Legacy commit-backed refs
  * still resolve through the fallback, so existing leases age out normally rather than wedging.
+ *
+ * The same tag's message names the HOLDER (#6065): a lane run, or a live session that took the
+ * lease by hand (`session-hold.mjs`). One lease, one ref; the holder rides inside it rather than in
+ * a second marker, and a lease with no holder line reads as the lane's, as every lease before
+ * #6065 was.
+ *
+ * @returns {{ takenAt: string, holder: string }}
  */
-export function claimAgeOf(sha) {
+export function leaseOf(sha) {
   try {
     const tag = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/tags/${sha}`]));
-    if (tag?.tagger?.date) return tag.tagger.date;
+    if (tag?.tagger?.date) return { takenAt: tag.tagger.date, holder: holderOf(tag.message) };
   } catch {
     /* not a tag object — fall through to the legacy commit read */
   }
   try {
-    return JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/commits/${sha}`])).commit.committer
-      .date;
+    const takenAt = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/commits/${sha}`])).commit
+      .committer.date;
+    return { takenAt, holder: LANE_HOLDER };
   } catch {
-    return new Date(0).toISOString(); // unreadable → treat as ancient, i.e. reclaimable
+    // unreadable → treat as ancient, i.e. reclaimable
+    return { takenAt: new Date(0).toISOString(), holder: LANE_HOLDER };
   }
 }
 
-/** A tag object stamped with the claim moment; the ref points at this, not at the head commit. */
-export function claimStamp(slug, sha, nowMs) {
+/** The lease's claim moment alone — what every TTL check reads. */
+export const claimAgeOf = (sha) => leaseOf(sha).takenAt;
+
+/** A tag object stamped with the claim moment (and its holder, when a session took it); the ref
+ *  points at this, not at the head commit. */
+export function claimStamp(slug, sha, nowMs, holder = LANE_HOLDER) {
   const tag = JSON.parse(
     sh("gh", [
       "api",
@@ -94,7 +108,7 @@ export function claimStamp(slug, sha, nowMs) {
       "-f",
       `tag=claim-${slug}-${nowMs}`,
       "-f",
-      `message=lease taken ${new Date(nowMs).toISOString()}`,
+      `message=lease taken ${new Date(nowMs).toISOString()}${holderLine(holder)}`,
       "-f",
       `object=${sha}`,
       "-f",

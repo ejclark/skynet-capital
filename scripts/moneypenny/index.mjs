@@ -15,6 +15,7 @@
 //   node scripts/moneypenny/index.mjs --model-tier < body.md   # just the tier decision
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
 //   node scripts/moneypenny/index.mjs --check-claim feedback-1234  # read-only lease peek, never claims
+//   node scripts/moneypenny/index.mjs --hold plan-1234          # a live session takes the plan's lease (#6065)
 //   node scripts/moneypenny/index.mjs --check-callout          # needs-eric just landed: is the ask actually written?
 //   node scripts/moneypenny/index.mjs --end-build plan-1234    # a build's job ended: take in-progress off (#5056)
 //
@@ -70,7 +71,13 @@ import {
 import { ASK_LEASE_MS, askOnce, gather as gatherAssignmentDeps } from "./assignments.mjs";
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { capsuleAudit, closeProvenCapsule, flagCapsuleOrphan } from "./capsule-stall.mjs";
-import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
+import {
+  CLAIM_TTL_MS,
+  claimAgeOf,
+  claimFailureReason,
+  claimStamp,
+  leaseOf,
+} from "./claim-lease.mjs";
 import { closeClockIssue, openClockIssue } from "./clock-watch.mjs";
 import {
   CONTINUED_MODEL,
@@ -112,6 +119,7 @@ import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { closeRedLanePr } from "./red-lane-pr.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
+import { continuationLeaseVerdict, SESSION_HOLDER } from "./session-hold.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { rearmStranded } from "./stranded-pr.mjs";
 import { updateStuckBranch } from "./stuck-branch-update.mjs";
@@ -202,9 +210,12 @@ function routeRelease(ctx) {
  * not claim anything from that merge onward: four retriggers of #475, no lease ever written.
  * A tag ref accepts a tag object, so the timestamp survives and the create is legal.
  *
+ * `holder` is who the stamp names: the lane by default, or `SESSION_HOLDER` when a live session
+ * takes the lease by hand (`--hold`, #6065 — `session-hold.mjs` says what that changes).
+ *
  * @returns {{ claimed: boolean, reason: string }}
  */
-export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
+export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS, holder) {
   const ref = `claim/${slug}`;
   const readRef = (ns) => {
     try {
@@ -234,7 +245,7 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
     // clock still beats no lease at all, and the TTL bounds the damage either way.
     let target = sha;
     try {
-      target = claimStamp(slug, sha, nowMs);
+      target = claimStamp(slug, sha, nowMs, holder);
     } catch {
       console.log(`::warning::claim ${ref}: could not stamp the lease; ageing off the head commit`);
     }
@@ -252,6 +263,18 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
   } catch (err) {
     return { claimed: false, reason: claimFailureReason(err) };
   }
+}
+
+/**
+ * A live session takes the lease (#6065) — the same compare-and-set the lane uses, so a session and
+ * the lane can never both hold a plan. The stamp needs a commit to point at: the run's own sha on a
+ * runner, else whatever `origin/main` the session last fetched.
+ *
+ * @returns {{ claimed: boolean, reason: string }}
+ */
+export function holdForSession(slug, nowMs = Date.now()) {
+  const sha = process.env.GITHUB_SHA || sh("git", ["rev-parse", "origin/main"]);
+  return claimHandoff(slug, sha, nowMs, CLAIM_TTL_MS, SESSION_HOLDER);
 }
 
 /** Release a lease once its work is no longer being built. */
@@ -915,17 +938,30 @@ function continuationPick(read) {
 }
 
 /**
- * The lease's own timestamp in ms, or null when nothing holds it. Same read and same stamp
- * `isClaimed` uses; this one hands back the number a comparison needs rather than prose.
+ * The lease's own timestamp in ms and its holder, or null when nothing holds it. Same read and same
+ * stamp `isClaimed` uses; this one hands back what a comparison needs rather than prose.
+ *
+ * @returns {{ takenMs: number, holder: string } | null}
  */
-function leaseStampMs(slug) {
+function readLease(slug) {
   try {
     const ref = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/tags/claim/${slug}`]));
-    const ms = Date.parse(claimAgeOf(ref.object.sha));
-    return Number.isNaN(ms) ? null : ms;
+    const { takenAt, holder } = leaseOf(ref.object.sha);
+    const takenMs = Date.parse(takenAt);
+    return Number.isNaN(takenMs) ? null : { takenMs, holder };
   } catch {
     return null; // 404 — nothing held, nothing to release
   }
+}
+
+/**
+ * Does a live session hold this lease (#6065)? Read-only, and deliberately blind to the stamp's age:
+ * its one caller (`pr-in-progress.mjs`) asks at a merge, and that merge is activity on the plan, so
+ * a session hold is live at that moment by `session-hold.mjs`'s rule. A crashed session's hold goes
+ * quiet after the merge, and continuation releases it once the TTL has passed with no activity.
+ */
+export function isSessionHeld(slug) {
+  return readLease(slug)?.holder === SESSION_HOLDER;
 }
 
 /**
@@ -944,15 +980,18 @@ function leaseStampMs(slug) {
  * state block. Those two runs sit in different concurrency groups, so nothing else serialises them.
  * Unconditional release was the first draft of this function and it is the bug a `/code-review`
  * pass caught before this slice shipped. So: compare, and leave a newer lease alone.
+ *
+ * A LIVE SESSION'S HOLD IS NOT A FINISHED RUN'S LEASE (#6065). A `/work-issues` session holding the
+ * plan keeps building after its own slice merges, so its pre-merge lease is left alone while it
+ * shows activity, and released only once it has gone quiet for the TTL — `continuationLeaseVerdict`
+ * (session-hold.mjs) makes both calls.
  */
 function continueNext(pick, { claims, nowMs, sha, gateDeps }) {
   if (!pick) return null;
   const slug = `plan-${pick.number}`;
-  const stamp = leaseStampMs(slug);
-  if (stamp !== null && pick.mergedMs && stamp > pick.mergedMs) {
-    console.log(
-      `::notice::continuation — #${pick.number} took a new lease after its slice merged; leaving it alone`,
-    );
+  const verdict = continuationLeaseVerdict(readLease(slug), pick, nowMs, CLAIM_TTL_MS);
+  if (verdict.action === "leave") {
+    console.log(`::notice::continuation — #${pick.number}: ${verdict.reason}; leaving it alone`);
     return null;
   }
   releaseClaim(slug);
@@ -1734,6 +1773,14 @@ function runCliFlag(argv, ctx) {
   if (checkIdx >= 0 && argv[checkIdx + 1]) {
     const slug = slugify(argv[checkIdx + 1]);
     console.log(JSON.stringify(isClaimed(slug)));
+    return true;
+  }
+
+  // `--hold <slug>` (#6065): a live session takes the lease the lane would, marked as a session's, so
+  // continuation leaves it alone past the session's own merges. The session ends it with `--release`.
+  const holdIdx = argv.indexOf("--hold");
+  if (holdIdx >= 0 && argv[holdIdx + 1]) {
+    console.log(JSON.stringify(holdForSession(slugify(argv[holdIdx + 1]))));
     return true;
   }
 
