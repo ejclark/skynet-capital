@@ -4,12 +4,14 @@ import {
   type AdoptionLedger,
   adoptionProblems,
   holdIn,
+  rulesIn,
   splitKey,
   staleAdoptions,
 } from "../../src/playbooks/conviction-adoptions.js";
 import type { Conviction } from "../../src/playbooks/conviction-record.js";
 import { AI_DIP_2026_10 } from "../../src/playbooks/conviction-seeds.js";
 import { CONVICTIONS } from "../../src/playbooks/conviction-store.js";
+import { FENCE_CALLS, type FenceCall } from "../../src/playbooks/fence-studies.js";
 import { CRWV_LONG_CALL, CRWV_WHEEL } from "../../src/playbooks/registry.js";
 import { steeredBy } from "../../src/playbooks/steered-playbook.js";
 import { aSubscription } from "../support/builders.js";
@@ -141,5 +143,132 @@ describe("an adopted hold runs the pair exits-only, saying why", () => {
     expect(convictionHoldNote(reason)).toBe(
       'Opening nothing new: an adopted change holds it (2026-11-10) after claim 2a of "AI-dip view" failed. Exits still run.',
     );
+  });
+});
+
+/** #6598 slice 3 — a passed claim's fence, adopted on a study's *adopt* call, as the pair's own rule. */
+describe("a pair-rule line", () => {
+  const QUIET_6 = { kind: "quiet" as const, sessionsAfterPrint: 6 };
+  const ADOPTED: readonly FenceCall[] = FENCE_CALLS.map((c) =>
+    c.pair === "CRWV-LONG-CALL" && c.fence === "quiet"
+      ? { ...c, call: "adopt" as const, words: "Adopt", rule: QUIET_6 }
+      : c,
+  );
+  const PASSED_9: Conviction = {
+    ...AI_DIP_2026_10,
+    claims: AI_DIP_2026_10.claims.map(({ score: _, ...c }) =>
+      c.statement.startsWith("9.")
+        ? {
+            ...c,
+            score: {
+              outcome: "pass" as const,
+              basis: "b",
+              dueOn: "2026-11-25",
+              scoredOn: "2026-11-25",
+            },
+          }
+        : c,
+    ),
+  };
+  const RULE_9: AdoptionLedger = {
+    "ai-dip-2026-10/9/CRWV-LONG-CALL": {
+      change: "pair-rule",
+      adoptedOn: "2026-11-25",
+      basis: "b",
+      rules: [QUIET_6],
+    },
+  };
+
+  it("reads clean only when a study's call adopts that very rule", () => {
+    expect(adoptionProblems(RULE_9, [PASSED_9], ADOPTED)).toEqual([]);
+    expect(adoptionProblems(RULE_9, [PASSED_9])).toEqual([
+      "ai-dip-2026-10/9/CRWV-LONG-CALL: no study's call adopts quiet on CRWV-LONG-CALL",
+    ]);
+    const other: AdoptionLedger = {
+      "ai-dip-2026-10/9/CRWV-LONG-CALL": {
+        change: "pair-rule",
+        adoptedOn: "2026-11-25",
+        basis: "b",
+        rules: [{ kind: "quiet", sessionsAfterPrint: 3 }],
+      },
+    };
+    expect(adoptionProblems(other, [PASSED_9], ADOPTED)).toEqual([
+      "ai-dip-2026-10/9/CRWV-LONG-CALL: its quiet rule is not the one `docs/research/long-call-fences-2026-11.md` adopts",
+    ]);
+  });
+
+  it("refuses a dated kind as a pair's own rule", () => {
+    const dated = {
+      "ai-dip-2026-10/9/CRWV-LONG-CALL": {
+        change: "pair-rule",
+        adoptedOn: "2026-11-25",
+        basis: "b",
+        rules: [{ kind: "expiry-from", day: "2027-03-18" }],
+      },
+    } as unknown as AdoptionLedger;
+    expect(adoptionProblems(dated, [PASSED_9], ADOPTED)).toEqual([
+      'ai-dip-2026-10/9/CRWV-LONG-CALL: "expiry-from" cannot be a pair\'s own rule',
+    ]);
+  });
+
+  it("is the pair's, not the view's, and holds nothing", () => {
+    expect(rulesIn(RULE_9)("CRWV-LONG-CALL")).toEqual([QUIET_6]);
+    expect(rulesIn(RULE_9)("CRWV-WHEEL")).toEqual([]);
+    expect(holdIn(RULE_9)("ai-dip-2026-10", "CRWV-LONG-CALL")).toBeUndefined();
+  });
+
+  it("rests on a pass: stale once the claim no longer reads one", () => {
+    expect(staleAdoptions(RULE_9, [PASSED_9])).toEqual([]);
+    expect(staleAdoptions(RULE_9, [AI_DIP_2026_10])).toEqual([
+      { key: "ai-dip-2026-10/9/CRWV-LONG-CALL", outcome: "pending" },
+    ]);
+  });
+
+  it("fences every subscription to the pair, pointed or not; the narrower of rule and view stands", () => {
+    const rules = rulesIn({
+      "ai-dip-2026-10/9/CRWV-LONG-CALL": {
+        change: "pair-rule",
+        adoptedOn: "2026-11-25",
+        basis: "b",
+        rules: [{ kind: "quiet", sessionsAfterPrint: 10 }],
+      },
+    });
+    const unpointed = steeredBy(
+      CRWV_LONG_CALL,
+      aSubscription("acct-other", "CRWV-LONG-CALL"),
+      undefined,
+      holdIn({}),
+      rules,
+    );
+    expect(unpointed).toMatchObject({
+      says: [
+        "the pair's own rule: no new opens from the print's blackout until 10 sessions after it",
+      ],
+    });
+    expect(unpointed.playbook).not.toBe(CRWV_LONG_CALL);
+    const pointed = steeredBy(
+      CRWV_LONG_CALL,
+      aiDipSub("CRWV-LONG-CALL"),
+      undefined,
+      holdIn({}),
+      rules,
+    );
+    expect(pointed).toMatchObject({
+      says: expect.arrayContaining([
+        "the pair's own rule: no new opens from the print's blackout until 10 sessions after it",
+        "expiries on or after 2027-03-18",
+      ]),
+    });
+  });
+
+  it("refuses the pair whole, exits-only, when its own rule would widen a bound", () => {
+    const wide = () => [{ kind: "dte" as const, min: 30, max: 400 }];
+    expect(
+      steeredBy(CRWV_LONG_CALL, aSubscription("a", "CRWV-LONG-CALL"), undefined, holdIn({}), wide),
+    ).toEqual({
+      playbook: CRWV_LONG_CALL,
+      refused:
+        "CRWV-LONG-CALL's own rule is refused whole: 30-400 days to expiry is wider than this playbook's 120-200",
+    });
   });
 });
