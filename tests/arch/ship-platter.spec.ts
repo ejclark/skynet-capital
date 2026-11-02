@@ -337,7 +337,8 @@ describe("ship platter — refusals that keep the platter an assembly point, not
   // 2026-10-26, #5852: an item branch cut from today's main, boarded onto a platter cut a week
   // earlier, squashed the whole week of main into one "item" — 504 files under a two-file subject,
   // with a revert sha that would have reverted all of them.
-  it("refuses an item based on a newer main than the platter, before squashing anything", () => {
+  // Since #5390 `board` merges main in first; --no-merge keeps this refusal for whoever wants it.
+  it("refuses an item based on a newer main than the platter under --no-merge, before squashing anything", () => {
     const root = mkdtempSync(join(tmpdir(), "ship-board-stale-"));
     const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
     const git = (cwd: string, args: string[]) =>
@@ -364,11 +365,11 @@ describe("ship platter — refusals that keep the platter an assembly point, not
       let code = 0;
       let stderr = "";
       try {
-        execFileSync("bash", [resolve("scripts/ship.sh"), "platter", "board", "fix/item"], {
-          cwd: work,
-          env,
-          stdio: "pipe",
-        });
+        execFileSync(
+          "bash",
+          [resolve("scripts/ship.sh"), "platter", "board", "fix/item", "--no-merge"],
+          { cwd: work, env, stdio: "pipe" },
+        );
       } catch (error) {
         const e = error as { status?: number; stderr?: Buffer };
         code = e.status ?? 1;
@@ -668,6 +669,134 @@ printf '%s\\n__SHIP_HTTP__200' "$out"
     expect(stderr).not.toContain("VERIFY FAILED");
     expect(moved).toBe(false);
     expect(staged).toBe("");
+  });
+});
+
+// #5390: an item cut from today's main, squashed onto a platter cut a week earlier, carried the whole
+// week of main (#5382 staged 681 files for a one-line change). The two refusals that replaced that
+// each printed `git merge origin/main --no-edit` for a hand to run; board now runs it. The platter
+// here also carries an OLDER ship.sh than main, so the same merge proves the board re-runs as
+// main's copy instead of tripping the stale-script refusal (#6067).
+describe("ship platter board — catches a stale platter up to main first (#5390)", () => {
+  const STUB_CURL = `#!/usr/bin/env bash
+method=GET; url=""
+while [ $# -gt 0 ]; do case "$1" in
+  -X) method="$2"; shift 2 ;;
+  --data-binary) cat >/dev/null; shift 2 ;;
+  -H|-w) shift 2 ;;
+  http*) url="$1"; shift ;;
+  *) shift ;;
+esac; done
+case "$method $url" in
+  "GET "*"platter/"*) out='[{"number":7}]' ;;
+  "GET "*"/pulls/7") out='{"commits":'"$(git rev-list --count origin/main..HEAD)"',"head":{"sha":"'"$(git rev-parse HEAD)"'"}}' ;;
+  "GET "*) out='[]' ;;
+  *) out='{}' ;;
+esac
+printf '%s\\n__SHIP_HTTP__200' "$out"
+`;
+
+  // mainEdit: what main writes to shared.txt after the platter was cut (the platter's earlier item
+  // wrote "platter\n" there); the same text merges cleanly, a different one conflicts.
+  const boardStale = (mainEdit: string) => {
+    const root = mkdtempSync(join(tmpdir(), "ship-board-catchup-"));
+    const bin = join(root, "bin");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
+    writeFileSync(join(bin, "npx"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
+    const env = hermeticGitEnv({
+      GH_TOKEN: "test-token-never-used",
+      PATH: `${bin}:${process.env.PATH ?? ""}`,
+    });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const commit = (cwd: string, file: string, text: string, subject: string) => {
+      writeFileSync(join(cwd, file), text);
+      git(cwd, ["add", "."]);
+      git(cwd, ["commit", "-q", "-m", subject]);
+    };
+    const work = join(root, "work");
+    const ship = readFileSync("scripts/ship.sh", "utf8");
+    git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+    git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+    git(work, ["config", "user.email", "spec@example.com"]);
+    git(work, ["config", "user.name", "spec"]);
+    mkdirSync(join(work, "scripts"));
+    writeFileSync(join(work, "envelope.json"), readFileSync("envelope.json"));
+    writeFileSync(join(work, "shared.txt"), "seed\n");
+    commit(work, "scripts/ship.sh", `${ship}\n# the platter's older copy\n`, "chore: seed");
+    git(work, ["push", "-q", "origin", "main"]);
+    git(work, ["checkout", "-q", "-b", "platter/2026-10-19"]);
+    commit(work, "shared.txt", "platter\n", "fix(ci): an earlier item");
+    git(work, ["push", "-q", "origin", "platter/2026-10-19"]);
+    git(work, ["checkout", "-q", "main"]);
+    commit(work, "week.txt", "a week of main\n", "feat: a week of main");
+    commit(work, "shared.txt", mainEdit, "fix: main touches the shared file");
+    commit(work, "scripts/ship.sh", ship, "fix(ship): a newer board guard");
+    git(work, ["push", "-q", "origin", "main"]);
+    git(work, ["checkout", "-q", "-b", "fix/item"]);
+    commit(work, "item.txt", "item\n", "fix: the item");
+    git(work, ["push", "-q", "origin", "fix/item"]);
+    git(work, ["checkout", "-q", "platter/2026-10-19"]);
+    // ship.sh calls its siblings by its own path; untracked, so the clean-tree checks still pass.
+    for (const name of ["envelope-scan.mjs", "platter-refs.mjs", "platter-picture.mjs"])
+      copyFileSync(resolve("scripts", name), join(work, "scripts", name));
+    for (const name of readdirSync("scripts"))
+      if (!existsSync(join(work, "scripts", name)))
+        symlinkSync(resolve("scripts", name), join(work, "scripts", name));
+    const before = git(work, ["rev-parse", "HEAD"]).trim();
+    let code = 0;
+    let stdout = "";
+    let stderr = "";
+    try {
+      stdout = execFileSync(
+        "bash",
+        [join(work, "scripts", "ship.sh"), "platter", "board", "fix/item", "--no-verify"],
+        { cwd: work, encoding: "utf8", env, stdio: "pipe" },
+      );
+    } catch (error) {
+      const e = error as { status?: number; stdout?: Buffer; stderr?: Buffer };
+      code = e.status ?? 1;
+      stdout = e.stdout?.toString() ?? "";
+      stderr = e.stderr?.toString() ?? "";
+    }
+    try {
+      return {
+        code,
+        stdout,
+        stderr,
+        before,
+        head: git(work, ["rev-parse", "HEAD"]).trim(),
+        itemFiles: git(work, ["show", "--name-only", "--format=", "HEAD"]).trim().split("\n"),
+        parents: git(work, ["log", "-1", "--format=%P", "HEAD~1"]).trim().split(" "),
+        mainSha: git(work, ["rev-parse", "origin/main"]).trim(),
+        merging: existsSync(join(work, ".git", "MERGE_HEAD")),
+        status: git(work, ["status", "--porcelain", "--untracked-files=no"]).trim(),
+      };
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it("merges main in, re-runs as main's ship.sh, and boards only the item's own files", () => {
+    const r = boardStale("platter\n");
+    expect(r.stderr).toBe("");
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("merged origin/main into the platter (3 commit(s))");
+    expect(r.stdout).toContain("boarding with that copy");
+    expect(r.itemFiles).toEqual(["item.txt"]); // not week.txt, shared.txt or scripts/ship.sh
+    expect(r.parents).toEqual([r.before, r.mainSha]); // the catch-up is a merge commit under the item
+  });
+
+  it("aborts on a conflict with an item already boarded, leaving the platter exactly as it was", () => {
+    const r = boardStale("main\n");
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("did not complete cleanly — aborted, the platter is unchanged");
+    expect(r.stderr).toContain("shared.txt");
+    expect(r.stderr).toContain("re-open it from main");
+    expect(r.head).toBe(r.before);
+    expect(r.merging).toBe(false);
+    expect(r.status).toBe("");
   });
 });
 
