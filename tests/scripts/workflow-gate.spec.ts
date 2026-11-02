@@ -212,7 +212,8 @@ describe("the work-mode gate in the scripted workflows", () => {
 // callers paste into the issue or PR, and its price counts the chain it will really run (#6470).
 describe("grind's forced run", () => {
   const { args } = CONDUCTORS.grind;
-  const ledgerOf = (result: unknown) => String((result as { ledger?: string } | null)?.ledger);
+  // A run that crashed has no ledger: "" fails every toContain below rather than passing a not.
+  const ledgerOf = (result: unknown) => (result as { ledger?: string } | null)?.ledger ?? "";
 
   it("writes the override into the ledger, with what it passed", async () => {
     const { result, error } = await runWorkflow("grind", { ...args, force: true }, withDial(HALT));
@@ -221,12 +222,18 @@ describe("grind's forced run", () => {
   });
 
   it("writes it even when the dial allowed the run", async () => {
-    const { result } = await runWorkflow("grind", { ...args, force: true }, withDial(NORMAL));
+    const { result, error } = await runWorkflow(
+      "grind",
+      { ...args, force: true },
+      withDial(NORMAL),
+    );
+    expect(error).toBeNull();
     expect(ledgerOf(result)).toContain("_force: true, though the dial allowed it_");
   });
 
   it("leaves an unforced run's ledger as it was", async () => {
-    const { result } = await runWorkflow("grind", args, withDial(NORMAL));
+    const { result, error } = await runWorkflow("grind", args, withDial(NORMAL));
+    expect(error).toBeNull();
     expect(ledgerOf(result)).toContain("_Items from: three hand-picked paths for this spec_");
     expect(ledgerOf(result)).not.toContain("force: true");
   });

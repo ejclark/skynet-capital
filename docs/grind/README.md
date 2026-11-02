@@ -78,7 +78,7 @@ checks all four."
   `grind.js` has no filesystem or `gh` access of its own (same reason the chore manifests below do).
   An unreadable dial reads as `conserve` inside the gate rather than a halt, so a GitHub blip
   narrows a batch instead of stopping the repo; a *malformed* control config exits 1 there and
-  throws here, because a broken control must never read as a quiet "go".
+  is refused here, because a broken control must never read as a quiet "go".
   **A run Eric typed gets through** with `force: true` (#6470), the override every other scripted
   workflow takes: it passes any of these refusals and logs what it passed and the price. A grind run
   can push, so the ledger it returns says `force: true` too, where whoever pastes it can see it.

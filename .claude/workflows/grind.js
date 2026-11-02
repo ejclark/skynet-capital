@@ -127,7 +127,7 @@ const CHORE_PATHS = [...new Set(steps.filter((s) => s.kind === 'instructions').m
 // spend breaker into a single verdict (scripts/moneypenny/work-gate.mjs). It runs once the chain is
 // built and before the first dispatch, so a forced run can price the chain it will really run.
 //
-// TWO REFUSALS, BOTH LOUD, BOTH THE WHOLE RUN — never a silent truncation of the item list. A run
+// EVERY REFUSAL IS LOUD AND REFUSES THE WHOLE RUN — never a silent truncation of the item list. A run
 // that quietly dropped the items past the cap would report "N/N done" over a batch nobody chose,
 // which is the "no silent caps" failure the workflow-authoring reference names; the honest answer is
 // to refuse and let the caller re-run in batches that fit. Concurrency is not the lever either: the
@@ -587,7 +587,7 @@ return {
   itemSource,
   done: done.length,
   tokens,
-  ledger: `${ledgerTable(`**${PHASE}** — ${counts.join(' · ')}\n_Items from: ${itemSource}_${FORCED ? `\n_${forcedLine}_` : ''}`, rows)}${leftLine}`,
+  ledger: `${ledgerTable(`**${PHASE}** — ${counts.join(' · ')}\n_Items from: ${itemSource}_${FORCED ? `\n_${cell(forcedLine)}_` : ''}`, rows)}${leftLine}`,
   blocked: blocked.map((c) => ({ item: labelFor(c.item), summary: c.result.summary })),
   results: combined.map((c) => ({ item: labelFor(c.item), ...(c.result || { status: 'errored', summary: 'agent failed after retries' }) })),
   deadAgents: leftBehind,
