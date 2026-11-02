@@ -53,15 +53,80 @@ describe("ship verifyrow — the failed step and first error line of a verify lo
     });
   });
 
-  it("falls back to the ✗ line, then to the exit line, and strips colour codes", () => {
-    expect(row('\u001b[31m✗ built from abc\u001b[0m\nERROR: "lint" exited with 1.')).toEqual({
-      step: "lint",
-      error: "✗ built from abc",
-    });
-    expect(row('ERROR: "test" exited with 2.')).toEqual({
+  // #6677: a passing spec printed this warning on purpose, and the first-`Error:` read named it as
+  // the failure of a run whose real failure was tests/arch/architecture-pages.spec.ts.
+  const passingWarning = [
+    "warn | tests/insights.spec.ts > listener > survives a full disk",
+    "Warning: [insights-listener] decisions write failed: Error: disk full",
+  ];
+
+  it("names the failing spec from rstest's summary, never a line a passing spec printed", () => {
+    expect(
+      row(
+        [
+          "  Rstest v0.12.5",
+          " \u001b[31m✗\u001b[0m tests/arch/architecture-pages.spec.ts (1)",
+          ...passingWarning,
+          " ✓ tests/insights.spec.ts (4)",
+          "Summary of all failing tests:",
+          // Byte for byte as rstest 0.12 colours it into a log.
+          "\u001b[41m\u001b[37m\u001b[1m FAIL \u001b[22m\u001b[39m\u001b[49m \u001b[90mtests/arch/\u001b[39m" +
+            "\u001b[36marchitecture-pages.spec.ts\u001b[39m \u001b[2m>\u001b[22m pages > are fresh",
+          "AssertionError: expected 'old' to be 'new' // Object.is equality",
+          'ERROR: "test" exited with 1.',
+        ].join("\n"),
+      ),
+    ).toEqual({
       step: "test",
-      error: 'ERROR: "test" exited with 2.'.replace(/"/g, ""),
+      error: "FAIL tests/arch/architecture-pages.spec.ts > pages > are fresh",
     });
+  });
+
+  it("reads the report rstest prints under an agent the same way", () => {
+    expect(
+      row(
+        [
+          "# Rstest Test Execution Report",
+          "## Failures",
+          "### [F01] tests/arch/architecture-pages.spec.ts :: pages > are fresh",
+          '      "message": "Error: stale",',
+          "### [F02] tests/broken.spec.ts",
+          'ERROR: "test:app" exited with 1.',
+        ].join("\n"),
+      ),
+    ).toEqual({
+      step: "test:app",
+      error: "FAIL tests/arch/architecture-pages.spec.ts > pages > are fresh",
+    });
+  });
+
+  it("names biome's first error diagnostic, skipping a warning, and prefers the failed step's tool", () => {
+    expect(
+      row(
+        [
+          "src/a.ts(1,1): error TS2304: Cannot find name 'x'.",
+          "src/b.ts:4:7 lint/style/useConst  FIXABLE  ━━━━━━━━━━",
+          "",
+          "  ! This let declares a variable that is only assigned once.",
+          "src/c.ts:2:20 lint/suspicious/noDoubleEquals  FIXABLE  ━━━━━━━━━━",
+          "",
+          "  × Using == may be unsafe if you are relying on type coercion.",
+          'ERROR: "lint" exited with 1.',
+        ].join("\n"),
+      ),
+    ).toEqual({ step: "lint", error: "src/c.ts:2:20 lint/suspicious/noDoubleEquals" });
+  });
+
+  it("leaves the error empty rather than guess from a warning, an advisory ✗ or the exit line", () => {
+    expect(
+      row(
+        [
+          ...passingWarning,
+          "\u001b[31m✗ built from abc\u001b[0m",
+          'ERROR: "test" exited with 2.',
+        ].join("\n"),
+      ),
+    ).toEqual({ step: "test", error: "" });
     expect(row("nothing useful")).toEqual({ step: "", error: "" });
   });
 });
