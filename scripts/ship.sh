@@ -861,10 +861,10 @@ cmd_merge() {
 # platter's one merge closes the issues behind its items — under either button.
 #
 # Four rules that are load-bearing, not preferences:
-#   - NOTHING RED BOARDS. `board` runs `npm run verify` on the POST-board tree — the union so far,
-#     which is strictly stronger than "green alone on its own branch", and is the only proof that
-#     can exist here: pipeline.yml's `verify` triggers on `pull_request: branches: [main]`, so a PR
-#     based on a platter branch runs no CI at all. The platter PR (base `main`) is the union's
+#   - NOTHING RED BOARDS. `board` runs `npm run verify`, through the verify queue, on the POST-board
+#     tree — the union so far, which is strictly stronger than "green alone on its own branch", and
+#     is the only proof that can exist here: pipeline.yml's `verify` triggers on `pull_request:
+#     branches: [main]`, so a PR based on a platter branch runs no CI at all. The platter PR (base `main`) is the union's
 #     first CI run. A failed verify un-boards the item and leaves the platter exactly as it was.
 #   - THE PLATTER IS NEVER A PLACE TO DEVELOP. A conflicting item catches up to `main` on its OWN
 #     branch and re-boards; nothing is ever fixed here (Rust's rollup procedure, same reasoning).
@@ -1100,10 +1100,21 @@ platter_board_item() {
   local evidence
   if [ "$verify" = 1 ]; then
     echo "ship platter: verifying the union with $item boarded…"
-    npm run verify >/tmp/ship-platter-verify.log 2>&1 || {
+    # Through verify-locked.sh (#5548), as `ship open` does: queued behind any other verify in this
+    # checkout, so boarding no longer skips the queue (#6470). The log is per-process for the same
+    # reason as open's. 75 is the queue's wait running out: nothing ran, so the item is un-boarded
+    # without calling it red.
+    local verify_log="/tmp/ship-platter-verify.$$.log" verify_rc=0
+    bash "$(dirname "$0")/verify-locked.sh" --log "$verify_log" || verify_rc=$?
+    if [ "$verify_rc" = 75 ]; then
+      git reset --hard --quiet "$before"
+      echo "ship platter: verify did not run — the queue wait ran out. $item is not boarded; the platter is unchanged. Run this again." >&2
+      exit 75
+    fi
+    [ "$verify_rc" = 0 ] || {
       git reset --hard --quiet "$before"
       echo "ship platter: VERIFY FAILED with $item boarded — un-boarded it; the platter is unchanged." >&2
-      tail -20 /tmp/ship-platter-verify.log >&2
+      tail -20 "$verify_log" >&2
       exit 1; }
     evidence="verify green $(date -u +%Y-%m-%dT%H:%MZ)"
   else
