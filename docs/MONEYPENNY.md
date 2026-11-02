@@ -124,9 +124,9 @@ enter her domain answer to her."* Concretely, for anything that is GitHub issue/
   cadence** all operate *under her mandate*, not as four peer systems Eric has to address by
   separate name. He talks to Moneypenny; she directs the mechanism. The repair lane is GitHub
   issue/PR orchestration by the same definition as the other three: one dispatch job with three entry
-  points over two triggers (`workflow_run` for a red `main`; `workflow_dispatch` for a conflict or a
-  stall), kept in its own workflow because its trigger shape differs from the events workflow, and
-  answering to Moneypenny alone.
+  points over two triggers (`workflow_run` for a red `main` or a session's red PR, #6605;
+  `workflow_dispatch` for a conflict or a stall), kept in its own workflow because its trigger shape
+  differs from the events workflow, and answering to Moneypenny alone.
 - This is a **frame and an authority relationship, not a rewrite** of what those mechanisms do —
   `docs/COACHES.md` and `docs/DELEGATION.md` keep their existing content and carry a pointer to this
   file. A full restructuring of their text around her is real work and is explicitly **not** part

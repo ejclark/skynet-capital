@@ -2,6 +2,8 @@
 // repair-logs.d.mts makes, and for the same reason: scripts/ is plain ESM with `allowJs` off.
 type Run = { id: number | string; name?: string; path?: string; conclusion?: string };
 type Failure = { job: string; step?: string; logTail?: string };
+/** Appended to the failing step when the runner went away mid-step. */
+export const LOST_RUNNER: string;
 /** How long to wait before each re-read of a run's jobs. */
 export const REREAD_WAITS_MS: number[];
 /** The further waits a read earns by showing a job still running on a concluded run. */
