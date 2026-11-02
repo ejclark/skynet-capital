@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `sync project status` red on main: skip with a warning when github faults a card write on every retry
+- **SHA:** 388fa0f   **DATE:** 2026-11-02   **STATUS:** closed
+- **COVERS:** e313ff7
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [41478541177](https://github.com/ejclark/skynet-capital/actions/runs/41478541177) at 2026-11-02T16:08:29Z. Repair capsule #6746 filed 2026-11-02T16:09:50Z, closed 17m later by #6748.
+- **ROOT CAUSE:** Run [41478541177](https://github.com/ejclark/skynet-capital/actions/runs/41478541177) went red on `sync project status` for #5719: `gh project item-edit` got GraphQL's internal error on all three of #4675's retries. Nothing in our code was wrong, and the reconcile job in `board-sync.yml` (run 41478634800, 16:09:49Z) logged `#5719: "Building now" → "Ready"` and `1 drifted, 1 fixed, 0 failed` 48 seconds later. The red run produced only a repair session. #4438 already set the rule that a display which can't be written warns and stays green; this applies it to the other GitHub-side cause.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/projects-sync-rate-limit-skip.spec.ts` (#6748).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### The queue ran one verify at a time, and the third in a row still froze the laptop
 - **SHA:** n/a   **DATE:** 2026-11-02   **STATUS:** closed
 - **RECURS:** The verify queue was off on the one machine that runs the fan-outs, and its spec was skipped for saying so
