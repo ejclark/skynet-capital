@@ -21,7 +21,7 @@ async function dispatched(
   manifest: Record<string, string> = {},
 ): Promise<Opts[]> {
   const calls: Opts[] = [];
-  const agent = (_prompt: string, opts: Opts) => {
+  const answer = (opts: Opts) => {
     if (opts.label === "work-mode") {
       reads.push(opts);
       return { found: true, dispatch: true, position: "normal", grindWidth: 50 };
@@ -33,6 +33,8 @@ async function dispatched(
     calls.push(opts);
     return { status: "done", summary: "ok", branch: "b" };
   };
+  // A promise, like the real hook: the gate read chains .catch on what agent() returns.
+  const agent = (_prompt: string, opts: Opts) => Promise.resolve(answer(opts));
   const pipeline = async (items: unknown[], ...stages: ((...a: unknown[]) => unknown)[]) => {
     const out: unknown[] = [];
     for (const [i, item] of items.entries()) {
