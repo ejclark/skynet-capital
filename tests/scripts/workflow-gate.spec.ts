@@ -80,8 +80,7 @@ const worked = (calls: { opts: { label?: string } }[]) =>
   calls.filter((c) => c.opts.label !== "work-mode");
 
 describe("the work-mode gate in the scripted workflows", () => {
-  // A new script joins this table or fails here. grind.js was left out on the word that it had its
-  // own specs, and none of them reached its refusal; it has run here since it took force (#6470).
+  // A new script joins this table or fails here.
   it("covers every scripted workflow", () => {
     const scripts = readdirSync(".claude/workflows")
       .filter((f) => f.endsWith(".js"))
@@ -219,6 +218,12 @@ describe("grind's forced run", () => {
     const { result, error } = await runWorkflow("grind", { ...args, force: true }, withDial(HALT));
     expect(error).toBeNull();
     expect(ledgerOf(result)).toContain("_force: true, past this: refused: work-mode is halt_");
+  });
+
+  it("names what a forced run would cost in the refusal, before anything runs", async () => {
+    const { error, calls } = await runWorkflow("grind", args, withDial(HALT));
+    expect(error?.message).toContain("forced, it would run up to 4 agents: 3 items through 1 step");
+    expect(worked(calls)).toEqual([]);
   });
 
   it("writes it even when the dial allowed the run", async () => {
