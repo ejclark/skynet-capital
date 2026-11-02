@@ -40,7 +40,7 @@ it looks strong, and 4 prints are colour, not a sample.
 **What happens next:**
 
 - A passed claim 2b, 8 or 9 does **not** carry either fence into CRWV-LONG-CALL. `research:refine`
-  keeps refusing those pass keys; #6598 slice 3 makes the refusal cite this study.
+  keeps refusing those pass keys, and each refusal cites this study (`src/playbooks/fence-studies.ts`, #6598 slice 3).
 - Both fences stay the view's own narrowings, unchanged. This study judges the pair's setting, not
   Eric's view: CRWV's own short history leans toward both fences.
 
