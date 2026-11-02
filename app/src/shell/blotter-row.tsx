@@ -11,7 +11,6 @@ import {
   PlCell,
   POS_SPAN,
   PositionCell,
-  ProjectionContent,
   ValueCell,
 } from "./position-columns";
 import { PositionRowOpen } from "./position-row-open";
@@ -49,7 +48,7 @@ export function BlotterRow({
     <>
       <tr id={positionAnchor(position.symbol)} className={open ? "row-opened" : undefined}>
         <PositionCell position={position} />
-        {/* The four ranked-out columns hold their content in one `.pos-cell`, which a column at
+        {/* The three ranked-out columns hold their content in one `.pos-cell`, which a column at
             zero width does not lay out (`positions-columns.css`). */}
         <td className={colClass("greeks")}>
           <div className="pos-cell">
@@ -58,11 +57,6 @@ export function BlotterRow({
         </td>
         <ValueCell position={position} />
         <PlCell position={position} />
-        <td className={`num ${colClass("model")}`}>
-          <div className="pos-cell">
-            <ProjectionContent />
-          </div>
-        </td>
         <td className={`next-event ${colClass("event")}`}>
           <div className="pos-cell">
             <EventContent event={position.nextEvent} />

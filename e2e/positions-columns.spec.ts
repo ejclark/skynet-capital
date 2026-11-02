@@ -133,7 +133,7 @@ async function openEveryRow(page: Page): Promise<Frame> {
   return measure(page);
 }
 
-const SIX = ["pos", "greeks", "value", "pl", "model", "open"];
+const FIVE = ["pos", "greeks", "value", "pl", "open"];
 
 /** The columns a box of this width stands (positions-columns.css): its own width, never the
  *  window's, picks them. */
@@ -142,7 +142,6 @@ const ranked = (width: number): string[] => [
   ...(width >= 640 ? ["greeks"] : []),
   "value",
   "pl",
-  ...(width >= 760 ? ["model"] : []),
   ...(width >= 960 ? ["event"] : []),
   ...(width >= 1100 ? ["best"] : []),
   "open",
@@ -186,7 +185,7 @@ for (const width of [860, 1100]) {
     test.use({ viewport: { width, height: 900 } });
 
     for (const route of ROUTES) {
-      test(`keeps the six ranked columns and never scrolls sideways on ${route}`, async ({
+      test(`keeps the five ranked columns and never scrolls sideways on ${route}`, async ({
         page,
       }) => {
         await stage(page);
@@ -194,7 +193,7 @@ for (const width of [860, 1100]) {
         await expect(page.locator("table.pos-table").first()).toBeVisible();
         const closed = await measure(page);
         expect(closed.boxes.length).toBeGreaterThan(0);
-        for (const key of SIX) expect(closed.columns).toContain(key);
+        for (const key of FIVE) expect(closed.columns).toContain(key);
         expectRanked(closed, `at ${width}`);
         expectNoSidewaysScroll(closed, `at ${width}`);
         expectNoSidewaysScroll(await openEveryRow(page), `at ${width}, every row opened`);
@@ -207,7 +206,7 @@ test.describe("the positions table at 1280px", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
   for (const route of ROUTES) {
-    test(`stands six columns beside the tower with no sideways scroll on ${route}`, async ({
+    test(`stands five columns beside the tower with no sideways scroll on ${route}`, async ({
       page,
     }) => {
       await stage(page);
@@ -215,17 +214,16 @@ test.describe("the positions table at 1280px", () => {
       await expect(page.locator("table.pos-table").first()).toBeVisible();
       const closed = await measure(page);
       expect(closed.tower, "the tower has its column").toBe(true);
-      // The bench beside the tower is ~806px: exactly the six, the wide-table extras stepped out.
-      expect(closed.columns).toEqual(SIX);
+      // The bench beside the tower is ~806px: exactly the five, the wide-table extras stepped out.
+      expect(closed.columns).toEqual(FIVE);
       expectNoSidewaysScroll(closed, "beside the tower");
       expectNoSidewaysScroll(await openEveryRow(page), "beside the tower, every row opened");
     });
   }
 
   // The rail takes the room the tower needed, so the tower steps aside (#3977). The Profile page's
-  // book keeps the stage's width: ~774px under overlay scrollbars (macOS), the six; ~759px under a
-  // classic 15px scrollbar (Linux CI), a pixel short of Model projects' step, which opens in the row
-  // instead. Either way the table stands what its own width ranks. An account's page splits the
+  // book keeps the stage's width: ~774px under overlay scrollbars (macOS), ~759px under a classic
+  // 15px scrollbar (Linux CI) — the five either way. The table stands what its own width ranks. An account's page splits the
   // stage with the character card, leaving its book ~374px — too narrow for any table, so it reads
   // as cards.
   const RAIL = [

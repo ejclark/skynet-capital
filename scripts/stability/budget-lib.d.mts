@@ -41,6 +41,15 @@ export function verdict(input: {
   budgets: Budgets;
   bootPeakMb?: number;
 }): { ok: boolean; peakMb: number; failures: string[]; advisories?: string[] };
+export interface BudgetVerdict {
+  ok: boolean;
+  peakMb: number;
+  failures: string[];
+  advisories?: string[];
+}
+export const RECHECKS: number;
+export function nextStep(verdicts: readonly BudgetVerdict[]): "again" | "pass" | "fail";
+export function remeasured(verdicts: readonly BudgetVerdict[], budgetMb: number): string;
 export function phaseTable(phase: BudgetPhase): string;
 export function summary(report: {
   commit: string;

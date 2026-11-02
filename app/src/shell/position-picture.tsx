@@ -27,21 +27,20 @@ import {
   strikeMoney,
 } from "../live/price-context";
 import { MINUS, withMinus } from "../ui";
-import { ProjectionContent } from "./position-columns";
 import { isWritten } from "./position-row-spec";
 
 /**
  * THE POSITION'S PICTURE, FIRST IN ITS OPENED GUIDANCE (#5070 slice 2; round 2 of #5037, R2's
  * depth ladder, step 2 "open in place"). Eric's order: the price strip (More 2: "the diagram beats
- * text"), the waiting-earns strip (af4f8295: the $/day decay in the graph), then the three figures
- * (3a77c6db: capital at play, the P/L, the model's expectation). Slice 2b lays the price context
+ * text"), the waiting-earns strip (af4f8295: the $/day decay in the graph), then the figures
+ * (3a77c6db: capital at play and the P/L; the model's expectation, a dash waiting on #4952, left
+ * in #5961 — it returns here, dashed, when the model grades one). Slice 2b lays the price context
  * on the strip's own axis (af4f8295): the 20-day range with its average, and an option's open
  * contracts by strike, read by one fact line. The numbers are `live/position-picture.ts`'s and
  * `live/price-context.ts`'s; this file only draws them.
  *
  * Hue never carries a meaning alone: each zone is named in a word in the key under the bar and is
- * its own shape (hatched, striped, solid), every figure keeps its sign, and the projection cell is dashed —
- * a projection never shares a fact's shape (PATTERNS → *Projection drawn dashed*).
+ * its own shape (hatched, striped, solid), and every figure keeps its sign.
  */
 
 const whole = new Intl.NumberFormat("en-US", {
@@ -300,13 +299,6 @@ function Figures({
               {premium ? ` of ${premium}` : ""}
             </span>
           )}
-        </dd>
-      </div>
-      <div className="pp-fig pp-fig--model">
-        <dt>Model projects</dt>
-        <dd>
-          <ProjectionContent />
-          <span className="pp-fig-note">a projection, once the model grades one</span>
         </dd>
       </div>
     </dl>

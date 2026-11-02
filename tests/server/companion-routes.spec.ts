@@ -215,6 +215,27 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
     expect(
       out.chunks.some((c) => c.includes("event: error") && c.includes("companion unreachable")),
     ).toBe(true);
+    expect(out.chunks.some((c) => c.includes("refused"))).toBe(false);
+  });
+
+  it("marks a refusal on the error frame so the rail drops a declined partial line (#6214)", async () => {
+    const config = configWith({
+      companion: ((_input, handlers: CompanionHandlers) => {
+        handlers.onText("Sure, the first step is");
+        handlers.onError("outside what I can help with", { refused: true });
+        return Promise.resolve();
+      }) as CompanionTurn,
+    });
+    const { res, out } = fakeRes();
+    await serveCompanionApi(
+      post({ messages: [{ role: "user", content: "hi" }] }),
+      res,
+      "/api/companion/chat",
+      config,
+      sessionFor(email()),
+    );
+    const frame = out.chunks.find((c) => c.includes("event: error")) ?? "";
+    expect(frame).toContain('{"error":"outside what I can help with","refused":true}');
   });
 
   it("resolves the SESSION's own linked desk — never a client-supplied id", async () => {

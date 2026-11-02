@@ -56,7 +56,8 @@ export function putStrategyTag(pair: Pair): string | undefined {
   return pair.strategy === "wheel" && symbol ? wheelStrategyTag(symbol, "put") : undefined;
 }
 
-const dollars = (x: number): string => `${x < 0 ? "-" : ""}$${Math.abs(x).toFixed(2)}`;
+const signedDollarsAndCents = (x: number): string =>
+  `${x < 0 ? "-" : ""}$${Math.abs(x).toFixed(2)}`;
 
 /** Unrealized P/L on one ticker's book: shares against what they cost, contracts against the
  *  premium taken or paid. `undefined` when a held position has no mark to read — a missing mark is
@@ -147,7 +148,7 @@ export function checkRecord(
       pass: false,
       netPl,
       stopped: readings.map((r) => r.pair.id),
-      reason: `${names}: net P/L is ${dollars(netPl)}${together} at the ${checkOn} check`,
+      reason: `${names}: net P/L is ${signedDollarsAndCents(netPl)}${together} at the ${checkOn} check`,
     };
   }
   // An owner who accepts assignment is judged on the money alone (`Conviction.acceptsAssignment`).

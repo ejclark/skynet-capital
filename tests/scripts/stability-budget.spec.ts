@@ -8,7 +8,9 @@ import {
   commonGets,
   flyCommand,
   flyEnv,
+  nextStep,
   procMemory,
+  remeasured,
   repeatedRow,
   summary,
   verdict,
@@ -232,6 +234,49 @@ describe("verdict", () => {
     };
     const v = verdict({ phases: [killed], state: { ...alive, running: false }, budgets });
     expect(v.failures).toEqual(["the server exited (exit 0)"]);
+  });
+});
+
+describe("nextStep / remeasured — a breach is measured twice before it fails (#6737)", () => {
+  const ci = { ...budgets, advisoryLatency: true };
+  const run = (peakMb: number, rows: BudgetPhase["rows"] = [pulse(12, 40)]) =>
+    verdict({ phases: [phase({ peakMb, rows })], state: alive, budgets: ci });
+  const over = run(316);
+  const under = run(279);
+
+  it("fails a real regression: two readings over budget", () => {
+    expect(nextStep([over])).toBe("again");
+    expect(nextStep([over, run(312)])).toBe("fail");
+  });
+
+  it("passes when the fresh container reads under budget, and a first pass needs no second run", () => {
+    expect(nextStep([over, under])).toBe("pass");
+    expect(nextStep([under])).toBe("pass");
+  });
+
+  it("never re-runs a breakage, or a peak breach that came with one", () => {
+    const fiveHundred = [{ path: "/api/wire", status: 502, ms: 3 }];
+    expect(nextStep([run(250, fiveHundred)])).toBe("fail");
+    expect(nextStep([run(316, fiveHundred)])).toBe("fail");
+    expect(nextStep([run(250, [pulse(31, 40)])])).toBe("fail");
+    const killed = verdict({
+      phases: [phase()],
+      state: { running: false, oomKilled: true, exitCode: 137 },
+      budgets: ci,
+    });
+    expect(nextStep([killed])).toBe("fail");
+  });
+
+  it("fails a second run that breaks something else", () => {
+    expect(nextStep([over, run(250, [pulse(31, 40)])])).toBe("fail");
+  });
+
+  it("prints every run's peak and the call, and nothing for a single run", () => {
+    expect(remeasured([under], 300)).toBe("");
+    const passed = remeasured([over, under], 300);
+    expect(passed).toContain("**PASS** on the re-run");
+    expect(passed).toContain("run 1 peaked at 316 MB, run 2 peaked at 279 MB");
+    expect(remeasured([over, run(312)], 300)).toContain("**FAIL** on every run");
   });
 });
 

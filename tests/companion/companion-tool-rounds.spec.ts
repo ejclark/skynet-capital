@@ -96,12 +96,14 @@ function onlyResult(requests: readonly SentRequest[], round = 1): ToolResultBloc
 function collect() {
   const texts: string[] = [];
   const errors: string[] = [];
+  const details: ({ refused?: boolean } | undefined)[] = [];
   const handoffs: unknown[] = [];
   const convictions: unknown[] = [];
   let doneCount = 0;
   return {
     texts,
     errors,
+    details,
     handoffs,
     convictions,
     doneCount: () => doneCount,
@@ -110,7 +112,10 @@ function collect() {
       onDone: () => {
         doneCount++;
       },
-      onError: (e: string) => errors.push(e),
+      onError: (e: string, d?: { refused?: boolean }) => {
+        errors.push(e);
+        details.push(d);
+      },
       onHandoff: (d: unknown) => handoffs.push(d),
       onConvictionDraft: (d: unknown) => convictions.push(d),
     },
@@ -299,6 +304,7 @@ describe("when a round fails", () => {
     const c = collect();
     expect(await run(doFetch, c)).toEqual({ kind: "error" });
     expect(c.errors).toEqual([REFUSAL_MESSAGE]);
+    expect(c.details).toEqual([{ refused: true }]);
     expect(c.doneCount()).toBe(0);
   });
 
@@ -310,6 +316,7 @@ describe("when a round fails", () => {
     await run(doFetch, c);
     expect(c.texts).toEqual([]);
     expect(c.errors).toEqual([REFUSAL_MESSAGE]);
+    expect(c.details).toEqual([{ refused: true }]);
   });
 
   describe("when the reply stopped on max_tokens (#6080)", () => {
@@ -335,6 +342,8 @@ describe("when a round fails", () => {
       await run(doFetch, c);
       expect(c.texts).toEqual(["Your first"]);
       expect(c.errors).toEqual([TRUNCATED_MESSAGE]);
+      // not a refusal — the rail keeps the partial line and marks it cut off (#6214)
+      expect(c.details).toEqual([undefined]);
       expect(c.doneCount()).toBe(0);
     });
 

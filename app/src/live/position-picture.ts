@@ -7,7 +7,7 @@ import { held, parseQuantity } from "./quantity";
 
 /**
  * A POSITION'S PICTURE, AS NUMBERS (#5070 slice 2; round 2 of #5037, R2 "tap opens it in place").
- * The opened guidance leads with two strips and three figures, in Eric's order:
+ * The opened guidance leads with two strips and two figures, in Eric's order:
  *  - the PRICE STRIP: where the stock is now against the prices that decide the position at expiry
  *    (breakeven, strike), the zones between them named in words — "keeps all", "keeps part",
  *    "loses" — so the zone never rides on hue alone;
@@ -15,8 +15,8 @@ import { held, parseQuantity } from "./quantity";
  *    day to expiry, with the $/day along it (af4f8295: "put the $/day decay in the graph; it speeds
  *    up toward expiry"). Black-Scholes at the contract's own implied volatility, said as an
  *    assumption on the strip, never a forecast;
- *  - the THREE FIGURES: what the position ties up (Cash set aside on a sold put), its P/L, and Model
- *    projects — "—" until #4952 grades a projection.
+ *  - the FIGURES: what the position ties up (Cash set aside on a sold put) and its P/L. (A third,
+ *    Model projects, was a dash waiting on #4952 and left in #5961.)
  * Pure: the components in `shell/position-picture.tsx` draw what this returns.
  */
 

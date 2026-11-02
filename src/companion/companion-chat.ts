@@ -65,10 +65,16 @@ export interface CompanionTurnInput {
   readonly convictions?: CompanionConvictions;
 }
 
+/** What kind of failure an `onError` was (#6214). `refused`: the model declined — any partial
+ *  text before it is not an answer, so the rail drops that line instead of keeping it cut off. */
+export interface CompanionErrorDetail {
+  readonly refused?: boolean;
+}
+
 export interface CompanionHandlers {
   readonly onText: (chunk: string) => void;
   readonly onDone: () => void;
-  readonly onError: (message: string) => void;
+  readonly onError: (message: string, detail?: CompanionErrorDetail) => void;
   /** The model drafted a filing from the conversation (`draft_feedback`) — the rail holds it and
    *  only the member's reply sends it. Optional: a caller with no rail just drops the draft. */
   readonly onHandoff?: (draft: FeedbackDraft) => void;
@@ -187,10 +193,11 @@ async function streamFinalReply(
     );
     logAnthropicUsage("companion-stream", model, usage, handlers.onUsage);
     // A decline is stop_reason "refusal" — before any text, or after partial text that is not an
-    // answer. Report it as an error: with nothing streamed the rail shows the decline message, and
-    // after partial text it marks the line cut off rather than presenting it as a finished reply.
-    // A `max_tokens` stop is the same shape of not-finished (#6080): the rail marks it cut off.
-    if (stopReason === "refusal") handlers.onError(REFUSAL_MESSAGE);
+    // answer. Report it as a refused error (#6214): the rail drops any partial line and shows the
+    // decline message alone, never the start of an answer the model then declined to give.
+    // A `max_tokens` stop is a different not-finished (#6080): the text is real but incomplete, so
+    // the rail keeps it and marks it cut off.
+    if (stopReason === "refusal") handlers.onError(REFUSAL_MESSAGE, { refused: true });
     else if (stopReason === "max_tokens") handlers.onError(TRUNCATED_MESSAGE);
     else handlers.onDone();
   } catch (error) {

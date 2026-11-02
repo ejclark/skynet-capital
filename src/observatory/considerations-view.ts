@@ -1,4 +1,7 @@
+import { housePlaybooks } from "../discovery/playbook-probe.js";
 import type { PlaybookStoreEntry } from "../discovery/playbook-store.js";
+import type { Playbook } from "../playbooks/playbook.js";
+import { windowOpenAt } from "./playbook-window.js";
 import { formatCurrency, formatSigned, plClass } from "./render-atoms.js";
 
 /**
@@ -106,6 +109,22 @@ function opportunityChip(
   };
 }
 
+/** The `windowClosed` read `considerationsFor` takes, asked of the house playbooks at `now` — the
+ *  same `windowOpenAt` the window alert reads (#5719), so the two never call one window differently. A
+ *  window open only on an estimated print date counts as open, as the alert counts it. Only an
+ *  earnings-keyed window is judged, the alert's scope: a dip-bounce rule says "no-window" on every
+ *  date because it has no date window, which is not a window that is shut. */
+export function windowClosedAt(
+  now: Date,
+  playbooks: readonly Playbook[] = housePlaybooks(),
+): (playbookId: string) => boolean {
+  const byId = new Map(playbooks.map((playbook) => [playbook.id, playbook]));
+  return (playbookId) => {
+    const playbook = byId.get(playbookId);
+    return playbook?.keyedOn === "earnings" && windowOpenAt(playbook, now) === "closed";
+  };
+}
+
 /** At-risk chips first (a loss outranks a suggestion), then opportunities — one per date-windowed
  *  playbook symbol the account already holds. A playbook the account doesn't hold at all isn't a
  *  "consideration" for this account; the full catalog is R&D → Playbooks' job. Tactical playbooks
@@ -116,13 +135,16 @@ export function considerationsFor(
   positions: readonly PositionForConsiderations[],
   catalog: readonly PlaybookStoreEntry[],
   account: ConsiderationsAccount,
+  /** Whether a playbook's window is shut right now (`windowOpenAt` says `closed`). A playbook it
+   *  cannot ask (`undatable`, or not in the registry) answers false: nothing is claimed of it. */
+  windowClosed: (playbookId: string) => boolean = () => false,
 ): ConsiderationChip[] {
   const heldSymbols = new Set(positions.map((p) => p.symbol));
   const atRisk = positions
     .map(atRiskChip)
     .filter((chip): chip is ConsiderationChip => chip !== undefined);
   const opportunities = catalog.flatMap((entry) =>
-    entry.window === undefined || account.subscribed.has(entry.id)
+    entry.window === undefined || account.subscribed.has(entry.id) || windowClosed(entry.id)
       ? []
       : entry.symbols
           .filter((symbol) => heldSymbols.has(symbol))

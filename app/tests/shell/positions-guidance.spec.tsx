@@ -660,7 +660,7 @@ describe("the opened guidance leads with the position's picture (#5070 slice 2)"
     expect(wait).toContain("Assumes today's 75% volatility holds; not a forecast.");
   });
 
-  it("then the three figures: cash set aside, the P/L on the premium, and a dashed projection", async () => {
+  it("then the figures: cash set aside and the P/L on the premium — no placeholder projection (#5961)", async () => {
     const open = await openCard(/^Guidance for CRWV \$80 PUT/);
     const figs = [...open.querySelectorAll(".pp-fig")].map((fig) =>
       [...fig.querySelectorAll("dt, dd > :not(.visually-hidden)")].map(seenText).filter(Boolean),
@@ -668,9 +668,7 @@ describe("the opened guidance leads with the position's picture (#5070 slice 2)"
     expect(figs).toEqual([
       ["Cash set aside", "$8,000", "buys 100 CRWV at $80 if assigned"],
       ["P/L", "−$295", "−116% of $255"],
-      ["Model projects", "—", "a projection, once the model grades one"],
     ]);
-    expect(open.querySelector(".pp-fig--model")).toBeTruthy();
   });
 
   it("lays the 20-day range and the open contracts by strike on the strip's own axis (slice 2b)", async () => {

@@ -262,6 +262,8 @@ export function continuationDecision(candidate = {}, { caps = {}, now = Date.now
     // The merge that made this plan continuable — `continueNext`'s lease check compares against it
     // (a lease stamped AFTER the merge belongs to a claim that is still alive).
     mergedMs: candidate.mergedMs,
+    // The block's last edit — a live session's activity, which keeps its hold on the plan (#6065).
+    blockEditedMs: Date.parse(block.updatedAt ?? "") || undefined,
     target: sub?.number ?? plan.number,
     pickup: sub ? `#${sub.number} — ${sub.title ?? ""}`.trim() : pickup,
     fingerprint,

@@ -15,6 +15,7 @@ import {
   type ConsiderationChip,
   considerationsFor,
   type PositionForConsiderations,
+  windowClosedAt,
 } from "./considerations-view.js";
 import { type Decision, decisionsFor } from "./decisions-view.js";
 import { allocationOf, type DeskAllocation } from "./desk-allocation.js";
@@ -346,10 +347,12 @@ export function deskView(
         ...carriedPlan(position, carried),
       };
     });
-  const considerations = considerationsFor(forConsiderations, playbooks, {
-    id: snapshot.id,
-    subscribed,
-  });
+  const considerations = considerationsFor(
+    forConsiderations,
+    playbooks,
+    { id: snapshot.id, subscribed },
+    windowClosedAt(now),
+  );
   return {
     id: snapshot.id,
     name: snapshot.displayName,

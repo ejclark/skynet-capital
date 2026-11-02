@@ -2,17 +2,17 @@
  * Which columns stand is decided by the TABLE'S OWN WIDTH — a container query on its scroll box
  * (`.blotter-scroll`, named `blotter` in desk.css) — never the window: beside the tower the stage
  * is ~806px of a 1280 window, and Moneypenny's rail takes 440px the window's width doesn't know
- * about. Six columns fit 806 with no sideways scroll; narrower, the lowest-ranked step into the
+ * about. Five columns fit 806 with no sideways scroll; narrower, the lowest-ranked step into the
  * opened row, wider, the next ones join:
  *
  *   width of the box   columns
- *   < 640              Position · Value · P/L · open           (θ · Δ and Model projects open in the row)
- *   ≥ 640              + θ · Δ 150
- *   ≥ 760              + Model projects 140                    (six: 1280 beside the tower)
+ *   < 640              Position · Value · P/L · open           (θ · Δ opens in the row)
+ *   ≥ 640              + θ · Δ 150                             (five: 1280 beside the tower)
  *   ≥ 960              + Next event 150
  *   ≥ 1100             + Best / worst 130
  *
- * Position takes what the fixed widths leave (236 at 806; never under ~190). A figure whose column
+ * (Model projects stood at ≥ 760 until #5961 cut it: a dash waiting on an unready plan.)
+ * Position takes what the fixed widths leave (376 at 806; never under ~190). A figure whose column
  * is showing hides in the opened row (`.pos-more-*`), so a row never says the same thing twice.
  *
  * A column steps aside by going to ZERO WIDTH, never `display: none`: a hidden `<col>` leaves the
@@ -47,17 +47,14 @@
   width: 44px;
 }
 
-/* The narrowest set first: the four ranked-out columns at zero width; each step adds one back. */
+/* The narrowest set first: the three ranked-out columns at zero width; each step adds one back. */
 .pos-table col.pos-col-greeks,
-.pos-table col.pos-col-model,
 .pos-table col.pos-col-event,
 .pos-table col.pos-col-best {
   width: 0;
 }
 .pos-table th.pos-col-greeks,
 .pos-table td.pos-col-greeks,
-.pos-table th.pos-col-model,
-.pos-table td.pos-col-model,
 .pos-table th.pos-col-event,
 .pos-table td.pos-col-event,
 .pos-table th.pos-col-best,
@@ -66,7 +63,6 @@
   visibility: hidden;
 }
 .pos-table .pos-col-greeks > .pos-cell,
-.pos-table .pos-col-model > .pos-cell,
 .pos-table .pos-col-event > .pos-cell,
 .pos-table .pos-col-best > .pos-cell {
   display: none;
@@ -84,22 +80,6 @@
     display: block;
   }
   .pos-open .pos-more-greeks {
-    display: none;
-  }
-}
-@container blotter (min-width: 760px) {
-  .pos-table col.pos-col-model {
-    width: 140px;
-  }
-  .pos-table th.pos-col-model,
-  .pos-table td.pos-col-model {
-    padding-inline: 12px;
-    visibility: visible;
-  }
-  .pos-table .pos-col-model > .pos-cell {
-    display: block;
-  }
-  .pos-open .pos-more-model {
     display: none;
   }
 }
