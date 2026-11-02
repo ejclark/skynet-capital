@@ -135,13 +135,20 @@ export interface AuthoredRoster {
   readonly rejected: readonly AuthoredPlayRejection[];
 }
 
+const AUTHORED_ID_PREFIX = "U-";
+
 /**
  * The compiled id: `U-` marks it member-authored at a glance in every log line, order reason and
  * decision record, and the author's own account namespaces the slug so two members may both author
  * "earnings-runup" without colliding.
  */
 export function authoredPlayId(spec: AuthoredPlaySpec): string {
-  return `U-${spec.authorAccountId}-${spec.slug}`;
+  return `${AUTHORED_ID_PREFIX}${spec.authorAccountId}-${spec.slug}`;
+}
+
+/** Whether an id is a member-authored play's, by its shape: true whether or not the spec is stored. */
+export function isAuthoredPlayId(id: string): boolean {
+  return id.startsWith(AUTHORED_ID_PREFIX);
 }
 
 /**

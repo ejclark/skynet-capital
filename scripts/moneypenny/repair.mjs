@@ -23,8 +23,9 @@
 //
 // THE LOOP GUARDS, ALL FOUR (a self-healing lane that can trigger itself is a bill, not a net):
 //   1. It ignores its own workflow's failures.
-//   2. It only acts on runs against the default branch — a red PR belongs to that PR's author and
-//      its watching session, and repair PRs opened here would otherwise feed themselves.
+//   2. `routeFailure` only acts on runs against the default branch, and repair PRs opened here would
+//      otherwise feed themselves. A red PR a session opened goes to red-session-pr.mjs instead
+//      (#6605), which leaves this lane's own PRs alone and spends one session per PR at most.
 //   3. One open issue per failure signature: a recurrence comments, it never files again — and a
 //      matrix job's legs fold onto one signature (`normalizeJobName`), so one fault is one issue.
 //   4. Once a signature carries `needs-eric`, this lane goes quiet on it entirely.
@@ -49,6 +50,7 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { raiseAlarmIfBurst } from "./burst-alarm.mjs";
 import { LABELS } from "./labels.mjs";
+import { CAPSULE_SLOT, gatherRedSessionPr, routeRedSessionPr, sayOnPr } from "./red-session-pr.mjs";
 import { jobLog } from "./repair-logs.mjs";
 
 /** This workflow's own `name:`. Guard 1 — never treat this lane's own failure as work for itself. */
@@ -652,6 +654,11 @@ function execute(intents) {
       console.log(`::notice::commented recurrence on #${intent.issue}`);
       continue;
     }
+    if (intent.type === "say-on-pr") {
+      sayOnPr(intent.number, intent.body);
+      console.log(`::notice::said why not on #${intent.number}`);
+      continue;
+    }
     if (intent.type === "open-issue") {
       ensureLabel();
       const url = sh("gh", [
@@ -672,6 +679,18 @@ function execute(intents) {
         createdAt: new Date().toISOString(),
       });
       if (intent.dispatch) dispatch.push(number);
+      // Soft: the line must not cost the session the capsule just asked for. An open capsule is its
+      // own memory (`routeRedSessionPr`), so a lost line cannot buy this PR a second session.
+      if (intent.sayOnPr) {
+        const { number: pr, body } = intent.sayOnPr;
+        try {
+          sayOnPr(pr, body.replaceAll(CAPSULE_SLOT, `#${number}`));
+        } catch (err) {
+          console.log(
+            `::warning::#${pr} did not get its line — ${String(err.message).slice(0, 200)}`,
+          );
+        }
+      }
     }
   }
   const out = process.env.GITHUB_OUTPUT;
@@ -700,7 +719,14 @@ function main(argv) {
         : failuresFrom(run, raw.jobs ?? [], dry ? undefined : jobLog)),
   };
   const deps = fixture ?? (dry ? {} : { openIssues: openIssues(), closedIssues: closedIssues() });
-  const intents = routeFailure(ctx, deps);
+  // A pull_request run never reaches `routeFailure`'s body, and a fixture brings its own PR.
+  const intents =
+    run.event === "pull_request"
+      ? routeRedSessionPr(ctx, {
+          ...deps,
+          ...(fixture || dry ? {} : gatherRedSessionPr(run, ctx.failures)),
+        })
+      : routeFailure(ctx, deps);
 
   if (dry) {
     console.log(JSON.stringify(intents, null, 2));
