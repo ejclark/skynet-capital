@@ -6,7 +6,7 @@ import { positionAlerts } from "../alerts/position-watch.js";
 import { windowAlerts } from "../alerts/window-watch.js";
 import { housePlaybooks } from "../discovery/playbook-probe.js";
 import { forVisibility } from "../observatory/activity-event.js";
-import { parseOccSymbol } from "../trading/option-symbols.js";
+import { underlyingOf } from "../observatory/book-health-detectors.js";
 import type { Session } from "./auth/session.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
@@ -69,9 +69,11 @@ async function botRecords(id: string, config: DeskAlertsDeps) {
   }
 }
 
-/** The names a member watches. The list is keyed by the account the session resolves to
- *  (`watchlist-route.ts`), which is the id asked about here. A failed read costs the watched names
- *  their window alerts, never the strip its other producers. */
+/** The names a member watches. Under sign-in the list is keyed by the account the session resolves
+ *  to (`watchlist-route.ts` → `resolveCurrentId`), so it is read under the id asked about here and
+ *  reaches that account's alerts; an owner's other accounts alert on what they hold only. An
+ *  unauthenticated local deployment keeps one list under "local", which this does not read. A
+ *  failed read costs the watched names their window alerts, never the strip its other producers. */
 async function watchedSymbols(id: string, config: DeskAlertsDeps): Promise<Set<string>> {
   try {
     return new Set((await config.watchlist?.load(id))?.map((w) => w.symbol) ?? []);
@@ -112,9 +114,7 @@ export async function deskAlertsFor(
   const bots = bot
     ? [{ botId: id, name: bot.displayName, records: await botRecords(id, config) }]
     : [];
-  const held = new Set(
-    (desk?.positions ?? []).map((p) => parseOccSymbol(p.symbol)?.underlying ?? p.symbol),
-  );
+  const held = new Set((desk?.positions ?? []).map((p) => underlyingOf(p.symbol)));
   const asOfIso = now.toISOString();
   const windows = windowAlerts(
     {

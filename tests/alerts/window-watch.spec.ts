@@ -142,6 +142,18 @@ describe("windowAlerts — a researched window open on a held or watched name", 
     expect(windowAlerts(input({ playbooks: [playbook({ keyedOn: undefined })] }), NOW)).toEqual([]);
   });
 
+  it("raises nothing for a researched pair past its shelf date, which takes no new entries", () => {
+    const stale = pair({ shelfOn: "2026-09-30" });
+    expect(windowAlerts(input({ pairOf: () => stale }), NOW)).toEqual([]);
+    const fresh = pair({ shelfOn: "2026-10-02" });
+    expect(windowAlerts(input({ pairOf: () => fresh }), NOW)).toHaveLength(1);
+  });
+
+  it("leaves a basket out, since its window keys on more than one ticker's print", () => {
+    const basket = playbook({ symbols: ["TST", "OTR"] });
+    expect(windowAlerts(input({ playbooks: [basket] }), NOW)).toEqual([]);
+  });
+
   it("stands the study's call in when no forecast call is on file, and says the falsifier is missing", () => {
     const [alert] = windowAlerts(input({ forecast: () => undefined }), NOW);
     expect(alert?.body).toContain(

@@ -110,7 +110,7 @@ function opportunityChip(
 }
 
 /** The `windowClosed` read `considerationsFor` takes, asked of the house playbooks at `now` — the
- *  same `windowOpenAt` the window alert reads (#5719), so a card and an alert never disagree. A
+ *  same `windowOpenAt` the window alert reads (#5719), so the two never call one window differently. A
  *  window open only on an estimated print date counts as open, as the alert counts it. Only an
  *  earnings-keyed window is judged, the alert's scope: a dip-bounce rule says "no-window" on every
  *  date because it has no date window, which is not a window that is shut. */

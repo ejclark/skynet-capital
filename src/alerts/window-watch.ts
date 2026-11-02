@@ -1,8 +1,9 @@
 import { type EarningsPrint, nextPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { windowOpenAt } from "../observatory/playbook-window.js";
-import { findPair, type Pair, STRATEGIES } from "../playbooks/pair-table.js";
+import { findPair, isStale, type Pair, STRATEGIES } from "../playbooks/pair-table.js";
 import type { Playbook } from "../playbooks/playbook.js";
 import type { PairForecast } from "../server/pair-forecast.js";
+import { capitalized } from "../ui/capitalized.js";
 import type { Alert } from "./alert.js";
 
 /**
@@ -14,9 +15,12 @@ import type { Alert } from "./alert.js";
  * and the research shelf already held R&D's dated call for the report it keys on, but a member
  * holding or watching NVDA only learned either by going to look.
  *
- * Which windows: a RESEARCHED pair (`pair-table.ts`, evidence status `researched`) whose playbook is
- * keyed on earnings — the windows a print date opens. Whether one is open is asked of the playbook
- * through `windowOpenAt`, the read the Overview's idea cards use too, never re-derived here.
+ * Which windows: a RESEARCHED pair (`pair-table.ts`, evidence status `researched` and not past its
+ * shelf date, the rule that stops new subscriptions to it) on one ticker, whose playbook is keyed
+ * on earnings — the windows a print date opens. One ticker, so the print the window keys on is that
+ * ticker's own; every such pair is one today, and a basket would need its own wording. Whether one
+ * is open is asked of the playbook through `windowOpenAt`, the read the Overview's idea cards use
+ * too, never re-derived here.
  *
  * Honesty rules:
  *  - A window open only on an ESTIMATED print date is said to be so, with the rule that only a
@@ -49,8 +53,6 @@ export interface WindowWatchInput {
   readonly calendar?: readonly EarningsPrint[];
   readonly pairOf?: (playbookId: string) => Pair | undefined;
 }
-
-const capitalized = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** A ledger cell as a sentence: the forecast keeps the author's words, which may end bare. */
 const sentence = (text: string): string => (/[.!?]$/.test(text) ? text : `${text}.`);
@@ -113,7 +115,7 @@ function windowAlert(
     data: {
       playbookId: playbook.id,
       ...(print ? { reportOn: print.date } : {}),
-      dateSet: !estimated,
+      dateSet: print?.status === "confirmed" && !onEstimate,
       ...(forecast?.call ? { call: forecast.call } : {}),
       ...(forecast?.confidence ? { confidence: forecast.confidence } : {}),
       ...(forecast?.wrongIf ? { wrongIf: forecast.wrongIf } : {}),
@@ -133,7 +135,9 @@ export function windowAlerts(input: WindowWatchInput, now: number): Alert[] {
   for (const playbook of input.playbooks) {
     if (playbook.keyedOn !== "earnings") continue;
     const pair = pairOf(playbook.id);
-    if (pair?.evidence.status !== "researched") continue;
+    if (pair?.evidence.status !== "researched" || isStale(pair.evidence, at.toISOString()))
+      continue;
+    if (playbook.symbols.length !== 1) continue;
     const symbols = playbook.symbols.filter((symbol) => interested.has(symbol));
     if (symbols.length === 0) continue;
     const read = windowOpenAt(playbook, at, input.calendar ?? UPCOMING_PRINTS);
