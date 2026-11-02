@@ -16,6 +16,7 @@
 //   npm run meter -- --failure-to-fix [--json] [--days N | ...] [--write-ledger [--date D] [--ledger DIR]]
 //   npm run meter:workers -- [--json] [--days N | ...]   # exits 1 if the worker's oracle fails
 //   npm run meter:flow -- [--json] [--days N | ...]      # the same as npm run meter -- --flow
+//   npm run meter -- --jobs [--json] [--days N | ...]    # tokens per verified result, per job (#6609)
 //
 // Seams (env, so a spec can drive it): AGENT_RUNS_DIR, AGENT_TRANSCRIPTS_DIR, AGENT_PROJECTS_DIR,
 // AGENT_MEMORY_DIR, AGENT_GIT_DIR; `gh` on PATH is the REST layer.
@@ -34,6 +35,7 @@ import { auditedInWindow, defectsFromIssues, writeAuditReceipt } from "./agent-m
 import { quantile, readFailureToFix, writeLedgerRow } from "./agent-meter/failure-to-fix.mjs";
 import { readFlow } from "./agent-meter/flow.mjs";
 import { defectIssues, mergedPrs, pipelineRuns } from "./agent-meter/github.mjs";
+import { readJobs } from "./agent-meter/jobs.mjs";
 import {
   createRest,
   loadCache,
@@ -45,6 +47,7 @@ import {
   render,
   renderFailureToFix,
   renderFlow,
+  renderJobs,
   renderWorkerStages,
 } from "./agent-meter/render.mjs";
 
@@ -356,8 +359,7 @@ async function workerStages(args, w) {
   return args.includes("--json") ? JSON.stringify(reading, null, 2) : renderWorkerStages(reading);
 }
 
-/** This section alone: a 30-day baseline must not pay for 30 days of lane logs. */
-function failureToFixOnly(args, w, maxRest) {
+function failureToFixReading(w, maxRest) {
   const runsDir = process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs");
   mkdirSync(runsDir, { recursive: true });
   const cachePath = join(runsDir, "agent-meter-cache.json");
@@ -371,6 +373,31 @@ function failureToFixOnly(args, w, maxRest) {
     gitDir: process.env.AGENT_GIT_DIR,
   });
   saveCache(cachePath, cache);
+  return reading;
+}
+
+/** The scoreboard. A GitHub that will not answer costs one row its reading, not the whole board. */
+async function jobsOnly(args, w, maxRest) {
+  const projectsDir = process.env.AGENT_PROJECTS_DIR ?? join(homedir(), ".claude", "projects");
+  const reading = await readJobs({
+    w,
+    projectsDir,
+    project: PROJECT,
+    runsDir: process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs"),
+    readFixes: () => {
+      try {
+        return failureToFixReading(w, maxRest);
+      } catch (err) {
+        return `unavailable: ${err.message.split("\n")[0]}`;
+      }
+    },
+  });
+  return args.includes("--json") ? JSON.stringify(reading, null, 2) : renderJobs(reading);
+}
+
+/** This section alone: a 30-day baseline must not pay for 30 days of lane logs. */
+function failureToFixOnly(args, w, maxRest) {
+  const reading = failureToFixReading(w, maxRest);
   if (args.includes("--write-ledger"))
     return writeLedgerRow(reading, {
       dir: flag(args, "--ledger"),
@@ -405,6 +432,7 @@ async function main(args) {
   }
   const maxRest = Number(flag(args, "--max-rest") ?? DEFAULT_MAX_REST);
   if (args.includes("--failure-to-fix")) return failureToFixOnly(args, w, maxRest);
+  if (args.includes("--jobs")) return jobsOnly(args, w, maxRest);
   const m = await measure(w, { maxRest });
   return args.includes("--json") ? JSON.stringify(m, null, 2) : render(m);
 }

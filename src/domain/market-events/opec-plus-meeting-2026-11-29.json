@@ -1,0 +1,11 @@
+{
+  "id": "opec-plus-meeting-2026-11-29",
+  "kind": "geopolitical",
+  "title": "OPEC+ 42nd ministerial (full group, 2027 baselines expected) with the 69th JMMC and the seven-country January meeting",
+  "date": "2026-11-29",
+  "status": "estimate",
+  "source": "EST: OPEC's own primaries, fetched direct 2026-11-02 (HTTP 200 each). (1) opec.org/pr-detail/605-7-june-2026.html, the 41st OPEC and non-OPEC Ministerial Meeting statement, item 8 verbatim: 'Hold the 42nd OPEC and non-OPEC Ministerial Meeting on 29 November 2026.' Item 6 affirms completing the maximum sustainable production capacity (MSC) assessment 'to be used as reference for 2027 production baselines'. (2) opec.org/pr-detail/620-1-november-2026.html, the seven countries' 2026-11-01 release: 'The next meeting will be held on 29 November 2026.' CNBC (2026-10-31) separately reports all 21 members meet that day on 2027 quotas; the 68th JMMC statement of 2026-10-04 set the 69th JMMC for the same day. Three OPEC primaries agree on the date. Stays estimate because market-events-data.ts defines no trusted opec.org prefix and this lane may not self-confirm; the date itself is not in doubt. Checked 2026-11-02",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Canonical file written by this event's initial research (2026-11-02), shadowing proposals/opec-plus-meeting-2026-11-29.from-opec-plus-meeting-2026-11-01.json. Title widened from the proposal: the 29 November date is the 42nd ministerial that OPEC set in June, not only a seven-country monthly. Kept medium: no tracked symbol, no house playbook covers commodities, and the quota path into our book runs through crude and then the Fed; the 2027 baselines make it the largest dated OPEC+ decision of the year, but the capacity review feeding it is still undelivered."
+}
