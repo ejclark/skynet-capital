@@ -103,6 +103,17 @@ function laterEntryDate(
   return null;
 }
 
+/** The calendar with this playbook's own estimated print dates read as confirmed. */
+function estimatesConfirmed(
+  playbook: Playbook,
+  calendar: readonly EarningsPrint[],
+): EarningsPrint[] {
+  const mine = new Set(playbook.symbols);
+  return calendar.map((p) =>
+    mine.has(p.symbol) && p.status === "estimate" ? { ...p, status: "confirmed" as const } : p,
+  );
+}
+
 /** A calendar diagnosis: the sentence, and the estimates holding an otherwise-open window. */
 interface CalendarCause {
   readonly reason: string;
@@ -163,10 +174,7 @@ function estimateHold(
   now: Date,
   calendar: readonly EarningsPrint[],
 ): CalendarCause | undefined {
-  const mine = new Set(playbook.symbols);
-  const asIfConfirmed = calendar.map((p) =>
-    mine.has(p.symbol) && p.status === "estimate" ? { ...p, status: "confirmed" as const } : p,
-  );
+  const asIfConfirmed = estimatesConfirmed(playbook, calendar);
   // "Open now" is asked AT now, never at the scan's fixed clock: at 9:30 PM ET the UTC date is
   // already tomorrow, and a print-day rule that went flat at 15:45 ET is not open at 4 PM.
   const openNow = playbook.desiredState(now.toISOString(), asIfConfirmed, []) === "long";
@@ -211,6 +219,34 @@ function waitingReason(
       reason: `On, with no day inside the next ${NEXT_ENTRY_HORIZON_DAYS} days on which its rule would open a position.`,
     }
   );
+}
+
+/**
+ * Is this playbook's window open right now (#5719)? The one read the window alert
+ * (`alerts/window-watch.ts`) and the Overview's idea cards (`considerations-view.ts`) share, so a
+ * card never sits on a window the alert calls closed.
+ *
+ *  - `open`: its own rule says "long" at `now` on the calendar as it stands.
+ *  - `open-on-estimate`: an earnings-keyed window that would be open now if its estimated print
+ *    dates were confirmed. Said apart, because only a confirmed date opens a position.
+ *  - `closed`: neither.
+ *  - `undatable`: no date answers the question (an event or live-signal rule), so nothing is claimed.
+ *
+ * Asked at `now`, never at the forward scan's fixed clock — the reason `estimateHold` gives.
+ */
+export type WindowOpenRead = "open" | "open-on-estimate" | "closed" | "undatable";
+
+export function windowOpenAt(
+  playbook: Playbook,
+  now: Date,
+  calendar: readonly EarningsPrint[] = UPCOMING_PRINTS,
+): WindowOpenRead {
+  if (!windowIsDatable(playbook)) return "undatable";
+  const at = now.toISOString();
+  if (playbook.desiredState(at, calendar, []) === "long") return "open";
+  if (playbook.keyedOn !== "earnings") return "closed";
+  const asIfConfirmed = estimatesConfirmed(playbook, calendar);
+  return playbook.desiredState(at, asIfConfirmed, []) === "long" ? "open-on-estimate" : "closed";
 }
 
 /**
