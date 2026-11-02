@@ -61,7 +61,12 @@ describe("feedback scoreboard", () => {
   });
 
   it("rolls up an answered rate and names what got nothing", () => {
-    expect(s).toMatchObject({ filed: 3, answered: 2, answeredPct: 67, noAnswer: 1 });
+    expect(s).toMatchObject({
+      filed: 3,
+      answered: 2,
+      answeredPct: 67,
+      noAnswer: 1,
+    });
   });
 
   it("exits honestly when gh is unreachable rather than stack-tracing", () => {
@@ -206,9 +211,11 @@ describe("when an input the scoreboard reads is missing", () => {
     // Stand-in `gh` (the list) and `curl` (the REST read ghRest makes) on PATH; the read 404s.
     const listed = [issue({ body: "", closedByPullRequestsReferences: [{ number: 99 }] })];
     writeFileSync(join(dir, "gh"), `#!/bin/sh\ncat <<'JSON'\n${JSON.stringify(listed)}\nJSON\n`);
+    // The open-issue read (#6704) gets an empty list; only the closing-PR read 404s.
     writeFileSync(
       join(dir, "curl"),
-      "#!/bin/sh\necho 'curl: (22) The requested URL returned error: 404' >&2\nexit 22\n",
+      '#!/bin/sh\ncase "$*" in *"/issues?"*) echo "[]"; exit 0;; esac\n' +
+        "echo 'curl: (22) The requested URL returned error: 404' >&2\nexit 22\n",
     );
     chmodSync(join(dir, "gh"), 0o755);
     chmodSync(join(dir, "curl"), 0o755);
@@ -220,5 +227,162 @@ describe("when an input the scoreboard reads is missing", () => {
     expect(res.stderr).toContain("· feedback-scan: closing PR #99 unreadable");
     expect(res.stderr).toContain("counted as not merged");
     expect(JSON.parse(res.stdout).rows[0].outcome).toBe("closed-without-pr");
+  });
+});
+
+/**
+ * THE WINDOW THAT HID THE OLDEST FILING (#6704, from the 2026-11-02 post-merge audit). The
+ * scoreboard reads the newest 200 `feedback` issues, open and closed. The unseen row used to filter
+ * that same window, so once enough newer filings landed, the oldest open filing with no state —
+ * the one the row exists to name — fell off the end, and the digest printed its all-clear. The row
+ * now reads every open filing on its own, over paginated REST; a read that cannot reach the end
+ * fails loud, never passes as "none".
+ */
+describe("the unseen row reads every open filing, not the scoreboard's window", () => {
+  const NOW = "2026-11-02T12:00:00Z";
+  let dir = "";
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "feedback-scan-window-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  type Listed = {
+    number: number;
+    title: string;
+    state: string;
+    createdAt: string;
+    labels: { name: string }[];
+  };
+
+  // Stand-ins that behave as the real ones do on a newest-first list: `gh issue list` honours
+  // `--state` and `--limit` (the cut the old single read silently depended on), and the REST
+  // issues endpoint (curl, under ghRestAll) honours `state`, `per_page` and `page`.
+  const stub = (all: Listed[]) => {
+    const data = join(dir, "issues.json");
+    writeFileSync(data, JSON.stringify(all));
+    const read = `JSON.parse(require("fs").readFileSync(${JSON.stringify(data)}, "utf8"))`;
+    writeFileSync(
+      join(dir, "gh"),
+      [
+        "#!/usr/bin/env node",
+        "const a = process.argv.slice(2);",
+        `const all = ${read};`,
+        'const state = a[a.indexOf("--state") + 1];',
+        'const limit = Number(a[a.indexOf("--limit") + 1]);',
+        'const kept = all.filter((i) => state === "all" || i.state === state.toUpperCase());',
+        'const out = kept.slice(0, limit).map((i) => ({ ...i, comments: [], body: "", closedByPullRequestsReferences: [] }));',
+        "process.stdout.write(JSON.stringify(out));",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(dir, "curl"),
+      [
+        "#!/usr/bin/env node",
+        "const u = new URL(process.argv[process.argv.length - 1]);",
+        `const all = ${read};`,
+        'const per = Number(u.searchParams.get("per_page"));',
+        'const page = Number(u.searchParams.get("page"));',
+        'const open = all.filter((i) => i.state === "OPEN");',
+        "const out = open.slice((page - 1) * per, page * per).map((i) => ({",
+        "  number: i.number, title: i.title, state: 'open', created_at: i.createdAt, labels: i.labels,",
+        "}));",
+        "process.stdout.write(JSON.stringify(out));",
+      ].join("\n"),
+    );
+    chmodSync(join(dir, "gh"), 0o755);
+    chmodSync(join(dir, "curl"), 0o755);
+  };
+  const env = () => ({ ...process.env, PATH: `${dir}:${process.env.PATH}` });
+  const hoursAgo = (h: number) => new Date(Date.parse(NOW) - h * 3_600_000).toISOString();
+
+  // The audit's reproduction: 274 newest-first, two open member filings with no state at positions
+  // 41 and 234 — the second well past the scoreboard's 200.
+  const busyRepo = (): Listed[] =>
+    Array.from({ length: 274 }, (_, i) => ({
+      number: 6100 - i,
+      title: `filing ${i}`,
+      state: "CLOSED",
+      createdAt: hoursAgo(26 + i * 6),
+      labels: [{ name: "feedback" }],
+    })).map((issue, i) => {
+      if (i === 41) {
+        return {
+          ...issue,
+          number: 6007,
+          title: "Paste a screenshot into the chat",
+          state: "OPEN",
+          labels: [{ name: "feedback" }, { name: "member-bug" }],
+        };
+      }
+      if (i === 234) {
+        return {
+          ...issue,
+          number: 4861,
+          title: "Option rungs never unlock",
+          state: "OPEN",
+          labels: [{ name: "feedback" }, { name: "member-idea" }],
+        };
+      }
+      return issue;
+    });
+
+  it("names the oldest open filing even when 200 newer issues push it out of the scoreboard", () => {
+    stub(busyRepo());
+    const res = spawnSync("node", ["scripts/feedback-scan.mjs", "--json", "--now", NOW], {
+      encoding: "utf8",
+      env: env(),
+    });
+    expect(res.status).toBe(0);
+    const out = JSON.parse(res.stdout);
+    expect(out.unseen.map((u: { number: number }) => u.number)).toEqual([4861, 6007]);
+    // The scoreboard keeps its own newest-200 window — out of scope for #6704.
+    expect(out.score.filed).toBe(200);
+  });
+
+  it("keeps the digest from printing the all-clear over the hidden filing", () => {
+    const repo = busyRepo().map((i) =>
+      i.number === 6007 ? { ...i, labels: [...i.labels, { name: "ready" }] } : i,
+    );
+    stub(repo);
+    const res = spawnSync("node", ["scripts/digest-scan.mjs", "--member-filings"], {
+      encoding: "utf8",
+      env: env(),
+    });
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("- Member filings: 1 older than 24h with no state (#4861");
+    expect(res.stdout).not.toContain("none older than 24h");
+  });
+
+  it("reads past the first REST page, so more than 100 open filings still all count", () => {
+    const many = Array.from({ length: 150 }, (_, i) => ({
+      number: 9000 - i,
+      title: `open ${i}`,
+      state: "OPEN",
+      createdAt: hoursAgo(48 + i),
+      labels: [{ name: "feedback" }, { name: "member-bug" }],
+    }));
+    stub(many);
+    const res = spawnSync("node", ["scripts/feedback-scan.mjs", "--json", "--now", NOW], {
+      encoding: "utf8",
+      env: env(),
+    });
+    expect(res.status).toBe(0);
+    expect(JSON.parse(res.stdout).unseen).toHaveLength(150);
+  });
+
+  it("fails loud when the open read fails, rather than reporting none", () => {
+    stub([]);
+    writeFileSync(
+      join(dir, "curl"),
+      "#!/bin/sh\necho 'curl: (22) The requested URL returned error: 401' >&2\nexit 22\n",
+    );
+    const res = spawnSync("node", ["scripts/feedback-scan.mjs", "--json", "--now", NOW], {
+      encoding: "utf8",
+      env: env(),
+    });
+    expect(res.status).toBe(2);
+    expect(res.stdout).toBe("");
   });
 });

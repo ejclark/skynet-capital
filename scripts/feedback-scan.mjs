@@ -21,7 +21,7 @@
 // malformed skynet-spec block, is named with a `·` note on stderr — stdout stays the report.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { ghRest } from "./moneypenny/gh.mjs";
+import { ghRest, ghRestAll } from "./moneypenny/gh.mjs";
 import { LABELS } from "./moneypenny/index.mjs";
 
 // One vocabulary, not a set of string literals that can drift from it (#500). This scan is the
@@ -92,6 +92,31 @@ function fetchIssues() {
     ...issue,
     closedByPullRequests: hydrateClosingPrs(issue.closedByPullRequestsReferences ?? []),
   }));
+}
+
+/**
+ * Every OPEN `feedback` issue, for the unseen-filings row — its own read, never the scoreboard's
+ * window (#6704). The scoreboard reads the newest 200, open and closed; with 275 filed and ~9 a
+ * day, the oldest open filing with no state was the first to fall off that window, and the row
+ * then printed its all-clear over the very filing it exists to name.
+ *
+ * Over REST through `ghRestAll`, on the plentiful core bucket rather than a second `gh --json`
+ * (GraphQL, the scarce one — see `fetchIssues`). `ghRestAll` pages to the end and throws at its
+ * page ceiling rather than return a cut list, so a read that could not see every open filing
+ * exits 2 here, and the digest's call to this scan fails loud instead of printing the all-clear.
+ * Mapped to `gh issue list`'s shape so `unseenFilings` reads both the same; the issues endpoint
+ * also lists pull requests, which are dropped.
+ */
+function fetchOpenIssues() {
+  return ghRestAll(`issues?state=open&labels=${encodeURIComponent(LABELS.feedback.name)}`)
+    .filter((issue) => !issue.pull_request)
+    .map((issue) => ({
+      number: issue.number,
+      title: issue.title,
+      state: "OPEN",
+      createdAt: issue.created_at,
+      labels: (issue.labels ?? []).map((l) => ({ name: typeof l === "string" ? l : l.name })),
+    }));
 }
 
 /**
@@ -268,11 +293,14 @@ function main(argv) {
     process.exit(2);
   }
   let issues;
+  let open; // the unseen row's own read (#6704); a fixture is the whole list, so it serves both
   if (argv.includes("--fixture") && fixture) {
     issues = JSON.parse(readFileSync(fixture, "utf8"));
+    open = issues;
   } else {
     try {
       issues = fetchIssues();
+      open = fetchOpenIssues();
     } catch (err) {
       console.error(
         `feedback-scan: could not reach gh — ${String(err.message).split("\n")[0]}\n` +
@@ -285,7 +313,7 @@ function main(argv) {
   const rows = issues.map((issue) => outcomeOf(issue, notes));
   for (const note of notes) console.error(`· feedback-scan: ${note}`);
   const score = scoreboard(rows);
-  const unseen = unseenFilings(issues, nowArg);
+  const unseen = unseenFilings(open, nowArg);
   if (argv.includes("--json")) {
     console.log(JSON.stringify({ score, rows, unseen }, null, 2));
     return;
