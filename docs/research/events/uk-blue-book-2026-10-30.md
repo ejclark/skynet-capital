@@ -350,6 +350,48 @@ every row; a dated adjacent event found gets proposed as a new
 Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from
 memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-11-02, D+3).** Instrument cache busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`); every price below re-fetched cold through
+`scripts/research/market-data.mjs`, never read from this document's own earlier rows. The ONS pages were
+fetched direct on 2026-11-02 (summarised by the fetch tool, not quoted raw). Date label stays `estimate`
+(no ONS slot in the confirmed-prefix taxonomy; this lane does not self-confirm), now with a published
+release behind it.
+
+**Call vs outcome: the stand-aside stance held, and all three registered tests passed.** Nothing here
+carried a position, so there is no P/L to score; the stance was a measured null plus one refusal.
+
+| Test | Registered | Result (re-run 2026-11-02) |
+|---|---|---|
+| FT-1 content | Release policy names the 09-30 QNA; 2024/2025 headlines match it | **pass** — Background notes list *"our GDP quarterly national accounts bulletin, published on 30 September 2026"*, with the balance of payments bulletin and UK Economic Accounts dataset of the same day and the 15 October 2026 production, services and trade bulletins. *At a glance*: 2025 real GDP **+1.2%**, 2024 **+1.1%**, 2025 nominal **+4.8%**. The 09-30 QNA page reads 2025 real **+1.2%** and says it is *"consistent with … the Blue Book 2026"*. 2024 real growth is not stated on the QNA page, so that half rests on the earlier **1.1%** impact-article figure |
+| FT-2 market | IGLT.L within ±0.785% on 2026-10-30 | **pass** — IGLT.L **-0.052%** (9.635 → 9.630), **0.2x** its 20-day mean |move| of 0.252%; ^FTSE **+0.072%**, GBPUSD=X **+0.380%** |
+| FT-3 date | Publishes 2026-10-30, 09:30 London | **pass** — page reads *"Release date: 30 October 2026 9:30am"*, no postponement notice, all 15 chapters live |
+
+**One thing the registered tests did not cover.** A notice on the compendium page says *"Blue Book links to
+content were not available on 30 October 2026 until 10:35am"*, while *"all data were published and available
+on the website at 09:30am"*. The release held its date; its content links lagged **65 minutes**. FT-3 scores
+the date, so it stands.
+
+**The refusal was needed, in the other direction.** Gilts did not move, so no gilt move needed attributing
+upstream. The day's large moves were US ones: SPY **-1.77%** (769.36 → 755.72, 20d mean |move| 0.527%),
+^VIX **+12.9%** to **19.42**, ^TNX **-1.20%**. Cause not established here, and nothing ties them to a 09:30
+London compendium: the gilt and sterling-adjacent series that a UK release would move sat still. The
+**channel kill** (a tracked name moving **>1%** in 04:30–09:30 ET on the ONS release) was not scored: no
+intraday instrument was run for it and no evidence of it was found. It was never a registered row.
+
+**Sources.** ons.gov.uk release page, compendium page, *Background notes*, *National accounts at a glance*
+and the Q2 2026 quarterly national accounts bulletin, all HTTP 200 on 2026-11-02. Market series: Yahoo
+chart via `market-data.mjs`.
+
+**Limits.** One edition is one observation; passing FT-2 does not move the twelve-edition ratios. Headline
+agreement with 09-30 was checked on 2025 real and nominal growth only. IGLT.L closes at 16:30 London, so its
+close-to-close move dilutes a 09:30 signature, as the Initial research already said.
+
+**Seen beyond the horizon, nothing proposed.** `uk-monthly-gdp-2026-10-15` and `uk-pink-book-2026-10-30`
+are already on the calendar as proposals from this lane. `--on-date=2026-10-30` lists 11 entries; no new
+dated adjacency was discovered, and the next UK ONS compendium is a year out.
+
 **Last assessed:** 2026-10-10
 <!-- probe-ref: {"symbols":{},"vix":14.84,"daysBand":"low:15+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","meta-2026-10-28-print","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-pink-book-2026-10-30"],"screenStreak":0,"blocked":[],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29"]} -->
 
@@ -358,3 +400,6 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.88,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"screenStreak":0,"blocked":[],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"]} -->
+
+**Last assessed:** 2026-11-02
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"screenStreak":0,"blocked":[],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"]} -->
