@@ -156,8 +156,9 @@ describe("the CLIs a session runs build the round page with no GitHub reads", ()
     run(["scripts/steer/build.mjs", join(out, "tp.json")]);
     expect(existsSync(join(out, "steer.html"))).toBe(true);
     const files = Object.keys(JSON.parse(readFileSync(join(out, "files.json"), "utf8")));
-    expect(files).toHaveLength(4);
-    expect(files.every((f) => f.startsWith("img/5150-q1/"))).toBe(true);
+    expect(files).toHaveLength(5);
+    expect(files.filter((f) => f.startsWith("img/5150-q1/"))).toHaveLength(4);
+    expect(files).toContain("round-input.json"); // a rebuild's input, #6607
   });
 });
 
