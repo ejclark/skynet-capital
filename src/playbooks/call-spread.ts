@@ -226,7 +226,7 @@ function entryFor(
   return expiration ? { print: read.print, blackout, exitDay, expiration } : undefined;
 }
 
-const dollars = (x: number): string => `$${x.toFixed(2)}`;
+const dollarsAndCents = (x: number): string => `$${x.toFixed(2)}`;
 
 /** The net quote for two legs in Alpaca's signed net (+ debit, − credit), with the oldest stamp
  *  among them — the feed's when every leg has one, else when this process read them. */
@@ -309,7 +309,7 @@ function openIntent(
     reach === undefined
       ? ""
       : " A one-standard-deviation rise by expiry, priced off the long call's implied " +
-        `volatility, reaches about ${dollars(reach)}.`;
+        `volatility, reaches about ${dollarsAndCents(reach)}.`;
   const intent = optionOpenIntent({
     underlying: symbol,
     structure: "call-debit-spread",
@@ -318,7 +318,7 @@ function openIntent(
     band,
     strategy: `${symbol.toLowerCase()}-spread-open`,
     reason:
-      `Buying one ${name} for about ${dollars(limitPrice)} a share — the options form of ` +
+      `Buying one ${name} for about ${dollarsAndCents(limitPrice)} a share — the options form of ` +
       `the pre-earnings run-up. The most it can lose is that $${debit} ` +
       `debit. ${spread.company} confirmed its ${entry.print.date} print; the spread is sold back ` +
       `by ${entry.exitDay}, ${inWords(spread.exit)} sessions before.`,
