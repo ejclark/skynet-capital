@@ -1,9 +1,10 @@
 /**
  * THE DAY-LENS FOG (#1704 slice 4; docs/FOG-OF-WAR.md). The research shelf's day lens is the
- * same-day view that pays out like a zero-DTE trade, so it is held behind rung 501 — the zero-DTE
- * rung #1671 proposes. Until that rung is built, the fog says so in words rather than implying
- * progress is possible ("a rung nobody can fill yet stays locked, honestly"). Experience sees
- * through it: a member with the wheels off is not fogged. Unknown (no plays payload) reads as
+ * same-day view that pays out like a zero-DTE trade, so it is held behind rung 501, the zero-DTE
+ * rung. If a plays catalog does not carry that rung, the fog says so in words rather than implying
+ * progress is possible ("a rung nobody can fill yet stays locked, honestly"), and never cites an
+ * issue number to a member (#5961: the line pointed at #1671, closed when 501 shipped). Experience
+ * sees through it: a member with the wheels off is not fogged. Unknown (no plays payload) reads as
  * open — the day lens is not safety information, and failing closed on a fetch error would fog
  * the wrong people for the wrong reason.
  */
@@ -32,6 +33,6 @@ export function dayLensFog(plays: PlaysIndex | undefined): DayLensFog {
     door: `Held until rung ${DAY_LENS_RUNG} (zero-DTE)`,
     reason: rung
       ? `Held until rung ${DAY_LENS_RUNG} (zero-DTE) is earned — the same-day view pays out like a same-day trade.`
-      : `Held until rung ${DAY_LENS_RUNG} (zero-DTE) — that rung is not built yet (#1671); wheels off sees through.`,
+      : `Held until rung ${DAY_LENS_RUNG} (zero-DTE) — that rung is not in this catalog yet; wheels off sees through.`,
   };
 }

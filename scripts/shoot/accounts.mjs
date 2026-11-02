@@ -554,10 +554,10 @@ await page.goto(`${origin}/app/accounts`);
 await page.locator(".blotter .row-guide").first().waitFor();
 
 // The positions table at 1600 (#3689 slice 6; ranked columns #5071): the row spec's two-line
-// cells, θ · Δ, Model projects, next event and best / worst case, with the Model projects glossary
-// open (breakeven moved into the Position cell, so its header glossary is gone).
+// cells, θ · Δ, next event and best / worst case, with the best / worst glossary open (breakeven
+// moved into the Position cell, so its header glossary is gone; Model projects left in #5961).
 await page.locator(".blotter-card").first().scrollIntoViewIfNeeded();
-await page.getByRole("button", { name: "Model projects" }).hover();
+await page.getByRole("button", { name: "Best / worst case" }).first().hover();
 await page.getByRole("tooltip").waitFor();
 await shootCockpit("accounts-table-desktop");
 

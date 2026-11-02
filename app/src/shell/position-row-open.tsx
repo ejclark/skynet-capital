@@ -9,12 +9,7 @@ import { CloseReceipt, type SentClose } from "./close-receipt";
 import { buysLabel } from "./glossary";
 import { GlossaryTerm } from "./glossary-term";
 import type { HoldingGreeks } from "./holding-decay";
-import {
-  BestWorstContent,
-  EventContent,
-  GreeksContent,
-  ProjectionContent,
-} from "./position-columns";
+import { BestWorstContent, EventContent, GreeksContent } from "./position-columns";
 
 /**
  * A DESK ROW, OPENED (#5071): what the ranked columns leave out, under the row's guidance line —
@@ -188,12 +183,6 @@ export function PositionRowOpen({
           <dt>θ · Δ</dt>
           <dd>
             <GreeksContent position={position} greeks={greeks} />
-          </dd>
-        </div>
-        <div className="pos-more-model">
-          <dt>Model projects</dt>
-          <dd>
-            <ProjectionContent />
           </dd>
         </div>
         <div>
