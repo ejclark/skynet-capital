@@ -1,7 +1,15 @@
 import type { PlaybookSubscription } from "../domain/types.js";
-import { adoptedHold, adoptedHoldReason, type HoldLookup } from "./conviction-adoptions.js";
-import { resolveSteering } from "./conviction-steering.js";
+import {
+  adoptedHold,
+  adoptedHoldReason,
+  adoptedRules,
+  type HoldLookup,
+  type RuleLookup,
+} from "./conviction-adoptions.js";
+import type { Conviction } from "./conviction-record.js";
+import { type Narrowing, resolveSteering } from "./conviction-steering.js";
 import { type ConvictionLookup, lookupConviction } from "./conviction-store.js";
+import type { PairRule } from "./fence-studies.js";
 import type { Playbook } from "./playbook.js";
 
 /**
@@ -37,19 +45,75 @@ import type { Playbook } from "./playbook.js";
  * and Eric merges the change it proposes (`conviction-adoptions.ts`), the view still steers the pair
  * but the pair opens nothing new under it. The pointer stays, so nothing is re-pointed or logged;
  * the refusal carries the claim and the day, and the same exits-only path runs it.
+ *
+ * A PAIR'S OWN RULE (#6598 slice 3). When a passed claim's fence was adopted on a study's *adopt*
+ * call (a `pair-rule` line), every subscription to the pair runs inside it, pointed or not. It goes
+ * through the same narrow-only resolver; where it and a view fence the same setting, the narrower
+ * of the two stands (`withOwnRules`), so neither can loosen the other. A rule refused against the
+ * playbook's bounds refuses the pair whole, exits-only. No line states one today.
  */
 export type SteeredPlaybook =
   | { readonly playbook: Playbook; readonly says: readonly string[] }
   | { readonly playbook: Playbook; readonly refused: string };
+
+/** One rule and one view fence on the same setting, as the narrower: the longer quiet, the smaller
+ *  cap, the inner days-to-expiry window (which the resolver refuses if it is empty). */
+function narrowerOf(rule: PairRule, n: Narrowing): Narrowing {
+  if (rule.kind === "quiet" && n.kind === "quiet") {
+    return {
+      kind: "quiet",
+      sessionsAfterPrint: Math.max(rule.sessionsAfterPrint, n.sessionsAfterPrint),
+    };
+  }
+  if (rule.kind === "contracts" && n.kind === "contracts") {
+    return { kind: "contracts", max: Math.min(rule.max, n.max) };
+  }
+  if (rule.kind === "dte" && n.kind === "dte") {
+    const mins = [rule.min, n.min].filter((m): m is number => m !== undefined);
+    const maxes = [rule.max, n.max].filter((m): m is number => m !== undefined);
+    return {
+      kind: "dte",
+      ...(mins.length > 0 ? { min: Math.max(...mins) } : {}),
+      ...(maxes.length > 0 ? { max: Math.min(...maxes) } : {}),
+    };
+  }
+  return n;
+}
+
+/**
+ * A pair's own rules and a view's fences as one list, one fence per setting: where both fence a
+ * setting, the narrower of the two. `own[i]` says whether the pair's rule is what stands at `i`, so
+ * the boot log names only the fence in force.
+ */
+export function withOwnRules(
+  rules: readonly PairRule[],
+  narrow: readonly Narrowing[],
+): { readonly narrow: readonly Narrowing[]; readonly own: readonly boolean[] } {
+  const merged = narrow.map((n) => {
+    const rule = rules.find((r) => r.kind === n.kind);
+    if (!rule) return { n, own: false };
+    const both = narrowerOf(rule, n);
+    return { n: both, own: JSON.stringify(both) === JSON.stringify(rule) };
+  });
+  const added = rules
+    .filter((r) => !narrow.some((n) => n.kind === r.kind))
+    .map((r) => ({ n: r as Narrowing, own: true }));
+  const all = [...merged, ...added];
+  return { narrow: all.map((m) => m.n), own: all.map((m) => m.own) };
+}
 
 export function steeredBy(
   playbook: Playbook,
   sub: Pick<PlaybookSubscription, "convictionId" | "playbookId">,
   lookup: ConvictionLookup = lookupConviction,
   holds: HoldLookup = adoptedHold,
+  rules: RuleLookup = adoptedRules,
 ): SteeredPlaybook {
   const unchanged = { playbook, says: [] } as const;
-  if (sub.convictionId === undefined) return unchanged;
+  const own = rules(sub.playbookId);
+  if (sub.convictionId === undefined) {
+    return own.length === 0 ? unchanged : fenced(playbook, own, []);
+  }
   const record = lookup(sub.convictionId);
   if (!record) {
     return {
@@ -68,14 +132,48 @@ export function steeredBy(
   const narrow = (record.narrowings ?? [])
     .filter((n) => n.pair === sub.playbookId)
     .flatMap((n) => n.narrow);
-  if (narrow.length === 0) return unchanged;
+  if (narrow.length === 0 && own.length === 0) return unchanged;
+  return fenced(playbook, own, narrow, record);
+}
+
+/** The playbook rebuilt inside its pair's own rules and a view's narrowings, or why it is refused. */
+function fenced(
+  playbook: Playbook,
+  own: readonly PairRule[],
+  narrow: readonly Narrowing[],
+  record?: Conviction,
+): SteeredPlaybook {
   const { steerable } = playbook;
   if (!steerable) {
     return { playbook, refused: `${playbook.id} has no bounds a conviction can narrow` };
+  }
+  const ownRead = resolveSteering(own, steerable.bounds, []);
+  if (!ownRead.ok) {
+    return { playbook, refused: `${playbook.id}'s own rule is refused whole: ${ownRead.reason}` };
+  }
+  if (!record) {
+    return {
+      playbook: steerable.steer(ownRead.steering),
+      says: ownRead.says.map((s) => `the pair's own rule: ${s}`),
+    };
   }
   const resolved = resolveSteering(narrow, steerable.bounds, record.claims);
   if (!resolved.ok) {
     return { playbook, refused: `conviction "${record.id}" is refused whole: ${resolved.reason}` };
   }
-  return { playbook: steerable.steer(resolved.steering), says: resolved.says };
+  if (own.length === 0) {
+    return { playbook: steerable.steer(resolved.steering), says: resolved.says };
+  }
+  const both = withOwnRules(own, narrow);
+  const read = resolveSteering(both.narrow, steerable.bounds, record.claims);
+  if (!read.ok) {
+    return {
+      playbook,
+      refused: `${playbook.id}'s own rule and conviction "${record.id}" together: ${read.reason}`,
+    };
+  }
+  return {
+    playbook: steerable.steer(read.steering),
+    says: read.says.map((say, i) => (both.own[i] ? `the pair's own rule: ${say}` : say)),
+  };
 }

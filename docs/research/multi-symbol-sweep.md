@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A benchmark revision leaves a four-month-old wholesale ratio within 0.03 because 9 of the last 12 did" (FT-mwts-benchmark-revision-2026-10-26-3)** — added 2026-11-02 from the
+  [mwts-benchmark-revision-2026-10-26 ledger](events/mwts-benchmark-revision-2026-10-26.md). Census restated the June-2026 SA inventories/sales ratio **1.19 → 1.24** (+0.05; inventories +4.42%),
+  past the 1.22 line. Do not carry a revision base rate from an archive of routine annual benchmarks onto a batched, off-cycle one: the twelve prior revisions moved recent levels a median
+  0.126%, this one about 4%, and the 10-16 retail rehearsal (−4.51%) had already said so.
+
 - **"A builder's pre-open earnings gap is at least 3% in size because 11 of its last 15 were" (FT-dhi-q4-fy2026-2026-10-29-2)** — added 2026-10-31 from the
   [dhi-q4-fy2026-2026-10-29 close-out](events/dhi-q4-fy2026-2026-10-29.md). DHI's FY Q4 print gapped **−0.70%** (close $143.00 → open $142.00), against a 15-print modern mean |gap| of 5.27%.
   The print carried orders −7% y/y and the group rallied through it (ITB +3.49% that day), so the open had little left to reprice. Do not register a size threshold off a heavy-tailed gap sample

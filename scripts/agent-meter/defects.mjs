@@ -62,8 +62,11 @@ export function writeAuditReceipt(runsDir, { prs, confirmed }) {
     .map(Number)
     .filter((n) => Number.isInteger(n) && n > 0);
   if (!numbers.length) throw new Error("--audit-receipt needs --prs 1,2,3");
+  // A count nobody gave would be read as an audit that found nothing, which is a claim.
+  if (!/^\d+$/.test(String(confirmed)))
+    throw new Error(`--audit-receipt needs --confirmed N, got "${confirmed}"`);
   mkdirSync(runsDir, { recursive: true });
-  const row = { at: new Date().toISOString(), prs: numbers, confirmed: Number(confirmed ?? 0) };
+  const row = { at: new Date().toISOString(), prs: numbers, confirmed: Number(confirmed) };
   const path = join(runsDir, "post-merge-audit.jsonl");
   writeFileSync(
     path,

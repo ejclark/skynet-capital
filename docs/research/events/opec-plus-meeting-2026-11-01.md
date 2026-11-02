@@ -312,6 +312,76 @@ geopolitical · event tape) runs in every row; a dated adjacent event found gets
 "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache
 busted first), never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out written 2026-11-02 (D+1).** The seven held December at the September level, a third
+consecutive non-decision; the meeting happened on the projected date, the Q4 pause survived its
+terminal month, and the next meeting is 29 November. The one forward test left open (FT-…-2) passed.
+Nothing here licenses a trade: `symbols: []`, the date is still **estimate**, and no house playbook
+covers commodities.
+
+**Sourcing.** `earnings-cycle.mjs` and `intraday-edges.mjs` are equity-keyed and have no target for
+this event; their caches were busted per the standing rule and nothing below is from memory of the
+tape. The decision is from opec.org's own page, `pr-detail/620-1-november-2026.html`, fetched direct
+today (HTTP 200, read as raw text); `opec.org/press-releases.html` still returned 403 and is not
+substituted. Prices are a fresh Yahoo v8 pull (`BZ=F`, `CL=F`, `^VIX`), cross-checked against CNBC
+(2026-10-31) for the 10-30 settles. Per-country figures are Xinhua (2026-11-02), secondary.
+
+### 1. The call sheet, scored
+
+| Horizon | Call as written | What happened | Verdict |
+|---|---|---|---|
+| Today (D-53) | Stand aside | No position, event stayed `estimate`, the group held. Falsifier (an OPEC+ headline moving Brent >5% in a session before 10-04) is not recorded in any ledger row. | **Correct** |
+| This week | Watch Brent's $100 line, not the meeting; falsifier Brent <$95 by 09-15 | Brent closed 99.25 (09-22) at the lowest and ≥101.2 on every close 09-09 to 09-15; the line was the live variable and was crossed for good on 09-23. | **Correct** — falsifier did not fire |
+| This month | The 10-04 release either publishes the date or invalidates it | Published: *"The next meeting will be held on 1 November 2026"*. | **Correct** — FT-…-1 passed 10-16 |
+| This quarter | Watch the pause's edge and Iran's 10-31 baseline close, not the December number; falsifier: agreed 2027 baselines published before 11-01 | December held. No baselines were agreed: the capacity review is now reported for mid-November and the full-group meeting is 11-29 (CNBC). Nothing was found on Iran's baseline number, in either direction. | **Framing held; Iran leg unscored** (the audit findings are not public) |
+
+### 2. The decision: base case, third consecutive non-decision
+
+The seven *"decided to maintain September 2026 required production for December 2026"*, reiterated
+conformity with the Declaration of Cooperation, and said they *"will continue to hold monthly
+meetings"*; the next is **29 November 2026**, which CNBC reports is also when all 21 members meet on
+2027 quotas, and which the 68th JMMC statement already gave to the 69th JMMC. Combined required
+production stays about **31.01 mb/d**. With Gulf members still pumping below target because of the
+war, a hold remained the base case at registration and adds no barrels. Neither of the two risks the
+10-26 rows added (a postponement, or a Saudi-security disruption to the format) occurred: the meeting
+was a short virtual session on the day.
+
+### 3. Kill switches
+
+- **KS1** (date wrong): cleared 10-16.
+- **KS2** (December increase or deeper cut): did not fire.
+- **KS3** (a member rejects its 2027 baseline or exits by 11-01): not found in a search through
+  11-02. That is absence of evidence from search, not a sweep of every ministry.
+- **KS4** (Brent >$100, five sessions): fired 10-16 and has not un-fired. Every Yahoo front-month
+  close from 09-23 to 10-30 is ≥100.20 (28 sessions). The expiring December contract settled
+  **117.64** on 10-30 (CNBC and Yahoo agree), the highest since late April; the January contract
+  settled **113.43**, WTI **104.12**. Owner from here: [`cpi-2026-11-10`](cpi-2026-11-10.md).
+- **KS5** (Hormuz transits >60/day, five sessions): no reporting of an operating arrangement was
+  found; CNBC still describes export disruption from the war. Not fired; the transit count itself
+  was not re-measured.
+
+### 4. The tape, descriptive only
+
+No price test was registered, and none is scored. The Yahoo `BZ=F` bar for 11-02 (111.83 at the
+00:25Z Sunday-evening open, **not a close**) sits against 117.64 on 10-30, but 117.64 is the expired
+December contract and 111.83 is the January one, so most of that gap is the roll (January settled
+113.43, so the open is -1.4% on a like-for-like basis). It is not a reaction to the meeting. VIX
+closed **19.42** on 10-30; the 11-02 session has not traded. The war, the midterms (11-03) and ISM
+(11-02) own this tape.
+
+### 5. What transfers
+
+- **The date test paid for itself.** FT-…-1 turned a cadence projection into a published fact 16
+  days after registration; the family now sits at 8 for 8 on the first-Sunday cadence.
+- **The terminal month behaved like the middle ones.** The edge-of-window worry in leg 2 did not
+  materialise; the next real fork is 29 November, where baselines and January are on the table.
+- **A beyond-horizon date gets filed when it crosses in.** The 29 November meeting was named, not
+  filed, in two rows while it was past the horizon (#2946); it is D-27 today and is proposed in this
+  PR as `proposals/opec-plus-meeting-2026-11-29.from-opec-plus-meeting-2026-11-01.json`
+  (`estimate`, medium).
+
+
 **Last assessed:** 2026-10-02
 <!-- probe-ref: {"symbols":{},"vix":15.9,"daysBand":"medium:8+","adjacentIds":["adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","boe-decision-2026-11-05","boj-decision-2026-10-30","boj-minutes-2026-11-05","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-trimmed-mean-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","treasury-2y-frn-2026-10-28","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30"],"adjacentStrongIds":["fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29","eci-q3-2026-10-30","jobs-2026-11-06"],"screenStreak":0,"blocked":[{"url":"https://www.opec.org/meetings.html","status":403,"at":"2026-10-02"},{"url":"https://www.opec.org/press-releases.html","status":403,"at":"2026-10-02"},{"url":"https://www.opec.org/opec_web/en/press_room/28.htm","status":403,"at":"2026-10-02"},{"url":"https://www.opec.org/opec_web/en/press_room/285.htm","status":402,"at":"2026-10-02"}]} -->
 
@@ -332,3 +402,6 @@ busted first), never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-01
 <!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":2} -->
+
+**Last assessed:** 2026-11-02
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0,"blocked":[{"url":"https://www.opec.org/press-releases.html","status":403,"at":"2026-11-02"}]} -->
