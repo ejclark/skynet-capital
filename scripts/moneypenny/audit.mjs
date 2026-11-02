@@ -9,6 +9,7 @@ import { ghRestAll, sh } from "./gh.mjs";
 import { FOOTER, LABELS, PARKING_LABELS } from "./labels.mjs";
 import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
 import { redLaneIntents, redLaneOrNone } from "./red-lane-pr.mjs";
+import { researchPrsOrNone, researchSweep } from "./research-pr-sweep.mjs";
 import { rearmIntents, strandedOrNone } from "./stranded-pr.mjs";
 import { stuckBranchesOrNone, updateIntents } from "./stuck-branch-update.mjs";
 import { loadWorkModeConfig, readWorkMode } from "./work-mode.mjs";
@@ -322,7 +323,12 @@ export function audit(deps = {}) {
   if (deps.workMode?.mode?.position !== "halt") intents.push(...updateIntents(deps.stuckBranches));
   // The stranded-PR act stage (stranded-pr.mjs): re-run a green PR's failed arm job, once per head.
   // `halt` stops every lane, so it stops this too — re-arming lands work.
-  if (deps.workMode?.mode?.position !== "halt") intents.push(...rearmIntents(deps.stranded));
+  const halted = deps.workMode?.mode?.position === "halt";
+  const rearmed = halted ? [] : rearmIntents(deps.stranded);
+  intents.push(...rearmed);
+  // The research-PR sweep (research-pr-sweep.mjs, #5689): close a superseded `research/*` PR, flag
+  // a red one once per head, and count the tick. `halt` stops the acts, not the count.
+  intents.push(...researchSweep(deps.researchPrs, rearmed, halted));
   // A red lane PR whose session has ended (red-lane-pr.mjs): close it and release its issue. `halt`
   // stops this too, because a released issue is a build the sweep may start.
   if (deps.workMode?.mode?.position !== "halt") intents.push(...redLaneIntents(deps.redLanePrs));
@@ -619,6 +625,8 @@ export function gatherAuditDeps(nowMs, hourly = {}) {
     clock: clockOrUnknown(nowMs, issues),
     // One REST call on a tick where no lane PR has sat a day untouched.
     redLanePrs: redLaneOrNone(nowMs),
+    // One REST call on a tick where no research PR has sat open 6h.
+    researchPrs: researchPrsOrNone(nowMs),
   };
 }
 
