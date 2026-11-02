@@ -27,7 +27,7 @@ import { money } from "./format-money.js";
  */
 
 export type ClaimOutcome = "pass" | "fail" | "pending" | "untestable";
-export const CLAIM_OUTCOMES: readonly ClaimOutcome[] = ["pass", "fail", "pending", "untestable"];
+const CLAIM_OUTCOMES: readonly ClaimOutcome[] = ["pass", "fail", "pending", "untestable"];
 
 /**
  * The mechanical reading of a claim's falsifier, where there is one.
@@ -70,7 +70,7 @@ export type FalsifierCheck =
 
 /** A sold put a claim's falsifier names: it expires worthless when the close on `expiry` is at or
  *  above `strike`. */
-export interface ExpiringPut {
+interface ExpiringPut {
   /** `YYYY-MM-DD`: the expiry day, read as the last close on or before it. */
   readonly expiry: string;
   readonly strike: number;
@@ -98,7 +98,7 @@ export interface ForwardLink {
 type LinkOutcome = "pass" | "fail" | "pending";
 
 /** A forward test's verdict as its lane recorded it (`scripts/research-scorecard.mjs` → verdictOf). */
-export type ForwardVerdict = "pass" | "kill" | "void" | "unscoreable" | "open" | "unread";
+type ForwardVerdict = "pass" | "kill" | "void" | "unscoreable" | "open" | "unread";
 
 /** The row a link resolves to, as the scoring run read it from the event's fragment. */
 export interface ForwardRow {
