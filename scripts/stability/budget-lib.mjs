@@ -129,7 +129,7 @@ export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
       if (typeof row.status !== "number" || row.status >= 500)
         failures.push(`${phase.name}: ${row.path} answered ${row.status}`);
   const peak = Math.max(bootPeakMb, ...phases.map((p) => p.peakMb ?? 0));
-  if (peak > budgets.peakMb) failures.push(`peak RSS ${peak} MB > budget ${budgets.peakMb} MB`);
+  if (peak > budgets.peakMb) failures.push(`${PEAK_OVER}${peak} MB > budget ${budgets.peakMb} MB`);
   failures.push(
     ...pageFailures(
       phases.find((p) => p.name === "accounts-open"),
@@ -156,6 +156,37 @@ export function verdict({ phases, state, budgets, bootPeakMb = 0 }) {
     failures: blocking,
     ...(advisories.length ? { advisories } : {}),
   };
+}
+
+const PEAK_OVER = "peak RSS ";
+
+/** How many fresh containers a run that broke only the peak budget gets before the gate fails. */
+export const RECHECKS = 1;
+
+/**
+ * What the runner does after `verdicts` (every run so far, in order): measure "again" in a fresh
+ * container, or settle on "pass" / "fail" (#6737). Only a run whose sole failure is peak RSS over
+ * budget earns a second run — the one number a noisy CI machine moved on its own (2026-11-02: two
+ * PRs read 316 and 315 MB, then passed on a re-run of the same commit; the day's middle was 267).
+ * A real regression breaks the budget on every run, so it still fails; an OOM kill, an exit, a
+ * 5xx or a page over its own budget never gets a second run. The budget itself never moves.
+ */
+export function nextStep(verdicts) {
+  const last = verdicts.at(-1);
+  if (last.ok) return "pass";
+  const peakOnly = last.failures.length > 0 && last.failures.every((f) => f.startsWith(PEAK_OVER));
+  return peakOnly && verdicts.length <= RECHECKS ? "again" : "fail";
+}
+
+/** The closing lines when a run was measured more than once: every run's peak, and the call. */
+export function remeasured(verdicts, budgetMb) {
+  if (verdicts.length < 2) return "";
+  const runs = verdicts.map((v, i) => `run ${i + 1} peaked at ${v.peakMb} MB`).join(", ");
+  const [call, why] =
+    nextStep(verdicts) === "pass"
+      ? ["**PASS** on the re-run", "Only the first machine read over budget"]
+      : ["**FAIL** on every run", "The re-run failed too"];
+  return `### Re-measured (#6737) — ${call}\n\nBudget ${budgetMb} MB: ${runs}. ${why}; every run's tables are above.`;
 }
 
 /** Marks `message` as a time-budget one (so CI mode can set it aside) and hands it back. */
