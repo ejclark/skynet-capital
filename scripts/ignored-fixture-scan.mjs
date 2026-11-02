@@ -30,6 +30,8 @@ import { dirname, join, normalize } from "node:path";
 /** Where specs and their fixtures live. A path resolved outside these is not a fixture here. */
 export const SPEC_ROOTS = ["tests/", "e2e/", "app/tests/", "app/playwright/"];
 const CODE = /\.(ts|tsx|mts|cts|js|mjs|cjs)$/;
+// This scan's own spec names ignored paths on purpose: they are the cases it checks.
+const OWN_SPEC = "tests/arch/ignored-fixture.spec.ts";
 
 // A quoted literal with no interpolation, no whitespace and no scheme: "a/b.log", './x.json'.
 const LITERAL = /(["'`])([^"'`\s$\\]+)\1/g;
@@ -80,15 +82,20 @@ export function resolutions(file, literal) {
 }
 
 /** Of these repo-relative paths, the ones git would leave out of a commit, each with its rule. */
-export function ignoredOf(paths, { cwd = process.cwd(), run = execFileSync } = {}) {
+export function ignoredOf(
+  paths,
+  { cwd = process.cwd(), env = process.env, run = execFileSync } = {},
+) {
   if (!paths.length) return new Map();
   let out = "";
   try {
-    // --verbose --non-matching prints one line per path: "<source>:<line>:<pattern>\t<path>", or
-    // "::\t<path>" when nothing matches. Exit 1 only means "none ignored".
-    out = run("git", ["check-ignore", "--stdin", "--verbose", "--non-matching"], {
+    // -z with --verbose --non-matching: four NUL-ended fields per path (source, line, pattern,
+    // path), the first three empty when nothing matches, and no quoting of odd characters. Exit 1
+    // only means "none ignored".
+    out = run("git", ["check-ignore", "--stdin", "-z", "--verbose", "--non-matching"], {
       cwd,
-      input: `${paths.join("\n")}\n`,
+      env,
+      input: `${paths.join("\0")}\0`,
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -96,28 +103,28 @@ export function ignoredOf(paths, { cwd = process.cwd(), run = execFileSync } = {
     if (error.status !== 1) throw error;
     out = error.stdout ?? "";
   }
+  const fields = out.split("\0");
   const ignored = new Map();
-  for (const row of out.split("\n")) {
-    const tab = row.indexOf("\t");
-    if (tab < 0) continue;
-    const rule = row.slice(0, tab);
-    if (rule !== "::") ignored.set(row.slice(tab + 1), rule);
+  for (let i = 0; i + 3 < fields.length; i += 4) {
+    const [source, line, pattern, path] = fields.slice(i, i + 4);
+    // A `!pattern` match is the rule that UN-ignores the path, so it is no finding.
+    if (pattern && !pattern.startsWith("!")) ignored.set(path, `${source}:${line}:${pattern}`);
   }
   return ignored;
 }
 
 /** Every spec-tree literal that names an ignored, untracked path. */
-export function scan({ cwd = process.cwd(), run = execFileSync } = {}) {
-  const files = run("git", ["ls-files", "-z", "--", ...SPEC_ROOTS], { cwd, encoding: "utf8" })
+export function scan({ cwd = process.cwd(), env = process.env, run = execFileSync } = {}) {
+  const files = run("git", ["ls-files", "-z", "--", ...SPEC_ROOTS], { cwd, env, encoding: "utf8" })
     .split("\0")
-    .filter((f) => CODE.test(f));
+    .filter((f) => CODE.test(f) && f !== OWN_SPEC);
   const sites = [];
   for (const file of files) {
     for (const { literal, line } of pathLiterals(readFileSync(join(cwd, file), "utf8"))) {
       for (const path of resolutions(file, literal)) sites.push({ file, line, literal, path });
     }
   }
-  const ignored = ignoredOf([...new Set(sites.map((s) => s.path))], { cwd, run });
+  const ignored = ignoredOf([...new Set(sites.map((s) => s.path))], { cwd, env, run });
   return sites.filter((s) => ignored.has(s.path)).map((s) => ({ ...s, rule: ignored.get(s.path) }));
 }
 

@@ -21,7 +21,7 @@ function repoWith(files: Record<string, string>, force: string[] = []) {
   }
   git(["add", "."]);
   if (force.length) git(["add", "-f", ...force]);
-  return { root, done: () => rmSync(root, { recursive: true, force: true }) };
+  return { root, env, done: () => rmSync(root, { recursive: true, force: true }) };
 }
 
 describe("ignored-fixture-scan: the repo", () => {
@@ -41,13 +41,13 @@ const realLog = readFileSync(
 `;
 
   it("names the spec, the fixture and the rule that hid it", () => {
-    const { root, done } = repoWith({
+    const { root, env, done } = repoWith({
       ".gitignore": "*.log\n",
       "tests/arch/research-circuit-breaker.spec.ts": SPEC,
       "tests/fixtures/circuit-breaker/run-38985010210-opex-leg.log": "##[notice]cost usd=1\n",
     });
     try {
-      expect(scan({ cwd: root })).toEqual([
+      expect(scan({ cwd: root, env })).toEqual([
         {
           file: "tests/arch/research-circuit-breaker.spec.ts",
           line: 4,
@@ -62,22 +62,22 @@ const realLog = readFileSync(
   });
 
   it("fires before the fixture exists, on the name alone", () => {
-    const { root, done } = repoWith({ ".gitignore": "*.log\n", "tests/a.spec.ts": SPEC });
+    const { root, env, done } = repoWith({ ".gitignore": "*.log\n", "tests/a.spec.ts": SPEC });
     try {
-      expect(scan({ cwd: root })).toHaveLength(1);
+      expect(scan({ cwd: root, env })).toHaveLength(1);
     } finally {
       done();
     }
   });
 
   it("passes once the fixture is renamed out of the rule, as the fix did", () => {
-    const { root, done } = repoWith({
+    const { root, env, done } = repoWith({
       ".gitignore": "*.log\n",
       "tests/a.spec.ts": SPEC.replace(".log", ".txt"),
       "tests/fixtures/circuit-breaker/run-38985010210-opex-leg.txt": "x\n",
     });
     try {
-      expect(scan({ cwd: root })).toEqual([]);
+      expect(scan({ cwd: root, env })).toEqual([]);
     } finally {
       done();
     }
@@ -85,26 +85,37 @@ const realLog = readFileSync(
 
   it("passes a fixture that matches a rule but is tracked anyway", () => {
     const fixture = "tests/fixtures/circuit-breaker/run-38985010210-opex-leg.log";
-    const { root, done } = repoWith(
+    const { root, env, done } = repoWith(
       { ".gitignore": "*.log\n", "tests/a.spec.ts": SPEC, [fixture]: "x\n" },
       [fixture],
     );
     try {
-      expect(scan({ cwd: root })).toEqual([]);
+      expect(scan({ cwd: root, env })).toEqual([]);
     } finally {
       done();
     }
   });
 
   it("catches a folder rule reaching into the spec tree, from a path relative to the spec", () => {
-    const { root, done } = repoWith({
+    const { root, env, done } = repoWith({
       ".gitignore": "data/\n",
       "tests/b.spec.ts": 'const u = new URL("./fixtures/data/prices.json", import.meta.url);\n',
     });
     try {
-      expect(scan({ cwd: root }).map((f) => [f.path, f.rule])).toEqual([
+      expect(scan({ cwd: root, env }).map((f) => [f.path, f.rule])).toEqual([
         ["tests/fixtures/data/prices.json", ".gitignore:1:data/"],
       ]);
+    } finally {
+      done();
+    }
+  });
+  it("passes a fixture a later `!` rule un-ignores", () => {
+    const { root, env, done } = repoWith({
+      ".gitignore": ".env.*\n!.env.example\n",
+      "tests/c.spec.ts": 'readFileSync("tests/fixtures/.env.example")\n',
+    });
+    try {
+      expect(scan({ cwd: root, env })).toEqual([]);
     } finally {
       done();
     }

@@ -6,7 +6,7 @@ export function pathLiterals(source: string): Array<{ literal: string; line: num
 /** The repo-relative path a literal in `file` names, when it has a fixture's shape. */
 export function resolutions(file: string, literal: string): string[];
 /** Every spec-tree literal that names an ignored, untracked path, with the rule that ignores it. */
-export function scan(opts?: { cwd?: string }): Array<{
+export function scan(opts?: { cwd?: string; env?: NodeJS.ProcessEnv }): Array<{
   file: string;
   line: number;
   literal: string;
