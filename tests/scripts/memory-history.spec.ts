@@ -168,8 +168,10 @@ describe("memory history hook", () => {
   });
 
   // A filesystem failure in the lock costs a version like any other, so it must not exit 0. The lock
-  // lives beside the memory folder, so a read-only parent stops the lock and nothing else.
-  it("exits 2 when it cannot take its turn at all", () => {
+  // lives beside the memory folder, so a read-only parent stops the lock and nothing else. Root
+  // writes through a read-only mode, so a cloud session (uid 0) cannot stage this failure; CI's
+  // runner is not root and runs it.
+  it.skipIf(process.getuid?.() === 0)("exits 2 when it cannot take its turn at all", () => {
     const { root, dir } = fixture();
     const file = join(dir, "a.md");
     writeFileSync(file, "one\n");
