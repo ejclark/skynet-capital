@@ -89,8 +89,8 @@ cycle branch its coach's first rep was merged into. Without one, your base is `m
 
 1. **WIP 1 — the cheapest skip, so it goes first.**
    `gh api 'repos/{owner}/{repo}/pulls?state=open&per_page=100' --jq '.[] | "\(.number) \(.head.ref)"'`
-   — REST, never `gh pr list`: that one is GraphQL, which a cloud session refuses with HTTP 403
-   (governed cycle 7, 2026-11-02). If any open
+   — REST, because gh's `pr` subcommands go through GraphQL, which a cloud session refuses with
+   HTTP 403 (governed cycle 7, 2026-11-02). If any open
    PR's head branch starts with your item's `prefix`, report `status: "skipped"` with
    `WIP 1: <branch> is already open for <coach>` and stop. Inventory is waste, and the next cycle
    recomputes this coach's target from a fresher `main` anyway.

@@ -124,3 +124,12 @@ describe("the governor chore's ledger rows", () => {
     }
   });
 });
+
+// A rep runs in a cloud session, where gh's GraphQL calls come back HTTP 403. Every `pr`
+// subcommand is GraphQL, so one in the chore stops all four reps at step 1 (governed cycle 7).
+describe("the governor chore's GitHub reads", () => {
+  it("go through REST, never a `gh pr` subcommand", () => {
+    expect(chore).not.toMatch(/`gh pr\b/);
+    expect(chore).toContain("`gh api 'repos/{owner}/{repo}/pulls?state=open&per_page=100'");
+  });
+});
