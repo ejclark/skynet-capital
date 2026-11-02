@@ -1835,7 +1835,7 @@ Found 2026-11-02 while building #6668. In `scripts/file-lock.mjs`, a lock path t
 reads as nothing (a folder, a dangling link, a file this user cannot read) makes `tryTake` answer
 EEXIST and `read` answer null, and the `seen === null` branch retries at once with no deadline:
 a busy loop that never throws `LockBusyError`. No incident yet; the memory hooks are the callers.
-The fix is a deadline check in that branch and a spec with a folder at the lock path.
+The fix is a deadline check in that branch and a spec with a folder at the lock path: filed as #6706.
 _(src: Claude · while: making the memory-history spec bind as root for #6668)_
 
 ### Most of a verify's peak memory is its first half-minute

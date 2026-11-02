@@ -33,7 +33,8 @@
 #     is in front wins the CPU. Not `-b`: background QoS runs on the efficiency cores alone, which
 #     would stretch a verify on an idle machine far past the 78 s it takes there today;
 #   - starts fewer test workers (SKYNET_TEST_WORKERS below; both rstest configs read it);
-#   - refuses while the lid is closed, before it queues and again when its turn comes (exit 75);
+#   - refuses while a closed lid would sleep the machine (no display attached), before it queues
+#     and again when its turn comes (exit 75); a docked laptop with its lid shut runs as normal;
 #   - reads `sysctl kern.waketime` before and after, and calls a failure the machine slept through
 #     no result (exit 75), which ship.sh counts as no mistake.
 # Each step needs its own tool, so on Linux and in CI none of them runs and nothing changes. None of
@@ -97,8 +98,10 @@ run() {
   else SKYNET_VERIFY_LOCKED=1 "${launch[@]}" 9>&-; fi
 }
 
-# ioreg names the lid AppleClamshellState; the AppleClamshellCausesSleep beside it is Yes on most
-# laptops whatever the lid does, so the match names the state's own key. The tree is read whole
+# ioreg reports the lid as AppleClamshellState and, beside it, whether a closed lid sleeps the
+# machine as AppleClamshellCausesSleep: Yes with no display attached (the laptop, lid open, on
+# 2026-11-02), No when docked, where a shut lid runs at full speed. Only both Yes refuses; a docked
+# run that sleeps anyway is caught by the waketime check below. The tree is read whole
 # first: under pipefail, `ioreg | grep -q` reads a closed lid as open whenever grep stops at the
 # line while ioreg is still writing, and ioreg dies of SIGPIPE.
 refuse_if_lid_closed() {
@@ -106,7 +109,8 @@ refuse_if_lid_closed() {
   command -v ioreg >/dev/null 2>&1 || return 0
   tree="$(ioreg -r -k AppleClamshellState -d 4 2>/dev/null)"
   grep -q '"AppleClamshellState" = Yes' <<<"$tree" || return 0
-  echo "verify: refused — the lid is closed, and a closed lid can sleep the machine mid-run, which fails specs on timeouts that say nothing about the code (#6668). Open the lid, then run it again." >&2
+  grep -q '"AppleClamshellCausesSleep" = Yes' <<<"$tree" || return 0
+  echo "verify: refused — the lid is closed with no display attached, so the machine can sleep mid-run and fail specs on timeouts that say nothing about the code (#6668). Open the lid or attach a display, then run it again." >&2
   exit 75
 }
 

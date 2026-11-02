@@ -17,7 +17,8 @@ import { hermeticGitEnv } from "../support/hermetic-git.js";
 // game in front, and the third froze it until a hard reboot. The same night a closed lid slept
 // another verify for 13 minutes, and it went red on 5 s timeouts its specs then passed in seconds.
 // WHEN verify-locked.sh runs a verify on macOS, THEN it SHALL run it at low priority with fewer test
-// workers, and say so. WHEN the lid is closed, THEN it SHALL exit 75 before running anything. WHEN a
+// workers, and say so. WHEN the lid is closed and that sleeps the machine (no display attached), THEN
+// it SHALL exit 75 before running anything; a docked laptop runs with its lid shut. WHEN a
 // verify fails and the machine slept after it started, THEN it SHALL say so and exit 75. WHERE those
 // tools are absent (Linux, CI), nothing SHALL change.
 //
@@ -25,8 +26,9 @@ import { hermeticGitEnv } from "../support/hermetic-git.js";
 // print (the issue's brief), and each can fail its spec when the script's real path breaks:
 // - taskpolicy hands its clamp to the program it runs, as the real one does by exec'ing it, so a
 //   verify run beside it rather than under it carries no clamp, and `-b` reads as a different one;
-// - ioreg prints `"AppleClamshellCausesSleep" = Yes` beside the lid's own line, the line a loose
-//   match would take for a closed lid;
+// - ioreg prints the lid's state and, beside it, whether a closed lid sleeps the machine
+//   (`AppleClamshellCausesSleep`: Yes with no display attached, as on the laptop on 2026-11-02, No
+//   when docked), so a check that reads only one of the two lines fails one of the lid specs;
 // - sysctl's waketime moves only when the verify itself "sleeps", so a script that reads it once,
 //   or only after the run, sees no change.
 
@@ -63,10 +65,11 @@ STUB_QOS_CLAMP="$clamp" exec "$@"
 echo "ioreg $*" >> "$STUB_DIR/calls"
 case " $* " in *" -k AppleClamshellState "*) ;; *) exit 0 ;; esac
 lid=$(cat "$STUB_DIR/lid")
+sleeps=$(cat "$STUB_DIR/causes-sleep")
 cat <<EOF
 +-o IOPMrootDomain  <class IOPMrootDomain, id 0x100000213, registered, matched, active, busy 0 (0 ms), retain 213>
   | {
-  |   "AppleClamshellCausesSleep" = Yes
+  |   "AppleClamshellCausesSleep" = $sleeps
   |   "AppleClamshellState" = $lid
   |   "SleepDisabled" = No
   | }
@@ -92,7 +95,7 @@ esac
 `,
 };
 
-/** A bin folder holding the three Mac tools as stubs, with the lid open and no sleep yet. */
+/** A bin folder holding the three Mac tools as stubs: lid open, no display attached, no sleep yet. */
 function macTools(stubDir: string) {
   const bin = join(stubDir, "bin");
   mkdirSync(bin, { recursive: true });
@@ -100,6 +103,7 @@ function macTools(stubDir: string) {
     writeFileSync(join(bin, name), body, { mode: 0o755 });
   }
   writeFileSync(join(stubDir, "lid"), "No\n");
+  writeFileSync(join(stubDir, "causes-sleep"), "Yes\n");
   writeFileSync(join(stubDir, "waketime"), "1793627758\n");
   writeFileSync(join(stubDir, "calls"), "");
   return bin;
@@ -168,7 +172,9 @@ function laptop({ mac = true } = {}) {
       .filter(Boolean);
   const calls = () => readFileSync(join(stubDir, "calls"), "utf8");
   const lid = (state: "Yes" | "No") => writeFileSync(join(stubDir, "lid"), `${state}\n`);
-  return { dir, env, run, start, runs, calls, lid };
+  // No when a display is attached: closing the lid then leaves the machine running (clamshell mode).
+  const docked = () => writeFileSync(join(stubDir, "causes-sleep"), "No\n");
+  return { dir, env, run, start, runs, calls, lid, docked };
 }
 
 /** Holds the queue until killed, and returns only once it is inside the lock. */
@@ -270,6 +276,16 @@ describe("verify-locked on a Mac — a closed lid", () => {
     },
     SLOW_BOX_MS,
   );
+
+  it("runs a docked laptop with its lid shut, where a closed lid does not sleep it", () => {
+    const { run, runs, lid, docked } = laptop();
+    lid("Yes");
+    docked();
+    const r = run();
+    expect(r.status).toBe(0);
+    expect(r.stderr).not.toContain("lid is closed");
+    expect(runs()).toHaveLength(1);
+  });
 
   it("reads an open lid as open, though the line beside it says a closed lid causes sleep", () => {
     const { run, runs, calls } = laptop();
