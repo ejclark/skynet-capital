@@ -1,2 +1,3 @@
 {"date":"2026-11-02","loop":"governor-bury","before":282,"after":282,"worth":1,"tokensM":null,"usd":null,"changed":"debt before the first rep"}
 {"date":"2026-11-02","loop":"governor-bury","before":282,"after":279,"tokensM":null,"usd":null,"changed":"un-exported CLAIM_OUTCOMES, ExpiringPut and ForwardVerdict in src/playbooks/claim-score.ts (all used only inside the file); dead-budget.json unchanged, its committed 0 and 91 sit below the measured 162 and 117"}
+{"date":"2026-11-02","loop":"governor-bury","before":279,"after":275,"tokensM":null,"usd":null,"changed":"un-exported ADOPTED_CHANGES, restsOn and AdoptedChange in src/playbooks/conviction-adoptions.ts (all used only inside the file); dead-budget.json unchanged, its committed budget sits below the measured debt"}

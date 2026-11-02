@@ -33,8 +33,8 @@ import {
  * WHAT IT NEVER SAYS. Nothing here widens a bound, sizes a trade or places an order. Paper only, SIM.
  */
 
-export const ADOPTED_CHANGES = ["stop-new-entries", "pair-rule"] as const;
-export type AdoptedChange = (typeof ADOPTED_CHANGES)[number];
+const ADOPTED_CHANGES = ["stop-new-entries", "pair-rule"] as const;
+type AdoptedChange = (typeof ADOPTED_CHANGES)[number];
 
 interface AdoptionBase {
   /** The day the adoption was written (its PR's merge makes it live). */
@@ -52,7 +52,7 @@ export type Adoption =
     });
 
 /** The outcome a claim must read for its line to stand: a hold rests on a fail, a rule on a pass. */
-export const restsOn = (change: AdoptedChange): "fail" | "pass" =>
+const restsOn = (change: AdoptedChange): "fail" | "pass" =>
   change === "pair-rule" ? "pass" : "fail";
 
 /** Adopted proposals by key: "ai-dip-2026-10/2a/CRWV-WHEEL". */
