@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -38,6 +38,23 @@ function fixture() {
   const dir = join(root, "proj", "memory");
   mkdirSync(dir, { recursive: true });
   return { root, dir };
+}
+
+/**
+ * Runs body while folder takes no new entries, then gives it back. Root ignores mode bits, and cloud
+ * sessions run as root: there a read-only folder still let the lock in, so this spec was red on
+ * every cloud verify (found 2026-11-02, building #6668). The immutable bit binds root as well.
+ */
+function sealed<T>(folder: string, body: () => T): T {
+  const root = process.getuid?.() === 0;
+  if (root) execFileSync("chattr", ["+i", folder]);
+  else chmodSync(folder, 0o555);
+  try {
+    return body();
+  } finally {
+    if (root) execFileSync("chattr", ["-i", folder]);
+    else chmodSync(folder, 0o755);
+  }
 }
 
 function writeBy(session: string, file: string) {
@@ -168,14 +185,12 @@ describe("memory history hook", () => {
   });
 
   // A filesystem failure in the lock costs a version like any other, so it must not exit 0. The lock
-  // lives beside the memory folder, so a read-only parent stops the lock and nothing else.
+  // lives beside the memory folder, so a parent that takes no new entries stops the lock and nothing else.
   it("exits 2 when it cannot take its turn at all", () => {
     const { root, dir } = fixture();
     const file = join(dir, "a.md");
     writeFileSync(file, "one\n");
-    chmodSync(join(root, "proj"), 0o555);
-    const fired = fire(root, writeBy("s-1", file));
-    chmodSync(join(root, "proj"), 0o755);
+    const fired = sealed(join(root, "proj"), () => fire(root, writeBy("s-1", file)));
     expect(fired.status).toBe(2);
     expect(fired.stderr).toContain("a.md has no version");
   });
