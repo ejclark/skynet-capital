@@ -549,7 +549,11 @@ describe("ship platter — the source contract", () => {
   });
 
   it("verifies the union as each item boards, and un-boards the item on red", () => {
-    expect(source).toMatch(/npm run verify >\/tmp\/ship-platter-verify\.log/);
+    // Through the queue (#6470): a plain `npm run verify` here skipped it while other verifies ran.
+    expect(source).toMatch(/verify-locked\.sh" --log "\$verify_log"/);
+    expect(source).not.toMatch(/npm run verify >\/tmp\/ship-platter-verify/);
+    // A queue wait that ran out is not a red verify.
+    expect(source).toMatch(/verify did not run — the queue wait ran out/);
     expect(source).toMatch(/un-boarded it; the platter is unchanged/);
   });
 
