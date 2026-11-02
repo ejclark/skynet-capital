@@ -1,5 +1,12 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
@@ -45,6 +52,31 @@ describe("file lock", () => {
     expect(ran).toBe(false);
     expect(readFileSync(lock, "utf8")).toBe(held);
   });
+
+  // In a child with a timeout: a loop that never gives up is synchronous, out of reach of the test's own.
+  for (const [what, make] of [
+    ["a folder", (lock: string) => mkdirSync(lock)],
+    ["a dangling link", (lock: string) => symlinkSync(`${lock}.gone`, lock)],
+  ] as const) {
+    it(`gives up after the wait when the lock path is ${what}`, () => {
+      const lock = lockPath();
+      make(lock);
+      const run = spawnSync(
+        "node",
+        [
+          "--input-type=module",
+          "-e",
+          `import { withFileLock } from ${JSON.stringify(resolve("scripts/file-lock.mjs"))};
+           try { withFileLock(${JSON.stringify(lock)}, () => {}, { waitMs: 100 }); }
+           catch (error) { console.log(error.constructor.name, error.message); }`,
+        ],
+        { encoding: "utf8", timeout: 5_000 },
+      );
+      expect(run.signal).toBe(null);
+      expect(run.stdout).toContain("LockBusyError");
+      expect(run.stdout).toContain(lock);
+    }, 30_000);
+  }
 
   it("takes over a lock whose writer has died", () => {
     const lock = lockPath();
