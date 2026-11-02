@@ -101,7 +101,7 @@ export function explainThrottled(detail?: {
   baseMs?: number;
 }): string;
 
-/** #4438: the `::warning::` line for a rate-limited board sync, or null to re-throw. */
+/** #4438/#6746: the `::warning::` line for a rate-limited or GitHub-faulted board sync, or null to re-throw. */
 export function boardSyncSkip(opts?: {
   issueNumber?: number | string;
   error?: unknown;

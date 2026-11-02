@@ -58,16 +58,52 @@ describe("moneypenny projects-sync: a rate limit skips the board sync, anything 
     );
   });
 
-  it("returns null — re-throw, job stays red — for every failure that is not a rate limit", () => {
+  it("returns null — re-throw, job stays red — for every failure that is not GitHub's", () => {
     const fatal = [
       new Error(explainMaskedOwnerFailure({ ok: false, text: "gh: Bad credentials (HTTP 401)" })),
       new Error(explainMaskedOwnerFailure({ ok: true })),
       new Error("Could not resolve to a ProjectV2 with the number 2."),
       new Error('Status field has no option named "Doing"'),
-      Object.assign(new Error("Command failed"), { stderr: "HTTP 502 Bad Gateway" }),
+      Object.assign(new Error("Command failed"), { stderr: "HTTP 404: Not Found" }),
+      Object.assign(new Error("Command failed: curl"), {
+        stderr: "curl: (22) The requested URL returned error: 422",
+      }),
       undefined,
     ];
     for (const error of fatal)
       expect(boardSyncSkip({ issueNumber: 1, error, now: NOW })).toBeNull();
+  });
+});
+
+// #6746 — run 41478541177 went red because GitHub's GraphQL failed one card write on all three
+// retries; the reconcile sweep on the next push fixed the card 48s later. A fault that outlasts
+// `withRetry` is GitHub's, so it skips like a rate limit does.
+describe("moneypenny projects-sync: a GitHub-side fault that outlasted the retries skips (#6746)", () => {
+  // Verbatim from the failing run's log.
+  const GRAPHQL_INTERNAL =
+    "GraphQL: Something went wrong while executing your query on 2026-11-02T16:09:01Z. Please " +
+    "include `F141:3C550D:97B68C:10619F0:6AE8B59A` when reporting this issue.";
+
+  it("skips with a one-line warning that names the reconcile sweep as the catch-up", () => {
+    const error = Object.assign(
+      new Error("Command failed: gh project item-edit --id PVTI_x --field-id F --project-id P"),
+      { stderr: `${GRAPHQL_INTERNAL}\n` },
+    );
+    const out = boardSyncSkip({ issueNumber: 5719, error, now: NOW });
+    expect(out).toMatch(/^::warning title=Board sync skipped \(GitHub error\)::issue #5719/);
+    expect(out).toMatch(/reconcile sweep on the next push to main/);
+    expect(out).toContain("Something went wrong while executing your query");
+    expect(out).not.toMatch(/\n/);
+  });
+
+  it("skips for gh's 5xx and curl's 5xx alike", () => {
+    const faults = [
+      Object.assign(new Error("Command failed"), { stderr: "HTTP 502 Bad Gateway" }),
+      Object.assign(new Error("Command failed: curl"), {
+        stderr: "curl: (22) The requested URL returned error: 500",
+      }),
+    ];
+    for (const error of faults)
+      expect(boardSyncSkip({ issueNumber: 1, error, now: NOW })).toMatch(/\(GitHub error\)/);
   });
 });
