@@ -319,7 +319,10 @@ npm run steer:build -- <dir>/tp.json
 - The trigger is a comment sent to Claude that starts `Done with steering round <id>`, or "done"
   from him in chat. Read back once per Done — the steer skill's step 6 rule. A session woken by
   his "done" in chat reads the round back exactly as it would for a Done comment. Either way,
-  first stamp `ackAt` on `tp/<id>`, so the page says you got it before the read-back lands.
+  first stamp `ackAt` and `ackFor` on `tp/<id>`, so the page says "✓ Received" before the read-back
+  lands: `ackFor` is the time after `Pressed` in the comment, copied exactly (on a chat "done", the
+  round's `doneAt`), because that match is what proves you read this press. No stamp within two
+  minutes, and the page tells him no session has read it.
 - Run the steer skill's step 7 on this round's folder: the records, his comments
   (`comments.json`), then `npm run steer:readback`. Its comment quotes his picks and pinned notes on
   the screen's issue, word for word. Reply on each pinned thread with where it landed, resolve it,
@@ -527,6 +530,7 @@ tried runs on **one** screen at a time, the test screen named on #5143. It lives
 state block and round pages, and it reaches this list only once it's settled. Every other running
 session keeps drawing from the lines below.
 
+- 2026-11-01 · **Stamp `ackFor` with `ackAt`, so the bar can say "✓ Received"** (#6606; he typed "done" in chat 5 more times after pressing it). The Done comment now carries `Pressed <time>`. Copy that time exactly into `ackFor` when you stamp `ackAt`; on a chat "done", use the round's `doneAt`. Stamp first, before anything else on the round. With no stamp, the bar says after two minutes that no session has read it and to say "done" in the session; a page opened later says so at once. Pages drawn before this change keep their old bar until they are rebuilt.
 - 2026-10-14 · **A screenshot of another screen invites feedback on that screen — route it, don't ask** (#5350 round 0: the round page's test frame showed the R&D card, and five of Eric's seven marks were about the app, not the round page). When his marks land on content the round isn't about, route each where it belongs — the screen's own redesign issue, an existing plan (search first: his "symbols as configuration" note was #4469's evidence), or a row in `docs/IA.md` §7/§10 — say so in the read-back, and keep the round on its scope. The focus view (#5363) keeps this rare; it doesn't make it wrong.
 - 2026-10-14 · **The focus view and outcomes he adds** (Eric: "I liked the outline of the sections under the microscope to narrow focus"; "simple and elegant design that is free of distraction"; "the redesign process must offer 'integrate this outcome' capabilities too"). From your next round: give each design question a `"focus"` (a section label from the frame's `.sections.json`, or a box) — the page opens on that part at real size, the whole screen one tap away, and the read-back splits his marks into in-focus and *outside — added to the scope for later*. The page's intro is now one line, its how-to folded. Every round page carries "＋ Add an outcome": classify each *Outcome he added* as reachable by today's design (it joins the scope) or a re-architecture (a row in `docs/IA.md` §7/§10, a plan issue, and a round drawn as the screen would be with it).
 - 2026-10-14 · **His marks read back by name.** `shoot.mjs` now writes `<id>-<phone|desk>.sections.json` beside each frame. Name it on the holder (`"sections"` for the phone frame, `"sectionsDesk"` for the desktop one; on Today it also covers `today.clean`), and the read-back says *on “Place order” (10% across, 62% down)* instead of a bare position. A frame without one reads back as before.
