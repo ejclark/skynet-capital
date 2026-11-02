@@ -358,3 +358,7 @@ export const deploysIssue = (body: string) => ({
   createdAt: iso(Date.now() - 30 * MIN),
   assignees: [],
 });
+
+// ---- shared by fitness.spec.ts and fitness-wiring.spec.ts -----------------------------------------
+
+export const START = resolve("scripts/bots-start-stopped.sh");
