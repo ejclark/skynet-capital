@@ -589,7 +589,8 @@ function main() {
   try {
     result = syncIssue(issueNumber);
   } catch (error) {
-    // #4438: a rate limit skips with a warning (the board is a display); anything else stays red.
+    // #4438: a rate limit skips with a warning (the board is a display), and so does a GitHub-side
+    // fault that outlasted the retries (#6746); anything else stays red.
     let budget = {};
     try {
       budget = ghRateLimit().graphql ?? {};

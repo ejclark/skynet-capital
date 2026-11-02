@@ -498,14 +498,31 @@ function catchUpPhrase(reset, now, text = "") {
   return `The GraphQL budget resets at ${at} (${mins} min); the next issue event after that re-syncs the board.`;
 }
 
+// #6746 — GITHUB'S OWN FAULT IS THE SAME CLASS. Run 41478541177 (2026-11-02) went red because
+// `gh project item-edit` got `GraphQL: Something went wrong while executing your query` on all
+// three of #4675's retries for #5719's card. Nothing was wrong with the code, and the reconcile
+// sweep on the next push to main (board-sync.yml) moved that card to Ready 48 seconds later — the
+// red run bought nothing but a repair session. A failure `isTransientGhError` names reaches here
+// only after `withRetry` gave up, so it is GitHub's (a 5xx, its internal error, a network reset)
+// and the sweep heals it; a 4xx, a bad field or a masked owner lookup still stays red.
+
 /**
  * Should this sync failure skip with a warning rather than fail the job? Returns the one-line
- * `::warning::` to print when the failure is a rate limit, `null` for anything else (re-throw it).
+ * `::warning::` to print when the failure is a rate limit or a GitHub-side fault that outlasted the
+ * retries, `null` for anything else (re-throw it).
  * Pure: `budget` is the caller's free `ghRateLimit().graphql` read, `{}` when unreadable.
  */
 export function boardSyncSkip({ issueNumber, error, budget = {}, now = Date.now() } = {}) {
   const text = `${error?.message ?? ""} ${error?.stderr ?? ""}`.replace(/\s+/g, " ").trim();
-  if (!isRateLimitExhausted(text)) return null;
+  if (!isRateLimitExhausted(text)) {
+    if (!isTransientGhError(text)) return null;
+    return (
+      `::warning title=Board sync skipped (GitHub error)::issue #${issueNumber} was not synced to ` +
+      `the board — GitHub failed the call on every retry, and the board is a display, not a ` +
+      `control (#4438). The reconcile sweep on the next push to main re-syncs the card (#6746). ` +
+      `Cause: ${text}`
+    );
+  }
   return (
     `::warning title=Board sync skipped (rate limit)::issue #${issueNumber} was not synced to the ` +
     `board — GitHub refused the call for its rate limit, and the board is a display, not a ` +
