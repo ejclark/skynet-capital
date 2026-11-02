@@ -859,6 +859,7 @@ cmd_merge() {
 #   scripts/ship.sh platter open <item-branch> [--name platter/<date>] [--subject S] [--no-verify]
 #                                [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter board <item-branch> [--subject S] [--no-verify] [--closes …] [--part-of …]
+#                                 [--no-merge]
 #   scripts/ship.sh platter amend <item-branch> [--closes N[,M]] [--part-of N[,M]]
 #   scripts/ship.sh platter ledger [--base <ref>] [--body]
 #   scripts/ship.sh platter sync
@@ -877,6 +878,8 @@ cmd_merge() {
 #     first CI run. A failed verify un-boards the item and leaves the platter exactly as it was.
 #   - THE PLATTER IS NEVER A PLACE TO DEVELOP. A conflicting item catches up to `main` on its OWN
 #     branch and re-boards; nothing is ever fixed here (Rust's rollup procedure, same reasoning).
+#     `board` does merge `main` into a platter that is behind before it squashes (#5390) — a
+#     catch-up that changes no item, never a fix; if it conflicts, the platter is re-opened.
 #   - IT IS NEVER ARMED. `--hold` applies `hold-merge` (which pipeline.yml's arm job skips) and the
 #     diff is protected by construction (which `checkarm` refuses) — unarmed by two mechanisms.
 #   - NO SAME-FILE FENCE. Feast mode's "two items must not touch the same file" comes from PARALLEL
@@ -1074,7 +1077,9 @@ platter_board_item() {
     echo "ship platter: uncommitted changes — commit or drop them before boarding" >&2; exit 1; }
   # An item cut from a NEWER main than the platter's would squash every main commit in between into
   # this one item — and its revert sha would then revert all of them (2026-10-26, #5852: a two-file
-  # item boarded as 504 files). Main is fetched first because the item fetch below owns FETCH_HEAD.
+  # item boarded as 504 files). `board` catches the platter up first (platter_catch_up), so this
+  # fires only under --no-merge or when main moves mid-board. Main is fetched first because the
+  # item fetch below owns FETCH_HEAD.
   git fetch --quiet origin main || {
     echo "ship platter: cannot fetch origin/main to check the item's base" >&2; exit 1; }
   git fetch --quiet origin "$item" || {
@@ -1327,15 +1332,67 @@ platter_require_current_script() {
   fi
 }
 
+# A platter behind main catches up before anything boards (#5390). The squash below stages
+# everything since the platter last shared a commit with the item, so an item cut from today's main
+# onto a week-old platter carried the whole week (#5382 staged 681 files for a one-line change), and
+# the two refusals that replaced that each printed `git merge origin/main --no-edit` for a hand to
+# run — twelve times on three platters by 2026-11-02. The remedy is a command, so the script runs it,
+# as `ship open` does (#5195). This is a catch-up, not development: a conflict means main and an item
+# already boarded disagree, which no merge here may settle, so it aborts and the platter is
+# re-opened. Returns 0 when it merged, 1 when the platter was already current.
+platter_catch_up() {
+  git diff --quiet && git diff --cached --quiet || {
+    echo "ship platter: uncommitted changes — commit or drop them before boarding" >&2; exit 1; }
+  git fetch --quiet origin main || {
+    echo "ship platter: cannot fetch origin/main to catch the platter up" >&2; exit 1; }
+  git merge-base --is-ancestor origin/main HEAD && return 1
+  local before behind conflicts
+  before="$(git rev-parse HEAD)"; behind="$(git rev-list --count HEAD..origin/main)"
+  if git merge origin/main --no-edit >"/tmp/ship-platter-merge.$$.log" 2>&1; then
+    echo "ship platter: merged origin/main into the platter ($behind commit(s)) — a catch-up, not an item."
+    return 0
+  fi
+  conflicts="$(git diff --name-only --diff-filter=U)"
+  git rev-parse -q --verify MERGE_HEAD >/dev/null && git merge --abort
+  git reset --hard --quiet "$before"
+  echo "ship platter: merging origin/main into the platter did not complete cleanly — aborted, the platter is unchanged." >&2
+  if [ -n "$conflicts" ]; then
+    echo "  conflicting paths (main disagrees with an item already boarded):" >&2
+    sed 's/^/    /' <<<"$conflicts" >&2
+  else
+    tail -5 "/tmp/ship-platter-merge.$$.log" >&2
+  fi
+  echo "  Nothing is fixed on a platter: re-open it from main (ship platter open <item> --name platter/<date>)" >&2
+  echo "  and re-board the survivors, each caught up to main on its own branch first." >&2
+  exit 1
+}
+
+# The catch-up rewrote this file on disk, but bash is still running the copy it read before. When
+# main's copy differs, hand the board to it — once — so main's guards are the ones that run (the gap
+# #6067 closed by refusing, which left the hand step in place every time main's ship.sh moved).
+platter_rerun_current() {
+  local running="$1"; shift
+  local main_ship top
+  main_ship="$(git rev-parse --verify --quiet origin/main:scripts/ship.sh || true)"
+  [ -n "$main_ship" ] && [ "$main_ship" != "$running" ] && [ -z "${SHIP_PLATTER_RERUN:-}" ] || return 0
+  top="$(git rev-parse --show-toplevel)/scripts/ship.sh"
+  # A platter whose own items changed ship.sh holds a third copy; platter_require_current_script refuses it.
+  [ -f "$top" ] && [ "$(git hash-object "$top")" = "$main_ship" ] || return 0
+  echo "ship platter: the catch-up brought main's ship.sh — boarding with that copy."
+  SHIP_PLATTER_RERUN=1 exec bash "$top" "$@"
+}
+
 cmd_platter_board() {
   local item="${1:-}"; shift || true
   [ -n "$item" ] || { echo "ship platter board: an item branch is required" >&2; exit 1; }
-  local subject="" verify=1 closes="" partof="" closes_set=0 partof_set=0
+  local argv=("$@") subject="" verify=1 closes="" partof="" closes_set=0 partof_set=0 catchup=1
   while [ $# -gt 0 ]; do case "$1" in
     --subject) subject="$2"; shift 2 ;;
     --no-verify) verify=0; shift ;;
     --closes) closes="$2"; closes_set=1; shift 2 ;;
     --part-of) partof="$2"; partof_set=1; shift 2 ;;
+    # refuse a stale platter instead of merging main in — the pre-#5390 behaviour, kept on request.
+    --no-merge) catchup=0; shift ;;
     *) echo "ship platter board: unknown arg $1" >&2; exit 1 ;;
   esac; done
 
@@ -1344,6 +1401,14 @@ cmd_platter_board() {
     echo "ship platter board: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
     exit 1 ;;
   esac
+  # The catch-up runs before the stale-script check, which it also satisfies: the same merge brings
+  # main's ship.sh, and the board then re-runs as that copy.
+  if [ "$catchup" = 1 ]; then
+    local running; running="$(git hash-object "$0")"
+    if platter_catch_up; then
+      platter_rerun_current "$running" platter board "$item" "${argv[@]}"
+    fi
+  fi
   platter_require_current_script
   platter_board_item "$item" "$subject" "$verify" "$closes" "$partof" "$closes_set" "$partof_set"
   local sha; sha="$(git rev-parse --short HEAD)"
@@ -1465,7 +1530,7 @@ cmd_platter() {
     landed) node "$(dirname "$0")/platter-picture.mjs" landed "$@" ;;
     # one item out of a landed platter, whichever button landed it — pure git, no token.
     revert) cmd_platter_revert "$@" ;;
-    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>] | revert <pr> <sha>}" >&2; exit 1 ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] [--closes N,M] [--part-of N] | board <item-branch> [--subject S] [--no-verify] [--closes N,M] [--part-of N] [--no-merge] | amend <item-branch> [--closes N,M] [--part-of N] | ledger [--base <ref>] [--body] | sync | landed <pr> [--ref <ref>] | revert <pr> <sha>}" >&2; exit 1 ;;
   esac
 }
 
