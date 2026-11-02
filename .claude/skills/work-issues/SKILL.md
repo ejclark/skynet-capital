@@ -55,6 +55,12 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
 
    On admit, label it `in-progress` right away (`gh issue edit <n> --add-label in-progress`) —
    that label is what the Orchestration board's Building now column and the cap count (#3960).
+   **On a `plan` issue, take its lease first:** `node scripts/moneypenny/index.mjs --hold
+   plan-<n>`. `claimed: false` means the plan lane or another session holds it, so skip it. The
+   label alone came off at your first slice merge, and the plan lane then built the slice you were
+   still building (#5482 on 2026-10-26: #6055 merged, duplicate #6058 closed, #6065). The hold
+   lasts while you show activity (a merge on the plan or a state-block edit) and goes stale after
+   2h quiet (`scripts/moneypenny/session-hold.mjs`).
    A fresh plan can also be refused because the board's Waiting column (started plans nobody is
    building) is at `startedPlanCap` — the CLI says so; finish one of those instead (#4393).
    Every terminal outcome in LAND takes it back off.
@@ -86,7 +92,10 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    (workflow files, the irreversible class per `envelope.json`, taste holds). On any other outcome:
    apply the label, comment the reason in one line, and move on. Either way, remove `in-progress`
    (`--remove-label in-progress`) on every terminal outcome — PR merged, `next-slice`,
-   `needs-info` or `needs-eric`; the stall audit only catches one forgotten for 6h. A `needs-eric` item doesn't block
+   `needs-info` or `needs-eric`; the stall audit only catches one forgotten for 6h. A held
+   **plan** ends differently: a slice merge is not the end of it. When you stop working the plan
+   (the pass ends, or you hand it on), run `node scripts/moneypenny/index.mjs --release plan-<n>`,
+   which drops the lease and the label together, so the plan lane can continue it on the next sweep. A `needs-eric` item doesn't block
    the rest of the queue; it just stops competing for the same PR slot. **On a `plan` issue, every
    outcome is an edit to its state block** (the slice's new state, the next pickup line, one dated
    log line), made with `npm run issues -- update N --edit-comment <id> --comment-file f` so it

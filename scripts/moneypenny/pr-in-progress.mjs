@@ -40,7 +40,7 @@
 // WIRED by .github/workflows/board-sync.yml (#4393 slice 2): every same-repo PR open, reopen, edit
 // and close. A PR opened with the plain GITHUB_TOKEN emits no event, so it is not seen here.
 import { ghRest, ghRestAll, withRetry } from "./gh.mjs";
-import { isClaimed } from "./index.mjs";
+import { isClaimed, isSessionHeld } from "./index.mjs";
 import { LABELS, setInProgress } from "./labels.mjs";
 import { derivePrIssues, laneClassOf } from "./pr-issues.mjs";
 import { isRetryableRestError } from "./projects.mjs";
@@ -97,8 +97,13 @@ const readPrFromRest = (number) =>
 
 const listOpenPrsFromRest = () => ghRestAll("pulls?state=open");
 
+// A live session's hold on a plan counts whatever its stamp's age: this merge is activity on the
+// plan, so the hold is live right now (#6065, session-hold.mjs). Without it a session's first merge
+// took the label off mid-session, and the plan lane built the slice the session was still building.
 const leasedFromRefs = (number) =>
-  isClaimed(`feedback-${number}`).claimed || isClaimed(`plan-${number}`).claimed;
+  isClaimed(`feedback-${number}`).claimed ||
+  isClaimed(`plan-${number}`).claimed ||
+  isSessionHeld(`plan-${number}`);
 
 const prEvidence = (pr) => ({
   title: pr?.title ?? "",

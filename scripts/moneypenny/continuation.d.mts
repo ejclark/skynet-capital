@@ -62,6 +62,7 @@ export interface Decision {
   readonly runId?: string;
   readonly runUrl?: string;
   readonly mergedMs?: number;
+  readonly blockEditedMs?: number;
 }
 
 export interface StopIntent {
