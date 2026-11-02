@@ -86,6 +86,7 @@ export function deliveryFingerprint(alert: Alert): string {
 const SOURCE_WORDS: Readonly<Record<string, string>> = {
   "order-watch": "orders",
   "bot-watch": "bot's decision loop",
+  "window-watch": "holdings and watchlist",
 };
 
 const SUBJECT_PREFIX: Record<AlertPriority, string> = {

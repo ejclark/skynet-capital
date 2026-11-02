@@ -276,6 +276,42 @@ describe("GET /api/trade/alerts", () => {
     });
   });
 
+  /** #5719: a researched window open on a watched name joins the same list, from the member's own
+   *  watchlist; a list that cannot be read costs only those alerts. Read against the house roster on
+   *  2026-11-02, inside S1-NVDA's window on NVDA's estimated 2026-11-18 print. */
+  describe("window watch", () => {
+    const watching = (symbols: readonly string[]) => ({
+      load: () =>
+        Promise.resolve(symbols.map((symbol) => ({ symbol, at: "2026-10-30T00:00:00Z" }))),
+    });
+    const quiet = { ...desk, positions: [] };
+    const windowConfig = (over: Record<string, unknown> = {}) =>
+      config({
+        hub: { getState: () => ({ participants: [quiet] }) },
+        now: () => new Date("2026-11-02T16:00:00Z"),
+        ...over,
+      });
+
+    it("raises an open window on a watched name, saying why and that the date is an estimate", async () => {
+      const { body } = await list(windowConfig({ watchlist: watching(["NVDA"]) }));
+      const windows = body.alerts.filter((a) => a.source === "window-watch");
+      expect(windows.map((a) => a.symbol)).toContain("NVDA");
+      for (const alert of windows) {
+        expect(alert.body).toMatch(/^NVDA is on your watchlist\./);
+        expect(alert.body).toContain("is an estimate the company has not confirmed");
+      }
+    });
+
+    it("raises nothing for an unwatched name, and a failed list read drops only those alerts", async () => {
+      const none = await list(windowConfig({ watchlist: watching(["AAPL"]) }));
+      expect(none.body.alerts.filter((a) => a.source === "window-watch")).toEqual([]);
+      const failing = { load: () => Promise.reject(new Error("volume down")) };
+      const { status, body } = await list(windowConfig({ watchlist: failing }));
+      expect(status).toBe(200);
+      expect(body.alerts.filter((a) => a.source === "window-watch")).toEqual([]);
+    });
+  });
+
   it("claims only its two paths", async () => {
     const { res } = fakeRes();
     expect(

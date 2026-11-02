@@ -2,7 +2,9 @@ import type { PlaybookStoreEntry } from "../../src/discovery/playbook-store.js";
 import {
   considerationsFor,
   type PositionForConsiderations,
+  windowClosedAt,
 } from "../../src/observatory/considerations-view.js";
+import type { Playbook } from "../../src/playbooks/playbook.js";
 
 /** #3186 slice 3 — the considerations rail's pure composer: at-risk chips derived from a
  *  position's own return, opportunity chips filtered to held symbols. */
@@ -127,5 +129,45 @@ describe("considerationsFor", () => {
       label: "View position",
       href: "?section=positions#pos-AAPL",
     });
+  });
+
+  // #5719: "a playbook fits NVDA" while its window is shut pitches a trade nothing can take.
+  it("leaves out an idea whose playbook's window is closed right now", () => {
+    const held = [position({ symbol: "NVDA", returnPct: 5 })];
+    const closed = (id: string) => id === "nvda-earnings";
+    expect(
+      considerationsFor(held, [play()], { id: "eric", subscribed: new Set() }, closed),
+    ).toEqual([]);
+    expect(
+      considerationsFor(held, [play()], { id: "eric", subscribed: new Set() }, () => false),
+    ).toHaveLength(1);
+  });
+});
+
+/** #5719: the Overview asks the same `windowOpenAt` the window alert reads. */
+describe("windowClosedAt", () => {
+  const rule = (state: "long" | "no-window", over: Partial<Playbook> = {}): Playbook => ({
+    id: "nvda-earnings",
+    symbols: ["NVDA"],
+    thesis: "a spec",
+    evidence: "a spec",
+    size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+    keyedOn: "earnings",
+    desiredState: () => state,
+    ...over,
+  });
+  const now = new Date("2026-10-02T15:00:00Z");
+
+  it("calls an earnings window closed when its rule says no window today", () => {
+    expect(windowClosedAt(now, [rule("no-window")])("nvda-earnings")).toBe(true);
+    expect(windowClosedAt(now, [rule("long")])("nvda-earnings")).toBe(false);
+  });
+
+  it("claims nothing of a playbook with no date window, or one it does not know", () => {
+    // A dip-bounce rule says no-window on every date: it has no window, not a shut one.
+    expect(windowClosedAt(now, [rule("no-window", { keyedOn: undefined })])("nvda-earnings")).toBe(
+      false,
+    );
+    expect(windowClosedAt(now, [])("nvda-earnings")).toBe(false);
   });
 });

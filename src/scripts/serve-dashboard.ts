@@ -362,6 +362,8 @@ async function main(): Promise<void> {
   const readDecisions: DashboardServerConfig["readDecisions"] =
     insightsBridge.readDecisions ??
     (auditDir ? (id: string) => new JsonlAuditStore(auditDir).list(id) : undefined);
+  // One store, read by the watchlist route and by the window alerts the delivery sweep derives.
+  const watchlist = createWatchlist(process.env);
   const alertDelivery = wireAlertDelivery({
     env: process.env,
     activityEvents: activityEventBus,
@@ -371,6 +373,7 @@ async function main(): Promise<void> {
       optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
       activityLog: activityEventBus,
       alertDismissals,
+      watchlist,
       ...(readDecisions ? { readDecisions } : {}),
     }),
   });
@@ -564,7 +567,7 @@ async function main(): Promise<void> {
     ...(alertDelivery.transport ? { alertDelivery: alertDelivery.transport } : {}),
     // The names a member chose to watch — member-authored truth nothing re-derives, so it is
     // durable on the same volume (#4332).
-    watchlist: createWatchlist(process.env),
+    watchlist,
     optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
     quoteStream,
     tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
