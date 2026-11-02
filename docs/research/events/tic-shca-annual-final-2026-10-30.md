@@ -104,6 +104,7 @@ Forward tests registered in [`../forward-tests/tic-shca-annual-final-2026-10-30.
 |---|---|---|---|---|
 | 2026-10-16 | D-14 | **Initial research banked (above); canonical file written from the one proposal (`from-tic-monthly-2026-10-16`), which it now shadows; date promoted `estimate` → `confirmed` (`TSY:`, three Treasury primaries).** Preliminary total $19,277bn (08-31); revisions +0.19%/+0.03%/−0.07%; 2025 final slipped 26 days. **Adjacency:** peers none (symbol-free); macro — CPI 10-14 hot, long end rallied through it (10Y 5.10% on 10-15), strong corridor FOMC 10-28, GDP and PCE 10-29, ECI 10-30, ISM 11-02; **VIX 16.46** (10-15 close); no geopolitical link. **Beyond horizon, not filed:** SHCA preliminary 2027-08-31 and final 2027-10-29 (release-dates table). **Proposed:** none. **Blocked:** none. | Initial stance: stand aside on every horizon. | 2026-10-23 (low band, 7d) |
 | 2026-10-26 | D-4 | **Date holds, stand aside.** Treasury release-dates page re-read direct: October Annual cell still `30 - final`, closure-notice unchanged; `shcprelim.html` still says it expires 2026-10-30 and carries no date-change notice (total ~$19.3tn). Funding law runs to 2026-12-11 (news-confirmed), so the 2025 slip mechanism stays absent. **Kill switch 4 (VIX > 19.46 by 10-23) tripped:** FRED `VIXCLS` 19.99 on 10-16, 18.44 / 17.31 / 16.68 on 10-19/20/21, 19.03 on 10-22, 19.45 on 10-23 (+3.0 vs 16.46); press attributes the 10-16 spike to unnamed hedge-fund distress rumors (unverified). Switch's own remedy is re-read the corridor, not this print: `symbols: []`, nothing option-shaped. **Adjacency:** peers none; macro — 10Y `DGS10` 5.10 → 5.09 / 5.15 / 5.12 / 5.13 / 4.96 (10-22), no CPI/FOMC yet (FOMC 10-28, GDP and PCE 10-29, ECI 10-30, ISM 11-02; AMD fq3 11-03 now in the strong set); geopolitics none linked. 10-30 holds 11 calendar entries, none a SHCA duplicate. **Beyond horizon, not filed:** SHCA 2027 prelim/final (unchanged). **Proposed:** none. **Blocked:** none. FT-1/2/3 still _open_ (score by 10-31 / 11-02). | — (stance holds: stand aside on every horizon) | 2026-10-30 (low band, D-0 day) |
+| 2026-11-02 | D+3 | **Close-out.** Final posted on schedule 2026-10-30 (`sb0672`; data page flags the report `NEW 10-30-2026`). Total **$19,258bn** vs prelim 19,277 (**-19bn, -0.10%**); top-10 order unchanged. FT-1/2/3 all **pass** (see Outcome). **Adjacency:** peers none (symbol-free); macro - FOMC 10-28, GDP/PCE 10-29 and ECI 10-30 already printed, ISM + borrowing estimates 11-02; FRED (to 10-29): VIX 17.20 (10-29), 10Y 4.98 (10-29), 10-30 and 11-02 not yet posted; geopolitics none linked. **Beyond horizon, not filed:** SHCA 2027 prelim/final (unchanged). **Proposed:** none. **Blocked:** none. | Closed - stand aside was right; nothing was ever tradeable. | - (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -121,3 +122,74 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":19.45,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-02, D+3, inside the `closeOutWithinDays: 6` window).** Macro-print mode runs no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []` by design); the cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) was run anyway and
+touched nothing this event reads. "Re-run data" here means re-fetching every cited Treasury primary
+today (curl, HTTP 200): the release-dates table, the Treasury press-release listing, press release
+`sb0672` and its PDF (`2026-10-30-SHCA-PR-Dec2025data.pdf`), the data page
+(`us-claims-on-foreigners-from-holdings-of-foreign-securities`) and the 152-page final report
+`shc2025r.pdf` (Table 1 and Table A1 read from its text layer).
+
+**The headline verdict: the stand-aside call and all three registered tests held.** The final landed
+on its confirmed date, the total moved by a tenth of a percent, and not one top-10 country changed
+rank. Nothing here was ever tradeable (`symbols: []`, `low`, 16:00 ET release), so the stance cost
+and earned nothing; the value is that the "headline is already public" frame is now measured on a
+fourth survey year.
+
+### What printed - preliminary (2026-08-31) vs final (2026-10-30), billions of dollars
+
+| Line | Prelim | Final | Revision |
+|---|---|---|---|
+| Equity | 15,246 | 15,232 | -14 (-0.09%) |
+| Long-term debt | 3,608 | 3,607 | -1 |
+| Short-term debt | 423 | 418 | -5 (-1.2%) |
+| **Total** | **19,277** | **19,258** | **-19 (-0.10%)** |
+
+Revision history on the total is now +0.19%, +0.03%, -0.07%, **-0.10%** (end-2022 to end-2025): mixed in
+sign, all inside 0.2%. Equity is 79% of the total (report p.2); the change from end-2024's 15,823 is
+**+3.4tn**, of which long-term equity valuation **+2.77tn** against net purchases **+0.11tn** (Table 1) -
+the same valuation-led shape the initial research read off the preliminary.
+
+### Forward-test scores
+
+- **FT-1 (date) - PASS.** Press release `sb0672` is dated October 30, 2026 and sits in Treasury's
+  press-release listing at that date; the data page marks the final report `(NEW 10-30-2026)`. The
+  slip prior (1 in 3) did not fire: the funding law ran to 2026-12-11, as recorded. Footnote: the
+  press release's PDF says "Embargoed for 4 p.m. EST" and "released ... on August 31, 2025" - both
+  Treasury typos (EDT applied on 10-30; the preliminary was 2026-08-31). The listing's timestamp
+  (19:50Z) is a page time, not an independent release stamp, so the 16:00 slot is read from the PDF.
+- **FT-2 (total within $19,181-19,373bn) - PASS.** 19,258, 77bn inside the lower edge; the equity
+  secondary read (15,232 vs 15,170-15,322) also held.
+- **FT-3 (top-10 order unchanged) - PASS.** Table A1: Cayman 3,072 · UK 2,007 · Canada 1,884 ·
+  Japan 1,483 · Ireland 1,182 · France 910 · Switzerland 803 · Netherlands 748 · Germany 685 ·
+  Taiwan 668. Largest top-10 revision: Canada -2 (1,886 to 1,884); Cayman -1; the rest unchanged.
+  The tightest gap, Germany over Taiwan, is still **17bn** - the revisions that could have closed it
+  were zero for both.
+
+### Kill switches
+
+1. Release slips - **not tripped.** 2. Headline moves outside the band - **not tripped.** 3. Order
+moves - **not tripped.** 4. Regime (VIX > 19.46 by 10-23) - had tripped at the D-4 pulse (19.45 on
+10-23, +3.0 on the 10-16 baseline) with no consequence for a symbol-free print; FRED's VIX is 17.20
+on 10-29. 5. Calendar revision notice - none seen; the release-dates table still reads `30 - final`.
+
+### Honest limits of this close-out
+
+- **No tape test was registered, and none is scored.** FRED's `DGS10` and `VIXCLS` stop at 2026-10-29
+  as of this fetch; neither 10-30 nor 11-02 had posted. The next session (11-02) is again a
+  scheduled-data day (ISM, SLOOS, borrowing estimates), so it would not have been a clean read.
+- **The final's per-country decomposition beyond Table A1 was not read** (industry, currency,
+  depositary-receipt and ABS tables); the initial research said that detail is context, not signal.
+- **n=4 survey years** of revision history; the +-0.5% band stays generous by design.
+- **The final report's own suggested-citation URL (`shca2025_report.pdf`) returns 404**; the live
+  file is `shc2025r.pdf` (same host). The `shc2025_appendix.zip` link on the data page also returned
+  404 at fetch time - the appendix tables were read from the report instead.
+- **Nothing here licenses a trade.** Estimates widen caution, never trigger action; this was a
+  confirmed, low-impact, symbol-free release.
+
+**Last assessed:** 2026-11-02
+<!-- probe-ref: {"symbols":{},"vix":17.2,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","pce-2026-10-29"],"screenStreak":0,"blocked":[]} -->
