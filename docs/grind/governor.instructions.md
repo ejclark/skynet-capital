@@ -51,6 +51,10 @@ Three things the front matter cannot carry, because `grind.js` cannot enforce th
   ratchet-down budget file, and `docs/COACHES.md`'s WIP limit counts open PRs, not dispatches. With
   one item per coach, each budget's `--update` has exactly one writer, so the drill's own ratchet
   step is safe to run in-rep — no trailing once-per-batch `--update` to remember.
+- **Under `surge`, a coach's second rep is a later run, stacked.** Merge the first wave into
+  `refactor/governed-cycle-<n>`, push it, and give each next-wave item `"base": "<that branch>"`.
+  Steps 2 and 5 then read the eye and cut the branch from it, so the gate names what the first
+  rep left. From `main`, the eye would name the first rep's target again.
 - **Under `work-mode:conserve`, pass fewer items than the roster has.** Grind's own spigot check
   refuses on `grindWidth` (5 under `conserve`), which four items clear — but
   `caps.governorDispatches` is **1** at that position (`work-mode.json`), and grind does not read
@@ -80,7 +84,8 @@ runs to a green, pushed branch. Done is a branch on origin — or a stated reaso
 ## Steps
 
 Your item is a JSON object with `coach`, `eye`, `drill` and `prefix`. Read those four fields out of
-it yourself; nothing substitutes them for you.
+it yourself; nothing substitutes them for you. A surge second rep's item also carries `base`, the
+cycle branch its coach's first rep was merged into. Without one, your base is `main`.
 
 1. **WIP 1 — the cheapest skip, so it goes first.**
    `gh api 'repos/{owner}/{repo}/pulls?state=open&per_page=100' --jq '.[] | "\(.number) \(.head.ref)"'`
@@ -89,7 +94,9 @@ it yourself; nothing substitutes them for you.
    PR's head branch starts with your item's `prefix`, report `status: "skipped"` with
    `WIP 1: <branch> is already open for <coach>` and stop. Inventory is waste, and the next cycle
    recomputes this coach's target from a fresher `main` anyway.
-2. **The gate picks the target; you never do.** `git fetch origin main`, then
+2. **The gate picks the target; you never do.** `git fetch origin main`. With a `base`, also
+   `git fetch origin <base>` and then `git checkout -q --detach origin/<base>` (one call each), so
+   the eye reads the tree step 5 branches from. Then
    `node <eye> --candidate` (run it from the repo root; `npx` nothing). A `null` candidate, or no
    `candidate` key, means that budget is already met — report `status: "skipped"` with
    `<coach>: budget met, no candidate`. That is the goal, not a failure. Never fall back to
@@ -121,7 +128,8 @@ it yourself; nothing substitutes them for you.
    `target is envelope-protected` and stop. This is the check grind's step 0 could not do for you
    (see the calling convention above).
 5. **Branch and set up.** `bash scripts/wt-start.sh <prefix><slug> --fresh` (`<slug>` from the
-   target's basename, or the symbol's name for duplication) — fetch, a new branch off `origin/main`,
+   target's basename, or the symbol's name for duplication; add `--base <base>` when your item
+   carries one) — fetch, a new branch off `origin/main` (or `origin/<base>`),
    `node_modules` and one status line, in one call. Slugs repeat across cycles and athlete branches
    stay on origin, so if it refuses because the name is taken, re-run with the `-N` name it prints;
    never drop `--fresh`, which would resume that stale branch (#6272). After it, one plain command per call — never a

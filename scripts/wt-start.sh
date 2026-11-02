@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Put an isolated worktree agent on its branch, ready to edit, in ONE call.
 #
-#   bash scripts/wt-start.sh <branch> [--fresh] [--issue N]
+#   bash scripts/wt-start.sh <branch> [--fresh] [--base <branch>] [--issue N]
 #
 # WHY (#5192). Every build agent opened with the same ritual — fetch, checkout -B, worktree-setup,
 # `ls node_modules…`, `git status`, `git log` — 530 setup calls across 129 agents in three days,
@@ -15,12 +15,13 @@ set -euo pipefail
 # What it does, in order (a failed step stops the script, exits non-zero and names the step):
 #   fresh     with --fresh, refuse when <branch> already exists, locally or on origin, and name the
 #             first free <branch>-N to re-run with (below)
-#   fetch     origin/main, and origin/<branch> when it exists
+#   fetch     origin/main, origin/<base> with --base, and origin/<branch> when it exists
 #   checkout  the local <branch> if there is one (fast-forwarded when it can be, never reset);
-#             else origin/<branch> as a tracking branch; else a new branch off origin/main
+#             else origin/<branch> as a tracking branch; else a new branch off origin/<base>
+#             (origin/main unless --base names another)
 #   setup     scripts/worktree-setup.sh (node_modules cloned; its chatter shown only on failure)
 #   issue     with --issue N, the one line `node scripts/issues.mjs show N` prints
-#   status    one closing line: branch · base sha · ahead/behind origin/main · node_modules ·
+#   status    one closing line: branch · base sha · ahead/behind origin/<base> · node_modules ·
 #             uncommitted files
 #
 # NEVER DISCARDS WORK: no `git stash` (banned here, CLAUDE.md), no `reset --hard`, no `checkout -B`
@@ -36,15 +37,22 @@ set -euo pipefail
 # quietly, on a stale base. --fresh restores the loud failure before anything is checked out, and
 # names the next free name rather than taking it silently — the branch an agent pushes is always
 # the one it typed.
+#
+# --base <branch> (governed cycle 7) starts a new branch off origin/<branch> instead of main — a
+# surge governor's second rep on one coach. Its first rep is merged into the cycle branch, not
+# main, so a second rep cut from main would see that target still there and redo it, or split a
+# file the first rep already split. Stacked on the cycle branch, its eye names what is left.
 
-usage() { echo "usage: bash scripts/wt-start.sh <branch> [--fresh] [--issue N]" >&2; exit 2; }
+usage() { echo "usage: bash scripts/wt-start.sh <branch> [--fresh] [--base <branch>] [--issue N]" >&2; exit 2; }
 
 BRANCH=""
 ISSUE=""
 FRESH=0
+BASE_REF=main
 while [ $# -gt 0 ]; do
   case "$1" in
     --issue) [ $# -ge 2 ] || usage; ISSUE="$2"; shift 2 ;;
+    --base) [ $# -ge 2 ] || usage; BASE_REF="$2"; shift 2 ;;
     --fresh) FRESH=1; shift ;;
     -h|--help) usage ;;
     -*) usage ;;
@@ -53,6 +61,8 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$BRANCH" ] || usage
 [ -z "$ISSUE" ] || [[ "$ISSUE" =~ ^[0-9]+$ ]] || usage
+# A branch name, never an option or a refspec: it is spliced into a fetch refspec below.
+[[ "$BASE_REF" =~ ^[A-Za-z0-9._][A-Za-z0-9._/-]*$ ]] || usage
 
 STEP=""
 # Run a step quietly; on failure print what it said and name the step.
@@ -109,7 +119,10 @@ if [ "$FRESH" -eq 1 ]; then
   fi
 fi
 
+STEP=fetch # again: --fresh above renamed it, and a failed fetch must name the fetch
 run git fetch -q origin "+refs/heads/main:refs/remotes/origin/main"
+[ "$BASE_REF" = main ] ||
+  run git fetch -q origin "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF"
 [ "$REMOTE_BRANCH" -eq 0 ] ||
   run git fetch -q origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
 
@@ -123,8 +136,8 @@ if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
 elif [ "$REMOTE_BRANCH" -eq 1 ]; then
   run git checkout -q -b "$BRANCH" --track "origin/$BRANCH"
 else
-  # --no-track: an upstream of origin/main would aim a bare `git push` at main.
-  run git checkout -q --no-track -b "$BRANCH" origin/main
+  # --no-track: an upstream of origin/<base> would aim a bare `git push` at main or the cycle branch.
+  run git checkout -q --no-track -b "$BRANCH" "origin/$BASE_REF"
 fi
 
 STEP=setup
@@ -140,9 +153,9 @@ if [ -n "$ISSUE" ]; then
   echo "$line"
 fi
 
-base="$(git merge-base HEAD origin/main | cut -c1-8)"
-behind="$(git rev-list --count HEAD..origin/main)"
-ahead="$(git rev-list --count origin/main..HEAD)"
+base="$(git merge-base HEAD "origin/$BASE_REF" | cut -c1-8)"
+behind="$(git rev-list --count "HEAD..origin/$BASE_REF")"
+ahead="$(git rev-list --count "origin/$BASE_REF..HEAD")"
 if [ -x node_modules/.bin/biome ] && [ -x node_modules/.bin/rstest ]; then mods=ok; else mods=MISSING; fi
 dirty="$(git status --porcelain | wc -l | tr -d ' ')"
-echo "wt-start: $BRANCH · base $base · $ahead ahead, $behind behind origin/main · node_modules $mods · $dirty uncommitted"
+echo "wt-start: $BRANCH · base $base · $ahead ahead, $behind behind origin/$BASE_REF · node_modules $mods · $dirty uncommitted"

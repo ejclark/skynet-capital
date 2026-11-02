@@ -26,6 +26,9 @@ earned after the policy proves out over reps.
      `conserve` 1 — walk the roster as usual, dispatch only the first in the order step 3 reads, and
      name the ones deferred. `surge` 8 — a coach may be dispatched
      again on its next candidate once its first athlete reports, until the allowance is spent.
+     The next candidate comes from the cycle branch, never `main`: merge and push the first wave to
+     `refactor/governed-cycle-<n>`, then give the next wave's items `"base"` set to it (the
+     chore's steps 2 and 5), so each eye names what is left and the rep stacks on the first.
    - **The allowance is the only thing the dial changes.** WIP 1, the collision check, the
      merge-policy table and the one-cycle-one-PR rule all hold at every position.
 3. **ROSTER.** The full athlete roster — every coach in `docs/COACHES.md` that has one. Walk **all** of
@@ -67,8 +70,8 @@ earned after the policy proves out over reps.
    `agents.tokensByWorkflow.grind.total`, divide it by the green reps, and write that in millions over
    each new row's null in one commit. That key sums every `grind` run in the window, so if another
    ran beside this one, leave the nulls. It is an even split of what the run spent, skips included,
-   so say so in the PR body. Two reps on one coach under `surge`
-   conflict on that file: keep both rows, in order. `npm run loop:ledger` then prints the cycle's
+   so say so in the PR body. A second rep on one coach under `surge`
+   is stacked on the cycle branch, so its row lands after the first's: keep both, in order. `npm run loop:ledger` then prints the cycle's
    numbers, and they go in the PR body.
    Then verify green once, and open one PR titled
    `refactor: governed cycle <n> — <rep summaries>` with `/ship`. Never arm auto-merge by hand — the
