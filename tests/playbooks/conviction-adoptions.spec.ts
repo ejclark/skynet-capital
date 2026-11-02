@@ -254,11 +254,72 @@ describe("a pair-rule line", () => {
       rules,
     );
     expect(pointed).toMatchObject({
-      says: expect.arrayContaining([
-        "the pair's own rule: no new opens from the print's blackout until 10 sessions after it",
+      says: [
         "expiries on or after 2027-03-18",
-      ]),
+        "the pair's own rule: no new opens from the print's blackout until 10 sessions after it",
+      ],
     });
+  });
+
+  it("names only the fence in force when the view's is the narrower", () => {
+    const loose = () => [{ kind: "quiet" as const, sessionsAfterPrint: 2 }];
+    expect(
+      steeredBy(CRWV_LONG_CALL, aiDipSub("CRWV-LONG-CALL"), undefined, holdIn({}), loose),
+    ).toMatchObject({
+      says: [
+        "expiries on or after 2027-03-18",
+        "no new opens from the print's blackout until 6 sessions after it",
+      ],
+    });
+  });
+
+  it("refuses a rule line whose claim backs no fence of that kind on the pair", () => {
+    // Claim 7 backs only CRWV-WHEEL's strike cap, so it can't carry a rule onto the long call.
+    // adoptionProblems never reads scores (staleAdoptions does), so the claim needs none here.
+    const line: AdoptionLedger = {
+      "ai-dip-2026-10/7/CRWV-LONG-CALL": {
+        change: "pair-rule",
+        adoptedOn: "2027-01-20",
+        basis: "b",
+        rules: [QUIET_6],
+      },
+    };
+    expect(adoptionProblems(line, [PASSED_9], ADOPTED)).toEqual([
+      "ai-dip-2026-10/7/CRWV-LONG-CALL: claim 7 backs no quiet fence on CRWV-LONG-CALL",
+    ]);
+  });
+
+  it("matches the study's rule whatever order its keys were written in", () => {
+    const dte = { kind: "dte" as const, min: 150, max: 200 };
+    const quietRow = ADOPTED.find((c) => c.call === "adopt") as FenceCall;
+    const calls: readonly FenceCall[] = [{ ...quietRow, fence: "dte", call: "adopt", rule: dte }];
+    const line = {
+      "ai-dip-2026-10/9/CRWV-LONG-CALL": {
+        change: "pair-rule",
+        adoptedOn: "2026-11-25",
+        basis: "b",
+        rules: [{ max: 200, min: 150, kind: "dte" }],
+      },
+    } as unknown as AdoptionLedger;
+    const withDte: Conviction = {
+      ...PASSED_9,
+      narrowings: [{ pair: "CRWV-LONG-CALL", fromClaims: ["9"], narrow: [dte] }],
+    };
+    expect(adoptionProblems(line, [withDte], calls)).toEqual([]);
+  });
+
+  it("skips a line with no rules instead of failing every import of the ledger", () => {
+    const bare = {
+      "ai-dip-2026-10/9/CRWV-LONG-CALL": {
+        change: "pair-rule",
+        adoptedOn: "2026-11-25",
+        basis: "",
+      },
+    } as unknown as AdoptionLedger;
+    expect(rulesIn(bare)("CRWV-LONG-CALL")).toEqual([]);
+    expect(adoptionProblems(bare, [PASSED_9], ADOPTED)).toEqual([
+      "ai-dip-2026-10/9/CRWV-LONG-CALL: a pair rule states no rules",
+    ]);
   });
 
   it("refuses the pair whole, exits-only, when its own rule would widen a bound", () => {

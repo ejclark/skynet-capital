@@ -32,6 +32,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   describeNarrowing,
+  fencesBackedBy,
   type Proposal,
   proposalKey,
   proposalsFor,
@@ -85,7 +86,7 @@ export function listing(
   const staleKeys = staleAdoptions(ledger, convictions);
   const stale = staleKeys.map(
     ({ key, outcome }) =>
-      `${key} · adopted, but the claim now reads ${outcome}: review it, and delete the line to lift the hold`,
+      `${key} · adopted, but the claim now reads ${outcome}: review it, and delete the line to ${ledger[key]?.change === "pair-rule" ? "drop the pair's own rule" : "lift the hold"}`,
   );
   // A stale key is said once, as stale: a claim re-read as a pass proposes under the same key.
   const fresh = found.filter((f) => !staleKeys.some((s) => s.key === f.key));
@@ -104,9 +105,14 @@ export function listing(
       return `${key} · claim failed, open: npm run research:refine -- ${key}`;
     }
     const read = readCalls(f, calls);
-    return read.adoptable.length > 0
-      ? `${key} · claim held, a study adopts ${read.adoptable.map((c) => c.fence).join(", ")}: npm run research:refine -- ${key}`
-      : `${key} · claim held, not adopted: ${read.refused.join("; ")}`;
+    if (read.adoptable.length === 0) {
+      return `${key} · claim held, not adopted: ${read.refused.join("; ")}`;
+    }
+    const held = rulesIn(ledger)(proposal.pair);
+    const open = read.adoptable.filter((c) => !held.some((h) => h.kind === c.rule.kind));
+    return open.length > 0
+      ? `${key} · claim held, a study adopts ${open.map((c) => c.fence).join(", ")}: npm run research:refine -- ${key}`
+      : `${key} · claim held: what a study adopts is already ${proposal.pair}'s own rule`;
   });
   return `${[...lines, ...stale].join("\n")}\n`;
 }
@@ -119,12 +125,9 @@ export function readCalls(
   readonly adoptable: readonly Extract<FenceCall, { call: "adopt" }>[];
   readonly refused: readonly string[];
 } {
-  const fences = (conviction.narrowings ?? [])
-    .filter((n) => n.pair === proposal.pair)
-    .flatMap((n) => n.narrow);
   const adoptable: Extract<FenceCall, { call: "adopt" }>[] = [];
   const refused: string[] = [];
-  for (const fence of fences) {
+  for (const fence of fencesBackedBy(conviction, proposal.pair, proposal.claim)) {
     const call = fenceCall(proposal.pair, fence.kind, calls);
     const what = describeNarrowing(fence);
     if (!call) refused.push(`${what}: no study has judged it, and it needs its own`);

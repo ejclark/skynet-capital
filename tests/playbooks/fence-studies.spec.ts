@@ -4,7 +4,7 @@ import { AI_DIP_2026_10 } from "../../src/playbooks/conviction-seeds.js";
 import { resolveSteering } from "../../src/playbooks/conviction-steering.js";
 import { FENCE_CALLS, fenceCall, PAIR_RULE_KINDS } from "../../src/playbooks/fence-studies.js";
 import { findPlaybook } from "../../src/playbooks/registry.js";
-import { narrower } from "../../src/playbooks/steered-playbook.js";
+import { withOwnRules } from "../../src/playbooks/steered-playbook.js";
 
 /** #6598 slice 3 — the studies' calls on each fence a view puts on a pair, which
  *  `research:refine` reads before it adopts a passed claim's fence. */
@@ -51,37 +51,37 @@ describe("the calls table", () => {
   });
 });
 
-describe("narrower — a pair's own rule and a view's fence as one", () => {
-  it("keeps the narrower of each setting", () => {
+describe("withOwnRules — a pair's own rules and a view's fences as one", () => {
+  it("keeps one fence per setting, the narrower, and says which is the pair's own", () => {
     expect(
-      narrower(
-        { dte: { min: 14, max: 45 }, quietSessionsAfterPrint: 6, contractsMax: 3 },
-        {
-          dte: { min: 21, max: 60 },
-          quietSessionsAfterPrint: 2,
-          expiryFrom: "2027-03-18",
-          strikeMax: 54,
-        },
+      withOwnRules(
+        [
+          { kind: "quiet", sessionsAfterPrint: 6 },
+          { kind: "contracts", max: 3 },
+          { kind: "dte", min: 14, max: 45 },
+        ],
+        [
+          { kind: "quiet", sessionsAfterPrint: 2 },
+          { kind: "contracts", max: 1 },
+          { kind: "dte", min: 21 },
+          { kind: "expiry-from", day: "2027-03-18" },
+        ],
       ),
     ).toEqual({
-      dte: { min: 21, max: 45 },
-      quietSessionsAfterPrint: 6,
-      contractsMax: 3,
-      expiryFrom: "2027-03-18",
-      strikeMax: 54,
-    });
-    expect(
-      narrower(
-        { expiryFrom: "2027-01-15", strikeMax: 60 },
-        { expiryFrom: "2027-03-18", strikeMax: 50 },
-      ),
-    ).toEqual({
-      expiryFrom: "2027-03-18",
-      strikeMax: 50,
+      narrow: [
+        { kind: "quiet", sessionsAfterPrint: 6 },
+        { kind: "contracts", max: 1 },
+        { kind: "dte", min: 21, max: 45 },
+        { kind: "expiry-from", day: "2027-03-18" },
+      ],
+      own: [true, false, false, false],
     });
   });
 
-  it("says when together they leave no days to expiry", () => {
-    expect(narrower({ dte: { min: 14, max: 20 } }, { dte: { min: 30, max: 45 } })).toBeUndefined();
+  it("adds a rule the view does not fence", () => {
+    expect(withOwnRules([{ kind: "quiet", sessionsAfterPrint: 6 }], [])).toEqual({
+      narrow: [{ kind: "quiet", sessionsAfterPrint: 6 }],
+      own: [true],
+    });
   });
 });

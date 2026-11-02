@@ -7,7 +7,7 @@ import {
   type RuleLookup,
 } from "./conviction-adoptions.js";
 import type { Conviction } from "./conviction-record.js";
-import { type Narrowing, resolveSteering, type Steering } from "./conviction-steering.js";
+import { type Narrowing, resolveSteering } from "./conviction-steering.js";
 import { type ConvictionLookup, lookupConviction } from "./conviction-store.js";
 import type { PairRule } from "./fence-studies.js";
 import type { Playbook } from "./playbook.js";
@@ -49,34 +49,57 @@ import type { Playbook } from "./playbook.js";
  * A PAIR'S OWN RULE (#6598 slice 3). When a passed claim's fence was adopted on a study's *adopt*
  * call (a `pair-rule` line), every subscription to the pair runs inside it, pointed or not. It goes
  * through the same narrow-only resolver; where it and a view fence the same setting, the narrower
- * of the two stands (`narrower`), so neither can loosen the other. A rule refused against the
+ * of the two stands (`withOwnRules`), so neither can loosen the other. A rule refused against the
  * playbook's bounds refuses the pair whole, exits-only. No line states one today.
  */
 export type SteeredPlaybook =
   | { readonly playbook: Playbook; readonly says: readonly string[] }
   | { readonly playbook: Playbook; readonly refused: string };
 
-/** Two steerings as one: on each setting, the narrower; undefined when together they leave no
- *  days to expiry. */
-export function narrower(a: Steering, b: Steering): Steering | undefined {
-  const pick = <T>(x: T | undefined, y: T | undefined, f: (x: T, y: T) => T): T | undefined =>
-    x === undefined ? y : y === undefined ? x : f(x, y);
-  const dte = pick(a.dte, b.dte, (x, y) => ({
-    min: Math.max(x.min, y.min),
-    max: Math.min(x.max, y.max),
-  }));
-  if (dte && dte.min > dte.max) return undefined;
-  const out: { -readonly [K in keyof Steering]: Steering[K] } = {};
-  if (dte) out.dte = dte;
-  const expiryFrom = pick(a.expiryFrom, b.expiryFrom, (x, y) => (x > y ? x : y));
-  if (expiryFrom !== undefined) out.expiryFrom = expiryFrom;
-  const strikeMax = pick(a.strikeMax, b.strikeMax, Math.min);
-  if (strikeMax !== undefined) out.strikeMax = strikeMax;
-  const quiet = pick(a.quietSessionsAfterPrint, b.quietSessionsAfterPrint, Math.max);
-  if (quiet !== undefined) out.quietSessionsAfterPrint = quiet;
-  const contractsMax = pick(a.contractsMax, b.contractsMax, Math.min);
-  if (contractsMax !== undefined) out.contractsMax = contractsMax;
-  return out;
+/** One rule and one view fence on the same setting, as the narrower: the longer quiet, the smaller
+ *  cap, the inner days-to-expiry window (which the resolver refuses if it is empty). */
+function narrowerOf(rule: PairRule, n: Narrowing): Narrowing {
+  if (rule.kind === "quiet" && n.kind === "quiet") {
+    return {
+      kind: "quiet",
+      sessionsAfterPrint: Math.max(rule.sessionsAfterPrint, n.sessionsAfterPrint),
+    };
+  }
+  if (rule.kind === "contracts" && n.kind === "contracts") {
+    return { kind: "contracts", max: Math.min(rule.max, n.max) };
+  }
+  if (rule.kind === "dte" && n.kind === "dte") {
+    const mins = [rule.min, n.min].filter((m): m is number => m !== undefined);
+    const maxes = [rule.max, n.max].filter((m): m is number => m !== undefined);
+    return {
+      kind: "dte",
+      ...(mins.length > 0 ? { min: Math.max(...mins) } : {}),
+      ...(maxes.length > 0 ? { max: Math.min(...maxes) } : {}),
+    };
+  }
+  return n;
+}
+
+/**
+ * A pair's own rules and a view's fences as one list, one fence per setting: where both fence a
+ * setting, the narrower of the two. `own[i]` says whether the pair's rule is what stands at `i`, so
+ * the boot log names only the fence in force.
+ */
+export function withOwnRules(
+  rules: readonly PairRule[],
+  narrow: readonly Narrowing[],
+): { readonly narrow: readonly Narrowing[]; readonly own: readonly boolean[] } {
+  const merged = narrow.map((n) => {
+    const rule = rules.find((r) => r.kind === n.kind);
+    if (!rule) return { n, own: false };
+    const both = narrowerOf(rule, n);
+    return { n: both, own: JSON.stringify(both) === JSON.stringify(rule) };
+  });
+  const added = rules
+    .filter((r) => !narrow.some((n) => n.kind === r.kind))
+    .map((r) => ({ n: r as Narrowing, own: true }));
+  const all = [...merged, ...added];
+  return { narrow: all.map((m) => m.n), own: all.map((m) => m.own) };
 }
 
 export function steeredBy(
@@ -138,17 +161,19 @@ function fenced(
   if (!resolved.ok) {
     return { playbook, refused: `conviction "${record.id}" is refused whole: ${resolved.reason}` };
   }
-  if (own.length === 0)
+  if (own.length === 0) {
     return { playbook: steerable.steer(resolved.steering), says: resolved.says };
-  const both = narrower(ownRead.steering, resolved.steering);
-  if (!both) {
+  }
+  const both = withOwnRules(own, narrow);
+  const read = resolveSteering(both.narrow, steerable.bounds, record.claims);
+  if (!read.ok) {
     return {
       playbook,
-      refused: `${playbook.id}'s own rule and conviction "${record.id}" leave no days to expiry`,
+      refused: `${playbook.id}'s own rule and conviction "${record.id}" together: ${read.reason}`,
     };
   }
   return {
-    playbook: steerable.steer(both),
-    says: [...ownRead.says.map((s) => `the pair's own rule: ${s}`), ...resolved.says],
+    playbook: steerable.steer(read.steering),
+    says: read.says.map((say, i) => (both.own[i] ? `the pair's own rule: ${say}` : say)),
   };
 }

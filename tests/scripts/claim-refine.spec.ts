@@ -12,6 +12,7 @@ import {
   marketDay,
   prFor,
   proposalsOf,
+  readCalls,
 } from "../../src/scripts/claim-refine.js";
 import { run } from "../support/ship-run.js";
 
@@ -129,6 +130,29 @@ const PASSED_9 = scoredAs({ "9": "pass" });
 const KEY_9 = "ai-dip-2026-10/9/CRWV-LONG-CALL";
 
 describe("adopt — a study's adopt call", () => {
+  it("reads only the fences the passed claim backs, never another claim's on the same pair", () => {
+    // Claim 9 backs the quiet fence alone here; 2b's expiry floor is its own entry.
+    const split: Conviction = {
+      ...PASSED_9,
+      narrowings: [
+        {
+          pair: "CRWV-LONG-CALL",
+          fromClaims: ["9"],
+          narrow: [{ kind: "quiet", sessionsAfterPrint: 6 }],
+        },
+        {
+          pair: "CRWV-LONG-CALL",
+          fromClaims: ["2b"],
+          narrow: [{ kind: "expiry-from", day: "2027-03-18" }],
+        },
+      ],
+    };
+    const found = proposalsOf([split]).find((f) => f.key === KEY_9);
+    if (!found) throw new Error("no proposal");
+    expect(readCalls(found, QUIET_ADOPTED)).toMatchObject({ refused: [] });
+    expect(readCalls(found, QUIET_ADOPTED).adoptable.map((c) => c.fence)).toEqual(["quiet"]);
+  });
+
   it("writes the study's rule as the pair's own, and only the fences it adopts", () => {
     const result = adopt(KEY_9, {}, [PASSED_9], "2026-11-25", { calls: QUIET_ADOPTED });
     expect(result).toMatchObject({ ok: true, changed: true });
@@ -194,6 +218,29 @@ describe("listing", () => {
     expect(text).toContain(`${KEY} · claim failed, open: npm run research:refine -- ${KEY}`);
     expect(text).toContain(
       "ai-dip-2026-10/8/CRWV-LONG-CALL · claim held, not adopted: no expiry before 2027-03-18: `docs/research/long-call-fences-2026-11.md` says Don't",
+    );
+  });
+
+  it("says a pass's adopted rule is already the pair's own, instead of offering a dead end", () => {
+    const first = adopt(KEY_9, {}, [PASSED_9], "2026-11-25", { calls: QUIET_ADOPTED });
+    if (!first.ok) throw new Error(first.error);
+    const both = scoredAs({ "9": "pass", "2b": "pass" });
+    expect(listing(proposalsOf([both]), first.ledger, [both], QUIET_ADOPTED)).toContain(
+      "ai-dip-2026-10/2b/CRWV-LONG-CALL · claim held: what a study adopts is already CRWV-LONG-CALL's own rule",
+    );
+  });
+
+  it("tells a stale rule line to drop the rule, not to lift a hold", () => {
+    const ledger: AdoptionLedger = {
+      [KEY_9]: {
+        change: "pair-rule",
+        adoptedOn: "2026-11-25",
+        basis: "x",
+        rules: [{ kind: "quiet", sessionsAfterPrint: 6 }],
+      },
+    };
+    expect(listing([], ledger, [AI_DIP_2026_10], QUIET_ADOPTED)).toBe(
+      `${KEY_9} · adopted, but the claim now reads pending: review it, and delete the line to drop the pair's own rule\n`,
     );
   });
 

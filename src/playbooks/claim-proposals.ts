@@ -51,6 +51,17 @@ export function describeNarrowing(n: Narrowing): string {
   }
 }
 
+/** The fences one claim backs on one pair: the narrowings of every entry that cites it. */
+export function fencesBackedBy(
+  conviction: Pick<Conviction, "narrowings">,
+  pair: string,
+  claim: string,
+): readonly Narrowing[] {
+  return (conviction.narrowings ?? [])
+    .filter((n) => n.pair === pair && n.fromClaims.includes(claim))
+    .flatMap((n) => n.narrow);
+}
+
 /** One proposal's stable key, the view, the claim and the pair: "ai-dip-2026-10/2a/CRWV-WHEEL". */
 export const proposalKey = (conviction: Pick<Conviction, "id">, p: Proposal): string =>
   `${conviction.id}/${p.claim}/${p.pair}`;
@@ -80,12 +91,9 @@ export function proposalsFor(conviction: Conviction): readonly Proposal[] {
 
 /** What the studies called on each fence a pass would carry (`fence-studies.ts`, #6598). */
 function studyCalls(conviction: Conviction, p: Proposal): string[] {
-  const fences = (conviction.narrowings ?? [])
-    .filter((n) => n.pair === p.pair)
-    .flatMap((n) => n.narrow);
   return [
     "**What the studies called:**",
-    ...fences.map((n) => {
+    ...fencesBackedBy(conviction, p.pair, p.claim).map((n) => {
       const call = fenceCall(p.pair, n.kind);
       return `  - ${describeNarrowing(n)}: ${call ? citeCall(call) : "no study yet"}`;
     }),

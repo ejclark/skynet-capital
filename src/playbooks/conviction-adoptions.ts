@@ -104,7 +104,7 @@ export function rulesIn(ledger: AdoptionLedger): RuleLookup {
   const rules = new Map<string, Map<string, PairRule>>();
   for (const [key, adoption] of Object.entries(ledger)) {
     const parts = splitKey(key);
-    if (!parts || adoption.change !== "pair-rule") continue;
+    if (!parts || adoption.change !== "pair-rule" || !Array.isArray(adoption.rules)) continue;
     const byKind = rules.get(parts.pair) ?? new Map<string, PairRule>();
     for (const rule of adoption.rules) if (!byKind.has(rule.kind)) byKind.set(rule.kind, rule);
     rules.set(parts.pair, byKind);
@@ -156,8 +156,9 @@ export function adoptionProblems(
     if (!(ADOPTED_CHANGES as readonly string[]).includes(adoption.change)) {
       problems.push(`${key}: unknown change "${adoption.change}"`);
     }
-    if (adoption.change === "pair-rule")
-      problems.push(...ruleProblems(key, parts.pair, adoption, calls));
+    if (adoption.change === "pair-rule") {
+      problems.push(...ruleProblems(key, parts, adoption, calls, record));
+    }
     if (!isCalendarDay(adoption.adoptedOn)) problems.push(`${key}: adoptedOn is not a day`);
   }
   return problems;
@@ -166,9 +167,10 @@ export function adoptionProblems(
 /** A rule line's rules must each be a date-free kind, and the very rule a study's *adopt* states. */
 function ruleProblems(
   key: string,
-  pair: string,
+  { claim, pair }: { readonly claim: string; readonly pair: string },
   adoption: Extract<Adoption, { change: "pair-rule" }>,
   calls: readonly FenceCall[],
+  record: Conviction | undefined,
 ): string[] {
   if (!Array.isArray(adoption.rules) || adoption.rules.length === 0) {
     return [`${key}: a pair rule states no rules`];
@@ -179,10 +181,24 @@ function ruleProblems(
     }
     const call = fenceCall(pair, rule.kind, calls);
     if (call?.call !== "adopt") return [`${key}: no study's call adopts ${rule.kind} on ${pair}`];
-    return JSON.stringify(call.rule) === JSON.stringify(rule)
+    const backed = (record?.narrowings ?? []).some(
+      (n) =>
+        n.pair === pair &&
+        n.fromClaims.includes(claim) &&
+        n.narrow.some((f) => f.kind === rule.kind),
+    );
+    if (record && !backed) return [`${key}: claim ${claim} backs no ${rule.kind} fence on ${pair}`];
+    return sameRule(call.rule, rule)
       ? []
       : [`${key}: its ${rule.kind} rule is not the one \`${call.study}\` adopts`];
   });
+}
+
+/** Two rules alike field by field, whatever order a hand edit wrote the keys in. */
+function sameRule(a: PairRule, b: PairRule): boolean {
+  const fields = (r: PairRule) =>
+    JSON.stringify(Object.entries(r).sort(([x], [y]) => x.localeCompare(y)));
+  return fields(a) === fields(b);
 }
 
 /** A record's claim by its label ("2a"), the way the record numbers it. */
