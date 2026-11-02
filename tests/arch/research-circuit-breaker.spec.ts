@@ -359,8 +359,9 @@ describe("recentResearchSpend", () => {
   // #4658 (2026-10-05): a cancelled job has no log, and `gh run view --log` then fails for the
   // WHOLE run — even though no research leg ran, so the run cannot have spent anything.
   describe("when a run's combined log is missing a job's log", () => {
-    const jobsOf = (jobs: { databaseId: number; name: string; conclusion: string }[]) =>
-      JSON.stringify({ jobs });
+    const jobsOf = (
+      jobs: { databaseId: number; name: string; conclusion: string; steps?: { name: string }[] }[],
+    ) => JSON.stringify({ jobs });
     const runList = JSON.stringify([{ databaseId: 1, createdAt: nowIso, status: "completed" }]);
     const isCombinedLog = (args: readonly string[]) =>
       args[1] === "view" && args[3] === "--log" && !args.includes("--job");
@@ -402,6 +403,59 @@ describe("recentResearchSpend", () => {
         if (args.includes("--json"))
           return jobsOf([
             { databaseId: 10, name: "research due events (alpha)", conclusion: "cancelled" },
+          ]);
+        throw new Error("log not found: 10");
+      };
+      expect(() => recentResearchSpend({ windowHours: 24, exec: custom })).toThrow(
+        /could not read run 1's log .*job 10/,
+      );
+    });
+
+    // #6640 (2026-11-02): run 41369452792's jobs-2026-11-06 leg was cancelled while queued.
+    // GitHub listed it with `steps: []` and had no log for it, so the combined log and the
+    // per-job read both said `log not found: 125037119282`, and every `route` tick went red.
+    it("counts $0 for a research leg cancelled before any step ran, and sums its sibling", () => {
+      const custom = (_cmd: string, args: readonly string[]) => {
+        if (args[1] === "list") return runList;
+        if (isCombinedLog(args)) throw new Error("log not found: 125037119282");
+        if (args.includes("--json"))
+          return jobsOf([
+            {
+              databaseId: 125036577116,
+              name: "route",
+              conclusion: "success",
+              steps: [{ name: "a" }],
+            },
+            {
+              databaseId: 125037118719,
+              name: "research due events (government-funding-deadline-2026-12-11, interval-elapsed)",
+              conclusion: "success",
+              steps: [{ name: "Set up job" }],
+            },
+            {
+              databaseId: 125037119282,
+              name: "research due events (jobs-2026-11-06, interval-elapsed, staleness-ceiling)",
+              conclusion: "cancelled",
+              steps: [],
+            },
+          ]);
+        if (args.at(-1) === "125037118719") return "::notice::cost — event=gov usd=0.80 turns=1\n";
+        throw new Error("log not found: 125037119282"); // proves the empty leg is never read
+      };
+      expect(recentResearchSpend({ windowHours: 24, exec: custom })).toBeCloseTo(0.8, 2);
+    });
+
+    it("still refuses on a cancelled research leg that ran a step and has no readable log", () => {
+      const custom = (_cmd: string, args: readonly string[]) => {
+        if (args[1] === "list") return runList;
+        if (args.includes("--json"))
+          return jobsOf([
+            {
+              databaseId: 10,
+              name: "research due events (alpha)",
+              conclusion: "cancelled",
+              steps: [{ name: "Set up job" }],
+            },
           ]);
         throw new Error("log not found: 10");
       };

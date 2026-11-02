@@ -270,6 +270,10 @@ const COST_JOB_PREFIX = "research due events";
  *  `log not found: <route's job id>` and the breaker refused every tick for the next 4 hours).
  *  So read only the jobs that can carry a cost line, one at a time. A run whose research legs
  *  were all skipped never launched a session and adds $0 — that is a known zero, not a guess.
+ *  So does a leg GitHub lists with `steps: []`: it never reached a runner, so it has no log and
+ *  no session (#6640, 2026-11-02: run 41369452792's jobs-2026-11-06 leg was cancelled while
+ *  queued, and the breaker refused on `log not found: 125037119282` for the rest of its window).
+ *  The empty list must be present: a job with no `steps` field at all is read like any other.
  *  Anything else stays fail-closed: a research leg that ran but whose log can't be read, or a
  *  job list that can't be read, still refuses, because an undercounted total is worse than a
  *  loud refusal (this check exists to stop a runaway). */
@@ -286,9 +290,9 @@ function costLegLogs(runId, cause, exec, sleep) {
     throw refuse(cause.message);
   }
   if (!Array.isArray(jobs)) throw refuse(cause.message);
-  const legs = jobs.filter(
-    (j) => String(j.name ?? "").startsWith(COST_JOB_PREFIX) && j.conclusion !== "skipped",
-  );
+  const neverRan = (j) =>
+    j.conclusion === "skipped" || (Array.isArray(j.steps) && j.steps.length === 0);
+  const legs = jobs.filter((j) => String(j.name ?? "").startsWith(COST_JOB_PREFIX) && !neverRan(j));
   return legs
     .map((leg) => {
       try {
