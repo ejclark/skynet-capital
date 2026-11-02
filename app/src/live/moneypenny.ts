@@ -3,6 +3,7 @@ import {
   ackMoneypennyMessage,
   type ChatConvictionDraft,
   type CompanionDraft,
+  CompanionStreamError,
   fetchCompanionIndex,
   streamCompanionTurn,
 } from "./companion";
@@ -181,7 +182,9 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       );
 
   /** A live answer, streamed into one growing line. A draft she hands off renders as a card and
-   *  parks; failures are reported in their own words, a dropped stream marked cut off. */
+   *  parks; failures are reported in their own words, a dropped stream marked cut off. A decline
+   *  after partial text drops that line (#6214) — the start of an answer she then refused to give
+   *  is not an answer — and shows the decline the way the nothing-streamed path does. */
   const chat = async () => {
     set({ typing: true, streaming: true });
     let text = "";
@@ -197,6 +200,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       }
     };
     let failure: string | undefined;
+    let refused = false;
     try {
       await streamCompanionTurn(
         transcript(),
@@ -215,8 +219,13 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       );
     } catch (err) {
       failure = err instanceof Error ? err.message : String(err);
+      refused = err instanceof CompanionStreamError && err.refused;
     }
     set({ typing: false, streaming: false });
+    if (refused && index >= 0) {
+      set({ messages: get().messages.filter((_, i) => i !== index) });
+      index = -1;
+    }
     if (index < 0) {
       await say([answerFailed(failure)]);
       return;

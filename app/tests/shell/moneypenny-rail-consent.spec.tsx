@@ -165,4 +165,47 @@ describe("MoneypennyRail — consent and identity", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText("Moneypenny · a covered call is — cut off")).toBeInTheDocument();
   });
+
+  const chatStreaming = (frames: string) => {
+    globalThis.fetch = ((url: string) => {
+      if (url === "/api/companion") return Promise.resolve(json({ enabled: true, disclosure: "" }));
+      if (url === "/api/companion/chat")
+        return Promise.resolve(
+          new Response(frames, { status: 200, headers: { "content-type": "text/event-stream" } }),
+        );
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    }) as typeof globalThis.fetch;
+  };
+  const ask = async (question: string) => {
+    mount();
+    await act(() => useMoneypenny.getState().openRail());
+    fireEvent.change(screen.getByLabelText("Message Moneypenny"), { target: { value: question } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  };
+
+  it("drops a partial line that ends in a refusal and shows the decline alone (#6214)", async () => {
+    chatStreaming(
+      'event: delta\ndata: {"text":"Sure, the first step is"}\n\nevent: error\ndata: {"error":"that one\'s outside what I can help with","refused":true}\n\n',
+    );
+    await ask("what's a strangle?");
+    expect(
+      await screen.findByText(
+        "Moneypenny · i couldn't answer that just now: that one's outside what I can help with",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Sure, the first step is/)).not.toBeInTheDocument();
+    expect(useMoneypenny.getState().messages.some((m) => m.text.includes("Sure, the first"))).toBe(
+      false,
+    );
+  });
+
+  it("keeps a partial line marked cut off when the error frame is not a refusal", async () => {
+    chatStreaming(
+      'event: delta\ndata: {"text":"The three plays are"}\n\nevent: error\ndata: {"error":"my reply ran past its length limit"}\n\n',
+    );
+    await ask("list the plays");
+    expect(
+      await screen.findByText("Moneypenny · The three plays are — cut off"),
+    ).toBeInTheDocument();
+  });
 });

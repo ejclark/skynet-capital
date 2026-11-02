@@ -2,6 +2,7 @@ import type { AnthropicStreamEvent } from "../../src/companion/companion-anthrop
 import {
   BUDGET_SPENT_MESSAGE,
   type CompanionChatConfig,
+  type CompanionErrorDetail,
   type CompanionHandlers,
   type CompanionMessage,
   type CompanionTurnInput,
@@ -86,10 +87,12 @@ function collect(): {
   handlers: CompanionHandlers;
   texts: string[];
   errors: string[];
+  details: (CompanionErrorDetail | undefined)[];
   done: () => boolean;
 } {
   const texts: string[] = [];
   const errors: string[] = [];
+  const details: (CompanionErrorDetail | undefined)[] = [];
   let isDone = false;
   return {
     handlers: {
@@ -97,10 +100,14 @@ function collect(): {
       onDone: () => {
         isDone = true;
       },
-      onError: (e) => errors.push(e),
+      onError: (e, d) => {
+        errors.push(e);
+        details.push(d);
+      },
     },
     texts,
     errors,
+    details,
     done: () => isDone,
   };
 }
@@ -450,7 +457,7 @@ describe("a decline (stop_reason refusal) is never presented as a finished reply
     expect(c.done()).toBe(false);
   });
 
-  it("a refusal mid-stream, after partial text, ends as an error so the rail marks the line cut off", async () => {
+  it("a refusal mid-stream, after partial text, ends as a refused error so the rail drops the line (#6214)", async () => {
     const chat = createCompanionChat(
       { apiKey: "k" },
       () => Promise.resolve(toolUseReply("get_play_catalog")),
@@ -460,6 +467,7 @@ describe("a decline (stop_reason refusal) is never presented as a finished reply
     await chat({ messages: [userMsg("hi")] }, c.handlers);
     expect(c.texts).toEqual(["Sure, the first step is"]);
     expect(c.errors).toEqual([REFUSAL_MESSAGE]);
+    expect(c.details).toEqual([{ refused: true }]);
     expect(c.done()).toBe(false);
   });
 
@@ -473,6 +481,7 @@ describe("a decline (stop_reason refusal) is never presented as a finished reply
     await chat({ messages: [userMsg("hi")] }, c.handlers);
     expect(c.texts).toEqual(["The three plays are"]);
     expect(c.errors).toEqual([TRUNCATED_MESSAGE]);
+    expect(c.details).toEqual([undefined]); // kept and marked cut off, never dropped
     expect(c.done()).toBe(false);
   });
 

@@ -170,7 +170,7 @@ async function oneRound(
   // Branch on stop_reason before reading content: a decline is a 200 with empty or partial content.
   const stopReason = (res.body as { stop_reason?: string }).stop_reason;
   if (stopReason === "refusal") {
-    handlers.onError(REFUSAL_MESSAGE);
+    handlers.onError(REFUSAL_MESSAGE, { refused: true });
     return { kind: "error" };
   }
   // A cut-off reply is not an answer, and a cut-off tool_use's input may be half-written — run no
