@@ -468,6 +468,13 @@ https://claude.ai/artifact/1Rrba8RtHyqLKq5FDuCccq, `files` from `files.json`,
 `capabilities: { comments: {} }`. Each Start press arrives as a comment, "Start redesign: <id>
 (<route>)": open one redesign session for that screen with his notes pinned on it.
 
+**Rebuild the open round pages** when the page tooling changes (#6607), so a change reaches a page
+whose session is parked. On main, `npm run steer:rebuild` lists the open rounds from the screens'
+issues, renders each one it has inputs for, names each one it doesn't, and lists the commits behind
+each change. It publishes nothing: publish each entry in the plan it prints. A page built since
+#6607 carries its input (`round-input.json`, already in `files.json`); an older page with no round
+folder left reaches main at its next round.
+
 ## Opening questions — the bank round 0 asks from
 
 Questions a retro found would have saved rounds had they been asked before round 1. Round 0's `ask`
