@@ -113,8 +113,13 @@ if [ "$FRESH" -eq 1 ]; then
       [[ "$heads" == *$'\n'"refs/heads/$BRANCH-$n"$'\n'* ]]; do
       n=$((n + 1))
     done
+    # The hint is pasted as printed, so it carries every flag that shapes the branch: dropping
+    # --base here would cut a surge second rep from main, the failure --base exists to prevent.
+    again="bash scripts/wt-start.sh $BRANCH-$n --fresh"
+    [ "$BASE_REF" = main ] || again+=" --base $BASE_REF"
+    [ -z "$ISSUE" ] || again+=" --issue $ISSUE"
     echo "wt-start: $BRANCH already exists $where — --fresh never resumes a branch, and nothing was checked out." >&2
-    echo "wt-start: re-run as: bash scripts/wt-start.sh $BRANCH-$n --fresh" >&2
+    echo "wt-start: re-run as: $again" >&2
     exit 1
   fi
 fi

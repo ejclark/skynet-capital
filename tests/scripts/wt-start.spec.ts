@@ -168,7 +168,18 @@ describe("wt-start — one call from a fresh worktree to the first edit", () => 
     // sees what is left.
     const cycle = "refactor/governed-cycle-9";
     beforeAll(() => {
-      git(["update-ref", `refs/heads/${cycle}`, git(["rev-parse", "feedback/7"], origin)], origin);
+      const earlier = git(["rev-parse", "feedback/7"], origin);
+      git(["update-ref", `refs/heads/${cycle}`, earlier], origin);
+      // The first rep's branch, pushed minutes earlier: a second rep on the same file takes its slug.
+      git(["update-ref", "refs/heads/refactor/bury-x", earlier], origin);
+    });
+
+    it("keeps --base (and --issue) in the re-run line when --fresh refuses a taken name", () => {
+      const r = run(worktree(), "refactor/bury-x", "--fresh", "--base", cycle, "--issue", "5192");
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain(
+        `re-run as: bash scripts/wt-start.sh refactor/bury-x-2 --fresh --base ${cycle} --issue 5192`,
+      );
     });
 
     it("creates the new branch off origin/<base> and reports ahead/behind against it", () => {
