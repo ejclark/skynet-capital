@@ -126,17 +126,43 @@ cmd_push() {
 # Prints one word: real (success/failure/…), pending (queued/in progress), stale (latest is
 # skipped or cancelled), none (no verify check yet). "Latest" is the highest id — the order GitHub
 # created them in, which is the order branch protection reads.
-# The failed step and the first error line of a verify log, as two JSON string fields for the row
-# scripts/agent-meter.mjs reads (#6470). The step is run-p's `ERROR: "<name>" exited with` line; the
-# error line prefers a compiler or test failure over an advisory ✗, which green runs print too.
-# Quotes, backslashes and control characters are dropped so the row stays one JSON line.
+# The failed step and the failing check of a verify log, as two JSON string fields for the row
+# scripts/agent-meter.mjs reads (#6470). The step is run-p's `ERROR: "<name>" exited with` line.
+# The error is read only from a tool's own failure report, never from the first `Error:` anywhere:
+# a passing spec prints `Warning: … Error: disk full` on purpose, and that line once stood in for
+# a stale-pages failure (#6677). Three readers, the failed step's own first:
+#   rstest — ` FAIL  <spec> > <test>` (its failing-tests summary) or `### [F01] <spec> :: <test>`
+#            (the report it prints under an agent), both as `FAIL <spec> > <test>`;
+#   tsc    — `<file>(l,c): error TS<n>: …`, which it prints only when it fails;
+#   biome  — a diagnostic header whose next mark is `×` (an error), not `!` (a warning).
+# No reader matching leaves the field empty — an honest blank, not a guess. Quotes, backslashes and
+# control characters are dropped so the row stays one JSON line.
+verify_fail_rstest() {
+  sed 's/\x1b\[[0-9;]*m//g' "$1" 2>/dev/null | awk '
+    /^ FAIL  [^ ]/ { sub(/^ FAIL +/, ""); sub(/ +$/, ""); print "FAIL " $0; exit }
+    /^### \[F[0-9]+\] [^ ]/ { sub(/^### \[F[0-9]+\] /, ""); sub(/ :: /, " > "); print "FAIL " $0; exit }'
+}
+verify_fail_tsc() {
+  grep -m1 -E '^([^ ]+\([0-9]+,[0-9]+\): |[^ ]+:[0-9]+:[0-9]+ - )?error TS[0-9]+:' "$1" 2>/dev/null || true
+}
+verify_fail_biome() {
+  sed 's/\x1b\[[0-9;]*m//g' "$1" 2>/dev/null | awk '
+    /^[^ ]+ [a-z][^ ]*.*━/ { head = $0; sub(/ +(FIXABLE +)?━.*$/, "", head); next }
+    /^  × / && head != "" { print head; exit }
+    /^  ! / { head = "" }'
+}
 verify_row_fields() {
-  local log="$1" step err
+  local log="$1" step err="" kind
   # Under set -e, a grep with no match would abort the ship; an empty field is the honest answer.
   step=$(grep -m1 -o 'ERROR: "[^"]*" exited with' "$log" 2>/dev/null | sed 's/ERROR: "\([^"]*\)".*/\1/' || true)
-  err=$(grep -m1 -E 'error TS[0-9]+|AssertionError|FAIL |✖|Error:' "$log" 2>/dev/null || true)
-  [ -n "$err" ] || err=$(grep -m1 '✗' "$log" 2>/dev/null || true)
-  [ -n "$err" ] || err=$(grep -m1 'exited with' "$log" 2>/dev/null || true)
+  case "$step" in
+    typecheck*) set -- tsc rstest biome ;;
+    lint*) set -- biome tsc rstest ;;
+    *) set -- rstest tsc biome ;;
+  esac
+  for kind in "$@"; do
+    [ -n "$err" ] || err=$("verify_fail_$kind" "$log")
+  done
   err=$(printf '%s' "$err" | sed 's/\x1b\[[0-9;]*m//g' | tr -d '"\\' | tr -d '\000-\037' | cut -c1-160)
   printf '"step":"%s","error":"%s"' "$step" "$err"
 }
