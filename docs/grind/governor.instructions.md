@@ -41,7 +41,7 @@ cycle's two invariants hold by construction rather than by prose:
 The items above are the roster, not the order. Before the call, run
 `node scripts/cleanup-next.mjs --json` and list them by where each scan first appears in its `rows`.
 
-Three things the front matter cannot carry, because `grind.js` cannot enforce them:
+Four things the front matter cannot carry, because `grind.js` cannot enforce them:
 
 - **`skipEnvelopeCheck` is not emitted by `--args`** — add it by hand, with that reason. Grind's
   automatic step 0 extracts a path field from an object item; the only path these items carry is
@@ -51,6 +51,9 @@ Three things the front matter cannot carry, because `grind.js` cannot enforce th
   ratchet-down budget file, and `docs/COACHES.md`'s WIP limit counts open PRs, not dispatches. With
   one item per coach, each budget's `--update` has exactly one writer, so the drill's own ratchet
   step is safe to run in-rep — no trailing once-per-batch `--update` to remember.
+- **Under `surge`, a coach's second rep is a later run, stacked on the cycle branch.** Its item
+  carries `"base"`, which steps 2 and 5 read; from `main`, the eye would name the first rep's
+  target again. How and when the caller builds that branch is `/governor` step 2, its one home.
 - **Under `work-mode:conserve`, pass fewer items than the roster has.** Grind's own spigot check
   refuses on `grindWidth` (5 under `conserve`), which four items clear — but
   `caps.governorDispatches` is **1** at that position (`work-mode.json`), and grind does not read
@@ -80,14 +83,19 @@ runs to a green, pushed branch. Done is a branch on origin — or a stated reaso
 ## Steps
 
 Your item is a JSON object with `coach`, `eye`, `drill` and `prefix`. Read those four fields out of
-it yourself; nothing substitutes them for you.
+it yourself; nothing substitutes them for you. A surge second rep's item also carries `base`, the
+cycle branch its coach's first rep was merged into. Without one, your base is `main`.
 
 1. **WIP 1 — the cheapest skip, so it goes first.**
-   `gh pr list --state open --limit 100 --json headRefName --jq '.[].headRefName'`. If any open
+   `gh api 'repos/{owner}/{repo}/pulls?state=open&per_page=100' --jq '.[] | "\(.number) \(.head.ref)"'`
+   — REST, because gh's `pr` subcommands go through GraphQL, which a cloud session refuses with
+   HTTP 403 (governed cycle 7, 2026-11-02). If any open
    PR's head branch starts with your item's `prefix`, report `status: "skipped"` with
    `WIP 1: <branch> is already open for <coach>` and stop. Inventory is waste, and the next cycle
    recomputes this coach's target from a fresher `main` anyway.
-2. **The gate picks the target; you never do.** `git fetch origin main`, then
+2. **The gate picks the target; you never do.** `git fetch origin main`. With a `base`, also
+   `git fetch origin <base>` and then `git checkout -q --detach origin/<base>` (one call each), so
+   the eye reads the tree step 5 branches from. Then
    `node <eye> --candidate` (run it from the repo root; `npx` nothing). A `null` candidate, or no
    `candidate` key, means that budget is already met — report `status: "skipped"` with
    `<coach>: budget met, no candidate`. That is the goal, not a failure. Never fall back to
@@ -119,7 +127,8 @@ it yourself; nothing substitutes them for you.
    `target is envelope-protected` and stop. This is the check grind's step 0 could not do for you
    (see the calling convention above).
 5. **Branch and set up.** `bash scripts/wt-start.sh <prefix><slug> --fresh` (`<slug>` from the
-   target's basename, or the symbol's name for duplication) — fetch, a new branch off `origin/main`,
+   target's basename, or the symbol's name for duplication; add `--base <base>` when your item
+   carries one) — fetch, a new branch off `origin/main` (or `origin/<base>`),
    `node_modules` and one status line, in one call. Slugs repeat across cycles and athlete branches
    stay on origin, so if it refuses because the name is taken, re-run with the `-N` name it prints;
    never drop `--fresh`, which would resume that stale branch (#6272). After it, one plain command per call — never a
@@ -162,6 +171,7 @@ it yourself; nothing substitutes them for you.
   hand-picked target is the one thing the gate exists to prevent.
 - **A skip is a successful rep.** Three of the four stop conditions above (WIP, budget met,
   collision) are the cycle working as designed; report them plainly and do not retry in-run.
-- **Blocked means blocked.** Verify failing, the target already fixed on `main`, a protected path —
+- **Blocked means blocked.** Verify failing, the target already fixed on `main` (or on your
+  `base`), a protected path —
   report `status: "blocked"` with why. Never improvise past it, and never retry a failed rep inside
   the same run.

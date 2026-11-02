@@ -162,6 +162,57 @@ describe("wt-start — one call from a fresh worktree to the first edit", () => 
     });
   });
 
+  describe("--base — a surge second rep stacks on the cycle branch (governed cycle 7)", () => {
+    // A coach's first rep is merged into refactor/governed-cycle-<n>, not main. A second rep cut
+    // from main would see the first rep's target still standing; cut from the cycle branch, it
+    // sees what is left.
+    const cycle = "refactor/governed-cycle-9";
+    beforeAll(() => {
+      const earlier = git(["rev-parse", "feedback/7"], origin);
+      git(["update-ref", `refs/heads/${cycle}`, earlier], origin);
+      // The first rep's branch, pushed minutes earlier: a second rep on the same file takes its slug.
+      git(["update-ref", "refs/heads/refactor/bury-x", earlier], origin);
+    });
+
+    it("keeps --base (and --issue) in the re-run line when --fresh refuses a taken name", () => {
+      const r = run(worktree(), "refactor/bury-x", "--fresh", "--base", cycle, "--issue", "5192");
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain(
+        `re-run as: bash scripts/wt-start.sh refactor/bury-x-2 --fresh --base ${cycle} --issue 5192`,
+      );
+    });
+
+    it("creates the new branch off origin/<base> and reports ahead/behind against it", () => {
+      const wt = worktree();
+      const r = run(wt, "test/backfill-x", "--fresh", "--base", cycle);
+      expect(r.status, r.stderr).toBe(0);
+      expect(git(["symbolic-ref", "--short", "HEAD"], wt)).toBe("test/backfill-x");
+      expect(git(["log", "-1", "--format=%s"], wt)).toBe("feat: earlier work");
+      expect(r.stdout.trim()).toMatch(
+        /^wt-start: test\/backfill-x · base [0-9a-f]{8} · 0 ahead, 0 behind origin\/refactor\/governed-cycle-9 · node_modules ok · 0 uncommitted$/,
+      );
+      // No upstream: a bare `git push` must never aim at the cycle branch either.
+      const up = spawnSync("git", ["rev-parse", "--abbrev-ref", "@{u}"], { cwd: wt, env });
+      expect(up.status).not.toBe(0);
+    });
+
+    it("fails at the fetch step, checking nothing out, when the base is not on origin", () => {
+      const wt = worktree();
+      const before = git(["symbolic-ref", "--short", "HEAD"], wt);
+      const r = run(wt, "test/backfill-y", "--fresh", "--base", "refactor/governed-cycle-404");
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("failed at step 'fetch'");
+      expect(git(["symbolic-ref", "--short", "HEAD"], wt)).toBe(before);
+    });
+
+    it("refuses a base that is not a plain branch name — it is spliced into a fetch refspec", () => {
+      const wt = worktree();
+      for (const bad of ["--fresh", "+main:x", "a:b", ""]) {
+        expect(run(wt, "test/backfill-z", "--base", bad).status, bad).toBe(2);
+      }
+    });
+  });
+
   it("prints the issue's line before the status line when --issue is passed", () => {
     const wt = worktree();
     const r = run(wt, "feedback/11", "--issue", "5192");
