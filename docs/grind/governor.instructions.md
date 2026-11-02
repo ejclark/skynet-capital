@@ -83,7 +83,9 @@ Your item is a JSON object with `coach`, `eye`, `drill` and `prefix`. Read those
 it yourself; nothing substitutes them for you.
 
 1. **WIP 1 — the cheapest skip, so it goes first.**
-   `gh pr list --state open --limit 100 --json headRefName --jq '.[].headRefName'`. If any open
+   `gh api 'repos/{owner}/{repo}/pulls?state=open&per_page=100' --jq '.[] | "\(.number) \(.head.ref)"'`
+   — REST, never `gh pr list`: that one is GraphQL, which a cloud session refuses with HTTP 403
+   (governed cycle 7, 2026-11-02). If any open
    PR's head branch starts with your item's `prefix`, report `status: "skipped"` with
    `WIP 1: <branch> is already open for <coach>` and stop. Inventory is waste, and the next cycle
    recomputes this coach's target from a fresher `main` anyway.
