@@ -1,5 +1,15 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
@@ -538,6 +548,128 @@ printf '%s\\n__SHIP_HTTP__%s' "$out" "$code"
   });
 });
 
+// Boarding verifies through the queue (#6470). A copy of ship.sh runs from a scratch repo whose
+// scripts/verify-locked.sh is a stub that exits as told, so the three outcomes are proven end to end.
+describe("ship platter board — verifies through verify-locked.sh", () => {
+  const STUB_CURL = `#!/usr/bin/env bash
+method=GET; url=""
+while [ $# -gt 0 ]; do case "$1" in
+  -X) method="$2"; shift 2 ;;
+  --data-binary) cat >/dev/null; shift 2 ;;
+  -H|-w) shift 2 ;;
+  http*) url="$1"; shift ;;
+  *) shift ;;
+esac; done
+case "$method $url" in
+  "GET "*"platter/"*) out='[{"number":7}]' ;;
+  "GET "*"/pulls/7") out='{"commits":1,"head":{"sha":"'"$(git rev-parse HEAD)"'"}}' ;;
+  "GET "*) out='[]' ;;
+  *) out='{}' ;;
+esac
+printf '%s\\n__SHIP_HTTP__200' "$out"
+`;
+
+  const boardWithVerify = (rc: number) => {
+    const root = mkdtempSync(join(tmpdir(), "ship-board-verify-"));
+    const bin = join(root, "bin");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
+    writeFileSync(join(bin, "npx"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
+    const env = hermeticGitEnv({
+      GH_TOKEN: "test-token-never-used",
+      PATH: `${bin}:${process.env.PATH ?? ""}`,
+    });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+    const work = join(root, "work");
+    git(root, ["init", "-q", "--bare", "-b", "main", "origin.git"]);
+    git(root, ["clone", "-q", join(root, "origin.git"), "work"]);
+    git(work, ["config", "user.email", "spec@example.com"]);
+    git(work, ["config", "user.name", "spec"]);
+    mkdirSync(join(work, "scripts"));
+    writeFileSync(join(work, "scripts", "ship.sh"), readFileSync("scripts/ship.sh"));
+    writeFileSync(join(work, "envelope.json"), readFileSync("envelope.json"));
+    git(work, ["add", "."]);
+    git(work, ["commit", "-q", "-m", "chore: seed"]);
+    git(work, ["push", "-q", "origin", "main"]);
+    git(work, ["checkout", "-q", "-b", "fix/item"]);
+    writeFileSync(join(work, "item.txt"), "item\n");
+    git(work, ["add", "."]);
+    git(work, ["commit", "-q", "-m", "fix: the item"]);
+    git(work, ["push", "-q", "origin", "fix/item"]);
+    git(work, ["checkout", "-q", "-b", "platter/2026-11-02", "main"]);
+    git(work, ["push", "-q", "origin", "platter/2026-11-02"]);
+    // ship.sh calls its siblings by its own path, so they sit beside the copy, untracked like the stub
+    // so the board's clean-tree check still passes. The ones it runs are copied, because a script
+    // run through a link fails its own is-main check; what they import is linked.
+    const RUN_BY_SHIP = ["envelope-scan.mjs", "platter-refs.mjs", "platter-picture.mjs"];
+    for (const name of readdirSync("scripts")) {
+      if (name === "ship.sh" || name === "verify-locked.sh") continue;
+      if (RUN_BY_SHIP.includes(name))
+        copyFileSync(resolve("scripts", name), join(work, "scripts", name));
+      else symlinkSync(resolve("scripts", name), join(work, "scripts", name));
+    }
+    // The stub records that it was the one called, and with what.
+    writeFileSync(
+      join(work, "scripts", "verify-locked.sh"),
+      `#!/usr/bin/env bash\necho "$*" > "${join(root, "called")}"\nexit ${rc}\n`,
+      { mode: 0o755 },
+    );
+    const before = git(work, ["rev-parse", "HEAD"]).trim();
+    let code = 0;
+    let stderr = "";
+    try {
+      execFileSync("bash", [join(work, "scripts", "ship.sh"), "platter", "board", "fix/item"], {
+        cwd: work,
+        env,
+        stdio: "pipe",
+      });
+    } catch (error) {
+      const e = error as { status?: number; stderr?: Buffer };
+      code = e.status ?? 1;
+      stderr = e.stderr?.toString() ?? "";
+    }
+    try {
+      return {
+        code,
+        stderr,
+        called: existsSync(join(root, "called")) ? readFileSync(join(root, "called"), "utf8") : "",
+        moved: git(work, ["rev-parse", "HEAD"]).trim() !== before,
+        staged: git(work, ["diff", "--cached", "--name-only"]).trim(),
+        subject: git(work, ["log", "-1", "--format=%B"]),
+      };
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it("boards a green item and records the verify", () => {
+    const { code, called, moved, subject, stderr } = boardWithVerify(0);
+    expect(stderr).toBe("");
+    expect(code).toBe(0);
+    expect(called).toContain("--log");
+    expect(moved).toBe(true);
+    expect(subject).toMatch(/Platter-Verify: verify green /);
+  });
+
+  it("un-boards a red item and exits 1", () => {
+    const { code, stderr, moved, staged } = boardWithVerify(1);
+    expect(code).toBe(1);
+    expect(stderr).toContain("VERIFY FAILED with fix/item boarded");
+    expect(moved).toBe(false);
+    expect(staged).toBe("");
+  });
+
+  it("un-boards on a queue wait that ran out, exits 75, and does not call it red", () => {
+    const { code, stderr, moved, staged } = boardWithVerify(75);
+    expect(code).toBe(75);
+    expect(stderr).toContain("verify did not run — the queue wait ran out");
+    expect(stderr).not.toContain("VERIFY FAILED");
+    expect(moved).toBe(false);
+    expect(staged).toBe("");
+  });
+});
+
 describe("ship platter — the source contract", () => {
   const source = readFileSync("scripts/ship.sh", "utf8");
 
@@ -549,7 +681,11 @@ describe("ship platter — the source contract", () => {
   });
 
   it("verifies the union as each item boards, and un-boards the item on red", () => {
-    expect(source).toMatch(/npm run verify >\/tmp\/ship-platter-verify\.log/);
+    // Through the queue (#6470): a plain `npm run verify` here skipped it while other verifies ran.
+    expect(source).toMatch(/verify-locked\.sh" --log "\$verify_log"/);
+    expect(source).not.toMatch(/npm run verify >\/tmp\/ship-platter-verify/);
+    // A queue wait that ran out is not a red verify.
+    expect(source).toMatch(/verify did not run — the queue wait ran out/);
     expect(source).toMatch(/un-boarded it; the platter is unchanged/);
   });
 
