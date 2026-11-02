@@ -1,6 +1,7 @@
 import { claimLabel, outcomeOf, scorecardOf } from "./claim-score.js";
 import type { Conviction, ConvictionClaim } from "./conviction-record.js";
 import type { Narrowing } from "./conviction-steering.js";
+import { citeCall, fenceCall } from "./fence-studies.js";
 
 /**
  * WHAT A SCORED CLAIM IMPLIES FOR A PLAYBOOK, AS TEXT FOR A REVIEWER (#5482 slice 5, criterion 6).
@@ -50,6 +51,17 @@ export function describeNarrowing(n: Narrowing): string {
   }
 }
 
+/** The fences one claim backs on one pair: the narrowings of every entry that cites it. */
+export function fencesBackedBy(
+  conviction: Pick<Conviction, "narrowings">,
+  pair: string,
+  claim: string,
+): readonly Narrowing[] {
+  return (conviction.narrowings ?? [])
+    .filter((n) => n.pair === pair && n.fromClaims.includes(claim))
+    .flatMap((n) => n.narrow);
+}
+
 /** One proposal's stable key, the view, the claim and the pair: "ai-dip-2026-10/2a/CRWV-WHEEL". */
 export const proposalKey = (conviction: Pick<Conviction, "id">, p: Proposal): string =>
   `${conviction.id}/${p.claim}/${p.pair}`;
@@ -77,6 +89,18 @@ export function proposalsFor(conviction: Conviction): readonly Proposal[] {
   return out;
 }
 
+/** What the studies called on each fence a pass would carry (`fence-studies.ts`, #6598). */
+function studyCalls(conviction: Conviction, p: Proposal): string[] {
+  return [
+    "**What the studies called:**",
+    ...fencesBackedBy(conviction, p.pair, p.claim).map((n) => {
+      const call = fenceCall(p.pair, n.kind);
+      return `  - ${describeNarrowing(n)}: ${call ? citeCall(call) : "no study yet"}`;
+    }),
+    "",
+  ];
+}
+
 const NOT_AN_EDGE =
   "A pass is one claim surviving one falsifier on one tape. It is not an edge, it sizes nothing, and it is no reason to widen any bound.";
 
@@ -101,6 +125,7 @@ function section(conviction: Conviction, p: Proposal): string[] {
       "",
       `**What it is not:** ${NOT_AN_EDGE} Adopting it as a default is a playbook change that needs its own study.`,
       "",
+      ...studyCalls(conviction, p),
     ];
   }
   return [

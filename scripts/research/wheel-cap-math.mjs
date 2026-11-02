@@ -174,6 +174,28 @@ function maturedEpisodes(members, match, asOf) {
  *   deeper and shallower comparison caps)
  */
 export function headlineFloor({ sym, state, names, asOf }) {
+  const hit = headlineSample({ sym, state, names, asOf, pick: (e) => e.further });
+  if (!hit) return null;
+  const b = band(hit.values);
+  return {
+    p25: b.p25,
+    p50: b.p50,
+    p75: b.p75,
+    sample: hit.sample,
+    level: hit.level,
+    units: hit.units,
+  };
+}
+
+/**
+ * The ladder `headlineFloor` climbs, for any one measure: the first sample/level with MIN_UNITS
+ * independent units and at least one value, and its per-episode values (`perEpisode`, so a censored
+ * Infinity survives). Study B (`long-call-fence-math.mjs`) reads the recovery band through it.
+ *
+ * @param {object} p `headlineFloor`'s inputs, plus `pick`: the measure read off each entry
+ * @returns {{values: number[], sample: string, level: string, units: number} | null}
+ */
+export function headlineSample({ sym, state, names, asOf, pick }) {
   const levels = [
     ["exact", (e) => e.bucket === state.bucket && e.wide === state.wide && e.vix === state.vix],
     ["dd+sector", (e) => e.bucket === state.bucket && e.wide === state.wide],
@@ -188,8 +210,8 @@ export function headlineFloor({ sym, state, names, asOf }) {
       const { groups, ranges } = maturedEpisodes(members, match, asOf);
       const units = sample === "own" ? groups.length : clusterCount(ranges);
       if (units < MIN_UNITS) continue;
-      const b = band(perEpisode(groups, (e) => e.further));
-      if (b) return { p25: b.p25, p50: b.p50, p75: b.p75, sample, level, units };
+      const values = perEpisode(groups, pick);
+      if (values.length) return { values, sample, level, units };
     }
   return null;
 }
