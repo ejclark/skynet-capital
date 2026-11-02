@@ -46,6 +46,13 @@ export function headlineFloor(p: {
   names: Map<string, { sym: string; entries: FloorEntry[] }>;
   asOf: string;
 }): { p25: number; p50: number; p75: number; sample: string; level: string; units: number } | null;
+export function headlineSample<E extends Omit<FloorEntry, "further">>(p: {
+  sym: string;
+  state: { bucket: number; wide: boolean | null; vix: string | null };
+  names: Map<string, { sym: string; entries: E[] }>;
+  asOf: string;
+  pick: (e: E) => number;
+}): { values: number[]; sample: string; level: string; units: number } | null;
 
 export function seeded(seed: number): () => number;
 export function blockInterval<R>(
