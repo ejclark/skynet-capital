@@ -476,3 +476,20 @@ different series**, while month-over-month flow is nearly unchanged.
 they are left `_open_` per #2988 rather than scored early. Their Outcome cells are filled by the
 `forward-test-due` re-dispatch on 2026-11-02, from the ALFRED/FRED vintage of the revised series, or from
 Census's `currentwhl.xlsx` if FRED still lags. No score will move a position: zero capital by design.
+
+### Forward tests scored 2026-11-02 (`forward-test-due`)
+
+Scored from Census's own `revision1.xlsx` (HTTP 200, 549,815 B; Revised vs Previously Published, the 10-08
+vintage as baseline), because ALFRED/FRED were unreachable from the runner. Outcome cells only; no
+registered prediction was edited and the assessment is not re-opened.
+
+| Test | Verdict | Reading |
+|---|---|---|
+| `-2` >= 126 old inventory months restated | **pass**, zero margin | 126 months on or before 2025-07 restated, exactly the floor; reaches back to 2015-01 only |
+| `-3` June ratio within 0.03 of 1.19 | **kill** | 1.19 -> 1.24 (+0.05); on the sweep doc's kill list; sibling `wholesale-trade-2026-12-09` `-3` voids by its own terms |
+| `-5` Aug inventories restated by >= 1.0% | **pass** | $964,199M -> $1,005,340M (+4.27%) |
+
+All five tests on this ledger are now terminal (`-1` pass, `-2` pass, `-3` kill, `-4` pass, `-5` pass).
+
+**Last assessed:** 2026-11-02
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:0+","adjacentIds":["aapl-iphone-duo-launch-2026-10-23","advance-economic-indicators-2026-10-28","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","japan-cpi-2026-10-23","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-liquidity-enhancement-11-39y-2026-10-27","jgb-liquidity-enhancement-5-11y-2026-10-22","msft-def14a-2026-10-22","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","spcx-lockup-release-2026-10-22","tic-shca-annual-final-2026-10-30","treasury-20y-bond-2026-10-21","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-5y-tips-2026-10-22","treasury-7y-note-2026-10-29","treasury-buyback-20y30y-2026-10-27","treasury-buyback-tips-1y10y-2026-10-21","treasury-coupon-announcement-2026-10-22","uk-ashe-earnings-2026-10-22","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-consumer-confidence-2026-10-23","uk-cpi-2026-10-21","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30","uk-ppi-2026-10-21","uk-public-sector-finances-2026-10-21","uk-retail-sales-2026-10-23","umich-sentiment-final-2026-10-23","vix-expiration-2026-10-21"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","pce-2026-10-29"],"screenStreak":0,"blocked":[{"url":"https://fred.stlouisfed.org","status":"unreachable from runner 2026-11-02 (timeouts); scored from Census revision1.xlsx","at":"2026-11-02"}]} -->
