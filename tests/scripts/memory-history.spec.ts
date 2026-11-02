@@ -1,5 +1,5 @@
-import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "@rstest/core";
@@ -38,23 +38,6 @@ function fixture() {
   const dir = join(root, "proj", "memory");
   mkdirSync(dir, { recursive: true });
   return { root, dir };
-}
-
-/**
- * Runs body while folder takes no new entries, then gives it back. Root ignores mode bits, and cloud
- * sessions run as root: there a read-only folder still let the lock in, so this spec was red on
- * every cloud verify (found 2026-11-02, building #6668). The immutable bit binds root as well.
- */
-function sealed<T>(folder: string, body: () => T): T {
-  const root = process.getuid?.() === 0;
-  if (root) execFileSync("chattr", ["+i", folder]);
-  else chmodSync(folder, 0o555);
-  try {
-    return body();
-  } finally {
-    if (root) execFileSync("chattr", ["-i", folder]);
-    else chmodSync(folder, 0o755);
-  }
 }
 
 function writeBy(session: string, file: string) {
@@ -185,12 +168,14 @@ describe("memory history hook", () => {
   });
 
   // A filesystem failure in the lock costs a version like any other, so it must not exit 0. The lock
-  // lives beside the memory folder, so a parent that takes no new entries stops the lock and nothing else.
+  // lives beside the memory folder, so a file where the project folder belongs stops the lock and
+  // nothing before it, for every user. A read-only parent stopped it for everyone but root, and cloud
+  // sessions run as root: there the hook took the lock, so this case failed every local verify until
+  // #6699 skipped it as root. This fixture runs it as root too (governed cycle 7, 2026-11-02).
   it("exits 2 when it cannot take its turn at all", () => {
-    const { root, dir } = fixture();
-    const file = join(dir, "a.md");
-    writeFileSync(file, "one\n");
-    const fired = sealed(join(root, "proj"), () => fire(root, writeBy("s-1", file)));
+    const root = mkdtempSync(join(tmpdir(), "projects-"));
+    writeFileSync(join(root, "proj"), "a file where the project folder belongs\n");
+    const fired = fire(root, writeBy("s-1", join(root, "proj", "memory", "a.md")));
     expect(fired.status).toBe(2);
     expect(fired.stderr).toContain("a.md has no version");
   });
