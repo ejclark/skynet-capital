@@ -9,6 +9,7 @@ import {
   type StrategyId,
 } from "../playbooks/pair-table.js";
 import { capitalized } from "../ui/capitalized.js";
+import { usdWhole } from "../ui/usd-whole.js";
 import type { StrategyAllocation } from "./subscriptions-file.js";
 
 /**
@@ -33,8 +34,6 @@ import type { StrategyAllocation } from "./subscriptions-file.js";
 
 /** A conviction's check day may sit at most this far out. */
 export const MAX_CHECK_DAYS = 366;
-
-const dollars = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
 
 /** The strategy a playbook id trades, when the pair table names it. */
 export function strategyOf(playbookId: string, lookup = findPair): StrategyId | undefined {
@@ -93,16 +92,16 @@ export function allocationRefusal(write: BudgetWrite): string | undefined {
   if (!raises) return undefined;
   const strategy = STRATEGIES[pair.strategy].name;
   if (capitalAllocated === undefined) {
-    return `${capitalized(pairName(pair))} needs a budget: you gave ${strategy} ${dollars(allocation.capitalAllocated)}, and an uncapped ticker would not fit inside it.`;
+    return `${capitalized(pairName(pair))} needs a budget: you gave ${strategy} ${usdWhole(allocation.capitalAllocated)}, and an uncapped ticker would not fit inside it.`;
   }
   const others = subscriptions.filter((sub) => sub.playbookId !== playbookId);
   const { total, uncapped } = budgetedOn(others, pair.strategy, lookup);
   if (uncapped.length > 0) {
-    return `${capitalized(pairName(uncapped[0] as Pair))} is uncapped, so nothing else fits inside the ${dollars(allocation.capitalAllocated)} you gave ${strategy}; give it a budget first.`;
+    return `${capitalized(pairName(uncapped[0] as Pair))} is uncapped, so nothing else fits inside the ${usdWhole(allocation.capitalAllocated)} you gave ${strategy}; give it a budget first.`;
   }
   if (total + capitalAllocated <= allocation.capitalAllocated) return undefined;
   const left = Math.max(0, allocation.capitalAllocated - total);
-  return `That would put ${dollars(total + capitalAllocated)} on ${strategy}, over the ${dollars(allocation.capitalAllocated)} you gave it; ${dollars(left)} is left for ${pair.symbols.join(", ") || "this pair"}.`;
+  return `That would put ${usdWhole(total + capitalAllocated)} on ${strategy}, over the ${usdWhole(allocation.capitalAllocated)} you gave it; ${usdWhole(left)} is left for ${pair.symbols.join(", ") || "this pair"}.`;
 }
 
 /** The sentence an allocation is refused with — the budgets already set would not fit under it — or
@@ -120,7 +119,7 @@ export function allocationChangeRefusal(
     return `${capitalized(pairName(uncapped[0] as Pair))} is uncapped; give it a budget before setting an allocation for ${name}.`;
   }
   return total > capitalAllocated
-    ? `Its tickers' budgets already add up to ${dollars(total)}; allocate at least that to ${name}, or lower a budget first.`
+    ? `Its tickers' budgets already add up to ${usdWhole(total)}; allocate at least that to ${name}, or lower a budget first.`
     : undefined;
 }
 
