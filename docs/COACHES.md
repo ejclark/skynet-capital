@@ -198,6 +198,11 @@ waits for Eric's merge by design — so the scan skips both.
 pipeline's own arm path, which re-checks `hold-merge` and the envelope — once per head sha, with a
 `<!-- moneypenny:rearm sha= -->` marker comment as memory. It never arms directly; a second failure
 on the same head is real and stays in the scan's report.
+**Research PRs get a sweep beside it** (#5689; `scripts/moneypenny/research-pr-sweep.mjs`): an open
+`research/<id>` PR makes the research lane skip its event, so one past 6h that conflicts while `main`'s
+ledger is already assessed on or after its own is closed, naming its successor; a red one is flagged
+once per head sha; and each tick logs re-armed / closed / flagged / left, the After for the 10 found
+stuck on 2026-10-18.
 
 **The lesson drains from the capsule's close, not from a session's choice** (#4212, #4056 slice 7).
 When a `ci-failure` capsule closes as completed, the events router (`issues: closed`) runs

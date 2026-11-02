@@ -66,10 +66,12 @@ export interface AuditDeps {
   workMode?: WorkModeState | null;
   /** The instruction-drift chore's ticket intent (#5729), from `driftChoreIntent` — null for none. */
   driftChore?: AuditIntent | null;
-  /** Green, unarmed PRs whose arm job failed — the re-arm act stage (stranded-pr.mjs). */
   /** Green, armed PRs held by a cancelled suite — the update act stage (stuck-branch-update.mjs). */
   stuckBranches?: import("./stuck-branch-update.mjs").StuckBranch[];
+  /** Green, unarmed PRs whose arm job failed — the re-arm act stage (stranded-pr.mjs). */
   stranded?: import("./stranded-pr.mjs").StrandedPr[];
+  /** `research/*` PRs open past 6h (research-pr-sweep.mjs, #5689) — null when unreadable. */
+  researchPrs?: import("./research-pr-sweep.mjs").ResearchPr[] | null;
   /** Lane PRs red past the age limit, their sessions over (red-lane-pr.mjs). */
   redLanePrs?: import("./red-lane-pr.mjs").RedLanePr[];
   /** The 15-minute clock as this tick read it (clock-watch.mjs, #6470) — null when unreadable. */

@@ -28,6 +28,11 @@ export interface RedLaneIntent extends AuditIntent {
   issueBody: string;
 }
 
+/** The head's newest failed check of those that hold it, and its age in hours, or null. Pure. */
+export function redCheck(
+  checkRuns: { name: string; status?: string; conclusion?: string | null; html_url?: string }[],
+  nowMs: number,
+): { run: { name: string; html_url?: string }; hours: number } | null;
 export const RED_PR_HOURS: number;
 export const RED_CLOSE_CAP: number;
 /** The block with its next-pickup line naming the closed PR's work first. Pure. */

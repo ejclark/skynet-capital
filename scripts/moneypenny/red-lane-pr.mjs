@@ -60,8 +60,8 @@ const LANE_BOT = "skynet-envoy[bot]";
 const LANE_BRANCH = /^(?:plan|feedback)\/(\d+)$/;
 
 /** Pure: the head's newest failed check of those that hold it, or null (a re-run in flight supersedes
- *  the red). */
-function redCheck(checkRuns, nowMs) {
+ *  the red). research-pr-sweep.mjs reads red the same way. */
+export function redCheck(checkRuns, nowMs) {
   const holding = [...REQUIRED_CHECKS, ...ARM_GATE_CHECKS];
   const failed = [...latestRequired(checkRuns, holding).values()].filter(
     ({ run }) => run.status === "completed" && RED.has(run.conclusion ?? ""),

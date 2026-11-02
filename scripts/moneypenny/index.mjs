@@ -112,6 +112,11 @@ import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { closeRedLanePr } from "./red-lane-pr.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
+import {
+  closeSupersededResearch,
+  flagRedResearch,
+  reportResearchSweep,
+} from "./research-pr-sweep.mjs";
 import { mergedReference, prIsMerged, resolveShipped, routeShipped } from "./shipped.mjs";
 import { rearmStranded } from "./stranded-pr.mjs";
 import { updateStuckBranch } from "./stuck-branch-update.mjs";
@@ -1534,6 +1539,10 @@ const ONE_CALL_INTENTS = {
     return `commented on #${i.issueNumber}`;
   },
   "close-red-lane-pr": (i) => closeRedLanePr(i),
+  // #5689 — the research-PR sweep: the writes live in research-pr-sweep.mjs beside the decision.
+  "close-superseded-research": (i) => closeSupersededResearch(i),
+  "flag-red-research": (i) => flagRedResearch(i),
+  "report-research-sweep": (i) => reportResearchSweep(i),
   "edit-issue-body": (i) => {
     sh("gh", ["issue", "edit", String(i.issueNumber), "--body", i.body]);
     console.log(`· refreshed the body of #${i.issueNumber}`);
