@@ -123,7 +123,7 @@ guarded_run() {
   local woke rc
   refuse_if_lid_closed
   if [ "${launch[0]}" = taskpolicy ]; then
-    echo "verify: low priority — taskpolicy -c utility, test workers capped at $SKYNET_TEST_WORKERS, so the app in front stays responsive (#6668)." >&2
+    echo "verify: low priority — taskpolicy -c utility, test workers capped at $SKYNET_TEST_WORKERS (root) and half that (app), so the app in front stays responsive (#6668)." >&2
   fi
   woke="$(waketime)"
   run; rc=$?
