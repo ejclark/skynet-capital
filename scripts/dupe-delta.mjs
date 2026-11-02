@@ -14,7 +14,9 @@
 // eye: 18 true pastes, 0 moves, 2 homonyms (both `refuse`, one shape with two return types, which a
 // body match cannot see once types are gone). The kill rule: under 50% on a fresh sample of 20, take
 // the line back out of scripts/ship.sh and leave this as a flag. Known miss: the same constant spelled
-// two ways (`60 * 60 * 1000`, `3_600_000`) lands under sameName.
+// two ways (`60 * 60 * 1000`, `3_600_000`) lands under sameName. And a backtick in a regex literal
+// reads as a template opening, so that body runs on into the next statement: 10 on main, 2026-11-02.
+// It errs toward "different", so it can hide a copy but never invent one.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { stripTypeScriptTypes } from "node:module";
@@ -26,7 +28,12 @@ const IN_SCOPE = (path) =>
   (path.startsWith("app/") ? /\.tsx?$/ : /\.ts$/).test(path) &&
   !/\.(?:d|gen|spec|test)\.tsx?$/.test(path);
 
-/** Biome-formatted statements close at column 0. A template literal's lines do not count. */
+/**
+ * Biome-formatted statements close at column 0. A template literal's lines do not count. A column-0
+ * closer that reopens (`): T {`, `}: Props) {`, `): T =>`) is where a broken signature hands over to
+ * its body, never the next statement: ending there hashed only the parameter list, so same-signature
+ * functions with different bodies read as copies (#6720, 1,711 of 6,453 definitions on main).
+ */
 function statementAt(text, start) {
   const lines = text.slice(start).split("\n");
   let inTemplate = false;
@@ -40,7 +47,7 @@ function statementAt(text, start) {
     if (inTemplate || wasInTemplate) continue;
     if (i === 0 && /[;}]\s*(?:\/\/.*)?$/.test(line)) return line;
     if (i > 0 && closes(line)) return lines.slice(0, i + 1).join("\n");
-    if (i > 0 && /^\S/.test(line)) return lines.slice(0, i).join("\n");
+    if (i > 0 && /^[^\s})\]]/.test(line)) return lines.slice(0, i).join("\n");
   }
   return lines.join("\n");
 }

@@ -14,7 +14,7 @@
 // leaves a window of microseconds that opens only while a dead lock is being cleared.
 import { linkSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 
-/** Thrown when the lock is still held by a live writer after the wait. */
+/** Thrown when the lock is still held by a live writer, or cannot be read as a lock, after the wait. */
 export class LockBusyError extends Error {}
 
 /** A synchronous sleep, for short scripts with nothing else to do while they wait. */
@@ -86,6 +86,13 @@ export function withFileLock(lock, body, { waitMs = 10_000, deadAfterMs = 60_000
     const seen = read(lock);
     if (seen === null) {
       content = tryTake(lock); // Just released: go now, and only now, so a queue stays read-only.
+      if (content !== null) break;
+      // Taken by another waiter first, or the path is no lock at all (a folder, a dangling link, a file
+      // this user cannot read): that one answers EEXIST and null forever, so it needs its own deadline.
+      if (Date.now() > deadline) {
+        throw new LockBusyError(`${lock} could not be taken or read as a lock after ${waitMs} ms`);
+      }
+      pause(10 + Math.random() * 40);
     } else if (lockIsDead(seen, deadAfterMs)) {
       clearDead(lock, seen);
     } else if (Date.now() > deadline) {

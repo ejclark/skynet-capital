@@ -78,7 +78,13 @@ checks all four."
   `grind.js` has no filesystem or `gh` access of its own (same reason the chore manifests below do).
   An unreadable dial reads as `conserve` inside the gate rather than a halt, so a GitHub blip
   narrows a batch instead of stopping the repo; a *malformed* control config exits 1 there and
-  throws here, because a broken control must never read as a quiet "go".
+  is refused here, because a broken control must never read as a quiet "go".
+  **A run Eric asked for gets through** with `force: true` (#6470), the override every other
+  scripted workflow takes. Only his own message, in a session he opened by hand, licenses it; never
+  a spawned session, a lane, a subagent or another workflow. It passes every refusal the gate gives,
+  an unreadable dial included, and logs what it passed and the price; each refusal names that price
+  first, so the ask can carry it. The ledger records `force: true`, as a record for an honest
+  caller rather than a check. Only the value `true` counts, and `MAX_ITEMS` still holds.
 - **An envelope check runs as step 0, on by default.** Every item goes through `node
   scripts/envelope-scan.mjs --check <path>` before your own steps run. It is a `prompt` step, not
   `script` — `--check` always exits 0 and returns descriptive JSON, so the dispatched agent reads

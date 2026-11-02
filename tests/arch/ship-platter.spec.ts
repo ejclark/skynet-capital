@@ -660,10 +660,11 @@ printf '%s\\n__SHIP_HTTP__200' "$out"
     expect(staged).toBe("");
   });
 
-  it("un-boards on a queue wait that ran out, exits 75, and does not call it red", () => {
+  // 75 is no result: the queue wait ran out, the lid was closed, or the machine slept mid-run (#6668).
+  it("un-boards on no verify result (exit 75), and does not call it red", () => {
     const { code, stderr, moved, staged } = boardWithVerify(75);
     expect(code).toBe(75);
-    expect(stderr).toContain("verify did not run — the queue wait ran out");
+    expect(stderr).toContain("no verify result — the queue wait ran out, the lid was closed");
     expect(stderr).not.toContain("VERIFY FAILED");
     expect(moved).toBe(false);
     expect(staged).toBe("");
@@ -684,8 +685,8 @@ describe("ship platter — the source contract", () => {
     // Through the queue (#6470): a plain `npm run verify` here skipped it while other verifies ran.
     expect(source).toMatch(/verify-locked\.sh" --log "\$verify_log"/);
     expect(source).not.toMatch(/npm run verify >\/tmp\/ship-platter-verify/);
-    // A queue wait that ran out is not a red verify.
-    expect(source).toMatch(/verify did not run — the queue wait ran out/);
+    // No verify result (exit 75) is not a red verify.
+    expect(source).toMatch(/ship platter: no verify result — the queue wait ran out/);
     expect(source).toMatch(/un-boarded it; the platter is unchanged/);
   });
 

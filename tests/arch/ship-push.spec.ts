@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import {
   chmodSync,
+  copyFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -211,4 +212,68 @@ describe("ship push — a refused push prints the remote's reason", () => {
     expect(r.stderr).toContain("pre-receive says no");
     expect(r.stderr).not.toContain("lacks the `workflows` permission");
   });
+});
+
+/**
+ * A PRE-PUSH REFUSAL IS AN ANSWER, NOT A BLIP (#6668). A hook's refusal reaches `ship push` as a
+ * failed push with no "[rejected]", so it was retried four times, and each retry ran the hook again:
+ * on a red tree pushed by `ship.sh open --no-verify`, five full verifies back to back, the run of
+ * verifies that froze the laptop on 2026-11-01. The real hook and verify-locked.sh, a verify that
+ * fails and counts its runs, and a bare origin.
+ */
+describe("ship push — a refused pre-push hook is not retried", () => {
+  it("runs the hook's verify once, shows why, and stops", () => {
+    const root = mkdtempSync(join(tmpdir(), "ship-push-hook-"));
+    const work = join(root, "work");
+    const runs = join(root, "runs");
+    const env = hermeticGitEnv({
+      GH_TOKEN: "test-token-never-used",
+      RUNS: runs,
+      SKYNET_VERIFY_LOCKED: "",
+    });
+    const git = (args: string[]) => execFileSync("git", args, { cwd: work, env, stdio: "pipe" });
+    try {
+      execFileSync("git", ["init", "-q", "--bare", "-b", "main", join(root, "origin.git")], {
+        env,
+        stdio: "pipe",
+      });
+      mkdirSync(join(work, "scripts"), { recursive: true });
+      mkdirSync(join(work, ".husky"));
+      copyFileSync(resolve(".husky/pre-push"), join(work, ".husky", "pre-push"));
+      copyFileSync(resolve("scripts/verify-locked.sh"), join(work, "scripts", "verify-locked.sh"));
+      writeFileSync(
+        join(work, "package.json"),
+        JSON.stringify({ scripts: { verify: 'echo ran >> "$RUNS"; exit 1' } }),
+      );
+      writeFileSync(runs, "");
+      git(["init", "-q", "-b", "main"]);
+      git(["config", "user.email", "spec@example.com"]);
+      git(["config", "user.name", "spec"]);
+      git(["remote", "add", "origin", join(root, "origin.git")]);
+      git(["add", "-A"]);
+      git(["commit", "-q", "-m", "chore: seed"]);
+      // husky's hooks have no shebang; its wrapper runs them with sh, and so does this one.
+      const hook = join(work, ".git", "hooks", "pre-push");
+      writeFileSync(hook, '#!/bin/sh\nexec sh .husky/pre-push "$@"\n');
+      chmodSync(hook, 0o755);
+      let code = 0;
+      let stderr = "";
+      try {
+        execFileSync("bash", [resolve("scripts/ship.sh"), "push", "main"], {
+          cwd: work,
+          env,
+          stdio: "pipe",
+        });
+      } catch (error) {
+        const e = error as { status?: number; stderr?: Buffer };
+        code = e.status ?? 1;
+        stderr = e.stderr?.toString() ?? "";
+      }
+      expect(code).toBe(1);
+      expect(stderr).toContain("pre-push: refused");
+      expect(readFileSync(runs, "utf8").trim().split("\n")).toEqual(["ran"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 120_000);
 });

@@ -1844,6 +1844,14 @@ names the exclusion). Worth doing only if a second instance turns up; noted so t
 recognised as a pattern rather than re-diagnosed.
 _(src: Claude · while: writing the #4477 fix's falsifier spec)_
 
+### Most of a verify's peak memory is its first half-minute
+Measured 2026-11-02 (#6668): one verify peaked at 4.8 GiB 28 s in, when both tsc runs, biome and
+both test runners' builds overlap, then held near 2 GiB for the remaining four minutes of tests.
+`run-p` starts all five at once. Starting the type checks after the tests have their workers, or
+the reverse, could cut the burst by about 2 GiB without touching the worker cap, at some cost in
+wall time. Worth a measured try if the laptop still strains with the cap in place.
+_(src: Claude · while: measuring a verify to set #6668's worker cap)_
+
 ## The chat/companion feature will likely change alongside orchestration work
 
 Eric, on why feedback filing is quiet (#3818 open question 4): "no one is really using the app —
