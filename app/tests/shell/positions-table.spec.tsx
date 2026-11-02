@@ -8,8 +8,8 @@ import { PositionsTable } from "../../src/shell/positions-table";
 
 /**
  * The desk table's ranked columns (#5071; round 2 of #5037, Q2 R2, Eric's pick). Beside the tower
- * the table gets ~806px, and six columns fit it: Position · θ · Δ · Value / Today · P/L / Return ·
- * Model projects · open. WHEN a position is drawn on the desk, THE row SHALL carry the phone card's
+ * the table gets ~806px, and five columns fit it: Position · θ · Δ · Value / Today · P/L / Return ·
+ * open. WHEN a position is drawn on the desk, THE row SHALL carry the phone card's
  * row spec as two-line cells; the rest of the columns SHALL open in the row. Which columns show at a
  * given width is CSS (a container query) and is measured by `e2e/positions-columns.spec.ts`.
  *
@@ -141,7 +141,7 @@ const cell = (symbol: string, column: string) =>
   row(symbol).querySelector(`td.pos-col-${column}`) as HTMLElement;
 
 describe("PositionsTable — the ranked columns (#5071)", () => {
-  it("heads six columns in rank order, then the two a wide table adds before the opener", () => {
+  it("heads five columns in rank order, then the two a wide table adds before the opener", () => {
     renderTable();
     const heads = [...document.querySelectorAll("thead th")].map((th) => th.className);
     expect(heads.map((c) => c.replace(/^num /, ""))).toEqual([
@@ -149,7 +149,6 @@ describe("PositionsTable — the ranked columns (#5071)", () => {
       "pos-col-greeks",
       "pos-col-value",
       "pos-col-pl",
-      "pos-col-model",
       "pos-col-event",
       "pos-col-best",
       "pos-col-open",
@@ -168,7 +167,6 @@ describe("PositionsTable — the ranked columns (#5071)", () => {
     expect(head("greeks")).toBe("θ · Δ");
     expect(head("value")).toBe("Value Today");
     expect(head("pl")).toBe("P/L Return");
-    expect(head("model")).toBe("Model projects");
   });
 
   it("names the row's opener, so the empty header still says what the column is", () => {
@@ -273,12 +271,10 @@ describe("PositionsTable — the ranked columns (#5071)", () => {
     for (const r of [SOLD_PUT, "CRWV", "NVDA"]) expect(seen(row(r))).not.toMatch(/-\$|-\d/);
   });
 
-  it("holds Model projects at a dash until the guidance model supplies one (#4952)", () => {
+  it("keeps no column for a figure nothing supplies yet (#5961: Model projects waited on #4952)", () => {
     renderTable();
-    for (const r of [SOLD_PUT, "CRWV", "NVDA"]) {
-      expect(seen(cell(r, "model"))).toBe("—");
-      expect(cell(r, "model")).toHaveTextContent("no projection yet");
-    }
+    expect(document.querySelector(".pos-col-model")).toBeNull();
+    expect(screen.queryByText("Model projects")).not.toBeInTheDocument();
   });
 
   it("keeps the closed row to its columns: no Close, no buys, no Guidance until it opens", () => {
@@ -318,10 +314,9 @@ describe("PositionsTable — the rest opens in the row (#5071)", () => {
     renderTable();
     open(PUT.display);
     expect(fact("θ · Δ")).toBe("θ earns $11/day · Δ +$40 per $1");
-    expect(fact("Model projects")).toBe("—");
     // Each sits in a block the container query hides while its own column is showing.
     expect(opened().querySelector(".pos-more-greeks dt")).toHaveTextContent("θ · Δ");
-    expect(opened().querySelector(".pos-more-model dt")).toHaveTextContent("Model projects");
+    expect(fact("Model projects")).toBeUndefined();
   });
 
   it("closes again from the same chevron", () => {

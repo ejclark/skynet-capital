@@ -220,6 +220,12 @@ makes the system cheap to extend — including by an agent reading it fresh.
 - `npm run lint:fix` and `npm test` are the whole inner loop. Fast feedback, no ceremony.
 - Errors are values where it matters: brokers return a rejected `OrderResult` with a `reason`
   rather than throwing, so callers handle outcomes uniformly.
+- **A member surface never carries a placeholder for work that is not `ready`.** A cell, column,
+  field or glossary term whose only content is a dash "until #N lands" is residue of an unbuilt
+  plan: cut it and bank the shape in `docs/PATTERNS.md` (*declined here*). The two honest waits
+  are an empty state keyed to *data* (it says what fills it) and a fog door
+  (`docs/FOG-OF-WAR.md`: a capability withheld behind an earnable rung, named). Neither cites an
+  issue number in member copy. First instance: Model projects, #5961.
 
 ## Change communication — commits & PRs are documents
 

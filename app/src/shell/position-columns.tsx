@@ -15,11 +15,12 @@ import {
 /**
  * THE DESK TABLE'S RANKED COLUMNS (#5071; round 2 of #5037, Q2 R2 — Eric's Build A: "ranked
  * columns, the rest opens in the row, no sideways scroll"). Beside the tower the stage is ~806px,
- * and six columns fit it: Position 236 · θ · Δ 150 · Value 118 · P/L 118 · Model projects 140 ·
- * open 44. The column set follows the TABLE'S OWN WIDTH, never the window
- * (`positions-columns.css`, a container query on `.blotter-scroll`): Moneypenny's rail or the
- * tower takes room the window doesn't know about. Narrower, Model projects and then θ · Δ step
- * into the opened row; wider, Next event and then Best / worst join as columns. Everything else
+ * and five columns fit it: Position 376 · θ · Δ 150 · Value 118 · P/L 118 · open 44. The column
+ * set follows the TABLE'S OWN WIDTH, never the window (`positions-columns.css`, a container query
+ * on `.blotter-scroll`): Moneypenny's rail or the tower takes room the window doesn't know about.
+ * Narrower, θ · Δ steps into the opened row; wider, Next event and then Best / worst join as
+ * columns. (Model projects left the table in #5961: a dash waiting on an unready plan, #4952 —
+ * #5167's IA call puts a projection in the opened row when one exists.) Everything else
  * (cost, expiry, the buys, Close) opens in the row (`position-row-open.tsx`).
  *
  * The cells are the phone card's row spec (`position-row-spec.tsx`) laid out as two-line pairs:
@@ -28,17 +29,8 @@ import {
  * @category trading
  */
 
-/** Left to right. `open` is the row's disclosure; the four optional ones come and go by width. */
-export const POS_COLUMNS = [
-  "pos",
-  "greeks",
-  "value",
-  "pl",
-  "model",
-  "event",
-  "best",
-  "open",
-] as const;
+/** Left to right. `open` is the row's disclosure; the three optional ones come and go by width. */
+export const POS_COLUMNS = ["pos", "greeks", "value", "pl", "event", "best", "open"] as const;
 export type PosColumn = (typeof POS_COLUMNS)[number];
 
 /** A full-width row under a position (its guidance line, its opened row) spans every column. */
@@ -73,11 +65,6 @@ export function PositionsHeaderRow(): ReactElement {
       </th>
       <th className={`num ${colClass("pl")}`}>
         <Pair top={ROW_KEY.pl} under={ROW_KEY.ret} />
-      </th>
-      <th className={`num ${colClass("model")}`}>
-        <span className="pos-cell">
-          <GlossaryTerm term="projection" />
-        </span>
       </th>
       <th className={colClass("event")}>
         <span className="pos-cell">Next event</span>
@@ -151,19 +138,6 @@ export function PlCell({ position }: { readonly position: DeskPosition }): React
         </span>
       )}
     </td>
-  );
-}
-
-/** Model projects (#4952 supplies it): a dash until the guidance model has a projection for the
- *  position, never a made-up figure. When it lands it is drawn as a projection, not a fact. */
-export function ProjectionContent(): ReactElement {
-  return (
-    <>
-      <span className="muted" aria-hidden="true">
-        —
-      </span>
-      <span className="visually-hidden">no projection yet</span>
-    </>
   );
 }
 
