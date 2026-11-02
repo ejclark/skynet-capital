@@ -16,3 +16,6 @@ export function rstestFailures(
   text: string,
   prefix?: string,
 ): { failed: number; files: number; lines: string[] } | null;
+export const PAGES_SCRIPT: string;
+export function touchesPages(paths: string[]): boolean;
+export function pagesRegenerated(text: string): string[];

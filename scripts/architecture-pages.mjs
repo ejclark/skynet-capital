@@ -297,12 +297,14 @@ function main() {
   const check = process.argv.includes("--check");
   const pages = renderPages(readSource());
   mkdirSync(OUT, { recursive: true });
+  // Only a page that differs is written, so write mode can name what it regenerated —
+  // `npm run check` repeats that list, the way it repeats biome's fix count (#6684).
   const drift = [];
   for (const [file, content] of Object.entries(pages)) {
     const path = join(OUT, file);
-    if (check) {
-      if (!existsSync(path) || readFileSync(path, "utf8") !== content) drift.push(file);
-    } else writeFileSync(path, content);
+    if (existsSync(path) && readFileSync(path, "utf8") === content) continue;
+    drift.push(file);
+    if (!check) writeFileSync(path, content);
   }
   const handKept = new Set(HAND_KEPT_PAGES.map((p) => p.file));
   const stale = readdirSync(OUT).filter(
@@ -319,7 +321,9 @@ function main() {
     return;
   }
   console.log(
-    `architecture-pages: wrote ${Object.keys(pages).length} pages to docs/architecture/.`,
+    drift.length
+      ? `architecture-pages: regenerated ${drift.length} page(s) in docs/architecture/: ${drift.join(", ")}`
+      : `architecture-pages: ✓ ${Object.keys(pages).length} pages already match source/.`,
   );
 }
 
