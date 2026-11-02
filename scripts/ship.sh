@@ -1111,13 +1111,13 @@ platter_board_item() {
     echo "ship platter: verifying the union with $item boarded…"
     # Through verify-locked.sh (#5548), as `ship open` does: queued behind any other verify in this
     # checkout, so boarding no longer skips the queue (#6470). The log is per-process for the same
-    # reason as open's. 75 is the queue's wait running out: nothing ran, so the item is un-boarded
-    # without calling it red.
+    # reason as open's. 75 is no result (the queue's wait ran out, the lid was closed, or the machine
+    # slept mid-run, #6668), so the item is un-boarded without calling it red.
     local verify_log="/tmp/ship-platter-verify.$$.log" verify_rc=0
     bash "$(dirname "$0")/verify-locked.sh" --log "$verify_log" || verify_rc=$?
     if [ "$verify_rc" = 75 ]; then
       git reset --hard --quiet "$before"
-      echo "ship platter: verify did not run — the queue wait ran out. $item is not boarded; the platter is unchanged. Run this again." >&2
+      echo "ship platter: no verify result — the queue wait ran out, the lid was closed, or the machine slept mid-run (the verify: line above says which). $item is not boarded; the platter is unchanged. Run this again." >&2
       exit 75
     fi
     [ "$verify_rc" = 0 ] || {

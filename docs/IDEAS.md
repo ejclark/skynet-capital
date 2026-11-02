@@ -1830,14 +1830,6 @@ names the exclusion). Worth doing only if a second instance turns up; noted so t
 recognised as a pattern rather than re-diagnosed.
 _(src: Claude · while: writing the #4477 fix's falsifier spec)_
 
-### `withFileLock` waits forever when its lock path exists but cannot be read
-Found 2026-11-02 while building #6668. In `scripts/file-lock.mjs`, a lock path that exists but
-reads as nothing (a folder, a dangling link, a file this user cannot read) makes `tryTake` answer
-EEXIST and `read` answer null, and the `seen === null` branch retries at once with no deadline:
-a busy loop that never throws `LockBusyError`. No incident yet; the memory hooks are the callers.
-The fix is a deadline check in that branch and a spec with a folder at the lock path: filed as #6706.
-_(src: Claude · while: making the memory-history spec bind as root for #6668)_
-
 ### Most of a verify's peak memory is its first half-minute
 Measured 2026-11-02 (#6668): one verify peaked at 4.8 GiB 28 s in, when both tsc runs, biome and
 both test runners' builds overlap, then held near 2 GiB for the remaining four minutes of tests.
