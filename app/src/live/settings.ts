@@ -20,8 +20,9 @@ export interface OwnedAccount {
 }
 
 /** Who made a change, as the server tells it — never an email: the viewer, another owner of the
- *  bot, the one-time copy of the bots app's own setting (#4535 slice 4c), or the app moving a
- *  conviction pointer by its own rule (#5482). */
+ *  bot, the one-time copy of the bots app's own setting (#4535 slice 4c), or the app acting by its
+ *  own rule: moving a conviction pointer (#5482) or dropping a subscription no registry entry knows
+ *  (#6599). */
 export type ChangeAuthor =
   | "you"
   | "another owner"
