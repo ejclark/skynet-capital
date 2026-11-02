@@ -190,3 +190,67 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.88,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-02, D+3).** Scored from sourced web research and a live pull of the ^GSPC/^VIX/CL=F/^TNX
+daily series (Yahoo chart API, 2026-11-02). No earnings/intraday instruments apply (geopolitical kind, no
+symbols keyed), so the cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) had nothing to clear. state.gov answered 202 (bot challenge) to every
+fetch, so the outcome text itself was **not** read: every outcome fact below is secondary (AP via
+NewsCord, Seoul Economic Daily, CGTN, Meduza, WABE headlines, Marietta Daily Journal).
+
+**Verdict: the call held — a read, never a trade — and the one question it asked has an answer: no joint
+text.** The meeting convened on its dates (Fri 10-30 and Sat 10-31, Atlanta, Rubio chairing), ended with
+**no joint communiqué**, and State issued only a **chair's statement** that, per AP, had "no mention of any
+agreements reached" and listed priorities (energy and food security, freedom of navigation; the Strait of
+Hormuz and Bab al-Mandeb "must remain secure and open to commerce"). Seoul Economic Daily reports the
+decision to issue a chair's statement "had been made early on".
+
+| Claim from the stance | Result | Evidence |
+|---|---|---|
+| Date and venue are real (state.gov Media Notes) | **Held** | Meeting took place 10-30/31 in Atlanta (PBS NewsHour, CGTN 11-01, Seoul Economic Daily 11-01). Stays `estimate` on the schema gap, not on doubt. |
+| Read flag: joint text, or chair's statement with a dissent footnote | **Answered: chair's statement, no joint text** | Whether the statement carries a *member dissent footnote* was not established: the text was not reached, and the Marietta Daily Journal piece mentions only a footnote defining "Super Intelligence" as "artificial intelligence" for Australia, India and Japan, with no objector named. |
+| Upgrade flag: a principal-level US–China or US–Iran meeting on the margins | **Not tripped** | Reported bilaterals were Saudi (Faisal bin Farhan), Turkey (Fidan), Australia, India, Japan. No Wang Yi–Rubio or Wang Yi–Lavrov meeting found; China's level of representation was not found. |
+| A foreign-ministers meeting names no oil, sanctions or tariff action | **Held** | No such action announced. A $2.1 billion Patriot sale to Ukraine was approved the same week — an arms sale, not a sanction. A separate AI statement came from a US-aligned subset, with no export controls. |
+| Never attribute 10-30 or 11-02 tape to Atlanta | **Held** | See the tape below. |
+| No tracked symbol carries exposure | **Held** | Nothing on the reported agenda touched a name in this book. |
+
+**What happened at the table.** Russia's war in Ukraine was the stated main obstacle; Lavrov attended after
+Rubio's pre-meeting doubt, and several Europeans (Australia and Canada too, per a search-engine summary of the wire
+coverage; the Seoul Economic Daily names only Europeans) refused to be photographed with him, so State **cancelled the group photo**. Other
+no-consensus items: the US–Israel–Iran conflict, US tariff policy, supply chains, the South China Sea, AI,
+and South Africa's exclusion. Talks "stopped short of calling out China directly" on export restrictions.
+Rubio said Russia had not yet confirmed whether Putin attends the Miami summit he has been invited to.
+
+**The tape, re-pulled (Yahoo daily).** SPX **7,720.39** (10-29) → **7,580.07** (10-30, −1.82%); VIX **17.20** →
+**19.42**; WTI **$102.00** → **$104.12** (10-30) → **$102.47** (11-02, a partial session at the time of
+this pull); 10-year **4.99%** → **4.93%** (10-30). The 10-30 drop has a named, non-Atlanta cause: a tech
+sell-off led by Intel (−29%) and Amazon results/outlook, the worst S&P 500 and Nasdaq day since June (Nasdaq
+−2.86%), on the Portfolio Terminal and Yahoo coverage. Oil rose Friday and eased Monday, the opposite of a
+Hormuz-language shock. The 11-02 SPX/VIX closes did not exist at pull time, so the Monday gap into ISM
+manufacturing is **not scored**; the registered kill switch for the tape ("a Monday move in an asset class a
+statement named, beyond the ISM-day norm") cannot trip on the evidence in hand, and nothing in the 10-30
+data needs the meeting to explain it.
+
+**Forward test.** `FT-g20-foreign-ministers-atlanta-2026-10-30-1` scored **pass on its core claim** (no joint
+communiqué or declaration was published; the outcome was a chair's statement) with the dissent-footnote
+clause **unverified** — see its fragment.
+
+**Cross-ledger flag, not edited** — [`g20-miami-2026-12-14`](g20-miami-2026-12-14.md) and
+[`g20-sherpa-iv-miami-2026-12-10`](g20-sherpa-iv-miami-2026-12-10.md) should absorb this at their next pulse:
+all three ministerials this presidency has now closed (Asheville chair's statement with China dissent;
+Bangkok no statement; Atlanta chair's statement, no joint text) without a joint communiqué endorsed by
+everyone present, which is the base rate behind a December declaration. The Putin invitation to Miami is
+unconfirmed on the Russian side.
+
+**Honest limits of this close-out.**
+- **No primary read:** the chair's statement text was not reached; its wording and any reservations are
+  press summaries, and press accounts differ on small points.
+- **Wang Yi attendance and level** were not found in any source reached.
+- **The Monday 11-02 session was incomplete** when the series was pulled; WTI's 11-02 figure is a partial.
+- **No process change proposed:** the screen could not have caught a diplomatic format outcome; this event's
+  one read-flag was answerable only by a session, which is what a close-out is for.
+
+**Last assessed:** 2026-11-02
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
