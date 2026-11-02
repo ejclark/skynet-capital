@@ -235,7 +235,42 @@ describe("ship open — a failed local verify lands in the meter's log with its 
     );
     process.kill(-(holder.pid as number), "SIGKILL");
     expect(r.status).toBe(75);
-    expect(r.stdout).toContain("verify did not run");
+    expect(r.stdout).toContain("no verify result");
+    expect(readFileSync(logged, "utf8")).toBe(rowsBefore);
+  }, 60_000);
+
+  // #6668: a closed lid slept the laptop 13 minutes into a verify, which then failed on 5 s timeouts
+  // its specs passed in seconds afterwards. That run says nothing about the branch, so it is no row.
+  it("does not count a verify the machine slept through: exit 75, no row", () => {
+    const logged = join(dir, "runs", "ship-verify.jsonl");
+    const rowsBefore = readFileSync(logged, "utf8");
+    const sleepy = join(dir, "sleepy-bin");
+    const wake = join(dir, "waketime");
+    mkdirSync(sleepy, { recursive: true });
+    writeFileSync(wake, "1793627758\n");
+    // macOS's sysctl, and a verify during which the machine slept and woke: the waketime moves.
+    writeFileSync(
+      join(sleepy, "sysctl"),
+      `#!/bin/sh\n[ "$1" = kern.waketime ] || exit 1\necho "kern.waketime: { sec = $(cat "${wake}"), usec = 179693 } Mon Nov  2 07:55:58 2026"\n`,
+    );
+    writeFileSync(
+      join(sleepy, "npm"),
+      `#!/bin/sh\n[ "$1 $2" = "run verify" ] && echo 1793628420 > "${wake}"\necho 'ERROR: "test" exited with 1.'\nexit 1\n`,
+    );
+    chmodSync(join(sleepy, "sysctl"), 0o755);
+    chmodSync(join(sleepy, "npm"), 0o755);
+    const r = spawnSync(
+      "bash",
+      [resolve("scripts/ship.sh"), "open", "test: spec", "--body-file", join(dir, "body.md")],
+      {
+        cwd: work,
+        env: { ...env(), PATH: `${sleepy}:${env().PATH}`, SKYNET_VERIFY_LOCKED: "" },
+        encoding: "utf8",
+      },
+    );
+    expect(r.status).toBe(75);
+    expect(r.stderr).toContain("slept");
+    expect(r.stdout).toContain("no verify result");
     expect(readFileSync(logged, "utf8")).toBe(rowsBefore);
   }, 60_000);
 });
