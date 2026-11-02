@@ -51,12 +51,20 @@ export function stateBlockOf(comments = []) {
  * the paragraph taken as the text.
  */
 export function nextPickupOf(blockBody) {
-  const m = /\*\*next pickup\b[:*\s]*([\s\S]*?)(?:\n\s*\n|$)/i.exec(String(blockBody ?? ""));
-  if (!m) return null;
-  const text = m[1].replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+  const text = pickupLineOf(blockBody);
   // "Next pickup: none — this closes the issue" names no slice. Matched at the START only: the
   // last slice's pickup line routinely ENDS with "this slice closes this issue", which is a slice.
   return !text || NO_PICKUP.test(text) ? null : text;
+}
+
+/**
+ * The next-pickup line's text as written, `none …` included, or `null` when the block has no such
+ * line. `nextPickupOf` is this minus the lines that name nothing; the pickup hold reads the rest of
+ * a `none` line for the day its wait ends (#5482).
+ */
+export function pickupLineOf(blockBody) {
+  const m = /\*\*next pickup\b[:*\s]*([\s\S]*?)(?:\n\s*\n|$)/i.exec(String(blockBody ?? ""));
+  return m ? m[1].replace(/\*\*/g, "").replace(/\s+/g, " ").trim() : null;
 }
 
 /**

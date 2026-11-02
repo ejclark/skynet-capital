@@ -779,3 +779,89 @@ describe("the writes — REST, and in an order that cannot storm", () => {
     expect(() => closeProvenCapsule(proven, { run: failing })).toThrow("HTTP 404");
   });
 });
+
+describe("a red PR's capsule ends with the PR (#6605)", () => {
+  const RED_PR_BODY = [
+    "**`integration tests` failed on PR #6605, and the session that opened it has ended.**",
+    "",
+    "| | |",
+    "|---|---|",
+    "| **Workflow** | Pipeline |",
+    "| **Job** | `integration tests` |",
+    "| **Failing step** | Build app/ and run the e2e suite |",
+    "| **Run** | [1](https://x/1) |",
+    "| **PR** | #6605 |",
+  ].join("\n");
+  const redPrCapsule = (overrides: Partial<Capsule> = {}) =>
+    capsule({ title: "[ci] Pipeline — PR #6605 is red", body: RED_PR_BODY, ...overrides });
+
+  it("closes once the PR has closed, merged or not, and says which", () => {
+    const merged = capsuleIntents({
+      capsules: [redPrCapsule({ redPr: { number: 6605, state: "closed", merged: true } })],
+    })[0];
+    expect(merged?.kind).toBe("close-proven-capsule");
+    expect(merged?.body).toContain("#6605 merged");
+    expect(merged?.body).toContain(PROVEN_MARKER);
+    const closed = capsuleIntents({
+      capsules: [redPrCapsule({ redPr: { number: 6605, state: "closed", merged: false } })],
+    })[0];
+    expect(closed?.body).toContain("#6605 was closed");
+  });
+
+  it("takes needs-eric off with it: the decision was about a PR that is gone", () => {
+    const [intent] = capsuleIntents({
+      capsules: [
+        redPrCapsule({
+          labels: ["ci-failure", "needs-eric"],
+          redPr: { number: 6605, state: "closed", merged: false },
+        }),
+      ],
+    });
+    expect(intent?.clearNeedsEric).toBe(true);
+  });
+
+  it("stays open while the PR is open, and leaves a capsule a person reopened alone", () => {
+    const open = redPrCapsule({ redPr: { number: 6605, state: "open", merged: false } });
+    expect(capsuleIntents({ capsules: [{ ...open, hasLinkedPr: true }] })).toEqual([]);
+    const reopened = redPrCapsule({
+      comments: [PROVEN_MARKER],
+      hasLinkedPr: true,
+      redPr: { number: 6605, state: "closed", merged: false },
+    });
+    expect(capsuleIntents({ capsules: [reopened] })).toEqual([]);
+  });
+
+  it("never reads main's runs for it: integration tests also run there, and prove nothing here", () => {
+    const io = fakeRest({
+      "issues?state=open&labels=ci-failure": [
+        {
+          number: 700,
+          title: "[ci] Pipeline — PR #6605 is red",
+          body: RED_PR_BODY,
+          created_at: hoursAgo(2),
+          labels: [{ name: "ci-failure" }],
+        },
+      ],
+      "issues/700/comments": [],
+      "pulls/6605": { number: 6605, state: "open", merged: false },
+    });
+    const [gathered] = gatherCapsules(NOW, io);
+    expect(gathered?.redPr).toEqual({ number: 6605, state: "open", merged: false });
+    expect(gathered?.recentRuns).toBeUndefined();
+  });
+
+  it("reports the close as what happened, not as a job passing again", () => {
+    const said = closeProvenCapsule(
+      {
+        kind: "close-proven-capsule",
+        issueNumber: 700,
+        title: "[ci] Pipeline — PR #6605 is red",
+        body: "b",
+        said: "closed with #6605",
+      },
+      { run: () => "" },
+    );
+    expect(said).toContain("closed with #6605");
+    expect(said).not.toContain("passing again");
+  });
+});

@@ -522,6 +522,9 @@ its next slice itself):
   remains), so it stops waking empty sessions; editing the line to name a slice is the wake, on the
   next push. A line that does not *start* with `none` reads as a slice. A wait on another plan's
   slice that has its own issue is a native blocked-by link instead, which lifts itself on close.
+  **A wait on a day is `none until <YYYY-MM-DD> — <why>`, and that day lifts it** (#5482): the hold
+  ends at the start of that UTC day, so the sweep starts a session then without anyone editing the
+  block. That session builds or re-dates the line. Only an ISO day straight after `until` counts.
 - **The edit itself is the proof of work.** A continued slice that ends with the block byte-identical
   stops the plan and assigns Eric with the run link — the lane cannot tell "nothing moved" from
   "moved but did not say so". Editing in place on finish is therefore not hygiene; it is how the
