@@ -16,6 +16,7 @@ worktree**, to build a scoped item to completion — build → verify → screen
 They run concurrently with the dialog; a completion notification brings the result back. Eric keeps
 feeding thoughts; work moves underneath. **Between two edits, verify with one call:** `npm run check`
 fixes lint, typechecks and runs the related tests for everything changed since `origin/main`,
+regenerates the architecture pages when anything under `docs/architecture/` changed (#6684),
 printing only the failures (`--no-fix` writes nothing, `--full` runs everything) — never split it
 into separate lint, typecheck and per-suite calls (#5191).
 

@@ -354,7 +354,7 @@ export function retryHold({
 /** Everything the unattended sweep steps past at the pick: nothing to build, or retried enough. */
 export function sweepHold({ now = Date.now(), ...rest } = {}) {
   const retried = retryHold({ now, ...rest });
-  return (issue, pool) => readPickupHold(issue, rest) ?? retried(issue, pool);
+  return (issue, pool) => readPickupHold(issue, { ...rest, now }) ?? retried(issue, pool);
 }
 
 /** The first body line a queue note carries — also the dedupe key. */

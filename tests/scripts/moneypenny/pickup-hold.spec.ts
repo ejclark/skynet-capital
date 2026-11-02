@@ -3,6 +3,7 @@ import {
   nextUnheld,
   pickupHoldReason,
   readPickupHold,
+  waitEndsOn,
   withoutBoarded,
 } from "../../../scripts/moneypenny/pickup-hold.mjs";
 import { platterClosesByIssue } from "../../../scripts/moneypenny/pr-issues.mjs";
@@ -23,6 +24,11 @@ const block = (pickup: string) => ({
 });
 
 const NONE = "**Next pickup: none buildable now.** Slice 4 waits on decision 4.";
+
+// A WAIT WITH A DAY ON IT LIFTS ITSELF (#5482). Its last step was dated (adopt a claim the 11-09
+// pass fails) and nothing edits a block on a date, so a `none until <day>` line holds only before
+// that UTC day.
+const DATED = "**Next pickup:** none until 2026-11-10 — the 11-09 pass may fail claim 2a.";
 
 describe("pickupHoldReason — the continuation lane's rule, asked at the pick", () => {
   it("holds a plan whose block names no next pickup and has no open slice", () => {
@@ -143,6 +149,51 @@ describe("readPickupHold — the live read, fail-open", () => {
     const r = reads({ "issues/4808/comments": new Error("HTTP 502") });
     expect(readPickupHold(plan(), { ...r, log: (l) => lines.push(l) })).toBeNull();
     expect(lines[0]).toMatch(/^::warning::#4808's state block could not be read/);
+  });
+
+  it("a passed dated wait stops at the comments read, like a named slice", () => {
+    const r = reads({ "issues/4808/comments": [block(DATED)] });
+    expect(readPickupHold(plan(), { ...r, now: Date.parse("2026-11-12T00:00:00Z") })).toBeNull();
+    expect(r.asked).toEqual(["issues/4808/comments"]);
+  });
+});
+
+describe("waitEndsOn / a dated wait — the day lifts the hold (#5482)", () => {
+  const holdAt = (iso: string, pickup = DATED) =>
+    pickupHoldReason({
+      issue: plan(5482),
+      comments: [block(pickup)],
+      subIssues: [{ number: 6598, state: "closed" }],
+      blockedBy: {},
+      now: Date.parse(iso),
+    });
+
+  it("reads the ISO day straight after `until`", () => {
+    expect(waitEndsOn(block(DATED).body)).toBe("2026-11-10");
+  });
+
+  it("names no day for an undated wait, or a date that is not right after `until`", () => {
+    expect(waitEndsOn(block(NONE).body)).toBeNull();
+    expect(waitEndsOn(block("**Next pickup:** none until #4808 merges (2026-11-10).").body)).toBe(
+      null,
+    );
+  });
+
+  it("holds the day before, and says when it lifts", () => {
+    expect(holdAt("2026-11-09T23:59:59Z")).toContain("the wait lifts on 2026-11-10");
+  });
+
+  it("lifts on the day itself (UTC) and after it", () => {
+    expect(holdAt("2026-11-10T00:00:00Z")).toBeNull();
+    expect(holdAt("2026-12-01T12:00:00Z")).toBeNull();
+  });
+
+  it("an undated `none` line still holds however late it is", () => {
+    expect(holdAt("2030-01-01T00:00:00Z", NONE)).toContain("names no next pickup");
+  });
+
+  it("a slice line is pullable whatever the clock says — the date only ever lifts a hold", () => {
+    expect(holdAt("2026-11-01T00:00:00Z", "**Next pickup:** slice 4 until 2026-11-10.")).toBeNull();
   });
 });
 
