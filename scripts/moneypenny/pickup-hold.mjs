@@ -23,10 +23,17 @@
 // the platter, so `nextSubIssue` read it as the next slice and both this hold and continuation
 // started a build with nothing in it. `withoutBoarded` is the one place that rule lives; the map is
 // `platterClosesByIssue`'s, the same one `boardedReason` reads for the issue itself.
+//
+// A WAIT WITH A DAY ON IT LIFTS ITSELF (#5482). `none until 2026-11-10 — …` holds the plan before
+// that UTC day and not from it, so the sweep starts the session the day names. Before, editing the
+// line was the only wake, and nobody edits a block on a date: #5482's last step (adopt a claim the
+// 11-09 pass fails) had no session coming. Only an ISO day straight after `until` counts, so
+// `none until #4808 merges` still holds until someone edits it. The session that wakes either
+// builds or re-dates the line, and either edit moves the block.
 import { ghRest, ghRestAll } from "./gh.mjs";
 import { LABELS, labelNames } from "./labels.mjs";
 import { platterClosesByIssue } from "./pr-issues.mjs";
-import { nextPickupOf, stateBlockOf } from "./state-block.mjs";
+import { nextPickupOf, pickupLineOf, stateBlockOf } from "./state-block.mjs";
 
 /** How many open sub-issues' blocker lists one read asks for — the continuation gather's bound. */
 export const BLOCKER_READS = 10;
@@ -79,15 +86,35 @@ const isPlan = (issue) => labelNames(issue?.labels).includes(LABELS.plan.name);
 const saysNothingBuildable = (body) =>
   /\*\*next pickup\b/i.test(String(body ?? "")) && !nextPickupOf(body);
 
+/** The UTC day a `none until <YYYY-MM-DD>` pickup line's wait ends, or null for an undated wait. */
+export function waitEndsOn(body) {
+  return /\buntil\s+(\d{4}-\d{2}-\d{2})\b/i.exec(pickupLineOf(body) ?? "")?.[1] ?? null;
+}
+
+/** Nothing buildable and the wait's day (if it names one) not yet come. ISO days compare as text. */
+const waiting = (body, now) => {
+  if (!saysNothingBuildable(body)) return false;
+  const day = waitEndsOn(body);
+  return !day || new Date(now).toISOString().slice(0, 10) < day;
+};
+
 /**
  * Why this plan has nothing a build session can take, or null when it may be picked. Pure.
  * `subIssues` / `blockedBy` are read only when the block names nothing, so either may be absent:
  * absent means "not read", which holds nothing. `boardedOn` likewise: absent screens nothing.
+ * `now` decides a dated wait (`none until <day>`) and nothing else.
  */
-export function pickupHoldReason({ issue, comments, subIssues, blockedBy, boardedOn } = {}) {
+export function pickupHoldReason({
+  issue,
+  comments,
+  subIssues,
+  blockedBy,
+  boardedOn,
+  now = Date.now(),
+} = {}) {
   if (!isPlan(issue)) return null;
   const block = stateBlockOf(comments);
-  if (!(block && saysNothingBuildable(block.body))) return null;
+  if (!(block && waiting(block.body, now))) return null;
   if (!subIssues) return null;
   const subs = withoutBoarded(subIssues, boardedOn);
   const open = subs.filter((s) => s && (s.state ?? "open") === "open");
@@ -95,9 +122,11 @@ export function pickupHoldReason({ issue, comments, subIssues, blockedBy, boarde
   if (open.some((s) => !Object.hasOwn(blockedBy ?? {}, s.number))) return null;
   if (nextSubIssue(open, blockedBy)) return null;
   const boarded = subs.filter((s) => s?.boardedOn).map((s) => `#${s.number} on #${s.boardedOn}`);
+  const day = waitEndsOn(block.body);
   return (
     `its state block names no next pickup and no open, unblocked slice remains` +
-    (boarded.length ? ` (boarded on a held platter: ${boarded.join(", ")})` : "")
+    (boarded.length ? ` (boarded on a held platter: ${boarded.join(", ")})` : "") +
+    (day ? `; the wait lifts on ${day}` : "")
   );
 }
 
@@ -109,14 +138,14 @@ export function pickupHoldReason({ issue, comments, subIssues, blockedBy, boarde
  */
 export function readPickupHold(
   issue,
-  { readAll = ghRestAll, read = ghRest, log = console.log } = {},
+  { readAll = ghRestAll, read = ghRest, log = console.log, now = Date.now() } = {},
 ) {
   if (!isPlan(issue)) return null;
   const n = issue.number;
   try {
     const comments = readAll(`issues/${n}/comments`);
     const block = stateBlockOf(comments);
-    if (!(block && saysNothingBuildable(block.body))) return null;
+    if (!(block && waiting(block.body, now))) return null;
     const subIssues = readAll(`issues/${n}/sub_issues`);
     const blockedBy = {};
     for (const s of subIssues
@@ -124,10 +153,10 @@ export function readPickupHold(
       .slice(0, BLOCKER_READS)) {
       blockedBy[s.number] = read(`issues/${s.number}/dependencies/blocked_by`) ?? [];
     }
-    const hold = pickupHoldReason({ issue, comments, subIssues, blockedBy });
+    const hold = pickupHoldReason({ issue, comments, subIssues, blockedBy, now });
     if (hold || !subIssues.some((s) => (s?.state ?? "open") === "open")) return hold;
     const boardedOn = platterClosesByIssue(readAll("pulls?state=open"));
-    return pickupHoldReason({ issue, comments, subIssues, blockedBy, boardedOn });
+    return pickupHoldReason({ issue, comments, subIssues, blockedBy, boardedOn, now });
   } catch (err) {
     log(
       `::warning::#${n}'s state block could not be read — treating it as pullable: ${String(err?.message ?? err).slice(0, 200)}`,

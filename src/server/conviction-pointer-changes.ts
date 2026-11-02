@@ -16,14 +16,16 @@ import {
  *
  * One `conviction:<playbookId>` line per move, on the bot's own log: the view that steered the pair
  * before and the one that steers it now, by title, `null` for none (the pair checked on its own
- * conviction, or on none). The pointer moves in three places, and each says who moved it:
+ * conviction, or on none). The pointer moves in four places, and each says who moved it:
  *
  *  - a member's own act — a hand-over, take-back, edit or delete (`member-convictions-api-routes.ts`)
  *    — is theirs on the bots they own;
  *  - a subscribe or conviction edit that restates the pointer is the owner's, in the same line set
  *    as the subscription it rewrote (`recordSubscriptionWrite`, both or neither);
  *  - the controls poll applying the pointer rule on its own (the seeded match, a heal after a write
- *    that failed halfway, a view the store's rules refuse today) is `POINTER_RULE_AUTHOR`'s.
+ *    that failed halfway, a view the store's rules refuse today) is `POINTER_RULE_AUTHOR`'s;
+ *  - the controls poll dropping a subscription no registry entry knows takes its pointer with it,
+ *    in the same line set as the drop (`unknown-subscription-drop.ts`, its own author).
  *
  * Outside a subscription write the pointer is an invariant re-applied each poll, so a log that
  * cannot be written leaves the pointer where the rule put it and says so, the posture the shadow

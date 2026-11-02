@@ -9,7 +9,7 @@
 globalThis.steerStatus = (() => {
   // What became of Done, in words. Never a colour, never a spinner alone.
   const TELLING = "Done — telling Claude…";
-  const WAIT = "The read-back shows here when it's posted.";
+  const WAIT = "“Received” shows here once the session reads it.";
   const RELOAD = "Reload the page to see the read-back once it's posted.";
   const NOT_LISTENING =
     "Done — saved. No Claude session is listening right now; the next page reads it back.";
@@ -17,14 +17,15 @@ globalThis.steerStatus = (() => {
   const NOT_REACHED =
     "Done — saved. Claude couldn't be reached just now; the next page reads it back.";
   const REOPENED = "Reopened — press Done again when you're finished.";
-  /** The session stamped `ackAt` after this Done: it heard, and the read-back is on its way. */
-  const ACK = "Claude got your Done, reading back…";
+  /** The session stamped the round after this Done: it read the press, and the read-back follows. */
+  const ACK = "✓ Received — Claude is reading your answers back…";
   // A sent Done no session answers (Eric, 2026-10-13: "I've had to click 'done'.. nothing
   // happens"): a session's page watch drops after hours idle, yet the send still reads
-  // "available". Five minutes after the press with no read-back, the bar says how to wake it.
-  const QUIET_MS = 5 * 60 * 1000;
+  // "available". Two minutes after the press with nothing read (#6606), the bar says so and what
+  // to do. It says what is known, never why: a session deep in a long turn is still there.
+  const QUIET_MS = 2 * 60 * 1000;
   const UNHEARD =
-    "No reply yet: the session that drew this page isn't listening. Open it and say “done” (or “watch my page”).";
+    "Not received yet: no session has read your Done. Open the session that drew this page and say “done”.";
   // A rejected send is not proof nothing was posted (comments.d.ts), so only a code that says the
   // send was refused before writing earns "wasn't told"; any other rejection of the send hedges.
   const UNTOLD = "wasn't told";
@@ -72,8 +73,18 @@ globalThis.steerStatus = (() => {
       line: `Read back ${clock(ms)}${summary ? ` · ${summary}` : ""}`,
     };
   }
-  /** The session's `ackAt` as a time, or NaN. NaN compares false, so a missing one never counts. */
-  const ackOf = (d) => (typeof d?.ackAt === "string" ? Date.parse(d.ackAt) : Number.NaN);
+  /** Does the session's stamp answer the press at `doneAt`? A session has no clock: of 4 `ackAt`
+   *  stamps in the transcripts (#6606), 3 were a whole-minute guess minutes ahead and 1 sat 21 seconds
+   *  behind, so the times can't decide it. `ackFor`, the press's own stamp copied from the Done
+   *  comment, decides when it is there. Without it (a page or a session from before it), a stamp that
+   *  `landed` after the press answers it, whatever time it claims; on opening a page, where a landing
+   *  can't be seen, the times are all there is. */
+  function acks(d, doneAt, landed) {
+    if (!doneAt) return false;
+    if (typeof d?.ackFor === "string") return d.ackFor === doneAt;
+    const ms = typeof d?.ackAt === "string" ? Date.parse(d.ackAt) : Number.NaN;
+    return landed ? !Number.isNaN(ms) : ms >= Date.parse(doneAt);
+  }
   return {
     ACK,
     LIFECYCLE,
@@ -89,7 +100,7 @@ globalThis.steerStatus = (() => {
     UNPOSTED,
     UNTOLD,
     WAIT,
-    ackOf,
+    acks,
     clock,
     notSaved,
     notTold,

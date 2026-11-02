@@ -5,8 +5,8 @@ import { answered, claudeWith, commentsWith, META, open, openWith } from "./stee
 // A session's page watch drops after hours, and canSendToClaude still answers "available", so the
 // page only learned 5 minutes after Done. The session now stamps the round's own doc: `listening`
 // after each publish or re-watch, `listening.lost` on a watch-lost notice, `ackAt` when a Done
-// reaches it. The bar reads them live. A stamp older than 6 hours says nothing, and the 5-minute
-// fallback stays for that case. Glyph and word on every line — never colour alone.
+// reaches it. The bar reads them live. A stamp older than 6 hours says nothing, and the 2-minute
+// line (#6606) stays for that case. Glyph and word on every line — never colour alone.
 
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
@@ -15,10 +15,10 @@ const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
 // just after midnight is "since Tue 11:51 PM" — the bare-time pattern went red 00:00–06:00 every day (#5332).
 const LISTENING = /^● Claude is listening · since (?:[A-Z][a-z]{2} )?\d{1,2}:\d{2}/;
 const LOST = "⊘ Claude isn't listening — say “watch my page” in its session";
-const ACK = "Claude got your Done, reading back…";
-const SENT = "Done — sent to Claude. The read-back shows here when it's posted.";
+const ACK = "✓ Received — Claude is reading your answers back…";
+const SENT = "Done — sent to Claude. “Received” shows here once the session reads it.";
 const UNHEARD =
-  "No reply yet: the session that drew this page isn't listening. Open it and say “done” (or “watch my page”).";
+  "Not received yet: no session has read your Done. Open the session that drew this page and say “done”.";
 
 type View = Awaited<ReturnType<typeof openWith>>;
 const ear = (v: View) => (v.el("ear").hidden ? "" : (v.el("ear").textContent ?? ""));
@@ -87,12 +87,12 @@ describe("the bar says whether a Claude session is listening", () => {
   });
 });
 
-describe("Done says when Claude got it", () => {
+describe("Done says received once a session has read it (#6606)", () => {
   afterEach(() => {
     rstest.useRealTimers();
   });
 
-  it("says Claude got the Done once the session acks it, then shows the read-back", async () => {
+  it("says received once the session acks the Done, then shows the read-back", async () => {
     const v = await openWith(answered());
     await v.press("done");
     expect(v.told()).toBe(SENT);
@@ -139,7 +139,110 @@ describe("Done says when Claude got it", () => {
     expect(v.told()).toMatch(/^Read back .+ · done$/);
   });
 
-  it("drops the five-minute fallback once the ack lands", async () => {
+  // Sessions have no clock: of 4 ackAt stamps in the transcripts, 3 were a whole-minute guess
+  // minutes ahead and 1 sat 21 seconds behind the real time. Neither may decide what the bar says.
+  it("says received when the stamp's clock sits behind the press, because it landed after it", async () => {
+    const v = await openWith(answered());
+    await v.press("done");
+    await stamp(v, { ackAt: ago(5 * MIN) });
+    expect(v.told()).toBe(ACK);
+  });
+
+  it("says received from the press's own stamp, however the session's clock reads", async () => {
+    const docs = answered();
+    const v = await openWith(docs);
+    await v.press("done");
+    await stamp(v, { ackAt: ago(5 * MIN), ackFor: docs[META]?.doneAt });
+    expect(v.told()).toBe(ACK);
+  });
+
+  it("shows that ack on a page opened after it, clock behind and all", async () => {
+    const doneAt = ago(30_000);
+    const v = await openWith(answered({ doneAt, ackAt: ago(HOUR), ackFor: doneAt }));
+    expect(v.told()).toBe(ACK);
+  });
+
+  it("never says received for the press before, even with a clock ahead of this one", async () => {
+    const docs = answered();
+    const v = await openWith(docs);
+    await v.press("done");
+    const first = docs[META]?.doneAt;
+    await stamp(v, { ackAt: new Date(Date.now() + 10 * MIN).toISOString(), ackFor: first });
+    expect(v.told()).toBe(ACK);
+    await v.press("reopen");
+    await new Promise((r) => setTimeout(r, 2));
+    await v.press("done");
+    expect(docs[META]?.doneAt).not.toBe(first);
+    expect(v.told()).toBe(SENT);
+    await stamp(v, { ackAt: new Date(Date.now() + 11 * MIN).toISOString(), ackFor: first });
+    expect(v.told()).toBe(SENT);
+  });
+
+  it("stays quiet on a guessed clock ahead of the press once he reopens and presses again", async () => {
+    const v = await openWith(answered());
+    await v.press("done");
+    await stamp(v, { ackAt: new Date(Date.now() + 10 * MIN).toISOString() });
+    await v.press("reopen");
+    await v.press("done");
+    expect(v.told()).toBe(SENT);
+  });
+
+  it("says received on a new press though the last read-back's guessed clock is ahead of it", async () => {
+    const docs = answered();
+    const v = await openWith(docs);
+    await v.press("done");
+    await stamp(v, {
+      readBackAt: new Date(Date.now() + 10 * MIN).toISOString(),
+      readBackSummary: "1 pick posted",
+    });
+    await v.press("reopen");
+    await new Promise((r) => setTimeout(r, 2));
+    await v.press("done");
+    await stamp(v, { ackAt: ago(0), ackFor: docs[META]?.doneAt });
+    expect(v.told()).toBe(ACK);
+  });
+
+  it("keeps the read-back when that Done's ack lands after it", async () => {
+    const docs = answered();
+    const v = await openWith(docs);
+    await v.press("done");
+    await stamp(v, { readBackAt: ago(0), readBackSummary: "1 pick posted" });
+    await stamp(v, { ackAt: ago(0), ackFor: docs[META]?.doneAt });
+    expect(v.told()).toMatch(/^Read back .+ · 1 pick posted$/);
+  });
+
+  it("replaces the not-received line when a session reads the Done late", async () => {
+    const v = await openWith(answered());
+    rstest.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    v.el("done").click();
+    await rstest.advanceTimersByTimeAsync(2 * MIN + 100);
+    expect(v.told()).toBe(UNHEARD);
+    await v.db.doc(META).update({ ackAt: ago(0) });
+    await rstest.advanceTimersByTimeAsync(10);
+    expect(v.told()).toBe(ACK);
+  });
+
+  it("says no session has read it on a page opened over two minutes after an unread Done", async () => {
+    const v = await openWith(answered({ doneAt: ago(10 * MIN) }));
+    await new Promise((r) => setTimeout(r, 5));
+    expect(v.told()).toBe(UNHEARD);
+  });
+
+  it("counts the two minutes from the press, not from the page opening", async () => {
+    const v = await openWith(answered({ doneAt: ago(2 * MIN - 300) }));
+    await new Promise((r) => setTimeout(r, 400));
+    expect(v.told()).toBe(UNHEARD);
+  });
+
+  it("says so at once on a page opened after an unread Done with a lost stamp on the round", async () => {
+    const v = await openWith(
+      answered({ doneAt: ago(30_000), listening: { lost: true, at: ago(MIN) } }),
+    );
+    expect(v.told()).toBe(UNHEARD);
+    expect(ear(v)).toBe(LOST);
+  });
+
+  it("drops the two-minute line once the ack lands", async () => {
     const v = await openWith(answered());
     rstest.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     v.el("done").click();
@@ -149,11 +252,11 @@ describe("Done says when Claude got it", () => {
     expect(v.told()).toBe(ACK);
   });
 
-  it("keeps the five-minute fallback when the only stamp is older than 6 hours", async () => {
+  it("keeps the two-minute line when the only stamp is older than 6 hours", async () => {
     const v = await openWith(answered({ listening: { at: ago(8 * HOUR), by: "session" } }));
     rstest.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     v.el("done").click();
-    await rstest.advanceTimersByTimeAsync(5 * MIN + 100);
+    await rstest.advanceTimersByTimeAsync(2 * MIN + 100);
     expect(ear(v)).toBe("");
     expect(v.told()).toBe(UNHEARD);
   });
