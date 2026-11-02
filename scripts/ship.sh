@@ -102,12 +102,20 @@ promote_ready() {
 # second, manual push to read (#4495, ~5 min per failure). Now the last attempt's stderr is
 # printed with any `x-access-token:<token>@` masked (a lane's origin URL carries the App token,
 # and git echoes it on some errors). A rejection the remote actually answered (`[rejected]` /
-# `[remote rejected]`) is final: retrying cannot change the answer, so it stops at once.
+# `[remote rejected]`) is final: retrying cannot change the answer, so it stops at once. So is a
+# `pre-push:` line, our own hook saying no (a red or unfinished verify, a merged branch): to git it is
+# a failure like a dropped connection, and each retry ran the hook again, a whole verify each time
+# on a red tree (#6668). Its exit 75 (no verify result) passes through for the caller.
 cmd_push() {
-  local branch="${1:?usage: scripts/ship.sh push <branch>}" n=0 err
+  local branch="${1:?usage: scripts/ship.sh push <branch>}" n=0 err refusal
   # stderr is captured for the diagnosis; stdout (fd 3) still reaches the terminal as before.
   until { err="$(git push -u origin "$branch" 2>&1 >&3)"; } 3>&1; do
     n=$((n+1))
+    if refusal="$(grep -m1 '^pre-push: ' <<<"$err")"; then
+      echo "ship: push stopped — the pre-push hook refused, and pushing again would only run it again:" >&2
+      tail -25 <<<"$err" | sed 's#^#  #' >&2
+      case "$refusal" in *"exit 75"*) exit 75 ;; *) exit 1 ;; esac
+    fi
     if grep -q '\[\(remote \)\{0,1\}rejected\]' <<<"$err" || [ "$n" -gt 4 ]; then
       echo "ship: push failed — the remote said:" >&2
       sed -E 's#x-access-token:[^@[:space:]]*@#x-access-token:***@#g; s#^#  #' <<<"$err" >&2
@@ -433,10 +441,11 @@ EOF_SHOTS
     # without this line the first-pass rate only sees what got past local verify (#6470).
     local verify_ok=true verify_rc=0
     bash scripts/verify-locked.sh --log "$verify_log" || { verify_rc=$?; verify_ok=false; }
-    # 75 is the queue's wait running out: nothing ran, so there is no log to show and no mistake for
-    # the meter to count, and telling it from a red verify stops an agent hunting for a failure.
+    # 75 is no result: the queue's wait ran out, the lid was closed, or the machine slept through a
+    # run that then failed (#6668). There is no mistake for the meter to count, and telling it from
+    # a red verify stops an agent hunting for a failure that is not there.
     if [ "$verify_rc" = 75 ]; then
-      echo "ship: verify did not run — the queue wait ran out and nothing was pushed. Run this again."
+      echo "ship: no verify result — the queue wait ran out, the lid was closed, or the machine slept mid-run (the verify: line above says which). Nothing was pushed or counted. Run this again."
       exit 75
     fi
     # A failed row also says which step failed and the first error line: a row that only said

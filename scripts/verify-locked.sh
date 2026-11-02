@@ -24,6 +24,20 @@
 #
 # CMD defaults to `npm run verify`. --log sends CMD's output to FILE; this script's own lines go to
 # stderr either way, so a caller that logs the run still shows "queued behind another verify".
+#
+# The laptop (#6668) — the queue held one verify at a time on 2026-11-01, and the third in a row
+# still froze the 10-core, 24 GB laptop (on battery, a game in front) until a hard reboot. The same
+# night a closed lid slept another verify for 13 minutes, and it went red on 5 s timeouts its specs
+# passed in seconds afterwards. So where macOS's own tools are on PATH, a verify:
+#   - runs under `taskpolicy -c utility`, a QoS clamp every process it starts inherits, so whatever
+#     is in front wins the CPU. Not `-b`: background QoS runs on the efficiency cores alone, which
+#     would stretch a verify on an idle machine far past the 78 s it takes there today;
+#   - starts fewer test workers (SKYNET_TEST_WORKERS below; both rstest configs read it);
+#   - refuses while the lid is closed, before it queues and again when its turn comes (exit 75);
+#   - reads `sysctl kern.waketime` before and after, and calls a failure the machine slept through
+#     no result (exit 75), which ship.sh counts as no mistake.
+# Each step needs its own tool, so on Linux and in CI none of them runs and nothing changes. None of
+# this has run on the laptop yet: tests/scripts/verify-locked-laptop.spec.ts stubs the three tools.
 set -uo pipefail
 
 log=""
@@ -60,9 +74,64 @@ if [ "$skip_if_stamped" = 1 ] && [ -s "$stamp" ]; then
   fi
 fi
 
+# SKYNET_TEST_WORKERS — the root test runner's worker limit; app/rstest.config.ts takes half, as its
+# suite is about a third the size. Measured 2026-11-02 with one `npm run verify` on a 4-core, 16 GB
+# cloud session, where rstest starts one worker per core but one in each runner (3 + 3):
+#   302 s, 916 CPU-s (3.3 of 4 cores busy); peak 4.8 GiB summed RSS 28 s in, while both tsc runs
+#   (1.2 + 0.9 GiB), biome (1.0 GiB) and both runners' builds overlap; each test worker ~0.4 GiB;
+#   the root suite ~285 s, the app suite ~111 s.
+# Scaled to the 10-core, 24 GB laptop, that default is 9 + 9 = 18 workers: about 3.6 + 18 × 0.42 ≈
+# 11 GiB for one verify, and 18 busy workers on 10 cores before the app in front gets one. Capped at
+# 3 (3 + 1 = 4 workers): about 3.6 + 4 × 0.42 ≈ 5.3 GiB, under a quarter of the laptop, and about 5
+# busy cores, half of them. 78 s for those 916 CPU-s makes a laptop core worth ~1.2–1.5 of these, so
+# the root suite's ~735 CPU-s on 3 workers is an estimated 2½–3½ minutes on an idle laptop: inside
+# #6668's 5-minute falsifier, slower than today's 78 s. 4 (6 workers, ~6.1 GiB) is the next step if
+# the first timed run says the cap costs too much. A value already set wins, so a run can try one.
+mac_test_workers=3
+
+# What actually runs: the command, under the utility clamp where taskpolicy exists (see above).
+launch=("${cmd[@]}")
+
 run() {
-  if [ -n "$log" ]; then SKYNET_VERIFY_LOCKED=1 "${cmd[@]}" >"$log" 2>&1 9>&-
-  else SKYNET_VERIFY_LOCKED=1 "${cmd[@]}" 9>&-; fi
+  if [ -n "$log" ]; then SKYNET_VERIFY_LOCKED=1 "${launch[@]}" >"$log" 2>&1 9>&-
+  else SKYNET_VERIFY_LOCKED=1 "${launch[@]}" 9>&-; fi
+}
+
+# ioreg names the lid AppleClamshellState; the AppleClamshellCausesSleep beside it is Yes on most
+# laptops whatever the lid does, so the match names the state's own key. The tree is read whole
+# first: under pipefail, `ioreg | grep -q` reads a closed lid as open whenever grep stops at the
+# line while ioreg is still writing, and ioreg dies of SIGPIPE.
+refuse_if_lid_closed() {
+  local tree
+  command -v ioreg >/dev/null 2>&1 || return 0
+  tree="$(ioreg -r -k AppleClamshellState -d 4 2>/dev/null)"
+  grep -q '"AppleClamshellState" = Yes' <<<"$tree" || return 0
+  echo "verify: refused — the lid is closed, and a closed lid can sleep the machine mid-run, which fails specs on timeouts that say nothing about the code (#6668). Open the lid, then run it again." >&2
+  exit 75
+}
+
+# The last wake as "sec.usec", from `kern.waketime: { sec = 1793627758, usec = 179693 } Mon Nov  2
+# 07:55:58 2026`; nothing where sysctl has no such key (Linux) or there is no sysctl.
+waketime() {
+  command -v sysctl >/dev/null 2>&1 || return 0
+  sysctl kern.waketime 2>/dev/null | sed -n 's/.*{ sec = \([0-9]*\), usec = \([0-9]*\) }.*/\1.\2/p'
+}
+
+# The lid once more (a queued verify's turn can come long after it asked), then the run, then
+# whether the machine woke during it: a failure it slept through says nothing about the code.
+guarded_run() {
+  local woke rc
+  refuse_if_lid_closed
+  if [ "${launch[0]}" = taskpolicy ]; then
+    echo "verify: low priority — taskpolicy -c utility, test workers capped at $SKYNET_TEST_WORKERS, so the app in front stays responsive (#6668)." >&2
+  fi
+  woke="$(waketime)"
+  run; rc=$?
+  if [ "$rc" != 0 ] && [ -n "$woke" ] && [ "$(waketime)" != "$woke" ]; then
+    echo "verify: no result — the machine slept during this run (kern.waketime moved), so its failure (exit $rc) says nothing about the code (#6668). Run it again with the machine awake." >&2
+    return 75
+  fi
+  return "$rc"
 }
 
 before=""
@@ -95,11 +164,21 @@ take_lock() {
   ' "$1"
 }
 
+# The laptop guards (#6668), for a run not already inside its parent's: a nested run inherits the
+# clamp and the cap, and its parent checks the lid and the sleep.
+if [ "${SKYNET_VERIFY_LOCKED:-}" != 1 ]; then
+  if command -v taskpolicy >/dev/null 2>&1; then
+    launch=(taskpolicy -c utility "${cmd[@]}")
+    export SKYNET_TEST_WORKERS="${SKYNET_TEST_WORKERS:-$mac_test_workers}"
+  fi
+  refuse_if_lid_closed
+fi
+
 if [ "${SKYNET_VERIFY_LOCKED:-}" = 1 ]; then
   run; status=$?
 elif [ -z "$lock_tool" ]; then
   echo "verify: no flock or perl on this machine — running unlocked (parallel verifies are not queued)." >&2
-  run; status=$?
+  guarded_run; status=$?
 else
   wait_s="${VERIFY_LOCK_WAIT:-1800}"
   exec 9>"$lock"
@@ -115,7 +194,7 @@ else
   fi
   # A broken lock tool must not stop every verify on the box, and must not read as a long wait.
   [ "$held" = 0 ] || echo "verify: $lock_tool could not take the lock (exit $held) — running unlocked (parallel verifies are not queued)." >&2
-  run; status=$?
+  guarded_run; status=$?
   exec 9>&-
 fi
 
