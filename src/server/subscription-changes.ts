@@ -66,7 +66,7 @@ type Store = NonNullable<DashboardServerConfig["subscriptions"]>;
 const held = (state: SubscriptionsState, accountId: string, playbookId: string) =>
   (state[accountId] ?? []).find((s) => s.playbookId === playbookId);
 
-function change(
+export function change(
   setting: string,
   before: SettingValue,
   after: SettingValue,

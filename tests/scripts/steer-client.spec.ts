@@ -141,7 +141,7 @@ describe("the page says comments count", () => {
 // but a saved answer wakes no session, so nothing followed. Done now sends a comment to Claude —
 // the platform notifies the session watching the page — and the page shows the read-back the
 // session writes on the round's own doc, without a reload. A second press never reopens the round.
-const SENT = "Done — sent to Claude. The read-back shows here when it's posted.";
+const SENT = "Done — sent to Claude. “Received” shows here once the session reads it.";
 const NOT_LISTENING =
   "Done — saved. No Claude session is listening right now; the next page reads it back.";
 const NO_REACH = "Done — saved. This view can't reach Claude; the next page reads it back.";
@@ -161,7 +161,7 @@ describe("Done tells the Claude session watching the page (#5135)", () => {
     expect(c.sent).toEqual([
       {
         anchor: ANCHOR,
-        text: `Done with steering round ${ROUND}: ${N - 1} of ${N} answered. Read it back.`,
+        text: `Done with steering round ${ROUND}: ${N - 1} of ${N} answered. Pressed ${docs[META]?.doneAt}. Read it back.`,
       },
     ]);
     expect(c.anchored.map((e) => e.className)).toEqual(["bar"]);
@@ -350,9 +350,9 @@ describe("the read-back shows in the bar without a reload (#5135)", () => {
     expect(v.el("reopen").hidden).toBe(false);
   });
 
-  it("says Done is waiting for its read-back when the page opens after Done and before it", async () => {
-    const v = await openWith(answered({ doneAt: "2026-10-10T22:21:59Z" }));
-    expect(v.told()).toMatch(/^Done at .+\. The read-back shows here when it's posted\.$/);
+  it("says Done is waiting to be read when the page opens just after Done", async () => {
+    const v = await openWith(answered({ doneAt: new Date(Date.now() - 30_000).toISOString() }));
+    expect(v.told()).toMatch(/^Done at .+\. “Received” shows here once the session reads it\.$/);
   });
 
   // A terminal snapshot error (db.d.ts: revoked, resource_exhausted, a dead bridge) ends the watch
@@ -371,7 +371,7 @@ describe("the read-back shows in the bar without a reload (#5135)", () => {
   });
 
   it("says the same on a page opened after Done whose watch then dies", async () => {
-    const v = await openWith(answered({ doneAt: "2026-10-10T22:21:59Z" }));
+    const v = await openWith(answered({ doneAt: new Date(Date.now() - 30_000).toISOString() }));
     v.db.kill(META, "unavailable");
     await settle();
     expect(v.told()).toMatch(
@@ -409,12 +409,12 @@ describe("the page's meta writes keep what the session wrote (#5135)", () => {
 
 // Eric, 2026-10-13: "I've had to click 'done'.. nothing happens then I click reopen/done again".
 // A session's page watch drops after hours idle, while the send still reads "available", so Done
-// goes into silence. Five minutes after a sent Done with no read-back, the bar says how to wake
-// the session. One timer from the press; never a resend.
+// goes into silence. Two minutes after a sent Done that no session has read, the bar says how to
+// wake the session (#6606). One timer from the press; never a resend.
 const UNHEARD =
-  "No reply yet: the session that drew this page isn't listening. Open it and say “done” (or “watch my page”).";
+  "Not received yet: no session has read your Done. Open the session that drew this page and say “done”.";
 const MIN = 60 * 1000;
-describe("a sent Done no session answers says so after five minutes", () => {
+describe("a sent Done no session answers says so after two minutes", () => {
   afterEach(() => {
     rstest.useRealTimers();
   });
@@ -428,10 +428,10 @@ describe("a sent Done no session answers says so after five minutes", () => {
     return { ...v, c, wait };
   }
 
-  it("says the session isn't listening once five minutes pass with no read-back, and never resends", async () => {
+  it("says no session has read it once two minutes pass, and never resends", async () => {
     const v = await pressed();
     expect(v.told()).toBe(SENT);
-    await v.wait(5 * MIN - 1000);
+    await v.wait(2 * MIN - 1000);
     expect(v.told()).toBe(SENT);
     await v.wait(1000);
     expect(v.told()).toBe(UNHEARD);
@@ -439,19 +439,25 @@ describe("a sent Done no session answers says so after five minutes", () => {
     expect(v.c.sent).toHaveLength(1);
   });
 
-  it("shows the read-back instead when it lands inside the five minutes", async () => {
+  it("shows the read-back instead when it lands inside the two minutes", async () => {
     const v = await pressed();
-    await v.wait(2 * MIN);
+    await v.wait(MIN);
     await v.db.doc(META).update({ ...READ_BACK, readBackAt: new Date().toISOString() });
     await v.wait(10 * MIN);
     expect(v.told()).toMatch(/^Read back .+ · 2 picks posted on their issues, 1 build queued$/);
   });
 
   it("still says so when the only read-back on the doc is older than the Done", async () => {
-    const v = await pressed();
-    await v.db.doc(META).update(READ_BACK); // 2026-10-10, before this press
-    await v.wait(5 * MIN);
+    const v = await pressed(answered(READ_BACK)); // 2026-10-10, before this press
+    await v.wait(2 * MIN);
     expect(v.told()).toBe(UNHEARD);
+  });
+
+  it("leaves a read-back that lands while it waits, even with a clock behind the press", async () => {
+    const v = await pressed();
+    await v.db.doc(META).update(READ_BACK); // a session's guessed time, 2026-10-10
+    await v.wait(10 * MIN);
+    expect(v.told()).toMatch(/^Read back .+ · 2 picks posted on their issues, 1 build queued$/);
   });
 
   it("drops the timer on Reopen", async () => {

@@ -2,16 +2,16 @@
 //
 // WHY (2026-11-01). A lane session opens its PR and ends. If a check that holds it then fails (`verify`,
 // `integration tests`, or the `stability budget` the arm job waits on), nothing comes back
-// to it: the repair lane leaves a pull_request run alone (repair.mjs `routeFailure`, guard 2), and the
-// sweep stays off any issue an open PR names with no age limit (`withoutOpenPr`, index.mjs). So one
-// failing spec parks the whole issue for as long as nobody looks. #6440 went red on 10-30 over a
+// to it: the repair lane's session route is for a PR a session opened, never a lane's
+// (red-session-pr.mjs, #6605), and the sweep stays off any issue an open PR names with no age limit
+// (`withoutOpenPr`, index.mjs). So one failing spec parks the whole issue for as long as nobody looks. #6440 went red on 10-30 over a
 // one-line spec fix and held #5482, the convictions plan, for two days. stuck-pr-scan does not see it
 // either: red is "somebody else's signal" there (stuck-pr-decide.mjs), and here there is no somebody.
 //
 // THE ACT IS TO CLOSE IT AND RELEASE THE ISSUE, not to fix it from here. The other door, the repair
-// workflow's dispatch, only knows conflicts and event stalls; teaching it red PRs means a protected
-// prompt edit. Closing is free, and the next build is an ordinary session the queue already knows how
-// to start, with the failed check named on its issue. Nothing is merged or force-pushed.
+// workflow's dispatch, knows conflicts, event stalls and a capsule, and its prompt says a run failed on
+// `main`, so a lane PR keeps the path that needs none of that. Closing is free, and the next build is
+// an ordinary session the queue already knows how to start, with the failed check named on its issue. Nothing is merged or force-pushed.
 //
 // THE BRANCH GOES WITH IT. Both lane prompts branch `plan/<n>` or `feedback/<n>` off `origin/main`, so
 // a stale remote branch of that name leaves the new session a rejected push, one step from a force
