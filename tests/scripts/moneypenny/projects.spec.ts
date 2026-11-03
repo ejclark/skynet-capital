@@ -332,6 +332,59 @@ describe("moneypenny projects: a board that reads stale right after a sibling's 
     expect(reads).toBe(1);
   });
 
+  // #6775: on #6774 the whole-board list missed the item for all three reads (~30s), while a sibling
+  // run's per-issue `projectItems` lookup found it at once. The list here NEVER shows it — only the
+  // per-issue lookup can rescue the run, and it must be asked before the expensive list.
+  it("asks the issue's own lookup before each board re-read, and a hit skips the list", () => {
+    const own = [[], [ADDED]];
+    let listReads = 0;
+
+    const resolved = resolveBoardItem({
+      issueUrl: URL,
+      addItem: alreadyExists,
+      lookupItems: () => own.shift() ?? [],
+      listItems: () => {
+        listReads += 1;
+        return { items: [{ id: "PVTI_other" }], totalCount: 1 };
+      },
+      sleep: () => undefined,
+    });
+
+    expect(resolved).toEqual({ item: ADDED, added: false });
+    expect(listReads).toBe(1); // the first round's miss paid for one list; the hit paid for none
+  });
+
+  it("falls through to the board list when the per-issue lookup throws (a blind token)", () => {
+    const resolved = resolveBoardItem({
+      issueUrl: URL,
+      addItem: alreadyExists,
+      lookupItems: () => {
+        throw new Error("this token cannot see project #2");
+      },
+      listItems: () => ({ items: [ADDED], totalCount: 1 }),
+      sleep: () => undefined,
+    });
+
+    expect(resolved).toEqual({ item: ADDED, added: false });
+  });
+
+  it("still fails closed on the archived case when neither source ever shows the item", () => {
+    let lookups = 0;
+    expect(() =>
+      resolveBoardItem({
+        issueUrl: URL,
+        addItem: alreadyExists,
+        lookupItems: () => {
+          lookups += 1;
+          return [];
+        },
+        listItems: () => ({ items: [], totalCount: 0 }),
+        sleep: () => undefined,
+      }),
+    ).toThrow(/archived/);
+    expect(lookups).toBe(3);
+  });
+
   it("still never calls item-list at all when the add itself succeeds", () => {
     const fresh: BoardItem = { id: "PVTI_new", content: { url: URL } };
     expect(

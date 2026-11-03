@@ -632,6 +632,13 @@ export function boardItemsFromProjectItems({ nodes = [], projectNumber, issueUrl
 // So "already exists but not in the list" is a race first and a permanent state second, and the
 // single read could not tell them apart. Re-reading is what separates them: a just-added item
 // appears within seconds, an ARCHIVED one never does. Truncation is not a race and never re-reads.
+//
+// #6775 — THE WHOLE-BOARD LIST CAN LAG FAR LONGER THAN THE ISSUE'S OWN INDEX. Filing #6774 raced
+// three syncs again; the loser's three `item-list` reads (07:17:49Z–07:18:11Z, ~10s each across 8
+// pages) never showed the item, while a sibling run 23 seconds later found it at once through the
+// per-issue `projectItems` lookup above (#4439). So each re-read asks that lookup FIRST — 1 point,
+// and a hit skips the ~8-point board read entirely — and only a miss pays for the whole list. A
+// lookup that throws (a blind token, #4439's own case) just falls through to the list, unchanged.
 export const BOARD_LOOKUP_ATTEMPTS = 3;
 export const BOARD_LOOKUP_BASE_MS = 2000;
 
@@ -641,11 +648,14 @@ export const BOARD_LOOKUP_BASE_MS = 2000;
  * can quote real numbers. Stops early on a truncated page: a short list stays short however long
  * you wait, so re-reading it only spends six seconds restating a `--limit` bug.
  */
-function readBoardUntilItemAppears({ listItems, issueUrl, attempts, baseMs, sleep }) {
+function readBoardUntilItemAppears({ lookupItems, listItems, issueUrl, attempts, baseMs, sleep }) {
   let seen = { items: [], counted: 0, truncated: false, reads: 0 };
 
   for (let n = 0; n < Math.max(1, attempts); n++) {
     if (n > 0) sleep(baseMs * 2 ** (n - 1));
+
+    const own = lookupOwnItem(lookupItems, issueUrl);
+    if (own) return { ...seen, reads: n + 1, item: own };
 
     const page = listItems() ?? {};
     const items = page.items ?? [];
@@ -658,6 +668,16 @@ function readBoardUntilItemAppears({ listItems, issueUrl, attempts, baseMs, slee
   }
 
   return seen;
+}
+
+/** The issue's own board item via the cheap per-issue lookup, or undefined on a miss or a throw. */
+function lookupOwnItem(lookupItems, issueUrl) {
+  if (!lookupItems) return undefined;
+  try {
+    return findBoardItem(lookupItems() ?? [], issueUrl);
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -677,9 +697,13 @@ function readBoardUntilItemAppears({ listItems, issueUrl, attempts, baseMs, slee
  * miss falls straight into the add-first path below, unchanged, so the first sync of a brand-new
  * issue still costs one mutation and no list read; and a stale cache can only produce a miss, never
  * a false hit, because the match is on `content.url` against a list GitHub really returned.
+ *
+ * `lookupItems` (optional) is the per-issue read (#4439) — this issue's items only, as an array —
+ * asked before every whole-board re-read once the add says "already exists" (#6775, above).
  */
 export function resolveBoardItem({
   addItem,
+  lookupItems,
   listItems,
   issueUrl,
   cachedItems,
@@ -697,6 +721,7 @@ export function resolveBoardItem({
     if (!isAlreadyOnBoardError(text)) throw err;
 
     const { item, items, counted, truncated, reads } = readBoardUntilItemAppears({
+      lookupItems,
       listItems,
       issueUrl,
       attempts,

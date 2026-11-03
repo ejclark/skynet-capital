@@ -148,6 +148,8 @@ export const BOARD_LOOKUP_BASE_MS: number;
 
 export function resolveBoardItem(deps: {
   addItem: () => BoardItem;
+  /** This issue's own board items (#4439's per-issue read), asked before each whole-board re-read (#6775). */
+  lookupItems?: () => BoardItem[];
   listItems: () => { items?: BoardItem[]; totalCount?: number };
   issueUrl?: string;
   cachedItems?: BoardItem[];
