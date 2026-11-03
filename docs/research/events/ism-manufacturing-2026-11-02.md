@@ -339,6 +339,86 @@ every row; a dated adjacent event found gets proposed to `market-events.ts` as a
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-11-02 evening ET, D+0 after the completed 11-02 session; filed under `event-passed-unscored`).**
+Instrument cache busted first (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`;
+neither instrument applies to a `symbols: []` macro print, so the bust had no target). Every price below
+was re-fetched this session from Yahoo daily bars (`range=1y`), never read from an earlier row.
+
+**What printed (ISM, first-hand).** Manufacturing PMI® **55.5%**, **+1.0** from September's 54.5, the **10th
+consecutive month of expansion**; **12 industries growing, 3 contracting.** Source: ISM's own release on
+PRNewswire ([302925617](https://www.prnewswire.com/news-releases/manufacturing-pmi-at-55-5-october-2026-ism-manufacturing-pmi-report-302925617.html),
+fetched direct 2026-11-03 UTC, dated 2026-11-02 10:00 ET). Second, independent source for the number:
+Kalshi `KXISMPMI-26OCT` markets are **finalized** with expiration value **55.5** (public API read).
+Sub-indexes, October vs September: New Orders **55.5** (55.3) · Production **59.0** (56.7) · Employment
+**52.4** (52.7) · Supplier Deliveries **59.1** (59.0) · Inventories **51.4** (48.6) · Customers' Inventories
+**41.6** (41.6) · **Prices 75.2 (77.9)** · Backlog **54.6** (56.4) · New Export Orders **51.2** (50.9) ·
+Imports **52.9** (51.0). The release's own next-report line names **Tuesday, December 1, 2026**, which is
+the [12-01 sibling](ism-manufacturing-2026-12-01.md)'s date.
+
+**Scored against the stance (the call was *stand aside*, so nothing here was traded; this scores the
+framing, not a P/L).**
+
+| Item | What the ledger said | What happened | Read |
+|---|---|---|---|
+| Base case (est., Low confidence, trend extrapolation) | continued expansion, low-to-mid 50s, inside 2026's 52.4–55.6 range, Prices elevated | **55.5** — inside the range, **0.1 under its top** (July, 55.6); Prices **75.2** | **Held**, at the hot end of "low-to-mid". |
+| Kalshi ladder centre (10-30 / 10-31 rows) | ≥54 at 0.63–0.77 · **≥55 at 0.33–0.48** · ≥56 at 0.20–0.21 | resolved **yes** through ≥55, **no** at ≥56 and above | The upper-middle rung the thin book priced as a coin flip paid; the print sat **1.0 above the 54.5 centre** the rows quoted. A drift read, as the rows said. |
+| Prices bar (above ~78 accelerating, below ~72 faded) | 77.9 in September | **75.2** — between the two bars | **Neither.** Eased 2.7 points yet still far above 70; the crude pass-through the bar was built to detect neither accelerated nor faded. |
+| Kill switch: sub-50 headline | breaks the expansion streak | 55.5 | **Did not fire.** |
+| Kill switch: Fed stops being inflation-anchored (hold-vs-hike to hold-vs-cut) | a print repricing toward cuts | no data since the 10-31 row, whose reading (December hike ~84–85%, carried from the FOMC close-out) was not re-fetched here | **Did not fire, not re-measured** — nothing dated sat between that row and the print. |
+| Kill switch: a published October consensus emerges | resolves leg 7 | every search pass this run found none (only undated calendar pages and a Kalshi ladder) | **Never fired.** Leg 7 stayed on trend extrapolation and the ladder; a surprise-vs-consensus score is **unscoreable** for this event, and the record says why. |
+
+**Day-of reaction, re-run (Yahoo daily bars, 2026-01-02 → 2026-11-02; percentile = rank of the day's
+\|move\| within 2026's distribution, n=210 sessions).** Extends leg 2's table by the 09-01, 10-01 and
+**11-02** releases (11 now).
+
+| Series | 11-02 | Percentile | Release-day record, 11 releases | Unconditional |
+|---|---|---|---|---|
+| SPY | **−0.48%** | p47 | **8/11 up**, one-sided binomial p = **0.12** | 50.5% up-days |
+| QQQ | **−1.36%** | p72 | 7/11 up, p = 0.34 | 52.9% |
+| TLT (raw close) | **−0.13%** | p19 | 0/11 up | 46.7% |
+| ^TNX | **−0.71%** (4.929 → 4.894) | p57 | 7/11 up | 54.3% |
+| ^VIX | **19.42 → 21.15** (+1.73 pt, +8.9%) | p81 | n/a | n/a |
+
+- **The equity non-reaction survives, with a caveat that points the other way from the print.** SPY's
+  −0.48% sits at the median of 2026's moves on a headline that beat the ladder centre by a full point; QQQ's
+  −1.36% (p72) is the day after a −3.47% session (10-30) and rides a VIX that rose 8.9%. A hot print with
+  Prices *easing* and the index lower is not a "good news is bad news" finding: the 10-30 and 10-31 rows had
+  already put the tape on a growth/tech-led risk-off footing, and one session cannot separate the print
+  from that run. **No reaction function is attributable to this release**; the SPY 8/11 record (p = 0.12)
+  stays suggestive and below the bar the ledger set for itself in leg 2.
+- **TLT is still not citeable as a bond result.** Raw TLT is now **0/11 up**, but TLT goes ex-dividend on the
+  first business day, which has been the release day each month (Yahoo's feed shows 08-03, 09-01 and 10-01
+  at $0.33, $0.315 and $0.312). **The 11-02 distribution is not yet in Yahoo's feed**, so the raw −0.13% is
+  unadjusted; if it went ex on 11-02 for a comparable ~$0.31, the dividend-adjusted move is about **+0.25%**
+  (an inference, not a measurement) and TLT would have *risen* on the print while the 10Y yield fell 0.71%.
+  Either way the leg-2 verdict stands: the bond column here measures the distribution calendar.
+- **Context, not cause.** VIX closed at **21.15**, the highest close this ledger has recorded (the 10-16 close
+  of 19.99 was the prior high; 22.68 on 10-30 was an intraday read that faded to 19.42). WTI `CL=F` gapped from
+  **104.12** (10-30 close) to an **11-02 open of 96.30** (Yahoo's 11-02 close field is empty; the next bar, dated
+  11-03, reads 96.25): roughly **−7.5%** over the weekend gap. The OPEC+ 11-01 meeting's outcome was **not
+  found** by search this session, so no cause is asserted for the oil gap, and the S&P Global final PMI,
+  SLOOS and construction-spending prints sharing the 11-02 morning were not read here (each has its own
+  ledger). The Prices sub-index fell 2.7 points *before* the oil gap; the survey window closed earlier.
+
+**Verdict.** The stand-aside call was right for the reason the ledger kept giving: **there is no tradeable
+edge measured off this release, and 11-02 added none.** The print landed at the hot end of the base case,
+the market's reaction cannot be separated from a risk-off run already in progress, and the one question the
+ledger could never answer, surprise against consensus, stayed unanswerable because no consensus was ever
+published where this lane could read it. The 11-03 midterms, ISM Services (11-04) and payrolls (11-06) are
+the next hard reads; each has its own ledger.
+
+**Forward tests.** This event's fragment carries one row, **FT-ism-manufacturing-2026-11-02-1**, already scored
+**pass (on the letter; attribution not established)** on 2026-10-19. Nothing is open, nothing registered
+here, so `npm run research:claims` has no row to pass on. `conviction-proposals.mjs --event=…` and
+`intents.mjs --event=…` both printed `[]`: no proposal to answer and no declared intent to cite.
+
+**Loop note (process gap, one line).** The sense and verify stages were manual: web search found neither the
+print nor the reaction, so the figure came from a direct PRNewswire fetch plus Kalshi's finalized value, and
+`event-material-scan.mjs` cannot produce readings after the event date (it errors `no matching cadence band
+(daysOut=-1)`), so the probe-ref below was assembled by hand from Yahoo bars.
+
 **Last assessed:** 2026-09-22
 <!-- probe-ref: {"symbols":{},"vix":14.87,"daysBand":"high:21+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-decision-2026-11-05","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","meta-2026-10-28-print","midterm-elections-2026-11-03","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","jobs-2026-11-06","pce-2026-10-29"],"screenStreak":2} -->
 
@@ -380,3 +460,6 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-02
 <!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"high:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":2} -->
+
+**Last assessed:** 2026-11-02
+<!-- probe-ref: {"symbols":{},"vix":21.15,"daysBand":"high:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
