@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `sync project status` red on main: re-check the issue's own board lookup after a lost add race
+- **SHA:** 820913d   **DATE:** 2026-11-03   **STATUS:** closed
+- **COVERS:** a073793
+- **SIGNAL:** 1 failed run(s) of `Moneypenny Events (event-research automation)` → `sync project status` on `main`, the first [41595337432](https://github.com/ejclark/skynet-capital/actions/runs/41595337432) at 2026-11-03T07:17:29Z. Repair capsule #6775 filed 2026-11-03T07:18:31Z, closed 22m later by #6779.
+- **ROOT CAUSE:** Filing #6774 applied several labels at once, so three `sync project status` runs raced. Two added the item; the third got `Content already exists`, then re-read the whole board three times (07:17:49Z–07:18:11Z) and never saw the item, so it threw the fail-closed "archived" error and turned `main` red. A sibling run 23s later found the same item immediately through the per-issue `projectItems` lookup (#4439). The whole-board list lags far longer than #3979's 6s backoff assumed; the per-issue index did not.
+- **PREVENTION:** spec — `tests/scripts/moneypenny/projects-per-issue-lookup.spec.ts`, `tests/scripts/moneypenny/projects.spec.ts` (#6779).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `sync project status` red on main: skip with a warning when github faults a card write on every retry
 - **SHA:** 388fa0f   **DATE:** 2026-11-02   **STATUS:** closed
 - **COVERS:** e313ff7
