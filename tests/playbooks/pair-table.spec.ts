@@ -10,6 +10,7 @@ import {
   playbookName,
   STRATEGIES,
   statusLabel,
+  statusParts,
   withPairNames,
 } from "../../src/playbooks/pair-table.js";
 import { findPlaybook, registeredPlaybooks } from "../../src/playbooks/registry.js";
@@ -172,10 +173,36 @@ describe("a status reads as a glyph plus a word (criterion 10)", () => {
 
   it("adds the qualifier a ✓ carries", () => {
     expect(labelOf("S1-NVDA")).toBe("△ researched, below the house bar");
-    expect(labelOf("NVDA-CALL-SPREAD")).toBe("✓ researched, borrowed");
+    expect(labelOf("NVDA-CALL-SPREAD")).toBe("△ researched, borrowed, below the house bar");
     expect(labelOf("G1-GOOG")).toBe("✓ researched");
     expect(labelOf("CRWV-WHEEL")).toBe("◆ conviction");
     expect(labelOf("TACO-DJT")).toBe("⊘ can't run");
+  });
+
+  // #6772: the spread wore a plain ✓ on the run-up's verdict while the run-up wore △.
+  it("gives a borrowed verdict the mark of the pair it borrows, and still says it is borrowed", () => {
+    const glyphOf = (id: string) => {
+      const pair = findPair(id);
+      return pair ? statusParts(pair.evidence).glyph : undefined;
+    };
+    expect(glyphOf("NVDA-CALL-SPREAD")).toBe(glyphOf("S1-NVDA"));
+    expect(labelOf("NVDA-CALL-SPREAD")).toMatch(/borrowed/);
+    // A borrowed row whose source clears the bar keeps its ✓.
+    const spread = findPair("NVDA-CALL-SPREAD");
+    if (!spread) throw new Error("NVDA-CALL-SPREAD expected");
+    expect(statusLabel({ ...spread.evidence, borrowedFrom: "G1-GOOG" })).toBe(
+      "✓ researched, borrowed",
+    );
+  });
+
+  it("borrows only from a pair that exists, and only on a row marked borrowed", () => {
+    for (const { id, evidence } of pairTable()) {
+      expect(evidence.qualifier === "borrowed", id).toBe(evidence.borrowedFrom !== undefined);
+      if (evidence.borrowedFrom) {
+        expect(findPair(evidence.borrowedFrom), id).toBeDefined();
+        expect(evidence.borrowedFrom, id).not.toBe(id);
+      }
+    }
   });
 
   it("never draws a status as a minus sign, which reads as 'minus one' before a count (#5093)", () => {
