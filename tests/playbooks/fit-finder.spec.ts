@@ -46,6 +46,8 @@ describe("fitFor", () => {
   it.each([
     ["NVDA", "pre-print-run-up", "S1-NVDA", NOW],
     ["NBIS", "dip-bounce", "NBIS-DIP-BOUNCE", NOW],
+    // #6772: the spread borrows the run-up's verdict, so it borrows its △ too.
+    ["NVDA", "call-spread", "NVDA-CALL-SPREAD", NOW],
     ["NVDA", "pre-print-run-up", "S1-NVDA", "2027-04-02T15:00:00Z"],
   ])(
     "reads %s on %s exactly as the Store's card row %s does, as of %s",

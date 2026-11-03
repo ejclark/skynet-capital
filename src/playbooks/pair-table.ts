@@ -208,6 +208,9 @@ export interface PairEvidence {
   /** A ✓ that is not a clean ✓: `weakened` (it misses the house bar), `borrowed` (another pair's
    *  verdict, this pair's own P/L untested). */
   readonly qualifier?: "weakened" | "borrowed";
+  /** `borrowed` only: the id of the pair whose verdict this one borrows. A borrowed verdict is
+   *  exactly as strong as its source, so its mark is read from there, never typed twice (#6772). */
+  readonly borrowedFrom?: string;
   /** The call, in one sentence. */
   readonly call: string;
   readonly confidence?: "high" | "medium" | "low";
@@ -375,6 +378,7 @@ const PAIRS: readonly Pair[] = [
     evidence: {
       status: "researched",
       qualifier: "borrowed",
+      borrowedFrom: "S1-NVDA",
       call: "The run-up on NVDA as a call debit spread: long from D-20 to D-6, out from D-5. The verdict is the run-up's; the spread's own P/L is untested.",
       confidence: "medium",
       measuredExit: "D-5",
@@ -542,6 +546,13 @@ export function withPairNames(text: string): string {
   });
 }
 
+/** Whether a verdict misses the house bar: its own `weakened`, or the one it borrows. */
+function belowHouseBar(evidence: PairEvidence): boolean {
+  if (evidence.qualifier === "weakened") return true;
+  const source = evidence.borrowedFrom ? findPair(evidence.borrowedFrom) : undefined;
+  return source?.evidence.qualifier === "weakened";
+}
+
 /** The status as a glyph and its words, apart — the one rule both doors read (the Store's card and
  *  the fit finder, #6275), so a row's mark can never differ between them. `stale` adds the shelf
  *  date in words and leaves the glyph alone. */
@@ -552,8 +563,10 @@ export function statusParts(
   const { glyph, word } = EVIDENCE_STATUS[evidence.status];
   const shelf = stale ? " · past its shelf date" : "";
   // A ✓ that misses the house bar never wears the ✓ (#5444): an open triangle, and the miss in words.
-  if (evidence.qualifier === "weakened") {
-    return { glyph: "△", word: `${word}, below the house bar${shelf}` };
+  // A borrowed verdict misses it whenever its source does (#6772), and still says it is borrowed.
+  if (belowHouseBar(evidence)) {
+    const borrowed = evidence.qualifier === "borrowed" ? ", borrowed" : "";
+    return { glyph: "△", word: `${word}${borrowed}, below the house bar${shelf}` };
   }
   return { glyph, word: `${evidence.qualifier ? `${word}, ${evidence.qualifier}` : word}${shelf}` };
 }
