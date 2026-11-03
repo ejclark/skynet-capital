@@ -348,4 +348,31 @@ describe("print exclusions", () => {
       "2026-10-12",
     ]);
   });
+
+  it("excludes an estimate's whole window, plus one session either side of it", () => {
+    // MU's cadence estimate (#6773): 12-16, window Mon 12-14 .. Wed 12-23; 12-25 is a holiday.
+    const estimate: readonly EarningsPrint[] = [
+      {
+        symbol: "MU",
+        date: "2026-12-16",
+        status: "estimate",
+        source: "test",
+        window: { start: "2026-12-14", end: "2026-12-23" },
+      },
+    ];
+    const dates = [
+      "2026-12-10",
+      "2026-12-11",
+      "2026-12-14",
+      "2026-12-21",
+      "2026-12-24",
+      "2026-12-28",
+    ];
+    expect([...printExclusions("MU", dates, estimate)]).toEqual([
+      "2026-12-11",
+      "2026-12-14",
+      "2026-12-21",
+      "2026-12-24",
+    ]);
+  });
 });

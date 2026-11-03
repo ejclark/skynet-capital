@@ -548,9 +548,10 @@ describe("a pre-earnings pair drawn as one line", () => {
 
   it("shows the line, the rows and the bars, and no Enter / Exit / Hold paragraphs", () => {
     mount(s1);
-    expect(screen.getByRole("img", { name: /^NVDA's window: holds from Oct 21/ })).toBeVisible();
-    expect(screen.getByText("① Buy · Oct 21 · 20 trading days before")).toBeInTheDocument();
-    expect(screen.getByText("② Sell · Nov 11 · 5 trading days before")).toBeInTheDocument();
+    // Counted from NVDA's confirmed 2026-11-17 report (#6773).
+    expect(screen.getByRole("img", { name: /^NVDA's window: holds from Oct 20/ })).toBeVisible();
+    expect(screen.getByText("① Buy · Oct 20 · 20 trading days before")).toBeInTheDocument();
+    expect(screen.getByText("② Sell · Nov 10 · 5 trading days before")).toBeInTheDocument();
     expect(screen.getByText("Average move in each stretch")).toBeInTheDocument();
     expect(document.querySelector(".pb-card-triggers")).toBeNull();
     expect(screen.queryByText("enter rule")).toBeNull();

@@ -48,6 +48,7 @@ export const TECHNOLOGY: readonly TickerEntry[] = [
   { symbol: "SMCI", name: "Super Micro Computer", sector: "Technology" },
   { symbol: "ARM", name: "Arm Holdings", sector: "Technology" },
   { symbol: "CRWV", name: "CoreWeave", sector: "Technology" },
+  { symbol: "NBIS", name: "Nebius Group", sector: "Technology" },
   { symbol: "NXPI", name: "NXP Semiconductors", sector: "Technology" },
   { symbol: "ON", name: "ON Semiconductor", sector: "Technology" },
   { symbol: "SWKS", name: "Skyworks Solutions", sector: "Technology" },
