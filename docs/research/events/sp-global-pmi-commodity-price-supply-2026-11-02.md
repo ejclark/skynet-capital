@@ -81,6 +81,7 @@ Registered forward tests: [`FT-…-1` to `-3`](../forward-tests/sp-global-pmi-co
 |---|---|---|---|---|
 | 2026-10-26 | D-7 | Initial research banked (above); canonical `sp-global-pmi-commodity-price-supply-2026-11-02.json` written this PR from its one proposal (`…from-sp-global-manufacturing-pmi-2026-11-02.json`), notes extended. **Date:** calendar read first-hand (HTTP 200): `Nov 02 16:00 UTC`; rule not stated for this series, inferred from the 10-01 realized masthead. **Sept release (primary PDF):** All Items 2.0 (Aug 1.9), energy 4.5×, transport 6.3×, semis 13.1×, electrical-items shortages 4.6×. **Oil (secondary):** Brent $102.31 (10-01) → $109.86 (10-16) → $110.10 (10-20). **VIX** 19.45 (10-23, Cboe). **Adjacency:** 49 ids ±5d, 7 strong; nothing new proposed — the one dated adjacent release in the same slot (JPMorgan Global Manufacturing PMI) is named, not filed; flash US PMI 11-23 is already proposed by the sibling. Nothing dated past the horizon surfaced. **Blocked:** Yahoo `^VIX` 429; flash PDFs on `pmi.spglobal.com` 202/empty. Registered FT-1 to FT-3. | — (initial) | 2026-11-03 (close-out) |
 | 2026-11-02 | D-0 | **Pulse check (session; screen was material: three new strong adjacents, the MSFT/GOOG/AMZN prints). Release not out** (13:58 UTC; slot is 16:00 UTC, **estimate**), so FT-1 to -3 stay open for the 11-03 close-out. **Oil, corrected upward (Yahoo v8 Brent front-month closes):** 10-12 to 10-26 window averages **109.7** vs **104.6** for 09-10 to 09-25 (**+4.9%**), peak **116.72** on 10-23, **117.64** on 10-30; the 10-26 row's 110.10 high was a secondary source and low. Direction for FT-1 unchanged and a little stronger; the sibling's flash read (prices sharpest since Aug 2022) is the same sign. **OPEC+ 11-01:** seven members held December at 31.01 mb/d (CNBC, FXStreet 10-31/11-01), next full meeting 11-29; the tracked event owns the read. **Today's tape:** Brent **~106.9** at 13:49 UTC vs 117.64 on 10-30 (**-9%**), a step down at ~13:30 UTC; press cites Iran-Qatar talks and Hormuz flows back to pre-conflict (Bessent), not verified to a primary. It lands after the survey window, so it moves nothing in this print and is a November-edition input. **VIX** 18.94 vs 19.45 (-0.5pt). **Peers/macro:** FOMC 10-28, PCE and GDP 10-29, ECI 10-30 all printed; reactions owned by their ledgers. Nothing proposed: JPMorgan Global Manufacturing PMI (same slot) still named, not filed; 11-29 OPEC+ is already tracked. No conviction proposals or declared intents name this event. | — (stance holds: stand aside; read energy first) | 2026-11-03 (close-out) |
+| 2026-11-03 | D+1 | **Close-out — see `## Outcome`.** Release read first-hand (PDF, HTTP 200): published 11:00 ET (1600 UTC) 11-02 as scheduled; All Items price pressure **2.2** (Sept 2.0), semis 16.9×, electrical 10.1×, energy and transport at 5- and 4-month highs (no multiple given), supply shortages **1.5** (Sept 1.8), window 9-27 Oct. FT-2 **pass**; FT-1 and FT-3 **unscoreable** (energy only qualitative; Yahoo 429 on 4 of 5 instruments). Caches busted. **Adjacency:** midterms 11-03, jobs 11-06 (already tracked); nothing new proposed, nothing past the horizon surfaced. **VIX** 19.42 (10-30, latest Cboe row). **Blocked:** Yahoo v8 429 (QQQ, TLT, IWM, `^TNX`); Brent not re-fetched. | — (stance confirmed: read, don't trade) | closed |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -98,3 +99,45 @@ registered forward test whose `Score by` has arrived (`forward-test-due`).
 
 **Last assessed:** 2026-11-02
 <!-- probe-ref: {"symbols":{},"vix":18.94,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-03, D+1 — inside the `closeOutWithinDays` window).** Caches busted
+(`symbols: []`, so no target; run for the record). The release was re-read first-hand from the
+press-release PDF (HTTP 200, 124,271 bytes, masthead "Embargoed until 1100 EDT (1600 UTC) 02 November
+2026"), so the 11:00 ET `estimate` held on timing; the entry stays `estimate` on the standing
+private-compiler schema gap. One forward test passed, two could not be scored; no kill switch fired.
+
+### The release itself
+
+October-data edition, data collected **9-27 October 2026**. Verbatim headline: price pressures "above
+the long-run average for the ninth month in a row, with the respective index edging up from 2.0 in
+September to **2.2** in October"; 23 of 26 monitored commodities above average, led by
+**Semiconductors (16.9×)** and **Electrical Items (10.1×)** — both back up from September's 13.1× and
+8.7×, so the "second month of semiconductor easing" risk this ledger named did not occur. Transport
+and Energy "most marked for four and five months" respectively; the economist says both "rise further
+above their long-run trends" on Middle East disruption. **Supply Shortages Index 1.5** (Sept 1.8),
+the lowest since March; oil still the most-reported shortage (5.7×), then electrical items (4.2) and
+transport (3.7). The base case (energy up, headline closer to a coin flip) was right on direction;
+the headline rose because of semiconductors and electrical items more than energy.
+
+### Forward tests
+
+- **FT-1 — unscoreable.** Energy is stated only as a ranking against prior months, no multiple, so
+  there is no figure to hold against 4.5; the registered kill clause sends this to unscoreable.
+  Direction (up) matches the prediction.
+- **FT-2 — pass.** Headline 2.2 is strictly above 2.0.
+- **FT-3 — unscoreable.** Yahoo v8 returned HTTP 429 on every retry for QQQ, TLT, IWM and `^TNX`.
+  The one instrument that loaded, SPY, was quiet at 11:00-11:15: triplet share 16.0% vs trailing
+  median 30.2% (59 prior sessions). One instrument cannot make the 3-of-5 count, so no verdict.
+
+### What it changes
+
+Nothing that trades; stance holds: read it, don't trade it. For the November edition (first working
+day of December, `estimate`), read semiconductors and electrical items before energy, and note that
+Brent fell about 9% on the morning of 11-02 after the survey window closed, an input to November.
+No loop stage was automated by this run; the sense step (fetching intraday bars when the free
+source throttles) still needs a second source.
+
+**Last assessed:** 2026-11-03
+<!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:0+","adjacentIds":["adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-minutes-2026-11-05","construction-spending-2026-11-02","eurostat-hicp-flash-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","treasury-borrowing-estimates-2026-11-02","treasury-refunding-2026-11-04","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0,"blocked":[{"url":"https://query2.finance.yahoo.com/v8/finance/chart/QQQ","status":"429","at":"2026-11-03"}]} -->
