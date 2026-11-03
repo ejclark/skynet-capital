@@ -278,7 +278,7 @@ describe("GET /api/trade/alerts", () => {
 
   /** #5719: a researched window open on a watched name joins the same list, from the member's own
    *  watchlist; a list that cannot be read costs only those alerts. Read against the house roster on
-   *  2026-11-02, inside S1-NVDA's window on NVDA's estimated 2026-11-18 print. */
+   *  2026-11-02, inside S1-NVDA's window on NVDA's 2026-11-17 print, confirmed by IR 10-28 (#6773). */
   describe("window watch", () => {
     const watching = (symbols: readonly string[]) => ({
       load: () =>
@@ -292,13 +292,14 @@ describe("GET /api/trade/alerts", () => {
         ...over,
       });
 
-    it("raises an open window on a watched name, saying why and that the date is an estimate", async () => {
+    it("raises an open window on a watched name, saying why, with no estimate caveat on a confirmed date", async () => {
       const { body } = await list(windowConfig({ watchlist: watching(["NVDA"]) }));
       const windows = body.alerts.filter((a) => a.source === "window-watch");
       expect(windows.map((a) => a.symbol)).toContain("NVDA");
       for (const alert of windows) {
         expect(alert.body).toMatch(/^NVDA is on your watchlist\./);
-        expect(alert.body).toContain("is an estimate the company has not confirmed");
+        expect(alert.body).toContain("nothing is placed on your account");
+        expect(alert.body).not.toContain("is an estimate the company has not confirmed");
       }
     });
 
