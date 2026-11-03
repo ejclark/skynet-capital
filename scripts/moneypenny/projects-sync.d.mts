@@ -17,6 +17,8 @@ export interface BoardContext {
   items(opts?: { refresh?: boolean }): BoardItemPage;
   /** One issue's candidate board items, from the cached list if there is one, else asked of GitHub about that issue alone (#4439). */
   itemsFor(issue: SyncIssueRef): BoardItem[];
+  /** Always the per-issue read, never a cached list — the re-check after `Content already exists` (#6775). */
+  issueItems(issue: SyncIssueRef): BoardItem[];
   fields(opts?: { refresh?: boolean }): {
     id: string;
     name: string;

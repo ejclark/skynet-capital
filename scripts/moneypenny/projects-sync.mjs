@@ -435,6 +435,13 @@ export function createBoardContext({
         return readAllItems().items ?? [];
       }
     },
+    /**
+     * Always asks GitHub about this issue alone, never a held list (#6775): the re-check after a
+     * sibling's add, which a cached or lagging whole-board list is exactly what failed to show.
+     */
+    issueItems(issue) {
+      return readIssueItems(issue);
+    },
     fields({ refresh = false } = {}) {
       if (refresh || !fields) fields = readFields();
       return fields;
@@ -531,6 +538,7 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
     issueUrl: issue.html_url,
     cachedItems: board.itemsFor(issue),
     addItem: () => addIssueToBoardFromGh({ projectId: board.project().id, issue }),
+    lookupItems: () => board.issueItems(issue),
     listItems: () => board.items({ refresh: true }),
   });
   if (added) board.noteAdded(item);
