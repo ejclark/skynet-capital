@@ -1031,6 +1031,12 @@ robust, alpha fragile — is the finding.
   seasonal-high quarter (median Q2→Q3 +0.25pp, unadjusted series) so a 0.3pp rise is also the seasonal default. Do not register a
   "this series' quarterly change will read as noise" call off the level's margin of error; test the publisher's difference language.
 
+- **"The GX cover ratio measures MOF's offering size, so competitive bids stay inside ¥1,045-1,412bn (FT-jgb-climate-transition-5y-auction-2026-11-02-5)"** — added 2026-11-03 from the
+  [jgb-climate-transition-5y-auction-2026-11-02 close-out](events/jgb-climate-transition-5y-auction-2026-11-02.md). Registered 2026-09-09 off ten
+  non-inaugural GX prints at a near-constant ¥1,115.3bn (cv 12.3%) while the offering fell ¥350bn to ¥250bn. The eleventh drew **¥959.9bn**
+  (cover 3.84), the lowest of the 5-year line. Do not register a "bid volume is constant, so cover is arithmetic" claim off a range fitted to
+  prints at larger offerings; the ¥250bn prints (¥1,155.6bn, ¥875.9bn, ¥959.9bn) sit below it.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
