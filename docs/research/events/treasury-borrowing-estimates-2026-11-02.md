@@ -278,6 +278,7 @@ Jan–Mar 2027 assumption, scored 2026-11-03).
 | 2026-10-19 | D-14 | Pulse; cadence band **low:15+ → low:0+** (interval 30d → 7d). **Date re-verified:** home.treasury.gov still reads *"(The next release is scheduled for November 2, 2026)"* (curl, today) — `confirmed` stands. **New primary:** the Q4 dealer questionnaire (Treasury PDF, 10-16) asks dealers for Oct–Dec 2026 *and* Jan–Mar 2027 borrowing + end-cash, responses due 10-26 noon, meetings 10-29/30 — so Treasury is polling the same two numbers this ledger says to read; no debt-limit question in the extracted text. **Debt-to-the-penny:** **$40.3883T** on 10-15 vs **$41.1T** = **~$712B** headroom (was $839B on 10-01: a $128B draw in 14 days). Against the $628B Oct–Dec borrowing plan that is thin: this ledger's own arithmetic (not Treasury's) puts year-end headroom near zero-to-low-hundreds of $B, i.e. earlier than leg 6's Feb–Apr 2027 order of magnitude — **FT-42 (no debt-limit language) is now less likely than at registration**, not void. **Tape (Yahoo, 10-16 vs 10-02):** ^TNX **5.10%** (5.28), TLT **80.05** (77.48), SPY **763.25** (769.64; −1.1% on 10-16), **^VIX 19.99** (15.31) — a +4.7pt regime step-up past the 3pt line; options-shaped plays cost more, release-day null (leg 2) unaffected. **Macro/geo:** 10-28 FOMC hike odds swing across sources (not re-established here); Hormuz unchanged. **Peers:** n/a. **Adjacency:** `--on-date` 11-02 shows 5 entries, all already tracked; corridor **45** events within ±5d, 7 confirmed high/critical (new: `ism-manufacturing-2026-11-02`, `amd-fq3-2026-results-2026-11-03`); nothing new to propose. **Stance check: survives; no kill switch tripped** (nothing published yet). FT-41/FT-42 remain `_open_`, scoreBy 2026-11-03. | — (stance survives; FT-42 odds lowered by headroom arithmetic) | 2026-10-26 (low, 0+d band: every 7d) |
 | 2026-10-26 | D-7 | **Date re-verified:** home.treasury.gov (curl, HTTP 200) still reads *"(The next release is scheduled for November 2, 2026)"* at the 15:00 ET slot, and Nov 4 / Jan 15, 2027 for the others — `confirmed` stands. **Debt-to-the-penny (fiscaldata):** **$40.4443T** on 10-22 vs the **$41.1T** limit = **~$656B** headroom (712B on 10-15: a $56B draw in 7 days); my own arithmetic, not Treasury's, still puts year-end headroom near zero-to-low-hundreds of $B, so FT-42 (no debt-limit language) stays less comfortable than at registration — not void, nothing published. **Tape (Yahoo, last close 10-26 vs 10-16):** ^TNX **4.99%** (5.10), TLT **81.66** (80.05), SPY **765.94** (763.25), ^VIX **17.85** (19.99) — rates rally continued, vol back inside 3pt of the 10-03 reading; release-day null (leg 2) unaffected. **Macro:** the 10-28 FOMC is still a hike-or-hold coin flip in the sources found (none primary); not re-established here. **Dealers:** questionnaire responses due today noon, meetings 10-29/30; no Monday-total consensus published. **Debt limit:** BPC-type projections cited in search put binding between late winter and mid-summer 2027, pessimistic case Nov 2026 (secondary, undated). **Peers/geo:** n/a / none new. **Adjacency:** `--on-date` 11-02 shows 8 entries, all tracked; corridor 51 within ±5d, 10 strong (new vs last row: GOOG 10-28 print, both confirmed); no proposals (nothing new dated in-horizon). No kill switch tripped; FT-41/FT-42 `_open_`, scoreBy 2026-11-03. | — (stance survives; no kill switch tripped) | 2026-11-02 (low, 0+d band: release day) |
 | 2026-11-02 | D-0 | **Deterministic screen (no Claude session).** Readings — VIX 19.0 (+1.1pt since last), band unchanged (low:0+), 54 adjacent event(s) tracked, new in corridor since last pulse: `smci-fq1-2027-results-2026-11-03` (recorded, not assessed). Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-09 |
+| 2026-11-03 | D+1 | Close-out (see `## Outcome`). Release published 2026-11-02 as confirmed (sb0675, fetched direct): Oct–Dec 2026 **$618B** (−$10B vs $628B; +$24B ex-cash-balance), Jan–Mar 2027 **$800B** on **$1.000T** end-March cash. **FT-41 pass**, **FT-42 pass** (no debt-limit text). Tape 11-02: TLT −0.13% (12th pctile |move|), ^TNX −0.71%, SPY −0.48%, ^VIX 19.42→21.15; unattributable (ISM-mfg 10:00, SLOOS 14:00, release 15:00). Debt $40.5936T (10-29), ~$506B under the limit. No kill switch fired; no proposals (nothing new dated in-horizon). | — (stance held; closed) | — (closed) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -286,6 +287,63 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-11-03, D+1).** Instrument caches busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`; neither instrument applies to a `symbols: []` macro print). Every number
+below was re-fetched this session, none read from an earlier row: the release from home.treasury.gov
+(plain `curl`, HTTP 200), debt from fiscaldata.treasury.gov debt-to-the-penny, prices from Yahoo daily bars
+(TLT, ^TNX, SPY, ^VIX; n=961 sessions since 2023-01-01, last bar 2026-11-02).
+
+**Verdict: the release happened as confirmed, FT-41 and FT-42 both pass, the stance holds — read it, did
+not trade it.** The base case (a quiet edition, no debt-limit text) is what printed.
+
+- **Date (leg 1): held.** Treasury's [press release sb0675](https://home.treasury.gov/news/press-releases/sb0675)
+  carries the 2026-11-02 date, and the most-recent-documents page now lists "Financing Estimates: 2026 -
+  4th Quarter" with the next release "February 1, 2027". (The page's 15:00 slot header reads "Monday,
+  November 4, 2026" — 11-04 is a Wednesday; a Treasury page typo, the release body is dated 11-02.)
+  The Date kill did not fire.
+- **What printed.** October–December 2026: **$618B** privately-held net marketable borrowing, end-December
+  cash **$850B** (unchanged). **$10B lower** than August's $628B — a −$34B cash effect (opening balance
+  $984B vs $950B assumed) partly offset by weaker net cash flows; **excluding the cash balance, $24B
+  higher.** July–September actual: $742B borrowed, $984B end-quarter cash (vs $739B / $950B estimated).
+  **January–March 2027, the first estimate: $800B, end-March cash $1.000T** — a $150B cash build on top
+  of the flow. For scale, the same release a year earlier opened Jan–Mar 2026 at $578B (secondary: press
+  summaries of the 2025-11-03 release; the quarter finished at $577B).
+- **FT-41: PASS.** −$10B is inside ±$150B and in the band of the four prior no-limit editions (−21 · −3 ·
+  +79 · +68). The regime mapping from leg 5 survives its first out-of-sample test: Treasury's own
+  sentence attributes the revision to the cash balance. Stated limit, as registered: the modal outcome,
+  one weak observation. Scored in `forward-tests/legacy.md`.
+- **FT-42: PASS, and read it with the context.** No *"assume enactment of a debt limit suspension or
+  increase"* footnote and no *"constraints related to the debt limit"* line — the body is two numbered
+  footnotes (SOMA treatment; the cash-balance table). Base rate disclosed at registration: 10 of 15
+  editions carried neither. **The context leg 6 asked to be read:** total debt was **$40.5936T on
+  2026-10-29** against the **$41.1T** limit — about **$506B** of headroom, down from $1.0225T on
+  08-27 (a $516B draw in 63 days; +$422B from 09-30 to 10-29 alone). On the $618B Oct–Dec plan, this
+  ledger's own arithmetic (not Treasury's; total debt outgrows privately-held borrowing) puts the
+  ceiling at or near year-end, ahead of a $800B Jan–Mar quarter. Treasury publishing a $1.000T end-March
+  cash assumption with no limit language is consistent with it not treating the ceiling as binding in
+  that window — my inference, not a statement in the document. **The absence of language is a fact
+  about the press release, not about the ceiling.**
+- **Reaction on the day (leg 2): consistent with nil, but unattributable.** 11-02 close-to-close, all
+  re-pulled: TLT **−0.13%** (12th percentile of its own |move| distribution), ^TNX **−0.71%** (42nd),
+  SPY **−0.48%** (49th), ^VIX 19.42 → **21.15** (+8.9%, 83rd). The TLT-above-90th-percentile kill did not
+  fire. 11-02 is not an FOMC eve, so the clean subset governs, as called. But the day also carried ISM
+  Manufacturing (55.5, 10:00), SLOOS (14:00) and S&P Global PMI, so the daily bar cannot say the 15:00
+  release did or did not move anything; the **T+1 (11-03) bar does not exist yet** and the 15:00→16:00
+  intraday window the Honest-limits section asked for was **not measured** — that kill (a real
+  release-window effect) is neither fired nor cleared.
+- **Reading for the next print (Feb 1, 2027 — [sibling ledger](treasury-borrowing-estimates-2027-02-01.md)):**
+  the number to carry is Jan–Mar 2027's **$800B** and its **$1.000T** cash assumption; the thing to watch
+  is whether the debt-limit language the base rate said *could* appear does, one quarter closer. The
+  [11-04 refunding](treasury-refunding-2026-11-04.md) owns the composition and guidance surprise.
+
+**Honest limits.** Two forward tests, both passes against high base rates — they confirm the document
+was quiet in the way the ledger expected, not that the mapping is proven. The ex-cash decomposition rests
+on Treasury's own prose for this release only. The $506B headroom is total public debt on 10-29, one
+data point from a series that moves ~$30–60B day to day around tax and auction dates. No conviction claim
+reads this event (`npm run research:claims -- --event treasury-borrowing-estimates-2026-11-02`).
 
 **Last assessed:** 2026-10-03
 <!-- probe-ref: {"symbols":{},"vix":15.31,"daysBand":"low:15+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amzn-2026-10-29-print","boe-decision-2026-11-05","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","meta-2026-10-28-print","midterm-elections-2026-11-03","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","jobs-2026-11-06","pce-2026-10-29"],"screenStreak":0} -->
@@ -301,3 +359,6 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-02
 <!-- probe-ref: {"symbols":{},"vix":18.96,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":1} -->
+
+**Last assessed:** 2026-11-03
+<!-- probe-ref: {"symbols":{},"vix":21.15,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
