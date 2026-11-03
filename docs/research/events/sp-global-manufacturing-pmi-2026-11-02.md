@@ -103,3 +103,81 @@ Nothing directional. The useful outputs are one **dated base rate** (final withi
 
 **Last assessed:** 2026-11-02
 <!-- probe-ref: {"symbols":{},"vix":18.95,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-03
+<!-- probe-ref: {"symbols":{},"vix":21.54,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out, 2026-11-03 (D+1, inside `closeOutWithinDays: 6`).** Instrument cache busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). Every figure
+below is a fresh pull: the release's own PDF fetched direct, and Yahoo **5-minute** bars for
+SPY/QQQ/TLT/IWM/`^TNX` re-fetched through the repo's `intraday-bars.mjs` (`range=60d&interval=5m`,
+60 sessions, 44 for `^TNX`), same window construction as registration (open of the bar starting at A
+-> close of the bar starting at B-5m; ET). That re-pull reproduces the 10-01, 10-05 and 10-23 shares
+the Initial research table carries (e.g. SPY 21.79% / 0.34% / 140.12%), so the sample is the same
+one. Nothing below is carried from a prior row or from memory of the tape.
+
+**What printed (primary: S&P Global's press-release index, browser User-Agent, HTTP 200, linked PDF
+HTTP 200, 111,121 bytes).** Masthead verbatim: **"Embargoed until 0945 EST 2 November 2026 / 1445
+UTC 2 November 2026"**, data collected 9-27 October. **October S&P Global US Manufacturing PMI
+(final): 54.9**, from September's 55.9 (the PDF now calls that a 52-month high); fifteenth month
+above 50. Output and new orders still rising but slower (new orders at the slowest since March);
+input-cost inflation highest since May; supplier delivery times lengthened the most since August
+2022; employment growth the highest since April 2021. The slot landed exactly where every row said
+it would. The entry stays `estimate`: the schema gap (no confirmed-source prefix for a private PMI
+compiler) is unchanged, and this lane may not promote its own sweep's find.
+
+**FT-sp-global-manufacturing-pmi-2026-11-02-1 - KILLED.** Flash **56.0** -> final **54.9**, a
+**-1.1pt** revision; the registered band was 55.0-57.0 inclusive and the final sits **0.1 below its
+floor**. The revision series is now four pairs: **+0.1, +0.7, -1.1, -1.1** - mean |revision| widens
+from 0.63pt (n=3) to **0.75pt (n=4)**, two of four inside +/-1.0, and the last two are both
+downward. The ledger's "revision inside a point is the rule" base case is spent; the next final
+should anchor on a wider band, and a downward-skewed one while the flash's late-panel tail keeps
+softening.
+
+**FT-sp-global-manufacturing-pmi-2026-11-02-2 - KILLED.** Share of the 09:30-10:30 |move| made by
+the 09:45-10:00 window on 2026-11-02, against the trailing medians fixed at registration:
+
+| Instrument | 09:45-10:00 move | 09:30-10:30 move | Share | Registered median | At or below? |
+|---|---|---|---|---|---|
+| SPY | +0.0790% | +0.5511% | 14.33% | 39.9% | **yes** |
+| QQQ | -0.0676% | +0.5753% | 11.75% | 44.6% | **yes** |
+| TLT | +0.2077% | -0.0304% | 682.70% | 38.0% | no |
+| IWM | +0.6012% | +0.4864% | 123.60% | 46.4% | no |
+| `^TNX` | -0.3268% | +0.1225% | 266.67% | 39.9% | no |
+
+**2 of 5 at or below median; 3 above** - the registered kill ("exceeds its trailing median in 3 or
+more of the counted instruments") fires. Re-computed medians on today's sample (SPY 38.7, QQQ 44.8,
+TLT 42.2, IWM 43.1, `^TNX` 41.4) sort the five identically. **Degeneracy guard:** every hour move
+cleared the 0.02% floor (smallest, TLT, 0.0304%), so nothing was excluded; excluding TLT anyway
+leaves 2 of 4, still short of the majority threshold. **Void check:** I found no named non-PMI
+catalyst running across both windows in 09:30-10:30; ISM Manufacturing and construction spending
+at 10:00 are the carve-out the registration excluded from voiding, and I did not re-read every
+same-day entry's release time. So the test stands as scored.
+
+**What the bars show (descriptive, not attributed).** The window was quiet where the hour was
+loud, and loud where the hour was flat. SPY and QQQ barely moved in 09:45-10:00 inside a +0.55%
+hour. Rates and small caps are the other way: `^TNX` stepped down across the three bars (4.896 ->
+4.880), TLT rose 0.21%, IWM rose 0.60% (0.31% of it in the 09:55 bar), then TLT gave the whole
+gain back by 10:30 and the yield retraced, which is why the TLT and `^TNX` hour moves are tiny
+denominators (0.03% and 0.12%) and their shares read 683% and 267%. The direction (yields and
+small caps both moving with a final 1.1 under the flash) fits a downside revision but one session
+cannot separate it from the surrounding tape, and 10-01 printed the same -1.1 revision with a quiet
+window. For the day: SPY 759.45 open -> 752.12 last bar (-0.97%), QQQ 695.32 -> 681.13 (-2.04%),
+TLT 81.84 -> 81.73, IWM 281.64 -> 279.15, `^TNX` 4.896 -> 4.894, VIX 19.05 -> 21.54 on the last bar
+(a risk-off afternoon, after the window). The ISM 10:00 print was not fetched here; its ledger owns
+that.
+
+**Vs. the stance.** **Tradeability-nil holds** - `symbols: []`, no macro-keyed playbook, nothing was
+sized off it, and the corridor made attribution hopeless. **Two claims move:** the +/-1.0pt revision
+prior is spent a second time (n=4), and "the 09:45 slot reads quiet on the final releases" is
+**retired as a general property**: finals now read 4 of 5 (10-01), 3 of 5 with two ties (10-05) and
+2 of 5 (11-02) - quiet in the equity indices on all three days, not in rates or small caps on the
+third. Kill switches not fired: sub-50 (54.9 is 4.9pt clear), date/slot moved (no), a confirmed-source
+prefix (no). No conviction reads either forward test, so none to update. **Honest limits.** n=3
+release days for the window study and n=4 for revisions; the 11-02 setup was the loud one FT-2
+warned about (first Monday after FOMC week, midterm eve), so a failure here is the registered kill,
+not a clean refutation of the quiet-slot claim; and the `^TNX` and TLT cells are close calls on
+tiny absolute moves. Next live test of both: the Flash US PMI (2026-11-23), which carries the
+consensus. This document goes quiet on its own stance as of this section.
