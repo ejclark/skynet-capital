@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A paired-refuted starts-vs-sales homebuilder asymmetry stays refuted when two more reference-month pairs arrive" (FT-new-home-sales-2026-09-24-3)** — added 2026-11-03 from the
+  [new-home-sales-2026-09-24 ledger](events/new-home-sales-2026-09-24.md). At 70 pairs the paired Wilcoxon put XHB at p=0.0310/0.0375 and LEN at 0.0386 with the housing-starts session larger,
+  from 0.0520/0.0677 and 0.0696 at 68. Do not register "stays refuted" or "stays significant" on a screen sitting at p≈0.05 with two pairs to come: a result that moves across the line on n+2 is
+  a coin on the threshold, and the 09-17 pair was the morning after Lennar's own print. The asymmetry is open, unproven, 14-test-multiplicity-fragile and unpositionable.
+
 - **"A benchmark revision leaves a four-month-old wholesale ratio within 0.03 because 9 of the last 12 did" (FT-mwts-benchmark-revision-2026-10-26-3)** — added 2026-11-02 from the
   [mwts-benchmark-revision-2026-10-26 ledger](events/mwts-benchmark-revision-2026-10-26.md). Census restated the June-2026 SA inventories/sales ratio **1.19 → 1.24** (+0.05; inventories +4.42%),
   past the 1.22 line. Do not carry a revision base rate from an archive of routine annual benchmarks onto a batched, off-cycle one: the twelve prior revisions moved recent levels a median
