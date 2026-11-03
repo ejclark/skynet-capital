@@ -18,6 +18,11 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **Hold a cite to the name it points at.** In 18 days at least ten cited rows in the playbook
+  anatomy page's appendix came to point at the wrong lines (`wheelPhase` moved from :132-154 to
+  :162-184) with every check green, because both cite checks only catch a file that shrank. A cite
+  written beside a backticked name could be checked for that name on the cited lines.
+  _(src: Claude · while: #6771 slice 1, re-reading the anatomy page)_
 - **A round page's read-back time is a session's guess.** Of 50 `readBackAt` stamps in the transcripts, 49 were a whole minute, 7 behind the real time and the median 230 seconds ahead, and the bar prints it as "Read back 9:41 AM". On a page opened later, one behind the press reads as not read at all. Sessions could take the time from `date -u`, or the page could print the time it saw the stamp land. _(src: Claude · while: #6606, 2026-11-01)_
 - **A round page open on a second device never hears Done.** The bar reads the press from what this view pressed or opened with, so Done on the phone leaves the laptop's page on "I'm done" with no "Received" until a reload. Reading `doneAt` from each update of the round's record would fix it, and it is the "marked done elsewhere" case. _(src: Claude · while: #6606, 2026-11-01)_
 - **Time a verify's wait and its run, per row.** `ship-verify.jsonl` says pass or fail with no duration, so nobody could see verifies slow from minutes to ten-minute timeouts. `waited` and `ran` seconds beside each row would let `npm run meter` report the queue. One verify alone took 78 seconds on 2026-11-01, so the 1,800-second wait fits about 23 in line; a row per run would show when that stops being true. _(src: Claude · while: retro on the verify queue, 2026-11-01)_
