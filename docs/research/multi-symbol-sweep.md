@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A de-risked chip tape rebounds into the print: AMD's print-day close is at or above its close 12 sessions earlier" (FT-amd-fq3-2026-results-2026-11-03-4)** — added 2026-11-04 from the
+  [amd-fq3-2026-results-2026-11-03 close-out](events/amd-fq3-2026-results-2026-11-03.md). Registered at $528.75 (10-16) after an 8-session, -18.6% streak; the 11-03 close was **$483.90**
+  (-8.5%) after Intel's 10-29 guide-down took AMD -10.9% on 10-30. Do not register a rebound-into-print off a sector streak whose cause is still live: the modern-era D-5→D +2.36%/67% base rate
+  says nothing about a window that spans another peer's print and the hyperscaler capex week.
+
 - **"A paired-refuted starts-vs-sales homebuilder asymmetry stays refuted when two more reference-month pairs arrive" (FT-new-home-sales-2026-09-24-3)** — added 2026-11-03 from the
   [new-home-sales-2026-09-24 ledger](events/new-home-sales-2026-09-24.md). At 70 pairs the paired Wilcoxon put XHB at p=0.0310/0.0375 and LEN at 0.0386 with the housing-starts session larger,
   from 0.0520/0.0677 and 0.0696 at 68. Do not register "stays refuted" or "stays significant" on a screen sitting at p≈0.05 with two pairs to come: a result that moves across the line on n+2 is
