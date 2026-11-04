@@ -352,3 +352,60 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-10-26
 <!-- probe-ref: {"symbols":{},"vix":17.85,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","sloos-2026-11-02","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->
+
+## Outcome
+
+**Close-out (2026-11-04, D+5).** Sector mode, `symbols: []`, so no `earnings-cycle`/`intraday-edges` instrument applies;
+the cache was busted anyway (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`). Scored from
+freshly pulled Yahoo daily closes and the last real holdings in this ledger, never from memory. **The primary stayed blocked:**
+the iShares holdings ajax endpoint returned an HTML product page under HTTP 200 again, stockanalysis.com returned 403, and the
+Wayback Machine's nearest snapshot of the holdings page is from 2025-09. So every cohort below is a **reconstruction, not an
+observation**, scored with that caveat.
+
+**The call was right: stand aside, and the 10-27 test did not come close to firing.** The estimate-labelled check was
+never actionable (`symbols: []`, no index-flow playbook), so nothing was traded either way.
+
+| Close | IWY cohort | META (IWY) | IWF cohort | vs 48% trigger |
+|---|---|---|---|---|
+| 2026-10-15 (real holdings) | 45.50% | 4.48% | 39.97% | 2.5pp / 8.0pp under |
+| 2026-10-16 | 45.73% (peak) | 4.41% | | 2.3pp under |
+| 2026-10-26 (real page read 45.49%) | 45.41% | 3.94% | 39.73% | 2.6pp / 8.3pp under |
+| **2026-10-27 (T-3 strike)** | **45.38%** | **3.83%** | **39.59%** | **2.6pp / 8.4pp under** |
+| 2026-10-29 (trade date if fired) | 44.37% | 3.89% | 43.41% | under (IWF jumps as AVGO crosses 4.8%) |
+
+Method: the 10-15 IWY weights (NVDA 14.84, AAPL 8.19, MSFT 6.33, Alphabet 10.98, AVGO 5.16, META 4.48) drifted by
+`w x (1+r_stock)/(1+r_IWY)`; IWF drifted from the real 09-29 weights. Company lines combined (Alphabet once). Validated on the one
+real read in the window: 10-26 modelled 45.41% vs page-read 45.49% (0.08pp). IWY fell 1.61% from 10-15 to 10-27 while META fell
+15.8% after its 10-21 print, so the one step that carried 116 of 151 historical breaches (META crossing 4.8%) went the other way.
+The 10-16 row's 12.1% eight-session risk and the 10-26 row's "under 1%" both resolved as no-fire.
+
+**Forward tests.** `-1` **pass**, `-4` **pass**, `-3` **pass** (weak, a negative about a document), `-2` **kill** (the 09-21 real
+read of 50.01% had already failed it, scored from the quarter-end 09-30 ledger's evidence). The scored kill joins
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list. Cells are in
+[`forward-tests/russell-style-month-end-capping-effective-2026-10-30.md`](../forward-tests/russell-style-month-end-capping-effective-2026-10-30.md).
+
+**The frequency question is still open, and this instance did not settle it.** The 09-08 sheet called 10-27 the first informative
+test. It was informative only if the cohort crossed 48%; it did not, so a monthly check that ran and did nothing and a quarterly
+regime that never ran look identical again (same observable as the 07-31 and 08-31 month-ends). What did move, as owner text:
+- **The capping guide is now v5.5, October 2026** (HTTP 200, 711,551 bytes vs v5.4's 652,008; inflated in-session). Section 4.8.6
+  still lists every Russell US Style row as **Monthly**, T-3, last business day of each month.
+- **New cross-reference:** the Russell-based review table (pages 31-34) now reads "Quarterly in Mar, Jun, Sep and Dec (see section
+  4.8.6 for additional monthly review)" on the Style rows, so the owner now cites the monthly review from its quarterly table.
+  That is the nearest thing to a confirmation yet and cuts against the FAQ's quarterly-only prose.
+- **Footnote 3 still says "quarter-end capping check"**, and the 4.8.5 illustrative calendar is still the September 2026 grid.
+- **The FAQ is unchanged** (October 2026 edition, 210,481 bytes, sha256 `208ac31e...`, same as the 10-26 read); its quarterly
+  wording was not re-extracted. No FTSE Russell index notice was found by search, so no event-date change is recorded.
+
+**What stays `estimate`.** The date is still derived from the standing rule, not published on the owner's dated table, and no
+primary document or notice confirms a 2026-10-30 recap, so it is **not** flipped to `confirmed`. A recap effective 2026-10-30
+would not be expected from the reconstruction above, so the absence of one in later IWY holdings would not tell the two readings
+apart either. The next date the same test can fire is the 2026-11-30 month-end, which has its own ledger.
+
+**Honest limits.** Frozen top-7 weights from an aggregator's 10-15 page; the cohort is a proxy for the index, not the index;
+Alphabet's GOOGL/GOOG split uses the 09-29 ratio; AVGO (about 5.2-5.3%) is the marginal member on both funds and its exit would
+move the cohort about 5pp in one step; the notice search used one lseg.com query. Loop stage a person still did: none this run,
+but the holdings read is the manual-adjacent stage, and it stayed blocked for the third straight close-out (a free-source holdings
+mirror would remove it).
+
+**Last assessed:** 2026-11-04
+<!-- probe-ref: {"symbols":{},"vix":20.83,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-dmp-2026-10-30","boj-decision-2026-10-30","case-shiller-hpi-2026-10-27","chicago-pmi-2026-10-30","construction-spending-2026-11-02","consumer-confidence-2026-10-27","dallas-fed-mfg-2026-10-26","dallas-fed-trimmed-mean-2026-10-29","dallas-fed-tssos-2026-10-27","dhi-q4-fy2026-2026-10-29","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-decision-2026-10-29","ecb-monetary-developments-2026-10-27","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fhfa-hpi-2026-10-27","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jgb-liquidity-enhancement-11-39y-2026-10-27","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","mwts-benchmark-revision-2026-10-26","nar-metro-home-prices-2026-10-29","new-home-sales-2026-10-27","opec-plus-meeting-2026-11-01","pce-2026-10-29","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-20y30y-2026-10-27","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-gilt-auction-short-2026-10-27","uk-pink-book-2026-10-30"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0} -->

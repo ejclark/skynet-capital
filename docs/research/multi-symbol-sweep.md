@@ -367,6 +367,15 @@ robust, alpha fragile — is the finding.
   post-reset composition — membership can move between the reset's own cut-off and effective dates, not
   just the drift the base rate already prices in.
 
+- **The Russell month-end sheet's "a 09-09 reset puts IWY at about 45% by the 09-21 open" leg
+  (FT-russell-style-month-end-capping-effective-2026-10-30-2)** — added 2026-11-04 from the
+  [russell-style-month-end-capping-effective-2026-10-30 close-out](events/russell-style-month-end-capping-effective-2026-10-30.md).
+  Same observation as the entry above, scored on this sheet's own row: the real 2026-09-21 holdings
+  read IWY's cohort at **50.01%**, not at or below 45.5%, because META crossed into the cohort between
+  the cut-off and the open. Do not re-propose a drift window that starts from "reset to the cap" without
+  reading the cohort in the first real post-open holdings file; the 34-session 19.61% figure rested on
+  that start and was superseded at the D-14 pulse.
+
 - **A French flash PMI's own-hours footprint on the CAC-minus-DAX residual, measured as genuinely
   absent at registration (FT-sp-global-flash-france-pmi-2026-09-23-1)** — added 2026-09-24 from the
   [sp-global-flash-france-pmi-2026-09-23 close-out](events/sp-global-flash-france-pmi-2026-09-23.md).
