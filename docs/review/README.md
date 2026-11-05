@@ -41,6 +41,12 @@ score could flatter a lens.
 |---|---|---|---|
 | Performance | 8 of 8 on reading; 5 by file match, and the other 3 named the same defect at the calling file | 13 of 14 clean, the 14th on a trap | Joined |
 | Smells and patterns | 1 of 3 on reading, 0 by file match; 2 of the 5 labelled PRs did not run | 8 of 8 clean | Not yet: it says little on the set, and every case in it was labelled for correctness |
+| Pre-merge, 2026-11-05 | 7 of 20 at Important on reading (8 by file match, 2 of them another defect, plus 1 named at its caller); 12 of 20 at any severity, 5 of them filed as Nit | 4 Important stand after the refuter (7 before); each traces to code still on main, so they are filed as #6878 to #6881, not counted as noise | Fails the S1 bar of 9: the Nit line is the lever, and its own replay is next (#6870) |
+
+**The pre-merge reviewer** is a separate thing from these lenses: [`REVIEW.md`](REVIEW.md) is its whole
+rulebook, read on every code PR before merge, and `review-replay.mjs`'s `pre-merge` lens replays it
+with one trace refuter per PR. Its score passes only on hits the job could post, a finding in the
+PR's diff: 5 of the 21 correctness cases sit in a file their PR never changed.
 
 ## Keep or kill
 

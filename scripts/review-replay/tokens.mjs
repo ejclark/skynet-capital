@@ -6,8 +6,8 @@
 // found for is listed as unmeasured, never priced at zero: only a skipped docs-only PR costs nothing.
 //
 // Total = input + cache writes + cache reads + output, every call of the agent: what a round of review
-// puts through a model. Cache reads are most of it and are billed at a tenth, so output is kept
-// beside it.
+// puts through a model. Cache reads are most of it and are billed at a tenth, so `fresh` (total less
+// cache reads, the figure a workflow's own usage line reports) and output are kept beside it.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { agentUsage } from "../agent-meter/agents.mjs";
@@ -26,6 +26,7 @@ export function readRunAgents(runDir) {
       return {
         label: agent.label ?? "",
         total: t.input + t.cacheWrite + t.cacheRead + t.output,
+        fresh: t.input + t.cacheWrite + t.output,
         output: t.output,
         calls: usage?.calls ?? 0,
       };
@@ -51,6 +52,7 @@ export function tokensPerTier(agents, results) {
         review: 0,
         refute: 0,
         output: 0,
+        fresh: 0,
         total: 0,
         seen: false,
       },
@@ -66,6 +68,7 @@ export function tokensPerTier(agents, results) {
     if (agent.label.startsWith("refute")) row.refute += agent.total;
     else row.review += agent.total;
     row.output += agent.output;
+    row.fresh += agent.fresh ?? 0;
     row.total += agent.total;
     row.seen = true;
   }
@@ -84,6 +87,7 @@ export function tokensPerTier(agents, results) {
       medianReview: median(inTier.map((row) => row.review)),
       medianRefute: median(inTier.map((row) => row.refute)),
       medianOutput: median(inTier.map((row) => row.output)),
+      medianFresh: median(inTier.map((row) => row.fresh)),
     };
   }
   const all = rows.reduce((sum, row) => sum + row.total, 0);
@@ -95,7 +99,7 @@ const k = (n) => (n == null ? "—" : `${Math.round(n / 1000)}k`);
 export function renderTokens({ tiers, unmeasured, lookups, total }) {
   const lines = Object.entries(tiers).map(
     ([tier, t]) =>
-      `  ${tier}: ${t.prs} PRs · median ${k(t.median)} (review ${k(t.medianReview)}, refute ${k(t.medianRefute)}, output ${k(t.medianOutput)}) · mean ${k(t.mean)} · max ${k(t.max)}`,
+      `  ${tier}: ${t.prs} PRs · median ${k(t.median)} (review ${k(t.medianReview)}, refute ${k(t.medianRefute)}; fresh ${k(t.medianFresh)}, output ${k(t.medianOutput)}) · mean ${k(t.mean)} · max ${k(t.max)}`,
   );
   return [
     `tokens per PR, by tier:`,

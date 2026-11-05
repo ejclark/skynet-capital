@@ -276,7 +276,7 @@ describe("tokens per tier", () => {
         `${JSON.stringify(line)}\n${JSON.stringify(line)}\n`,
       );
       expect(readRunAgents(dir)).toEqual([
-        { label: "review #2 (light)", total: 100, output: 40, calls: 1 },
+        { label: "review #2 (light)", total: 100, fresh: 70, output: 40, calls: 1 },
       ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
