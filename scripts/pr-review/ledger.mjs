@@ -128,7 +128,10 @@ const onBranch = (path) => `${contents(path)}?ref=${encodeURIComponent(LEDGER_BR
 export function readLedgerFile(path, { api = defaultApi() } = {}) {
   try {
     const file = withRetry(() => api.get(onBranch(path)));
-    return { body: decode(file), sha: file.sha };
+    // Over 1 MB the contents API sends no content: read the blob, or an append would overwrite.
+    const full =
+      file.content || !file.size ? file : withRetry(() => api.get(`git/blobs/${file.sha}`));
+    return { body: decode(full), sha: file.sha };
   } catch (err) {
     if (isNotFound(err)) return null;
     throw err;
@@ -167,6 +170,11 @@ export function ensureLedgerBranch({ api = defaultApi() } = {}) {
   return true;
 }
 
+const landed = (body, rows) => {
+  const have = new Set(String(body ?? "").split("\n"));
+  return rows.every((r) => have.has(JSON.stringify(r)));
+};
+
 /**
  * Append rows to one ledger file, sha-checked: a writer that lost a race re-reads and tries again,
  * up to `attempts` times. Returns the path written. Throws when every attempt lost, so a caller's
@@ -180,6 +188,8 @@ export function appendLedgerRows(
   if (!rows.length) return path;
   for (let n = 0; n < attempts; n++) {
     const file = readLedgerFile(path, { api });
+    // A write that answered 5xx may still have landed: then the rows are there, and done.
+    if (n > 0 && landed(file?.body, rows)) return path;
     if (!file) ensureLedgerBranch({ api }); // a missing file and a missing branch both read as 404
     try {
       withRetry(

@@ -4,6 +4,7 @@ import {
   readMarkers,
   receiptMarker,
   replyMarker,
+  respondMarker,
 } from "../../../scripts/pr-review/markers.mjs";
 import { gatherReeval, MIN_REASON_CHARS, reevaluate } from "../../../scripts/pr-review/reeval.mjs";
 import { fakeApi } from "./fake-api";
@@ -162,8 +163,26 @@ describe("the rounds", () => {
     });
   });
 
-  it("lifts the hold after round 2 and records each still-open finding as open", () => {
+  it("keeps the hold at round 2 until that round's response session was sent", () => {
     const v = judge([], { receipts: [receipt(1, C0), receipt(2, C1)] });
+    expect(v).toMatchObject({ state: "failure", released: false, round: 2 });
+  });
+
+  it("lifts the hold after round 2's answer and records each still-open finding as open", () => {
+    const v = reevaluate({
+      markers: readMarkers({
+        reviews: [receipt(1, C0), receipt(2, C1)],
+        reviewComments: [findingAt("r1f1")],
+        issueComments: [
+          {
+            ...BOT,
+            created_at: "2026-11-05T13:00:00Z",
+            body: respondMarker({ sha: C1, round: 2 }),
+          },
+        ],
+      }),
+      commits: [C0, C1, C2],
+    });
     expect(v).toMatchObject({ state: "success", released: true, round: 2 });
     expect(v.description).toBe("released after 2 rounds: 1 Important still open");
     expect(v.outcomes).toEqual([

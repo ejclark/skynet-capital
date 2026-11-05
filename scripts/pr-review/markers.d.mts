@@ -14,6 +14,7 @@ export interface FindingMark {
   at: string | null;
   file?: string;
   line?: number | null;
+  originalLine?: number | null;
   commentId?: number;
 }
 export interface ReplyMark {

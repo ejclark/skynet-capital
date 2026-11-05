@@ -29,9 +29,10 @@ import { fileURLToPath } from "node:url";
 import { ghRestAll } from "../moneypenny/gh.mjs";
 import { FOOTER } from "../moneypenny/labels.mjs";
 import { workGate } from "../moneypenny/work-gate.mjs";
+import { envelopeRules, flag, readGate } from "./cli.mjs";
 import { appendLedgerRows, ledgerPath, ledgerRow } from "./ledger.mjs";
 import { findingMarker, readPrMarkers, receiptMarker, roundOf } from "./markers.mjs";
-import { gatherRespond, respondLine, routeRespond } from "./respond-route.mjs";
+import { respondLine, routeRespond } from "./respond-route.mjs";
 import { defaultApi, isNotFound } from "./rest.mjs";
 
 export const CAPS = { important: 5, nit: 3 };
@@ -72,14 +73,17 @@ const slug = (s) =>
 export function suppressedCategories(markdown) {
   const out = [];
   let inside = false;
-  for (const line of String(markdown ?? "").split("\n")) {
+  const lines = String(markdown ?? "").split("\n");
+  const separator = (l) => /^\s*\|[\s:|-]+\|\s*$/.test(l ?? "");
+  for (const [i, line] of lines.entries()) {
     if (/^#{1,6}\s/.test(line)) {
       inside = /suppress/i.test(line);
       continue;
     }
-    if (!inside) continue;
+    // A table's header row is the one its separator row follows: column names, not categories.
+    if (!inside || separator(line) || separator(lines[i + 1])) continue;
     const item = /^\s*(?:[-*]|\d+\.)\s+(.*)$/.exec(line)?.[1] ?? /^\s*\|([^|]*)\|/.exec(line)?.[1];
-    if (!item || /^[\s:-]*$/.test(item) || /^\s*category\s*$/i.test(item)) continue;
+    if (!item?.trim()) continue;
     const named = /`([^`]+)`/.exec(item)?.[1] ?? item.split(/\s+[—–-]\s+|:/)[0];
     if (slug(named)) out.push(slug(named));
   }
@@ -269,16 +273,15 @@ export function gatherPost(number, { api = defaultApi() } = {}) {
     pr,
     files: ghRestAll(`pulls/${number}/files`, { read: api.get }),
     suppressed: suppressedCategories(reviewRulesAt(pr.base.sha, { api })),
-    prior: markers.findings.map((f) => ({ ...f, round: roundOfId(f.id) })),
+    // Only a finding GitHub still places on the current diff: an outdated one (its code changed,
+    // likely the fix) has no line, and an old line number would match the wrong code.
+    prior: markers.findings
+      .filter((f) => Number.isInteger(f.line))
+      .map((f) => ({ ...f, round: roundOfId(f.id) })),
     markers,
     round: roundOf(markers) + 1,
   };
 }
-
-const flag = (args, name) => {
-  const i = args.indexOf(name);
-  return i >= 0 ? args[i + 1] : undefined;
-};
 
 /** The CLI: check, route, post, record. Exported so a spec drives it with a fake `api` and gate. */
 export function runPost(args, { api = defaultApi(), gate = workGate } = {}) {
@@ -289,7 +292,7 @@ export function runPost(args, { api = defaultApi(), gate = workGate } = {}) {
     throw new Error(
       "usage: post.mjs --pr N --review review.json --tier T [--patch ID] [--tokens N] [--gate] [--dry-run]",
     );
-  const { pr, files, suppressed, prior, round } = gatherPost(number, { api });
+  const { pr, files, suppressed, prior, markers, round } = gatherPost(number, { api });
   const { kept, dropped } = checkFindings(parseReviewJson(readFileSync(file, "utf8")).findings, {
     files,
     suppressed,
@@ -298,18 +301,26 @@ export function runPost(args, { api = defaultApi(), gate = workGate } = {}) {
   });
   const gateOn = args.includes("--gate");
   const important = kept.filter((f) => f.severity === "important").length;
+  // The PR, its files and markers are already read: only the gate is new.
   const respond = gateOn
-    ? routeRespond({ ...gatherRespond(number, { api, gate }), round, importantOpen: important })
+    ? routeRespond({
+        pr,
+        files: files.flatMap((f) => [f.filename, f.previous_filename].filter(Boolean)),
+        markers,
+        gate: readGate(gate),
+        rules: envelopeRules(),
+        round,
+        importantOpen: important,
+      })
     : null;
   const patchId = flag(args, "--patch") ?? null;
   const sha = pr.head.sha;
   const built = buildReview({ kept, dropped, sha, round, tier, patchId, respond, gateOn });
   if (args.includes("--dry-run"))
     return JSON.stringify({ ...built, kept, dropped, respond }, null, 2);
-  api.send("POST", `pulls/${number}/reviews`, built.review);
-  api.send("POST", `statuses/${sha}`, built.status);
-  if (respond?.dispatch)
-    api.send("POST", `issues/${number}/comments`, { body: respondLine(respond, FOOTER) });
+  // Ledger first, then the PR: a failed ledger write stops before anything is posted, so a rerun
+  // never posts a second review that eats a round. The respond marker lands before the failing
+  // status, so a hold never exists without the record that its session was sent.
   const tokens = Number(flag(args, "--tokens"));
   const dropCounts = Object.fromEntries(tally(dropped));
   const row = ledgerRow("review", {
@@ -323,6 +334,10 @@ export function runPost(args, { api = defaultApi(), gate = workGate } = {}) {
     dropped: dropCounts,
   });
   appendLedgerRows(ledgerPath(row.at.slice(0, 10)), [row], { api });
+  api.send("POST", `pulls/${number}/reviews`, built.review);
+  if (respond?.dispatch)
+    api.send("POST", `issues/${number}/comments`, { body: respondLine(respond, FOOTER) });
+  api.send("POST", `statuses/${sha}`, built.status);
   return `round ${round} on #${number}: ${kept.length} posted, ${dropped.length} dropped, status ${built.status.state}`;
 }
 

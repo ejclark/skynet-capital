@@ -112,6 +112,7 @@ describe("what the PR remembers", () => {
         at: "2026-11-05T10:00:01Z",
         file: "src/a.ts",
         line: 12,
+        originalLine: null,
         commentId: 7,
       },
     ]);

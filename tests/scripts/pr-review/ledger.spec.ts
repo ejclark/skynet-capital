@@ -185,6 +185,33 @@ describe("writing to the ledger branch", () => {
     );
   });
 
+  it("reads a day file over 1 MB through its blob, so an append never overwrites it", () => {
+    const api = fakeApi({
+      [`contents/${path}${REF}`]: { sha: "big", size: 2_000_000, content: "", encoding: "none" },
+      "git/blobs/big": { content: b64('{"old":1}\n') },
+    });
+    appendLedgerRows(path, [row], { api, sleep: noSleep });
+    expect(unb64(api.sent[0]?.body.content)).toBe('{"old":1}\n{"kind":"outcome","pr":1}\n');
+  });
+
+  it("stops when a write that answered 5xx had landed after all, rather than appending twice", () => {
+    let landed = false;
+    const api = fakeApi(
+      {
+        [`contents/${path}${REF}`]: () => ({
+          sha: landed ? "s2" : "s1",
+          content: b64(landed ? '{"kind":"outcome","pr":1}\n' : ""),
+        }),
+      },
+      () => {
+        landed = true;
+        throw httpError(409); // the 5xx retry's answer: the first try had already committed
+      },
+    );
+    appendLedgerRows(path, [row], { api, sleep: noSleep });
+    expect(api.sent).toHaveLength(1);
+  });
+
   it("goes red after every attempt loses, rather than dropping the rows", () => {
     const api = fakeApi({ [`contents/${path}${REF}`]: { sha: "s", content: b64("") } }, () => {
       throw httpError(409);

@@ -19,13 +19,13 @@
 // thread is the lane's to answer, and no other lane owns that answer.
 //
 //   node scripts/pr-review/respond-route.mjs --pr N --round R --important K   # prints the verdict
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { breachOf } from "../envelope-scan.mjs";
 import { ghRestAll, trustedComment } from "../moneypenny/gh.mjs";
 import { LABELS } from "../moneypenny/labels.mjs";
 import { workGate } from "../moneypenny/work-gate.mjs";
+import { envelopeRules, flag, readGate } from "./cli.mjs";
 import { readPrMarkers, respondMarker } from "./markers.mjs";
 import { defaultApi } from "./rest.mjs";
 
@@ -91,19 +91,12 @@ export function routeRespond({
   };
 }
 
-const envelopeRules = () => JSON.parse(readFileSync("envelope.json", "utf8")).protected ?? [];
-
 /** Read what `routeRespond` needs for PR #number, bar the round and count the review step knows. */
 export function gatherRespond(
   number,
   { api = defaultApi(), gate = workGate, rules = envelopeRules } = {},
 ) {
-  let verdict = null;
-  try {
-    verdict = gate();
-  } catch (err) {
-    verdict = { dispatch: false, reason: `refused: ${String(err?.message ?? err).slice(0, 200)}` };
-  }
+  const verdict = readGate(gate);
   return {
     pr: api.get(`pulls/${number}`),
     files: ghRestAll(`pulls/${number}/files`, { read: api.get }).flatMap((f) =>
@@ -119,14 +112,9 @@ export function gatherRespond(
 export const respondLine = (verdict, footer) =>
   `**A response session answers each Important thread:** ${verdict.reason}.\n\n${verdict.marker}\n\n${footer}`;
 
-const flag = (args, name) => {
-  const i = args.indexOf(name);
-  return i >= 0 ? Number(args[i + 1]) : Number.NaN;
-};
-
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
-  const number = flag(args, "--pr");
+  const number = Number(flag(args, "--pr"));
   if (!Number.isInteger(number) || number <= 0) {
     console.error("usage: node scripts/pr-review/respond-route.mjs --pr N --round R --important K");
     process.exit(1);
@@ -134,8 +122,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const deps = gatherRespond(number);
   const verdict = routeRespond({
     ...deps,
-    round: flag(args, "--round"),
-    importantOpen: flag(args, "--important"),
+    round: Number(flag(args, "--round")),
+    importantOpen: Number(flag(args, "--important")),
   });
   console.log(JSON.stringify(verdict, null, 2));
 }

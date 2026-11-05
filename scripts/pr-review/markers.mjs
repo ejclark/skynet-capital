@@ -103,7 +103,12 @@ export function readMarkers({ reviews = [], reviewComments = [], issueComments =
   take(reviews, "submitted_at", () => ({}));
   take(reviewComments, "created_at", (c, kind) =>
     kind === "finding"
-      ? { file: c.path, line: c.line ?? c.original_line ?? null, commentId: c.id }
+      ? {
+          file: c.path,
+          line: c.line ?? null,
+          originalLine: c.original_line ?? null,
+          commentId: c.id,
+        }
       : kind === "reply"
         ? { reason: stripMarkers(c.body), inReplyTo: c.in_reply_to_id ?? null }
         : {},

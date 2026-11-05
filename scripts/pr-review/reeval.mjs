@@ -81,7 +81,10 @@ export function reevaluate({
     });
   const open = threads.filter((t) => t.outcome === "open");
   const answered = threads.length - open.length;
-  const released = open.length > 0 && round >= maxRounds;
+  // Lift only after the last round's response session was sent: a reply that arrives before it
+  // would otherwise release a hold nobody has answered yet.
+  const lastAnswered = (markers?.responds ?? []).some((r) => r.round === round);
+  const released = open.length > 0 && round >= maxRounds && lastAnswered;
   const description = !threads.length
     ? "no Important finding to answer"
     : !open.length

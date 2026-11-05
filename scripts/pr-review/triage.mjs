@@ -19,14 +19,17 @@
 // protected); until then, DAILY_TOKEN_BUDGET below is the plan's figure. Spent tokens are today's
 // review rows in the ledger, so the reading is the same in every job that asks.
 //
+// A REUSE VERDICT CARRIES NO STATUS. A rebase gives the PR a new head sha, and a commit status lives
+// on one sha, so the caller re-posts the last round's `pr-review` state on the new head (S6 owns it).
+//
 //   node scripts/pr-review/triage.mjs --pr N     # prints the verdict as JSON
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { breachOf } from "../envelope-scan.mjs";
 import { ghRestAll, sh } from "../moneypenny/gh.mjs";
 import { workGate } from "../moneypenny/work-gate.mjs";
 import { DOCS_ONLY, isDeepPath } from "../review-roots.mjs";
+import { envelopeRules, flag } from "./cli.mjs";
 import { ledgerPath, readLedgerDays, reviewTokens } from "./ledger.mjs";
 import { lastReceipt, readPrMarkers } from "./markers.mjs";
 import { defaultApi } from "./rest.mjs";
@@ -136,7 +139,6 @@ export function patchIdOf(base, head, { run = sh } = {}) {
   }
 }
 
-const envelopeRules = () => JSON.parse(readFileSync("envelope.json", "utf8")).protected ?? [];
 const gateOrNull = (gate) => {
   try {
     return gate();
@@ -167,11 +169,6 @@ export function gatherTriage(
     rules: typeof rules === "function" ? rules() : rules,
   };
 }
-
-const flag = (args, name) => {
-  const i = args.indexOf(name);
-  return i >= 0 ? args[i + 1] : undefined;
-};
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const number = Number(flag(process.argv.slice(2), "--pr"));

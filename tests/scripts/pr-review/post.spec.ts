@@ -8,6 +8,7 @@ import {
   buildReview,
   CAPS,
   checkFindings,
+  gatherPost,
   hunksOf,
   parseReviewJson,
   runPost,
@@ -149,10 +150,14 @@ describe("REVIEW.md's suppressed categories", () => {
       "| Category | Why |",
       "|---|---|",
       "| `import-order` | Biome |",
+      "### Suppressed by path",
+      "| Name | Why |",
+      "| :-- | --- |",
+      "| copy | the linguist owns it |",
       "## Severity",
       "- `important` — blocks",
     ].join("\n");
-    expect(suppressedCategories(md)).toEqual(["style", "formatting", "import-order"]);
+    expect(suppressedCategories(md)).toEqual(["style", "formatting", "import-order", "copy"]);
     expect(suppressedCategories("")).toEqual([]);
   });
 });
@@ -303,7 +308,18 @@ describe("the CLI round", () => {
         { api },
       );
       const paths = api.sent.map((s) => `${s.method} ${s.path}`);
-      expect(paths.slice(0, 2)).toEqual(["POST pulls/7/reviews", `POST statuses/${SHA}`]);
+      // The ledger first, so a failed write stops before anything reaches the PR.
+      expect(paths.filter((p) => !p.includes("git/"))).toEqual([
+        "PUT contents/ledger/" +
+          String(
+            paths
+              .find((p) => p.startsWith("PUT"))
+              ?.split("/")
+              .pop(),
+          ),
+        "POST pulls/7/reviews",
+        `POST statuses/${SHA}`,
+      ]);
       const put = api.sent.find((s) => s.method === "PUT");
       expect(put?.path).toMatch(new RegExp(`^contents/${ledgerPath("\\d{4}-\\d\\d-\\d\\d")}$`));
       expect(put?.body.branch).toBe(LEDGER_BRANCH);
@@ -345,6 +361,55 @@ describe("the CLI round", () => {
         description: expect.stringMatching(/work-mode=halt/),
       });
     });
+  });
+
+  it("posts nothing when the ledger write fails, so a rerun cannot spend a second round", () => {
+    withReview([finding()], (file) => {
+      const api = fakeApi(routes(7), (s) => {
+        if (s.method === "PUT") throw new Error("curl: (22) The requested URL returned error: 403");
+        return { sha: "g" };
+      });
+      expect(() => runPost(["--pr", "7", "--review", file, "--tier", "light"], { api })).toThrow(
+        /403/,
+      );
+      expect(api.sent.filter((s) => s.method === "POST" && !s.path.startsWith("git/"))).toEqual([]);
+    });
+  });
+
+  it("leaves the respond line before the failing status, so no hold lacks its record", () => {
+    withReview([finding()], (file) => {
+      const api = fakeApi(routes(7), (s) => (s.path.startsWith("git/") ? { sha: "g" } : {}));
+      const gate = () => ({ dispatch: true, position: "normal", reason: "" });
+      runPost(["--pr", "7", "--review", file, "--tier", "standard", "--gate"], { api, gate });
+      const order = api.sent.map((s) => s.path);
+      expect(order.indexOf("issues/7/comments")).toBeLessThan(order.indexOf(`statuses/${SHA}`));
+    });
+  });
+
+  it("compares only with earlier findings GitHub still places on the current diff", () => {
+    const bot = { author_association: "NONE", user: { type: "Bot" }, created_at: "t" };
+    const api = fakeApi({
+      ...routes(7),
+      "pulls/7/comments": [
+        {
+          ...bot,
+          id: 1,
+          path: "src/a.ts",
+          line: null,
+          original_line: 11,
+          body: findingMarker({ id: "r1f1", severity: "important" }),
+        },
+        {
+          ...bot,
+          id: 2,
+          path: "src/a.ts",
+          line: 43,
+          original_line: 40,
+          body: findingMarker({ id: "r1f2", severity: "nit" }),
+        },
+      ],
+    });
+    expect(gatherPost(7, { api }).prior.map((p) => [p.line, p.round])).toEqual([[43, 1]]);
   });
 
   it("refuses a call missing its PR, review file or tier", () => {
