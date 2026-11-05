@@ -1,0 +1,11 @@
+{
+  "id": "umich-sentiment-prelim-2026-12-04",
+  "kind": "macro-print",
+  "title": "University of Michigan consumer sentiment — preliminary (Dec 2026), the first reading after the midterms",
+  "date": "2026-12-04",
+  "status": "estimate",
+  "source": "EST: the publisher's own `2026 Release Dates` document, data.sca.isr.umich.edu/fetchdoc.php?docid=79628 (HTTP 200, 132,710 bytes, PDF text layer inflated direct 2026-11-05), whose text reads verbatim \"December 4 / December Prelim\" between \"November 20 / November Final\" and \"December 18 / December Final\". Filed `estimate` on this lane's no-self-confirm limit ONLY; its own never-assessed lane can promote it off the same fetch plus `2026 Interview Dates` (docid=79629), exactly as umich-sentiment-prelim-2026-11-06 did. No clock time appears in the document, so 10:00 ET would be customary, not sourced. Proposed 2026-11-05 by umich-sentiment-prelim-2026-11-06's pulse sweep",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "PROPOSED 2026-11-05 at D-29 of its own print, the first day a medium event enters the all-impacts horizon (30 days). WHY IT HAS STANDING: it is the first national consumer read whose interviews run after the 2026-11-03 polls, and the release-dates document itself warns \"November and December are a bit off this schedule due to holidays\". It also lands on jobs-2026-12-04 at 08:30 ET, so its 10:00 ET tape cannot be attributed to the survey. Filed `medium` to match umich-sentiment-prelim-2026-11-06 and umich-sentiment-prelim-2026-09-11 (same series, same tier). Read-it-do-not-trade-it: `symbols: []`, `estimate` date."
+}
