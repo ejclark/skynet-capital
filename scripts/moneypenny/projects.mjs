@@ -134,9 +134,16 @@ function hasWorkLeft({ labels = [], subIssues = {} } = {}) {
   return open > 0 || labels.includes("next-slice");
 }
 
-// Backlog view: table sorted by Priority. Deliberately not derived from anything below — priority
-// is Eric's judgment call, not mechanical, so nothing here ever sets it automatically.
+// Priority is LABEL-LED (#4064) and the board carries a copy (#6871 slice B1): a hand-set P label
+// wins, otherwise `classOf()`'s class from scripts/rank.mjs — the same answer `npm run rank` prints.
+// projects-sync.mjs writes it per issue and the reconcile sweep heals it; a human drag between
+// priority lanes flows back as that lane's P label. The rule and its failure cases live in
+// projects-priority.mjs. Backlog sorts by it; "Flow by priority" and Roadmap lane by it.
 export const PRIORITY_OPTIONS = ["P0", "P1", "P2", "P3"];
+
+// The hidden text field that records each Priority the sync wrote, so a value that differs from it
+// is a human drag, not a sync (projects-priority.mjs's header). No view we create shows it.
+export const SYNCED_PRIORITY = "Synced priority";
 
 // Roadmap view: grouped by Horizon, laid out along Target date.
 export const HORIZON_OPTIONS = ["Now", "Next", "Later"];
@@ -146,6 +153,7 @@ export const FIELDS = [
   { name: "Priority", dataType: "SINGLE_SELECT", options: PRIORITY_OPTIONS },
   { name: "Horizon", dataType: "SINGLE_SELECT", options: HORIZON_OPTIONS },
   { name: "Target date", dataType: "DATE" },
+  { name: SYNCED_PRIORITY, dataType: "TEXT", hidden: true },
 ];
 
 // THIS FUNCTION IS THE BOARD'S ONLY STATUS WRITER, ON PURPOSE — #3939 slice 4, the board half of
@@ -617,7 +625,23 @@ export function findBoardItem(items = [], issueUrl) {
  */
 export function boardItemsFromProjectItems({ nodes = [], projectNumber, issueUrl } = {}) {
   const node = (nodes ?? []).find((n) => n?.id && n?.project?.number === projectNumber);
-  return node ? [{ id: node.id, content: { type: "Issue", url: issueUrl } }] : [];
+  return node
+    ? [{ id: node.id, ...priorityValues(node), content: { type: "Issue", url: issueUrl } }]
+    : [];
+}
+
+/**
+ * A card's Priority and its "Synced priority" record from a GraphQL node's `priority` / `synced`
+ * aliases (#6871), as `{priority, syncedPriority}` — only the keys GitHub actually set, so an unset
+ * field reads as absent, the way `planPriority` expects. Pure.
+ */
+export function priorityValues(node) {
+  const priority = node?.priority?.name;
+  const synced = node?.synced?.text;
+  return {
+    ...(priority ? { priority } : {}),
+    ...(synced ? { syncedPriority: synced } : {}),
+  };
 }
 
 // #3979 — THE BOARD READS STALE FOR A FEW SECONDS AFTER SOMEONE ELSE'S ADD, and the add-or-find
@@ -780,10 +804,11 @@ export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
   return `${head} A direct GraphQL probe with the same GH_TOKEN said: "${probe || "(nothing)"}".`;
 }
 
-// THE THREE VIEWS (2026-09-29). projects-setup.mjs used to end with "views are one-time UI setup"
-// printed to a workflow log nobody read, so the board shipped with only GitHub's default table.
-// GitHub's REST API now creates views (POST /users/{id}/projectsV2/{n}/views — layout, filter,
-// group_by, vertical_group_by, sort_by), so they are provisioned here instead. The API has no
+// THE VIEWS (three on 2026-09-29, a fourth in #6871). projects-setup.mjs used to end with "views
+// are one-time UI setup" printed to a workflow log nobody read, so the board shipped with only
+// GitHub's default table. GitHub's REST API now creates views (POST /users/{id}/projectsV2/{n}/views
+// — layout, filter, visible_fields, group_by, vertical_group_by, sort_by; numeric user id, per
+// GitHub's OpenAPI description as of 2026-11), so they are provisioned here instead. The API has no
 // update/delete for views, so the rule is create-if-missing by name; the default "View 1" table
 // is left alone (renaming or deleting it stays a UI click).
 //   Flow     — kanban: one column per Status, the work's state at a glance.
@@ -793,8 +818,25 @@ export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
 //              informs priority, and nobody will maintain dates. GitHub's roadmap layout only
 //              draws bars from date fields, so it was the wrong tool; a board over Horizon is the
 //              classic Now/Next/Later roadmap. Target date stays on the project, unused.
+//   Flow by priority — #6871 slice B2 (Eric, 2026-11-04: "our project kanban board should switch
+//              to swim lanes"): Flow's Status columns, one swimlane per Priority, Done hidden — a
+//              closed card has nothing left to pull and the sync leaves its Priority unset, so Done
+//              would fill a "No Priority" lane. Dragging a card between lanes sets its P label
+//              (projects-priority.mjs). The old Flow stays until Eric says otherwise (slice B3).
+// `visibleFields` names the card fields a board view shows. Listing them is how "Synced priority"
+// stays hidden on the views made here; a name the project does not report is skipped.
+const CARD_FIELDS = ["Assignees", "Labels"];
+
 export const VIEWS = [
   { name: "Flow", layout: "board", columnsBy: "Status" },
+  {
+    name: "Flow by priority",
+    layout: "board",
+    columnsBy: "Status",
+    groupBy: "Priority",
+    filter: "-status:Done",
+    visibleFields: CARD_FIELDS,
+  },
   {
     name: "Backlog",
     layout: "table",
@@ -807,6 +849,7 @@ export const VIEWS = [
     columnsBy: "Horizon",
     groupBy: "Priority",
     filter: "-status:Done",
+    visibleFields: CARD_FIELDS,
   },
 ];
 
@@ -827,6 +870,8 @@ export function viewsToCreate(existingNames = [], fieldIds = {}) {
     if (v.columnsBy) body.vertical_group_by = [id(v.columnsBy)];
     if (v.groupBy) body.group_by = [id(v.groupBy)];
     if (v.sortBy) body.sort_by = [[id(v.sortBy), "asc"]];
+    const visible = (v.visibleFields ?? []).filter((n) => n in fieldIds).map((n) => fieldIds[n]);
+    if (visible.length) body.visible_fields = visible;
     return { name: v.name, body };
   });
 }

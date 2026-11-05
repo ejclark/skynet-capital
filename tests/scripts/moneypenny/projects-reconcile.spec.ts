@@ -19,10 +19,14 @@ import { createBoardContext } from "../../../scripts/moneypenny/projects-sync.mj
 // the live script needs PROJECTS_PAT and has not been run from a session (see its header).
 
 const URL = "https://github.com/ejclark/skynet-capital/issues/";
+// Every card here already carries the P2 its labels derive, in step with its record, so these
+// specs stay about Status; the priority half of the sweep is projects-priority.spec.ts (#6871).
 const card = (number: number, status: string | null): ReconcileItem => ({
   id: `PVTI_${number}`,
   content: { type: "Issue", number, url: `${URL}${number}` },
   status,
+  priority: "P2",
+  syncedPriority: "P2",
 });
 const open = (
   number: number,

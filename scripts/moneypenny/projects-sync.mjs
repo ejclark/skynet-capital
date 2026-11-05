@@ -40,22 +40,27 @@
 // meant a dozen `issues` events spent the PAT's hour, with `main` red behind them. `itemsFor` asks
 // GitHub about the issue instead of about the board, and only a caller already holding a board list
 // (a sweep) uses one.
+import { readFileSync } from "node:fs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
-import { ghRateLimit, ghRest, sh, withRetry } from "./gh.mjs";
+import { ghRateLimit, ghRest, isTransientGhError, sh, withRetry } from "./gh.mjs";
 import {
   boardItemsFromProjectItems,
   boardSyncSkip,
   explainMaskedOwnerFailure,
+  findBoardItem,
   isBacklogCandidate,
   isMaskedOwnerFailure,
   isRateLimitExhausted,
   isRetryableProjectsGhError,
   isRetryableRestError,
+  priorityValues,
   resolveBoardItem,
   runThroughRateLimit,
+  SYNCED_PRIORITY,
   statusForIssue,
   subIssueCounts,
 } from "./projects.mjs";
+import { describePriority, planPriority, wantedPriorityOf } from "./projects-priority.mjs";
 
 const OWNER = "ejclark";
 const PROJECT_NUMBER = 2; // created by projects-setup.mjs's first live run (2026-09-27)
@@ -141,12 +146,18 @@ function optionByName(field, name) {
 // message stays reachable. They leave `totalCount` too — otherwise `boardItemsOrThrow` would read
 // every archived card as truncation. A page cap stops a runaway cursor; a capped read still counts
 // more than it returns, so the truncation guards refuse it instead of reporting a half board.
+// #6871: Priority and its hidden record ride along as two more single objects, not connections —
+// the same price rule as Status above. A field the board does not carry yet answers null.
+const PRIORITY_VALUES = `priority: fieldValueByName(name:"Priority"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
+        synced: fieldValueByName(name:"${SYNCED_PRIORITY}"){ ... on ProjectV2ItemFieldTextValue{ text } }`;
+
 const BOARD_ITEMS_QUERY = `query($owner:String!,$project:Int!,$after:String){
   user(login:$owner){ projectV2(number:$project){
     items(first:100, after:$after){ totalCount pageInfo{ hasNextPage endCursor }
       nodes{ id isArchived
         content{ __typename ... on Issue{ url } ... on PullRequest{ url } }
         status: fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
+        ${PRIORITY_VALUES}
       } }
   } }
   rateLimit{ cost remaining resetAt }
@@ -198,6 +209,7 @@ export function readBoardItemsFromGh({
       items.push({
         id: node.id,
         ...(node.status?.name ? { status: node.status.name } : {}),
+        ...priorityValues(node),
         content: __typename ? { type: __typename, ...(url ? { url } : {}) } : null,
       });
     }
@@ -287,7 +299,8 @@ const ISSUE_PROJECT_ITEMS_QUERY = `query($owner:String!,$repo:String!,$number:In
   projectOwner: user(login:$projectOwner){ projectV2(number:$project){ id } }
   repository(owner:$owner,name:$repo){
     issue(number:$number){
-      projectItems(first:20,includeArchived:false){ nodes{ id project{ number } } }
+      projectItems(first:20,includeArchived:false){ nodes{ id project{ number }
+        ${PRIORITY_VALUES} } }
     }
   }
 }`;
@@ -508,15 +521,89 @@ export function readIssue(issueNumber, { read = ghRest, sleep } = {}) {
   });
 }
 
+// ── Priority (#6871 slice B1) ────────────────────────────────────────────────────────────────────
+// The decision is projects-priority.mjs's `planPriority`; this is its IO. rank.mjs reads the same
+// Horizon triage file, so `Later` means P3 on the board exactly as it does in `npm run rank`.
+const HORIZONS_PATH = new URL("./projects-horizons.json", import.meta.url);
+let horizonTriage;
+/** The hand Horizon triage (issue number → Now/Next/Later), read once per process. */
+export function readHorizons() {
+  if (horizonTriage) return horizonTriage;
+  try {
+    horizonTriage = JSON.parse(readFileSync(HORIZONS_PATH, "utf8"));
+  } catch {
+    horizonTriage = {};
+  }
+  return horizonTriage;
+}
+
+const REPO = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
+
+/** A label write over REST (the core bucket), retried on GitHub's 5xx like every call here. */
+function ghLabel(argv) {
+  return withRetry(() => sh("gh", argv), { isTransient: isTransientGhError });
+}
+
 /**
- * Adds the issue to the board if it isn't there yet, sets Status always, and sets Horizon only
- * when the caller supplies one — Horizon is a sequencing judgment (same footing as Priority,
- * which nothing here ever sets automatically either), so a plain per-issue sync call with no
+ * Bring one open issue's Priority card in line with its labels — or, when a human dragged the card,
+ * carry the drag back to the labels FIRST (Eric, 2026-11-04: "Drag sets priority"). Every write
+ * arrives through `io`, so each route is provable without a network call:
+ *   io.readFresh()        → this card as GitHub sees it now, or undefined
+ *   io.setPriority(name)  · io.setRecord(text) · io.addLabel(name) · io.removeLabel(name)
+ *
+ * `fresh` says whether `item`'s values were read moments ago. A sweep's are from its start, and a
+ * drag made since would be overwritten by a stale "write" — so before acting on held values, the
+ * card is re-read (one point) and re-planned. Order is load-bearing (projects-priority.mjs header):
+ * Priority before its record; labels (old off, new on) before the record on a drag.
+ *
+ * Returns the plan it applied, or `{action: "skipped", reason}`.
+ */
+export function syncPriority({ issue, item, fresh = false, ready = true, horizons = {}, io }) {
+  if (issue?.state === "closed") return { action: "skipped", reason: "closed" };
+  if (!ready) {
+    return {
+      action: "skipped",
+      reason: `no "${SYNCED_PRIORITY}" field on the board yet — projects-setup.yml creates it`,
+    };
+  }
+  const wanted = wantedPriorityOf(issue, { horizons });
+  const planFor = (card) =>
+    planPriority({
+      current: card?.priority ?? null,
+      synced: card?.syncedPriority ?? null,
+      wanted,
+      labels: issue?.labels,
+    });
+  let plan = planFor(item);
+  if (!fresh && plan.action !== "none" && plan.action !== "foreign") {
+    const now = io.readFresh();
+    if (now) plan = planFor(now);
+  }
+  if (plan.action === "write") {
+    io.setPriority(plan.value);
+    io.setRecord(plan.value);
+  } else if (plan.action === "record") {
+    io.setRecord(plan.value);
+  } else if (plan.action === "drag") {
+    // Remove before add: with no P label for a moment, a sync reading in between still sees the
+    // card off its record and re-plans the same drag. Two P labels at once would let `classOf`
+    // pick the old lane and overwrite the drag.
+    for (const name of plan.remove) io.removeLabel(name);
+    for (const name of plan.add) io.addLabel(name);
+    io.setRecord(plan.lane);
+  }
+  return plan;
+}
+
+/**
+ * Adds the issue to the board if it isn't there yet, sets Status when it differs, sets Priority
+ * from the labels (or carries a drag back to them, `syncPriority`), and sets Horizon only when the
+ * caller supplies one — Horizon is a sequencing judgment, so a plain per-issue sync call with no
  * `horizon` leaves it untouched rather than guessing.
  *
- * Returns `{skipped}` for a non-candidate (e.g. a `ci-failure` tracker), `{status, horizon, added}`
- * otherwise (`added` false = it was already an item). Throws loudly on any GitHub-side surprise —
- * never a silent partial write.
+ * Returns `{skipped}` for a non-candidate (e.g. a `ci-failure` tracker), `{status, horizon, added,
+ * priority}` otherwise (`added` false = it was already an item). Throws loudly on any GitHub-side
+ * surprise — never a silent partial write.
  *
  * `board` is a `createBoardContext()` the caller may share across many issues (#4183); left out, it
  * makes its own, which is the one-issue `sync project status` job's behaviour unchanged.
@@ -580,10 +667,51 @@ export function syncIssue(issueNumber, { horizon, board = createBoardContext() }
     ]);
   };
 
-  setSingleSelect("Status", status);
+  // A held board list already says which column the card is in; an unchanged Status is not
+  // rewritten (#6871: a sweep filling Priority would otherwise pay a third mutation per card).
+  // The per-issue lookup carries no Status, so the events lane writes it every time, as before.
+  if (item.status !== status) setSingleSelect("Status", status);
   if (horizon) setSingleSelect("Horizon", horizon);
 
-  return { status, horizon: horizon ?? null, added, decisionCalloutMissing };
+  const setText = (fieldName, text) => {
+    const { id } = findField(fieldList, fieldName);
+    ghProject([
+      "item-edit",
+      "--id",
+      item.id,
+      "--field-id",
+      id,
+      "--project-id",
+      project.id,
+      "--text",
+      text,
+    ]);
+  };
+  const labelsPath = `repos/${REPO}/issues/${issue.number}/labels`;
+  const priority = syncPriority({
+    issue,
+    item,
+    fresh: added,
+    ready: Boolean(findField(fieldList, SYNCED_PRIORITY)),
+    horizons: readHorizons(),
+    io: {
+      readFresh: () => {
+        try {
+          return findBoardItem(board.issueItems(issue), issue.html_url);
+        } catch (err) {
+          if (isRateLimitExhausted(`${err?.stderr ?? ""} ${err?.message ?? ""}`)) throw err;
+          return undefined;
+        }
+      },
+      setPriority: (name) => setSingleSelect("Priority", name),
+      setRecord: (text) => setText(SYNCED_PRIORITY, text),
+      addLabel: (name) => ghLabel(["api", "-X", "POST", labelsPath, "-f", `labels[]=${name}`]),
+      removeLabel: (name) =>
+        ghLabel(["api", "-X", "DELETE", `${labelsPath}/${encodeURIComponent(name)}`]),
+    },
+  });
+
+  return { status, horizon: horizon ?? null, added, decisionCalloutMissing, priority };
 }
 
 function main() {
@@ -617,6 +745,12 @@ function main() {
   console.log(
     `issue #${issueNumber}: ${result.added ? "added to board" : "already on board"}, ` +
       `Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : ""}`,
+  );
+  const p = result.priority;
+  console.log(
+    p?.action === "skipped"
+      ? `issue #${issueNumber}: Priority not synced — ${p.reason}`
+      : describePriority(issueNumber, p),
   );
   if (result.decisionCalloutMissing) {
     console.log(

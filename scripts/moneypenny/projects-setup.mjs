@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // PROJECTS V2 SETUP — one-time (idempotent, safe to re-run), #3818 slice B. Creates the
-// "Skynet Capital — Orchestration" project under ejclark and its four fields (Status, Priority,
-// Horizon, Target date) via `gh project`.
+// "Skynet Capital — Orchestration" project under ejclark and its fields (Status, Priority,
+// Horizon, Target date, and #6871's hidden "Synced priority" text record) via `gh project`.
 //
 // Needs `GH_TOKEN` to be Eric's own classic personal access token with `project` scope, never the
 // Moneypenny App's installation token. The first live run (2026-09-26, run 36270609136) proved

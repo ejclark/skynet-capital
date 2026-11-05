@@ -3,7 +3,9 @@
 // item whose column disagrees with `statusForIssue()`, closed issues still outside Done included —
 // and adds any open blocked issue that never got a card at all (#4303, see `planReconcile`). Before
 // the cards, the columns: a Status option list in projects.mjs the live field does not carry yet
-// is written in place first (#4393 slice 4, `ensureStatusColumns`).
+// is written in place first (#4393 slice 4, `ensureStatusColumns`). Since #6871 it also keeps each
+// open card's Priority in step with its labels, and turns a human drag between priority lanes into
+// that lane's P label before anything overwrites it (projects-priority.mjs, `mergeDrift` below).
 //
 // WHY A SWEEP AND NOT A BETTER EVENT JOB. On 2026-10-01 the In Progress column showed #3818, #3953,
 // #3977 and #4327 while zero open issues carried `in-progress` and two of them were closed. Cause:
@@ -47,7 +49,13 @@ import {
   statusForIssue,
   subIssueCounts,
 } from "./projects.mjs";
-import { createBoardContext, syncIssue, writeStatusOptions } from "./projects-sync.mjs";
+import { describePriority, planPriorityDrift } from "./projects-priority.mjs";
+import {
+  createBoardContext,
+  readHorizons,
+  syncIssue,
+  writeStatusOptions,
+} from "./projects-sync.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
 
@@ -199,9 +207,34 @@ export function planReconcile({
 }
 
 /**
+ * Status drift and priority drift as one list, one entry per issue (#6871): `syncIssue` fixes both
+ * in a single call, so a card wrong on both counts is synced once. Status entries keep their
+ * `{have, want}`; priority adds `priority` (a `planPriority` result). Ascending by number. Pure.
+ */
+export function mergeDrift(statusDrift = [], priorityDrift = []) {
+  const byNumber = new Map(statusDrift.map((d) => [d.number, { ...d }]));
+  for (const { number, plan } of priorityDrift) {
+    byNumber.set(number, { ...(byNumber.get(number) ?? { number }), priority: plan });
+  }
+  return [...byNumber.values()].sort((a, b) => a.number - b.number);
+}
+
+/** One dry-run / result line for a merged drift entry. */
+function driftLine(d, verb) {
+  const parts = [];
+  if (d.want) parts.push(`${verb} "${d.have ?? "(none)"}" → "${d.want}"`);
+  if (d.priority) parts.push(describePriority(d.number, d.priority).replace(/^#\d+: /, ""));
+  return `#${d.number}: ${parts.join("; ")}`;
+}
+
+/**
  * The sweep. Every IO edge is injected so a spec drives it without a network call; the defaults
  * are the real reads and `syncIssue`. Returns a summary the CLI prints; never throws on a
  * per-issue failure (it records it), but stops at the first exhausted-quota failure.
+ *
+ * #6871: it also reads each card's Priority and "Synced priority" (the board read carries both)
+ * and syncs the cards whose priority is out of step — a human drag first, carried back to that
+ * lane's P label before anything may overwrite it, then up to `PRIORITY_WRITES_PER_SWEEP` fills.
  */
 export function reconcileBoard({
   board = createBoardContext(),
@@ -210,6 +243,7 @@ export function reconcileBoard({
   sync = (number, opts) => syncIssue(String(number), opts),
   ensureColumns = ensureStatusColumns,
   statusOf,
+  horizons = readHorizons(),
   dryRun = false,
   log = console.log,
 } = {}) {
@@ -223,15 +257,27 @@ export function reconcileBoard({
 
   const columns = ensureColumns({ board, dryRun, log });
   const items = boardItemsOrThrow(board);
-  const drift = planReconcile({ items, openIssues, columns, ...(statusOf ? { statusOf } : {}) });
-  log(`board: ${items.length} item(s), ${drift.length} in the wrong column`);
+  const moved = planReconcile({ items, openIssues, columns, ...(statusOf ? { statusOf } : {}) });
+  const { drift: priorityDrift, deferred } = planPriorityDrift({
+    items,
+    openIssues,
+    numberOf: (item) => boardIssueNumber(item),
+    horizons,
+  });
+  const drift = mergeDrift(moved, priorityDrift);
+  const drags = priorityDrift.filter((p) => p.plan.action === "drag").length;
+  log(
+    `board: ${items.length} item(s), ${moved.length} in the wrong column, ${drags} priority ` +
+      `drag(s), ${priorityDrift.length - drags} priority write(s)` +
+      (deferred ? ` (${deferred} more left for the next sweep)` : ""),
+  );
 
   const fixed = [];
   const failed = [];
   let aborted = false;
   for (const d of drift) {
     if (dryRun) {
-      log(`#${d.number}: would move "${d.have ?? "(none)"}" → "${d.want}"`);
+      log(driftLine(d, "would move"));
       continue;
     }
     try {
@@ -241,7 +287,15 @@ export function reconcileBoard({
         continue;
       }
       fixed.push({ ...d, now: result?.status });
-      log(`#${d.number}: "${d.have ?? "(none)"}" → "${result?.status}"`);
+      const now = result?.priority;
+      log(
+        `#${d.number}: Status "${result?.status}"` +
+          (now?.action === "skipped"
+            ? `; Priority not synced — ${now.reason}`
+            : now
+              ? `; ${describePriority(d.number, now).replace(/^#\d+: /, "")}`
+              : ""),
+      );
     } catch (err) {
       failed.push({ number: d.number, message: err?.message });
       log(`#${d.number}: FAILED — ${err?.message}`);
