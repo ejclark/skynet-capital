@@ -5,13 +5,13 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "@rstest/core";
 import { parseLoopList } from "../../scripts/loop-list-decide.mjs";
 // @ts-expect-error plain .mjs script, no declarations
-import { main } from "../../scripts/newsletter.mjs";
-// @ts-expect-error plain .mjs script, no declarations
 import { asksDue } from "../../scripts/newsletter/asks.mjs";
 // @ts-expect-error plain .mjs script, no declarations
 import { buildNewsletter } from "../../scripts/newsletter/build.mjs";
 // @ts-expect-error plain .mjs script, no declarations
 import { mergeSeries, seriesEntry } from "../../scripts/newsletter/series.mjs";
+// @ts-expect-error plain .mjs script, no declarations
+import { main } from "../../scripts/newsletter.mjs";
 
 // The weekly newsletter's numbers (#6872, N1), built from a fixture shaped on 2026-W45's public
 // records: three of #4153's audit reports (A with its receipt, B and E with only a table), an audit

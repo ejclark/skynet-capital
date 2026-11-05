@@ -5,8 +5,9 @@
 // THE HONESTY RULE IS THE METER'S (scripts/agent-meter/jobs.mjs): what could not be read is null,
 // never 0. A 0 defects or a 100% pass rate is the best number on the page, so it has to be earned
 // by a reading, not by a source that was missing.
-import { ciByTrigger } from "../agent-meter.mjs";
+
 import { defectsFromIssues } from "../agent-meter/defects.mjs";
+import { ciByTrigger } from "../agent-meter.mjs";
 
 const DAY = 86400000;
 const within = (ms, w) => ms >= w.sinceMs && ms < w.untilMs;
