@@ -11,12 +11,26 @@
 //   node scripts/review-replay.mjs prompt --lens <name> --head <sha> [--set <file>] [--lens-file <file>]
 //   node scripts/review-replay.mjs score  --results <file>[,<file>] [--set <file>] [--json]
 //   node scripts/review-replay.mjs check  [--set <file>]    # every sha resolves and fits its PR
+//   node scripts/review-replay.mjs tokens --run-dir <dir>[,<dir>] --results <file>[,<file>]
 //
 // What a score can and cannot say is in the set's own howThisCouldFlatterALens: this measures a lens
-// on the cases it was grown from, reviewers only, no refuters.
+// on the cases it was grown from. The post-merge lenses run reviewers only; the pre-merge lens
+// (scripts/review-replay/pre-merge.mjs) adds one trace refuter per PR, and a refuted finding counts
+// for nothing, so its score is read after the refuter, with the number before it beside.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import {
+  changedFilesOf,
+  PASS_BAR,
+  preMergePromptFor,
+  RULES_FILE,
+  readProtectedRules,
+  shapeOf,
+  verdictOf,
+} from "./review-replay/pre-merge.mjs";
+import { scoreRows, summary } from "./review-replay/score.mjs";
+import { readRunAgents, renderTokens, tokensPerTier } from "./review-replay/tokens.mjs";
 
 const SET_FILE = "docs/review/replay-set.json";
 const MAX_PRS = 40; // the same cap post-merge-audit carries: a wider run is two runs, never a cut
@@ -30,7 +44,9 @@ export const LENSES = {
   "context-loop": "context-loop",
   "reuse-composability": "reuse",
   "smells-and-patterns": "structure",
+  "pre-merge": "correctness",
 };
+export const PRE_MERGE = "pre-merge";
 
 function facetOf(lens) {
   const facet = LENSES[lens];
@@ -68,9 +84,12 @@ export function casesFor(set, lens, { ids } = {}) {
       `${inputs.length} PRs is over the ${MAX_PRS} one run may review; name a batch with --ids`,
     );
   }
-  const agents = inputs.length + LOOKUPS;
+  // The pre-merge lens refutes on the PR, so a PR with any finding pays one more agent.
+  const refuters = lens === PRE_MERGE ? { refuters: inputs.length } : {};
+  const agents = inputs.length + (refuters.refuters ?? 0) + LOOKUPS;
   const price = {
     reviewers: inputs.length,
+    ...refuters,
     lookups: LOOKUPS,
     agents,
     startTokens: agents * START_TOKENS,
@@ -100,87 +119,13 @@ Read the change through this lens and no other:
 ${withoutExamples(lensText)}`;
 }
 
-const SERIOUS = (finding) => finding.severity === "high" || finding.severity === "medium";
-
-function scoreDefects(rows, seen) {
-  const prs = [...new Set(rows.map((row) => row.pr))];
-  const recall = {
-    prs: prs.length,
-    reviewed: 0,
-    hit: 0,
-    hits: [],
-    lowOnly: [],
-    missed: [],
-    unknown: [],
-  };
-  for (const pr of prs) {
-    const result = seen.get(pr);
-    if (!result) {
-      recall.unknown.push(pr);
-      continue;
-    }
-    recall.reviewed += 1;
-    const onDefect = (row) => (finding) => finding.file === row.defect.file;
-    const counted = (finding) => SERIOUS(finding) && finding.mechanism !== false;
-    const cases = rows.filter((row) => row.pr === pr);
-    const matched = cases.filter((row) =>
-      result.findings.some((f) => onDefect(row)(f) && counted(f)),
-    );
-    if (matched.length) {
-      recall.hit += 1;
-      // Both sentences, because a file match is only an upper bound until someone reads them.
-      recall.hits.push({
-        pr,
-        caseIds: matched.map((row) => row.id),
-        defect: matched[0].defect.summary,
-        found: result.findings.find((f) => onDefect(matched[0])(f) && counted(f)).summary,
-      });
-    } else if (
-      cases.some((row) => result.findings.some((f) => onDefect(row)(f) && f.severity === "low"))
-    ) {
-      recall.lowOnly.push(pr);
-    } else {
-      recall.missed.push(pr);
-    }
-  }
-  return recall;
-}
-
-function scoreControls(rows, facet, seen) {
-  const controls = { reviewed: 0, clean: 0, flagged: [], traps: [], unknown: [] };
-  for (const row of rows) {
-    const result = seen.get(row.pr);
-    if (!result) {
-      controls.unknown.push(row.pr);
-      continue;
-    }
-    controls.reviewed += 1;
-    const serious = result.findings.filter(SERIOUS).map((f) => ({ id: row.id, pr: row.pr, ...f }));
-    if (!serious.length) controls.clean += 1;
-    else if (row.trapFor === facet) controls.traps.push(...serious);
-    else controls.flagged.push(...serious);
-  }
-  return controls;
-}
-
-/** One lens's run. A reviewer that never returned is unknown: neither a miss nor a clean control. */
-export function scoreRun(set, { lens, results }) {
+/** One lens's run, scored (scripts/review-replay/score.mjs), with the bar's verdict for pre-merge. */
+export function scoreRun(set, { lens, results, changed }) {
   const facet = facetOf(lens);
   const rows = set.cases.filter((row) => runsOn(row, lens, facet));
-  const seen = new Map(results.filter((row) => row.returned !== false).map((row) => [row.pr, row]));
-  return {
-    lens,
-    facet,
-    recall: scoreDefects(
-      rows.filter((row) => !row.isControl),
-      seen,
-    ),
-    controls: scoreControls(
-      rows.filter((row) => row.isControl),
-      facet,
-      seen,
-    ),
-  };
+  const report = scoreRows(rows, { lens, facet, results, changed });
+  if (lens === PRE_MERGE) report.bar = { ...PASS_BAR, verdict: verdictOf(report) };
+  return report;
 }
 
 function checkSet(set) {
@@ -205,16 +150,22 @@ function checkSet(set) {
   return problems.length ? 1 : 0;
 }
 
-const summary = ({ lens, recall, controls }) =>
-  [
-    `${lens}: recall ${recall.hit} of ${recall.reviewed} PRs reviewed (${recall.prs} labelled), by file match; read each hit`,
-    `  low only: ${recall.lowOnly.join(", ") || "none"} · missed: ${recall.missed.join(", ") || "none"} · not reviewed: ${recall.unknown.join(", ") || "none"}`,
-    `  controls: ${controls.clean} clean of ${controls.reviewed} reviewed; ${controls.flagged.length} high or medium counted against the lens, before any refuter; ${controls.traps.length} on a trap, to read; not reviewed: ${controls.unknown.join(", ") || "none"}`,
-  ].join("\n");
-
 function flag(argv, name) {
   const at = argv.indexOf(`--${name}`);
   return at === -1 ? undefined : argv[at + 1];
+}
+
+/** What each PR changed, for the pre-merge lens; a sha that will not resolve leaves its PR out. */
+function changedFor(set, lens) {
+  const changed = new Map();
+  for (const input of inputsFor(set, lens)) {
+    try {
+      changed.set(input.pr, changedFilesOf(input));
+    } catch {
+      // unresolvable: hitsInDiff cannot count this PR, which only lowers the floor
+    }
+  }
+  return changed;
 }
 
 function scoreCommand(argv, set) {
@@ -224,14 +175,54 @@ function scoreCommand(argv, set) {
     const lens = run.lens ?? flag(argv, "lens");
     runs.set(lens, [...(runs.get(lens) ?? []), ...run.results]);
   }
-  const facets = {};
+  // Keyed by lens: two lenses can read one facet (adversarial and pre-merge both read correctness).
+  const lenses = {};
   for (const [lens, results] of runs) {
-    const report = scoreRun(set, { lens, results });
-    facets[report.facet] = report;
+    const changed = lens === PRE_MERGE ? changedFor(set, lens) : undefined;
+    lenses[lens] = scoreRun(set, { lens, results, changed });
   }
-  if (!Object.keys(facets).length) throw new Error("score needs --results <file>");
-  if (argv.includes("--json")) console.log(JSON.stringify({ facets }, null, 2));
-  else for (const report of Object.values(facets)) console.log(summary(report));
+  if (!Object.keys(lenses).length) throw new Error("score needs --results <file>");
+  if (argv.includes("--json")) console.log(JSON.stringify({ lenses }, null, 2));
+  else for (const report of Object.values(lenses)) console.log(summary(report));
+  return 0;
+}
+
+function casesCommand(argv, set, lens) {
+  const ids = flag(argv, "ids")?.split(",").filter(Boolean);
+  const run = casesFor(set, lens, { ids });
+  if (lens === PRE_MERGE) {
+    // The tier is a rule over git and the envelope, never the workflow's or a model's judgment.
+    const rules = readProtectedRules();
+    run.inputs = run.inputs.map((input) => ({ ...input, ...shapeOf(input, rules) }));
+  }
+  console.log(JSON.stringify(run));
+  return 0;
+}
+
+function promptCommand(argv, set, lens) {
+  const head = flag(argv, "head");
+  if (lens === PRE_MERGE) {
+    const input = inputsFor(set, lens).find((row) => row.head === head);
+    if (!input) throw new Error(`${lens} does not run on ${head}`);
+    console.log(
+      preMergePromptFor(input, readFileSync(flag(argv, "lens-file") ?? RULES_FILE, "utf8")),
+    );
+    return 0;
+  }
+  const lensText = readFileSync(flag(argv, "lens-file") ?? `docs/review/lenses/${lens}.md`, "utf8");
+  console.log(promptFor(set, lens, head, lensText));
+  return 0;
+}
+
+function tokensCommand(argv) {
+  const runDirs = (flag(argv, "run-dir") ?? "").split(",").filter(Boolean);
+  if (!runDirs.length) throw new Error("tokens needs --run-dir <a workflow run's folder>[,<more>]");
+  const results = (flag(argv, "results") ?? "")
+    .split(",")
+    .filter(Boolean)
+    .flatMap((file) => JSON.parse(readFileSync(file, "utf8")).results);
+  const report = tokensPerTier(runDirs.flatMap(readRunAgents), results);
+  console.log(argv.includes("--json") ? JSON.stringify(report, null, 2) : renderTokens(report));
   return 0;
 }
 
@@ -239,22 +230,14 @@ function main(argv) {
   const [command] = argv;
   const set = JSON.parse(readFileSync(flag(argv, "set") ?? SET_FILE, "utf8"));
   const lens = flag(argv, "lens");
-  if (command === "cases") {
-    const ids = flag(argv, "ids")?.split(",").filter(Boolean);
-    console.log(JSON.stringify(casesFor(set, lens, { ids })));
-    return 0;
-  }
-  if (command === "prompt") {
-    const lensText = readFileSync(
-      flag(argv, "lens-file") ?? `docs/review/lenses/${lens}.md`,
-      "utf8",
-    );
-    console.log(promptFor(set, lens, flag(argv, "head"), lensText));
-    return 0;
-  }
+  if (command === "cases") return casesCommand(argv, set, lens);
+  if (command === "prompt") return promptCommand(argv, set, lens);
   if (command === "score") return scoreCommand(argv, set);
   if (command === "check") return checkSet(set);
-  throw new Error("usage: review-replay.mjs cases|prompt|score|check (see the file's header)");
+  if (command === "tokens") return tokensCommand(argv);
+  throw new Error(
+    "usage: review-replay.mjs cases|prompt|score|check|tokens (see the file's header)",
+  );
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

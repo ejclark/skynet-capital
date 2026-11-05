@@ -406,6 +406,10 @@ appeared). Two consequences:
   path instead — `Workflow({scriptPath: "<repo root>/.claude/workflows/grind.js",
   args: {...}})` — which reads the file fresh and, if the script is malformed, reports the real
   error instead of "not found". The name works again in the next session.
+- The registry also holds each script's **text** as it stood when it was built, so a session that
+  edits a workflow and then runs it by name runs the old copy, with no error. On 2026-11-05 four
+  `review-replay` runs started by name ran the pre-edit script, until an agent label missing the
+  new tier gave it away (#6870). After editing a workflow, run it by `scriptPath` every time.
 
 ## Known limitations
 
