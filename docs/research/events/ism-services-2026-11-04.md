@@ -442,3 +442,121 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-04
 <!-- probe-ref: {"symbols":{},"vix":20.83,"daysBand":"high:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","chicago-pmi-2026-10-30","construction-spending-2026-11-02","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","eci-q3-2026-10-30","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-11-05).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design), so the **report** is scored from the release as read this session and the
+**tape** from Yahoo daily and 5-minute bars fetched after the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
+**Source limit, stated up front:** ismworld.org stays SSO-gated and PRNewswire's ISM index lists the
+headline "Services PMI® at 54.5%; October 2026 ISM® Services PMI® Report" but showed no dateline, so the
+release text itself was not read. The figures below come from tradingeconomics.com's 2026-11-04 item
+("decreased to 54.5 in October 2026, the lowest in three months, compared to 54.9 in September"),
+whose headline matches PRNewswire's listing; the sub-indices rest on that single secondary and are
+labelled so. The event stays `estimate` (`EST:`): the date was met, but this lane promotes nothing.
+
+**What printed — the headline cooled a notch and stayed inside 2026's range; Prices stayed above 70.**
+
+| Index | Oct | Sep | Δ |
+|---|---|---|---|
+| **Services PMI** | **54.5** | 54.9 | −0.4 |
+| Business Activity | 53.8 | 56.5 | −2.7 |
+| New Orders | 55.9 | 59.8 | −3.9 |
+| **Employment** | **51.4** | 50.1 | +1.3 |
+| **Prices** | **73.0** | 74.0 | −1.0 |
+
+**Against the stance (every check from this doc's own call sheet):**
+
+- **Base case held.** It named "continued expansion in the low-to-mid 50s … within 2026's tight
+  53.6–56.1 range, Prices elevated above 67, Employment at or below 50." Headline, range and Prices
+  landed; **Employment missed** (51.4, a second consecutive reading above 50 after September's 50.1,
+  so the five-reading sub-50 run is now over, not merely interrupted). No October consensus was published and none was found
+  (no surprise framing is possible), so this is a trend-versus-print read, not a beat or a miss.
+- **Neither "proves it wrong" fired.** A headline outside 53.6–56.1: no. A sub-50 print: no. A published
+  Prices forecast: none found.
+- **The attribution rule was the right call, and it was tested harder than any prior date.** 11-04 was
+  the loudest session in the whole 2026 grid, and the bond and equity move are attributed by the
+  tape's own narrative (tradingeconomics.com, 2026-11-04) to the **midterm result** ("Democratic sweep
+  of Congress"; gridlock "could limit further fiscal expansion and ease pressure on bond markets")
+  and, for the long end, to Treasury's refunding statement (nominal coupon auction sizes held; Q4
+  borrowing estimate $618B, $10B under August's). Neither source item mentions ISM or ADP.
+- **The Stance's "stand aside; nothing to trade off this event" stands.** Nothing was opened, closed
+  or sized off it, and nothing in the print would have changed that.
+
+**The tape, 2026-11-04 (Yahoo dividend-adjusted closes; 211 sessions since 2026-01-01).**
+
+| Leg | 11-04 close-to-close | \|move\| percentile in 2026 | 11-03 → 11-04 |
+|---|---|---|---|
+| **XLF** | **+3.515%** | **p100** (the largest of 211) | 57.19 → 59.20 |
+| **SPY** | +1.652% | p94 | 754.35 → 766.81 |
+| IWM | +1.512% | p82 | 279.79 → 284.02 |
+| QQQ | +0.973% | p55 | 685.28 → 691.95 |
+| **TLT** | +0.801% | p84 | 81.11 → 81.76 |
+| **`^TNX`** | **−1.171%** (−5.8bp) | p78 | 4.952 → 4.894 |
+| `^VIX` | **−20.26%** | p98 | 20.83 → 16.61 |
+
+**The release hour on its own (5-minute bars, 11-04, regular hours).** `^TNX` printed **4.929** at 09:55,
+**4.935** on the 10:00 bar's close and a session-local high of **4.958** by about 10:20 — **+2.9bp over
+roughly 25 minutes** — then gave it all back: **4.904** at 11:00 and **4.894** into the close. TLT mirrored
+it (81.31 at 09:55 → 80.98 low by about 10:20, then 81.77 into the close, +0.8% on the day). SPY was already at **767.27** by 09:55 after a
+762.99 open and spent 10:00–10:30 inside a **768.24 / 766.28** band; XLF sagged 58.46 → 58.01 into the
+print, ticked to 58.24 on the 10:00 bar and then ran to **59.17** by the close — the whole move happened
+after, not at, the survey. That is FT-48's shape again (a small, correctly signed bond impulse on a
+Prices-heavy print that retraces), and it is **not** a release-day move: the release-day close is
+−5.8bp, the opposite sign.
+
+**Is the "biggest non-CPI rate-path mover" claim any better off? The reaction function, re-measured on
+all eleven 2026 releases** (11-04 added; no row is edited, this is a new measurement):
+
+| Leg | Up days | Mean (release day) | Unconditional | Spearman vs Prices | Spearman vs headline |
+|---|---|---|---|---|---|
+| `^TNX` | 5/11 (vs 54.0%) | −0.119% | +0.079% | **0.000** | +0.155 |
+| TLT | 5/11 (vs 48.3%) | +0.057% | −0.013% | −0.055 | −0.283 |
+| SPY | 7/11 (vs 51.2%) | +0.411% | +0.062% | +0.342 | +0.219 |
+| QQQ | 8/11 (vs 53.6%) | +0.462% | +0.068% | −0.009 | +0.288 |
+| **XLF** | **9/11 (vs 52.6%)** | **+0.590%** | +0.046% | +0.387 | +0.155 |
+| IWM | 7/11 (vs 55.5%) | +0.272% | +0.072% | +0.196 | +0.064 |
+
+- **Bonds: the unproven verdict stands.** Prices ≥ 70 (seven releases): `^TNX` 3/7 up, mean −0.116%;
+  below 70 (four): 2/4, −0.125%. The ordering is back at **zero** (Spearman 0.000, n=11; critical
+  value ~0.6) after +0.225 on the 10-05 tape. Of the three hottest Prices readings of the year
+  (72.6, 74.0, 73.0) two closed with yields **down** (09-03 −0.71%, 11-04 **−1.17%**) and one up by a
+  knife-edge (10-05 +0.64%). *Unproven* remains the wording; it does not earn "refuted".
+- **Equities: a new thing to be honest about — and not this survey's.** XLF is now **9/11 up, mean
+  +0.59%** against a 0.05% unconditional rate (about p ≈ 0.05 one-sided for 9/11 at a 52.6% base
+  rate, **uncorrected** across the six legs read here, so not a finding). The mean is carried by
+  exactly two sessions, both with a named non-ISM driver — 09-03 (Waller, hike odds 63.2% → 50–54%)
+  and 11-04 (the election result): drop them and XLF's nine other releases average **+0.16%** (computed from the returns above). The
+  honest summary is that the **two loudest ISM Services days of 2026 were both days something else
+  was the news**, which is the strongest evidence yet for this doc's attribution discipline and the
+  weakest possible evidence for the survey being a lever.
+
+**Forward tests — none open.** This event's own fragment carries one row, **FT-ism-services-2026-11-04-1**,
+already scored **kill** on 2026-10-16; no row here is unscored, so there is nothing to score today and
+nothing was edited. The legacy rows touching this chain are settled (**FT-37** void, **FT-38** pass,
+**FT-48** pass). `node scripts/conviction-proposals.mjs --event=ism-services-2026-11-04` and
+`node scripts/intents.mjs --event=ism-services-2026-11-04` both returned `[]`: no conviction proposal
+awaits an answer and no declared intent names this event. No new forward test is registered: the
+Prices-ordering question now has eleven releases and a flat Spearman, and a twelfth-observation test
+on 12-03 would be a fresh hypothesis (the successor ledger
+[`ism-services-2026-12-03`](ism-services-2026-12-03.md) owns it), not a continuation of this one.
+`npm run research:claims -- --event ism-services-2026-11-04` ran after this section was written and printed `nothing written` (no conviction reads this event's rows).
+
+**Honest limits.** (1) One secondary source for the sub-indices (headline cross-checked against
+PRNewswire's headline text only). (2) The attribution of the 11-04 tape rests on a news aggregator's
+dated paraphrase, not on a primary wire; the *size* of the move is measured, the *cause* is reported.
+(3) No consensus existed to score a surprise against, so "the print was inline" is a statement about
+range, never about expectation. (4) Eleven observations cannot confirm any ordering at these
+magnitudes; they can only fail to reject, and this doc has called the claim unproven since 2026-10-16.
+(5) Adding 11-04 was not a clean test: the day carried an election result, a refunding statement and
+ADP at 08:15 — the stack of four the doc predicted.
+
+**Process note (the loop stage a person still had to do).** None — a full close-out ran unattended.
+The recurring manual step was fetching the print: ismworld.org's SSO gate meant the primary was never
+readable, so *sense* ran on a secondary again. A free ISM headline source that is dated and
+ungated would close that loop; the cheapest candidate is PRNewswire's own release page, whose
+index listed the headline but not its dateline.
+
+**Last assessed:** 2026-11-05
+<!-- probe-ref: {"symbols":{},"vix":16.61,"daysBand":"high:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","chicago-pmi-2026-10-30","construction-spending-2026-11-02","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","eci-q3-2026-10-30","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0} -->
