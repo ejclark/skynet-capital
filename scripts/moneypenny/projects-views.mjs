@@ -18,9 +18,14 @@ import { PROJECT_TITLE, viewsToCreate } from "./projects.mjs";
 
 const OWNER = "ejclark";
 const API_VERSION = "2022-11-28";
+// #6871, run 41964697645 (2026-11-05): the view POST took a bare 404 again with the version header
+// set, while the same PAT read the project's fields fine and `GET /versions` named a newer version,
+// 2026-03-10. An endpoint added after 2022-11-28 can live only under the newer version, so a 404
+// is retried once there before it is reported. Wrong if the retry 404s too: then it is the token.
+const NEWER_VERSION = "2026-03-10";
 const gh = (args, opts) => withRetry(() => sh("gh", args, opts));
-const rest = (args, opts) =>
-  gh(["api", "-H", `X-GitHub-Api-Version: ${API_VERSION}`, ...args], opts);
+const rest = (args, opts, version = API_VERSION) =>
+  gh(["api", "-H", `X-GitHub-Api-Version: ${version}`, ...args], opts);
 
 /** GitHub's own words from a failed `gh api` call: its stderr status line and the JSON body. */
 function whyItFailed(err) {
@@ -67,12 +72,23 @@ console.log(`existing views: ${existing.join(", ") || "(none)"}`);
 const failed = [];
 for (const { name, body } of viewsToCreate(existing, fieldIds)) {
   const path = `/users/${userId}/projectsV2/${project.number}/views`;
-  try {
-    const out = rest(["-X", "POST", path, "--input", "-"], { input: JSON.stringify(body) });
-    console.log(`created view "${name}": ${out}`);
-  } catch (err) {
+  const post = (version) =>
+    rest(["-X", "POST", path, "--input", "-"], { input: JSON.stringify(body) }, version);
+  let lastErr;
+  for (const version of [API_VERSION, NEWER_VERSION]) {
+    try {
+      console.log(`created view "${name}" (API ${version}): ${post(version)}`);
+      lastErr = undefined;
+      break;
+    } catch (err) {
+      lastErr = err;
+      console.log(`view "${name}" refused under API ${version}: ${whyItFailed(err)}`);
+      if (!/HTTP 404/.test(String(err?.stderr ?? ""))) break;
+    }
+  }
+  if (lastErr) {
     failed.push(name);
-    console.log(`FAILED view "${name}": POST ${path} ${whyItFailed(err)}`);
+    console.log(`FAILED view "${name}": POST ${path}`);
     console.log(`  body sent: ${JSON.stringify(body)}`);
   }
 }
