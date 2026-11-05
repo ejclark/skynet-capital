@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The refunding statement keeps \"at least the next several quarters\" because sizes had been flat for nine quarters and dealers expected it" (FT-39)** — added 2026-11-05 from the
+  [treasury-refunding-2026-11-04 close-out](events/treasury-refunding-2026-11-04.md). Sizes held at $58B/$42B/$25B for a tenth quarter, but sb0678 dropped "at least" ("for the next several
+  quarters"). Do not register a persistence bet on forward-guidance wording off a run of unchanged editions when the ledger itself names the edit window as live: nine flat quarters said
+  nothing about the one quarter dealers had flagged as the venue for a change.
+
 - **"The ECB SPF's modal Q4-2026 deposit rate moves up a bin to 2.75% because a Reuters poll of 73 economists had 64 expecting a December hike" (FT-ecb-spf-q4-2026-10-30-1)** — added 2026-11-05 from the
   [ecb-spf-q4-2026-10-30 close-out](events/ecb-spf-q4-2026-10-30.md). Registered 2026-10-16 off a July baseline of 2.50%; the Q4 report (2–7 Oct, 52 responses) kept the mode at **2.50% (48%)**
   with **43%** at 2.75%. The distribution moved, the mode did not. Do not register a survey's modal bin when the prior split is near even or the panel is a different set of respondents from the
