@@ -299,3 +299,56 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-03
 <!-- probe-ref: {"symbols":{},"vix":21.15,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","chicago-pmi-2026-10-30","construction-spending-2026-11-02","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","eci-q3-2026-10-30","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0} -->
+
+| 2026-11-05 | D+1 | Close-out. Statement read direct (sb0678, curl 200): sizes **unchanged**, **"at least" dropped** (FT-39 kill, FT-40 pass). See `## Outcome`. | - (event closed; stance of record: stand aside on the print, read the sentence; the sentence moved) | - (closed; scored rows only) |
+
+## Outcome
+
+**Close-out (2026-11-05, D+1; inside `closeOutWithinDays`, ceiling 11-10).** Caches busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`; neither instrument applies to a
+`symbols: []` macro print). Every figure below was re-fetched this session: the statement and the buyback calendar from
+home.treasury.gov (plain `curl`, HTTP 200), prices from Yahoo daily dividend-adjusted bars through the **2026-11-04** close.
+Hard limits honoured: no trade, calendar entry untouched (already `confirmed`, `TSY:`).
+
+**Verdict: the stance held on the print and the one sentence it said to read did move. FT-39 killed, FT-40 passed.**
+
+- **Date (held).** [sb0678](https://home.treasury.gov/news/press-releases/sb0678) is dated November 4, 2026; the documents
+  page lists the release at 8:30 AM Wednesday, next on **February 3, 2027**.
+- **Sizes unchanged (the base case).** $125B refunding at **$58B 3y / $42B 10y / $25B 30y**, a tenth consecutive quarter;
+  the monthly table is flat for every tenor. Kill switch 2 did **not** fire.
+- **The language changed (kill switch 1 fired).** August: *"...for **at least** the next several quarters."* November:
+  *"...for the next several quarters."* The "continues to evaluate... structural demand" line is kept verbatim and a new
+  line says Treasury will "engage with a variety of market participants". Read: the floor is gone, the horizon is not.
+  The dealer base case (retained) was **wrong on the wording** and right on the sizes; the first coupon increase is still
+  not announced.
+- **Also new, outside the registered tests:** the 7-year note converts to a quarterly new issue with two reopenings from the
+  **March 2027** cycle; the buyback plan is up to **$70B** liquidity support (from $38B) and $25B cash management.
+- **Buyback (FT-40 pass, bigger than asked).** The tentative calendar (11-12 → 2027-02-09) sets **$6B/op** for the
+  20Y-30Y and 10Y-20Y buckets, up from the $4B/op window that lapsed 11-04. Not a reversion, not a discontinuation.
+
+**Tape (Yahoo adj., 11-04 vs 11-03 close):** TLT **+0.801%** (81.11 → 81.76; **83.9th percentile** of its 2026-era |move|,
+n=211, p90 = 1.065%), IEF +0.548%, ^TNX 4.952 → 4.894 (−1.17%), SPY **+1.652%**, QQQ +0.973%, VIX 20.83 → **16.61**. The
+registered guidance-change read ("long duration reprices lower", from the one clean precedent TLT −1.09% on 2025-11-05)
+was **not** what the tape did: bonds rallied. That is n=2 guidance-change editions with opposite signs, and the day cannot
+be attributed: ISM services printed at 10:00 and it was the first session after the midterms (a −20% VIX day). Two web
+searches found no wrap of the session, so no cause is claimed. Kill switch 3 (a clean-day TLT move above the 90th
+percentile with *no* guidance change) did not fire: 0.80% is below the line, and there *was* a change.
+
+**Stance vs outcome.** Stand-aside on the print: nothing was held, no P/L to score, and a +0.80% bond day with a +1.65%
+equity day would not have been a case for any entry. The measured refusal (clean-subset p=0.905) is now 9 observations,
+and the day is an ordinary-to-large session confounded by two other events; it neither confirms nor damages it. The
+"language is the only channel" hypothesis is **neither confirmed nor refuted** by one edition whose bond sign was opposite
+to its precedent. Tape caution on the rate-duration names (CRWV first) into the **11-06** jobs print stands as the ledger
+wrote it: the trigger fired, the price read it was tied to did not, and it stays caution, not an entry.
+
+**Hand-off (not edited here; each has its own owner).** Forward tests that quote "at least the next several quarters" as
+current guidance — `treasury-10y-note-2026-11-10`, `treasury-30y-bond-2026-11-12`, `treasury-coupon-announcement-2026-11-12`
+and the 2027 refunding fragments — were registered against the old wording; their sessions should re-anchor on sb0678.
+Dated items beyond the 60-day horizon (the March 2027 7-year conversion) are noted here, not proposed.
+
+**Loop stage a person still did (LEARNING-LOOP):** *sense* — reading whether a policy sentence changed was a manual diff
+of two Treasury releases. A scripted `sb`-statement diff against the prior quarter's text would turn that into a mechanical
+check.
+
+**Last assessed:** 2026-11-05
+<!-- probe-ref: {"symbols":{},"vix":16.61,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","chicago-pmi-2026-10-30","construction-spending-2026-11-02","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"screenStreak":0} -->

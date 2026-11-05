@@ -2,6 +2,7 @@
 // spec exercises directly with injected readers (no network). The scripts/ tree is plain ESM with
 // `allowJs` off (see index.d.mts for the same reasoning).
 import type { BoardItem } from "./projects.d.mts";
+import type { PriorityIssue, PriorityPlan } from "./projects-priority.d.mts";
 
 export interface BoardItemPage {
   items?: BoardItem[];
@@ -88,4 +89,24 @@ export function syncIssue(
       horizon: string | null;
       added: boolean;
       decisionCalloutMissing?: boolean;
+      priority?: PriorityPlan | { action: "skipped"; reason: string };
     };
+
+/** The hand Horizon triage file (issue number → Now/Next/Later), read once per process. */
+export function readHorizons(): Record<string, string>;
+
+/** One open issue's Priority card brought in line, or a drag carried back to its labels (#6871). */
+export function syncPriority(input: {
+  issue: PriorityIssue;
+  item?: BoardItem;
+  fresh?: boolean;
+  ready?: boolean;
+  horizons?: Record<string, string>;
+  io: {
+    readFresh: () => BoardItem | undefined;
+    setPriority: (name: string) => void;
+    setRecord: (text: string) => void;
+    addLabel: (name: string) => void;
+    removeLabel: (name: string) => void;
+  };
+}): PriorityPlan | { action: "skipped"; reason: string };

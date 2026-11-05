@@ -12,6 +12,10 @@ export interface LoopRow {
   question?: string;
   /** The whole Next check cell: the date and the falsifier it is judged against. */
   nextCheckText?: string;
+  /** What a person decides for this loop, or "—" — the newsletter's asks (#6872). */
+  humanStep?: string;
+  /** How often that step falls due: Weekly · Every two weeks · Monthly. */
+  cadence?: string;
 }
 
 export function parseLoopList(md: string): LoopRow[] | null;

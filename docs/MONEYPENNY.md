@@ -62,7 +62,7 @@ flowchart TD
         REP[["moneypenny-repair<br>CI self-healing"]]
         SEC[["/secretary digests"]]
     end
-    BOARD[("Orchestration board<br>Status / Horizon")]
+    BOARD[("Orchestration board<br>Status / Priority / Horizon")]
     TRIAGE{"curated filing?"}
     READY(["ready label"])
     BUILD["Claude build session"]
@@ -94,6 +94,16 @@ escalates to repair, a repair capsule with no PR 24 hours after filing gets `sta
 a comment asking for a fix PR or `needs-eric`, and a capsule whose failing job has passed three
 runs on `main` since its last recurrence (push or dispatch) is closed with the run links
 (`scripts/moneypenny/capsule-stall.mjs`)._
+
+### Priority on the board — labels lead, a drag writes back
+
+The board's Priority field is a copy of the issue's priority, never a second opinion (#4064): a
+hand-set `P0`–`P3` label wins, otherwise the class `npm run rank` derives. The event job and the
+reconcile sweep write it; the **Flow by priority** view lays it out as swimlanes under the Status
+columns. Dragging a card into another lane (Eric, 2026-11-04: "Drag sets priority") becomes that
+lane's P label within one sweep, other P labels removed. A hidden "Synced priority" field records
+each value the sync wrote, which is how a drag is told from a sync, and why a half-finished sync
+is never mistaken for one. Rule and failure cases: `scripts/moneypenny/projects-priority.mjs`; plan #6871.
 
 ### Where an open ask lives — the board's Blocked column
 

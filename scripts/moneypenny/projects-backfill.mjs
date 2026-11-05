@@ -34,6 +34,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { ghRateLimit, ghRestAll } from "./gh.mjs";
 import { isBacklogCandidate, isRateLimitExhausted, planBoardSweep } from "./projects.mjs";
+import { describePriority } from "./projects-priority.mjs";
 import { createBoardContext, syncIssue } from "./projects-sync.mjs";
 
 const HORIZONS_PATH = fileURLToPath(new URL("./projects-horizons.json", import.meta.url));
@@ -71,8 +72,12 @@ function main() {
     const horizon = horizons[String(issue.number)];
     try {
       const result = syncIssue(String(issue.number), { horizon, board });
+      const p = result.priority;
       console.log(
-        `#${issue.number}: Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : " (no Horizon triaged yet)"}`,
+        `#${issue.number}: Status="${result.status}"${result.horizon ? ` Horizon="${result.horizon}"` : " (no Horizon triaged yet)"}` +
+          (p?.action === "skipped"
+            ? ` Priority skipped (${p.reason})`
+            : ` — ${describePriority(issue.number, p).replace(/^#\d+: /, "")}`),
       );
       added++;
     } catch (err) {
