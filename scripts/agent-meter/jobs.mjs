@@ -13,6 +13,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { listDirs, scanWorkflowAgents, stagesByType } from "./agents.mjs";
+import { mergeReceipts } from "./defects.mjs";
 import { readFlow } from "./flow.mjs";
 import { k } from "./render.mjs";
 
@@ -242,8 +243,23 @@ export function flowJob(flow) {
   return row;
 }
 
-/** Every row. Local files, except `readFixes`, which the caller prices and wraps. */
-export async function readJobs({ w, projectsDir, project, runsDir, readFixes }) {
+/** The audit's receipts: the local log plus the ledger branch's copies (#6683), each row once. */
+function auditLog(path, shared) {
+  const local = readLog(path);
+  if (!shared.length) return local;
+  return { ...local, present: true, rows: mergeReceipts(local.rows, shared) };
+}
+
+/** Every row. Local files, except `readFixes`, which the caller prices and wraps, and
+ *  `sharedReceipts`, the audit receipts the caller read off the ledger branch. */
+export async function readJobs({
+  w,
+  projectsDir,
+  project,
+  runsDir,
+  readFixes,
+  sharedReceipts = [],
+}) {
   let hasTranscripts = listDirs(projectsDir).some((name) => name.startsWith(project));
   let agents = [];
   try {
@@ -261,7 +277,12 @@ export async function readJobs({ w, projectsDir, project, runsDir, readFixes }) 
   return {
     window: w,
     rows: [
-      auditJob(agents, readLog(join(runsDir, "post-merge-audit.jsonl")), w, hasTranscripts),
+      auditJob(
+        agents,
+        auditLog(join(runsDir, "post-merge-audit.jsonl"), sharedReceipts),
+        w,
+        hasTranscripts,
+      ),
       verifyJob(readLog(join(runsDir, "ship-verify.jsonl")), w),
       ...stageJobs(agents, w, hasTranscripts),
       fixJob(fixes),

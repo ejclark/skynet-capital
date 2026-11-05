@@ -66,6 +66,26 @@ Written in each lens's header, and owed a row in `docs/process/LEARNING-LOOP.md`
 A cause seen twice becomes, cheapest first: a spec on the owning module, a gate line, a row in the
 smell ledger, and a doctrine line only when a gate would cost more than the damage.
 
+## Before merge: the plain-code core (#6870)
+
+The pre-merge reviewer's model writes one `review.json`; everything else is plain code in
+`scripts/pr-review/`, each file a pure core with fixture specs in `tests/scripts/pr-review/`:
+
+| File | Decides |
+|---|---|
+| `triage.mjs` | Skip, light, standard or deep, scaled by the work dial and the day's token budget |
+| `post.mjs` | Which findings reach the PR (in a changed hunk, deduplicated, capped 5 + 3, not suppressed), one `COMMENT` review, the `pr-review` status |
+| `respond-route.mjs` | Whether an open Important finding gets a response session, red-session-pr's routing |
+| `reeval.mjs` | Whether every Important thread is fixed by a commit or declined with a reason |
+| `release.mjs` | Which holds nobody is answering after 2 hours |
+| `markers.mjs` | The hidden receipt, finding, reply and respond markers that carry state between rounds |
+| `ledger.mjs` | `review` / `outcome` / `escape` rows on the `data/pr-review` branch, `ledger/YYYY-MM-DD.jsonl` |
+
+Triage routes by `scripts/review-roots.mjs`, the audit's `DEEP_ROOTS` and `DOCS_ONLY`; the audit
+keeps its own copy because a workflow cannot import, and `tests/scripts/review-roots.spec.ts` fails
+when the two differ. The audit's receipts ride the same branch at `audit/YYYY-MM-DD.jsonl` (#6683).
+Nothing here runs in CI yet: the job that calls it is S3, on the platter.
+
 ## Not known yet
 
 Adversarial, context and loop, security and reuse have not been replayed, so their recall and

@@ -12,7 +12,8 @@
 //
 //   npm run meter -- [--json] [--hours N | --days N | --since ISO [--until ISO]] [--max-rest N]
 //   npm run meter -- --row "<loop>" --before N --after N --tokens N [--usd N] [--minutes N]
-//   npm run meter -- --audit-receipt --prs 6307,6323 --confirmed N
+//   npm run meter -- --audit-receipt --prs 6307,6323 --confirmed N [--local-only]
+//     (also appends the row to the data/pr-review branch, which later meter runs read: #6683)
 //   npm run meter -- --failure-to-fix [--json] [--days N | ...] [--write-ledger [--date D] [--ledger DIR]]
 //   npm run meter:workers -- [--json] [--days N | ...]   # exits 1 if the worker's oracle fails
 //   npm run meter:flow -- [--json] [--days N | ...]      # the same as npm run meter -- --flow
@@ -31,7 +32,13 @@ import {
   stagesByType,
   workerOracle,
 } from "./agent-meter/agents.mjs";
-import { auditedInWindow, defectsFromIssues, writeAuditReceipt } from "./agent-meter/defects.mjs";
+import {
+  auditedInWindow,
+  branchReceipts,
+  defectsFromIssues,
+  mergeReceipts,
+  recordAuditReceipt,
+} from "./agent-meter/defects.mjs";
 import { quantile, readFailureToFix, writeLedgerRow } from "./agent-meter/failure-to-fix.mjs";
 import { readFlow } from "./agent-meter/flow.mjs";
 import { defectIssues, mergedPrs, pipelineRuns } from "./agent-meter/github.mjs";
@@ -300,7 +307,10 @@ async function measure(w, { maxRest }) {
     .filter(Boolean);
   const agents = await scanWorkflowAgents(projectsDir, PROJECT, w.sinceMs, w.untilMs);
   const audited = auditedInWindow(
-    readJsonl(join(runsDir, "post-merge-audit.jsonl")),
+    mergeReceipts(
+      readJsonl(join(runsDir, "post-merge-audit.jsonl")),
+      branchReceipts(rest, w.sinceMs, w.untilMs),
+    ),
     w.sinceMs,
     w.untilMs,
   );
@@ -384,6 +394,7 @@ async function jobsOnly(args, w, maxRest) {
     projectsDir,
     project: PROJECT,
     runsDir: process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs"),
+    sharedReceipts: branchReceipts(createRest(), w.sinceMs, w.untilMs),
     readFixes: () => {
       try {
         return failureToFixReading(w, maxRest);
@@ -420,9 +431,11 @@ async function main(args) {
     });
   }
   if (args.includes("--audit-receipt"))
-    return writeAuditReceipt(process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs"), {
+    return recordAuditReceipt({
       prs: flag(args, "--prs"),
       confirmed: flag(args, "--confirmed"),
+      localOnly: args.includes("--local-only"),
+      runsDir: process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs"),
     });
   const w = windowFromArgs(args);
   if (args.includes("--worker-stages")) return workerStages(args, w);
