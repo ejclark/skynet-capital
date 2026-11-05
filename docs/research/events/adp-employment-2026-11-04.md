@@ -360,3 +360,63 @@ never from memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-03
 <!-- probe-ref: {"symbols":{},"vix":21.15,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","chicago-pmi-2026-10-30","construction-spending-2026-11-02","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","eci-q3-2026-10-30","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-11-05, D+1).** Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`) and nothing here reads it. The *print* is scored from ADP's own
+release (`mediacenter.adp.com/2026-11-04-ADP-National-Employment-Report-Private-Sector-Employment-Increased-by-86,000-Jobs-in-October`,
+fetched direct 2026-11-05); the *tape* from Yahoo daily closes and 5-minute `ES=F` bars pulled fresh the
+same day. The release time of day was not read off the page; the futures bars below are consistent with
+08:15 ET. The consensus is a **secondary**: Trading Economics' calendar shows **69k** (its own model
+forecast 80k), and this lane could not reach the survey behind it, so "beat" is stated against that
+number only. Date label unchanged: `confirmed`, `IR:`.
+
+| Measure | 2026-11-04 | Line | Result |
+|---|---|---|---|
+| **ADP October headline** | **+86,000** | TE calendar consensus **69k** (secondary) | beat **+17k (+25%)**; 2020-11-04 was a **39% miss** |
+| **September revision** | **90,000 → 86,000 (−4k)** | kill line: "outsized" vs 2025's −3k | not outsized |
+| **QCEW / benchmark language** | none on the release page | kill switch: present, or outsized revision | **did not fire** |
+| **Pay (all workers, y/y)** | base **+3.2%**, gross +4.7%; stayers +3.0%, changers +4.8% | not registered | context |
+| **S&P 500 close** | **7,568.92 → 7,688.62 (+1.58%)** | this doc's measured ceiling for ADP alone: +0.37% | 4.3x the ceiling |
+| Nasdaq / Dow close | **+1.44%** (25,372 → 25,737) / **+3.03%** (51,787 → 53,356) | — | — |
+| **VIX close** | **20.83 → 16.61 (−4.22)** | 2020-11-04: −5.98 | — |
+| 10-year (`^TNX`) | **4.952 → 4.894% (−5.8bp)** | 2025-11-05: +6.8bp | — |
+| **`ES=F` around the release** | 08:15 ET **7,665.0** → 08:30 ET **7,669.5** (+0.06%) | overnight 15:55 ET → 08:15 ET: 7,596.5 → 7,665.0 (**+0.90%**) | the print moved nothing |
+
+**What happened vs the stance.** The stance — stand aside and attribute no part of the 11-04 tape to
+this release — held, and the receipt it asked for is now this edition's own.
+
+- **The attribution refusal was right, and it was measured twice.** A +25% beat landed into a futures
+  tape that had already gained **0.90%** overnight and then moved **+0.06%** in the 15 minutes after
+  08:15 ET. The session closed **S&P +1.58%, VIX −4.22**, 4.3x the +0.37% this doc measured for ADP
+  as the only labor read (2025-11-05). A CNBC headline snippet on 11-04 ties the rally to Democratic
+  midterm wins (index page only, article not opened); the election's own ledger owns that attribution.
+- **Same structure as 2020-11-04, opposite sign.** Then a 39% miss left futures "broadly unchanged";
+  now a 25% beat did the same. Two observations on one calendar date, one in each direction. n=2, so
+  the refusal is a standing rule, not a law.
+- **October was an ordinary measurement, not a restatement.** No benchmark language and a −4k
+  prior-month revision against 2025's −3k, so leg 3 ("ordinary by construction") holds and the 09-30
+  doc's premise that the re-benchmark lands in September is intact.
+- **The level, for context only.** +86k is flat on September's revised 86k, with professional and
+  business services down a third straight month (−27k). ADP's weekly NER Pulse ran +16,750 to
+  +18,500 a week into mid-October; one monthly print against a weekly series, so no trend is claimed.
+- **A consensus did emerge (the ~11-02 kill switch).** 69k is not the prior print restated (90k), so it
+  reads as a survey figure rather than a carry-forward placeholder, though its origin was not seen.
+- **No kill switch fired.** Naming of 11-04: pass (the release is dated 2026-11-04). Benchmark
+  language / outsized revision: no. BLS 11-06 payrolls cancelled or delayed: no evidence of either as
+  of 11-05 (the print itself is owned by [`jobs-2026-11-06`](jobs-2026-11-06.md)). Midterm contested into
+  the 12-01 runoff: not assessed here, owned by
+  [`midterm-elections-2026-11-03`](midterm-elections-2026-11-03.md). Macro-keyed playbook landing: no.
+
+No forward test was registered for this event (the stance is a refusal with no directional content), so
+none is scored and no fragment exists. Conviction proposals naming this event: none
+(`conviction-proposals.mjs --event`). Declared intents naming it: none (`intents.mjs --event`). Next on
+the series: the November edition on **2026-12-02 at 8:15 a.m. ET**, per ADP's own 11-04 release (`IR:`);
+it is already on the calendar as the `estimate` entry
+[`adp-employment-2026-12-02`](adp-employment-2026-12-02.md), whose lane owns the promotion, so nothing
+is proposed here.
+
+**Last assessed:** 2026-11-05
+<!-- probe-ref: {"symbols":{},"vix":16.61,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","chicago-pmi-2026-10-30","construction-spending-2026-11-02","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","eci-q3-2026-10-30","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0} -->
