@@ -1,0 +1,11 @@
+{
+  "id": "empire-state-mfg-2026-11-16",
+  "kind": "macro-print",
+  "title": "Empire State Manufacturing Survey, November 2026 — the New York Fed's half of the pair, printing on the closing Monday of the Philadelphia Fed's collection window",
+  "date": "2026-11-16",
+  "status": "confirmed",
+  "source": "FRB: newyorkfed.org/survey/empire/empiresurvey_overview — the New York Fed's own survey overview page, re-fetched direct 2026-11-05 (HTTP 200, 132,035 bytes) by this event's own never-assessed initial research: its 2026 release table renders 'SEP 15 · OCT 15 · NOV 16 · DEC 15' above the page's timing note 'Released at or shortly after 8:30 a.m.' Second primary: newyorkfed.org/research/calendars/nationalecon_cal (HTTP 200, 111,962 bytes), whose November grid lists 'Empire State Manufacturing Survey (08:30)' on the 16th. Independently reproduced by the survey's published rule (the 15th, rolled forward off weekends: 2026-11-15 is a Sunday; Feb 15 and Aug 15 2026 printed Feb 17 and Aug 17). PROMOTED TO `confirmed` 2026-11-05 on #3117's `FRB:` prefix (a regional Reserve Bank's own release table), exactly as the 09-15, 10-15 and 12-15 siblings were. Checked 2026-11-05",
+  "impact": "low",
+  "symbols": [],
+  "notes": "CANONICAL entry written 2026-11-05 by this event's own never-assessed initial research, which read the one proposal that existed for this id (proposals/empire-state-mfg-2026-11-16.from-philly-fed-mfg-2026-11-19.json) and re-verified its two primaries independently. The proposal's date holds; its status is promoted from estimate to confirmed on the FRB: prefix. Initial research (docs/research/events/empire-state-mfg-2026-11-16.md) adds what the proposal could not: the November collection window most likely closes 11-09 or 11-10 (October's was Oct 2-9, August's Aug 3-10), i.e. BEFORE the 11-10 CPI and everything after it, so the print cannot see the week's macro; and the reading order measured on the NY Fed's own seasonally-adjusted series (prices paid lag-1 autocorrelation 0.931 vs headline 0.718 full-sample, 0.357 since 2024). Impact stays low, symbols stay empty: no tracked name has a Second District channel and no house playbook is macro-keyed."
+}
