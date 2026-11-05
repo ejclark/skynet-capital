@@ -6,6 +6,8 @@ export const BUILDING: "Building now";
 export const WAITING: "Waiting";
 export const RENAMED_STATUS_OPTIONS: Record<string, string>;
 export const PRIORITY_OPTIONS: string[];
+/** The hidden text field recording each Priority the sync wrote (#6871). */
+export const SYNCED_PRIORITY: "Synced priority";
 export const HORIZON_OPTIONS: string[];
 
 export interface StatusFieldOption {
@@ -41,8 +43,10 @@ export function isStartedPlan(issue?: {
 
 export interface ProjectField {
   name: string;
-  dataType: "SINGLE_SELECT" | "DATE";
+  dataType: "SINGLE_SELECT" | "DATE" | "TEXT";
   options?: string[];
+  /** Shown on no view this module creates (#6871's "Synced priority"). */
+  hidden?: boolean;
 }
 
 export const FIELDS: ProjectField[];
@@ -133,12 +137,27 @@ export function planBoardSweep(budget?: {
 export interface BoardItem {
   id: string;
   content?: { type?: string; number?: number; url?: string };
+  /** The card's Priority option name, when set (#6871). */
+  priority?: string;
+  /** The card's "Synced priority" record, when set (#6871). */
+  syncedPriority?: string;
 }
 
 export function findBoardItem(items?: BoardItem[], issueUrl?: string): BoardItem | undefined;
 
+export interface PriorityNode {
+  priority?: { name?: string } | null;
+  synced?: { text?: string } | null;
+}
+
+/** `{priority, syncedPriority}` from a GraphQL node's aliases — only the keys GitHub set. */
+export function priorityValues(node?: PriorityNode | null): {
+  priority?: string;
+  syncedPriority?: string;
+};
+
 export function boardItemsFromProjectItems(args?: {
-  nodes?: ({ id?: string; project?: { number?: number } } | null | undefined)[];
+  nodes?: (({ id?: string; project?: { number?: number } } & PriorityNode) | null | undefined)[];
   projectNumber?: number;
   issueUrl?: string;
 }): BoardItem[];
@@ -165,6 +184,8 @@ export interface ViewSpec {
   columnsBy?: string;
   groupBy?: string;
   sortBy?: string;
+  /** Card/column fields the view shows; a name the project lacks is skipped. */
+  visibleFields?: string[];
 }
 export const VIEWS: ViewSpec[];
 export function viewsToCreate(
