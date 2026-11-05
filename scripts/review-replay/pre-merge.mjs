@@ -8,8 +8,10 @@
 //   - one trace refuter per PR checks all of that PR's findings at once (the workflow's job);
 //   - the tier follows the post-merge audit's routing, plus a light tier for small changes.
 //
-// No hunk filter yet: a finding outside a changed hunk still counts here, which can only overstate
-// what a clean control is flagged for. The plain-code filter is slice S2's.
+// No hunk filter yet, and a plain file match flatters recall: 5 of the set's 21 correctness defects sit
+// in a file their PR never changed, where the shipped job cannot post a finding. So the score also
+// counts hits on a file in the diff, and the bar passes only on those (verdictOf). The plain-code
+// filter is slice S2's.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { breachOf } from "../envelope-scan.mjs";
@@ -36,8 +38,8 @@ export const DEEP_ROOTS = [
   ".github/workflows/",
   "scripts/bots-",
 ];
-export const DOCS_ONLY = (file) =>
-  file.startsWith("docs/") || file.startsWith("src/domain/market-events/proposals/");
+export const DOCS_ONLY_ROOTS = ["docs/", "src/domain/market-events/proposals/"];
+export const DOCS_ONLY = (file) => DOCS_ONLY_ROOTS.some((root) => file.startsWith(root));
 export const LIGHT_LINES = 60; // the plan's light tier: at most this many changed lines, no risky path
 
 /** deep · standard · light · skip, by rule: the audit's routing, with small safe changes made light. */
@@ -76,6 +78,10 @@ export function shapeOf({ base, head }, protectedRules) {
   const protectedPath = files.some((file) => breachOf(file, protectedRules));
   return { tier: tierOf({ files, lines, protectedPath }), lines, fileCount: files.length };
 }
+
+/** The paths one PR changed, so the score can tell a hit the job could post from one it could not. */
+export const changedFilesOf = ({ base, head }) =>
+  new Set(git("diff", "--name-only", base, head).split("\n").filter(Boolean));
 
 export const readProtectedRules = () =>
   JSON.parse(readFileSync("envelope.json", "utf8")).protected ?? [];
@@ -128,10 +134,15 @@ export function preMergePromptFor(input, rulesText) {
 // enough false Important findings that an author answering them is not a tax.
 export const PASS_BAR = { hits: 9, controlImportant: 2 };
 
-/** Pass or fail against the bar; unknown while any labelled PR went unreviewed. */
-export function verdictOf({ recall, controls }) {
-  if (recall.unknown.length || controls.unknown.length) return "UNKNOWN";
-  return recall.hit >= PASS_BAR.hits && controls.flagged.length <= PASS_BAR.controlImportant
-    ? "PASS"
-    : "FAIL";
+/**
+ * PASS, FAIL, READ or UNKNOWN. It passes only on hits the job could post (a file match on a file in
+ * the diff), and fails only when even every PR with a standing Important finding falls short; in
+ * between, those findings have to be read. Unknown while any PR went unreviewed or any serious
+ * finding unjudged, because each of those would otherwise read as clean.
+ */
+export function verdictOf({ recall, controls, unjudged = [] }) {
+  if (recall.unknown.length || controls.unknown.length || unjudged.length) return "UNKNOWN";
+  if (controls.flagged.length > PASS_BAR.controlImportant) return "FAIL";
+  if ((recall.hitsInDiff ?? recall.hit) >= PASS_BAR.hits) return "PASS";
+  return recall.withFindings < PASS_BAR.hits ? "FAIL" : "READ";
 }

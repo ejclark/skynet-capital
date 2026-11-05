@@ -543,7 +543,7 @@ to 3,536.
 | `set-dresser` | added one detail layer to a 3D piece | the same | 0 | **benched** |
 | `render-alchemist` | researched a render technique | the same | 0 | **benched** |
 | a standing gamification agent | would score agents' own work | nothing: `npm run meter -- --jobs` does the scoring (#6609), and `evals-expert` designs each check | 0 | **rejected, `/charter` 2026-11-01** |
-| a dedicated PR review agent | would review every code PR before merge | a pipeline job reading `.github/prompts/pr-review.md` and `docs/review/REVIEW.md` from the base commit, on every code PR (#6870): an agent file would wait for a caller, add a listing every session pays for, and sit outside the envelope the prompt is under. `reviewer` keeps the session-time read | new | **rejected, `/charter` 2026-11-05.** The job keeps its place only if, by 2026-12-15, its Important findings are right at least half the time and it catches at least 30% of the defects the audit later confirms |
+| a dedicated PR review agent | would review every code PR before merge | the pipeline job #6870's S3 adds, with its own prompt under the envelope, reading `docs/review/REVIEW.md` from the base commit on every code PR. An agent file would wait for a caller, add a listing every session pays for, and sit outside the envelope. `reviewer` keeps the session-time read | 0 | **rejected, `/charter` 2026-11-05.** Its keep-or-revisit bar and date are on #6870 |
 
 Benched files sit in [`docs/agents/bench/`](agents/bench/README.md), and one `git mv` restores them.
 

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   DEEP_ROOTS,
   DIFF_CAP,
+  DOCS_ONLY_ROOTS,
   parseNumstat,
   preMergePrompt,
   tierOf,
@@ -73,10 +74,14 @@ describe("the pre-merge tier", () => {
   });
 
   // A copy, because a workflow cannot import: slice S2 makes it one module both read.
-  it("routes on exactly the roots the post-merge audit routes on", () => {
+  it("routes on exactly the roots, and skips exactly the docs, the post-merge audit does", () => {
     const audit = readFileSync(".claude/workflows/post-merge-audit.js", "utf8");
     const block = /const DEEP_ROOTS = \[([\s\S]*?)\]/.exec(audit)?.[1] ?? "";
     expect([...block.matchAll(/'([^']+)'/g)].map((m) => m[1])).toEqual(DEEP_ROOTS);
+    const docs = /const DOCS_ONLY = .*/.exec(audit)?.[0] ?? "";
+    expect([...docs.matchAll(/startsWith\('([^']+)'\)/g)].map((m) => m[1])).toEqual(
+      DOCS_ONLY_ROOTS,
+    );
   });
 });
 
@@ -157,10 +162,67 @@ describe("the pre-merge score", () => {
     expect(report.controls.clean).toBe(1);
   });
 
-  it("passes the bar only with every PR reviewed, enough hits and few control flags", () => {
-    expect(score([row(1), row(2), row(3)]).bar.verdict).toBe("FAIL");
+  it("says UNKNOWN while any PR went unreviewed", () => {
     expect(score([row(1), row(3)]).bar.verdict).toBe("UNKNOWN");
     expect(score([row(1), row(2), row(3)]).bar).toMatchObject({ hits: 9, controlImportant: 2 });
+  });
+
+  // A dead refuter marks its findings refuted, which would read a flagged control as clean.
+  it("says UNKNOWN while any finding went unjudged, and names the PR", () => {
+    const unjudged = finding("src/k.ts", { refuted: true, judged: false });
+    const report = score([row(1), row(2), { pr: 3, findings: [unjudged], refuterDied: true }]);
+    expect(report.bar.verdict).toBe("UNKNOWN");
+    expect(report.unjudged).toEqual([3]);
+  });
+});
+
+describe("the pre-merge bar", () => {
+  // Ten defect PRs, the last five with their defect in a file the PR never changed, and 3 controls.
+  const defects = Array.from({ length: 10 }, (_, i) => defect(`D${i}`, i, `src/d${i}.ts`));
+  const BIG = {
+    facets: {},
+    cases: [...defects, control("K1", 20), control("K2", 21), control("K3", 22)],
+  };
+  const changed = new Map(
+    defects.map((d, i) => [d.pr, new Set(i < 5 ? [d.defect.file] : ["src/x.ts"])]),
+  );
+  const hitOn = (pr: number) => ({ pr, findings: [finding(`src/d${pr}.ts`, { refuted: false })] });
+  const atCaller = (pr: number) => ({ pr, findings: [finding("src/x.ts", { refuted: false })] });
+  const clean = (pr: number) => ({ pr, findings: [] });
+  const flagged = (pr: number) => ({ pr, findings: [finding("src/k.ts", { refuted: false })] });
+  const verdict = (results: unknown[]) =>
+    scoreRun(BIG, { lens: "pre-merge", results, changed }).bar.verdict;
+  const controls = (n: number) => [20, 21, 22].map((pr, i) => (i < n ? flagged(pr) : clean(pr)));
+
+  it("passes on nine hits it could post, and fails on a third flagged control", () => {
+    const nine = [0, 1, 2, 3, 4].map(hitOn).concat([5, 6, 7, 8].map(atCaller), [clean(9)]);
+    // Five postable file matches are the floor; the four at-caller findings need reading.
+    expect(verdict([...nine, ...controls(2)])).toBe("READ");
+    const postable = { ...BIG, cases: BIG.cases };
+    const all = new Map(defects.map((d) => [d.pr, new Set([d.defect.file])]));
+    const ten = defects.map((d) => hitOn(d.pr));
+    expect(
+      scoreRun(postable, { lens: "pre-merge", results: [...ten, ...controls(2)], changed: all }).bar
+        .verdict,
+    ).toBe("PASS");
+    expect(
+      scoreRun(postable, { lens: "pre-merge", results: [...ten, ...controls(3)], changed: all }).bar
+        .verdict,
+    ).toBe("FAIL");
+  });
+
+  // A file match on a file the PR never changed is a finding the shipped job could not post.
+  it("never passes on hits the job could not post, and fails when even reading cannot reach 9", () => {
+    const report = scoreRun(BIG, {
+      lens: "pre-merge",
+      results: [...defects.map((d) => hitOn(d.pr)), ...controls(0)],
+      changed,
+    });
+    expect(report.recall.hit).toBe(10);
+    expect(report.recall.hitsInDiff).toBe(5);
+    expect(report.bar.verdict).toBe("READ");
+    const few = [0, 1, 2].map(hitOn).concat([3, 4, 5, 6, 7, 8, 9].map(clean));
+    expect(verdict([...few, ...controls(0)])).toBe("FAIL");
   });
 });
 
@@ -177,16 +239,23 @@ describe("tokens per tier", () => {
     { pr: 3, tier: "light" },
   ];
 
-  it("sums each PR's reviewer and refuter, a PR with no agent at zero, lookups apart", () => {
+  it("sums each PR's reviewer and refuter, keeps lookups apart, and never counts a missing PR as free", () => {
     const report = tokensPerTier(agents, results);
     expect(report.perPr.find((r: { pr: number }) => r.pr === 1)).toMatchObject({
       review: 200_000,
       refute: 100_000,
       total: 300_000,
     });
-    expect(report.tiers.light).toMatchObject({ prs: 2, median: 25_000, max: 50_000 });
+    expect(report.tiers.light).toMatchObject({ prs: 1, median: 50_000, max: 50_000 });
+    expect(report.unmeasured).toEqual([3]);
     expect(report.lookups).toBe(30_000);
     expect(report.total).toBe(380_000);
+  });
+
+  it("counts a skipped docs-only PR at zero, since the job spends nothing on it", () => {
+    const report = tokensPerTier(agents, [...results, { pr: 4, tier: "skip" }]);
+    expect(report.tiers.skip).toMatchObject({ prs: 1, median: 0 });
+    expect(report.unmeasured).toEqual([3]);
   });
 
   it("reads each agent's usage from a run folder, once per message", () => {
@@ -241,7 +310,11 @@ describe("review-replay's workflow, pre-merge lens", () => {
       return { verdicts: [] };
     };
   const run = (answer: Reply) => runWorkflow("review-replay", { lens: "pre-merge" }, answer);
-  type Row = { pr: number; findings: { refuted: boolean }[]; [key: string]: unknown };
+  type Row = {
+    pr: number;
+    findings: { refuted: boolean; judged?: boolean }[];
+    [key: string]: unknown;
+  };
   const rowOf = (result: unknown, pr: number) =>
     (result as { results: Row[] } | null)?.results.find((row) => row.pr === pr);
 
@@ -284,8 +357,43 @@ describe("review-replay's workflow, pre-merge lens", () => {
     const pr1 = rowOf(result, 1);
     expect(pr1?.findings).toHaveLength(5);
     expect(pr1?.dropped).toBe(1);
+    expect(pr1?.findings.map((f) => f.judged)).toEqual([true, true, false, false, false]);
     // A finding the refuter never judged is not one an author should answer.
     expect(pr1?.findings.map((f) => f.refuted)).toEqual([false, true, true, true, true]);
+  });
+
+  it("keeps at most 3 Nits beside the Important findings", async () => {
+    const nits = Array.from({ length: 4 }, (_, i) =>
+      finding("src/a.ts", { severity: "nit", line: i }),
+    );
+    const { result } = await run(
+      reply({ "review #2 (light)": { ran: true, findings: [finding("src/b.ts"), ...nits] } }),
+    );
+    const pr2 = rowOf(result, 2);
+    expect(pr2?.findings.map((f) => (f as { severity?: string }).severity)).toEqual([
+      "important",
+      "nit",
+      "nit",
+      "nit",
+    ]);
+    expect(pr2?.dropped).toBe(1);
+  });
+
+  it("hands the reviewer another rules file only when told, by a path it checks", async () => {
+    const { calls } = await runWorkflow(
+      "review-replay",
+      { lens: "pre-merge", rulesFile: "docs/review/REVIEW.md" },
+      reply(),
+    );
+    const review = calls.find((c) => c.opts.label === "review #1 (deep)");
+    expect(review?.prompt).toContain("--lens-file docs/review/REVIEW.md");
+    const bad = await runWorkflow(
+      "review-replay",
+      { lens: "pre-merge", rulesFile: "x; rm y" },
+      reply(),
+    );
+    expect(bad.error?.message).toMatch(/rulesFile/);
+    expect(bad.calls).toEqual([]);
   });
 
   it("marks every finding refuted and says so when the refuter dies", async () => {
@@ -297,7 +405,7 @@ describe("review-replay's workflow, pre-merge lens", () => {
     );
     const pr2 = rowOf(result, 2);
     expect(pr2).toMatchObject({ refuterDied: true, returned: true });
-    expect(pr2?.findings[0]?.refuted).toBe(true);
+    expect(pr2?.findings[0]).toMatchObject({ refuted: true, judged: false });
     expect(logs.join("\n")).toContain("re-run those");
   });
 

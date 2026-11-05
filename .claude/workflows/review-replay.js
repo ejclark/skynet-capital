@@ -28,7 +28,7 @@
 export const meta = {
   name: 'review-replay',
   description: 'Replay one review lens over the labelled PRs, one reviewer each, and return the findings for scripts/review-replay.mjs to score',
-  whenToUse: 'When a review lens under docs/review/lenses needs a number before the post-merge audit may load it, or after a lens changes; lens pre-merge replays the pre-merge reviewer with docs/review/REVIEW.md as its rules and one refuter per PR. Args: {lens: string, ids?: [string, ...], force?: true}. One worker per PR plus two lookups, near a 30k start each; refuses more than 40 PRs at once. Read-only. force: true is only for a run Eric typed. Save the return value and run node scripts/review-replay.mjs score --results <file>.',
+  whenToUse: 'When a review lens under docs/review/lenses, or the pre-merge reviewer (lens pre-merge), needs a number before it runs for real, or after it changes. Args: {lens: string, ids?: [string, ...], rulesFile?: string, force?: true}. `cases` prints the price; refuses more than 40 PRs at once. Read-only. force: true is only for a run Eric typed. Save the return value and run node scripts/review-replay.mjs score --results <file>.',
   phases: [
     { title: 'Gate', detail: 'ask the work spigot, then list the PRs this lens runs on and their price' },
     { title: 'Review', detail: 'one worker per PR, base and head shas, the lens and none of the answer' },
@@ -43,6 +43,11 @@ if (!/^[a-z-]+$/.test(lens)) throw new Error('review-replay requires args.lens: 
 const ids = (args?.ids ?? []).map(String)
 if (!ids.every((id) => /^[A-Z]\d+$/.test(id))) throw new Error('review-replay: args.ids must be case ids from docs/review/replay-set.json, like P04')
 if (ids.length > MAX_PRS) throw new Error(`review-replay: ${ids.length} ids is over the ${MAX_PRS} one run may review — run it in batches`)
+// Another rules or lens file, for an ablation (a copy with one section removed). It goes into a
+// command a worker runs, so it must be a plain path.
+const rulesFile = args?.rulesFile === undefined ? '' : String(args.rulesFile)
+if (rulesFile && !/^[A-Za-z0-9_./-]+$/.test(rulesFile)) throw new Error('review-replay: args.rulesFile must be a plain file path')
+const lensFileFlag = rulesFile ? ` --lens-file ${rulesFile}` : ''
 
 // THE WORK-MODE GATE: the same block as clear-path-flip and its siblings, because a workflow script
 // cannot import; tests/scripts/workflow-gate.spec.ts runs this one too. A named batch's width is known
@@ -161,7 +166,7 @@ if (PRE_MERGE) return await preMerge(cases)
 const reviewed = await parallel(
   cases.inputs.map((input) => () =>
     agent(
-      `Run exactly: node scripts/review-replay.mjs prompt --lens ${lens} --head ${input.head}\n\nWhat it prints is your whole task. Do it, and return its findings in the schema you were given, with "ran": true. If the command exits non-zero, return "ran": false and no findings: never review without what it prints.`,
+      `Run exactly: node scripts/review-replay.mjs prompt --lens ${lens} --head ${input.head}${lensFileFlag}\n\nWhat it prints is your whole task. Do it, and return its findings in the schema you were given, with "ran": true. If the command exits non-zero, return "ran": false and no findings: never review without what it prints.`,
       { schema: FINDINGS_SCHEMA, agentType: 'worker', model: 'opus', effort: 'high', label: `review #${input.pr}`, phase: 'Review' },
     ),
   ),
@@ -253,7 +258,7 @@ ${JSON.stringify(findings.map((f, id) => ({ id, ...f })), null, 2)}`
       const tier = input.tier ?? 'deep' // an unknown blast radius is never made cheaper
       if (tier === 'skip') return { input, tier, skipped: true }
       const review = await agent(
-        `Run exactly: node scripts/review-replay.mjs prompt --lens pre-merge --head ${input.head}\n\nWhat it prints is your whole task. Do it, and return its findings in the schema you were given, with "ran": true. If the command exits non-zero, return "ran": false and no findings: never review without what it prints.`,
+        `Run exactly: node scripts/review-replay.mjs prompt --lens pre-merge --head ${input.head}${lensFileFlag}\n\nWhat it prints is your whole task. Do it, and return its findings in the schema you were given, with "ran": true. If the command exits non-zero, return "ran": false and no findings: never review without what it prints.`,
         { schema: PRE_MERGE_SCHEMA, agentType: 'worker', ...(TIER_DIAL[tier] ?? TIER_DIAL.deep), label: `review #${input.pr} (${tier})`, phase: 'Review' },
       )
       return { input, tier, review }
@@ -275,7 +280,7 @@ ${JSON.stringify(findings.map((f, id) => ({ id, ...f })), null, 2)}`
       // A finding no refuter could stand behind is not one an author should answer: the audit's rule.
       const findings = kept.map((f, id) => {
         const v = verdict?.verdicts?.find((row) => row.id === id)
-        return { ...f, refuted: v ? v.refuted === true : true, evidence: v?.evidence ?? 'the refuter did not judge it' }
+        return { ...f, refuted: v ? v.refuted === true : true, judged: Boolean(v), evidence: v?.evidence ?? 'the refuter did not judge it' }
       })
       return { ...base, returned: true, findings, dropped, ...(verdict ? {} : { refuterDied: true }) }
     },

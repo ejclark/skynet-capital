@@ -302,8 +302,8 @@ describe("the command line", () => {
     const run = cli("score", "--results", results, "--set", setFile, "--json");
     expect(run.status).toBe(0);
     const report = JSON.parse(run.stdout);
-    expect(report.facets.performance.recall.hit).toBe(1);
-    expect(report.facets.performance.recall.unknown).toEqual([2, 3]);
+    expect(report.lenses.performance.recall.hit).toBe(1);
+    expect(report.lenses.performance.recall.unknown).toEqual([2, 3]);
   });
 
   it("scores two batches of one lens as one run", () => {
@@ -315,7 +315,19 @@ describe("the command line", () => {
     };
     const files = `${write("one.json", 1)},${write("two.json", 2)}`;
     const run = cli("score", "--results", files, "--set", setFile, "--json");
-    expect(JSON.parse(run.stdout).facets.performance.recall.hit).toBe(2);
+    expect(JSON.parse(run.stdout).lenses.performance.recall.hit).toBe(2);
+  });
+
+  // Two lenses can share a facet (adversarial and pre-merge both read correctness).
+  it("scores two lenses on one facet side by side, never one over the other", () => {
+    const write = (name: string, lens: string) => {
+      const file = join(dir, name);
+      writeFileSync(file, JSON.stringify({ lens, results: [{ pr: 5, findings: [] }] }));
+      return file;
+    };
+    const files = `${write("adv.json", "adversarial")},${write("pm.json", "pre-merge")}`;
+    const run = cli("score", "--results", files, "--set", setFile, "--json");
+    expect(Object.keys(JSON.parse(run.stdout).lenses).sort()).toEqual(["adversarial", "pre-merge"]);
   });
 
   it("refuses a results file it cannot read", () => {

@@ -1,9 +1,9 @@
 // What a review really cost per PR, by tier, read back from the run's own transcripts.
 //
-// The plan for the pre-merge reviewer (#6870) priced each tier by guess: light ~50k, standard ~125k,
-// deep ~260k per round. Its first slice replaces the guesses with what the replay spent. Each
-// workflow agent writes its usage beside its transcript; scripts/agent-meter/agents.mjs dedupes it by
-// message, and the agent's label (`review #6039 (deep)`, `refute #6039 (deep)`) names its PR.
+// A tier's price is only known from what a run spent, so this never estimates. Each workflow agent
+// writes its usage beside its transcript; scripts/agent-meter/agents.mjs dedupes it by message, and
+// the agent's label (`review #6039 (deep)`, `refute #6039 (deep)`) names its PR. A PR no agent was
+// found for is listed as unmeasured, never priced at zero: only a skipped docs-only PR costs nothing.
 //
 // Total = input + cache writes + cache reads + output, every call of the agent: what a round of review
 // puts through a model. Cache reads are most of it and are billed at a tenth, so output is kept
@@ -45,7 +45,15 @@ export function tokensPerTier(agents, results) {
   const perPr = new Map(
     results.map((row) => [
       row.pr,
-      { pr: row.pr, tier: tierOfPr.get(row.pr), review: 0, refute: 0, output: 0, total: 0 },
+      {
+        pr: row.pr,
+        tier: tierOfPr.get(row.pr),
+        review: 0,
+        refute: 0,
+        output: 0,
+        total: 0,
+        seen: false,
+      },
     ]),
   );
   let lookups = 0;
@@ -59,11 +67,14 @@ export function tokensPerTier(agents, results) {
     else row.review += agent.total;
     row.output += agent.output;
     row.total += agent.total;
+    row.seen = true;
   }
   const rows = [...perPr.values()];
+  const measured = rows.filter((row) => row.seen || row.tier === "skip");
+  const unmeasured = rows.filter((row) => !measured.includes(row)).map((row) => row.pr);
   const tiers = {};
-  for (const tier of [...new Set(rows.map((row) => row.tier))].sort()) {
-    const inTier = rows.filter((row) => row.tier === tier);
+  for (const tier of [...new Set(measured.map((row) => row.tier))].sort()) {
+    const inTier = measured.filter((row) => row.tier === tier);
     const totals = inTier.map((row) => row.total);
     tiers[tier] = {
       prs: inTier.length,
@@ -76,12 +87,12 @@ export function tokensPerTier(agents, results) {
     };
   }
   const all = rows.reduce((sum, row) => sum + row.total, 0);
-  return { perPr: rows, tiers, lookups, total: all + lookups };
+  return { perPr: rows, tiers, unmeasured, lookups, total: all + lookups };
 }
 
 const k = (n) => (n == null ? "—" : `${Math.round(n / 1000)}k`);
 
-export function renderTokens({ tiers, lookups, total }) {
+export function renderTokens({ tiers, unmeasured, lookups, total }) {
   const lines = Object.entries(tiers).map(
     ([tier, t]) =>
       `  ${tier}: ${t.prs} PRs · median ${k(t.median)} (review ${k(t.medianReview)}, refute ${k(t.medianRefute)}, output ${k(t.medianOutput)}) · mean ${k(t.mean)} · max ${k(t.max)}`,
@@ -89,6 +100,7 @@ export function renderTokens({ tiers, lookups, total }) {
   return [
     `tokens per PR, by tier:`,
     ...lines,
+    `  unmeasured (no agent found): ${unmeasured.join(", ") || "none"}`,
     `  lookups ${k(lookups)} · run total ${k(total)}`,
   ].join("\n");
 }
