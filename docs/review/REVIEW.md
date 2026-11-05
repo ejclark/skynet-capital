@@ -3,7 +3,7 @@
 **Read by:** the pre-merge reviewer, on every code PR, from the base commit, so a PR cannot change
 its own rules. Docs-only PRs are not reviewed.
 
-**Size:** 3,362 characters, held under 4,000 by `tests/arch/review-rules.spec.ts`.
+**Size:** 3,531 characters, held under 4,000 by `tests/arch/review-rules.spec.ts`.
 
 Read the diff first, then the files it touches as they stand at the PR's head. Report what would go
 wrong after merge, with a concrete failure: the input or state, and the wrong result. Zero findings
@@ -36,10 +36,12 @@ change might". A finding with no failure to name is taste, however confident it 
 
 ## Severity
 
-- **Important**: a wrong result on a path someone uses. It needs a `file:line` inside a changed hunk
-  and a concrete failure scenario. At most 5 per review. It holds merge until the author fixes it or
-  declines it with a reason.
-- **Nit**: real, but cheap or narrow. At most 3; the rest are dropped. It never holds merge.
+- **Important**: any wrong result a real input reaches, however narrow the path: money, a member's
+  page, stored state, a lane's decision, a filed issue or comment. It needs a `file:line` inside a
+  changed hunk and a concrete failure scenario. At most 5 per review. It holds merge until the
+  author fixes it or declines it with a reason.
+- **Nit**: no wrong result: words that mislead a reader, a comment the code no longer matches. At
+  most 3; the rest are dropped. It never holds merge.
 - An edge you are unsure anyone reaches is neither. Leave it out.
 
 Give each finding one category: `correctness`, `contract`, `honesty`, `security`, `performance` or
