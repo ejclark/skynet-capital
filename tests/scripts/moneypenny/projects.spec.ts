@@ -493,6 +493,7 @@ describe("moneypenny projects: field/option constants", () => {
     expect(byName.get("Horizon")?.dataType).toBe("SINGLE_SELECT");
     expect(byName.get("Target date")?.dataType).toBe("DATE");
     expect(byName.get("Target date")?.options).toBeUndefined();
+    expect(byName.get("Synced priority")).toMatchObject({ dataType: "TEXT", hidden: true });
   });
 });
 
@@ -599,7 +600,7 @@ describe("moneypenny projects: viewsToCreate", () => {
   const ids = { Status: 1, Priority: 2, Horizon: 3, "Target date": 4 };
 
   it("builds a kanban on Status, a Priority-sorted backlog and a dateless Horizon roadmap", () => {
-    const [flow, backlog, roadmap] = viewsToCreate([], ids);
+    const [flow, , backlog, roadmap] = viewsToCreate([], ids);
     expect([flow?.name, backlog?.name, roadmap?.name]).toEqual(["Flow", "Backlog", "Roadmap"]);
     expect(flow?.body).toMatchObject({ layout: "board", vertical_group_by: [1] });
     expect(backlog?.body).toMatchObject({ layout: "table", sort_by: [[2, "asc"]] });
@@ -612,7 +613,25 @@ describe("moneypenny projects: viewsToCreate", () => {
 
   it("skips views that already exist by name", () => {
     const names = viewsToCreate(["Flow", "Backlog", "View 1"], ids).map((v) => v.name);
-    expect(names).toEqual(["Roadmap"]);
+    expect(names).toEqual(["Flow by priority", "Roadmap"]);
+  });
+
+  // #6871 slice B2: Eric, 2026-11-04 — "our project kanban board should switch to swim lanes".
+  it("Flow by priority: Status columns, one swimlane per Priority, Done hidden", () => {
+    const view = viewsToCreate([], ids).find((v) => v.name === "Flow by priority");
+    expect(view?.body).toEqual({
+      name: "Flow by priority",
+      layout: "board",
+      filter: "-status:Done",
+      vertical_group_by: [1],
+      group_by: [2],
+    });
+  });
+
+  it("names the card fields it shows, which keeps Synced priority hidden", () => {
+    const withCards = { ...ids, Assignees: 7, Labels: 8, "Synced priority": 9 };
+    const view = viewsToCreate([], withCards).find((v) => v.name === "Flow by priority");
+    expect(view?.body.visible_fields).toEqual([7, 8]);
   });
 
   it("fails loudly when a field the views need is missing", () => {

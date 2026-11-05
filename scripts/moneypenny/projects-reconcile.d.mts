@@ -1,11 +1,25 @@
 // Type surface for scripts/moneypenny/projects-reconcile.mjs — the hourly board sweep (#4393 slice
 // 1), driven by a spec through injected IO. The scripts/ tree is plain ESM with `allowJs` off.
 import type { BoardItem } from "./projects.d.mts";
+import type { PriorityPlan } from "./projects-priority.d.mts";
 import type { BoardContext } from "./projects-sync.d.mts";
 
 export interface ReconcileItem extends BoardItem {
   status?: string | null;
 }
+
+/** A merged drift entry: Status drift (`have`/`want`), priority drift (`priority`), or both. */
+export interface MergedDrift {
+  number: number;
+  have?: string | null;
+  want?: string;
+  priority?: PriorityPlan;
+}
+
+export function mergeDrift(
+  statusDrift?: Drift[],
+  priorityDrift?: { number: number; plan: PriorityPlan }[],
+): MergedDrift[];
 
 export interface RestIssue {
   number: number;
@@ -15,6 +29,7 @@ export interface RestIssue {
   labels?: ({ name?: string } | string)[];
   pull_request?: unknown;
   sub_issues_summary?: { total?: number; completed?: number };
+  issue_dependencies_summary?: { blocking?: number } | null;
 }
 
 export interface Drift {
@@ -65,20 +80,26 @@ export function reconcileBoard(deps?: {
   sync?: (
     number: number,
     opts: { board: BoardContext },
-  ) => { skipped?: boolean; reason?: string; status?: string };
+  ) => {
+    skipped?: boolean;
+    reason?: string;
+    status?: string;
+    priority?: PriorityPlan | { action: "skipped"; reason: string };
+  };
   ensureColumns?: (deps: {
     board: BoardContext;
     dryRun: boolean;
     log: (line: string) => void;
   }) => readonly string[];
   statusOf?: (item: ReconcileItem) => string | null | undefined;
+  horizons?: Record<string, string>;
   dryRun?: boolean;
   log?: (line: string) => void;
 }): {
   started: boolean;
   reason?: string;
-  drift: Drift[];
-  fixed: (Drift & { now?: string })[];
+  drift: MergedDrift[];
+  fixed: (MergedDrift & { now?: string })[];
   failed: { number: number; message?: string }[];
   aborted?: boolean;
 };
