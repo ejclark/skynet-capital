@@ -1,13 +1,11 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  DEEP_ROOTS,
   DIFF_CAP,
-  DOCS_ONLY_ROOTS,
   parseNumstat,
   preMergePrompt,
-  tierOf,
+  tierFor,
   // @ts-expect-error — plain .mjs helper, no types.
 } from "../../scripts/review-replay/pre-merge.mjs";
 // @ts-expect-error — plain .mjs helper, no types.
@@ -51,37 +49,29 @@ const finding = (file: string, extra = {}) => ({
   ...extra,
 });
 
+// The replay routes through the job's own triage (scripts/pr-review/triage.mjs), so a tier measured
+// here is the tier the job will charge; tests/scripts/review-roots.spec.ts pins its roots to the audit.
 describe("the pre-merge tier", () => {
+  const file = (filename: string, lines = 1) => ({ filename, additions: lines, deletions: 0 });
+  const PROTECTED = [{ pattern: ".github/prompts/**", why: "lane prompts" }];
+
   it("is deep on a money, state or deploy path, or any protected path, whatever its size", () => {
-    expect(tierOf({ files: ["src/trading/x.ts"], lines: 2, protectedPath: false })).toBe("deep");
-    expect(tierOf({ files: ["scripts/a.mjs"], lines: 2, protectedPath: true })).toBe("deep");
+    expect(tierFor([file("src/trading/x.ts", 2)], [])).toBe("deep");
+    expect(tierFor([file(".github/prompts/a.md", 2)], PROTECTED)).toBe("deep");
   });
 
   it("is light at 60 changed lines or fewer, standard above, and skips docs-only", () => {
-    expect(tierOf({ files: ["scripts/a.mjs"], lines: 60, protectedPath: false })).toBe("light");
-    expect(tierOf({ files: ["scripts/a.mjs"], lines: 61, protectedPath: false })).toBe("standard");
-    expect(tierOf({ files: ["docs/a.md"], lines: 900, protectedPath: false })).toBe("skip");
-    expect(tierOf({ files: ["docs/a.md", "app/src/x.ts"], lines: 9, protectedPath: false })).toBe(
-      "light",
-    );
+    expect(tierFor([file("scripts/a.mjs", 60)], [])).toBe("light");
+    expect(tierFor([file("scripts/a.mjs", 61)], [])).toBe("standard");
+    expect(tierFor([file("docs/a.md", 900)], [])).toBe("skip");
+    expect(tierFor([file("docs/a.md", 4), file("app/src/x.ts", 5)], [])).toBe("light");
   });
 
-  it("counts lines from numstat, a binary file as none", () => {
-    expect(parseNumstat("3\t4\tsrc/a.ts\n-\t-\tpic.png\n")).toEqual({
-      files: ["src/a.ts", "pic.png"],
-      lines: 7,
-    });
-  });
-
-  // A copy, because a workflow cannot import: slice S2 makes it one module both read.
-  it("routes on exactly the roots, and skips exactly the docs, the post-merge audit does", () => {
-    const audit = readFileSync(".claude/workflows/post-merge-audit.js", "utf8");
-    const block = /const DEEP_ROOTS = \[([\s\S]*?)\]/.exec(audit)?.[1] ?? "";
-    expect([...block.matchAll(/'([^']+)'/g)].map((m) => m[1])).toEqual(DEEP_ROOTS);
-    const docs = /const DOCS_ONLY = .*/.exec(audit)?.[0] ?? "";
-    expect([...docs.matchAll(/startsWith\('([^']+)'\)/g)].map((m) => m[1])).toEqual(
-      DOCS_ONLY_ROOTS,
-    );
+  it("reads numstat as the files triage reads, a binary file as no lines", () => {
+    expect(parseNumstat("3\t4\tsrc/a.ts\n-\t-\tpic.png\n")).toEqual([
+      { filename: "src/a.ts", additions: 3, deletions: 4 },
+      { filename: "pic.png", additions: 0, deletions: 0 },
+    ]);
   });
 });
 

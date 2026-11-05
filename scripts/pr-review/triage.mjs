@@ -5,9 +5,9 @@
 //   skip      the work dial refuses (halt, or the spend breaker), every path is docs-only by the
 //             audit's DOCS_ONLY rule, or the patch-id equals the last receipt's (a rebase or an
 //             empty push: the last round's result still stands, at zero tokens)
-//   light     ≤ 60 changed lines and no risky path            ~50k tokens a round
-//   standard  everything else                                 ~125k, one refuter
-//   deep      a DEEP_ROOTS path or an envelope-protected one  ~260k, two refuters
+//   light     ≤ 60 changed lines and no risky path            ~46k tokens a round (uncached)
+//   standard  everything else                                 ~114k, one refuter
+//   deep      a DEEP_ROOTS path or an envelope-protected one  ~279k, two refuters
 //
 // A risky path is exactly what makes a PR deep: one rule, so "conserve reviews risky paths only" and
 // "past the budget, deep tier only" mean the same PRs. A renamed file counts by both its names, so a
@@ -44,12 +44,17 @@ export const DAILY_TOKEN_BUDGET = {
   normal: 8_000_000,
   surge: 20_000_000,
 };
-/** What each tier runs, and its estimated tokens a round (S1 replaces the estimates with readings). */
+/**
+ * What each tier runs, and its tokens a round: S1's replay over 35 PRs (2026-11-05), the median
+ * reviewer plus the median refuter times this tier's refuters. Uncached (input + cache writes +
+ * output), the figure a workflow's usage line reports; cache reads add 5 to 9 times that, at a tenth
+ * of the price. Light rests on 2 PRs, so it is the thinnest reading (`review-replay.mjs tokens`).
+ */
 export const TIER_PLAN = {
   skip: { model: null, refuters: 0, estTokens: 0 },
-  light: { model: "opus", refuters: 0, estTokens: 50_000 },
-  standard: { model: "opus", refuters: 1, estTokens: 125_000 },
-  deep: { model: "fable", refuters: 2, estTokens: 260_000 },
+  light: { model: "opus", refuters: 0, estTokens: 46_000 },
+  standard: { model: "opus", refuters: 1, estTokens: 114_000 },
+  deep: { model: "fable", refuters: 2, estTokens: 279_000 },
 };
 
 const POSITIONS = Object.keys(DAILY_TOKEN_BUDGET);
