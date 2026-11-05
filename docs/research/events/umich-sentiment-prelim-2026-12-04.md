@@ -1,0 +1,94 @@
+# University of Michigan consumer sentiment — preliminary (Dec 2026) — umich-sentiment-prelim-2026-12-04
+
+**Kind:** macro-print · **Date:** 2026-12-04 (confirmed, UMICH: two of the publisher's own 2026 scheduling documents, both fetched and PDF-inflated direct 2026-11-05 — `2026 Release Dates` docid=79628 reads verbatim "December 4 / December Prelim", and `2026 Interview Dates` docid=79629 reads verbatim "November 17 IW Begins / November 30 Prelim Ends / December 14 IW Ends"; neither states a clock time, so 10:00 ET is customary, not sourced) · **Impact:** medium
+**Last assessed:** 2026-11-05
+<!-- probe-ref: {"symbols":{},"vix":16.81,"daysBand":"medium:8+","adjacentIds":["adp-employment-2026-12-02","aws-reinvent-2026","chicago-pmi-2026-11-30","construction-spending-2026-12-01","cyber-monday-2026-11-30","dallas-fed-mfg-2026-11-30","dallas-fed-tssos-2026-12-01","ecb-quiet-period-start-2026-12-09","eia-steo-2026-12-08","eroc-lockup-expiry-2026-12-06","eurostat-hicp-flash-2026-12-01","existing-home-sales-2026-12-09","fomc-2026-12-09","georgia-senate-runoff-2026-12-01","inio-lockup-expiry-2026-11-30","intl-trade-full-report-2026-12-08","ism-manufacturing-2026-12-01","ism-services-2026-12-03","japan-balance-of-payments-2026-12-08","jgb-2y-auction-2026-11-30","jobs-2026-12-04","jolts-2026-12-01","m3-full-report-2026-12-03","msft-annual-meeting-2026-12-08","opec-plus-meeting-2026-11-29","pbls-lockup-expiry-2026-12-06","productivity-costs-q3-revised-2026-12-08","qnt-lockup-expiry-2026-11-30","russell-recon-lockdown-2026-11-30","russell-style-month-end-capping-effective-2026-11-30","sp-rebalance-proforma-2026-12-04","spcx-lockup-expiry-2026-12-08","treasury-10y-note-2026-12-08","treasury-3y-note-2026-12-07","treasury-coupon-announcement-2026-12-03","wholesale-trade-2026-12-09"],"adjacentStrongIds":["fomc-2026-12-09","jobs-2026-12-04","spcx-lockup-expiry-2026-12-08"],"screenStreak":0,"blocked":[{"url":"https://sca.isr.umich.edu/","status":"DNS_NXDOMAIN","at":"2026-11-05"}]} -->
+
+## At a glance
+
+**TL;DR.** **This is the first preliminary whose interviews all come after the polls — and the base rate says to expect a bounce off a record low, not a political verdict.** The publisher's own interview calendar puts this print's window at **2026-11-17 → 11-30**: it opens two weeks after `midterm-elections-2026-11-03` (`estimate`) and **contains `nvda-2026-11-18-print`** (confirmed, critical), `retail-sales-2026-11-17`, `pce-2026-11-25` and `gdp-q3-2026-second-2026-11-25` (confirmed, high), then Thanksgiving. No CPI falls inside it. The live variable is the pump: Brent fell **$117.64 → $97.33** (10-30 → 11-05, −17%), RBOB **$3.312 → $2.785**, AAA regular **$4.1239** on 11-04 (from **$4.4137** on 10-01). Last published level: October final **48.0** (the October prelim's current conditions, **44.7**, were an all-time low), year-ahead inflation expectations **4.7%**. FRED `UMCSENT` Dec−Nov has a median of **+2.05** over 48 years (up **28 of 48**, **6 of 6** since 2020) but only **+0.30** across the 12 midterm years — a lean, not a signal. The release lands on **`jobs-2026-12-04` at 08:30 ET**, so its 10:00 ET tape cannot be attributed to the survey. **Stand aside on every horizon; a measured refusal, not a forecast.** Date promoted `estimate` → **`confirmed`** off two primaries.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (D-29) | **Stand aside** | High | `symbols: []`, medium impact, 29 days out, and the window does not open until **2026-11-17** — nothing this print reports has been said to an interviewer yet. No house playbook is macro-keyed. | Nothing dated today; falsified only by a house playbook acquiring a macro trigger |
+| This week | **Read the 11-06 prelim and the 11-20 final as this print's baseline, not as it** | Medium | The 11-20 final is the figure the 12-04 release prints against ("prior"), and its post-election stretch (11-03 → 11-16) is the one that feeds it. Gasoline is the measured channel, and it is easing. | **Brent closing above $110 on any session before 2026-11-17** (it was $97.33 on 11-05) — the energy shock re-escalates into the window and the "easing pump" reading loses its subject |
+| This month | **Do not read the 12-04 10:00 ET tape as a sentiment reaction** | Medium | Jobs owns 08:30 ET. Ten 2026 prelim days (Jan 9 → Oct 9) moved the S&P median \|move\| **0.627%** vs an all-2026 median **0.510%** (212 sessions), **7 of 10** above it — noise at n=10, and the largest (02-06 **+1.970%**) was a jobs day. | The **2026-12-04** S&P \|move\| resolving **under 0.510%** while payrolls print inside ±50k of consensus — then the jobs morning was quiet and any residual belongs to this release; revisit attribution |
+| This quarter | **Expect a lean up from the floor, not a political premium; read the sub-numbers** | Low | Dec−Nov `UMCSENT` finals: median **+2.05**, up **28 of 48**, up in every year 2020–2025; midterm years alone median **+0.30**, up **6 of 12**. Registered as **FT-umich-sentiment-prelim-2026-12-04-1** and **-2**. | The **2026-12-04** prelim printing **below** the 2026-11-20 final's headline, or year-ahead inflation expectations **above** its figure with the pump still falling (AAA ≤ $4.25 on 11-30) |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Buy signal:** no — `symbols: []`, medium impact, no macro-keyed house playbook; a consumer-sentiment print never licenses a new long.
+- **Published collection window (primary, docid=79629):** opens **2026-11-17**, prelim cut-off **11-30**, final window closes **12-14**.
+- **Inside the window (confirmed):** `retail-sales-2026-11-17` · `nvda-2026-11-18-print` · `fomc-minutes-2026-11-18` · `pce-2026-11-25` · `gdp-q3-2026-second-2026-11-25`. **Oct CPI (11-10) is before it opens**; Nov CPI is mid-December.
+- **The sub-number that matters** — year-ahead inflation expectations (Oct final **4.7%**, long-run **3.5%**). Read it ahead of the headline.
+- **Energy watch, measured 2026-11-05 (Yahoo daily bars):** Brent **$97.33** · WTI **$89.88** · RBOB **$2.785** · AAA regular **$4.1239** (11-04, carried from the [11-06 ledger](umich-sentiment-prelim-2026-11-06.md)).
+- **Attribution warning:** 10:00 ET on **2026-12-04** is two hours after the Employment Situation (`jobs-2026-12-04`, confirmed, high), and five days before `fomc-2026-12-09`.
+- **Watch (dated):** Nov prelim **11-06** · window opens **11-17** · NVDA **11-18** · Nov final **11-20** · PCE + GDP **11-25** · window closes **11-30** · jobs + this print **12-04** · FOMC **12-09**.
+
+## Initial research
+
+### The question, plainly
+
+Is the 2026-12-04 date real; what window does this print collect and what falls inside it; does being the first all-post-election prelim make it special; and does it change how a paper book holding NVDA MRVL AVGO CRWV MSFT GOOG META AAPL AMZN should sit?
+
+**One-line verdict:** the date is primary-confirmed twice over, the window is published and contains NVDA's print and PCE but no CPI, the election channel is a measured null while the December seasonal is a mild lean up, the live variable is the pump, and the print stays untradeable — `symbols: []`, and it shares its morning with the jobs report.
+
+### Method
+
+Both of the publisher's scheduling PDFs were fetched direct on 2026-11-05 (HTTP 200, **132,710** and **89,846** bytes — byte-identical to the sizes the proposing lane recorded the same day) and the text layers extracted locally. FRED `UMCSENT` (the full monthly series, last observation 2026-09-01 **48.1**) was fetched for the seasonal base rate; prices are Yahoo daily bars (`^GSPC`, `^VIX`, `BZ=F`, `RB=F`, `CL=F`). The siblings ([prelim 11-06](umich-sentiment-prelim-2026-11-06.md), [final 11-20](umich-sentiment-final-2026-11-20.md), [final 10-23](umich-sentiment-final-2026-10-23.md)) were read for their baselines and are cited, not re-derived without saying so. The proposal this entry grew from ([`proposals/umich-sentiment-prelim-2026-12-04.from-umich-sentiment-prelim-2026-11-06.json`](../../../src/domain/market-events/proposals/umich-sentiment-prelim-2026-12-04.from-umich-sentiment-prelim-2026-11-06.json)) was read first; its framing "the first reading after the midterms" is tightened below.
+
+### Leg 1 — the date and the window are primary-confirmed — SUPPORTED
+
+`2026 Release Dates` (docid=79628) lists **"November 20 · November Final · December 4 · December Prelim · December 18 · December Final"**, with its own caveat *"November and December are a bit off this schedule due to holidays."* `2026 Interview Dates` (docid=79629) reads for December **"November 17 IW Begins / November 30 Prelim Ends / December 14 IW Ends"**. The normal rule — *interviewing begins the Tuesday before the final release of the previous month; prelims run through the Monday before the prelim release* — holds exactly (Nov 17 is the Tuesday before the 11-20 final; Nov 30 is the Monday before 12-04), so the holiday caveat concerns the November final's own timing, not this window. The apex host `sca.isr.umich.edu` still did not resolve (curl exit 6), recorded in `probe-ref.blocked`; the `data.` host did. **No clock time appears anywhere, so 10:00 ET stays customary, not sourced** — "confirmed" is a claim about the scheduled date only.
+
+### Leg 2 — "first reading after the midterms" is half right — SUPPORTED, with a correction
+
+The proposal called this the first national consumer read after the 11-03 polls. By *interview dates* it is not: the **11-20 final**'s exclusive stretch is **11-03 → 11-16** and is the first release to carry post-election interviews. What is true is that **12-04 is the first prelim whose whole window (11-17 → 11-30) is post-election**, two weeks or more after the polls, so any election-night mood has had the longest time to fade. That makes it a cleaner read of "what did the election leave behind" and a weaker read of "what did the election do".
+
+### Leg 3 — what is inside the window — SUPPORTED, and it differs from the 11-06 prelim's
+
+Confirmed events dated inside 11-17 → 11-30 (from the calendar): **retail sales 11-17 (high)**, **NVDA earnings 11-18 (critical)**, FOMC minutes 11-18, the 11-20 final and monthly opex, **PCE and Q3 GDP second estimate 11-25 (high)**, Beige Book and durable goods 11-25, Thanksgiving closure 11-26, the 11-27 half-day, `fomc-blackout-start-2026-11-28`. **No CPI**: October CPI prints 11-10, a week before it opens; the 11-06 prelim's window held the October FOMC, this one holds an AI-capex print and the holiday-spending stretch instead. `cyber-monday-2026-11-30` (estimate) is already on the calendar on the cut-off day; Black Friday is not a dated entry and is named here only.
+
+### Leg 4 — the energy channel is easing, and it is the same one that moved September — MIXED
+
+AAA regular **$4.4137 (10-01) → $4.2471 (10-28) → $4.1239 (11-04)**. Futures: Brent **$117.64 (10-30) → $104.77 (11-02) → $94.62 (11-04) → $97.33 (11-05 bar)**; RBOB **$3.312 → $2.900 → $2.729 → $2.785**; WTI **$104.12 → $89.88**. The drop (US–Iran talk hopes, per the siblings' secondary search digests) landed on and after the 11-02 interview cut-off of the 11-06 prelim, so it feeds the **11-20 final** and this print rather than 11-06. MIXED because crude has swung $20 in a week twice this autumn (Brent **$100 → $116.72 → $94**), and a $110 re-escalation inside the window would undo the premise.
+
+### Leg 5 — the seasonal is a lean; the election is a null — MIXED
+
+FRED `UMCSENT` finals, Dec minus Nov, 1978–2025 (n=48): median **+2.05**, mean **+1.01**, up **28 of 48** (58%), mean absolute change **~3**; **2020 +3.8 · 2021 +3.2 · 2022 +3.1 · 2023 +8.4 · 2024 +2.2 · 2025 +1.9**, six for six. Across the **12 midterm years** alone (1978 −8.9, 1982 −0.2, 1986 −2.3, 1990 −0.5, 1994 +3.5, 1998 −2.2, 2002 +2.5, 2006 −0.4, 2010 +2.9, 2014 +4.8, 2018 +0.8, 2022 +3.1): median **+0.30**, up **6 of 12** — a coin flip, and that sample includes 1978's −8.9. Two limits: FRED carries **no preliminary series**, so the base rate is final-to-final and the prelim's own comparator (the 11-20 final) is not a published series; and the recent six-for-six run overlaps a long recovery from record lows, which is the regime this print is also in (the October prelim's current conditions, 44.7, were an all-time low). MIXED, not SUPPORTED.
+
+### Leg 6 — a prelim day is an ordinary session; the jobs report owns the morning — SUPPORTED
+
+Re-measured today from Yahoo daily bars (212 sessions of 2026, all-day median \|move\| **0.510%**): the ten 2026 prelim release days moved the S&P **+0.648 · +1.970 · −0.606 · −0.114 · +0.843 · +0.503 · −1.010 · −0.170 · +0.860 · +0.595 %** (10-09 is new relative to the 11-06 ledger's n=9), median \|move\| **0.627%**, **7 of 10** above the all-day median (null 5.0). Noise at n=10. I did **not** build a December-prelim cohort across past years: those release dates are not in a primary source I fetched, and rebuilding them from memory would be the unsourced input this doc refuses elsewhere. **Honest gap — named, not filled.** The prelim's own surprise gap vs consensus is structurally live (2026's eight prelims through 09-11: **−0.3 · +2.2 · −1.3 · −3.7 · −0.4 · +1.3 · +3.3 · −5.4**, median **\|1.75\|**, carried from the 09-11 ledger; the 10-09 print missed by **−1.3 to −1.5** depending on source), so a published consensus does not close it.
+
+### What plays the conditions support
+
+None. `symbols: []`; every call above is a refusal or a watch item. The practical use of this ledger is to keep the 12-04 morning from being misread, and to give the 11-20 final's ledger a downstream reader.
+
+### Honest limits
+
+- No clock time is sourced; the apex host does not resolve (recorded in `blocked`).
+- No published consensus exists for 12-04 yet; none was sought beyond a search that returned only earlier years' releases.
+- The 11-06 prelim and the 11-20 final are not released: the level this print is measured against is unknown. October's final (**48.0**) is the latest.
+- No partisan breakdown for the October 2026 release was found (a search returned only headline and component numbers); no claim about a partisan swing after the midterms is made here.
+- AAA readings newer than 11-04 were not fetched; the 11-04 figure is carried from the 11-06 ledger.
+- The Dec−Nov seasonal is final-to-final; no prelim-day cohort for past Decembers was built.
+
+## Stance & kill switches
+
+**Stance (date confirmed, two primaries fetched 2026-11-05; no clock time sourced).** Treat 2026-12-04 as a **medium-impact, non-tradeable release whose value is diagnostic.** No position opened, closed or sized off it; no discretionary-adjacent entry keyed to it; no election premium priced into any consumer read; no reading of the 10:00 ET tape as a sentiment reaction while jobs prints at 08:30 ET. Base case (**Low** confidence): the headline prints **at or above** the 11-20 final's, and year-ahead inflation expectations print **no higher** than it if the pump holds under about $4.25. **The size of the move is not called.** Confidence is low by construction and sizes nothing.
+
+**Kill switches:**
+
+- **The 12-04 headline prints below the 11-20 final's** — the seasonal lean and the easing pump both failed. Registered as **FT-umich-sentiment-prelim-2026-12-04-1**.
+- **Year-ahead inflation expectations on 12-04 exceed the 11-20 final's with AAA still at or below $4.25 on 11-30** — the pump-transmission reading failed (a second print after the 11-06 prelim's own test). Registered as **FT-umich-sentiment-prelim-2026-12-04-2**.
+- **Brent closes above $110 before 2026-11-17** — the energy shock re-escalates before the window opens; this stance's energy leg is rebuilt.
+- **A house playbook acquires a macro trigger** — the standing "never a trade" call is re-derived.
+
+## Assessment ledger
+
+| Date | Days out | New info / adjacency findings | Stance change | Next check due |
+|---|---|---|---|---|
+| 2026-11-05 | D-29 | Initial research banked (above). **Date flipped `estimate` → `confirmed` / `UMICH:`** off both publisher PDFs, fetched and inflated direct today (**132,710** / **89,846** bytes, same as the proposer's). **Window published: 11-17 → 11-30**, containing retail sales 11-17, **NVDA 11-18**, FOMC minutes 11-18, PCE + GDP-second 11-25, Thanksgiving; no CPI inside it. **"First reading after the midterms" corrected:** the 11-20 final is the first release with post-election interviews (11-03 → 11-16); 12-04 is the first prelim wholly post-election. **Seasonal (FRED, n=48):** Dec−Nov median **+2.05**, up **28/48**, up 6/6 since 2020; midterm years median **+0.30**, up 6/12. **Energy (Yahoo):** Brent **117.64 → 97.33** (10-30 → 11-05), RBOB **3.312 → 2.785**; AAA **$4.1239** (11-04, carried). **Last level:** Oct final **48.0**, year-ahead **4.7%**. **Prelim-day cohort n=10:** median \|move\| **0.627%** vs **0.510%**, 7 of 10 above. **Tape:** S&P **7,688.62** (11-04 close), VIX **16.81** (live read at write time; 16.61 on the 11-04 close). Registered **FT-…-1** and **-2**. Nothing proposed: every dated event in the window is already canonical; Cyber Monday (11-30) is already canonical; Black Friday is an undated retail occasion. Beyond horizon, named only: Dec final **12-18** (D-43, low). Conviction proposals: none; declared intents: none. | Initial stance set: stand aside; refusal + watch items | 2026-11-12 (D-22; after the 11-06 prelim and CPI) |
+
+**Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in every row; a dated adjacent event found **inside the research horizon** (`assessment-cadence.json`'s `horizon`: nothing past `maxDaysOut`, and past `allImpactsWithinDays` only critical/high) gets proposed as a new `src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the same PR — your own file, never another event's canonical one (#1717). One past the horizon is named in the row instead (#2946). Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from memory. After that the assessment is closed; the doc reopens only to score a registered forward test whose `Score by` has since arrived (`forward-test-due`).
