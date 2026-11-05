@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { suppressedCategories } from "../../scripts/pr-review/post.mjs";
 
 // docs/review/REVIEW.md is the pre-merge reviewer's whole rulebook, read into every review's prompt,
 // so its size is what each review pays and its words are what the reviewer obeys literally. These
@@ -73,6 +74,20 @@ describe("the pre-merge review rules", () => {
       const category = row.split("|")[1]?.trim().replaceAll("`", "");
       expect(categories, row).toContain(category);
     }
+  });
+
+  // The posting code (scripts/pr-review/post.mjs) drops a finding in a suppressed category, reading
+  // this file at the base commit. A row it cannot parse would suppress nothing, silently.
+  it("are read by the posting code exactly as the suppressed table is written", () => {
+    const written = tableRows(section("Suppressed categories")).map((row) =>
+      (row.split("|")[1] ?? "").trim().replaceAll("`", ""),
+    );
+    expect(suppressedCategories(text)).toEqual(written);
+    const withRow = text.replace(
+      "|---|---|---|---|\n",
+      "|---|---|---|---|\n| `honesty` | `app/src/` | 2026-12-01 | 9 of 10 declined |\n",
+    );
+    expect(suppressedCategories(withRow)).toEqual(["honesty"]);
   });
 
   it("point each per-path note at paths that exist", () => {

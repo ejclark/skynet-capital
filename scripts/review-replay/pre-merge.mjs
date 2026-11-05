@@ -6,7 +6,7 @@
 //     any checklist primes what to look for;
 //   - severities are Important and Nit, capped at 5 and 3, and every finding carries a file:line;
 //   - one trace refuter per PR checks all of that PR's findings at once (the workflow's job);
-//   - the tier follows the post-merge audit's routing, plus a light tier for small changes.
+//   - the tier is the job's own: scripts/pr-review/triage.mjs, read on a normal day with no budget spent.
 //
 // No hunk filter yet, and a plain file match flatters recall: 5 of the set's 21 correctness defects sit
 // in a file their PR never changed, where the shipped job cannot post a finding. So the score also
@@ -14,56 +14,30 @@
 // filter is slice S2's.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { breachOf } from "../envelope-scan.mjs";
+import { triage } from "../pr-review/triage.mjs";
 
 export const RULES_FILE = "docs/review/REVIEW.md";
 
-// A copy of .claude/workflows/post-merge-audit.js's DEEP_ROOTS and DOCS_ONLY, because a workflow
-// cannot import. tests/scripts/review-replay-pre-merge.spec.ts fails when the two drift; slice S2
-// moves both into one module the audit reads too.
-export const DEEP_ROOTS = [
-  "src/trading/",
-  "src/options/",
-  "src/risk/",
-  "src/math/",
-  "src/engine/",
-  "src/playbooks/",
-  "src/autonomous/",
-  "src/bots/",
-  "src/alpaca/",
-  "src/storage/",
-  "src/server/",
-  "src/scripts/",
-  "app/src/live/",
-  ".github/workflows/",
-  "scripts/bots-",
-];
-export const DOCS_ONLY_ROOTS = ["docs/", "src/domain/market-events/proposals/"];
-export const DOCS_ONLY = (file) => DOCS_ONLY_ROOTS.some((root) => file.startsWith(root));
-export const LIGHT_LINES = 60; // the plan's light tier: at most this many changed lines, no risky path
+// The job's triage on a day the dial is normal and nothing is spent yet, so the replay routes each PR
+// exactly as the job would and a budget never makes it skip one.
+const REPLAY_GATE = { dispatch: true, position: "normal" };
 
-/** deep · standard · light · skip, by rule: the audit's routing, with small safe changes made light. */
-export function tierOf({ files, lines, protectedPath }) {
-  if (protectedPath || files.some((f) => DEEP_ROOTS.some((root) => f.startsWith(root)))) {
-    return "deep";
-  }
-  if (files.length && files.every(DOCS_ONLY)) return "skip";
-  return lines <= LIGHT_LINES ? "light" : "standard";
-}
+/** deep · standard · light · skip, by the job's own rule (triage.mjs), never a copy of it. */
+export const tierFor = (files, rules) => triage({ files, gate: REPLAY_GATE, rules }).tier;
 
-/** Files and changed lines from `git diff --numstat`; a binary file's "-" counts as no lines. */
+/** `git diff --numstat --no-renames` as the files triage reads; a binary file's "-" is no lines. */
 export function parseNumstat(text) {
-  const rows = text
+  return text
     .split("\n")
     .filter(Boolean)
-    .map((line) => line.split("\t"));
-  return {
-    files: rows.map((row) => row.slice(2).join("\t")),
-    lines: rows.reduce(
-      (sum, [added, deleted]) => sum + (Number(added) || 0) + (Number(deleted) || 0),
-      0,
-    ),
-  };
+    .map((line) => {
+      const [added, deleted, ...name] = line.split("\t");
+      return {
+        filename: name.join("\t"),
+        additions: Number(added) || 0,
+        deletions: Number(deleted) || 0,
+      };
+    });
 }
 
 function git(...args) {
@@ -72,11 +46,12 @@ function git(...args) {
   return run.stdout;
 }
 
-/** One PR's tier and size, read from git and the envelope, never from the PR's text. */
+/** One PR's tier and size, read from git and the envelope, never from the PR's text. A rename counts
+ *  as both its names (`--no-renames`), as triage counts a REST rename. */
 export function shapeOf({ base, head }, protectedRules) {
-  const { files, lines } = parseNumstat(git("diff", "--numstat", base, head));
-  const protectedPath = files.some((file) => breachOf(file, protectedRules));
-  return { tier: tierOf({ files, lines, protectedPath }), lines, fileCount: files.length };
+  const files = parseNumstat(git("diff", "--numstat", "--no-renames", base, head));
+  const lines = files.reduce((sum, f) => sum + f.additions + f.deletions, 0);
+  return { tier: tierFor(files, protectedRules), lines, fileCount: files.length };
 }
 
 /** The paths one PR changed, so the score can tell a hit the job could post from one it could not. */
