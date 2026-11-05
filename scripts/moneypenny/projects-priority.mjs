@@ -24,7 +24,7 @@
 // Pure: no network, no file reads. The IO lives in projects-sync.mjs (one issue) and
 // projects-reconcile.mjs (the sweep), which both call `planPriority` so they cannot disagree.
 import { classOf } from "../rank.mjs";
-import { PRIORITY_OPTIONS, SYNCED_PRIORITY } from "./projects.mjs";
+import { isBacklogCandidate, PRIORITY_OPTIONS, SYNCED_PRIORITY } from "./projects.mjs";
 
 export { SYNCED_PRIORITY };
 
@@ -131,7 +131,9 @@ export function planPriorityDrift({
   for (const item of items) {
     const number = numberOf(item);
     const issue = number ? open.get(number) : undefined;
-    if (!issue) continue;
+    // syncIssue skips a non-candidate (a ci-failure tracker), so planning one would spend a slot of
+    // the cap on a no-op every sweep, forever.
+    if (!(issue && isBacklogCandidate({ labels: namesOf(issue.labels) }))) continue;
     const plan = planPriority({
       current: item?.priority ?? null,
       synced: item?.syncedPriority ?? null,

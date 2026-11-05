@@ -554,7 +554,7 @@ function ghLabel(argv) {
  * `fresh` says whether `item`'s values were read moments ago. A sweep's are from its start, and a
  * drag made since would be overwritten by a stale "write" — so before acting on held values, the
  * card is re-read (one point) and re-planned. Order is load-bearing (projects-priority.mjs header):
- * Priority before its record; labels before the record on a drag.
+ * Priority before its record; labels (old off, new on) before the record on a drag.
  *
  * Returns the plan it applied, or `{action: "skipped", reason}`.
  */
@@ -585,8 +585,11 @@ export function syncPriority({ issue, item, fresh = false, ready = true, horizon
   } else if (plan.action === "record") {
     io.setRecord(plan.value);
   } else if (plan.action === "drag") {
-    for (const name of plan.add) io.addLabel(name);
+    // Remove before add: with no P label for a moment, a sync reading in between still sees the
+    // card off its record and re-plans the same drag. Two P labels at once would let `classOf`
+    // pick the old lane and overwrite the drag.
     for (const name of plan.remove) io.removeLabel(name);
+    for (const name of plan.add) io.addLabel(name);
     io.setRecord(plan.lane);
   }
   return plan;

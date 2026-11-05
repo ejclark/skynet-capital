@@ -139,7 +139,7 @@ describe("syncPriority: the order of writes is what makes a failure safe", () =>
     expect(calls).toEqual(["priority=P0", "record=P0"]);
   });
 
-  it("a drag: labels first, record last, Priority untouched", () => {
+  it("a drag: old label off, new label on, record last, Priority untouched", () => {
     const { calls, io } = recorder();
     const plan = syncPriority({
       issue: issue(1, ["plan", "P2"]),
@@ -148,7 +148,7 @@ describe("syncPriority: the order of writes is what makes a failure safe", () =>
       io,
     });
     expect(plan.action).toBe("drag");
-    expect(calls).toEqual(["+P0", "-P2", "record=P0"]);
+    expect(calls).toEqual(["-P2", "+P0", "record=P0"]);
   });
 
   it("a record write that throws leaves the card as the failed-sync case, which heals", () => {
@@ -235,6 +235,15 @@ describe("planPriorityDrift: which cards the sweep touches", () => {
       [3, "drag"],
       [1, "write"],
     ]);
+  });
+
+  it("skips a card whose issue the sync would skip (a ci-failure tracker)", () => {
+    const { drift } = planPriorityDrift({
+      items: [card(1)],
+      openIssues: [issue(1, ["ci-failure"])],
+      numberOf,
+    });
+    expect(drift).toEqual([]);
   });
 
   it("caps the writes per sweep and says how many wait — drags are never capped", () => {
