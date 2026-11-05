@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The refunding statement keeps \"at least the next several quarters\" because sizes had been flat for nine quarters and dealers expected it" (FT-39)** — added 2026-11-05 from the
+  [treasury-refunding-2026-11-04 close-out](events/treasury-refunding-2026-11-04.md). Sizes held at $58B/$42B/$25B for a tenth quarter, but sb0678 dropped "at least" ("for the next several
+  quarters"). Do not register a persistence bet on forward-guidance wording off a run of unchanged editions when the ledger itself names the edit window as live: nine flat quarters said
+  nothing about the one quarter dealers had flagged as the venue for a change.
+
 - **"A de-risked chip tape rebounds into the print: AMD's print-day close is at or above its close 12 sessions earlier" (FT-amd-fq3-2026-results-2026-11-03-4)** — added 2026-11-04 from the
   [amd-fq3-2026-results-2026-11-03 close-out](events/amd-fq3-2026-results-2026-11-03.md). Registered at $528.75 (10-16) after an 8-session, -18.6% streak; the 11-03 close was **$483.90**
   (-8.5%) after Intel's 10-29 guide-down took AMD -10.9% on 10-30. Do not register a rebound-into-print off a sector streak whose cause is still live: the modern-era D-5→D +2.36%/67% base rate
