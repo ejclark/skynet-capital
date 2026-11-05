@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The ECB SPF's modal Q4-2026 deposit rate moves up a bin to 2.75% because a Reuters poll of 73 economists had 64 expecting a December hike" (FT-ecb-spf-q4-2026-10-30-1)** — added 2026-11-05 from the
+  [ecb-spf-q4-2026-10-30 close-out](events/ecb-spf-q4-2026-10-30.md). Registered 2026-10-16 off a July baseline of 2.50%; the Q4 report (2–7 Oct, 52 responses) kept the mode at **2.50% (48%)**
+  with **43%** at 2.75%. The distribution moved, the mode did not. Do not register a survey's modal bin when the prior split is near even or the panel is a different set of respondents from the
+  poll it is borrowed from; register the bin's share (here 43% at 2.75% would have passed) or the mean. The 2027 HICP (2.6%) and 2031 anchor (2.0%) tests passed and are not retired.
+
 - **"A de-risked chip tape rebounds into the print: AMD's print-day close is at or above its close 12 sessions earlier" (FT-amd-fq3-2026-results-2026-11-03-4)** — added 2026-11-04 from the
   [amd-fq3-2026-results-2026-11-03 close-out](events/amd-fq3-2026-results-2026-11-03.md). Registered at $528.75 (10-16) after an 8-session, -18.6% streak; the 11-03 close was **$483.90**
   (-8.5%) after Intel's 10-29 guide-down took AMD -10.9% on 10-30. Do not register a rebound-into-print off a sector streak whose cause is still live: the modern-era D-5→D +2.36%/67% base rate
