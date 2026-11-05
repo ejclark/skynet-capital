@@ -155,7 +155,8 @@
     "test:e2e:ct:update": "playwright test -c app/playwright-ct.config.ts --update-snapshots",
     "shoot:status-line": "tsx scripts/shoot/status-line.mjs",
     "shoot:route-error": "tsx scripts/shoot/route-error.mjs",
-    "shoot:mermaid-pairs": "node scripts/shoot/mermaid-pairs.mjs"
+    "shoot:mermaid-pairs": "node scripts/shoot/mermaid-pairs.mjs",
+    "newsletter": "node scripts/newsletter.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

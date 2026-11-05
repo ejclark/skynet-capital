@@ -40,6 +40,8 @@ describe("parseLoopList", () => {
         nextCheck: "2026-10-06",
         question: "right calls?",
         nextCheckText: "2026-10-06 — score it",
+        humanStep: "",
+        cadence: "",
       },
     ]);
   });
@@ -130,6 +132,8 @@ describe("doctrine-scan.mjs --due carries overdue loop checks", () => {
         nextCheck: "2026-10-06",
         question: "right calls?",
         nextCheckText: "2026-10-06",
+        humanStep: "",
+        cadence: "",
         due: true,
         reason: "loop-check-overdue",
         nextDueDate: "2026-10-06",
