@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **A board view by digital team member: each lane's queue and what it ships.** Eric, 2026-11-05:
+  "one view in our project could be geared around digital team members roles/personas.. the work in
+  their queue that they pump out. This provides an interesting visual." Cheap once two things exist:
+  a derived "Role" field the sync writes from labels (the same machinery #6871 B1 built for Priority:
+  `feedback` → the build lane, `plan` → the plan lane, `bottleneck` → the research lane), and a way to
+  create views without his click (#6883). Needs the IA call first: what counts as a role on the board.
+  _(src: Eric · while: #6871 swimlanes, after the view-create 404s)_
 - **Hold a cite to the name it points at.** In 18 days at least ten cited rows in the playbook
   anatomy page's appendix came to point at the wrong lines (`wheelPhase` moved from :132-154 to
   :162-184) with every check green, because both cite checks only catch a file that shrank. A cite
