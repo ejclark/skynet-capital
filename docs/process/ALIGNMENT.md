@@ -43,5 +43,6 @@ alignment has come — and the evidence that lets a class stop asking.
 | 2026-11-01 | member trade surfaces | #5709 · where does a long call's exit plan show: in the ticket (A), at review (B), after the fill (C), or not at all (D)? | A, in the ticket (medium) | B: a strategy carries its exit plan before the trade, and it shows at review | miss |
 | 2026-11-01 | credentials | #4621 · press the button that sets the bridge password, and approve the run it starts? (first wording) | Yes (high) | "what is there to approve?" | unclear |
 | 2026-11-01 | credentials | #4621 · Same, asked again in chat | Yes (high) | Yes, in chat | match |
+| 2026-11-05 | session housekeeping | #6870 S1 done and its replay failed the bar: archive the session, or run iteration 2 (the Nit line, ~5.3M tokens) here first? | Archive; iteration 2 in its own session (medium) | Run iteration 2 here first | miss |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.
