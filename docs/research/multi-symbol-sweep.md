@@ -71,6 +71,18 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"A pre-announced quarter's reported figures land inside the company's own ranges" (FT-smci-fq1-2027-results-2026-11-03-1)** — added 2026-11-05 from the
+  [smci-fq1-2027-results-2026-11-03 close-out](events/smci-fq1-2027-results-2026-11-03.md). SMCI's formal Q1 FY27 results (8-K Ex. 99.1) reported net sales **$19.9B** and GAAP gross margin
+  **12.7%** against pre-announced $18.5-19.5B and 12.0-12.5%: both above the top. Do not treat a preliminary-and-unaudited range as a ceiling; it was a floor here.
+
+- **"A pre-announced quarter still moves the stock at least 7% on the formal print because 7 of its last 10 print-days did" (FT-smci-fq1-2027-results-2026-11-03-2)** — added 2026-11-05 from the
+  [smci-fq1-2027-results-2026-11-03 close-out](events/smci-fq1-2027-results-2026-11-03.md). The 11-03 → 11-04 close-to-close was **-5.70%** (open flat, +0.10%, then a session fade). The ten-print-day
+  count mixes the pre-announcements themselves with the formal results; of four formal results after a pre-announcement, two cleared 7%. Do not carry that count onto the formal-results day.
+
+- **"Two names reporting in one after-close window react with the same sign" (FT-smci-fq1-2027-results-2026-11-03-3)** — added 2026-11-05 from the
+  [smci-fq1-2027-results-2026-11-03 close-out](events/smci-fq1-2027-results-2026-11-03.md). SMCI **-5.70%** against AMD **+1.01%** on 11-04, while DELL fell -8.83%. A shared AI-demand headline
+  did not couple the reactions; each traded on its own guide and sector tape. Do not register a same-evening coupling test on the premise that one read-through governs both.
+
 - **"A de-risked chip tape rebounds into the print: AMD's print-day close is at or above its close 12 sessions earlier" (FT-amd-fq3-2026-results-2026-11-03-4)** — added 2026-11-04 from the
   [amd-fq3-2026-results-2026-11-03 close-out](events/amd-fq3-2026-results-2026-11-03.md). Registered at $528.75 (10-16) after an 8-session, -18.6% streak; the 11-03 close was **$483.90**
   (-8.5%) after Intel's 10-29 guide-down took AMD -10.9% on 10-30. Do not register a rebound-into-print off a sector streak whose cause is still live: the modern-era D-5→D +2.36%/67% base rate
