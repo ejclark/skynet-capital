@@ -55,7 +55,13 @@ export function main(args, nowMs = Date.now()) {
   const saveTo = flag(args, "--save-inputs");
   if (saveTo) writeFileSync(saveTo, `${JSON.stringify(inputs, null, 2)}\n`);
   const newsletter = buildNewsletter(inputs);
-  if (args.includes("--append-series")) console.error(appendSeries(seriesEntry(newsletter)));
+  if (args.includes("--append-series")) {
+    // A week stored with a hole would overwrite a whole reading of it; the series takes whole weeks.
+    const holes = Object.entries(newsletter.metrics).filter(([, v]) => typeof v === "string");
+    if (holes.length)
+      throw new Error(`not appended: ${holes.map(([k]) => k).join(", ")} could not be read`);
+    console.error(appendSeries(seriesEntry(newsletter)));
+  }
   if (restCalls) console.error(`newsletter: ${restCalls} REST calls`);
   return JSON.stringify(newsletter, null, 2);
 }

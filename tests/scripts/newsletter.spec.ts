@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "@rstest/core";
 import { parseLoopList } from "../../scripts/loop-list-decide.mjs";
@@ -83,7 +85,12 @@ describe("buildNewsletter over the 2026-W45 fixture", () => {
 
   it("reads usage, needs-eric, fitness, loops and the scorecard", () => {
     expect(n.metrics.usage).toMatchObject({ mode: "normal", used: 6, gone: 26, gap: -20 });
-    expect(n.metrics.needsEric).toMatchObject({ count: 3, medianDays: 15.4, oldestDays: 23.8 });
+    expect(n.metrics.needsEric).toMatchObject({
+      count: 3,
+      unreadAge: 1,
+      medianDays: 15.4,
+      oldestDays: 23.8,
+    });
     expect(n.metrics.fitness).toMatchObject({
       redDuringWeek: ["bots-running", "main-deploys", "alerts-reach-owner"],
       redAtEnd: ["alerts-reach-owner"],
@@ -115,6 +122,17 @@ describe("buildNewsletter over the 2026-W45 fixture", () => {
       n.humanSteps.rolledOver.length,
       n.humanSteps.carriedIn,
     ]).toEqual([8, 5, 3, 1]);
+  });
+
+  it("reads usage unknown when the inputs were gathered long after the week", () => {
+    expect(buildNewsletter({ ...inputs(), usageNow: false }).metrics.usage).toMatch(
+      /^unavailable: /,
+    );
+    const dir = mkdtempSync(join(tmpdir(), "newsletter-"));
+    const holed = join(dir, "inputs.json");
+    writeFileSync(holed, JSON.stringify({ ...inputs(), prs: "unavailable: gh api: 502" }));
+    // refused before any write: the series keeps whole weeks only
+    expect(() => main(["--inputs", holed, "--append-series"])).toThrow(/not appended: mergedPrs/);
   });
 
   it("passes a source gather could not read through as its words, and the rest still builds", () => {

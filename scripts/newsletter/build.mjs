@@ -95,7 +95,12 @@ export function buildNewsletter(inputs) {
       failureToFix: failureToFix(inputs.failureToFix),
       verifyFirstTry: verifyFirstTry(inputs.jobs, isList(inputs.ciRuns) ? inputs.ciRuns : null),
       tokensPerVerified: rows,
-      usage: tracker ? paceReading(tracker.title, tracker.body) : inputs.tracker,
+      usage:
+        inputs.usageNow === false
+          ? `unavailable: #4153 holds only today's pace, which cannot stand for ${w.week}`
+          : tracker
+            ? paceReading(tracker.title, tracker.body)
+            : inputs.tracker,
       needsEric: over(inputs.needsEric, (r) => needsEric(r, asOfMs)),
       fitness: over(inputs.fitness, (f) => fitness(f.contracts, f.issues, w)),
       loops: over(inputs.loopIterations, (r) => loopsMoved(r, w)),

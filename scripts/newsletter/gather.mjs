@@ -155,8 +155,14 @@ function previous(week) {
 }
 
 /** Everything build.mjs reads, for `week` as of `asOfMs`. */
-export function gather(week, asOfMs) {
+/** A snapshot read now (the pace title, open needs-eric) stands for a week only if it is that moment. */
+const SNAPSHOT_SLACK_MS = 24 * 3600000;
+
+export function gather(week, asOfMs, nowMs = Date.now()) {
   const w = windowOf(week, asOfMs);
+  const stale = nowMs - asOfMs > SNAPSHOT_SLACK_MS;
+  const snapshot = (read) =>
+    stale ? `unavailable: read now, it cannot stand for ${week} as of ${w.until}` : attempt(read);
   const rest = createRest();
   const runsDir = process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs");
   const receipts = join(runsDir, "post-merge-audit.jsonl");
@@ -165,6 +171,7 @@ export function gather(week, asOfMs) {
     asOf: new Date(asOfMs).toISOString(),
     prs: attempt(() => mergedPrs(rest, w)),
     tracker: attempt(() => tracker(rest, w)),
+    usageNow: !stale,
     localReceipts: existsSync(receipts) ? parseRows(readFileSync(receipts, "utf8")).rows : [],
     defectIssues: attempt(() =>
       defectIssues(rest, w.sinceMs).map((i) => ({ created_at: i.created_at, body: i.body })),
@@ -179,7 +186,7 @@ export function gather(week, asOfMs) {
         )
         .map((r) => ({ event: r.event, conclusion: r.conclusion })),
     ),
-    needsEric: attempt(() => needsEric(rest)),
+    needsEric: snapshot(() => needsEric(rest)),
     fitness: attempt(() => fitnessIssues(rest)),
     loopIterations: attempt(loopIterations),
     scorecard: attempt(() => scorecard({ ...readCorpus(), today: w.until.slice(0, 10) })),

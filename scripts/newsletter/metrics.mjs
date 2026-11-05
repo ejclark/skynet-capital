@@ -148,6 +148,7 @@ export function needsEric(rows, asOfMs) {
   const ages = items.map((i) => i.days).filter((d) => d !== null);
   return {
     count: items.length,
+    unreadAge: items.length - ages.length,
     medianDays: median(ages),
     oldestDays: ages.length ? Math.max(...ages) : null,
     items,
