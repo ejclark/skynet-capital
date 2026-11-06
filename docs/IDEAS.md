@@ -18,6 +18,24 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **A held fold could say so when it falls back to a whole read in live mode.** #6597: a wrapper
+  dropped `since`, and two folds quietly re-read whole audits in production for hours. The
+  fallback is right for offline mode and specs and silent everywhere else. One `emitWarning` per
+  store, only when the mode is live, would have named it in the first request's log. A spec now
+  guards the publishing wrappers (`tests/observatory/activity-publishing-forwarding.spec.ts`), so
+  this is worth building only if a second fallback appears outside that file.
+  _(src: Claude · while: retro on #6597, #4612 slice 10)_
+- **Dupe and clone budgets can spread a costly helper to every caller.** Both scans count
+  definitions, not calls. #599 made `marketDayKey` the one shared helper, and it built an `Intl`
+  formatter per call, because a second copy "would have tripped dupe:scan". The `Intl` scan now
+  catches that one cost. The general question is whether a consolidation PR should say what the
+  shared helper allocates per call.
+  _(src: Claude · while: retro on #4612's audit, slice 10)_
+- **The bots app still runs under tsx on a 512 MB machine, and no budget measures it.**
+  `fly.bots.toml` starts `npm run run:autonomous`, which is the npm → tsx → node chain that #4425
+  measured at about 295 MB at boot for the dashboard. #4425 left the bots as a follow-up because
+  the trader is stateful. Measure its RSS first; slice 6's gauge only runs in the dashboard.
+  _(src: Claude · while: retro on #4425, #4612 slice 10)_
 - **A board view by digital team member: each lane's queue and what it ships.** Eric, 2026-11-05:
   "one view in our project could be geared around digital team members roles/personas.. the work in
   their queue that they pump out. This provides an interesting visual." Cheap once two things exist:
