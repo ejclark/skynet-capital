@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The Construction Spending headline carries Census's not-significant asterisk because 27 of 29 editions did" (FT-construction-spending-2026-11-02-3)** — added 2026-11-06 from the
+  [construction-spending-2026-11-02 close-out](events/construction-spending-2026-11-02.md). Census CB26-176 (September 2026) read **-1.9% (±0.7%)**, no asterisk: 2.7x its own margin of error,
+  driven by residential (-5.5% ±1.3%). Do not register a significance call on a series-level base rate when the reference month's own components are already moving (housing starts printed
+  -5.2% for the same month on 10-20); register the component, or the sign, and read the soft input first.
+
 - **"A pre-announced quarter's reported figures land inside the company's own ranges" (FT-smci-fq1-2027-results-2026-11-03-1)** — added 2026-11-05 from the
   [smci-fq1-2027-results-2026-11-03 close-out](events/smci-fq1-2027-results-2026-11-03.md). SMCI's formal Q1 FY27 results (8-K Ex. 99.1) reported net sales **$19.9B** and GAAP gross margin
   **12.7%** against pre-announced $18.5-19.5B and 12.0-12.5%: both above the top. Do not treat a preliminary-and-unaudited range as a ceiling; it was a floor here.
