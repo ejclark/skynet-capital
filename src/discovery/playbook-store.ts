@@ -12,6 +12,7 @@ import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import type { PlaybookMode } from "../domain/types.js";
 import { movesNoCapital } from "../playbooks/pair-table.js";
 import { type Playbook, type PrintStretches, readsLiveSignals } from "../playbooks/playbook.js";
+import { CRWV_WHEEL_SETTING } from "../playbooks/registry.js";
 import {
   evidenceHref,
   housePlaybooks,
@@ -264,14 +265,18 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "The wheel on CRWV: sell a cash-secured put (the bot is paid now, and keeps the cash to buy " +
       "100 shares at the strike set aside); if CRWV finishes below the strike, buy the shares and " +
       "sell covered calls on them (paid again, the shares promised at the call's strike) until " +
-      "they are called away. It runs on its owner's conviction, AGAINST our own study: CRWV's " +
-      "options imply about 70% volatility while the stock has delivered a median of about 89% " +
-      "over the last year, and its 0.20-delta puts are priced to be assigned 19% of the time " +
-      "against 33% in CRWV's own history — the premium has underpaid the moves. It is checked on " +
-      "2027-01-29: if its net P/L is below $0 on 2027-01-29, or more than 1 in 3 of its sold puts " +
-      "have finished in the money, it stops selling new puts on its own until its owner sets a " +
-      "new check date. A put still open runs to expiry, and assigned shares keep selling covered " +
-      "calls until they are called away.",
+      "they are called away. It runs on its owner's conviction, AGAINST our own study. " +
+      // The study's numbers are the setting's own sentence (#6774): this card once repeated an older
+      // run's and drifted when the 10-16 re-run moved the setting and the pair row.
+      `${CRWV_WHEEL_SETTING.dataShows} So the premium is about fair: the study finds no edge in ` +
+      "selling it and says stand aside. It is checked on 2027-01-29. A subscription that keeps " +
+      "that date runs under its owner's AI-dip view (his 2026-10-16 call that CRWV's drop is " +
+      "temporary), which reads the money alone: if the wheel and the CRWV long call that view " +
+      "also steers are below $0 net together on 2027-01-29, it stops selling new puts on its own " +
+      "until its owner sets a new check date. That view accepts owning the shares, so puts " +
+      "finishing in the money never stop it; under a view of your own, more than 1 in 3 of its " +
+      "sold puts finishing in the money stops it too. A put still open runs to expiry, and " +
+      "assigned shares keep selling covered calls until they are called away.",
     enter:
       "Sells puts at the strike nearest 0.15 delta in every mode — roughly a 1-in-7 chance the " +
       "market prices for finishing in the money, about where our cycle study puts CRWV's floor — " +
@@ -304,19 +309,25 @@ const COPY: Readonly<Record<string, PlaybookStoreCopy>> = {
       "recovers well above today's price over the next 3 to 6 months. No study has tested this " +
       "play. What the data does say: options have priced CRWV's earnings moves smaller than they " +
       "turned out, which is why this play may hold through a report when no sold option may. It " +
-      "is checked on 2027-01-29: if its net P/L is below $0, it stops buying until its owner sets " +
+      "is checked on 2027-01-29: if its net P/L is below $0 — counted together with the CRWV " +
+      "wheel's while its owner's AI-dip view steers both — it stops buying until its owner sets " +
       "a new date.",
     enter:
       "Buys calls on the latest expiry 120 to 200 days out, at the strike nearest 0.60 delta " +
       "(0.70 conservative, 0.50 aggressive), in about three orders ten minutes apart, up to the " +
       "capital you allocate (and at most 30 contracts; 15 / 60). " +
       "Adds are the same contract, only while it costs within 10% of what was paid and 90 or " +
-      "more days remain. Never buys during an earnings blackout.",
+      "more days remain. Never buys during an earnings blackout. While its owner's AI-dip view " +
+      "steers it — as it does a subscription that keeps the 2027-01-29 check — it also waits " +
+      "until 6 trading sessions after CRWV's report before buying or adding again, and buys no " +
+      "expiry before 2027-03-18.",
     exitTakeProfit: "Sells every call once it is worth double what it cost.",
     exitCutLosses:
       "No stop: the most it can lose is the premium paid. It sells everything with 45 days left, " +
       "before time decay speeds up, whatever the price.",
-    hold: "Holds through earnings reports. After a sale it may buy again at once, at the new price.",
+    hold:
+      "Holds through earnings reports. After a sale it may buy again at once, at the new price — " +
+      "unless it is inside an earnings blackout or the 6-session wait after a report.",
   },
   "NVDA-CALL-SPREAD": {
     description:
