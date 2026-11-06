@@ -298,3 +298,55 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-03
 <!-- probe-ref: {"symbols":{},"vix":21.15,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","chicago-pmi-2026-10-30","construction-spending-2026-11-02","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06","wholesale-trade-2026-11-09"],"screenStreak":0} -->
+
+
+## Outcome
+
+**Assessed 2026-11-06 (D+2, inside the close-out window).** `rates` event, `symbols: []`, so no
+`earnings-cycle`/`intraday-edges` target applies; the instrument caches were busted (`rm -rf`) with
+nothing to refill. Every figure is a fresh pull this session: `api.fiscaldata.treasury.gov`
+`buybacks_operations` and `buybacks_security_details` (plain curl, HTTP 200) and Yahoo daily closes.
+The calendar entry stays `estimate`: no Treasury-buyback primary prefix exists and this lane may not
+self-confirm an event it discovered in-sweep. No trade, no calendar-entry edit.
+
+**Verdict: the base case held on all three registered tests (3 pass, 0 kill).**
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$6,000,000,000** (tentative schedule: `= or > $4 billion`) |
+| Total par offered | **$39,636,000,000** |
+| Total par accepted | **$6,000,000,000** |
+| Cover (offered ÷ max) | **6.61x** |
+| Fill (accepted ÷ max) | **100%** |
+| Issues | **7 accepted of 40 eligible** |
+| Window / settlement | 1:40–2:00pm ET **2026-11-04**, settled 2026-11-05 |
+
+Accepted par by line: 912810TC2 (2.000% 2041-11-15) **$4.924B** @ 66.781 · 912810SY5 (2.250% 2041-05-15)
+$0.950B @ 70.334 · 912810ST6 (1.375% 2040-11-15) $0.083B @ 62.530 · 912810TQ1 (3.875% 2043-02-15) $0.020B ·
+912810RD2 (3.750% 2043-11-15) $0.010B · 912810UJ5 (4.750% 2045-02-15) $0.008B · 912810UF3 (4.625% 2044-11-15)
+$0.005B. Sum $6.000B. As on 10-01 and 10-15, a deep book let Treasury take the cheapest low-coupon lines.
+
+### Forward tests scored
+
+- **`FT-…-1` — PASS.** Published maximum $6.000B ≥ $4.0B. The doubled cap covered its own end date.
+- **`FT-…-2` — PASS.** 100% fill. Sector record **28 of 29**; the enlarged-cap record is 3 full of 4.
+- **`FT-…-3` — PASS.** $39.636B offered ≥ $12.0B on a refunding-statement day, the larger of the two
+  such 10Y-20Y collisions on record (05-06: $19.69B).
+
+No new forward test is registered. Nothing here moves a kill list: no row was killed.
+
+### Tape, for context only (Yahoo daily closes; no attribution to a 1:40pm operation)
+
+The day carried the 08:30 refunding statement, ISM Services and ADP, one session after the midterms.
+^TNX 4.952 → **4.894**, ^TYX 5.324 → **5.282**, VIX 20.83 → **16.61** on 11-04. The next session's bar
+reads VIX **28.18** (11-05) with ^TNX 4.837; a web search found no wrap of that session, so no cause is
+claimed. Sizing for later operations was set by the refunding statement, assessed on
+[`treasury-refunding-2026-11-04`](treasury-refunding-2026-11-04.md): its tentative calendar sets
+**$6B/op** for 10Y-20Y and 20Y-30Y from 11-12, up from the lapsed window's $4B floor.
+
+**Loop stage a person still did (LEARNING-LOOP):** *sense*: comparing the published maximum with the
+schedule's floor was a manual read of `buybacks_operations`. A scripted per-operation scorecard (cap, fill,
+cover, issues) would turn every close-out in this family into a check.
+
+**Last assessed:** 2026-11-06
+<!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-minutes-2026-11-05","jobs-2026-11-06","treasury-3y-note-2026-11-09","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["jobs-2026-11-06"],"screenStreak":0} -->
