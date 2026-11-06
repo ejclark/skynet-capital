@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"Solve the print's thresholds from the published index levels and they hold to the release" (FT-productivity-costs-q3-2026-11-05-1, -2, -3)** — added 2026-11-06 from the
+  [productivity-costs-q3-2026-11-05 close-out](events/productivity-costs-q3-2026-11-05.md). The ledger's identity arithmetic was exact (151.663 ÷ 121.922 × 100 = 124.393), but every anchor
+  came from a vintage the 2026 NIPA annual update then revised: ULC y/y printed **2.4%** (called <2.0%), productivity y/y **2.1%** (called 1.0–2.0%), labor-share index **93.729**
+  (called <93.446). Do not register a level-keyed threshold on a BLS productivity release without checking whether BEA's annual update lands before it, and key it to the q/q SAAR instead.
+
 - **"A pre-announced quarter's reported figures land inside the company's own ranges" (FT-smci-fq1-2027-results-2026-11-03-1)** — added 2026-11-05 from the
   [smci-fq1-2027-results-2026-11-03 close-out](events/smci-fq1-2027-results-2026-11-03.md). SMCI's formal Q1 FY27 results (8-K Ex. 99.1) reported net sales **$19.9B** and GAAP gross margin
   **12.7%** against pre-announced $18.5-19.5B and 12.0-12.5%: both above the top. Do not treat a preliminary-and-unaudited range as a ceiling; it was a floor here.

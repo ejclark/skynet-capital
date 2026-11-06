@@ -386,6 +386,55 @@ every row; a dated adjacent event found gets proposed as a new `src/domain/marke
 (`status: "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.
 
+## Outcome
+
+**Close-out (2026-11-06, D+1; inside `closeOutWithinDays`).** Scored from the BLS Public Data API
+(`PRS85006091/093/102/111/112/113/173`, plus output/hours levels, fetched direct 2026-11-06) and the BLS
+release text (`bls.gov/news.release/prod2.nr0.htm`, WebFetch 2026-11-06), never from memory. The instrument
+caches were cleared first; neither instrument is keyed to a macro print, so there is no instrument cell.
+**All three registered forward tests are kills.** The calendar entry is untouched.
+
+**What printed (BLS, 2026-11-05 08:30 ET).** Nonfarm business productivity **+3.6% SAAR** (output **+3.7%**,
+hours **+0.1%**), **+2.1% y/y**. Hourly compensation **+2.9% SAAR**. Unit labor costs **−0.7% SAAR**, **+2.4% y/y**.
+Labor share **53.0%**, index **93.729**, *"the lowest level in the series, which begins in the first quarter of 1947"*.
+Identity check: 151.663 ÷ 121.922 × 100 = **124.393**, the published ULC index, so the arithmetic frame held.
+
+**The stance's own kill switch fired, and it was the revision, not the quarter.** The release states *"Data in
+this release reflect the 2026 Annual Update of the National Income and Product Accounts"* and that output-based
+measures were *"revised back to 2021"*. The base moved the way the ledger's last-listed switch said it could:
+Q2 2026 productivity index **120.017 → 120.862**, Q2 ULC index **123.979 → 124.600**, Q2 labor-share index
+**93.446 → 94.362**, 2025Q3 productivity index **118.884 → 119.464**, Q2 ULC y/y **1.4% → 2.6%**. The ledger solved
+every threshold against the old vintage, so the thresholds moved with it. Against the pre-print central case the
+misses decompose cleanly: **output** was right (~3.6% central vs 3.67% printed); **hours** was the large miss
+(~1.2% SAAR carried vs **0.11%** on the revised index); **compensation** landed inside the 3.2–5% grid (2.9% is just
+under it).
+
+**FT-1 — kill.** ULC y/y printed **2.4%**, not below 2.0%. The Q3 quarter itself was disinflationary (ULC **−0.7%**
+SAAR); the 2.4% is carried by the revised Q4 2025–Q2 2026 path (ULC q/q SAAR 4.7 · 3.7 · 1.9 revised), so the
+registered "margin, not price" reading failed at the 4-quarter window it named. **FT-2 — kill.** Productivity y/y
+**2.1%** (unrounded 121.922 ÷ 119.464 = **2.06%**) is above the 1.0–2.0% band by one revised-base tenth; per the
+row's own asymmetry that is the *channel widened* side. **FT-3 — kill on the letter.** Index **93.729 ≥ 93.446**.
+The spirit half held in the revised vintage (a new series low, 53.0%, down from 94.362) but "a sixth consecutive
+decline" did not: the revised 2025Q4 index (95.643) is *above* 2025Q3 (95.254), so the run is three declines, and
+the registered 93.446 anchor no longer exists in the published series. Scored as registered; the anchor
+problem is the lesson, not an excuse.
+
+**Sibling doc and the 11-10 carry.** [`eci-q3-2026-10-30`](eci-q3-2026-10-30.md)'s conditional (productivity y/y
+below ~1.0% *and* ULC y/y above ~2.5%) did **not** fire: productivity **2.1%**, ULC **2.4%**. The Stance's
+rewrite instruction attached to ULC ≥2.0% applies: every "margin story survives" statement in the repo should
+read as **"ULC y/y 2.4% on the revised base, with the quarter itself −0.7%"** before CPI 11-10 (not edited here;
+other ledgers are other owners). Read as an observation, not a trade signal: `symbols: []`, never a position.
+
+**Tape (Yahoo daily closes, secondary).** VIX **16.61 (11-04) → 28.18 (11-05)**; S&P 500 **7,688.62 → 7,353.73
+(−4.36%)**; 10y **4.89% → 4.84%**. A ULC print does not move the S&P 4%; **cause not found** (searched 2026-11-06,
+no coverage located), so none is attributed to this release. Jobs 11-06 08:30 ET is the next scheduled print.
+
+**Conviction claims.** None for this event (`conviction-proposals` and `intents` both empty at registration and
+at close-out). **Loop stage a person still did (LEARNING-LOOP):** *remember* — a Stance kill switch ("base
+revised") named a BLS annual-update risk but nothing watches BEA's annual-update date, so the pre-print pulses
+re-solved against a vintage that was already scheduled to change; a date-keyed "NIPA annual update lands before
+this print" check on the ledger's prerequisites would have flagged it at D-30.
+
 **Last assessed:** 2026-10-06
 <!-- probe-ref: {"symbols":{},"vix":15.52,"daysBand":"medium:8+","adjacentIds":["adp-employment-2026-11-04","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","sloos-2026-11-02","sp-global-investment-manager-index-2026-11-10","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["cpi-2026-11-10","jobs-2026-11-06"],"screenStreak":0} -->
 
@@ -418,3 +467,6 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-05
 <!-- probe-ref: {"symbols":{},"vix":16.61,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-investment-manager-index-2026-11-10","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","cpi-2026-11-10","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0} -->
+
+**Last assessed:** 2026-11-06
+<!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-investment-manager-index-2026-11-10","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","cpi-2026-11-10","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0} -->
