@@ -118,8 +118,8 @@ what hides or disables it (the fog ledger: `docs/FOG-OF-WAR.md`).
 | Needs-a-decision card | `Decision` `app/src/live/desk.ts:76` (`src/observatory/decisions-view.ts:43`) | rides `GET /api/desk/:id` | account · symbol · position · decision · date (as words: `clocks`, `decisions-view.ts:116-130`) | `primary.href` → `/trade?desk=&symbol=` (`decisions-view.ts:217`) | `MapLens` column `positions-lens.tsx:116` · the row's fact badge (`app/src/live/position-mark.ts`, drawn by `position-guidance-slot.tsx`; #5070) | — |
 | Consideration chip | `ConsiderationChip` `app/src/live/desk.ts:105` (`src/observatory/considerations-view.ts:24`) | rides `GET /api/desk/:id` (`desk-json-routes.ts:223-228`) | account · symbol · playbook | a house playbook matching a held symbol | **served, not rendered** — no component reads `Desk.considerations` (`desk.ts:195`) | — |
 | Activity event (fill) + reasoning | `DeskActivityEvent` / `ActivityReasoning` `app/src/live/desk.ts:256,279` (`src/observatory/desk-json-view.ts:312`) | `GET /api/desk/:id/activity` `src/server/desk-json-routes.ts:107,122` | account · order · symbol · date (`at`) · playbook (`reasoning.playbookId`) · decision (`reasoning`) | anchor `#act-<orderId>` (`desk.ts:332`) | `LedgerTable` `app/src/shell/ledger-table.tsx:24` (`accounts.tsx:107-123`) · `RecentOrdersStrip` `app/src/shell/recent-orders-strip.tsx:30` (`option-gate.tsx:535`, `trade-gate.tsx:386`) · `FormStrip` `app/src/shell/form-strip.tsx:57` (`networth-card.tsx:68`) | `available:false` without a ledger |
-| Order (working / recent) | `DeskOrderRow` / `DeskOrders` `app/src/live/orders.ts:19,44` | `GET /api/trade/orders?participantId=` `src/server/trade-orders-routes.ts:286`; cancel/replace `:290,277` | account · order · symbol · date (`submittedAt`) | `replaces` / `replacedBy` chain | `OrdersSection` `app/src/shell/orders-section.tsx:18` (`trade.tsx:339`) | unlinked / unreachable |
-| Order event (live) | `DeskOrderEvent` `app/src/live/desk-events.ts:18` | `GET /api/trade/events?participantId=` (SSE) `src/server/desk-events-route.ts:30` | account · order | promotes the ticket's headline to "filled" | `fillHeadline` `app/src/live/fill-headline.ts:24` | bus wired |
+| Order (working / recent) | `DeskOrderRow` / `DeskOrders` `app/src/live/orders.ts:19,44` | `GET /api/trade/orders?participantId=` `src/server/trade-orders-routes.ts:286`; cancel/replace `:290,277` | account · order · symbol · date (`submittedAt`) | `replaces` / `replacedBy` chain | `OrdersSection` `app/src/shell/orders-section.tsx:18` (`trade.tsx:339`) · `OrderReceipt` `app/src/shell/order-receipt.tsx:44` (the sent ticket, follows `replacedBy`) | unlinked / unreachable |
+| Order event (live) | `DeskOrderEvent` `app/src/live/desk-events.ts:18` | `GET /api/trade/events?participantId=` (SSE) `src/server/desk-events-route.ts:30` | account · order | promotes the sent ticket's receipt to "filled" | `readReceipt` `app/src/live/order-receipt.ts:123` | bus wired |
 | Alert | `DeskAlert` `app/src/live/alerts.ts:11` (`src/server/desk-alerts-route.ts:38`) | `GET /api/trade/alerts?participantId=` `src/server/desk-alerts-route.ts:31` | account · symbol? · date (`at`) | dismissed by `fingerprint` | `DeskAlerts` `app/src/shell/desk-alerts.tsx:67` (`orders-section.tsx:34`) | `dismissable` |
 | Pulse (recap) | `DeskPulse` `app/src/live/pulse.ts:61` (`src/observatory/pulse-json-view.ts:62`) | `GET /api/desk/:id/pulse` `src/server/desk-json-routes.ts:107` | account · date/range (weeks, curve) | streaks; the doubling race | `PulseBody` `app/src/routes/u.$id.pulse.tsx:129` — **desk only** | — |
 | Heartbeat | `Heartbeat` / `PlaybookHeartbeat` `app/src/live/heartbeat.ts:18,10` (`src/observatory/bot-heartbeat-view.ts:34,24`) | `GET /api/desk/:id/heartbeat` `src/server/desk-json-routes.ts:107` | account (bot) · playbook · date (`since`, `lastPassAt`) | one verdict per subscribed playbook | `PlaybooksHeadLine` `app/src/shell/heartbeat.tsx:33` — "● Running · 7 playbooks ›" on the Profile head's account row (`cockpit-head.tsx`, #5072) and on `/u/:id`'s head (`account-head.tsx`) · `BotPlaybooksSection` `app/src/shell/bot-playbooks.tsx:26` (`accounts.tsx:263`; the Heartbeat section merged into Playbooks, #5073) | bot accounts only (`accounts.tsx:78`) |
@@ -500,8 +500,8 @@ beside PATTERNS:117's falsifier.
   #1749), not a screen; the option ticket is the 390 pane and already carries Quote and the chain
   by construction; the lever-call line and the held contract are the two rows the scenarios ask it
   to carry; Bars stays a tap away (the returning trader skips the chart).
-- ◆ **Order event's order key is the joint to the book and the ladder**, with `fill-headline.ts`
-  as its carrier: Ticket × Order event is 9 steps where the fill, the rung and the book meet on
+- ◆ **Order event's order key is the joint to the book and the ladder**, with `order-receipt.ts`
+  (was `fill-headline.ts`) as its carrier: Ticket × Order event is 9 steps where the fill, the rung and the book meet on
   one order id ("filled" and rung 102 in the same fill).
 - ◆ **The incoming carrier is dry where it hurts.** The pager's `tradeHref` builds
   `?symbol=&strike=&exp=` — an *open* preset — for a held contract and bare `?symbol=` for shares
@@ -633,8 +633,8 @@ Claude-derived fork it overturns, row cited) ◆.
   Falsifier: Eric reading the two lists as one system and asking which he subscribes to → the
   chapter returns to Profile.
 - ◆ **The fill-row celebration renders only where the fill's account is the ladder's account** —
-  the ticket's `fillHeadline` already knows the traded account, so #469's ceremony rides there
-  first; `ledger-table.tsx` and `fill-headline.ts` render no earned/milestone today (verified,
+  the ticket's receipt (`readReceipt`) already knows the traded account, so #469's ceremony rides there
+  first; `ledger-table.tsx` and `order-receipt.tsx` render no earned/milestone today (verified,
   zero references), and once they do a bot's fill row would celebrate against `ownedIds[0]`'s
   ledger. The claim (`POST /api/learn/claim`) stays on the viewer-level surface until MISSING 33
   lands. `Journey.celebrating` mounts in the cockpit head (viewer-level, every section) with its

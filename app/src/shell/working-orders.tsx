@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { useDeskEvents } from "../live/desk-events";
@@ -68,19 +68,23 @@ function qtyLabel(row: DeskOrderRow): string {
 }
 
 /** The row's actions: Cancel (two taps — the button becomes its own confirm), and Modify on a
- *  working limit or stop, which opens the change drawer under the row (P1 1b). */
-function RowActions({
+ *  working limit or stop, which opens the change drawer under the row (P1 1b). Shared with the
+ *  ticket's receipt (`order-receipt.tsx`), where a bare "Cancel" beside "New ticket" could read as
+ *  dismissing the card — so it says "Cancel order" there (`cancelLabel`). */
+export function RowActions({
   row,
   onCancel,
   pending,
   modifying,
   setModifying,
+  cancelLabel = "Cancel",
 }: {
   readonly row: DeskOrderRow;
   readonly onCancel: (id: string) => Promise<void>;
   readonly pending: boolean;
   readonly modifying: boolean;
   readonly setModifying: (open: boolean) => void;
+  readonly cancelLabel?: string;
 }): ReactElement {
   const [armed, setArmed] = useState(false);
   if (armed) {
@@ -118,7 +122,7 @@ function RowActions({
         </button>
       ) : null}
       <button type="button" className="btn wo-btn" onClick={() => setArmed(true)}>
-        Cancel
+        {cancelLabel}
       </button>
     </span>
   );
@@ -185,13 +189,9 @@ function OrderRow({
 /** The poll that stands in when the event stream is absent or between reconnects. */
 export const FALLBACK_POLL_MS = 60_000;
 
-/** @category trading */
-export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactElement | null {
-  const queryClient = useQueryClient();
-  // The desk's own event stream re-reads this list the moment the bus sees a fill or a cancel
-  // (#3407 P4 slice 1); the poll below is the fallback for a deployment with no bus wired.
-  useDeskEvents(deskId);
-  const query = useQuery({
+/** The account's order list — one query, shared by this pane and the ticket's receipt. */
+export const deskOrdersQuery = (deskId: string) =>
+  queryOptions({
     queryKey: ["desk-orders", deskId],
     queryFn: () => fetchOrders(deskId),
     enabled: deskId !== "",
@@ -201,6 +201,14 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
     refetchInterval: (q) =>
       q.state.data?.available && q.state.data.working.length > 0 ? FALLBACK_POLL_MS : false,
   });
+
+/** @category trading */
+export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactElement | null {
+  const queryClient = useQueryClient();
+  // The desk's own event stream re-reads this list the moment the bus sees a fill or a cancel
+  // (#3407 P4 slice 1); the poll below is the fallback for a deployment with no bus wired.
+  useDeskEvents(deskId);
+  const query = useQuery(deskOrdersQuery(deskId));
   const [pendingId, setPendingId] = useState<string | undefined>();
   const [notice, setNotice] = useState<string | undefined>();
 

@@ -13,7 +13,7 @@
 // app-shell half, which imports the server's real `serveAppShell`, lives in `./shell.mjs` and needs
 // `tsx`.
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -25,18 +25,21 @@ import { join } from "node:path";
  * "Executable doesn't exist at …chromium_headless_shell-<pinned>". Hence the explicit candidates,
  * newest-first, with `undefined` (let Playwright resolve) as the honest last resort. Five scripts
  * carried their own copy of this list and two of them had already diverged; now the env image or the
- * pin moving changes exactly one file.
+ * pin moving changes exactly one file. The image moved again by 2026-11-06: `/opt/pw-browsers/chromium`
+ * is now the executable itself (no `chrome-linux/` beneath it), so it is a candidate only as a file.
  *
  * @returns {string | undefined} an executable path, or undefined to let Playwright resolve its own.
  */
 export function resolveChromium() {
+  const file = (p) => existsSync(p) && statSync(p).isFile();
   return [
     process.env.PW_CHROME,
     "/opt/pw-browsers/chromium/chrome-linux/chrome",
     "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+    "/opt/pw-browsers/chromium",
   ]
     .filter(Boolean)
-    .find((p) => existsSync(p));
+    .find(file);
 }
 
 /**
