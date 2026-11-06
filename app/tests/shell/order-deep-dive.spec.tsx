@@ -92,7 +92,10 @@ describe("OrderDeepDive — what it shows", () => {
     expect(document.querySelector(".pl-legend")).toHaveTextContent(
       "At expiry:loses below $77.45buys 100 at $80, still aheadkeeps $255 above $80",
     );
-    expect(document.querySelector(".dl")).toHaveTextContent(/Nov 6 · \d+ days? left|expired/);
+    // The fixture's expiry is a fixed date, so all three of daysLeft's words must read as a pass.
+    expect(document.querySelector(".dl")).toHaveTextContent(
+      /Nov 6 · (\d+ days? left|expires today)|expired/,
+    );
     expect(document.querySelector(".dd-cash")).toHaveTextContent("received +$255$8,000 set aside");
     const play = screen.getByRole("region", { name: "At Nov 6, the play" });
     expect(
