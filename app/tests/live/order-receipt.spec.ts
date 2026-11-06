@@ -4,6 +4,7 @@ import { marketSession } from "../../src/live/market-session";
 import {
   followRow,
   orderWords,
+  type ReceiptSources,
   readReceipt,
   receiptHeadline,
   receiptNote,
@@ -69,11 +70,19 @@ const row = (over: Partial<DeskOrderRow> = {}): DeskOrderRow => ({
   replaceable: true,
   ...over,
 });
-const headline = (
-  o: SentOrder,
-  r: DeskOrderRow | undefined,
-  f: Parameters<typeof readReceipt>[2],
-) => receiptHeadline(readReceipt(o, r, f), o.quantity, o.unit);
+type Frame = ReceiptSources["fill"];
+/** The receipt's read of a just-sent order: its echo, and whatever list row and frame exist. */
+const read = (o: SentOrder, r?: DeskOrderRow, f?: Frame, extra: Partial<ReceiptSources> = {}) =>
+  readReceipt({
+    orderId: o.orderId,
+    quantity: o.quantity,
+    echo: o.status,
+    ...(r ? { row: r } : {}),
+    ...(f ? { fill: f } : {}),
+    ...extra,
+  });
+const headline = (o: SentOrder, r?: DeskOrderRow, f?: Frame) =>
+  receiptHeadline(read(o, r, f), o.quantity, o.unit);
 
 describe("the order in words — never a UUID, a raw status or a raw contract symbol", () => {
   it("names the contract as a person reads it, then side · size · price · TIF", () => {
@@ -153,12 +162,51 @@ describe("where the order stands", () => {
   });
 });
 
+// The pre-open review of this change (2026-11-06): each case below was a wrong sentence it found.
+describe("the edges a stale or partial source would get wrong", () => {
+  it("never prints 'Filled — 0' when a fill frame carries no count and the list is stale", () => {
+    const countless = frame({ payload: { status: "filled" } });
+    expect(headline(order, row({ filledQuantity: 0 }), countless)).toBe("Filled — 5 shares");
+  });
+
+  it("says 'Partly filled' without inventing a count no source reported", () => {
+    const partial = frame({ eventType: "order.updated", payload: { status: "partially_filled" } });
+    expect(headline(order, undefined, partial)).toBe("Partly filled");
+  });
+
+  it("maps every status the order list maps — 'stopped' and 'suspended' end the order", () => {
+    for (const status of ["stopped", "suspended"]) {
+      expect(headline({ ...order, status }, undefined, undefined)).toBe(
+        "Cancelled — nothing filled",
+      );
+    }
+  });
+
+  it("holds a cancel the member sent until the broker confirms it, and lets the confirmation win", () => {
+    const sent = read(order, row(), undefined, { cancelSent: true });
+    expect(receiptHeadline(sent, 5, "shares")).toBe("Cancel requested — waiting for the broker");
+    const done = read(order, row({ state: "cancelled" }), undefined, { cancelSent: true });
+    expect(receiptHeadline(done, 5, "shares")).toBe("Cancelled — nothing filled");
+  });
+
+  it("never lends the submit's echo to a modify's successor", () => {
+    const successor = readReceipt({ orderId: "o-9", quantity: 5, row: row({ id: "o-9" }) });
+    expect(receiptHeadline(successor, 5, "shares")).toBe("Order placed — not filled yet");
+  });
+
+  it("states the effect the server reviewed, never an assumed 'to open'", () => {
+    expect(orderWords({ ...put, side: "buy", intent: "buy_to_close" }).terms).toMatch(
+      /^Buy to close · 20 contracts/,
+    );
+  });
+});
+
 // #6257: the done note said "simulated fill" before any fill existed.
 describe("the note", () => {
   const open = marketSession(new Date("2026-10-27T15:00:00Z")); // Tue 11:00 ET
   const closed = marketSession(new Date("2026-10-27T00:00:00Z")); // Mon 8:00 p.m. ET
   const note = (fill: ReturnType<typeof frame> | undefined, market = open, r?: DeskOrderRow) =>
-    receiptNote(readReceipt(order, r, fill), market);
+    receiptNote(read(order, r, fill), market);
 
   it("says queued, with the open it waits for, while the market is closed and nothing filled", () => {
     expect(note(undefined, closed)).toBe("Queued — nothing fills before the Tue 9:30 ET open.");
@@ -231,16 +279,18 @@ describe("a status-less frame never reads as filled", () => {
     );
 
   it("reads the server's cancel frame as a cancel request, headline and note agreeing", () => {
-    const read = readReceipt(order, row(), audit("cancel"));
-    expect(receiptHeadline(read, 5, "shares")).toBe("Cancel requested — waiting for the broker");
-    const note = receiptNote(read, open);
+    const requested = read(order, row(), audit("cancel"));
+    expect(receiptHeadline(requested, 5, "shares")).toBe(
+      "Cancel requested — waiting for the broker",
+    );
+    const note = receiptNote(requested, open);
     expect(note).toMatch(/^Cancel requested/);
     expect(note).not.toMatch(/Queued|simulated fill/);
   });
 
   it("lets the broker's confirmed cancel outrank the request", () => {
-    const read = readReceipt(order, row({ state: "cancelled" }), audit("cancel"));
-    expect(receiptHeadline(read, 5, "shares")).toBe("Cancelled — nothing filled");
+    const confirmed = read(order, row({ state: "cancelled" }), audit("cancel"));
+    expect(receiptHeadline(confirmed, 5, "shares")).toBe("Cancelled — nothing filled");
   });
 
   it("earns nothing from the submission's own audit frame", () => {

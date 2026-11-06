@@ -467,6 +467,7 @@ export function OptionGate({
         side: preview.side,
         quantity: preview.contracts,
         unit: "contracts",
+        intent: preview.positionIntent,
         orderType: preview.orderType,
         ...(preview.limitPrice === undefined ? {} : { limitPrice: preview.limitPrice }),
         timeInForce: result.timeInForce ?? preview.timeInForce,

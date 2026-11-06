@@ -1,3 +1,4 @@
+import { brokerStatusState } from "../../../src/server/desk-orders-view";
 import { humanizeOptionSymbol } from "../../../src/trading/option-symbols";
 import type { DeskOrderEvent } from "./desk-events";
 import { type MarketSessionView, waitsForOpen } from "./market-session";
@@ -37,6 +38,8 @@ export interface SentOrder {
   readonly limitPrice?: number;
   readonly stopPrice?: number;
   readonly timeInForce?: string;
+  /** An option order's effect as the server reviewed it — "sell_to_open", "buy_to_close". */
+  readonly intent?: string;
 }
 
 /** Where the order stands: the order list's own states, plus a cancel the broker hasn't confirmed. */
@@ -50,19 +53,9 @@ export interface ReceiptRead {
   readonly price?: number;
 }
 
-/** The broker's status words, mapped as the order list maps them (`desk-orders-view.ts`). */
-const STATUS: Record<string, DeskOrderState> = {
-  filled: "filled",
-  partially_filled: "partial",
-  replaced: "replaced",
-  canceled: "cancelled",
-  cancelled: "cancelled",
-  done_for_day: "cancelled",
-  rejected: "rejected",
-  expired: "expired",
-};
-
-const statusState = (status: string): DeskOrderState => STATUS[status] ?? "working";
+/** A broker status word, mapped by the order list's own table (`desk-orders-view.ts`) so the two
+ *  never disagree; a word it can't name is still live here — nothing has ended it. */
+const statusState = (status: string): DeskOrderState => brokerStatusState(status) ?? "working";
 
 /** How far along each state is — the furthest-along source wins, so a stale read never
  *  un-fills an order the stream already reported. */
@@ -119,12 +112,26 @@ export function followRow(
   return row;
 }
 
-/** Where the order stands — the furthest-along of the list's row, the stream's frame and the echo. */
-export function readReceipt(
-  order: SentOrder,
-  row: DeskOrderRow | undefined,
-  fill: DeskOrderEvent | undefined,
-): ReceiptRead {
+/** What the receipt reads its order from. */
+export interface ReceiptSources {
+  /** The order's id now — a modify answers with a new one. */
+  readonly orderId: string;
+  /** Its size now — the sent size, or the modify's. */
+  readonly quantity: number;
+  /** The submit's echo status — only while the order is still the one submitted; a modify's
+   *  successor never inherits it. */
+  readonly echo?: string;
+  readonly row?: DeskOrderRow;
+  readonly fill?: DeskOrderEvent;
+  /** The gate accepted the member's cancel and the broker has not confirmed it yet. */
+  readonly cancelSent?: boolean;
+}
+
+/** Where the order stands — the furthest-along of the list's row, the stream's frame, the echo and
+ *  a cancel the member sent from the receipt. Filled quantities only grow, so the largest any
+ *  source reports is the honest one — a stale list's 0 never undercuts a frame's fill. */
+export function readReceipt(sources: ReceiptSources): ReceiptRead {
+  const { orderId, quantity, echo, row, fill, cancelSent } = sources;
   const listed: ReceiptRead | undefined = row
     ? {
         state: row.state,
@@ -132,12 +139,18 @@ export function readReceipt(
         ...(row.avgFillPrice === undefined ? {} : { price: row.avgFillPrice }),
       }
     : undefined;
-  const ownFrame = fill && fill.orderId === (row?.id ?? order.orderId) ? fill : undefined;
-  const pushed = ownFrame ? frameRead(ownFrame, row?.quantity ?? order.quantity) : undefined;
-  const echo: ReceiptRead = { state: statusState(order.status) };
-  const reads = [listed, pushed, echo].filter((r): r is ReceiptRead => r !== undefined);
-  const lead = reads.reduce((best, r) => (RANK[r.state] > RANK[best.state] ? r : best));
-  const filled = lead.filled ?? reads.find((r) => r.filled !== undefined)?.filled;
+  const ownFrame = fill && fill.orderId === (row?.id ?? orderId) ? fill : undefined;
+  const pushed = ownFrame ? frameRead(ownFrame, row?.quantity ?? quantity) : undefined;
+  const echoed: ReceiptRead | undefined =
+    echo === undefined ? undefined : { state: statusState(echo) };
+  const requested: ReceiptRead | undefined = cancelSent ? { state: "cancel-requested" } : undefined;
+  const reads = [listed, pushed, echoed, requested].filter(
+    (r): r is ReceiptRead => r !== undefined,
+  );
+  const floor: ReceiptRead = { state: "working" };
+  const lead = reads.reduce((best, r) => (RANK[r.state] > RANK[best.state] ? r : best), floor);
+  const counts = reads.flatMap((r) => (r.filled === undefined ? [] : [r.filled]));
+  const filled = counts.length > 0 ? Math.max(...counts) : undefined;
   const price = lead.price ?? reads.find((r) => r.price !== undefined)?.price;
   return {
     state: lead.state,
@@ -166,6 +179,10 @@ export function orderWords(
 ): { readonly instrument: string; readonly terms: string } {
   const option = order.unit === "contracts";
   const side = terms.side === "sell" ? "Sell" : "Buy";
+  // "sell_to_open" → "Sell to open": the effect the server reviewed, never assumed.
+  const effect = order.intent
+    ? order.intent.charAt(0).toUpperCase() + order.intent.slice(1).replace(/_/g, " ")
+    : `${side} to open`;
   const { stopPrice: stop, limitPrice: limit } = terms;
   // One price reads beside its order type ("Limit $20.00"); a stop-limit names both.
   const price =
@@ -178,7 +195,7 @@ export function orderWords(
   return {
     instrument: option ? humanizeOptionSymbol(order.symbol) : order.symbol,
     terms: [
-      option ? `${side} to open` : side,
+      option ? effect : side,
       countWords(terms.quantity, order.unit),
       `${orderTypeLabel(terms.orderType)}${price}`,
       ...(tif ? [tif] : []),
@@ -197,9 +214,10 @@ export function receiptHeadline(
   const partly = `${read.filled} of ${countWords(quantity, unit)} filled`;
   switch (read.state) {
     case "filled":
-      return `Filled — ${countWords(read.filled ?? quantity, unit)}${at}`;
+      // A fill frame with no count still filled the order — the whole of it.
+      return `Filled — ${countWords(some ? (read.filled ?? quantity) : quantity, unit)}${at}`;
     case "partial":
-      return `Partly filled — ${partly}${at}`;
+      return some ? `Partly filled — ${partly}${at}` : `Partly filled${at}`;
     case "cancel-requested":
       return "Cancel requested — waiting for the broker";
     case "cancelled":

@@ -180,7 +180,7 @@ describe("WorkingOrders", () => {
       expect(replaces).toEqual([{ id: "o-1", change: { limitPrice: 172, timeInForce: "day" } }]),
     );
     await waitFor(() =>
-      expect(screen.getByText(/replaced o-1 with o-9 \(pending replace\)/)).toBeInTheDocument(),
+      expect(screen.getByText(/replaced the order \(pending replace\)/)).toBeInTheDocument(),
     );
     expect(screen.queryByLabelText("Shares")).not.toBeInTheDocument();
   });

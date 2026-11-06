@@ -1,7 +1,7 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import { useOrderFill } from "../live/desk-events";
 import { manageSearch } from "../live/manage-handoff";
@@ -16,12 +16,15 @@ import {
   receiptTone,
   type SentOrder,
 } from "../live/order-receipt";
-import { cancelOrder, type DeskOrderRow, type OrderChange, replaceOrder } from "../live/orders";
+import type { DeskOrderRow, OrderChange } from "../live/orders";
 import { useFillFlare } from "./fill-flare";
 import { GateHead } from "./gate-frame";
 import { useNow } from "./market-session";
 import { ModifyForm } from "./working-order-modify";
-import { deskOrdersQuery, RowActions } from "./working-orders";
+import { deskOrdersQuery, FALLBACK_POLL_MS, RowActions, useOrderActions } from "./working-orders";
+
+/** How often the receipt asks for its order until the broker lists it — a moment, not a minute. */
+const LISTING_POLL_MS = 5_000;
 
 /**
  * THE TICKET BECOMES ITS RECEIPT (Eric, 2026-11-06: "After completing execution of a trade, it's
@@ -53,48 +56,63 @@ export function OrderReceipt({
   /** A ticket's own extra receipt line (the option ticket's exit plan). */
   readonly children?: ReactNode;
 }): ReactElement {
-  const queryClient = useQueryClient();
-  /** The order's id now — a modify answers with a new one, and the card follows it. */
-  const [orderId, setOrderId] = useState(order.orderId);
-  const orders = useQuery(deskOrdersQuery(deskId));
-  const row = followRow(orders.data, orderId);
-  const fill = useOrderFill(deskId, row?.id ?? orderId);
+  /** The order now — a modify answers with a new id and new terms, and the card follows both. */
+  const [now, setNow] = useState(order);
+  const nowId = useRef(now.orderId);
+  nowId.current = now.orderId;
+  const orders = useQuery({
+    ...deskOrdersQuery(deskId),
+    // Its own poll, not the pane's (which rests when no OTHER order is working): every few
+    // seconds until the broker lists this order, slowly while it is live, never once it ends —
+    // the stream re-reads it at once where a bus is wired.
+    refetchInterval: (q) => {
+      if (q.state.data?.available === false) return false;
+      const listed = followRow(q.state.data, nowId.current);
+      if (!listed) return LISTING_POLL_MS;
+      return isLive(listed.state) ? FALLBACK_POLL_MS : false;
+    },
+  });
+  const row = followRow(orders.data, now.orderId);
+  const fill = useOrderFill(deskId, row?.id ?? now.orderId);
   useFillFlare(fill);
   const market = marketSession(useNow());
-  const read = readReceipt({ ...order, orderId }, row, fill);
-  const quantity = row?.quantity ?? order.quantity;
-  const words = orderWords(order, row ?? order);
-  const [pending, setPending] = useState(false);
+  const { pendingId, notice, cancel, replace } = useOrderActions(deskId);
+  /** The gate took the member's cancel; until the broker confirms it the card says so, and offers
+   *  no second cancel. */
+  const [cancelSent, setCancelSent] = useState(false);
+  const read = readReceipt({
+    orderId: now.orderId,
+    quantity: row?.quantity ?? now.quantity,
+    // The submit's echo speaks for the order it answered, never for a modify's successor.
+    ...(now.orderId === order.orderId ? { echo: order.status } : {}),
+    ...(row ? { row } : {}),
+    ...(fill ? { fill } : {}),
+    cancelSent,
+  });
+  const quantity = row?.quantity ?? now.quantity;
+  const words = orderWords(now, row ?? now);
   const [modifying, setModifying] = useState(false);
-  const [notice, setNotice] = useState<string | undefined>();
 
-  const settle = async (send: () => Promise<string>) => {
-    setPending(true);
-    setNotice(undefined);
-    try {
-      setNotice(await send());
-    } catch (error) {
-      setNotice(`Couldn't reach the gate — ${String(error)}`);
-    } finally {
-      setPending(false);
-      await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
-    }
+  const onCancel = async (id: string) => {
+    const answer = await cancel(id);
+    if (answer?.ok) setCancelSent(true);
   };
-  const onCancel = (id: string) =>
-    settle(async () => {
-      const result = await cancelOrder(deskId, id);
-      return result.ok ? "Cancel sent to the broker." : result.refusals.join(" ");
-    });
-  // The drawer closes and the card follows the broker's new id on success; a refusal keeps the
-  // drawer open with the server's sentence in the notice.
-  const onChange = (live: DeskOrderRow) => (change: OrderChange) =>
-    settle(async () => {
-      const result = await replaceOrder(deskId, live.id, change);
-      if (!result.ok) return result.refusals.join(" ");
-      setOrderId(result.orderId);
+  // The drawer closes and the card follows the broker's new id and the changed terms on success;
+  // a refusal keeps the drawer open with the server's sentence in the notice.
+  const onChange = (live: DeskOrderRow) => async (change: OrderChange) => {
+    const answer = await replace(live.id, change);
+    if (answer?.ok) {
+      setNow((sent) => ({ ...sent, ...change, orderId: answer.orderId }));
       setModifying(false);
-      return "Change sent — the broker swaps in the changed order.";
-    }).then(() => undefined);
+    }
+    return answer;
+  };
+  const listedNote =
+    orders.data?.available === false
+      ? orders.data.reason === "unlinked"
+        ? "Modify and Cancel work through your own connected account, and this session isn't linked to one."
+        : "Couldn't reach the broker's order list just now — Modify and Cancel come back when it answers."
+      : "Modify and Cancel appear here once the broker lists the order.";
 
   const underlying = parseOccSymbol(order.symbol)?.underlying ?? order.symbol;
   return (
@@ -109,7 +127,7 @@ export function OrderReceipt({
           <p className="gate-note">{receiptNote(read, market)}</p>
           {children}
           <p className="receipt-ref">
-            Order ref <span className="num">{orderId.slice(0, 8)}</span>
+            Order ref <span className="num">{now.orderId.slice(0, 8)}</span>
           </p>
         </div>
       </div>
@@ -119,7 +137,7 @@ export function OrderReceipt({
             <RowActions
               row={row}
               onCancel={onCancel}
-              pending={pending}
+              pending={pendingId === row.id}
               modifying={modifying}
               setModifying={setModifying}
               cancelLabel="Cancel order"
@@ -127,14 +145,14 @@ export function OrderReceipt({
             {modifying ? (
               <ModifyForm
                 row={row}
-                busy={pending}
+                busy={pendingId === row.id}
                 onSend={onChange(row)}
                 onClose={() => setModifying(false)}
               />
             ) : null}
           </div>
         ) : (
-          <p className="tkt-note">Modify and Cancel appear here once the broker lists the order.</p>
+          <p className="tkt-note">{listedNote}</p>
         )
       ) : null}
       {read.state === "filled" ? (

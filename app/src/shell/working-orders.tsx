@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { useDeskEvents } from "../live/desk-events";
 import {
+  type CancelResult,
   cancelOrder,
   type DeskOrderRow,
   type DeskOrderState,
@@ -202,43 +203,27 @@ export const deskOrdersQuery = (deskId: string) =>
       q.state.data?.available && q.state.data.working.length > 0 ? FALLBACK_POLL_MS : false,
   });
 
-/** @category trading */
-export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactElement | null {
+/**
+ * Cancel and change for one account's orders — the one copy the Orders pane and the ticket's
+ * receipt share: which order is in flight, the notice line (the server's own sentence on a
+ * refusal), and a re-read of the list once the gate answers. Each returns the gate's answer, or
+ * undefined when the gate could not be reached.
+ */
+export function useOrderActions(deskId: string) {
   const queryClient = useQueryClient();
-  // The desk's own event stream re-reads this list the moment the bus sees a fill or a cancel
-  // (#3407 P4 slice 1); the poll below is the fallback for a deployment with no bus wired.
-  useDeskEvents(deskId);
-  const query = useQuery(deskOrdersQuery(deskId));
   const [pendingId, setPendingId] = useState<string | undefined>();
   const [notice, setNotice] = useState<string | undefined>();
-
-  if (deskId === "" || !query.data) return null;
-
-  const onCancel = async (id: string) => {
+  const run = async <T,>(
+    id: string,
+    send: () => Promise<T>,
+    say: (answer: T) => string,
+  ): Promise<T | undefined> => {
     setPendingId(id);
     setNotice(undefined);
     try {
-      const result = await cancelOrder(deskId, id);
-      setNotice(result.ok ? "Cancel sent to the broker." : result.refusals.join(" "));
-    } catch (error) {
-      setNotice(`Couldn't reach the gate — ${String(error)}`);
-    } finally {
-      setPendingId(undefined);
-      await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
-    }
-  };
-
-  const onReplace = async (id: string, change: OrderChange) => {
-    setPendingId(id);
-    setNotice(undefined);
-    try {
-      const result = await replaceOrder(deskId, id, change);
-      setNotice(
-        result.ok
-          ? `Change sent — the broker replaced ${result.replaces} with ${result.orderId} (${result.status.replace(/_/g, " ")}).`
-          : result.refusals.join(" "),
-      );
-      return result;
+      const answer = await send();
+      setNotice(say(answer));
+      return answer;
     } catch (error) {
       setNotice(`Couldn't reach the gate — ${String(error)}`);
       return undefined;
@@ -246,6 +231,37 @@ export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactEle
       setPendingId(undefined);
       await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
     }
+  };
+  const cancel = (id: string): Promise<CancelResult | undefined> =>
+    run(
+      id,
+      () => cancelOrder(deskId, id),
+      (r) => (r.ok ? "Cancel sent to the broker." : r.refusals.join(" ")),
+    );
+  const replace = (id: string, change: OrderChange): Promise<ReplaceResult | undefined> =>
+    run(
+      id,
+      () => replaceOrder(deskId, id, change),
+      (r) =>
+        r.ok
+          ? `Change sent — the broker replaced the order (${r.status.replace(/_/g, " ")}).`
+          : r.refusals.join(" "),
+    );
+  return { pendingId, notice, cancel, replace };
+}
+
+/** @category trading */
+export function WorkingOrders({ deskId }: { readonly deskId: string }): ReactElement | null {
+  // The desk's own event stream re-reads this list the moment the bus sees a fill or a cancel
+  // (#3407 P4 slice 1); the poll below is the fallback for a deployment with no bus wired.
+  useDeskEvents(deskId);
+  const query = useQuery(deskOrdersQuery(deskId));
+  const { pendingId, notice, cancel, replace: onReplace } = useOrderActions(deskId);
+
+  if (deskId === "" || !query.data) return null;
+
+  const onCancel = async (id: string) => {
+    await cancel(id);
   };
 
   const data = query.data;
