@@ -71,6 +71,19 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"The strip is pricing a hike no forecaster the Bank asks expects, so the meeting holds" (FT-boe-decision-2026-11-05-1)** — added 2026-11-06 from the
+  [boe-decision-2026-11-05 close-out](events/boe-decision-2026-11-05.md). The MPC raised Bank Rate 25bp to **4%** on an **8–1** vote. Do not take the under on a central-bank strip off surveys and
+  polls that close before the bank resets its own projection: the 17 Sep reset moved the strip from 54% to 85% hike and every hold-side read pre-dated it.
+
+- **"A forecast round's two-year modal CPI prints below 2.0% because the curve rose" (FT-boe-decision-2026-11-05-2)** — added 2026-11-06 from the
+  [boe-decision-2026-11-05 close-out](events/boe-decision-2026-11-05.md). Table 3.B read **2.0%** at 2028 Q4 (July: 1.9) and the Bank's conditioning path rose to 4.9% end-2027. Do not read a
+  higher market curve as a deeper projected undershoot: an energy shock raises the projection and the curve together. The registered baseline also had no like-for-like cell (July's Q3-2028 1.8%
+  against a Report that prints year-end quarters only); register the printed quarter.
+
+- **"The hawkish dissent is a stable minority of three or fewer through a forecast round" (FT-boe-decision-2026-11-05-3)** — added 2026-11-06 from the
+  [boe-decision-2026-11-05 close-out](events/boe-decision-2026-11-05.md). All **nine** voted to raise (8 for +25bp, Mann for +50bp). Do not carry a bloc size across a meeting where the committee's
+  own projection reset; three consecutive meetings of growth plus two hold-side speeches (09-24) were the trend, and the registration called it the weakest test.
+
 - **"A pre-announced quarter's reported figures land inside the company's own ranges" (FT-smci-fq1-2027-results-2026-11-03-1)** — added 2026-11-05 from the
   [smci-fq1-2027-results-2026-11-03 close-out](events/smci-fq1-2027-results-2026-11-03.md). SMCI's formal Q1 FY27 results (8-K Ex. 99.1) reported net sales **$19.9B** and GAAP gross margin
   **12.7%** against pre-announced $18.5-19.5B and 12.0-12.5%: both above the top. Do not treat a preliminary-and-unaudited range as a ceiling; it was a floor here.
