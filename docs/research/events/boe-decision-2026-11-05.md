@@ -347,6 +347,7 @@ that would price one.
 | 2026-11-01 | D-4 | **Deterministic screen (no Claude session).** Readings — VIX 19.4 (-0.3pt since last), band unchanged (medium:0+), 39 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-03 |
 | 2026-11-03 | D-2 | **Deterministic screen (no Claude session).** Readings — VIX 21.1 (+1.7pt since last), band unchanged (medium:0+), 39 adjacent event(s) tracked. Nothing tracked crossed its threshold. | — (screen; no assessment made) | 2026-11-05 |
 | 2026-11-05 | D-0 | **Headline: pre-announcement read at ~00:55 UTC (before the 12:00 London vote) — consensus is a 25bp hike to 4.00%; nothing in the tape moves the lean, and no outcome is scored here.** Reuters poll (press, search-relayed, dated 11-05): **7–2** for +25bp, first rise since 2023; Deutsche Bank **6–3**; the Oct poll was 54 of 63. Yahoo UK (fetched, 11-01): hike "widely expected"; ICAEW expects a "mixed" forecast picture (slightly stronger growth this year, weaker later). Press: markets price **at least three** 25bp rises in 2027, economists far fewer — the MPR path is the uncertain part. Strip %: **not refreshed** (centralbank.watch **404**, blocked; a prediction-market page unusable, outcome labels missing). Leg-4 baseline stays **1.8%** (2y), FT-…-2 threshold 2.0%. **Not read:** the decision, vote, MPR table. Adjacency: **peers** none (`symbols: []`); **macro** — none new UK; **VIX 16.61** (Yahoo, 11-04 close; 11-03 21.15 screen) **−4.5pt**, a US regime easing, driver unverified (midterm/refunding outcomes not fetched); **geopolitical** — Iran/energy still the transmission; **tape** — 39 events within 5 days, strong: AMD 11-03, ISM mfg 11-02, jobs 11-06, CBRS lockup 11-09, CPI 11-10; US tape needs the midterms/refunding ruled out first. GBP/USD ~1.349 (page ticker, undated). Nothing proposed (BoE 12-17 and the rest are already listed; nothing new dated in horizon). Conviction proposals none; declared intents none. | — (Medium hike lean unchanged; no position; all four FTs stay open to 11-06) | 2026-11-06 (close-out reads the 12:00 London decision, vote split and MPR table) |
+| 2026-11-06 | D+1 | **Close-out.** Bank Rate **+25bp to 4%**, **8–1** (Mann for +50bp); November MPR Table 3.B CPI 2028 Q4 **2.0** (July 1.9). FT-…-1 kill · -2 kill · -3 kill · -4 pass; channel kill not fired. See `## Outcome`. Adjacency: **VIX 28.18** (Yahoo, 11-05 close; 16.61 on 11-04, +11.6pt) and a US chip crash, driver not the BoE. | — (closed; scored in `## Outcome`) | none (closed; the doc reopens only for a registered forward test) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -381,3 +382,57 @@ which this doc goes quiet.
 
 **Last assessed:** 2026-11-05
 <!-- probe-ref: {"symbols":{},"vix":16.61,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-investment-manager-index-2026-11-10","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","cpi-2026-11-10","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0,"blocked":[{"url":"https://www.centralbank.watch/en/banks/bank-of-england","status":404,"at":"2026-11-05"}]} -->
+
+## Outcome
+
+**Close-out (2026-11-06, D+1 — inside the `closeOutWithinDays` deadline).** Macro-print mode has no
+`earnings-cycle` / `intraday-edges` mode (`symbols: []` by design); the cache was busted first per
+the lane's rule, though nothing here reads it. "Re-run instrument data" for this event means
+re-fetching every cited source direct on 2026-11-06: the Bank's own November 2026 Monetary Policy
+Summary and Minutes page (HTTP 200), the November 2026 Monetary Policy Report PDF (Table 3.B and the
+projection text) and Yahoo's daily and 5-minute bars for the tracked names, `^VIX` and GBP/USD.
+
+**The headline verdict: the strip was right and this ledger's 09-09 hold lean was wrong — three of
+four registered tests are kills, and the one pass is the mirror.** The MPC voted **8–1** to raise Bank
+Rate **25bp from 3.75% to 4%** (BoE primary, published 5 Nov). Eight members chose +25bp (Bailey,
+Breeden, Dhingra, Greene, Lombardelli, Pill, Ramsden, Taylor); Catherine Mann alone voted for **+50bp
+to 4.25%**. All nine voted to raise. The 10-06 reversal to a hike lean, made on the 17 Sep reset, was
+the right call and is the part of this ledger worth keeping; the 09-09 "take the under" was a
+stale-evidence miss that the ledger itself named as its objection leg and withdrew four weeks
+early.
+
+**The forecast round said the opposite of what FT-2 registered.** Table 3.B (central projection,
+conditioned on the market curve) reads CPI **3.8% at 2026 Q4, 4.0% at 2027 Q4, 2.0% at 2028 Q4,
+1.8% at 2029 Q4**; the July equivalents were **3.2 / 2.1 / 1.9 / n.a.**. CPI peaks "around 5%" in
+2027 Q2 and returns to target in 2028 Q3. The two-year point is therefore **at** 2.0%, which meets the
+kill ("at or above 2.0%"), and the registered direction (undershoot deepens as the curve rises) was
+wrong: the Bank's own conditioning path is higher (Bank Rate **4.9%** end-2027 against July's 4.2%) and
+the projection **rose**, not fell. Only the three-year point (1.8%) kept the shape. Two caveats stay
+on the record: the Report prints year-end quarters only, so the July baseline of 1.8% (a Q3 2028
+reading) has no like-for-like November cell and the Projections Databank was not fetched; and 2.0 is a
+one-decimal rounding. Neither changes the call, but a reader should know the margin is zero.
+
+**Channel kill: not fired.** NVDA, AVGO and MRVL fell **2.4%, 2.8% and 3.8%** between 06:55 and 09:30
+ET on 11-05 (CRWV **−1.2%**), so the >2% condition on the price alone is met for three names. The
+condition's second half, "a way the tape attributes to the BoE", is not: the day was a US chip crash
+(Nasdaq Composite **−5.52%**, S&P 500 **−4.35%**; NVDA close **−9.3%**, AVGO **−10.4%**, MRVL
+**−16.4%**, CRWV **−9.8%**; VIX **28.18** from 16.61), which press attributes to fears that a Democratic
+Congress will regulate data centres plus a large Marvell all-stock acquisition (search-relayed,
+Schwab, CNBC and Investing.com snippets; not fetched in full). The US 10-year yield **fell** (4.89 to
+4.84), GBP/USD was flat to up on the print (1.3451 at 11:45 UTC, 1.3476 at 12:00), and a hike that
+was already ~99% priced did not move a US equity book. The "no price channel" premise holds; the
+anti-attribution rule worked, because the midterms ruled out the BoE before the BoE had to.
+
+**Scoreboard.** FT-…-1 **kill** · FT-…-2 **kill** · FT-…-3 **kill** · FT-…-4 **pass**, each with
+its evidence in [its own fragment](../forward-tests/boe-decision-2026-11-05.md); the three kills are
+on the sweep doc's kill list. `conviction-proposals` and `intents` for this event: none. Open: the
+next BoE meeting is **2026-12-17** (est), now a live second hike rather than a residual, on its own
+ledger; the Report's market path (Bank Rate 4.9% end-2027) is the number to carry there.
+
+**What a person still had to do (loop census).** *Sense* and *verify* were manual: the centralbank.watch
+strip stayed 404 from 10-13 on, so the last five rows leaned on press-relayed odds, and the Report's
+two-year cell needed a PDF parse by hand. Both are the same gap: no committed fetcher for the Bank's
+own Table 3.B. Not built here (a close-out ships one ledger); noted for the next BoE MPR round.
+
+**Last assessed:** 2026-11-06
+<!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-investment-manager-index-2026-11-10","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","cpi-2026-11-10","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0,"blocked":[]} -->

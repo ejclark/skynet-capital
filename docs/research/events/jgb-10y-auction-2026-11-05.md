@@ -488,3 +488,90 @@ data (cache busted first), never from memory — after which this doc goes quiet
 
 **Last assessed:** 2026-11-02
 <!-- probe-ref: {"symbols":{},"vix":18.93,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","productivity-costs-q3-2026-11-05","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-investment-manager-index-2026-11-10","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cpi-2026-11-10","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jobs-2026-11-06","midterm-elections-2026-11-03"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-06, D+1).** Rates mode runs no `earnings-cycle` / `intraday-edges` instrument
+(`symbols: []` by design); the cache was busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) though nothing here
+reads it. Every figure below was fetched today, never carried from an earlier row. MOF's HTML pages
+answer `curl` with an Incapsula 503, so they were read through WebFetch (a summarising reader, not a
+byte parse); the 10-06 result page read the same way reproduced this ledger's earlier row exactly
+(¥7,401.1bn / ¥1,966.1bn, 3.103% / 3.101%), which is the check on the reader.
+
+### What happened
+
+MOF primaries. The announcement `calendar/announcement/auct20261029e.htm` (dated **October 29, 2026**,
+D-7) reads auction 2026-11-05, issue 2026-11-06, maturity **September 20, 2036**, **"About 2,600
+billion yen"**. The November calendar `2611e.htm` prints **`10-year (384)`** on the Nov. 5 row. The
+result (the calendar's `eresul20261105.htm` link 404s; the full table is on `eresul20261105a.htm`)
+prints issue **384**, coupon **3.1%**, competitive bids **¥6,335.5bn** against **¥1,971.9bn**
+accepted (**cover 3.21x**), lowest accepted price 102.32 (yield **2.800%**), weighted average 102.57
+(yield **2.768%**) — **tail 3.2bp**, lowest-to-average price gap **0.25** — NPC I ¥626.6bn, NPC II
+¥243.9bn.
+
+Against the 10-06 opening of the same issue: cover **3.76x → 3.21x**, tail **0.2bp → 3.2bp**,
+average yield **3.101% → 2.768%** (−33.3bp), price gap **0.02 → 0.25**. A softer auction on this
+ledger's own live calibration (weak is cover < 2.71x or tail ≥ 2.58bp), but only the tail leg: the
+cover sits between the weak line and the strong line (3.66x).
+
+### Forward tests
+
+- **FT-3 (issue 384 opens 10-06, 11-05 is its first reopening) — pass.** Result pages for 10-06 and
+  11-05 both read issue 384, maturity 2036-09-20; the calendar row reads `10-year (384)`.
+- **FT-4 (terms published 10-29, About ¥2,600bn) — pass.** A fifth straight seven-day lead.
+- **FT-1 (score-by 2026-12-10), FT-2 (2026-12-01), FT-5 (2027-01-05) — left `_open_` on purpose.**
+  Each keys on data that does not exist yet (the Sept-Nov BoJ workbooks, the 11-12 5Y and 11-30 2Y
+  auctions, the 12-31 par curve). BoJ `ope2610.xlsx` and `ope2611.xlsx` still 404. Scoring early would
+  be falsification; the `forward-test-due` mode re-dispatches this lane when each date arrives.
+
+### Kill switches, re-adjudicated at close
+
+- **KS1 (no-price-channel premise) — not fired.** Tracked names fell hard on 11-05 (Yahoo, secondary:
+  NVDA −9.3%, AVGO −10.4%, MRVL −16.4%, CRWV −9.8%; VIX 16.61 → 28.18), but USD/JPY barely moved
+  (158.47 → 158.36) and UST 10Y fell 5bp (4.894% → 4.837%). Headlines from CNBC, Yahoo Finance, CNN
+  and Seoul Economic Daily (search snippets, not fetched) tie the day to an AI-trade selloff and
+  worry that a Democratic midterm sweep slows AI buildout; none names a JGB or yen cause. The
+  auction ran about 12:45 JST, which is 22:45 ET on 11-04, ahead of that US session.
+- **KS2 / KS5 — undecided, not fired.** Their dates (BoJ workbooks, 12-31 curve) have not arrived.
+- **KS3 — not fired.** Its auctions (11-12, 11-30) are still ahead.
+- **KS4 — not fired.** Maturity 2036-09-20 and issue 384 held.
+- **KS6 (terms rhythm) — not fired.** Date, size and publication day all as registered.
+- **KS7 (calibration) — FIRED on the tail leg.** Tail **3.2bp ≥ 2.58bp**; cover 3.21x did not trip
+  it. The kill switch asks whether the date's contamination makes the result uninterpretable. Here the
+  largest shock came after the auction, so the print is readable, but BoJ Minutes (08:50 JST) and
+  the BoE shared the Tokyo day, which this session did not read. This is issue 384's *first
+  reopening* in a quarter's second month, the same position as 08-04 (6.0bp); two prints are not
+  evidence, and position stays 96.2% collinear with month-in-quarter here.
+
+### The stance calls, scored
+
+- **Today (stand aside; nothing on this calendar is exposed) — CORRECT as stated.** No entry, exit or
+  hedge was keyed to the auction. The tracked names' 11-05 collapse had no JGB or yen cause found,
+  so the premise held; it cost nothing here, but is also no proof the channel is zero.
+- **This week (stop calling the 10-year the untapered control) — UNTESTED by this print.** It rests
+  on the BoJ workbooks, not on the auction.
+- **This month (dose ordering is inverted; do not attribute auction damage to the bucket taper) —
+  UNSCORED.** Needs the 11-12 5Y and 11-30 2Y. The 10Y's 3.2bp tail is neither for nor against it.
+- **This quarter (read 11-05 as issue 384's first reopening; nothing about demand) — CORRECT on
+  identity, and the softer print is consistent with it.** The weak-tail reading is held to the
+  collinearity caveat above, not read as demand.
+
+### Honest limits
+
+- The result table came from `eresul20261105a.htm`, the page the calendar labels Non-price-competitive
+  Auction II. It carries the full result and was read by a summarising reader; the tail and cover
+  here are derived from it, not published by MOF. They are internally consistent (a 0.25 price gap at
+  roughly eight to nine years of duration is about 3bp), but not independently re-read.
+- MOF's `jgbcme.csv` paths 404 and the auction-results workbook was last saved 2026-10-02, so
+  no 11-05 par-curve reading exists in this close-out.
+- A web search for the result found no wire write-up of this auction; no secondary source is used.
+- VIX, equities, USD/JPY and UST yields are Yahoo (secondary); the cause of the 11-05 selloff comes
+  from headline snippets only.
+- No conviction proposals or declared intents name this event.
+
+**Kill list.** No ticker-level hypothesis was ever carried here, so nothing is added to
+[`multi-symbol-sweep.md`](../multi-symbol-sweep.md)'s kill list.
+
+**Last assessed:** 2026-11-06
+<!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","productivity-costs-q3-2026-11-05","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-investment-manager-index-2026-11-10","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cpi-2026-11-10","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jobs-2026-11-06","midterm-elections-2026-11-03"],"screenStreak":0,"blocked":[]} -->

@@ -1,0 +1,11 @@
+{
+  "id": "erock-q3-2026-results-2026-11-12",
+  "kind": "sector",
+  "title": "ERock (EROC) fiscal Q3 2026 results, before the open, call 8:30 a.m. ET — its second report as a public company and the last one before the lock-up ends",
+  "date": "2026-11-12",
+  "status": "estimate",
+  "source": "NEWS: ERock press release 'ERock Schedules Third Quarter 2026 Results and Conference Call' (Business Wire copy on finviz.com/news/406263, fetched 2026-11-06, HTTP 200): results for the quarter ended 2026-09-30 'before market open on Thursday, November 12', call 8:30AM Eastern. Filed estimate because the company's own IR page and the 8-K Item 2.02 were not read (an 8-K for the print does not exist yet; the Q2 one is accession 0001193125-26-344714, filed 2026-08-11). The Q2 10-Q is the only 10-Q on file",
+  "impact": "medium",
+  "symbols": ["EROC"],
+  "notes": "Discovered during the eroc-lockup-expiry-2026-12-06 initial research (2026-11-06). Why it is a dated event of its own: with 20-day realized vol at 126% it is the largest scheduled price event before the 2026-12-07 first sellable session, and it falls outside the lockup study's D-10..D+10 window, which opens 2026-11-20. The Q2 report (8-K 2026-08-11) was followed by +22.8% on 08-12 and +13.3% on 08-13 (Yahoo daily bars), all of which was given back by 2026-10-14."
+}
