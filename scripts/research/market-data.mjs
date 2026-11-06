@@ -44,6 +44,9 @@ export async function bars(symbol) {
     out.push({
       date: new Date(r.timestamp[i] * 1000).toISOString().slice(0, 10),
       open: q.open[i] * ratio,
+      // A missing high/low falls back to the bar's own body, so a level test never reads NaN.
+      high: (q.high?.[i] ?? Math.max(q.open[i], close)) * ratio,
+      low: (q.low?.[i] ?? Math.min(q.open[i], close)) * ratio,
       close: a,
       rawClose: close,
       // Shares traded, as Yahoo reports them; the lockup study only compares volume within a few
