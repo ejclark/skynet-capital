@@ -54,7 +54,14 @@ export function gateBuild(
   } else {
     console.log(`[gate] ${persona.name}: ${readiness.reason} → ${mode}`);
   }
-  report({ id: persona.id, ready: readiness.ready, reason: readiness.reason });
+  // `wanted` and `mode` let the fleet health card name the gate that holds a watching bot (#6954).
+  report({
+    id: persona.id,
+    ready: readiness.ready,
+    reason: readiness.reason,
+    wanted: wantedMode,
+    mode,
+  });
   return mode;
 }
 

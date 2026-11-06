@@ -203,6 +203,10 @@ async function runLive(): Promise<void> {
     (wire) => promotedPlays.accept(wire),
     (wire) => memberConvictions.accept(wire),
   );
+  // The house mode rides every poll from here on, idle or trading, so the fleet health card says
+  // whether the bots place paper orders without anyone reading the Fly secret (#6954 slice 1).
+  const mode = traderMode(process.env);
+  controls.reportProcessMode(mode);
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
   // registry would also have qualified.
@@ -295,7 +299,6 @@ async function runLive(): Promise<void> {
   await pollNews();
   setInterval(() => void pollNews(), NEWS_POLL_MS);
 
-  const mode = traderMode(process.env);
   const audit = auditStore(process.env);
   const decisionDb = seedDecisionDb(process.env);
   decisionDbRef = decisionDb;

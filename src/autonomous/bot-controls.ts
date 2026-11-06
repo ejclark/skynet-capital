@@ -16,7 +16,9 @@
  *    and the mode its readiness gate allows in one step, re-running that gate on the build being
  *    swapped in — no restart.
  *  - **Mode** (observe/live) swaps the trader construction, so it applies at the next `bots` boot.
- *    The page says so on the control; nothing pretends otherwise.
+ *    The page says so on the control; nothing pretends otherwise. A stored mode only ever NARROWS
+ *    the house mode (#6954 slice 1): `observe` pins one bot to watching, and a stored `live` never
+ *    widens an observe process — placing paper orders at all is the house's single switch (#4535).
  *
  * The behaviour settings (hardcore, forced picks, staging) are the OWNER'S alone since #4535 slice
  * 4c-2: a bot with no stored value is off, whatever the env says — the dashboard copied each env
@@ -39,7 +41,8 @@ import { credentialFingerprint } from "./bot-credential-fingerprint.js";
 export interface BotControls {
   /** True = the owner suspended this bot's trading (dynamic — applies within one poll). */
   readonly suspended?: boolean;
-  /** Trading mode override (boot-applied). */
+  /** Trading mode override (boot-applied). Narrow-only: `observe` holds this bot to watching,
+   *  `live` defers to the house mode and can never widen it (`effectiveMode`). */
   readonly mode?: "observe" | "live";
   /** Run the bot's hardcore research build (dynamic — applies on the next poll; only bots with a
    *  hardcore build). Absent = off. */
@@ -147,13 +150,19 @@ export function suspendedReason(state: ControlsState, botId: string): string | n
   return null;
 }
 
-/** Boot-applied mode: the store's override when present, else the env-derived default. */
+/**
+ * Boot-applied mode: the house mode, narrowed by the store and never widened by it (#6954 slice 1).
+ * A stored `observe` holds this bot to watching under a live house; a stored `live` under an observe
+ * house still watches, because "do the bots place paper orders at all" is the house's one switch
+ * (`SKYNET_AUTONOMOUS_MODE`, #4535). Nothing writes the stored field yet, so this is the guard a
+ * future writer inherits, not a change to any bot running today.
+ */
 export function effectiveMode(
   state: ControlsState,
   botId: string,
-  envDefault: "observe" | "live",
+  houseMode: "observe" | "live",
 ): "observe" | "live" {
-  return state.bots[botId]?.mode ?? envDefault;
+  return state.bots[botId]?.mode === "observe" ? "observe" : houseMode;
 }
 
 /**

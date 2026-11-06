@@ -10,8 +10,10 @@ import {
   suspendedReason,
 } from "./bot-controls.js";
 import {
+  type BotMode,
   controlsPollGateHeaders,
   controlsPollHeaders,
+  controlsPollModeHeaders,
   type PersonaGateVerdict,
 } from "./controls-poll-wire.js";
 import { type ConvictionsWire, parseConvictionsWire } from "./convictions-wire.js";
@@ -54,6 +56,13 @@ export interface BotControlsClient {
    * disabled client. `buildLiveBot` calls this once per bot as it wires each one.
    */
   reportPersonaGate(verdict: PersonaGateVerdict): void;
+  /**
+   * Records the house mode this process runs under (#6954 slice 1), reported on every subsequent
+   * poll so the fleet health card can say whether the bots place paper orders or only watch,
+   * without anyone reading a Fly secret. Same shape as `reportPersonaGate`: safe before `start()`,
+   * a no-op on the disabled client, latest call wins.
+   */
+  reportProcessMode(mode: BotMode): void;
   /**
    * Records this boot's `SKYNET_PLAYBOOKS` house roster and the bot accounts it runs on, reported
    * on every subsequent poll so the dashboard can seed each house bot's own subscriptions from it
@@ -104,6 +113,7 @@ const DISABLED_CLIENT: BotControlsClient = {
   betaPicks: () => undefined,
   betaStage: () => undefined,
   reportPersonaGate: () => undefined,
+  reportProcessMode: () => undefined,
   reportHouseRoster: () => undefined,
   enabled: false,
 };
@@ -157,6 +167,7 @@ export function resolveBotControls(
   // Filled in by `reportPersonaGate` as `buildLiveBot` wires each bot; read fresh on every poll
   // (not captured once like `selfReport`) since it only settles after boot has built the roster.
   const gateVerdicts = new Map<string, PersonaGateVerdict>();
+  let processMode: BotMode | undefined;
   let houseRoster: HouseRosterReport | undefined;
 
   let snapshot: ControlsState = EMPTY_CONTROLS;
@@ -176,6 +187,7 @@ export function resolveBotControls(
             ...controlsPollGateHeaders(
               gateVerdicts.size > 0 ? [...gateVerdicts.values()] : undefined,
             ),
+            ...controlsPollModeHeaders(processMode),
             ...controlsPollRosterHeaders(houseRoster),
           },
           undefined,
@@ -233,6 +245,9 @@ export function resolveBotControls(
     betaStage: (botId) => snapshot.bots[botId]?.betaStage,
     reportPersonaGate: (verdict) => {
       gateVerdicts.set(verdict.id, verdict);
+    },
+    reportProcessMode: (mode) => {
+      processMode = mode;
     },
     reportHouseRoster: (report) => {
       houseRoster = report;

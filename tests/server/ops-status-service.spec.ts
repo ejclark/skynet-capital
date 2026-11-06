@@ -3,6 +3,7 @@ import {
   activitySignal,
   bridgeSignal,
   buildOpsStatus,
+  paperOrdersSignal,
   personaGateSignal,
   resolveOpsStatusRepo,
 } from "../../src/server/ops-status-service.js";
@@ -78,7 +79,9 @@ describe("personaGateSignal", () => {
       { id: "banker", ready: true, reason: "passed the readiness pack" },
     ]);
     expect(signal.verdict).toBe("ok");
-    expect(signal.detail).toContain("2 persona(s) live");
+    expect(signal.detail).toContain("2 persona(s) cleared to place paper orders");
+    // "live" alone reads as real money on a paper-only app (#6954's honest-labels invariant)
+    expect(signal.detail).not.toMatch(/\blive\b/);
   });
 
   it("reads attention and names each pinned persona with its reason", () => {
@@ -93,6 +96,103 @@ describe("personaGateSignal", () => {
   });
 });
 
+describe("paperOrdersSignal (#6954 slice 1)", () => {
+  const placing = { ready: true, reason: "passed", wanted: "live", mode: "live" } as const;
+  const none = () => null;
+
+  it("reads unknown when the bots process has not reported its house mode", () => {
+    const signal = paperOrdersSignal(undefined, [{ id: "sauron", ...placing }], none);
+    expect(signal.verdict).toBe("unknown");
+    expect(signal.id).toBe("paper-orders");
+  });
+
+  it("asks for attention when the house only watches: no bot places a paper order", () => {
+    const signal = paperOrdersSignal("observe", [{ id: "sauron", ...placing }], none);
+    expect(signal.verdict).toBe("attention");
+    expect(signal.detail).toContain("Every bot is watching");
+    expect(signal.detail).toContain("places no paper orders");
+  });
+
+  it("names each bot placing paper orders under a live house", () => {
+    const signal = paperOrdersSignal(
+      "live",
+      [
+        { id: "sauron", ...placing },
+        { id: "banker", ...placing },
+      ],
+      none,
+    );
+    expect(signal.verdict).toBe("ok");
+    expect(signal.detail).toBe(
+      "2 of 2 bot(s) placing paper orders. sauron: placing paper orders; banker: placing paper orders.",
+    );
+  });
+
+  it("names the gate that holds each watching bot: its owner, its readiness gate, a suspend", () => {
+    const signal = paperOrdersSignal(
+      "live",
+      [
+        { id: "sauron", ...placing },
+        { id: "banker", ready: true, reason: "passed", wanted: "observe", mode: "observe" },
+        {
+          id: "prospector",
+          ready: false,
+          reason: "not ready yet",
+          wanted: "live",
+          mode: "observe",
+        },
+        { id: "day-trader", ...placing },
+      ],
+      (id) => (id === "day-trader" ? "suspended by owner" : null),
+    );
+    expect(signal.verdict).toBe("ok");
+    expect(signal.detail).toContain("1 of 4 bot(s) placing paper orders.");
+    expect(signal.detail).toContain("sauron: placing paper orders");
+    expect(signal.detail).toContain("banker: watching: its owner set it to watch only");
+    expect(signal.detail).toContain("prospector: watching: not cleared by its readiness gate");
+    expect(signal.detail).toContain("day-trader: watching: suspended by owner");
+  });
+
+  it("reads the outer gate when two hold a bot: its owner before its readiness gate", () => {
+    const signal = paperOrdersSignal(
+      "live",
+      [{ id: "banker", ready: false, reason: "not ready", wanted: "observe", mode: "observe" }],
+      none,
+    );
+    expect(signal.detail).toContain("banker: watching: its owner set it to watch only");
+  });
+
+  it("never says placing over a bot the owner suspended (all bots)", () => {
+    const signal = paperOrdersSignal(
+      "live",
+      [{ id: "sauron", ...placing }],
+      () => "suspended by owner (all bots)",
+    );
+    expect(signal.detail).toContain("0 of 1 bot(s) placing paper orders.");
+    expect(signal.detail).toContain("sauron: watching: suspended by owner (all bots)");
+  });
+
+  it("reads a verdict with no mode (an older bots build) as not reported, never a guess", () => {
+    const signal = paperOrdersSignal(
+      "live",
+      [{ id: "sauron", ready: true, reason: "passed" }],
+      none,
+    );
+    expect(signal.verdict).toBe("unknown");
+    expect(signal.detail).toContain("no bot has reported its own mode yet");
+  });
+
+  it('never prints a bare "live" that would read as real money', () => {
+    const details = [
+      paperOrdersSignal("live", [{ id: "sauron", ...placing }], none),
+      paperOrdersSignal("observe", [{ id: "sauron", ...placing }], none),
+      paperOrdersSignal(undefined, undefined, none),
+      paperOrdersSignal("live", [], none),
+    ].map((s) => s.detail);
+    for (const detail of details) expect(detail).not.toMatch(/\blive\b/i);
+  });
+});
+
 describe("buildOpsStatus", () => {
   it("degrades the deploy signals honestly when no fetcher is wired", async () => {
     const status = await buildOpsStatus({
@@ -100,6 +200,8 @@ describe("buildOpsStatus", () => {
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => undefined,
       personaGateVerdicts: () => undefined,
+      botsProcessMode: () => undefined,
+      suspendedReason: () => null,
       lastBotActivityAt: async () => undefined,
       repo: "x/y",
     });
@@ -130,6 +232,8 @@ describe("buildOpsStatus", () => {
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => undefined,
       personaGateVerdicts: () => undefined,
+      botsProcessMode: () => undefined,
+      suspendedReason: () => null,
       lastBotActivityAt: async () => undefined,
       fetchDeploySignals: async () => ({ app, bots }),
       repo: "x/y",
@@ -145,6 +249,8 @@ describe("buildOpsStatus", () => {
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => undefined,
       personaGateVerdicts: () => [{ id: "sauron", ready: false, reason: "not ready yet" }],
+      botsProcessMode: () => undefined,
+      suspendedReason: () => null,
       lastBotActivityAt: async () => undefined,
       repo: "x/y",
     });
@@ -153,17 +259,36 @@ describe("buildOpsStatus", () => {
     expect(gate?.detail).toContain("sauron (not ready yet)");
   });
 
+  it("folds the reported house mode and a suspend from Mission Control into the paper-orders row", async () => {
+    const status = await buildOpsStatus({
+      now: () => NOW,
+      bridgeLastPollAt: () => undefined,
+      botsRunningSha: () => undefined,
+      personaGateVerdicts: () => [
+        { id: "sauron", ready: true, reason: "passed", wanted: "live", mode: "live" },
+      ],
+      botsProcessMode: () => "live",
+      suspendedReason: (id) => (id === "sauron" ? "suspended by owner" : null),
+      lastBotActivityAt: async () => undefined,
+      repo: "x/y",
+    });
+    const row = status.signals.find((s) => s.id === "paper-orders");
+    expect(row?.detail).toContain("sauron: watching: suspended by owner");
+  });
+
   it("never throws the panel over a failing activity or deploy read", async () => {
     const status = await buildOpsStatus({
       now: () => NOW,
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => undefined,
       personaGateVerdicts: () => undefined,
+      botsProcessMode: () => undefined,
+      suspendedReason: () => null,
       lastBotActivityAt: () => Promise.reject(new Error("store down")),
       fetchDeploySignals: () => Promise.reject(new Error("network down")),
       repo: "x/y",
     });
-    expect(status.signals).toHaveLength(5);
+    expect(status.signals).toHaveLength(6);
     expect(status.signals.every((s) => s.verdict === "unknown")).toBe(true);
   });
 });
@@ -185,6 +310,8 @@ describe("the bots process's reported commit reaches the deploy signals (#666)",
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => RUNNING,
       personaGateVerdicts: () => undefined,
+      botsProcessMode: () => undefined,
+      suspendedReason: () => null,
       lastBotActivityAt: async () => undefined,
       fetchDeploySignals: (_now, sha) => {
         seen.push(sha);
@@ -201,6 +328,8 @@ describe("the bots process's reported commit reaches the deploy signals (#666)",
       bridgeLastPollAt: () => undefined,
       botsRunningSha: () => RUNNING,
       personaGateVerdicts: () => undefined,
+      botsProcessMode: () => undefined,
+      suspendedReason: () => null,
       lastBotActivityAt: async () => undefined,
       repo: "x/y",
     });
