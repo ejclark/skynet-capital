@@ -111,16 +111,34 @@ matching specs. Anti-patterns EARS kills: vague "should/support/handle", compoun
 **A shared cap over a growing set of entities gets its arithmetic run at design time, not
 discovered live** (Eric, 2026-09-17, on `/api/wire`'s 30-row page cap silently hiding a member's
 own older trades: "our concern is identifying constraints at scale... one user having more than 30
-trades, two users having 15 trades, 5 users having 6 trades — basic math problems"). The framing
-that matters is not "how much data exists" (volume is a red herring — a five-person league with
-modest activity crosses the exact same cap a thousand-user one would) but "how many entities share
-this one fixed budget, and what does each one's slice look like at plausible N." When an EARS
-criterion introduces a limit/cap/page size shared across participants, personas, symbols, or any
-other growing set, state the per-entity math in the same breath — a sentence, not a model: "at 5
-active participants this is 6 rows each," caught by reading the requirement, never by waiting for
-real accounts to hit it. `tests/arch/pagination-consumer.spec.ts` catches the one specific failure
-mode this produced (a paginated contract with zero client consumers); it cannot catch the design
-gap itself — that's a review habit, not a mechanical gate.
+trades, two users having 15 trades, 5 users having 6 trades — basic math problems"). For a cap,
+the question is not "how much data exists" (a five-person league with modest activity crosses the
+exact same cap a thousand-user one would) but "how many entities share this one fixed budget, and
+what does each one's slice look like at plausible N." When an EARS criterion introduces a
+limit/cap/page size shared across participants, personas, symbols, or any other growing set, state
+the per-entity math in the same breath — a sentence, not a model: "at 5 active participants this is
+6 rows each," caught by reading the requirement, never by waiting for real accounts to hit it.
+`tests/arch/pagination-consumer.spec.ts` catches the one specific failure mode this produced (a
+paginated contract with zero client consumers); it cannot catch the design gap itself — that's a
+review habit, not a mechanical gate.
+
+**For runtime cost, volume is the question: price a read at the ledger's length a year out, not
+today's** (#4612 slice 10). This section once called volume "a red herring". That was right for a
+cap and wrong for cost, and it steered review away from the reads that OOM-killed production twice
+(#4425, #4519) and from 10 of the 16 defects #4612's audit traced. Each of those merged with only
+empty or fixture-sized data as runtime evidence. Every append-only store here grows with no
+retention, so a request or boot path that reads a whole ledger, or builds an object per row, gets
+slower and heavier each day with no code changing. Three checks price it, so review doesn't have
+to remember:
+- `npm run stability:budget` runs the built server in a 512 MB container on 180 days × 12
+  participants and clicks what a member clicks. CI runs it on every PR that changes what the server
+  ships, and memory and breakage block.
+- `scripts/whole-read-scan.mjs` fails a new whole read on a request or boot path.
+- `scripts/intl-scan.mjs` fails an `Intl` formatter built inside a function body.
+
+A heap cap (`--max-old-space-size`) is not memory evidence: formatter memory is native, so measure
+RSS. A held fold that falls back to a whole read when its store lacks `since` is still a whole
+read in production if a wrapper drops the method (#6597).
 
 **Automated enforcement.** The red-green-refactor loop is backed by deterministic gates, so the
 suite runs whether or not anyone remembers:

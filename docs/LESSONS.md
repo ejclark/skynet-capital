@@ -35,6 +35,53 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A publishing wrapper dropped `since`, so two held folds re-read whole audits in production while every spec stayed green
+- **SHA:** c2e4ebe   **DATE:** 2026-11-01   **STATUS:** closed
+- **SIGNAL:** `npm run stability:budget` on `main` (`a839e593`) FAILed `/api/wire` at 160 ms. A CPU profile of 15 warm Wire requests inside the budget container showed `ladderEvidenceFrom`, the whole-read fallback, running on every request. The cost landed earlier the same day with #6577 (the ladder's held fold) and #6585 (Activity's held order origins), so detection took hours. It came from the budget run's timing, which CI only prints.
+- **ROOT CAUSE:** `publishingOrderAuditLog` (`src/observatory/activity-publishing.ts`) rebuilt the audit log as an object literal holding only `record` and `list`. It never forwarded the optional `since` that `JsonlOrderAuditLog` gained later. A held fold reads a missing `since` as "an in-memory store, read it whole", which is the right fallback for offline mode and specs and is silent in production. Three nets missed it, each for its own reason. Every fold spec was built on the bare log. The whole-read scan exempts fallbacks by design. The budget run's latency is advisory. The retro's question, "what else wraps a store this way?", found only the four publishing decorators in that file. `src/research/spot-checks.ts` builds a port with no `since`; it does not wrap one.
+- **PREVENTION:** spec — `tests/observatory/activity-publishing-forwarding.spec.ts` (#4612 slice 10) builds each publishing decorator over the store production builds and fails when the wrapper offers fewer methods than the store. It went red with #6597's forwarding line removed. A `since` added to the ladder-progress log tomorrow fails there until its wrapper forwards it. #6597's own spec still guards the audit's `since` behaviour.
+- **SIDE QUESTS:** a held fold could warn once when it falls back in live mode, which would turn the next silent fallback into a log line → docs/IDEAS.md.
+
+---
+
+### The server crashed on clicks: 16 runtime defects merged with empty or fixture-sized data as their only runtime evidence
+- **SHA:** n/a   **DATE:** 2026-10-04   **STATUS:** closed
+- **SIGNAL:** Eric, 2026-10-04: "the web application continues to crash after clicking on links in the application. This is after several sessions fixed memory intense issues." #4612's 43-agent audit reproduced two crashes. Opening Accounts OOM-killed a 512 MB container, because Pulse built an `Intl.DateTimeFormat` per stored sample, about 27 MB per day of history. A tab older than a deploy blanked the whole app on a changed route, which 45 of 49 frontend deploys did. Members or the audit found every one of the 16 defects; no gate found any. The Pulse formatter dated from #599 (2026-08-26) and reached the Accounts page with #3995 (2026-09-29).
+- **ROOT CAUSE:** five process causes.
+  - **Runtime evidence came only from data that cannot grow.** Offline mode swaps three ledgers for empty in-memory stores, and fixtures are 12 KB. 0 of the 16 entry PRs measured memory, latency or production-sized data.
+  - **Every gate measured code shape or pipeline spend, never the server at runtime.** Two shape gates pushed toward the costly code. dupe-scan's frozen budget made `marketDayKey` the one shared helper that built a formatter per call (#599). A clone-budget cycle shared the spread read that 12 stores use (#236).
+  - **Production incidents never reached this ledger.** Two OOMs left 0 entries, and `docs/ENGINEERING.md` called data volume "a red herring".
+  - **Nothing tested across a deploy,** at about 52 restarts a day.
+  - **Throughput outran the design horizon.** 8 of the 16 entry PRs merged on 2026-08-28 from one session. Lanes moved 3 heavy reads onto hotter paths (#790, #1377, #3995) without re-pricing them.
+- **PREVENTION:** gate, plus a doctrine fix.
+  - The CI `stability budget` job (#4617, item 14 of platter #6576) runs the built server in a 512 MB container on 180 days × 12 participants and clicks every common GET. Memory, OOM, exit and 5xx block; time prints (#6586).
+  - `scripts/whole-read-scan.mjs` (#6510; 18 sites grandfathered, now 1) and `scripts/intl-scan.mjs` (#6571) fail a new instance of the two code patterns.
+  - Route error boundaries and a one-time reload for a stale chunk (#4635). Live channels reopen after a restart (#4984).
+  - Production telemetry: a 60 s memory gauge, `/healthz`, an `incident` issue on an unclean restart, and a client error beacon (#4983). Deploys that change no runtime code skip the restart (#4839, platter #5852).
+  - `docs/ENGINEERING.md`'s cap paragraph no longer calls volume a red herring. A new paragraph names the three checks (#4612 slice 10).
+  - Since #4983 (2026-10-09): 0 OOM kills. One unclean restart (#5525, 2026-10-16) was a Fly host outage at 104 MB.
+- **SIDE QUESTS:** dupe and clone budgets count definitions, not calls, so consolidating a costly helper hands its cost to every caller. Whether those scans should flag a consolidated helper that allocates per call → docs/IDEAS.md.
+
+---
+
+### Research pages OOM-killed the dashboard: every request re-parsed the whole research corpus four times
+- **SHA:** 3be1f71   **DATE:** 2026-10-03   **STATUS:** closed
+- **SIGNAL:** on 2026-10-03, members moving around the app OOM-killed the 512 MB dashboard. One `/api/research` visit took RSS from 118 to 796 MB. The release smoke failures that day are banked under "Four web release failures on 2026-10-03: a boot that never bound, an OOM, and a closed Fly socket". The pattern dated from #387 (2026-08-17), so it ran 47 days. No gate saw it; members did.
+- **ROOT CAUSE:** `shelfJson()` called `listResearch()` once and again inside `eventCalls`, `ledgerDigests` and `shelfSymbols`. That re-read and parsed every doc four times per request, about 350 MB of garbage. #387 wrote the read when the corpus was 29 docs (0.3 MB). By October it was 1,337 docs (33.5 MB), 46× the docs, mostly from the research lane. A store that grows every day by design was read whole on a request path. The e2e corpus frozen at 20 docs (2% of production's bytes) hid the cost. The fix's first memo still held about 170 MB, because a regex match is a V8 sliced string that pins its whole source file. `structuredClone` on insert detached it. The fix was proven under `--max-old-space-size=200`, a heap cap, which cannot see native memory.
+- **PREVENTION:** script. #4519 parses the corpus once per corpus fingerprint and stores detached copies. #4636 (`2315196`) detached the remaining 3 sites: cold `/api/research/calendar` went from +104 to +37 MB. The budget run copied the real research shelf into its container but never requested it. #4612 slice 10 adds a `research` phase (`researchGets` in `scripts/stability/budget-lib.mjs`): R&D's calendar, shelf and coverage, cold then warm. It is judged on breakage and the run's peak, because the cold build is paid once per process by design. Measured 2026-11-06: those three add 0–2 MB, run PASS at a 268 MB peak.
+- **SIDE QUESTS:** the same phase with the forward-test register in it failed twice. The register's cold render added 66–91 MB and peaked at 347–351 MB. It stays out of the phase until #6957 (`bug`, `fast-track`) brings it under budget; production has had no OOM since 2026-10-09, so the cost is headroom, not a crash.
+
+---
+
+### The dashboard ran under tsx for 69 days on a 512 MB machine until it OOM-killed in production
+- **SHA:** 499c9ce   **DATE:** 2026-10-01   **STATUS:** closed
+- **SIGNAL:** Fly logs, 2026-10-01 02:26: `Out of memory: Killed process … anon-rss:364460kB` on the 512 MB machine, 96 s after boot, then eight proxy `connection reset` errors, which members saw as 502s. The runtime came from #2 (2026-07-24), so it ran 69 days. Members found it, not a gate, because production logged no memory.
+- **ROOT CAUSE:** #2 chose a "host-agnostic image (Node 24, `tsx` runtime, no build step)". Production started as npm → the tsx launcher → node with the tsx loader, compiling TypeScript in memory. That was 3 processes and about 295 MB RSS at boot, leaving about 200 MB for requests. #2's evidence was "80 specs pass". 512 MB was never discussed, and nothing in the pipeline could measure RSS: every gate was static.
+- **PREVENTION:** script. #4425 runs one plain-node process on an esbuild bundle (`node dist/serve.mjs`), about 86 MB at boot. The class is now gated. The CI `stability budget` job boots `fly.toml`'s own start command (`flyCommand` in `scripts/stability/budget-lib.mjs`) in a 512 MB container and fails on boot or run peak over 300 MB. Production's run marker (`src/server/run-marker.ts`, #4983) opens an `incident` issue after an unclean restart, so the next OOM is filed within a minute of the reboot instead of after members report 502s.
+- **SIDE QUESTS:** the bots app still runs under tsx on 512 MB (`fly.bots.toml`: `npm run run:autonomous`), the half #4425 left as a follow-up, and no budget measures it → docs/IDEAS.md.
+
+---
+
 ### `sync project status` red on main: re-check the issue's own board lookup after a lost add race
 - **SHA:** 820913d   **DATE:** 2026-11-03   **STATUS:** closed
 - **COVERS:** a073793
