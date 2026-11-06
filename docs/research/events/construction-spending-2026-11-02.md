@@ -520,3 +520,69 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-02
 <!-- probe-ref: {"symbols":{},"vix":19.42,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Close-out (2026-11-06, D+4; filed under `event-passed-unscored`, held until the four forward tests' score-by).**
+Macro-print mode runs no `earnings-cycle` / `intraday-edges` instrument (`symbols: []`); the cache was busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and nothing here reads it. The *print*
+is Census's own release (CB26-176, `census.gov/construction/c30/current/index.html`), the *nowcast* the Atlanta Fed
+GDPNow workbook (`ContribHistory` and `ContribArchives`), the *tape* Yahoo daily bars (SPY, `^VIX`, ITB, XHB), all
+fetched direct 2026-11-06. Date label stays **confirmed** (two Census primaries, 09-06). No September consensus was
+reachable, so "vs expectations" is not claimed.
+
+| Measure | Result | Line | Verdict |
+|---|---|---|---|
+| **Total construction m/m** | **−1.9% (±0.7%)**, $2,186.1B SAAR vs revised Aug $2,227.4B; −2.7% (±1.5%) y/y | asterisk expected (93.1% of editions) | **FT-3 kill** — no asterisk |
+| Residential / nonresidential / public | **−5.5% (±1.3%)** $848.8B / **+1.1% (±0.5%)** $790.6B / −0.1% (±1.3%)\* $546.8B | — | residential drove it |
+| August, revised | $2,203.1B first print → **$2,227.4B (+1.1%)** | first print's own m/m was +0.9% | revision > the print's move, again |
+| **GDPNow 2026:Q4 structures contribution** | **0.10873 → 0.18349 = +0.0748pp** (10-29 → 11-02) | kill at ≥ 0.08pp | **FT-1 pass**, at 93.5% of the line |
+| GDPNow residential contribution, same vintage | −0.1820 → +0.0474 = **+0.2294pp** | — | ~2.7x the posting-11–15 median |
+| GDPNow headline, same vintage (ISM + construction) | 3.2217 → 3.7383 = **+0.5166pp** | — | not the isolated class |
+| **SPY 11-02 high–low range** | **1.630%** of close (763.86 / 751.60 / 752.10), close −0.48% | kill at ≥ 1.797% | **FT-2 pass** |
+| **`^VIX` 11-02 close** | **21.15** (19.42 the session before) | kill at ≤ 16.00 | **FT-4 pass** |
+
+**What happened vs the stance.** The stance — stand aside, size nothing, read the nowcast not the tape — held, and
+nothing was licensed or lost. The *analysis under it* took one clean hit and one soft one.
+
+- **The headline was not noise this time, and that breaks the calling card of Leg 6.** −1.9% against ±0.7% clears its margin where
+  the two prior September-reference editions did not (they read +0.4% ±1.2%\* and +0.1% ±1.0%\*),
+  and it came from a residential line (−5.5%) that the 10-20 housing starts (−5.2%) had already pointed at — the
+  10-26 pulses called that "soft residential" while still holding the 93.1% asterisk call. The sibling twin's
+  claim that this trigger "fires on a number Census declines to call different from zero" is true of 27 of 29 and
+  false of this edition. Kill switch "headline clears its own margin of error" **fired**; Leg 6's arithmetic gets
+  re-derived on a longer archive, and the December twin inherits that.
+- **The posting-1 slot claim survived by 0.0052pp, and weakened.** The structures move was +0.0748pp: under the
+  0.08pp line, but ~2x the slot median, above the 0.059pp line, and the residential line moved far more than the
+  gradient allows. On the refreshed workbook the registered slot comparison drifts from p=0.0312 to **p=0.0506**
+  (0.0404pp n=37 vs 0.0774pp n=42) and to **0.0623** with this vintage. Direction held; the evidence for it is now a
+  coin on the threshold, which is exactly what Honest limits said a post-hoc slice would do. November editions now
+  read median **0.0307pp** (n=12; 8 clear 0.02pp, 4 clear 0.059pp), still against December's 0.0903pp (**p=0.0035**).
+- **The tape and the vol tests passed for reasons unrelated to the print.** SPY ranged 1.630% on a day the ISM
+  Manufacturing print (55.5), SLOOS and the borrowing estimates shared; `^VIX` closed 21.15, a level it had already
+  reached before the window opened (19.99 on 10-16). FT-4 scored on regime drift, not on election eve; the 14.53
+  registered reading was stale for three weeks. Neither supports a market claim for this release, and none is made.
+- **Aftermath, recorded not assessed.** SPY ranged 4.54% on 11-05 and closed 733.00; `^VIX` closed 28.18 that day
+  (high 28.36). Not researched here — outside this event's corridor and `symbols: []`.
+
+**Kill switches.** *Fired:* the headline clearing its own margin of error (−1.9% vs ±0.7%). *Not fired:* 11-02 structures
+≥ 0.08pp (0.0748); isolated-class |Δ GDP| ≥ 0.30pp (the 11-02 vintage is construction + ISM, +0.5166pp, so the isolated
+class stays n=9 and unmoved); a November 2027 vintage (not yet); an off-cycle release; a Suspended row; a macro-keyed
+playbook (0 hits, no change).
+
+**Banked traps.** (1) The Atlanta Fed's `/-/media/Project/Atlanta/FRBA/Documents/cqer/researchcq/gdpnow/*.xlsx` path
+now returns 404 (a 302 to `/error`); the live path is `/-/media/Project/Atlanta/FRBA/Documents/research-and-data/data/gdpnow/*.xlsx`,
+found by reading the GDPNow landing page's hrefs. (2) `ContribArchives` holds *completed-quarter* vintages only (it
+ended 2026-10-28 on the Q3 column); the **current** quarter's per-vintage structures line lives in the `ContribHistory` tab,
+columns by vintage date. A score read from the archive alone would have found no 11-02 row and voided FT-1.
+
+**Forward tests.** `-1` pass · `-2` pass · `-3` **kill** (moved to the sweep doc's kill list) · `-4` pass — cells filled in
+[`forward-tests/construction-spending-2026-11-02.md`](../forward-tests/construction-spending-2026-11-02.md). Passes are
+single observations, not promotions. No conviction proposal or declared intent names this event (both commands print `[]`).
+
+**Loop stage a person still had to do.** *Sense*: reading CB26-176's first paragraph for the asterisk, and finding the
+moved GDPNow path. Both are mechanical (a fetch plus a regex on `(±x percent)\*`; a landing-page href scrape), and a
+scoring script for the macro-print class is the first thing to automate if the next close-out repeats them.
+
+**Last assessed:** 2026-11-06
+<!-- probe-ref: {"symbols":{},"vix":28.18,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","advance-economic-indicators-2026-10-28","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","fomc-2026-10-28","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","housing-vacancies-q3-2026-10-28","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","msft-2026-10-27-print","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-2y-frn-2026-10-28","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-autumn-budget-2026-10-28","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","fomc-2026-10-28","gdp-q3-2026-advance-2026-10-29","goog-2026-10-28-print","ism-manufacturing-2026-11-02","jobs-2026-11-06","msft-2026-10-27-print","pce-2026-10-29"],"screenStreak":0,"blocked":[]} -->
