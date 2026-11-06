@@ -63,7 +63,9 @@ export function serveResearchDoc(res: ServerResponse, path: string, root?: strin
     return;
   }
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-  res.end(`<!doctype html>
+  // The body is already bytes (#6957): splicing it into a template would rebuild the register's
+  // ~5 MB page as a 10 MB two-byte string on every request.
+  const head = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -74,7 +76,6 @@ export function serveResearchDoc(res: ServerResponse, path: string, root?: strin
 <body><div class="wrap">
 <a class="back" href="/app/research">← Research</a>
 ${doc.glanceHtml ? `<div class="rs-glance">${doc.glanceHtml}</div>` : ""}
-${doc.html}
-</div></body>
-</html>`);
+`;
+  res.end(Buffer.concat([Buffer.from(head), doc.html, Buffer.from("\n</div></body>\n</html>")]));
 }
