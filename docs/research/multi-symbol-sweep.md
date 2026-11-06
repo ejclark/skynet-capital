@@ -71,6 +71,11 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"Solve the print's thresholds from the published index levels and they hold to the release" (FT-productivity-costs-q3-2026-11-05-1, -2, -3)** — added 2026-11-06 from the
+  [productivity-costs-q3-2026-11-05 close-out](events/productivity-costs-q3-2026-11-05.md). The ledger's identity arithmetic was exact (151.663 ÷ 121.922 × 100 = 124.393), but every anchor
+  came from a vintage the 2026 NIPA annual update then revised: ULC y/y printed **2.4%** (called <2.0%), productivity y/y **2.1%** (called 1.0–2.0%), labor-share index **93.729**
+  (called <93.446). Do not register a level-keyed threshold on a BLS productivity release without checking whether BEA's annual update lands before it, and key it to the q/q SAAR instead.
+
 - **"The strip is pricing a hike no forecaster the Bank asks expects, so the meeting holds" (FT-boe-decision-2026-11-05-1)** — added 2026-11-06 from the
   [boe-decision-2026-11-05 close-out](events/boe-decision-2026-11-05.md). The MPC raised Bank Rate 25bp to **4%** on an **8–1** vote. Do not take the under on a central-bank strip off surveys and
   polls that close before the bank resets its own projection: the 17 Sep reset moved the strip from 54% to 85% hike and every hold-side read pre-dated it.
