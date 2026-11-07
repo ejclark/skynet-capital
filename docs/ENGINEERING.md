@@ -123,12 +123,11 @@ paginated contract with zero client consumers); it cannot catch the design gap i
 review habit, not a mechanical gate.
 
 **For runtime cost, volume is the question: price a read at the ledger's length a year out, not
-today's** (#4612 slice 10). This section once called volume "a red herring". That was right for a
-cap and wrong for cost, and it steered review away from the reads that OOM-killed production twice
-(#4425, #4519) and from 10 of the 16 defects #4612's audit traced. Each of those merged with only
-empty or fixture-sized data as runtime evidence. Every append-only store here grows with no
-retention, so a request or boot path that reads a whole ledger, or builds an object per row, gets
-slower and heavier each day with no code changing. Three checks price it, so review doesn't have
+today's** (#4612 slice 10). The cap rule above sets volume aside; cost cannot. The reads that
+OOM-killed production twice (#4425, #4519), and 10 of the 16 defects #4612's audit traced, each
+merged with only empty or fixture-sized data as runtime evidence. Every append-only store here
+grows with no retention, so a request or boot path that reads a whole ledger, or builds an object
+per row, gets slower and heavier each day with no code changing. Three checks price it, so review doesn't have
 to remember:
 - `npm run stability:budget` runs the built server in a 512 MB container on 180 days × 12
   participants and clicks what a member clicks. CI runs it on every PR that changes what the server
