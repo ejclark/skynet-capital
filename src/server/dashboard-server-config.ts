@@ -39,6 +39,7 @@ import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { FilingCommentsDeps } from "./filing-comments-form.js";
 import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
+import type { MemberCampaignStore } from "./member-campaign-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
@@ -372,6 +373,17 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * Nothing in it reaches a bot; a draft is not on any roster.
    */
   readonly authoredPlays?: AuthoredPlayStore;
+  /**
+   * MEMBERS' OWN CAMPAIGNS (#6949 slice 3a) — the campaigns a member crafts from the form, private
+   * to their author. Omit to disable (offline mode): the list answers empty and a save answers "not
+   * wired in this deployment."
+   */
+  readonly memberCampaigns?: MemberCampaignStore;
+  /**
+   * Whether the house has a ledger on a symbol, for a campaign's research ask. Omit to read the
+   * research shelf on each save (`shelfResearched`); specs pass a fixed answer.
+   */
+  readonly campaignShelf?: (symbol: string) => boolean;
   /**
    * MEMBERS' CONVICTIONS (#5482 slice 6a) — the views a member states and keeps as drafts. Omit to
    * disable (offline mode): the list answers empty and a save answers "not wired in this
