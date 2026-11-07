@@ -13,7 +13,9 @@
 //      fast-track "lets an urgent bug/CVE build under conserve; never under halt").
 //   2. `conserve` refuses anything without `fast-track`.
 //   3. The in-flight cap: `mode.caps.inFlightCap` open issues already carrying `in-progress`
-//      (this issue excluded) refuses anything without `fast-track`.
+//      (this issue excluded) refuses anything without `fast-track` — and a `fast-track` card too
+//      while another `fast-track` card is in flight (#6871 call 6: one urgent build over the cap
+//      at a time). Under the cap, `fast-track` needs no exception and gets none.
 //   4. THE STARTED-PLAN CAP (#4393 criterion 6): when `mode.caps.startedPlanCap` plans already sit
 //      in the board's Next part queued column (started, work left a lane can pull, nobody
 //      building), a FRESH plan is
@@ -165,8 +167,18 @@ export function admitBuild({ issue, inFlight = [], mode, waiting }) {
   }
   const others = (inFlight ?? []).filter((i) => i && i.number !== issue?.number);
   const cap = mode?.caps?.inFlightCap ?? 0;
-  if (others.length >= cap && !fastTrack) {
-    return { admit: false, reason: `queued: ${others.length} of ${cap} in flight` };
+  if (others.length >= cap) {
+    if (!fastTrack) return { admit: false, reason: `queued: ${others.length} of ${cap} in flight` };
+    // One fast-track build over the cap at a time (#6871 §6, call 6): a second urgent card waits
+    // for the first, so `fast-track` cannot grow the in-flight count without bound.
+    const urgent = others.find((i) => hasLabel(i, LABELS.fastTrack.name));
+    if (urgent) {
+      return {
+        admit: false,
+        reason: `queued: ${others.length} of ${cap} in flight, and fast-track #${urgent.number} is already building`,
+        queuedBehind: urgent.number,
+      };
+    }
   }
   const planCap = mode?.caps?.startedPlanCap;
   // A fresh plan whose parent holds a seat IS that parent's remaining work — refusing it refuses
@@ -360,8 +372,8 @@ export function queueNote(reason) {
     reasonLine(reason),
     "",
     "This issue keeps `ready`; the lane retries it on a later tick — nothing to do here. " +
-      "An urgent bug or CVE can take `fast-track` to skip the queue (never the halt, never the " +
-      "same-surface fence).",
+      "An urgent bug or CVE can take `fast-track` to skip the queue (one fast-track build over " +
+      "the cap at a time; never the halt, never the same-surface fence).",
     "",
     FOOTER,
   ].join("\n");

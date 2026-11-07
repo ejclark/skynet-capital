@@ -82,8 +82,8 @@ function columnOn(name, columns, { optional = false } = {}) {
 // never shows a number the code does not enforce. The board's own hand-set WIP limit is
 // display-only and is cleared by hand (#6871 slice B3). Each sentence is pinned to `admitBuild`
 // by tests/scripts/moneypenny/board-columns.spec.ts — change one and that spec says whether the
-// gate still agrees. They name the `fast-track` label as the card shows it, which skips the
-// in-flight and plan caps today.
+// gate still agrees. They name the `fast-track` label as the card shows it: it skips the plan cap,
+// and the in-flight cap for one card at a time (#6871 call 6).
 /**
  * Building now's and Next part queued's descriptions for one dial reading, or null when the dial
  * could not be read (a fallback position is not a reading, so the board keeps what it shows).
@@ -94,12 +94,12 @@ export function dialSentences(mode) {
   const plans = mode.caps?.startedPlanCap ?? 0;
   const building = {
     halt: "Stopped: nothing new starts",
-    conserve: "Only fast-track cards start",
+    conserve: `Only fast-track cards start: up to ${inFlight}, plus one over`,
   }[mode.position];
   return {
     [BUILDING]:
       building ??
-      `Lanes start up to ${inFlight}; fast-track cards and hand-started sessions may add more`,
+      `Lanes start up to ${inFlight}; one fast-track card and hand-started sessions may add more`,
     [NEXT_QUEUED]:
       mode.position === "halt"
         ? "Part built; next part approved. Nothing starts while stopped"

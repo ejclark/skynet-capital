@@ -564,7 +564,7 @@ describe("ensureStatusColumns: the live field follows projects.mjs", () => {
     expect(writes).toHaveLength(1);
     expect(writes[0]?.map((o) => o.id)).toEqual(STATUS_OPTIONS.map((n) => `O_${n}`));
     expect(writes[0]?.find((o) => o.name === "Building now")?.description).toBe(
-      "Lanes start up to 6; fast-track cards and hand-started sessions may add more",
+      "Lanes start up to 6; one fast-track card and hand-started sessions may add more",
     );
     expect(writes[0]?.find((o) => o.name === "Next part queued")?.description).toBe(
       "Part built; next part approved. At 8 here, no new plan starts (fast-track excepted)",

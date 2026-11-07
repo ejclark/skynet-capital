@@ -265,17 +265,24 @@ describe("the dial sentences say what admitBuild does", () => {
         expect(queued).toMatch(/Nothing starts while stopped/);
         return;
       }
+      // "one fast-track card … over": past the cap, a fast-track card is admitted only while no
+      // other fast-track card is in flight (#6871 call 6).
+      const urgentBusy = (k: number) => [...busy(k - 1), issue(499, ["fast-track"])];
       if (position === "conserve") {
-        expect(building).toBe("Only fast-track cards start");
+        expect(building).toMatch(/^Only fast-track cards start: up to \d+, plus one over$/);
+        const n = numberIn(building, /up to (\d+),/);
+        expect(n).toBe(caps.inFlightCap);
         expect(admits(issue(1), [])).toBe(false);
-        expect(admits(issue(1, ["fast-track"]), busy(caps.inFlightCap))).toBe(true);
+        expect(admits(issue(1, ["fast-track"]), busy(n))).toBe(true);
+        expect(admits(issue(1, ["fast-track"]), urgentBusy(n))).toBe(false);
       } else {
         const n = numberIn(building, /up to (\d+);/);
         expect(n).toBe(caps.inFlightCap);
+        expect(building).toMatch(/; one fast-track card and hand-started sessions may add more$/);
         expect(admits(issue(1), busy(n - 1))).toBe(true);
         expect(admits(issue(1), busy(n))).toBe(false);
-        // "fast-track cards … may add more": fast-track is admitted past the cap
         expect(admits(issue(1, ["fast-track"]), busy(n))).toBe(true);
+        expect(admits(issue(1, ["fast-track"]), urgentBusy(n))).toBe(false);
       }
 
       const m = numberIn(queued, /At (\d+) here/);
