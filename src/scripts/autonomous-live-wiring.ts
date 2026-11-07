@@ -44,7 +44,7 @@ import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { ConvictionLookup } from "../playbooks/conviction-store.js";
 import { exitPlannedFor } from "../playbooks/exit-plan.js";
-import { openCeilingFor, withBelowBarLabel } from "../playbooks/fit-floor.js";
+import { openCeilingFor, ownerFloorsOf, withBelowBarLabel } from "../playbooks/fit-floor.js";
 import type { EnabledPlaybook, PlaybookReads } from "../playbooks/playbook.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
@@ -482,6 +482,9 @@ export function tradingRoster(
   const roster = runsScout
     ? full
     : { ...full, enabled: full.enabled.filter((e) => e.playbook.id !== BETA_SCOUT_ID) };
+  // One ceiling for the guards and the label (#6954 slice 5): the house floor, or the owner's
+  // smaller one off this bot's subscription (slice 5c), so the words name the size applied.
+  const ceiling = openCeilingFor(undefined, ownerFloorsOf(roster.subscriptions));
   return {
     // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose on
     // top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS or a
@@ -538,6 +541,7 @@ export function tradingRoster(
           log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
         },
       ),
+      ceiling,
     ),
     risk: {
       ...baseRisk,
@@ -559,7 +563,7 @@ export function tradingRoster(
         ...registeredPlaybooks(),
       ]),
       // A pair below its playbook's evidence bar opens at the smaller floor size (#6954 slice 5).
-      openCeiling: openCeilingFor(),
+      openCeiling: ceiling,
     },
   };
 }

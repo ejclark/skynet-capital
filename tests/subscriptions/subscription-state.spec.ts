@@ -254,3 +254,20 @@ describe("parseSubscriptionsState", () => {
     });
   });
 });
+
+describe("an owner's below-bar floor (#6954 slice 5c)", () => {
+  it("parses one between 0 and the whole account, and carries it on a re-subscribe", () => {
+    const [sub] =
+      parseSubscriptionsState({ "acct-1": [{ ...valid, belowBarFloorPct: 0.005 }] })?.["acct-1"] ??
+      [];
+    expect(sub?.belowBarFloorPct).toBe(0.005);
+    expect(sub && carriedOnResubscribe(sub)).toEqual({ belowBarFloorPct: 0.005 });
+  });
+
+  it.each([0, -0.01, 1.01, "0.005", null, true])(
+    "refuses the record for a floor of %s, never reading it as the larger house floor",
+    (belowBarFloorPct) => {
+      expect(parseSubscriptionsState({ "acct-1": [{ ...valid, belowBarFloorPct }] })).toEqual({});
+    },
+  );
+});

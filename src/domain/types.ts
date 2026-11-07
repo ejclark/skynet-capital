@@ -373,6 +373,14 @@ export interface PlaybookSubscription {
    * only narrow the playbook's own bounds (`playbooks/play-target.ts`).
    */
   readonly playTarget?: PlayTarget;
+  /**
+   * The owner's own below-bar floor (#6954 slice 5c): the most one opening order from this pair may
+   * risk, as a share of the account's equity, WHERE the pair sits below its playbook's evidence bar.
+   * It can only tighten the house floor (`BELOW_BAR_FLOOR_PCT`, `playbooks/fit-floor.ts`): a larger
+   * value reads as the house floor. Absent = the house floor. Behavioral, so it rides the wire only
+   * under `subscriptions.v5` (`subscriptions-wire.ts`); a v4 snapshot never applies it.
+   */
+  readonly belowBarFloorPct?: number;
 }
 
 /**

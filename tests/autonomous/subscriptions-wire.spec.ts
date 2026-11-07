@@ -116,7 +116,7 @@ describe("parseSubscriptionsSnapshot refuses anything it cannot fully reproduce"
   });
 
   it("refuses an unknown kind rather than reinterpreting it", () => {
-    for (const kind of ["subscriptions.v5", "s.v9", undefined]) {
+    for (const kind of ["subscriptions.v6", "s.v9", undefined]) {
       expect(parseSubscriptionsSnapshot({ ...good, kind })).toBeUndefined();
     }
   });

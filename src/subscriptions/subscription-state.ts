@@ -47,6 +47,7 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
   "compoundAllocation",
   "convictionId",
   "playTarget",
+  "belowBarFloorPct",
 ]);
 
 /** Fields an older build wrote that no build reads any more: dropped on read, never carried, and
@@ -148,8 +149,12 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     compoundAllocation,
     convictionId,
     playTarget,
+    belowBarFloorPct,
   } = raw;
   if (typeof playbookId !== "string" || playbookId.length === 0) return null;
+  // An owner's floor (#6954 slice 5c) only ever narrows, so a garbled one refuses the record rather
+  // than reading as absent — absent is the house floor, the LARGER size the owner turned down.
+  if (belowBarFloorPct !== undefined && !isOwnerFloor(belowBarFloorPct)) return null;
   if (typeof mode !== "string" || !PLAYBOOK_MODES.includes(mode as PlaybookMode)) return null;
   // Absent is a real value — "uncapped" (`PlaybookSubscription.capitalAllocated`'s doc). Present
   // but not a finite number is still malformed, never silently read as uncapped.
@@ -177,7 +182,14 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     ...(compoundAllocation === true ? { compoundAllocation: true } : {}),
     ...(parsedConvictionId ? { convictionId: parsedConvictionId } : {}),
     ...(parsedPlayTarget ? { playTarget: parsedPlayTarget } : {}),
+    ...(belowBarFloorPct !== undefined ? { belowBarFloorPct } : {}),
   };
+}
+
+/** A share of equity an owner's floor may hold: finite, above 0, at most the whole account. Whether
+ *  it tightens the house floor is `fit-floor.ts`'s call, never the parser's. */
+function isOwnerFloor(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 1;
 }
 
 /**
