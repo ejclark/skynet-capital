@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `route` red on main: protected-path changes — 2026-11-06
+- **SHA:** 13d5950   **DATE:** 2026-11-07   **STATUS:** closed
+- **COVERS:** a39f49c 6ff1d62 555261f
+- **SIGNAL:** 5 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [42185658675](https://github.com/ejclark/skynet-capital/actions/runs/42185658675) at 2026-11-06T08:09:22Z. Repair capsule #6942 filed 2026-11-06T08:13:44Z, closed 16h later by #6967.
+- **ROOT CAUSE:** One merge clears every protected-path change below; the boundary does not move, only its cost. **Either button lands it** — a merge commit keeps items in `main`; a squash reverts one through `platter revert`. Each item was verified green on the union as it boarded; this PR is that union's first CI run.
+- **PREVENTION:** spec — `tests/arch/research-circuit-breaker.spec.ts` (#6967).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### A publishing wrapper dropped `since`, so two held folds re-read whole audits in production while every spec stayed green
 - **SHA:** c2e4ebe   **DATE:** 2026-11-01   **STATUS:** closed
 - **SIGNAL:** `npm run stability:budget` on `main` (`a839e593`) FAILed `/api/wire` at 160 ms. A CPU profile of 15 warm Wire requests inside the budget container showed `ladderEvidenceFrom`, the whole-read fallback, running on every request. The cost landed earlier the same day with #6577 (the ladder's held fold) and #6585 (Activity's held order origins), so detection took hours. It came from the budget run's timing, which CI only prints.
