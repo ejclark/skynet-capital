@@ -20,6 +20,16 @@ as unknown is printed as unknown.
    each measure with this week's value beside `lastWeek` (read from the series; `null` is "no
    reading", never zero) and its target. The first row, open asks that need him, is the one to
    watch; the rest explain why it moved. `unread` names any read that failed.
+   **Playthroughs and reactions** (#7031 slice 3) is two lines. `metrics.playthroughGaps` is the
+   count of journey steps still marked `known_gap` (expected to fail), by member; a falling count
+   is the ratchet working, and a step written for a PR's own acceptance line never carries one.
+   `metrics.memberChanges` is the member-facing changes merged in the week (a `feat`, `fix` or
+   `perf` PR touching `app/src/**` or `src/ui/**`) and how many drew a reaction: Eric's is a
+   Revisit filing, a member's is an in-app filing naming the PR, and both are a floor until the
+   app has a per-change reaction (#7029 slice 4). `memberFilings` is the in-app filings of the
+   week, the volume line the member-facing slices wait on (2 a week). Unread PRs, and a count that
+   reads as words, are printed as unknown, never as zero. The open `needs-eric` count and its
+   median age are `metrics.needsEric`.
 3. **Milestones** — closed sub-issues and plan Log lines dated in the week.
 4. **Last week's plan, checked** — each commitment from the previous plan block marked done,
    partial or slipped, with the reason, and plan accuracy as a percentage.
