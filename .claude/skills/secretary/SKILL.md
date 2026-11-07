@@ -93,6 +93,14 @@ shape for tooling; without `--file` it drafts and says so, never posts.
    --member-filings`'s one line** (#6316) — every open `member-*` filing older than 24h that
    carries none of ready / in-progress / needs-info / needs-eric / next-slice, counted, the oldest
    named. A count above zero is the clear-path judge's next input, not a step on his list.
+   **Asks waiting on a session go here, as `node scripts/digest-scan.mjs --needs-session`'s one
+   line** (#6953 slice 2) — a merge of a branch with no PR, a patch-only PR, every `needs-session`
+   issue. The missing actor is a session, so none of it is his.
+   **`--needs-you` ends with two lines that are not items** (#6953 slices 3–4): *Callout
+   incomplete* (an ask he holds whose callout lacks options, a prediction or a silence line) and
+   *Unseen* (an ask no list shows him: `needs-eric` with no body callout, a callout only in a
+   comment, a protected PR neither held nor armed, a `platter/*` branch with no PR). Print both
+   here; each is fixed by a session moving the ask to where the lists can read it.
 
 **Measure the digest's own channel** (#456): `node scripts/comms-scan.mjs --table` emits one row
 per PR merged since the last digest — which picture form it used (or waived, with the reason),
