@@ -57,7 +57,7 @@ export function subscriptionSummary(
     ...(sub.compoundAllocation ? ["compounding"] : []),
     // The owner's below-bar floor (#6954 slice 5c-ii): it sizes what the bot opens, so it is logged.
     ...(sub.belowBarFloorPct !== undefined
-      ? [`below-bar floor ${floorPercent(sub.belowBarFloorPct)}`]
+      ? [`each new order at most ${floorPercent(sub.belowBarFloorPct)}`]
       : []),
     ...(sub.conviction ? [`conviction checked ${sub.conviction.checkOn}`] : []),
   ];

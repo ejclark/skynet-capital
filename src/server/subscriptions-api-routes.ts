@@ -405,7 +405,10 @@ async function handleConfigure(
         }),
     )) ??
     basketRefusal(body.playbookId, body.tuning.symbols) ??
-    (typeof body.tuning.belowBarFloorPct === "number"
+    // Only a floor the edit changes is judged: one echoed back unchanged (a pair that has since met
+    // its bar, a stale page) never blocks an unrelated edit.
+    (typeof body.tuning.belowBarFloorPct === "number" &&
+    body.tuning.belowBarFloorPct !== prior?.belowBarFloorPct
       ? ownerFloorRefusal(body.playbookId, body.tuning.belowBarFloorPct)
       : undefined) ??
     (prior

@@ -114,23 +114,25 @@ export function belowBarNote(pct: number = BELOW_BAR_FLOOR_PCT): string {
 
 /**
  * Why the Playbook Store refuses an owner's floor (#6954 slice 5c-ii), in words, or `undefined` to
- * save it. The bots would read any of these harmlessly (a larger floor reads as the house's, a pair
- * at its bar ignores one, the parser drops a share at or below 0), which is exactly why the Store
- * refuses them: a saved setting that changes nothing tells its owner something false.
+ * save it. The bots would read any of these harmlessly (a floor at or over the house's reads as the
+ * house's, a pair at its bar ignores one, the parser drops a share at or below 0), which is exactly
+ * why the Store refuses them: a saved setting that changes nothing tells its owner something false.
+ * The words name the job ("the most each new order may risk"), never the field's name.
  */
 export function ownerFloorRefusal(
   playbookId: string,
   pct: number,
   lookup: PairLookup = findPair,
 ): string | undefined {
+  const house = floorPercent(BELOW_BAR_FLOOR_PCT);
   if (!(Number.isFinite(pct) && pct > 0)) {
-    return "A below-bar floor has to be above 0%. Leave it empty to use the house floor.";
+    return `The most each new order may risk has to be above 0%. Leave it empty to use the house limit of ${house}.`;
   }
   if (!belowBar(playbookId, lookup)) {
-    return `${playbookId} is not below its bar, so it trades at its ordinary size and a below-bar floor would change nothing.`;
+    return `${playbookId} meets its study's bar, so it trades at its ordinary size and a smaller limit on each new order would change nothing.`;
   }
-  if (pct > BELOW_BAR_FLOOR_PCT) {
-    return `A below-bar floor can only be smaller than the house floor of ${floorPercent(BELOW_BAR_FLOOR_PCT)} of the account per opening order.`;
+  if (pct >= BELOW_BAR_FLOOR_PCT) {
+    return `The most each new order may risk can only be set below the house limit of ${house} of the account.`;
   }
   return undefined;
 }

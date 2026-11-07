@@ -146,8 +146,14 @@ describe("an owner's below-bar floor, written by the Store (#6954 slice 5c-ii)",
 
   describe("is refused in words, and nothing is saved", () => {
     it.each([
-      ["above the house floor", "S1-NVDA", 0.02, /only be smaller than the house floor of 1%/],
-      ["on a pair at its bar", "G1-GOOG", 0.005, /not below its bar/],
+      ["above the house limit", "S1-NVDA", 0.02, /only be set below the house limit of 1%/],
+      [
+        "at the house limit: it would change nothing",
+        "S1-NVDA",
+        BELOW_BAR_FLOOR_PCT,
+        /below the house limit of 1%/,
+      ],
+      ["on a pair at its bar", "G1-GOOG", 0.005, /meets its study's bar/],
       ["at zero", "S1-NVDA", 0, /above 0%/],
       ["below zero", "S1-NVDA", -0.001, /above 0%/],
     ])("%s", async (_label, playbookId, belowBarFloorPct, words) => {
@@ -166,16 +172,23 @@ describe("an owner's below-bar floor, written by the Store (#6954 slice 5c-ii)",
       expect(answer.body).toMatchObject({ ok: false });
       expect(floorOn("S1-NVDA")).toBeUndefined();
     });
+  });
 
-    it('exactly the house floor saves: the field reads "at most"', async () => {
-      // Exactly the house floor is allowed: "at most 1%" is what the field says.
-      const answer = await configure({
-        ...EDIT,
-        playbookId: "S1-NVDA",
-        belowBarFloorPct: BELOW_BAR_FLOOR_PCT,
-      });
-      expect(answer.body).toEqual({ ok: true });
+  it("a floor echoed back unchanged is never re-judged, so it cannot block an unrelated edit", async () => {
+    // A floor saved while G1-GOOG sat below its bar (written to disk directly: the Store would now
+    // refuse it), then an edit from a page that still sends it.
+    store.configure("sauron", "G1-GOOG", { ...EDIT, belowBarFloorPct: 0.005 });
+    const answer = await configure({
+      ...EDIT,
+      playbookId: "G1-GOOG",
+      capitalAllocated: 40_000,
+      belowBarFloorPct: 0.005,
     });
+    expect(answer.body).toEqual({ ok: true });
+    expect(floorOn("G1-GOOG")).toBe(0.005);
+    // ...and it can be cleared there.
+    await configure({ ...EDIT, playbookId: "G1-GOOG", belowBarFloorPct: null });
+    expect(floorOn("G1-GOOG")).toBeUndefined();
   });
 
   it.each([
@@ -244,8 +257,8 @@ describe("an owner's below-bar floor, written by the Store (#6954 slice 5c-ii)",
   it("the settings change log names it, as the percent the owner typed", () => {
     const [s1] = store.load().sauron ?? [];
     expect(s1 && subscriptionSummary({ ...s1, belowBarFloorPct: 0.005 })).toContain(
-      "below-bar floor 0.5%",
+      "each new order at most 0.5%",
     );
-    expect(s1 && subscriptionSummary(s1)).not.toContain("below-bar floor");
+    expect(s1 && subscriptionSummary(s1)).not.toContain("each new order");
   });
 });
