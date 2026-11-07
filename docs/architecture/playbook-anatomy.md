@@ -151,6 +151,14 @@ report (`recordPasses`, `play-milestone-sync.ts`), and the row is worded by `pla
 signed-in members only. Subscribing to another member's play is not part of this (it waits on #809's
 review slice).
 
+A **chain** (#6959 slice 1, `src/playbooks/chain.ts`) hands one playbook's position to the next when
+it reaches an event from a closed menu (filled, take-profit, stopped, assigned, expired, on a date).
+It is a record, not a `Playbook`: `parseChain` refuses any key off the form, so it carries no
+condition, and `nextOwner` keeps the current owner when no link names the event. Nothing live reads a
+chain yet; `src/playbooks/chain-replay.ts` runs one on price history in shadow, asking only the owner
+each session, and `npm run research:chain` prints the AI-dip chain's replay on CRWV. Live handoff
+waits on per-playbook ledgers (#4269).
+
 Around the playbook, in order of wrapping: the conviction check filters new entries; expiry hygiene
 adds its closes **beside** the playbook's intents (outside the conviction check, so it is never
 filtered); then every intent passes the guards. The guards refuse opens and never refuse a close.
