@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "@rstest/core";
+// @ts-expect-error plain .mjs script, no declarations (the same as fitness.spec.ts)
 import { judgeLiveSilent, parseTally } from "../../scripts/fitness.mjs";
 import {
   journalsOf,
@@ -16,6 +17,18 @@ import {
 // orders, no order placed and no refusal reason, THEN the health check SHALL fail. The tally runs
 // on the bots machine (scripts/journal-tally.mjs) and prints ids and counts; the judge and the
 // probe live in scripts/fitness.mjs as the `live-bots-place` contract.
+//
+// Graded 2026-11-07 on a blind list (evals-expert, spec unseen): 13 of 14 caught first time; the
+// survivor (stopping at five days drops the split half of the fifth) and one blind state (a day
+// past the calendar table) are seeded below, and the list now scores 14 of 14. It is
+// tests/scripts/fixtures/fitness-heldout-bugs-3.json, a regression list now, so the next score
+// needs a fresh blind pass. Grading it:
+//   node scripts/fitness-audit.mjs --bugs <file> --spec tests/scripts/fitness-live-silent.spec.ts \
+//     --with src/alerts/bot-watch.ts --with src/domain/market-session.ts \
+//     --with src/domain/market-calendar.ts --with src/domain/intl-format.ts \
+//     --with scripts/deploy-lag.mjs --with scripts/bot-relevant.mjs --with scripts/fitness-rungs.mjs \
+//     --with scripts/journal-tally.mjs --with scripts/journal-tally.d.mts \
+//     --with .dockerignore --with Dockerfile
 
 const SCRIPT = resolve("scripts/fitness.mjs");
 const TALLY = resolve("scripts/journal-tally.mjs");
@@ -173,6 +186,24 @@ describe("journal-tally: a folder", () => {
       "2026-10-29",
     ]);
     expect(bot?.sessions[1]).toMatchObject({ proposed: 2, placed: 1 });
+  });
+
+  it("reads on past five days when the fifth may be split: its other half can hold the placed order", async () => {
+    // Five days in the active file, the oldest of them begun in the archive, where it placed.
+    const five = ["2026-10-30", "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05"];
+    const dir = folder({
+      "sauron.2026-10-30T16-00-00-000Z.jsonl.gz": gzipSync(
+        `${record(at("2026-10-30", 14), { outcomes: [{ action: "placed" }] })}\n`,
+      ),
+      "sauron.jsonl": `${five.map((d) => record(at(d))).join("\n")}\n`,
+    });
+    const [bot] = (await tallyJournals(dir)).bots;
+    expect(bot?.sessions.at(-1)).toEqual({
+      day: "2026-10-30",
+      proposed: 2,
+      placed: 1,
+      explained: 0,
+    });
   });
 
   it("stops reading archives once a sixth day proves the fifth whole", async () => {
@@ -464,6 +495,17 @@ describe("live-bots-place wiring", () => {
     expect(verdictAt(stub, EVENING)).toMatchObject({
       status: "quiet",
       detail: "machine is stopped: bots-running reports this",
+    });
+    expect(flyCalls(stub)).not.toContain("journal-tally");
+  });
+
+  it("reads a day past the exchange calendar as unknown, not a closed market it can judge", () => {
+    // The calendar table ends in 2027; a holiday it cannot know reads as an open market.
+    const past = Date.parse("2028-03-04T15:00:00Z");
+    const stub = world(silentTally(past));
+    expect(verdictAt(stub, past)).toMatchObject({
+      status: "unknown",
+      detail: "the exchange calendar table ends before today",
     });
     expect(flyCalls(stub)).not.toContain("journal-tally");
   });
