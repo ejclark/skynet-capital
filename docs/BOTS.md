@@ -29,6 +29,7 @@ Persona.decide()  →  TradingEngine  →  BrokerPort
 - `bots/bot-broker.ts` — `createBotBroker(bot)` assembles transport → client → adapter and
   returns a live `BrokerPort` the engine can drive.
 - `alpaca/trading-transport.ts` — the network seam (key/secret header auth); fake it in tests.
+- `alpaca/paper-host.ts` — paper-only as a check in code: the transport and the fills stream refuse any host but paper trading (or market data, or an offline stand-in) at construction, so a wrong `baseUrl` fails boot (#6954).
 - `alpaca/alpaca-trading-client.ts` — typed calls for the account and its portfolio history
   (`/v2/account`), positions (`/v2/positions`), orders — place, read, list, replace, cancel
   (`/v2/orders`) — and the market clock (`/v2/clock`).
