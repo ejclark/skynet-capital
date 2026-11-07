@@ -101,7 +101,8 @@ export function openCeilingFor(
 
 /** "· below its bar: sized to at most 1% of the account" — the tail an opening order gains. */
 export function belowBarNote(pct: number = BELOW_BAR_FLOOR_PCT): string {
-  const shown = Number((pct * 100).toFixed(2));
+  // Three significant figures, never a fixed count of decimals: an owner's 0.004% must not read "0%".
+  const shown = Number((pct * 100).toPrecision(3));
   return ` · ${BELOW_BAR_LABEL}: sized to at most ${shown}% of the account`;
 }
 

@@ -265,9 +265,12 @@ describe("an owner's below-bar floor (#6954 slice 5c)", () => {
   });
 
   it.each([0, -0.01, 1.01, "0.005", null, true])(
-    "refuses the record for a floor of %s, never reading it as the larger house floor",
+    "drops a floor of %s and keeps the subscription, as a garbled symbols filter does",
     (belowBarFloorPct) => {
-      expect(parseSubscriptionsState({ "acct-1": [{ ...valid, belowBarFloorPct }] })).toEqual({});
+      const subs = parseSubscriptionsState({ "acct-1": [{ ...valid, belowBarFloorPct }] })?.[
+        "acct-1"
+      ];
+      expect(subs).toEqual([{ ...valid, accountId: "acct-1" }]);
     },
   );
 });

@@ -76,10 +76,13 @@ export type SubscriptionsSnapshotKind =
   | typeof SUBSCRIPTIONS_SNAPSHOT_KIND
   | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V5;
 
-const READ_KINDS: ReadonlySet<unknown> = new Set<SubscriptionsSnapshotKind>([
+const READ_KINDS: readonly SubscriptionsSnapshotKind[] = [
   SUBSCRIPTIONS_SNAPSHOT_KIND,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V5,
-]);
+];
+
+const isReadKind = (kind: unknown): kind is SubscriptionsSnapshotKind =>
+  READ_KINDS.some((read) => read === kind);
 
 /**
  * Defensive bounds on a snapshot. This app's roster is a handful of bots and its registry a
@@ -213,19 +216,18 @@ function withinBounds(accounts: Record<string, unknown>): boolean {
 export function parseSubscriptionsSnapshot(value: unknown): SubscriptionsSnapshot | undefined {
   if (!isRecord(value)) return undefined;
   const { kind, at, version, accounts } = value;
-  if (!READ_KINDS.has(kind)) return undefined;
-  const read = kind as SubscriptionsSnapshotKind;
+  if (!isReadKind(kind)) return undefined;
   if (typeof at !== "number" || !Number.isFinite(at) || at <= 0) return undefined;
   if (typeof version !== "string" || !VERSION.test(version)) return undefined;
   if (!(isRecord(accounts) && withinBounds(accounts))) return undefined;
   const parsed = parseSubscriptionsState(accounts);
-  if (!parsed || subscriptionsVersion(parsed, read) !== version) return undefined;
+  if (!parsed || subscriptionsVersion(parsed, kind) !== version) return undefined;
   const allocations = parseAllocations(value.allocations);
   return {
-    kind: read,
+    kind,
     at,
     version,
-    accounts: read === SUBSCRIPTIONS_SNAPSHOT_KIND_V5 ? parsed : withoutOwnerFloors(parsed),
+    accounts: kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V5 ? parsed : withoutOwnerFloors(parsed),
     ...(Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
 }

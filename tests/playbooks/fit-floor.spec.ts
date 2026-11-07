@@ -426,6 +426,14 @@ describe("an owner's smaller floor on a subscription", () => {
     );
   });
 
+  it("never rounds a small owner floor to 0% in the label", () => {
+    const tiny = [aSubscription("sauron", "S1-NVDA", { belowBarFloorPct: 0.00004 })];
+    const ceiling = openCeilingFor(undefined, ownerFloorsOf(tiny));
+    expect(labelBelowBar(BELOW_BAR_OPEN, ceiling).reason).toBe(
+      "a below-bar open · below its bar: sized to at most 0.004% of the account",
+    );
+  });
+
   it("names the house percent when the owner asked for more", () => {
     const loose = [aSubscription("sauron", "S1-NVDA", { belowBarFloorPct: 0.05 })];
     const ceiling = openCeilingFor(undefined, ownerFloorsOf(loose));

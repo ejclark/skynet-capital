@@ -85,13 +85,13 @@ describe("a v4 snapshot never applies a floor", () => {
 
 describe("a garbled floor", () => {
   it.each([0, -0.01, 1.5, "0.005", null, Number.NaN])(
-    "drops the subscription (%s) rather than reading it as the larger house floor",
+    "drops the floor (%s), never the subscription: the pair runs under the house floor",
     (bad) => {
       const raw = sentV5({ sauron: [sub()] });
       raw.accounts.sauron[0].belowBarFloorPct = bad;
-      // The record no longer parses, so the version (over what parsed) cannot reproduce: the
-      // whole snapshot reads as "not reported" and the roster in force stays.
-      expect(parseSubscriptionsSnapshot(raw)).toBeUndefined();
+      const parsed = parseSubscriptionsSnapshot(raw);
+      expect(parsed?.accounts.sauron).toHaveLength(1);
+      expect(parsed?.accounts.sauron?.[0]).not.toHaveProperty("belowBarFloorPct");
     },
   );
 });
