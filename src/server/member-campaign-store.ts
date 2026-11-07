@@ -12,9 +12,10 @@ import { listResearch, RESEARCH_DIR } from "./research-service.js";
  * title, a storyline, a sector or market and some tickers — no credentials, no personal data),
  * atomic tmp+rename writes, total reads.
  *
- * Keyed by `opaqueMemberId(email)`: the key IS the author, and the only reads are by that key, so
- * a member's campaign reaches nobody else (criterion 8). Inviting the party is slice 3b; until then
- * no read here takes another member's key.
+ * Keyed by `opaqueMemberId(email)`: the key IS the author, and `list` reads by that key, so a
+ * member's campaign reaches nobody else (criterion 8) until its author shares it with the party
+ * (slice 3b). `listShared` is the one read across authors and returns only records carrying
+ * `sharedAt`; unsharing deletes that field, so the next read stops returning the record.
  *
  * Every record is re-checked through `parseCampaign` on load, the same parser the house files pass,
  * so a hand-edited or stale file drops the bad record rather than serving it.
@@ -31,6 +32,21 @@ export interface MemberCampaignRecord {
    * ceiling.
    */
   readonly researchAsk: readonly string[];
+  /**
+   * Set when the author shares the campaign with the party (slice 3b), with the display name to
+   * show beside it. Both or neither: a record with one and not the other parses as private.
+   */
+  readonly sharedAt?: string;
+  readonly sharedBy?: string;
+}
+
+/** The longest author name shown beside a shared campaign; a bound on member text. */
+export const MAX_SHARED_BY = 60;
+
+/** A shared campaign as the party reads it: the record plus who it belongs to. */
+export interface SharedCampaign {
+  readonly memberKey: string;
+  readonly record: MemberCampaignRecord & { readonly sharedAt: string; readonly sharedBy: string };
 }
 
 export type MemberCampaignsState = Readonly<Record<string, readonly MemberCampaignRecord[]>>;
@@ -46,7 +62,12 @@ function parseRecord(raw: unknown): MemberCampaignRecord | undefined {
   try {
     const id = String(raw.campaign.id);
     const campaign = parseCampaign(raw.campaign, "member-campaigns.json", id);
-    return { campaign, createdAt, updatedAt, researchAsk };
+    const { sharedAt, sharedBy } = raw;
+    const shared =
+      typeof sharedAt === "string" && typeof sharedBy === "string" && sharedBy.length > 0
+        ? { sharedAt, sharedBy: sharedBy.slice(0, MAX_SHARED_BY) }
+        : {};
+    return { campaign, createdAt, updatedAt, researchAsk, ...shared };
   } catch {
     return undefined;
   }
@@ -135,10 +156,57 @@ export class MemberCampaignStore {
       createdAt: prior?.createdAt ?? iso,
       updatedAt: iso,
       researchAsk: [...researchAsk],
+      // An edit by the author keeps the campaign shared; sharing is the author's own act.
+      ...(prior?.sharedAt && prior.sharedBy
+        ? { sharedAt: prior.sharedAt, sharedBy: prior.sharedBy }
+        : {}),
     };
     const next = prior ? mine.map((r) => (r === prior ? record : r)) : [...mine, record];
     this.file.write({ ...state, [memberKey]: next });
     return { ok: true, record };
+  }
+
+  /**
+   * Every campaign its author has shared with the party, newest share first. The one read across
+   * authors: a record without `sharedAt` is never returned. The caller serves it to signed-in
+   * members only (the invite gate), which is the route's job, not the store's.
+   */
+  listShared(): readonly SharedCampaign[] {
+    const out: SharedCampaign[] = [];
+    for (const [memberKey, records] of Object.entries(this.file.load())) {
+      for (const record of records) {
+        if (record.sharedAt && record.sharedBy) {
+          out.push({
+            memberKey,
+            record: { ...record, sharedAt: record.sharedAt, sharedBy: record.sharedBy },
+          });
+        }
+      }
+    }
+    return out.sort((a, b) => b.record.sharedAt.localeCompare(a.record.sharedAt));
+  }
+
+  /**
+   * Share one of this author's campaigns with the party, or take it back to private. Only the
+   * author's own key reaches a record; another member's id is `not-found` here, the same answer as
+   * a campaign that does not exist. Sharing again keeps the first `sharedAt`.
+   */
+  setShared(
+    memberKey: string,
+    id: string,
+    shared: { readonly by: string } | false,
+    at = new Date(),
+  ): "ok" | "not-found" {
+    const state = this.file.load();
+    const mine = state[memberKey] ?? [];
+    const prior = mine.find((r) => r.campaign.id === id);
+    if (!prior) return "not-found";
+    const { sharedAt: _at, sharedBy: _by, ...rest } = prior;
+    const by = shared ? shared.by.trim().slice(0, MAX_SHARED_BY) : "";
+    const next: MemberCampaignRecord =
+      shared && by ? { ...rest, sharedAt: prior.sharedAt ?? at.toISOString(), sharedBy: by } : rest;
+    this.file.write({ ...state, [memberKey]: mine.map((r) => (r === prior ? next : r)) });
+    return "ok";
   }
 
   /** Remove one of this author's campaigns; another member's id is not theirs to remove. */

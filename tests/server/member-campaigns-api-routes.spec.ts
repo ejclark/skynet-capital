@@ -14,6 +14,11 @@ import { serveMemberCampaignsApi } from "../../src/server/member-campaigns-api-r
  * validates it through `parseCampaign`, stores it with the member as author, and returns it only to
  * that author's reads; the storyline is capped at 200 characters; the research it asks for is
  * recorded as an ask and starts nothing.
+ *
+ * Slice 3b: WHEN an author shares a campaign, every signed-in member's party read lists it with
+ * the author's display name and a request with no session never gets it; WHEN the author takes it
+ * back, other members' reads stop returning it; another member can never edit, delete, share or
+ * unshare it.
  */
 
 interface Answer {
@@ -168,6 +173,120 @@ describe("serveMemberCampaignsApi", () => {
     expect(store.list(ADA)).toEqual([]);
   });
 
+  describe("sharing with the party", () => {
+    const share = (id: string, shared: boolean, who: unknown = ada) =>
+      call("/api/campaigns/mine/share", post({ id, shared }), who);
+    const party = (who: unknown = grace) => call("/api/campaigns/party", get(), who);
+    const ids = (answer: { body: { campaigns: { id: string }[] } }) =>
+      answer.body.campaigns.map((c) => c.id);
+
+    it("keeps a campaign off the party read until its author shares it", async () => {
+      await save(FORM);
+      expect(ids(await party())).toEqual([]);
+      const shared = await share("energy-for-ai", true);
+      expect(shared.body).toMatchObject({
+        ok: true,
+        campaign: { id: "energy-for-ai", visibility: "party" },
+      });
+      const seen = await party();
+      expect(seen.body.campaigns).toEqual([
+        expect.objectContaining({
+          id: "energy-for-ai",
+          title: "Energy for AI",
+          author: "Ada Lovelace",
+          mine: false,
+          cast: ["XOM", "CVX", "XLE"],
+        }),
+      ]);
+      // The author reads the same list and is told which is theirs.
+      expect((await party(ada)).body.campaigns[0].mine).toBe(true);
+    });
+
+    it("shows other members only what the story shows, never the author's form or ask", async () => {
+      await save(FORM);
+      await share("energy-for-ai", true);
+      const [entry] = (await party()).body.campaigns;
+      expect(Object.keys(entry).sort()).toEqual(
+        ["anchor", "author", "cast", "id", "mine", "mode", "sharedAt", "storyline", "title"].sort(),
+      );
+    });
+
+    it("never serves a shared campaign to a request with no session", async () => {
+      await save(FORM);
+      await share("energy-for-ai", true);
+      const { res, out } = fakeRes();
+      const handled = await serveMemberCampaignsApi(
+        get(),
+        res,
+        "/api/campaigns/party",
+        config(),
+        undefined,
+      );
+      expect(handled).toBe(false);
+      expect(out.body).toBeUndefined();
+    });
+
+    it("stops returning it to other members once the author takes it back", async () => {
+      await save(FORM);
+      await share("energy-for-ai", true);
+      const back = await share("energy-for-ai", false);
+      expect(back.body.campaign.visibility).toBe("private");
+      expect(ids(await party())).toEqual([]);
+      expect(store.listShared()).toEqual([]);
+      // The author still has it.
+      expect(store.list(ADA)).toHaveLength(1);
+    });
+
+    it("keeps a shared campaign shared across the author's own edit", async () => {
+      await save(FORM);
+      await share("energy-for-ai", true);
+      await save({ ...FORM, mode: "play" }, ada, "energy-for-ai");
+      const [entry] = (await party()).body.campaigns;
+      expect(entry).toMatchObject({ id: "energy-for-ai", mode: "play" });
+    });
+
+    it("lets only the author share, unshare, edit or delete it", async () => {
+      await save(FORM);
+      await share("energy-for-ai", true);
+      const grab = await share("energy-for-ai", false, grace);
+      expect(grab.body.ok).toBe(false);
+      expect(ids(await party())).toEqual(["energy-for-ai"]);
+      await call("/api/campaigns/mine/delete", post({ id: "energy-for-ai" }), grace);
+      const edit = await save({ ...FORM, storyline: "mine now" }, grace, "energy-for-ai");
+      expect(edit.body.ok).toBe(false);
+      expect(store.list(ADA)[0]?.campaign.storyline).toBe(FORM.storyline);
+      // Grace's own campaign with the same name is hers alone.
+      await save(FORM, grace);
+      expect(store.list(opaqueMemberId("grace@example.com"))).toHaveLength(1);
+      expect(ids(await party())).toEqual(["energy-for-ai"]);
+    });
+
+    it("drops a shared campaign from the party read when the author deletes it", async () => {
+      await save(FORM);
+      await share("energy-for-ai", true);
+      await call("/api/campaigns/mine/delete", post({ id: "energy-for-ai" }), ada);
+      expect(ids(await party())).toEqual([]);
+    });
+
+    it("falls back to a neutral author name when the session has none", async () => {
+      const nameless = { email: "nameless@example.com" } as never;
+      await save(FORM, nameless);
+      await share("energy-for-ai", true, nameless);
+      expect((await party()).body.campaigns[0].author).toBe("A member");
+    });
+
+    it("answers 400 to a malformed share body, and not-found for a campaign that isn't theirs", async () => {
+      expect((await call("/api/campaigns/mine/share", post({ id: "x" }))).status).toBe(400);
+      expect((await share("nope", true)).body.ok).toBe(false);
+    });
+
+    it("serves the party read by GET only", async () => {
+      const { res, out } = fakeRes();
+      await serveMemberCampaignsApi(post({}), res, "/api/campaigns/party", config(), grace);
+      expect(out.status).toBe(405);
+    });
+  });
+
   it("answers not-wired when the deployment has no store", async () => {
     const answer = await call(
       "/api/campaigns/mine/save",
@@ -203,5 +322,22 @@ describe("MemberCampaignStore", () => {
     onDisk[ADA][0].campaign.storyline = "y".repeat(201);
     writeFileSync(file, JSON.stringify(onDisk));
     expect(new MemberCampaignStore(file).list(ADA)).toEqual([]);
+  });
+
+  it("reads a record with half a share (a date and no name) as private", async () => {
+    const file = join(dir, "member-campaigns.json");
+    const store = new MemberCampaignStore(file);
+    const { res } = fakeRes();
+    await serveMemberCampaignsApi(
+      post({ form: FORM }),
+      res,
+      "/api/campaigns/mine/save",
+      { memberCampaigns: store, campaignShelf: () => true } as unknown as DashboardServerConfig,
+      ada,
+    );
+    const onDisk = JSON.parse(readFileSync(file, "utf8"));
+    onDisk[ADA][0].sharedAt = "2026-11-07T00:00:00.000Z";
+    writeFileSync(file, JSON.stringify(onDisk));
+    expect(new MemberCampaignStore(file).listShared()).toEqual([]);
   });
 });
