@@ -15,8 +15,10 @@ import {
   BELOW_BAR_FLOOR_PCT,
   BELOW_BAR_LABEL,
   belowBar,
+  floorPct,
   labelBelowBar,
   openCeilingFor,
+  ownerFloorsOf,
   withBelowBarLabel,
 } from "../../src/playbooks/fit-floor.js";
 import { pairTable } from "../../src/playbooks/pair-table.js";
@@ -370,5 +372,102 @@ describe("the live roster turns the label and the floor on together", () => {
     const context = aContext({ NVDA: { last: 100 } }, "2026-10-07T15:00:00Z");
     const reasons = roster.persona.decide(context, aPortfolio()).map((i) => i.reason);
     expect(reasons).toEqual([labelBelowBar(BELOW_BAR_OPEN).reason]);
+  });
+});
+
+/**
+ * THE OWNER'S FLOOR (#6954 slice 5c). The EARS:
+ *  - WHERE a pair sits below its playbook's evidence bar and its subscription sets a smaller floor,
+ *    the system SHALL size its opens no larger than that floor and label each decision with that
+ *    percent; the owner SHALL never be able to set it above `BELOW_BAR_FLOOR_PCT`.
+ */
+describe("an owner's smaller floor on a subscription", () => {
+  const OWNER = 0.005;
+  const floored = [aSubscription("sauron", "S1-NVDA", { belowBarFloorPct: OWNER })];
+
+  it("tightens the house floor, and never loosens it", () => {
+    expect(floorPct(undefined)).toBe(BELOW_BAR_FLOOR_PCT);
+    expect(floorPct(OWNER)).toBe(OWNER);
+    expect(floorPct(BELOW_BAR_FLOOR_PCT * 3)).toBe(BELOW_BAR_FLOOR_PCT);
+  });
+
+  it("binds a below-bar pair only: a clean pair's subscription floor is no ceiling", () => {
+    const ceiling = openCeilingFor(
+      undefined,
+      ownerFloorsOf([...floored, aSubscription("sauron", "G1-GOOG", { belowBarFloorPct: OWNER })]),
+    );
+    expect(ceiling("S1-NVDA")).toBe(OWNER);
+    expect(ceiling("NVDA-CALL-SPREAD")).toBe(BELOW_BAR_FLOOR_PCT);
+    expect(ceiling("G1-GOOG")).toBeUndefined();
+  });
+
+  it("sizes the guards' buy to the owner's floor", () => {
+    const context = aContext({ NVDA: { last: 100 } }, "2026-10-07T15:00:00Z");
+    const ask = context.quotes.NVDA?.ask ?? 0;
+    const config: RiskConfig = {
+      maxPositionPct: 0.5,
+      openCeiling: openCeilingFor(undefined, ownerFloorsOf(floored)),
+    };
+    const { approved } = applyGuardsWithVerdicts(
+      [{ ...BELOW_BAR_OPEN, quantity: 30 }],
+      aPortfolio({ cash: 100_000 }),
+      context,
+      config,
+    );
+    const ownerShares = Math.floor((OWNER * 100_000) / ask);
+    expect(ownerShares).toBeLessThan(Math.floor((BELOW_BAR_FLOOR_PCT * 100_000) / ask));
+    expect(approved.map((i) => i.quantity)).toEqual([ownerShares]);
+  });
+
+  it("names the owner's percent in the label", () => {
+    const ceiling = openCeilingFor(undefined, ownerFloorsOf(floored));
+    expect(labelBelowBar(BELOW_BAR_OPEN, ceiling).reason).toBe(
+      "a below-bar open · below its bar: sized to at most 0.5% of the account",
+    );
+  });
+
+  it("never rounds a small owner floor to 0% in the label", () => {
+    const tiny = [aSubscription("sauron", "S1-NVDA", { belowBarFloorPct: 0.00004 })];
+    const ceiling = openCeilingFor(undefined, ownerFloorsOf(tiny));
+    expect(labelBelowBar(BELOW_BAR_OPEN, ceiling).reason).toBe(
+      "a below-bar open · below its bar: sized to at most 0.004% of the account",
+    );
+  });
+
+  it("names the house percent when the owner asked for more", () => {
+    const loose = [aSubscription("sauron", "S1-NVDA", { belowBarFloorPct: 0.05 })];
+    const ceiling = openCeilingFor(undefined, ownerFloorsOf(loose));
+    expect(ceiling("S1-NVDA")).toBe(BELOW_BAR_FLOOR_PCT);
+    expect(labelBelowBar(BELOW_BAR_OPEN, ceiling).reason).toBe(
+      labelBelowBar(BELOW_BAR_OPEN).reason,
+    );
+  });
+
+  describe("on the live roster", () => {
+    const roster = tradingRoster(
+      {
+        bot: {
+          persona: {
+            id: "sauron",
+            name: "Sauron",
+            thesis: "n/a",
+            decide: () => [{ ...BELOW_BAR_OPEN }],
+          },
+          credentials: { apiKey: "k", apiSecret: "s" },
+        },
+        subscriptions: floored,
+        enabled: [],
+      },
+      { maxPositionPct: 0.03 },
+    );
+
+    it("hands the guards the owner's floor and labels with the same percent", () => {
+      expect(roster.risk.openCeiling?.("S1-NVDA")).toBe(OWNER);
+      const context = aContext({ NVDA: { last: 100 } }, "2026-10-07T15:00:00Z");
+      const reasons = roster.persona.decide(context, aPortfolio()).map((i) => i.reason);
+      expect(reasons).toEqual([
+        "a below-bar open · below its bar: sized to at most 0.5% of the account",
+      ]);
+    });
   });
 });

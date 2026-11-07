@@ -26,10 +26,21 @@
  * so the floor never lets a below-bar pair grow past what it would place today. UNMEASURED: a stated
  * default. Falsifier (#6954 call 1): wrong if by 2026-12-31 at least 10 closed below-bar paper
  * trades average worse than −2% while at-or-above-bar pairs are positive — that pair then drops to
- * record-only. An owner will be able to set a smaller floor on a subscription, never a larger one
- * (#6954 slice 5's later piece); until then this constant is the only floor.
+ * record-only. An owner's smaller floor is the lever before that.
+ *
+ * THE OWNER'S FLOOR (#6954 slice 5c). A subscription may carry `belowBarFloorPct`, its owner's own
+ * floor for that pair. It only ever tightens this one: the floor a pair runs under is the smaller of
+ * the two (`floorPct`), so no setting can size a below-bar pair past what the house allows. The
+ * guards' ceiling and the label's percent are the same function (`openCeilingFor`), so the words on
+ * a decision always name the floor that sized it. A pair at or above its bar ignores the field: it
+ * narrows weak evidence, not a pair's ordinary size.
  */
-import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
+import type {
+  MarketContext,
+  OrderIntent,
+  PlaybookSubscription,
+  Portfolio,
+} from "../domain/types.js";
 import type { Persona } from "../personas/persona.js";
 import { belowHouseBar, findPair, type Pair } from "./pair-table.js";
 import { pausedMayPlace } from "./playbook.js";
@@ -50,40 +61,76 @@ export function belowBar(playbookId: string, lookup: PairLookup = findPair): boo
   return pair !== undefined && belowHouseBar(pair.evidence);
 }
 
+/** The guards' ceiling for one playbook (`RiskConfig.openCeiling`): a share of equity, or
+ *  `undefined` for no ceiling. The label reads the same function, so its percent is the one applied. */
+export type OpenCeiling = (playbookId: string) => number | undefined;
+
+/** The owner's floor for each playbook, read off one bot's subscriptions (`belowBarFloorPct`). */
+export type OwnerFloorOf = (playbookId: string) => number | undefined;
+
+const NO_OWNER_FLOOR: OwnerFloorOf = () => undefined;
+
+/** The floor a below-bar pair runs under: the owner's when it is smaller, else the house's, so a
+ *  larger one reads as the house floor. A NaN (the parser refuses one) survives `Math.min`, and the
+ *  guards fail it closed at 0 (`openCeilingUsd`): never a larger size. */
+export function floorPct(ownerPct: number | undefined): number {
+  return ownerPct === undefined ? BELOW_BAR_FLOOR_PCT : Math.min(BELOW_BAR_FLOOR_PCT, ownerPct);
+}
+
+/** Each playbook's owner floor on one bot, from that bot's subscriptions. */
+export function ownerFloorsOf(subscriptions: readonly PlaybookSubscription[]): OwnerFloorOf {
+  const floors = new Map(
+    subscriptions.flatMap((sub) =>
+      sub.belowBarFloorPct === undefined ? [] : [[sub.playbookId, sub.belowBarFloorPct] as const],
+    ),
+  );
+  return (playbookId) => floors.get(playbookId);
+}
+
 /**
- * The guards' ceiling for one playbook (`RiskConfig.openCeiling`): the floor when its pair is below
- * its bar, else `undefined` (no ceiling). Bound to the lookup once, so a spec can hand it a table.
+ * The ceiling for one bot: the floor (`floorPct`, the owner's when smaller) when a playbook's pair
+ * is below its bar, else `undefined`. Bound to the lookup once, so a spec can hand it a table.
  */
 export function openCeilingFor(
   lookup: PairLookup = findPair,
-): (playbookId: string) => number | undefined {
-  return (playbookId) => (belowBar(playbookId, lookup) ? BELOW_BAR_FLOOR_PCT : undefined);
+  ownerFloorOf: OwnerFloorOf = NO_OWNER_FLOOR,
+): OpenCeiling {
+  return (playbookId) =>
+    belowBar(playbookId, lookup) ? floorPct(ownerFloorOf(playbookId)) : undefined;
 }
 
 /** "· below its bar: sized to at most 1% of the account" — the tail an opening order gains. */
 export function belowBarNote(pct: number = BELOW_BAR_FLOOR_PCT): string {
-  const shown = Number((pct * 100).toFixed(2));
+  // Three significant figures, never a fixed count of decimals: an owner's 0.004% must not read "0%".
+  const shown = Number((pct * 100).toPrecision(3));
   return ` · ${BELOW_BAR_LABEL}: sized to at most ${shown}% of the account`;
 }
 
 /** An order the floor sizes — an open that risks cash, from a below-bar pair — with the label on its
- *  reason; every other order as it came. Exits and a covered call (which risks no cash, so the floor
- *  never sizes it: `pausedMayPlace`) are left alone, since the label would say otherwise. */
-export function labelBelowBar(intent: OrderIntent, lookup: PairLookup = findPair): OrderIntent {
-  if (!intent.playbookId || pausedMayPlace(intent) || !belowBar(intent.playbookId, lookup)) {
-    return intent;
-  }
-  if (intent.reason.includes(BELOW_BAR_LABEL)) return intent;
-  return { ...intent, reason: `${intent.reason}${belowBarNote()}` };
+ *  reason, naming the percent `ceiling` sizes it to; every other order as it came. Exits and a
+ *  covered call (which risks no cash, so the floor never sizes it: `pausedMayPlace`) are left alone,
+ *  since the label would say otherwise. */
+export function labelBelowBar(
+  intent: OrderIntent,
+  ceiling: OpenCeiling = openCeilingFor(),
+): OrderIntent {
+  if (!intent.playbookId || pausedMayPlace(intent)) return intent;
+  const pct = ceiling(intent.playbookId);
+  if (pct === undefined || intent.reason.includes(BELOW_BAR_LABEL)) return intent;
+  return { ...intent, reason: `${intent.reason}${belowBarNote(pct)}` };
 }
 
-/** The composed persona, with every order it decides labelled (`labelBelowBar`). Outermost, so the
- *  opens the wrappers add (a roll, a wind-down) are labelled too; every other method passes through. */
-export function withBelowBarLabel(inner: Persona): Persona {
+/** The composed persona, with every order it decides labelled (`labelBelowBar`) against the same
+ *  `ceiling` the guards size with. Outermost, so the opens the wrappers add (a roll, a wind-down) are
+ *  labelled too; every other method passes through. */
+export function withBelowBarLabel(
+  inner: Persona,
+  ceiling: OpenCeiling = openCeilingFor(),
+): Persona {
   return {
     ...inner,
     decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
-      return inner.decide(context, portfolio).map((intent) => labelBelowBar(intent));
+      return inner.decide(context, portfolio).map((intent) => labelBelowBar(intent, ceiling));
     },
   };
 }

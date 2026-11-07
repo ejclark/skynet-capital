@@ -144,8 +144,9 @@ const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
 
 /** The Playbook Store as the bots receive it on every poll: `subscriptions.v4`, with each
  *  subscription's pointer at a conviction record in the version (#5482 contract piece 4). Its
- *  inline-copy bit is frozen at `false` since the field was retired, and v4 is the only kind the
- *  wire knows since the contract step's close (`subscriptions-wire.ts`). */
+ *  inline-copy bit is frozen at `false` since the field was retired. The bots also read v5, whose
+ *  version names an owner's below-bar floor (#6954 slice 5c); this sends v4 until that has
+ *  deployed (`subscriptions-wire.ts`). */
 export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
   return buildSubscriptionsSnapshot(store.load(), at, store.loadAllocations());
 }

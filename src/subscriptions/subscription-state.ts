@@ -47,6 +47,7 @@ const KNOWN_FIELDS: ReadonlySet<string> = new Set([
   "compoundAllocation",
   "convictionId",
   "playTarget",
+  "belowBarFloorPct",
 ]);
 
 /** Fields an older build wrote that no build reads any more: dropped on read, never carried, and
@@ -148,6 +149,7 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     compoundAllocation,
     convictionId,
     playTarget,
+    belowBarFloorPct,
   } = raw;
   if (typeof playbookId !== "string" || playbookId.length === 0) return null;
   if (typeof mode !== "string" || !PLAYBOOK_MODES.includes(mode as PlaybookMode)) return null;
@@ -177,7 +179,17 @@ export function parseSubscription(raw: unknown, accountId: string): PlaybookSubs
     ...(compoundAllocation === true ? { compoundAllocation: true } : {}),
     ...(parsedConvictionId ? { convictionId: parsedConvictionId } : {}),
     ...(parsedPlayTarget ? { playTarget: parsedPlayTarget } : {}),
+    ...(isOwnerFloor(belowBarFloorPct) ? { belowBarFloorPct } : {}),
   };
+}
+
+/** A share of equity an owner's floor (#6954 slice 5c) may hold: finite, above 0, at most the whole
+ *  account. Whether it tightens the house floor is `fit-floor.ts`'s call, never the parser's. A
+ *  garbled one drops the floor, not the subscription, as a garbled `symbols` drops the filter: the
+ *  pair then runs under the house floor, which still bounds it, and one bad optional field never
+ *  hides a pair from its owner or makes the whole file unreadable (`subscriptions-file.ts`). */
+function isOwnerFloor(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 1;
 }
 
 /**
