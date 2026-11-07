@@ -48,7 +48,22 @@ export function decisionsSnapshot(rest, nowMs) {
     const items = parseAsk(bodies.get(n) ?? "");
     return items.length > 0 && items.every((it) => it.forecast);
   });
-  const unseen = gatherUnseen({ rest: (p) => list(p), read, issues: deps.issues, prs: deps.prs });
+  // The unseen scan fails on its own (the search bucket is 30 a minute): it costs its measure, not
+  // the open asks, which are the measure to watch.
+  let unseen = null;
+  let unseenUnread = null;
+  try {
+    unseen = gatherUnseen({
+      rest: (p) => list(p),
+      read,
+      issues: deps.issues,
+      prs: deps.prs,
+      listed: planned.needsYou.map((n) => n.number),
+      now: nowMs,
+    });
+  } catch (err) {
+    unseenUnread = `unavailable: ${String(err.message).split("\n")[0].slice(0, 200)}`;
+  }
   return {
     needsYou: planned.needsYou.map((n) => ({ number: n.number, criterion: n.criterion })),
     // A session-labelled issue is waiting on a session by choice; the gaps are the asks that were
@@ -58,7 +73,8 @@ export function decisionsSnapshot(rest, nowMs) {
       .map((s) => ({ number: s.number, why: s.why })),
     asks,
     predicted,
-    unseen: unseen.map((u) => ({ case: u.case, ref: u.number ?? u.branch, why: u.why })),
+    unseen: unseen && unseen.map((u) => ({ case: u.case, ref: u.number ?? u.branch, why: u.why })),
+    ...(unseenUnread ? { unseenUnread } : {}),
   };
 }
 
@@ -112,12 +128,21 @@ export function labelHistory(rest, w) {
   return episodes.sort((a, b) => a.unlabeledAt.localeCompare(b.unlabeledAt));
 }
 
-/** CI capsules created from 14 days before the window to its end: repair.mjs's signatures. */
+/**
+ * CI capsules updated from 14 days before the window, created before its end: repair.mjs's
+ * signatures. An older capsule still open is in the list (its updates keep it there) — repair
+ * dedupes against it, so a second number beside it is a refile too.
+ */
 export function ciCapsules(rest, w) {
   const since = new Date(w.sinceMs - 14 * DAY).toISOString();
   return lister(rest)(`issues?state=all&labels=ci-failure&since=${since}`)
     .filter((i) => !i.pull_request && Date.parse(i.created_at) < w.untilMs)
-    .map((i) => ({ number: i.number, title: i.title, createdAt: i.created_at }));
+    .map((i) => ({
+      number: i.number,
+      title: i.title,
+      createdAt: i.created_at,
+      closedAt: i.closed_at ?? null,
+    }));
 }
 
 /** The stored series, or `[]` when the data branch has none yet (that is "no reading", not a fault). */

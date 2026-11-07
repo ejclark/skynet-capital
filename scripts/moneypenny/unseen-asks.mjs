@@ -22,8 +22,10 @@
 // Reads are bounded: the open `needs-eric` list and open PRs (both usually handed in from the
 // assignment gather, so free), one search for callouts in comments (10 hits on 2026-11-07), a
 // comment list per hit whose body has no callout, a file list per open PR with neither hold nor
-// auto-merge, and one PR lookup per `platter/*` branch with no open PR.
+// auto-merge past the in-flight hour, and one PR lookup per `platter/*` branch with no open PR.
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { breachOf } from "../envelope-scan.mjs";
 import { calloutLines, decisionLine } from "./ask-card.mjs";
 import { NEEDS_ERIC } from "./decision-callout.mjs";
@@ -33,10 +35,19 @@ export const HOLD_MERGE = "hold-merge";
 export const PLATTER_PREFIX = "platter/";
 /** The search that finds callouts in comments; past one page it says so instead of guessing. */
 const SEARCH_CAP = 100;
+/** A protected PR younger than this is still in CI: the pipeline holds it once verify has run. */
+export const IN_FLIGHT_MS = 3600 * 1000;
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const names = (labels = []) => labels.map((l) => (typeof l === "string" ? l : l?.name));
 const open = (x) => (x.state ?? "open") === "open";
 const hasCallout = (body) => decisionLine(body ?? "") !== null;
+/** Open, past the in-flight floor, and neither held nor armed: nothing will move it. */
+const unheld = (pr, now) =>
+  open(pr) &&
+  !pr.auto_merge &&
+  !names(pr.labels).includes(HOLD_MERGE) &&
+  !(now - Date.parse(pr.created_at ?? "") < IN_FLIGHT_MS);
 
 /**
  * Every unseen ask, one row each, the most specific case winning when two apply (a `needs-eric`
@@ -50,6 +61,9 @@ const hasCallout = (body) => decisionLine(body ?? "") !== null;
  *   draft?: boolean, files?: string[]}[]} [input.prs] open PRs; `files` only where read
  * @param {{branch: string, prs: number}[]} [input.platters] each `platter/*` branch and its PR count
  * @param {(path: string) => boolean} [input.isProtected]
+ * @param {Iterable<number>} [input.listed] numbers already on Needs you (`plan().needsYou`): a list
+ *   shows those, so they are never unseen — a held PR carrying `needs-eric` is criterion 4's
+ * @param {number} [input.now] the clock for the in-flight floor
  */
 export function unseenAsks({
   issues = [],
@@ -57,9 +71,11 @@ export function unseenAsks({
   prs = [],
   platters = [],
   isProtected = () => false,
+  listed = [],
+  now = Date.now(),
 } = {}) {
   const rows = [];
-  const seen = new Set();
+  const seen = new Set(listed);
   const add = (row) => {
     if (row.number !== undefined && seen.has(row.number)) return;
     if (row.number !== undefined) seen.add(row.number);
@@ -82,7 +98,7 @@ export function unseenAsks({
     });
   }
   for (const pr of prs) {
-    if (!open(pr) || pr.auto_merge || names(pr.labels).includes(HOLD_MERGE)) continue;
+    if (!unheld(pr, now)) continue;
     const hit = (pr.files ?? []).find(isProtected);
     if (!hit) continue;
     add({
@@ -109,8 +125,8 @@ export function unseenLine(rows, unknown = null) {
 }
 
 /** `envelope.json`'s test, read once. */
-export function protectedTest(root = process.cwd()) {
-  const rules = JSON.parse(readFileSync(`${root}/envelope.json`, "utf8")).protected ?? [];
+export function protectedTest(root = ROOT) {
+  const rules = JSON.parse(readFileSync(join(root, "envelope.json"), "utf8")).protected ?? [];
   return (path) => breachOf(path, rules) !== null;
 }
 
@@ -124,6 +140,8 @@ export function gatherUnseen({
   repo = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital",
   issues,
   prs,
+  listed = [],
+  now = Date.now(),
   isProtected = protectedTest(),
 } = {}) {
   const asked = issues ?? rest(`issues?state=open&labels=${NEEDS_ERIC}`);
@@ -154,10 +172,21 @@ export function gatherUnseen({
     .filter(Boolean)
     .map((branch) => ({
       branch,
+      // A PR closed unmerged leaves the branch as stranded as no PR at all: only open or merged count.
       prs: heads.has(branch)
         ? 1
-        : rest(`pulls?state=all&head=${owner}:${encodeURIComponent(branch)}`).length,
+        : rest(`pulls?state=all&head=${owner}:${encodeURIComponent(branch)}`).filter(
+            (pr) => pr.state === "open" || pr.merged_at,
+          ).length,
     }));
 
-  return unseenAsks({ issues: asked, commentCallouts, prs: prRows, platters, isProtected });
+  return unseenAsks({
+    issues: asked,
+    commentCallouts,
+    prs: prRows,
+    platters,
+    isProtected,
+    listed,
+    now,
+  });
 }

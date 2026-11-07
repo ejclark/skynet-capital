@@ -90,6 +90,16 @@ describe("the same question under a new number", () => {
     });
   });
 
+  it("counts a refile beside an older capsule still open, and not one closed long before", () => {
+    const old = { number: 6000, title: t, createdAt: "2026-10-01T00:00:00Z" };
+    const fresh = { number: 6900, title: t, createdAt: "2026-11-04T00:00:00Z" };
+    expect(refiled([{ ...old, closedAt: null }, fresh], W45).items).toEqual([
+      { number: 6900, sameAs: 6000 },
+    ]);
+    expect(refiled([{ ...old, closedAt: "2026-11-01T00:00:00Z" }, fresh], W45).count).toBe(1);
+    expect(refiled([{ ...old, closedAt: "2026-10-10T00:00:00Z" }, fresh], W45).count).toBe(0);
+  });
+
   it("reads 0 once a returning fault reopens its one capsule instead of filing (slice 2)", () => {
     expect(refiled([capsules[1], capsules[4]], W45).count).toBe(0);
   });
@@ -264,6 +274,40 @@ describe("the report, beside last week", () => {
     expect(Object.keys(failed.unread)).toEqual(["snapshot", "episodes", "series"]);
   });
 
+  it("loses only the unseen measure when the unseen scan fails, never the open asks", () => {
+    const partial = decisionsReport(
+      {
+        snapshot: { ...snapshot, unseen: null, unseenUnread: "unavailable: search rate limit" },
+        episodes: [],
+        capsules: [],
+        ledger: { text: ALIGNMENT },
+        needsEric,
+        series,
+      },
+      { w: W45, asOfMs: W45.untilMs, priorWeek: "2026-W44" },
+    );
+    const value = (id: string) => partial.measures.find((m: Measure) => m.id === id).value;
+    expect([value("openAsks"), value("unseen")]).toEqual([3, null]);
+    expect(partial.unread).toEqual({ unseen: "unavailable: search rate limit" });
+  });
+
+  it("cuts the ledger at a partial week's asOf day, so a re-run reads as it stood", () => {
+    const md = `## Ledger\n\n| Date | Class | Ask | P | A | Score |\n|---|---|---|---|---|---|\n| 2026-11-04 | x | a | A | A | match |\n| 2026-11-06 | x | a | A | B | miss |\n`;
+    const wed = windowOf("2026-W45", Date.parse("2026-11-04T18:00:00Z"));
+    const r = decisionsReport(
+      {
+        snapshot: null,
+        episodes: [],
+        capsules: [],
+        ledger: { text: md },
+        needsEric: [],
+        series: [],
+      },
+      { w: wed, asOfMs: wed.untilMs, priorWeek: "2026-W44" },
+    );
+    expect(r.measures.find((m: Measure) => m.id === "ledgerMatchRate").value).toBe(1);
+  });
+
   it("gives Your part this week the open-ask count and the oldest, from the same selector", () => {
     expect(openAsks(snapshot, needsEric, W45.untilMs)).toEqual({
       count: 3,
@@ -294,6 +338,7 @@ describe("the report, beside last week", () => {
 
 describe("oldestBotAsk", () => {
   it("is unknown for rows read before ranks were kept, and 0 when no such ask is open", () => {
+    expect(oldestBotAsk([], 0)).toEqual({ days: 0, number: null, count: 0 });
     expect(oldestBotAsk([{ number: 1, labeledAt: "2026-11-01T00:00:00Z" }], 0)).toBeNull();
     expect(oldestBotAsk([{ number: 1, labeledAt: "2026-11-01T00:00:00Z", rank: 4 }], 0)).toEqual({
       days: 0,

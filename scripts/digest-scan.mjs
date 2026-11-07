@@ -47,7 +47,7 @@
 //
 // UNSEEN (#6953 slice 4): `--needs-you` ends with one line naming the asks no list can see. The
 // four cases, and every rule that tells them apart, live in scripts/moneypenny/unseen-asks.mjs, so
-// this file keeps no selector of its own (tests/scripts/digest-scan.spec.ts holds it to that).
+// this file keeps no selector of its own (tests/scripts/moneypenny/needs-you.spec.ts holds it to that).
 //
 // LEARNING (#4212, #4056 slice 7): unlearned incidents are a count line under "Noise absorbed",
 // never a Needs-you item — a repair capsule's close drafts its own ledger entry
@@ -374,7 +374,8 @@ async function needsYouReport() {
   let unseen = null;
   let why = null;
   try {
-    unseen = gatherUnseen({ issues: read.issues, prs: read.prs });
+    const listed = planned.needsYou.map((n) => n.number);
+    unseen = gatherUnseen({ issues: read.issues, prs: read.prs, listed });
   } catch (err) {
     why = String(err?.message ?? err)
       .split("\n")[0]

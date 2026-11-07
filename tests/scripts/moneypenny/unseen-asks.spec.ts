@@ -54,6 +54,23 @@ describe("unseenAsks — the four cases no list can see", () => {
   });
 });
 
+describe("unseenAsks — what is not unseen", () => {
+  const NOW = Date.parse("2026-11-07T12:00:00Z");
+  it("skips what Needs you already lists, and a protected PR still inside its first hour of CI", () => {
+    const rows = unseenAsks({
+      issues: [{ number: 20, title: "held PR with the label", body: "", labels: needsEric }],
+      prs: [
+        { number: 30, labels: [], files: ["envelope.json"], created_at: "2026-11-07T11:30:00Z" },
+        { number: 31, labels: [], files: ["envelope.json"], created_at: "2026-11-07T10:00:00Z" },
+      ],
+      isProtected,
+      listed: [20],
+      now: NOW,
+    });
+    expect(rows.map((r) => r.number)).toEqual([31]);
+  });
+});
+
 describe("unseenLine", () => {
   it("lists each item, says plainly when there is none, and never reads a failed scan as none", () => {
     expect(unseenLine([])).toBe("- Unseen: every open ask is on a list.");
@@ -82,7 +99,12 @@ describe("gatherUnseen — the reads", () => {
     calls.push(path);
     if (path in comments) return comments[path] ?? [];
     if (path.startsWith("pulls/6768/files")) return [{ filename: ".github/workflows/x.yml" }];
-    if (path.startsWith("git/matching-refs")) return [{ ref: "refs/heads/platter/a" }];
+    if (path.startsWith("git/matching-refs"))
+      return ["a", "closed", "merged"].map((b) => ({ ref: `refs/heads/platter/${b}` }));
+    if (path.startsWith("pulls?state=all&head=ejclark:platter%2Fclosed"))
+      return [{ state: "closed", merged_at: null }];
+    if (path.startsWith("pulls?state=all&head=ejclark:platter%2Fmerged"))
+      return [{ state: "closed", merged_at: "2026-11-01T00:00:00Z" }];
     if (path.startsWith("pulls?state=all")) return [];
     throw new Error(`unexpected read ${path}`);
   };
@@ -106,7 +128,13 @@ describe("gatherUnseen — the reads", () => {
   });
 
   it("counts only a trusted comment's real callout, and reads files only for unarmed, unheld PRs", () => {
-    expect(rows.map((r) => r.number ?? r.branch)).toEqual([6771, 6768, "platter/a"]);
+    // A platter PR closed unmerged strands its branch like no PR at all; a merged one does not.
+    expect(rows.map((r) => r.number ?? r.branch)).toEqual([
+      6771,
+      6768,
+      "platter/a",
+      "platter/closed",
+    ]);
     expect(calls).not.toContain("issues/6953/comments");
     expect(calls.some((c) => c.startsWith("pulls/7/files"))).toBe(false);
   });

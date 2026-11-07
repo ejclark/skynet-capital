@@ -140,21 +140,25 @@ export function labelEpisodes(episodes, w) {
 }
 
 /**
- * CI capsules filed in the week whose title — repair.mjs's signature — another capsule already
- * carried within `REFILE_DAYS` before it: the same question under a new number. Since slice 2 a
- * returning fault reopens its capsule, so this should read 0. Pure.
+ * CI capsules filed in the week whose title — repair.mjs's signature — another capsule still owned
+ * when it was filed: open then, or closed within `REFILE_DAYS` before (repair.mjs's own rule, by
+ * close date). The same question under a new number. Since slice 2 a returning fault reopens its
+ * capsule, so this should read 0. Pure.
  */
 export function refiled(capsules, w) {
   if (!isList(capsules)) return null;
+  const owned = (o, at) => {
+    const created = Date.parse(o.createdAt);
+    if (!(created < at)) return false;
+    const closed = o.closedAt ? Date.parse(o.closedAt) : null;
+    return closed === null || closed >= at || at - closed <= REFILE_DAYS * DAY;
+  };
   const items = [];
   for (const c of capsules) {
     const at = Date.parse(c.createdAt);
     if (!within(at, w)) continue;
     const prior = capsules
-      .filter((o) => o.number !== c.number && o.title === c.title)
-      .filter(
-        (o) => Date.parse(o.createdAt) < at && at - Date.parse(o.createdAt) <= REFILE_DAYS * DAY,
-      )
+      .filter((o) => o.number !== c.number && o.title === c.title && owned(o, at))
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
     if (prior) items.push({ number: c.number, sameAs: prior.number });
   }
@@ -163,7 +167,8 @@ export function refiled(capsules, w) {
 
 /** The oldest open `needs-eric` ask ranked between watching and trading bots, by label age. Pure. */
 export function oldestBotAsk(rows, asOfMs) {
-  if (!(isList(rows) && rows.some((r) => "rank" in r))) return null;
+  // Rows read before ranks were kept cannot say; an empty list is the best case, read as 0.
+  if (!isList(rows) || (rows.length && !rows.some((r) => "rank" in r))) return null;
   const aged = rows
     .filter((r) => r.rank === BOT_RANK && r.labeledAt)
     .map((r) => ({ number: r.number, days: round1((asOfMs - Date.parse(r.labeledAt)) / DAY) }))
@@ -187,7 +192,7 @@ function fromSnapshot(snap) {
   return {
     value: {
       openAsks: snap.needsYou.length,
-      unseen: snap.unseen.length,
+      unseen: snap.unseen ? snap.unseen.length : null,
       artifactMissing: snap.artifactGaps.length,
       predictedShare: ratio(snap.predicted.length, snap.asks.length),
     },
@@ -244,6 +249,7 @@ function unreadOf({ snapshot, episodes, capsules, ledger, series }, led) {
   return Object.fromEntries(
     [
       ["snapshot", words(snapshot)],
+      ["unseen", snapshot && typeof snapshot === "object" ? (snapshot.unseenUnread ?? null) : null],
       ["episodes", words(episodes)],
       ["capsules", words(capsules)],
       ["ledger", ledgerWhy],
@@ -260,7 +266,11 @@ function unreadOf({ snapshot, episodes, capsules, ledger, series }, led) {
 export function decisionsReport(inputs, ctx) {
   const { snapshot, episodes, capsules, ledger, needsEric, series } = inputs;
   const { w, asOfMs, priorWeek } = ctx;
-  const led = ledger && typeof ledger === "object" ? ledgerStats(ledger.text, w.end) : null;
+  // A partial week stops at its asOf day, as plan Log lines do; a whole week at its end.
+  const cut = w.partial
+    ? new Date(Date.parse(w.until.slice(0, 10)) + DAY).toISOString().slice(0, 10)
+    : w.end;
+  const led = ledger && typeof ledger === "object" ? ledgerStats(ledger.text, cut) : null;
   const snap = fromSnapshot(snapshot && typeof snapshot === "object" ? snapshot : null);
   const hist = fromHistory({
     eps: labelEpisodes(episodes, w),

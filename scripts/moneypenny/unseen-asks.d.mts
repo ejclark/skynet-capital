@@ -2,6 +2,7 @@
 
 export const HOLD_MERGE: string;
 export const PLATTER_PREFIX: string;
+export const IN_FLIGHT_MS: number;
 
 export type UnseenCase = "no-callout" | "comment-only" | "protected-pr" | "platter-branch";
 export interface UnseenRow {
@@ -17,6 +18,8 @@ export interface UnseenInput {
   prs?: readonly Record<string, unknown>[];
   platters?: readonly { branch: string; prs: number }[];
   isProtected?: (path: string) => boolean;
+  listed?: Iterable<number>;
+  now?: number;
 }
 
 export function unseenAsks(input?: UnseenInput): UnseenRow[];
@@ -28,5 +31,7 @@ export function gatherUnseen(deps?: {
   repo?: string;
   issues?: readonly Record<string, unknown>[];
   prs?: readonly Record<string, unknown>[];
+  listed?: Iterable<number>;
+  now?: number;
   isProtected?: (path: string) => boolean;
 }): UnseenRow[];
