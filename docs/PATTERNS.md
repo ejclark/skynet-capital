@@ -54,8 +54,9 @@ and any prior decision it overturns: a fork settled in **Eric's own words** is r
 the frame, flagged "reverses your call of <date>", never silently replaced; a Claude-derived mechanism
 is overturnable with the row cited. A shape may borrow only rows graded `frame` or `vendor-quote` in the
 study it comes from. Red and tiger passes run against each shape before Eric sees them. The greybox
-HTML is committed (`docs/design/lofi/`) and the artifact is published from it — a lo-fi carries no
-account data, so the teardown ban on frames does not apply. Lo-fi settles template and flow; hi-fi
+HTML under `docs/design/lofi/` is the record of earlier hand-built rounds
+([`design/lofi/README.md`](design/lofi/README.md)) — a lo-fi carries no account data, so the
+teardown ban on frames does not apply. Lo-fi settles template and flow; hi-fi
 (`/design`, the synced components) settles placement and polish. A pick is written into the owning
 plan issue's decision log the moment it happens — the issue is the record; what Eric answers on a
 round page is read back into it ([`process/REDESIGN.md`](process/REDESIGN.md)).
@@ -77,7 +78,7 @@ falsifier is written on the frame — if the docked bench reads as a mess on the
 every width. A section that grows into a full page graduates to a sub-view — the legacy desk's `?tab=performance`
 became `/u/:id/pulse` this way (`src/server/legacy-redirects.ts`). A tab strip as a fourth
 navigation band was rejected: at phone width the topbar and the page's head (it holds the
-rail's jobs since #3810) are already each a horizontal row, and a third band before content is what the mobile-first rule forbids.
+rail's jobs, #3810) are already each a horizontal row, and a third band before content is what the mobile-first rule forbids.
 
 ## The vocabulary — four words for fire
 
@@ -134,7 +135,7 @@ undocumented and gets one.
 | **Member menu** | Actions on your own session (Settings, Sign out) leave the bar for one round button wearing your initial; each item is an icon and a word. | `app/src/shell/member-menu.tsx` | #5037 round 2, question 9 ("too many icons available all the time") | placed — falsifier (from the round-2 write-up): a crawl member cannot find Settings within two taps by 2026-11-15 → the button gains the word "Menu" |
 | **Hovercard** | A detail card on hover, suppressed where hover doesn't exist. | `app/src/styles/hovercard.css` | #738 | placed |
 | **Fog of war** | Withhold a *capability* behind an earnable rung, never information a member needs to stay safe; the door is visible · named · disabled · counted. | [`FOG-OF-WAR.md`](FOG-OF-WAR.md) (tree + its own instance ledger) | Eric, 2026-09-06: "a spot on / perfect scenario" | placed |
-| **Propose-then-place** | Claude proposes a pattern rendered on a candidate surface; Eric places it. A rejected placement banks the pattern, never the idea. | CLAUDE.md → *Fog of war is a first-class reveal pattern* | fog of war: declined for the ticket 2026-09-05, landed on the research day lens 2026-09-06 | placed (process) |
+| **Propose-then-place** | Claude proposes a pattern rendered on a candidate surface; Eric places it. A rejected placement banks the pattern, never the idea. | [`process/WORKING-AGREEMENTS.md`](process/WORKING-AGREEMENTS.md) → *Fog of war* | fog of war: declined for the ticket 2026-09-05, landed on the research day lens 2026-09-06 | placed (process) |
 | **"Build me" placeholder** | A planned item is visible but disabled and reads as "help shape it", not broken; the same treatment on a rail item and a trade type. | #784 (Trade rail, `src/domain/trade-types.ts` ladder) | Eric, 2026-08-29 | seeded |
 | **Onramp fold** | A how-to for an outside system (GitHub) folded behind a `<details>`, reference not front matter. | `app/src/routes/activity.tsx` (`.wire-onramp`) | #738 | placed — Eric, 2026-08-28: "feels out of place" (#784) |
 | **Mobile-first curation** | What survives 390px is the curated set; desktop adds room for what was one swipe away, never new concepts. | CLAUDE.md → *Mobile-first on every information surface* | Eric, 2026-09-05, from Fidelity's ticket | placed (rule) — widened from trading to every information surface, Eric 2026-09-26 |
