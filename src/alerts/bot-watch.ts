@@ -73,6 +73,12 @@ function isBreaker(reason: string): reason is HaltReason {
   return Object.hasOwn(BREAKERS, reason);
 }
 
+/** The breaker a halted decision record names, in words, when an owner's "reset breaker" can clear
+ *  it (#6954 slice 3b). The kill switch reads `manual` and is not one: only a restart clears it. */
+export function resettableBreaker(halted: string | undefined): string | undefined {
+  return halted && halted !== "manual" && isBreaker(halted) ? BREAKERS[halted].name : undefined;
+}
+
 /** One bot as the watch sees it: who it is, and its decision records in any order. */
 export interface BotWatchInput {
   readonly botId: string;
@@ -138,7 +144,7 @@ function haltedAlert(
     source: BOT_WATCH_SOURCE,
     priority: "critical",
     title: `${bot.name} is halted by ${breaker.name}, so it opens no new positions`,
-    body: `${breaker.why} Its exits keep running, so it can still get out of what it holds. A breaker never re-arms on its own: a restart of the bots clears it today.`,
+    body: `${breaker.why} Its exits keep running, so it can still get out of what it holds. A breaker never re-arms on its own: reset it from this bot's Settings card, or restart the bots.`,
     dedupeKey: `halted:${bot.botId}:${reason}:${session}`,
     data: { botId: bot.botId, breaker: reason, passAt },
   };

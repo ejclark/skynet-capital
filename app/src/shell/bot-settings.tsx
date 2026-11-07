@@ -36,6 +36,7 @@ const SETTING_NAMES: Readonly<Record<string, string>> = {
   hardcore: "Build",
   betaPicks: "Forced picks per day",
   betaStage: "After-close staging",
+  breakerReset: "Breaker",
 };
 
 const SUBSCRIPTION = "subscription:";
@@ -60,6 +61,7 @@ function valueWords(setting: string, value: BotSettingChange["before"]): string 
     return typeof value === "number" ? `$${value.toLocaleString("en-US")}` : "none";
   }
   if (setting === "suspended") return value === true ? "suspended" : "on";
+  if (setting === "breakerReset") return value === null ? "never reset" : "re-armed by its owner";
   if (value === null) return OPS;
   if (setting === "hardcore") return value === true ? "hardcore" : "standard";
   if (setting === "betaPicks") return value === 0 ? "0 (off)" : String(value);

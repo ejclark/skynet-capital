@@ -88,6 +88,33 @@ export class BotControlsStore {
     return next;
   }
 
+  /** Stamp the owner's "reset breaker" press (#6954 slice 3b): the bots re-arm on the poll that
+   *  carries a newer stamp. Returns the state as it was before, so the caller can log before/after. */
+  stampBreakerReset(updatedBy: string, at = new Date()): ControlsState {
+    const state = this.load();
+    const next: ControlsState = {
+      ...state,
+      breakerResetAt: at.toISOString(),
+      updatedAt: at.toISOString(),
+      updatedBy,
+    };
+    this.file.write(next);
+    return state;
+  }
+
+  /** Put the reset stamp back to what `prev` held — the undo when the change log could not be written. */
+  restoreBreakerReset(prev: ControlsState, updatedBy: string, at = new Date()): ControlsState {
+    const { breakerResetAt: _drop, ...rest } = this.load();
+    const next: ControlsState = {
+      ...rest,
+      ...(prev.breakerResetAt ? { breakerResetAt: prev.breakerResetAt } : {}),
+      updatedAt: at.toISOString(),
+      updatedBy,
+    };
+    this.file.write(next);
+    return next;
+  }
+
   setCompanionModel(model: CompanionModelId, updatedBy: string, at = new Date()): ControlsState {
     const state = this.load();
     const next: ControlsState = {
