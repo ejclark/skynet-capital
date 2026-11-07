@@ -59,7 +59,13 @@ export interface CapsuleIntent {
 export interface TimelineEvent {
   event?: string;
   source?: {
-    issue?: { number?: number; state?: string; pull_request?: { merged_at?: string | null } };
+    issue?: {
+      number?: number;
+      state?: string;
+      body?: string | null;
+      labels?: readonly Label[];
+      pull_request?: { merged_at?: string | null };
+    };
   };
 }
 type Run = (cmd: string, args: string[]) => string;
@@ -76,7 +82,10 @@ export function jobPassed(
   job: string,
   step?: string,
 ): boolean;
-export function openLinkedPr(timeline?: readonly TimelineEvent[]): number | null;
+export function openLinkedPr(
+  timeline?: readonly TimelineEvent[],
+  number?: number | null,
+): number | null;
 export function sinceReopen(comments?: readonly string[]): readonly string[];
 export function carryOf(c: Pick<Capsule, "body" | "openPr">): Carry;
 export function hasLinkedPr(timeline?: readonly TimelineEvent[], since?: string): boolean;
@@ -111,5 +120,9 @@ export function flagCapsuleOrphan(
 ): string;
 export function closeProvenCapsule(
   i: CapsuleIntent,
-  io?: { run?: Run; ensure?: (label: { name: string }) => void },
+  io?: {
+    run?: Run;
+    ensure?: (label: { name: string }) => void;
+    restAll?: (path: string) => unknown[];
+  },
 ): string;

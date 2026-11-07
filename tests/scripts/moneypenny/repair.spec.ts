@@ -1048,6 +1048,22 @@ describe("moneypenny repair — a fault back after a close reopens its capsule (
     expect(intent?.removeLabels).toEqual(["in-progress", "stall-flagged"]);
   });
 
+  it("never reopens a duplicate, whose number was retired for another", () => {
+    const [intent] = route("2026-11-03T00:50:00Z", [
+      closed(6640, "2026-11-02T14:08:20Z", { stateReason: "DUPLICATE" }),
+    ]);
+    expect(intent?.type).toBe("open-issue");
+  });
+
+  it("spends no body edit when the body has no table to count in", () => {
+    const [intent] = route("2026-11-03T00:50:00Z", [
+      closed(6640, "2026-11-02T14:08:20Z", { body: "no table" }),
+    ]);
+    expect(intent).toMatchObject({ type: "reopen-issue", issue: 6640 });
+    expect(intent?.issueBody).toBeUndefined();
+    expect(intent?.body).toContain("come back after a close 1 time");
+  });
+
   it("counts up from the body's row, which sits with the metadata table", () => {
     const body = [
       "| | |",

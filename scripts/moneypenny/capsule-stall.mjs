@@ -146,15 +146,26 @@ export function hasLinkedPr(timeline = [], since) {
 }
 
 /**
- * The open PR the timeline links to this capsule, or null: the fix an escalated capsule's ask is
- * about, when there is one. Only a cross-reference names its PR; `connected` does not. Pure.
+ * The held fix PR the timeline links to this capsule, or null — where an escalated capsule's ask can
+ * go and still be seen. Two tests, each closing a way the ask could land wrong:
+ *   - it says it closes this capsule (`Closes #N` and kin), so a PR that only mentions the number —
+ *     a digest, a research note — is never taken for the fix;
+ *   - it carries `hold-merge`, so the assignment lane's criterion 4 asks Eric about it. An unheld
+ *     PR either auto-merges, which answers nothing he was asked, or sits where no list sees it.
+ * The newest such PR wins. Only a cross-reference names its PR; `connected` does not. Pure.
  */
-export function openLinkedPr(timeline = []) {
+export function openLinkedPr(timeline = [], number = null) {
+  const closes =
+    number && new RegExp(`\\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\\s+#${number}\\b`, "i");
+  let found = null;
   for (const e of timeline ?? []) {
     const pr = e?.event === "cross-referenced" ? e.source?.issue : null;
-    if (pr?.pull_request && pr.state === "open" && pr.number) return pr.number;
+    if (!(pr?.pull_request && pr.state === "open" && pr.number)) continue;
+    if (closes && !closes.test(String(pr.body ?? ""))) continue;
+    if (!names(pr.labels).includes(LABELS.holdMerge.name)) continue;
+    found = pr.number;
   }
-  return null;
+  return found;
 }
 
 /** The comments since the newest reopen — the capsule's current life. Oldest first in, and out. */
@@ -164,9 +175,9 @@ export function sinceReopen(comments = []) {
 }
 
 /**
- * Where an escalated capsule's ask goes before a green close: its fix's open PR, else a session.
- * `openPr` is the gather's read; absent reads as no PR, because listing the ask for a session loses
- * nothing, while closing with it nowhere is the failure this exists for. Pure.
+ * Where an escalated capsule's ask goes before a green close: its held fix PR (`openLinkedPr`), else
+ * a session. `openPr` is the gather's read; absent reads as no PR, because listing the ask for a
+ * session loses nothing, while closing with it nowhere is the failure this exists for. Pure.
  */
 export function carryOf(c) {
   const decision = decisionLine(c.body);
@@ -178,7 +189,9 @@ export function carryOf(c) {
  *  green closes any of them. */
 export function lookupsFor(issue, nowMs, orphanAfterHours = ORPHAN_AFTER_HOURS) {
   const labels = names(issue.labels);
-  if (labels.includes(LABELS.needsEric.name)) return { orphan: false };
+  if (labels.includes(LABELS.needsEric.name) || labels.includes(LABELS.needsSession.name)) {
+    return { orphan: false };
+  }
   const old = hours(issue.created_at ?? issue.createdAt, nowMs) >= orphanAfterHours;
   return { orphan: old && !labels.includes(LABELS.stall.name) };
 }
@@ -300,8 +313,9 @@ export function capsuleIntents({ capsules = [], orphanAfterHours = ORPHAN_AFTER_
       });
       continue;
     }
-    // Not proven. An escalated capsule waits on its decision; the rest may be orphans.
-    if (escalated) continue;
+    // Not proven. An escalated capsule waits on its decision, a handed-off one on its session (the
+    // reopen said so, #6953); the rest may be orphans.
+    if (escalated || labels.includes(LABELS.needsSession.name)) continue;
     if (c.ageHours < orphanAfterHours || c.hasLinkedPr !== false) continue;
     if (labels.includes(LABELS.stall.name)) continue;
     if (posted.includes(ORPHAN_MARKER)) continue;
@@ -387,7 +401,7 @@ export function gatherCapsules(nowMs, { rest = ghRest, restAll = ghRestAll } = {
     }
     // Where its ask would go if proof closes it — read only for the few capsules that carry one.
     if (c.labels.includes(LABELS.needsEric.name)) {
-      c.openPr = openLinkedPr(restAll(`issues/${i.number}/timeline`));
+      c.openPr = openLinkedPr(restAll(`issues/${i.number}/timeline`), i.number);
     }
     const redPr = redPrOf(i);
     if (redPr) {
@@ -441,11 +455,14 @@ export function flagCapsuleOrphan(i, { run = sh, ensure = ensureLabel } = {}) {
   return `🧭 orphaned capsule — \`${i.title}\` (commented on #${i.issueNumber})`;
 }
 
+/** One per capsule on a PR: a close that fails after it posted retries without posting again. */
+const carriedMarker = (n) => `<!-- moneypenny:ask-carried #${n} -->`;
+
 /** What the fix's PR is told when the ask moves onto it. */
 function carriedToPrBody(i) {
   // A quote, not a `Needs from you` callout: a callout in a comment is one no list can see.
   const ask = i.carry.decision ? `\n\n> ${i.carry.decision}` : "";
-  return `The question on #${i.issueNumber} moves here: that capsule closed because its job is passing again, and this PR is the fix it was waiting on.${ask}\n\n${FOOTER}`;
+  return `The question on #${i.issueNumber} moves here: that capsule closed because its job is passing again, and this held PR is the fix it was waiting on.${ask}\n\n${carriedMarker(i.issueNumber)}\n\n${FOOTER}`;
 }
 
 /**
@@ -458,11 +475,19 @@ function carriedToPrBody(i) {
  * shipped sweep's merged-fix closes stay countable apart. A capsule is an issue, never a PR, so the
  * issue subcommand is safe here.
  */
-export function closeProvenCapsule(i, { run = sh, ensure = ensureLabel } = {}) {
+export function closeProvenCapsule(
+  i,
+  { run = sh, ensure = ensureLabel, restAll = ghRestAll } = {},
+) {
   const n = String(i.issueNumber);
   if (i.carry?.pr) {
+    const said = restAll(`issues/${i.carry.pr}/comments`)
+      .filter(trustedComment)
+      .some((c) => String(c.body ?? "").includes(carriedMarker(i.issueNumber)));
     const body = carriedToPrBody(i);
-    run("gh", ["api", "-X", "POST", `${issuePath(i.carry.pr)}/comments`, "-f", `body=${body}`]);
+    if (!said) {
+      run("gh", ["api", "-X", "POST", `${issuePath(i.carry.pr)}/comments`, "-f", `body=${body}`]);
+    }
   } else if (i.carry?.session) {
     ensure(LABELS.needsSession);
     const label = `labels[]=${LABELS.needsSession.name}`;

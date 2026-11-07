@@ -293,7 +293,7 @@ export function withRecurrence(body, n) {
 /**
  * The capsule a returning fault reopens: the newest one with this signature closed within
  * `REOPEN_DAYS` of the run's start — or after it, which is the audit tick's proof close overlapping
- * the run (#6579). Runs after the staleness guard, so a fix's close the run predates never gets
+ * the run (#6579) — and not closed as a duplicate. Runs after the staleness guard, so a fix's close the run predates never gets
  * here. A run with no readable start, or a capsule with no readable close, files fresh: that is the
  * status quo, and loud either way. Pure.
  *
@@ -305,7 +305,8 @@ export function reopenable(run, closedIssues, title, days = REOPEN_DAYS) {
   const from = started - days * 864e5;
   let best = null;
   for (const issue of closedIssues ?? []) {
-    if (issue.title !== title) continue;
+    // A duplicate's number was retired in favour of another; the fault never lives there again.
+    if (issue.title !== title || issue.stateReason === "DUPLICATE") continue;
     const closed = Date.parse(issue.closedAt ?? "");
     if (!Number.isFinite(closed) || closed < from) continue;
     if (!best || closed > Date.parse(best.closedAt)) best = issue;
@@ -448,12 +449,13 @@ export function routeFailure(ctx, deps = {}) {
           labels.includes(l),
         );
         const count = recurrenceCount(back.body) + 1;
+        const counted = back.body == null ? undefined : withRecurrence(back.body, count);
         intents.push({
           type: "reopen-issue",
           issue: back.number,
           title,
           body: reopenBody(run, failure, back, count, waiting),
-          issueBody: back.body == null ? undefined : withRecurrence(back.body, count),
+          issueBody: counted === back.body ? undefined : counted,
           removeLabels: STALE_ON_REOPEN.filter((l) => labels.includes(l)),
           dispatch: !waiting,
         });

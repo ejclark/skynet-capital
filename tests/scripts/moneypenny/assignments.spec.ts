@@ -376,7 +376,7 @@ describe("markedByComments: asked, and not since cleared by this lane", () => {
     const rest = (path: string) => {
       if (path.startsWith("issues?state=open&labels=needs-eric")) return [returned];
       if (path.startsWith("issues?state=all&assignee=")) return [];
-      if (path.startsWith("issues?state=all&labels=needs-session")) return [];
+      if (path.includes("labels=needs-session")) return [];
       if (path === "pulls?state=open") return [];
       if (path === "issues/5955/comments") return thread;
       throw new Error(`unexpected read ${path}`);
@@ -519,6 +519,12 @@ describe("no ask before its artifact exists (#6953)", () => {
   });
 
   it("lists every needs-session issue that still waits: open, or closed by a proof close", () => {
+    const capsule = {
+      state: "closed",
+      state_reason: "not_planned",
+      closed_at: new Date(NOW - 2 * 864e5).toISOString(),
+      labels: [{ name: "ci-failure" }, { name: "needs-session" }],
+    };
     const row = (number: number, over: Record<string, unknown>) => ({
       number,
       title: `s${number}`,
@@ -528,9 +534,13 @@ describe("no ask before its artifact exists (#6953)", () => {
     const planned = plan({
       sessionIssues: [
         row(1, { state: "open" }),
-        row(2, { state: "closed", state_reason: "not_planned", body: ask("Merge it?") }),
-        row(3, { state: "closed", state_reason: "completed" }),
-        row(4, { state: "closed", state_reason: null, pull_request: {} }),
+        row(2, { ...capsule, body: ask("Merge it?") }),
+        row(3, { ...capsule, state_reason: "completed" }),
+        row(4, { ...capsule, state_reason: null, pull_request: {} }),
+        // Past the reopen window a fault has been quiet 14 days: nothing is left waiting.
+        row(5, { ...capsule, closed_at: new Date(NOW - 15 * 864e5).toISOString() }),
+        // A not-planned close that is no CI capsule: another lane's, and not this list's.
+        row(6, { ...capsule, labels: [{ name: "needs-session" }] }),
       ],
       now: NOW,
     });
@@ -538,6 +548,17 @@ describe("no ask before its artifact exists (#6953)", () => {
       expect.objectContaining({ number: 1, why: "labelled needs-session" }),
       expect.objectContaining({ number: 2, decision: "Merge it?" }),
     ]);
+  });
+
+  it("the base branch a PR merges into is never read as a head with no PR", () => {
+    const into = issue({ body: ask("Merge #6900 into the `main` branch? — it is green.") });
+    expect(plan({ issues: [into], now: NOW }).needsSession).toEqual([]);
+  });
+
+  it("lists a carried ask exactly as long as repair.mjs would reopen its capsule", async () => {
+    const { REOPEN_SINCE_MS } = await import("../../../scripts/moneypenny/assignments.mjs");
+    const { REOPEN_DAYS } = await import("../../../scripts/moneypenny/repair.mjs");
+    expect(REOPEN_SINCE_MS).toBe(REOPEN_DAYS * 864e5);
   });
 
   it("artifactGap reads the whole callout, not only its first item", () => {
@@ -556,12 +577,15 @@ describe("no ask before its artifact exists (#6953)", () => {
       }
       if (path === "pulls?state=open") return [held];
       if (path === "pulls/6620/files") return [{ filename: "MONEYPENNY-EVENTS-6618.patch" }];
-      if (path.startsWith("issues?state=all&labels=needs-session")) return [{ number: 9 }];
+      if (path === "issues?state=open&labels=needs-session") return [{ number: 9 }];
+      if (path.startsWith("issues?state=closed&labels=needs-session,ci-failure&since=")) {
+        return [{ number: 10 }];
+      }
       return [];
     };
     const deps = gather({ rest, now: NOW });
     expect([...deps.patchOnly]).toEqual([6620]);
-    expect(deps.sessionIssues).toEqual([{ number: 9 }]);
+    expect(deps.sessionIssues).toEqual([{ number: 9 }, { number: 10 }]);
     // #6794 is not an open PR, so its files are never read.
     expect(asked).not.toContain("pulls/6794/files");
   });

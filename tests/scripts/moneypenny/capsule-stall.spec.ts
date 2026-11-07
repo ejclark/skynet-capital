@@ -934,7 +934,8 @@ describe("a green close moves an escalated capsule's ask first (#6953)", () => {
       body: "b",
       clearNeedsEric: true,
     };
-    closeProvenCapsule({ ...base, carry: { pr: 7001, decision: "Merge it?" } }, { run });
+    const restAll = () => [] as unknown[];
+    closeProvenCapsule({ ...base, carry: { pr: 7001, decision: "Merge it?" } }, { run, restAll });
     expect(calls[0]?.slice(0, 4)).toEqual([
       "api",
       "-X",
@@ -973,20 +974,63 @@ describe("a green close moves an escalated capsule's ask first (#6953)", () => {
       throw new Error("HTTP 502");
     };
     expect(() =>
-      closeProvenCapsule({ ...base, carry: { pr: 7001, decision: null } }, { run: failing }),
+      closeProvenCapsule(
+        { ...base, carry: { pr: 7001, decision: null } },
+        { run: failing, restAll },
+      ),
     ).toThrow("HTTP 502");
     expect(calls).toHaveLength(1);
+
+    // A retry after a failed close does not post on the PR twice: its marker is the memory.
+    calls.length = 0;
+    const posted = [
+      {
+        body: "<!-- moneypenny:ask-carried #6942 -->",
+        author_association: "NONE",
+        user: { type: "Bot" },
+      },
+    ];
+    closeProvenCapsule(
+      { ...base, carry: { pr: 7001, decision: null } },
+      { run, restAll: () => posted },
+    );
+    expect(calls.map((c) => c.slice(0, 4).join(" "))).toEqual([
+      "api -X DELETE repos/{owner}/{repo}/issues/6942/labels/needs-eric",
+      "issue close 6942 --reason",
+    ]);
   });
 
-  it("finds the open PR a timeline cross-references, and nothing else", () => {
-    const pr = (number: number, state: string) => ({
+  it("takes only a held, open PR that says it closes this capsule — the newest one", () => {
+    const pr = (number: number, over: Record<string, unknown> = {}) => ({
       event: "cross-referenced",
-      source: { issue: { number, state, pull_request: { merged_at: null } } },
+      source: {
+        issue: {
+          number,
+          state: "open",
+          body: "Closes #6942",
+          labels: [{ name: "hold-merge" }],
+          pull_request: { merged_at: null },
+          ...over,
+        },
+      },
     });
-    expect(openLinkedPr([pr(1, "closed"), { event: "connected" }, pr(7001, "open")])).toBe(7001);
-    expect(openLinkedPr([pr(1, "closed")])).toBeNull();
+    const timeline = [pr(7000), { event: "connected" }, pr(7001)];
+    expect(openLinkedPr(timeline, 6942)).toBe(7001);
+    expect(openLinkedPr([pr(1, { state: "closed" })], 6942)).toBeNull();
+    // A digest or research PR that only mentions the number is not the fix.
+    expect(openLinkedPr([pr(2, { body: "see #6942" })], 6942)).toBeNull();
+    // An unheld PR auto-merges or sits where no list sees it: the ask goes to a session instead.
+    expect(openLinkedPr([pr(3, { labels: [] })], 6942)).toBeNull();
     const issueRef = { event: "cross-referenced", source: { issue: { number: 5, state: "open" } } };
-    expect(openLinkedPr([issueRef])).toBeNull();
+    expect(openLinkedPr([issueRef], 6942)).toBeNull();
+  });
+
+  it("a capsule reopened with its hand-off is never flagged orphaned", () => {
+    const handedOff = capsule({ labels: ["ci-failure", "needs-session"], comments: [] });
+    expect(capsuleIntents({ capsules: [handedOff] })).toEqual([]);
+    expect(lookupsFor({ labels: ["needs-session"], createdAt: hoursAgo(48) }, NOW)).toEqual({
+      orphan: false,
+    });
   });
 
   it("the gather reads an escalated capsule's timeline for it", () => {
@@ -1009,7 +1053,15 @@ describe("a green close moves an escalated capsule's ask first (#6953)", () => {
           return [
             {
               event: "cross-referenced",
-              source: { issue: { number: 7001, state: "open", pull_request: {} } },
+              source: {
+                issue: {
+                  number: 7001,
+                  state: "open",
+                  body: "Fixes #6942",
+                  labels: [{ name: "hold-merge" }],
+                  pull_request: {},
+                },
+              },
             },
           ];
         }

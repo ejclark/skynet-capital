@@ -77,6 +77,7 @@ export interface Planned {
 /** A `needs-session` issue as REST lists it, open or closed. */
 export interface SessionIssue extends PlanIssue {
   state_reason?: string | null;
+  closed_at?: string | null;
   pull_request?: unknown;
 }
 export interface PlanInput {
@@ -121,6 +122,8 @@ export function routeAssignments(deps?: {
   now?: number;
 }): AssignIntent[];
 export const ASK_LEASE_MS: number;
+/** How long a closed capsule's carried ask stays on the needs-session list. */
+export const REOPEN_SINCE_MS: number;
 export interface AskLease {
   claim: (slug: string) => { claimed: boolean; reason?: string };
   release: (slug: string) => unknown;

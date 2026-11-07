@@ -61,6 +61,9 @@ export const HELD_PR_HOURS = 12;
 export const ASSIGN_CAP = 3;
 /** How long a dead sweep's lease on one ask can block the next: its writes take seconds. */
 export const ASK_LEASE_MS = 10 * 60 * 1000;
+/** How long a closed capsule's carried ask stays listed: repair.mjs's `REOPEN_DAYS`, in ms. Not
+ *  imported — repair.mjs's own imports would ride into the digest's lazy import; a spec pins them. */
+export const REOPEN_SINCE_MS = 14 * 864e5;
 
 const names = (labels = []) => labels.map((l) => (typeof l === "string" ? l : l?.name));
 const logins = (users = []) => users.map((u) => (typeof u === "string" ? u : u?.login));
@@ -100,6 +103,7 @@ export function decisionLine(body = "") {
 }
 
 /** A branch the callout names: `` branch `x/y` `` or `` `x/y` branch ``. */
+const DEFAULT_BRANCH = "main";
 const NAMED_BRANCH = /\bbranch\s+`([^`\s]+)`|`([^`\s]+)`\s+branch\b/gi;
 
 /**
@@ -118,6 +122,8 @@ export function artifactGap(item, { openHeads = new Set(), patchOnly = new Set()
   if (!/\bmerge/i.test(text)) return null;
   for (const m of text.matchAll(NAMED_BRANCH)) {
     const branch = m[1] ?? m[2];
+    // The base a PR merges INTO is named the same way ("into the `main` branch"); it is never a head.
+    if (branch === DEFAULT_BRANCH) continue;
     if (!openHeads.has(branch))
       return `asks for a merge of branch \`${branch}\`, which no open PR is built from`;
   }
@@ -249,11 +255,17 @@ export function plan({
       });
     }
   }
-  // What a session already holds: `needs-session`, open — or closed by capsule-stall's proof
-  // ("not planned") with its ask carried, which is the one way a closed issue still waits on work.
+  // What a session already holds: `needs-session`, open — or a CI capsule closed by capsule-stall's
+  // proof ("not planned") with its ask carried, which is the one way a closed issue still waits on
+  // work. Only while repair.mjs would reopen it (`REOPEN_SINCE_MS`): a fault quiet that long has
+  // nothing left waiting, and the label stays on closed issues, so without a bound the line grows.
   for (const i of sessionIssues) {
     const open = (i.state ?? "open") === "open";
-    if (!open && (i.pull_request || i.state_reason !== "not_planned")) continue;
+    if (!open) {
+      if (i.pull_request || i.state_reason !== "not_planned") continue;
+      if (!names(i.labels).includes(LABELS.ciFailure.name)) continue;
+      if (!(now - Date.parse(i.closed_at ?? "") <= REOPEN_SINCE_MS)) continue;
+    }
     session({
       number: i.number,
       title: i.title,
@@ -538,7 +550,13 @@ export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
       patchOnly.add(n);
     }
   }
-  const sessionIssues = rest(`issues?state=all&labels=${LABELS.needsSession.name}`);
+  // Open ones, and closed CI capsules updated inside the window — both bounded reads.
+  const label = LABELS.needsSession.name;
+  const closedSince = new Date(now - REOPEN_SINCE_MS).toISOString();
+  const sessionIssues = [
+    ...rest(`issues?state=open&labels=${label}`),
+    ...rest(`issues?state=closed&labels=${label},${LABELS.ciFailure.name}&since=${closedSince}`),
+  ];
   return { issues, prs, markers, patchOnly, sessionIssues };
 }
 
