@@ -14,7 +14,7 @@
  * ownership check the plan names as its falsifier: sessions where two links decided, or a live
  * position had no owner.
  *
- * THE VOL MODEL is the long-call fence study's (`long-call-fence-study.mjs`): 60 sessions of
+ * THE VOL MODEL is the long-call fence study's (`printVolModel`, `long-call-fence-math.mjs`): 60 sessions of
  * realized vol with every print's reaction left out, plus each print still ahead inside an option's
  * life priced at the root mean square of CRWV's past print reactions (NVDA's while CRWV has fewer
  * than two). Every option dollar is modeled; closes, not intraday.
@@ -28,10 +28,10 @@ import {
   eventMove,
   eventsAhead,
   impliedVol,
+  printVolModel,
 } from "../../scripts/research/long-call-fence-math.mjs";
 import { bars, earningsDates } from "../../scripts/research/market-data.mjs";
-import { annualizedVol } from "../../scripts/research/premium-fit-math.mjs";
-import { AI_DIP_CHAIN } from "../playbooks/chain.js";
+import { AI_DIP_CHAIN, chainStart } from "../playbooks/chain.js";
 import {
   AI_DIP_MODELS,
   type ChainRun,
@@ -42,7 +42,6 @@ import {
 
 const SYMBOL = "CRWV";
 const STEP = 5;
-const VOL_WINDOW = 60;
 
 interface Loaded {
   readonly dates: string[];
@@ -57,27 +56,7 @@ async function load(symbol: string): Promise<Loaded> {
   const prints = await earningsDates(symbol).catch(() => [] as string[]);
   const closes = px.map((b) => b.close);
   const dates = px.map((b) => b.date);
-  const lr = closes.map((c, i) => (i === 0 ? 0 : Math.log(c / (closes[i - 1] ?? c))));
-  const printAt = prints.map((p) => dates.findIndex((d) => d >= p)).filter((i) => i > 0);
-  // A print's reaction lands on its filing session or the next, so both stay out of the base vol.
-  const touched = new Set(printAt.flatMap((s) => [s, s + 1]));
-  const baseVol = closes.map((_, t) => {
-    const clean: number[] = [];
-    for (let i = t; i >= 1 && clean.length < VOL_WINDOW; i--) {
-      if (!touched.has(i)) clean.push(lr[i] ?? 0);
-    }
-    return clean.length < VOL_WINDOW ? null : annualizedVol(clean);
-  });
-  const moves = printAt.flatMap((s) => {
-    const before = closes[s - 1];
-    const after = closes[s + 1];
-    const vol = baseVol[s - 1];
-    if (before === undefined || after === undefined || vol == null) return [];
-    const r2 = Math.log(after / before);
-    const excess = Math.max(0, r2 * r2 - (2 * vol ** 2) / 252);
-    return [{ reactedOn: dates[s + 1] ?? "", move: Math.sqrt(excess) }];
-  });
-  return { dates, closes, prints, baseVol, moves };
+  return { dates, closes, prints, ...printVolModel(closes, dates, prints) };
 }
 
 const crwv = await load(SYMBOL);
@@ -104,13 +83,14 @@ const tape: Tape = {
 const first = crwv.baseVol.findIndex((v) => v != null);
 const runs: ChainRun[] = [];
 let dark = 0;
+const opener = AI_DIP_MODELS.get(chainStart(AI_DIP_CHAIN));
 for (let t = first; t >= 0 && t < crwv.closes.length; t += STEP) {
-  const run = runChain(AI_DIP_CHAIN, AI_DIP_MODELS, tape, t);
-  if (run.steps[0]?.event !== "filled") {
+  // A day the first link would open nothing is skipped before the chain runs, not scored.
+  if (opener?.step(tape, t, { kind: "cash" }).event?.kind !== "filled") {
     dark++;
     continue;
   }
-  runs.push(run);
+  runs.push(runChain(AI_DIP_CHAIN, AI_DIP_MODELS, tape, t));
 }
 
 const WHEEL = "CRWV-WHEEL";

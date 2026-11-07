@@ -92,6 +92,11 @@ describe("Given a chain record (criterion 1)", () => {
     expect(problemsOf(record([link("A", "expired", "A")])).join()).toMatch(/to itself/);
   });
 
+  it("then two events from one playbook may hand off to the same next one", () => {
+    const both = record([link("A", "expired", "B"), link("A", "take-profit", "B")]);
+    expect(parseChain(both, KNOWN).ok).toBe(true);
+  });
+
   it("then a link must start from a playbook an earlier link handed something to", () => {
     expect(
       problemsOf(record([link("A", "expired", "B"), link("C", "expired", "D")])).join(),

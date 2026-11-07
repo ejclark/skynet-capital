@@ -138,6 +138,21 @@ function parseLink(raw: unknown, i: number, problems: string[]): ChainLink | und
 const eventKey = (from: string, on: HandoffEvent): string =>
   on.kind === "on-date" ? `${from}|on-date|${on.date}` : `${from}|${on.kind}`;
 
+/** Whether `to` already reaches `from` through `links` — a link from `from` back to `to` would close
+ *  a loop. A playbook may receive from two events (expired or stopped, both to B); only a cycle is
+ *  refused. */
+function reaches(links: readonly ChainLink[], to: string, from: string): boolean {
+  const seen = new Set<string>();
+  const queue = [to];
+  for (let id = queue.shift(); id !== undefined; id = queue.shift()) {
+    if (id === from) return true;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    for (const l of links) if (l.from === id) queue.push(l.to);
+  }
+  return false;
+}
+
 /** Rules the links break as a set: one start, every later link reachable from it, no event handed
  *  off twice, no loop, and every playbook known when `known` is given. */
 function shapeProblems(links: readonly ChainLink[], known?: ReadonlySet<string>): string[] {
@@ -150,8 +165,8 @@ function shapeProblems(links: readonly ChainLink[], known?: ReadonlySet<string>)
     if (!owned.has(link.from)) {
       problems.push(`${at}: ${link.from} owns nothing yet — each link starts from an earlier one`);
     }
-    if (owned.has(link.to)) {
-      problems.push(`${at}: ${link.to} already holds a place in the chain; a chain has no loops`);
+    if (reaches(links.slice(0, i), link.to, link.from)) {
+      problems.push(`${at}: ${link.to} hands back to ${link.from}; a chain has no loops`);
     }
     const key = eventKey(link.from, link.on);
     if (seen.has(key)) {

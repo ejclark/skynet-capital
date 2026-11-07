@@ -53,7 +53,7 @@ describe("Given the AI-dip chain on a flat tape", () => {
     const expired = run.path.find((p) => p.event === "expired");
     const after = run.steps.filter((s) => s.t > (expired?.t ?? Infinity));
     expect(after.length).toBeGreaterThan(0);
-    expect(after.every((s) => s.decidedBy === "CRWV-LONG-CALL")).toBe(true);
+    expect(after.every((s) => s.asked.join() === "CRWV-LONG-CALL")).toBe(true);
     expect(run.path.find((p) => p.event === "filled" && p.by === "CRWV-LONG-CALL")?.t).toBe(
       (expired?.t ?? 0) + 1,
     );
@@ -83,7 +83,7 @@ describe("Given the AI-dip chain when CRWV falls through the strike", () => {
   it("then the put is assigned and the wheel keeps the shares, with no link to anyone", () => {
     expect(run.path.map((p) => p.event)).toEqual(["filled", "assigned"]);
     expect(run.links.map((l) => l.playbook)).toEqual(["CRWV-WHEEL"]);
-    expect(run.steps.every((s) => s.decidedBy === "CRWV-WHEEL")).toBe(true);
+    expect(run.steps.every((s) => s.asked.join() === "CRWV-WHEEL")).toBe(true);
   });
 
   it("then a run the tape ends first is open and marked at the last close", () => {
@@ -134,7 +134,7 @@ describe("Given a chain that passes the position itself", () => {
       { playbook: "B", result: -5000 + 10 },
     ]);
     expect(run.status).toBe("closed");
-    expect(run.steps.map((s) => s.decidedBy)).toEqual(["A", "A", "A", "B", "B"]);
+    expect(run.steps.map((s) => s.asked.join())).toEqual(["A", "A", "A", "B", "B"]);
   });
 });
 
@@ -145,9 +145,31 @@ describe("Given a run whose steps show two links deciding (the plan's falsifier)
     if (!last) throw new Error("the run took no steps");
     const doctored: ChainRun = {
       ...run,
-      steps: [...run.steps, { ...last, decidedBy: "CRWV-LONG-CALL" }],
+      steps: [...run.steps, { ...last, t: last.t + 1, asked: ["CRWV-WHEEL", "CRWV-LONG-CALL"] }],
     };
     expect(ownershipCheck(doctored, AI_DIP_CHAIN).twoDeciders).toBe(1);
+  });
+
+  it("then a session no model was asked counts as a position with no owner", () => {
+    const run = runChain(AI_DIP_CHAIN, AI_DIP_MODELS, tapeOf(flat(30)), 0);
+    const last = run.steps.at(-1);
+    if (!last) throw new Error("the run took no steps");
+    const doctored: ChainRun = {
+      ...run,
+      steps: [...run.steps, { ...last, t: last.t + 1, asked: [] }],
+    };
+    expect(ownershipCheck(doctored, AI_DIP_CHAIN).unowned).toBe(1);
+  });
+});
+
+describe("Given a put still alive when the tape ends", () => {
+  // 10 sessions: the wheel's put is 14+ days out, so it cannot have expired by the last close.
+  const run = runChain(AI_DIP_CHAIN, AI_DIP_MODELS, tapeOf(flat(10)), 0);
+
+  it("then it is marked open, never settled early as expired or assigned", () => {
+    expect(run.path.map((p) => p.event)).toEqual(["filled"]);
+    expect(run.status).toBe("open");
+    expect(run.links.map((l) => l.playbook)).toEqual(["CRWV-WHEEL"]);
   });
 });
 

@@ -49,6 +49,7 @@ import {
 import { chainStart, type HandoffEvent, nextOwner, type PlaybookChain } from "./chain.js";
 import { LONG_CALL_DELTAS } from "./long-call.js";
 import { longCallExit } from "./long-call-rules.js";
+import { CRWV_WHEEL_PUT_DELTA } from "./registry.js";
 import { WHEEL_DELTAS } from "./wheel.js";
 
 /** One contract is 100 shares; every dollar below is per contract. */
@@ -82,7 +83,6 @@ export type Holding =
       readonly strike: number;
       readonly expiry: string;
       readonly paid: number;
-      readonly boughtAt: number;
     };
 
 /** One session's decision by the link that owns the holding. */
@@ -116,10 +116,26 @@ export function nextPrintAfter(prints: readonly string[], date: string): string 
   return next;
 }
 
-/** Is session `t` the last one on or before `expiry` — the session an option held to expiry settles? */
-const settlesOn = (tape: Tape, t: number, expiry: string): boolean =>
-  (tape.dates[t] ?? "") <= expiry &&
-  (t + 1 >= tape.dates.length || (tape.dates[t + 1] ?? "") > expiry);
+/** Is session `t` the last one on or before `expiry` — the session an option held to expiry settles?
+ *  On the tape's last session only the expiry day itself settles: an option still alive when the
+ *  tape ends stays open and is marked, never settled early. */
+function settlesOn(tape: Tape, t: number, expiry: string): boolean {
+  const day = tape.dates[t];
+  if (day === undefined || day > expiry) return false;
+  const next = tape.dates[t + 1];
+  return next === undefined ? day === expiry : next > expiry;
+}
+
+/** Each print's filing session on a tape, read once per tape. */
+const printSessions = new WeakMap<Tape, number[]>();
+function printAtOf(tape: Tape): number[] {
+  let found = printSessions.get(tape);
+  if (!found) {
+    found = tape.prints.map((p) => tape.dates.findIndex((d) => d >= p)).filter((i) => i >= 0);
+    printSessions.set(tape, found);
+  }
+  return found;
+}
 
 const HOLD = (holding: Holding): LinkStep => ({ holding, cash: 0 });
 
@@ -246,10 +262,7 @@ export function longCallModel(options: { delta: number }): LinkModel {
       const spot = at(tape.closes, t);
       const date = dayAt(tape, t);
       if (holding.kind === "cash") {
-        const printAt = tape.prints
-          .map((p) => tape.dates.findIndex((d) => d >= p))
-          .filter((i) => i >= 0);
-        if (heldBack(printAt, t, QUIET_SESSIONS)) return HOLD(holding);
+        if (heldBack(printAtOf(tape), t, QUIET_SESSIONS)) return HOLD(holding);
         const exp = entryExpiry(date);
         const vol = exp ? tape.volAt(t, exp.expiry) : null;
         if (!exp || vol === null) return HOLD(holding);
@@ -257,7 +270,7 @@ export function longCallModel(options: { delta: number }): LinkModel {
         const strike = strikeForCallDelta(spot, vol, y, options.delta);
         const paid = callValue(spot, strike, vol, y) * (1 + SLIPPAGE);
         return {
-          holding: { kind: "long-call", strike, expiry: exp.expiry, paid, boughtAt: t },
+          holding: { kind: "long-call", strike, expiry: exp.expiry, paid },
           cash: -paid * SHARES,
           event: { kind: "filled" },
         };
@@ -307,10 +320,12 @@ function markOf(tape: Tape, t: number, holding: Holding): number {
   }
 }
 
-/** One session of a run: who decided, who owns the holding at the close, and what happened. */
+/** One session of a run: every model asked to decide (logged at the call, not from the owner
+ *  variable, so the check below reads what happened), who owns the holding at the close, and what
+ *  happened. */
 export interface RunStep {
   readonly t: number;
-  readonly decidedBy: string;
+  readonly asked: readonly string[];
   readonly ownerAfter: string;
   readonly holding: Holding["kind"];
   readonly event?: HandoffEvent["kind"];
@@ -345,8 +360,22 @@ export function runChain(
   tape: Tape,
   start: number,
 ): ChainRun {
+  // Every model's step is logged as it is called, whoever calls it.
+  const asked: string[] = [];
+  const logged = new Map(
+    [...models].map(([id, m]): [string, LinkModel] => [
+      id,
+      {
+        step: (...args) => {
+          asked.push(id);
+          return m.step(...args);
+        },
+        mark: (...args) => m.mark(...args),
+      },
+    ]),
+  );
   const modelOf = (id: string): LinkModel => {
-    const m = models.get(id);
+    const m = logged.get(id);
     if (!m) throw new Error(`chain ${chain.id}: no shadow model for ${id}`);
     return m;
   };
@@ -357,6 +386,7 @@ export function runChain(
   const steps: RunStep[] = [];
   const path: { t: number; event: HandoffEvent["kind"]; by: string; to: string }[] = [];
   for (let t = start; t < tape.closes.length; t++) {
+    asked.length = 0;
     const decidedBy = owner;
     const out = modelOf(owner).step(tape, t, holding);
     book(owner, out.cash);
@@ -380,7 +410,7 @@ export function runChain(
     }
     steps.push({
       t,
-      decidedBy,
+      asked: [...asked],
       ownerAfter: owner,
       holding: holding.kind,
       ...(out.event ? { event: out.event.kind } : {}),
@@ -398,9 +428,10 @@ export function runChain(
 }
 
 /**
- * The plan's falsifier, read off a run's steps: sessions where a link other than the owner decided
- * (two decision-makers for one position), and sessions where a live holding had no owner. Both
- * must be zero.
+ * The plan's falsifier, read off a run's steps: sessions where more than one model was asked, or
+ * one other than the owner going in (two decision-makers for one position), and sessions where no
+ * model was asked or no one owns the holding after (a live position with no owner). Both must be
+ * zero.
  */
 export function ownershipCheck(
   run: ChainRun,
@@ -413,19 +444,22 @@ export function ownershipCheck(
   let owner = chainStart(chain);
   let twoDeciders = 0;
   let unowned = 0;
-  const seen = new Set<number>();
   for (const step of run.steps) {
-    if (step.decidedBy !== owner || seen.has(step.t)) twoDeciders++;
-    if (!step.ownerAfter) unowned++;
-    seen.add(step.t);
+    if (step.asked.length > 1 || (step.asked.length === 1 && step.asked[0] !== owner)) {
+      twoDeciders++;
+    }
+    if (step.asked.length === 0 || !step.ownerAfter) unowned++;
     owner = step.ownerAfter;
   }
   return { sessions: run.steps.length, twoDeciders, unowned };
 }
 
 /** The AI-dip chain's two shadows, at the playbooks' standard-mode targets (`wheel.ts`, `long-call.ts`)
- *  and CRWV-WHEEL's own 0.15 put setting (`registry.ts`). */
+ *  and CRWV-WHEEL's own put setting (`registry.ts`). */
 export const AI_DIP_MODELS: ReadonlyMap<string, LinkModel> = new Map([
-  ["CRWV-WHEEL", wheelModel({ putDelta: 0.15, callDelta: WHEEL_DELTAS.standard.call })],
+  [
+    "CRWV-WHEEL",
+    wheelModel({ putDelta: CRWV_WHEEL_PUT_DELTA, callDelta: WHEEL_DELTAS.standard.call }),
+  ],
   ["CRWV-LONG-CALL", longCallModel({ delta: LONG_CALL_DELTAS.standard })],
 ]);
