@@ -12,9 +12,9 @@ description: >-
 # Retro — the learning drill
 
 The *correction* half of the learning Coach. Its eye (`scripts/incident-scan.mjs` +
-`incident-budget.json`, enforced by `tests/arch/lessons.spec.ts`) watches one dimension no other
-coach watches: **how long a process gap goes unrecognized.** Every other gate looks at the code.
-This one looks at us.
+`incident-budget.json`, reported advisory in `npm test` by `tests/arch/lessons.spec.ts`) watches
+one dimension no other coach watches: **how long a process gap goes unrecognized.** Every other
+gate looks at the code. This one looks at us.
 
 Blameless, always. The question is never "who missed it" — it is "what about the *system* made
 missing it the likely outcome."
@@ -93,8 +93,9 @@ them now.
 ## 6. Bank it
 
 Append an entry to `docs/LESSONS.md` in the documented format (title, `SHA`, `DATE`, `STATUS`,
-`SIGNAL`, `ROOT CAUSE`, `PREVENTION`, `SIDE QUESTS`). The gate parses these field names, so keep
-them exact, and never leave `STATUS: open` — an open entry fails the build by design.
+`SIGNAL`, `ROOT CAUSE`, `PREVENTION`, `SIDE QUESTS`). The scan parses these field names, so keep
+them exact, and never leave `STATUS: open` — an open entry fails `incident-scan.mjs` and stops it
+before it reads the failed runs on `main`.
 
 **Same class as an earlier entry?** Then that entry's fix did not hold. Add
 `- **RECURS:** <the earlier entry's exact title>` under your `SHA`/`DATE` line, and run
@@ -106,7 +107,7 @@ and scores whether gate-type preventions recur less than doctrine-only ones.
 ## 7. Verify and ratchet
 
 ```bash
-npm run verify                      # typecheck · lint · test (the ledger gate runs here)
+npm run verify                      # typecheck · lint · test (the ledger check runs here, advisory)
 node scripts/incident-scan.mjs      # every incident on main now has a lesson
 ```
 
