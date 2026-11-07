@@ -7,6 +7,7 @@ import type { SymbolFacts } from "../domain/symbol-facts.js";
 import type {
   MarketContext,
   OrderIntent,
+  PlaybookMode,
   PlaybookSubscription,
   Portfolio,
 } from "../domain/types.js";
@@ -122,6 +123,14 @@ export interface RiskConfig {
    * daily pick; absent everywhere else (evals, the readiness gate), which behave exactly as before.
    */
   readonly subscribedOnly?: true;
+  /**
+   * Whether an opening order's playbook carries an exit plan in the order's mode — a stop, a target
+   * or a time exit (#6954 slice 4, `exitPlannedFor` in `playbooks/exit-plan.ts`). An open it answers
+   * `false` for, or one with no playbook at all, is refused `no-exit-plan`; exits always pass. Set
+   * beside `subscribedOnly` by the live bots' roster and the forced daily pick; absent everywhere
+   * else (evals, the readiness gate), which behave exactly as before.
+   */
+  readonly exitPlanned?: (playbookId: string, mode?: PlaybookMode) => boolean;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -182,7 +191,10 @@ export type GuardRefusalReason =
   | "collateral-reserved"
   /** An order that would open a position, from no playbook the bot is subscribed to and has on
    *  (#4642 slice 10, `subscribed-only.ts`). Never an exit. */
-  | "unsubscribed";
+  | "unsubscribed"
+  /** An order that would open a position, from a playbook that declares no stop, no target and no
+   *  time exit in its mode (#6954 slice 4). Never an exit. */
+  | "no-exit-plan";
 
 /** The single source of truth for the reason literals above — so a validator crossing a process
  *  boundary (`decision-wire-parts.ts`, on the bots↔app replication bridge) can check a foreign
@@ -210,6 +222,7 @@ export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "uncovers-short-call",
   "collateral-reserved",
   "unsubscribed",
+  "no-exit-plan",
 ];
 
 /** One raw intent the guards refused outright this cycle — the persona's own ask, unfiltered,
@@ -441,6 +454,37 @@ function clampOne(
     : clampSell(intent, portfolio, batch);
 }
 
+/** An opening order with no exit plan behind it, when the rule is on (`RiskConfig.exitPlanned`). */
+function lacksExitPlan(intent: OrderIntent, config: RiskConfig): boolean {
+  if (!config.exitPlanned) return false;
+  return !(intent.playbookId && config.exitPlanned(intent.playbookId, intent.playbookMode));
+}
+
+/**
+ * Why an order that ADDS risk is refused before it is sized, if it is — checked in this order:
+ *  1. no exit plan (#6954 slice 4): a play with no way out opens nothing;
+ *  2. the ladder's BLOCK rung, ahead of sizing: no point sizing an order that is refused. A share
+ *     sell can only ever be risk-reducing, because `clampSell` refuses to sell more than is held,
+ *     and an option close only closes what is held. So blocking opens alone satisfies the rung: new
+ *     risk is refused, EXISTING POSITIONS ARE UNTOUCHED, and exits stay open — including the
+ *     force-flatten sells the bottom rung emits;
+ *  3. a tripped breaker, which holds opens the same way and for the same reason (#6954 slice 3; it
+ *     used to stop the whole cycle, exits included);
+ *  4. trade discipline (S2/E1): a dropped entry needs no sizing. S2 keys on `intent.symbol`, which
+ *     for an option order is the underlying.
+ */
+function openRefusal(
+  intent: OrderIntent,
+  context: MarketContext,
+  config: RiskConfig,
+  ladderBlocks: boolean,
+): GuardRefusalReason | undefined {
+  if (lacksExitPlan(intent, config)) return "no-exit-plan";
+  if (ladderBlocks) return "ladder-block";
+  if (config.opensHalted) return "breaker-halt";
+  return config.discipline ? disciplineReason(intent, context, config.discipline) : undefined;
+}
+
 /** Share orders still open at the broker this cycle — see `applyGuardsWithVerdicts`. */
 export interface OpenAtBroker {
   readonly sells?: ReadonlyMap<string, number>;
@@ -493,29 +537,11 @@ export function applyGuardsWithVerdicts(
       continue;
     }
     // Whether this order ADDS risk: a share buy, or any option open (a sold put is a sell that opens
-    // risk). For a share intent this is exactly `side === "buy"`.
-    const opens = opensRisk(intent);
-    // The ladder's BLOCK rung, ahead of everything else: no point sizing an order that is refused.
-    // A share sell can only ever be risk-reducing, because `clampSell` refuses to sell more than is
-    // held, and an option close only closes what is held. So blocking opens alone satisfies the
-    // rung: new risk is refused, EXISTING POSITIONS ARE UNTOUCHED, and exits stay open — including
-    // the force-flatten sells the bottom rung emits.
-    if (opens && ladderBlocks) {
-      refused.push({ intent, reason: "ladder-block" });
-      continue;
-    }
-    // A tripped breaker holds opens the same way and for the same reason: new risk is refused, and
-    // every exit passes (#6954 slice 3). It used to stop the whole cycle, exits included.
-    if (opens && config.opensHalted) {
-      refused.push({ intent, reason: "breaker-halt" });
-      continue;
-    }
-    // Trade discipline next (S2/E1, opens only): a dropped entry needs no sizing. S2 keys on
-    // `intent.symbol`, which for an option order is the underlying.
-    const discipline =
-      opens && config.discipline ? disciplineReason(intent, context, config.discipline) : undefined;
-    if (discipline) {
-      refused.push({ intent, reason: discipline });
+    // risk). For a share intent this is exactly `side === "buy"`. Every refusal past this point is
+    // for opens alone — an exit is never refused before it is sized.
+    const held = opensRisk(intent) ? openRefusal(intent, context, config, ladderBlocks) : undefined;
+    if (held) {
+      refused.push({ intent, reason: held });
       continue;
     }
     const outcome = clampOne(intent, portfolio, context, config, batch);

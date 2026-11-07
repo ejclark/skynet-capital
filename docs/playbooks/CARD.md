@@ -54,10 +54,10 @@ strategy running on one ticker, which the code also calls a **pair**.
 | a playbook | **strategy** (`StrategyId`, `Strategy`) | The rules with no ticker: what it does, what it buys, whether its window counts toward an earnings report, whether an owner's dated view may run it where its study says stand aside (`runsOnConviction`), and the screen that tests a ticker for it (`screen`, or `noScreen` saying why there is none). Ten today. | `src/playbooks/pair-table.ts:26-36`, `src/playbooks/pair-table.ts:38-72` |
 | — | **pair** (`Pair`), id like `MU-DIP-BOUNCE` | One strategy on one ticker, with the study's verdict on whether the ticker fits: ✓ researched, △ researched but below the house bar, ◆ an owner's conviction, ~ screened, ✗ stand aside, ? not studied, ⊘ can't run. The id is looked up, never built from parts. Sauron's pair holds ten tickers and the two scouts none; every other pair holds one. | `src/playbooks/pair-table.ts:245-254`, `src/playbooks/pair-table.ts:474-490`, `src/playbooks/pair-table.ts:548-558` |
 | — | **setting** (`WheelSetting`, `CallSpreadSetting`, …) | One ticker's words and numbers, handed to its strategy's template (`wheel()`, `longCall()`, `dipBounce()`, `callSpread()`), which returns one `Playbook` for that ticker. The registry calls each template once per pair. | `src/playbooks/wheel.ts:77-98`, `src/playbooks/call-spread.ts:93-105`, `src/playbooks/registry.ts:255-268` |
-| — | **`Playbook`**, "playbook id" | What the engine runs, and it is a pair: its id is the pair's id and `symbols` holds the pair's ticker. A subscriber's view may rebuild it narrower under the same id, so one pair can run as several builds. | `src/playbooks/playbook.ts:179-196`, `src/playbooks/steered-playbook.ts:105-137` |
+| — | **`Playbook`**, "playbook id" | What the engine runs, and it is a pair: its id is the pair's id and `symbols` holds the pair's ticker. A subscriber's view may rebuild it narrower under the same id, so one pair can run as several builds. | `src/playbooks/playbook.ts:191-208`, `src/playbooks/steered-playbook.ts:105-137` |
 | subscribe | **subscription** (`PlaybookSubscription`) | One account running one pair: mode, a dollar budget, pause (`enabled`), a symbols filter that only narrows, compounding, the view that steers it, a play target. With no budget, share buys are uncapped but every option open is refused. | `src/domain/types.ts:317-375`, `src/engine/option-guards.ts:279` |
 | allocated funds | **allocation** | One optional dollar cap per account and strategy. Each pair's budget must fit inside it when the budget is written; trades read only the subscription's own budget. | `src/subscriptions/strategy-budgets.ts:15-33`, `src/subscriptions/strategy-budgets.ts:82-107` |
-| settings | **mode** (`PlaybookMode`) | conservative · standard · aggressive. Mode moves each strategy's deltas, counts and limit prices; the one per-mode number every `Playbook` carries (`size`, a fraction of equity) is zero for all four strategies here. | `src/domain/types.ts:128`, `src/playbooks/playbook.ts:195-196` |
+| settings | **mode** (`PlaybookMode`) | conservative · standard · aggressive. Mode moves each strategy's deltas, counts and limit prices; the one per-mode number every `Playbook` carries (`size`, a fraction of equity) is zero for all four strategies here. | `src/domain/types.ts:128`, `src/playbooks/playbook.ts:207-208` |
 
 So when a member "subscribes to a playbook and picks its symbols", today's code has one subscription
 per pair, which means one per ticker, each inside the strategy's allocation. The Store already draws
@@ -121,7 +121,7 @@ calendar) counts as data, not a rule.
 | Entry | No trigger: it always wants to hold calls. With none held it buys while under its cap; holding, it adds the same contract only with 90+ days left and the ask within 10% of cost (`src/playbooks/long-call.ts:239-254`). Blocked while an exit is due, while a sold contract or put sits on the ticker, inside the report's protected window, in the view's quiet period, and before 10:00 ET. The seeded view adds 6 quiet sessions after CRWV's report (`src/playbooks/conviction-seeds.ts:67`). | ◐ view |
 | Position | One bought call: the latest listed expiry 120 to 200 days out, strike nearest the mode's delta and at most 0.10 off; adds buy the contract already held (`src/playbooks/long-call.ts:113-126`, `src/playbooks/long-call.ts:201-217`). The seeded view sets the earliest expiry to 2027-03-18 (`src/playbooks/conviction-seeds.ts:66`). | ◐ view |
 | Size | Contracts. Each buy asks for a third of the mode's cap (15 / 30 / 60), so a full budget is in within three orders; the guard trims to at most 20 and to what the budget and cash pay for (`src/playbooks/long-call.ts:74-87`, `src/engine/option-guards.ts:52-59`). | ● |
-| Exit | Sells once the bid is double the average cost, or at 45 days left; time wins a tie (`src/playbooks/long-call-rules.ts:9-12`, `src/playbooks/long-call-rules.ts:64-79`). No stop, no roll; it holds through reports. With a sold contract or put on the ticker it sells nothing, and expiry hygiene's T-2 close is the only exit (`src/playbooks/long-call.ts:339-358`). | ● |
+| Exit | Sells once the bid is double the average cost, or at 45 days left; time wins a tie (`src/playbooks/long-call-rules.ts:9-12`, `src/playbooks/long-call-rules.ts:64-79`). No stop, no roll; it holds through reports. With a sold contract or put on the ticker it sells nothing, and expiry hygiene's T-2 close is the only exit (`src/playbooks/long-call.ts:344-363`). | ● |
 | Settings | The pair (the ticker comes with it), mode, a budget (needed to open), pause, compounding, the filter, a play target, and the view that steers it. A subscription that names no view is pointed at the one seeded view that steers the pair, and inherits its limits and check day (`src/subscriptions/conviction-pointer.ts:99-105`, `src/playbooks/conviction-seeds.ts:47`). | ◐ view |
 | House rules | Options level 2. One option playbook per ticker per bot. Exempt from the rule against holding an option across a report, but it still needs a report on the calendar and never opens inside a blackout (`src/engine/option-guards.ts:176-198`). Opens wait until 10:00 ET (`src/engine/guards.ts:244-247`). | ● |
 | Research | None declared, "unvalidated" (`src/playbooks/research-signals.ts:111-115`). It reads the view's limits and check day, the earnings calendar and option quotes. | ◐ view |
@@ -152,7 +152,7 @@ calendar) counts as data, not a rule.
 | Why it should pay | It borrows the run-up's edge: the stock tends to rise in the sessions before a confirmed report, and the last week is a coin flip (`src/playbooks/call-spread.ts:42-48`). The spread's own P/L is untested, and the borrowed number measures 20 sessions before through the report day's close, not the D-20 to D-6 it trades (`scripts/research/earnings-controls.mjs:49-65`). | ● |
 | Fit | Screen: the run-up's, whose declared line is the house bar, about p 0.001 (`src/playbooks/research-signals.ts:59-65`). NVDA's run-up is p 0.0032: below the bar, marked △ on the run-up's own row, and borrowed by this pair, which shows a plain ✓ (`src/playbooks/pair-table.ts:262-272`, `src/playbooks/pair-table.ts:371-392`). | ▲ NVDA |
 | Stage | Trades. | ● |
-| Entry | Opens only with no contracts on the ticker and a confirmed report date, from D-enter through D-(exit+1) trading sessions, and not within 3 calendar days after a report (`src/playbooks/call-spread.ts:143-162`, `src/playbooks/call-spread.ts:481-494`). NVDA's window, D-20 to D-6, is typed in its setting (`src/playbooks/registry.ts:134-135`); its row already records the measured exit, D-5. | ◐ verdict |
+| Entry | Opens only with no contracts on the ticker and a confirmed report date, from D-enter through D-(exit+1) trading sessions, and not within 3 calendar days after a report (`src/playbooks/call-spread.ts:143-162`, `src/playbooks/call-spread.ts:483-496`). NVDA's window, D-20 to D-6, is typed in its setting (`src/playbooks/registry.ts:134-135`); its row already records the measured exit, D-5. | ◐ verdict |
 | Position | A call debit spread on one expiry: long the liquid call nearest 0.50 delta (within 0.10), short a higher strike nearest the mode's delta (0.30 / 0.25 / 0.20, within 0.05). Expiry: the latest listed after D-exit and before the report's blackout (`src/playbooks/call-spread.ts:69-82`, `src/playbooks/call-spread.ts:210-227`). | ◐ verdict |
 | Size | One spread, whatever the budget: the guard caps a spread at one, and the budget only refuses an open it cannot pay for (`src/engine/option-guards.ts:49-59`). | ● |
 | Exit | No take profit, stop or roll. The whole spread closes as one order from D-exit, priced from mid toward the natural side as sessions pass, and at natural within 3 days after a report (`src/playbooks/call-spread.ts:352-430`). Expiry hygiene's T-2 close is the backstop (`src/playbooks/option-hygiene.ts:18-40`). | ◐ verdict |
@@ -181,6 +181,28 @@ calendar) counts as data, not a rule.
 - **Three bugs, filed on the way:** the NVDA call spread wears ✓ though its borrowed verdict misses
   the house bar (#6772); MU's and NBIS's next reports are missing from the calendar the dip-to-bounce
   reads (#6773); the CRWV wheel's Store text quotes a superseded study run (#6774).
+
+## Exit, now required (#6954 slice 4, 2026-11-07)
+
+Field 8 is no longer optional. A strategy carries its exit plan before it executes (Eric,
+2026-11-01): a stop, a profit target or a time exit. A live bot's guards refuse an opening order
+`no-exit-plan` from a pair that declares none of the three in its mode (`src/engine/guards.ts`,
+`src/playbooks/exit-plan.ts`).
+
+| Pair | Stop (sell all at market, below cost) | Target or time exit it declares |
+|---|---|---|
+| S1-NVDA, G1-GOOG, TACO-DJT, SAURON | 8% / 12% / 16% (conservative / standard / aggressive) | the run-up's or event's window closing; SAURON none (he sells into euphoria) |
+| CRWV-WHEEL | none, on purpose | each sold contract ends at expiry; assigned shares leave by a covered call |
+| CRWV-LONG-CALL | none | sells at 2× cost, or with 45 days left |
+| NVDA-LONG-LEAP | none | sells half at 2× cost, the rest with 180 days left |
+| NVDA-CALL-SPREAD | none (the loss is the debit paid) | sells 5 trading sessions before the report |
+| BETA-SCOUT | none | sells each pick at the next session's first check |
+
+- **The option pairs carry no stop** because the stop mechanism reads share positions only: on a
+  contract it would fire on nothing, and on the wheel it would sell the shares its owner chose to
+  hold. A stop priced on the contract's own premium is parked in `docs/IDEAS.md`.
+- **The stop levels are unmeasured** (`HOUSE_STOP_LOSS`). Wrong if by 2026-12-15 more than half of
+  stop-triggered paper exits recover past their entry within 5 sessions.
 
 <details>
 <summary><strong>How this was checked</strong> — four readers, four refuters, only what survived</summary>

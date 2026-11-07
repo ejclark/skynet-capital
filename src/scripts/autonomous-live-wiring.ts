@@ -43,6 +43,7 @@ import type { AuthoredRoster } from "../playbooks/authored-play.js";
 import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { ConvictionLookup } from "../playbooks/conviction-store.js";
+import { exitPlannedFor } from "../playbooks/exit-plan.js";
 import type { EnabledPlaybook, PlaybookReads } from "../playbooks/playbook.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
@@ -545,6 +546,12 @@ export function tradingRoster(
       playbookSymbols: new Map(roster.enabled.map((e) => [e.playbook.id, e.playbook.symbols])),
       ...(realizedPlForPlaybook ? { realizedPlForPlaybook } : {}),
       subscribedOnly: true,
+      // No open without an exit plan (#6954 slice 4): the roster's own entries first, as this bot
+      // runs them, then the house roster for a wind-down subscription's exits-only playbook.
+      exitPlanned: exitPlannedFor([
+        ...roster.enabled.map((e) => e.playbook),
+        ...registeredPlaybooks(),
+      ]),
     },
   };
 }

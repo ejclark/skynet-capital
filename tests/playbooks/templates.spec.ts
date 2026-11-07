@@ -293,9 +293,12 @@ describe("a template instance equals main's playbook field by field (criterion 7
 
   it("adds no field a template did not set, so nothing downstream sees a new key", () => {
     const keys = (play: Playbook) => Object.keys(play).sort();
+    // `exitSafety` and `exits` are every share play's exit plan, set by the template (#6954 slice 4).
     expect(keys(S1_NVDA)).toEqual([
       "desiredState",
       "evidence",
+      "exitSafety",
+      "exits",
       "id",
       "keyedOn",
       "mixedSignals",
@@ -308,6 +311,8 @@ describe("a template instance equals main's playbook field by field (criterion 7
     expect(keys(G1_GOOG)).toEqual([
       "desiredState",
       "evidence",
+      "exitSafety",
+      "exits",
       "id",
       "keyedOn",
       "size",

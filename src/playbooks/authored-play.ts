@@ -38,7 +38,7 @@
  */
 import { PLAYBOOK_MODES, type PlaybookMode } from "../domain/types.js";
 import type { Playbook } from "./playbook.js";
-import { eventState, prePrintState } from "./templates.js";
+import { eventState, eventTimeExit, prePrintState, runUpTimeExit } from "./templates.js";
 
 /**
  * The trigger menu — the complete set of conditions an authored play may key on, each one the
@@ -321,16 +321,30 @@ export function compileAuthoredPlay(spec: AuthoredPlaySpec): Playbook {
     // exit-safety dial reads (`playbook.ts`) follows from the trigger, never from a separate field
     // an author could set inconsistently with it.
     horizon: spec.trigger.kind === "event-window" ? "short" : "medium",
-    desiredState:
-      spec.trigger.kind === "event-window"
-        ? eventState(symbol, spec.trigger.holdMinutes)
-        : prePrintState(symbol, {
-            // A member's form declares calendar days; the house plays count sessions.
-            unit: "days",
-            enter: spec.trigger.enterDaysBefore,
-            exit: { kind: "before", count: spec.trigger.exitDaysBefore },
-          }),
+    ...authoredWindow(symbol, spec.trigger),
   };
+}
+
+/** An authored play's window and the time exit it is (#6954 slice 4): every form trigger ends in a
+ *  flat, so every authored play carries its exit plan. Its stop stays the author's to set — the form
+ *  has no stop field yet, and a house number would be a setting the author never chose. */
+function authoredWindow(
+  symbol: string,
+  trigger: AuthoredPlaySpec["trigger"],
+): Pick<Playbook, "desiredState" | "exits"> {
+  if (trigger.kind === "event-window") {
+    return {
+      desiredState: eventState(symbol, trigger.holdMinutes),
+      exits: { time: eventTimeExit(trigger.holdMinutes) },
+    };
+  }
+  // A member's form declares calendar days; the house plays count sessions.
+  const window = {
+    unit: "days",
+    enter: trigger.enterDaysBefore,
+    exit: { kind: "before", count: trigger.exitDaysBefore },
+  } as const;
+  return { desiredState: prePrintState(symbol, window), exits: { time: runUpTimeExit(window) } };
 }
 
 /**

@@ -22,6 +22,11 @@
  * so a second run-up strategy never opens on another ticker while the account holds one. Exits and
  * every non-run-up intent pass unchanged.
  *
+ * THE OWN-RULES STOP (#6954 slice 4). The own-rules entry never reaches `playbookIntents`, so its
+ * stop (`exitSafety`, `SAURON`'s house stop) is run here, running or paused: a tripped name gets the
+ * stop's sell, stamped with that playbook, and the base persona's reflexes on it are dropped for the
+ * cycle — the safety net overrides the rules rather than competing with them for the same sale.
+ *
  * A PAUSED entry (`exitsOnly`, #4651) opens nothing new (`playbookIntents`), and its names stay its
  * own exactly as when it runs: the base persona stays off them, buys and sells, held or flat. It
  * records no verdict, and a paused own-rules entry is ignored altogether. With no paused entry
@@ -47,6 +52,7 @@ import { observationDelta } from "./observation-delta.js";
 import { mergeOptionDemand } from "./option-demand.js";
 import {
   type EnabledPlaybook,
+  exitSafetyIntents,
   type PlaybookEvent,
   type PlaybookReads,
   playbookIntents,
@@ -131,6 +137,8 @@ export function withPlaybooks(
   // A PAUSED own-rules entry is ignored entirely: his reflexes run unlabelled, as before he
   // subscribed — his rules have no basket of positions to manage apart from himself.
   const own = enabled.find((e) => e.playbook.rulesOf === base.id && !e.exitsOnly);
+  // Its stop is an exit, so it runs paused too: a pause stops opens, never a way out.
+  const ownStop = enabled.filter((e) => e.playbook.rulesOf === base.id).slice(0, 1);
   const others = enabled.filter((e) => e.playbook.rulesOf !== base.id);
   const running = enabled.filter((e) => !e.exitsOnly);
   const managed = managedSymbols(base.id, enabled);
@@ -156,12 +164,14 @@ export function withPlaybooks(
         portfolio,
         refuseRunUp,
       );
+      const stops = exitSafetyIntents(ownStop, context, portfolio).intents;
+      const stopped = new Set(stops.map((i) => i.symbol));
       const reflexes = base
         .decide(context, portfolio)
-        .filter((i) => !managed.has(i.symbol))
+        .filter((i) => !(managed.has(i.symbol) || stopped.has(i.symbol)))
         .map(attribute);
       observeMixedSignals(running, context, mixedSignalsLog);
-      return [...plays, ...reflexes];
+      return [...plays, ...stops, ...reflexes];
     },
     // A paused entry records no verdict: the roll call reads a verdict as "this playbook ran".
     playbookVerdicts: (context) => playbookVerdicts(running, context.asOf, calendar, events),

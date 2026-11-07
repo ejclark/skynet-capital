@@ -11,7 +11,13 @@ import type {
 } from "../domain/types.js";
 import type { GuardRefusal, RiskConfig } from "../engine/guards.js";
 import { applyGuardsWithVerdicts } from "../engine/guards.js";
-import { BETA_SCOUT_ID, betaScoutExitIntents, betaScoutIntents } from "../playbooks/beta-scout.js";
+import {
+  BETA_SCOUT,
+  BETA_SCOUT_ID,
+  betaScoutExitIntents,
+  betaScoutIntents,
+} from "../playbooks/beta-scout.js";
+import { exitPlannedFor } from "../playbooks/exit-plan.js";
 import type { BrokerPort } from "../ports/broker.js";
 import type { AutonomousTrader, TraderMode } from "./autonomous-trader.js";
 import type { ScoutState } from "./bots-state-db.js";
@@ -99,6 +105,8 @@ function readHost(scout: BetaScoutDeps): ScoutHost {
     ...scout.risk,
     subscriptions,
     subscribedOnly: true,
+    // The forced pick places only its own picks, whose exit plan is the next-session sale (#6954 slice 4).
+    exitPlanned: exitPlannedFor([BETA_SCOUT]),
     ...(scout.realizedPlForPlaybook ? { realizedPlForPlaybook: scout.realizedPlForPlaybook } : {}),
   };
   const mine = subscriptions.filter((s) => s.playbookId === BETA_SCOUT_ID);

@@ -20,6 +20,7 @@
  */
 import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
+import { HOUSE_STOP_LOSS } from "./exit-plan.js";
 import { pairFor, type StrategyId } from "./pair-table.js";
 import {
   type Playbook,
@@ -185,22 +186,42 @@ function copyOf(
   };
 }
 
-/** The pre-print run-up on one ticker — S1-NVDA and G1-GOOG are two calls of this. */
+/** When a pre-print run-up goes flat, in a member's words — the time exit its window is. Also read
+ *  by `authored-play.ts`, whose plays run the same window. */
+export function runUpTimeExit(window: PrePrintWindow): string {
+  const unit = window.unit === "sessions" ? "trading sessions" : "days";
+  return window.exit.kind === "before"
+    ? `sells ${window.exit.count} ${unit} before the earnings report`
+    : `sells by ${window.exit.etCutoff} ET on the day of the earnings report`;
+}
+
+/** When an event play goes flat, in a member's words. */
+export function eventTimeExit(holdMinutes: number): string {
+  return `sells ${holdMinutes} minutes after the event that opened it`;
+}
+
+/** The pre-print run-up on one ticker — S1-NVDA and G1-GOOG are two calls of this. A share play,
+ *  so it carries the house stop in every mode beside its window's time exit (#6954 slice 4). */
 export function prePrintRunUp(setting: PrePrintRunUpSetting): Playbook {
   return {
     id: pairIdOf("pre-print-run-up", setting.symbol),
     symbols: [setting.symbol],
     ...copyOf(setting, "earnings"),
+    exitSafety: HOUSE_STOP_LOSS,
+    exits: { time: runUpTimeExit(setting.window) },
     desiredState: prePrintState(setting.symbol, setting.window),
   };
 }
 
-/** The event strategy on one ticker — TACO-DJT is one call of this. */
+/** The event strategy on one ticker — TACO-DJT is one call of this. A share play: the house stop
+ *  in every mode beside its hold's time exit. */
 export function eventPlay(setting: EventPlaySetting): Playbook {
   return {
     id: pairIdOf("event", setting.symbol),
     symbols: [setting.symbol],
     ...copyOf(setting, "event"),
+    exitSafety: HOUSE_STOP_LOSS,
+    exits: { time: eventTimeExit(setting.holdMinutes) },
     desiredState: eventState(setting.symbol, setting.holdMinutes),
   };
 }
