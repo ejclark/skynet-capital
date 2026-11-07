@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { resettableBreaker } from "../alerts/bot-watch.js";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import type { Session } from "./auth/session.js";
 import { botSettingsView, serveBotSettings } from "./bot-settings-route.js";
@@ -19,6 +20,7 @@ import { controlsChanges, recordControlsChange } from "./settings-change-log.js"
  *                                 is verified by the SERVICE, never trusted from the client.
  *   POST /api/settings/rotate   → rotateCredentials (8a): replace, never reveal.
  *   POST /api/settings/bot-control → the own-bot switch (9b): ownership-tier, see serveBotControl.
+ *   POST /api/settings/breaker-reset → the owner re-arms a tripped breaker (#6954 slice 3b).
  *   POST /api/settings/bot-settings → the bot's hardcore build and forced-pick count, same tier
  *                                 (#4535 slice 3b, `bot-settings-route.ts`).
  *
@@ -87,11 +89,11 @@ function parseRemoveBody(raw: string): RemoveBody | undefined {
   return id && confirmName ? { id, confirmName } : undefined;
 }
 
-function serveSettingsIndex(
+async function serveSettingsIndex(
   res: ServerResponse,
   config: DashboardServerConfig,
   session: Session | undefined,
-): void {
+): Promise<void> {
   const authConfigured = Boolean(config.auth);
   const adminWired = Boolean(config.accountAdmin);
   const ownedIds = authConfigured ? resolveOwnedIds(session, config) : [];
@@ -101,6 +103,7 @@ function serveSettingsIndex(
   // owns AND bot controls are wired; the fleet-wide hold is stated so a halted bot never reads
   // as trading (docs/BRAND.md: never let a flourish imply something false).
   const fleet = config.controls?.store.load();
+  const breakers = await heldByBreaker(config, ownedIds);
   const accounts = ownedIds.map((id) => {
     const found = board.find((p) => p.id === id);
     const profile = config.accountAdmin?.profileFor(id);
@@ -112,6 +115,10 @@ function serveSettingsIndex(
       hostConfigured: roster.has(id),
       profile: profile ?? null,
       ...(kind === "bot" && fleet ? { suspended: fleet.bots[id]?.suspended === true } : {}),
+      // Present only while the bot's newest pass was halted by a breaker an owner can reset.
+      ...(breakers.has(id)
+        ? { breaker: breakers.get(id)?.name, rearming: breakers.get(id)?.rearming }
+        : {}),
       // The bot's own settings and their change log (#4535 slice 3b), same tier as the switch.
       ...(kind === "bot" && fleet ? { settings: botSettingsView(config, id, session?.email) } : {}),
     };
@@ -125,6 +132,95 @@ function serveSettingsIndex(
     fleetSuspended: accounts.some((a) => a.kind === "bot") && fleet?.allSuspended === true,
     timezones: ALLOWED_TIMEZONES,
   });
+}
+
+/** A breaker holding one bot's newest pass, in words, and whether an owner already pressed reset
+ *  after that pass — the bots have been told, and the next pass is what proves it. */
+interface BreakerHold {
+  readonly name: string;
+  readonly rearming: boolean;
+}
+
+/** The breaker holding each owned bot's newest pass — only those. A failed read leaves a bot out
+ *  (the card then offers no reset) rather than failing the settings page. */
+async function heldByBreaker(
+  config: DashboardServerConfig,
+  ownedIds: readonly string[],
+): Promise<Map<string, BreakerHold>> {
+  const held = new Map<string, BreakerHold>();
+  const readDecisions = config.readDecisions;
+  if (!readDecisions) return held;
+  const resetAt = Date.parse(config.controls?.store.load().breakerResetAt ?? "");
+  await Promise.all(
+    ownedIds.map(async (id) => {
+      try {
+        const [newest] = await readDecisions(id, { limit: 1 });
+        const name = resettableBreaker(newest?.halted);
+        if (name && newest) held.set(id, { name, rearming: resetAt >= newest.at });
+      } catch {
+        /* the page still loads; the reset button just is not offered */
+      }
+    }),
+  );
+  return held;
+}
+
+/** POST /api/settings/breaker-reset — an owner re-arms the tripped breakers (#6954 slice 3b). The
+ *  bots hear the stamp on their next ~30s poll. Ownership is the only gate (#928); it never touches
+ *  the kill switch or a suspend, and it is a no-op unless this bot's newest pass was halted by a
+ *  breaker, so a stray press cannot re-arm anything that is not held. */
+async function serveBreakerReset(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const raw = await readJsonPost(req, res, SETTINGS_BODY_CAP_BYTES);
+  if (raw === undefined) return;
+  const body = parseJsonRecord(raw);
+  const id = body ? boundedString(body.id, 100) : undefined;
+  if (!id) {
+    sendJson(res, 400, { error: "malformed breaker-reset body" });
+    return;
+  }
+  const ownedIds = config.auth ? resolveOwnedIds(session, config) : [];
+  const isBot = config.hub.getState().participants.some((p) => p.id === id && p.kind === "bot");
+  if (!(config.controls && isBot && ownedIds.includes(id))) {
+    sendJson(res, 200, { ok: false, error: "You can only reset the breaker on your own bot." });
+    return;
+  }
+  const hold = (await heldByBreaker(config, [id])).get(id);
+  if (!hold) {
+    sendJson(res, 200, { ok: false, error: "No breaker is holding this bot right now." });
+    return;
+  }
+  if (hold.rearming) {
+    sendJson(res, 200, {
+      ok: false,
+      error: "Already reset — the bots re-arm within about 30 seconds, and the next pass confirms.",
+    });
+    return;
+  }
+  const editor = session?.email ?? "unknown";
+  const at = config.now?.() ?? new Date();
+  const { store, changes } = config.controls;
+  const before = store.stampBreakerReset(editor, at);
+  recordControlsChange(
+    changes,
+    id,
+    [
+      {
+        at: at.toISOString(),
+        setting: "breakerReset",
+        before: before.breakerResetAt ?? null,
+        after: at.toISOString(),
+        proposedBy: editor,
+        approvedBy: editor,
+      },
+    ],
+    () => store.restoreBreakerReset(before, editor, at),
+  );
+  sendJson(res, 200, { ok: true });
 }
 
 /** POST /api/settings/bot-control — flip the session's OWN bot. The rule is
@@ -203,7 +299,7 @@ export async function serveSettingsApi(
   session: Session | undefined,
 ): Promise<boolean> {
   if (path === "/api/settings") {
-    serveSettingsIndex(res, config, session);
+    await serveSettingsIndex(res, config, session);
     return true;
   }
   if (path === "/api/settings/rotate") {
@@ -212,6 +308,10 @@ export async function serveSettingsApi(
   }
   if (path === "/api/settings/bot-control") {
     await serveBotControl(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/settings/breaker-reset") {
+    await serveBreakerReset(req, res, config, session);
     return true;
   }
   if (path === "/api/settings/bot-settings") {

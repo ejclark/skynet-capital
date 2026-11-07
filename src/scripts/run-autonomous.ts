@@ -107,6 +107,7 @@ import {
   seedDailyLossBaseline,
   seedDecisionDb,
   tradingRoster,
+  wireBreakerReset,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
 import {
@@ -187,11 +188,14 @@ async function runLive(): Promise<void> {
   let onScoutPicksPolled: (() => void) | undefined;
   // Set once the traders exist: swaps a bot's build when the owner flips its hardcore setting.
   let onHardcorePolled: ((state: ControlsState) => void) | undefined;
+  // Set once the safety controller exists: re-arms the breakers when the owner presses reset.
+  let onBreakerPolled: ((state: ControlsState) => void) | undefined;
   const { controls, bootControls, health } = await bootMissionControl(
     (state) => {
       void credentials.reconcile(state);
       onScoutPicksPolled?.();
       onHardcorePolled?.(state);
+      onBreakerPolled?.(state);
     },
     undefined,
     (cursor) => replication.onPoll(cursor),
@@ -338,6 +342,9 @@ async function runLive(): Promise<void> {
   // STOP OPENING: a tripped breaker refuses new risk and never an exit (#6954 slice 3) — a bot that
   // cannot sell is stuck in the drawdown the breaker tripped on.
   const openBlockedReason = () => safety.blockedReason();
+  // The owner's "reset breaker" (Settings card) re-arms the breakers on the next poll; it never
+  // clears the kill switch or a suspend (#6954 slice 3b).
+  onBreakerPolled = wireBreakerReset(bots, safety);
   // Anything that opens (the forced pick, the shadow scouts) stops under either.
   const blockedReason = () => stopEverything() ?? openBlockedReason();
   controls.start();

@@ -19,6 +19,7 @@ import { type BotControlsClient, resolveBotControls } from "../autonomous/bot-co
 import { type BotsHealthFile, resolveBotsHealthFile } from "../autonomous/bots-health-file.js";
 import type { BotsStateDb } from "../autonomous/bots-state-db.js";
 import { openBotsStateDb } from "../autonomous/bots-state-db.js";
+import { breakerResetListener } from "../autonomous/breaker-reset.js";
 import type { ConvictionsWire } from "../autonomous/convictions-wire.js";
 import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-equity.js";
 import { type DecisionDb, decisionDbPathFrom, openDecisionDb } from "../autonomous/decision-db.js";
@@ -60,7 +61,12 @@ import {
   subscriptionRoster,
 } from "../subscriptions/subscription-roster.js";
 import { buildTuning, gateBuild, HARDCORE_COOLDOWN_MS } from "./autonomous-hardcore-live.js";
-import { optionReadWarn, optionTraderConfig, ownedRoster } from "./autonomous-option-wiring.js";
+import {
+  optionReadWarn,
+  optionTraderConfig,
+  ownedRoster,
+  readBootAccounts,
+} from "./autonomous-option-wiring.js";
 import { botOrderPublisher, logResult } from "./autonomous-sinks.js";
 
 /** Mission Control boot (Eric, 2026-08-21): one bounded fetch for the boot-applied overrides
@@ -161,6 +167,40 @@ export function seedDailyLossBaseline(
   } catch (error) {
     console.warn("[safety] day-open equity seed failed (non-fatal):", error);
   }
+}
+
+/**
+ * The owner's "reset breaker" (#6954 slice 3b), wired to this process: on a poll carrying a newer
+ * reset stamp, read the bots' accounts, then re-arm the breakers and seed the day-open baseline in
+ * one step (`breaker-reset.ts`). With no day-open equity to seed — a bot's read failed — it refuses
+ * and tries again on the next poll, because re-arming without the seed would anchor the daily-loss
+ * baseline to today's lower mark and quietly forgive the loss. Never touches the kill switch.
+ */
+export function wireBreakerReset(
+  bots: readonly Bot[],
+  safety: SafetyController,
+  options: {
+    readonly bootedAt?: Date;
+    readonly log?: (line: string) => void;
+    readonly read?: () => Promise<ReadonlyMap<string, AlpacaAccount | undefined>>;
+  } = {},
+): (state: ControlsState) => void {
+  return breakerResetListener({
+    read: options.read ?? (() => readBootAccounts(bots)),
+    rearm: (accounts) => {
+      const seed = fleetDayOpenEquity(
+        [...(accounts?.values() ?? [])].map((a) => (a ? parseDayOpenEquity(a) : null)),
+      );
+      if (seed === null) throw new Error("day-open equity unreadable, so the loss cannot be kept");
+      safety.reset();
+      safety.seedBaseline(seed);
+      console.log(
+        `[safety] daily-loss baseline re-seeded from day-open equity: $${seed.toFixed(2)}`,
+      );
+    },
+    bootedAt: options.bootedAt ?? new Date(),
+    log: options.log ?? ((line) => console.log(line)),
+  });
 }
 
 /**

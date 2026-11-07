@@ -72,6 +72,11 @@ export interface ControlsState {
   /** Moneypenny's model override — absent falls back to `companion-model.ts`'s own default.
    *  Dynamic: `dashboard-companion.ts` reads it fresh per turn, no restart. */
   readonly companionModel?: CompanionModelId;
+  /** ISO time an owner last pressed "reset breaker" (#6954 slice 3b). Dynamic: the bots re-arm their
+   *  tripped breakers on the first poll that carries a stamp newer than the last they honoured, and
+   *  never for one older than their own boot (a restart already cleared it). Never touches the kill
+   *  switch or any suspend. */
+  readonly breakerResetAt?: string;
   /** ISO time of the last edit — the page's audit line. */
   readonly updatedAt?: string;
   /** Who edited (owner email) — same audit-trail principle as the allowlist store. */
@@ -89,6 +94,13 @@ export const MAX_BETA_PICKS = 10;
 
 /** Bounded — a fingerprint is 16 hex chars; generous headroom for a future longer digest. */
 const MAX_CREDENTIALS_VERSION_LENGTH = 64;
+
+/** A stored instant: an ISO string that parses, else absent (a hostile or torn value reads as unset). */
+function isoStamp(raw: unknown): string | undefined {
+  return typeof raw === "string" && raw.length <= 40 && !Number.isNaN(Date.parse(raw))
+    ? raw
+    : undefined;
+}
 
 function parseBot(raw: unknown): BotControls | null {
   if (!isRecord(raw)) return null;
@@ -130,8 +142,10 @@ export function parseControlsState(raw: unknown): ControlsState | null {
     }
   }
   const companionModel = COMPANION_MODELS.find((m) => m === raw.companionModel);
+  const breakerResetAt = isoStamp(raw.breakerResetAt);
   return {
     bots,
+    ...(breakerResetAt ? { breakerResetAt } : {}),
     ...(typeof raw.allSuspended === "boolean" ? { allSuspended: raw.allSuspended } : {}),
     ...(companionModel ? { companionModel } : {}),
     ...(typeof raw.updatedAt === "string" ? { updatedAt: raw.updatedAt } : {}),
@@ -163,6 +177,15 @@ export function effectiveMode(
   houseMode: "observe" | "live",
 ): "observe" | "live" {
   return state.bots[botId]?.mode === "observe" ? "observe" : houseMode;
+}
+
+/**
+ * Is the owner's reset stamp newer than the last one this process honoured? Compared as instants,
+ * never as strings, so a stamp written with a different offset still orders correctly.
+ */
+export function breakerResetDue(state: ControlsState, honouredAt: string): boolean {
+  if (!state.breakerResetAt) return false;
+  return Date.parse(state.breakerResetAt) > Date.parse(honouredAt);
 }
 
 /**

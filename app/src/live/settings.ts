@@ -15,6 +15,12 @@ export interface OwnedAccount {
   readonly profile: { readonly displayName: string; readonly timezone?: string } | null;
   /** The own-bot switch's state — present exactly when this is your bot and controls are wired. */
   readonly suspended?: boolean;
+  /** The breaker, in words, holding this bot's newest pass — present only while an owner can reset
+   *  it (#6954 slice 3b). The kill switch is never one. */
+  readonly breaker?: string;
+  /** True once an owner pressed reset after that pass: the bots have been told and the next pass
+   *  confirms, so the card says so instead of offering the button again. */
+  readonly rearming?: boolean;
   /** The bot's own settings and their change log (#4535 slice 3b) — same presence as `suspended`. */
   readonly settings?: BotSettings;
 }
@@ -122,3 +128,10 @@ export const botSettingsRequest = (input: {
   readonly betaStage?: boolean | null;
 }): Promise<{ readonly ok: true } | { ok: false; error: string }> =>
   postJson("/api/settings/bot-settings", input);
+
+/** Re-arm the tripped breakers on your OWN bot's newest pass; the bots hear it within ~30 seconds.
+ *  Ownership is the server's check, and it refuses unless a breaker is actually holding the bot. */
+export const breakerResetRequest = (input: {
+  readonly id: string;
+}): Promise<{ readonly ok: true } | { ok: false; error: string }> =>
+  postJson("/api/settings/breaker-reset", input);
