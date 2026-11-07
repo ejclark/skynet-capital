@@ -32,3 +32,44 @@ export function readFailures(
     staleWaits?: number[];
   },
 ): Failure[];
+/** How far back a closed capsule still owns its signature (#6953 slice 2). */
+export const REOPEN_DAYS: number;
+/** Left on every reopen; capsule-stall.mjs reads only what was said since. */
+export const REOPEN_MARKER: string;
+type ClosedCapsule = {
+  number: number;
+  title: string;
+  closedAt?: string;
+  stateReason?: string;
+  labels?: (string | { name?: string })[];
+  body?: string | null;
+};
+/** The closes a capsule's fault has come back from, read from its body row. */
+export function recurrenceCount(body?: string | null): number;
+/** `body` with its recurrence row set to `n`. */
+export function withRecurrence(body: string | null | undefined, n: number): string;
+/** The closed capsule a returning fault reopens, or null. */
+export function reopenable(
+  run: { run_started_at?: string } | undefined,
+  closedIssues: readonly ClosedCapsule[] | undefined,
+  title: string,
+  days?: number,
+): ClosedCapsule | null;
+export interface RepairIntent {
+  type: string;
+  issue?: number;
+  title?: string;
+  body?: string;
+  issueBody?: string;
+  removeLabels?: string[];
+  dispatch?: boolean;
+  reason?: string;
+}
+/** Decide what to do about a completed run. Pure. */
+export function routeFailure(
+  ctx: { run?: Record<string, unknown>; defaultBranch?: string; failures?: Failure[] },
+  deps?: {
+    openIssues?: { number: number; title: string; labels?: string[] }[];
+    closedIssues?: ClosedCapsule[];
+  },
+): RepairIntent[];

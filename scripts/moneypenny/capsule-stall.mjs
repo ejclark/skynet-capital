@@ -19,15 +19,24 @@
 // Both ride the `--audit` push tick (scripts/moneypenny/index.mjs), beside audit.mjs, which is at
 // its size cap. Same doctrine as audit(): comment, move a label, close on proof — never decide
 // more than that. It NEVER re-dispatches a repair (that needs a workflow edit, which is protected).
-// A fault that comes back after the close files a fresh capsule through repair.mjs as any new
-// failure does.
+// A fault that comes back within 14 days REOPENS the capsule through repair.mjs (#6953 slice 2), so
+// this check reads only what was said since the newest reopen (`sinceReopen`): the proven comment
+// from the last life must not read as "a person reopened it" on the next.
+//
+// A CLOSE NEVER TAKES THE QUESTION WITH IT (#6953 slice 2). Proof used to close a capsule
+// "whatever else it carries", `needs-eric` included — so the ask vanished with the incident, came
+// back under the next number, and Eric saw the breaker question 9 times in 5 days. Before closing an
+// escalated capsule this now moves its ask (`carryOf`): onto the fix's open PR when one is linked,
+// since that PR is the thing his answer acts on; otherwise onto `needs-session`, which the digest
+// lists as "needs a session" — a fix with no PR waits on a session that can open one, not on him.
 //
 // REST only (the core bucket — gh.mjs `ghRest` says why), and one comment per capsule per condition,
 // deduped by a hidden marker in the comment itself. Pure core (`capsuleIntents` and its helpers) +
 // a thin gather/act shell, so every branch is fixture-drivable.
+import { decisionLine } from "./assignments.mjs";
 import { ghRest, ghRestAll, sh, trustedComment } from "./gh.mjs";
 import { ensureLabel, FOOTER, LABELS } from "./labels.mjs";
-import { LOST_RUNNER, normalizeJobName } from "./repair.mjs";
+import { LOST_RUNNER, normalizeJobName, REOPEN_DAYS, REOPEN_MARKER } from "./repair.mjs";
 
 /** A capsule younger than this may still have its repair session running. */
 export const ORPHAN_AFTER_HOURS = 24;
@@ -136,12 +145,53 @@ export function hasLinkedPr(timeline = [], since) {
   });
 }
 
+/**
+ * The held fix PR the timeline links to this capsule, or null — where an escalated capsule's ask can
+ * go and still be seen. Two tests, each closing a way the ask could land wrong:
+ *   - it says it closes this capsule (`Closes #N` and kin), so a PR that only mentions the number —
+ *     a digest, a research note — is never taken for the fix;
+ *   - it carries `hold-merge`, so the assignment lane's criterion 4 asks Eric about it. An unheld
+ *     PR either auto-merges, which answers nothing he was asked, or sits where no list sees it.
+ * The newest such PR wins. Only a cross-reference names its PR; `connected` does not. Pure.
+ */
+export function openLinkedPr(timeline = [], number = null) {
+  const closes =
+    number && new RegExp(`\\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\\s+#${number}\\b`, "i");
+  let found = null;
+  for (const e of timeline ?? []) {
+    const pr = e?.event === "cross-referenced" ? e.source?.issue : null;
+    if (!(pr?.pull_request && pr.state === "open" && pr.number)) continue;
+    if (closes && !closes.test(String(pr.body ?? ""))) continue;
+    if (!names(pr.labels).includes(LABELS.holdMerge.name)) continue;
+    found = pr.number;
+  }
+  return found;
+}
+
+/** The comments since the newest reopen — the capsule's current life. Oldest first in, and out. */
+export function sinceReopen(comments = []) {
+  const last = comments.findLastIndex((c) => String(c ?? "").includes(REOPEN_MARKER));
+  return last === -1 ? comments : comments.slice(last + 1);
+}
+
+/**
+ * Where an escalated capsule's ask goes before a green close: its held fix PR (`openLinkedPr`), else
+ * a session. `openPr` is the gather's read; absent reads as no PR, because listing the ask for a
+ * session loses nothing, while closing with it nowhere is the failure this exists for. Pure.
+ */
+export function carryOf(c) {
+  const decision = decisionLine(c.body);
+  return c.openPr ? { pr: c.openPr, decision } : { session: true, decision };
+}
+
 /** Whether the gather needs the costlier PR read for this capsule, from its labels and age alone:
  *  only where the orphan flag could still fire. The proof is read for every open capsule, since
  *  green closes any of them. */
 export function lookupsFor(issue, nowMs, orphanAfterHours = ORPHAN_AFTER_HOURS) {
   const labels = names(issue.labels);
-  if (labels.includes(LABELS.needsEric.name)) return { orphan: false };
+  if (labels.includes(LABELS.needsEric.name) || labels.includes(LABELS.needsSession.name)) {
+    return { orphan: false };
+  }
   const old = hours(issue.created_at ?? issue.createdAt, nowMs) >= orphanAfterHours;
   return { orphan: old && !labels.includes(LABELS.stall.name) };
 }
@@ -204,13 +254,20 @@ function prGoneBody(pr, clearNeedsEric) {
   return `🌤 **Closed with its PR** — #${pr.number} ${how}, so there is nothing left here to repair.${label}\n\n${PROVEN_MARKER}\n\n${FOOTER}`;
 }
 
-function provenBody(proof, clearNeedsEric) {
+/** Where the ask went, said in the close comment, so the close never reads as the ask answered. */
+function carryLine(carry) {
+  if (!carry) return "";
+  const ask = carry.decision ? `: "${carry.decision}"` : "";
+  const where = carry.pr
+    ? `moves to #${carry.pr}, the fix it waits on${ask}. That PR is what an answer acts on, so the question sits there, not on this incident.`
+    : `moves to \`${LABELS.needsSession.name}\` — the digest's "needs a session" line${ask}. No fix PR is open, so the next step is a session that can open one, not a decision.`;
+  return `\n\n\`${LABELS.needsEric.name}\` comes off, and the ask ${where}`;
+}
+
+function provenBody(proof, carry) {
   const runs = proof.runs.map((r) => `[${r.id}](${r.url})`).join(", ");
   const ran = proof.step ? ` that ran \`${proof.step}\`` : "";
-  const label = clearNeedsEric
-    ? ` \`${LABELS.needsEric.name}\` comes off with it: the decision it waited on no longer blocks anything.`
-    : "";
-  return `🌤 **Passing again — closed** — \`${proof.job}\` (${proof.workflow}) passed on the last ${proof.runs.length} runs on \`main\`${ran}: ${runs}. The failure this tracked has stopped happening, so there is nothing left here to repair.${label}\n\nIf it comes back, the repair lane files a fresh issue for it; reopen this one only to keep its history together.\n\n${PROVEN_MARKER}\n\n${FOOTER}`;
+  return `🌤 **Passing again — closed** — \`${proof.job}\` (${proof.workflow}) passed on the last ${proof.runs.length} runs on \`main\`${ran}: ${runs}. The failure this tracked has stopped happening, so there is nothing left here to repair.${carryLine(carry)}\n\nIf it comes back within ${REOPEN_DAYS} days, the repair lane reopens this issue rather than filing a new one.\n\n${PROVEN_MARKER}\n\n${FOOTER}`;
 }
 
 /**
@@ -218,18 +275,20 @@ function provenBody(proof, clearNeedsEric) {
  * markers), when its fault last recurred, and whichever lookups `lookupsFor` asked for:
  * `hasLinkedPr` for an orphan candidate, `recentRuns` (newest first, each with its jobs) for the
  * proof. A lookup that is absent is unknown, and unknown never fires. Proof is judged first and
- * for every capsule: a green one closes, whatever else it carries.
+ * for every capsule: a green one closes, and an escalated one moves its ask first (`carryOf`).
+ * Markers count only since the newest reopen (`sinceReopen`).
  */
 export function capsuleIntents({ capsules = [], orphanAfterHours = ORPHAN_AFTER_HOURS } = {}) {
   const intents = [];
   for (const c of capsules) {
     const labels = names(c.labels);
-    const posted = (c.comments ?? []).join("\n");
+    const posted = sinceReopen(c.comments ?? []).join("\n");
     const escalated = labels.includes(LABELS.needsEric.name);
     // This check speaks once. A proven comment on an OPEN capsule means a person reopened it; a
     // legacy eroded comment beside a present `needs-eric` means the owner re-applied the label
     // after that check removed it. Either is his call and stays, green or not.
     const spoke = posted.includes(PROVEN_MARKER) || (escalated && posted.includes(ERODED_MARKER));
+    // No carry here: the ask was about that PR, and its merge or close is the answer.
     if (!spoke && c.redPr?.state === "closed") {
       intents.push({
         kind: "close-proven-capsule",
@@ -243,18 +302,20 @@ export function capsuleIntents({ capsules = [], orphanAfterHours = ORPHAN_AFTER_
     }
     const proof = spoke ? null : greenProof(c);
     if (proof) {
-      const clearNeedsEric = escalated;
+      const carry = escalated ? carryOf(c) : undefined;
       intents.push({
         kind: "close-proven-capsule",
         issueNumber: c.number,
         title: c.title,
-        body: provenBody(proof, clearNeedsEric),
-        clearNeedsEric,
+        body: provenBody(proof, carry),
+        clearNeedsEric: escalated,
+        ...(carry ? { carry } : {}),
       });
       continue;
     }
-    // Not proven. An escalated capsule waits on its decision; the rest may be orphans.
-    if (escalated) continue;
+    // Not proven. An escalated capsule waits on its decision, a handed-off one on its session (the
+    // reopen said so, #6953); the rest may be orphans.
+    if (escalated || labels.includes(LABELS.needsSession.name)) continue;
     if (c.ageHours < orphanAfterHours || c.hasLinkedPr !== false) continue;
     if (labels.includes(LABELS.stall.name)) continue;
     if (posted.includes(ORPHAN_MARKER)) continue;
@@ -338,6 +399,10 @@ export function gatherCapsules(nowMs, { rest = ghRest, restAll = ghRestAll } = {
     if (need.orphan) {
       c.hasLinkedPr = hasLinkedPr(restAll(`issues/${i.number}/timeline`), recurredAt);
     }
+    // Where its ask would go if proof closes it — read only for the few capsules that carry one.
+    if (c.labels.includes(LABELS.needsEric.name)) {
+      c.openPr = openLinkedPr(restAll(`issues/${i.number}/timeline`), i.number);
+    }
     const redPr = redPrOf(i);
     if (redPr) {
       const pr = cached(`pulls/${redPr}`);
@@ -390,15 +455,44 @@ export function flagCapsuleOrphan(i, { run = sh, ensure = ensureLabel } = {}) {
   return `🧭 orphaned capsule — \`${i.title}\` (commented on #${i.issueNumber})`;
 }
 
+/** One per capsule on a PR: a close that fails after it posted retries without posting again. */
+const carriedMarker = (n) => `<!-- moneypenny:ask-carried #${n} -->`;
+
+/** What the fix's PR is told when the ask moves onto it. */
+function carriedToPrBody(i) {
+  // A quote, not a `Needs from you` callout: a callout in a comment is one no list can see.
+  const ask = i.carry.decision ? `\n\n> ${i.carry.decision}` : "";
+  return `The question on #${i.issueNumber} moves here: that capsule closed because its job is passing again, and this held PR is the fix it was waiting on.${ask}\n\n${carriedMarker(i.issueNumber)}\n\n${FOOTER}`;
+}
+
 /**
- * Label first and strict, like audit.mjs's `clearStaleInProgress`: if the `needs-eric` removal
- * fails, nothing closes and no comment claims it did. Then one `gh issue close` carries the comment
- * and the close together, so a closed capsule always says why. "Not planned", not "completed":
- * no fix merged here, the failure stopped on its own, and the shipped sweep's merged-fix closes
- * stay countable apart. A capsule is an issue, never a PR, so the issue subcommand is safe here.
+ * The ask moves first, then the label, then the close — each strict, so a failure stops the chain
+ * before anything claims the ask went somewhere it did not. Moving it: a comment on the fix's PR,
+ * or `needs-session` on the capsule, which survives the close and is what the digest lists.
+ * Then, like audit.mjs's `clearStaleInProgress`, if the `needs-eric` removal fails nothing closes.
+ * One `gh issue close` carries the comment and the close together, so a closed capsule always says
+ * why. "Not planned", not "completed": no fix merged here, the failure stopped on its own, and the
+ * shipped sweep's merged-fix closes stay countable apart. A capsule is an issue, never a PR, so the
+ * issue subcommand is safe here.
  */
-export function closeProvenCapsule(i, { run = sh } = {}) {
+export function closeProvenCapsule(
+  i,
+  { run = sh, ensure = ensureLabel, restAll = ghRestAll } = {},
+) {
   const n = String(i.issueNumber);
+  if (i.carry?.pr) {
+    const said = restAll(`issues/${i.carry.pr}/comments`)
+      .filter(trustedComment)
+      .some((c) => String(c.body ?? "").includes(carriedMarker(i.issueNumber)));
+    const body = carriedToPrBody(i);
+    if (!said) {
+      run("gh", ["api", "-X", "POST", `${issuePath(i.carry.pr)}/comments`, "-f", `body=${body}`]);
+    }
+  } else if (i.carry?.session) {
+    ensure(LABELS.needsSession);
+    const label = `labels[]=${LABELS.needsSession.name}`;
+    run("gh", ["api", "-X", "POST", `${issuePath(i.issueNumber)}/labels`, "-f", label]);
+  }
   if (i.clearNeedsEric) {
     const label = encodeURIComponent(LABELS.needsEric.name);
     run("gh", ["api", "-X", "DELETE", `${issuePath(i.issueNumber)}/labels/${label}`]);

@@ -30,6 +30,10 @@
 //      lane's own unassign came after it; his unassign leaves no marker and stays his answer.
 //      `askOnce` is what holds this when two sweeps overlap.
 //   4. a held or platter PR unmerged ≥12h → assign ejclark.
+//   And never an ask his answer cannot complete yet (#6953 slice 2, `artifactGap`): a merge of a
+//   branch with no PR, or of a PR that carries only a patch. Those go to `needsSession` — the
+//   digest's "needs a session" line, with every `needs-session` issue — because the missing actor is
+//   a session that can open the PR or apply the patch, not Eric.
 // And the HONEST QUEUE half: every open `needs-eric` with the one decision it waits on, flagging the
 // ones that state none — `needs-eric` means exactly one thing, a decision only Eric can make
 // (CLAUDE.md), so a label with no stated decision is a candidate to clear, never an assignment.
@@ -40,7 +44,7 @@
 import { aboveFold } from "../issue-lint.mjs";
 import { ERIC, NEEDS_ERIC, withoutLaneAsk, writeIssueBody } from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, trustedComment, withRetry } from "./gh.mjs";
-import { FOOTER } from "./labels.mjs";
+import { FOOTER, LABELS } from "./labels.mjs";
 
 export const ASSIGN_MARKER = "<!-- moneypenny:assigned -->";
 /**
@@ -57,17 +61,19 @@ export const HELD_PR_HOURS = 12;
 export const ASSIGN_CAP = 3;
 /** How long a dead sweep's lease on one ask can block the next: its writes take seconds. */
 export const ASK_LEASE_MS = 10 * 60 * 1000;
+/** How long a closed capsule's carried ask stays listed: repair.mjs's `REOPEN_DAYS`, in ms. Not
+ *  imported — repair.mjs's own imports would ride into the digest's lazy import; a spec pins them. */
+export const REOPEN_SINCE_MS = 14 * 864e5;
 
 const names = (labels = []) => labels.map((l) => (typeof l === "string" ? l : l?.name));
 const logins = (users = []) => users.map((u) => (typeof u === "string" ? u : u?.login));
 const isEric = (login) => String(login ?? "").toLowerCase() === ERIC;
 
 /**
- * The one decision an issue waits on: the first numbered item of its `> [!IMPORTANT]` / `Needs
- * from you` callout above the fold, else the first plain callout line after the heading. `null`
- * when there is no callout — the "no stated decision" case. Pure.
+ * The lines of the `> [!IMPORTANT]` / `Needs from you` callout above the fold, after its heading,
+ * blanks dropped — or `null` when there is none. Pure.
  */
-export function decisionLine(body = "") {
+function calloutLines(body = "") {
   const lines = aboveFold(body ?? "").split("\n");
   // Every alert, not only the first: a lane's ask can land below an unrelated note, and the rule
   // (`hasDecisionCallout`) counts it, so this has to find it too or he is never asked.
@@ -80,10 +86,51 @@ export function decisionLine(body = "") {
     }
     const head = callout.findIndex((l) => /needs from you/i.test(l));
     if (head === -1) continue;
-    const rest = callout.slice(head + 1).filter(Boolean);
-    const numbered = rest.find((l) => /^\d+\.\s+/.test(l));
-    const pick = numbered ?? rest[0];
-    return pick ? pick.replace(/^(\d+\.|[-*])\s+/, "") : null;
+    return callout.slice(head + 1).filter(Boolean);
+  }
+  return null;
+}
+
+/**
+ * The one decision an issue waits on: the first numbered item of its `> [!IMPORTANT]` / `Needs
+ * from you` callout above the fold, else the first plain callout line after the heading. `null`
+ * when there is no callout — the "no stated decision" case. Pure.
+ */
+export function decisionLine(body = "") {
+  const rest = calloutLines(body) ?? [];
+  const pick = rest.find((l) => /^\d+\.\s+/.test(l)) ?? rest[0];
+  return pick ? pick.replace(/^(\d+\.|[-*])\s+/, "") : null;
+}
+
+/** A branch the callout names: `` branch `x/y` `` or `` `x/y` branch ``. */
+const DEFAULT_BRANCH = "main";
+const NAMED_BRANCH = /\bbranch\s+`([^`\s]+)`|`([^`\s]+)`\s+branch\b/gi;
+
+/**
+ * Why this ask cannot be completed by his answer yet, or `null` (#6953 slice 2, call 1). Two
+ * shapes, both measured on 2026-11-06's queue, where 5 of the digest's 10 lines were like this:
+ *   - a merge ask naming a branch no open PR is built from (#6942: the fix sat on
+ *     `fix/breaker-stepless-cancelled-leg` with no PR, because the lane could not open one);
+ *   - a held PR whose files are all `*.patch` (#6620), or a merge ask naming one (#6618). The App
+ *     cannot push workflow files, so the edit rides as a patch, and merging it changes nothing.
+ * The actor missing in both is a session, so the ask goes to "needs a session", never to him.
+ * `openHeads` is every open PR's head branch; `patchOnly` the PR numbers read as patch-only. Pure.
+ */
+export function artifactGap(item, { openHeads = new Set(), patchOnly = new Set() } = {}) {
+  if (patchOnly.has(item.number)) return "a held PR whose only files are patches";
+  const text = (calloutLines(item.body) ?? []).join("\n");
+  if (!/\bmerge/i.test(text)) return null;
+  for (const m of text.matchAll(NAMED_BRANCH)) {
+    const branch = m[1] ?? m[2];
+    // The base a PR merges INTO is named the same way ("into the `main` branch"); it is never a head.
+    if (branch === DEFAULT_BRANCH) continue;
+    if (!openHeads.has(branch))
+      return `asks for a merge of branch \`${branch}\`, which no open PR is built from`;
+  }
+  for (const m of text.matchAll(/#(\d+)\b/g)) {
+    const n = Number(m[1]);
+    if (patchOnly.has(n))
+      return `asks for a merge of #${n}, a held PR whose only files are patches`;
   }
   return null;
 }
@@ -144,11 +191,22 @@ export function markedByComments(comments = []) {
  * would-be writes, each with the criterion and a one-line why, and `needsYou` the set Eric holds
  * once those writes land (criterion 12 — the digest's Needs-you list). Pure.
  */
-export function plan({ issues = [], prs = [], markers = new Set(), now = Date.now() } = {}) {
+export function plan({
+  issues = [],
+  prs = [],
+  markers = new Set(),
+  patchOnly = new Set(),
+  sessionIssues = [],
+  now = Date.now(),
+} = {}) {
   const queue = [];
   const actions = [];
   const needsYou = [];
+  const needsSession = [];
   const ask = (row) => needsYou.some((n) => n.number === row.number) || needsYou.push(row);
+  const session = (row) =>
+    needsSession.some((n) => n.number === row.number) || needsSession.push(row);
+  const gaps = { openHeads: new Set(prs.map((pr) => pr.head?.ref).filter(Boolean)), patchOnly };
   // CRITERION 4 OUTRANKS CRITERION 2 ON THE SAME NUMBER, and this set is what makes that true.
   // GitHub lists a PR among `issues`, so a PR assigned under criterion 4 reaches `planIssue` as an
   // issue that is marked, assigned and has no `needs-eric` — which reads as "the label came off,
@@ -158,11 +216,21 @@ export function plan({ issues = [], prs = [], markers = new Set(), now = Date.no
   const stillHeld = new Set(
     prs.filter((pr) => heldPrHours(pr, now) !== null).map((pr) => pr.number),
   );
-  for (const issue of issues) planIssue(issue, { markers, now, queue, actions, ask, stillHeld });
+  for (const issue of issues) {
+    planIssue(issue, { markers, now, queue, actions, ask, session, gaps, stillHeld });
+  }
   for (const pr of prs) {
     const hours = heldPrHours(pr, now);
     if (hours === null) continue;
     const why = `held PR unmerged ${Math.floor(hours)}h (≥${HELD_PR_HOURS}h)`;
+    const gap = artifactGap(pr, gaps);
+    if (gap) {
+      session({ number: pr.number, title: pr.title, why: gap });
+      // Already his (by hand, or asked before this rule): he holds it, so the digest says so.
+      if (logins(pr.assignees).some(isEric))
+        ask({ number: pr.number, title: pr.title, criterion: 4, why });
+      continue;
+    }
     ask({ number: pr.number, title: pr.title, criterion: 4, why });
     if (actions.some((a) => a.kind === "assign" && a.number === pr.number)) continue; // one ask each
     // `!markers.has` is criterion 3 applied to criterion 4, and it is load-bearing, not symmetry.
@@ -187,11 +255,32 @@ export function plan({ issues = [], prs = [], markers = new Set(), now = Date.no
       });
     }
   }
-  return { queue, actions, needsYou };
+  // What a session already holds: `needs-session`, open — or a CI capsule closed by capsule-stall's
+  // proof ("not planned") with its ask carried, which is the one way a closed issue still waits on
+  // work. Only while repair.mjs would reopen it (`REOPEN_SINCE_MS`): a fault quiet that long has
+  // nothing left waiting, and the label stays on closed issues, so without a bound the line grows.
+  for (const i of sessionIssues) {
+    const open = (i.state ?? "open") === "open";
+    if (!open) {
+      if (i.pull_request || i.state_reason !== "not_planned") continue;
+      if (!names(i.labels).includes(LABELS.ciFailure.name)) continue;
+      if (!(now - Date.parse(i.closed_at ?? "") <= REOPEN_SINCE_MS)) continue;
+    }
+    session({
+      number: i.number,
+      title: i.title,
+      why: open ? "labelled needs-session" : "closed with its ask handed to a session",
+      decision: decisionLine(i.body) ?? undefined,
+    });
+  }
+  return { queue, actions, needsYou, needsSession };
 }
 
 /** Criteria 1–3 and the honest queue, for one issue (or a PR GitHub lists as one). */
-function planIssue(issue, { markers, now, queue, actions, ask, stillHeld = new Set() }) {
+function planIssue(
+  issue,
+  { markers, now, queue, actions, ask, session, gaps, stillHeld = new Set() },
+) {
   const assigned = logins(issue.assignees).some(isEric);
   const marked = markers.has(issue.number);
   const open = (issue.state ?? "open") === "open";
@@ -217,6 +306,13 @@ function planIssue(issue, { markers, now, queue, actions, ask, stillHeld = new S
   // already and not since cleared by this lane (`markedByComments`: a label that comes back after
   // the lane's own unassign is unmarked, and asks again). Assigned → his by hand; nothing to add.
   const why = `needs-eric with a stated decision: "${decision}"`;
+  // Nothing his answer could act on exists yet: a session's, not his — unless he already holds it.
+  const gap = decision ? artifactGap(issue, gaps) : null;
+  if (gap) {
+    session({ number: issue.number, title: issue.title, why: gap, decision });
+    if (assigned) ask({ number: issue.number, title: issue.title, criterion: 1, why, decision });
+    return;
+  }
   if (decision && !marked && !assigned) {
     actions.push({
       kind: "assign",
@@ -245,7 +341,7 @@ function heldPrHours(pr, now) {
 }
 
 /** The dry run's report, as markdown — what Eric reads before anything is switched on. Pure. */
-export function report({ queue, actions }) {
+export function report({ queue, actions, needsSession = [] }) {
   const out = ["## Honest queue — open `needs-eric`", ""];
   if (!queue.length) out.push("_none_");
   else {
@@ -260,6 +356,9 @@ export function report({ queue, actions }) {
   }
   const clear = queue.filter((q) => !q.decision).length;
   out.push("", `${queue.length} open · ${clear} with no stated decision (listed, not cleared).`);
+  out.push("", "## Needs a session, not Eric", "");
+  if (!needsSession.length) out.push("_none_");
+  for (const s of needsSession) out.push(`- #${s.number} — ${s.why}`);
   out.push("", "## Would do (dry run — nothing written)", "");
   if (!actions.length) out.push("_nothing_");
   for (const a of actions)
@@ -437,7 +536,28 @@ export function gather({ rest = ghRestAll, now = Date.now() } = {}) {
   for (const n of candidates) {
     if (markedByComments(rest(`issues/${n}/comments`))) markers.add(n);
   }
-  return { issues, prs, markers };
+  // Patch-only reads (`artifactGap`): the held PRs above, any PR that is itself an ask, and any
+  // open PR an ask names — a handful of file lists, never one per open PR.
+  const open = new Set(prs.map((pr) => pr.number));
+  const named = issues.flatMap((i) =>
+    [...(calloutLines(i.body) ?? []).join("\n").matchAll(/#(\d+)\b/g)].map((m) => Number(m[1])),
+  );
+  const patchOnly = new Set();
+  for (const n of new Set([...candidates, ...named])) {
+    if (!open.has(n)) continue;
+    const files = rest(`pulls/${n}/files`);
+    if (files.length && files.every((f) => String(f?.filename ?? "").endsWith(".patch"))) {
+      patchOnly.add(n);
+    }
+  }
+  // Open ones, and closed CI capsules updated inside the window — both bounded reads.
+  const label = LABELS.needsSession.name;
+  const closedSince = new Date(now - REOPEN_SINCE_MS).toISOString();
+  const sessionIssues = [
+    ...rest(`issues?state=open&labels=${label}`),
+    ...rest(`issues?state=closed&labels=${label},${LABELS.ciFailure.name}&since=${closedSince}`),
+  ];
+  return { issues, prs, markers, patchOnly, sessionIssues };
 }
 
 function main(argv) {

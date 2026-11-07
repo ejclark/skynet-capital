@@ -11,6 +11,7 @@
 //   node scripts/digest-scan.mjs --due         # JSON {due, reason, ...} (due:false = no-op, due:null = could not tell)
 //   node scripts/digest-scan.mjs --validate    # digest docs satisfy the template contract
 //   node scripts/digest-scan.mjs --needs-you   # the "Needs you" list, from the assignment query
+//   node scripts/digest-scan.mjs --needs-session  # the "needs a session" line, from the same plan()
 //   node scripts/digest-scan.mjs --learning    # the unlearned-incident line for "Noise absorbed"
 //   node scripts/digest-scan.mjs --stuck       # the green-but-not-merging PR line (stuck-pr-scan.mjs)
 //   node scripts/digest-scan.mjs --member-filings  # the unseen-member-filings line (feedback-scan.mjs)
@@ -38,6 +39,11 @@
 // scripts/moneypenny/assignments.mjs — the same call the assignment dry run makes, never a second
 // selector here. Imported lazily, so the importers of `digestFiles`/`latestDigestDate` (comms,
 // rank, thrash) stay git-only; tests/scripts/moneypenny/needs-you.spec.ts fails on any divergence.
+//
+// NEEDS A SESSION (#6953 slice 2): the asks his answer cannot complete yet — a merge of a branch
+// with no PR, a PR that carries only a patch — plus every `needs-session` issue. `plan().needsSession`,
+// the same call as Needs you, printed as one "Noise absorbed" line: the actor it waits on is a
+// session, so it is never a Needs-you item, and listing it is what keeps it from being lost.
 //
 // LEARNING (#4212, #4056 slice 7): unlearned incidents are a count line under "Noise absorbed",
 // never a Needs-you item — a repair capsule's close drafts its own ledger entry
@@ -216,6 +222,13 @@ export function needsYouLines({ needsYou }) {
   );
 }
 
+/** The "needs a session" line from `plan()` output: a count, each item and why. Pure. */
+export function needsSessionLine({ needsSession = [] }) {
+  if (!needsSession.length) return "- Needs a session: nothing is waiting on a session.";
+  const items = needsSession.map((s) => `#${s.number} ${s.why}`).join("; ");
+  return `- Needs a session: ${needsSession.length} waiting on a session, not on you — ${items}.`;
+}
+
 /**
  * The "Noise absorbed" line for unlearned incidents, from `incident-scan.mjs --count`. Pure.
  * `unlearnedRuns: null` means the scan could not reach GitHub — said as unknown, never as zero.
@@ -384,6 +397,11 @@ async function main() {
   if (has("needs-you")) {
     const { gather, plan } = await import("./moneypenny/assignments.mjs");
     console.log(needsYouLines(plan(gather())).join("\n"));
+    return;
+  }
+  if (has("needs-session")) {
+    const { gather, plan } = await import("./moneypenny/assignments.mjs");
+    console.log(needsSessionLine(plan(gather())));
     return;
   }
 
