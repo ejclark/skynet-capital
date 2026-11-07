@@ -255,6 +255,63 @@ describe("bot-controls bridge client", () => {
   });
 });
 
+describe("the owner's steering switches on the poll (#6954 slice 5b)", () => {
+  it("answers stop-opening and watch-only from the latest poll, per bot", async () => {
+    let state: ControlsState = { bots: { sauron: { holdOpens: true, mode: "observe" } } };
+    await withBridge(
+      () => state,
+      async (base) => {
+        const client = bridgeClient({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
+        expect(client.watchOnly("sauron")).toBe(false); // nothing read yet: no hold assumed
+        await client.fetchOnce();
+        expect(client.opensHeldReason("sauron")).toBe("opens held by owner (exits still run)");
+        expect(client.watchOnly("sauron")).toBe(true);
+        expect([client.opensHeldReason("banker"), client.watchOnly("banker")]).toEqual([
+          null,
+          false,
+        ]);
+        state = { bots: { sauron: { mode: "live" } } };
+        await client.fetchOnce();
+        expect([client.opensHeldReason("sauron"), client.watchOnly("sauron")]).toEqual([
+          null,
+          false,
+        ]);
+      },
+    );
+  });
+
+  it("folds the owner's watch-only into the bot's verdict from the poll after it is read", async () => {
+    const reports: ControlsPollReport[] = [];
+    const server = createInsightsListener({
+      record: () => Promise.resolve(),
+      controls: () => ({ bots: { sauron: { mode: "observe" } } }),
+      onControlsPoll: (report) => reports.push(report),
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      const client = bridgeClient({
+        SKYNET_INSIGHTS_BRIDGE_URL: `http://127.0.0.1:${port}`,
+      } as NodeJS.ProcessEnv);
+      client.reportPersonaGate({
+        id: "sauron",
+        ready: true,
+        reason: "passed",
+        wanted: "live",
+        mode: "live",
+      });
+      await client.fetchOnce();
+      await client.fetchOnce();
+      expect(reports.map((r) => r.gate?.[0])).toEqual([
+        { id: "sauron", ready: true, reason: "passed", wanted: "live", mode: "live" },
+        { id: "sauron", ready: true, reason: "passed", wanted: "observe", mode: "observe" },
+      ]);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+});
+
 /**
  * The self-report round trip (#666): the bots process's own `GIT_SHA` riding the poll it already
  * makes, over a real socket. This is what lets the owner's ops-status panel answer "on what

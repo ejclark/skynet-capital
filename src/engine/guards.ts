@@ -89,6 +89,13 @@ export interface RiskConfig {
    */
   readonly opensHalted?: true;
   /**
+   * The bot's owner set "stop opening, keep exits" on its Settings card (#6954 slice 5b): every
+   * order that ADDS risk is refused `opens-held`, and exits still pass — the breaker's shape above,
+   * chosen by a person rather than tripped by a loss. Set per cycle by the trader; absent leaves
+   * every other caller untouched.
+   */
+  readonly opensHeld?: true;
+  /**
    * This account's active playbook subscriptions. Scoped to one account already —
    * `RiskConfig` is built per-bot — so a buy's `playbookId` looks itself up here rather than the
    * guard taking an `accountId`. Absent or no match = no sub-allocation clamp, unchanged from
@@ -159,6 +166,9 @@ export type GuardRefusalReason =
   /** A tripped safety breaker (daily loss, order rate, errors, data gap) is holding opens (#6954
    *  slice 3). Opens only: a breaker never blocks an exit, so a bot can always get out. */
   | "breaker-halt"
+  /** The bot's owner is holding its opens ("stop opening, keep exits", #6954 slice 5b). Opens only:
+   *  the owner's hold never blocks an exit. */
+  | "opens-held"
   /** S2: the symbol is inside its protected window (`domain/protected-window.ts`) and the intent
    *  didn't claim `allowThroughPrint`. */
   | "s2-print"
@@ -214,6 +224,7 @@ export type GuardRefusalReason =
 export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "ladder-block",
   "breaker-halt",
+  "opens-held",
   "s2-print",
   "e1-open",
   "subscription-filter",
@@ -491,7 +502,9 @@ function lacksExitPlan(intent: OrderIntent, config: RiskConfig): boolean {
  *     force-flatten sells the bottom rung emits;
  *  3. a tripped breaker, which holds opens the same way and for the same reason (#6954 slice 3; it
  *     used to stop the whole cycle, exits included);
- *  4. trade discipline (S2/E1): a dropped entry needs no sizing. S2 keys on `intent.symbol`, which
+ *  4. the owner's "stop opening, keep exits" (#6954 slice 5b), after the breaker: a safety stop is
+ *     named first when both hold;
+ *  5. trade discipline (S2/E1): a dropped entry needs no sizing. S2 keys on `intent.symbol`, which
  *     for an option order is the underlying.
  */
 function openRefusal(
@@ -503,6 +516,7 @@ function openRefusal(
   if (lacksExitPlan(intent, config)) return "no-exit-plan";
   if (ladderBlocks) return "ladder-block";
   if (config.opensHalted) return "breaker-halt";
+  if (config.opensHeld) return "opens-held";
   return config.discipline ? disciplineReason(intent, context, config.discipline) : undefined;
 }
 

@@ -179,6 +179,72 @@ describe("a bot's own settings, changed by its owner (#4535 slice 3b)", () => {
     });
   });
 
+  describe("WHEN the owner sets stop opening or watch only (#6954 slice 5b)", () => {
+    it("stores both where the bots read them every cycle, on any bot the session owns", async () => {
+      owned = ["banker"];
+      expect(await change({ id: "banker", holdOpens: true, watchOnly: true })).toMatchObject({
+        ok: true,
+      });
+      expect(store.load().bots.banker).toEqual({ holdOpens: true, mode: "observe" });
+    });
+
+    it("clears each on off, keeping the bot's other settings", async () => {
+      store.setBot("sauron", { hardcore: true, holdOpens: true, mode: "observe" }, OWNER, AT);
+      await change({ id: "sauron", holdOpens: false });
+      expect(store.load().bots.sauron).toEqual({ hardcore: true, mode: "observe" });
+      await change({ id: "sauron", watchOnly: false });
+      expect(store.load().bots.sauron).toEqual({ hardcore: true });
+    });
+
+    it("never stores a widening mode: a stray stored live is cleared, not kept", async () => {
+      store.setBot("sauron", { mode: "live" }, OWNER, AT);
+      await change({ id: "sauron", holdOpens: true });
+      expect(store.load().bots.sauron).toEqual({ holdOpens: true });
+    });
+
+    it("records who switched each, before and after", async () => {
+      await change({ id: "sauron", holdOpens: true });
+      await change({ id: "sauron", watchOnly: true });
+      expect(log.list("sauron")).toEqual([
+        expect.objectContaining({
+          setting: "mode",
+          before: null,
+          after: "observe",
+          approvedBy: OWNER,
+        }),
+        expect.objectContaining({
+          setting: "holdOpens",
+          before: false,
+          after: true,
+          proposedBy: OWNER,
+        }),
+      ]);
+    });
+
+    it("refuses another owner's bot and writes nothing", async () => {
+      owned = ["banker"];
+      expect(await change({ id: "sauron", holdOpens: true })).toMatchObject({ ok: false });
+      expect(store.load().bots.sauron).toBeUndefined();
+    });
+
+    it.each([
+      { id: "sauron", holdOpens: "yes" },
+      { id: "sauron", holdOpens: null },
+      { id: "sauron", watchOnly: 1 },
+    ])("answers 400 to a malformed switch %j", async (body) => {
+      expect((await change(body)).status).toBe(400);
+    });
+
+    it("shows both on every owned bot's settings", async () => {
+      owned = ["sauron", "banker"];
+      await change({ id: "banker", holdOpens: true });
+      const accounts = (await index()).accounts as Array<{ id: string; settings: unknown }>;
+      const byId = Object.fromEntries(accounts.map((a) => [a.id, a.settings]));
+      expect(byId.banker).toMatchObject({ holdOpens: true, watchOnly: false });
+      expect(byId.sauron).toMatchObject({ holdOpens: false, watchOnly: false });
+    });
+  });
+
   describe("IF a user changes a bot they do not own (criterion 2)", () => {
     it("refuses it and writes nothing", async () => {
       owned = ["banker"];

@@ -70,7 +70,8 @@ export interface HardcoreWatchDeps {
   readonly ids: readonly string[];
   /** Who is running the hardcore build right now (the boot roster). Copied, not kept. */
   readonly initial: ReadonlySet<string>;
-  /** The mode a bot wanted at boot, before any readiness gate narrowed it. */
+  /** The mode a bot's readiness gate is run against: the house mode. The owner's "watch only"
+   *  narrows each cycle on top of it (#6954 slice 5b), never through the gate. */
   readonly wantedMode: (id: string) => TraderMode;
   readonly report: BotControlsClient["reportPersonaGate"];
   /** Put the new persona and tuning in force for this bot — one swap, between cycles. */

@@ -163,6 +163,7 @@ export function personaGateSignal(verdicts: readonly PersonaGateVerdict[] | unde
 function botStanding(
   verdict: PersonaGateVerdict,
   suspended: string | null,
+  opensHeld: string | null,
 ): { readonly placing: boolean; readonly words: string } {
   const gate = modeGate("live", verdict);
   if (gate === "owner") {
@@ -175,6 +176,11 @@ function botStanding(
   // places nothing either, and saying "placing" over it would be the false claim this row exists
   // to stop.
   if (suspended) return { placing: false, words: `watching: ${suspended}` };
+  // "Stop opening, keep exits" (#6954 slice 5b): it still sells, so it is not "watching", and it
+  // opens nothing, so it is not counted as placing paper orders either.
+  if (opensHeld) {
+    return { placing: false, words: "placing exits only: its owner stopped new positions" };
+  }
   return { placing: true, words: "placing paper orders" };
 }
 
@@ -191,6 +197,7 @@ export function paperOrdersSignal(
   processMode: BotMode | undefined,
   verdicts: readonly PersonaGateVerdict[] | undefined,
   suspendedReason: (botId: string) => string | null,
+  opensHeldReason: (botId: string) => string | null = () => null,
 ): OpsSignal {
   const id = "paper-orders";
   const label = "Paper orders";
@@ -222,7 +229,10 @@ export function paperOrdersSignal(
         "The house mode places paper orders, but no bot has reported its own mode yet — none wired, or an older bots build.",
     };
   }
-  const standings = reported.map((v) => ({ id: v.id, ...botStanding(v, suspendedReason(v.id)) }));
+  const standings = reported.map((v) => ({
+    id: v.id,
+    ...botStanding(v, suspendedReason(v.id), opensHeldReason(v.id)),
+  }));
   const placing = standings.filter((b) => b.placing).length;
   return {
     id,
@@ -251,6 +261,9 @@ export interface OpsStatusInputs {
   readonly botsProcessMode: () => BotMode | undefined;
   /** This app's own Mission Control read: why a bot is suspended, or null (`suspendedReason`). */
   readonly suspendedReason: (botId: string) => string | null;
+  /** The same store's "stop opening, keep exits", or null (`opensHeldReason`, #6954 slice 5b).
+   *  Absent reads as no hold. */
+  readonly opensHeldReason?: (botId: string) => string | null;
   /** Latest `at` among bot-owned trade-activity records; undefined when none exist. Never throws
    *  — a read failure should read as "unknown", not crash the panel. */
   readonly lastBotActivityAt: () => Promise<string | undefined>;
@@ -298,6 +311,7 @@ export async function buildOpsStatus(inputs: OpsStatusInputs): Promise<OpsStatus
         inputs.botsProcessMode(),
         inputs.personaGateVerdicts(),
         inputs.suspendedReason,
+        inputs.opensHeldReason,
       ),
       activitySignal(activityAt, now, link),
     ],

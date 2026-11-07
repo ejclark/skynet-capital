@@ -54,6 +54,10 @@ export interface BotSettings {
   readonly betaPicks?: number | null;
   /** Present exactly when this bot runs the forced daily pick; `null` = not set here. */
   readonly betaStage?: boolean | null;
+  /** The owner's "watch only" (#6954 slice 5b) — every bot. */
+  readonly watchOnly: boolean;
+  /** The owner's "stop opening, keep exits" (#6954 slice 5b) — every bot. */
+  readonly holdOpens: boolean;
   readonly maxBetaPicks: number;
   readonly changes: readonly BotSettingChange[];
 }
@@ -119,13 +123,16 @@ export const botControlRequest = (input: {
 }): Promise<{ readonly ok: true; readonly suspended: boolean } | { ok: false; error: string }> =>
   postJson("/api/settings/bot-control", input);
 
-/** Change your OWN bot's hardcore build, forced-pick count or after-close staging; `null` hands it
- *  back to the operations setting. Ownership is the server's check, same tier as the switch above. */
+/** Change your OWN bot's hardcore build, forced-pick count or after-close staging (`null` hands it
+ *  back to the operations setting), or its two steering switches, watch only and stop opening.
+ *  Ownership is the server's check, same tier as the switch above. */
 export const botSettingsRequest = (input: {
   readonly id: string;
   readonly hardcore?: boolean | null;
   readonly betaPicks?: number | null;
   readonly betaStage?: boolean | null;
+  readonly watchOnly?: boolean;
+  readonly holdOpens?: boolean;
 }): Promise<{ readonly ok: true } | { ok: false; error: string }> =>
   postJson("/api/settings/bot-settings", input);
 

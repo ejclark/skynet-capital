@@ -6,6 +6,7 @@ import {
   CONTROLS_BRIDGE_PATH,
   type ControlsState,
   EMPTY_CONTROLS,
+  opensHeldReason,
   parseControlsState,
   suspendedReason,
 } from "./bot-controls.js";
@@ -14,6 +15,7 @@ import {
   controlsPollGateHeaders,
   controlsPollHeaders,
   controlsPollModeHeaders,
+  ownerNarrowed,
   type PersonaGateVerdict,
 } from "./controls-poll-wire.js";
 import { type ConvictionsWire, parseConvictionsWire } from "./convictions-wire.js";
@@ -43,6 +45,12 @@ export interface BotControlsClient {
   stop(): void;
   /** The dynamic check for the `blockedReason` seam. Non-null = do not trade this bot. */
   suspendedReason(botId: string): string | null;
+  /** The owner's "stop opening, keep exits" as of the last poll (#6954 slice 5b) — non-null holds
+   *  this bot's opens and keeps its exits. Read every cycle, never cached. */
+  opensHeldReason(botId: string): string | null;
+  /** The owner's "watch only" as of the last poll (#6954 slice 5b): true = this bot records what it
+   *  would do and places nothing. Narrow-only — false never widens a watching bot. */
+  watchOnly(botId: string): boolean;
   /** The owner's stored forced-pick count for this bot, as of the last poll (#4535 slice 2b);
    *  undefined = none stored, so the env count stands. Read at every scout scan, never cached. */
   betaPicks(botId: string): number | undefined;
@@ -110,6 +118,8 @@ const DISABLED_CLIENT: BotControlsClient = {
   start: () => undefined,
   stop: () => undefined,
   suspendedReason: () => null,
+  opensHeldReason: () => null,
+  watchOnly: () => false,
   betaPicks: () => undefined,
   betaStage: () => undefined,
   reportPersonaGate: () => undefined,
@@ -171,6 +181,7 @@ export function resolveBotControls(
   let houseRoster: HouseRosterReport | undefined;
 
   let snapshot: ControlsState = EMPTY_CONTROLS;
+  const watches = (botId: string) => snapshot.bots[botId]?.mode === "observe";
   let timer: ReturnType<typeof setInterval> | undefined;
 
   const fetchOnce = async (): Promise<ControlsState | null> => {
@@ -184,8 +195,12 @@ export function resolveBotControls(
           {
             [INSIGHTS_BRIDGE_SECRET_HEADER]: bridgeSecret,
             ...selfReport,
+            // Each verdict with the owner's watch-only folded in, as of the snapshot every cycle
+            // reads — so the card names the hold the bots are actually applying (#6954 slice 5b).
             ...controlsPollGateHeaders(
-              gateVerdicts.size > 0 ? [...gateVerdicts.values()] : undefined,
+              gateVerdicts.size > 0
+                ? [...gateVerdicts.values()].map((v) => ownerNarrowed(v, watches(v.id)))
+                : undefined,
             ),
             ...controlsPollModeHeaders(processMode),
             ...controlsPollRosterHeaders(houseRoster),
@@ -241,6 +256,8 @@ export function resolveBotControls(
       timer = undefined;
     },
     suspendedReason: (botId) => suspendedReason(snapshot, botId),
+    opensHeldReason: (botId) => opensHeldReason(snapshot, botId),
+    watchOnly: watches,
     betaPicks: (botId) => snapshot.bots[botId]?.betaPicks,
     betaStage: (botId) => snapshot.bots[botId]?.betaStage,
     reportPersonaGate: (verdict) => {

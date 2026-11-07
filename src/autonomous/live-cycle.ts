@@ -62,6 +62,9 @@ export interface BetaScoutDeps {
   readonly managedSymbols: ReadonlySet<string>;
   readonly risk: RiskConfig;
   readonly mode: TraderMode;
+  /** The host bot owner's "watch only" (#6954 slice 5b, `scout-host-gates.ts`): true = the scout's
+   *  orders are recorded `observed`, never sent. Read at each submit; narrows `mode`, never widens. */
+  readonly watchOnly?: () => boolean;
   /**
    * The host bot's subscriptions as they stand now (#4642 slice 10). The scout opens only while
    * that bot is subscribed to `BETA-SCOUT` with the subscription on — armed (`maxPicks`) AND
@@ -562,9 +565,10 @@ export class LiveCycleRunner {
       return false;
     }
     const now = this.deps.now ?? Date.now;
+    const mode: TraderMode = scout.watchOnly?.() ? "observe" : scout.mode; // one read per submit
     const outcomes: IntentOutcome[] = [];
     for (const intent of intents) {
-      if (scout.mode !== "live") {
+      if (mode !== "live") {
         this.deps.onScoutObserve?.(intent);
         outcomes.push({ intent, action: "observed" });
         continue;
@@ -580,7 +584,7 @@ export class LiveCycleRunner {
     this.deps.onDecision?.({
       at: now(),
       personaId: BETA_SCOUT_PERSONA_ID,
-      mode: scout.mode,
+      mode,
       rawIntents: raw,
       guardedIntents: intents,
       outcomes,

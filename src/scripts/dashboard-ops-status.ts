@@ -1,4 +1,4 @@
-import { suspendedReason } from "../autonomous/bot-controls.js";
+import { opensHeldReason, suspendedReason } from "../autonomous/bot-controls.js";
 import type { ActivityStore } from "../observatory/activity-store.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
@@ -87,6 +87,7 @@ export function setupOpsStatus(deps: OpsStatusSetupDeps): OpsStatusDeps | undefi
         personaGateVerdicts: () => deps.insightsBridge.botsGate(),
         botsProcessMode: () => deps.insightsBridge.botsProcessMode(),
         suspendedReason: (botId) => suspendedReason(deps.botControls.load(), botId),
+        opensHeldReason: (botId) => opensHeldReason(deps.botControls.load(), botId),
         lastBotActivityAt: () => lastBotActivityAt(deps.hub, deps.activity),
         ...(fetchDeploySignals ? { fetchDeploySignals } : {}),
         repo,

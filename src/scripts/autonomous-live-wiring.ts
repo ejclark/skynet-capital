@@ -291,6 +291,7 @@ export function buildScoutDeps(
     managedSymbols: ReadonlySet<string>;
     risk: RiskConfig;
     mode: TraderMode;
+    watchOnly?: () => boolean;
     subscriptions: () => readonly PlaybookSubscription[];
     realizedPlForPlaybook?: (playbookId: string) => number;
     hostId?: string;
@@ -613,16 +614,15 @@ export function buildLiveBot(
   },
 ): LiveBot {
   const hardcore = opts.hardcore.has(bot.persona.id);
-  // The owner's per-bot mode override (Mission Control, boot-applied) narrows the env default;
-  // the readiness gate still has the final say, and re-runs when the hardcore build flips live.
-  const wantedMode = controlsMode(opts.bootControls, bot.persona.id, opts.mode);
-  if (wantedMode !== opts.mode) {
-    console.log(`[controls] ${bot.persona.name}: mode ${wantedMode} (owner override)`);
+  // The readiness gate runs against the house mode; the owner's "watch only" narrows it at every
+  // cycle (#6954 slice 5b), so clearing it hands the bot back without a restart.
+  if (controlsMode(opts.bootControls, bot.persona.id, opts.mode) !== opts.mode) {
+    console.log(`[controls] ${bot.persona.name}: watch only (owner setting, read every cycle)`);
   }
   // The verdict also rides the `/controls` poll this bot's process is already making — the
   // ops-status panel's credential-free "which personas are gated, and why" (#666 slice 3).
   const tuning = buildTuning(
-    gateBuild(bot.persona, hardcore, wantedMode, opts.controls.reportPersonaGate),
+    gateBuild(bot.persona, hardcore, opts.mode, opts.controls.reportPersonaGate),
     hardcore,
   );
   // Swappable, not the plain factory: lets a future credential rotation swap the Alpaca
@@ -659,6 +659,10 @@ export function buildLiveBot(
       // blocks the cycle, and the decision record carries the owner's reason verbatim.
       blockedReason: () => opts.controls.suspendedReason(bot.persona.id) ?? opts.blockedReason(),
       openBlockedReason: opts.openBlockedReason,
+      // The owner's "stop opening, keep exits" and "watch only" (Settings card, polled — #6954
+      // slice 5b): each read every cycle, each only ever narrows what the bot does.
+      ownerHoldsOpens: () => opts.controls.opensHeldReason(bot.persona.id),
+      watchOnly: () => opts.controls.watchOnly(bot.persona.id),
       // The ladder's rung rides every cycle's guards; its bottom rung closes this bot's shares book
       // (`safety` was built `actor: "bot"`; a member's never is). No reading yet leaves both off.
       riskTier: () => opts.safety.riskReading()?.tier,

@@ -45,7 +45,6 @@ import {
   type ControlsState,
   effectiveBetaPicks,
   effectiveBetaStage,
-  effectiveMode,
 } from "../autonomous/bot-controls.js";
 import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
 import {
@@ -63,6 +62,7 @@ import type { LiveBot } from "../autonomous/live-cycle.js";
 import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { scoutHostGates } from "../autonomous/scout-host-gates.js";
 import { scoutSignalsFrom } from "../autonomous/scout-stand-down.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
@@ -499,7 +499,8 @@ async function runLive(): Promise<void> {
   onHardcorePolled = watchHardcore({
     ids: botRosters.map((r) => r.bot.persona.id),
     initial: hardcoreRoster.hardcore,
-    wantedMode: (id) => effectiveMode(bootControls, id, mode),
+    // The house mode: the owner's "watch only" narrows each cycle on top (#6954 slice 5b).
+    wantedMode: () => mode,
     report: controls.reportPersonaGate,
     apply: (id, persona, tuning) => {
       const i = botRosters.findIndex((r) => r.bot.persona.id === id);
@@ -608,17 +609,21 @@ async function runLive(): Promise<void> {
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
   // fully spec'd in tests/autonomous/live-cycle.spec.ts. Everything below is wiring: real
   // brokers, the halt-file-aware blockedReason, and console/audit sinks for its hooks.
+  // The forced pick obeys its host bot's owner too: the suspend, "stop opening" and "watch only"
+  // (#6954 slice 5b) — it trades on that bot's account, so the bot's settings are its settings.
+  const scoutGates = scoutHostGates(controls, scoutHostId, { stopEverything, openBlockedReason });
   const runner = new LiveCycleRunner({
     traders,
     safety,
-    blockedReason,
-    exitBlockedReason: stopEverything,
+    blockedReason: scoutGates.blockedReason,
+    exitBlockedReason: scoutGates.exitBlockedReason,
     ...(botsStateDb ? { scoutState: scoutStateStore(botsStateDb) } : {}),
     scout: buildScoutDeps(scoutPicks, scoutBroker, {
       universe: UNIVERSE,
       managedSymbols,
       risk,
       mode,
+      watchOnly: scoutGates.watchOnly,
       subscriptions: () => botRosters[0]?.subscriptions ?? [],
       ...(botRosters[0] ? { hostId: botRosters[0].bot.persona.id } : {}),
       settlementOf: settlements.settlementOf,

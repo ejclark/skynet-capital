@@ -119,7 +119,17 @@ export class SettingsChangeLog {
   }
 }
 
-const LOGGED_SETTINGS = ["suspended", "hardcore", "betaPicks", "betaStage"] as const;
+const LOGGED_SETTINGS = [
+  "suspended",
+  "hardcore",
+  "betaPicks",
+  "betaStage",
+  "mode",
+  "holdOpens",
+] as const;
+
+/** On/off settings with no fallback to hand back to: never set IS off, so they compare as false. */
+const SWITCHES: ReadonlySet<string> = new Set(["suspended", "holdOpens"]);
 
 /** One log line per setting that moved between two stored entries. */
 export function controlsChanges(
@@ -131,7 +141,7 @@ export function controlsChanges(
   // Suspend has no fallback to hand back to: never set IS on, so it compares as false, and resuming
   // a bot never suspended here records nothing (code review of #4535 slice 3b).
   const stored = (c: BotControls, key: (typeof LOGGED_SETTINGS)[number]): SettingValue =>
-    key === "suspended" ? c.suspended === true : (c[key] ?? null);
+    SWITCHES.has(key) ? c[key] === true : (c[key] ?? null);
   return LOGGED_SETTINGS.filter((key) => stored(prev, key) !== stored(next, key)).map((key) => ({
     at: at.toISOString(),
     setting: key,

@@ -172,6 +172,20 @@ describe("paperOrdersSignal (#6954 slice 1)", () => {
     expect(signal.detail).toContain("sauron: watching: suspended by owner (all bots)");
   });
 
+  it("says a bot whose owner stopped opening places exits only, never 'placing paper orders' (#6954 5b)", () => {
+    const signal = paperOrdersSignal(
+      "live",
+      [
+        { id: "sauron", ...placing },
+        { id: "banker", ...placing },
+      ],
+      none,
+      (id) => (id === "banker" ? "opens held by owner (exits still run)" : null),
+    );
+    expect(signal.detail).toContain("1 of 2 bot(s) placing paper orders.");
+    expect(signal.detail).toContain("banker: placing exits only: its owner stopped new positions");
+  });
+
   it("reads a verdict with no mode (an older bots build) as not reported, never a guess", () => {
     const signal = paperOrdersSignal(
       "live",

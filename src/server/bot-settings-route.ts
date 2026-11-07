@@ -21,7 +21,13 @@ import { UNKNOWN_PLAYBOOK_RULE_AUTHOR } from "./unknown-subscription-drop.js";
  * restarted the bots.
  *
  *   POST /api/settings/bot-settings
- *     { id, hardcore?: boolean | null, betaPicks?: number | null, betaStage?: boolean | null }
+ *     { id, hardcore?: boolean | null, betaPicks?: number | null, betaStage?: boolean | null,
+ *       watchOnly?: boolean, holdOpens?: boolean }
+ *
+ * The two steering switches (#6954 slice 5b) are plain on/off, with no operations fallback: off is
+ * the house's own behaviour. "Watch only" stores the narrow-only `mode: "observe"` (off clears it);
+ * "stop opening, keep exits" stores `holdOpens`. The bots read both at every cycle, and either only
+ * ever narrows what a bot does, so they are offered on every bot the session owns.
  *
  * `null` clears the stored value, so the bots app's own setting (`SKYNET_HARDCORE_BOTS`,
  * `SKYNET_BETA_FORCING`) stands again. The one gate is ownership (#928: nobody changes an account
@@ -44,7 +50,12 @@ interface BotSettingsBody {
   readonly hardcore?: boolean | null;
   readonly betaPicks?: number | null;
   readonly betaStage?: boolean | null;
+  readonly watchOnly?: boolean;
+  readonly holdOpens?: boolean;
 }
+
+const isSwitch = (value: unknown): value is boolean | undefined =>
+  value === undefined || typeof value === "boolean";
 
 const isFlag = (value: unknown): value is boolean | null | undefined =>
   value === undefined || value === null || typeof value === "boolean";
@@ -57,17 +68,20 @@ export function parseBotSettingsBody(raw: string): BotSettingsBody | undefined {
   const body = parseJsonRecord(raw);
   const id = body ? boundedString(body.id, 100) : undefined;
   if (!(body && id)) return undefined;
-  const { hardcore, betaPicks, betaStage } = body;
-  if (!(isFlag(hardcore) && isFlag(betaStage))) return undefined;
-  if (betaPicks !== undefined && betaPicks !== null && !isPickCount(betaPicks)) return undefined;
-  if (hardcore === undefined && betaPicks === undefined && betaStage === undefined) {
+  const { hardcore, betaPicks, betaStage, watchOnly, holdOpens } = body;
+  if (!(isFlag(hardcore) && isFlag(betaStage) && isSwitch(watchOnly) && isSwitch(holdOpens))) {
     return undefined;
   }
+  if (betaPicks !== undefined && betaPicks !== null && !isPickCount(betaPicks)) return undefined;
+  const named = [hardcore, betaPicks, betaStage, watchOnly, holdOpens];
+  if (named.every((value) => value === undefined)) return undefined;
   return {
     id,
     ...(hardcore !== undefined ? { hardcore } : {}),
     ...(betaPicks !== undefined ? { betaPicks } : {}),
     ...(betaStage !== undefined ? { betaStage } : {}),
+    ...(watchOnly !== undefined ? { watchOnly } : {}),
+    ...(holdOpens !== undefined ? { holdOpens } : {}),
   };
 }
 
@@ -90,17 +104,22 @@ function settingsRefusal(body: BotSettingsBody, config: DashboardServerConfig): 
   return undefined;
 }
 
-/** `prev` with each named setting set, or removed when `null`. */
+/** `prev` with each named setting set, or removed when `null` (a steering switch: when off). */
 function applySettings(prev: BotControls, body: BotSettingsBody): BotControls {
-  const { hardcore: _h, betaPicks: _b, betaStage: _s, ...rest } = prev;
+  const { hardcore: _h, betaPicks: _b, betaStage: _s, mode: _m, holdOpens: _o, ...rest } = prev;
   const hardcore = body.hardcore === undefined ? prev.hardcore : body.hardcore;
   const betaPicks = body.betaPicks === undefined ? prev.betaPicks : body.betaPicks;
   const betaStage = body.betaStage === undefined ? prev.betaStage : body.betaStage;
+  const watchOnly = body.watchOnly ?? prev.mode === "observe";
+  const holdOpens = body.holdOpens ?? prev.holdOpens === true;
   return {
     ...rest,
     ...(typeof hardcore === "boolean" ? { hardcore } : {}),
     ...(typeof betaPicks === "number" ? { betaPicks } : {}),
     ...(typeof betaStage === "boolean" ? { betaStage } : {}),
+    // A stored `live` says nothing (narrow-only, `effectiveMode`), so off clears the field.
+    ...(watchOnly ? { mode: "observe" as const } : {}),
+    ...(holdOpens ? { holdOpens: true } : {}),
   };
 }
 
@@ -156,6 +175,10 @@ export interface BotSettingsView {
   readonly betaPicks?: number | null;
   /** Present exactly when this bot runs the forced daily pick; `null` = not set here. */
   readonly betaStage?: boolean | null;
+  /** The owner's "watch only" (#6954 slice 5b): records what it would do, places nothing. */
+  readonly watchOnly: boolean;
+  /** The owner's "stop opening, keep exits" (#6954 slice 5b). */
+  readonly holdOpens: boolean;
   readonly maxBetaPicks: number;
   /** The latest changes to this bot's settings, newest first — never an email. */
   readonly changes: ReadonlyArray<
@@ -191,6 +214,8 @@ export function botSettingsView(
     ...(scoutHostId(config) === botId
       ? { betaPicks: stored.betaPicks ?? null, betaStage: stored.betaStage ?? null }
       : {}),
+    watchOnly: stored.mode === "observe",
+    holdOpens: stored.holdOpens === true,
     maxBetaPicks: MAX_BETA_PICKS,
     changes: (config.controls.changes?.list(botId, CHANGES_SHOWN) ?? []).map((c) => ({
       ...c,
