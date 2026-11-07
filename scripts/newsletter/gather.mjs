@@ -19,7 +19,9 @@ import { parseRows } from "../agent-meter/jobs.mjs";
 import { createRest, listRuns, REPO } from "../agent-meter/lanes.mjs";
 import { CONTRACTS } from "../fitness.mjs";
 import { parseLoopList } from "../loop-list-decide.mjs";
+import { askRank, decisionLine } from "../moneypenny/ask-card.mjs";
 import { readCorpus, scorecard } from "../research-scorecard.mjs";
+import { ciCapsules, decisionsSnapshot, labelHistory, seriesRead } from "./decision-reads.mjs";
 import { previousWeek, windowOf } from "./week.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -88,14 +90,23 @@ function tracker(rest, w) {
   };
 }
 
-/** When each open `needs-eric` issue last gained the label; its filing date is not its ask's age. */
+/**
+ * When each open `needs-eric` issue last gained the label; its filing date is not its ask's age.
+ * `rank` is the assignment card's (askRank), so the oldest ask between watching and trading bots
+ * can be named (#6953 slice 4).
+ */
 function needsEric(rest) {
   return pages(rest, `repos/${REPO}/issues?labels=needs-eric&state=open`)
     .filter((i) => !i.pull_request)
     .map((i) => {
       const events = pages(rest, `repos/${REPO}/issues/${i.number}/events`);
       const labeled = events.filter((e) => e.event === "labeled" && e.label?.name === "needs-eric");
-      return { number: i.number, labeledAt: labeled.at(-1)?.created_at ?? null };
+      const rank = askRank({
+        labels: i.labels,
+        title: i.title,
+        decision: decisionLine(i.body) ?? "",
+      });
+      return { number: i.number, labeledAt: labeled.at(-1)?.created_at ?? null, rank };
     });
 }
 
@@ -196,6 +207,17 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
       parseLoopList(readFileSync(join(ROOT, "docs", "process", "LEARNING-LOOP.md"), "utf8")),
     ),
     previous: attempt(() => previous(week)),
+    // "Decisions reaching Eric" (#6953 slice 4): the asks as they stand now, the week's label
+    // history, the CI capsules, the ledger as written, and the series for last week's values.
+    decisions: {
+      snapshot: snapshot(() => decisionsSnapshot(rest, asOfMs)),
+      episodes: attempt(() => labelHistory(rest, w)),
+      capsules: attempt(() => ciCapsules(rest, w)),
+      ledger: attempt(() => ({
+        text: readFileSync(join(ROOT, "docs", "process", "ALIGNMENT.md"), "utf8"),
+      })),
+      series: attempt(() => seriesRead(rest)),
+    },
   };
   return { inputs, restCalls: rest.calls };
 }
