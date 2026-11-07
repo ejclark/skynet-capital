@@ -108,6 +108,21 @@ export function controlsPollModeHeaders(mode: BotMode | undefined): Record<strin
   return mode ? { [CONTROLS_BOT_MODE_HEADER]: mode } : {};
 }
 
+/**
+ * Bots side: a boot-time verdict as it stands now, with the owner's "watch only" folded in (#6954
+ * slice 5b). The readiness gate runs once per build, against the house mode; the owner's setting is
+ * read at every cycle, so the report folds it in at every poll — `wanted` and `mode` both become
+ * `observe`, which `modeGate` reads as the owner's hold. Never widens: a verdict that already
+ * watches is left as it is, and a verdict from a build with no `wanted` is not touched.
+ */
+export function ownerNarrowed(
+  verdict: PersonaGateVerdict,
+  ownerWatches: boolean,
+): PersonaGateVerdict {
+  if (!ownerWatches || verdict.wanted !== "live") return verdict;
+  return { ...verdict, wanted: "observe", mode: "observe" };
+}
+
 const isBotMode = (value: unknown): value is BotMode => value === "observe" || value === "live";
 
 /** Which gate holds a bot to watching under this house mode, or null when it places paper orders.

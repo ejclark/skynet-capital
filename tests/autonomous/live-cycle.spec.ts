@@ -173,6 +173,65 @@ describe("LiveCycleRunner", () => {
     expect(portfolio.positions.some((p) => p.symbol === "MSFT")).toBe(true);
   });
 
+  // #6954 slice 5b: the forced pick trades on its host bot's account, so it obeys that bot's owner.
+  it("records the forced pick as observed and places nothing while its host bot watches", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const decisions: DecisionRecord[] = [];
+    const runner = new LiveCycleRunner({
+      traders: [aBot(new NeverBuys(), broker)],
+      safety: new SafetyController(),
+      blockedReason: () => null,
+      scout: {
+        maxPicks: 3,
+        broker,
+        universe: ["MSFT"],
+        managedSymbols: new Set(),
+        risk: RISK,
+        mode: "live",
+        watchOnly: () => true,
+        subscriptions: SCOUT_ON,
+      },
+      onDecision: (r) => decisions.push(r),
+    });
+
+    await runner.runCycle(aContext({ MSFT: { last: 100, sentiment: 0.9 } }));
+
+    expect(decisions[0]).toMatchObject({ personaId: "beta-scout", mode: "observe" });
+    expect(decisions[0]?.outcomes[0]?.action).toBe("observed");
+    expect((await broker.getPortfolio()).positions).toHaveLength(0);
+  });
+
+  it("opens no forced pick while its host bot's owner has stopped opening", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const halted: string[] = [];
+    const runner = new LiveCycleRunner({
+      traders: [aBot(new NeverBuys(), broker)],
+      safety: new SafetyController(),
+      // `scoutHostGates`' answer for a host whose owner stopped opening: opens held, exits clear.
+      blockedReason: () => "opens held by owner (exits still run)",
+      exitBlockedReason: () => null,
+      scout: {
+        maxPicks: 3,
+        broker,
+        universe: ["MSFT"],
+        managedSymbols: new Set(),
+        risk: RISK,
+        mode: "live",
+        subscriptions: SCOUT_ON,
+      },
+      onScoutHalted: (reason) => halted.push(reason),
+    });
+
+    await runner.runCycle(aContext({ MSFT: { last: 100, sentiment: 0.9 } }));
+
+    expect((await broker.getPortfolio()).positions).toHaveLength(0);
+    expect(halted).toEqual(["opens held by owner (exits still run)"]);
+  });
+
   // Confirmed live 2026-09-04: the first cycle after a restart ran on the first price tick, before
   // any news had been polled — every candidate read "skip", the scan came back empty, and the
   // pre-scan latch burned the scout's one daily shot. An empty scan must retry; a real fire must

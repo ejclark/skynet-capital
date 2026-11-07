@@ -10,6 +10,8 @@ rstest.mock("../../src/live/settings", () => ({
 }));
 
 const settings = (over: Partial<BotSettings> = {}): BotSettings => ({
+  watchOnly: false,
+  holdOpens: false,
   maxBetaPicks: 10,
   changes: [],
   ...over,
@@ -188,6 +190,68 @@ describe("BotSettingsPanel (#4535 slice 3b)", () => {
     expect(handOver?.textContent).toContain("by you");
     expect(healed?.textContent).toContain("View steering CRWV-LONG-CALL no view → AI-dip view");
     expect(healed?.textContent).toContain("by the app, on its own");
+  });
+
+  it("offers both steering switches on every bot, each showing what is stored (#6954 slice 5b)", () => {
+    render(
+      <BotSettingsPanel
+        account={account(settings({ holdOpens: true }))}
+        onChanged={() => undefined}
+      />,
+    );
+    const opens = screen.getByLabelText<HTMLSelectElement>("New positions");
+    expect(opens.value).toBe("true");
+    expect([...opens.options].map((o) => o.text)).toEqual([
+      "Open and exit",
+      "Stop opening, keep exits",
+    ]);
+    const orders = screen.getByLabelText<HTMLSelectElement>("Paper orders");
+    expect(orders.value).toBe("false");
+    expect([...orders.options].map((o) => o.text)).toEqual([
+      "Place them",
+      "Watch only — place nothing",
+    ]);
+    // Never a bare "live": the switch says what it does in paper terms, and that it only narrows.
+    expect(screen.getByText(/only narrows the house setting/)).toBeInTheDocument();
+  });
+
+  it("saves a steering switch and lists its change in words (#6954 slice 5b)", async () => {
+    let changed = 0;
+    nextResponse = { ok: true };
+    render(
+      <BotSettingsPanel
+        account={account(
+          settings({
+            changes: [
+              {
+                at: "2026-11-07T15:00:00.000Z",
+                setting: "holdOpens",
+                before: false,
+                after: true,
+                proposedBy: "you",
+                approvedBy: "you",
+              },
+              {
+                at: "2026-11-07T14:00:00.000Z",
+                setting: "mode",
+                before: null,
+                after: "observe",
+                proposedBy: "you",
+                approvedBy: "you",
+              },
+            ],
+          }),
+        )}
+        onChanged={() => {
+          changed += 1;
+        }}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Paper orders"), { target: { value: "true" } });
+    await waitFor(() => expect(changed).toBe(1));
+    const [hold, watch] = screen.getAllByRole("listitem");
+    expect(hold?.textContent).toContain("Stop opening off → on");
+    expect(watch?.textContent).toContain("Watch only off → on");
   });
 
   it("says so when nothing has been recorded yet", () => {

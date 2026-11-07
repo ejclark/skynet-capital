@@ -67,6 +67,7 @@ interface CycleOutcomeView {
 export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
   "ladder-block": "blocked by the risk ladder",
   "breaker-halt": "a tripped safety breaker is holding new positions (exits still run)",
+  "opens-held": "its owner is holding new positions on this bot (exits still run)",
   "s2-print": "blocked by S2 (flat through the print)",
   "e1-open": "deferred by E1 (waiting out the open)",
   "subscription-filter": "outside the subscription's aimed symbols",

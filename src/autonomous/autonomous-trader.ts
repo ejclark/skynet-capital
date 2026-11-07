@@ -53,6 +53,18 @@ export interface AutonomousTraderConfig {
    * the owner's suspends): those place nothing at all.
    */
   readonly openBlockedReason?: () => string | null;
+  /**
+   * The owner's "stop opening, keep exits" (#6954 slice 5b, the Settings card): a non-null reason
+   * holds this bot's opens, refused `opens-held`, and its exits still run — the breaker's shape,
+   * apart from it so the record says whose hold it was. Read every cycle.
+   */
+  readonly ownerHoldsOpens?: () => string | null;
+  /**
+   * The owner's "watch only" (#6954 slice 5b): true = this cycle runs in `observe`, recording what
+   * it would do and placing nothing. Read every cycle. Narrow-only by construction: it can turn a
+   * live cycle into a watching one, never the reverse.
+   */
+  readonly watchOnly?: () => boolean;
   /** The account's rung on the risk ladder this cycle, from the equity feed. `undefined` = no
    *  reading yet, which leaves the guards exactly as they were (never defaulted to `clear`). */
   readonly riskTier?: () => RiskTier | undefined;
@@ -230,7 +242,7 @@ export class AutonomousTrader {
     // One read of the swappable pair, at the top — see `swapRoster`.
     const { persona, risk, tuning } = this.current;
     const now = (this.config.now ?? Date.now)();
-    const mode: TraderMode = tuning.mode;
+    const mode: TraderMode = this.config.watchOnly?.() ? "observe" : tuning.mode;
 
     // Kill switch / circuit breakers first: if halted, decide nothing and place nothing this cycle.
     // The market context is still captured here — a halt is exactly the kind of cycle the
@@ -259,17 +271,21 @@ export class AutonomousTrader {
 
     const decidedOn = await this.config.broker.getPortfolio();
     const holdOpens = this.config.openBlockedReason?.() ?? null;
+    const ownerHold = this.config.ownerHoldsOpens?.() ?? null;
     const accountTier = this.config.riskTier?.();
     const cycleRisk: RiskConfig =
-      holdOpens || accountTier !== undefined
+      holdOpens || ownerHold || accountTier !== undefined
         ? {
             ...risk,
             ...(accountTier !== undefined ? { accountTier } : {}),
             ...(holdOpens ? { opensHalted: true as const } : {}),
+            ...(ownerHold ? { opensHeld: true as const } : {}),
           }
         : risk;
+    // Settled by the build's mode, not this cycle's: an order a live cycle left working is still
+    // read while its owner has the bot watching, and reading places nothing.
     const working =
-      mode === "live"
+      tuning.mode === "live"
         ? ((await this.config.optionOrders?.settle()) ?? NOTHING_WORKING)
         : NOTHING_WORKING;
     const cooling = this.optionCooling(working, now);
@@ -323,7 +339,10 @@ export class AutonomousTrader {
       guardedIntents,
       outcomes,
       // A breaker holding opens is still said on the record: the owner's alert and the heartbeat
-      // read it, though the cycle ran and its exits were placed.
+      // read it, though the cycle ran and its exits were placed. The owner's own hold is NOT: it is
+      // a choice, not a stop, and a `halted` on every cycle would turn each quiet pass into a halted
+      // row and the bot's card into "Halted" (code review, #6954 slice 5b). Its refused opens carry
+      // `opens-held`, which is where the record says it.
       ...(holdOpens ? { halted: holdOpens } : {}),
       // The context the cycle was HANDED — option quotes never reach disk or the wire.
       context,
