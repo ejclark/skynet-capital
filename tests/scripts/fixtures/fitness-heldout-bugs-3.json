@@ -1,0 +1,114 @@
+[
+  {
+    "id": "silent-bot-never-fails",
+    "contract": "live-bots-place",
+    "file": "scripts/fitness.mjs",
+    "find": "sum(bot, \"placed\") === 0",
+    "replace": "sum(bot, \"placed\") < 0",
+    "why": "a live bot that proposed across five sessions, placed nothing and recorded no reason must fail; with this it can never fail"
+  },
+  {
+    "id": "unreadable-tally-passes",
+    "contract": "live-bots-place",
+    "file": "scripts/fitness.mjs",
+    "find": "if (!tally) return unknown(\"the journal tally is unreadable\");",
+    "replace": "if (!tally) return pass(\"the journal tally is unreadable\");",
+    "why": "a tally the probe cannot read must be unknown, never a pass that closes an open issue"
+  },
+  {
+    "id": "window-six-sessions-never-judged",
+    "contract": "live-bots-place",
+    "file": "scripts/fitness.mjs",
+    "find": "const SILENT_SESSIONS = 5;",
+    "replace": "const SILENT_SESSIONS = 6;",
+    "why": "the tally prints at most five sessions, so a window of six judges no bot and every silent bot reads quiet"
+  },
+  {
+    "id": "recency-window-inverted",
+    "contract": "live-bots-place",
+    "file": "scripts/fitness.mjs",
+    "find": "<= SILENT_RECENT_MS,",
+    "replace": "> SILENT_RECENT_MS,",
+    "why": "a bot whose newest live session is this week must be judged; only a bot idle for over ten days is skipped"
+  },
+  {
+    "id": "tally-runs-in-session",
+    "contract": "live-bots-place",
+    "file": "scripts/fitness.mjs",
+    "find": "if (!outside) return quiet(\"judged after the close, so the read never slows a trading cycle\");\n      if (outside.status === \"unknown\") return outside;",
+    "replace": "if (outside?.status === \"unknown\") return outside;",
+    "why": "the probe must not run the tally while the regular session is open: a trading cycle on a one-CPU machine never waits on a multi-megabyte read"
+  },
+  {
+    "id": "tally-reads-first-listed-machine",
+    "contract": "live-bots-place",
+    "file": "scripts/fitness.mjs",
+    "find": "journalRead(primary.id, TALLY_COMMAND)",
+    "replace": "journalRead(machines[0].id, TALLY_COMMAND)",
+    "why": "the journal is read on the primary machine; the first machine Fly lists may be a standby with an empty or stale volume"
+  },
+  {
+    "id": "tally-through-a-shell",
+    "contract": "live-bots-place",
+    "file": "scripts/fitness.mjs",
+    "find": "const TALLY_COMMAND = `node /app/scripts/journal-tally.mjs ${JOURNAL_DIR}`;",
+    "replace": "const TALLY_COMMAND = `sh -c \"node /app/scripts/journal-tally.mjs ${JOURNAL_DIR}\"`;",
+    "why": "the read on the machine is the plain tally command with no shell; the exec arguments are the contract with the machine"
+  },
+  {
+    "id": "scouts-counted-as-bots",
+    "contract": "live-bots-place",
+    "file": "scripts/journal-tally.mjs",
+    "find": ".filter((id) => id && !SCOUTS.has(id));",
+    "replace": ".filter((id) => id);",
+    "why": "a scout picking or closing is not a bot deciding, so its journal must never appear in the tally as a bot"
+  },
+  {
+    "id": "watching-bot-counted-as-live",
+    "contract": "live-bots-place",
+    "file": "scripts/journal-tally.mjs",
+    "find": "record?.mode !== \"live\" ||",
+    "replace": "!record?.mode ||",
+    "why": "only a record with mode live counts; a bot held to watching proposes and places nothing by design and must not be judged"
+  },
+  {
+    "id": "any-outcome-is-a-reason",
+    "contract": "live-bots-place",
+    "file": "scripts/journal-tally.mjs",
+    "find": "count(outcomes, (o) => o?.action === \"rejected\" || o?.action === \"cooldown-skipped\"),",
+    "replace": "count(outcomes, (o) => o?.action !== \"placed\"),",
+    "why": "a reason is a broker rejection or a cooldown skip; an outcome with any other action is not an explanation and must not excuse a silent bot"
+  },
+  {
+    "id": "utc-days-not-new-york",
+    "contract": "live-bots-place",
+    "file": "scripts/journal-tally.mjs",
+    "find": "timeZone: \"America/New_York\",",
+    "replace": "timeZone: \"UTC\",",
+    "why": "sessions are New York days; a record after 8 pm New York belongs to that day, and under UTC it starts a day that never traded"
+  },
+  {
+    "id": "archives-read-oldest-first",
+    "contract": "live-bots-place",
+    "file": "scripts/journal-tally.mjs",
+    "find": "kept.sort().reverse()",
+    "replace": "kept.sort()",
+    "why": "archives are read newest first so the stop rule lands on the five newest days; oldest first fills the window with stale days and stops before the recent silent ones"
+  },
+  {
+    "id": "stop-before-fifth-day-is-whole",
+    "contract": "live-bots-place",
+    "file": "scripts/journal-tally.mjs",
+    "find": "if (days.size > TALLY_SESSIONS) break;",
+    "replace": "if (days.size >= TALLY_SESSIONS) break;",
+    "why": "reading stops only once a sixth day proves the fifth is whole; stopping at five drops the half of the fifth day that sits in the next older file, including its placed order or refusal"
+  },
+  {
+    "id": "tally-prints-a-journal-line",
+    "contract": "live-bots-place",
+    "file": "scripts/journal-tally.mjs",
+    "find": "{ day: one.day, proposed: 0, placed: 0, explained: 0 }",
+    "replace": "{ day: one.day, line, proposed: 0, placed: 0, explained: 0 }",
+    "why": "the tally prints bot ids and counts only; a journal line is production data and crosses flyctl into a public log"
+  }
+]

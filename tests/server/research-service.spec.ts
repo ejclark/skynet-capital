@@ -89,11 +89,11 @@ describe("weekly studies on the shelf", () => {
     const doc = findResearchDoc("weeks/2026-W37", fixtureRoot());
     expect(doc?.title).toBe("The market week of 2026-09-07 — 2026-W37");
     expect(doc?.glanceHtml).toContain("Nineteen ledgers in range");
-    expect(doc?.html).toContain('href="/research/events/nvda-2026-08-26-print"');
+    expect(doc?.html.toString()).toContain('href="/research/events/nvda-2026-08-26-print"');
   });
 
   it("leaves the week's board OPEN and folds the composition receipt", () => {
-    const html = findResearchDoc("weeks/2026-W37", fixtureRoot())?.html ?? "";
+    const html = findResearchDoc("weeks/2026-W37", fixtureRoot())?.html.toString() ?? "";
     const board = html.indexOf("The week&#39;s board");
     expect(board).toBeGreaterThan(-1);
     expect(html.slice(0, board)).not.toContain("<details");
@@ -126,25 +126,25 @@ describe("convictions on the shelf (#5482)", () => {
     const doc = findResearchDoc("convictions/ai-dip-2026-10", withConviction());
     expect(doc?.title).toBe("The AI dip — a conviction");
     expect(doc?.glanceHtml).toContain("One claim tested");
-    expect(doc?.html).toContain('href="/research/alpha-study"');
-    expect(doc?.html).toContain('href="/research/events/nvda-2026-08-26-print"');
+    expect(doc?.html.toString()).toContain('href="/research/alpha-study"');
+    expect(doc?.html.toString()).toContain('href="/research/events/nvda-2026-08-26-print"');
   });
 });
 
 describe("findResearchDoc", () => {
   it("renders a known slug to HTML, GFM tables included", () => {
     const doc = findResearchDoc("alpha-study", fixtureRoot());
-    expect(doc?.html).toContain("<table>");
+    expect(doc?.html.toString()).toContain("<table>");
     expect(doc?.title).toBe("Alpha study — the QQQ question");
   });
 
   it("rewrites doc-internal .md links to live /research routes", () => {
     const root = fixtureRoot();
-    expect(findResearchDoc("alpha-study", root)?.html).toContain(
+    expect(findResearchDoc("alpha-study", root)?.html.toString()).toContain(
       'href="/research/events/nvda-2026-08-26-print"',
     );
     // ...in both directions: a ledger's ../ links climb back to the shelf.
-    expect(findResearchDoc("events/nvda-2026-08-26-print", root)?.html).toContain(
+    expect(findResearchDoc("events/nvda-2026-08-26-print", root)?.html.toString()).toContain(
       'href="/research/alpha-study"',
     );
   });
@@ -174,9 +174,9 @@ describe("findResearchDoc — At a glance header", () => {
     expect(doc?.glanceHtml).not.toContain("<del>");
     expect(doc?.glanceHtml).toContain("~7%");
     // …and is removed from the body, which still carries everything else.
-    expect(doc?.html).not.toContain("Guards only");
-    expect(doc?.html).toContain("Body.");
-    expect(doc?.html).toContain('href="/research/alpha-study"');
+    expect(doc?.html.toString()).not.toContain("Guards only");
+    expect(doc?.html.toString()).toContain("Body.");
+    expect(doc?.html.toString()).toContain('href="/research/alpha-study"');
   });
 
   it("returns a null header for a doc with no At a glance section", () => {
@@ -306,21 +306,21 @@ describe("eventCalls", () => {
 describe("findResearchDoc — reader-side folds", () => {
   it("folds the method wall and the append-only ledger, leaving the stance open", () => {
     const rendered = findResearchDoc("events/nvda-2026-08-26-print", fixtureRoot());
-    expect(rendered?.html).toContain("Initial research");
-    expect(rendered?.html).toContain('<details class="rs-fold"');
+    expect(rendered?.html.toString()).toContain("Initial research");
+    expect(rendered?.html.toString()).toContain('<details class="rs-fold"');
     // The stance renders as a plain heading — never folded away.
-    expect(rendered?.html).toContain("<h2>Stance &amp; kill switches</h2>");
+    expect(rendered?.html.toString()).toContain("<h2>Stance &amp; kill switches</h2>");
   });
 
   it("labels each fold with its size, so nothing is hidden silently", () => {
     const rendered = findResearchDoc("events/nvda-2026-08-26-print", fixtureRoot());
-    expect(rendered?.html).toContain("rs-foldsize");
+    expect(rendered?.html.toString()).toContain("rs-foldsize");
   });
 
   it("keeps every word — a fold relocates, it never rewrites", () => {
     const rendered = findResearchDoc("events/nvda-2026-08-26-print", fixtureRoot());
-    expect(rendered?.html).toContain("Body.");
-    expect(rendered?.html).toContain("Defined-risk only");
+    expect(rendered?.html.toString()).toContain("Body.");
+    expect(rendered?.html.toString()).toContain("Defined-risk only");
   });
 });
 
@@ -345,18 +345,38 @@ describe("findResearchDoc — the forward-test register is composed from per-eve
 
   it("serves index + every fragment as one document, legacy last, authoring comments dropped", () => {
     const rendered = findResearchDoc("forward-tests", registerRoot());
-    expect(rendered?.html).toContain("Intro paragraph.");
-    expect(rendered?.html).toContain("FT-nvda-2026-08-26-print-1");
-    expect(rendered?.html).toContain("FT-1");
-    expect(rendered?.html).not.toContain("owned by one lane");
+    expect(rendered?.html.toString()).toContain("Intro paragraph.");
+    expect(rendered?.html.toString()).toContain("FT-nvda-2026-08-26-print-1");
+    expect(rendered?.html.toString()).toContain("FT-1");
+    expect(rendered?.html.toString()).not.toContain("owned by one lane");
     expect(rendered?.html.indexOf("FT-nvda-2026-08-26-print-1")).toBeLessThan(
       rendered?.html.indexOf(">FT-1<") ?? -1,
     );
   });
 
+  it("renders fragment by fragment, yet matches the same register written as one file (#6957)", () => {
+    const root = registerRoot();
+    // Two index sections (one open, one folded) so the join between index and fragments is tested.
+    writeFileSync(
+      join(root, "forward-tests.md"),
+      "# Forward-test register\n\n<!-- no rows here -->\n\nIntro.\n\n## The headline\n\nOpen.\n\n## How to register\n\nFolded.\n",
+    );
+    writeFileSync(
+      join(root, "one-file.md"),
+      [
+        "# Forward-test register\n\n<!-- no rows here -->\n\nIntro.\n\n## The headline\n\nOpen.\n\n## How to register\n\nFolded.",
+        "## Forward tests — nvda-2026-08-26-print\n\n| # | Hypothesis |\n|---|---|\n| FT-nvda-2026-08-26-print-1 | see [ledger](../events/nvda-2026-08-26-print.md) |",
+        "## Forward tests — legacy\n\n| # | Hypothesis |\n|---|---|\n| FT-1 | legacy row |\n",
+      ].join("\n\n"),
+    );
+    const register = findResearchDoc("forward-tests", root)?.html.toString();
+    expect(register).toContain('<span class="rs-foldname">Forward tests — legacy</span>');
+    expect(register).toBe(findResearchDoc("one-file", root)?.html.toString());
+  });
+
   it("re-anchors a fragment's relative links to live routes, and lists no fragment as its own study", () => {
     const root = registerRoot();
-    expect(findResearchDoc("forward-tests", root)?.html).toContain(
+    expect(findResearchDoc("forward-tests", root)?.html.toString()).toContain(
       'href="/research/events/nvda-2026-08-26-print"',
     );
     expect(listResearch(root).studies.map((d) => d.slug)).not.toContain("forward-tests/legacy");

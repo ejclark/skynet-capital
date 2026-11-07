@@ -383,6 +383,7 @@ case "$1 $2" in
         [[ -f "$S/tail-hang" ]] && sleep 5
         read -r _ _ count _ <<<"$4"
         if [[ -f "$S/tail-first" ]]; then cat "$S/tail-first"; rm "$S/tail-first"; else tail -n "$count" "$S/tail-\${4##*/}"; fi ;;
+      "node /app/scripts/journal-tally.mjs /data/audit") echo '{"tally":1,"bots":[]}' ;;
       *) echo "refused: $4" >&2; exit 1 ;;
     esac ;;
   *) echo "refused: $*" >&2; exit 1 ;;
@@ -623,7 +624,9 @@ describe("decision-cycle wiring", () => {
     for (const now of [SATURDAY, THANKSGIVING, EARLY_CLOSE]) {
       const stub = world({ now, record: `{"at":${FEED_DIED}}\n` });
       expect(verdict(stub, now).status).toBe("quiet");
-      expect(flyCalls(stub)).not.toContain("/data/audit");
+      // live-bots-place reads its tally after the close; this contract's own reads stay shut
+      expect(flyCalls(stub)).not.toContain("ls -t /data/audit");
+      expect(flyCalls(stub)).not.toContain("tail -n");
     }
   });
 

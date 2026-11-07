@@ -564,7 +564,7 @@
           {
             "id": "shell",
             "label": "Shell components",
-            "path": "app/src/shell/*.tsx (board-section, coverage-section, calendar-head, book-range-head, book-lanes, events-section, held-events-line, positions-*, accounts-*, balance-*, chain-section, chain-straddle, draft-order-builder, guidance-*, mission-control, milestone-*, ladder-gate, trade-gate, option-gate, unlock-gate, working-orders, orders-section, decisions-section, league-card, networth-*, sauron-card, admin-cards …)",
+            "path": "app/src/shell/*.tsx (board-section, coverage-section, calendar-head, book-range-head, book-lanes, events-section, held-events-line, positions-*, accounts-*, balance-*, chain-section, chain-straddle, draft-order-builder, guidance-*, mission-control, milestone-*, ladder-gate, trade-gate, option-gate, order-receipt, unlock-gate, working-orders, orders-section, decisions-section, league-card, networth-*, sauron-card, admin-cards …)",
             "responsibility": "Presentational React components for every section; gates render fog-of-war doors visible, named, disabled and counted."
           },
           {
@@ -907,7 +907,7 @@
         "id": "mp_repair",
         "label": "Moneypenny repair lane",
         "technology": "GitHub Actions workflow_run + workflow_dispatch, Node ESM router (scripts/moneypenny/repair.mjs), claude-code-action on claude-opus-5-5",
-        "responsibility": "Watches the other lanes: a failed run on main files one ci-failure issue per signature and dispatches a repair session; a failed Pipeline run on a session's open PR files one capsule per PR and dispatches one session, or posts one line saying why not (red-session-pr.mjs, #6605); workflow_dispatch entry points repair a conflicted PR (pr_number) or a stalled event-research issue (issue_number); four loop guards keep it from feeding itself",
+        "responsibility": "Watches the other lanes: a failed run on main files one ci-failure issue per signature and dispatches a repair session, and a signature whose capsule closed within 14 days reopens that capsule with a recurrence count instead (#6953); a failed Pipeline run on a session's open PR files one capsule per PR and dispatches one session, or posts one line saying why not (red-session-pr.mjs, #6605); workflow_dispatch entry points repair a conflicted PR (pr_number) or a stalled event-research issue (issue_number); four loop guards keep it from feeding itself",
         "code_roots": [
           ".github/workflows/moneypenny-repair.yml",
           "scripts/moneypenny/repair.mjs",
@@ -1426,7 +1426,7 @@
             "id": "assign",
             "label": "Decision assignment lane",
             "path": "scripts/moneypenny/assignments.mjs",
-            "responsibility": "decisionLine/plan/routeAssignments/executeAssignments: an open needs-eric issue whose above-the-fold Needs-from-you callout states a decision gets ejclark assigned and ONE marked comment quoting that line (the marker is the memory, so it never asks twice); criterion 4 does the same for a hold-merge or platter/ PR unmerged 12h, and criterion 2 removes only the assignments it marked. The assignment is written BEFORE its comment, so the half-write that can happen leaves the phone push and the digest row intact and loses only the quoted copy; criterion 4 outranks criterion 2 on the same number, or a still-held PR would assign/unassign every tick. ASSIGN_CAP 3 new asks a tick (oldest number first) bounds a wrong read; removals are uncapped. plan() is also the digest's Needs-you selector (criterion 12)"
+            "responsibility": "decisionLine/plan/routeAssignments/executeAssignments: an open needs-eric issue whose above-the-fold Needs-from-you callout states a decision gets ejclark assigned and ONE marked comment quoting that line (the marker is the memory, so it never asks twice); criterion 4 does the same for a hold-merge or platter/ PR unmerged 12h, and criterion 2 removes only the assignments it marked. The assignment is written BEFORE its comment, so the half-write that can happen leaves the phone push and the digest row intact and loses only the quoted copy; criterion 4 outranks criterion 2 on the same number, or a still-held PR would assign/unassign every tick. ASSIGN_CAP 3 new asks a tick (oldest number first) bounds a wrong read; removals are uncapped. plan() is also the digest's Needs-you selector (criterion 12). No ask before its artifact exists (#6953): a merge of a branch no open PR is built from, or of a held PR whose files are all *.patch, is never assigned and goes to plan().needsSession with every needs-session issue, printed by digest-scan --needs-session"
           },
           {
             "id": "continuation",

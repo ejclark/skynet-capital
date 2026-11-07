@@ -115,6 +115,7 @@
     "shoot:steady": "tsx --import ./scripts/shoot/steady-preload.mjs",
     "shoot:diff": "node scripts/shoot/frame-diff.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
+    "shoot:trade-receipt": "tsx scripts/shoot/trade-receipt.mjs",
     "shoot:guidance-recap": "tsx scripts/shoot/guidance-recap.mjs",
     "shoot:debit-spread": "tsx scripts/shoot/debit-spread.mjs",
     "shoot:playbook-store": "tsx scripts/shoot/playbook-store.mjs",

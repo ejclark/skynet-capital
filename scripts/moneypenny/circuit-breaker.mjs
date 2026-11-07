@@ -264,6 +264,13 @@ export function recentResearchSpend({
  *  each leg "<job name> (<matrix value>)", and an unexpanded skipped matrix keeps the bare name. */
 const COST_JOB_PREFIX = "research due events";
 
+/** A leg cancelled before its first step has no log and launched no session: a known $0, like a
+ *  skipped one (#6921, 2026-11-06: run 42139604356 was cancelled while three legs still waited for
+ *  a runner, `steps: []`, and asking for their logs refused every tick for the next 6 hours). Only
+ *  an explicitly empty `steps` counts — a missing field, or a leg that ran a step, is still read. */
+const neverStarted = (job) =>
+  job.conclusion === "cancelled" && Array.isArray(job.steps) && job.steps.length === 0;
+
 /** The fallback when a run's combined log can't be read. `gh run view --log` fails for the WHOLE
  *  run when any one job has no log — a cancelled job does not (#4658, 2026-10-05: run
  *  37373634443's `route` was cancelled and every other job skipped, so `gh` answered
@@ -287,7 +294,10 @@ function costLegLogs(runId, cause, exec, sleep) {
   }
   if (!Array.isArray(jobs)) throw refuse(cause.message);
   const legs = jobs.filter(
-    (j) => String(j.name ?? "").startsWith(COST_JOB_PREFIX) && j.conclusion !== "skipped",
+    (j) =>
+      String(j.name ?? "").startsWith(COST_JOB_PREFIX) &&
+      j.conclusion !== "skipped" &&
+      !neverStarted(j),
   );
   return legs
     .map((leg) => {
