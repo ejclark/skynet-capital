@@ -59,7 +59,6 @@ import {
   createBoardContext,
   localParentOf,
   openPrMaps,
-  readHorizons,
   syncIssue,
   wantedCard,
   wantedColumn,
@@ -319,7 +318,6 @@ export function reconcileBoard({
   readMode = () => readWorkMode(),
   buildContext = (issues) => sweepContext(issues, { log }),
   statusOf,
-  horizons = readHorizons(),
   dryRun = false,
   log = console.log,
 } = {}) {
@@ -348,7 +346,6 @@ export function reconcileBoard({
     items,
     openIssues,
     numberOf: (item) => boardIssueNumber(item),
-    horizons,
   });
   // Kind and "Waiting on" (#6871 slice 3): only for the fields the board carries — a sweep that
   // runs before the setup dispatch says so once and plans nothing, never an error.
@@ -370,7 +367,7 @@ export function reconcileBoard({
     skip: new Set([...moved.map((d) => d.number), ...priorityDrift.map((d) => d.number)]),
     wantedFor: (issue) => {
       const card = wantedCard(issue, { ...context, columns });
-      return card && card.status !== "Done" ? wantedCardFields(issue, card, { horizons }) : null;
+      return card && card.status !== "Done" ? wantedCardFields(issue, card) : null;
     },
   });
   const drift = mergeDrift(moved, priorityDrift, fieldDrift);

@@ -37,25 +37,28 @@ describe("rank: the class", () => {
     });
   });
 
-  // Eric, 2026-09-30: a bug found during development is expedited ahead of the queue and new WIP.
-  it("puts a bug at P0, expedited, ahead of the other derived P0 reasons", () => {
-    expect(classOf({ labels: ["bug"] })).toEqual({
+  // #6871 §4 (Eric's tap on PR-A): fast-track is the only derived P0 — "fix first".
+  it("puts fast-track at P0 and nothing else: a bug, a blocker and a constraint are P1", () => {
+    expect(classOf({ labels: ["fast-track", "bug"] })).toEqual({
       cls: "P0",
-      why: "something is broken — expedite",
-      expedite: true,
+      why: "fix first — pulled before all other work",
     });
-    expect(classOf({ labels: ["bug", "bottleneck"], blocks: [7] }).expedite).toBe(true);
+    expect(classOf({ labels: ["bug"] })).toEqual({ cls: "P1", why: "something is broken" });
+    expect(classOf({ blocks: [4061, 4062] })).toEqual({
+      cls: "P1",
+      why: "unblocks #4061, #4062",
+    });
+    expect(classOf({ labels: ["bottleneck"] }).cls).toBe("P1");
   });
 
-  it("puts work that unblocks open issues, then measured constraints, at P0", () => {
-    expect(classOf({ blocks: [4061, 4062] }).why).toBe("unblocks #4061, #4062");
-    expect(classOf({ labels: ["bottleneck"] }).cls).toBe("P0");
+  it("lets a hand-set P label hold a fast-track card in a lower lane", () => {
+    expect(classOf({ labels: ["fast-track", "P3"] }).cls).toBe("P3");
   });
 
-  it("puts member asks at P1, ideas and Later at P3, the rest at P2", () => {
+  it("puts member asks at P1, ideas at P3, the rest at P2, and ignores the board's Horizon", () => {
     expect(classOf({ labels: ["feedback", "member-d7037b4107"] }).cls).toBe("P1");
     expect(classOf({ labels: ["idea"] }).cls).toBe("P3");
-    expect(classOf({ labels: ["plan"], horizon: "Later" }).cls).toBe("P3");
+    expect(classOf({ labels: ["plan"], horizon: "Later" } as never).cls).toBe("P2");
     expect(classOf({ labels: ["plan"] })).toEqual({
       cls: "P2",
       why: "improves a surface or a process",
@@ -104,14 +107,30 @@ describe("rank: the order", () => {
     expect(rankOrder(rows).map((r) => r.number)).toEqual([14, 12, 11, 13, 10]);
   });
 
-  it("leads P0 with an expedited bug, even an older ready bottleneck or unblocker behind it", () => {
+  // The Kind order inside a lane (#6871 §4): a bug still pulls ahead of a blocker and a constraint,
+  // as Eric's 2026-09-30 call has it; ready-before-not-ready only breaks ties inside one Kind.
+  it("orders a lane by Kind: bug, then blocks other work, then slows delivery", () => {
     const rows = [
       row(20, ["bottleneck", "ready"], now - 90 * H),
       rankRow(issue(21, ["plan", "ready"]), { readyAt: now - 80 * H, blocks: [4], now }),
       row(22, ["bug"], null),
       row(23, ["bug", "ready"], now - 1 * H),
     ].filter((r) => r !== null);
-    expect(rankOrder(rows).map((r) => r.number)).toEqual([23, 22, 20, 21]);
+    expect(rankOrder(rows).map((r) => r.number)).toEqual([23, 22, 21, 20]);
+    expect(rankOrder(rows).map((r) => r.kind)).toEqual([
+      "Bug",
+      "Bug",
+      "Blocks other work",
+      "Slows delivery",
+    ]);
+  });
+
+  it("puts fast-track alone in P0, ahead of every P1 bug", () => {
+    const rows = [
+      row(30, ["bug", "ready"], now - 90 * H),
+      row(31, ["plan", "ready", "fast-track"], now),
+    ];
+    expect(rankOrder(rows.filter((r) => r !== null)).map((r) => r.number)).toEqual([31, 30]);
   });
 
   it("renders a count line and one row per item, read-only", () => {

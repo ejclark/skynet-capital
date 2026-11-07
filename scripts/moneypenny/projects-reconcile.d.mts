@@ -124,7 +124,6 @@ export function reconcileBoard(deps?: {
   readMode?: () => DialReading & { warning?: string };
   buildContext?: (openIssues: RestIssue[]) => ColumnContext;
   statusOf?: (item: ReconcileItem) => string | null | undefined;
-  horizons?: Record<string, string>;
   dryRun?: boolean;
   log?: (line: string) => void;
 }): {

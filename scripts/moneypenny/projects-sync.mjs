@@ -40,7 +40,6 @@
 // meant a dozen `issues` events spent the PAT's hour, with `main` red behind them. `itemsFor` asks
 // GitHub about the issue instead of about the board, and only a caller already holding a board list
 // (a sweep) uses one.
-import { readFileSync } from "node:fs";
 import { withOpenSubIssues } from "./admission.mjs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRateLimit, ghRest, ghRestAll, isTransientGhError, sh, withRetry } from "./gh.mjs";
@@ -628,20 +627,7 @@ export function readOpenSubIssuesOf(issue, readAll = ghRestAll) {
 }
 
 // ── Priority (#6871 slice B1) ────────────────────────────────────────────────────────────────────
-// The decision is projects-priority.mjs's `planPriority`; this is its IO. rank.mjs reads the same
-// Horizon triage file, so `Later` means P3 on the board exactly as it does in `npm run rank`.
-const HORIZONS_PATH = new URL("./projects-horizons.json", import.meta.url);
-let horizonTriage;
-/** The hand Horizon triage (issue number → Now/Next/Later), read once per process. */
-export function readHorizons() {
-  if (horizonTriage) return horizonTriage;
-  try {
-    horizonTriage = JSON.parse(readFileSync(HORIZONS_PATH, "utf8"));
-  } catch {
-    horizonTriage = {};
-  }
-  return horizonTriage;
-}
+// The decision is projects-priority.mjs's `planPriority`; this is its IO.
 
 const REPO = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
 
@@ -664,7 +650,7 @@ function ghLabel(argv) {
  *
  * Returns the plan it applied, or `{action: "skipped", reason}`.
  */
-export function syncPriority({ issue, item, fresh = false, ready = true, horizons = {}, io }) {
+export function syncPriority({ issue, item, fresh = false, ready = true, io }) {
   if (issue?.state === "closed") return { action: "skipped", reason: "closed" };
   if (!ready) {
     return {
@@ -672,7 +658,7 @@ export function syncPriority({ issue, item, fresh = false, ready = true, horizon
       reason: `no "${SYNCED_PRIORITY}" field on the board yet — projects-setup.yml creates it`,
     };
   }
-  const wanted = wantedPriorityOf(issue, { horizons });
+  const wanted = wantedPriorityOf(issue);
   const planFor = (card) =>
     planPriority({
       current: card?.priority ?? null,
@@ -804,9 +790,7 @@ export function syncIssue(
   const fieldWrites = planCardFields({
     have: item,
     // A closed card keeps its Kind, but nothing waits on anyone: "Waiting on" is cleared.
-    wanted: closed
-      ? { waitingOn: "" }
-      : wantedCardFields(issue, card, { horizons: readHorizons() }),
+    wanted: closed ? { waitingOn: "" } : wantedCardFields(issue, card),
     status,
     today,
     present,
@@ -831,7 +815,6 @@ export function syncIssue(
     item,
     fresh: added,
     ready: Boolean(findField(fieldList, SYNCED_PRIORITY)),
-    horizons: readHorizons(),
     io: {
       readFresh: () => {
         try {

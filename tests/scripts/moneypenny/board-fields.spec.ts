@@ -62,7 +62,7 @@ describe("Kind: written from the card's own labels, in the order a lane sorts by
     expect(kindOf({ labels: ["feedback", "member-sam"] })).toBe("Member asked");
     expect(kindOf({ labels: ["plan"] })).toBe("Improvement");
     expect(kindOf({ labels: ["idea"] })).toBe("Idea");
-    expect(kindOf({ labels: ["plan"], horizon: "Later" })).toBe("Idea");
+    expect(kindOf({ labels: ["plan"], horizon: "Later" } as never)).toBe("Improvement");
   });
 
   it("a hand-set P label moves the lane, never the Kind", () => {
@@ -72,23 +72,17 @@ describe("Kind: written from the card's own labels, in the order a lane sorts by
   it("any label snapshot lands on one of the board's options", () => {
     const pool = ["fast-track", "bug", "bottleneck", "idea", "member-x", "plan", "P0", "P3"];
     fc.assert(
-      fc.property(
-        fc.subarray(pool),
-        fc.nat(3),
-        fc.constantFrom(null, "Later", "Now"),
-        (names, blocking, horizon) => {
-          const kind = kindOf({ labels: names, blocks: Array(blocking).fill(0), horizon });
-          expect(KIND_OPTIONS).toContain(kind);
-        },
-      ),
+      fc.property(fc.subarray(pool), fc.nat(3), (names, blocking) => {
+        const kind = kindOf({ labels: names, blocks: Array(blocking).fill(0) });
+        expect(KIND_OPTIONS).toContain(kind);
+      }),
     );
   });
 
-  it("reads blocking from the REST issue's dependency summary, and Later from the triage", () => {
+  it("reads blocking from the REST issue's dependency summary", () => {
     expect(wantedKindOf(issue(1, ["plan"], { issue_dependencies_summary: { blocking: 2 } }))).toBe(
       "Blocks other work",
     );
-    expect(wantedKindOf(issue(7, ["plan"]), { horizons: { "7": "Later" } })).toBe("Idea");
   });
 });
 
@@ -460,8 +454,8 @@ describe("mergeDrift and the sweep: field fills ride the same single sync per is
           {
             id: "PVTI_1",
             status: "Backlog",
-            priority: "P0",
-            syncedPriority: "P0",
+            priority: "P1",
+            syncedPriority: "P1",
             content: { type: "Issue", url: URL(1) },
           },
           {
@@ -481,7 +475,6 @@ describe("mergeDrift and the sweep: field fills ride the same single sync per is
       ensureColumns: () => ["Backlog", "Ready"],
       readMode: () => ({ position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } }),
       buildContext: () => ({}),
-      horizons: {},
       // Priority is not under test: both cards already carry theirs.
       sync: (n) => {
         synced.push(n);

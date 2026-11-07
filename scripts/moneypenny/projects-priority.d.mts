@@ -17,10 +17,7 @@ export type PriorityPlan =
   | { action: "drag"; lane: string; from: string; add: string[]; remove: string[] }
   | { action: "foreign"; value: string };
 
-export function wantedPriorityOf(
-  issue: PriorityIssue,
-  opts?: { horizons?: Record<string, string> },
-): string;
+export function wantedPriorityOf(issue: PriorityIssue): string;
 
 export function planPriority(input?: {
   current?: string | null;
@@ -39,6 +36,5 @@ export function planPriorityDrift<
   items?: Item[];
   openIssues?: (PriorityIssue & { number: number })[];
   numberOf: (item: Item) => number | null;
-  horizons?: Record<string, string>;
   cap?: number;
 }): { drift: { number: number; plan: PriorityPlan }[]; deferred: number };

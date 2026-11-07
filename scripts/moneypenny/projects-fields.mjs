@@ -20,7 +20,7 @@
 //
 // Pure: no network, no file reads. The IO is projects-sync.mjs (`syncCardFields`, one issue) and
 // projects-reconcile.mjs (the sweep), which both call these so they cannot disagree.
-import { kindOf } from "../rank.mjs";
+import { blocksOf, kindOf } from "../rank.mjs";
 import { LABELS, labelNames, notPullable } from "./labels.mjs";
 import {
   IN_COLUMN_SINCE,
@@ -30,14 +30,9 @@ import {
   WAITING_ON,
 } from "./projects.mjs";
 
-/** The Kind an open issue's labels give it. `horizons` is the hand triage in projects-horizons.json. */
-export function wantedKindOf(issue, { horizons = {} } = {}) {
-  const blocking = Number(issue?.issue_dependencies_summary?.blocking) || 0;
-  return kindOf({
-    labels: labelNames(issue?.labels),
-    blocks: Array.from({ length: blocking }, () => 0),
-    horizon: horizons[String(issue?.number)] ?? null,
-  });
+/** The Kind an open issue's labels give it. */
+export function wantedKindOf(issue) {
+  return kindOf({ labels: labelNames(issue?.labels), blocks: blocksOf(issue) });
 }
 
 // The person-waiting labels, each with the act it asks for. Order = which one the card names when
@@ -90,8 +85,8 @@ export function waitingOnFor(issue, card = {}) {
 }
 
 /** Kind and "Waiting on" for one open issue — what its card should show. Pure. */
-export function wantedCardFields(issue, card, { horizons = {} } = {}) {
-  return { kind: wantedKindOf(issue, { horizons }), waitingOn: waitingOnFor(issue, card) };
+export function wantedCardFields(issue, card) {
+  return { kind: wantedKindOf(issue), waitingOn: waitingOnFor(issue, card) };
 }
 
 /**
