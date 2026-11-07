@@ -13,6 +13,10 @@ as unknown is printed as unknown.
 
 1. **Pictures first** — week-over-week trend lines from the series on the `data/newsletter` branch.
 2. **Numbers** — the metric set, one line each, every line linking to where it came from.
+   **Decisions reaching Eric** (`metrics.decisions`, #6953 slice 4) is a small table of its own:
+   each measure with this week's value beside `lastWeek` (read from the series; `null` is "no
+   reading", never zero) and its target. The first row, open asks that need him, is the one to
+   watch; the rest explain why it moved. `unread` names any read that failed.
 3. **Milestones** — closed sub-issues and plan Log lines dated in the week.
 4. **Last week's plan, checked** — each commitment from the previous plan block marked done,
    partial or slipped, with the reason, and plan accuracy as a percentage.
@@ -20,7 +24,9 @@ as unknown is printed as unknown.
    remove it, asked as named options.
 6. **Next week** — 3–7 commitments, each with a done line and its Horizon. Written again,
    machine-readable, in the plan block.
-7. **Your part this week** — the human steps due, at most 5 asks, plus how many rolled over.
+7. **Your part this week** — the human steps due, at most 5 asks, plus how many rolled over,
+   and the decisions he holds now: `humanSteps.openAsks` (the count, and the oldest by how long it
+   has carried `needs-eric`), from the same selector as the digest's Needs you.
 8. **Steering** — up to 3 direction questions with named options.
 
 ## The plan block

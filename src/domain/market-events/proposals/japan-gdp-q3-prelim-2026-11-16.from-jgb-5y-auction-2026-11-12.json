@@ -1,0 +1,11 @@
+{
+  "id": "japan-gdp-q3-prelim-2026-11-16",
+  "kind": "macro-print",
+  "title": "Japan GDP, July–September 2026 first preliminary (Cabinet Office, 08:50 JST) — the first Japanese growth print after the 5-year and 30-year JGB auctions",
+  "date": "2026-11-16",
+  "status": "estimate",
+  "source": "EST: esri.cao.go.jp/jp/sna/kouhyou/kouhyou_top.html (Cabinet Office ESRI quarterly GDP release schedule, Japanese page), fetched direct 2026-11-06 (HTTP 200, 11,979 bytes). Its quarterly-GDP table reads verbatim '2026年7-9月期（1次速報） | 2026（令和8）年11月16日（月） | 8時50分', with the second preliminary on 2026-12-08 and the Oct-Dec first preliminary on 2027-02-15. The English schedule page 404s, so the Japanese page is the primary read. Filed estimate: market-events-data defines no confirmed source prefix for a Japanese statistics office, and this lane may not self-confirm an event it discovered in-sweep. The date is not in doubt; the label is about the taxonomy. Checked 2026-11-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Discovered during the jgb-5y-auction-2026-11-12 pulse (2026-11-06) after the sibling's two earlier pulses had named it without a primary date (the ESRI English pages 404). It prints on the Monday after the 5-year (11-12) and the same day as the 10-year inflation-indexed JGB auction (jgb-10y-inflation-indexed-auction-2026-11-16), four days inside the horizon, so it is the one Japanese macro print in the JGB auction corridor with no tracked entry. No tracked symbol is keyed to it; it is proposed as corridor context, not as a signal."
+}

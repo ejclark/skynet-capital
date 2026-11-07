@@ -87,6 +87,16 @@ export interface ContinuationDeps {
 export const CONTINUED_MODEL: string;
 export const MERGE_WINDOW_HOURS: number;
 export const STALL_HOURS: number;
+export const BUILD_JOB: string;
+export interface RunOutcome {
+  status: string;
+  conclusion?: string | null;
+  url?: string;
+}
+export function buildJobOutcome(
+  run: RunOutcome,
+  jobs?: Array<{ name?: string; status?: string; conclusion?: string | null }>,
+): RunOutcome;
 export const MAX_CANDIDATES: number;
 export const STOP_CAP: number;
 
