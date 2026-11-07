@@ -174,6 +174,9 @@ export const CRWV_WHEEL_SETTING: WheelSetting = {
     "drop, and accepts the shares if a put is assigned.",
 };
 
+/** The |delta| CRWV-WHEEL's puts aim at in every mode; the chain replay sells the same. */
+export const CRWV_WHEEL_PUT_DELTA = 0.15;
+
 export const CRWV_WHEEL: Playbook = wheel({
   ...CRWV_WHEEL_SETTING,
   thesis:
@@ -186,7 +189,7 @@ export const CRWV_WHEEL: Playbook = wheel({
   // at 0.15 delta (about the $48–52 floor band, `docs/research/cycle-phase-crwv-nvda-2026-10.md`),
   // and as many contracts as the budget secures, up to the mode's count.
   minDte: 14,
-  putDelta: 0.15,
+  putDelta: CRWV_WHEEL_PUT_DELTA,
   // Ten at most even when aggressive: assigned shares ride the print when no print-clean call exists,
   // and the cycle study puts the low after the print, so part of the budget waits for 11-18.
   putContracts: { conservative: 3, standard: 6, aggressive: 10 },

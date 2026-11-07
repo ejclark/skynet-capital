@@ -50,18 +50,19 @@ import {
   impliedVol,
   longCallTrade,
   NEVER,
+  printVolModel,
   QUIET_SESSIONS,
   recoveryBand,
+  VOL_WINDOW,
   weekdaysAfter,
 } from "./long-call-fence-math.mjs";
 import { bars, earningsDates } from "./market-data.mjs";
-import { annualizedVol, printCadence } from "./premium-fit-math.mjs";
+import { printCadence } from "./premium-fit-math.mjs";
 import { blockInterval, quarterOf } from "./wheel-cap-math.mjs";
 
 const BASKET = ["NVDA", "CRWV", "NBIS", "MU", "AVGO", "AMD"];
 const SINCE = "2005-01-01";
 const STEP = 5;
-const VOL_WINDOW = 60;
 /** The live fence and the day it was read (`conviction-seeds.ts`, claim 8's study). */
 const LIVE_FLOOR = { day: "2027-03-18", readOn: "2026-10-16" };
 /** Entry offsets around a print, in sessions from its filing session. */
@@ -78,25 +79,7 @@ async function loadName(sym) {
   const prints = await earningsDates(sym).catch(() => []);
   const closes = px.map((b) => b.close);
   const dates = px.map((b) => b.date);
-  const lr = closes.map((c, i) => (i === 0 ? 0 : Math.log(c / closes[i - 1])));
-  const printAt = prints.map((p) => dates.findIndex((d) => d >= p)).filter((i) => i > 0);
-  // A print's reaction can land on its filing session or the next (EDGAR has no time of day), so
-  // both returns are left out of the base vol and carried by the event term instead.
-  const touched = new Set(printAt.flatMap((s) => [s, s + 1]));
-  const baseVol = closes.map((_, t) => {
-    const clean = [];
-    for (let i = t; i >= 1 && clean.length < VOL_WINDOW; i--)
-      if (!touched.has(i)) clean.push(lr[i]);
-    return clean.length < VOL_WINDOW ? null : annualizedVol(clean);
-  });
-  // Each print's two-session move in excess of two ordinary sessions: what the event alone adds.
-  const moves = printAt
-    .filter((s) => s + 1 < closes.length && baseVol[s - 1] != null)
-    .map((s) => {
-      const r2 = Math.log(closes[s + 1] / closes[s - 1]);
-      const excess = Math.max(0, r2 * r2 - (2 * baseVol[s - 1] ** 2) / 252);
-      return { reactedOn: dates[s + 1], move: Math.sqrt(excess) };
-    });
+  const { printAt, baseVol, moves } = printVolModel(closes, dates, prints, VOL_WINDOW);
   return {
     sym,
     px,

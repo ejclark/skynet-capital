@@ -32,7 +32,7 @@
  */
 
 import { rankQuantile } from "./cycle-phase-math.mjs";
-import { addDays, daysBetween } from "./premium-fit-math.mjs";
+import { addDays, annualizedVol, daysBetween } from "./premium-fit-math.mjs";
 import { headlineSample, normCdf } from "./wheel-cap-math.mjs";
 
 /** The window the long call buys in, calendar days to expiry (`long-call.ts` MIN_DTE, MAX_DTE). */
@@ -125,6 +125,40 @@ export function entryExpiry(date, { scheme = "monthly", floor = null } = {}) {
   }
   if (!best) return null;
   return { ...best, blocked: floor != null && best.expiry < floor };
+}
+
+/** Sessions of print-free realized vol the base reads (`VOL_WINDOW`). */
+export const VOL_WINDOW = 60;
+
+/**
+ * The tape half of the vol model: each print's filing session, the base vol on every session (the
+ * last VOL_WINDOW returns with every print's reaction left out, or null until that many exist), and
+ * each print's two-session move in excess of two ordinary sessions — what the event alone adds. A
+ * print's reaction can land on its filing session or the next (EDGAR has no time of day), so both
+ * returns are left out of the base and carried by the event term instead. Shared with the chain
+ * replay (`src/scripts/chain-replay.ts`) so the two price options the same way.
+ *
+ * @param {readonly number[]} closes
+ * @param {readonly string[]} dates
+ * @param {readonly string[]} prints ascending filing dates
+ */
+export function printVolModel(closes, dates, prints, window = VOL_WINDOW) {
+  const lr = closes.map((c, i) => (i === 0 ? 0 : Math.log(c / closes[i - 1])));
+  const printAt = prints.map((p) => dates.findIndex((d) => d >= p)).filter((i) => i > 0);
+  const touched = new Set(printAt.flatMap((s) => [s, s + 1]));
+  const baseVol = closes.map((_, t) => {
+    const clean = [];
+    for (let i = t; i >= 1 && clean.length < window; i--) if (!touched.has(i)) clean.push(lr[i]);
+    return clean.length < window ? null : annualizedVol(clean);
+  });
+  const moves = printAt
+    .filter((s) => s + 1 < closes.length && baseVol[s - 1] != null)
+    .map((s) => {
+      const r2 = Math.log(closes[s + 1] / closes[s - 1]);
+      const excess = Math.max(0, r2 * r2 - (2 * baseVol[s - 1] ** 2) / 252);
+      return { reactedOn: dates[s + 1], move: Math.sqrt(excess) };
+    });
+  return { printAt, baseVol, moves };
 }
 
 /** Implied vol for an option of `years` with `events` prints ahead, each priced at `eventMove`. */
