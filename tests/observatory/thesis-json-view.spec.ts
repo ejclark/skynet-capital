@@ -114,7 +114,9 @@ describe("thesisView", () => {
   });
 
   it("derives 'standing aside' from a halted cycle", () => {
-    const decisions = decisionCyclesView([record({ halted: "kill switch engaged" })]);
+    const decisions = decisionCyclesView([
+      record({ halted: "kill switch engaged", rawIntents: [], guardedIntents: [], outcomes: [] }),
+    ]);
     const view = thesisView("sauron", decisions, [], []);
     expect(view.call.verdict).toBe("standing aside");
   });

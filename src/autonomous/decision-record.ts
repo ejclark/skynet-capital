@@ -36,7 +36,9 @@ export interface DecisionRecord {
   readonly guardedIntents: readonly OrderIntent[];
   /** Per guarded intent, what happened to it this cycle. */
   readonly outcomes: readonly IntentOutcome[];
-  /** Set when the cycle was blocked by the kill switch / a circuit breaker — nothing was decided. */
+  /** Set when the kill switch, an owner suspend or a circuit breaker held the cycle. Kill switch and
+   *  suspends decide and place nothing. A breaker holds OPENS only (#6954 slice 3): the cycle ran,
+   *  its exits were placed, and the opens it wanted carry the refusal `breaker-halt`. */
   readonly halted?: string;
   /**
    * The market state the persona actually reasoned over this cycle — the critical-path field

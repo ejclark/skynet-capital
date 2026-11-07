@@ -509,6 +509,22 @@ export function tradingRoster(
   };
 }
 
+/** A flatten that could not close a position says which, once per distinct set per bot — it re-runs
+ *  every cycle, and a line every 15s would bury the one that matters. */
+const flattenGapsSaid = new Map<string, string>();
+function flattenGapWarn(personaId: string, unflattened: readonly string[]): void {
+  const key = [...unflattened].sort().join(",");
+  if (key === "") {
+    flattenGapsSaid.delete(personaId); // the gap closed: a return of the same set is news again
+    return;
+  }
+  if (flattenGapsSaid.get(personaId) === key) return;
+  flattenGapsSaid.set(personaId, key);
+  console.warn(
+    `[risk-ladder] ${personaId}: flatten cannot close ${key} (an option or a short) — it needs a person`,
+  );
+}
+
 /** READINESS GATE + wiring for one live bot: a not-ready persona is pinned to `observe` (watched,
  *  placing nothing) no matter what `SKYNET_AUTONOMOUS_MODE` says. Pulled out of `runLive` to keep
  *  its own branching off that function's complexity budget (`scripts/arch-scan.mjs`'s sibling
@@ -520,7 +536,11 @@ export function buildLiveBot(
     /** What this bot trades under at boot — `tradingRoster` above. The live subscription swap
      *  (issue #3595) replaces exactly this pair via `AutonomousTrader.swapRoster`. */
     trading: TradingRoster;
+    /** STOP EVERYTHING: the kill switch and the owner's all-bots suspend (this bot's own suspend
+     *  composes below). Places nothing, exits included. */
     blockedReason: () => string | null;
+    /** STOP OPENING: the breakers (#6954 slice 3) — opens refused, exits kept. */
+    openBlockedReason: () => string | null;
     safety: SafetyController;
     onDecision: (r: DecisionRecord) => void;
     /** Ids running their hardcore research-mode build — own readiness pack, faster cooldown. */
@@ -584,12 +604,21 @@ export function buildLiveBot(
       // Per-bot suspend (Mission Control, polled) composes with the kill switch/breakers: either
       // blocks the cycle, and the decision record carries the owner's reason verbatim.
       blockedReason: () => opts.controls.suspendedReason(bot.persona.id) ?? opts.blockedReason(),
+      openBlockedReason: opts.openBlockedReason,
+      // The ladder's rung rides every cycle's guards; its bottom rung closes this bot's shares book
+      // (`safety` was built `actor: "bot"`; a member's never is). No reading yet leaves both off.
+      riskTier: () => opts.safety.riskReading()?.tier,
+      forceFlatten: () =>
+        opts.safety.flattenRequired()
+          ? `risk ladder: drawdown ${((opts.safety.riskReading()?.drawdownPct ?? 0) * 100).toFixed(1)}% — closing the book`
+          : null,
+      onFlattenGap: flattenGapWarn,
       onResult: (r) => {
         opts.safety.recordOrder();
         logResult(r);
       },
       onDecision: (r) => {
-        if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
+        if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — no new positions`);
         opts.onDecision(r);
       },
       onObservationError: (personaId, error) =>

@@ -132,6 +132,13 @@ export interface LiveCycleDeps {
    * trader's own gate is already baked into its `AutonomousTrader` at construction.
    */
   readonly blockedReason: () => string | null;
+  /**
+   * The gate for the scout's EXITS (#6954 slice 3): a breaker holds new positions and never a sale,
+   * so selling a lot due checks this one — the kill switch and the owner's suspend — while the
+   * forced pick itself checks `blockedReason`, which adds the breakers. Absent = `blockedReason`
+   * gates both, as before.
+   */
+  readonly exitBlockedReason?: () => string | null;
   /** Injectable clock (ms) for the scout's `DecisionRecord.at` — fixed in tests. */
   readonly now?: () => number;
   /** Every order the scout itself submits (bots report their own via their `AutonomousTrader`). */
@@ -389,9 +396,16 @@ export class LiveCycleRunner {
     return true;
   }
 
+  /** The block that applies to what is about to be sent: sales skip the breakers, opens do not. */
+  private gate(exiting: boolean): string | null {
+    return exiting && this.deps.exitBlockedReason
+      ? this.deps.exitBlockedReason()
+      : this.deps.blockedReason();
+  }
+
   /** Whether the kill switch or a breaker holds the scout now; said once a day, never per cycle. */
-  private haltedToday(today: string): boolean {
-    const blocked = this.deps.blockedReason();
+  private haltedToday(today: string, exiting = false): boolean {
+    const blocked = this.gate(exiting);
     if (!blocked) return false;
     if (this.haltNotedDay !== today) {
       this.haltNotedDay = today;
@@ -471,7 +485,7 @@ export class LiveCycleRunner {
     const due = this.scoutLots.filter(
       (lot) => this.isDue(lot, today, scout) && !this.triedToday(lot, today),
     );
-    if (due.length === 0 || this.haltedToday(today)) return [];
+    if (due.length === 0 || this.haltedToday(today, true)) return [];
     const portfolio = await scout.broker.getPortfolio();
     const gone = due.filter((lot) => heldQuantity(portfolio, lot.symbol) <= 0);
     this.scoutLots = this.scoutLots.filter((lot) => !gone.includes(lot));
@@ -486,10 +500,16 @@ export class LiveCycleRunner {
     const verdict = applyGuardsWithVerdicts(exits, portfolio, context, host.risk);
     // An exit releases only the lots it was sized from — never one tried earlier today, nor one
     // still working.
-    const offered = await this.submitScoutIntents(exits, scout, verdict, (outcome) => {
-      this.scoutLots = afterExit(this.scoutLots, outcome, (lot) => due.includes(lot));
-      this.persistScoutState();
-    });
+    const offered = await this.submitScoutIntents(
+      exits,
+      scout,
+      verdict,
+      (outcome) => {
+        this.scoutLots = afterExit(this.scoutLots, outcome, (lot) => due.includes(lot));
+        this.persistScoutState();
+      },
+      true,
+    );
     if (offered) this.markTried(today, due);
     this.persistScoutState();
     return offered ? verdict.approved.map((exit) => exit.symbol) : [];
@@ -522,12 +542,13 @@ export class LiveCycleRunner {
       readonly refused: readonly GuardRefusal[];
     },
     onOutcome?: (outcome: IntentOutcome) => void,
+    exiting = false,
   ): Promise<boolean> {
     if (raw.length === 0) {
       return true;
     }
     const intents = verdict?.approved ?? raw;
-    const blocked = this.deps.blockedReason();
+    const blocked = this.gate(exiting);
     if (blocked) {
       this.deps.onScoutHalted?.(blocked);
       return false;

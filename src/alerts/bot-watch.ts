@@ -53,7 +53,10 @@ export const BOT_STALL_AFTER_MS = 10 * 60_000;
 /** The breaker, in the words an owner reads. Typed over `HaltReason`, so a new breaker fails the
  *  build here until someone names it. */
 const BREAKERS: Record<HaltReason, { readonly name: string; readonly why: string }> = {
-  manual: { name: "the kill switch", why: "Someone threw it on purpose." },
+  manual: {
+    name: "the kill switch",
+    why: "Someone threw it on purpose. It stops every order, exits too.",
+  },
   "daily-loss": {
     name: "the daily-loss breaker",
     why: "Account equity fell past the day's loss cap.",
@@ -134,8 +137,8 @@ function haltedAlert(
     at: now,
     source: BOT_WATCH_SOURCE,
     priority: "critical",
-    title: `${bot.name} is halted by ${breaker.name}, so it places no orders`,
-    body: `${breaker.why} A breaker never re-arms on its own, so the bot stays halted until someone resets it.`,
+    title: `${bot.name} is halted by ${breaker.name}, so it opens no new positions`,
+    body: `${breaker.why} Its exits keep running, so it can still get out of what it holds. A breaker never re-arms on its own: a restart of the bots clears it today.`,
     dedupeKey: `halted:${bot.botId}:${reason}:${session}`,
     data: { botId: bot.botId, breaker: reason, passAt },
   };

@@ -79,6 +79,14 @@ export interface RiskConfig {
    */
   readonly accountTier?: RiskTier;
   /**
+   * A tripped safety breaker is holding this account's opens (#6954 slice 3): every order that
+   * ADDS risk is refused `breaker-halt`, and exits still pass — the same shape as the ladder's
+   * block rung, which this sits beside. Set per cycle by the trader from the breaker's own answer;
+   * absent means no breaker is holding, so evals, the readiness gate and every other caller are
+   * untouched.
+   */
+  readonly opensHalted?: true;
+  /**
    * This account's active playbook subscriptions. Scoped to one account already —
    * `RiskConfig` is built per-bot — so a buy's `playbookId` looks itself up here rather than the
    * guard taking an `accountId`. Absent or no match = no sub-allocation clamp, unchanged from
@@ -130,6 +138,9 @@ export type GuardRefusalReason =
   /** The graduated risk ladder's BLOCK rung (opens only — see `applyGuards`'s own comment on why
    *  gating opens alone is sufficient). */
   | "ladder-block"
+  /** A tripped safety breaker (daily loss, order rate, errors, data gap) is holding opens (#6954
+   *  slice 3). Opens only: a breaker never blocks an exit, so a bot can always get out. */
+  | "breaker-halt"
   /** S2: the symbol is inside its protected window (`domain/protected-window.ts`) and the intent
    *  didn't claim `allowThroughPrint`. */
   | "s2-print"
@@ -178,6 +189,7 @@ export type GuardRefusalReason =
  *  string against the real set instead of re-typing it a third time. */
 export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "ladder-block",
+  "breaker-halt",
   "s2-print",
   "e1-open",
   "subscription-filter",
@@ -490,6 +502,12 @@ export function applyGuardsWithVerdicts(
     // the force-flatten sells the bottom rung emits.
     if (opens && ladderBlocks) {
       refused.push({ intent, reason: "ladder-block" });
+      continue;
+    }
+    // A tripped breaker holds opens the same way and for the same reason: new risk is refused, and
+    // every exit passes (#6954 slice 3). It used to stop the whole cycle, exits included.
+    if (opens && config.opensHalted) {
+      refused.push({ intent, reason: "breaker-halt" });
       continue;
     }
     // Trade discipline next (S2/E1, opens only): a dropped entry needs no sizing. S2 keys on
