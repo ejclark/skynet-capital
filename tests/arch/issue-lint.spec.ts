@@ -430,9 +430,20 @@ describe("issue lint — the Status row against the labels", () => {
     expect(code).toBe(0);
   });
 
-  it("reads the label spellings older rows used — `needs-eric` claims Blocked", () => {
+  it("reads the label spellings older rows used — `needs-eric` claims Waiting on a person", () => {
     const { notes } = run(withStatus("needs-eric — waiting on the fork"), "plan");
-    expect(drift(notes)[0]).toContain("Status row says Blocked");
+    expect(drift(notes)[0]).toContain("Status row says Waiting on a person");
+  });
+
+  // #6871: Blocked was renamed; a row typed before it still claims the person-waiting column.
+  it("reads a Blocked row, and the new name, as Waiting on a person", () => {
+    expect(drift(run(withStatus("Blocked · a decision"), "plan").notes)[0]).toContain(
+      "Status row says Waiting on a person",
+    );
+    expect(drift(run(withStatus("Waiting on a person · Eric"), "plan").notes)[0]).toContain(
+      "Status row says Waiting on a person",
+    );
+    expect(drift(run(withStatus("Waiting on a person · Eric"), "needs-eric").notes)).toEqual([]);
   });
 
   it("notes a Backlog row after the ready flip", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@rstest/core";
-import { priorityValues } from "../../../scripts/moneypenny/projects.mjs";
+import { priorityValues, STATUS_OPTIONS } from "../../../scripts/moneypenny/projects.mjs";
 import {
   PRIORITY_WRITES_PER_SWEEP,
   planPriority,
@@ -349,7 +349,9 @@ describe("reconcileBoard: a drag is carried back before anything overwrites", ()
       ]),
       readOpenIssues: () => [issue(3, ["plan"]), issue(4, ["plan"])],
       rateLimit: () => ({ remaining: 5000 }),
-      ensureColumns: () => ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"],
+      ensureColumns: () => STATUS_OPTIONS,
+      readMode: () => ({ position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } }),
+      buildContext: () => ({}),
       horizons: {},
       sync: (n) => {
         synced.push(n);
@@ -387,7 +389,9 @@ describe("reconcileBoard: a drag is carried back before anything overwrites", ()
       ]),
       readOpenIssues: () => [issue(1, ["bug"]), issue(3, ["idea", "P3"])],
       rateLimit: () => ({ remaining: 5000 }),
-      ensureColumns: () => ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"],
+      ensureColumns: () => STATUS_OPTIONS,
+      readMode: () => ({ position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } }),
+      buildContext: () => ({}),
       horizons: {},
       dryRun: true,
       sync: () => {

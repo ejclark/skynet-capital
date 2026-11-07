@@ -11,7 +11,9 @@
 //     footer if missing, then prints one line: `#N [Board status] title`.
 //   - the board column is never set here. It follows labels: moneypenny-events.yml's sync-project
 //     job runs projects-sync.mjs on every label change, and statusForIssue() maps needs-eric/
-//     needs-info → Blocked, ready → Ready, closed → Done. So "make it Blocked" is `--add needs-eric`.
+//     needs-info → Waiting on a person, ready → Ready, closed → Done. So "make it wait on Eric" is
+//     `--add needs-eric` (with a written ask). The preview reads no sub-issues or PRs, so a started
+//     plan reads as holding its seat and an issue an open PR names may still preview as Ready.
 //     `show`/`search` print the column that rule yields, so a session can check without GraphQL.
 //
 //   node scripts/issues.mjs create --title "…" --body-file b.md [--labels a,b] [--force] [--dry-run]
@@ -145,8 +147,10 @@ const labelNames = (issue) => (issue.labels ?? []).map((l) => (typeof l === "str
 /** The board column statusForIssue() yields — what projects-sync.mjs will set on its next run. */
 export const boardStatus = (issue) =>
   statusForIssue({
+    number: issue.number,
     state: issue.state,
     labels: labelNames(issue),
+    blockedBy: Number(issue.issue_dependencies_summary?.blocked_by) || 0,
     subIssues: subIssueCounts(issue),
     decisionCalloutMissing: missingDecisionCallout({
       labels: labelNames(issue),

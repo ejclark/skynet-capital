@@ -147,3 +147,34 @@ export function platterClosesByIssue(openPrs = [], repo = REPO) {
 export function namesNoIssue({ title = "", body = "", headRef = "", repo = REPO } = {}) {
   return !laneClassOf(headRef) && derivePrIssues({ title, body, headRef, repo }).length === 0;
 }
+
+/**
+ * Which open PR, if any, is still building each issue — `derivePrIssues` (pr-issues.mjs, #4393's
+ * "observe, don't remember"), not the branch name.
+ *
+ * The branch was the obvious oracle and it is the wrong one: a plan's slices are not all built on
+ * `plan/<n>`. #4450's slice 1 shipped on `feat/playbook-roll-call` and its slice 2 on `plan/4450`,
+ * so a branch-only check would have read "nothing in flight" while an interactive session was
+ * mid-slice — two builds on one plan, both editing the same state block. The PR-names-the-issue
+ * rules already cover every build path (`Closes #n`, `Part of #n`, a bare `#n` in the title, the
+ * branch's own number), which is exactly the gap #4393 closed for the in-flight cap.
+ *
+ * A HELD PLATTER NAMES ONLY WHAT IT CLOSES (#6282). Since #6144 its body carries a `Part of #n`
+ * bullet per boarded item with work left, and the item's own PR is closed on boarding (#6266), so
+ * reading that bullet as "a build of #n" parked #n for the platter's whole hold — up to a digest
+ * week. `platterClosesByIssue`'s rule (#6193) applies instead: a `Closes #n` issue waits on the
+ * merge; a `Part of #n` issue still has work left, which a puller may take. The slices such a
+ * plan's platter closes are screened separately, as `boardedOn` (#6530): the plan continues, but
+ * never into a sub-issue whose build is already boarded.
+ */
+export function openPrsByIssue(openPrs = []) {
+  const byIssue = new Map();
+  for (const pr of openPrs) {
+    const named =
+      laneClassOf(pr?.head?.ref) === "platter"
+        ? keywordIssuesOf(pr?.body ?? "").closes
+        : derivePrIssues({ title: pr?.title, body: pr?.body, headRef: pr?.head?.ref });
+    for (const n of named) if (!byIssue.has(n)) byIssue.set(n, pr.number);
+  }
+  return byIssue;
+}

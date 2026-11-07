@@ -105,20 +105,23 @@ lane's P label within one sweep, other P labels removed. A hidden "Synced priori
 each value the sync wrote, which is how a drag is told from a sync, and why a half-finished sync
 is never mistaken for one. Rule and failure cases: `scripts/moneypenny/projects-priority.mjs`; plan #6871.
 
-### Where an open ask lives — the board's Blocked column
+### Where an open ask lives — the board's Waiting on a person column
 
-The one place to look for "what is waiting on a person" is the Orchestration board's **Blocked**
-column (Eric, 2026-09-28, #3959: the live board, not a digest, is the default surface). It lists
-every open `needs-eric` and `needs-info` issue, and nothing else does that job — a digest's "Needs
+The one place to look for "what is waiting on a person" is the Orchestration board's **Waiting on
+a person** column (Blocked until #6871; Eric, 2026-09-28, #3959: the live board, not a digest, is
+the default surface). It lists every open `needs-eric`, `needs-info`, `needs-design` and
+`needs-session` issue not being built right now (a card being built shows in Building now, where
+the cap counts it, its labels still naming the person), and nothing else does that job — a digest's "Needs
 you" tier is a dated snapshot of the same query, never a second list to reconcile against it.
 
 - **How it stays complete:** the event job moves a card on every label change, and the reconcile
   sweep (`board-sync.yml` → `scripts/moneypenny/projects-reconcile.mjs`) re-columns drifted cards
   *and* adds any open blocked issue that never got a card because its one event run died (#4303).
-- **The one deliberate gap:** a `needs-eric` issue with no `Needs from you` callout stays out of
-  Blocked until the ask is written (#3913) — an unwritten ask is not an open ask yet.
+- **The one deliberate gap:** a `needs-eric` issue with no `Needs from you` callout reads Backlog
+  until the ask is written (#3913) — an unwritten ask is not an open ask yet; writing it is a
+  session's job.
 - **From a session, without GraphQL:** `node scripts/issues.mjs show <n>` prints the column the
-  rule yields. Answering is a comment on the Blocked issue itself: an authorized reply on a
+  rule yields. Answering is a comment on the waiting issue itself: an authorized reply on a
   `needs-info` / `needs-eric` feedback or plan issue restarts the waiting lane without a session
   noticing it (#3959 slices 1–2, `docs/FEEDBACK.md`).
 

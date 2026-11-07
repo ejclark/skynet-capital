@@ -61,8 +61,9 @@ mandate, per `docs/MONEYPENNY.md`'s authority section.
    still building (#5482 on 2026-10-26: #6055 merged, duplicate #6058 closed, #6065). The hold
    lasts while you show activity (a merge on the plan or a state-block edit) and goes stale after
    2h quiet (`scripts/moneypenny/session-hold.mjs`).
-   A fresh plan can also be refused because the board's Waiting column (started plans nobody is
-   building) is at `startedPlanCap` — the CLI says so; finish one of those instead (#4393).
+   A fresh plan can also be refused because the board's Next part queued column (started plans
+   with a next part approved and nobody building) is at `startedPlanCap` — the CLI says so; finish
+   one of those instead (#4393, #6871).
    Every terminal outcome in LAND takes it back off.
 
    **The expedite class (#4393 criterion 12).** A session Eric starts by hand to build something

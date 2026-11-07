@@ -7,7 +7,6 @@ import {
   type Decision,
   executeStopContinuation,
   nextSubIssue,
-  openPrsByIssue,
   pickContinuation,
   postContinuationReceipt,
   routeContinuation,
@@ -15,7 +14,11 @@ import {
   STOP_CAP,
   stopComment,
 } from "../../../scripts/moneypenny/continuation.mjs";
-import { derivePrIssues, platterClosesByIssue } from "../../../scripts/moneypenny/pr-issues.mjs";
+import {
+  derivePrIssues,
+  openPrsByIssue,
+  platterClosesByIssue,
+} from "../../../scripts/moneypenny/pr-issues.mjs";
 import {
   blockFingerprint,
   nextPickupOf,

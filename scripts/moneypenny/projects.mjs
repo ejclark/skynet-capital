@@ -13,50 +13,133 @@
 // in projects-setup.mjs, projects-backfill.mjs and projects.spec.ts — docs/IDEAS.md carries the sweep.
 
 import { isTransientGhError, sleepSync, withRetry } from "./gh.mjs";
+import { LABELS, labelNames, notPullableReason, parkedBy } from "./labels.mjs";
 
 export const PROJECT_TITLE = "Skynet Capital — Orchestration";
 
-// Board view: one column per Status, WIP limits set per-column in the Projects UI itself (native
-// feature, no code). Order matters — it's the column order gh CLI creates the option list in.
+// THE BOARD'S COLUMNS (#6871 slice 2, the 2026-11-05 board design §3 on the plan issue). Every
+// column is computed by the functions the build lanes pull with, and every number a column shows
+// is one the code enforces. Order matters — it is the option order the field is written in, which
+// is the column order left to right (Backlog and Done are hidden on the Flow view by a UI save).
 //
-// #4393 slice 4 (criteria 5 and 9): "In Progress" is renamed **Building now** — the column means a
-// session is building it this minute, and "in progress" also described every plan half-done and
-// idle for days — and those idle plans get their own column, **Waiting**, so started-but-idle work
-// stops hiding in Ready or Backlog. Stop starting, start finishing: the admission gate counts the
-// Waiting column against `startedPlanCap` (admission.mjs).
-export const STATUS_OPTIONS = ["Backlog", "Ready", "Building now", "Waiting", "Blocked", "Done"];
-
-/** The building column's name, and the one it had before #4393 slice 4. */
+// History: #4393 slice 4 renamed "In Progress" to **Building now** and added **Waiting** for
+// started-but-idle plans. #6871 renamed Blocked to **Waiting on a person** (the card names the
+// person), split Waiting into **Next part queued** (it holds one of `startedPlanCap`'s seats) and
+// **Next part needs approval** (nothing left is approved to build, so no builder can finish it),
+// and narrowed Ready to exactly what the unattended sweep may pull.
 export const BUILDING = "Building now";
-export const WAITING = "Waiting";
+export const WAITING_ON_PERSON = "Waiting on a person";
+export const NEXT_QUEUED = "Next part queued";
+export const NEXT_NEEDS_APPROVAL = "Next part needs approval";
+
+export const STATUS_OPTIONS = [
+  "Backlog",
+  WAITING_ON_PERSON,
+  NEXT_NEEDS_APPROVAL,
+  "Ready",
+  NEXT_QUEUED,
+  BUILDING,
+  "Done",
+];
 
 // Renamed options, old name → new. `statusFieldUpdate` carries the OLD option's id onto the new
-// name, so GitHub renames the column in place — every card in it stays put and Eric's WIP limit on
-// it (set in the UI, keyed to the option) survives. Without the id, `updateProjectV2Field` replaces
-// the option list wholesale and every card loses its Status until the sweep rewrites it.
-export const RENAMED_STATUS_OPTIONS = { "In Progress": BUILDING };
+// name, so GitHub renames the column in place — every card in it stays put. Without the id,
+// `updateProjectV2Field` replaces the option list wholesale and every card loses its Status until
+// the sweep rewrites it. Waiting's cards land in Next part queued; the sweep then moves the ones
+// holding no seat to Next part needs approval.
+export const RENAMED_STATUS_OPTIONS = {
+  "In Progress": BUILDING,
+  Blocked: WAITING_ON_PERSON,
+  Waiting: NEXT_QUEUED,
+};
 
-// Every new GitHub Project ships with its own default Status field (Todo/In Progress/Done) — the
-// setup script's "field already exists, skip" check meant our 5-value set was never actually
-// applied on first run (#3818 slice B, logged on the plan issue 2026-09-27). Fixing an EXISTING
-// field's options needs `updateProjectV2Field`, which gh CLI has no subcommand for — only a raw
-// GraphQL call does this (verified against GitHub's own schema, github.com/octokit/graphql-schema,
-// since `gh project field-*` and GitHub's rendered docs don't show it). That mutation REPLACES the
-// whole option list when given one, so this carries color/description for every option, not just
-// the new ones. Colors are cosmetic only — docs/BRAND.md's colorblind rule doesn't apply here,
-// since a board column's position and name already carry the meaning, not the color.
-export const STATUS_FIELD_OPTIONS = [
-  { name: "Backlog", color: "GRAY", description: "" },
-  { name: "Ready", color: "BLUE", description: "" },
-  { name: BUILDING, color: "YELLOW", description: "A session is building it right now" },
-  {
-    name: WAITING,
-    color: "ORANGE",
-    description: "A plan started and idle — finish before starting",
-  },
-  { name: "Blocked", color: "RED", description: "" },
-  { name: "Done", color: "GREEN", description: "" },
-];
+// The fallback for the window between this file merging and the sweep writing the field
+// (projects-reconcile.mjs `ensureStatusColumns`): a column the live board lacks resolves to the
+// name it had before, so a sync never asks for an option the field does not carry and goes red.
+// Next part needs approval is new; before it, those plans read Waiting.
+const LEGACY_STATUS = {
+  [BUILDING]: ["In Progress"],
+  [WAITING_ON_PERSON]: ["Blocked"],
+  [NEXT_QUEUED]: ["Waiting"],
+  [NEXT_NEEDS_APPROVAL]: ["Waiting"],
+};
+
+/**
+ * The column `name` resolves to on a board carrying `columns`: itself, else its pre-rename name,
+ * else — for a column the rule can do without (`optional`) — null, so the rule falls through to
+ * the next column; a required column keeps its own name and the write fails loudly.
+ */
+function columnOn(name, columns, { optional = false } = {}) {
+  if (columns.includes(name)) return name;
+  const legacy = (LEGACY_STATUS[name] ?? []).find((c) => columns.includes(c));
+  if (legacy) return legacy;
+  return optional ? null : name;
+}
+
+// THE DIAL SENTENCES (#6871 §3). The two columns that carry a limit say it in their option
+// description, written from the dial position the lanes obey (`readWorkMode()`), so the board
+// never shows a number the code does not enforce. The board's own hand-set WIP limit is
+// display-only and is cleared by hand (#6871 slice B3). Each sentence is pinned to `admitBuild`
+// by tests/scripts/moneypenny/board-columns.spec.ts — change one and that spec says whether the
+// gate still agrees. Fix-first means `fast-track`, which skips the in-flight and plan caps today.
+/**
+ * Building now's and Next part queued's descriptions for one dial reading, or null when the dial
+ * could not be read (a fallback position is not a reading, so the board keeps what it shows).
+ */
+export function dialSentences(mode) {
+  if (!mode || mode.unreadable || !mode.position) return null;
+  const inFlight = mode.caps?.inFlightCap ?? 0;
+  const plans = mode.caps?.startedPlanCap ?? 0;
+  const building = {
+    halt: "Stopped: nothing new starts",
+    conserve: "Only fix-first cards start",
+  }[mode.position];
+  return {
+    [BUILDING]:
+      building ??
+      `Lanes start up to ${inFlight}; fix-first cards and hand-started sessions may add more`,
+    [NEXT_QUEUED]:
+      mode.position === "halt"
+        ? "Part built; next part approved. Nothing starts while stopped"
+        : `Part built; next part approved. At ${plans} here, no new plan starts (fix-first excepted)`,
+  };
+}
+
+// `updateProjectV2Field` REPLACES the whole option list when given one, so this carries color and
+// description for every option, not just the new ones. Fixing an EXISTING field's options needs
+// that raw GraphQL mutation — gh CLI has no subcommand for it (#3818 slice B; verified against
+// GitHub's own schema, github.com/octokit/graphql-schema). Colors are cosmetic: every column is
+// gray but Waiting on a person, the one a person acts on, and the name carries the meaning (BRAND
+// colorblind rule). Descriptions are one line each; the rules live in the project README.
+// `description: undefined` (a dial column with no dial reading) means "keep what the board shows".
+/** The Status options to write, for one dial reading (`dialSentences`). */
+export function statusFieldOptions(mode) {
+  const dial = dialSentences(mode);
+  return [
+    { name: "Backlog", color: "GRAY", description: "Not buildable yet; its labels say why" },
+    {
+      name: WAITING_ON_PERSON,
+      color: "BLUE",
+      description: "Stopped until a person acts; its labels say who",
+    },
+    {
+      name: NEXT_NEEDS_APPROVAL,
+      color: "GRAY",
+      description: "Part built; nothing left is approved to build",
+    },
+    {
+      name: "Ready",
+      color: "GRAY",
+      description: "Approved, nothing in the way; builds pull the top lane first",
+    },
+    { name: NEXT_QUEUED, color: "GRAY", description: dial?.[NEXT_QUEUED] },
+    { name: BUILDING, color: "GRAY", description: dial?.[BUILDING] },
+    { name: "Done", color: "GRAY", description: "" },
+  ];
+}
+
+/** The options with no dial reading: dial columns keep whatever description the board carries. */
+export const STATUS_FIELD_OPTIONS = statusFieldOptions(null);
 
 /**
  * Does an existing Status field (its current option names, in whatever order the API returned)
@@ -70,36 +153,58 @@ export function statusOptionsMatch(currentNames = []) {
   return want.size === have.size && [...want].every((n) => have.has(n));
 }
 
+/** Does a live option's color or description differ from the one wanted? Only keys it carries. */
+function styleDrifts(live, want) {
+  if (!live) return false;
+  if ("color" in live && live.color !== want.color) return true;
+  return "description" in live && live.description !== want.description;
+}
+
 /**
  * The `singleSelectOptions` to send `updateProjectV2Field` so the live Status field carries
- * `STATUS_FIELD_OPTIONS`, or null when nothing needs writing. `current` is the field's options as
- * gh's `field-list` returns them (`{id, name}`). Every option that survives — by its own name, or by
- * its old one in `RENAMED_STATUS_OPTIONS` — keeps its id, so the mutation renames and adds in place
- * instead of replacing the list (which would strip every card's Status). Pure; specced.
+ * `statusFieldOptions(mode)`, or null when nothing needs writing. `current` is the field's options
+ * (`{id, name}`, plus `color` and `description` when the read asked for them). Every option that
+ * survives — by its own name, or by its old one in `RENAMED_STATUS_OPTIONS` — keeps its id, so the
+ * mutation renames and adds in place instead of replacing the list (which would strip every card's
+ * Status). Pure; specced.
+ *
+ * A write is due when a name is missing, or (#6871) when a surviving option's color or description
+ * differs — the dial sentences change with the dial, so names alone said "nothing to do" while the
+ * board printed a stale cap. A read that carries no color/description (gh's `field-list`) compares
+ * names only, as before.
  *
  * `keepExtras` is the reconcile sweep's mode: it runs on every push, unattended, so it only ever
- * ADDS and RENAMES. A column someone made by hand in the Projects UI is kept (with its id; gh does
- * not report colors, so it is re-sent GRAY) and is never a reason to write. Removing an option stays
+ * ADDS, RENAMES and RESTYLES. A column someone made by hand in the Projects UI is kept (with its id
+ * and its own color/description) and is never a reason to write. Removing an option stays
  * projects-setup.mjs's job — the default mode, an exact match, run when someone means it.
  */
-export function statusFieldUpdate(current = [], { keepExtras = false } = {}) {
+export function statusFieldUpdate(current = [], { keepExtras = false, mode } = {}) {
   const names = current.map((o) => o?.name);
-  const missing = STATUS_OPTIONS.some((n) => !names.includes(n));
-  if (keepExtras ? !missing : statusOptionsMatch(names)) return null;
   const idOf = new Map();
   for (const o of current) {
     if (!(o?.id && o?.name)) continue;
     const name = RENAMED_STATUS_OPTIONS[o.name] ?? o.name;
     if (!idOf.has(name) || o.name === name) idOf.set(name, o.id);
   }
-  const wanted = STATUS_FIELD_OPTIONS.map((o) =>
-    idOf.has(o.name) ? { id: idOf.get(o.name), ...o } : o,
-  );
+  const liveOf = (id) => current.find((o) => o?.id === id);
+  const wanted = statusFieldOptions(mode).map((o) => {
+    const id = idOf.get(o.name);
+    const description = o.description ?? liveOf(id)?.description ?? "";
+    return id ? { id, ...o, description } : { ...o, description };
+  });
+  const restyled = wanted.some((o) => o.id && styleDrifts(liveOf(o.id), o));
+  const missing = STATUS_OPTIONS.some((n) => !names.includes(n));
+  if (!restyled && (keepExtras ? !missing : statusOptionsMatch(names))) return null;
   if (!keepExtras) return wanted;
   const used = new Set(wanted.map((o) => o.id).filter(Boolean));
   const extras = current
     .filter((o) => o?.id && o?.name && !used.has(o.id))
-    .map((o) => ({ id: o.id, name: o.name, color: "GRAY", description: "" }));
+    .map((o) => ({
+      id: o.id,
+      name: o.name,
+      color: o.color ?? "GRAY",
+      description: o.description ?? "",
+    }));
   return [...wanted, ...extras];
 }
 
@@ -127,18 +232,44 @@ export function isStartedPlan({ labels = [], subIssues = {} } = {}) {
 /**
  * Started, and with work left: an open sub-issue, or `next-slice` (the lane's "more remains").
  * A plan whose sub-issues are all closed and that carries no `next-slice` is finished-but-open —
- * slice 5's auto-close, never the Waiting column.
+ * slice 5's auto-close, never a next-part column.
  */
 function hasWorkLeft({ labels = [], subIssues = {} } = {}) {
   const open = (Number(subIssues.total) || 0) - (Number(subIssues.completed) || 0);
   return open > 0 || labels.includes("next-slice");
 }
 
+const hasLabel = (issue, name) => labelNames(issue?.labels).includes(name);
+
+/**
+ * DOES THIS STARTED PLAN HOLD ONE OF THE CAP'S SEATS? Only while a lane could pull its next work
+ * (2026-10-18 loop census). The cap's decision is unchanged — "finish one before starting a new
+ * plan", `startedPlanCap` 4 — but it counted every Waiting plan, and 9 of the 10 Waiting that day
+ * had nothing any lane could pull: their open sub-issues were unready sub-plans or unlabelled
+ * stories, or (#3959) every sub-issue was closed. Nothing could finish them, so every fresh plan
+ * was refused, a P1 among them — and #5494 held a seat against its own sub-plan #5482. A plan
+ * nobody can work is waiting on someone to ready its remainder, not on a builder.
+ *
+ * Pullable = the plan carries `ready` itself (its next slice is the plan lane's), or one of its
+ * open sub-issues carries `ready` and is not itself a plan. A row whose sub-issues were not read
+ * (`openSubIssues` absent) keeps its seat — the old count, never a looser one.
+ *
+ * Since #6871 this is also the line between the board's two next-part columns: a seat is Next part
+ * queued, no seat is Next part needs approval. It lives here, beside `statusForIssue`, so the
+ * admission gate (which re-exports it) and the board read one rule.
+ */
+export function holdsCapSeat(plan) {
+  const subs = plan?.openSubIssues;
+  if (!Array.isArray(subs)) return true;
+  if (hasLabel(plan, LABELS.ready.name)) return true;
+  return subs.some((s) => hasLabel(s, LABELS.ready.name) && !hasLabel(s, LABELS.plan.name));
+}
+
 // Priority is LABEL-LED (#4064) and the board carries a copy (#6871 slice B1): a hand-set P label
 // wins, otherwise `classOf()`'s class from scripts/rank.mjs — the same answer `npm run rank` prints.
 // projects-sync.mjs writes it per issue and the reconcile sweep heals it; a human drag between
 // priority lanes flows back as that lane's P label. The rule and its failure cases live in
-// projects-priority.mjs. Backlog sorts by it; "Flow by priority" and Roadmap lane by it.
+// projects-priority.mjs. Backlog sorts by it; Flow and Roadmap lane by it.
 export const PRIORITY_OPTIONS = ["P0", "P1", "P2", "P3"];
 
 // The hidden text field that records each Priority the sync wrote, so a value that differs from it
@@ -175,7 +306,7 @@ export const FIELDS = [
 //      issue-lint.mjs. Deleting it breaks four callers to save one line, and the sweep already heals
 //      a dropped close event, which is the only thing the built-in would have covered.
 //   3. TWO OF THEM WOULD ACTIVELY DISAGREE. "Item reopened" writes one fixed value; the rule below
-//      derives Backlog/Ready/Blocked/Building now from the labels a reopened issue still carries, so
+//      derives every open column from the labels a reopened issue still carries, so
 //      a reopened `ready` issue would sit in the wrong column until the next push-triggered sweep
 //      overwrote it. "Auto-add to project" filters on creation and cannot express
 //      `isBacklogCandidate` for a `ci-failure` label applied afterwards.
@@ -194,54 +325,71 @@ export const FIELDS = [
 //
 /**
  * The sync rule from #3818 slice B, as one pure decision: given what's already knowable about an
- * issue from labels/state/linked PRs (never a network call itself), which Status column does it
- * belong in? Mirrors labels already in use rather than inventing a second taxonomy.
+ * issue from labels/state/sub-issues and the per-sweep reads (never a network call itself), which
+ * Status column does it belong in? Mirrors labels already in use rather than inventing a second
+ * taxonomy.
  *
- * Precedence, most authoritative first: closed always wins (an issue can't be both Done and
- * Blocked); needs-eric/needs-info next, because a blocked item should read as blocked even if a
- * PR happens to be open against it; then `in-progress` (or an open linked PR); then ready; else
- * it sits in Backlog.
+ * THE ORDER (#6871 §3; the first match wins), and why each step sits where it does:
+ *   1. **Done** — closed always wins.
+ *   2. **Building now** — `in-progress` (or an open linked PR, for a caller that can see one),
+ *      BEFORE every needs-* label: the in-flight cap counts every open `in-progress` issue
+ *      (admission.mjs `admitBuild`), so a card being built that also waits on someone still shows
+ *      the seat it takes. Its labels still name the person. (#3960: the `in-progress` label is
+ *      what fills this column; the sync never passes `hasOpenLinkedPr`.)
+ *   3. **Waiting on a person** — `needs-info`, `needs-design`, `needs-session`, or `needs-eric`
+ *      with its written ask. A `needs-eric` with no `Needs from you` callout (#3913 slice 2,
+ *      decision-callout.mjs) is not shown as waiting on Eric: writing the ask is a session's job,
+ *      so it reads Backlog until the ask is written.
+ *   4. **Next part queued** — a started plan with work left that holds a cap seat (`holdsCapSeat`)
+ *      and carries no parking label. Exactly `waitingPlans` (admission.mjs), the list the
+ *      started-plan cap counts; checked before Ready because a started plan's next part is
+ *      finishing, not starting.
+ *   5. **Next part needs approval** — a started plan with work left that holds no seat: nothing
+ *      left is approved to build, so no builder can finish it.
+ *   6. **Ready** — `pullable` (labels.mjs) for the unattended sweep: `ready`, buildable, not
+ *      blocked by an open issue, not boarded on a held platter (`boardedOn`), and not already
+ *      named by an open PR (`namedByOpenPr` — the sweep's own `withoutOpenPr`). Ready plus the
+ *      pullable cards in Next part queued is the sweep's pool.
+ *   7. **Backlog** — everything else.
  *
- * #3960 (2026-09-30): the `in-progress` label is what fills the building column now. The column
- * keyed only on `hasOpenLinkedPr`, which projects-sync.mjs never passed — and live sessions
- * auto-merge within minutes, so an open PR is rarely there to see. Eric set the column's WIP limit
- * to 3 and it read 0 while ~3 stories were being built. `hasOpenLinkedPr` stays as a second way in
- * for a caller that can see one.
- *
- * #4393 slice 4: a started plan with work left and nobody building it reads **Waiting** — after
- * Blocked (a plan waiting on Eric is blocked, not idle) and after Building now, ahead of Ready.
- * `subIssues` is `subIssueCounts(issue)`.
+ * `openSubIssues` is the plan's open sub-issues (`{number, labels}`), absent when unread — an
+ * unread plan keeps its seat, as the cap does. `boardedOn` and `namedByOpenPr` are the per-sweep
+ * PR reads; left out, those two checks are skipped.
  *
  * `columns` is the option names the live board carries, for the one window where it lags this
  * file: between this rule merging and the sweep renaming the field (projects-reconcile.mjs
- * `ensureStatusColumns`). Without it a sync would ask for a column the board does not have yet
- * and go red. So the building column falls back to its old name, and Waiting to whatever the
- * issue would read without it. Left out, it is this file's own `STATUS_OPTIONS`.
+ * `ensureStatusColumns`). A renamed column falls back to its old name; a next-part column the
+ * board has under neither name is skipped. Left out, it is this file's own `STATUS_OPTIONS`.
  */
 export function statusForIssue({
+  number,
   state = "open",
   labels = [],
   hasOpenLinkedPr = false,
   decisionCalloutMissing = false,
   subIssues = {},
+  openSubIssues,
+  blockedBy = 0,
+  boardedOn,
+  namedByOpenPr = false,
   columns = STATUS_OPTIONS,
 } = {}) {
-  if (state === "closed") return "Done";
+  if (String(state).toLowerCase() === "closed") return "Done";
   const has = (name) => labels.includes(name);
-  // #3913 slice 2: a `needs-eric` with no `Needs from you` callout (decision-callout.mjs) is not
-  // shown as waiting on Eric — it falls through to its ordinary column until the ask is written.
-  if (has("needs-info") || (has("needs-eric") && !decisionCalloutMissing)) return "Blocked";
-  if (has("in-progress") || hasOpenLinkedPr) {
-    const legacy = Object.keys(RENAMED_STATUS_OPTIONS).find((k) => columns.includes(k));
-    return columns.includes(BUILDING) || !legacy ? BUILDING : legacy;
+  if (has(LABELS.inProgress.name) || hasOpenLinkedPr) return columnOn(BUILDING, columns);
+  const asksEric = has(LABELS.needsEric.name) && !decisionCalloutMissing;
+  const waitsOnPerson = [LABELS.needsInfo, LABELS.needsDesign, LABELS.needsSession].some((l) =>
+    has(l.name),
+  );
+  if (asksEric || waitsOnPerson) return columnOn(WAITING_ON_PERSON, columns);
+  const parked = parkedBy(labels).length > 0;
+  if (!parked && isStartedPlan({ labels, subIssues }) && hasWorkLeft({ labels, subIssues })) {
+    const seat = holdsCapSeat({ labels, openSubIssues });
+    const column = columnOn(seat ? NEXT_QUEUED : NEXT_NEEDS_APPROVAL, columns, { optional: true });
+    if (column) return column;
   }
-  if (
-    columns.includes(WAITING) &&
-    isStartedPlan({ labels, subIssues }) &&
-    hasWorkLeft({ labels, subIssues })
-  )
-    return WAITING;
-  if (has("ready")) return "Ready";
+  const issue = { number, state, labels, issue_dependencies_summary: { blocked_by: blockedBy } };
+  if (!namedByOpenPr && notPullableReason(issue, { boardedOn }) === null) return "Ready";
   return "Backlog";
 }
 
@@ -618,7 +766,9 @@ export function findBoardItem(items = [], issueUrl) {
 /**
  * One issue's board items, selected from its `projectItems` nodes and shaped like the `item-list`
  * rows `resolveBoardItem`'s `cachedItems` already takes: a one-element list when the issue is on
- * project `projectNumber`, empty when it is not. Pure — the caller runs the GraphQL read.
+ * project `projectNumber`, empty when it is not. Carries the card's Status (#6871 slice 2), so the
+ * events lane skips a Status write that would change nothing, as the sweep already does. Pure —
+ * the caller runs the GraphQL read.
  *
  * `issueUrl` is carried through rather than read back from GitHub because the match rule downstream
  * is `content.url` (`findBoardItem`), and the query was asked ABOUT this issue: the url is known.
@@ -626,7 +776,14 @@ export function findBoardItem(items = [], issueUrl) {
 export function boardItemsFromProjectItems({ nodes = [], projectNumber, issueUrl } = {}) {
   const node = (nodes ?? []).find((n) => n?.id && n?.project?.number === projectNumber);
   return node
-    ? [{ id: node.id, ...priorityValues(node), content: { type: "Issue", url: issueUrl } }]
+    ? [
+        {
+          id: node.id,
+          ...(node.status?.name ? { status: node.status.name } : {}),
+          ...priorityValues(node),
+          content: { type: "Issue", url: issueUrl },
+        },
+      ]
     : [];
 }
 
@@ -804,39 +961,33 @@ export function explainMaskedOwnerFailure({ ok = false, text = "" } = {}) {
   return `${head} A direct GraphQL probe with the same GH_TOKEN said: "${probe || "(nothing)"}".`;
 }
 
-// THE VIEWS (three on 2026-09-29, a fourth in #6871). projects-setup.mjs used to end with "views
-// are one-time UI setup" printed to a workflow log nobody read, so the board shipped with only
-// GitHub's default table. GitHub's REST API now creates views (POST /users/{id}/projectsV2/{n}/views
-// — layout, filter, visible_fields, group_by, vertical_group_by, sort_by; numeric user id, per
-// GitHub's OpenAPI description as of 2026-11), so they are provisioned here instead. The API has no
-// update/delete for views, so the rule is create-if-missing by name; the default "View 1" table
-// is left alone (renaming or deleting it stays a UI click).
-//   Flow     — kanban: one column per Status, the work's state at a glance.
+// THE VIEWS (three on 2026-09-29). projects-setup.mjs used to end with "views are one-time UI
+// setup" printed to a workflow log nobody read, so the board shipped with only GitHub's default
+// table. GitHub's REST API creates views (POST /users/{id}/projectsV2/{n}/views — layout, filter,
+// visible_fields, group_by, vertical_group_by, sort_by; numeric user id, per GitHub's OpenAPI
+// description as of 2026-11) and has NO update or delete for them
+// (docs.github.com/en/rest/projects/views), so the rule is create-if-missing by name. Columns,
+// lanes, sort, hidden columns and a column's limit on an EXISTING view are a UI save, always; the
+// default "View 1" table is left alone.
+//   Flow     — kanban: one column per Status, one swimlane per Priority. The 2026-11-05 design
+//              (#6871 §5) makes the view Eric built, "Kanban Board", the Flow; a session renames
+//              the old Flow to "Flow (old)" first, so nothing is ever renamed onto a name this list
+//              would create. Dragging a card between lanes sets its P label (projects-priority.mjs).
 //   Backlog  — table of everything not Done, sorted by Priority.
 //   Roadmap  — a dateless Now / Next / Later board: one column per Horizon, one swimlane per
 //              Priority. Eric, 2026-09-29: the roadmap is a strategic time-horizon view that
 //              informs priority, and nobody will maintain dates. GitHub's roadmap layout only
 //              draws bars from date fields, so it was the wrong tool; a board over Horizon is the
 //              classic Now/Next/Later roadmap. Target date stays on the project, unused.
-//   Flow by priority — #6871 slice B2 (Eric, 2026-11-04: "our project kanban board should switch
-//              to swim lanes"): Flow's Status columns, one swimlane per Priority, Done hidden — a
-//              closed card has nothing left to pull and the sync leaves its Priority unset, so Done
-//              would fill a "No Priority" lane. Dragging a card between lanes sets its P label
-//              (projects-priority.mjs). The old Flow stays until Eric says otherwise (slice B3).
+// "Flow by priority" (#6871 slice B2) left this list in slice 2: REST refused to create it (404
+// under both API versions, 2026-11-05), and a later setup dispatch creating it beside the renamed
+// Flow would leave two flows.
 // `visibleFields` names the card fields a board view shows. Listing them is how "Synced priority"
 // stays hidden on the views made here; a name the project does not report is skipped.
 const CARD_FIELDS = ["Assignees", "Labels"];
 
 export const VIEWS = [
   { name: "Flow", layout: "board", columnsBy: "Status" },
-  {
-    name: "Flow by priority",
-    layout: "board",
-    columnsBy: "Status",
-    groupBy: "Priority",
-    filter: "-status:Done",
-    visibleFields: CARD_FIELDS,
-  },
   {
     name: "Backlog",
     layout: "table",

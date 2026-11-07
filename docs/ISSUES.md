@@ -60,7 +60,7 @@ Copy-paste skeleton. Everything above the fold fits one phone screen; everything
 
 | | |
 |---|---|
-| **Status** | Blocked · waiting on a decision (needs-eric) |
+| **Status** | Waiting on a person · a decision (needs-eric) |
 | **Surface** | Moneypenny's rail (filings listed at `/app/accounts?section=feedback`) |
 | **Size** | ~2 PRs |
 
@@ -108,7 +108,8 @@ Rules that make it work, in priority order:
    exists to prevent (Eric, 2026-08-30: issues bury the action-required item behind a fold instead
    of surfacing it below the context). The rule holds **after filing too**: the label usually
    lands later, from another lane, so `issues.mjs update --add needs-eric` refuses a body with no
-   callout, and the board keeps such an issue out of Blocked until the callout exists
+   callout, and the board keeps such an issue in Backlog, out of Waiting on a person, until the
+   callout exists
    (`scripts/moneypenny/decision-callout.mjs`, #3913). It binds every issue with the label, whoever
    filed it: sessions post under Eric's login, so neither the author nor a footer can tell whose words
    an issue is (#6584). A lane writes its ask into the callout when it applies the label. A parked plan
@@ -139,9 +140,10 @@ Rules that make it work, in priority order:
    ranked list of what the page shows first at phone width (`At 390, in order: balance · open
    positions · the trade button`). The PR's first phone screenshot is checked against it
    (CLAUDE.md → "Mobile-first on every information surface": the ranking is the product).
-11. **The Status row leads with the board's word, then free text.** One of Backlog · Ready ·
-   Building now · Waiting · Blocked · Done (the board's columns, `scripts/moneypenny/projects.mjs`;
-   `In Progress`, Building now's older name, still reads as it — `RENAMED_STATUS_OPTIONS`, #4393),
+11. **The Status row leads with the board's word, then free text.** One of Backlog · Waiting on a
+   person · Next part needs approval · Ready · Next part queued · Building now · Done (the board's
+   columns, `scripts/moneypenny/projects.mjs`; the older names `In Progress` and `Blocked` still read
+   as Building now and Waiting on a person — `RENAMED_STATUS_OPTIONS`, #4393, #6871),
    then a `·` and whatever a reader needs: `Ready · plan, no decision needed`. The labels and the board move
    after filing; the row is typed once, and #3748 and #3407 were found saying `ready` and
    `needs-eric` with neither label on them. `issue-lint --labels` notes a first word the labels

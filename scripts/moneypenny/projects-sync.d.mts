@@ -1,7 +1,8 @@
 // Type surface for scripts/moneypenny/projects-sync.mjs — the board context #4183 added, which a
 // spec exercises directly with injected readers (no network). The scripts/ tree is plain ESM with
 // `allowJs` off (see index.d.mts for the same reasoning).
-import type { BoardItem } from "./projects.d.mts";
+import type { AdmissionIssue } from "./admission.d.mts";
+import type { BoardItem, StatusColumn } from "./projects.d.mts";
 import type { PriorityIssue, PriorityPlan } from "./projects-priority.d.mts";
 
 export interface BoardItemPage {
@@ -23,7 +24,7 @@ export interface BoardContext {
   fields(opts?: { refresh?: boolean }): {
     id: string;
     name: string;
-    options?: { id: string; name: string }[];
+    options?: { id: string; name: string; color?: string; description?: string }[];
   }[];
   project(): { id: string; number: number };
   noteAdded(item?: BoardItem): void;
@@ -31,7 +32,11 @@ export interface BoardContext {
 
 export function createBoardContext(readers?: {
   readItems?: () => BoardItemPage;
-  readFields?: () => { id: string; name: string; options?: { id: string; name: string }[] }[];
+  readFields?: () => {
+    id: string;
+    name: string;
+    options?: { id: string; name: string; color?: string; description?: string }[];
+  }[];
   readProject?: () => { id: string; number: number };
   readIssueItems?: (issue: SyncIssueRef) => BoardItem[];
   log?: (line: string) => void;
@@ -79,9 +84,46 @@ export function readIssue(
   user?: { login?: string };
 };
 
+/** The open-PR reads one column needs: issue → platter that closes it, issue → open PR naming it. */
+export interface PrMaps {
+  boardedOn: ReadonlyMap<number, number>;
+  openPrOn: ReadonlyMap<number, number>;
+}
+
+/** An issue as a REST row: the admission shape, with GitHub's nullable body. */
+export type ColumnIssue = Omit<AdmissionIssue, "body" | "issue_dependencies_summary"> & {
+  body?: string | null;
+  issue_dependencies_summary?: { blocked_by?: number } | null;
+};
+
+/** The reads beyond an issue's own row that `wantedColumn` takes (#6871 slice 2). */
+export interface ColumnContext {
+  columns?: readonly string[];
+  openSubIssuesOf?: (issue: ColumnIssue) => AdmissionIssue["openSubIssues"] | undefined;
+  prMaps?: () => PrMaps;
+}
+
+/** The column an issue (a REST row) belongs in, or null for a card the board never carries. */
+export function wantedColumn(issue: ColumnIssue, context?: ColumnContext): StatusColumn | null;
+
+/** One memoized, fail-open `pulls?state=open` read, as both PR maps. */
+export function openPrMaps(deps?: {
+  read?: () => unknown[];
+  log?: (line: string) => void;
+}): () => PrMaps;
+
+/** A started plan's open sub-issues (one REST read); undefined for anything else. */
+export function readOpenSubIssuesOf(
+  issue: ColumnIssue,
+  readAll?: (path: string) => unknown[],
+): AdmissionIssue["openSubIssues"] | undefined;
+
+/** The reads a one-issue sync makes for itself. */
+export function oneIssueContext(): ColumnContext;
+
 export function syncIssue(
   issueNumber: string,
-  opts?: { horizon?: string; board?: BoardContext },
+  opts?: { horizon?: string; board?: BoardContext; context?: ColumnContext },
 ):
   | { skipped: true; reason: string }
   | {
@@ -90,6 +132,8 @@ export function syncIssue(
       added: boolean;
       decisionCalloutMissing?: boolean;
       priority?: PriorityPlan | { action: "skipped"; reason: string };
+      /** The parent issue the events lane re-syncs after this one (#6871 slice 2). */
+      parent: number | null;
     };
 
 /** The hand Horizon triage file (issue number → Now/Next/Later), read once per process. */
