@@ -201,6 +201,9 @@ Field 8 is no longer optional. A strategy carries its exit plan before it execut
 - **The option pairs carry no stop** because the stop mechanism reads share positions only: on a
   contract it would fire on nothing, and on the wheel it would sell the shares its owner chose to
   hold. A stop priced on the contract's own premium is parked in `docs/IDEAS.md`.
+- **A stopped-out pair stays out of the name**: until its window closes, or until the next session
+  for a pair with no window, so a stop is never followed by a buy-back at the lower price
+  (`src/playbooks/stop-latch.ts`).
 - **The stop levels are unmeasured** (`HOUSE_STOP_LOSS`). Wrong if by 2026-12-15 more than half of
   stop-triggered paper exits recover past their entry within 5 sessions.
 

@@ -93,6 +93,10 @@ describe("exitPlanOf", () => {
     expect(exitPlanOf(p)).toBeUndefined();
   });
 
+  it("counts a stop for an order with no mode only when every mode enforces one (SAURON)", () => {
+    expect(exitPlanOf(SAURON)?.stop).toEqual(HOUSE_STOP_LOSS.standard);
+  });
+
   it("counts a target or a time exit in any mode, a missing mode included", () => {
     expect(exitPlanOf(bare({ exits: { time: "sells tomorrow" } }))).toEqual({
       time: "sells tomorrow",
@@ -219,6 +223,60 @@ describe("a held position past its play's stop is closed", () => {
     expect(aggressive.filter((i) => i.side === "sell")).toEqual([]);
   });
 
+  describe("a play its stop sold out of a name stays out of it", () => {
+    const base: Persona = { id: "plain", name: "plain", thesis: "test", decide: () => [] };
+    // S1-NVDA's window open: NVDA reports 2026-11-18, confirmed; 2026-10-28 is about D-15.
+    const NVDA_PRINT = {
+      symbol: "NVDA",
+      date: "2026-11-18",
+      status: "confirmed" as const,
+      source: "test",
+      window: { start: "2026-11-17", end: "2026-11-19" },
+    };
+    const PRINT = [NVDA_PRINT];
+    const at = (iso: string, last: number) => aContext({ NVDA: { last } }, iso);
+    const flat = aPortfolio({ cash: 100_000 });
+
+    it("does not buy back while its window is still open, and says why once", () => {
+      const said: string[] = [];
+      const bot = withPlaybooks(
+        base,
+        [{ playbook: S1_NVDA, mode: "standard" }],
+        PRINT,
+        [],
+        undefined,
+        (l) => said.push(l),
+      );
+      expect(bot.decide(at("2026-10-28T15:00:00Z", 100), flat)).toEqual([
+        expect.objectContaining({ side: "buy", symbol: "NVDA" }),
+      ]);
+      const trip = bot.decide(at("2026-10-29T15:00:00Z", 85), portfolio);
+      expect(trip).toEqual([expect.objectContaining({ side: "sell", quantity: 40 })]);
+      // Flat again, the window still "long": no buy-back, the next day included.
+      expect(bot.decide(at("2026-10-29T15:05:00Z", 85), flat)).toEqual([]);
+      expect(bot.decide(at("2026-10-30T15:00:00Z", 90), flat)).toEqual([]);
+      expect(said).toEqual([
+        "S1-NVDA was stopped out of NVDA; it opens nothing on it until its window closes",
+      ]);
+    });
+
+    it("opens again in the next window, once this one has closed — the same bot, one memory", () => {
+      const next = {
+        ...NVDA_PRINT,
+        date: "2027-02-24",
+        window: { start: "2027-02-23", end: "2027-02-25" },
+      };
+      const bot = withPlaybooks(base, [{ playbook: S1_NVDA, mode: "standard" }], [...PRINT, next]);
+      bot.decide(at("2026-10-29T15:00:00Z", 85), portfolio);
+      expect(bot.decide(at("2026-10-30T15:00:00Z", 90), flat)).toEqual([]);
+      // D-5 and after: the window is flat, which clears the latch.
+      expect(bot.decide(at("2026-11-12T15:00:00Z", 90), flat)).toEqual([]);
+      expect(bot.decide(at("2027-02-01T15:00:00Z", 90), flat)).toEqual([
+        expect.objectContaining({ side: "buy", symbol: "NVDA" }),
+      ]);
+    });
+  });
+
   describe("SAURON on his own account, where his rules run as the persona", () => {
     // A stand-in for his rules that wants to ADD to the loser: the stop must win the name.
     const rules: Persona = {
@@ -268,6 +326,16 @@ describe("a held position past its play's stop is closed", () => {
       );
       expect(intents.map((i) => `${i.symbol}:${i.side}`)).toEqual(["NVDA:buy", "AMD:buy"]);
     });
+
+    it("buys the stopped name back no sooner than the next session", () => {
+      const bot = withPlaybooks(rules, [{ playbook: sauron, mode: "standard" }], []);
+      bot.decide(context, portfolio);
+      const flat = aPortfolio({ cash: 100_000 });
+      const sameDay = bot.decide(aContext({ NVDA: { last: 85 } }, "2026-10-07T18:00:00Z"), flat);
+      expect(sameDay.map((i) => i.symbol)).toEqual(["AMD"]);
+      const nextDay = bot.decide(aContext({ NVDA: { last: 85 } }, "2026-10-08T15:00:00Z"), flat);
+      expect(nextDay.map((i) => i.symbol)).toEqual(["NVDA", "AMD"]);
+    });
   });
 });
 
@@ -286,8 +354,16 @@ describe("the safeguard ladder shows the stop armed, and an option play's own ex
     ]);
     expect(entry?.stages?.[1]).toMatchObject({ state: "off" });
     expect(entry?.stages?.[1]?.does).toBe(
-      "No automatic exit on standard. This play sells on its own rules: it sells everything once " +
-        "the bid is 2× the average cost; it sells everything with 45 days left to expiry.",
+      "No stop on a losing position on standard. This play gets out on its own rules: it sells " +
+        "everything once the bid is 2× the average cost; it sells everything with 45 days left to expiry.",
     );
+  });
+
+  it("reads every option play's own exits as sentences: each one is a verb phrase", () => {
+    for (const p of registeredPlaybooks().filter((x) => x.options)) {
+      for (const line of [p.exits?.target, p.exits?.time].filter(Boolean)) {
+        expect(line).toMatch(/^(sells|holds) /);
+      }
+    }
   });
 });

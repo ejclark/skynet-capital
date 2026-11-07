@@ -47,7 +47,7 @@
  * STEP 4 — THE MECHANISM IS NOW LIVE, OPT-IN PER PLAYBOOK/MODE. `exitSafetyIntents` (below) reads
  * `exitSafety` and can, for the FIRST time in this rollout, autonomously close a position — but
  * only for a playbook+mode pair that actually declares a dial. Since #6954 slice 4 every house
- * SHARE play declares one in every mode (`HOUSE_STOP_LOSS`, `exit-plan.ts`): a strategy carries
+ * share play that places orders declares one in every mode (`HOUSE_STOP_LOSS`, `exit-plan.ts`): a strategy carries
  * its exit plan before it executes (Eric, 2026-11-01). The option plays declare none — this reads
  * share positions only — and carry their exit plan as their own target and time rules (`exits`).
  */
@@ -126,8 +126,8 @@ export interface ExitSafetyDial {
 }
 
 /**
- * A play's own non-stop exits, each one sentence a member reads ("sells everything with 45 days
- * left"). Words, not a second mechanism: the rule that sells lives in the play's own `decide` or
+ * A play's own non-stop exits, each a verb phrase whose subject is the play ("sells everything with
+ * 45 days left"), so a surface can say "it …" before each. Words, not a second mechanism: the rule that sells lives in the play's own `decide` or
  * `desiredState`, and this says what it is so the guards can require one and the Store can show it.
  */
 export interface PlaybookExits {

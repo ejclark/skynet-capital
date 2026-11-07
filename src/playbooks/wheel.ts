@@ -415,8 +415,8 @@ export function wheel(
     // Its exit plan (#6954 slice 4). No stop, on purpose: a share stop would sell the assigned
     // shares its owner chose to hold until the next upswing (Eric, 2026-10-16; `exit-plan.ts`).
     exits: {
-      time: "each put and call it sells ends at its expiry: it expires, or it is assigned",
-      target: "assigned shares leave when a covered call sold on them is assigned",
+      time: "holds each put and call it sells to expiry, where it expires or is assigned",
+      target: "sells assigned shares through a covered call on them",
     },
     // A conviction may fence the put (#5482 slice 4); a playbook already fenced is not fenced twice.
     ...(steering

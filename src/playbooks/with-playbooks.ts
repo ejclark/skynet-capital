@@ -26,6 +26,8 @@
  * stop (`exitSafety`, `SAURON`'s house stop) is run here, running or paused: a tripped name gets the
  * stop's sell, stamped with that playbook, and the base persona's reflexes on it are dropped for the
  * cycle — the safety net overrides the rules rather than competing with them for the same sale.
+ * And a play its stop sold out of a name opens nothing on it until its window closes, or the next
+ * session for a play with none (`stop-latch.ts`): a stop followed by a buy-back is a churn machine.
  *
  * A PAUSED entry (`exitsOnly`, #4651) opens nothing new (`playbookIntents`), and its names stay its
  * own exactly as when it runs: the base persona stays off them, buys and sells, held or flat. It
@@ -59,6 +61,7 @@ import {
   playbookVerdicts,
 } from "./playbook.js";
 import { oneRunUpBet } from "./run-up-bet.js";
+import { stopLatch } from "./stop-latch.js";
 
 /** The option half of a composed persona: present only when an enabled playbook is an option play. */
 function optionSurface(
@@ -104,6 +107,20 @@ export function managedSymbols(baseId: string, enabled: readonly EnabledPlaybook
   );
 }
 
+/** Whether a play's window is open now, for the stop latch: `undefined` for a play with no window
+ *  (a `decide` play or a persona's own rules), whose latch runs to the next session instead. */
+function windowOpen(
+  enabled: readonly EnabledPlaybook[],
+  playbookId: string,
+  asOf: string,
+  calendar: readonly EarningsPrint[],
+  events: readonly PlaybookEvent[],
+): boolean | undefined {
+  const playbook = enabled.find((e) => e.playbook.id === playbookId)?.playbook;
+  if (!playbook || playbook.decide || playbook.rulesOf !== undefined) return undefined;
+  return playbook.desiredState(asOf, calendar, events) === "long";
+}
+
 export function withPlaybooks(
   base: Persona,
   enabled: readonly EnabledPlaybook[],
@@ -136,9 +153,8 @@ export function withPlaybooks(
   // first one names the stamp.
   // A PAUSED own-rules entry is ignored entirely: his reflexes run unlabelled, as before he
   // subscribed — his rules have no basket of positions to manage apart from himself.
-  const own = enabled.find((e) => e.playbook.rulesOf === base.id && !e.exitsOnly);
-  // Its stop is an exit, so it runs paused too: a pause stops opens, never a way out.
-  const ownStop = enabled.filter((e) => e.playbook.rulesOf === base.id).slice(0, 1);
+  const ownEntry = enabled.find((e) => e.playbook.rulesOf === base.id);
+  const own = ownEntry && !ownEntry.exitsOnly ? ownEntry : undefined;
   const others = enabled.filter((e) => e.playbook.rulesOf !== base.id);
   const running = enabled.filter((e) => !e.exitsOnly);
   const managed = managedSymbols(base.id, enabled);
@@ -153,6 +169,18 @@ export function withPlaybooks(
   };
   // What a dark playbook would have done, said once and again only when it moves (`observation-delta`).
   const newly = observationDelta();
+  // A play stopped out of a name stays out of it (`stop-latch.ts`); each hold is said once.
+  const latch = stopLatch();
+  const holdsAfterStop = (intent: OrderIntent, asOf: string): boolean => {
+    if (!latch.holds(intent)) return false;
+    const windowed = windowOpen(enabled, intent.playbookId ?? "", asOf, calendar, events);
+    const until = windowed === undefined ? "the next session" : "its window closes";
+    refuseRunUp(
+      `${intent.playbookId} was stopped out of ${intent.symbol}; it opens nothing on it until ${until}`,
+    );
+    return true;
+  };
+
   return {
     id: base.id,
     name: base.name,
@@ -164,14 +192,19 @@ export function withPlaybooks(
         portfolio,
         refuseRunUp,
       );
-      const stops = exitSafetyIntents(ownStop, context, portfolio).intents;
+      // Every enforced stop this pass, the own-rules entry's included — the same pure call
+      // `playbookIntents` makes for the others, which already placed theirs in `plays`.
+      const safety = exitSafetyIntents(enabled, context, portfolio).intents;
+      latch.note(safety, context.asOf);
+      latch.sweep(context.asOf, (id) => windowOpen(enabled, id, context.asOf, calendar, events));
+      const stops = ownEntry ? safety.filter((i) => i.playbookId === ownEntry.playbook.id) : [];
       const stopped = new Set(stops.map((i) => i.symbol));
       const reflexes = base
         .decide(context, portfolio)
         .filter((i) => !(managed.has(i.symbol) || stopped.has(i.symbol)))
         .map(attribute);
       observeMixedSignals(running, context, mixedSignalsLog);
-      return [...plays, ...stops, ...reflexes];
+      return [...plays, ...stops, ...reflexes].filter((i) => !holdsAfterStop(i, context.asOf));
     },
     // A paused entry records no verdict: the roll call reads a verdict as "this playbook ran".
     playbookVerdicts: (context) => playbookVerdicts(running, context.asOf, calendar, events),

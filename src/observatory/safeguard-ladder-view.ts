@@ -11,7 +11,7 @@ import { findPlaybook } from "../playbooks/registry.js";
  * The ladder's two stages are #3186's own ask ("Stage 1: mixed signals auto-suspend new entries;
  * Stage 2: a tripped invalidator auto-starts systematic exit"), and both mechanisms now exist:
  * `mixed-signals.ts` (step 5) and `playbook.ts`'s `exitSafetyIntents` (step 4). Stage 2 is armed
- * on every house share play since #6954 slice 4 (`HOUSE_STOP_LOSS`, `exit-plan.ts`), and this
+ * on every house share play that places orders since #6954 slice 4 (`HOUSE_STOP_LOSS`, `exit-plan.ts`), and this
  * readout is how a member sees it: a member cannot consent to a safety net they cannot see. An
  * option play carries no stop; its stage 2 names the target and time rules it sells on instead.
  *
@@ -106,7 +106,7 @@ function stageTwo(playbook: Playbook, mode: PlaybookMode): SafeguardStageView {
       state: "off",
       does:
         own.length > 0
-          ? `No automatic exit on ${mode}. This play sells on its own rules: it ${own.join("; it ")}.`
+          ? `No stop on a losing position on ${mode}. This play gets out on its own rules: it ${own.join("; it ")}.`
           : `No automatic exit on ${mode}. This play sells only when its own rule says to.`,
     };
   }

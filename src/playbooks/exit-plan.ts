@@ -3,7 +3,8 @@
  * its exit plan before execution"). A play's exit plan is a stop (`exitSafety`, enforced by
  * `exitSafetyIntents`), a profit target, or a time exit (`exits`, in its own words). The guards
  * refuse an opening order `no-exit-plan` from a play that declares none of the three
- * (`RiskConfig.exitPlanned`), so a play can no longer reach a live bot with no way out.
+ * (`RiskConfig.exitPlanned`), so a play can no longer reach a live bot with no way out. A play its
+ * stop sold out of a name stays out of it for a while (`stop-latch.ts`).
  *
  * WHY THE OPTION PLAYS CARRY NO STOP. `exitSafetyIntents` measures a held SHARE position against
  * its cost; it never reads a contract. A dial on an option play would print "armed" on the ladder
@@ -12,7 +13,7 @@
  * time rules, and a stop priced on a contract's own premium waits for its own mechanism
  * (docs/IDEAS.md, 2026-11-07).
  */
-import type { PlaybookMode } from "../domain/types.js";
+import { PLAYBOOK_MODES, type PlaybookMode } from "../domain/types.js";
 import type { ExitSafetyDial, Playbook } from "./playbook.js";
 
 /**
@@ -43,11 +44,16 @@ export interface ExitPlan {
 
 /**
  * The play's exit plan in `mode`, or `undefined` when it has none. `mode` absent (an order that
- * carries no mode) counts only the target and time exits: a stop is set per mode.
+ * carries no mode) counts a stop only when every mode enforces one — whichever mode the order ran
+ * in, it had a stop; the standard one stands in for it.
  */
 export function exitPlanOf(playbook: Playbook, mode?: PlaybookMode): ExitPlan | undefined {
-  const dial = mode ? playbook.exitSafety?.[mode] : undefined;
-  const stop = dial?.enforcement === "enforce" ? dial : undefined;
+  const enforced = (m: PlaybookMode) => {
+    const dial = playbook.exitSafety?.[m];
+    return dial?.enforcement === "enforce" ? dial : undefined;
+  };
+  const stopCounts = mode !== undefined || PLAYBOOK_MODES.every((m) => enforced(m));
+  const stop = stopCounts ? enforced(mode ?? "standard") : undefined;
   const { target, time } = playbook.exits ?? {};
   if (!(stop || target || time)) return undefined;
   return {
