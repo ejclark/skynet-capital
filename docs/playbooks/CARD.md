@@ -207,6 +207,24 @@ Field 8 is no longer optional. A strategy carries its exit plan before it execut
 - **The stop levels are unmeasured** (`HOUSE_STOP_LOSS`). Wrong if by 2026-12-15 more than half of
   stop-triggered paper exits recover past their entry within 5 sessions.
 
+## Fit, below the bar (#6954 slice 5, 2026-11-07)
+
+Eric answered #6771's question on 2026-11-06 ("fully autonomous trade execution where we steer, not
+just watching"), read as C: a pair below its strategy's own fit line trades as it does today, at a
+smaller size written once. Field 3's "who may admit a ticker below that line" now has an answer: the
+△ tier, at the below-bar floor (`src/playbooks/fit-floor.ts`).
+
+| Pair | Why it is below its bar | What changes |
+|---|---|---|
+| S1-NVDA | p 0.0032 against the house bar's ~0.001 | each opening buy risks at most 1% of the account (its size was 1% / 2% / 3% by mode) |
+| NVDA-CALL-SPREAD | borrows S1-NVDA's verdict | a spread whose one debit is over 1% of the account is refused `below-bar-floor` |
+| NBIS-DIP-BOUNCE | t 2.2 against 3.5 | nothing yet: it records only; the floor applies once it trades |
+
+- **Every such opening order says so**: its reason ends "below its bar: sized to at most 1% of the
+  account", so the decision record shows why it was small. Exits are never sized by the floor.
+- **The floor is unmeasured.** Wrong if by 2026-12-31 at least 10 closed below-bar paper trades
+  average worse than −2% while at-or-above-bar pairs are positive; that pair then records only.
+
 <details>
 <summary><strong>How this was checked</strong> — four readers, four refuters, only what survived</summary>
 

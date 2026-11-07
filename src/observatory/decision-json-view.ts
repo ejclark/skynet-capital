@@ -90,6 +90,8 @@ export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
     "not from a subscribed playbook — a bot opens a position only through a playbook it is subscribed to and has on",
   "no-exit-plan":
     "its playbook has no exit plan — a bot opens a position only through a playbook with a stop, a profit target or a time exit",
+  "below-bar-floor":
+    "below its bar — one unit costs more than the smaller size a playbook below its evidence bar may risk",
 };
 
 /** A result that is neither a fill nor a rejection, in words — a limit order's two other endings. */

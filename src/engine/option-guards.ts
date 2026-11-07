@@ -8,7 +8,7 @@ import {
   requiredOptionLevel,
   SNAPSHOT_MAX_AGE_MS,
 } from "../domain/option-book.js";
-import { heldQuantity } from "../domain/portfolio.js";
+import { computeEquity, heldQuantity } from "../domain/portfolio.js";
 import type {
   MarketContext,
   OptionOrderIntent,
@@ -23,6 +23,7 @@ import {
   closableContracts,
   committedToPlaybook,
   type GuardLedger,
+  openCeilingUsd,
   subscriptionTerms,
   unspentCash,
   worsens,
@@ -69,6 +70,8 @@ export interface OptionGuardConfig {
   readonly subscriptions?: readonly PlaybookSubscription[];
   readonly playbookSymbols?: ReadonlyMap<string, readonly string[]>;
   readonly realizedPlForPlaybook?: (playbookId: string) => number;
+  /** The below-bar floor, as `RiskConfig.openCeiling` (#6954 slice 5). */
+  readonly openCeiling?: (playbookId: string) => number | undefined;
 }
 
 /** The refusals this module can name — a subset of `GuardRefusalReason`. */
@@ -86,7 +89,8 @@ type OptionRefusalReason =
   | "collateral-reserved"
   | "insufficient-cash"
   | "option-unallocated"
-  | "subscription-budget";
+  | "subscription-budget"
+  | "below-bar-floor";
 
 type OptionOutcome =
   | { readonly ok: true; readonly intent: OrderIntent }
@@ -238,6 +242,7 @@ function openUnits(
   { ledger }: OptionBatch,
   capital: number | undefined,
   pnlLessCommitted: number,
+  ceiling: number,
 ): number {
   if (!MULTI_UNIT_STRUCTURES.has(option.structure)) return MAX_OPTION_OPEN_UNITS;
   const perUnit = worsens(portfolio, ledger, intent.symbol, {
@@ -245,7 +250,7 @@ function openUnits(
     pays: premiumOut(option),
   }).newCash;
   if (!(perUnit > 0) || capital === undefined) return MAX_OPTION_OPEN_UNITS;
-  const room = Math.min(capital + pnlLessCommitted, unspentCash(portfolio, ledger));
+  const room = Math.min(capital + pnlLessCommitted, unspentCash(portfolio, ledger), ceiling);
   const asked = Math.min(Math.floor(intent.quantity), MAX_MULTI_UNITS);
   return Math.max(MAX_OPTION_OPEN_UNITS, Math.min(asked, Math.floor(room / perUnit)));
 }
@@ -272,8 +277,26 @@ function clampOpen(
 
   const capital = terms.subscription?.capitalAllocated;
   const committed = committedToPlaybook(intent, portfolio, context, config.playbookSymbols, batch);
-  const units = openUnits(intent, option, portfolio, batch, capital, terms.realizedPl - committed);
+  const ceiling = openCeilingUsd(
+    intent,
+    computeEquity(portfolio, context.quotes),
+    config.openCeiling,
+  );
+  const units = openUnits(
+    intent,
+    option,
+    portfolio,
+    batch,
+    capital,
+    terms.realizedPl - committed,
+    ceiling,
+  );
   const cover = coverProblem(intent, option, portfolio, batch, units);
+  // The below-bar floor (#6954 slice 5) first: a bought call or a sold put was already cut to the
+  // whole contracts inside it (`openUnits`), so one structure that still risks more is refused under
+  // the floor's name — never as uncovered cash, which more cash would not fix. A covered call risks
+  // no cash and always passes.
+  if (Math.max(0, cover.cash) > ceiling) return refuse("below-bar-floor");
   if (cover.reason) return refuse(cover.reason);
 
   if (capital === undefined) return refuse("option-unallocated");
