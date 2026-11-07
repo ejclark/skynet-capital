@@ -59,4 +59,15 @@ export function recoveryBand(p: {
   asOf: string;
   q?: number;
 }): { sessions: number; sample: string; level: string; units: number } | null;
+export const VOL_WINDOW: number;
+export function printVolModel(
+  closes: readonly number[],
+  dates: readonly string[],
+  prints: readonly string[],
+  window?: number,
+): {
+  printAt: number[];
+  baseVol: (number | null)[];
+  moves: { reactedOn: string; move: number }[];
+};
 export function expiryFloor(dates: readonly string[], t: number, sessions: number): string;

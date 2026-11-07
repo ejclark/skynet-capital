@@ -65,7 +65,7 @@ const NO_CHASE = 1.1;
 const DELTA_MISS = 0.1;
 
 /** Target delta per mode: deeper in the money is steadier, further out more leveraged. */
-const LONG_CALL_DELTAS: Readonly<Record<PlaybookMode, number>> = {
+export const LONG_CALL_DELTAS: Readonly<Record<PlaybookMode, number>> = {
   conservative: 0.7,
   standard: 0.6,
   aggressive: 0.5,

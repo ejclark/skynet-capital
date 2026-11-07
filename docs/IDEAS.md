@@ -163,7 +163,8 @@ picks it up starts from the fork, not the wish.
   goes to (playbook, sleeve) instead of the account, and the parent's guards cap the sum. The
   deciding question before slicing: should two sleeves ever hold the same symbol at once? If not,
   nesting is just roster composition plus a capital split. `playbooks/registry.ts` and
-  `engine/guards.ts` are envelope-protected, so the build boards the platter.
+  `engine/guards.ts` are not protected (`envelope.json` `$openOnPurpose`, since #928), so the build
+  is an ordinary PR. Chaining, the handoff cousin of this, is #6959.
   _(src: Eric · while: brain-dump on trading mechanics)_
 - **Eric as game master: recruit Tony or Phil to run bot accounts, up to 6 bots in S1, as teams.**
   This changes a written frame. Era 1 says the only autonomous bots are Eric-account bots
@@ -1578,11 +1579,11 @@ check is automatic rather than remembered. _(src: Claude · while: research-lab 
 - **`PRINT_WINDOWS` should DRIVE the guards, not mirror them.** The chain's earnings badge needs the
   same day-counts the S2 entry guard and the playbooks trade on, so `domain/earnings-calendar.ts`
   now names them (`entryFlatDays` 2 · `postPrintFlatDays` 3 · `deadZoneDays` 5) — but
-  `engine/guards.ts` and `playbooks/registry.ts` are envelope-protected, so they still hold their
-  own literals and the new constants are copies pinned by spec (`tests/domain/earnings-calendar.spec.ts`).
+  `engine/guards.ts` and `playbooks/registry.ts` were envelope-protected then, so they still hold
+  their own literals and the new constants are copies pinned by spec (`tests/domain/earnings-calendar.spec.ts`).
   The pins make drift loud, not impossible. The end state is a three-line change inside those two
-  files to import the constants instead; it is behaviour-identical, but it lands in the protected
-  class, so it wants Eric's eyes rather than an autonomous PR.
+  files to import the constants instead; it is behaviour-identical, and since #928 neither file is
+  protected (`envelope.json` `$openOnPurpose`), so it is an ordinary autonomous PR.
   _(src: Claude · while: badging the options chain with earnings proximity, #575, 2026-08-26)_
 
 - **The `ci-medic` repair lane still has no token that can push, generally, not just for #655.**

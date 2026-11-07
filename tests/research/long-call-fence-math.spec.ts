@@ -11,6 +11,7 @@ import {
   impliedVol,
   longCallTrade,
   NEVER,
+  printVolModel,
   type RecoveryEntry,
   recoveryBand,
   strikeForCallDelta,
@@ -206,5 +207,31 @@ describe("expiryFloor", () => {
   it("sets a floor nothing listed can meet when the band never came back", () => {
     expect(expiryFloor(dates, 0, Infinity)).toBe(NEVER);
     expect(entryExpiry("2026-10-16", { floor: NEVER })?.blocked).toBe(true);
+  });
+});
+
+describe("printVolModel — the tape half of the vol model", () => {
+  // 70 sessions alternating ±1%, a +20% jump the session after a print filed on day 64.
+  const dates = Array.from({ length: 70 }, (_, i) => addDays("2026-01-01", i));
+  const closes = [100];
+  for (let i = 1; i < 70; i++) {
+    closes.push((closes[i - 1] ?? 100) * (i === 65 ? 1.2 : i % 2 ? 1.01 : 0.99));
+  }
+  const { printAt, baseVol, moves } = printVolModel(closes, dates, [dates[64] ?? ""], 20);
+
+  it("finds the print's filing session", () => {
+    expect(printAt).toEqual([64]);
+  });
+
+  it("leaves the print's two sessions out of the base vol", () => {
+    // The jump at session 65 is skipped, so the base stays at the ±1% tape's own vol.
+    expect(baseVol[66]).toBeCloseTo(baseVol[63] ?? 0, 2);
+    expect(baseVol[10]).toBeNull();
+  });
+
+  it("carries the jump as the print's excess move instead", () => {
+    expect(moves).toHaveLength(1);
+    expect(moves[0]?.reactedOn).toBe(dates[65]);
+    expect(moves[0]?.move).toBeGreaterThan(0.15);
   });
 });
