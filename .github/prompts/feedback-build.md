@@ -92,7 +92,7 @@ above the Claude Code attribution footer, and write anything you post in the hou
 | **Shipped** | Open the PR — `pipeline.yml`'s `arm auto-merge` job arms it on green; never arm by hand | no |
 | **Sliced** | Ship the first coherent slice; comment what remains; label `next-slice` | no |
 | **Needs the member** | Comment ONE specific question; label `needs-info`; stop | no |
-| **Needs Eric** | Write the decision as the body's `Needs from you` callout (`docs/ISSUES.md` rule 7), comment one paragraph, then label `needs-eric`; stop | **yes — only this** |
+| **Needs Eric** | Write the decision as the body's `Needs from you` callout (`docs/ISSUES.md` rule 7), with its options, your predicted answer and its confidence, and an **On silence** line (the template in `moneypenny-ci-repair.md`); comment one paragraph, then label `needs-eric`; stop | **yes — only this** |
 
 `needs-eric` is reserved for a decision only Eric can make: a protected path named by
 `envelope-scan`, provisioning a credential, raising a spend cap, or a genuine taste fork where
