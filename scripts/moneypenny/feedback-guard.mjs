@@ -131,7 +131,7 @@ ${FOOTER}`;
  * nothing" apart from "the session said something and I haven't looked yet".
  *
  * The ask goes in the body before the label lands, so the `labeled` event's check finds it stated
- * and the board reads Blocked (docs/ISSUES.md rule 7). `run` and `ensure` are injected for specs.
+ * and the board reads Waiting on a person (docs/ISSUES.md rule 7). `run` and `ensure` are injected for specs.
  */
 export function guardFeedbackOutcome(
   issueNumber,

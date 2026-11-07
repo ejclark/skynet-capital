@@ -359,12 +359,20 @@ const STATUS_WORDS = new Map([
  *  Backlog after the flip. Done is left alone: an open-state check needs the issue's state, which a
  *  body lint never has — and the next-part columns likewise, which need the plan's sub-issues. */
 const STATUS_HOLDS = {
-  Backlog: (has) => !(has("ready") || has("needs-eric") || has("needs-info")),
+  // A `ready` card the board still shows in Backlog: parked by an unwritten ask or a merge hold.
+  Backlog: (has, text) =>
+    !(waitsOnPerson(has, text) || (has("ready") && !has("needs-eric") && !has("hold-merge"))),
   Ready: (has) => has("ready"),
   [BUILDING]: (has) => has("in-progress"),
-  [WAITING_ON_PERSON]: (has) =>
-    ["needs-eric", "needs-info", "needs-design", "needs-session"].some((l) => has(l)),
+  [WAITING_ON_PERSON]: (has, text) => waitsOnPerson(has, text),
 };
+
+/** The board's person-waiting rule (projects.mjs `statusForIssue`, #6871): a `needs-eric` counts
+ *  only once its `Needs from you` callout is written (#3913) — until then it reads Backlog. */
+function waitsOnPerson(has, text) {
+  if (["needs-info", "needs-design", "needs-session"].some((l) => has(l))) return true;
+  return has("needs-eric") && hasDecisionCallout(text);
+}
 
 /** The board column a body's Status row claims, from its first word — or null when the row is
  *  absent or leads with free text ("proposed", "awaiting…"), which this check leaves alone. */
@@ -386,7 +394,7 @@ function checkStatusRow(text, labels, notes) {
   if (!Array.isArray(labels)) return;
   const claim = statusRowClaim(text);
   const holds = claim && STATUS_HOLDS[claim];
-  if (!holds || holds((name) => labels.includes(name))) return;
+  if (!holds || holds((name) => labels.includes(name), text)) return;
   const shown = labels.length ? labels.map((l) => `\`${l}\``).join(", ") : "none";
   notes.push(
     `Status row says ${claim} but the labels (${shown}) say otherwise — the row is what a phone ` +

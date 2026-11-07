@@ -41,7 +41,7 @@
 // GitHub about the issue instead of about the board, and only a caller already holding a board list
 // (a sweep) uses one.
 import { readFileSync } from "node:fs";
-import { parentNumberOf, withOpenSubIssues } from "./admission.mjs";
+import { withOpenSubIssues } from "./admission.mjs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRateLimit, ghRest, ghRestAll, isTransientGhError, sh, withRetry } from "./gh.mjs";
 import { labelNames } from "./labels.mjs";
@@ -792,8 +792,20 @@ export function syncIssue(
     added,
     decisionCalloutMissing,
     priority,
-    parent: parentNumberOf(issue),
+    parent: localParentOf(issue),
   };
+}
+
+/**
+ * The parent issue's number when the parent lives in THIS repo, else null. `parent_issue_url` is an
+ * API url and GitHub allows a parent in another repo; reading only its number would re-sync, or
+ * group sub-issues under, an unrelated local issue with the same number.
+ */
+export function localParentOf(issue, repo = REPO) {
+  const m = /^https:\/\/api\.github\.com\/repos\/([^/]+\/[^/]+)\/issues\/(\d+)$/.exec(
+    String(issue?.parent_issue_url ?? ""),
+  );
+  return m && m[1].toLowerCase() === repo.toLowerCase() ? Number(m[2]) : null;
 }
 
 /**
@@ -854,15 +866,26 @@ function main() {
     process.exit(1);
   }
   const board = createBoardContext();
-  const result = syncOrSkip(issueNumber, { board });
+  const context = oneIssueContext();
+  const result = syncOrSkip(issueNumber, { board, context });
   if (!result) return;
   report(issueNumber, result);
   // #6871 slice 2: a sub-issue's labels decide whether its parent plan holds a cap seat (Next part
   // queued) or waits on an approval (Next part needs approval), and the parent gets no event of
-  // its own when a child's labels change. One level up, sharing this run's board reads.
-  if (result.parent) {
-    const parent = syncOrSkip(String(result.parent), { board });
+  // its own when a child's labels change. One level up, sharing this run's board and PR reads.
+  // The child's own sync has landed, so a parent failure warns rather than reddening this job;
+  // the reconcile sweep on the next push heals the parent's card.
+  if (!result.parent) return;
+  try {
+    const parent = syncOrSkip(String(result.parent), { board, context });
     if (parent) report(String(result.parent), parent);
+  } catch (err) {
+    const text = String(err?.message ?? err)
+      .replace(/\s+/g, " ")
+      .slice(0, 300);
+    console.log(
+      `::warning title=Parent not synced::#${issueNumber}'s parent #${result.parent} was not synced — the next sweep re-syncs it. Cause: ${text}`,
+    );
   }
 }
 

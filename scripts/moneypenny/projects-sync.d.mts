@@ -91,9 +91,13 @@ export interface PrMaps {
 }
 
 /** An issue as a REST row: the admission shape, with GitHub's nullable body. */
-export type ColumnIssue = Omit<AdmissionIssue, "body" | "issue_dependencies_summary"> & {
+export type ColumnIssue = Omit<
+  AdmissionIssue,
+  "body" | "issue_dependencies_summary" | "parent_issue_url"
+> & {
   body?: string | null;
   issue_dependencies_summary?: { blocked_by?: number } | null;
+  parent_issue_url?: string | null;
 };
 
 /** The reads beyond an issue's own row that `wantedColumn` takes (#6871 slice 2). */
@@ -117,6 +121,12 @@ export function readOpenSubIssuesOf(
   issue: ColumnIssue,
   readAll?: (path: string) => unknown[],
 ): AdmissionIssue["openSubIssues"] | undefined;
+
+/** The parent's number when it lives in this repo (`parent_issue_url`), else null. */
+export function localParentOf(
+  issue: { parent_issue_url?: string | null } | undefined,
+  repo?: string,
+): number | null;
 
 /** The reads a one-issue sync makes for itself. */
 export function oneIssueContext(): ColumnContext;

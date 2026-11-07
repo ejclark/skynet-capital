@@ -81,7 +81,8 @@ function columnOn(name, columns, { optional = false } = {}) {
 // never shows a number the code does not enforce. The board's own hand-set WIP limit is
 // display-only and is cleared by hand (#6871 slice B3). Each sentence is pinned to `admitBuild`
 // by tests/scripts/moneypenny/board-columns.spec.ts — change one and that spec says whether the
-// gate still agrees. Fix-first means `fast-track`, which skips the in-flight and plan caps today.
+// gate still agrees. They name the `fast-track` label as the card shows it, which skips the
+// in-flight and plan caps today.
 /**
  * Building now's and Next part queued's descriptions for one dial reading, or null when the dial
  * could not be read (a fallback position is not a reading, so the board keeps what it shows).
@@ -92,16 +93,16 @@ export function dialSentences(mode) {
   const plans = mode.caps?.startedPlanCap ?? 0;
   const building = {
     halt: "Stopped: nothing new starts",
-    conserve: "Only fix-first cards start",
+    conserve: "Only fast-track cards start",
   }[mode.position];
   return {
     [BUILDING]:
       building ??
-      `Lanes start up to ${inFlight}; fix-first cards and hand-started sessions may add more`,
+      `Lanes start up to ${inFlight}; fast-track cards and hand-started sessions may add more`,
     [NEXT_QUEUED]:
       mode.position === "halt"
         ? "Part built; next part approved. Nothing starts while stopped"
-        : `Part built; next part approved. At ${plans} here, no new plan starts (fix-first excepted)`,
+        : `Part built; next part approved. At ${plans} here, no new plan starts (fast-track excepted)`,
   };
 }
 
@@ -111,12 +112,17 @@ export function dialSentences(mode) {
 // GitHub's own schema, github.com/octokit/graphql-schema). Colors are cosmetic: every column is
 // gray but Waiting on a person, the one a person acts on, and the name carries the meaning (BRAND
 // colorblind rule). Descriptions are one line each; the rules live in the project README.
-// `description: undefined` (a dial column with no dial reading) means "keep what the board shows".
+// `description: undefined` (a dial column with no dial reading) means "keep what the board shows"
+// — unless the option is being renamed onto it, whose old sentence describes another column.
 /** The Status options to write, for one dial reading (`dialSentences`). */
 export function statusFieldOptions(mode) {
   const dial = dialSentences(mode);
   return [
-    { name: "Backlog", color: "GRAY", description: "Not buildable yet; its labels say why" },
+    {
+      name: "Backlog",
+      color: "GRAY",
+      description: "Not buildable yet: waiting on a label, a blocking issue or an open PR",
+    },
     {
       name: WAITING_ON_PERSON,
       color: "BLUE",
@@ -189,7 +195,9 @@ export function statusFieldUpdate(current = [], { keepExtras = false, mode } = {
   const liveOf = (id) => current.find((o) => o?.id === id);
   const wanted = statusFieldOptions(mode).map((o) => {
     const id = idOf.get(o.name);
-    const description = o.description ?? liveOf(id)?.description ?? "";
+    const live = liveOf(id);
+    const kept = live?.name === o.name ? live.description : undefined;
+    const description = o.description ?? kept ?? "";
     return id ? { id, ...o, description } : { ...o, description };
   });
   const restyled = wanted.some((o) => o.id && styleDrifts(liveOf(o.id), o));

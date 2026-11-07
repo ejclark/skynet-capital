@@ -22,6 +22,7 @@ import {
   wantedStatusOf,
 } from "../../../scripts/moneypenny/projects-reconcile.mjs";
 import {
+  localParentOf,
   openPrMaps,
   readOpenSubIssuesOf,
   wantedColumn,
@@ -192,6 +193,27 @@ describe("board columns agree with what the build lanes pull (#6871 call 2)", ()
     );
   });
 
+  it("a child whose parent lives in another repo is never grouped under a local namesake", () => {
+    const local: RestIssue = {
+      number: 12,
+      state: "open",
+      labels: [{ name: "plan" }],
+      sub_issues_summary: { total: 2, completed: 1 },
+    };
+    const own = { number: 13, state: "open", labels: [], parent_issue_url: `${REPO}12` };
+    const foreign = {
+      number: 14,
+      state: "open",
+      labels: [{ name: "ready" }],
+      parent_issue_url: "https://api.github.com/repos/ejclark/other/issues/12",
+    };
+    const context = sweepContext([local, own, foreign], { readAll: () => [], readPulls: () => [] });
+    expect(context.openSubIssuesOf?.(local)?.map((s) => s.number)).toEqual([13]);
+    expect(wantedStatusOf(local, STATUS_OPTIONS, context)).toBe("Next part needs approval");
+    expect(localParentOf(foreign)).toBeNull();
+    expect(localParentOf(own)).toBe(12);
+  });
+
   it("a plan whose sub-issue lives in another repo is read directly, so the column keeps agreeing", () => {
     const plan: RestIssue = {
       number: 1,
@@ -244,7 +266,7 @@ describe("the dial sentences say what admitBuild does", () => {
         return;
       }
       if (position === "conserve") {
-        expect(building).toBe("Only fix-first cards start");
+        expect(building).toBe("Only fast-track cards start");
         expect(admits(issue(1), [])).toBe(false);
         expect(admits(issue(1, ["fast-track"]), busy(caps.inFlightCap))).toBe(true);
       } else {
@@ -252,7 +274,7 @@ describe("the dial sentences say what admitBuild does", () => {
         expect(n).toBe(caps.inFlightCap);
         expect(admits(issue(1), busy(n - 1))).toBe(true);
         expect(admits(issue(1), busy(n))).toBe(false);
-        // "fix-first cards … may add more": fast-track is admitted past the cap
+        // "fast-track cards … may add more": fast-track is admitted past the cap
         expect(admits(issue(1, ["fast-track"]), busy(n))).toBe(true);
       }
 

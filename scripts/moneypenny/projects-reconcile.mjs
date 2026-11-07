@@ -37,7 +37,7 @@
 // instead of ~310 a sweep) in the same shape; its log line names the points each sweep spent.
 //
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-reconcile.mjs [--dry-run]
-import { parentNumberOf, withOpenSubIssues } from "./admission.mjs";
+import { withOpenSubIssues } from "./admission.mjs";
 import { ghRateLimit, ghRestAll, withRetry } from "./gh.mjs";
 import { labelNames } from "./labels.mjs";
 import {
@@ -53,6 +53,7 @@ import {
 import { describePriority, planPriorityDrift } from "./projects-priority.mjs";
 import {
   createBoardContext,
+  localParentOf,
   openPrMaps,
   readHorizons,
   syncIssue,
@@ -136,7 +137,7 @@ export function wantedStatusOf(issue, columns = STATUS_OPTIONS, context = {}) {
 export function sweepContext(openIssues = [], { readAll = ghRestAll, readPulls, log } = {}) {
   const byParent = new Map();
   for (const i of openIssues) {
-    const parent = parentNumberOf(i);
+    const parent = localParentOf(i);
     if (parent === null) continue;
     if (!byParent.has(parent)) byParent.set(parent, []);
     byParent.get(parent).push({ number: i.number, labels: i.labels ?? [] });
@@ -201,6 +202,9 @@ export function ensureStatusColumns({
   return (fresh?.options ?? options).map((o) => o.name);
 }
 
+/** The person-waiting column, under its name or its pre-#6871 one during the rename window. */
+const isAskColumn = (column) => column === WAITING_ON_PERSON || column === "Blocked";
+
 /**
  * The pure half: which board items sit in the wrong column? `items` is the board's item list,
  * `openIssues` every open issue (REST shape). An issue on the board but not in `openIssues` is
@@ -244,7 +248,7 @@ export function planReconcile({
   for (const [number, issue] of open) {
     if (carded.has(number)) continue;
     const want = wantedStatusOf(issue, columns, context);
-    if (want === WAITING_ON_PERSON || want === "Blocked") drift.push({ number, have: null, want });
+    if (isAskColumn(want)) drift.push({ number, have: null, want });
   }
   return drift.sort((a, b) => a.number - b.number);
 }
@@ -272,15 +276,17 @@ function driftLine(d, verb) {
 
 /**
  * One log line per sweep: how many open cards each column holds once this sweep's moves land —
- * the board a person will see, read from the same rule (#6871 §6 "checks"). Pure.
+ * the board a person will see, read from the same rule (#6871 §6 "checks"): every carded open
+ * issue, plus the uncarded asks `planReconcile` adds to Waiting on a person (#4303). Pure.
  */
 export function columnCounts({ items = [], openIssues = [], columns = STATUS_OPTIONS, context }) {
   const carded = new Set(items.map((i) => boardIssueNumber(i)).filter(Boolean));
   const counts = new Map(columns.filter((c) => c !== "Done").map((c) => [c, 0]));
   for (const issue of openIssues) {
-    if (!carded.has(Number(issue?.number))) continue;
+    if (issue?.pull_request) continue;
     const column = wantedStatusOf(issue, columns, context);
-    if (column && column !== "Done") counts.set(column, (counts.get(column) ?? 0) + 1);
+    const shown = carded.has(Number(issue?.number)) || isAskColumn(column);
+    if (shown && column && column !== "Done") counts.set(column, (counts.get(column) ?? 0) + 1);
   }
   return [...counts].map(([c, n]) => `${c} ${n}`).join(" · ");
 }

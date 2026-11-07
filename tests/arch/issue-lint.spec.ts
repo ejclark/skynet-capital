@@ -443,7 +443,22 @@ describe("issue lint — the Status row against the labels", () => {
     expect(drift(run(withStatus("Waiting on a person · Eric"), "plan").notes)[0]).toContain(
       "Status row says Waiting on a person",
     );
-    expect(drift(run(withStatus("Waiting on a person · Eric"), "needs-eric").notes)).toEqual([]);
+    expect(drift(run(withStatus("Waiting on a person · design"), "needs-design").notes)).toEqual(
+      [],
+    );
+  });
+
+  // #3913 + #6871: a `needs-eric` with no written ask reads Backlog on the board, so the row should.
+  it("holds a needs-eric row to the board: Backlog until the ask is written", () => {
+    expect(drift(run(withStatus("Backlog · ask not written"), "needs-eric,ready").notes)).toEqual(
+      [],
+    );
+    expect(drift(run(withStatus("Waiting on a person · Eric"), "needs-eric").notes)[0]).toContain(
+      "Status row says Waiting on a person",
+    );
+    expect(drift(run(withStatus("Backlog · proposed"), "needs-session").notes)[0]).toContain(
+      "Status row says Backlog",
+    );
   });
 
   it("notes a Backlog row after the ready flip", () => {

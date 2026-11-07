@@ -689,6 +689,18 @@ describe("moneypenny projects: statusFieldUpdate", () => {
     expect(statusFieldUpdate(recolored, { keepExtras: true, mode: normal })).not.toBeNull();
   });
 
+  it("a column renamed onto a dial column never inherits the old column's sentence", () => {
+    const before = [
+      { id: "o-w", name: "Waiting", color: "ORANGE", description: "A plan started and idle" },
+    ];
+    const fallback = { position: "conserve", unreadable: true, caps: { inFlightCap: 1 } };
+    const update = statusFieldUpdate(before, { keepExtras: true, mode: fallback });
+    expect(update?.find((o) => o.name === "Next part queued")).toMatchObject({
+      id: "o-w",
+      description: "",
+    });
+  });
+
   it("an unreadable dial keeps the description the board already shows", () => {
     const normal = { position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } };
     const written = statusFieldOptions(normal).map((o, k) => ({ id: `o${k}`, ...o }));

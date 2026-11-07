@@ -3,6 +3,7 @@ import { STATUS_OPTIONS } from "../../../scripts/moneypenny/projects.mjs";
 import {
   boardIssueNumber,
   boardItemsOrThrow,
+  columnCounts,
   ensureStatusColumns,
   planReconcile,
   type ReconcileItem,
@@ -180,6 +181,16 @@ describe("planReconcile: every open ask reaches the Waiting on a person column (
         openIssues: [open(60, ["needs-info"])],
       }),
     ).toEqual([]);
+  });
+
+  it("the sweep's column count includes the asks it is about to add", () => {
+    const line = columnCounts({
+      items: [card(1, "Ready")],
+      openIssues: [open(1, ["ready"]), open(70, ["needs-info"]), open(71)],
+    });
+    expect(line).toContain("Waiting on a person 1");
+    expect(line).toContain("Ready 1");
+    expect(line).toContain("Backlog 0"); // #71 has no card and is not an ask: not on the board
   });
 
   it("the sweep syncs the uncarded ask, still on one board read", () => {
@@ -553,10 +564,10 @@ describe("ensureStatusColumns: the live field follows projects.mjs", () => {
     expect(writes).toHaveLength(1);
     expect(writes[0]?.map((o) => o.id)).toEqual(STATUS_OPTIONS.map((n) => `O_${n}`));
     expect(writes[0]?.find((o) => o.name === "Building now")?.description).toBe(
-      "Lanes start up to 6; fix-first cards and hand-started sessions may add more",
+      "Lanes start up to 6; fast-track cards and hand-started sessions may add more",
     );
     expect(writes[0]?.find((o) => o.name === "Next part queued")?.description).toBe(
-      "Part built; next part approved. At 8 here, no new plan starts (fix-first excepted)",
+      "Part built; next part approved. At 8 here, no new plan starts (fast-track excepted)",
     );
     ensureStatusColumns({ board, mode: surge, write, log: () => undefined });
     expect(writes).toHaveLength(1); // a board already printing the dial is left alone
