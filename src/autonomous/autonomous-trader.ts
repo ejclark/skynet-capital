@@ -4,6 +4,8 @@ import { applyGuardsWithVerdicts, DEFAULT_RISK_CONFIG, type RiskConfig } from ".
 import type { Persona } from "../personas/persona.js";
 import type { BrokerPort, OpenShareOrder } from "../ports/broker.js";
 import type { OptionMarketPort, OptionOrderTracker } from "../ports/option-market.js";
+import { planForceFlatten } from "../risk/force-flatten.js";
+import type { RiskTier } from "../risk/risk-ladder.js";
 import { clientOrderIdFor } from "./client-order-id.js";
 import type { DecisionRecord, IntentOutcome } from "./decision-record.js";
 import { actionFor, DEFAULT_OPTION_COOLDOWN_MS, readCycleOptions } from "./option-cycle.js";
@@ -43,6 +45,24 @@ export interface AutonomousTraderConfig {
    * halts the cycle before the persona is even asked, and nothing is placed. See `SafetyController`.
    */
   readonly blockedReason?: () => string | null;
+  /**
+   * The breakers' half of the gate (#6954 slice 3): a non-null reason holds this bot's OPENS and
+   * nothing else. The cycle still runs, so an exit the persona decides is still placed — a breaker
+   * that also stopped exits would strand a drawdown's positions in the drawdown. Refused opens are
+   * recorded `breaker-halt`. `blockedReason` above stays the stop-everything gate (the kill switch,
+   * the owner's suspends): those place nothing at all.
+   */
+  readonly openBlockedReason?: () => string | null;
+  /** The account's rung on the risk ladder this cycle, from the equity feed. `undefined` = no
+   *  reading yet, which leaves the guards exactly as they were (never defaulted to `clear`). */
+  readonly riskTier?: () => RiskTier | undefined;
+  /** Non-null = the ladder's bottom rung says close this bot's book now; the reason rides on each
+   *  closing order. The orders are ordinary sells through the same guards, cooldown and open-order
+   *  reads as any other exit (`planForceFlatten`). */
+  readonly forceFlatten?: () => string | null;
+  /** Said on every flatten cycle with what it could not close (an option leg, a short) — by symbol,
+   *  so it is never mistaken for a flat book. Empty when the plan covers the whole book. */
+  readonly onFlattenGap?: (personaId: string, unflattened: readonly string[]) => void;
   /** Seeds the cooldown clock at construction (e.g. restored after a process restart) — read
    *  once, never mutated by this class after that. */
   readonly initialCooldowns?: ReadonlyMap<string, number>;
@@ -238,6 +258,16 @@ export class AutonomousTrader {
     }
 
     const decidedOn = await this.config.broker.getPortfolio();
+    const holdOpens = this.config.openBlockedReason?.() ?? null;
+    const accountTier = this.config.riskTier?.();
+    const cycleRisk: RiskConfig =
+      holdOpens || accountTier !== undefined
+        ? {
+            ...risk,
+            ...(accountTier !== undefined ? { accountTier } : {}),
+            ...(holdOpens ? { opensHalted: true as const } : {}),
+          }
+        : risk;
     const working =
       mode === "live"
         ? ((await this.config.optionOrders?.settle()) ?? NOTHING_WORKING)
@@ -251,7 +281,7 @@ export class AutonomousTrader {
       skip: new Set(cooling),
     });
     const enriched = options ? { ...context, options } : context;
-    const rawIntents = persona.decide(enriched, decidedOn);
+    const rawIntents = this.intentsFor(persona, enriched, decidedOn);
     const playbookVerdicts = persona.playbookVerdicts?.(enriched) ?? [];
     const playbookObservations = this.observationsOf(persona, enriched);
     const { open, portfolio } = await this.readOpenShares(mode, rawIntents, decidedOn);
@@ -259,7 +289,7 @@ export class AutonomousTrader {
       rawIntents,
       portfolio,
       enriched,
-      risk,
+      cycleRisk,
       { sells: open.selling, buys: open.buys },
     );
 
@@ -292,6 +322,9 @@ export class AutonomousTrader {
       rawIntents,
       guardedIntents,
       outcomes,
+      // A breaker holding opens is still said on the record: the owner's alert and the heartbeat
+      // read it, though the cycle ran and its exits were placed.
+      ...(holdOpens ? { halted: holdOpens } : {}),
       // The context the cycle was HANDED — option quotes never reach disk or the wire.
       context,
       ...(refusals.length > 0 ? { refusals } : {}),
@@ -301,6 +334,22 @@ export class AutonomousTrader {
       ...(playbookObservations.length > 0 ? { playbookObservations } : {}),
     });
     return results;
+  }
+
+  /** What the persona decides, or — at the ladder's bottom rung — the sells that close its shares
+   *  book in place of its share decisions. Its option orders still ride along: a flatten cannot
+   *  close a contract (`planForceFlatten` says so), and the persona's own close is the way out. */
+  private intentsFor(
+    persona: Persona,
+    context: MarketContext,
+    portfolio: Portfolio,
+  ): readonly OrderIntent[] {
+    const decided = persona.decide(context, portfolio);
+    const reason = this.config.forceFlatten?.() ?? null;
+    if (!reason) return decided;
+    const plan = planForceFlatten(portfolio, reason);
+    this.config.onFlattenGap?.(persona.id, plan.unflattened); // empty too: it clears a said gap
+    return [...decided.filter((intent) => intent.option), ...plan.intents];
   }
 
   /** What the persona's dark playbooks would have done (#5489) — a recording, never a decision, so a

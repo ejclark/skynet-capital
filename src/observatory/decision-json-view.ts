@@ -66,6 +66,7 @@ interface CycleOutcomeView {
  *  Exported so `funnelView` (PR 7b) reuses the same labels rather than re-deriving them. */
 export const REFUSAL_LABEL: Record<GuardRefusalReason, string> = {
   "ladder-block": "blocked by the risk ladder",
+  "breaker-halt": "a tripped safety breaker is holding new positions (exits still run)",
   "s2-print": "blocked by S2 (flat through the print)",
   "e1-open": "deferred by E1 (waiting out the open)",
   "subscription-filter": "outside the subscription's aimed symbols",
@@ -155,7 +156,9 @@ export interface DecisionCycleView {
 }
 
 function cycleStatus(record: DecisionRecord): CycleStatus {
-  if (record.halted) return "halted";
+  // A breaker holds opens but the cycle runs (#6954 slice 3): when it still placed or tried an exit,
+  // that outcome is the status and the breaker rides beside it as `halted`.
+  if (record.halted && record.outcomes.length === 0) return "halted";
   if (record.outcomes.some((o) => o.action === "placed")) return "placed";
   if (record.outcomes.some((o) => o.action === "rejected")) return "rejected";
   if (record.outcomes.length > 0) return "observed";

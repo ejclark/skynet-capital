@@ -81,7 +81,7 @@ describe("botAlerts — a halted safety controller", () => {
     expect(alerts[0]).toMatchObject({
       source: BOT_WATCH_SOURCE,
       priority: "critical",
-      title: `Sauron is halted by ${words}, so it places no orders`,
+      title: `Sauron is halted by ${words}, so it opens no new positions`,
       data: { botId: "sauron", breaker: reason },
     });
   });

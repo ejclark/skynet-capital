@@ -452,6 +452,93 @@ describe("LiveCycleRunner", () => {
     });
   });
 
+  describe("a breaker holds the forced pick, never its sale (#6954 slice 3)", () => {
+    function holding(exitBlockedReason: (() => string | null) | undefined) {
+      const broker = new InMemoryBroker(1_000_000, [
+        { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
+      ]);
+      const placed: string[] = [];
+      const scoutBroker = {
+        getPortfolio: () => broker.getPortfolio(),
+        submit: (intent: OrderIntent) => {
+          placed.push(`${intent.side} ${intent.symbol}`);
+          return broker.submit(intent);
+        },
+      };
+      const runner = new LiveCycleRunner({
+        traders: [aBot(new NeverBuys(), broker)],
+        safety: new SafetyController(),
+        // A tripped breaker, as run-autonomous composes it: the union gate says blocked.
+        blockedReason: () => "daily-loss",
+        ...(exitBlockedReason ? { exitBlockedReason } : {}),
+        scout: {
+          maxPicks: 1,
+          broker: scoutBroker,
+          universe: ["MSFT"],
+          managedSymbols: new Set(),
+          risk: RISK,
+          mode: "live",
+          subscriptions: SCOUT_ON,
+        },
+        scoutState: {
+          load: () => ({
+            day: "2026-07-23",
+            ranToday: true,
+            firedOrganicallyToday: false,
+            ownedLots: [{ symbol: "MSFT", quantity: 50, day: "2026-07-23" }],
+          }),
+          save: () => undefined,
+        },
+      });
+      return { runner, placed, broker };
+    }
+
+    it("sells a lot that is due while the breaker is tripped", async () => {
+      const { runner, placed, broker } = holding(() => null);
+      await broker.submit({
+        symbol: "MSFT",
+        side: "buy",
+        quantity: 50,
+        type: "market",
+        reason: "seed",
+      });
+
+      await runner.runCycle(aContext({ MSFT: { last: 100 } }, "2026-07-24T14:30:00Z"));
+
+      expect(placed).toEqual(["sell MSFT"]);
+    });
+
+    it("sells nothing under the stop-everything gate", async () => {
+      const { runner, placed, broker } = holding(() => "manual");
+      await broker.submit({
+        symbol: "MSFT",
+        side: "buy",
+        quantity: 50,
+        type: "market",
+        reason: "seed",
+      });
+
+      await runner.runCycle(aContext({ MSFT: { last: 100 } }, "2026-07-24T14:30:00Z"));
+
+      expect(placed).toEqual([]);
+    });
+
+    it("keeps the single gate when no exit gate is given: a breaker holds the sale too", async () => {
+      const { runner, placed, broker } = holding(undefined);
+      await broker.submit({
+        symbol: "MSFT",
+        side: "buy",
+        quantity: 50,
+        type: "market",
+        reason: "seed",
+      });
+
+      await runner.runCycle(aContext({ MSFT: { last: 100 } }, "2026-07-24T14:30:00Z"));
+
+      expect(placed).toEqual([]);
+    });
+  });
+
   // Eric, 2026-09-04: "configuration that nudges sauron to put in an after hours trade that is
   // staged to be executed when the market opens (on tuesday, not monday)". Staging runs the
   // scout's one daily scan while the market is closed, for the session Alpaca's next_open names,
