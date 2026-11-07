@@ -142,11 +142,10 @@ const CHECK_WEEK_TTL_MS = 15_000;
  *  last ten sessions, behind a card nobody can tell is a minute old. */
 const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
 
-/** The Playbook Store as the bots receive it on every poll: `subscriptions.v4`, with each
- *  subscription's pointer at a conviction record in the version (#5482 contract piece 4). Its
- *  inline-copy bit is frozen at `false` since the field was retired. The bots also read v5, whose
- *  version names an owner's below-bar floor (#6954 slice 5c); this sends v4 until that has
- *  deployed (`subscriptions-wire.ts`). */
+/** The Playbook Store as the bots receive it on every poll: `subscriptions.v5`, with each
+ *  subscription's pointer at a conviction record (#5482 contract piece 4) and its owner's below-bar
+ *  floor, where one is set (#6954 slice 5c-ii), in the version. Its inline-copy bit is frozen at
+ *  `false` since the field was retired (`subscriptions-wire.ts`). */
 export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
   return buildSubscriptionsSnapshot(store.load(), at, store.loadAllocations());
 }

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import {
   buildSubscriptionsSnapshot,
   parseSubscriptionsSnapshot,
-  SUBSCRIPTIONS_SNAPSHOT_KIND,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
   subscriptionsVersion,
 } from "../../src/autonomous/subscriptions-wire.js";
 import type { PlaybookSubscription } from "../../src/domain/types.js";
@@ -33,11 +33,14 @@ const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscriptio
 });
 
 const AT = Date.parse("2026-10-23T12:00:00.000Z");
-const V4 = SUBSCRIPTIONS_SNAPSHOT_KIND;
+const V4 = SUBSCRIPTIONS_SNAPSHOT_KIND_V4;
 const pointed = { convictionId: "ai-dip-2026-10" };
-const v4 = (state: SubscriptionsState) => subscriptionsVersion(state);
+const v4 = (state: SubscriptionsState) => subscriptionsVersion(state, V4);
+/** What an app from before the v5 switch sent (#6954 slice 5c-ii): the same snapshot, kinded v4. */
 const wire = (state: SubscriptionsState) =>
-  JSON.parse(JSON.stringify(buildSubscriptionsSnapshot(state, AT)));
+  JSON.parse(
+    JSON.stringify({ ...buildSubscriptionsSnapshot(state, AT), kind: V4, version: v4(state) }),
+  );
 /** A fingerprint over sauron's subscriptions, each as `fields` lists it: an older build's shape. */
 const fingerprint = (subs: readonly unknown[][]) =>
   createHash("sha256")

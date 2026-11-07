@@ -33,7 +33,9 @@
  * the two (`floorPct`), so no setting can size a below-bar pair past what the house allows. The
  * guards' ceiling and the label's percent are the same function (`openCeilingFor`), so the words on
  * a decision always name the floor that sized it. A pair at or above its bar ignores the field: it
- * narrows weak evidence, not a pair's ordinary size.
+ * narrows weak evidence, not a pair's ordinary size. The Store writes it (5c-ii), refusing in words
+ * a value the bots would read as no change (`ownerFloorRefusal`), and the app sends it under
+ * `subscriptions.v5`.
  */
 import type {
   MarketContext,
@@ -99,11 +101,40 @@ export function openCeilingFor(
     belowBar(playbookId, lookup) ? floorPct(ownerFloorOf(playbookId)) : undefined;
 }
 
+/** A share of equity as a percent in words, "0.5%". Three significant figures, never a fixed count
+ *  of decimals: an owner's 0.004% must not read "0%". */
+export function floorPercent(pct: number): string {
+  return `${Number((pct * 100).toPrecision(3))}%`;
+}
+
 /** "· below its bar: sized to at most 1% of the account" — the tail an opening order gains. */
 export function belowBarNote(pct: number = BELOW_BAR_FLOOR_PCT): string {
-  // Three significant figures, never a fixed count of decimals: an owner's 0.004% must not read "0%".
-  const shown = Number((pct * 100).toPrecision(3));
-  return ` · ${BELOW_BAR_LABEL}: sized to at most ${shown}% of the account`;
+  return ` · ${BELOW_BAR_LABEL}: sized to at most ${floorPercent(pct)} of the account`;
+}
+
+/**
+ * Why the Playbook Store refuses an owner's floor (#6954 slice 5c-ii), in words, or `undefined` to
+ * save it. The bots would read any of these harmlessly (a floor at or over the house's reads as the
+ * house's, a pair at its bar ignores one, the parser drops a share at or below 0), which is exactly
+ * why the Store refuses them: a saved setting that changes nothing tells its owner something false.
+ * The words name the job ("the most each new order may risk"), never the field's name.
+ */
+export function ownerFloorRefusal(
+  playbookId: string,
+  pct: number,
+  lookup: PairLookup = findPair,
+): string | undefined {
+  const house = floorPercent(BELOW_BAR_FLOOR_PCT);
+  if (!(Number.isFinite(pct) && pct > 0)) {
+    return `The most each new order may risk has to be above 0%. Leave it empty to use the house limit of ${house}.`;
+  }
+  if (!belowBar(playbookId, lookup)) {
+    return `${playbookId} meets its study's bar, so it trades at its ordinary size and a smaller limit on each new order would change nothing.`;
+  }
+  if (pct >= BELOW_BAR_FLOOR_PCT) {
+    return `The most each new order may risk can only be set below the house limit of ${house} of the account.`;
+  }
+  return undefined;
 }
 
 /** An order the floor sizes — an open that risks cash, from a below-bar pair — with the label on its

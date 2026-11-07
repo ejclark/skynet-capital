@@ -26,6 +26,9 @@ interface SubscribeBody {
   readonly compoundAllocation?: boolean;
   /** The owner's conviction (#4469 slice 3c part 3) — optional; a malformed one is a 400. */
   readonly conviction?: SubscriptionConviction;
+  /** The owner's smaller below-bar floor (#6954 slice 5c-ii), a share of equity. Whether it is one
+   *  the pair may take is the route's call (`ownerFloorRefusal`), said in words. */
+  readonly belowBarFloorPct?: number;
 }
 
 interface PlaybookRefBody {
@@ -78,6 +81,11 @@ function parseMode(raw: unknown): PlaybookMode | undefined {
 const isCapital = (raw: unknown): raw is number =>
   typeof raw === "number" && Number.isFinite(raw) && raw >= 0;
 
+/** A floor the route may judge: any finite number. Zero, a negative or one over the house floor is
+ *  refused in words by the route (`ownerFloorRefusal`), never here as a bare 400. */
+const isFloorNumber = (raw: unknown): raw is number =>
+  typeof raw === "number" && Number.isFinite(raw);
+
 /** `{reason, checkOn}`: a non-blank reason within the cap, trimmed, and a real calendar day.
  *  Whether the day is one a conviction may be checked on is the route's call (`checkOnRefusal`). */
 function parseConviction(raw: unknown): SubscriptionConviction | undefined {
@@ -107,6 +115,10 @@ export function parseSubscribeBody(raw: string): SubscribeBody | undefined {
   const capitalAllocated = isCapital(body.capitalAllocated) ? body.capitalAllocated : undefined;
   const symbols = parseSymbols(body.symbols);
   const compoundAllocation = body.compoundAllocation === true;
+  // A floor that is not a number is refused, never dropped: dropped, the pair would trade at the
+  // house floor its owner meant to shrink. Absent is no floor of the owner's.
+  const floor = body.belowBarFloorPct;
+  if (!(floor === undefined || isFloorNumber(floor))) return undefined;
   return id && playbookId && mode && (unbudgeted || capitalAllocated !== undefined)
     ? {
         id,
@@ -116,6 +128,7 @@ export function parseSubscribeBody(raw: string): SubscribeBody | undefined {
         ...(symbols ? { symbols } : {}),
         ...(compoundAllocation ? { compoundAllocation: true } : {}),
         ...(conviction ? { conviction } : {}),
+        ...(floor !== undefined ? { belowBarFloorPct: floor } : {}),
       }
     : undefined;
 }
@@ -168,6 +181,9 @@ export function parseSetEnabledBody(raw: string): SetEnabledBody | undefined {
  *  - A malformed `symbols` is a 400. Dropping it to "unrestricted", as subscribe does, would
  *    silently widen what the bot may buy. Absent or `[]` is the whole basket.
  * `compoundAllocation` must be a boolean when present; absent is off.
+ * `belowBarFloorPct` (#6954 slice 5c-ii) is three-way: a number sets the owner's floor, `null`
+ * clears it back to the house floor, and absent keeps what the subscription has, so a page loaded
+ * before the field existed never clears a floor by not knowing it. Anything else is a 400.
  */
 export function parseConfigureBody(raw: string): ConfigureBody | undefined {
   const ref = parsePlaybookRefBody(raw);
@@ -180,7 +196,17 @@ export function parseConfigureBody(raw: string): ConfigureBody | undefined {
     body.symbols === undefined || (Array.isArray(body.symbols) && body.symbols.length === 0);
   const symbols = wholeBasket ? [] : parseSymbols(body.symbols);
   const compound = body.compoundAllocation;
-  if (!(mode && capitalOk && symbols && (compound === undefined || typeof compound === "boolean")))
+  const floor = body.belowBarFloorPct;
+  const floorOk = floor === undefined || floor === null || isFloorNumber(floor);
+  if (
+    !(
+      mode &&
+      capitalOk &&
+      symbols &&
+      floorOk &&
+      (compound === undefined || typeof compound === "boolean")
+    )
+  )
     return undefined;
   return {
     ...ref,
@@ -189,6 +215,7 @@ export function parseConfigureBody(raw: string): ConfigureBody | undefined {
       ...(isCapital(capital) ? { capitalAllocated: capital } : {}),
       ...(symbols.length > 0 ? { symbols } : {}),
       ...(compound === true ? { compoundAllocation: true } : {}),
+      ...(floor !== undefined ? { belowBarFloorPct: floor as number | null } : {}),
     },
   };
 }

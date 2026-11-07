@@ -57,27 +57,31 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * and never apply a pair under a version that did not vouch for its pointer. The next behavioral
  * field adds a kind again, expand first: the bots read both before the app sends the new one.
  *
- * V5 (#6954 slice 5c, EXPAND): a subscription's `belowBarFloorPct`, the owner's own smaller
- * below-bar floor, joins the version. The bots read v4 and v5; the app still sends v4, and sends v5
- * once this has deployed (5c's second half, which also gives the Store its writer). A v5 version
- * names the floor only where one is set, so a state with no floor hashes byte for byte as v4 does
- * and the switch swaps no roster. A v4 snapshot never vouched for a floor, so one is stripped from
- * it before it is applied: a floor reaches a bot only under a version that would move if it changed.
+ * V5 (#6954 slice 5c): a subscription's `belowBarFloorPct`, the owner's own smaller below-bar
+ * floor, joins the version. Expand first (5c-i, #7016): the bots read v4 and v5. Then the switch
+ * (5c-ii): the app sends v5, and the Store writes the floor. A v5 version names the floor only where
+ * one is set, so a state with no floor hashes byte for byte as v4 does and the switch swaps no
+ * roster. A v4 snapshot never vouched for a floor, so one is stripped from it before it is applied:
+ * a floor reaches a bot only under a version that would move if it changed. The bots keep reading
+ * v4 for one release, so an app rolled back past the switch still steers them (without floors).
  */
 
-/** The kind the app sends. */
-export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v4";
+/** The kind an app before the switch sent, still read for a rollback past it. */
+export const SUBSCRIPTIONS_SNAPSHOT_KIND_V4 = "subscriptions.v4";
 
 /** The kind whose version names the owner's below-bar floor (#6954 slice 5c). */
 export const SUBSCRIPTIONS_SNAPSHOT_KIND_V5 = "subscriptions.v5";
 
+/** The kind the app sends (#6954 slice 5c-ii). */
+export const SUBSCRIPTIONS_SNAPSHOT_KIND = SUBSCRIPTIONS_SNAPSHOT_KIND_V5;
+
 /** Every kind the bots read. */
 export type SubscriptionsSnapshotKind =
-  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V4
   | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V5;
 
 const READ_KINDS: readonly SubscriptionsSnapshotKind[] = [
-  SUBSCRIPTIONS_SNAPSHOT_KIND,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V5,
 ];
 
@@ -181,7 +185,7 @@ export function buildSubscriptionsSnapshot(
   return {
     kind: SUBSCRIPTIONS_SNAPSHOT_KIND,
     at,
-    version: subscriptionsVersion(state),
+    version: subscriptionsVersion(state, SUBSCRIPTIONS_SNAPSHOT_KIND),
     accounts: state,
     ...(allocations && Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
