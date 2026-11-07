@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  anchorOf,
   CAMPAIGNS,
   type Campaign,
   campaignById,
@@ -15,8 +16,11 @@ import {
   MAX_STORYLINE,
   parseCampaign,
 } from "../../src/domain/campaigns.js";
+import { MARKETS, marketById } from "../../src/domain/market-catalog.js";
 import { everyEvent } from "../../src/domain/market-events.js";
 import { MARKET_EVENTS, type MarketEvent } from "../../src/domain/market-events-data.js";
+import { GICS_SECTORS } from "../../src/domain/sector-coverage.js";
+import { TICKER_DIRECTORY } from "../../src/domain/ticker-directory/index.js";
 import { claimLabel } from "../../src/playbooks/claim-score.js";
 import { SEEDED_CONVICTIONS } from "../../src/playbooks/conviction-seeds.js";
 
@@ -36,7 +40,7 @@ const minimal = (over: Record<string, unknown> = {}): Record<string, unknown> =>
   title: "Test",
   storyline: "A one-sentence story.",
   sector: "Energy",
-  cast: [{ role: "Majors", symbols: ["XOM"], source: "test" }],
+  cast: [{ role: "Majors", symbols: ["XOM", "XLE"], source: "test" }],
   forces: [{ id: "oil", name: "Oil supply", why: "test", prefixes: ["opec-"] }],
   openQuestions: [],
   ...over,
@@ -65,6 +69,7 @@ describe("campaigns", () => {
         "AMD",
         "AVGO",
         "MU",
+        "MRVL",
         "TSM",
         "CRWV",
         "NBIS",
@@ -108,6 +113,14 @@ describe("campaigns", () => {
           expect(ids.some((id) => id.startsWith(prefix))).toBe(true);
     });
 
+    it("links the benchmarks' rebalances and MRVL's events beyond the rates force", () => {
+      const census = linkCensus(linkEvents(aiBuildout(), MARKET_EVENTS));
+      expect(census.byForce["benchmark-rebalances"]).toBeGreaterThan(0);
+      expect(
+        linkEvents(aiBuildout(), everyEvent()).some((l) => l.event.id.startsWith("mrvl-")),
+      ).toBe(true);
+    });
+
     // The state block's falsifier: fewer than 50 linked events would mean the cast or forces are
     // drawn too narrowly to steer research.
     it("links at least 50 of the calendar's events", () => {
@@ -115,9 +128,107 @@ describe("campaigns", () => {
     });
   });
 
+  describe("what a campaign is anchored on (#6949 slice 2)", () => {
+    const sectorCast = (fund: string): Record<string, unknown> => ({
+      cast: [{ role: "Fund", symbols: [fund], source: "test" }],
+    });
+
+    it("anchors on any of the 11 GICS sectors through that sector's SPDR fund", () => {
+      for (const { name, fund } of GICS_SECTORS) {
+        const c = parse({ ...sectorCast(fund), sector: name });
+        expect(anchorOf(c)).toEqual({ kind: "sector", name, fund });
+      }
+    });
+
+    it("anchors on a market through its US-listed ETF", () => {
+      for (const m of MARKETS) {
+        const c = parse({ ...sectorCast(m.fund), sector: undefined, market: m.id });
+        expect(anchorOf(c)).toEqual({ kind: "market", name: m.name, fund: m.fund });
+        expect(c.researchOnly).toBeUndefined();
+      }
+    });
+
+    it("refuses a campaign with both anchors, or with neither", () => {
+      expect(() => parse({ market: "gold" })).toThrow(/exactly one anchor/);
+      expect(() => parse({ sector: undefined })).toThrow(/exactly one anchor/);
+    });
+
+    it("refuses a market the catalog does not name", () => {
+      expect(() => parse({ sector: undefined, market: "bitcoin" })).toThrow(/market catalog/);
+    });
+
+    it("refuses a cast that leaves out the fund that carries the anchor", () => {
+      expect(() => parse({ cast: [{ role: "Majors", symbols: ["XOM"], source: "test" }] })).toThrow(
+        /must include XLE/,
+      );
+      expect(() =>
+        parse({
+          sector: undefined,
+          market: "gold",
+          cast: [{ role: "Miners", symbols: ["NEM"], source: "test" }],
+        }),
+      ).toThrow(/must include GLD/);
+    });
+
+    it("keeps the catalog honest: every market's fund is an ETF the directory lists, once", () => {
+      const etfs = new Map(
+        TICKER_DIRECTORY.filter((e) => e.sector === "ETF").map((e) => [e.symbol, e.name]),
+      );
+      for (const m of MARKETS) {
+        expect(etfs.has(m.fund)).toBe(true);
+        expect(isTradable(m.fund)).toBe(true);
+      }
+      expect(new Set(MARKETS.map((m) => m.id)).size).toBe(MARKETS.length);
+      expect(new Set(MARKETS.map((m) => m.fund)).size).toBe(MARKETS.length);
+      expect(marketById("japan")?.fund).toBe("EWJ");
+      expect(marketById("nowhere")).toBeUndefined();
+    });
+  });
+
+  describe("the oil-supply campaign (#6949 slice 2: a second, non-AI campaign)", () => {
+    const oil = (): Campaign => {
+      const c = campaignById("oil-supply");
+      if (!c) throw new Error("the oil-supply campaign is missing");
+      return c;
+    };
+
+    it("is an Energy-sector record played through XLE, with nothing AI in its cast", () => {
+      expect(anchorOf(oil())).toEqual({ kind: "sector", name: "Energy", fund: "XLE" });
+      const ai = new Set(castSymbols(aiBuildout()));
+      expect(castSymbols(oil()).filter((s) => ai.has(s))).toEqual([]);
+    });
+
+    it("is not research-only, and every cast symbol is one the order path trades", () => {
+      expect(oil().researchOnly).toBeUndefined();
+      expect(castSymbols(oil()).every(isTradable)).toBe(true);
+    });
+
+    it("cites a file that exists for every cast role, and has no dead force prefix", () => {
+      for (const role of oil().cast)
+        for (const p of role.source.match(/(?:docs|src)\/[\w./-]+\.(?:md|ts)/g) ?? [])
+          expect(existsSync(p)).toBe(true);
+      const ids = everyEvent().map((e) => e.id);
+      for (const force of oil().forces)
+        for (const prefix of force.prefixes ?? [])
+          expect(ids.some((id) => id.startsWith(prefix))).toBe(true);
+    });
+
+    it("links the cartel meetings, the inventory reports and the chokepoint dates", () => {
+      const census = linkCensus(linkEvents(oil(), MARKET_EVENTS));
+      for (const force of ["opec", "inventories", "chokepoints", "gas"])
+        expect(census.byForce[force]).toBeGreaterThan(0);
+    });
+
+    it("shares no linked event with the AI buildout's power force: the stories stay apart", () => {
+      const aiIds = new Set(linkEvents(aiBuildout(), MARKET_EVENTS).map((l) => l.event.id));
+      const shared = linkEvents(oil(), MARKET_EVENTS).filter((l) => aiIds.has(l.event.id));
+      expect(shared).toEqual([]);
+    });
+  });
+
   describe("linking", () => {
     const campaign = parse({
-      cast: [{ role: "Chips", symbols: ["NVDA", "AMD"], source: "test" }],
+      cast: [{ role: "Chips", symbols: ["NVDA", "AMD", "XLE"], source: "test" }],
       forces: [
         { id: "power", name: "Power", why: "test", prefixes: ["pjm-"] },
         { id: "rates", name: "Rates", why: "test", kinds: ["rates"] },

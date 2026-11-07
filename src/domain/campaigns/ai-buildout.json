@@ -6,8 +6,8 @@
   "cast": [
     {
       "role": "Chips",
-      "symbols": ["NVDA", "AMD", "AVGO", "MU", "TSM"],
-      "source": "docs/research/cycle-phase-crwv-nvda-2026-10.md (peer basket NVDA, CRWV, NBIS, MU, AVGO, AMD); TSM: docs/research/events/nvda-2026-11-18-print.md and docs/research/ai-hardware-constraints-aug-2026.md"
+      "symbols": ["NVDA", "AMD", "AVGO", "MU", "MRVL", "TSM"],
+      "source": "docs/research/cycle-phase-crwv-nvda-2026-10.md (peer basket NVDA, CRWV, NBIS, MU, AVGO, AMD); TSM: docs/research/events/nvda-2026-11-18-print.md and docs/research/ai-hardware-constraints-aug-2026.md; MRVL: docs/research/multi-symbol-sweep.md (swept with AVGO and the hyperscalers as an AI-capex name)"
     },
     {
       "role": "Neoclouds",
@@ -68,6 +68,16 @@
         "us-china-tariff-truce-expiry-",
         "china-retaliation-suspension-expiry-",
         "apec-leaders-shenzhen-"
+      ]
+    },
+    {
+      "id": "benchmark-rebalances",
+      "name": "The benchmarks' own rebalances",
+      "why": "XLK and QQQ are the cast's benchmarks and their index owners cap and reweight them on fixed dates; the chips and hyperscalers are among the heaviest names in both, so a rebalance trades the same shares the story is about.",
+      "prefixes": [
+        "ndx-annual-reconstitution-",
+        "sp-select-sector-secondary-reweight-",
+        "sp-rebalance-reference-close-"
       ]
     }
   ],
