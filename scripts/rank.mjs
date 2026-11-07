@@ -52,6 +52,31 @@ export function classOf({ labels = [], blocks = [], horizon = null }) {
   return { cls: "P2", why: "improves a surface or a process" };
 }
 
+/** The board's Kind field, in the order a lane sorts by (#6871 §4): what kind of work a card is,
+ *  written from the card's own labels so it only changes when they do. Option names are the board's;
+ *  `tests/scripts/moneypenny/board-fields.spec.ts` pins them to `KIND_OPTIONS` in projects.mjs. */
+export const KINDS = [
+  "Fix first",
+  "Bug",
+  "Blocks other work",
+  "Slows delivery",
+  "Member asked",
+  "Improvement",
+  "Idea",
+];
+
+/** The Kind of one issue. A hand-set P label moves the lane, never the Kind: the card still says
+ *  what it is. `blocks` lists the open issues this one blocks; `horizon` is the hand triage. */
+export function kindOf({ labels = [], blocks = [], horizon = null }) {
+  if (labels.includes("fast-track")) return KINDS[0];
+  if (labels.includes("bug")) return KINDS[1];
+  if (blocks.length) return KINDS[2];
+  if (labels.includes("bottleneck")) return KINDS[3];
+  if (labels.some((l) => l.startsWith("member-"))) return KINDS[4];
+  if (labels.includes("idea") || horizon === "Later") return KINDS[6];
+  return KINDS[5];
+}
+
 /** The labels that put an issue in the buildable backlog. `bottleneck` and `bug` are in on purpose:
  *  they carry the P0 signals, and a queue that only read plan/feedback left every bottleneck out
  *  (the first run's own finding). `ci-failure` stays out — the repair lane owns it. */

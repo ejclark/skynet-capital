@@ -3,6 +3,7 @@
 // `allowJs` off (see index.d.mts for the same reasoning).
 import type { AdmissionIssue } from "./admission.d.mts";
 import type { BoardItem, StatusColumn } from "./projects.d.mts";
+import type { CardFieldWrite } from "./projects-fields.d.mts";
 import type { PriorityIssue, PriorityPlan } from "./projects-priority.d.mts";
 
 export interface BoardItemPage {
@@ -110,6 +111,15 @@ export interface ColumnContext {
 /** The column an issue (a REST row) belongs in, or null for a card the board never carries. */
 export function wantedColumn(issue: ColumnIssue, context?: ColumnContext): StatusColumn | null;
 
+/** `wantedColumn` with the reads behind it, for the card's "Waiting on" text (#6871 slice 3). */
+export interface WantedCard {
+  status: StatusColumn;
+  decisionCalloutMissing: boolean;
+  boardedOn?: ReadonlyMap<number, number>;
+  namedByOpenPr?: boolean;
+}
+export function wantedCard(issue: ColumnIssue, context?: ColumnContext): WantedCard | null;
+
 /** One memoized, fail-open `pulls?state=open` read, as both PR maps. */
 export function openPrMaps(deps?: {
   read?: () => unknown[];
@@ -133,7 +143,13 @@ export function oneIssueContext(): ColumnContext;
 
 export function syncIssue(
   issueNumber: string,
-  opts?: { horizon?: string; board?: BoardContext; context?: ColumnContext },
+  opts?: {
+    horizon?: string;
+    board?: BoardContext;
+    context?: ColumnContext;
+    /** The UTC day "In this column since" is written with; defaults to today. */
+    today?: string;
+  },
 ):
   | { skipped: true; reason: string }
   | {
@@ -142,6 +158,8 @@ export function syncIssue(
       added: boolean;
       decisionCalloutMissing?: boolean;
       priority?: PriorityPlan | { action: "skipped"; reason: string };
+      /** The Kind / "Waiting on" / "In this column since" writes made (#6871 slice 3). */
+      fields: CardFieldWrite[];
       /** The parent issue the events lane re-syncs after this one (#6871 slice 2). */
       parent: number | null;
     };

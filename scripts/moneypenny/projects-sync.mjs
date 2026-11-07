@@ -49,21 +49,26 @@ import { openPrsByIssue, platterClosesByIssue } from "./pr-issues.mjs";
 import {
   boardItemsFromProjectItems,
   boardSyncSkip,
+  cardFieldValues,
   explainMaskedOwnerFailure,
   findBoardItem,
+  IN_COLUMN_SINCE,
   isBacklogCandidate,
   isMaskedOwnerFailure,
   isRateLimitExhausted,
   isRetryableProjectsGhError,
   isRetryableRestError,
   isStartedPlan,
+  KIND,
   priorityValues,
   resolveBoardItem,
   runThroughRateLimit,
   SYNCED_PRIORITY,
   statusForIssue,
   subIssueCounts,
+  WAITING_ON,
 } from "./projects.mjs";
+import { describeCardFields, planCardFields, wantedCardFields } from "./projects-fields.mjs";
 import { describePriority, planPriority, wantedPriorityOf } from "./projects-priority.mjs";
 
 const OWNER = "ejclark";
@@ -155,6 +160,12 @@ function optionByName(field, name) {
 const PRIORITY_VALUES = `priority: fieldValueByName(name:"Priority"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
         synced: fieldValueByName(name:"${SYNCED_PRIORITY}"){ ... on ProjectV2ItemFieldTextValue{ text } }`;
 
+// #6871 slice 3: Kind, "Waiting on" and "In this column since" ride along the same way. A field the
+// board does not carry yet answers null, so a sweep before the setup dispatch reads them as unset.
+const CARD_VALUES = `kind: fieldValueByName(name:"${KIND}"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
+        waiting: fieldValueByName(name:"${WAITING_ON}"){ ... on ProjectV2ItemFieldTextValue{ text } }
+        since: fieldValueByName(name:"${IN_COLUMN_SINCE}"){ ... on ProjectV2ItemFieldDateValue{ date } }`;
+
 const BOARD_ITEMS_QUERY = `query($owner:String!,$project:Int!,$after:String){
   user(login:$owner){ projectV2(number:$project){
     items(first:100, after:$after){ totalCount pageInfo{ hasNextPage endCursor }
@@ -162,6 +173,7 @@ const BOARD_ITEMS_QUERY = `query($owner:String!,$project:Int!,$after:String){
         content{ __typename ... on Issue{ url } ... on PullRequest{ url } }
         status: fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
         ${PRIORITY_VALUES}
+        ${CARD_VALUES}
       } }
   } }
   rateLimit{ cost remaining resetAt }
@@ -214,6 +226,7 @@ export function readBoardItemsFromGh({
         id: node.id,
         ...(node.status?.name ? { status: node.status.name } : {}),
         ...priorityValues(node),
+        ...cardFieldValues(node),
         content: __typename ? { type: __typename, ...(url ? { url } : {}) } : null,
       });
     }
@@ -307,7 +320,8 @@ const ISSUE_PROJECT_ITEMS_QUERY = `query($owner:String!,$repo:String!,$number:In
     issue(number:$number){
       projectItems(first:20,includeArchived:false){ nodes{ id project{ number }
         status: fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
-        ${PRIORITY_VALUES} } }
+        ${PRIORITY_VALUES}
+        ${CARD_VALUES} } }
     }
   }
 }`;
@@ -543,27 +557,41 @@ export function readIssue(issueNumber, { read = ghRest, sleep } = {}) {
  *                      the only column those two checks can move — so a sync that lands anywhere
  *                      else costs no PR list.
  */
-export function wantedColumn(issue, { columns, openSubIssuesOf, prMaps } = {}) {
+export function wantedColumn(issue, context = {}) {
+  return wantedCard(issue, context)?.status ?? null;
+}
+
+/**
+ * `wantedColumn` with the reads behind it (#6871 slice 3): `{status, decisionCalloutMissing,
+ * boardedOn, namedByOpenPr}`, or null for a card the board never carries. The extras are what the
+ * "Waiting on" field needs to name who acts next, so it and the column come from ONE evaluation of
+ * the rule and cannot disagree. `boardedOn` / `namedByOpenPr` are undefined unless the card read
+ * Ready first (the only column those two checks can move).
+ */
+export function wantedCard(issue, { columns, openSubIssuesOf, prMaps } = {}) {
   const labels = labelNames(issue?.labels);
   if (!isBacklogCandidate({ labels })) return null;
+  const decisionCalloutMissing = missingDecisionCallout({ labels, body: issue?.body });
   const base = {
     number: issue?.number,
     state: issue?.state ?? "open",
     labels,
-    decisionCalloutMissing: missingDecisionCallout({ labels, body: issue?.body }),
+    decisionCalloutMissing,
     subIssues: subIssueCounts(issue),
     openSubIssues: openSubIssuesOf?.(issue),
     blockedBy: Number(issue?.issue_dependencies_summary?.blocked_by) || 0,
     ...(columns?.length ? { columns } : {}),
   };
-  const column = statusForIssue(base);
-  if (column !== "Ready" || !prMaps) return column;
+  const status = statusForIssue(base);
+  if (status !== "Ready" || !prMaps) return { status, decisionCalloutMissing };
   const { boardedOn, openPrOn } = prMaps();
-  return statusForIssue({
-    ...base,
+  const namedByOpenPr = Boolean(openPrOn?.has(Number(issue?.number)));
+  return {
+    status: statusForIssue({ ...base, boardedOn, namedByOpenPr }),
+    decisionCalloutMissing,
     boardedOn,
-    namedByOpenPr: Boolean(openPrOn?.has(Number(issue?.number))),
-  });
+    namedByOpenPr,
+  };
 }
 
 /**
@@ -688,7 +716,12 @@ export function syncPriority({ issue, item, fresh = false, ready = true, horizon
  */
 export function syncIssue(
   issueNumber,
-  { horizon, board = createBoardContext(), context = oneIssueContext() } = {},
+  {
+    horizon,
+    board = createBoardContext(),
+    context = oneIssueContext(),
+    today = new Date().toISOString().slice(0, 10),
+  } = {},
 ) {
   const issue = readIssue(issueNumber);
   const labels = (issue.labels ?? []).map((l) => l.name);
@@ -716,7 +749,8 @@ export function syncIssue(
   // The live board's own column names (#4393 slice 4): a rule that names a column the field does
   // not carry yet falls back rather than failing the sync — see `statusForIssue`'s `columns`.
   const columns = (findField(fieldList, "Status")?.options ?? []).map((o) => o.name);
-  const status = wantedColumn(issue, { ...context, columns });
+  const card = wantedCard(issue, { ...context, columns });
+  const status = card.status;
 
   const setSingleSelect = (fieldName, optionName) => {
     const field = findField(fieldList, fieldName);
@@ -742,13 +776,7 @@ export function syncIssue(
     ]);
   };
 
-  // The card's own Status rides on both reads (the board list, and since #6871 slice 2 the
-  // per-issue lookup too), so an unchanged Status is not rewritten — a sweep filling Priority
-  // would otherwise pay a third mutation per card, and every label event a needless write.
-  if (item.status !== status) setSingleSelect("Status", status);
-  if (horizon) setSingleSelect("Horizon", horizon);
-
-  const setText = (fieldName, text) => {
+  const setValue = (fieldName, flag, value) => {
     const { id } = findField(fieldList, fieldName);
     ghProject([
       "item-edit",
@@ -758,10 +786,41 @@ export function syncIssue(
       id,
       "--project-id",
       project.id,
-      "--text",
-      text,
+      ...(flag ? [flag, value] : ["--clear"]),
     ]);
   };
+  const setText = (fieldName, text) => setValue(fieldName, "--text", text);
+
+  // Kind, "Waiting on" and "In this column since" (#6871 slice 3). A closed card keeps only the day
+  // (Done is a column too); a field setup has not made yet is skipped, not an error. The day is
+  // written BEFORE Status (projects-fields.mjs header): a failed Status write then re-writes both.
+  const closed = status === "Done";
+  const present = {
+    [IN_COLUMN_SINCE]: Boolean(findField(fieldList, IN_COLUMN_SINCE)),
+    [KIND]: !closed && Boolean(findField(fieldList, KIND)),
+    [WAITING_ON]: !closed && Boolean(findField(fieldList, WAITING_ON)),
+  };
+  const fieldWrites = planCardFields({
+    have: item,
+    wanted: closed ? {} : wantedCardFields(issue, card, { horizons: readHorizons() }),
+    status,
+    today,
+    present,
+  });
+  const writeCardField = (w) => {
+    if (w.kind === "select") setSingleSelect(w.field, w.value);
+    else if (w.kind === "date") setValue(w.field, "--date", w.value);
+    else if (w.kind === "text") setText(w.field, w.value);
+    else setValue(w.field, null);
+  };
+  for (const w of fieldWrites.filter((x) => x.kind === "date")) writeCardField(w);
+
+  // The card's own Status rides on both reads (the board list, and since #6871 slice 2 the
+  // per-issue lookup too), so an unchanged Status is not rewritten — a sweep filling Priority
+  // would otherwise pay a third mutation per card, and every label event a needless write.
+  if (item.status !== status) setSingleSelect("Status", status);
+  if (horizon) setSingleSelect("Horizon", horizon);
+  for (const w of fieldWrites.filter((x) => x.kind !== "date")) writeCardField(w);
   const labelsPath = `repos/${REPO}/issues/${issue.number}/labels`;
   const priority = syncPriority({
     issue,
@@ -792,6 +851,7 @@ export function syncIssue(
     added,
     decisionCalloutMissing,
     priority,
+    fields: fieldWrites,
     parent: localParentOf(issue),
   };
 }
@@ -852,6 +912,7 @@ function report(issueNumber, result) {
       ? `issue #${issueNumber}: Priority not synced — ${p.reason}`
       : describePriority(issueNumber, p),
   );
+  if (result.fields?.length) console.log(describeCardFields(issueNumber, result.fields));
   if (result.decisionCalloutMissing) {
     console.log(
       `issue #${issueNumber}: labelled needs-eric with no "Needs from you" callout — kept in Backlog until the ask is written (#3913)`,
