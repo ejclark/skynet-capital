@@ -1,4 +1,3 @@
-import { openPrsByIssue } from "../../../scripts/moneypenny/continuation.mjs";
 import {
   type ClaimCtx,
   claimNext,
@@ -7,7 +6,7 @@ import {
   withoutOpenPr,
 } from "../../../scripts/moneypenny/index.mjs";
 import { readPickupHold } from "../../../scripts/moneypenny/pickup-hold.mjs";
-import { platterClosesByIssue } from "../../../scripts/moneypenny/pr-issues.mjs";
+import { openPrsByIssue, platterClosesByIssue } from "../../../scripts/moneypenny/pr-issues.mjs";
 import {
   issue,
   mode,

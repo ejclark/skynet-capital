@@ -167,7 +167,7 @@ export function calloutGapComment({ actor } = {}) {
     `**This issue is labelled \`${NEEDS_ERIC}\` but never says what Eric has to decide.**`,
     "",
     `- The label was applied by ${who}; the body has no \`Needs from you\` callout above the fold (docs/ISSUES.md rule 7).`,
-    "- Until one exists, the board keeps this out of the Blocked column — an ask he can't see isn't in his queue yet.",
+    "- Until one exists, the board keeps this in Backlog, out of Waiting on a person — an ask he can't see isn't in his queue yet.",
     "- Fix: add the callout to the top of the body, or remove the label if no decision is needed.",
     "",
     "```markdown",

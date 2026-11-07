@@ -84,7 +84,6 @@ import {
   continuationContext,
   executeStopContinuation,
   gatherContinuationDeps,
-  openPrsByIssue,
   pickContinuation,
   postContinuationReceipt,
   routeContinuation,
@@ -116,6 +115,7 @@ import { modelTier } from "./model-tier.mjs";
 import { nextUnheld } from "./pickup-hold.mjs";
 import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
+import { openPrsByIssue } from "./pr-issues.mjs";
 import { closeRedLanePr } from "./red-lane-pr.mjs";
 import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
@@ -808,8 +808,9 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
   const mode = readMode();
   const inFlight = inFlightOf();
   let pool = withoutOpenPr(readReady(), readPrIssues());
-  // Read once: the sweep's pick and the claim's own gate must count the same Waiting column. A
-  // failed read leaves the claim's gate its own reader, which fails closed for a fresh plan only.
+  // Read once: the sweep's pick and the claim's own gate must count the same Next part queued
+  // column. A failed read leaves the claim's gate its own reader, which fails closed for a fresh
+  // plan only.
   const { openPlans, waiting } = waitingOrSkip(readPlans);
   const gateDeps = {
     readMode: () => mode,
@@ -857,8 +858,8 @@ export function claimNext(nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? ""
 }
 
 /**
- * The open plans and the board's Waiting column for one sweep tick (#4393 slice 4) — or neither,
- * with a warning, when the read fails. The started-plan cap governs fresh plans only, so a failed
+ * The open plans and the board's Next part queued column for one sweep tick (#4393 slice 4) — or
+ * neither, with a warning, when the read fails. The started-plan cap governs fresh plans only, so a failed
  * plan read must not cost the tick its continuation or a feedback pick: the pick runs without the
  * cap, and a fresh plan it lands on is refused by `gateAdmission`'s own read, which fails closed.
  */

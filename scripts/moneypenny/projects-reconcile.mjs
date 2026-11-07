@@ -37,25 +37,30 @@
 // instead of ~310 a sweep) in the same shape; its log line names the points each sweep spent.
 //
 //   GH_TOKEN=<eric's PAT> node scripts/moneypenny/projects-reconcile.mjs [--dry-run]
-import { missingDecisionCallout } from "./decision-callout.mjs";
+import { withOpenSubIssues } from "./admission.mjs";
 import { ghRateLimit, ghRestAll, withRetry } from "./gh.mjs";
+import { labelNames } from "./labels.mjs";
 import {
-  isBacklogCandidate,
   isRateLimitExhausted,
   isRetryableRestError,
+  isStartedPlan,
   planBoardSweep,
   STATUS_OPTIONS,
   statusFieldUpdate,
-  statusForIssue,
   subIssueCounts,
+  WAITING_ON_PERSON,
 } from "./projects.mjs";
 import { describePriority, planPriorityDrift } from "./projects-priority.mjs";
 import {
   createBoardContext,
+  localParentOf,
+  openPrMaps,
   readHorizons,
   syncIssue,
+  wantedColumn,
   writeStatusOptions,
 } from "./projects-sync.mjs";
+import { readWorkMode } from "./work-mode.mjs";
 
 const REPO = process.env.GITHUB_REPOSITORY ?? "ejclark/skynet-capital";
 
@@ -109,21 +114,50 @@ export function boardIssueNumber(item, repo = REPO) {
 }
 
 /**
- * What Status an open issue (a REST issue object) belongs in — `syncIssue`'s rule, no network.
- * `columns` is the live board's option names (see `statusForIssue`); the REST list carries
- * `sub_issues_summary`, which the Waiting rule reads.
+ * What Status an issue (a REST issue object) belongs in — `wantedColumn` (projects-sync.mjs), the
+ * one-issue sync's own rule, so the two never disagree. `columns` is the live board's option names
+ * (see `statusForIssue`); `context` is the sweep's shared reads (`sweepContext`). Left out, the
+ * open-PR and sub-issue checks are skipped: a plan reads as holding its seat, as the cap does.
  */
-export function wantedStatusOf(issue, columns = STATUS_OPTIONS) {
-  const labels = (issue?.labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
-  if (!isBacklogCandidate({ labels })) return null;
-  const decisionCalloutMissing = missingDecisionCallout({ labels, body: issue?.body });
-  return statusForIssue({
-    state: issue?.state ?? "open",
-    labels,
-    decisionCalloutMissing,
-    subIssues: subIssueCounts(issue),
-    columns,
-  });
+export function wantedStatusOf(issue, columns = STATUS_OPTIONS, context = {}) {
+  return wantedColumn(issue, { ...context, columns });
+}
+
+/**
+ * THE SWEEP'S SHARED READS, ONCE (#6871 slice 2, design §6 "per-sweep reads"). The rule needs two
+ * things beyond each issue's row: a started plan's open sub-issues (seat or no seat), and the open
+ * PRs (a card one names, or a held platter closes, is not Ready). Both come from lists the sweep
+ * holds or reads once:
+ *   - Sub-issues: the open-issue list grouped by `parent_issue_url` — free. A started plan whose
+ *     summary counts more open sub-issues than the list shows (one in another repo) is read
+ *     directly, the cap's own read (`withOpenSubIssues`), so the column and `waitingPlans` agree.
+ *   - Open PRs: one `pulls?state=open` list for both maps, fail-open (`openPrMaps`).
+ * Pure apart from the injected reads.
+ */
+export function sweepContext(openIssues = [], { readAll = ghRestAll, readPulls, log } = {}) {
+  const byParent = new Map();
+  for (const i of openIssues) {
+    const parent = localParentOf(i);
+    if (parent === null) continue;
+    if (!byParent.has(parent)) byParent.set(parent, []);
+    byParent.get(parent).push({ number: i.number, labels: i.labels ?? [] });
+  }
+  const subsOf = new Map();
+  for (const i of openIssues) {
+    const labels = labelNames(i?.labels);
+    const counts = subIssueCounts(i);
+    if (!isStartedPlan({ labels, subIssues: counts })) continue;
+    const grouped = byParent.get(Number(i.number)) ?? [];
+    const open = counts.total - counts.completed;
+    subsOf.set(
+      Number(i.number),
+      open <= grouped.length ? grouped : withOpenSubIssues({ ...i, labels }, readAll).openSubIssues,
+    );
+  }
+  return {
+    openSubIssuesOf: (issue) => subsOf.get(Number(issue?.number)),
+    prMaps: openPrMaps({ ...(readPulls ? { read: readPulls } : {}), ...(log ? { log } : {}) }),
+  };
 }
 
 /**
@@ -135,11 +169,17 @@ export function wantedStatusOf(issue, columns = STATUS_OPTIONS) {
  * field (already part of the board context), a write only when a column is missing, ids kept so no
  * card moves, and never a removal — a column made by hand in the UI stays (`keepExtras`).
  *
+ * #6871 slice 2: the same write carries the dial sentences (`dialSentences`, projects.mjs). `mode`
+ * is `readWorkMode()`'s result; when a column's description differs from the sentence for the
+ * dial's position, the list is rewritten in place, so the cap the board prints is the cap the
+ * lanes obey. An unreadable dial writes no sentence (the board keeps what it shows).
+ *
  * Returns the column names the cards may be planned against: the new list once written, the board's
  * current one on a dry run (which only says what it would change).
  */
 export function ensureStatusColumns({
   board,
+  mode,
   write = writeStatusOptions,
   dryRun = false,
   log = console.log,
@@ -147,9 +187,11 @@ export function ensureStatusColumns({
   const field = (board.fields() ?? []).find((f) => f?.name === "Status");
   if (!field) throw new Error('no "Status" field on the board — has projects-setup run?');
   const have = (field.options ?? []).map((o) => o.name);
-  const options = statusFieldUpdate(field.options ?? [], { keepExtras: true });
+  const options = statusFieldUpdate(field.options ?? [], { keepExtras: true, mode });
   if (!options) return have;
-  const change = `(${have.join(", ")}) → (${options.map((o) => o.name).join(", ")})`;
+  const names = options.map((o) => o.name).join(", ");
+  const change =
+    have.join(", ") === names ? `restyled (${names})` : `(${have.join(", ")}) → (${names})`;
   if (dryRun) {
     log(`Status field: would change ${change}`);
     return have;
@@ -160,19 +202,22 @@ export function ensureStatusColumns({
   return (fresh?.options ?? options).map((o) => o.name);
 }
 
+/** The person-waiting column, under its name or its pre-#6871 one during the rename window. */
+const isAskColumn = (column) => column === WAITING_ON_PERSON || column === "Blocked";
+
 /**
  * The pure half: which board items sit in the wrong column? `items` is the board's item list,
  * `openIssues` every open issue (REST shape). An issue on the board but not in `openIssues` is
  * treated as closed and wants Done. Returns `[{number, have, want}]`, ascending by number.
  * `statusOf(item)` reads an item's current Status; the default is gh's `status` key.
  *
- * #4303 (#3959 slice 3) — AN OPEN ASK THAT NEVER REACHED THE BOARD IS DRIFT TOO. The Blocked column
- * is the one place a household member checks for an open ask, so "every open needs-eric/needs-info
+ * #4303 (#3959 slice 3) — AN OPEN ASK THAT NEVER REACHED THE BOARD IS DRIFT TOO. The Waiting on a
+ * person column (Blocked before #6871; its old name during the rename window) is the one place a household member checks for an open ask, so "every open needs-eric/needs-info
  * issue is listed there" has to hold, not just "every listed card is in the right column". A card is
  * added only by the event job on a label change, and the event job is exactly what dropped runs
  * on 2026-09-30 — an issue whose one `needs-info` event died never got a card, and a sweep that
- * walks only cards could not see it. So an open issue absent from the board that wants Blocked
- * comes back as `have: null`; `syncIssue` adds it (add-or-find, #3954). Only Blocked, on purpose:
+ * walks only cards could not see it. So an open issue absent from the board that wants it
+ * comes back as `have: null`; `syncIssue` adds it (add-or-find, #3954). Only that column, on purpose:
  * Backlog/Ready cards are a convenience the pull rule never reads (it reads labels), and adding
  * every uncarded issue is projects-backfill.mjs's one-shot job, at a GraphQL cost an hourly sweep
  * should not carry.
@@ -183,6 +228,7 @@ export function planReconcile({
   statusOf = (item) => item?.status ?? null,
   repo = REPO,
   columns = STATUS_OPTIONS,
+  context = {},
 } = {}) {
   const open = new Map(
     openIssues.filter((i) => i && !i.pull_request).map((i) => [Number(i.number), i]),
@@ -194,14 +240,15 @@ export function planReconcile({
     if (!number) continue;
     carded.add(number);
     const issue = open.get(number);
-    const want = issue ? wantedStatusOf(issue, columns) : "Done";
+    const want = issue ? wantedStatusOf(issue, columns, context) : "Done";
     if (!want) continue;
     const have = statusOf(item) ?? null;
     if (have !== want) drift.push({ number, have, want });
   }
   for (const [number, issue] of open) {
-    if (!carded.has(number) && wantedStatusOf(issue, columns) === "Blocked")
-      drift.push({ number, have: null, want: "Blocked" });
+    if (carded.has(number)) continue;
+    const want = wantedStatusOf(issue, columns, context);
+    if (isAskColumn(want)) drift.push({ number, have: null, want });
   }
   return drift.sort((a, b) => a.number - b.number);
 }
@@ -228,6 +275,23 @@ function driftLine(d, verb) {
 }
 
 /**
+ * One log line per sweep: how many open cards each column holds once this sweep's moves land —
+ * the board a person will see, read from the same rule (#6871 §6 "checks"): every carded open
+ * issue, plus the uncarded asks `planReconcile` adds to Waiting on a person (#4303). Pure.
+ */
+export function columnCounts({ items = [], openIssues = [], columns = STATUS_OPTIONS, context }) {
+  const carded = new Set(items.map((i) => boardIssueNumber(i)).filter(Boolean));
+  const counts = new Map(columns.filter((c) => c !== "Done").map((c) => [c, 0]));
+  for (const issue of openIssues) {
+    if (issue?.pull_request) continue;
+    const column = wantedStatusOf(issue, columns, context);
+    const shown = carded.has(Number(issue?.number)) || isAskColumn(column);
+    if (shown && column && column !== "Done") counts.set(column, (counts.get(column) ?? 0) + 1);
+  }
+  return [...counts].map(([c, n]) => `${c} ${n}`).join(" · ");
+}
+
+/**
  * The sweep. Every IO edge is injected so a spec drives it without a network call; the defaults
  * are the real reads and `syncIssue`. Returns a summary the CLI prints; never throws on a
  * per-issue failure (it records it), but stops at the first exhausted-quota failure.
@@ -242,6 +306,8 @@ export function reconcileBoard({
   rateLimit = () => ghRateLimit().graphql ?? {},
   sync = (number, opts) => syncIssue(String(number), opts),
   ensureColumns = ensureStatusColumns,
+  readMode = () => readWorkMode(),
+  buildContext = (issues) => sweepContext(issues, { log }),
   statusOf,
   horizons = readHorizons(),
   dryRun = false,
@@ -255,9 +321,19 @@ export function reconcileBoard({
   if (!budget.ok)
     return { started: false, reason: budget.reason, drift: [], fixed: [], failed: [] };
 
-  const columns = ensureColumns({ board, dryRun, log });
+  const mode = readMode();
+  if (mode?.unreadable) log(`::warning::${mode.warning} — the dial sentences are left as they are`);
+  const columns = ensureColumns({ board, mode, dryRun, log });
   const items = boardItemsOrThrow(board);
-  const moved = planReconcile({ items, openIssues, columns, ...(statusOf ? { statusOf } : {}) });
+  const context = buildContext(openIssues);
+  const moved = planReconcile({
+    items,
+    openIssues,
+    columns,
+    context,
+    ...(statusOf ? { statusOf } : {}),
+  });
+  log(`columns: ${columnCounts({ items, openIssues, columns, context })}`);
   const { drift: priorityDrift, deferred } = planPriorityDrift({
     items,
     openIssues,
@@ -281,7 +357,7 @@ export function reconcileBoard({
       continue;
     }
     try {
-      const result = sync(d.number, { board });
+      const result = sync(d.number, { board, context });
       if (result?.skipped) {
         log(`#${d.number}: skipped — ${result.reason}`);
         continue;

@@ -144,7 +144,7 @@ what happens next, so the thread still reads as a complete record.
 
 The board follows along without anyone touching it: clearing `needs-info` and applying
 `in-progress` are the two label events the Orchestration board's Status sync already listens to, so
-the issue moves Blocked → Building now as the build starts. A reply on an issue that is *also*
+the issue moves Waiting on a person → Building now as the build starts. A reply on an issue that is *also*
 `needs-eric` does **not** resume — one reply answers one question, and the other still waits.
 
 **Any blocked lane (#4301).** The same door serves `needs-eric` too, and a `plan`
