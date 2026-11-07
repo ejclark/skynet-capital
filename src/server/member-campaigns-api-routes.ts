@@ -117,9 +117,7 @@ function save(
   const ask = researchAskFor(made.campaign, isResearched);
   const saved = store.save(memberKey, made.campaign, ask, body.replaceId);
   if (!saved.ok) {
-    // A taken name is the title's to fix; a gone draft or a full list is the form's.
-    const field = saved.reason.includes("name") ? "title" : "form";
-    sendJson(res, 200, { ok: false, refusals: [{ field, reason: saved.reason }] });
+    sendJson(res, 200, { ok: false, refusals: [{ field: saved.field, reason: saved.reason }] });
     return;
   }
   sendJson(res, 200, { ok: true, campaign: campaignViewOf(saved.record) });

@@ -27,6 +27,8 @@
  * Shared by the server (the authority) and, later, the screen (an early read of it) — the same split
  * `specFromForm` uses. Paper only; a campaign never places or sizes an order.
  */
+
+import { isRecord } from "../storage/parse-guards.js";
 import {
   CAMPAIGN_MODES,
   type Campaign,
@@ -77,9 +79,6 @@ export const CAMPAIGN_FORM_CHOICES = {
   maxPicks: MAX_PICKS,
 } as const;
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
-
 /**
  * The body's SHAPE only: right types, bounded sizes. A value that is the wrong kind of thing is a
  * malformed request (undefined → 400); a value that is the right kind but not allowed is a refusal
@@ -107,15 +106,30 @@ export function parseCampaignForm(raw: unknown): CampaignForm | undefined {
 /** One line of plain text: whitespace runs (newlines included) collapse to one space. */
 const oneLine = (s: string): string => s.replace(/\s+/g, " ").trim();
 
-/** A slug from the title, the record's id. The store refuses a second campaign with the same one. */
+/** FNV-1a over the title, six hex digits: pure, so the screen can run it too (no node:crypto). */
+const shortHash = (s: string): string => {
+  let h = 0x811c9dc5;
+  for (const ch of s) h = Math.imul(h ^ (ch.codePointAt(0) ?? 0), 0x01000193);
+  return (h >>> 0).toString(16).padStart(8, "0").slice(0, 6);
+};
+
+const SLUG_MAX = 40;
+
+/**
+ * A slug from the title, the record's id. The store refuses a second campaign with the same one, so
+ * a slug that LOST the title (a non-Latin title slugs to nothing; a long one is cut at `SLUG_MAX`)
+ * carries a hash of the whole title, and two different names never share an id by accident. Titles
+ * differing only in punctuation or case ("AI!" and "ai?") are one name, and share one id on purpose.
+ */
 export function memberCampaignId(title: string): string {
-  const slug = oneLine(title)
+  const line = oneLine(title);
+  const full = line
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40)
-    .replace(/-+$/, "");
-  return slug.length > 0 ? slug : "campaign";
+    .replace(/^-+|-+$/g, "");
+  const slug = full.slice(0, SLUG_MAX).replace(/-+$/, "");
+  if (slug.length === 0) return `campaign-${shortHash(line.toLowerCase())}`;
+  return slug === full ? slug : `${slug}-${shortHash(line.toLowerCase())}`;
 }
 
 /** The anchor's fund and the file that says so, or undefined when the anchor is not in a catalog. */
@@ -146,7 +160,9 @@ function refusalsFor(form: CampaignForm): CampaignFormRefusal[] {
       field: "anchor",
       reason: "Pick one of the 11 sectors or one of the markets on the list.",
     });
-  const picks = normalisedPicks(form.symbols);
+  // The anchor's fund is added for the member, so picking it too costs no pick.
+  const fund = anchorFund(form.anchor)?.fund;
+  const picks = normalisedPicks(form.symbols).filter((s) => s !== fund);
   if (picks.length > MAX_PICKS)
     refusals.push({ field: "symbols", reason: `Pick at most ${MAX_PICKS} symbols.` });
   const unknown = picks.filter((s) => !isTradable(s));
@@ -203,7 +219,10 @@ export function campaignFromForm(form: CampaignForm, id: string): CompiledCampai
   }
 }
 
-/** The form a saved campaign came from, so Edit opens on exactly it. */
+/**
+ * The form a saved campaign came from, so Edit opens on it. The anchor's fund is not among the
+ * picks even if the member typed it: it is always in the cast, so listing it again adds nothing.
+ */
 export function formFromCampaign(campaign: Campaign): CampaignForm {
   return {
     title: campaign.title,

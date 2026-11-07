@@ -2,6 +2,7 @@ import { type Campaign, parseCampaign } from "../domain/campaigns.js";
 import { everyEvent } from "../domain/market-events.js";
 import { ledgerCoversSymbol } from "../domain/sector-coverage.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
+import { isRecord } from "../storage/parse-guards.js";
 import { siblingPath } from "../storage/sibling-path.js";
 import { listResearch, RESEARCH_DIR } from "./research-service.js";
 
@@ -36,9 +37,6 @@ export type MemberCampaignsState = Readonly<Record<string, readonly MemberCampai
 
 const EMPTY: MemberCampaignsState = {};
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
-
 function parseRecord(raw: unknown): MemberCampaignRecord | undefined {
   if (!(isRecord(raw) && isRecord(raw.campaign))) return undefined;
   const { createdAt, updatedAt, researchAsk } = raw;
@@ -59,9 +57,13 @@ export function parseMemberCampaignsState(raw: unknown): MemberCampaignsState | 
   const state: Record<string, readonly MemberCampaignRecord[]> = {};
   for (const [member, list] of Object.entries(raw)) {
     if (!Array.isArray(list)) continue;
+    // One id per author: a hand-edited file holding two keeps the first, so Edit can't wedge.
+    const seen = new Set<string>();
     const records = list.flatMap((item) => {
       const record = parseRecord(item);
-      return record ? [record] : [];
+      if (!record || seen.has(record.campaign.id)) return [];
+      seen.add(record.campaign.id);
+      return [record];
     });
     if (records.length > 0) state[member] = records;
   }
@@ -70,7 +72,12 @@ export function parseMemberCampaignsState(raw: unknown): MemberCampaignsState | 
 
 export type CampaignSaveOutcome =
   | { readonly ok: true; readonly record: MemberCampaignRecord }
-  | { readonly ok: false; readonly reason: string };
+  | {
+      readonly ok: false;
+      /** Which form field the reason belongs to: a taken name is the title's to fix. */
+      readonly field: "title" | "form";
+      readonly reason: string;
+    };
 
 /** The most campaigns one member keeps; a bound on member text, not a game rule. */
 export const MAX_CAMPAIGNS_PER_MEMBER = 20;
@@ -110,14 +117,15 @@ export class MemberCampaignStore {
     const prior =
       replaceId === undefined ? undefined : mine.find((r) => r.campaign.id === replaceId);
     if (replaceId !== undefined && !prior) {
-      return { ok: false, reason: "That campaign is gone, so it can't be changed." };
+      return { ok: false, field: "form", reason: "That campaign is gone, so it can't be changed." };
     }
     if (mine.some((r) => r.campaign.id === campaign.id && r !== prior)) {
-      return { ok: false, reason: "You already have a campaign with that name." };
+      return { ok: false, field: "title", reason: "You already have a campaign with that name." };
     }
     if (!prior && mine.length >= MAX_CAMPAIGNS_PER_MEMBER) {
       return {
         ok: false,
+        field: "form",
         reason: `You can keep ${MAX_CAMPAIGNS_PER_MEMBER} campaigns; remove one first.`,
       };
     }
@@ -136,7 +144,9 @@ export class MemberCampaignStore {
   /** Remove one of this author's campaigns; another member's id is not theirs to remove. */
   delete(memberKey: string, id: string): void {
     const state = this.file.load();
-    const remaining = (state[memberKey] ?? []).filter((r) => r.campaign.id !== id);
+    const mine = state[memberKey] ?? [];
+    const remaining = mine.filter((r) => r.campaign.id !== id);
+    if (remaining.length === mine.length) return; // nothing of theirs by that id: no write
     const next: MemberCampaignsState =
       remaining.length > 0
         ? { ...state, [memberKey]: remaining }

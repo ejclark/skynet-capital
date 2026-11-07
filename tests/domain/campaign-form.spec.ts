@@ -11,7 +11,14 @@ import {
   parseCampaignForm,
   researchAskFor,
 } from "../../src/domain/campaign-form.js";
-import { anchorOf, castSymbols, MAX_STORYLINE, parseCampaign } from "../../src/domain/campaigns.js";
+import {
+  anchorOf,
+  castSymbols,
+  isTradable,
+  MAX_STORYLINE,
+  parseCampaign,
+} from "../../src/domain/campaigns.js";
+import { TICKER_DIRECTORY } from "../../src/domain/ticker-directory/index.js";
 
 /**
  * A member's campaign form (#6949 slice 3a, criterion 7): every choice from a catalog, no free-form
@@ -155,5 +162,26 @@ describe("the record's mode", () => {
     ]);
     expect(CAMPAIGN_FORM_CHOICES.sectors).toHaveLength(11);
     expect(CAMPAIGN_FORM_CHOICES.markets.map((m) => m.id)).toContain("oil");
+  });
+});
+
+describe("memberCampaignId", () => {
+  it("slugs a plain title, and keeps two names apart when the slug lost them", () => {
+    expect(memberCampaignId("Energy for AI")).toBe("energy-for-ai");
+    expect(memberCampaignId("AI!")).toBe(memberCampaignId("ai?"));
+    expect(memberCampaignId("日本株")).toMatch(/^campaign-[0-9a-f]{6}$/);
+    expect(memberCampaignId("日本株")).not.toBe(memberCampaignId("🚀🚀"));
+    const long = "Semiconductor supply chain and the AI buildout";
+    expect(memberCampaignId(long)).not.toBe(memberCampaignId(`${long}, part 2`));
+    expect(memberCampaignId(long).length).toBeLessThanOrEqual(47);
+  });
+
+  it("does not count a picked anchor fund against the pick limit", () => {
+    const picks = TICKER_DIRECTORY.map((e) => e.symbol)
+      .filter((sym) => isTradable(sym) && sym !== "XLE")
+      .slice(0, MAX_PICKS);
+    expect(picks).toHaveLength(MAX_PICKS);
+    expect(compile({ symbols: [...picks, "XLE"] }).ok).toBe(true);
+    expect(compile({ symbols: [...picks, "SPY"] }).ok).toBe(false);
   });
 });
