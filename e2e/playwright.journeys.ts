@@ -1,7 +1,7 @@
 import type { PlaywrightTestConfig } from "@playwright/test";
 import { devices } from "@playwright/test";
 import { frozenFixturesDir } from "../scripts/crawl/frozen-fixtures.mjs";
-import { envFor } from "../scripts/crawl/server.mjs";
+import { offlineBootEnv } from "../scripts/crawl/server.mjs";
 
 // The member playthroughs (e2e/journeys/*.journey.json → e2e/journeys.spec.ts) as Playwright
 // projects, one per auth mode, each with its OWN server — so the default `npx playwright test`,
@@ -21,7 +21,10 @@ import { envFor } from "../scripts/crawl/server.mjs";
 // never collected, so there are no skipped tests standing in for the other mode's run.
 //
 // Both boots serve a FROZEN copy of the offline fixtures (scripts/crawl/frozen-fixtures.mjs): the
-// roster as committed, no fill replay, so a position a step expects is there on every step.
+// roster as committed, no fill replay, so a position a step expects is there on every step. Each
+// boot's env is `offlineBootEnv` (scripts/crawl/server.mjs), the same the crawl boots with: its own
+// ports, its own empty data dir (never the repo's `data/`, which the main suite's boot writes to),
+// and no feedback token.
 
 export type JourneysMode = "open" | "session";
 
@@ -40,6 +43,19 @@ type Project = NonNullable<PlaywrightTestConfig["projects"]>[number];
 type WebServer = Extract<NonNullable<PlaywrightTestConfig["webServer"]>, { command: string }>;
 
 /**
+ * One frozen dir per boot: the roster copy (plus the invited friend), the guest list `envFor` points
+ * the session boot at (the friend signs in as a member, never as an owner) and the boot's own empty
+ * data dir. Made once per run: Playwright re-imports the config in every worker, and a worker
+ * inherits the runner's env, so it reads the runner's path instead of copying the roster again.
+ */
+function fixturesFor(mode: JourneysMode): string {
+  const key = `SKYNET_JOURNEYS_FIXTURES_${mode.toUpperCase()}`;
+  const dir = process.env[key] ?? frozenFixturesDir();
+  process.env[key] = dir;
+  return dir;
+}
+
+/**
  * One project + one web server per mode. `build` says whether this mode's boot builds the React
  * shell first: Playwright launches web servers one after another, in array order, so only the
  * first boot in a config needs to build (a second `npm run build` would rewrite app/dist under a
@@ -51,9 +67,7 @@ export function journeysMode(
 ): { project: Project; webServer: WebServer } {
   const { port, bridgePort } = JOURNEY_PORTS[mode];
   const origin = `http://localhost:${port}`;
-  // One frozen dir per boot: the roster copy (plus the invited friend) AND the guest list that
-  // `envFor` points the session boot at — the friend signs in as a member, never as an owner.
-  const fixtures = frozenFixturesDir();
+  const fixtures = fixturesFor(mode);
   const serve = "npm run serve:dashboard:offline";
   return {
     project: {
@@ -67,19 +81,7 @@ export function journeysMode(
       url: origin,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
-      env: {
-        SKYNET_OFFLINE_FIXTURES: fixtures,
-        // resolve-port.ts reads PORT before SKYNET_DASHBOARD_PORT; pin both so an inherited PORT
-        // can never put two boots on one port.
-        PORT: String(port),
-        SKYNET_DASHBOARD_PORT: String(port),
-        SKYNET_INSIGHTS_BRIDGE_PORT: String(bridgePort),
-        // Never a feedback token, as in scripts/crawl/server.mjs: a filing would open a real issue,
-        // and a token saved from Settings would re-arm filing at boot — so point at no store.
-        SKYNET_FEEDBACK_GITHUB_TOKEN: "",
-        SKYNET_GITHUB_TOKEN_STORE: `${fixtures}/no-github-token.json`,
-        ...envFor(mode, fixtures),
-      },
+      env: offlineBootEnv({ mode, port, bridgePort, fixtures }),
     },
   };
 }

@@ -48,7 +48,14 @@ export default defineConfig({
       timeout: 60_000,
       // The browser clock is pinned per page (`freezePage`); this pins the server's for the reads
       // that compute a date themselves, such as the Council's week label (#4683).
-      env: { SKYNET_FIXED_NOW: FIXED_CLOCK.toISOString() },
+      // Ports pinned like the playthrough boots' (offlineBootEnv): an inherited PORT or bridge port
+      // must never move this boot onto theirs.
+      env: {
+        SKYNET_FIXED_NOW: FIXED_CLOCK.toISOString(),
+        PORT: "8787",
+        SKYNET_DASHBOARD_PORT: "8787",
+        SKYNET_INSIGHTS_BRIDGE_PORT: "8788",
+      },
     },
     open.webServer,
     session.webServer,
