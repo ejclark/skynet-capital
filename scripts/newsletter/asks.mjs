@@ -22,6 +22,29 @@ export const ASK_BUDGET = 5;
 const SILENT = new Set(["closed", "killed", "pivoted", "replaced", "planned"]);
 const NONE = /^(|—|-|–|none\b.*|n\/a)$/i;
 
+/**
+ * The decisions he holds right now, beside the loop chores (#6953 section 3): how many, and the
+ * oldest by how long it has carried `needs-eric`. Read from the same selector as the digest's
+ * Needs you (`plan().needsYou`, via decision-reads.mjs), never a second list. A held PR has no
+ * label age, so it counts but cannot be the oldest. `null` when the snapshot could not be read.
+ */
+export function openAsks(snapshot, needsEricRows, asOfMs) {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  const labelled = new Map(
+    (Array.isArray(needsEricRows) ? needsEricRows : [])
+      .filter((r) => r.labeledAt)
+      .map((r) => [r.number, r.labeledAt]),
+  );
+  const aged = snapshot.needsYou
+    .filter((n) => labelled.has(n.number))
+    .map((n) => ({
+      number: n.number,
+      days: Math.round(((asOfMs - Date.parse(labelled.get(n.number))) / 864e5) * 10) / 10,
+    }))
+    .sort((a, b) => b.days - a.days);
+  return { count: snapshot.needsYou.length, oldest: aged[0] ?? null };
+}
+
 /** Registry rows that carry a human step, in table order; unreadable cadences are named, not guessed. */
 export function humanSteps(rows) {
   const steps = [];
