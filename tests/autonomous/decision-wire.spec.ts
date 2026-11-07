@@ -30,8 +30,8 @@ const OPTION_REFUSALS = [
 ] as const;
 
 /** Reasons taught to the dashboard after the option guards, before any bot sends them — the
- *  subscribed-only rule (#4642 slice 10). An older dashboard has never heard of these either. */
-const LATER_REFUSALS = ["unsubscribed"] as const;
+ *  subscribed-only rule (#4642 slice 10) and the breaker hold on opens (#6954 slice 3). An older dashboard has never heard of these either. */
+const LATER_REFUSALS = ["unsubscribed", "breaker-halt"] as const;
 /** Every reason a v1 dashboard never knew. */
 const V2_ONLY_REFUSALS: readonly string[] = [...OPTION_REFUSALS, ...LATER_REFUSALS];
 

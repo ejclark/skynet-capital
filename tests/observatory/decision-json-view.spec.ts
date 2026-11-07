@@ -35,8 +35,27 @@ const record = (over: Partial<DecisionRecord> = {}): DecisionRecord => ({
 });
 
 describe("decisionCyclesView", () => {
+  it("shows a placed exit as placed when a breaker held the opens, and keeps the breaker beside it (#6954 slice 3)", () => {
+    const sell = intent({ side: "sell" });
+    const [cycle] = decisionCyclesView([
+      record({
+        halted: "daily-loss",
+        rawIntents: [sell],
+        guardedIntents: [sell],
+        outcomes: [{ intent: sell, action: "placed", result: { intent: sell, status: "filled" } }],
+      }),
+    ]);
+
+    expect(cycle).toMatchObject({ status: "placed", halted: "daily-loss" });
+  });
+
   it("derives the run-row status: halted > placed > rejected > observed > quiet", () => {
-    expect(decisionCyclesView([record({ halted: "kill switch engaged" })])[0]).toMatchObject({
+    // A cycle the kill switch or a suspend held decided nothing: no outcomes.
+    expect(
+      decisionCyclesView([
+        record({ halted: "kill switch engaged", rawIntents: [], guardedIntents: [], outcomes: [] }),
+      ])[0],
+    ).toMatchObject({
       status: "halted",
       headline: "kill switch engaged",
     });

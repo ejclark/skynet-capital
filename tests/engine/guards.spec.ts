@@ -594,6 +594,24 @@ describe("applyGuardsWithVerdicts", () => {
     expect(result.refused).toEqual([{ intent, reason: "ladder-block" }]);
   });
 
+  it("names breaker-halt for an open a tripped breaker holds, and lets the sell through (#6954 slice 3)", () => {
+    const context = aContext({ EEM: { last: 100 } });
+    const portfolio = aPortfolio({
+      cash: 10_000,
+      positions: [aPosition({ symbol: "EEM", quantity: 30 })],
+    });
+    const open = buy("EEM", 10);
+    const exit = sell("EEM", 30);
+
+    const result = applyGuardsWithVerdicts([open, exit], portfolio, context, {
+      maxPositionPct: 0.2,
+      opensHalted: true,
+    });
+
+    expect(result.approved).toEqual([exit]);
+    expect(result.refused).toEqual([{ intent: open, reason: "breaker-halt" }]);
+  });
+
   it("names s2-print and e1-open for the two trade-discipline refusals", () => {
     const calendar = [
       { symbol: "EEM", date: "2026-08-26", status: "estimate" as const, source: "test" },

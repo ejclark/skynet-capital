@@ -318,14 +318,28 @@ async function runLive(): Promise<void> {
   const onSettled = settlements.onSettled;
   const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
-  const safety = new SafetyController();
+  // The ladder rides the same equity feed: the bots are `actor: "bot"`, so its bottom rung closes
+  // their books, and a rung change is said in the log (#6954 slice 3).
+  const safety = new SafetyController({
+    actor: "bot",
+    onRiskAlert: (alert) => console.warn(`[risk-ladder] ${alert.title}`),
+  });
   const haltFile = process.env.SKYNET_HALT_FILE;
-  const blockedReason = () => {
-    if (haltFile && existsSync(haltFile)) safety.halt("manual");
-    // The owner's global suspend gates everything this seam gates — the beta scout included.
-    // Empty id = only the all-bots switch can match; per-bot suspends compose in buildLiveBot.
-    return safety.blockedReason() ?? controls.suspendedReason("");
+  // STOP EVERYTHING: the kill switch and the owner's all-bots suspend place nothing, exits included.
+  // Per-bot suspends compose in buildLiveBot. The kill switch reads "manual" so the bot-watch alert
+  // still names it (`HaltReason`).
+  // Latched like any breaker: once the file has been seen the switch stays thrown until the bots
+  // restart, even if the file is removed ("a breaker never silently re-arms").
+  let killSwitchThrown = false;
+  const stopEverything = () => {
+    if (haltFile && existsSync(haltFile)) killSwitchThrown = true;
+    return killSwitchThrown ? "manual" : controls.suspendedReason("");
   };
+  // STOP OPENING: a tripped breaker refuses new risk and never an exit (#6954 slice 3) — a bot that
+  // cannot sell is stuck in the drawdown the breaker tripped on.
+  const openBlockedReason = () => safety.blockedReason();
+  // Anything that opens (the forced pick, the shadow scouts) stops under either.
+  const blockedReason = () => stopEverything() ?? openBlockedReason();
   controls.start();
   console.log(
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
@@ -428,7 +442,8 @@ async function runLive(): Promise<void> {
     buildLiveBot(botRoster.bot, {
       mode,
       trading: rosterFor(botRoster),
-      blockedReason,
+      blockedReason: stopEverything,
+      openBlockedReason,
       safety,
       onDecision,
       hardcore: hardcoreRoster.hardcore,
@@ -590,6 +605,7 @@ async function runLive(): Promise<void> {
     traders,
     safety,
     blockedReason,
+    exitBlockedReason: stopEverything,
     ...(botsStateDb ? { scoutState: scoutStateStore(botsStateDb) } : {}),
     scout: buildScoutDeps(scoutPicks, scoutBroker, {
       universe: UNIVERSE,
