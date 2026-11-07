@@ -13,8 +13,13 @@
  * HOW IT BINDS. The guards size an opening order from such a pair to at most this share of the
  * account's equity (`RiskConfig.openCeiling`), beside the cash, position-cap and budget bounds they
  * already take the smallest of; an order whose single unit costs more is refused `below-bar-floor`.
- * Exits are never sized by it. The playbook layer labels each opening order "below its bar"
- * (`labelBelowBar`, applied in `with-playbooks.ts`), so the decision record says why it was small.
+ * Exits are never sized by it. Each opening order the floor sizes says "below its bar" on its
+ * reason (`withBelowBarLabel`), so the decision record says why it was small. The live wiring turns
+ * the label and the ceiling on together, around the whole composed persona, so an order can never
+ * carry the label without the floor behind it, nor the floor without the label.
+ *
+ * WHAT IT BOUNDS. One order, not the holding: the position cap already bounds the holding, and the
+ * one below-bar share play enters from flat only. The base is equity, as every guard bound is.
  *
  * WHY 1%. Half the standard share size of the one below-bar share play (S1-NVDA: 1% / 2% / 3% by
  * mode, `registry.ts`), a third of the 3% position cap, and no larger than its conservative size,
@@ -24,9 +29,10 @@
  * record-only. An owner will be able to set a smaller floor on a subscription, never a larger one
  * (#6954 slice 5's later piece); until then this constant is the only floor.
  */
-import type { OrderIntent } from "../domain/types.js";
+import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
+import type { Persona } from "../personas/persona.js";
 import { belowHouseBar, findPair, type Pair } from "./pair-table.js";
-import { isExitIntent } from "./playbook.js";
+import { pausedMayPlace } from "./playbook.js";
 
 /** The most one opening order from a below-bar pair may risk, as a share of account equity. */
 export const BELOW_BAR_FLOOR_PCT = 0.01;
@@ -60,12 +66,24 @@ export function belowBarNote(pct: number = BELOW_BAR_FLOOR_PCT): string {
   return ` · ${BELOW_BAR_LABEL}: sized to at most ${shown}% of the account`;
 }
 
-/** An opening order from a below-bar pair, with the label on its reason; every other order as it
- *  came. Exits are left alone: the floor sizes opens only, and a label there would say otherwise. */
+/** An order the floor sizes — an open that risks cash, from a below-bar pair — with the label on its
+ *  reason; every other order as it came. Exits and a covered call (which risks no cash, so the floor
+ *  never sizes it: `pausedMayPlace`) are left alone, since the label would say otherwise. */
 export function labelBelowBar(intent: OrderIntent, lookup: PairLookup = findPair): OrderIntent {
-  if (!intent.playbookId || isExitIntent(intent) || !belowBar(intent.playbookId, lookup)) {
+  if (!intent.playbookId || pausedMayPlace(intent) || !belowBar(intent.playbookId, lookup)) {
     return intent;
   }
   if (intent.reason.includes(BELOW_BAR_LABEL)) return intent;
   return { ...intent, reason: `${intent.reason}${belowBarNote()}` };
+}
+
+/** The composed persona, with every order it decides labelled (`labelBelowBar`). Outermost, so the
+ *  opens the wrappers add (a roll, a wind-down) are labelled too; every other method passes through. */
+export function withBelowBarLabel(inner: Persona): Persona {
+  return {
+    ...inner,
+    decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
+      return inner.decide(context, portfolio).map((intent) => labelBelowBar(intent));
+    },
+  };
 }

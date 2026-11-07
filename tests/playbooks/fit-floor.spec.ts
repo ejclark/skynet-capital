@@ -17,15 +17,18 @@ import {
   belowBar,
   labelBelowBar,
   openCeilingFor,
+  withBelowBarLabel,
 } from "../../src/playbooks/fit-floor.js";
 import { pairTable } from "../../src/playbooks/pair-table.js";
 import { registeredPlaybooks } from "../../src/playbooks/registry.js";
+import { tradingRoster } from "../../src/scripts/autonomous-live-wiring.js";
 import {
   aContext,
   anOptionIntent,
   anOptionQuote,
   aPortfolio,
   aPosition,
+  aSubscription,
   withOptionQuotes,
 } from "../support/builders.js";
 
@@ -140,6 +143,17 @@ describe("the guards size a below-bar share open to the floor", () => {
     expect(REFUSAL_LABEL["below-bar-floor"]).toContain(BELOW_BAR_LABEL);
   });
 
+  it("fails closed on a ceiling that is not a share of the account: refused under the floor's name", () => {
+    const portfolio = aPortfolio({ cash: 100_000 });
+    for (const bad of [Number.NaN, -0.01, 2]) {
+      const { refused } = applyGuardsWithVerdicts([order("buy", "S1-NVDA")], portfolio, context, {
+        maxPositionPct: 0.5,
+        openCeiling: () => bad,
+      });
+      expect(refused.map((r) => r.reason)).toEqual(["below-bar-floor"]);
+    }
+  });
+
   it("never sizes an exit: a below-bar pair sells all it holds", () => {
     const portfolio = aPortfolio({
       cash: 1_000,
@@ -245,6 +259,10 @@ describe("the guards hold a below-bar option open to the floor", () => {
     expect(clamp({ ...anOptionIntent(), quantity: 3 }, rich)).toBe("below-bar-floor");
   });
 
+  it("names the floor, not the cash, when a put is over both — more cash would not fix it", () => {
+    expect(clamp(anOptionIntent(), aPortfolio({ cash: 5_000 }))).toBe("below-bar-floor");
+  });
+
   it("never sizes a covered call: it risks no cash of its own", () => {
     const shares = aPortfolio({
       cash: 100_000,
@@ -289,5 +307,68 @@ describe("each below-bar opening decision says so", () => {
     expect(labelBelowBar(exit)).toBe(exit);
     expect(labelBelowBar(clean)).toBe(clean);
     expect(labelBelowBar(bare)).toBe(bare);
+  });
+
+  it("leaves a covered call alone: it risks no cash, so the floor never sizes it", () => {
+    const coveredCall = anOptionIntent({
+      playbookId: "NVDA-CALL-SPREAD",
+      option: { structure: "covered-call" },
+    });
+    expect(labelBelowBar(coveredCall)).toBe(coveredCall);
+  });
+
+  it("labels what a wrapped persona decides, and keeps the rest of the persona", () => {
+    const inner = {
+      id: "sauron",
+      name: "Sauron",
+      thesis: "n/a",
+      decide: () => [open],
+      playbookVerdicts: () => [],
+    };
+    const wrapped = withBelowBarLabel(inner);
+    expect(wrapped.decide(aContext({}), aPortfolio()).map((i) => i.reason)).toEqual([
+      labelBelowBar(open).reason,
+    ]);
+    expect(wrapped.playbookVerdicts).toBe(inner.playbookVerdicts);
+  });
+});
+
+const BELOW_BAR_OPEN: OrderIntent = {
+  symbol: "NVDA",
+  side: "buy",
+  quantity: 10,
+  type: "market",
+  reason: "a below-bar open",
+  playbookId: "S1-NVDA",
+  playbookMode: "standard",
+};
+
+describe("the live roster turns the label and the floor on together", () => {
+  const roster = tradingRoster(
+    {
+      bot: {
+        persona: {
+          id: "sauron",
+          name: "Sauron",
+          thesis: "n/a",
+          decide: () => [{ ...BELOW_BAR_OPEN }],
+        },
+        credentials: { apiKey: "k", apiSecret: "s" },
+      },
+      subscriptions: [aSubscription("sauron", "S1-NVDA")],
+      enabled: [],
+    },
+    { maxPositionPct: 0.03 },
+  );
+
+  it("hands the guards the floor for a below-bar pair", () => {
+    expect(roster.risk.openCeiling?.("S1-NVDA")).toBe(BELOW_BAR_FLOOR_PCT);
+    expect(roster.risk.openCeiling?.("G1-GOOG")).toBeUndefined();
+  });
+
+  it("labels the open the composed persona decides", () => {
+    const context = aContext({ NVDA: { last: 100 } }, "2026-10-07T15:00:00Z");
+    const reasons = roster.persona.decide(context, aPortfolio()).map((i) => i.reason);
+    expect(reasons).toEqual([labelBelowBar(BELOW_BAR_OPEN).reason]);
   });
 });

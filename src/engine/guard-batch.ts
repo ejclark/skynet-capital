@@ -407,3 +407,19 @@ export function committedToPlaybook(
   }
   return committed;
 }
+
+/**
+ * The dollars ONE opening order may risk under the below-bar floor (#6954 slice 5,
+ * `RiskConfig.openCeiling`), or `Infinity` when its playbook has none. The one rule the share and
+ * option clamps both read. A ceiling that is not a finite share between 0 and 1 fails closed at 0,
+ * so a bad value refuses the open under the floor's own name, never as no limit or another bound.
+ */
+export function openCeilingUsd(
+  intent: OrderIntent,
+  equity: number,
+  openCeiling: ((playbookId: string) => number | undefined) | undefined,
+): number {
+  const pct = intent.playbookId ? openCeiling?.(intent.playbookId) : undefined;
+  if (pct === undefined) return Number.POSITIVE_INFINITY;
+  return Number.isFinite(pct) && pct >= 0 && pct <= 1 ? pct * equity : 0;
+}

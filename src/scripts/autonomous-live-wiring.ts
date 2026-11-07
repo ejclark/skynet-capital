@@ -44,7 +44,7 @@ import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { ConvictionLookup } from "../playbooks/conviction-store.js";
 import { exitPlannedFor } from "../playbooks/exit-plan.js";
-import { openCeilingFor } from "../playbooks/fit-floor.js";
+import { openCeilingFor, withBelowBarLabel } from "../playbooks/fit-floor.js";
 import type { EnabledPlaybook, PlaybookReads } from "../playbooks/playbook.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
@@ -491,48 +491,52 @@ export function tradingRoster(
     // looked after even with no option playbook subscribed (`with-option-safety.ts`). The base persona
     // sees only the ten names, whatever else the stream carries for a playbook (#4777) — on every
     // bot, a bot with no playbook included.
-    persona: withUnsubscribedExits(
-      (enabled) =>
-        withOptionSafety(
-          // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
-          // hygiene around it, so the gate sits between the two.
-          withTargetObservation(
-            withConvictionGate(
-              withPlaybooks(
-                withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
-                enabled,
-                UPCOMING_PRINTS,
-                [],
-                console,
-                (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
-                intradayBars,
-                reads,
+    // The below-bar label sits outermost, switched on here beside the guards' `openCeiling` below,
+    // so a labelled order always had the floor behind it (#6954 slice 5).
+    persona: withBelowBarLabel(
+      withUnsubscribedExits(
+        (enabled) =>
+          withOptionSafety(
+            // A failed conviction check (#4469 criterion 12) stops new entries but never the expiry
+            // hygiene around it, so the gate sits between the two.
+            withTargetObservation(
+              withConvictionGate(
+                withPlaybooks(
+                  withQuoteUniverse(roster.bot.persona, BOTS_UNIVERSE),
+                  enabled,
+                  UPCOMING_PRINTS,
+                  [],
+                  console,
+                  (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+                  intradayBars,
+                  reads,
+                ),
+                {
+                  subscriptions: roster.subscriptions,
+                  ...(ledgerOf ? { ledgerOf } : {}),
+                  ...(roster.convictionOf ? { convictionOf: roster.convictionOf } : {}),
+                  log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+                },
               ),
+              // OBSERVE-ONLY (#5483 slice 3): reads each play's book against its target and logs; the
+              // intents come back untouched. Hygiene still wraps it all.
               {
+                accountId: roster.bot.persona.id,
                 subscriptions: roster.subscriptions,
-                ...(ledgerOf ? { ledgerOf } : {}),
-                ...(roster.convictionOf ? { convictionOf: roster.convictionOf } : {}),
-                log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+                enabled: enabled,
+                log: console,
               },
             ),
-            // OBSERVE-ONLY (#5483 slice 3): reads each play's book against its target and logs; the
-            // intents come back untouched. Hygiene still wraps it all.
-            {
-              accountId: roster.bot.persona.id,
-              subscriptions: roster.subscriptions,
-              enabled: enabled,
-              log: console,
-            },
+            enabled,
+            UPCOMING_PRINTS,
           ),
-          enabled,
-          UPCOMING_PRINTS,
-        ),
-      {
-        candidates: registeredPlaybooks(),
-        enabled: roster.enabled,
-        ...(placedBy ? { placedBy } : {}),
-        log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
-      },
+        {
+          candidates: registeredPlaybooks(),
+          enabled: roster.enabled,
+          ...(placedBy ? { placedBy } : {}),
+          log: (line) => console.warn(`[playbooks] ${roster.bot.persona.id}: ${line}`),
+        },
+      ),
     ),
     risk: {
       ...baseRisk,

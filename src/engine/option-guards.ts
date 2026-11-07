@@ -23,6 +23,7 @@ import {
   closableContracts,
   committedToPlaybook,
   type GuardLedger,
+  openCeilingUsd,
   subscriptionTerms,
   unspentCash,
   worsens,
@@ -254,20 +255,6 @@ function openUnits(
   return Math.max(MAX_OPTION_OPEN_UNITS, Math.min(asked, Math.floor(room / perUnit)));
 }
 
-/** The dollars one opening order may risk under the below-bar floor (`RiskConfig.openCeiling`), or
- *  `Infinity` when its playbook has no ceiling. */
-function openCeilingUsd(
-  intent: OrderIntent,
-  portfolio: Portfolio,
-  context: MarketContext,
-  config: OptionGuardConfig,
-): number {
-  const pct = intent.playbookId ? config.openCeiling?.(intent.playbookId) : undefined;
-  return pct === undefined
-    ? Number.POSITIVE_INFINITY
-    : pct * computeEquity(portfolio, context.quotes);
-}
-
 /** Rules 4–11. */
 function clampOpen(
   intent: OrderIntent,
@@ -290,7 +277,11 @@ function clampOpen(
 
   const capital = terms.subscription?.capitalAllocated;
   const committed = committedToPlaybook(intent, portfolio, context, config.playbookSymbols, batch);
-  const ceiling = openCeilingUsd(intent, portfolio, context, config);
+  const ceiling = openCeilingUsd(
+    intent,
+    computeEquity(portfolio, context.quotes),
+    config.openCeiling,
+  );
   const units = openUnits(
     intent,
     option,
@@ -301,6 +292,11 @@ function clampOpen(
     ceiling,
   );
   const cover = coverProblem(intent, option, portfolio, batch, units);
+  // The below-bar floor (#6954 slice 5) first: a bought call or a sold put was already cut to the
+  // whole contracts inside it (`openUnits`), so one structure that still risks more is refused under
+  // the floor's name — never as uncovered cash, which more cash would not fix. A covered call risks
+  // no cash and always passes.
+  if (Math.max(0, cover.cash) > ceiling) return refuse("below-bar-floor");
   if (cover.reason) return refuse(cover.reason);
 
   if (capital === undefined) return refuse("option-unallocated");
@@ -311,9 +307,6 @@ function clampOpen(
   if (risk > 0 && risk > capital + terms.realizedPl - committed) {
     return refuse("subscription-budget");
   }
-  // The below-bar floor (#6954 slice 5): a bought call or a sold put was already cut to whole
-  // contracts inside it (`openUnits`); a single structure that still risks more is refused.
-  if (risk > ceiling) return refuse("below-bar-floor");
 
   claim(batch.ledger, {
     order: { underlying: intent.symbol, option, units },

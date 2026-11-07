@@ -18,6 +18,7 @@ import {
   committedToPlaybook,
   type OpenBuy,
   openBuysSpend,
+  openCeilingUsd,
   openLedger,
   soldShares,
   spendableCash,
@@ -349,10 +350,9 @@ function clampBuy(
   const affordable = Math.floor(spendable / unitPrice);
   const withinPosition = Math.floor(positionBudget / unitPrice);
   // The below-bar floor (#6954 slice 5): a per-order ceiling, so the position already held does
-  // not count against it — the position cap above already bounds the whole holding.
-  const ceilingPct = intent.playbookId ? config.openCeiling?.(intent.playbookId) : undefined;
-  const withinFloor =
-    ceilingPct === undefined ? undefined : Math.floor((ceilingPct * equity) / unitPrice);
+  // not count against it — the position cap above already bounds the whole holding. `Infinity`
+  // when the playbook has no ceiling, so it never binds.
+  const withinFloor = Math.floor(openCeilingUsd(intent, equity, config.openCeiling) / unitPrice);
 
   // The subscription's budget is shared across its playbook's WHOLE basket — shares held, the
   // collateral its sold puts hold, its long contracts and this batch's earlier claims — so a
@@ -380,7 +380,7 @@ function clampBuy(
 
   const bounds = [intent.quantity, affordable, withinPosition];
   if (subscriptionBudgetShares !== undefined) bounds.push(subscriptionBudgetShares);
-  if (withinFloor !== undefined) bounds.push(withinFloor);
+  bounds.push(withinFloor);
   const quantity = Math.min(...bounds);
 
   if (quantity > 0) {
