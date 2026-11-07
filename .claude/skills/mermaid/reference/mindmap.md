@@ -17,7 +17,7 @@
 - Platter PRs merging one commit per item: use gitGraph.
 - The fitness budget ratcheting down over weeks: a quantity over time, so use xychart-beta or a timeline. A mindmap has no numeric encoding.
 - Before/after or delta pictures: there are no thick, dotted, or dashed edge variants to mark new or removed parts on GitHub.
-- The interrogation call sheet verdicts (verbatim / amended / reject / status-quo) across many items: a table is denser and scannable at 390px. A mindmap of 4 × N leaves blows the ≤15-node and phone-width budget.
+- The interrogation call sheet verdicts (verbatim / amended / reject / status-quo) across many items: a table is denser and scannable at 390px. A mindmap of 4 × N leaves blows the one-phone-screen budget, height and width.
 - Any tree deeper than 3 levels or wider than about 10 nodes: the radial cose-bilkent canvas shrinks to unreadable text on a phone.
 - Any use where branch color would carry meaning: section hues are automatic, arbitrary, and hard to tell apart for a red/green colorblind reader.
 
