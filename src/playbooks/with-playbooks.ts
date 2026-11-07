@@ -29,6 +29,10 @@
  * And a play its stop sold out of a name opens nothing on it until its window closes, or the next
  * session for a play with none (`stop-latch.ts`): a stop followed by a buy-back is a churn machine.
  *
+ * THE BELOW-BAR LABEL (#6954 slice 5). An opening order from a pair below its playbook's evidence
+ * bar says so on its reason ("below its bar", `fit-floor.ts`), so its decision record explains why
+ * the guards sized it small. Exits and every other order pass unchanged.
+ *
  * A PAUSED entry (`exitsOnly`, #4651) opens nothing new (`playbookIntents`), and its names stay its
  * own exactly as when it runs: the base persona stays off them, buys and sells, held or flat. It
  * records no verdict, and a paused own-rules entry is ignored altogether. With no paused entry
@@ -45,6 +49,7 @@ import {
   type Portfolio,
 } from "../domain/types.js";
 import type { Persona } from "../personas/persona.js";
+import { labelBelowBar } from "./fit-floor.js";
 import {
   type MixedSignalsSink,
   observeMixedSignals,
@@ -204,7 +209,9 @@ export function withPlaybooks(
         .filter((i) => !(managed.has(i.symbol) || stopped.has(i.symbol)))
         .map(attribute);
       observeMixedSignals(running, context, mixedSignalsLog);
-      return [...plays, ...stops, ...reflexes].filter((i) => !holdsAfterStop(i, context.asOf));
+      return [...plays, ...stops, ...reflexes]
+        .filter((i) => !holdsAfterStop(i, context.asOf))
+        .map((i) => labelBelowBar(i));
     },
     // A paused entry records no verdict: the roll call reads a verdict as "this playbook ran".
     playbookVerdicts: (context) => playbookVerdicts(running, context.asOf, calendar, events),

@@ -44,6 +44,7 @@ import { BETA_SCOUT_ID } from "../playbooks/beta-scout.js";
 import { CONVICTION_NOT_STATED, isConvictionNotStated } from "../playbooks/conviction-check.js";
 import type { ConvictionLookup } from "../playbooks/conviction-store.js";
 import { exitPlannedFor } from "../playbooks/exit-plan.js";
+import { openCeilingFor } from "../playbooks/fit-floor.js";
 import type { EnabledPlaybook, PlaybookReads } from "../playbooks/playbook.js";
 import { registeredPlaybooks } from "../playbooks/registry.js";
 import { type ConvictionGateDeps, withConvictionGate } from "../playbooks/with-conviction-gate.js";
@@ -552,6 +553,8 @@ export function tradingRoster(
         ...roster.enabled.map((e) => e.playbook),
         ...registeredPlaybooks(),
       ]),
+      // A pair below its playbook's evidence bar opens at the smaller floor size (#6954 slice 5).
+      openCeiling: openCeilingFor(),
     },
   };
 }

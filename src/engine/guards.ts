@@ -131,6 +131,14 @@ export interface RiskConfig {
    * else (evals, the readiness gate), which behave exactly as before.
    */
   readonly exitPlanned?: (playbookId: string, mode?: PlaybookMode) => boolean;
+  /**
+   * The most ONE opening order from a playbook may risk, as a share of account equity — the
+   * below-bar floor (#6954 slice 5, `openCeilingFor` in `playbooks/fit-floor.ts`). It is one more
+   * bound beside cash, the position cap and the budget, so it only ever shrinks an order; one whose
+   * single unit costs more is refused `below-bar-floor`. `undefined` for a playbook means no
+   * ceiling. Exits are never sized by it. Set by the live bots' roster; absent everywhere else.
+   */
+  readonly openCeiling?: (playbookId: string) => number | undefined;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -194,7 +202,10 @@ export type GuardRefusalReason =
   | "unsubscribed"
   /** An order that would open a position, from a playbook that declares no stop, no target and no
    *  time exit in its mode (#6954 slice 4). Never an exit. */
-  | "no-exit-plan";
+  | "no-exit-plan"
+  /** An order that would open a position from a pair below its playbook's evidence bar, whose one
+   *  unit costs more than the below-bar floor lets it risk (#6954 slice 5). Never an exit. */
+  | "below-bar-floor";
 
 /** The single source of truth for the reason literals above — so a validator crossing a process
  *  boundary (`decision-wire-parts.ts`, on the bots↔app replication bridge) can check a foreign
@@ -223,6 +234,7 @@ export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "collateral-reserved",
   "unsubscribed",
   "no-exit-plan",
+  "below-bar-floor",
 ];
 
 /** One raw intent the guards refused outright this cycle — the persona's own ask, unfiltered,
@@ -285,6 +297,7 @@ type BuySizingOutcome =
         | "position-cap"
         | "subscription-budget"
         | "collateral-reserved"
+        | "below-bar-floor"
       >;
     };
 
@@ -335,6 +348,11 @@ function clampBuy(
   const spendable = spendableCash(portfolio, ledger, book);
   const affordable = Math.floor(spendable / unitPrice);
   const withinPosition = Math.floor(positionBudget / unitPrice);
+  // The below-bar floor (#6954 slice 5): a per-order ceiling, so the position already held does
+  // not count against it — the position cap above already bounds the whole holding.
+  const ceilingPct = intent.playbookId ? config.openCeiling?.(intent.playbookId) : undefined;
+  const withinFloor =
+    ceilingPct === undefined ? undefined : Math.floor((ceilingPct * equity) / unitPrice);
 
   // The subscription's budget is shared across its playbook's WHOLE basket — shares held, the
   // collateral its sold puts hold, its long contracts and this batch's earlier claims — so a
@@ -362,6 +380,7 @@ function clampBuy(
 
   const bounds = [intent.quantity, affordable, withinPosition];
   if (subscriptionBudgetShares !== undefined) bounds.push(subscriptionBudgetShares);
+  if (withinFloor !== undefined) bounds.push(withinFloor);
   const quantity = Math.min(...bounds);
 
   if (quantity > 0) {
@@ -380,6 +399,8 @@ function clampBuy(
     return { ok: false, reason: reserved ? "collateral-reserved" : "insufficient-cash" };
   }
   if (withinPosition <= 0) return { ok: false, reason: "position-cap" };
+  if (withinFloor !== undefined && withinFloor <= 0)
+    return { ok: false, reason: "below-bar-floor" };
   return { ok: false, reason: "subscription-budget" };
 }
 

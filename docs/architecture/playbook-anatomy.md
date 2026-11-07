@@ -318,6 +318,7 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 |---|---|---|
 | The `Playbook` interface: `desiredState`, `rulesOf`, `optionDemand`, `decide`, `options`, `exitSafety`, `exits`, `derivesFrom`, `mixedSignals` | `src/playbooks/playbook.ts:191-314` | grounded |
 | No opening order without an exit plan (a stop, a target or a time exit), refused `no-exit-plan` on a live bot; share plays carry `HOUSE_STOP_LOSS` | `src/playbooks/exit-plan.ts`, `src/engine/guards.ts`, `src/playbooks/templates.ts` | grounded |
+| A pair below its playbook's evidence bar (the △ tier) opens at most 1% of the account per order (`RiskConfig.openCeiling`), refused `below-bar-floor` when one unit costs more; its opens are labelled "below its bar" | `src/playbooks/fit-floor.ts`, `src/engine/guards.ts`, `src/engine/option-guards.ts`, `src/playbooks/with-playbooks.ts` | grounded |
 | Order: `decide`, then `desiredState`; exit-safety first | `src/playbooks/playbook.ts:445-484` | grounded |
 | `decide` intents kept only on own tickers, stamped here | `src/playbooks/playbook.ts:386-400` | grounded |
 | A `rulesOf` playbook runs the persona itself, never `decide` | `src/playbooks/playbook.ts:182-189`, `src/playbooks/playbook.ts:441-443` | grounded |

@@ -8,7 +8,7 @@ import {
   requiredOptionLevel,
   SNAPSHOT_MAX_AGE_MS,
 } from "../domain/option-book.js";
-import { heldQuantity } from "../domain/portfolio.js";
+import { computeEquity, heldQuantity } from "../domain/portfolio.js";
 import type {
   MarketContext,
   OptionOrderIntent,
@@ -69,6 +69,8 @@ export interface OptionGuardConfig {
   readonly subscriptions?: readonly PlaybookSubscription[];
   readonly playbookSymbols?: ReadonlyMap<string, readonly string[]>;
   readonly realizedPlForPlaybook?: (playbookId: string) => number;
+  /** The below-bar floor, as `RiskConfig.openCeiling` (#6954 slice 5). */
+  readonly openCeiling?: (playbookId: string) => number | undefined;
 }
 
 /** The refusals this module can name — a subset of `GuardRefusalReason`. */
@@ -86,7 +88,8 @@ type OptionRefusalReason =
   | "collateral-reserved"
   | "insufficient-cash"
   | "option-unallocated"
-  | "subscription-budget";
+  | "subscription-budget"
+  | "below-bar-floor";
 
 type OptionOutcome =
   | { readonly ok: true; readonly intent: OrderIntent }
@@ -238,6 +241,7 @@ function openUnits(
   { ledger }: OptionBatch,
   capital: number | undefined,
   pnlLessCommitted: number,
+  ceiling: number,
 ): number {
   if (!MULTI_UNIT_STRUCTURES.has(option.structure)) return MAX_OPTION_OPEN_UNITS;
   const perUnit = worsens(portfolio, ledger, intent.symbol, {
@@ -245,9 +249,23 @@ function openUnits(
     pays: premiumOut(option),
   }).newCash;
   if (!(perUnit > 0) || capital === undefined) return MAX_OPTION_OPEN_UNITS;
-  const room = Math.min(capital + pnlLessCommitted, unspentCash(portfolio, ledger));
+  const room = Math.min(capital + pnlLessCommitted, unspentCash(portfolio, ledger), ceiling);
   const asked = Math.min(Math.floor(intent.quantity), MAX_MULTI_UNITS);
   return Math.max(MAX_OPTION_OPEN_UNITS, Math.min(asked, Math.floor(room / perUnit)));
+}
+
+/** The dollars one opening order may risk under the below-bar floor (`RiskConfig.openCeiling`), or
+ *  `Infinity` when its playbook has no ceiling. */
+function openCeilingUsd(
+  intent: OrderIntent,
+  portfolio: Portfolio,
+  context: MarketContext,
+  config: OptionGuardConfig,
+): number {
+  const pct = intent.playbookId ? config.openCeiling?.(intent.playbookId) : undefined;
+  return pct === undefined
+    ? Number.POSITIVE_INFINITY
+    : pct * computeEquity(portfolio, context.quotes);
 }
 
 /** Rules 4–11. */
@@ -272,7 +290,16 @@ function clampOpen(
 
   const capital = terms.subscription?.capitalAllocated;
   const committed = committedToPlaybook(intent, portfolio, context, config.playbookSymbols, batch);
-  const units = openUnits(intent, option, portfolio, batch, capital, terms.realizedPl - committed);
+  const ceiling = openCeilingUsd(intent, portfolio, context, config);
+  const units = openUnits(
+    intent,
+    option,
+    portfolio,
+    batch,
+    capital,
+    terms.realizedPl - committed,
+    ceiling,
+  );
   const cover = coverProblem(intent, option, portfolio, batch, units);
   if (cover.reason) return refuse(cover.reason);
 
@@ -284,6 +311,9 @@ function clampOpen(
   if (risk > 0 && risk > capital + terms.realizedPl - committed) {
     return refuse("subscription-budget");
   }
+  // The below-bar floor (#6954 slice 5): a bought call or a sold put was already cut to whole
+  // contracts inside it (`openUnits`); a single structure that still risks more is refused.
+  if (risk > ceiling) return refuse("below-bar-floor");
 
   claim(batch.ledger, {
     order: { underlying: intent.symbol, option, units },
