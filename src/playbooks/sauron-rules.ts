@@ -1,5 +1,6 @@
 import { BOTS_UNIVERSE } from "../domain/bots-universe.js";
 import { SauronPersona } from "../personas/sauron.js";
+import { HOUSE_STOP_LOSS } from "./exit-plan.js";
 import type { Playbook } from "./playbook.js";
 
 /** The standard rules, default config — what a bot OTHER than Sauron runs when it subscribes. Pure
@@ -28,9 +29,14 @@ const STANDARD_RULES = new SauronPersona();
  * applied when the live roster resolves), so it never sells another playbook's position and a Store
  * allocation on it counts only its own names.
  *
- * Deliberately absent: an exit-safety dial (a trip would add a sell his rules never make) and a
- * window (`rulesOf` makes the verdict "tactical", which the roll call reads as "reading live price
- * and sentiment every pass").
+ * THE HOUSE STOP (#6954 slice 4). His rules buy a name panic threw away and sell it only into
+ * euphoria, however long that takes — no stop-loss (docs/BOTS-SAURON.md). A strategy carries its
+ * exit plan before it executes (Eric, 2026-11-01), so SAURON carries `HOUSE_STOP_LOSS`: a sell his
+ * rules never make, on purpose, once a position is that far under what he paid. On his own account
+ * `withPlaybooks` runs that stop beside his reflexes; on any other bot `playbookIntents` runs it.
+ *
+ * Deliberately absent: a window (`rulesOf` makes the verdict "tactical", which the roll call reads
+ * as "reading live price and sentiment every pass").
  */
 export const SAURON: Playbook = {
   id: "SAURON",
@@ -46,6 +52,7 @@ export const SAURON: Playbook = {
   // Unused: his rules size every order themselves, so the mode a subscriber picks changes nothing
   // about size. Present only because `Playbook` requires it; a Store allocation still caps buys.
   size: { conservative: 0, standard: 0, aggressive: 0 },
+  exitSafety: HOUSE_STOP_LOSS,
   // No window: `rulesOf` makes the verdict "tactical" (`readsLiveSignals`), so the roll call, the
   // Store and the trader never ask. Only the morning brief reads it, for an env-named playbook.
   desiredState: () => "no-window",

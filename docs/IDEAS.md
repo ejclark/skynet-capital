@@ -18,6 +18,7 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **An option play's stop, priced on the contract's own premium.** #6954 slice 4 put a stop on every share play, but `exitSafetyIntents` reads share positions only, so the long call, the LEAP and the spread exit on their target and time rules alone, and a long call can lose its whole premium before 45 days are left. A stop that closes a long contract once its bid is some fraction under its cost (and never on the wheel's sold contracts, which its owner holds to expiry on purpose) would close that gap. The open question is the level: no study prices how far these contracts fall before they pay. Also parked: stop orders held at the broker for shares, so a gap while the bots are down is managed (#6954 gate list). _(src: Claude · while: #6954 slice 4, 2026-11-07)_
 - **A held fold could say so when it falls back to a whole read in live mode.** #6597: a wrapper
   dropped `since`, and two folds quietly re-read whole audits in production for hours. The
   fallback is right for offline mode and specs and silent everywhere else. One `emitWarning` per

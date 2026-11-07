@@ -24,7 +24,7 @@ import {
 import { humanizeOptionSymbol, OPTION_MULTIPLIER } from "../trading/option-symbols.js";
 import { expiryInside, inQuietPeriod, type Steering } from "./conviction-steering.js";
 import { money } from "./format-money.js";
-import { EXIT_DTE, longCallExit } from "./long-call-rules.js";
+import { EXIT_DTE, longCallExit, TAKE_PROFIT } from "./long-call-rules.js";
 import { optionCloseIntent, optionOpenIntent } from "./option-intent.js";
 import { pairFor } from "./pair-table.js";
 import type { Playbook } from "./playbook.js";
@@ -320,6 +320,11 @@ export function longCall(
     // Unused: sized by the Store allocation, one contract per cycle up to the mode's cap.
     size: { conservative: 0, standard: 0, aggressive: 0 },
     options: { underlyings: [symbol], holdsShortToExpiry: [], requiredLevel: 2 },
+    // Its exit plan (#6954 slice 4) is the two rules `closeIntents` sells on (`long-call-rules.ts`).
+    exits: {
+      target: `sells everything once the bid is ${TAKE_PROFIT}× the average cost`,
+      time: `sells everything with ${EXIT_DTE} days left to expiry`,
+    },
     // A conviction may fence what it buys (#5482 slice 4); a playbook already fenced is not fenced twice.
     ...(steering
       ? {}
