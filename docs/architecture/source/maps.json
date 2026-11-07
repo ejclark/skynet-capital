@@ -564,7 +564,7 @@
           {
             "id": "shell",
             "label": "Shell components",
-            "path": "app/src/shell/*.tsx (board-section, coverage-section, calendar-head, book-range-head, book-lanes, events-section, held-events-line, positions-*, accounts-*, balance-*, chain-section, chain-straddle, draft-order-builder, guidance-*, mission-control, milestone-*, ladder-gate, trade-gate, option-gate, unlock-gate, working-orders, orders-section, decisions-section, league-card, networth-*, sauron-card, admin-cards …)",
+            "path": "app/src/shell/*.tsx (board-section, coverage-section, calendar-head, book-range-head, book-lanes, events-section, held-events-line, positions-*, accounts-*, balance-*, chain-section, chain-straddle, draft-order-builder, guidance-*, mission-control, milestone-*, ladder-gate, trade-gate, option-gate, order-receipt, unlock-gate, working-orders, orders-section, decisions-section, league-card, networth-*, sauron-card, admin-cards …)",
             "responsibility": "Presentational React components for every section; gates render fog-of-war doors visible, named, disabled and counted."
           },
           {
