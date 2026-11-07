@@ -13,7 +13,7 @@ import { buildAuthoredPlaysWire } from "../autonomous/authored-plays-wire.js";
 import { buildShadowOrders, type ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
-import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
+import type { BotMode, PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
 import { buildConvictionsWire } from "../autonomous/convictions-wire.js";
 import {
   type DecisionDb,
@@ -78,6 +78,9 @@ export interface InsightsBridgeHandle {
    *  build, no live bots wired, or a malformed payload. Re-read from every poll, same posture as
    *  `botsRunningSha`. */
   readonly botsGate: () => readonly PersonaGateVerdict[] | undefined;
+  /** The house mode the bots process reported on its most recent poll (#6954 slice 1) —
+   *  `undefined` from a build that predates the header. Re-read from every poll like `botsGate`. */
+  readonly botsProcessMode: () => BotMode | undefined;
   /** The app-side decision store's own read, for `readDecisions` wiring in `serve-dashboard.ts` —
    *  `undefined` when `SKYNET_INSIGHTS_DIR` is unset, exactly mirroring `seedAppDecisionDb`. */
   readonly readDecisions?: (
@@ -178,6 +181,7 @@ export function startInsightsBridge(
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
   let botsGate: readonly PersonaGateVerdict[] | undefined;
+  let botsProcessMode: BotMode | undefined;
   let houseRoster: HouseRosterReport | undefined;
   let condScout: CondScoutSnapshot | undefined;
   let authoredShadow: ShadowReport | undefined;
@@ -231,6 +235,7 @@ export function startInsightsBridge(
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;
       botsGate = report.gate;
+      botsProcessMode = report.processMode;
       houseRoster = report.houseRoster;
       for (const line of seed(report)) console.log(line);
     },
@@ -256,6 +261,7 @@ export function startInsightsBridge(
     lastControlsPollAt: () => lastControlsPollAt,
     botsRunningSha: () => botsRunningSha,
     botsGate: () => botsGate,
+    botsProcessMode: () => botsProcessMode,
     readCondScout: () => condScout,
     readAuthoredShadow: () => authoredShadow,
     readHouseRoster: () => houseRoster,

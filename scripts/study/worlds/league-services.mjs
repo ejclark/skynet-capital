@@ -79,7 +79,10 @@ function opsStatus(book) {
         now: () => AT,
         bridgeLastPollAt: () => LAST_POLL,
         botsRunningSha: () => head,
-        personaGateVerdicts: () => bots.map((id) => ({ id, ready: true, reason: "ready" })),
+        personaGateVerdicts: () =>
+          bots.map((id) => ({ id, ready: true, reason: "ready", wanted: "live", mode: "live" })),
+        botsProcessMode: () => "live",
+        suspendedReason: () => null,
         lastBotActivityAt: () => lastBotActivityAt(hub, activityStore(book)),
         fetchDeploySignals: async (_now, running) => ({
           app: appDeploySignal(deployLag(head, head, []), head, head, link),

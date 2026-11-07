@@ -1,9 +1,12 @@
 import {
   CONTROLS_BOT_GATE_HEADER,
+  CONTROLS_BOT_MODE_HEADER,
   CONTROLS_BOT_SHA_HEADER,
   controlsPollGateHeaders,
   controlsPollHeaders,
+  controlsPollModeHeaders,
   controlsPollReport,
+  modeGate,
   type PersonaGateVerdict,
 } from "../../src/autonomous/controls-poll-wire.js";
 
@@ -119,5 +122,80 @@ describe("controlsPollReport reads the gate header back (the app side)", () => {
     const headers = controlsPollGateHeaders(VERDICTS);
     const encoded = requiredHeader(headers, CONTROLS_BOT_GATE_HEADER);
     expect(controlsPollReport({ [CONTROLS_BOT_GATE_HEADER]: [encoded, encoded] })).toEqual({});
+  });
+});
+
+/**
+ * The mode the bots run in (#6954 slice 1): the house mode on its own header, and each gate verdict's
+ * `wanted` and `mode`. Same posture as the headers above — anything but a clean value reads as not
+ * reported, never as watching or placing.
+ */
+describe("the house mode and each bot's mode on the poll (#6954 slice 1)", () => {
+  it("round-trips the house mode", () => {
+    expect(controlsPollReport(controlsPollModeHeaders("live"))).toEqual({ processMode: "live" });
+    expect(controlsPollReport(controlsPollModeHeaders("observe"))).toEqual({
+      processMode: "observe",
+    });
+  });
+
+  it("stamps nothing before the process knows its mode", () => {
+    expect(controlsPollModeHeaders(undefined)).toEqual({});
+  });
+
+  it("reads anything but observe or live as not reported", () => {
+    for (const raw of ["LIVE", "", "paper", ["live", "live"]]) {
+      expect(controlsPollReport({ [CONTROLS_BOT_MODE_HEADER]: raw })).toEqual({});
+    }
+  });
+
+  it("round-trips each verdict's wanted and actual mode", () => {
+    const verdicts: readonly PersonaGateVerdict[] = [
+      { id: "sauron", ready: true, reason: "passed", wanted: "live", mode: "live" },
+      { id: "banker", ready: false, reason: "not ready", wanted: "live", mode: "observe" },
+    ];
+    expect(controlsPollReport(controlsPollGateHeaders(verdicts))).toEqual({ gate: verdicts });
+  });
+
+  it("drops the whole roster when one verdict carries a mode it cannot read", () => {
+    const bad = Buffer.from(
+      JSON.stringify([{ id: "sauron", ready: true, reason: "ok", mode: "real-money" }]),
+      "utf8",
+    ).toString("base64");
+    expect(controlsPollReport({ [CONTROLS_BOT_GATE_HEADER]: bad })).toEqual({});
+  });
+});
+
+describe("modeGate — which gate holds a bot to watching", () => {
+  const verdict = (over: Partial<PersonaGateVerdict>): PersonaGateVerdict => ({
+    id: "sauron",
+    ready: true,
+    reason: "passed",
+    wanted: "live",
+    mode: "live",
+    ...over,
+  });
+
+  it("is none for a bot placing paper orders under a live house", () => {
+    expect(modeGate("live", verdict({}))).toBeNull();
+  });
+
+  it("names the house first: an observe house holds every bot, whatever else holds it", () => {
+    expect(modeGate("observe", verdict({ wanted: "observe", mode: "observe" }))).toBe("house");
+    expect(modeGate("observe", verdict({ ready: false, mode: "observe" }))).toBe("house");
+  });
+
+  it("names the owner's setting before the readiness gate", () => {
+    expect(modeGate("live", verdict({ wanted: "observe", mode: "observe" }))).toBe("owner");
+    expect(modeGate("live", verdict({ wanted: "observe", mode: "observe", ready: false }))).toBe(
+      "owner",
+    );
+  });
+
+  it("names the readiness gate for a bot that wanted live and was pinned", () => {
+    expect(modeGate("live", verdict({ ready: false, mode: "observe" }))).toBe("readiness");
+  });
+
+  it("is not reported for a verdict from a build that predates the mode", () => {
+    expect(modeGate("live", { id: "sauron", ready: true, reason: "passed" })).toBeUndefined();
   });
 });
