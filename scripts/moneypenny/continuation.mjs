@@ -493,6 +493,21 @@ export function gatherContinuationDeps({ now = Date.now(), mode = readWorkMode()
   return { candidates, caps: mode.caps ?? {} };
 }
 
+/** The job a continued slice runs in (`moneypenny-events.yml`, `build-plan`). */
+export const BUILD_JOB = "build plan issue";
+
+/**
+ * A continued slice's outcome is its build job's, not its run's. The same `moneypenny-events` run
+ * also carries that tick's research legs, and one cancelled research leg reads the whole run as
+ * `cancelled` while the build succeeded: on 2026-11-07 #6953's slice 3 merged as #6996, and this
+ * lane still stopped the plan and assigned Eric over run 42318429910. With no build job in the list,
+ * the run's own conclusion stands. Pure, so the spec pins it without a GitHub read.
+ */
+export function buildJobOutcome(run, jobs = []) {
+  const job = jobs.find((j) => j?.name === BUILD_JOB);
+  return job?.status === "completed" ? { ...run, conclusion: job.conclusion } : run;
+}
+
 /**
  * The last dispatched run's outcome, with a READ FAILURE told apart from a missing run.
  * `judgePriorRun`'s header says why the difference matters; `withRetry` is what makes `unreadable`
@@ -501,7 +516,12 @@ export function gatherContinuationDeps({ now = Date.now(), mode = readWorkMode()
 function readRunOutcome(runId) {
   try {
     const r = withRetry(() => ghRest(`actions/runs/${runId}`));
-    return r ? { status: r.status, conclusion: r.conclusion, url: r.html_url } : { status: "none" };
+    if (!r) return { status: "none" };
+    const run = { status: r.status, conclusion: r.conclusion, url: r.html_url };
+    // A green run needs no job read: every job in it, the build included, is green.
+    if (run.status !== "completed" || run.conclusion === "success") return run;
+    const jobs = withRetry(() => ghRest(`actions/runs/${runId}/jobs?per_page=100`))?.jobs ?? [];
+    return buildJobOutcome(run, jobs);
   } catch (err) {
     const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
     return /\b404\b/.test(text) ? { status: "none" } : { status: "unreadable" };

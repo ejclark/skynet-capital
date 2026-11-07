@@ -1,4 +1,6 @@
 import {
+  BUILD_JOB,
+  buildJobOutcome,
   type Candidate,
   CONTINUED_MODEL,
   continuationDecision,
@@ -484,6 +486,34 @@ describe("criterion 10 — when a continued slice stops the plan", () => {
     });
 
     expect(d.action).toBe("continue");
+  });
+});
+
+describe("the continued slice is judged by its build job, not its run", () => {
+  const run = { status: "completed", conclusion: "cancelled", url: "u" };
+  const job = (conclusion: string, name = BUILD_JOB) => ({ name, status: "completed", conclusion });
+
+  it("reads a run cancelled by another job's leg as the build's success (#6953, 2026-11-07)", () => {
+    const jobs = [job("cancelled", "research due events (treasury-3y-note)"), job("success")];
+
+    expect(buildJobOutcome(run, jobs).conclusion).toBe("success");
+  });
+
+  it("still stops on a build job that failed or was cancelled itself", () => {
+    expect(buildJobOutcome(run, [job("failure")]).conclusion).toBe("failure");
+    expect(buildJobOutcome(run, [job("cancelled")]).conclusion).toBe("cancelled");
+  });
+
+  it("keeps the run's own conclusion when the run has no build job", () => {
+    expect(buildJobOutcome(run, [job("success", "route")])).toEqual(run);
+  });
+
+  it("so a cancelled run whose build succeeded falls through to the state-block check", () => {
+    const resolved = buildJobOutcome(run, [job("success")]);
+    const d = decide({ comments: [block(), receipt()], runs: { "900": resolved } });
+
+    expect(d.action).toBe("stop");
+    expect(d.reason).toContain("unchanged");
   });
 });
 
