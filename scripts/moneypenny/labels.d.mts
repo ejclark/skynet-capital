@@ -28,6 +28,20 @@ export function notPullableReason(
   issue: PullableIssue | null | undefined,
   opts?: PullOptions,
 ): string | null;
+/** `notPullableReason`'s rule with the reason coded, for the board's "Waiting on" field (#6871). */
+export type NotPullableCode =
+  | "no-issue"
+  | "closed"
+  | "no-ready"
+  | "parked"
+  | "in-progress"
+  | "needs-session"
+  | "platter"
+  | "blocked";
+export function notPullable(
+  issue: PullableIssue | null | undefined,
+  opts?: PullOptions,
+): { code: NotPullableCode; text: string } | null;
 /** Why issue `n` may not be pulled because an open platter closes it, or null (#6191). */
 export function boardedReason(
   n: number | undefined,

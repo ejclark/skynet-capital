@@ -11,6 +11,11 @@ export const PRIORITY_OPTIONS: string[];
 /** The hidden text field recording each Priority the sync wrote (#6871). */
 export const SYNCED_PRIORITY: "Synced priority";
 export const HORIZON_OPTIONS: string[];
+/** The Kind field's options, in lane-sort order; equal to rank.mjs's `KINDS` (#6871 slice 3). */
+export const KIND_OPTIONS: string[];
+export const KIND: "Kind";
+export const WAITING_ON: "Waiting on";
+export const IN_COLUMN_SINCE: "In this column since";
 
 export interface StatusFieldOption {
   name: string;
@@ -191,6 +196,10 @@ export interface BoardItem {
   priority?: string;
   /** The card's "Synced priority" record, when set (#6871). */
   syncedPriority?: string;
+  /** The card's Kind option name, when set (#6871 slice 3). */
+  kind?: string;
+  /** The card's "Waiting on" text, when set (#6871 slice 3). */
+  waitingOn?: string;
 }
 
 export function findBoardItem(items?: BoardItem[], issueUrl?: string): BoardItem | undefined;
@@ -200,6 +209,17 @@ export interface PriorityNode {
   synced?: { text?: string } | null;
 }
 
+export interface CardFieldNode {
+  kind?: { name?: string } | null;
+  waiting?: { text?: string } | null;
+}
+
+/** `{kind, waitingOn}` from a GraphQL node's aliases — only the keys GitHub set (#6871). */
+export function cardFieldValues(node?: CardFieldNode | null): {
+  kind?: string;
+  waitingOn?: string;
+};
+
 /** `{priority, syncedPriority}` from a GraphQL node's aliases — only the keys GitHub set. */
 export function priorityValues(node?: PriorityNode | null): {
   priority?: string;
@@ -207,7 +227,11 @@ export function priorityValues(node?: PriorityNode | null): {
 };
 
 export function boardItemsFromProjectItems(args?: {
-  nodes?: (({ id?: string; project?: { number?: number } } & PriorityNode) | null | undefined)[];
+  nodes?: (
+    | ({ id?: string; project?: { number?: number } } & PriorityNode & CardFieldNode)
+    | null
+    | undefined
+  )[];
   projectNumber?: number;
   issueUrl?: string;
 }): BoardItem[];

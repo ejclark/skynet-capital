@@ -1,6 +1,7 @@
 // Type surface for scripts/moneypenny/projects-reconcile.mjs — the hourly board sweep (#4393 slice
 // 1), driven by a spec through injected IO. The scripts/ tree is plain ESM with `allowJs` off.
 import type { BoardItem, DialReading } from "./projects.d.mts";
+import type { CardFieldWrite } from "./projects-fields.d.mts";
 import type { PriorityPlan } from "./projects-priority.d.mts";
 import type { BoardContext, ColumnContext } from "./projects-sync.d.mts";
 
@@ -14,11 +15,14 @@ export interface MergedDrift {
   have?: string | null;
   want?: string;
   priority?: PriorityPlan;
+  /** Kind / "Waiting on" writes the card is due (#6871 slice 3). */
+  fields?: CardFieldWrite[];
 }
 
 export function mergeDrift(
   statusDrift?: Drift[],
   priorityDrift?: { number: number; plan: PriorityPlan }[],
+  fieldDrift?: { number: number; writes: CardFieldWrite[] }[],
 ): MergedDrift[];
 
 export interface RestIssue {

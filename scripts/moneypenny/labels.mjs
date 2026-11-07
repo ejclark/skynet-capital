@@ -303,26 +303,51 @@ export const parkedReason = (number, labels = []) =>
  * only from a live session's pull
  * @returns {string | null} why the issue may not be pulled, or null when it may
  */
-export function notPullableReason(issue, { interactive = false, boardedOn } = {}) {
-  if (!issue) return "no issue to pull";
+export function notPullableReason(issue, opts) {
+  return notPullable(issue, opts)?.text ?? null;
+}
+
+/**
+ * The same rule with its reason CODED (#6871 slice 3), so the board's "Waiting on" field can say
+ * who acts next without parsing the sentence: `{code, text}` for the first rule that fails, or null
+ * when the issue may be pulled. `notPullableReason` is this rule's `text`; the two cannot disagree.
+ * Codes: `no-issue` · `closed` · `no-ready` · `parked` · `in-progress` · `needs-session` ·
+ * `platter` · `blocked`.
+ */
+export function notPullable(issue, { interactive = false, boardedOn } = {}) {
+  if (!issue) return { code: "no-issue", text: "no issue to pull" };
   const n = issue.number;
-  if (issue.state && String(issue.state).toLowerCase() !== "open") return `#${n} is not open`;
+  if (issue.state && String(issue.state).toLowerCase() !== "open") {
+    return { code: "closed", text: `#${n} is not open` };
+  }
   const names = labelNames(issue.labels);
   if (!names.includes(LABELS.ready.name)) {
-    return `#${n} does not carry \`ready\` — the board shows it in Backlog, not Ready`;
+    return {
+      code: "no-ready",
+      text: `#${n} does not carry \`ready\` — the board shows it in Backlog, not Ready`,
+    };
   }
-  if (!isBuildable(issue.labels)) return parkedReason(n, issue.labels);
+  if (!isBuildable(issue.labels)) return { code: "parked", text: parkedReason(n, issue.labels) };
   if (names.includes(LABELS.inProgress.name)) {
-    return `#${n} is already \`in-progress\` — another session or lane is building it`;
+    return {
+      code: "in-progress",
+      text: `#${n} is already \`in-progress\` — another session or lane is building it`,
+    };
   }
   if (!interactive && names.includes(LABELS.needsSession.name)) {
-    return `#${n} carries \`needs-session\` — its remainder waits on an interactive session (/work-issues), not a lane`;
+    return {
+      code: "needs-session",
+      text: `#${n} carries \`needs-session\` — its remainder waits on an interactive session (/work-issues), not a lane`,
+    };
   }
   const boarded = boardedReason(n, boardedOn);
-  if (boarded) return boarded;
+  if (boarded) return { code: "platter", text: boarded };
   const blockers = openBlockers(issue);
   if (blockers > 0) {
-    return `#${n} is blocked by ${blockers} open issue${blockers === 1 ? "" : "s"} — it starts when they close`;
+    return {
+      code: "blocked",
+      text: `#${n} is blocked by ${blockers} open issue${blockers === 1 ? "" : "s"} — it starts when they close`,
+    };
   }
   return null;
 }

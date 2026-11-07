@@ -12,6 +12,7 @@
 // below was written); only the writes need Eric's PAT in a workflow. The stale sentence still sits
 // in projects-setup.mjs, projects-backfill.mjs and projects.spec.ts — docs/IDEAS.md carries the sweep.
 
+import { KINDS } from "../rank.mjs";
 import { isTransientGhError, sleepSync, withRetry } from "./gh.mjs";
 import { LABELS, labelNames, notPullableReason, parkedBy } from "./labels.mjs";
 
@@ -287,12 +288,29 @@ export const SYNCED_PRIORITY = "Synced priority";
 // Roadmap view: grouped by Horizon, laid out along Target date.
 export const HORIZON_OPTIONS = ["Now", "Next", "Later"];
 
+// THE CARD'S THREE EXTRA FIELDS (#6871 slice 3, board design §5). Each is written by the sync from
+// what the card's issue already says, never by hand:
+//   Kind                 — what sort of work it is (`kindOf`, scripts/rank.mjs), the order inside a
+//                          priority lane. The options ARE rank.mjs's `KINDS`, one list.
+//   Waiting on           — who acts next on a card that cannot be pulled, as actor plus act
+//                          ("Eric to decide"), from projects-fields.mjs's `waitingOnFor`.
+//   In this column since — the day the SYNC last changed the card's Status. Written only on a real
+//                          change, so a card the sync has not moved since the field was made reads
+//                          blank (a hand move the sync agrees with does not stamp it).
+export const KIND_OPTIONS = KINDS;
+export const KIND = "Kind";
+export const WAITING_ON = "Waiting on";
+export const IN_COLUMN_SINCE = "In this column since";
+
 export const FIELDS = [
   { name: "Status", dataType: "SINGLE_SELECT", options: STATUS_OPTIONS },
   { name: "Priority", dataType: "SINGLE_SELECT", options: PRIORITY_OPTIONS },
   { name: "Horizon", dataType: "SINGLE_SELECT", options: HORIZON_OPTIONS },
   { name: "Target date", dataType: "DATE" },
   { name: SYNCED_PRIORITY, dataType: "TEXT", hidden: true },
+  { name: KIND, dataType: "SINGLE_SELECT", options: KIND_OPTIONS },
+  { name: WAITING_ON, dataType: "TEXT" },
+  { name: IN_COLUMN_SINCE, dataType: "DATE" },
 ];
 
 // THIS FUNCTION IS THE BOARD'S ONLY STATUS WRITER, ON PURPOSE — #3939 slice 4, the board half of
@@ -789,6 +807,7 @@ export function boardItemsFromProjectItems({ nodes = [], projectNumber, issueUrl
           id: node.id,
           ...(node.status?.name ? { status: node.status.name } : {}),
           ...priorityValues(node),
+          ...cardFieldValues(node),
           content: { type: "Issue", url: issueUrl },
         },
       ]
@@ -806,6 +825,20 @@ export function priorityValues(node) {
   return {
     ...(priority ? { priority } : {}),
     ...(synced ? { syncedPriority: synced } : {}),
+  };
+}
+
+/**
+ * A card's Kind and "Waiting on" text from a GraphQL node's `kind` / `waiting` aliases (#6871
+ * slice 3), as `{kind, waitingOn}` — only the keys GitHub set, so a field the board does not carry
+ * yet (or a card never written) reads as absent. Pure.
+ */
+export function cardFieldValues(node) {
+  const kind = node?.kind?.name;
+  const waitingOn = node?.waiting?.text;
+  return {
+    ...(kind ? { kind } : {}),
+    ...(waitingOn ? { waitingOn } : {}),
   };
 }
 

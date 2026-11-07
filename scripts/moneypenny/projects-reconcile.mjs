@@ -41,15 +41,19 @@ import { withOpenSubIssues } from "./admission.mjs";
 import { ghRateLimit, ghRestAll, withRetry } from "./gh.mjs";
 import { labelNames } from "./labels.mjs";
 import {
+  IN_COLUMN_SINCE,
   isRateLimitExhausted,
   isRetryableRestError,
   isStartedPlan,
+  KIND,
   planBoardSweep,
   STATUS_OPTIONS,
   statusFieldUpdate,
   subIssueCounts,
+  WAITING_ON,
   WAITING_ON_PERSON,
 } from "./projects.mjs";
+import { describeCardFields, planCardFieldDrift, wantedCardFields } from "./projects-fields.mjs";
 import { describePriority, planPriorityDrift } from "./projects-priority.mjs";
 import {
   createBoardContext,
@@ -57,6 +61,7 @@ import {
   openPrMaps,
   readHorizons,
   syncIssue,
+  wantedCard,
   wantedColumn,
   writeStatusOptions,
 } from "./projects-sync.mjs";
@@ -256,12 +261,16 @@ export function planReconcile({
 /**
  * Status drift and priority drift as one list, one entry per issue (#6871): `syncIssue` fixes both
  * in a single call, so a card wrong on both counts is synced once. Status entries keep their
- * `{have, want}`; priority adds `priority` (a `planPriority` result). Ascending by number. Pure.
+ * `{have, want}`; priority adds `priority` (a `planPriority` result); the card's Kind / "Waiting on"
+ * fields add `fields` (#6871 slice 3, `planCardFieldDrift`'s writes). Ascending by number. Pure.
  */
-export function mergeDrift(statusDrift = [], priorityDrift = []) {
+export function mergeDrift(statusDrift = [], priorityDrift = [], fieldDrift = []) {
   const byNumber = new Map(statusDrift.map((d) => [d.number, { ...d }]));
   for (const { number, plan } of priorityDrift) {
     byNumber.set(number, { ...(byNumber.get(number) ?? { number }), priority: plan });
+  }
+  for (const { number, writes } of fieldDrift) {
+    byNumber.set(number, { ...(byNumber.get(number) ?? { number }), fields: writes });
   }
   return [...byNumber.values()].sort((a, b) => a.number - b.number);
 }
@@ -271,6 +280,7 @@ function driftLine(d, verb) {
   const parts = [];
   if (d.want) parts.push(`${verb} "${d.have ?? "(none)"}" → "${d.want}"`);
   if (d.priority) parts.push(describePriority(d.number, d.priority).replace(/^#\d+: /, ""));
+  if (d.fields) parts.push(describeCardFields(d.number, d.fields).replace(/^#\d+: /, ""));
   return `#${d.number}: ${parts.join("; ")}`;
 }
 
@@ -340,12 +350,38 @@ export function reconcileBoard({
     numberOf: (item) => boardIssueNumber(item),
     horizons,
   });
-  const drift = mergeDrift(moved, priorityDrift);
+  // Kind and "Waiting on" (#6871 slice 3): only for the fields the board carries — a sweep that
+  // runs before the setup dispatch says so once and plans nothing, never an error.
+  const present = Object.fromEntries(
+    [KIND, WAITING_ON, IN_COLUMN_SINCE].map((name) => [
+      name,
+      (board.fields() ?? []).some((f) => f?.name === name),
+    ]),
+  );
+  const absent = Object.keys(present).filter((name) => !present[name]);
+  if (absent.length) {
+    log(`board fields not made yet: ${absent.join(", ")} — projects-setup.yml creates them`);
+  }
+  const { drift: fieldDrift, deferred: fieldsDeferred } = planCardFieldDrift({
+    items,
+    openIssues,
+    numberOf: (item) => boardIssueNumber(item),
+    present,
+    skip: new Set([...moved.map((d) => d.number), ...priorityDrift.map((d) => d.number)]),
+    wantedFor: (issue) => {
+      const card = wantedCard(issue, { ...context, columns });
+      return card && card.status !== "Done" ? wantedCardFields(issue, card, { horizons }) : null;
+    },
+  });
+  const drift = mergeDrift(moved, priorityDrift, fieldDrift);
   const drags = priorityDrift.filter((p) => p.plan.action === "drag").length;
   log(
     `board: ${items.length} item(s), ${moved.length} in the wrong column, ${drags} priority ` +
-      `drag(s), ${priorityDrift.length - drags} priority write(s)` +
-      (deferred ? ` (${deferred} more left for the next sweep)` : ""),
+      `drag(s), ${priorityDrift.length - drags} priority write(s), ${fieldDrift.length} card ` +
+      `field fill(s)` +
+      (deferred || fieldsDeferred
+        ? ` (${deferred + fieldsDeferred} more left for the next sweep)`
+        : ""),
   );
 
   const fixed = [];
