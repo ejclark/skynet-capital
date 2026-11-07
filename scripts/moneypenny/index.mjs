@@ -1532,7 +1532,7 @@ function executeSweepIntent(i) {
     console.log(`::notice::${line}`);
     return line;
   }
-  if (i.kind === "assign-eric" || i.kind === "unassign-eric") {
+  if (i.kind === "assign-eric" || i.kind === "unassign-eric" || i.kind === "readback-eric") {
     // The two writes live in assignments.mjs so its own `--apply` CLI reuses them without importing
     // this router — the same cycle-avoidance as the relay below.
     const line = askOnce(i, { lease: ASK_LEASE });

@@ -245,6 +245,7 @@ function checkNeedsFromYou(text, labels, problems, notes) {
     );
   }
   if (!hasCallout) return;
+  noteCardGaps(text, top, labels, notes);
 
   for (const line of top.split("\n")) {
     const item = /^>\s*\d+\.\s+(.+)$/.exec(line);
@@ -253,6 +254,23 @@ function checkNeedsFromYou(text, labels, problems, notes) {
         `"Needs from you" item over ${MAX_BULLET} chars — one line, why trailing after an em dash: "${item[1].slice(0, 60)}…"`,
       );
     }
+  }
+}
+
+/** The assignment card carries a callout's whole ask (scripts/moneypenny/ask-card.mjs, #6953 slice 3);
+ *  a labelled callout with no prediction or no silence line still assigns, so this only points at the
+ *  gap — advisory, never a refusal, so no lane's ask is dropped for being thin (docs/ISSUES.md rule 8). */
+function noteCardGaps(text, top, labels, notes) {
+  if (!(Array.isArray(labels) && labels.includes("needs-eric"))) return;
+  const callout = top.split("\n").filter((l) => l.startsWith(">"));
+  const missing = [];
+  if (!(callout.some((l) => /\bpredicted\b/i.test(l)) || /^###\s+Predicted answers/im.test(text)))
+    missing.push("a prediction");
+  if (!callout.some((l) => /\bon silence\b/i.test(l))) missing.push("an `On silence:` line");
+  if (missing.length) {
+    notes.push(
+      `\`Needs from you\` callout has no ${missing.join(" and no ")} — the assignment card shows both, and the digest lists the ask as incomplete (docs/ISSUES.md rule 8)`,
+    );
   }
 }
 
