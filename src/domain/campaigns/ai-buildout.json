@@ -79,6 +79,12 @@
         "sp-select-sector-secondary-reweight-",
         "sp-rebalance-reference-close-"
       ]
+    },
+    {
+      "id": "ai-labor",
+      "name": "AI replacing workers",
+      "why": "Eric's view that employers cut salary budgets to pay for AI, with layoffs, unemployment and relief to follow (docs/research/convictions/ai-labor-2026-11.md). Challenger's monthly report counts the cuts that cite AI (claim 1); the 120th Congress's first day seats the majority any relief bill needs (claim 6).",
+      "prefixes": ["challenger-job-cuts-", "congress-120th-convenes-2027-01-03"]
     }
   ],
   "openQuestions": [

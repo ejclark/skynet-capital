@@ -1,0 +1,11 @@
+{
+  "id": "challenger-job-cuts-2026-12-03",
+  "kind": "macro-print",
+  "title": "Challenger Job-Cut Report (Nov 2026)",
+  "date": "2026-12-03",
+  "status": "estimate",
+  "source": "EST: cadence — Challenger publishes the month's report on the Thursday before BLS payrolls (Sep 3, Oct 1 and Nov 5, 2026 per the publisher's own job-cuts feed at challengergray.com, read 2026-11-07); BLS payrolls for November are 2026-12-04 (jobs-2026-12-04), so the Thursday before is 2026-12-03. No primary schedule for this edition was fetched",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Seeded for docs/research/convictions/ai-labor-2026-11.md (#7033), which reverses the 2026-09-04 close-out's choice not to seed later editions (challenger-job-cuts-2026-09-03.md → Calendar fed). That close-out priced the report as a market mover and found almost no move; it is seeded here as a measurement, not a mover: its AI-cited share of cuts scores the conviction's claim 1 (the house call is that AI has faded as a stated reason; a share of 15% or more in this or the December report proves that call wrong). The share was 9% in September (3,961 of 43,281) and 3% in October (1,265 of 43,994), both from the publisher's own posts. Impact stays `low`: the tape has not shown this report moving anything in a normal data week."
+}

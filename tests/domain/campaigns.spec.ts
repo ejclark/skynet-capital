@@ -121,6 +121,24 @@ describe("campaigns", () => {
       ).toBe(true);
     });
 
+    // #7033: the AI-labor conviction's two dated reads — the Challenger reports that score claim 1
+    // and the 120th Congress's first day that claim 6 waits on — reach the campaign by one force.
+    it("links the AI-replacing-workers force to the Challenger reports and the new Congress", () => {
+      const force = aiBuildout().forces.find((f) => f.id === "ai-labor");
+      expect(force?.why).toContain("docs/research/convictions/ai-labor-2026-11.md");
+      expect(existsSync("docs/research/convictions/ai-labor-2026-11.md")).toBe(true);
+      const linked = linkEvents(aiBuildout(), everyEvent())
+        .filter((l) => l.reasons.some((r) => r.via === "force" && r.force === "ai-labor"))
+        .map((l) => l.event.id);
+      expect(linked).toEqual(
+        expect.arrayContaining([
+          "challenger-job-cuts-2026-12-03",
+          "challenger-job-cuts-2027-01-07",
+          "congress-120th-convenes-2027-01-03",
+        ]),
+      );
+    });
+
     // The state block's falsifier: fewer than 50 linked events would mean the cast or forces are
     // drawn too narrowly to steer research.
     it("links at least 50 of the calendar's events", () => {
