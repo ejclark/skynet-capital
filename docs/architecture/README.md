@@ -312,6 +312,7 @@ A component that cuts across containers, written from the code with `path:line` 
 | Page | Covers | Code roots |
 |---|---|---|
 | [Playbook anatomy](playbook-anatomy.md) | What a playbook is made of, today and proposed: strategy, pair, setting, subscription, allocation; the decision surface; cycles; signals; thresholds; invariants | `src/playbooks`, `src/engine/option-guards.ts`, `src/subscriptions/strategy-budgets.ts` |
+| [The org chart](org-chart.md) | Every seat, human or agent, by department; the channels between them and their measured friction (reverse Conway); generated from docs/agents/seats.json by scripts/org-chart.mjs | `docs/agents/seats.json`, `scripts/org-chart.mjs` |
 
 ## Graphify parity
 
