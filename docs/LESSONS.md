@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `route` red on main: the audit step skips a spent api budget and stops re-reading the router's deps
+- **SHA:** bbe6f53   **DATE:** 2026-11-07   **STATUS:** closed
+- **COVERS:** 2302e46 9c9abd5 6be9692
+- **SIGNAL:** 8 failed run(s) of `Moneypenny Events (event-research automation)` → `route` on `main`, the first [42185658675](https://github.com/ejclark/skynet-capital/actions/runs/42185658675) at 2026-11-06T08:09:22Z. Repair capsule #6942 filed 2026-11-06T08:13:44Z, closed 17h later by #6998.
+- **ROOT CAUSE:** Run [42321492817](https://github.com/ejclark/skynet-capital/actions/runs/42321492817) failed at `Audit for stalls & conflicts`. Its log: `issues/5365/timeline … returned error: 403 … GitHub said: API rate limit exceeded for installation ID 157155153`. The repair lane matched the job name and reopened #6942. But the breaker bug #6942 tracked (a cancelled, stepless research leg) was fixed in platter #6967 at 00:23Z, and the breaker's own step, `List due events`, is not the step that failed here. Two things in `scripts/moneypenny/index.mjs` `main()` let a spent budget turn `route` red: 1. `gatherDeps(ctx)` ran before the audit-mode branch, so `--audit` paid the router's full read and threw it…
+- **PREVENTION:** spec — `tests/scripts/moneypenny/budget.spec.ts` (#6998).
+- **SIDE QUESTS:** none — drafted from the capsule's closure (#4212); `/retro` deepens it if the class recurs.
+
+---
+
 ### `route` red on main: protected-path changes — 2026-11-06
 - **SHA:** 13d5950   **DATE:** 2026-11-07   **STATUS:** closed
 - **COVERS:** a39f49c 6ff1d62 555261f
