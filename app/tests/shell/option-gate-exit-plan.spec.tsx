@@ -1,8 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ChainData, OptionDraft, OptionPreview, PlayInfo } from "../../src/live/options";
 import { ExitPlanReview } from "../../src/shell/exit-plan-review";
 import { OptionGate } from "../../src/shell/option-gate";
+import { renderOnTrade } from "./trade-route-harness";
 
 /**
  * THE EXIT PLAN IN THE REVIEW STEP (#5709 slice 3). Buying a call, the review shows the house's
@@ -98,11 +98,10 @@ const buyCall: PlayInfo = {
   earned: true,
 };
 
+/** On a `/trade` page: a submitted order becomes the receipt, whose links need the router. */
 function renderGate() {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <OptionGate deskId="desk-1" play={buyCall} initialSymbol="NVDA" initialStrike="180" />
-    </QueryClientProvider>,
+  return renderOnTrade(
+    <OptionGate deskId="desk-1" play={buyCall} initialSymbol="NVDA" initialStrike="180" />,
   );
 }
 
@@ -168,6 +167,25 @@ describe("the options ticket's exit plan (#5709 slice 3)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Submit order/ }));
     await waitFor(() => expect(submitted).toHaveLength(1));
     expect(submitted[0]).not.toHaveProperty("exitPlan");
+  });
+
+  // Eric, 2026-11-06: entries that persisted after a submit read as an order that never went out.
+  it("WHEN an order is accepted, the form SHALL give way to its receipt, and New ticket SHALL hand back an empty one", async () => {
+    renderGate();
+    await reviewed();
+    fireEvent.click(screen.getByRole("button", { name: /Submit order/ }));
+    const receipt = await screen.findByRole("region", { name: "Order receipt" });
+    expect(receipt).toHaveTextContent("NVDA $180 CALL · 15 JAN 27");
+    expect(receipt).toHaveTextContent("Buy to open · 1 contract · Limit $5.00 · Day");
+    expect(screen.queryByLabelText("Symbol")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Contracts (100 shares)")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Review order" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "New ticket" }));
+    expect(screen.queryByRole("region", { name: "Order receipt" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Symbol")).toHaveValue("NVDA");
+    expect(screen.getByLabelText("Strike")).toHaveValue(null);
+    expect(screen.getByLabelText("Contracts (100 shares)")).toHaveValue(1);
   });
 
   it("an edit after Carry returns to draft, and the next review starts unpicked", async () => {

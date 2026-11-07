@@ -102,10 +102,13 @@ function coerceNumber(raw: string | number | null | undefined): number | undefin
   return Number.isFinite(value) ? value : undefined;
 }
 
-function stateFor(order: AlpacaOrder): DeskOrderState | undefined {
-  if (order.status === "partially_filled") return "partial";
-  if (WORKING_STATUSES.has(order.status)) return "working";
-  return TERMINAL[order.status];
+/** A broker status word as the desk names it — undefined for a status this view can't honestly
+ *  name. Shared with the ticket's receipt (`app/src/live/order-receipt.ts`), which reads the same
+ *  words off the submit echo and the stream, so the two never map a status differently. */
+export function brokerStatusState(status: string): DeskOrderState | undefined {
+  if (status === "partially_filled") return "partial";
+  if (WORKING_STATUSES.has(status)) return "working";
+  return TERMINAL[status];
 }
 
 function settledStamp(order: AlpacaOrder, state: DeskOrderState): string | undefined {
@@ -121,7 +124,7 @@ const REPLACEABLE_TYPES = new Set(["limit", "stop", "stop_limit"]);
 /** One broker record → one desk row, or undefined when the status is one this view can't
  *  honestly name. */
 export function deskOrderRow(order: AlpacaOrder): DeskOrderRow | undefined {
-  const state = stateFor(order);
+  const state = brokerStatusState(order.status);
   if (!state) return undefined;
   const limitPrice = coerceNumber(order.limit_price);
   const stopPrice = coerceNumber(order.stop_price);
