@@ -1,14 +1,14 @@
 # Test suites
 
-**Technology:** Rstest 0.12 (rstest.config.ts, tests/**/*.spec.ts, node env) and app/rstest.config.ts with happy-dom + Testing Library; Playwright 1.62 e2e (playwright.config.ts boots `npm run build --prefix app && npm run serve:dashboard:offline` on :8787), playwright.auth.config.ts for /login, Playwright component tests (app/playwright-ct.config.ts → e2e/ct); fast-check
+**Technology:** Rstest 0.12 (rstest.config.ts, tests/**/*.spec.ts, node env) and app/rstest.config.ts with happy-dom + Testing Library; Playwright 1.62 e2e (playwright.config.ts boots `npm run build --prefix app && npm run serve:dashboard:offline` on :8787, plus the member playthroughs e2e/journeys.spec.ts as projects `journeys-open` on :8790 and `journeys-session` on :8792 against frozen fixtures, from e2e/playwright.journeys.ts), playwright.auth.config.ts for /login, Playwright component tests (app/playwright-ct.config.ts → e2e/ct); fast-check
 
 **Responsibility:** The consumer that proves the runtime: unit/BDD specs import src modules directly (ports & adapters make every network seam fakeable), architecture gates under tests/arch run the scripts/*-scan.mjs coaches (arch, dupe, dead, spec-gap, envelope, volume-persistence, fly-split, workflows), and the e2e suite drives the real server in offline mode on fixtures/offline (participants.json + events.jsonl) so CI never needs Alpaca keys.
 
-**Code roots:** `tests` · `app/tests` · `e2e` · `fixtures/offline` · `rstest.config.ts` · `playwright.config.ts` · `playwright.auth.config.ts` · `app/playwright-ct.config.ts`
+**Code roots:** `tests` · `app/tests` · `e2e` · `fixtures/offline` · `rstest.config.ts` · `playwright.config.ts` · `playwright.auth.config.ts` · `playwright.journeys.config.ts` · `app/playwright-ct.config.ts`
 
-**Entrypoints:** `package.json: verify → run-p typecheck lint test typecheck:app test:app` · `package.json: test:e2e, test:e2e:auth, test:e2e:ct`
+**Entrypoints:** `package.json: verify → run-p typecheck lint test typecheck:app test:app` · `package.json: test:e2e, test:e2e:auth, test:e2e:journeys, test:e2e:ct`
 
-**Grounding:** rstest.config.ts include tests/**/*.spec.ts; playwright.config.ts webServer command; e2e/playwright.shared.ts; tests/arch/volume-persistence.spec.ts reads src/runtime/volume-guard.ts against fly.toml; src/runtime/data-source.ts is the live/offline seam (ADR docs/adr/0002-offline-data-source-mode.md).
+**Grounding:** rstest.config.ts include tests/**/*.spec.ts; playwright.config.ts webServer commands; e2e/playwright.shared.ts; e2e/playwright.journeys.ts; tests/arch/volume-persistence.spec.ts reads src/runtime/volume-guard.ts against fly.toml; src/runtime/data-source.ts is the live/offline seam (ADR docs/adr/0002-offline-data-source-mode.md).
 
 **Refuter's verdict:** grounded — Change the label to say that tests/arch gates either invoke scripts/*-scan.mjs coaches (arch-scan via god-file.spec, dead, dupe, spec-gap, envelope, clone, doc-rot, and others) or assert invariants inline. volume-persist
 

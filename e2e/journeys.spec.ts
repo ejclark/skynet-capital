@@ -9,6 +9,7 @@ import {
   VIEWPORTS,
   viewportsFor,
 } from "../scripts/crawl/steps.mjs";
+import { journeysTag } from "./playwright.journeys";
 
 /**
  * THE MEMBER JOURNEYS AS ACCEPTANCE TESTS — generated at module load from every
@@ -18,23 +19,21 @@ import {
  * suite is green while the gaps are real and turns RED the day a gap is fixed. That red is the
  * ratchet: the fix then deletes the `known_gap` line, and the step guards the fix from then on.
  *
- * Runs only under `playwright.journeys.config.ts` (`npm run test:e2e:journeys[:open]`, and
- * `scripts/crawl/run.mjs`); the default config lists it in `testIgnore`, so `npm run test:e2e`
- * never collects it. CI wiring is a platter item, because workflow files are the irreversible
- * class. The server picks ONE auth mode per boot (`playwright.auth.config.ts` explains), so
- * `JOURNEYS_MODE` says which fixtures this boot can serve: `open` (anonymous fixtures) or `session`
- * (OAuth with the crawl's owner-links fixture; the spec mints the `skynet_session` cookie). A
- * member whose fixture the boot cannot serve is left out at load time, never collected as a
- * skipped test — the other mode's run covers it.
+ * Runs in CI before every merge (#7031 slice 1): the default `npx playwright test` collects it in
+ * two projects, `journeys-open` and `journeys-session`, each against its own boot
+ * (`e2e/playwright.journeys.ts`); `playwright.journeys.config.ts` runs just those two. The server
+ * picks ONE auth mode per boot (`playwright.auth.config.ts` explains), so each journey is tagged
+ * with the mode its member's fixture needs — `@journeys-open` (anonymous) or `@journeys-session`
+ * (OAuth with the crawl's owner-links fixture; the spec mints the `skynet_session` cookie) — and
+ * each project greps for its own tag. A member the boot cannot serve is never collected there,
+ * never a skipped test: the other project covers it.
  */
-const MODE = process.env.JOURNEYS_MODE === "session" ? "session" : "open";
-
 for (const member of loadJourneys()) {
   const wantsSession = member.fixture.kind === "session";
-  if (wantsSession !== (MODE === "session")) continue;
+  const tag = journeysTag(wantsSession ? "session" : "open");
   for (const journey of member.journeys) {
     for (const viewport of viewportsFor(member, journey)) {
-      test.describe(`${member.member} · ${journey.name} · ${viewport}`, () => {
+      test.describe(`${member.member} · ${journey.name} · ${viewport}`, { tag }, () => {
         test.use(VIEWPORTS[viewport]);
         test.beforeEach(async ({ context, baseURL }) => {
           if (wantsSession && baseURL) {
