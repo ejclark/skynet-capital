@@ -222,6 +222,13 @@ export function needsYouLines({ needsYou }) {
   );
 }
 
+/** The "callout incomplete" line: asks he holds or is about to, whose callout lacks part of the card (#6953 slice 3). */
+export function calloutIncompleteLine({ incomplete = [] }) {
+  if (!incomplete.length) return "- Callout incomplete: every ask carries its full card.";
+  const items = incomplete.map((c) => `#${c.number} lacks ${c.missing.join(", ")}`).join("; ");
+  return `- Callout incomplete: ${incomplete.length} ask${incomplete.length === 1 ? "" : "s"} lack part of the card — ${items}.`;
+}
+
 /** The "needs a session" line from `plan()` output: a count, each item and why. Pure. */
 export function needsSessionLine({ needsSession = [] }) {
   if (!needsSession.length) return "- Needs a session: nothing is waiting on a session.";
@@ -396,7 +403,8 @@ async function main() {
   }
   if (has("needs-you")) {
     const { gather, plan } = await import("./moneypenny/assignments.mjs");
-    console.log(needsYouLines(plan(gather())).join("\n"));
+    const planned = plan(gather());
+    console.log([...needsYouLines(planned), calloutIncompleteLine(planned)].join("\n"));
     return;
   }
   if (has("needs-session")) {

@@ -121,6 +121,15 @@ Rules that make it work, in priority order:
    confidence, written before he answers; the row is scored in
    [`docs/process/ALIGNMENT.md`](process/ALIGNMENT.md) when he does (Eric, 2026-10-18: alignment
    is the asymptote, so its distance is measured).
+   **The callout speaks one more grammar, so the assignment card can carry the whole ask**
+   (`scripts/moneypenny/ask-card.mjs`, #6953 slice 3). Under a numbered item, indented sub-lines:
+   `- A (predicted, medium): <what happens>`, `- B: <what happens>`, `- On silence: <what the lane
+   will actually do>`, `- Unblocks: <what moves>`. The card shows every numbered item (up to 3),
+   each option, the prediction and the silence line; his reply, if its first line is an option
+   letter, `yes`, `no` or `not now`, is read back by the lane, which takes the label off and logs a
+   scored ledger row (`answer-readback.mjs`). A callout without them still assigns, and the digest
+   lists it under "callout incomplete"; `issue-lint` adds a note, never a refusal. An `On silence:`
+   line must name something that will really happen — the card quotes it to him as a promise.
 9. **A multi-slice plan's Slicing sketch names which slice closes it.** #928 and #885 both shipped
    their final slice without a `Closes #N`, so GitHub never auto-closed them and the issue sat open
    describing already-superseded state (found in the 2026-08-30 `/work-issues` pass). Mark the

@@ -15,7 +15,19 @@ export function shouldPostCalloutGap(
   issue?: CalloutIssue & { comments?: (string | null)[] },
 ): boolean;
 
-export function withLaneAsk(body: string | null | undefined, ask: string, url?: string): string;
+export interface LaneAskDetail {
+  options?: { key: string; text: string; predicted?: boolean; confidence?: string }[];
+  /** The prediction as written, when no option is flagged: "A (medium)". */
+  predicted?: string;
+  onSilence?: string;
+  unblocks?: string;
+}
+export function withLaneAsk(
+  body: string | null | undefined,
+  ask: string,
+  url?: string,
+  extra?: LaneAskDetail,
+): string;
 export function withoutLaneAsk(body: string | null | undefined): string;
 export function askFromComments(
   comments?: readonly unknown[],

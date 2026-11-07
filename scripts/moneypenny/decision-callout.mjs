@@ -64,18 +64,38 @@ const askItem = (ask) => {
 };
 
 /**
+ * The sub-lines a callout speaks so the assignment card can carry the whole ask (ask-card.mjs):
+ * `options` ([{key, text, predicted?}]), `predicted` ("A (medium)" when no option is flagged),
+ * `onSilence` and `unblocks`. Each is one short line under item 1; a field left out is left out,
+ * and the card names the gap in the digest instead of refusing the ask.
+ */
+function askDetail({ options = [], predicted, onSilence, unblocks } = {}) {
+  const one = (t) => askItem(t);
+  return [
+    ...options.map(
+      (o) =>
+        `>    - ${o.key}${o.predicted ? " (predicted" + (o.confidence ? `, ${o.confidence}` : "") + ")" : ""}: ${one(o.text)}`,
+    ),
+    ...(predicted ? [`>    - Predicted: ${one(predicted)}`] : []),
+    ...(onSilence ? [`>    - On silence: ${one(onSilence)}`] : []),
+    ...(unblocks ? [`>    - Unblocks: ${one(unblocks)}`] : []),
+  ];
+}
+
+/**
  * `body` with this ask as its callout, above the fold. A callout this lane wrote is replaced, so a
  * plan stopped twice asks only the newest question. A callout anyone else wrote is left alone: the
  * rule is already met, and a second one would split the decision across two places. `url` points
  * at the comment the ask came from, on its own line because rule 8 limits the item's length. Pure.
  */
-export function withLaneAsk(body, ask, url) {
+export function withLaneAsk(body, ask, url, extra = {}) {
   const text = body ?? "";
   const block = [
     LANE_ASK_OPEN,
     "> [!IMPORTANT]",
     "> **Needs from you**",
     `> 1. ${askItem(ask)}`,
+    ...askDetail(extra),
     ...(url ? [">", `> The lane's comment: ${url}`] : []),
     LANE_ASK_CLOSE,
   ].join("\n");

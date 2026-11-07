@@ -27,6 +27,20 @@ alignment has come — and the evidence that lets a class stop asking.
    accountability and recoverability, not because alignment is short. That boundary moves only when
    he moves it.
 
+## How rows get recorded (#6953 slice 3)
+
+The assignment card (`scripts/moneypenny/ask-card.mjs`) carries each question's options and Claude's
+prediction. When Eric's first reply under an ask is a letter on the card, `yes`, `no` or `not now`,
+the lane (`answer-readback.mjs`) answers "Read as: …", takes `needs-eric` off, unassigns him and
+leaves a scored row in that comment: `match` or `miss` against the predicted letter, `unclear` for a
+deferral, "score by hand" when the prediction was prose. Plan and feedback issues are skipped, since
+their own reply path resumes the build with the reply as the answer. Nothing acts on the answer:
+a reply of "merge it" is never read as the merge.
+
+`node scripts/moneypenny/answer-readback.mjs --ledger [--apply]` collects the last week's rows into
+the table below, once each, with the row's key in a hidden comment. A weekly PR that runs it, and a
+graduation PR when a class meets rule 3, are the next piece; until then a session runs it.
+
 ## Ledger
 
 | Date | Class | The ask | Predicted (confidence) | Eric's answer | Score |
