@@ -32,6 +32,7 @@ case "$1 $2" in
     case "$4" in
       "ls -t /data/audit") echo sauron.jsonl ;;
       "tail -n 2 "*) cat "$S/journal" ;;
+      "node /app/scripts/journal-tally.mjs /data/audit") if [[ -f "$S/tally" ]]; then cat "$S/tally"; else echo '{"tally":1,"bots":[]}'; fi ;;
       *) cat "$S/stamp" ;;
     esac ;;
   "machine start") cp "$S/machines-up" "$S/machines" ;;
