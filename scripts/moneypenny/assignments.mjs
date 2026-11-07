@@ -193,8 +193,10 @@ export function plan({
   const stillHeld = new Set(
     prs.filter((pr) => heldPrHours(pr, now) !== null).map((pr) => pr.number),
   );
+  const reading = new Set(replies.filter((r) => markers.has(r.number)).map((r) => r.number));
   for (const issue of issues) {
     planIssue(issue, {
+      reading,
       markers,
       now,
       queue,
@@ -210,6 +212,8 @@ export function plan({
   // His reply under an ask the lane stands behind: read it back, clear the ask (answer-readback.mjs).
   for (const r of replies) {
     if (!markers.has(r.number)) continue;
+    reading.add(r.number);
+    holding.delete(r.number);
     actions.push({
       kind: "readback",
       criterion: 1,
@@ -313,6 +317,7 @@ function planIssue(
     stillHeld = new Set(),
     holding = new Set(),
     incomplete = [],
+    reading = new Set(),
   },
 ) {
   const assigned = logins(issue.assignees).some(isEric);
@@ -322,7 +327,7 @@ function planIssue(
     actions.push({ kind, criterion, number: issue.number, title: issue.title, why });
 
   if (!(open && names(issue.labels).includes(NEEDS_ERIC))) {
-    if (marked && assigned && !stillHeld.has(issue.number)) {
+    if (marked && assigned && !stillHeld.has(issue.number) && !reading.has(issue.number)) {
       act("unassign", 2, open ? "needs-eric removed" : "issue closed");
     }
     return;
@@ -471,14 +476,15 @@ export function routeAssignments(deps = {}) {
 function readbackIntent(a) {
   const { answer, card, reply } = a.readback;
   const rows = ledgerRows({ number: a.number, title: a.title, card, answer, reply });
+  const body = readbackComment({ answer, rows });
   return {
     kind: "readback-eric",
     number: a.number,
     title: a.title,
     criterion: 1,
     why: a.why,
-    said: readbackComment({ answer, rows }).split("\n")[0],
-    body: readbackComment({ answer, rows }),
+    said: body.split("\n")[0],
+    body,
   };
 }
 

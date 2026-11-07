@@ -43,6 +43,7 @@ export function readbackFor(
     title?: string;
     state?: string;
     labels?: (string | { name?: string })[];
+    pull_request?: unknown;
   },
   comments: readonly ReplyComment[],
 ): Readback | null;

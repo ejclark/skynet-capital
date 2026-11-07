@@ -42,14 +42,17 @@ function firstLine(text = "") {
   const line = text.split("\n").find((l) => l.trim()) ?? "";
   return line
     .replace(/^[\s>*_`#-]+/, "")
-    .replace(/^(?:reply|answer|re)\s*[:,-]?\s*/i, "")
+    .replace(/^(?:(?:reply|answer|re)\b\s*[:-]\s*|(?:reply|answer)\b\s+)/i, "")
     .trim();
 }
 
 const TOKEN = /^(?:(\d)[.:)]?\s*)?([A-F]\d?)$/;
-const YES = /^(?:yes|yep|yeah|approved?|do it|go ahead|ok(?:ay)?)\b/i;
-const NO = /^(?:no|nope)\b/i;
-const DEFER = /^(?:not now|later|park(?: it)?|defer)\b/i;
+/** A plain word is an answer only when it stands alone or is followed by a clause set off by a dash,
+ *  colon or paren — "no, actually do X" and "later today I'll look" are not clean answers. */
+const plain = (words) => new RegExp(`^(?:${words})\\s*(?:[.!]*$|\\s[—–-]\\s|[(:])`, "i");
+const YES = plain("yes|yep|yeah|approved?|do it|go ahead|ok(?:ay)?");
+const NO = plain("no|nope");
+const DEFER = plain("not now|later|park it|park|defer");
 
 /**
  * What a reply says, against the card it answers, or `null` when it is not an answer to read.
@@ -71,7 +74,10 @@ export function readAnswer(text, card) {
   }
   const head = items.length > 1 ? line : line.split(/\s+[—–-]\s+|\s*[(:]/)[0];
   const tokens = head.split(/[\s,;/]+/).filter(Boolean);
-  const first = items.length > 1 ? tokens : tokens.slice(0, 1);
+  // One question takes exactly one token ("B", "b — simple"), so "B or maybe C?" and "a bit more
+  // context" are not answers; several questions take exactly one token each.
+  if (items.length <= 1 && tokens.length !== 1) return null;
+  const first = tokens;
   const picks = [];
   for (const [i, t] of first.entries()) {
     const m = TOKEN.exec(
@@ -82,7 +88,8 @@ export function readAnswer(text, card) {
     if (!(items[item]?.keys ?? []).includes(m[2])) return null;
     picks.push({ item, key: m[2] });
   }
-  if (items.length > 1 && picks.length !== items.length) return null;
+  // Every question answered once: "1A 1B" and "2B 2B" leave one open and double-score another.
+  if (items.length > 1 && new Set(picks.map((p) => p.item)).size !== items.length) return null;
   return picks.length ? { kind: "option", picks } : null;
 }
 
@@ -113,7 +120,10 @@ const isBot = (c) => c?.user?.type === "Bot";
 
 /** Planner input for one issue: the readable reply, if it is the lane's to read. */
 export function readbackFor(issue, comments) {
-  if (!names(issue.labels).includes(NEEDS_ERIC)) return null;
+  // The label is NOT required: a read-back that took it off and then failed before its comment
+  // would otherwise lose the reply for good. The ask marker (the planner's `markers`) is the memory.
+  // A PR is never read: a held-PR ask is answered by the merge click, which no reply stands in for.
+  if (issue.pull_request) return null;
   if (names(issue.labels).some((n) => OTHER_REPLY_LANES.includes(n))) return null;
   if ((issue.state ?? "open") !== "open") return null;
   const found = findReply(comments);
@@ -145,7 +155,7 @@ export function ledgerRows({ number, title = "", card, answer, reply }) {
     if (answer.kind === "deferred") score = "unclear (deferred: not now)";
     else if (it.predicted && key) score = it.predicted === key ? "match" : "miss";
     else if (it.forecast && answer.kind !== "option") {
-      const said = it.forecast.trim().toLowerCase().startsWith(answer.kind);
+      const said = new RegExp(`^${answer.kind}\\b`, "i").test(it.forecast.trim());
       score = said ? "match" : "score by hand (the prediction is prose)";
     } else score = it.forecast ? "score by hand (the prediction is prose)" : "not predicted";
     const predicted = it.forecast
@@ -198,8 +208,8 @@ export function readbackComment({ answer, rows }) {
 
 /**
  * Carry out one read-back. The reply comes LAST: the label and assignment are the writes that
- * matter, and a failure before the comment leaves the reply unanswered, so the next tick reads it
- * again; a failure after leaves criterion 2 to finish the unassign. A label already gone is fine.
+ * matter. A failure before the comment leaves the ask marker standing, so the next tick reads the
+ * reply again (`readbackFor` does not need the label); a failure of the comment itself the same. A label already gone is fine.
  */
 export function executeReadback(intent, { run = sh, retry = withRetry, read = ghRest } = {}) {
   const n = String(intent.number);
@@ -243,8 +253,12 @@ export function appendRows(ledger, rows) {
   const fresh = rows.filter((r) => !ledger.includes(`<!-- ledger:${r.key} -->`));
   if (!fresh.length) return { ledger, added: 0 };
   const lines = ledger.split("\n");
+  const from = lines.findIndex((l) => /^##\s+Ledger\b/.test(l));
   let last = -1;
-  for (const [i, l] of lines.entries()) if (/^\|.*\|\s*$/.test(l)) last = i;
+  for (let i = from === -1 ? 0 : from; i < lines.length; i++) {
+    if (i > from && from !== -1 && /^##\s/.test(lines[i] ?? "")) break;
+    if (/^\|.*\|\s*$/.test(lines[i] ?? "")) last = i;
+  }
   if (last === -1) return { ledger, added: 0 };
   lines.splice(last + 1, 0, ...fresh.map(tableRow));
   return { ledger: lines.join("\n"), added: fresh.length };

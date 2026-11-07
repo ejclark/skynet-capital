@@ -59,6 +59,11 @@ describe("readAnswer: what his first line says", () => {
     expect(readAnswer("C", one)).toBeNull();
     expect(readAnswer("yes", one)).toBeNull();
     expect(readAnswer("What does A mean?", one)).toBeNull();
+    // Ambiguity and filler are not answers (code review, 2026-11-07).
+    expect(readAnswer("a bit more context first", one)).toBeNull();
+    expect(readAnswer("B or maybe C?", one)).toBeNull();
+    expect(readAnswer("A, no wait B", one)).toBeNull();
+    expect(readAnswer("Reno is the answer", one)).toBeNull();
   });
 
   it("reads not now whatever the card", () => {
@@ -67,8 +72,10 @@ describe("readAnswer: what his first line says", () => {
 
   it("reads yes and no only where no letter is on offer", () => {
     const plain = card(assignmentComment({ decision: "Press the button." }));
-    expect(readAnswer("Yes, done", plain)).toEqual({ kind: "yes" });
+    expect(readAnswer("Yes — done", plain)).toEqual({ kind: "yes" });
     expect(readAnswer("no", plain)).toEqual({ kind: "no" });
+    expect(readAnswer("no, actually do X instead", plain)).toBeNull();
+    expect(readAnswer("later today I'll look", plain)).toBeNull();
   });
 
   it("reads one letter per question, in order or numbered", () => {
@@ -88,6 +95,8 @@ describe("readAnswer: what his first line says", () => {
       ],
     });
     expect(readAnswer("A", two)).toBeNull();
+    expect(readAnswer("1A 1B", two)).toBeNull();
+    expect(readAnswer("2C 2C", two)).toBeNull();
     expect(readAnswer("A, because", two)).toBeNull();
   });
 });
@@ -138,7 +147,11 @@ describe("readbackFor: which issues are the lane's to read", () => {
   it("leaves plan and feedback issues to reply-resume, and an issue without the label alone", () => {
     expect(readbackFor(issue(["needs-eric", "plan"]), thread)).toBeNull();
     expect(readbackFor(issue(["needs-eric", "feedback"]), thread)).toBeNull();
-    expect(readbackFor(issue([]), thread)).toBeNull();
+    expect(readbackFor({ ...issue(["needs-eric"]), pull_request: {} }, thread)).toBeNull();
+  });
+
+  it("still reads when a failed read-back already took the label off, so the reply is never lost", () => {
+    expect(readbackFor(issue([]), thread)?.number).toBe(5);
   });
 });
 
@@ -173,6 +186,19 @@ describe("the ledger row", () => {
       "not predicted",
     );
   });
+  it("does not score 'no' a match for a prediction that merely starts with those letters", () => {
+    const none = card(
+      assignmentComment({
+        items: parseAsk(
+          "> [!IMPORTANT]\n> **Needs from you**\n> 1. Q?\n>    - Predicted: None needed",
+        ),
+      }),
+    );
+    expect(ledgerRows({ ...base, card: none, answer: { kind: "no" } })[0]?.score).toMatch(
+      /by hand/,
+    );
+  });
+
   it("makes one row per question answered", () => {
     const two = card(assignmentComment({ items: parseAsk(TWO) }));
     const rows = ledgerRows({
@@ -247,6 +273,12 @@ describe("collecting rows into the ledger", () => {
   it("reads rows back out of the lane's own comments", () => {
     expect(found).toHaveLength(1);
     expect(rowsFromComments([his(readbackComment({ answer, rows }))])).toEqual([]);
+  });
+
+  it("appends under the Ledger heading, not to another table", () => {
+    const two = "## Ledger\n\n| a |\n|---|\n| 1 |\n\n## Later\n\n| z |\n|---|\n| 9 |\n";
+    const out = appendRows(two, found).ledger;
+    expect(out.indexOf("2026-11-07")).toBeLessThan(out.indexOf("## Later"));
   });
 
   it("appends each row once, to the table", () => {

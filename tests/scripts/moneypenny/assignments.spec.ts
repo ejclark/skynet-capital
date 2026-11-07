@@ -786,3 +786,26 @@ describe("askOnce carries a read-back out under the lease, once", () => {
     expect(calls).toEqual([]);
   });
 });
+
+describe("a read-back and a stale unassign never double up", () => {
+  it("plans the read-back only, for an issue whose label a failed read-back already took off", () => {
+    const reply = {
+      number: 4,
+      title: "t",
+      ask: {},
+      card: null,
+      reply: {},
+      answer: { kind: "yes" },
+    };
+    const stale = issue({ number: 4, labels: [], assignees: [{ login: "ejclark" }] });
+    const { actions, holding } = plan({
+      issues: [stale],
+      prs: [],
+      markers: new Set([4]),
+      replies: [reply as never],
+      now: NOW,
+    });
+    expect(actions.map((a) => a.kind)).toEqual(["readback"]);
+    expect(holding).toBe(0);
+  });
+});
