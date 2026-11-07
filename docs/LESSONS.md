@@ -35,6 +35,15 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A lo-fi round format became a standing rule before Eric had judged it, and failed the same day
+- **SHA:** n/a   **DATE:** 2026-11-07   **STATUS:** closed
+- **SIGNAL:** Eric on the redrawn #6948 round page, 2026-11-07: "The format is still difficult for me to understand". The format had reached `main` as a rule within the hour (#7007 → PR #7011), so detection took hours, and only because he opened the page.
+- **ROOT CAUSE:** #7007 was filed `ready` to codify the side-by-side compare view while its first instance was still waiting on his read. The feedback lane builds a `ready` issue at once, so the rule landed in `docs/PATTERNS.md` → *Lo-fi shapes* and `docs/process/REDESIGN.md` → *Process changes*. That broke the page's own "Only a settled change gets a line" rule (Eric, 2026-10-14) one step upstream: the change hadn't settled yet. Both #6948 formats were also hand-built outside the redesign kit, with no real Today frame, no pins and no Done (three-reader study, summarized on #6948).
+- **PREVENTION:** doctrine — `docs/process/REDESIGN.md` → *Process changes*: an issue that would write a round format into that page or `docs/PATTERNS.md` is filed without `ready` until his read-back settles it. `docs/PATTERNS.md` → *Lo-fi shapes* now points rounds at the kit instead of a hand-built format (#7017). Not a gate: `ready` is applied by hand on filing, and no script can tell whether a format has been judged.
+- **SIDE QUESTS:** none.
+
+---
+
 ### `route` red on main: the audit step skips a spent api budget and stops re-reading the router's deps
 - **SHA:** bbe6f53   **DATE:** 2026-11-07   **STATUS:** closed
 - **COVERS:** 2302e46 9c9abd5 6be9692
