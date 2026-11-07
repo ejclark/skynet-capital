@@ -14,7 +14,8 @@ import { capsule, issue, mode } from "../../support/admission-fixtures.js";
 
 // THE ADMISSION GATE (#3960 criteria 1, 2, 7). Between "ready" and "a build session starts":
 // halt refuses everything, conserve refuses all but fast-track, the in-flight cap refuses all but
-// fast-track, and the same-surface fence refuses everything — fast-track included. Pure specs,
+// fast-track (and a second fast-track card while one is in flight, #6871), and the same-surface
+// fence refuses everything — fast-track included. Pure specs,
 // then the impure `gateAdmission` with every read injected (no `gh`, no network). The started-plan
 // cap lives in admission-plan-cap.spec.ts and the retry sweep in admission-sweep.spec.ts.
 
@@ -95,6 +96,44 @@ describe("admitBuild — the pure gate", () => {
   it("fast-track skips the cap", () => {
     const busy = [issue(1, "a"), issue(2, "b"), issue(3, "c")];
     expect(admitBuild({ issue: urgent, inFlight: busy, mode: mode("normal") }).admit).toBe(true);
+  });
+
+  // #6871 §12(b): while a fast-track build is in flight, a second fast-track card over the cap waits.
+  it("refuses a second fast-track card over the cap while one is in flight, naming it", () => {
+    const busy = [issue(1, "a"), issue(2, "b", ["fast-track"]), issue(3, "c")];
+    expect(admitBuild({ issue: urgent, inFlight: busy, mode: mode("normal") })).toEqual({
+      admit: false,
+      reason: "queued: 3 of 3 in flight, and fast-track #2 is already building",
+      queuedBehind: 2,
+    });
+  });
+
+  it("admits a second fast-track card under the cap — no exception is needed there", () => {
+    const busy = [issue(2, "b", ["fast-track"])];
+    expect(admitBuild({ issue: urgent, inFlight: busy, mode: mode("normal") }).admit).toBe(true);
+  });
+
+  it("does not count the card itself as the fast-track already building", () => {
+    const busy = [issue(1, "a"), issue(2, "b"), issue(3, "c"), urgent];
+    expect(admitBuild({ issue: urgent, inFlight: busy, mode: mode("normal") }).admit).toBe(true);
+  });
+
+  it("under conserve, a fast-track card goes one over a seat a hand session holds, never two", () => {
+    expect(
+      admitBuild({ issue: urgent, inFlight: [issue(1, "a")], mode: mode("conserve", 1) }).admit,
+    ).toBe(true);
+    const held = [issue(1, "a", ["fast-track"])];
+    expect(admitBuild({ issue: urgent, inFlight: held, mode: mode("conserve", 1) }).admit).toBe(
+      false,
+    );
+  });
+
+  it("the sweep picks a fast-track card over a full cap only while no fast-track builds", () => {
+    const ready = [issue(20, "x", ["ready", "fast-track"])];
+    const full = [issue(1, "a"), issue(2, "b"), issue(3, "c")];
+    expect(nextAdmissible(ready, full, mode("normal"))?.number).toBe(20);
+    const urgentBusy = [issue(1, "a"), issue(2, "b", ["fast-track"]), issue(3, "c")];
+    expect(nextAdmissible(ready, urgentBusy, mode("normal"))).toBeNull();
   });
 
   it("surge's bigger cap lets a fourth build through", () => {
