@@ -31,10 +31,7 @@ export const BANNED = [
     // Anchored to a command position, or `$G` in a script's shape, for the reason the rules around it
     // are: its first draft refused the PR title that named it, on its first use.
     name: "git worktree remove on a computed path",
-    test: (cmd) =>
-      /(^|[;&|(]\s*|\b(?:do|then)\s+|\bbash\s+-c\s+['"])(?:\S*\/)?(?:git|\$\{?\w+\}?)(?:\s+-C\s+\S+)?\s+worktree\s+remove\b[^;&|\n]*[$`]/m.test(
-        cmd,
-      ) || /\bxargs\b[^;&|\n]*\bworktree\s+remove\b/.test(cmd),
+    test: (cmd) => removesWorktreeOnComputedPath(cmd),
     reason:
       "`git worktree remove` on a computed path is refused (docs/LESSONS.md 2026-11-01: a bad filter removed 115). Run `npm run worktree:sweep` to see keep or remove and why, then `npm run worktree:sweep -- --apply`, or `--only <dir-or-branch>` for your own. To remove one, type its path out.",
   },
@@ -95,6 +92,40 @@ function isRawCommentWrite(segment) {
   if (!COMMENTS_PATH.test(segment)) return false;
   const body = m[1] === "curl" ? BODY_FLAG.curl : BODY_FLAG.gh;
   return WRITE_METHOD.test(segment) || body.test(segment);
+}
+
+// THE WORKTREE RULE'S READER (#6698). The first draft anchored on column 0, `do`/`then` and the
+// separators, so an indented loop line, an env or `sudo` prefix, `eval`, `sh -c`, a brace group and
+// `find -exec` all passed: the shapes sessions actually write. It also refused text that only NAMED
+// the command, inside a heredoc or a commit message. So the command is read the way a shell runs it:
+// heredoc bodies and quoted strings are text (a quoted string keeps only whether it expands, `"$"`
+// or `"q"`), and what `sh -c`, `bash -lc` or `eval` will run is read as a command of its own.
+const WT_POS = String.raw`(?:^[ \t]*|[;&|({][ \t]*|\b(?:do|then|else)\s+)`;
+const WT_PREFIX = String.raw`(?:(?:[A-Za-z_]\w*=\S*|command|sudo(?:\s+-\w+)*|time(?:\s+-p)?|nohup|exec|eval|env(?:\s+-\w+)*)\s+)*`;
+const WT_GIT = String.raw`(?:\S*\/)?(?:git|\$\{?\w+\}?)(?:\s+-C\s+\S+)?\s+worktree\s+remove\b`;
+/** A remove whose path expands (`$`, a backtick) before the segment ends or a redirect starts. */
+const WT_COMPUTED = new RegExp(`${WT_POS}${WT_PREFIX}${WT_GIT}[^;&|\\n<>]*[$\`]`, "m");
+/** `find … -exec git worktree remove {}`: every match is a computed path. */
+const WT_FIND = new RegExp(
+  `${WT_POS}${WT_PREFIX}find\\b[^;&|\\n]*?-exec(?:dir)?\\s+${WT_GIT}`,
+  "m",
+);
+const WT_XARGS = /\bxargs\b[^;&|\n]*\bworktree\s+remove\b/;
+const HEREDOC = /<<-?[ \t]*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g;
+const SHELL_PAYLOAD = /\b(?:(?:ba|z)?sh\s+-\w*c|eval)\s+(['"])([\s\S]*?)\1/g;
+
+/** Heredoc bodies are text: keep the line that opens one, drop the body and its delimiter. */
+const withoutHeredocs = (cmd) => cmd.replace(HEREDOC, (m) => m.split("\n")[0]);
+/** Quoted strings are text; each keeps only whether it expands. */
+const withoutQuotedText = (cmd) =>
+  cmd.replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, (q) => (/[$`]/.test(q) ? '"$"' : '"q"'));
+
+/** Whether a command removes a worktree on a path the shell computes (the 2026-11-01 failure). */
+export function removesWorktreeOnComputedPath(cmd) {
+  const plain = withoutHeredocs(cmd);
+  const outer = withoutQuotedText(plain);
+  if (WT_COMPUTED.test(outer) || WT_FIND.test(outer) || WT_XARGS.test(outer)) return true;
+  return [...plain.matchAll(SHELL_PAYLOAD)].some((m) => removesWorktreeOnComputedPath(m[2]));
 }
 
 /** Pure verdict over one hook payload. */
