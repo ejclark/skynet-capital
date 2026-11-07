@@ -20,6 +20,7 @@ import { createRest, listRuns, REPO } from "../agent-meter/lanes.mjs";
 import { CONTRACTS } from "../fitness.mjs";
 import { parseLoopList } from "../loop-list-decide.mjs";
 import { askRank, decisionLine } from "../moneypenny/ask-card.mjs";
+import { trustedComment } from "../moneypenny/gh.mjs";
 import { readCorpus, scorecard } from "../research-scorecard.mjs";
 import { ciCapsules, decisionsSnapshot, labelHistory, seriesRead } from "./decision-reads.mjs";
 import { previousWeek, windowOf } from "./week.mjs";
@@ -80,9 +81,15 @@ function mergedPrs(rest, w) {
   }));
 }
 
-function tracker(rest, w) {
+// The repo is public, so anyone can comment, file an issue or post text shaped like a state block
+// or an audit receipt. Each read below keeps only what this repo's people and bots wrote
+// (trustedComment): a stranger's text must not become a public edition's numbers or lines.
+
+export function tracker(rest, w) {
   const issue = rest.api(`repos/${REPO}/issues/${TRACKER}`);
-  const comments = pages(rest, `repos/${REPO}/issues/${TRACKER}/comments?since=${w.since}`);
+  const comments = pages(rest, `repos/${REPO}/issues/${TRACKER}/comments?since=${w.since}`).filter(
+    trustedComment,
+  );
   return {
     title: issue.title,
     body: issue.body,
@@ -110,15 +117,17 @@ function needsEric(rest) {
     });
 }
 
-function fitnessIssues(rest) {
+export function fitnessIssues(rest) {
   return {
     contracts: CONTRACTS.map((c) => c.id),
-    issues: searchIssues(rest, `"[fitness]" in:title is:issue`).map((i) => ({
-      number: i.number,
-      title: i.title,
-      createdAt: i.created_at,
-      closedAt: i.closed_at,
-    })),
+    issues: searchIssues(rest, `"[fitness]" in:title is:issue`)
+      .filter(trustedComment)
+      .map((i) => ({
+        number: i.number,
+        title: i.title,
+        createdAt: i.created_at,
+        closedAt: i.closed_at,
+      })),
   };
 }
 
@@ -146,11 +155,11 @@ function subIssues(rest, w) {
 }
 
 /** Every state block edited since the week began, with its issue's title. */
-function stateBlocks(rest, w) {
+export function stateBlocks(rest, w) {
   const comments = pages(
     rest,
     `repos/${REPO}/issues/comments?sort=updated&direction=asc&since=${w.since}`,
-  ).filter((c) => /^#{1,6}[ \t]+State block\b/im.test(c.body ?? ""));
+  ).filter((c) => trustedComment(c) && /^#{1,6}[ \t]+State block\b/im.test(c.body ?? ""));
   const titles = new Map();
   return comments.map((c) => {
     const issue = Number(/\/issues\/(\d+)$/.exec(c.issue_url)?.[1]);
@@ -185,7 +194,9 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
     usageNow: !stale,
     localReceipts: existsSync(receipts) ? parseRows(readFileSync(receipts, "utf8")).rows : [],
     defectIssues: attempt(() =>
-      defectIssues(rest, w.sinceMs).map((i) => ({ created_at: i.created_at, body: i.body })),
+      defectIssues(rest, w.sinceMs)
+        .filter(trustedComment)
+        .map((i) => ({ created_at: i.created_at, body: i.body })),
     ),
     failureToFix: attempt(() => meter(["--failure-to-fix"], w)),
     jobs: attempt(() => meter(["--jobs"], w)),

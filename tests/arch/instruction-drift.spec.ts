@@ -46,6 +46,7 @@ describe("instruction scope — the one definition", () => {
       "docs/research/events/TEMPLATE.md",
       "docs/research/weeks/README.md",
       "docs/digests/TEMPLATE.md",
+      "docs/newsletters/TEMPLATE.md",
       "docs/JOURNEYS/TEMPLATE.md",
       "docs/plans/README.md",
       "docs/plans/TEMPLATE.md",
@@ -59,6 +60,7 @@ describe("instruction scope — the one definition", () => {
     for (const path of [
       "docs/research/events/x.md",
       "docs/digests/2026-10-05.md",
+      "docs/newsletters/2026-W45.md",
       "docs/JOURNEYS/one.md",
       "docs/vendor/claude-code/hooks.md",
       "docs/plans/old.md",

@@ -23,6 +23,7 @@
 <!-- One line per shipped OUTCOME ("X now does Y", never "worked on X"). Cap ~5, ranked. -->
 
 -
+- This week so far (<YYYY-Www>, partial): <the line from `node scripts/newsletter.mjs --week "$(date -u +%G-W%V)"`, in the form .claude/skills/secretary section 1 gives; on a Monday, a link to the edition that closed the week>
 
 ## Noise absorbed
 
