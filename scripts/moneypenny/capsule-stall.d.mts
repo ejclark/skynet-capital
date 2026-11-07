@@ -37,7 +37,13 @@ export interface Capsule {
   recentRuns?: readonly CapsuleRun[];
   /** The PR a red-PR capsule tracks (#6605), as last read. */
   redPr?: { number: number; state?: string; merged: boolean };
+  /** An escalated capsule's open linked PR, where its ask moves on a close (#6953); null if none. */
+  openPr?: number | null;
 }
+/** Where an escalated capsule's ask goes before a green close. */
+export type Carry =
+  | { pr: number; decision: string | null }
+  | { session: true; decision: string | null };
 export interface CapsuleIntent {
   kind: "flag-capsule-orphan" | "close-proven-capsule";
   issueNumber: number;
@@ -47,10 +53,14 @@ export interface CapsuleIntent {
   clearNeedsEric?: boolean;
   /** On a close: what to report instead of "is passing again". */
   said?: string;
+  /** On a close of an escalated capsule: where its ask moves first. */
+  carry?: Carry;
 }
 export interface TimelineEvent {
   event?: string;
-  source?: { issue?: { state?: string; pull_request?: { merged_at?: string | null } } };
+  source?: {
+    issue?: { number?: number; state?: string; pull_request?: { merged_at?: string | null } };
+  };
 }
 type Run = (cmd: string, args: string[]) => string;
 
@@ -66,6 +76,9 @@ export function jobPassed(
   job: string,
   step?: string,
 ): boolean;
+export function openLinkedPr(timeline?: readonly TimelineEvent[]): number | null;
+export function sinceReopen(comments?: readonly string[]): readonly string[];
+export function carryOf(c: Pick<Capsule, "body" | "openPr">): Carry;
 export function hasLinkedPr(timeline?: readonly TimelineEvent[], since?: string): boolean;
 export function lookupsFor(
   issue: { labels?: readonly Label[]; created_at?: string; createdAt?: string },
@@ -96,4 +109,7 @@ export function flagCapsuleOrphan(
   i: CapsuleIntent,
   io?: { run?: Run; ensure?: (label: { name: string }) => void },
 ): string;
-export function closeProvenCapsule(i: CapsuleIntent, io?: { run?: Run }): string;
+export function closeProvenCapsule(
+  i: CapsuleIntent,
+  io?: { run?: Run; ensure?: (label: { name: string }) => void },
+): string;

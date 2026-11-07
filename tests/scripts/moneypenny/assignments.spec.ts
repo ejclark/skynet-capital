@@ -1,7 +1,9 @@
 import { describe, expect, it } from "@rstest/core";
+import { needsSessionLine } from "../../../scripts/digest-scan.mjs";
 import {
   ASSIGN_CAP,
   ASSIGN_MARKER,
+  artifactGap,
   assignmentComment,
   decisionLine,
   executeAssignments,
@@ -374,6 +376,7 @@ describe("markedByComments: asked, and not since cleared by this lane", () => {
     const rest = (path: string) => {
       if (path.startsWith("issues?state=open&labels=needs-eric")) return [returned];
       if (path.startsWith("issues?state=all&assignee=")) return [];
+      if (path.startsWith("issues?state=all&labels=needs-session")) return [];
       if (path === "pulls?state=open") return [];
       if (path === "issues/5955/comments") return thread;
       throw new Error(`unexpected read ${path}`);
@@ -408,6 +411,7 @@ describe("markedByComments: asked, and not since cleared by this lane", () => {
       if (path === "pulls?state=open") return [held];
       if (path === "issues/10/comments")
         return [bot(`ask\n${ASSIGN_MARKER}`), bot(`off\n${UNASSIGN_MARKER}`)];
+      if (path === "pulls/10/files") return [{ filename: ".github/workflows/x.yml" }];
       throw new Error(`unexpected read ${path}`);
     };
     const deps = gather({ rest, now: NOW });
@@ -443,5 +447,133 @@ describe("routeSweep: a close beats an ask on the same issue", () => {
       now: NOW,
     }) as { kind: string }[];
     expect(intents.map((i) => i.kind)).toEqual(["assign-eric"]);
+  });
+});
+
+// #6953 slice 2, call 1: half the asks in the 2026-11-06 digest could not be completed by his
+// answer, because the thing his "yes" would act on did not exist yet — #6942 asked him to merge a
+// branch with no PR, #6620 was a held PR carrying only a patch, #6618 asked him to merge #6620.
+// The missing actor is a session, so none of them is assigned to him; all are listed for one.
+describe("no ask before its artifact exists (#6953)", () => {
+  const ask = (line: string) => `**Ask.**\n\n> [!IMPORTANT]\n> **Needs from you**\n> 1. ${line}`;
+  const branchAsk = issue({
+    number: 6942,
+    body: ask("Merge the tested fix on branch `fix/breaker-stepless-cancelled-leg`? — protected."),
+  });
+  const heldPatch = {
+    number: 6620,
+    title: "held patch",
+    state: "open",
+    created_at: "2026-09-28T00:00:00Z",
+    labels: [{ name: "hold-merge" }],
+    head: { ref: "fix/node-24" },
+    assignees: [],
+  };
+
+  it("does not assign a merge of a branch no open PR is built from, and lists it for a session", () => {
+    const planned = plan({ issues: [branchAsk], now: NOW });
+    expect(planned.actions).toEqual([]);
+    expect(planned.needsYou).toEqual([]);
+    expect(planned.needsSession).toEqual([
+      expect.objectContaining({
+        number: 6942,
+        why: expect.stringContaining("`fix/breaker-stepless-cancelled-leg`"),
+      }),
+    ]);
+  });
+
+  it("asks as usual once a PR is open from that branch", () => {
+    const pr = { ...heldPatch, number: 7001, head: { ref: "fix/breaker-stepless-cancelled-leg" } };
+    const planned = plan({ issues: [branchAsk], prs: [pr], now: NOW });
+    expect(planned.actions.map((a) => a.number)).toContain(6942);
+    expect(planned.needsSession).toEqual([]);
+  });
+
+  it("only a merge ask is held to it: a branch named in any other ask is still his", () => {
+    const other = issue({ body: ask("Delete the stale branch `platter/old`? — tidy.") });
+    expect(plan({ issues: [other], now: NOW }).actions).toHaveLength(1);
+  });
+
+  it("never assigns a held PR whose only files are patches, nor a merge ask that names one", () => {
+    const merge6620 = issue({ number: 6618, body: ask("Merge #6620 once it boards the platter?") });
+    const planned = plan({
+      issues: [merge6620],
+      prs: [heldPatch],
+      patchOnly: new Set([6620]),
+      now: NOW,
+    });
+    expect(planned.actions).toEqual([]);
+    expect(planned.needsYou).toEqual([]);
+    expect(planned.needsSession.map((n) => n.number)).toEqual([6618, 6620]);
+    // The same PR with a real file is criterion 4 as before.
+    expect(plan({ prs: [heldPatch], now: NOW }).actions).toEqual([
+      expect.objectContaining({ kind: "assign", criterion: 4, number: 6620 }),
+    ]);
+  });
+
+  it("one he already holds stays in Needs you — he holds it — and is listed for a session too", () => {
+    const his = { ...branchAsk, assignees: [{ login: "ejclark" }] };
+    const planned = plan({ issues: [his], now: NOW });
+    expect(planned.needsYou.map((n) => n.number)).toEqual([6942]);
+    expect(planned.needsSession.map((n) => n.number)).toEqual([6942]);
+  });
+
+  it("lists every needs-session issue that still waits: open, or closed by a proof close", () => {
+    const row = (number: number, over: Record<string, unknown>) => ({
+      number,
+      title: `s${number}`,
+      body: "",
+      ...over,
+    });
+    const planned = plan({
+      sessionIssues: [
+        row(1, { state: "open" }),
+        row(2, { state: "closed", state_reason: "not_planned", body: ask("Merge it?") }),
+        row(3, { state: "closed", state_reason: "completed" }),
+        row(4, { state: "closed", state_reason: null, pull_request: {} }),
+      ],
+      now: NOW,
+    });
+    expect(planned.needsSession).toEqual([
+      expect.objectContaining({ number: 1, why: "labelled needs-session" }),
+      expect.objectContaining({ number: 2, decision: "Merge it?" }),
+    ]);
+  });
+
+  it("artifactGap reads the whole callout, not only its first item", () => {
+    const two = ask("Pick a name? — taste\n> 2. Merge branch `x/y` after?");
+    expect(artifactGap({ number: 1, body: two })).toContain("`x/y`");
+    expect(artifactGap({ number: 1, body: two }, { openHeads: new Set(["x/y"]) })).toBeNull();
+  });
+
+  it("gather reads the file lists of held and named PRs, and the needs-session issues", () => {
+    const asked: string[] = [];
+    const held = { ...heldPatch, created_at: new Date(NOW - 13 * 36e5).toISOString() };
+    const rest = (path: string): unknown[] => {
+      asked.push(path);
+      if (path.startsWith("issues?state=open&labels=needs-eric")) {
+        return [issue({ number: 6618, body: ask("Merge #6620? — and #6794 is an issue") })];
+      }
+      if (path === "pulls?state=open") return [held];
+      if (path === "pulls/6620/files") return [{ filename: "MONEYPENNY-EVENTS-6618.patch" }];
+      if (path.startsWith("issues?state=all&labels=needs-session")) return [{ number: 9 }];
+      return [];
+    };
+    const deps = gather({ rest, now: NOW });
+    expect([...deps.patchOnly]).toEqual([6620]);
+    expect(deps.sessionIssues).toEqual([{ number: 9 }]);
+    // #6794 is not an open PR, so its files are never read.
+    expect(asked).not.toContain("pulls/6794/files");
+  });
+
+  it("the digest's needs-a-session line counts and names them", () => {
+    expect(needsSessionLine({ needsSession: [] })).toBe(
+      "- Needs a session: nothing is waiting on a session.",
+    );
+    expect(
+      needsSessionLine({ needsSession: [{ number: 6942, why: "asks for a merge of branch `x`" }] }),
+    ).toBe(
+      "- Needs a session: 1 waiting on a session, not on you — #6942 asks for a merge of branch `x`.",
+    );
   });
 });
