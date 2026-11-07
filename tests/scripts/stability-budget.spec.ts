@@ -120,9 +120,14 @@ describe("commonGets / repeatedRow — the other GETs, each fired several times"
 });
 
 describe("researchGets — R&D over the real research shelf (#4519's class, #4612 slice 10)", () => {
-  it("clicks the calendar, the shelf and Coverage", () => {
+  it("clicks the calendar, the shelf, Coverage and the forward-test register (#6957)", () => {
     expect(researchGets()).toEqual(
-      expect.arrayContaining(["/api/research/calendar", "/api/research", "/api/research/coverage"]),
+      expect.arrayContaining([
+        "/api/research/calendar",
+        "/api/research",
+        "/api/research/coverage",
+        "/research/forward-tests",
+      ]),
     );
   });
 
