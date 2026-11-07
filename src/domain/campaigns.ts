@@ -8,6 +8,12 @@
  * belong to its story, and why, so research can be steered by it (slice 5's landscape read, the
  * narrator's questions in #6948).
  *
+ * WHAT A CAMPAIGN IS ABOUT (slice 2). Exactly one anchor: a GICS `sector` (played through its SPDR
+ * fund) or a `market` from market-catalog.ts (oil, gold, Japan, bonds — played through the one
+ * US-listed ETF that tracks it). The anchor's fund must be in the cast, so every campaign carries
+ * at least one instrument the order path trades today (criterion 2) — and a member's form can offer
+ * nothing the catalogs do not name.
+ *
  * A NEW CAMPAIGN IS A RECORD, NEVER A CODE CHANGE (#6949 constraints). Each one is a checked-in
  * JSON file, `src/domain/campaigns/<id>.json`, read at load, the same one-file-per-owner shape the
  * event calendar uses (market-events-data.ts, #1449). A member-crafted campaign (slice 3) compiles
@@ -31,6 +37,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { marketById } from "./market-catalog.js";
 import type { MarketEvent } from "./market-events-types.js";
 import { GICS_SECTORS } from "./sector-coverage.js";
 import { TICKER_DIRECTORY } from "./ticker-directory/index.js";
@@ -73,8 +80,10 @@ export interface Campaign {
   readonly title: string;
   /** One sentence, at most `MAX_STORYLINE` characters. */
   readonly storyline: string;
-  /** The GICS sector it sits in, by `GICS_SECTORS`' label. Markets (an ETF anchor) are slice 2. */
-  readonly sector: string;
+  /** The GICS sector it sits in, by `GICS_SECTORS`' label. Exactly one of `sector` and `market`. */
+  readonly sector?: string;
+  /** A market by its `market-catalog.ts` id, played through that market's fund. */
+  readonly market?: string;
   readonly cast: readonly CastRole[];
   readonly forces: readonly CampaignForce[];
   readonly openQuestions: readonly OpenQuestion[];
@@ -83,6 +92,26 @@ export interface Campaign {
    * loader refuses a campaign with no tradable cast symbol unless this is true.
    */
   readonly researchOnly?: boolean;
+}
+
+/** What a campaign is anchored on, and the fund it is played through. */
+export interface Anchor {
+  readonly kind: "sector" | "market";
+  /** The sector's or market's display name. */
+  readonly name: string;
+  /** The US-listed ETF that carries the anchor; always in the cast. */
+  readonly fund: string;
+}
+
+/** The campaign's anchor. The loader guarantees one exists; a hand-built record without one throws. */
+export function anchorOf(campaign: Campaign): Anchor {
+  if (campaign.market !== undefined) {
+    const m = marketById(campaign.market);
+    if (m) return { kind: "market", name: m.name, fund: m.fund };
+  }
+  const s = GICS_SECTORS.find((g) => g.name === campaign.sector);
+  if (s) return { kind: "sector", name: s.name, fund: s.fund };
+  throw new Error(`campaigns: ${campaign.id} has no sector or market anchor`);
 }
 
 /** The storyline cap a member's form will hold too (#6949 criterion 7, #2224's 200-char precedent). */
@@ -235,8 +264,12 @@ function checkHeader(c: Raw, expectedId: string, fail: Fail): void {
   if (!isText(c.storyline)) fail("missing storyline");
   if ((c.storyline as string).length > MAX_STORYLINE)
     fail(`storyline is over ${MAX_STORYLINE} characters`);
-  if (!(isText(c.sector) && GICS_NAMES.has(c.sector)))
+  if ((c.sector === undefined) === (c.market === undefined))
+    fail("name exactly one anchor: a sector or a market");
+  if (c.sector !== undefined && !(isText(c.sector) && GICS_NAMES.has(c.sector)))
     fail(`sector "${String(c.sector)}" is not one of the 11 GICS sectors`);
+  if (c.market !== undefined && !(isText(c.market) && marketById(c.market)))
+    fail(`market "${String(c.market)}" is not in the market catalog`);
 }
 
 function checkCastRole(role: Raw, fail: Fail): void {
@@ -292,6 +325,9 @@ export function parseCampaign(raw: unknown, file: string, expectedId: string): C
   const campaign = raw as Campaign;
   if (campaign.researchOnly !== true && !castSymbols(campaign).some(isTradable))
     fail("no cast symbol is a stock or US-listed ETF the order path trades; mark it researchOnly");
+  const anchor = anchorOf(campaign);
+  if (campaign.researchOnly !== true && !castSymbols(campaign).includes(anchor.fund))
+    fail(`the cast must include ${anchor.fund}, the fund that carries the ${anchor.name} anchor`);
   return campaign;
 }
 
