@@ -32,6 +32,17 @@ trust-but-verify. **Continual learning** — experiments, side quests, fast iter
 generative principle behind side quests — small investments in the *system* compound far beyond one task.
 Bias toward the process investment when it's cheap and reversible.
 
+**Reverse Conway — Conway's law as the benchmark, not the curse** (Eric, 2026-11-07: "The friction
+with AI that we've worked to optimize boils down to improving communication. AI can 'solve' conways
+Law to autonomously evolve our communication strucutre"). A system copies the communication structure
+that builds it, so redraw the communication on purpose and the system follows. The map is
+[`docs/architecture/org-chart.md`](docs/architecture/org-chart.md), generated from the seat registry
+`docs/agents/seats.json`: every seat, human or agent, and the friction measured on each edge. When a
+recurring breakdown is really a communication edge (an ask that is not his, a hand-off nobody reads,
+two lanes racing one file), change the edge and update the registry in the same PR. The game is
+designed the same way: draw the members' communication first (ask, steer, act, hear back), and the
+build org's edges into the game stay few and plain (#7029, #7031).
+
 **Apply these frameworks as a lattice, not a lexical ranking.** No single one is obeyed by the letter in
 isolation; when two collide (e.g. ToC vs. fix-at-the-source), the collision is the signal to find the
 higher synthesis — usually the *correct* reading of both agrees and only the naive reading conflicts.

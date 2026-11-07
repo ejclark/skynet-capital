@@ -53,6 +53,13 @@ export const HAND_KEPT_PAGES = [
       "src/subscriptions/strategy-budgets.ts",
     ],
   },
+  {
+    file: "org-chart.md",
+    title: "The org chart",
+    covers:
+      "Every seat, human or agent, by department; the channels between them and their measured friction (reverse Conway); generated from docs/agents/seats.json by scripts/org-chart.mjs",
+    roots: ["docs/agents/seats.json", "scripts/org-chart.mjs"],
+  },
 ];
 
 const slug = (s) =>
