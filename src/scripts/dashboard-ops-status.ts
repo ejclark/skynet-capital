@@ -1,3 +1,4 @@
+import { suspendedReason } from "../autonomous/bot-controls.js";
 import type { ActivityStore } from "../observatory/activity-store.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
@@ -22,6 +23,8 @@ export interface OpsStatusSetupDeps {
   readonly hub: ObservatoryHub;
   readonly activity: ActivityStore;
   readonly insightsBridge: InsightsBridgeHandle;
+  /** Mission Control's store — the paper-orders row reads a bot's suspend from it (#6954). */
+  readonly botControls: BotControlsStore;
   /** OAuth-only. The panel is group-visible now (#1296), so what it rides is MEMBERSHIP — and
    *  password mode has no membership, only one shared key, so there is still no panel to serve
    *  there. */
@@ -56,11 +59,14 @@ export async function lastBotActivityAt(
 export function wireOpsStatus(
   env: NodeJS.ProcessEnv,
   botControls: BotControlsStore,
-  rest: Omit<OpsStatusSetupDeps, "env" | "insightsBridge">,
+  rest: Omit<OpsStatusSetupDeps, "env" | "insightsBridge" | "botControls">,
   credentialsDeps?: CredentialsBridgeDeps,
 ): { opsStatus: OpsStatusDeps | undefined; insightsBridge: InsightsBridgeHandle } {
   const insightsBridge = startInsightsBridge(env, botControls, credentialsDeps);
-  return { opsStatus: setupOpsStatus({ env, insightsBridge, ...rest }), insightsBridge };
+  return {
+    opsStatus: setupOpsStatus({ env, insightsBridge, botControls, ...rest }),
+    insightsBridge,
+  };
 }
 
 export function setupOpsStatus(deps: OpsStatusSetupDeps): OpsStatusDeps | undefined {
@@ -79,6 +85,8 @@ export function setupOpsStatus(deps: OpsStatusSetupDeps): OpsStatusDeps | undefi
         bridgeLastPollAt: () => deps.insightsBridge.lastControlsPollAt(),
         botsRunningSha: () => deps.insightsBridge.botsRunningSha(),
         personaGateVerdicts: () => deps.insightsBridge.botsGate(),
+        botsProcessMode: () => deps.insightsBridge.botsProcessMode(),
+        suspendedReason: (botId) => suspendedReason(deps.botControls.load(), botId),
         lastBotActivityAt: () => lastBotActivityAt(deps.hub, deps.activity),
         ...(fetchDeploySignals ? { fetchDeploySignals } : {}),
         repo,

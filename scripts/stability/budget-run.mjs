@@ -4,7 +4,8 @@
 // every durable store under /data, a 512 MB container with no swap — on production-shaped data
 // (`--days` of history for `--participants` accounts, seed.ts), then clicks what a member clicks:
 // Accounts opened on a cold server exactly as the shell fires it, the same load with every
-// participant's Pulse at once (twice), each Pulse alone, and a handful of other common GETs. It
+// participant's Pulse at once (twice), each Pulse alone, a handful of other common GETs, and R&D's
+// GETs over the real research shelf (judged on breakage and the peak only, see `researchGets`). It
 // prints one markdown table per phase and exits non-zero on an OOM kill, a process exit, any 5xx,
 // peak RSS over `--budget-mb`, an Accounts open that adds more than `--page-mb`, a Pulse (inside
 // that open, or fired alone) that takes longer than `--pulse-ms` or, alone, adds over `--pulse-mb`,
@@ -48,6 +49,7 @@ import {
   procMemory,
   remeasured,
   repeatedRow,
+  researchGets,
   summary,
   verdict,
 } from "./budget-lib.mjs";
@@ -270,10 +272,11 @@ async function measure() {
     ["accounts-every-pulse-again", "the same burst, warm", burst],
     ["pulse-each", "each participant's Pulse, alone", burst.filter((p) => p.endsWith("/pulse"))],
     ["common", "other common GETs, one by one", commonGets(bot)],
+    ["research", "R&D's GETs, one by one: cold, then warm", researchGets()],
   ];
   for (const [name, note, paths] of plan) {
-    const together = !["pulse-each", "common"].includes(name);
-    const repeat = name === "common" ? COMMON_REPEAT : 1;
+    const together = !["pulse-each", "common", "research"].includes(name);
+    const repeat = ["common", "research"].includes(name) ? COMMON_REPEAT : 1;
     if (!(await phase(name, note, paths, together, repeat))) break;
   }
 

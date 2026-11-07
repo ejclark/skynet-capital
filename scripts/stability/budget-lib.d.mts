@@ -32,6 +32,7 @@ export function flyCommand(toml: string): string;
 export function accountsOpen(ownerId: string): string[];
 export function accountsBurst(ownerId: string, participantIds: readonly string[]): string[];
 export function commonGets(botId: string): string[];
+export function researchGets(): string[];
 export const COMMON_REPEAT: number;
 export function repeatedRow(hits: readonly BudgetRow[]): BudgetRow;
 export function procMemory(status: string): { rss: number; hwm: number; anon: number };

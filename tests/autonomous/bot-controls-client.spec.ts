@@ -366,3 +366,21 @@ describe("the bots process's persona gate verdicts on the controls poll", () => 
     ).not.toThrow();
   });
 });
+
+describe("the house mode on the controls poll (#6954 slice 1)", () => {
+  it("carries the reported house mode to the app on every poll, the latest report winning", async () => {
+    await withReportingBridge(async (base, reports) => {
+      const client = bridgeClient({ SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv);
+      client.reportProcessMode("observe");
+      await client.fetchOnce();
+      client.reportProcessMode("live");
+      await client.fetchOnce();
+      expect(reports).toEqual([{ processMode: "observe" }, { processMode: "live" }]);
+    });
+  });
+
+  it("is a safe no-op on the disabled client", () => {
+    const client = resolveBotControls({} as NodeJS.ProcessEnv);
+    expect(() => client.reportProcessMode("live")).not.toThrow();
+  });
+});
