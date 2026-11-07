@@ -184,24 +184,40 @@ const REGISTER_SLUG = "forward-tests";
  *
  * Since issue #1449 `docs/research/forward-tests.md` carries no rows — every registration lives in
  * `docs/research/forward-tests/<event-id>.md`, written only by the lane that owns that event, so
- * concurrent research PRs never touch the same file. The reader still wants the register whole,
- * so this composes it at request time: the index verbatim, then each fragment as a `##` section
- * (its H1 demoted, its authoring comment dropped), legacy rows last. Relocates, never rewrites —
- * the same doctrine as renderFolded; each event's table then folds under its own heading.
+ * concurrent research PRs never touch the same file. The reader still wants the register whole:
+ * the index verbatim, then each fragment as a `##` section (its H1 demoted, its authoring comment
+ * dropped), legacy rows last. Relocates, never rewrites — the same doctrine as renderFolded; each
+ * event's table then folds under its own heading.
+ *
+ * RENDERED ONE FRAGMENT AT A TIME, KEPT AS BYTES (#6957). This used to compose all 674 fragments
+ * into one 5.7 MB markdown string, split it into lines and parse that: the whole register was live
+ * as markdown, as lines and as section bodies at once, and the first render after boot added
+ * 64–91 MB in the 512 MB budget container. Each fragment is exactly one section, so it renders
+ * alone; its HTML goes straight to UTF-8 bytes, so every string it made is garbage before the next
+ * fragment is read. As one JS string the ~5 MB page was two-byte (an em dash anywhere does it):
+ * 10 MB held, 20 MB while joined. The bytes match the composed render's exactly.
  */
-export function composeRegister(root: string, indexMd: string): string {
+function renderRegister(root: string, doc: ResearchDoc, indexMd: string): RenderedDoc {
+  const { glanceMd, bodyMd } = extractGlance(indexMd);
+  const parts = [Buffer.from(rewriteDocLinks(renderFolded(bodyMd)))];
   const dir = join(root, REGISTER_SLUG);
-  if (!existsSync(dir)) return indexMd;
-  const files = readdirSync(dir)
-    .filter((f) => f.endsWith(".md"))
-    .sort((a, b) => Number(a === "legacy.md") - Number(b === "legacy.md") || a.localeCompare(b));
-  const sections = files.map((f) =>
-    readFileSync(join(dir, f), "utf8")
+  const files = existsSync(dir)
+    ? readdirSync(dir)
+        .filter((f) => f.endsWith(".md"))
+        .sort((a, b) => Number(a === "legacy.md") - Number(b === "legacy.md") || a.localeCompare(b))
+    : [];
+  for (const f of files) {
+    const section = readFileSync(join(dir, f), "utf8")
       .replace(/<!--[\s\S]*?-->\n*/g, "")
       .replace(/^#\s+/m, "## ")
-      .trim(),
-  );
-  return `${indexMd.trim()}\n\n${sections.join("\n\n")}\n`;
+      .trim();
+    if (section) parts.push(Buffer.from(`\n${rewriteDocLinks(renderFolded(section))}`));
+  }
+  return {
+    ...doc,
+    html: Buffer.concat(parts),
+    glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
+  };
 }
 
 /** Ledger event-ids that have research — the calendar's link set. */
@@ -226,7 +242,8 @@ function rewriteDocLinks(html: string): string {
 }
 
 export interface RenderedDoc extends ResearchDoc {
-  readonly html: string;
+  /** The body as UTF-8 bytes, ready to write — the register's page never exists as a JS string. */
+  readonly html: Buffer;
   /**
    * The rendered `## At a glance` decision header, when the doc carries one — a faithful
    * surfacing of the body's stance (TL;DR + horizon table + signal conditions), authored in the
@@ -329,8 +346,10 @@ function renderFolded(md: string): string {
   const head = preamble.trim() ? (marked.parse(preamble) as string) : "";
   const body = sections
     .map(({ heading, body }) => {
-      const inner = marked.parse(`## ${heading}\n${body}`) as string;
-      if (OPEN_SECTIONS.includes(heading.toLowerCase())) return inner;
+      // A folded section parses its body alone, so only an open one pays for the heading parse.
+      if (OPEN_SECTIONS.includes(heading.toLowerCase())) {
+        return marked.parse(`## ${heading}\n${body}`) as string;
+      }
       const words = wordCount(body);
       const size =
         words > 0 ? ` <span class="rs-foldsize">~${words.toLocaleString()} words</span>` : "";
@@ -359,20 +378,22 @@ export function findResearchDoc(slug: string, root: string = RESEARCH_DIR()): Re
   const shelf = listResearch(root);
   const doc = [...shelf.studies, ...shelf.ledgers].find((d) => d.slug === slug);
   if (!doc) return null;
-  const render = (): RenderedDoc => {
-    const raw = readFileSync(join(root, `${doc.slug}.md`), "utf8");
-    const md = doc.slug === REGISTER_SLUG ? composeRegister(root, raw) : raw;
-    const { glanceMd, bodyMd } = extractGlance(md);
-    return {
-      ...doc,
-      html: rewriteDocLinks(renderFolded(bodyMd)),
-      glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
-    };
+  const raw = (): string => readFileSync(join(root, `${doc.slug}.md`), "utf8");
+  // The register renders ~670 fragments into a ~5 MB page, so a handful of members opening it
+  // together could OOM the dashboard. Render it once per corpus state; every other doc is one
+  // file and stays cheap to render on demand. `detached`: the page is bytes, which share nothing
+  // with a file's text, and `doc` is a shelf row, so a clone would only copy the page at its peak.
+  if (doc.slug === REGISTER_SLUG) {
+    return memoByCorpus("register", root, () => renderRegister(root, doc, raw()), {
+      detached: true,
+    });
+  }
+  const { glanceMd, bodyMd } = extractGlance(raw());
+  return {
+    ...doc,
+    html: Buffer.from(rewriteDocLinks(renderFolded(bodyMd))),
+    glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
   };
-  // The register composes ~620 fragments into a ~4.7 MB page — ~200 MB of transient heap per
-  // render, so a handful of members opening it together could OOM the dashboard. Render it once
-  // per corpus state; every other doc is one file and stays cheap to render on demand.
-  return doc.slug === REGISTER_SLUG ? memoByCorpus("register", root, render) : render();
 }
 
 /** Verbatim section extraction — an excerpt, never a summary (honesty: no lossy compression). */
