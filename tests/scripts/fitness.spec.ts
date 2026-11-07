@@ -598,6 +598,7 @@ describe("fitness: the owner is assigned last", () => {
       "bots-running": "script",
       "bots-responsive": "wait",
       "decision-cycle": "wait",
+      "live-bots-place": "wait",
       "main-deploys": "wait",
       "alerts-reach-owner": "owner",
       "owner-assignment-path": "owner",
