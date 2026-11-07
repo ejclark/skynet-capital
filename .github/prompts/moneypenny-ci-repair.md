@@ -31,7 +31,14 @@ costs a round trip you can avoid by writing it now:
 
     > [!IMPORTANT]
     > **Needs from you**
-    > 1. <the one decision, phrased as a question> — <why, trailing>
+    > 1. <the one decision, phrased as a question> — <what his answer unblocks>
+    >    - **A** (predicted, <high|medium|low>): <what happens if he picks it>
+    >    - **B**: <what happens if he picks it>
+    >    - **On silence:** <what happens if he never answers, from when; "nothing proceeds" for a credential, spend, workflow-file or bot-safety decision>
+
+The options, the predicted answer and the silence line let him answer in one word from his watch,
+and they are what gets scored in `docs/process/ALIGNMENT.md` (#6953). Once #6953's slice 3 lands, a
+question without them is listed as "callout incomplete".
 
 The comment in state (b) explains the blocker; the callout states the choice. Both, always.
 
