@@ -106,8 +106,8 @@ function relay<T>(
 }
 
 /** The kind a refused subscriptions snapshot claimed, for its warning: since #5482's contract
- *  step closed the bots read `subscriptions.v4` only, so an app rolled back past #6000 (or one
- *  ahead of its bots) is named in the log instead of leaving the roster frozen without a word. */
+ *  step closed the bots read `subscriptions.v4` (and v5 since #6954 slice 5c) only, so an app rolled
+ *  back past #6000 (or one ahead of its bots) is named in the log instead of leaving the roster frozen without a word. */
 function subscriptionsKind(body: unknown): string {
   const raw = isRecord(body) ? body.subscriptions : undefined;
   const kind = isRecord(raw) ? raw.kind : undefined;

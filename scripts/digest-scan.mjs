@@ -45,6 +45,10 @@
 // the same call as Needs you, printed as one "Noise absorbed" line: the actor it waits on is a
 // session, so it is never a Needs-you item, and listing it is what keeps it from being lost.
 //
+// UNSEEN (#6953 slice 4): `--needs-you` ends with one line naming the asks no list can see. The
+// four cases, and every rule that tells them apart, live in scripts/moneypenny/unseen-asks.mjs, so
+// this file keeps no selector of its own (tests/scripts/moneypenny/needs-you.spec.ts holds it to that).
+//
 // LEARNING (#4212, #4056 slice 7): unlearned incidents are a count line under "Noise absorbed",
 // never a Needs-you item — a repair capsule's close drafts its own ledger entry
 // (scripts/moneypenny/lesson-draft.mjs), so draining them is the system's job, not Eric's. The
@@ -360,6 +364,27 @@ function validate() {
   console.log(`✓ ${digestFiles().length} digest(s) satisfy the contract.`);
 }
 
+/** `--needs-you`: the list, the callout-incomplete line, and the unseen line (#6953 slice 4). */
+async function needsYouReport() {
+  const { gather, plan } = await import("./moneypenny/assignments.mjs");
+  const { gatherUnseen, unseenLine } = await import("./moneypenny/unseen-asks.mjs");
+  const read = gather();
+  const planned = plan(read);
+  // The unseen scan reuses the gather's listings; a failed read costs its own line, never the list.
+  let unseen = null;
+  let why = null;
+  try {
+    const listed = planned.needsYou.map((n) => n.number);
+    unseen = gatherUnseen({ issues: read.issues, prs: read.prs, listed });
+  } catch (err) {
+    why = String(err?.message ?? err)
+      .split("\n")[0]
+      .slice(0, 200);
+  }
+  const lines = [...needsYouLines(planned), calloutIncompleteLine(planned)];
+  return [...lines, unseenLine(unseen, why)].join("\n");
+}
+
 async function main() {
   const nowMs = arg("now") ? Date.parse(arg("now")) : Date.now();
   if (!Number.isFinite(nowMs)) throw new Error("digest-scan: --now must be an ISO instant.");
@@ -402,9 +427,7 @@ async function main() {
     return;
   }
   if (has("needs-you")) {
-    const { gather, plan } = await import("./moneypenny/assignments.mjs");
-    const planned = plan(gather());
-    console.log([...needsYouLines(planned), calloutIncompleteLine(planned)].join("\n"));
+    console.log(await needsYouReport());
     return;
   }
   if (has("needs-session")) {

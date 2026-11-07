@@ -357,7 +357,7 @@ export interface PlaybookSubscription {
    * subscription's whole conviction: an owner's own reason and day live as their view on the pair
    * (`subscriptions/pair-conviction.ts`), and a pointer the bots cannot use runs the pair exits-only
    * (`steeredBy`). Behavioral since `subscriptions.v3`, the first kind whose version names it; the
-   * bots read `subscriptions.v4` only since the contract step closed.
+   * bots read `subscriptions.v4` and later kinds only since the contract step closed.
    *
    * There is no inline conviction beside it any more (#5482, the contract step's last piece): the
    * `{reason, checkOn}` a subscription once carried (#4469 slice 3c) moved onto views, the live
@@ -373,6 +373,14 @@ export interface PlaybookSubscription {
    * only narrow the playbook's own bounds (`playbooks/play-target.ts`).
    */
   readonly playTarget?: PlayTarget;
+  /**
+   * The owner's own below-bar floor (#6954 slice 5c): the most one opening order from this pair may
+   * risk, as a share of the account's equity, WHERE the pair sits below its playbook's evidence bar.
+   * It can only tighten the house floor (`BELOW_BAR_FLOOR_PCT`, `playbooks/fit-floor.ts`): a larger
+   * value reads as the house floor. Absent, or not a share above 0 (dropped on read), = the house floor. Behavioral, so it rides the wire only
+   * under `subscriptions.v5` (`subscriptions-wire.ts`); a v4 snapshot never applies it.
+   */
+  readonly belowBarFloorPct?: number;
 }
 
 /**
