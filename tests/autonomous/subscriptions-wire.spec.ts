@@ -259,8 +259,8 @@ describe("the kinds before v4 are read as not reported", () => {
     }
   });
 
-  it("names v4 as the kind the app sends", () => {
-    expect(SUBSCRIPTIONS_SNAPSHOT_KIND).toBe("subscriptions.v4");
-    expect(buildSubscriptionsSnapshot({}, AT).kind).toBe("subscriptions.v4");
+  it("names v5 as the kind the app sends (#6954 slice 5c-ii)", () => {
+    expect(SUBSCRIPTIONS_SNAPSHOT_KIND).toBe("subscriptions.v5");
+    expect(buildSubscriptionsSnapshot({}, AT).kind).toBe("subscriptions.v5");
   });
 });

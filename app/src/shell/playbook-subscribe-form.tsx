@@ -35,7 +35,25 @@ import { ConvictionFields, convictionOf } from "./playbook-conviction";
  * and for an options pair states what one contract ties up and how much of the budget that leaves
  * idle. Said in words with a glyph, written nowhere, and discarded the moment the mode or budget
  * changes, because an answer to a different question is worse than none.
+ *
+ * A pair below its study's bar (the card's `houseFloorPct`, #6954 slice 5c-ii) also offers the
+ * owner's own below-bar floor: a smaller share of the account each new order may risk. Typed as a
+ * percent, sent as a share. Empty is the house floor, and on Edit an emptied field clears the
+ * owner's floor. The server says in words why a value is refused (`ownerFloorRefusal`); the form
+ * never second-guesses it. A pair at its bar shows no field and sends nothing, so an edit there
+ * keeps whatever the subscription has.
  */
+
+/** A share of equity as the percent an owner types: 0.005 → "0.5". Three significant figures, as
+ *  the bots' label prints it (`belowBarNote`), so the field and the decision read the same number. */
+const asPercent = (share: number): string => String(Number((share * 100).toPrecision(3)));
+
+/** The typed percent as a share, `null` for an empty field, `undefined` for one that is not a number. */
+function floorShare(typed: string): number | null | undefined {
+  if (typed.trim() === "") return null;
+  const pct = Number(typed);
+  return Number.isFinite(pct) ? pct / 100 : undefined;
+}
 
 const dollars = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
 
@@ -143,6 +161,9 @@ export function SubscribeForm({
   const [compoundAllocation, setCompoundAllocation] = useState(
     editing?.compoundAllocation === true,
   );
+  const [floor, setFloor] = useState(
+    editing?.belowBarFloorPct !== undefined ? asPercent(editing.belowBarFloorPct) : "",
+  );
   const [reason, setReason] = useState("");
   const [checkOn, setCheckOn] = useState(() => defaultCheckOn());
   const [busy, setBusy] = useState(false);
@@ -156,6 +177,7 @@ export function SubscribeForm({
   const capitalId = useId();
   const uncappedId = useId();
   const compoundId = useId();
+  const floorId = useId();
   const capitalAllocated = Number(capital);
   // A playbook that sends no order has no budget, mode or compounding to ask for (#4535 slice 3a).
   const noCapital = card.movesNoCapital === true;
@@ -163,7 +185,11 @@ export function SubscribeForm({
   // An edit never asks: the owner's conviction is stated and re-dated on the row (`ConvictionPanel`).
   const asksConviction = needsConviction && !editing;
   const conviction = asksConviction ? convictionOf(reason, checkOn) : undefined;
+  // The floor is offered only on a pair below its bar; anywhere else nothing is sent.
+  const houseFloor = noCapital ? undefined : card.houseFloorPct;
+  const floorValue = houseFloor === undefined ? null : floorShare(floor);
   const valid =
+    floorValue !== undefined &&
     (noCapital ||
       uncapped ||
       (capital.trim() !== "" && Number.isFinite(capitalAllocated) && capitalAllocated >= 0)) &&
@@ -185,6 +211,7 @@ export function SubscribeForm({
           capitalAllocated: noCapital || uncapped ? null : capitalAllocated,
           symbols,
           compoundAllocation,
+          ...(houseFloor !== undefined ? { belowBarFloorPct: floorValue ?? null } : {}),
         })
       : subscribeRequest({
           id: accountId,
@@ -194,6 +221,7 @@ export function SubscribeForm({
           ...(symbols.length > 0 ? { symbols } : {}),
           ...(compoundAllocation ? { compoundAllocation: true } : {}),
           ...(conviction ? { conviction } : {}),
+          ...(typeof floorValue === "number" ? { belowBarFloorPct: floorValue } : {}),
         });
 
   const save = async () => {
@@ -311,6 +339,27 @@ export function SubscribeForm({
           </label>
         </div>
       )}
+      {houseFloor !== undefined ? (
+        <div className="field">
+          <label htmlFor={floorId}>Below-bar floor (% of the account per new order)</label>
+          <input
+            id={floorId}
+            type="number"
+            inputMode="decimal"
+            min={0}
+            max={Number(asPercent(houseFloor))}
+            step={0.1}
+            placeholder={`${asPercent(houseFloor)} (house floor)`}
+            value={floor}
+            onChange={(e) => setFloor(e.target.value)}
+          />
+          <p className="pb-form-note">
+            This pair is below its study's bar, so each new order risks at most{" "}
+            {asPercent(houseFloor)}% of the account. Set a smaller share to trade it smaller, or
+            leave it empty for the house floor. Exits are never sized by it.
+          </p>
+        </div>
+      ) : null}
       {stale.length > 0 ? (
         <p className="pb-form-note">
           Its saved filter names {stale.join(", ")}, which {stale.length === 1 ? "isn't" : "aren't"}{" "}
@@ -323,7 +372,7 @@ export function SubscribeForm({
       {reduceOnly ? (
         <p className="pb-form-note">
           Until you unlock delegation, an edit can only lower what this bot may do: less capital,
-          fewer symbols, a calmer mode, or compounding off.
+          fewer symbols, a calmer mode, compounding off, or a smaller below-bar floor.
         </p>
       ) : null}
       {editing && !editing.enabled ? <p className="pb-form-note">Saving keeps it paused.</p> : null}

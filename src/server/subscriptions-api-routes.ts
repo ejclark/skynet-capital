@@ -10,6 +10,7 @@ import {
 import type { SubscriptionConviction } from "../domain/types.js";
 import { playbookStoreView, withConvictionHolds } from "../observatory/playbook-store-json-view.js";
 import { withOwnSteering } from "../observatory/steered-by-view.js";
+import { ownerFloorRefusal } from "../playbooks/fit-floor.js";
 import { movesNoCapital, STRATEGIES } from "../playbooks/pair-table.js";
 import { asOwnConviction } from "../subscriptions/pair-conviction.js";
 import {
@@ -37,6 +38,7 @@ import {
 import { withForecasts } from "./pair-forecast.js";
 import { subscribeLiveReads } from "./subscribe-live-reads.js";
 import { recordAllocationWrite, recordSubscriptionWrite } from "./subscription-changes.js";
+import { floorAfter } from "./subscription-store.js";
 import {
   parseAllocationBody,
   parseConfigureBody,
@@ -92,6 +94,11 @@ import { servePreflight } from "./subscriptions-preflight-route.js";
  * allocation caps what may be delegated and delegates nothing, so it passes ownership and bots-only,
  * never the fog. A conviction's new date can resume a pair a failed check stopped — more delegation
  * — so it passes all three gates, like Edit.
+ *
+ * AN OWNER'S BELOW-BAR FLOOR (#6954 slice 5c-ii, `belowBarFloorPct` on subscribe and configure) is
+ * refused in words unless it is above 0, on a pair below its bar, and smaller than the house floor
+ * (`ownerFloorRefusal`): a setting the bots would read as no change is not saved as if it were one.
+ * Lowering it is less delegation, so it never meets the fog; raising or clearing it does.
  *
  * EVERY WRITE IS LOGGED (#4535 slice 3c, `subscription-changes.ts`): who, before and after, in the
  * same settings change log a bot's Settings card lists — both or neither.
@@ -314,6 +321,9 @@ async function handleSubscribe(
   const refusal =
     delegation ??
     (body.conviction ? checkOnRefusal(body.conviction.checkOn, asOfIso(config)) : undefined) ??
+    (body.belowBarFloorPct !== undefined
+      ? ownerFloorRefusal(body.playbookId, body.belowBarFloorPct)
+      : undefined) ??
     newSubscriptionRefusal(needs) ??
     allocationRefusal({
       playbookId: body.playbookId,
@@ -351,6 +361,9 @@ async function handleSubscribe(
           ...(body.symbols ? { symbols: body.symbols } : {}),
           ...(body.compoundAllocation ? { compoundAllocation: true } : {}),
           ...(body.conviction ? { conviction: body.conviction } : {}),
+          ...(body.belowBarFloorPct !== undefined
+            ? { belowBarFloorPct: body.belowBarFloorPct }
+            : {}),
         }),
       viewsBefore,
     ),
@@ -385,9 +398,16 @@ async function handleConfigure(
       "You can only change your own account's playbooks.",
       config,
       session,
-      prior === undefined || raisesDelegation(prior, body.tuning),
+      prior === undefined ||
+        raisesDelegation(prior, {
+          ...body.tuning,
+          belowBarFloorPct: floorAfter(prior, body.tuning),
+        }),
     )) ??
     basketRefusal(body.playbookId, body.tuning.symbols) ??
+    (typeof body.tuning.belowBarFloorPct === "number"
+      ? ownerFloorRefusal(body.playbookId, body.tuning.belowBarFloorPct)
+      : undefined) ??
     (prior
       ? allocationRefusal({
           playbookId: body.playbookId,

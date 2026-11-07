@@ -26,7 +26,8 @@ import { SubscribeForm } from "./playbook-subscribe-form";
  * leaving is never gated, but it has no Edit: tuning is delegation, and only bots take that for now.
  */
 
-/** The words after the state, in the phone order: mode · capital · symbols · compounding. */
+/** The words after the state, in the phone order: mode · capital · symbols · compounding · the
+ *  owner's below-bar floor. */
 function subscriptionFacts(
   sub: SubscriptionView,
   basket: readonly string[],
@@ -51,6 +52,10 @@ function subscriptionFacts(
     sub.capitalAllocated === undefined ? "uncapped" : `$${sub.capitalAllocated.toLocaleString()}`,
     ...symbols,
     ...(sub.compoundAllocation ? ["compounding"] : []),
+    // The owner's below-bar floor (#6954 slice 5c-ii), as the percent they typed.
+    ...(sub.belowBarFloorPct !== undefined
+      ? [`below-bar floor ${Number((sub.belowBarFloorPct * 100).toPrecision(3))}%`]
+      : []),
     // A human subscription's state word is "never trades", so its pause has to be said here.
     ...(human && !sub.enabled ? ["paused"] : []),
   ];

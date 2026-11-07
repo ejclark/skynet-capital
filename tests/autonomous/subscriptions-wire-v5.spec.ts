@@ -1,7 +1,7 @@
 import {
   buildSubscriptionsSnapshot,
   parseSubscriptionsSnapshot,
-  SUBSCRIPTIONS_SNAPSHOT_KIND,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
   SUBSCRIPTIONS_SNAPSHOT_KIND_V5,
   subscriptionsVersion,
 } from "../../src/autonomous/subscriptions-wire.js";
@@ -9,8 +9,9 @@ import type { PlaybookSubscription } from "../../src/domain/types.js";
 import type { SubscriptionsState } from "../../src/subscriptions/subscription-state.js";
 
 /**
- * `subscriptions.v5` (#6954 slice 5c, the expand step): the owner's below-bar floor joins the
- * version. The bots read v4 and v5; the app still sends v4 until this has deployed.
+ * `subscriptions.v5` (#6954 slice 5c): the owner's below-bar floor joins the version. The bots read
+ * v4 and v5 (5c-i, the expand step); the app sends v5 since 5c-ii.
+ *  - WHEN the app builds its snapshot, it SHALL send v5, so a floor its owner set reaches the bots.
  *  - WHEN a v5 snapshot carries an owner's floor, the bots SHALL apply it only if its version names it.
  *  - WHEN a v4 snapshot carries one, the bots SHALL apply the roster without it: v4 never vouched.
  *  - WHERE no subscription sets a floor, the v5 version SHALL equal the v4 one, so the app's switch
@@ -30,17 +31,18 @@ const sub = (overrides: Partial<PlaybookSubscription> = {}): PlaybookSubscriptio
 const AT = Date.parse("2026-11-07T12:00:00.000Z");
 const V5 = SUBSCRIPTIONS_SNAPSHOT_KIND_V5;
 
-/** What a v5 app will send: the snapshot as built, under v5's kind and version. */
+/** What the app sends: the snapshot as built, v5 since 5c-ii. */
 const sentV5 = (state: SubscriptionsState) =>
+  JSON.parse(JSON.stringify(buildSubscriptionsSnapshot(state, AT)));
+/** What an app rolled back past the switch sends: the same roster under v4's kind and version. */
+const sentV4 = (state: SubscriptionsState) =>
   JSON.parse(
     JSON.stringify({
       ...buildSubscriptionsSnapshot(state, AT),
-      kind: V5,
-      version: subscriptionsVersion(state, V5),
+      kind: SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
+      version: subscriptionsVersion(state, SUBSCRIPTIONS_SNAPSHOT_KIND_V4),
     }),
   );
-const sentV4 = (state: SubscriptionsState) =>
-  JSON.parse(JSON.stringify(buildSubscriptionsSnapshot(state, AT)));
 
 const FLOORED: SubscriptionsState = { sauron: [sub({ belowBarFloorPct: 0.005 })] };
 
@@ -73,13 +75,16 @@ describe("the owner's floor on subscriptions.v5", () => {
 describe("a v4 snapshot never applies a floor", () => {
   it("applies the roster with the floor taken off", () => {
     const parsed = parseSubscriptionsSnapshot(sentV4(FLOORED));
-    expect(parsed?.kind).toBe(SUBSCRIPTIONS_SNAPSHOT_KIND);
+    expect(parsed?.kind).toBe(SUBSCRIPTIONS_SNAPSHOT_KIND_V4);
     expect(parsed?.accounts.sauron).toHaveLength(1);
     expect(parsed?.accounts.sauron?.[0]).not.toHaveProperty("belowBarFloorPct");
   });
 
-  it("is still the kind the app sends", () => {
-    expect(buildSubscriptionsSnapshot(FLOORED, AT).kind).toBe("subscriptions.v4");
+  it("is no longer the kind the app sends: v5 is, and its version names the floor", () => {
+    const built = buildSubscriptionsSnapshot(FLOORED, AT);
+    expect(built.kind).toBe("subscriptions.v5");
+    expect(built.version).toBe(subscriptionsVersion(FLOORED, V5));
+    expect(built.version).not.toBe(subscriptionsVersion(FLOORED, SUBSCRIPTIONS_SNAPSHOT_KIND_V4));
   });
 });
 

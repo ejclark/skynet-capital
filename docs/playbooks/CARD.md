@@ -222,6 +222,12 @@ smaller size written once. Field 3's "who may admit a ticker below that line" no
 
 - **Every such opening order says so**: its reason ends "below its bar: sized to at most 1% of the
   account", so the decision record shows why it was small. Exits are never sized by the floor.
+- **An owner can set a smaller floor** (#6954 slice 5c, 2026-11-07): the Playbook Store's form
+  shows "Below-bar floor" on these pairs only, as a percent of the account per new order. Empty is
+  the house 1%. The Store refuses in words a floor at or below 0, one above 1%, or one on a pair at
+  its bar. Lowering it passes the delegation fog; raising or clearing it does not. The bots size the
+  pair to the smaller of the two within one poll (`subscriptions.v5`), the decision's label names
+  that percent, and the bot's settings change log records it ("below-bar floor 0.5%").
 - **The floor is unmeasured.** Wrong if by 2026-12-31 at least 10 closed below-bar paper trades
   average worse than −2% while at-or-above-bar pairs are positive; that pair then records only.
 
