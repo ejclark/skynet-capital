@@ -200,8 +200,6 @@ export interface BoardItem {
   kind?: string;
   /** The card's "Waiting on" text, when set (#6871 slice 3). */
   waitingOn?: string;
-  /** The card's "In this column since" day (YYYY-MM-DD), when set (#6871 slice 3). */
-  since?: string;
 }
 
 export function findBoardItem(items?: BoardItem[], issueUrl?: string): BoardItem | undefined;
@@ -214,14 +212,12 @@ export interface PriorityNode {
 export interface CardFieldNode {
   kind?: { name?: string } | null;
   waiting?: { text?: string } | null;
-  since?: { date?: string } | null;
 }
 
-/** `{kind, waitingOn, since}` from a GraphQL node's aliases — only the keys GitHub set (#6871). */
+/** `{kind, waitingOn}` from a GraphQL node's aliases — only the keys GitHub set (#6871). */
 export function cardFieldValues(node?: CardFieldNode | null): {
   kind?: string;
   waitingOn?: string;
-  since?: string;
 };
 
 /** `{priority, syncedPriority}` from a GraphQL node's aliases — only the keys GitHub set. */

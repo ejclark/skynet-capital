@@ -367,6 +367,7 @@ export function reconcileBoard({
     openIssues,
     numberOf: (item) => boardIssueNumber(item),
     present,
+    skip: new Set([...moved.map((d) => d.number), ...priorityDrift.map((d) => d.number)]),
     wantedFor: (issue) => {
       const card = wantedCard(issue, { ...context, columns });
       return card && card.status !== "Done" ? wantedCardFields(issue, card, { horizons }) : null;

@@ -160,11 +160,11 @@ function optionByName(field, name) {
 const PRIORITY_VALUES = `priority: fieldValueByName(name:"Priority"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
         synced: fieldValueByName(name:"${SYNCED_PRIORITY}"){ ... on ProjectV2ItemFieldTextValue{ text } }`;
 
-// #6871 slice 3: Kind, "Waiting on" and "In this column since" ride along the same way. A field the
-// board does not carry yet answers null, so a sweep before the setup dispatch reads them as unset.
+// #6871 slice 3: Kind and "Waiting on" ride along the same way. A field the board does not carry yet
+// answers null, so a sweep before the setup dispatch reads them as unset. "In this column since" is
+// write-only: the sync stamps it when Status changes and never needs to read it back.
 const CARD_VALUES = `kind: fieldValueByName(name:"${KIND}"){ ... on ProjectV2ItemFieldSingleSelectValue{ name } }
-        waiting: fieldValueByName(name:"${WAITING_ON}"){ ... on ProjectV2ItemFieldTextValue{ text } }
-        since: fieldValueByName(name:"${IN_COLUMN_SINCE}"){ ... on ProjectV2ItemFieldDateValue{ date } }`;
+        waiting: fieldValueByName(name:"${WAITING_ON}"){ ... on ProjectV2ItemFieldTextValue{ text } }`;
 
 const BOARD_ITEMS_QUERY = `query($owner:String!,$project:Int!,$after:String){
   user(login:$owner){ projectV2(number:$project){
@@ -791,18 +791,22 @@ export function syncIssue(
   };
   const setText = (fieldName, text) => setValue(fieldName, "--text", text);
 
-  // Kind, "Waiting on" and "In this column since" (#6871 slice 3). A closed card keeps only the day
-  // (Done is a column too); a field setup has not made yet is skipped, not an error. The day is
+  // Kind, "Waiting on" and "In this column since" (#6871 slice 3). A closed card keeps its Kind,
+  // gets the day (Done is a column too) and has its "Waiting on" cleared; a field setup has not
+  // made yet is skipped, not an error. The day is
   // written BEFORE Status (projects-fields.mjs header): a failed Status write then re-writes both.
   const closed = status === "Done";
   const present = {
     [IN_COLUMN_SINCE]: Boolean(findField(fieldList, IN_COLUMN_SINCE)),
     [KIND]: !closed && Boolean(findField(fieldList, KIND)),
-    [WAITING_ON]: !closed && Boolean(findField(fieldList, WAITING_ON)),
+    [WAITING_ON]: Boolean(findField(fieldList, WAITING_ON)),
   };
   const fieldWrites = planCardFields({
     have: item,
-    wanted: closed ? {} : wantedCardFields(issue, card, { horizons: readHorizons() }),
+    // A closed card keeps its Kind, but nothing waits on anyone: "Waiting on" is cleared.
+    wanted: closed
+      ? { waitingOn: "" }
+      : wantedCardFields(issue, card, { horizons: readHorizons() }),
     status,
     today,
     present,

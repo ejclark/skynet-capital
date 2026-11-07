@@ -262,6 +262,20 @@ describe("planCardFields: the day moves only with Status, and goes first", () =>
     expect(writes).toEqual([{ field: KIND, kind: "select", value: "Bug" }]);
   });
 
+  it("a closed card keeps its Kind and has Waiting on cleared, and the day is stamped", () => {
+    const writes = planCardFields({
+      have: { status: "Waiting on a person", kind: "Bug", waitingOn: "Eric to decide" },
+      wanted: { waitingOn: "" },
+      status: "Done",
+      today: "2026-11-07",
+      present: ALL,
+    });
+    expect(writes.map((w) => `${w.field}:${w.kind}`)).toEqual([
+      `${IN_COLUMN_SINCE}:date`,
+      `${WAITING_ON}:clear`,
+    ]);
+  });
+
   it("describes what it wrote", () => {
     expect(describeCardFields(3, [])).toBe("#3: card fields in step");
     expect(
@@ -300,6 +314,18 @@ describe("planCardFieldDrift: which cards the sweep fills", () => {
     expect(out.drift[0]?.writes.map((w) => w.field)).toEqual([KIND, WAITING_ON]);
   });
 
+  it("leaves a card the sweep syncs anyway to that sync", () => {
+    const out = planCardFieldDrift({
+      items: [{ id: "PVTI_1" }, { id: "PVTI_2" }],
+      openIssues: [issue(1), issue(2)],
+      numberOf,
+      wantedFor,
+      present: ALL,
+      skip: new Set([1]),
+    });
+    expect(out.drift.map((d) => d.number)).toEqual([2]);
+  });
+
   it("caps a first fill and counts what is left for the next sweep", () => {
     const n = CARD_FIELD_WRITES_PER_SWEEP + 5;
     const items = Array.from({ length: n }, (_, i) => ({ id: `PVTI_${i + 1}` }));
@@ -316,19 +342,18 @@ describe("planCardFieldDrift: which cards the sweep fills", () => {
   });
 });
 
-describe("the board reads carry the three fields", () => {
+describe("the board reads carry Kind and Waiting on", () => {
   it("cardFieldValues keeps only what GitHub set", () => {
     expect(
       cardFieldValues({
         kind: { name: "Bug" },
         waiting: { text: "Eric to decide" },
-        since: { date: "2026-11-07" },
       }),
-    ).toEqual({ kind: "Bug", waitingOn: "Eric to decide", since: "2026-11-07" });
-    expect(cardFieldValues({ kind: null, waiting: null, since: null })).toEqual({});
+    ).toEqual({ kind: "Bug", waitingOn: "Eric to decide" });
+    expect(cardFieldValues({ kind: null, waiting: null })).toEqual({});
   });
 
-  it("the per-issue lookup asks for all three and returns them on the item", () => {
+  it("the per-issue lookup asks for Kind and Waiting on and returns them on the item", () => {
     let query = "";
     const items = readIssueItemsFromGh(
       { number: 9, html_url: URL(9) },
@@ -347,7 +372,6 @@ describe("the board reads carry the three fields", () => {
                         project: { number: 2 },
                         kind: { name: "Idea" },
                         waiting: { text: "Approval to build" },
-                        since: { date: "2026-11-01" },
                       },
                     ],
                   },
@@ -358,14 +382,12 @@ describe("the board reads carry the three fields", () => {
         },
       },
     );
-    for (const f of [KIND, WAITING_ON, IN_COLUMN_SINCE]) {
+    for (const f of [KIND, WAITING_ON]) {
       expect(query).toContain(`fieldValueByName(name:"${f}")`);
     }
-    expect(items[0]).toMatchObject({
-      kind: "Idea",
-      waitingOn: "Approval to build",
-      since: "2026-11-01",
-    });
+    // The day is write-only: nothing reads it back, so no read pays for it.
+    expect(query).not.toContain(IN_COLUMN_SINCE);
+    expect(items[0]).toMatchObject({ kind: "Idea", waitingOn: "Approval to build" });
     expect(
       boardItemsFromProjectItems({
         nodes: [{ id: "PVTI_9", project: { number: 2 }, kind: { name: "Bug" } }],
@@ -375,7 +397,7 @@ describe("the board reads carry the three fields", () => {
     ).toMatchObject({ kind: "Bug" });
   });
 
-  it("the whole-board read asks for all three and returns them on each card", () => {
+  it("the whole-board read asks for Kind and Waiting on and returns them on each card", () => {
     let query = "";
     const { items } = readBoardItemsFromGh({
       log: () => undefined,
@@ -395,7 +417,6 @@ describe("the board reads carry the three fields", () => {
                       content: { __typename: "Issue", url: URL(1) },
                       kind: { name: "Bug" },
                       waiting: { text: "Eric to decide" },
-                      since: { date: "2026-11-07" },
                     },
                   ],
                 },
@@ -405,12 +426,8 @@ describe("the board reads carry the three fields", () => {
         });
       },
     });
-    expect(query).toContain(`fieldValueByName(name:"${IN_COLUMN_SINCE}")`);
-    expect(items[0]).toMatchObject({
-      kind: "Bug",
-      waitingOn: "Eric to decide",
-      since: "2026-11-07",
-    });
+    expect(query).toContain(`fieldValueByName(name:"${WAITING_ON}")`);
+    expect(items[0]).toMatchObject({ kind: "Bug", waitingOn: "Eric to decide" });
   });
 });
 
@@ -440,7 +457,13 @@ describe("mergeDrift and the sweep: field fills ride the same single sync per is
     const result = reconcileBoard({
       board: board(
         [
-          { id: "PVTI_1", status: "Backlog", content: { type: "Issue", url: URL(1) } },
+          {
+            id: "PVTI_1",
+            status: "Backlog",
+            priority: "P0",
+            syncedPriority: "P0",
+            content: { type: "Issue", url: URL(1) },
+          },
           {
             id: "PVTI_2",
             status: "Backlog",
@@ -459,7 +482,7 @@ describe("mergeDrift and the sweep: field fills ride the same single sync per is
       readMode: () => ({ position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } }),
       buildContext: () => ({}),
       horizons: {},
-      // Priority is not under test: card 2 already carries its own.
+      // Priority is not under test: both cards already carry theirs.
       sync: (n) => {
         synced.push(n);
         return { status: "Backlog", fields: [] };

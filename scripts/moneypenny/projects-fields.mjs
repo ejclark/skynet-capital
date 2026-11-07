@@ -73,7 +73,9 @@ export function waitingOnFor(issue, card = {}) {
   if (card.status === NEXT_NEEDS_APPROVAL) return "Next part to be approved";
   if (card.status !== "Backlog") return "";
   const why = notPullable({ ...issue, labels }, { boardedOn: card.boardedOn });
-  switch (why?.code) {
+  // Pullable, yet Backlog: the only thing left that holds it is an open PR that names it.
+  if (!why) return card.namedByOpenPr ? "Its open PR to merge" : "";
+  switch (why.code) {
     case "no-ready":
       return "Approval to build";
     case "platter":
@@ -83,7 +85,7 @@ export function waitingOnFor(issue, card = {}) {
       return n === 1 ? "An open blocking issue to close" : `${n} open blocking issues to close`;
     }
     default:
-      return card.namedByOpenPr ? "Its open PR to merge" : "";
+      return "";
   }
 }
 
@@ -106,10 +108,14 @@ export function planCardFields({ have = {}, wanted, status, today, present = {} 
   if (present[IN_COLUMN_SINCE] && status && (have.status ?? null) !== status) {
     writes.push({ field: IN_COLUMN_SINCE, kind: "date", value: today });
   }
-  if (present[KIND] && wanted.kind !== (have.kind ?? null)) {
+  if (present[KIND] && wanted.kind !== undefined && wanted.kind !== (have.kind ?? null)) {
     writes.push({ field: KIND, kind: "select", value: wanted.kind });
   }
-  if (present[WAITING_ON] && wanted.waitingOn !== (have.waitingOn ?? "")) {
+  if (
+    present[WAITING_ON] &&
+    wanted.waitingOn !== undefined &&
+    wanted.waitingOn !== (have.waitingOn ?? "")
+  ) {
     writes.push(
       wanted.waitingOn
         ? { field: WAITING_ON, kind: "text", value: wanted.waitingOn }
@@ -148,6 +154,7 @@ export function planCardFieldDrift({
   numberOf,
   wantedFor,
   present = {},
+  skip = new Set(),
   cap = CARD_FIELD_WRITES_PER_SWEEP,
 } = {}) {
   if (!(present[KIND] || present[WAITING_ON])) return { drift: [], deferred: 0 };
@@ -156,6 +163,8 @@ export function planCardFieldDrift({
   for (const item of items) {
     const number = numberOf(item);
     const issue = number ? open.get(number) : undefined;
+    // A card the sweep syncs anyway (a column move, a priority drag) gets its fields in that sync.
+    if (skip.has(number)) continue;
     if (!(issue && isBacklogCandidate({ labels: labelNames(issue.labels) }))) continue;
     const wanted = wantedFor(issue);
     if (!wanted) continue;

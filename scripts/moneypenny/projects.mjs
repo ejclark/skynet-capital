@@ -12,6 +12,7 @@
 // below was written); only the writes need Eric's PAT in a workflow. The stale sentence still sits
 // in projects-setup.mjs, projects-backfill.mjs and projects.spec.ts — docs/IDEAS.md carries the sweep.
 
+import { KINDS } from "../rank.mjs";
 import { isTransientGhError, sleepSync, withRetry } from "./gh.mjs";
 import { LABELS, labelNames, notPullableReason, parkedBy } from "./labels.mjs";
 
@@ -290,21 +291,13 @@ export const HORIZON_OPTIONS = ["Now", "Next", "Later"];
 // THE CARD'S THREE EXTRA FIELDS (#6871 slice 3, board design §5). Each is written by the sync from
 // what the card's issue already says, never by hand:
 //   Kind                 — what sort of work it is (`kindOf`, scripts/rank.mjs), the order inside a
-//                          priority lane. Option names and order equal rank.mjs's `KINDS`; the board
-//                          spec pins the two together.
+//                          priority lane. The options ARE rank.mjs's `KINDS`, one list.
 //   Waiting on           — who acts next on a card that cannot be pulled, as actor plus act
 //                          ("Eric to decide"), from projects-fields.mjs's `waitingOnFor`.
-//   In this column since — the day the card last changed Status. Written only on a real change, so
-//                          a card that has never moved since the field was made reads blank.
-export const KIND_OPTIONS = [
-  "Fix first",
-  "Bug",
-  "Blocks other work",
-  "Slows delivery",
-  "Member asked",
-  "Improvement",
-  "Idea",
-];
+//   In this column since — the day the SYNC last changed the card's Status. Written only on a real
+//                          change, so a card the sync has not moved since the field was made reads
+//                          blank (a hand move the sync agrees with does not stamp it).
+export const KIND_OPTIONS = KINDS;
 export const KIND = "Kind";
 export const WAITING_ON = "Waiting on";
 export const IN_COLUMN_SINCE = "In this column since";
@@ -836,18 +829,16 @@ export function priorityValues(node) {
 }
 
 /**
- * A card's Kind, "Waiting on" text and "In this column since" day from a GraphQL node's `kind` /
- * `waiting` / `since` aliases (#6871 slice 3), as `{kind, waitingOn, since}` — only the keys GitHub
- * set, so a field the board does not carry yet (or a card never written) reads as absent. Pure.
+ * A card's Kind and "Waiting on" text from a GraphQL node's `kind` / `waiting` aliases (#6871
+ * slice 3), as `{kind, waitingOn}` — only the keys GitHub set, so a field the board does not carry
+ * yet (or a card never written) reads as absent. Pure.
  */
 export function cardFieldValues(node) {
   const kind = node?.kind?.name;
   const waitingOn = node?.waiting?.text;
-  const since = node?.since?.date;
   return {
     ...(kind ? { kind } : {}),
     ...(waitingOn ? { waitingOn } : {}),
-    ...(since ? { since } : {}),
   };
 }
 

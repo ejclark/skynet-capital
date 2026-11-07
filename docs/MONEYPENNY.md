@@ -109,8 +109,8 @@ Three more fields ride on each card, all written by the sync and none read by a 
 (#6871 slice 3, `scripts/moneypenny/projects-fields.mjs`): **Kind** (what sort of work it is, from
 its labels; the order inside a lane), **Waiting on** (who acts next on a card that cannot be pulled,
 for example "Eric to decide"; blank when nothing stops a build), and **In this column since** (the
-day Status last changed, written only on a real change, so a card that has not moved since the field
-was made reads blank). A field the board does not carry yet is skipped with one log line; the
+day the sync last changed Status, written only on a real change, so a card the sync has not moved
+since the field was made reads blank). A field the board does not carry yet is skipped with one log line; the
 `projects-setup.yml` dispatch creates it.
 
 ### Where an open ask lives — the board's Waiting on a person column

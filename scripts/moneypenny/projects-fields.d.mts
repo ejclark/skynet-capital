@@ -50,5 +50,7 @@ export function planCardFieldDrift<
   numberOf: (item: Item) => number | null;
   wantedFor: (issue: CardIssue & { number: number }) => { kind: string; waitingOn: string } | null;
   present?: Record<string, boolean>;
+  /** Numbers the sweep syncs anyway — their fields are written in that sync. */
+  skip?: ReadonlySet<number>;
   cap?: number;
 }): { drift: { number: number; writes: CardFieldWrite[] }[]; deferred: number };
