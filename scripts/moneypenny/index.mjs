@@ -1076,6 +1076,33 @@ export function sweepShipped(readIssues, deps) {
   }
 }
 
+/**
+ * The push-tick audit's reads, skipped when the token's hourly budget is spent — `sweepShipped`'s
+ * rule, applied to the audit (#6942, 2026-11-07).
+ *
+ * Run 42321492817's `Audit for stalls & conflicts` step died on its first silent-feedback timeline
+ * read: `issues/5365/timeline` answered "API rate limit exceeded for installation ID 157155153".
+ * That one 403 failed `route`, and the repair lane reopened #6942 as though the spend-breaker bug
+ * it tracked had come back. It had not. The audit is level-based: every push re-reads every rule
+ * from scratch. So a tick that could read nothing loses one tick, and nothing is wrong in this
+ * repo's code. The step goes red only for a failure that could hide a real stall.
+ *
+ * LAZY, like `sweepShipped`: the thunk does the reading, so a throw lands inside this `try`. Only
+ * the READS are guarded. A write that fails in `execute` still turns the run red, on purpose.
+ * Returns `null` on a skip, so the caller can tell "skipped" apart from "nothing to do".
+ */
+export function auditIntentsOrSkip(readIntents, log = console.log) {
+  try {
+    return readIntents();
+  } catch (err) {
+    if (!isRateLimited(err)) throw err;
+    log(
+      `::warning::audit skipped — this token's API budget is spent (${String(err.message).slice(0, 200)}). Nothing was flagged or cleared; the next push re-reads everything.`,
+    );
+    return null;
+  }
+}
+
 /** THE DEDUPE'S EYES, PAGED (2026-09-18, found by the stall-repair lane on #2967) — and, since
  *  #2968's reconcile, the receipt reconcile's eyes too. One read, both consumers.
  *
@@ -1862,13 +1889,20 @@ function main(argv) {
 
   if (runCliFlag(argv, ctx)) return;
 
-  const deps = fixtureDeps ?? (dry ? {} : gatherDeps(ctx));
   const auditMode = argv.includes("--audit") || ctx.inputs?.command === "audit";
   // A dry run writes nothing, so it takes no lease; the update pass then stops at the list.
   const hourly = dry ? {} : { takeHourlyLease: takeUpdateBranchLease };
+  // The router's dependencies are read only on the router's path (#6942). The audit never reads
+  // them, yet `gatherDeps` used to run first on every call, so each push paid the router's whole
+  // REST read twice: once in the `route` step and once more, thrown away, in the audit step.
+  // With the budget spent, that unused read was also the first call to throw, ahead of the guard.
   const intents = auditMode
-    ? [...audit(fixtureDeps ?? gatherAuditDeps(Date.now(), hourly)), ...capsuleAudit(fixtureDeps)]
-    : route(ctx, deps);
+    ? auditIntentsOrSkip(() => [
+        ...audit(fixtureDeps ?? gatherAuditDeps(Date.now(), hourly)),
+        ...capsuleAudit(fixtureDeps),
+      ])
+    : route(ctx, fixtureDeps ?? (dry ? {} : gatherDeps(ctx)));
+  if (intents === null) return;
 
   if (dry) {
     console.log(JSON.stringify(intents, null, 2));
