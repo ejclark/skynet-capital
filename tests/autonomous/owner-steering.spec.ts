@@ -9,7 +9,7 @@ import {
 } from "../../src/autonomous/bot-controls.js";
 import { ownerNarrowed } from "../../src/autonomous/controls-poll-wire.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
-import { scoutHostGates } from "../../src/autonomous/scout-host-gates.js";
+import { HOST_WATCHES_REASON, scoutHostGates } from "../../src/autonomous/scout-host-gates.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
 import type { Persona } from "../../src/personas/persona.js";
 
@@ -56,7 +56,7 @@ const held = async (broker: InMemoryBroker, symbol: string) =>
   (await broker.getPortfolio()).positions.find((p) => p.symbol === symbol)?.quantity ?? 0;
 
 describe("stop opening, keep exits", () => {
-  it("refuses the open as opens-held, places the exit, and says the owner's hold on the record", async () => {
+  it("refuses the open as opens-held and places the exit, never calling the cycle halted", async () => {
     const broker = await bookHolding();
     const records: DecisionRecord[] = [];
     const trader = new AutonomousTrader({
@@ -74,7 +74,8 @@ describe("stop opening, keep exits", () => {
     expect(records[0]?.refusals).toMatchObject([
       { intent: { symbol: "NVDA", side: "buy" }, reason: "opens-held" },
     ]);
-    expect(records[0]?.halted).toBe(OPENS_HELD_REASON);
+    // A choice, not a stop: a halted cycle would read "Halted" on the bot's card (code review).
+    expect(records[0]?.halted).toBeUndefined();
   });
 
   it("names the breaker first when both hold, so a safety stop is never hidden by the owner's", async () => {
@@ -228,6 +229,13 @@ describe("the forced pick obeys its host bot's owner", () => {
     const gates = scoutHostGates(controls({ sauron: { holdOpens: true } }), "sauron", clear);
     expect(gates.blockedReason()).toBe(OPENS_HELD_REASON);
     expect(gates.exitBlockedReason()).toBeNull();
+  });
+
+  it("holds its opens while the host bot watches, so no day is spent, and keeps exits recorded", () => {
+    const gates = scoutHostGates(controls({ sauron: { mode: "observe" } }), "sauron", clear);
+    expect(gates.blockedReason()).toBe(HOST_WATCHES_REASON);
+    expect(gates.exitBlockedReason()).toBeNull();
+    expect(gates.watchOnly()).toBe(true);
   });
 
   it("watches when the host bot watches, and reads another bot's settings as nothing", () => {

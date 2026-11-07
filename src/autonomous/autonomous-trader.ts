@@ -272,10 +272,9 @@ export class AutonomousTrader {
     const decidedOn = await this.config.broker.getPortfolio();
     const holdOpens = this.config.openBlockedReason?.() ?? null;
     const ownerHold = this.config.ownerHoldsOpens?.() ?? null;
-    const heldBy = holdOpens ?? ownerHold;
     const accountTier = this.config.riskTier?.();
     const cycleRisk: RiskConfig =
-      heldBy || accountTier !== undefined
+      holdOpens || ownerHold || accountTier !== undefined
         ? {
             ...risk,
             ...(accountTier !== undefined ? { accountTier } : {}),
@@ -340,9 +339,11 @@ export class AutonomousTrader {
       guardedIntents,
       outcomes,
       // A breaker holding opens is still said on the record: the owner's alert and the heartbeat
-      // read it, though the cycle ran and its exits were placed. The owner's own hold is said too,
-      // after the breaker, which names the safety stop first (bot-watch alerts on breakers only).
-      ...(heldBy ? { halted: heldBy } : {}),
+      // read it, though the cycle ran and its exits were placed. The owner's own hold is NOT: it is
+      // a choice, not a stop, and a `halted` on every cycle would turn each quiet pass into a halted
+      // row and the bot's card into "Halted" (code review, #6954 slice 5b). Its refused opens carry
+      // `opens-held`, which is where the record says it.
+      ...(holdOpens ? { halted: holdOpens } : {}),
       // The context the cycle was HANDED — option quotes never reach disk or the wire.
       context,
       ...(refusals.length > 0 ? { refusals } : {}),

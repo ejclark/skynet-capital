@@ -6,6 +6,7 @@ import {
   CONTROLS_BRIDGE_PATH,
   type ControlsState,
   EMPTY_CONTROLS,
+  effectiveMode,
   opensHeldReason,
   parseControlsState,
   suspendedReason,
@@ -181,7 +182,7 @@ export function resolveBotControls(
   let houseRoster: HouseRosterReport | undefined;
 
   let snapshot: ControlsState = EMPTY_CONTROLS;
-  const watches = (botId: string) => snapshot.bots[botId]?.mode === "observe";
+  const watches = (botId: string) => effectiveMode(snapshot, botId, "live") === "observe";
   let timer: ReturnType<typeof setInterval> | undefined;
 
   const fetchOnce = async (): Promise<ControlsState | null> => {

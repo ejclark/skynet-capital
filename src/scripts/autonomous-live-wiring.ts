@@ -600,7 +600,8 @@ export function buildLiveBot(
     onDecision: (r: DecisionRecord) => void;
     /** Ids running their hardcore research-mode build — own readiness pack, faster cooldown. */
     hardcore: ReadonlySet<string>;
-    /** Mission Control: dynamic suspend checks (polled) + the boot snapshot for mode overrides. */
+    /** Mission Control: the polled suspend, stop-opening and watch-only checks, plus the boot
+     *  snapshot (read only to say a watch-only bot at boot). */
     controls: BotControlsClient;
     bootControls: ControlsState;
     /** Durable cooldown storage (slice 4) — omit to run cold-start, exactly as before this existed. */
@@ -617,7 +618,9 @@ export function buildLiveBot(
   // The readiness gate runs against the house mode; the owner's "watch only" narrows it at every
   // cycle (#6954 slice 5b), so clearing it hands the bot back without a restart.
   if (controlsMode(opts.bootControls, bot.persona.id, opts.mode) !== opts.mode) {
-    console.log(`[controls] ${bot.persona.name}: watch only (owner setting, read every cycle)`);
+    console.log(
+      `[controls] ${bot.persona.name}: watch only at boot (owner setting, read every cycle)`,
+    );
   }
   // The verdict also rides the `/controls` poll this bot's process is already making — the
   // ops-status panel's credential-free "which personas are gated, and why" (#666 slice 3).

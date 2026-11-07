@@ -110,15 +110,16 @@ function applySettings(prev: BotControls, body: BotSettingsBody): BotControls {
   const hardcore = body.hardcore === undefined ? prev.hardcore : body.hardcore;
   const betaPicks = body.betaPicks === undefined ? prev.betaPicks : body.betaPicks;
   const betaStage = body.betaStage === undefined ? prev.betaStage : body.betaStage;
-  const watchOnly = body.watchOnly ?? prev.mode === "observe";
+  // Untouched by this save, the stored mode stays exactly as it was (code review, slice 5b).
+  const mode = body.watchOnly === undefined ? prev.mode : body.watchOnly ? "observe" : undefined;
   const holdOpens = body.holdOpens ?? prev.holdOpens === true;
   return {
     ...rest,
     ...(typeof hardcore === "boolean" ? { hardcore } : {}),
     ...(typeof betaPicks === "number" ? { betaPicks } : {}),
     ...(typeof betaStage === "boolean" ? { betaStage } : {}),
-    // A stored `live` says nothing (narrow-only, `effectiveMode`), so off clears the field.
-    ...(watchOnly ? { mode: "observe" as const } : {}),
+    // A stored `live` says nothing (narrow-only, `effectiveMode`), so switching off clears it.
+    ...(mode ? { mode } : {}),
     ...(holdOpens ? { holdOpens: true } : {}),
   };
 }

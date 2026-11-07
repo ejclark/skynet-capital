@@ -8,7 +8,9 @@
  *  - **exits** stop under the kill switch, the all-bots suspend and the host's own suspend — a
  *    suspend places nothing, exits included, as it does for the bot;
  *  - **opens** stop under all of those, the breakers, and the host's "stop opening, keep exits";
- *  - **watch only** on the host turns the scout's orders into recorded ones, placing nothing.
+ *  - **watch only** on the host holds the scout's opens, like a halt — no scan and no day spent,
+ *    so switching it off later the same session still lets the pick run — and turns any sale it
+ *    offers into a recorded one, placing nothing (code review, slice 5b).
  *
  * No host (no bot wired) leaves only the process gates, as before.
  */
@@ -28,6 +30,12 @@ export interface ScoutGates {
   readonly watchOnly: () => boolean;
 }
 
+/** Why the forced pick opens nothing while its host watches. */
+export const HOST_WATCHES_REASON = "its bot's owner set it to watch only";
+
+const watchingReason = (controls: ScoutHostControls, hostId: string): string | null =>
+  controls.watchOnly(hostId) ? HOST_WATCHES_REASON : null;
+
 export function scoutHostGates(
   controls: ScoutHostControls,
   hostId: string | undefined,
@@ -45,7 +53,7 @@ export function scoutHostGates(
     blockedReason: () =>
       exitBlockedReason() ??
       process.openBlockedReason() ??
-      (hostId ? controls.opensHeldReason(hostId) : null),
+      (hostId ? (controls.opensHeldReason(hostId) ?? watchingReason(controls, hostId)) : null),
     watchOnly: () => (hostId ? controls.watchOnly(hostId) : false),
   };
 }

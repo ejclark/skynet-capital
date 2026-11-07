@@ -196,10 +196,17 @@ describe("a bot's own settings, changed by its owner (#4535 slice 3b)", () => {
       expect(store.load().bots.sauron).toEqual({ hardcore: true });
     });
 
-    it("never stores a widening mode: a stray stored live is cleared, not kept", async () => {
+    it("leaves the stored mode alone on a save that does not touch watch only, logging nothing for it", async () => {
       store.setBot("sauron", { mode: "live" }, OWNER, AT);
       await change({ id: "sauron", holdOpens: true });
-      expect(store.load().bots.sauron).toEqual({ holdOpens: true });
+      expect(store.load().bots.sauron).toEqual({ mode: "live", holdOpens: true });
+      expect(log.list("sauron").map((c) => c.setting)).toEqual(["holdOpens"]);
+    });
+
+    it("never stores a widening mode: switching watch only off clears a stray stored live", async () => {
+      store.setBot("sauron", { mode: "live" }, OWNER, AT);
+      await change({ id: "sauron", watchOnly: false });
+      expect(store.load().bots.sauron).toEqual({});
     });
 
     it("records who switched each, before and after", async () => {
