@@ -41,18 +41,15 @@ after its interrogation on PR #3406). A structural decision — what the *home* 
 sits on one page versus a sheet or a drawer, the order of steps — arrives as 3–5 **greybox** shapes:
 no brand tokens, no colour, no motion, but **real values** (real tickers, a real chain slice, real
 bid/ask/greek strings, the real order sentence), because the defects that motivate a redesign are
-density defects and boxes without values hide them. **The round opens with the compare view**
-(Eric, 2026-11-07, #7007: "i don't know the difference in getting with each option" — the #6948
-round showed one frame at a time, so telling shapes apart meant flipping through 60 frames): every
-shape drawn side by side on **one shared moment**, with real values, before any switcher. Under each
-picture go three one-liners — **You get** · **You give up** · **Pick it if**. The decision follows
-as **named questions**, each listing its options with the recorded prediction marked
-([`process/ALIGNMENT.md`](process/ALIGNMENT.md)); a shape that combines with the others instead of
-replacing them (an overlay such as a chat rail) is **its own question**, not a sixth shape. Below
-that, as optional detail, the same artifact keeps its three switchers — **shape × journey step ×
-viewport (390 first, then 1280)** — built on the same `render()`-and-state-buttons skeleton as
-*The Rail Over the Form*, because a step-specific density defect can hide on any single moment.
-Each shape names the patterns it borrows (a row here, a row in the study),
+density defects and boxes without values hide them. **A round is built with the redesign kit,
+never hand-built** ([`process/REDESIGN.md`](process/REDESIGN.md), `/redesign`): a real Today frame
+for comparison, one named change per shape, pins and Done (Eric, 2026-10-15, #5143: "the new
+process is solid - it allows for faster and more confident reviews"). Two hand-built formats failed
+on the #6948 round page on 2026-11-07 — one frame at a time behind shape × step × width switchers
+("i don't know the difference in getting with each option"), then every shape side by side with
+*You get / You give up / Pick it if* lines ("The format is still difficult for me to understand").
+Both ran one scene for every shape, showed no frame a member would recognise, and asked for answers
+in chat instead of pins (#7017). Each shape names the patterns it borrows (a row here, a row in the study),
 and any prior decision it overturns: a fork settled in **Eric's own words** is rendered as an A/B on
 the frame, flagged "reverses your call of <date>", never silently replaced; a Claude-derived mechanism
 is overturnable with the row cited. A shape may borrow only rows graded `frame` or `vendor-quote` in the

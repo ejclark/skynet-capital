@@ -2,10 +2,10 @@
 
 **The convention** (`docs/PATTERNS.md` → *Lo-fi shapes*): a structural decision — what the *home* of
 a journey is, what sits on one page versus a sheet or a drawer, the order of steps — arrives as
-3–5 greybox shapes with real values in one artifact. It opens with every shape side by side on one
-shared moment (You get · You give up · Pick it if under each, then the decision as named questions,
-#7007); three switchers (shape × journey step × viewport, 390 first) follow as optional detail. The
-files below predate that compare view. A prior call in Eric's own words is drawn as an A/B on the frame and flagged
+3–5 greybox shapes with real values. The round itself is built with the redesign kit
+(`docs/process/REDESIGN.md`, `/redesign`: a real Today frame, one named change per shape, pins and
+Done), never hand-built (#7017). The files below are earlier hand-built artifacts, kept as the
+greybox record of their decisions. A prior call in Eric's own words is drawn as an A/B on the frame and flagged
 with its date; never silently replaced.
 
 **How to open:** double-click the `.html` file, or `open docs/design/lofi/trading-journeys.html`.
