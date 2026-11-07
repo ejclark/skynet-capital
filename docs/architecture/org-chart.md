@@ -26,18 +26,19 @@ flowchart TD
   members e0@-->|"chat · filings · trades"| front_desk
   front_desk e1@-->|"a feedback issue"| build
   build -.->|"status badge only, no push"| members
-  build e3@-->|"needs-eric · 67% not his"| staff
+  build e3@-->|"needs-eric"| staff
   quality e4@-->|"needs-eric"| staff
-  staff e5@-->|"ask cards · median 85h"| owner
+  staff e5@-->|"ask cards · 15 of 27 needed no answer"| owner
   staff e6@-->|"digest · newsletter · steering"| owner
   owner e7@-->|"replies · labels · the work dial"| staff
-  quality e8@-->|"needs-session · 8 waiting"| live_sessions
+  build e8@-->|"needs-session · 5 waiting"| live_sessions
   owner e9@-->|"opens one"| live_sessions
   build e10@-->|"pull requests"| quality
   quality e11@-->|"green checks"| platform
   platform e12@-->|"one App identity · claims"| build
   research e13@-->|"ledgers · guidance"| front_desk
-  trading e14@-->|"fills · convictions"| front_desk
+  trading e14@-->|"fills · decisions"| front_desk
+  front_desk e15@-->|"convictions · bot controls"| trading
   contributors -.->|"access is his call"| owner
   e0@{ animate: true }
   e1@{ animate: true }
@@ -53,32 +54,35 @@ flowchart TD
   e12@{ animate: true }
   e13@{ animate: true }
   e14@{ animate: true }
+  e15@{ animate: true }
 ```
 
 _Caption — the departments and people, from `docs/agents/seats.json`; dotted edges are paths with no push or no access yet._
 
 ## Where the talk breaks down
 
-The friction census (2026-11-07): each row is a communication edge with a measured breakdown, the
-change that would give the shape we want, and where that change is tracked.
+The friction census (2026-11-07): each row is a communication edge with a breakdown, measured where
+we could, the change that would give the shape we want, and where that change is tracked.
 
 | Edge | Channel | What goes wrong | Measured | The change | Tracked in |
 |---|---|---|---|---|---|
-| Members → front desk → builders | the in-app rail and coach, filed as a GitHub issue | Members almost never file. The intake copies the build team's own issue format, so only the owner uses it. | Of 238 feedback issues since 2026-10-01, Eric filed 209 and the bot 28; the last other member filing is #716 (2026-08-28) | Feedback becomes a game act: a one-tap reaction and a Suggest a change that knows the quest | #7029 |
-| Builders → members | the feedback status badge; the chat's work-status lookup | A member hears back only by revisiting. Eric has four push channels; members have none. | unmeasured (no member filings to measure against) | 'Your ask shipped' becomes a moment on the landing page, with a Try it quest | #7029 |
-| Every lane → Eric | the needs-eric label, then an assigned ask card | Lanes send questions that are not his to answer; most clear later without him, so the real ones wait. | 31 of 46 lane asks in 30 days were not decisions (#6079); 15 of 27 cleared without his answer, median ask 85h (#6953) | Ask 'only his?' before an edge points at Eric; a class whose predictions keep matching graduates (docs/process/ALIGNMENT.md) | #6953 |
-| Repair lanes → live sessions | the needs-session label | Lanes hand work to a live session, but no session is scheduled to read the label. | 8 open on 2026-11-07, the oldest waiting 12 days | Staff it: a scheduled cloud routine pulls needs-session oldest first, or lanes may edit .claude/skills/ behind the envelope check | #7032 |
-| Chief of staff → Eric | a push, a comment on #7024, a private steering page | Three report pipes to one reader. The one he answered most needs a live session to publish. | steering pages drew 87 answers 2026-10-10 to 10-16, then none (#6953) | One source of 'needs you', every channel a view of it; publish the tap page from a routine | #6953 |
-| Builder ↔ builder | the admission gate's surface fence, which compares issue prose | Two builds of the same code run at once; one is wasted and often lands in conflict repair. | 3 of 3 closed lane PRs in the week to 2026-10-26 were superseded duplicates (#6250); 4 duplicate builds in 27 days (#4357) | Fence by the files a build will touch, not by its words | #6250 |
-| Every lane → GitHub | one App identity and one router; every label and comment is an event | In a surge hour the lanes' talk exhausts the App's hourly REST budget. | 162 runs in one hour on 2026-10-27; 14 failed on the rate limit (#6319) | Fewer, richer messages: the router skips events it will not act on; conditional reads | #6319 |
-| Live session → a running workflow agent | none sanctioned | Messaging a running workflow agent starts a second copy in the same worktree. The lesson lived in one machine's private memory. | one incident (2026-10-11) | Workers read a file between steps; the lesson now sits in docs/DELEGATION.md where every lane reads it | this page's PR |
-| Sessions → reviewers and coaches | an agent call, or a phrase from Eric | Seats with no reporting line don't run, so the check each one stands for doesn't happen. | review agents ran 4 times in 45 days (docs/review/README.md:10); the linguist 0 times (docs/COACHES.md:535); the debt coach 0 cycles in 30 days (#4527) | Every seat names its invoker or is benched; this page lists the ones nothing starts | #6886 |
-| Board lanes → the board | the owner's personal Projects board | Lanes cannot create or regroup views, so each view change waits for Eric's click. | 4 of 4 view creates refused with 404 (2026-11-05) | Settle whether the API can; if not, one card with the clicks, once | #6883 |
-| Learning-loop checks → owners | a comment on tracker #5724 | Output posted to a log, not a queue, so nobody's pull reached the decision. | 5 checks 4 to 16 days past due, one never posted (2026-10-26) | Every tracker-comment output gets a routed decide step | docs/LESSONS.md |
+| Members → front desk → builders | the in-app rail and coach, filed as a GitHub issue | Members almost never file from the app. One untested reading (Conway): the intake is shaped like the build team's issue capsule (app/src/live/moneypenny-filing.ts:30-34), not like play. | 2 in-app filings since 2026-10-01 (#4861, #6007), both Eric's; the last other member filing is #716 (2026-08-28). Nearly all of the 238 feedback issues since 10-01 were filed by sessions under Eric's account (#7031) | Feedback becomes a game act: a one-tap reaction and a Suggest a change that knows the quest | #7029 |
+| Builders → members | the feedback status badge; the chat's work-status lookup | A member hears back about their ask only by revisiting: no push about asks reaches them (trade alerts by email are opt-in). | unmeasured (no member filings to measure against) (src/companion/companion-tools.ts:190) | 'Your ask shipped' becomes a moment on the landing page, with a Try it quest | #7029 |
+| Every lane → Eric | the needs-eric label, then an assigned ask card | Lanes send questions that are not his to answer; most clear later without him, so the real ones wait. | 31 of 46 lane asks 09-26 to 10-26 were not decisions, 17 of them from conflict repair, since rerouted by #6010 (#6079); then 15 of 27 cleared without his answer, median ask 85h before #6953's fixes (#6079; #6953) | Ask 'only his?' before an edge points at Eric; a class whose predictions keep matching graduates (docs/process/ALIGNMENT.md) | docs/process/LEARNING-LOOP.md → Decisions reaching Eric (checks 11-20, 12-04) |
+| Lanes and sessions → live sessions | the needs-session label | Lanes hand work to a live session, but no session is scheduled to read the label. | 8 open on 2026-11-07, the oldest waiting 12 days, 1 of them from a repair lane; 5 after a live session cleared 3 (#7036) (.github/prompts/moneypenny-conflict-repair.md:26; #4555) | Staff it: a scheduled cloud routine pulls needs-session oldest first, or lanes may edit .claude/skills/ behind the envelope check | #7032 |
+| Chief of staff → Eric | a push, a comment on #7024, a private steering page | Several report pipes to one reader. The one he answered most, pictures with taps, needs a live session to publish. | steering pages drew 87 answers 2026-10-10 to 10-16, then none (#6953); #7024's reply path has carried 0 replies (first edition due 2026-11-08) (#6953) | Shipped: the digest, steering page and newsletter read one source of 'needs you' (#6953). Still untracked: publishing the tap page from a routine | docs/process/LEARNING-LOOP.md → Decisions reaching Eric |
+| Builder ↔ builder | the admission gate's surface fence, which compares issue prose | Two builds of the same code run at once; one is wasted and often lands in conflict repair. | 3 of 3 closed lane PRs in the week to 2026-10-26 were superseded duplicates (#6250) (scripts/moneypenny/admission.mjs:25-32) | Fence by the files a build will touch, not by its words | #6250 |
+| Every lane → GitHub | the App identity and the event router; every label and comment is an event | In a surge hour the lanes' talk exhausts the App's hourly REST budget. | 162 runs in one hour on 2026-10-27; 11 failed, 14 by 03:03Z, on the rate limit (#6319) (#6319) | Fewer, richer messages: the router skips events it will not act on; conditional reads | #6319 |
+| Live session → a running workflow agent | none sanctioned | Messaging a running workflow agent starts a second copy in the same worktree. The lesson lived in one machine's private memory. | one incident (2026-10-11) (docs/DELEGATION.md rail 2 (moved from private memory, 2026-11-07)) | Workers read a file between steps; the lesson now sits in docs/DELEGATION.md rail 2, which CLAUDE.md sends every session to | docs/DELEGATION.md rail 2 (done) |
+| Sessions → reviewers and coaches | an agent call, or a phrase from Eric | Seats with no reporting line don't run, so the check each one stands for doesn't happen. | review agents ran 4 times in 45 days (docs/review/README.md:10); the linguist 0 times (docs/COACHES.md:535); the debt coach only when a surge started it (7 cycles, 10-26 to 11-02, #4527) (docs/review/README.md:10; docs/COACHES.md:535; #4527) | Every seat names its invoker or is benched; this page lists the ones nothing starts | #6886 |
+| Board lanes → the board | the owner's personal Projects board | Lanes cannot create or regroup views, so each view change waits for Eric's click. | 4 of 4 view creates refused with 404 (2026-11-05) (#6883) | Settle whether the API can; if not, one card with the clicks, once | #6883 |
+| Learning-loop checks → owners | a comment on tracker #5724 | Loop checks sat unread on tracker #5724 until their decide step was routed (fixed 2026-10-26, scripts/loop-check.mjs); other lanes still post output only to tracker comments. | 5 checks 4 to 16 days past due before the fix (2026-10-26) (docs/LESSONS.md:200-205) | Re-run the loop census for the other tracker-comment outputs | docs/LESSONS.md side quest |
 
-**The shape today is a star.** Every decision edge ends at Eric, every machine seat speaks through
-one App identity and one router, and he has four push channels while members have none. The member
-feedback form copies the build team's own issue format, which is why he files most of it himself.
+**The shape today is a star.** Every decision a lane cannot settle ends at Eric, and most lane seats
+speak through one App identity and one router (the board and member filings use separate tokens).
+He gets the digest, newsletter and ask-card pushes; members get no push about their asks. Nearly all
+feedback is filed by sessions under his account, and no other member has filed from the app since
+2026-08-28.
 
 **The shape we are steering toward:**
 
@@ -90,8 +94,8 @@ feedback form copies the build team's own issue format, which is why he files mo
 
 ## Seats with no reporting line
 
-- **Nothing starts these (4):** Game masters · Requirements writer (ears) · Reader-comprehension checker (linguist) · Skip-orientation style (Focus). Each needs an invoker, or the bench (`/charter` sunset mode).
-- **Only Eric starts these (21):** Would-be code contributors · Invites and claims · Owner bot controls · Ticker sweep · Reference teardown · Link intake · Design build lane · Human-directed lane · Live backlog burn-down · Screen redesign loop and its board · Render-note translator · Art direction writer · Post-merge correctness audit · Debt head coach and drills · Work dial and spend breaker · Steering pages · Memory review · Roster gatekeeper: hire, bench, retire · Quota surge · Ops buttons · Live sessions. Each is a phrase he has to remember; a schedule or an event would take it off him.
+- **Nothing starts these (1):** Reader-comprehension checker (linguist). Each needs an invoker, or the bench (`/charter` sunset mode).
+- **Only Eric starts these (16):** Invites and claims · Owner bot controls · Ticker sweep · Reference teardown · Link intake · Design build lane · Human-directed lane · Live backlog burn-down · Screen redesign loop and its board · Render-note translator · Art direction writer · Debt head coach and drills · Steering pages · Memory review · Roster gatekeeper: hire, bench, retire · Quota surge. Each is a phrase he has to remember; a schedule or an event would take it off him.
 
 ## The crew on the deck
 
@@ -105,15 +109,13 @@ feels them only as honest timing on their own ask ("queued behind 2 builds"), ne
 | The owner's office: who joins, and whether the bots run | Owner and game master (Eric) |
 | The game master's chair: steers the story, posts marked as the GM's | Game masters |
 | The front desk: quick answers in chat; drafts, never acts | Companion chat (Moneypenny in the app) |
-| The builders' inbox: a suggestion becomes a built change | Feedback intake: rail filing, coach and filer |
-| Your trade desk: only you fire a move, always with exits | Desk ownership gate (only the owner fires orders) |
+| Your trade desk: only you place orders on your own account | Desk ownership gate (only the owner fires orders) |
 | The briefing desk: the day's market conditions, and what you make of them | Landing page briefing and narrator |
 | The trading floor: your bots, each a character with a strategy | Bot runtime (paper) |
 | The research desk: what is coming up, and what the house has written about it | Market-event calendar |
-| The builders: they make the change you asked for and say where it stands | Feedback build lane (with reply resume) |
-| The test pilots: fly every new build the way a member would before it ships | Pipeline checks: verify, integration tests, stability budget |
 
-Below decks: 44 seats across Quality, Chief of staff and Platform.
+Below decks: 58 seats, every one in Builders, Quality, Chief of staff and Platform. A
+member sees their own ask's status in plain words, never the lanes.
 
 ## Departments
 
@@ -165,7 +167,7 @@ The event calendar, the research ledgers, position guidance, campaigns.
 | Pulse screen (no model) | Screens interval-elapsed pulses without a model and opens a moneypenny/screen-* PR with the ledger rows | push or scan | A screen PR, auto-merge attempted | hired | `scripts/moneypenny/open-screen-pr.mjs` `scripts/event-material-scan.mjs` |
 | Research PR sweep and stall repair | Finds an open research/<id> PR that stopped moving and frees the event it holds | Push audit | Rearm or close intents | hired | `scripts/moneypenny/research-pr-sweep.mjs` `.github/prompts/moneypenny-event-stall-repair.md` |
 | Position guidance | Reads market inputs live through the member's own account, checks each one's freshness against its source, adds the nearest research ledger's summary; the stake math runs in the browser | GET /api/trade/guidance?symbol= | market half of guidance plus freshness rows | hired | `src/server/guidance-route.ts` `src/server/guidance-pulse.ts` `src/server/guidance-market.ts` |
-| Campaigns | A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events; two exist (AI buildout, oil supply) | checked-in JSON files; a member form later (slice 3) | linked events marked measured, reported or estimated; scope for research and the narrator | on trial | `src/domain/campaigns.ts` `src/domain/campaigns/` |
+| Campaigns | A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events; two exist (AI buildout, oil supply) | A PR adding or editing src/domain/campaigns/<id>.json (a member form is slice 3, not built; no app code reads it yet) | linked events marked measured, reported or estimated; scope for research and the narrator | on trial | `src/domain/campaigns.ts` `src/domain/campaigns/` |
 | Ticker sweep (symbol-sweep) | Runs earnings-cycle + intraday-edges instruments per ticker, red-teams each, judges playbook fit | 'research X, Y, Z', 'run the sweep on' | research docs under docs/research/ | hired | `.claude/workflows/symbol-sweep.js` `docs/research/multi-symbol-sweep.md` |
 | Reference teardown (teardown) | Redacts and decomposes another app's screens into named patterns with a borrow/adapt/skip call sheet | screenshots of someone else's app | comment on the plan issue; images in a private artifact | hired | `.claude/skills/teardown/SKILL.md` `scripts/teardown/redact.mjs` |
 | Link intake (intake) | Reads a dropped post/video/talk without an account, finds the primary source, records what it changes | Eric pastes a link 'to scan' | findings applied to process docs | hired | `.claude/skills/intake/SKILL.md` |
@@ -177,13 +179,13 @@ Turn ready issues and plans into merged pull requests.
 | Seat | Job | Wakes on | Speaks on | Status | Code roots |
 |---|---|---|---|---|---|
 | Feedback triage | On a fresh feedback or fast-track label, self-readies a curated filing or a bug+fast-track; everything else waits in Backlog | issues labeled feedback or fast-track | The ready label, or nothing | hired | `scripts/moneypenny/index.mjs` |
-| Feedback build lane (with reply resume) | Builds a ready feedback/bug issue end to end on a feedback/<n> branch and opens a PR; model picked from the issue's spec block (Sonnet default, Opus escalation) | ready label, an unpark (needs-* or hold-merge removed), the retry sweep | A PR, a receipt comment, one of four endings; needs-session via the guard | hired | `.github/workflows/moneypenny-events.yml` `.github/prompts/feedback-build.md` `scripts/moneypenny/model-tier.mjs` `scripts/moneypenny/feedback-guard.mjs` `scripts/moneypenny/reply-resume.mjs` `scripts/moneypenny/index.mjs` |
+| Feedback build lane (with reply resume) | Builds a ready feedback/bug issue end to end on a feedback/<n> branch and opens a PR; model picked from the issue's skynet-spec block: Haiku for one criterion and no assumptions, Sonnet for up to 3 criteria, Opus otherwise, including any issue with no spec block | ready label, an unpark (needs-* or hold-merge removed), the retry sweep | A PR, a receipt comment, one of four endings; needs-session via the guard | hired | `.github/workflows/moneypenny-events.yml` `.github/prompts/feedback-build.md` `scripts/moneypenny/model-tier.mjs` `scripts/moneypenny/feedback-guard.mjs` `scripts/moneypenny/reply-resume.mjs` `scripts/moneypenny/index.mjs` |
 | Plan build lane (with continuation and relay) | Builds the slice a ready plan issue's state block names, on a plan/<n> branch | A ready comment from OWNER/MEMBER/COLLABORATOR, the ready label, an unpark, the retry or continuation sweep | A slice PR, a state-block edit, needs-eric when stuck | hired | `.github/prompts/plan-build.md` `scripts/moneypenny/plan-claim.mjs` `scripts/moneypenny/continuation.mjs` `scripts/moneypenny/state-block.mjs` `scripts/moneypenny/relay.mjs` |
 | Retry sweep (claims the next ready issue) | Claims the top-ranked admissible ready issue in either lane; on a push it only peeks, then re-dispatches itself as scan | workflow_dispatch scan (from the push re-dispatch, the wake, or the clock) | A lease and a build job | hired | `scripts/moneypenny/index.mjs` `scripts/moneypenny/labels.mjs` |
 | Design build lane | Builds the artboards marked build on a design canvas and leaves the receipt on the canvas | A one-tap POST of the canvas URL to the routine's API trigger | A PR and a canvas receipt | hired | `.github/prompts/design-build.md` |
 | Human-directed lane (@claude on an issue) | Any comment from OWNER/MEMBER/COLLABORATOR on an issue or PR thread, or a new issue with @claude, starts or steers an Opus session | issues opened/labeled with @claude, issue_comment, PR review comment | Comments, PRs | hired | `.github/workflows/claude.yml` `.github/prompts/interactive.md` |
 | Issue shaper (issue) | Files or rewrites a GitHub issue as a capsule for a human and a zero-context build session | 'file this as an issue'; any fan-out route; bottleneck capture | a GitHub issue, linted by issue-lint.mjs | hired | `.claude/skills/issue/SKILL.md` `scripts/issue-lint.mjs` `docs/ISSUES.md` |
-| Requirements writer (ears) | Turns a raw request into EARS-format requirements and scaffolds matching BDD specs | writing acceptance criteria; vague requirement text | acceptance criteria and spec scaffolds | hired | `.claude/skills/ears/SKILL.md` |
+| Requirements writer (ears) | Turns a raw request into EARS-format requirements and scaffolds matching BDD specs | /fitness step 1 (an outcome or incident becomes one EARS line); writing acceptance criteria | acceptance criteria and spec scaffolds | hired | `.claude/skills/ears/SKILL.md` |
 | Live backlog burn-down (work-issues) | Pulls the next Ready issue the admission gate admits, echoes the ask, builds in a worktree, ships, repeats | 'work through the backlog', 'burn down issues'; needs-session issues | echo comment on the issue, PRs | hired | `.claude/skills/work-issues/SKILL.md` `scripts/moneypenny/admission.mjs` |
 | Screen redesign loop and its board (redesign) | Align, scope, design rounds (1-5 shapes), learn-forward retro for one screen | 'redesign the trade form'; a 'Start redesign: <id> (<route>)' comment from the feedback board | round pages (steer machinery), a filed build issue, docs/PATTERNS.md rows | hired | `.claude/skills/redesign/SKILL.md` `scripts/redesign/` `docs/process/REDESIGN.md` `scripts/redesign/board.mjs` |
 | Render-note translator (telestrator) | Turns 'this looks terrible / a 30/100' into a named technical cause and fix | any reaction to a rendered frame | cause -> fix table in session | hired | `.claude/skills/telestrator/SKILL.md` |
@@ -200,7 +202,7 @@ Gates, repair lanes, reviewers and the debt coach.
 | Envelope gate (the irreversible class) | Mechanical answer to 'is this the irreversible class?': protected path globs plus a no-new-runtime-dependency rule; red on feedback/, research/, design/ branches | Every arm attempt; ship.sh checkarm; a lane's verify | Refuses to arm; red check on lane branches | hired | `envelope.json` `scripts/envelope-scan.mjs` |
 | Fitness contracts and their writer (fitness) | Runs the must-stay-true contracts and keeps one [fitness] <id> issue per failing contract | The 15-minute clock | [fitness] issues, assigned once the fix budget is spent | hired | `scripts/fitness.mjs` `.claude/skills/fitness/SKILL.md` `scripts/fitness-audit.mjs` |
 | CI repair lane | A failed run on main of five watched workflows files or reopens one ci-failure capsule per signature and dispatches an Opus repair session; four loop guards | workflow_run completed for Events, Pipeline, Autonomy ops, Fly logs, Companion eval | A ci-failure issue, a repair PR | hired | `.github/workflows/moneypenny-repair.yml` `scripts/moneypenny/repair.mjs` `.github/prompts/moneypenny-ci-repair.md` `scripts/moneypenny/red-session-pr.mjs` `scripts/moneypenny/red-lane-pr.mjs` |
-| Conflict repair | Resolves a PR conflicted against main with a merge commit | workflow_dispatch pr_number from the stall audit | A pushed merge commit, or needs-eric after 3 attempts | hired | `.github/prompts/moneypenny-conflict-repair.md` |
+| Conflict repair | Resolves a PR conflicted against main with a merge commit | workflow_dispatch pr_number from the stall audit | A pushed merge commit for a disjoint conflict; a needs-session hand-off on an issue (or a closed machine-lane PR) for a same-logic one; needs-eric only for the irreversible class. The stall audit stops re-dispatching after 3 repairs and labels needs-eric. | hired | `.github/prompts/moneypenny-conflict-repair.md` |
 | Stall audit and watchdogs | Flags stalled receipts, silent feedback, unclaimed plan flips and conflicted PRs; clears stale in-progress; hands conflicts and stalls to repair | push to main (--audit) | Comments, labels, repair dispatches | hired | `scripts/moneypenny/audit.mjs` `scripts/moneypenny/capsule-stall.mjs` `scripts/moneypenny/burst-alarm.mjs` `scripts/moneypenny/clock-watch.mjs` |
 | Lessons: drafter and blameless retro (retro) | When a repair capsule closes, drafts its docs/LESSONS.md entry and opens it as a PR | issues closed on a ci-failure capsule | A LESSONS PR | hired | `scripts/moneypenny/lesson-draft.mjs` `.claude/skills/retro/SKILL.md` `scripts/incident-scan.mjs` `docs/LESSONS.md` |
 | Dependency PR reviewer (dep-warden) | Reads changelogs on dependabot PRs, verifies, merges patch/minor on green, escalates majors | dependabot opening a PR | auto-merge via ship.sh automerge, or escalation | hired | `.claude/agents/dep-warden.md` `.github/workflows/moneypenny-events.yml` |
@@ -220,8 +222,8 @@ Pace the work, route decisions to Eric, report at altitude.
 
 | Seat | Job | Wakes on | Speaks on | Status | Code roots |
 |---|---|---|---|---|---|
-| Admission gate | Between ready and a build start: refuses on halt, conserve (unless fast-track), the in-flight cap, or the started-plan cap; a refused issue keeps ready and holds no lease | Every claim attempt (feedback, plan, retry sweep, continuation) | admit / one queue note on the issue | hired | `scripts/moneypenny/admission.mjs` |
-| Work dial and spend breaker | One work-mode:<halt\|conserve\|normal\|surge> label on #4153 sets every lane's caps; a tap clears the other label and writes an end date | A label added to #4153 | Caps every lane reads; #4153's title | hired | `work-mode.json` `scripts/moneypenny/work-mode.mjs` `scripts/moneypenny/dial-tap.mjs` `scripts/moneypenny/work-mode-title.mjs` `research-circuit-breaker.json` `scripts/moneypenny/circuit-breaker.mjs` `scripts/moneypenny/work-gate.mjs` |
+| Admission gate | Between ready and a build start: refuses on halt; on conserve unless fast-track; at the in-flight cap (one fast-track may go over it at a time); at the started-plan cap for a fresh plan; and on the surface fence (another build on the same Surface), which fast-track does not bypass. A refused issue keeps ready and holds no lease | Every claim attempt (feedback, plan, retry sweep, continuation) | admit / one queue note on the issue | hired | `scripts/moneypenny/admission.mjs` |
+| Work dial and spend breaker | One work-mode:<halt\|conserve\|normal\|surge> label on #4153 sets every lane's caps; a tap clears the other label and writes an end date | A work-mode label added to #4153: halt or normal by anyone, conserve by a session after Eric's phrase, surge by Eric alone; the spend breaker trips itself when 4h spend crosses research-circuit-breaker.json's line | Caps every lane reads; #4153's title | hired | `work-mode.json` `scripts/moneypenny/work-mode.mjs` `scripts/moneypenny/dial-tap.mjs` `scripts/moneypenny/work-mode-title.mjs` `research-circuit-breaker.json` `scripts/moneypenny/circuit-breaker.mjs` `scripts/moneypenny/work-gate.mjs` |
 | Decisions for Eric: ask cards, assignment, read-back | needs-eric plus a Needs-from-you callout becomes a GitHub assignment to ejclark with a card of options, prediction and what silence does; at most 3 new a tick | Push sweep | An assignment and one comment; unassign when the label goes | hired | `scripts/moneypenny/assignments.mjs` `scripts/moneypenny/ask-card.mjs` `scripts/moneypenny/answer-readback.mjs` `scripts/moneypenny/decision-callout.mjs` |
 | Shipped and plan closers | Close feedback and research issues whose work merged, and plans whose sub-issues are all done | Push sweep | Issue closes | hired | `scripts/moneypenny/shipped.mjs` `scripts/moneypenny/plan-close.mjs` |
 | Daily digest (secretary) | When digest-scan says due, writes the three-tier digest with ride-along audits and ships it; push-notifies the needs-you count | claude.ai Routine daily 12:00 | docs/digests/<date>.md via /ship; a push notification | hired | `.claude/skills/secretary/SKILL.md` `scripts/digest-scan.mjs` `scripts/newsletter.mjs` `docs/digests/` |
@@ -248,12 +250,12 @@ The router, the App identity, merge, deploy, sessions and their hooks.
 | GitHub App identity (Moneypenny) | The token every lane writes with; its writes start further workflow runs where GITHUB_TOKEN's do not | Minted per job | Every lane comment, label, PR and arm | hired | `.github/actions/app-token/action.yml` `docs/MONEYPENNY.md` |
 | Auto-merge arm and stranded-PR rearm | The only arming path: after verify and integration tests (and stability) pass, re-reads live hold-merge, runs the envelope check, arms squash with the App token | Pipeline PR events | Native auto-merge armed | hired | `.github/workflows/pipeline.yml` `scripts/arm-merge.mjs` `scripts/moneypenny/stranded-pr.mjs` `scripts/moneypenny/stuck-branch-update.mjs` |
 | Release and deploy | On push to main: semantic-release, deploy the dashboard when the image changed, smoke, roll back; deploy the bots app when bot-relevant, reusing the image | push main; force_bots_deploy dispatch | A release tag, Fly deploys | hired | `.github/workflows/pipeline.yml` `scripts/bots-deploy-preflight.mjs` `scripts/fly-deploy.mjs` |
-| Ops buttons (autonomy ops, Fly logs, companion eval) | Phone-operable ops: status, machine-status, logs, bootstrap, flip-mode observe/live, set-bridge-secret; filtered log pull; companion replay eval | workflow_dispatch | Fly secrets and status, job logs | hired | `.github/workflows/autonomy-ops.yml` `.github/workflows/fly-logs.yml` `.github/workflows/companion-eval.yml` |
+| Ops buttons (autonomy ops, Fly logs, companion eval) | Phone-operable ops: status, machine-status, logs, bootstrap, flip-mode observe/live, set-bridge-secret; filtered log pull; companion replay eval | workflow_dispatch from a session; autonomy-ops and companion-eval then wait on Eric's autonomy-ops Environment approval | Fly secrets and status, job logs | hired | `.github/workflows/autonomy-ops.yml` `.github/workflows/fly-logs.yml` `.github/workflows/companion-eval.yml` |
 | Live sessions (interactive Claude Code) | Does what unattended lanes cannot: edits under .claude/, taste rounds, the held batch of protected changes, needs-session hand-offs | Eric opening a session, or a session another one started | Pull requests, issue comments, private pages | hired | `.claude/settings.json` `docs/DELEGATION.md` |
 | Held batch of protected changes (the platter) | Collects every green change to protected paths onto one held PR with a ledger, merged by Eric with one commit per item | a protected-path change that is green on its own branch | one held PR per cadence | hired | `scripts/ship.sh` `envelope.json` |
 | PR lander (ship) | Local verify + integration tests -> push -> REST PR open -> stop; pipeline arms auto-merge | any session opening a PR | a PR | hired | `.claude/skills/ship/SKILL.md` `scripts/ship.sh` |
 | Batch chore fan-out and stage runner (grind, worker) | Fans a check -> fix -> re-check chain across many items, gated by the work spigot | 'grind through a batch'; governor dispatch; interrogate route | per-item branches/results | hired | `.claude/workflows/grind.js` `docs/grind/` `.claude/agents/worker.md` |
-| Session hooks: setup, guard, intent log, memory history | Materializes the SSH signing key from GIT_SIGNING_KEY so commits are signed | SessionStart | git config | hired | `scripts/setup-commit-signing.sh` `.claude/hooks/session-start.sh` `scripts/hooks/guard-bash.mjs` `scripts/duel-log.mjs` `scripts/hooks/memory-history.mjs` |
+| Session hooks: setup, guard, intent log, memory history | Prepares each session (signing key, pinned toolchain, fresh origin/main), refuses banned Bash commands before they run, logs prompts and agent fan-outs for config-audit, and versions the shared memory folder on every edit | SessionStart; every Bash call; every agent call; every prompt; every Write/Edit | git config; a refused command (exit 2); duel-log lines; a memory-history commit | hired | `scripts/setup-commit-signing.sh` `.claude/hooks/session-start.sh` `scripts/hooks/guard-bash.mjs` `scripts/duel-log.mjs` `scripts/hooks/memory-history.mjs` |
 | Skip-orientation style (Focus) | Same response shape as Orient minus the orient-and-route step, for fully decided execution | a person switching output style by hand | response shape only | hired | `.claude/output-styles/focus.md` |
 
 ## Changing this page

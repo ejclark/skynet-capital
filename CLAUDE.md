@@ -39,9 +39,10 @@ that builds it, so redraw the communication on purpose and the system follows. T
 [`docs/architecture/org-chart.md`](docs/architecture/org-chart.md), generated from the seat registry
 `docs/agents/seats.json`: every seat, human or agent, and the friction measured on each edge. When a
 recurring breakdown is really a communication edge (an ask that is not his, a hand-off nobody reads,
-two lanes racing one file), change the edge and update the registry in the same PR. The game is
-designed the same way: draw the members' communication first (ask, steer, act, hear back), and the
-build org's edges into the game stay few and plain (#7029, #7031).
+two lanes racing one file), change the edge and update the registry in the same PR. The game can
+borrow the same lens (his hunch, same day: "my gut tells me there are opportunities to leverage this
+into our gameplay"): draw the members' communication first (ask, steer, act, hear back), and the
+build org stays out of the game (#6948, #7031).
 
 **Apply these frameworks as a lattice, not a lexical ranking.** No single one is obeyed by the letter in
 isolation; when two collide (e.g. ToC vs. fix-at-the-source), the collision is the signal to find the

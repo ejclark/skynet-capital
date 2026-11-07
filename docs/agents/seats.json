@@ -77,7 +77,7 @@
     {
       "from": "build",
       "to": "staff",
-      "label": "needs-eric · 67% not his"
+      "label": "needs-eric"
     },
     {
       "from": "quality",
@@ -87,7 +87,7 @@
     {
       "from": "staff",
       "to": "owner",
-      "label": "ask cards · median 85h"
+      "label": "ask cards · 15 of 27 needed no answer"
     },
     {
       "from": "staff",
@@ -100,9 +100,9 @@
       "label": "replies · labels · the work dial"
     },
     {
-      "from": "quality",
+      "from": "build",
       "to": "live-sessions",
-      "label": "needs-session · 8 waiting"
+      "label": "needs-session · 5 waiting"
     },
     {
       "from": "owner",
@@ -132,7 +132,12 @@
     {
       "from": "trading",
       "to": "front-desk",
-      "label": "fills · convictions"
+      "label": "fills · decisions"
+    },
+    {
+      "from": "front-desk",
+      "to": "trading",
+      "label": "convictions · bot controls"
     },
     {
       "from": "contributors",
@@ -145,8 +150,8 @@
     {
       "edge": "Members → front desk → builders",
       "channel": "the in-app rail and coach, filed as a GitHub issue",
-      "what": "Members almost never file. The intake copies the build team's own issue format, so only the owner uses it.",
-      "number": "Of 238 feedback issues since 2026-10-01, Eric filed 209 and the bot 28; the last other member filing is #716 (2026-08-28)",
+      "what": "Members almost never file from the app. One untested reading (Conway): the intake is shaped like the build team's issue capsule (app/src/live/moneypenny-filing.ts:30-34), not like play.",
+      "number": "2 in-app filings since 2026-10-01 (#4861, #6007), both Eric's; the last other member filing is #716 (2026-08-28). Nearly all of the 238 feedback issues since 10-01 were filed by sessions under Eric's account",
       "cite": "#7031",
       "change": "Feedback becomes a game act: a one-tap reaction and a Suggest a change that knows the quest",
       "tracked": "#7029"
@@ -154,7 +159,7 @@
     {
       "edge": "Builders → members",
       "channel": "the feedback status badge; the chat's work-status lookup",
-      "what": "A member hears back only by revisiting. Eric has four push channels; members have none.",
+      "what": "A member hears back about their ask only by revisiting: no push about asks reaches them (trade alerts by email are opt-in).",
       "number": "unmeasured (no member filings to measure against)",
       "cite": "src/companion/companion-tools.ts:190",
       "change": "'Your ask shipped' becomes a moment on the landing page, with a Try it quest",
@@ -164,16 +169,16 @@
       "edge": "Every lane → Eric",
       "channel": "the needs-eric label, then an assigned ask card",
       "what": "Lanes send questions that are not his to answer; most clear later without him, so the real ones wait.",
-      "number": "31 of 46 lane asks in 30 days were not decisions (#6079); 15 of 27 cleared without his answer, median ask 85h (#6953)",
+      "number": "31 of 46 lane asks 09-26 to 10-26 were not decisions, 17 of them from conflict repair, since rerouted by #6010 (#6079); then 15 of 27 cleared without his answer, median ask 85h before #6953's fixes",
       "cite": "#6079; #6953",
       "change": "Ask 'only his?' before an edge points at Eric; a class whose predictions keep matching graduates (docs/process/ALIGNMENT.md)",
-      "tracked": "#6953"
+      "tracked": "docs/process/LEARNING-LOOP.md → Decisions reaching Eric (checks 11-20, 12-04)"
     },
     {
-      "edge": "Repair lanes → live sessions",
+      "edge": "Lanes and sessions → live sessions",
       "channel": "the needs-session label",
       "what": "Lanes hand work to a live session, but no session is scheduled to read the label.",
-      "number": "8 open on 2026-11-07, the oldest waiting 12 days",
+      "number": "8 open on 2026-11-07, the oldest waiting 12 days, 1 of them from a repair lane; 5 after a live session cleared 3 (#7036)",
       "cite": ".github/prompts/moneypenny-conflict-repair.md:26; #4555",
       "change": "Staff it: a scheduled cloud routine pulls needs-session oldest first, or lanes may edit .claude/skills/ behind the envelope check",
       "tracked": "#7032"
@@ -181,26 +186,26 @@
     {
       "edge": "Chief of staff → Eric",
       "channel": "a push, a comment on #7024, a private steering page",
-      "what": "Three report pipes to one reader. The one he answered most needs a live session to publish.",
-      "number": "steering pages drew 87 answers 2026-10-10 to 10-16, then none (#6953)",
+      "what": "Several report pipes to one reader. The one he answered most, pictures with taps, needs a live session to publish.",
+      "number": "steering pages drew 87 answers 2026-10-10 to 10-16, then none (#6953); #7024's reply path has carried 0 replies (first edition due 2026-11-08)",
       "cite": "#6953",
-      "change": "One source of 'needs you', every channel a view of it; publish the tap page from a routine",
-      "tracked": "#6953"
+      "change": "Shipped: the digest, steering page and newsletter read one source of 'needs you' (#6953). Still untracked: publishing the tap page from a routine",
+      "tracked": "docs/process/LEARNING-LOOP.md → Decisions reaching Eric"
     },
     {
       "edge": "Builder ↔ builder",
       "channel": "the admission gate's surface fence, which compares issue prose",
       "what": "Two builds of the same code run at once; one is wasted and often lands in conflict repair.",
-      "number": "3 of 3 closed lane PRs in the week to 2026-10-26 were superseded duplicates (#6250); 4 duplicate builds in 27 days (#4357)",
+      "number": "3 of 3 closed lane PRs in the week to 2026-10-26 were superseded duplicates (#6250)",
       "cite": "scripts/moneypenny/admission.mjs:25-32",
       "change": "Fence by the files a build will touch, not by its words",
       "tracked": "#6250"
     },
     {
       "edge": "Every lane → GitHub",
-      "channel": "one App identity and one router; every label and comment is an event",
+      "channel": "the App identity and the event router; every label and comment is an event",
       "what": "In a surge hour the lanes' talk exhausts the App's hourly REST budget.",
-      "number": "162 runs in one hour on 2026-10-27; 14 failed on the rate limit (#6319)",
+      "number": "162 runs in one hour on 2026-10-27; 11 failed, 14 by 03:03Z, on the rate limit (#6319)",
       "cite": "#6319",
       "change": "Fewer, richer messages: the router skips events it will not act on; conditional reads",
       "tracked": "#6319"
@@ -210,15 +215,15 @@
       "channel": "none sanctioned",
       "what": "Messaging a running workflow agent starts a second copy in the same worktree. The lesson lived in one machine's private memory.",
       "number": "one incident (2026-10-11)",
-      "cite": "CLAUDE.md (a workflow agent that ends its turn is done)",
-      "change": "Workers read a file between steps; the lesson now sits in docs/DELEGATION.md where every lane reads it",
-      "tracked": "this page's PR"
+      "cite": "docs/DELEGATION.md rail 2 (moved from private memory, 2026-11-07)",
+      "change": "Workers read a file between steps; the lesson now sits in docs/DELEGATION.md rail 2, which CLAUDE.md sends every session to",
+      "tracked": "docs/DELEGATION.md rail 2 (done)"
     },
     {
       "edge": "Sessions → reviewers and coaches",
       "channel": "an agent call, or a phrase from Eric",
       "what": "Seats with no reporting line don't run, so the check each one stands for doesn't happen.",
-      "number": "review agents ran 4 times in 45 days (docs/review/README.md:10); the linguist 0 times (docs/COACHES.md:535); the debt coach 0 cycles in 30 days (#4527)",
+      "number": "review agents ran 4 times in 45 days (docs/review/README.md:10); the linguist 0 times (docs/COACHES.md:535); the debt coach only when a surge started it (7 cycles, 10-26 to 11-02, #4527)",
       "cite": "docs/review/README.md:10; docs/COACHES.md:535; #4527",
       "change": "Every seat names its invoker or is benched; this page lists the ones nothing starts",
       "tracked": "#6886"
@@ -235,11 +240,11 @@
     {
       "edge": "Learning-loop checks → owners",
       "channel": "a comment on tracker #5724",
-      "what": "Output posted to a log, not a queue, so nobody's pull reached the decision.",
-      "number": "5 checks 4 to 16 days past due, one never posted (2026-10-26)",
+      "what": "Loop checks sat unread on tracker #5724 until their decide step was routed (fixed 2026-10-26, scripts/loop-check.mjs); other lanes still post output only to tracker comments.",
+      "number": "5 checks 4 to 16 days past due before the fix (2026-10-26)",
       "cite": "docs/LESSONS.md:200-205",
-      "change": "Every tracker-comment output gets a routed decide step",
-      "tracked": "docs/LESSONS.md"
+      "change": "Re-run the loop census for the other tracker-comment outputs",
+      "tracked": "docs/LESSONS.md side quest"
     }
   ],
   "target": [
@@ -299,7 +304,7 @@
       "wakesOn": "the public repo, the weekly newsletter archive",
       "speaksOn": "comments on issues and PRs (the human-directed lane answers only OWNER/MEMBER/COLLABORATOR)",
       "cadence": "ad hoc",
-      "invoker": "eric",
+      "invoker": "self",
       "status": "planned",
       "codeRoots": [".github/workflows/claude.yml"],
       "cite": "CLAUDE.md:52-55 \"granting anyone repo or app access stays Eric's call\"; #7024 \"This repo is public\"; #6872 \"intended for human consumption (me, possibly other human contributors)\""
@@ -361,8 +366,7 @@
         "src/server/feedback-service.ts",
         "src/server/feedback-api-routes.ts"
       ],
-      "cite": "app/src/live/moneypenny-filing.ts:20-34 \"Two ways in, one door out (/api/feedback)... THE COACH STILL SHAPES EVERY ISSUE\"; src/server/feedback-coach.ts:1-9 \"The coach only DRAFTS... the member's explicit submit stays the only path that posts anything anywhere\"; src/server/feedback-service.ts:2-4 \"files a labelled issue on the repo via a bot token — so friends and family never need a GitHub account\"",
-      "station": "The builders' inbox: a suggestion becomes a built change"
+      "cite": "app/src/live/moneypenny-filing.ts:20-34 \"Two ways in, one door out (/api/feedback)... THE COACH STILL SHAPES EVERY ISSUE\"; src/server/feedback-coach.ts:1-9 \"The coach only DRAFTS... the member's explicit submit stays the only path that posts anything anywhere\"; src/server/feedback-service.ts:2-4 \"files a labelled issue on the repo via a bot token — so friends and family never need a GitHub account\""
     },
     {
       "id": "feedback-followup",
@@ -405,7 +409,7 @@
       "status": "hired",
       "codeRoots": ["src/server/desk-owner-gate.ts", "src/server/trade-orders-routes.ts"],
       "cite": "src/server/desk-owner-gate.ts:12-21 \"WHICH PLAYBOOKS A BOT RUNS IS ITS OWNER'S TO SEE\"; src/server/trade-orders-routes.ts:171",
-      "station": "Your trade desk: only you fire a move, always with exits"
+      "station": "Your trade desk: only you place orders on your own account"
     },
     {
       "id": "invites",
@@ -614,10 +618,10 @@
       "name": "Campaigns",
       "kind": "service",
       "job": "A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events; two exist (AI buildout, oil supply)",
-      "wakesOn": "checked-in JSON files; a member form later (slice 3)",
+      "wakesOn": "A PR adding or editing src/domain/campaigns/<id>.json (a member form is slice 3, not built; no app code reads it yet)",
       "speaksOn": "linked events marked measured, reported or estimated; scope for research and the narrator",
       "cadence": "read at load",
-      "invoker": "member",
+      "invoker": "session",
       "status": "on trial",
       "codeRoots": ["src/domain/campaigns.ts", "src/domain/campaigns/"],
       "cite": "src/domain/campaigns.ts:1-9 \"so research can be steered by it (slice 5's landscape read, the narrator's questions in #6948)\""
@@ -683,7 +687,7 @@
       "department": "build",
       "name": "Feedback build lane (with reply resume)",
       "kind": "lane",
-      "job": "Builds a ready feedback/bug issue end to end on a feedback/<n> branch and opens a PR; model picked from the issue's spec block (Sonnet default, Opus escalation)",
+      "job": "Builds a ready feedback/bug issue end to end on a feedback/<n> branch and opens a PR; model picked from the issue's skynet-spec block: Haiku for one criterion and no assumptions, Sonnet for up to 3 criteria, Opus otherwise, including any issue with no spec block",
       "wakesOn": "ready label, an unpark (needs-* or hold-merge removed), the retry sweep",
       "speaksOn": "A PR, a receipt comment, one of four endings; needs-session via the guard",
       "cadence": "Per ready issue, behind the admission gate",
@@ -697,8 +701,7 @@
         "scripts/moneypenny/reply-resume.mjs",
         "scripts/moneypenny/index.mjs"
       ],
-      "cite": ".github/workflows/moneypenny-events.yml:483-492, 787-856 (build-feedback reads feedback-build.md; --model from route output at :846); scripts/moneypenny/model-tier.mjs:14-23; scripts/moneypenny/index.mjs:418-446 (claimFeedbackReply, three writes in order); .github/workflows/moneypenny-events.yml:511-521",
-      "station": "The builders: they make the change you asked for and say where it stands"
+      "cite": ".github/workflows/moneypenny-events.yml:483-492, 787-856 (build-feedback reads feedback-build.md; --model from route output at :846); scripts/moneypenny/model-tier.mjs:14-23; scripts/moneypenny/index.mjs:418-446 (claimFeedbackReply, three writes in order); .github/workflows/moneypenny-events.yml:511-521"
     },
     {
       "id": "plan-build",
@@ -782,10 +785,10 @@
       "name": "Requirements writer (ears)",
       "kind": "skill",
       "job": "Turns a raw request into EARS-format requirements and scaffolds matching BDD specs",
-      "wakesOn": "writing acceptance criteria; vague requirement text",
+      "wakesOn": "/fitness step 1 (an outcome or incident becomes one EARS line); writing acceptance criteria",
       "speaksOn": "acceptance criteria and spec scaffolds",
       "cadence": "on demand",
-      "invoker": "none",
+      "invoker": "session",
       "status": "hired",
       "codeRoots": [".claude/skills/ears/SKILL.md"],
       "cite": "docs/COACHES.md:161-163"
@@ -877,8 +880,7 @@
       "invoker": "event",
       "status": "hired",
       "codeRoots": [".github/workflows/pipeline.yml", "e2e/"],
-      "cite": ".github/workflows/pipeline.yml:24-41, 68-69, 205-215, 274-290",
-      "station": "The test pilots: fly every new build the way a member would before it ships"
+      "cite": ".github/workflows/pipeline.yml:24-41, 68-69, 205-215, 274-290"
     },
     {
       "id": "envelope",
@@ -939,7 +941,7 @@
       "kind": "lane",
       "job": "Resolves a PR conflicted against main with a merge commit",
       "wakesOn": "workflow_dispatch pr_number from the stall audit",
-      "speaksOn": "A pushed merge commit, or needs-eric after 3 attempts",
+      "speaksOn": "A pushed merge commit for a disjoint conflict; a needs-session hand-off on an issue (or a closed machine-lane PR) for a same-logic one; needs-eric only for the irreversible class. The stall audit stops re-dispatching after 3 repairs and labels needs-eric.",
       "cadence": "Per conflict",
       "invoker": "lane",
       "status": "hired",
@@ -1063,7 +1065,7 @@
       "wakesOn": "after a surge wave, governor cycle or burn-down",
       "speaksOn": "confirmed findings for a session to file as bug + fast-track; receipts in post-merge-audit.jsonl",
       "cadence": "per wave",
-      "invoker": "eric",
+      "invoker": "session",
       "status": "hired",
       "codeRoots": [".claude/workflows/post-merge-audit.js", "docs/review/"],
       "cite": ".claude/skills/surge/SKILL.md:89; scripts/agent-meter.mjs:311; scripts/newsletter/gather.mjs:188"
@@ -1140,7 +1142,7 @@
       "department": "staff",
       "name": "Admission gate",
       "kind": "gate",
-      "job": "Between ready and a build start: refuses on halt, conserve (unless fast-track), the in-flight cap, or the started-plan cap; a refused issue keeps ready and holds no lease",
+      "job": "Between ready and a build start: refuses on halt; on conserve unless fast-track; at the in-flight cap (one fast-track may go over it at a time); at the started-plan cap for a fresh plan; and on the surface fence (another build on the same Surface), which fast-track does not bypass. A refused issue keeps ready and holds no lease",
       "wakesOn": "Every claim attempt (feedback, plan, retry sweep, continuation)",
       "speaksOn": "admit / one queue note on the issue",
       "cadence": "Per claim",
@@ -1155,10 +1157,10 @@
       "name": "Work dial and spend breaker",
       "kind": "gate",
       "job": "One work-mode:<halt|conserve|normal|surge> label on #4153 sets every lane's caps; a tap clears the other label and writes an end date",
-      "wakesOn": "A label added to #4153",
+      "wakesOn": "A work-mode label added to #4153: halt or normal by anyone, conserve by a session after Eric's phrase, surge by Eric alone; the spend breaker trips itself when 4h spend crosses research-circuit-breaker.json's line",
       "speaksOn": "Caps every lane reads; #4153's title",
       "cadence": "Read before every pull",
-      "invoker": "eric",
+      "invoker": "session",
       "status": "hired",
       "codeRoots": [
         "work-mode.json",
@@ -1488,10 +1490,10 @@
       "name": "Ops buttons (autonomy ops, Fly logs, companion eval)",
       "kind": "workflow",
       "job": "Phone-operable ops: status, machine-status, logs, bootstrap, flip-mode observe/live, set-bridge-secret; filtered log pull; companion replay eval",
-      "wakesOn": "workflow_dispatch",
+      "wakesOn": "workflow_dispatch from a session; autonomy-ops and companion-eval then wait on Eric's autonomy-ops Environment approval",
       "speaksOn": "Fly secrets and status, job logs",
       "cadence": "On demand",
-      "invoker": "eric",
+      "invoker": "session",
       "status": "hired",
       "codeRoots": [
         ".github/workflows/autonomy-ops.yml",
@@ -1508,8 +1510,8 @@
       "job": "Does what unattended lanes cannot: edits under .claude/, taste rounds, the held batch of protected changes, needs-session hand-offs",
       "wakesOn": "Eric opening a session, or a session another one started",
       "speaksOn": "Pull requests, issue comments, private pages",
-      "cadence": "Only when Eric opens one; no schedule",
-      "invoker": "eric",
+      "cadence": "When Eric or another session opens one; nothing scheduled reads needs-session",
+      "invoker": "session",
       "status": "hired",
       "codeRoots": [".claude/settings.json", "docs/DELEGATION.md"],
       "cite": ".github/prompts/moneypenny-conflict-repair.md:26 (nothing reads needs-session); #4555 (lanes cannot edit .claude/**)"
@@ -1561,9 +1563,9 @@
       "department": "platform",
       "name": "Session hooks: setup, guard, intent log, memory history",
       "kind": "hook",
-      "job": "Materializes the SSH signing key from GIT_SIGNING_KEY so commits are signed",
-      "wakesOn": "SessionStart",
-      "speaksOn": "git config",
+      "job": "Prepares each session (signing key, pinned toolchain, fresh origin/main), refuses banned Bash commands before they run, logs prompts and agent fan-outs for config-audit, and versions the shared memory folder on every edit",
+      "wakesOn": "SessionStart; every Bash call; every agent call; every prompt; every Write/Edit",
+      "speaksOn": "git config; a refused command (exit 2); duel-log lines; a memory-history commit",
       "cadence": "every session",
       "invoker": "session",
       "status": "hired",
@@ -1585,7 +1587,7 @@
       "wakesOn": "a person switching output style by hand",
       "speaksOn": "response shape only",
       "cadence": "manual",
-      "invoker": "none",
+      "invoker": "session",
       "status": "hired",
       "codeRoots": [".claude/output-styles/focus.md"],
       "cite": ".claude/output-styles/focus.md:3-7; settings.json:2 sets Orient as the only default"
