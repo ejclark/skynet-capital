@@ -33,6 +33,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { marketDayKey } from "./market-day.js";
 
 /** How a line knows what it says. `reported` renders as unconfirmed, `modeled` says so. */
 export const EDITION_MARKS = ["measured", "reported", "modeled", "call"] as const;
@@ -113,9 +114,10 @@ const BASE_RATE_RE = /\d+(?:\.\d+)?% of the time/i;
 const BUY_FRAMING_RE =
   /\b(?:good|great|right|best|perfect|ideal) (?:time|moment|day|entry|chance) to (?:buy|get in)\b|\bbuy(?:ing)? the dip\b|\bbuying opportunity\b|\bchance to buy\b|\b(?:should|must) buy\b|\bdon'?t miss\b/i;
 
-/** Phrases lifted from existing franchises. A floor, not a proof (criterion 4). */
+/** Phrases lifted from existing franchises. A floor, not a proof (criterion 4). Bare words that are
+ *  also market words (Enterprise software, Vulcan Materials) are left out on purpose. */
 const FRANCHISE_RE =
-  /\b(?:captain'?s log|stardate|starfleet|star ?fleet|enterprise|make it so|final frontier|boldly go|beam (?:me|us) up|warp speed|resistance is futile|live long and prosper|may the force|hyperspace|jedi|wookiee|klingon|vulcan)\b/i;
+  /\b(?:captain'?s log|stardate|star ?fleet|uss enterprise|make it so|final frontier|boldly go|beam (?:me|us) up|warp speed|resistance is futile|live long and prosper|may the force|jedi|wookiee|klingon)\b/i;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -129,6 +131,23 @@ type Fail = (what: string) => never;
 const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 const isMark = (v: unknown): v is EditionMark => (EDITION_MARKS as readonly unknown[]).includes(v);
 const isN = (v: unknown): boolean => typeof v === "number" && Number.isInteger(v) && v > 0;
+const isObject = (v: unknown): v is Raw => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** Every entry of a list is an object, or the loader names the list rather than throwing a bare
+ *  TypeError on its first field read. */
+function objects(list: unknown, where: string, fail: Fail): Raw[] {
+  if (!(Array.isArray(list) && list.every(isObject))) fail(`${where} must be a list of objects`);
+  return list as Raw[];
+}
+
+/** No two entries of a list share a key: the page keys its rows by it, and a repeat is a typo. */
+function distinct(list: readonly Raw[], key: (r: Raw) => string, where: string, fail: Fail): void {
+  const keys = list.map(key);
+  const twice = keys.find((k, i) => keys.indexOf(k) !== i);
+  if (twice !== undefined) fail(`${where} lists "${twice}" twice`);
+}
+
+const dateKey = (d: Raw): string => `${String(d.date)} ${String(d.what)}`;
 
 /** Every word a member reads in one piece of copy, checked for buy framing. */
 function checkCopy(text: string, where: string, fail: Fail): void {
@@ -181,16 +200,17 @@ function checkStory(s: Raw, fail: Fail): void {
   }
   if (!(Array.isArray(s.symbols) && s.symbols.every((x) => isText(x) && SYMBOL_RE.test(x))))
     fail(`story "${id}": symbols must be uppercase tickers`);
-  if (!(Array.isArray(s.facts) && s.facts.length > 0 && s.facts.length <= MAX_FACTS))
+  const facts = objects(s.facts, `story "${id}": facts`, fail);
+  if (facts.length === 0 || facts.length > MAX_FACTS)
     fail(`story "${id}": key facts must be 1 to ${MAX_FACTS}`);
-  for (const [i, f] of (s.facts as Raw[]).entries())
-    checkFact(f, `story "${id}" fact ${i + 1}`, fail);
-  if (!Array.isArray(s.reports)) fail(`story "${id}": reports must be a list`);
-  for (const [i, d] of (s.reports as Raw[]).entries())
-    checkDate(d, `story "${id}" report ${i + 1}`, fail);
-  if (!Array.isArray(s.more)) fail(`story "${id}": more must be a list`);
-  for (const [i, l] of (s.more as Raw[]).entries())
-    checkLine(l, `story "${id}" line ${i + 1}`, fail);
+  for (const [i, f] of facts.entries()) checkFact(f, `story "${id}" fact ${i + 1}`, fail);
+  distinct(facts, (f) => String(f.label), `story "${id}": facts`, fail);
+  const reports = objects(s.reports, `story "${id}": reports`, fail);
+  for (const [i, d] of reports.entries()) checkDate(d, `story "${id}" report ${i + 1}`, fail);
+  distinct(reports, dateKey, `story "${id}": reports`, fail);
+  const more = objects(s.more, `story "${id}": more`, fail);
+  for (const [i, l] of more.entries()) checkLine(l, `story "${id}" line ${i + 1}`, fail);
+  distinct(more, (l) => String(l.text), `story "${id}": more`, fail);
 }
 
 /**
@@ -209,13 +229,15 @@ export function parseEdition(raw: unknown, file: string, expectedDate: string): 
   if (e.campaign !== undefined && !(isText(e.campaign) && SLUG_RE.test(e.campaign)))
     fail(`campaign "${String(e.campaign)}" must be a campaign id`);
   if (!isText(e.writtenBy)) fail("say who or what wrote it (writtenBy)");
-  if (!(Array.isArray(e.stories) && e.stories.length > 0)) fail("stories must be a non-empty list");
-  for (const s of e.stories as Raw[]) checkStory(s, fail);
-  const ids = (e.stories as Raw[]).map((s) => s.id);
+  const stories = objects(e.stories, "stories", fail);
+  if (stories.length === 0) fail("stories must be a non-empty list");
+  for (const s of stories) checkStory(s, fail);
+  const ids = stories.map((s) => s.id);
   const twice = ids.find((id, i) => ids.indexOf(id) !== i);
   if (twice !== undefined) fail(`story "${String(twice)}" is listed twice`);
-  if (!Array.isArray(e.next)) fail("next must be a list");
-  for (const [i, d] of (e.next as Raw[]).entries()) checkDate(d, `next ${i + 1}`, fail);
+  const next = objects(e.next, "next", fail);
+  for (const [i, d] of next.entries()) checkDate(d, `next ${i + 1}`, fail);
+  distinct(next, dateKey, "next", fail);
   return raw as Edition;
 }
 
@@ -244,31 +266,45 @@ export function editions(): readonly Edition[] {
 
 // ── The read the page gets ───────────────────────────────────────────────────────────────────────
 
-/** What `/api/edition` answers: the latest edition on or before today, its dated items cut to the
- *  ones still ahead, and the campaign's title. `edition: null` is the honest empty state. */
+/** A story's dated report, as the page reads it: `passed` once its day is behind today. */
+export type EditionReportView = EditionDate & { readonly passed?: true };
+
+/** One story as the page reads it: its reports kept, a passed one marked. */
+export type EditionStoryView = Omit<EditionStory, "reports"> & {
+  readonly reports: readonly EditionReportView[];
+};
+
+/** What `/api/edition` answers: the latest edition on or before today, what's next cut to the items
+ *  still ahead, each story's reports marked once passed, the campaign's title, and the edition's
+ *  age. `edition: null` is the honest empty state. */
 export interface EditionView {
-  readonly edition: (Edition & { readonly campaignTitle?: string }) | null;
-  /** Today in New York (YYYY-MM-DD), the day the dates were cut against. */
+  readonly edition:
+    | (Omit<Edition, "stories"> & {
+        readonly campaignTitle?: string;
+        /** Calendar days from the close it describes to today. */
+        readonly ageDays: number;
+        readonly stories: readonly EditionStoryView[];
+      })
+    | null;
+  /** Today in New York (YYYY-MM-DD), the day the dates were read against. */
   readonly today: string;
 }
 
-/** en-CA formats a date as YYYY-MM-DD; New York is where the market's days are counted. */
-const NEW_YORK_DAY = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/New_York",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-/** Today's date in New York. */
+/** Today's date in New York, through market-day.ts, the one place an instant becomes a market day. */
 export function marketToday(now: Date): string {
-  return NEW_YORK_DAY.format(now);
+  return marketDayKey(now.toISOString());
+}
+
+/** Whole calendar days from `from` to `to`, both YYYY-MM-DD. */
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
 /**
- * The page's read. A report whose day has passed is dropped from its story and from what's next,
- * so a hand-written edition never shows last week's "coming up" as if it still were; the rest of
- * the edition keeps its own date on the masthead, so its age is always on the page.
+ * The page's read. What's next looks forward, so an item whose day has passed leaves it. A story
+ * is written as of its close, so its reports stay and a passed one is marked: the story's own words
+ * ("three reports are inbound") keep matching the list beside them. The edition's age rides along,
+ * so the page can say plainly when the news is not today's.
  */
 export function editionView(
   editions: readonly Edition[],
@@ -285,7 +321,11 @@ export function editionView(
     edition: {
       ...latest,
       ...(title ? { campaignTitle: title } : {}),
-      stories: latest.stories.map((s) => ({ ...s, reports: s.reports.filter(ahead) })),
+      ageDays: daysBetween(latest.date, today),
+      stories: latest.stories.map((s) => ({
+        ...s,
+        reports: s.reports.map((r) => (ahead(r) ? r : { ...r, passed: true as const })),
+      })),
       next: latest.next.filter(ahead),
     },
   };

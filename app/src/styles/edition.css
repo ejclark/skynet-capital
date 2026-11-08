@@ -18,6 +18,13 @@
   color: var(--text);
   font-weight: 700;
 }
+.edition-stale {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  font-size: var(--text-sm);
+}
 .edition-asof {
   margin: 4px 0 0;
   font-size: var(--text-sm);
@@ -155,6 +162,11 @@
   }
 }
 .dated-when {
+  color: var(--muted);
+}
+/* A passed report stays on its story, struck through and worded "passed": shape and word, not hue. */
+.dated-item--passed .dated-what {
+  text-decoration: line-through;
   color: var(--muted);
 }
 

@@ -1,9 +1,9 @@
 import type { ReactElement } from "react";
 import {
   dateLine,
-  type EditionDate,
   type EditionFact,
   type EditionLine,
+  type EditionReport,
   type EditionStory,
   MARK_WORD,
 } from "../live/edition";
@@ -15,8 +15,10 @@ import {
  *
  * The tile shows the headline (news voice), at most one narrator line (mission voice), what moved
  * and by how much, and the dated reports that bear on it — his "huge dip, earnings about to post"
- * pairing, on the story's own tile (round 2's "dates on the story"). Everything else sits behind
- * one native disclosure, so it opens on a tap or Enter with nothing to build.
+ * pairing, on the story's own tile (round 2's "dates on the story"). The story is written as of its
+ * close, so a report whose day has passed stays, marked "passed", and the narrator's count of what
+ * is inbound still matches the list. Everything else sits behind one native disclosure, so it
+ * opens on a tap or Enter with nothing to build.
  *
  * Every line wears its mark as a WORD ("Reported · unconfirmed", "Modeled"), never a colour alone
  * (BRAND.md → Accessibility); a base rate shows its sample size beside it.
@@ -46,9 +48,9 @@ function Fact({ fact }: { readonly fact: EditionFact }): ReactElement {
 }
 
 /** A dated item: the day in figures, then what it is. Shared with the page's What's next. */
-export function DatedItem({ item }: { readonly item: EditionDate }): ReactElement {
+export function DatedItem({ item }: { readonly item: EditionReport }): ReactElement {
   return (
-    <li className="dated-item">
+    <li className={item.passed ? "dated-item dated-item--passed" : "dated-item"}>
       <span className="dated-when num">{dateLine(item)}</span>
       <span className="dated-what">{item.what}</span>
     </li>
@@ -87,8 +89,8 @@ export function EditionStoryTile({
         ))}
       </dl>
       {story.reports.length > 0 ? (
-        <section className="story-reports" aria-label="Reports coming up on this story">
-          <h3 className="story-sub">Coming up</h3>
+        <section className="story-reports" aria-label="Reports on this story">
+          <h3 className="story-sub">Reports on this story</h3>
           <ul className="dated-list">
             {story.reports.map((r) => (
               <DatedItem key={`${r.date}-${r.what}`} item={r} />

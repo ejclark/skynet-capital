@@ -98,8 +98,31 @@ describe("the edition record", () => {
 
   it("holds the narrator to one original line (criterion 4)", () => {
     expect(() => parse(withStory({ narrator: "Captain's log: chips fell." }))).toThrow(/franchise/);
+    // Market words that a franchise also uses stay usable.
+    expect(
+      parse(withStory({ narrator: "Enterprise AI budgets held; Vulcan Materials slid." })),
+    ).toBeTruthy();
     expect(() => parse(withStory({ narrator: "x".repeat(161) }))).toThrow(/one line/);
     expect(() => parse(withStory({ narrator: "One.\nTwo." }))).toThrow(/one line/);
+  });
+
+  it("names the list when an entry is not an object, never a bare TypeError", () => {
+    expect(() => parse({ ...valid(), next: [null] })).toThrow(
+      /2026-11-06\.json: next must be a list of objects/,
+    );
+    expect(() => parse({ ...valid(), stories: ["x"] })).toThrow(
+      /stories must be a list of objects/,
+    );
+    expect(() => parse(withStory({ facts: [1] }))).toThrow(/facts must be a list of objects/);
+  });
+
+  it("refuses a repeat in a list the page keys its rows by", () => {
+    const fact = { label: "NVDA", value: "1" };
+    expect(() => parse(withStory({ facts: [fact, fact] }))).toThrow(/lists "NVDA" twice/);
+    const line = { text: "Up.", mark: "measured", source: "x" };
+    expect(() => parse(withStory({ more: [line, line] }))).toThrow(/twice/);
+    const d = { date: "2026-11-10", what: "CPI", status: "confirmed" };
+    expect(() => parse({ ...valid(), next: [d, d] })).toThrow(/next lists "2026-11-10 CPI" twice/);
   });
 
   it("keeps key facts to one to four", () => {
@@ -153,14 +176,35 @@ describe("editionView — what the landing page reads", () => {
     expect(before.edition?.date).toBe("2026-11-02");
   });
 
-  it("drops dates that have passed, so last week's 'coming up' never shows as ahead", () => {
+  it("cuts passed items from what's next, and marks a story's passed report instead of hiding it", () => {
     const view = editionView([latest], new Date("2026-11-08T15:00:00Z"), noTitle);
     expect(view.edition?.next.map((d) => d.what)).toEqual(["CPI"]);
+    expect(view.edition?.stories[0]?.reports[0]?.passed).toBeUndefined();
     const later = editionView([latest], new Date("2026-11-11T15:00:00Z"), noTitle);
     expect(later.edition?.next).toEqual([]);
-    expect(later.edition?.stories[0]?.reports).toEqual([]);
-    // The rest of the story stays: its age is on the masthead, not hidden.
-    expect(later.edition?.stories[0]?.facts).toHaveLength(1);
+    // The story is written as of its close: its report stays, so "three are inbound" still counts
+    // three on the list, and the page says which have passed.
+    expect(later.edition?.stories[0]?.reports).toEqual([
+      {
+        date: "2026-11-10",
+        when: "after the close",
+        what: "CRWV Q3",
+        status: "confirmed",
+        passed: true,
+      },
+    ]);
+  });
+
+  it("says how old the edition is, in calendar days from its close", () => {
+    expect(editionView([latest], new Date("2026-11-06T22:00:00Z"), noTitle).edition?.ageDays).toBe(
+      0,
+    );
+    expect(editionView([latest], new Date("2026-11-09T15:00:00Z"), noTitle).edition?.ageDays).toBe(
+      3,
+    );
+    expect(editionView([latest], new Date("2026-12-01T15:00:00Z"), noTitle).edition?.ageDays).toBe(
+      25,
+    );
   });
 
   it("answers null when no edition has been written for any day yet", () => {

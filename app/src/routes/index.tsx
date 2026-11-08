@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { parseBoardMetric } from "../live/board";
-import { asOfLine, type EditionView, fetchEdition } from "../live/edition";
+import { asOfLine, type EditionView, fetchEdition, staleLine } from "../live/edition";
 import { DatedItem, EditionStoryTile } from "../shell/edition-story";
 import { PageFrame } from "../shell/frame";
 
@@ -34,14 +34,15 @@ function Masthead({ view }: { readonly view: EditionView }): ReactElement {
   return (
     <header className="page-header edition-head">
       <p className="edition-kicker">
-        <span className="edition-name">Skynet Chronicles</span> · today's market news
+        <span className="edition-name">Skynet Chronicles</span> · the market news
       </p>
       {edition ? (
         <p className="edition-asof">
-          {asOfLine(edition, view.today)}
+          {asOfLine(edition)}
           {edition.campaignTitle ? ` · ${edition.campaignTitle}` : ""}
         </p>
       ) : null}
+      {edition && staleLine(edition) ? <p className="edition-stale">{staleLine(edition)}</p> : null}
     </header>
   );
 }
@@ -57,7 +58,7 @@ function Landing(): ReactElement {
   if (view.isError)
     return (
       <PageFrame>
-        <p className="note">Today's news is unreachable — {String(view.error)}</p>
+        <p className="note">The news didn't load. Try again in a moment.</p>
       </PageFrame>
     );
   const edition = view.data.edition;

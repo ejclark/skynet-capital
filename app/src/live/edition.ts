@@ -1,3 +1,5 @@
+import { dayLabel } from "./book-events";
+
 /**
  * The day's edition, client side (#7077) — mirrors `EditionView` in `src/domain/edition.ts`. The
  * honesty checks (a base rate carries its sample size, nothing frames a time as good to buy, every
@@ -28,13 +30,16 @@ export interface EditionLine {
   readonly n?: number;
 }
 
+/** A story's report; `passed` once its day is behind today (the story is written as of its close). */
+export type EditionReport = EditionDate & { readonly passed?: true };
+
 export interface EditionStory {
   readonly id: string;
   readonly headline: string;
   readonly narrator?: string;
   readonly symbols: readonly string[];
   readonly facts: readonly EditionFact[];
-  readonly reports: readonly EditionDate[];
+  readonly reports: readonly EditionReport[];
   readonly more: readonly EditionLine[];
 }
 
@@ -43,6 +48,8 @@ export interface Edition {
   readonly campaign?: string;
   readonly campaignTitle?: string;
   readonly writtenBy: string;
+  /** Calendar days from the close it describes to today. */
+  readonly ageDays: number;
   readonly stories: readonly EditionStory[];
   readonly next: readonly EditionDate[];
 }
@@ -66,40 +73,28 @@ export const MARK_WORD: Readonly<Record<EditionMark, string>> = {
   call: "House call",
 };
 
-const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-const MONTH = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
-/** "2026-11-10" → "Tue Nov 10". A calendar date, never a moment, so no time zone can shift it. */
-export function dayLabel(date: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  const at = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1));
-  return `${WEEKDAY[at.getUTCDay()]} ${MONTH[at.getUTCMonth()]} ${at.getUTCDate()}`;
-}
-
-/** How a dated item reads: "Tue Nov 10 · after the close", plus "estimate" when it is one. */
-export function dateLine(d: EditionDate): string {
-  return [dayLabel(d.date), d.when, d.status === "estimate" ? "estimate" : undefined]
+/** How a dated item reads: "Tue, Nov 10 · after the close", plus "estimate" or "passed". */
+export function dateLine(d: EditionReport): string {
+  return [
+    dayLabel(d.date),
+    d.when,
+    d.status === "estimate" ? "estimate" : undefined,
+    d.passed ? "passed" : undefined,
+  ]
     .filter(Boolean)
     .join(" · ");
 }
 
-/** The masthead's age line: whose close the news describes, so a hand-written edition's age is on
- *  the page. */
-export function asOfLine(edition: Edition, today: string): string {
-  const close = `${dayLabel(edition.date)} close`;
-  if (edition.date === today) return `Today's ${close}`;
-  return `As of the ${close}`;
+/** The masthead's age line: whose close the news describes, so an edition's age is on the page. */
+export function asOfLine(edition: Edition): string {
+  return `As of the ${dayLabel(edition.date)} close`;
+}
+
+/** Older than a weekend: Friday's close still leads on Monday, but not past it. */
+export const STALE_AFTER_DAYS = 3;
+
+/** Said plainly when the news is older than a weekend, so an old edition never reads as today's. */
+export function staleLine(edition: Edition): string | undefined {
+  if (edition.ageDays <= STALE_AFTER_DAYS) return undefined;
+  return `No newer edition has been written yet, so this news is ${edition.ageDays} days old.`;
 }
