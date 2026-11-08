@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import {
   dateLine,
   type EditionFact,
@@ -78,9 +78,12 @@ function Line({ line }: { readonly line: EditionLine }): ReactElement {
 export function EditionStoryTile({
   story,
   lead = false,
+  children,
 }: {
   readonly story: EditionStory;
   readonly lead?: boolean;
+  /** The story's asks (slice 2), drawn under the rest so the tile stays key facts first. */
+  readonly children?: ReactNode;
 }): ReactElement {
   const headingId = `story-${story.id}`;
   return (
@@ -114,6 +117,7 @@ export function EditionStoryTile({
           </ul>
         </details>
       ) : null}
+      {children}
     </article>
   );
 }

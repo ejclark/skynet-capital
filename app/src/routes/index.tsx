@@ -5,6 +5,7 @@ import { parseBoardMetric } from "../live/board";
 import { asOfLine, type EditionView, fetchEdition, staleLine } from "../live/edition";
 import { DatedItem, EditionStoryTile } from "../shell/edition-story";
 import { PageFrame } from "../shell/frame";
+import { AskBox, StoryAsk } from "../shell/landing-ask";
 
 /**
  * THE LANDING PAGE (#7077, parent #6948 slice 4): sign-in opens the day's market news, not the
@@ -12,9 +13,10 @@ import { PageFrame } from "../shell/frame";
  * Leaderboard keeps its route and leaves the tab bar; Profile's league card ("Full leaderboard ›")
  * is its door now.
  *
- * At 390, in order (docs/IA.md §5.9): the question box (slice 2) · the lead story's coming reports,
- * then what moved · its ask (slice 2) · quests by source (slice 3, #7028) · what's next. This slice builds the news and
- * what's next; the slots for the ask and the quests come with their slices, never as placeholders.
+ * At 390, in order (docs/IA.md §5.9): the question box · the lead story's coming reports, then what
+ * moved · its ask · quests by source (slice 3, #7028) · what's next. Slice 1 built the news and
+ * what's next; slice 2 the question box and each story's ask (`shell/landing-ask.tsx`). The quests'
+ * slot comes with slice 3, never as a placeholder.
  *
  * An old bookmark or a shared compare link (`/?by=`, `?a=`, `?b=`) was always a member asking for
  * the board, so it still goes there with its query intact (#2321's promise).
@@ -64,12 +66,19 @@ function Landing(): ReactElement {
   const edition = view.data.edition;
   return (
     <PageFrame>
+      <AskBox />
       <Masthead view={view.data} />
       {edition ? (
         <>
           <div className="edition-stories">
             {edition.stories.map((s, i) => (
-              <EditionStoryTile key={s.id} story={s} lead={i === 0} />
+              <EditionStoryTile key={s.id} story={s} lead={i === 0}>
+                <StoryAsk
+                  story={s}
+                  campaign={edition.campaign}
+                  campaignTitle={edition.campaignTitle}
+                />
+              </EditionStoryTile>
             ))}
           </div>
           {edition.next.length > 0 ? (

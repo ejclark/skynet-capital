@@ -215,3 +215,139 @@
   display: block;
   margin-bottom: 8px;
 }
+
+/* The ask box (#7077 slice 2): the member's own question first, two quick questions under it.
+ * One field and one wrapping row of chips, so the lead story's key facts still reach the first
+ * phone screen. The chips are outlined buttons: shape and words, never a colour alone. */
+.ask-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: var(--space-3);
+}
+.ask-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ask-label {
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+.ask-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  min-width: 0;
+}
+.ask-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-base);
+}
+.ask-input:focus-visible,
+.ask-name:focus-visible,
+.ask-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.ask-send.btn {
+  width: auto;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 10px;
+}
+.ask-name {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+}
+.ask-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ask-chip {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+/* A story's asks sit under its tile, behind the same disclosure "More on this story" uses. */
+.story-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.story-record {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.story-record-none,
+.story-record-coda,
+.ask-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.story-record-coda {
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+.ask-own {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.party-qs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.party-q p {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.party-q-words {
+  font-weight: 600;
+}
+.party-q-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--muted);
+}
+.party-q-found {
+  padding-left: 10px;
+  border-left: 3px solid var(--border);
+}
