@@ -11,7 +11,8 @@ the Day Trader), and "member" is the established plain word for a person who sig
 `docs/members/`, and nothing here is ever called a persona. No coined names either (CLAUDE.md →
 "name what the thing does"): each file is titled by who the member is — the first-timer, the
 returning trader, the bot-watcher, the phone-only member, the invited friend (a member, never the
-owner — the only one who walks the app as someone other than Eric), and Eric, the owner.
+owner — the only one with a linked account who walks the app as someone other than Eric), and
+Eric, the owner.
 
 ## The anatomy — seven parts, in this order, in every file
 
@@ -48,8 +49,8 @@ same change, and where the two disagree the JSON is right.
 {
   "member": "first-timer",                       // matches the docs/members file name
   "source": "docs/members/first-timer.md",
-  "fixture": { "kind": "anonymous" },            // or { "kind": "session", "email": "crawl@example.test", "participant": "human-eric" }
-                                                 //   a session with no participant = signed in, nothing linked
+  "fixture": { "kind": "session", "email": "newcomer@example.test" },  // a session with no participant = signed in, nothing linked
+                                                 //   or { "kind": "anonymous" }, or { "kind": "session", "email": "crawl@example.test", "participant": "human-eric" }
   "viewports": ["phone", "desktop"],             // phone = 390×844 touch, desktop = 1280×900
   "journeys": [
     { "id": "j1", "name": "the first ten minutes",
