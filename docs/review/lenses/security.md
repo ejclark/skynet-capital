@@ -8,7 +8,7 @@ token, secret or key. 96 code PRs since 2026-10-01.
 the refuters, after 40 PRs: delete this file and leave the facet to `/security-review` and
 `.claude/agents/red-team.md`.
 
-**Size:** 3,792 characters.
+**Size:** 3,834 characters.
 
 Start from a goal: read another member's account, move the dial, run a build on a stranger's text,
 reach a token. Ask whether the diff adds a step toward it. A finding names a concrete failure: the
@@ -34,13 +34,13 @@ bridge password in a public repo; #6256 moved it, keeping a documented fallback 
 **Token wider than the job.** Spot it: a lane token or `permissions:` block granting `workflows` or
 `contents: write` to steps that only comment (`.github/actions/app-token/action.yml`). Fix: scopes
 per lane. Not when: the lane uses it, as the plan lane does. Boards the platter; protected. Real:
-`.github/actions/app-token/action.yml:25` passes no `permission-` input, so every lane holds all the
-App's permissions.
+`.github/actions/app-token/action.yml:10` inherits all the App's permissions when a caller passes no
+`permission-` input, and only `bots-catchup.yml` passes one.
 
 **Open code before a secret.** Spot it: `npm ci` or a repo script above a `FLY_API_TOKEN` step in one
 job. Fix: secret steps in a job with no install. Not when: every script the job calls is on a
-protected path. Eric's call. Real: `.github/workflows/pipeline.yml:502` installs in the job that
-holds the token at `:550`.
+protected path. Eric's call. Real: `.github/workflows/pipeline.yml:565` installs in the job that
+holds the token at `:609`.
 
 **Member data on a public surface.** Spot it: an issue body, comment or artifact built from app logs,
 member emails or a brokerage screenshot. Fix: aggregate or redact first, failing closed. Not when: it
