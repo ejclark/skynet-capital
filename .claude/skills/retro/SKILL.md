@@ -93,9 +93,8 @@ them now.
 ## 6. Bank it
 
 Append an entry to `docs/LESSONS.md` in the documented format (title, `SHA`, `DATE`, `STATUS`,
-`SIGNAL`, `ROOT CAUSE`, `PREVENTION`, `SIDE QUESTS`). The scan parses these field names, so keep
-them exact, and never leave `STATUS: open` — an open entry fails `incident-scan.mjs` and stops it
-before it reads the failed runs on `main`.
+`SIGNAL`, `ROOT CAUSE`, `PREVENTION`, `SIDE QUESTS`). The gate parses these field names, so keep
+them exact, and never leave `STATUS: open` — an open entry fails the build by design.
 
 **Same class as an earlier entry?** Then that entry's fix did not hold. Add
 `- **RECURS:** <the earlier entry's exact title>` under your `SHA`/`DATE` line, and run
