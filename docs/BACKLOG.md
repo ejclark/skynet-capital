@@ -14,4 +14,4 @@ Where its contents went:
 | anything new | file an issue — `/issue` shapes the capsule ([`ISSUES.md`](ISSUES.md)) |
 
 The spec this file carried is not lost: it is the header commentary on the functions that implement
-it, which is where intent stops being able to drift from the code (`CLAUDE.md` — *co-locate intent*).
+it, which is where intent stops being able to drift from the code ([`ENGINEERING.md`](ENGINEERING.md) — *co-locate intent with structure*).
