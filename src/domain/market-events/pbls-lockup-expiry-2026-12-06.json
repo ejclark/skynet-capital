@@ -6,8 +6,6 @@
   "status": "confirmed",
   "source": "SEC: 424B4 https://www.sec.gov/Archives/edgar/data/1657677/000119312526265983/pbls_424b4.htm, fetched 2026-10-20 (scripts/research/lockup-discovery.mjs). Prospectus dated 2026-06-09 (read from its cover); 180 days after it is 2026-12-06. Lock-up clause: \"Lock-up Arrangements We, all of our directors and executive officers, and the holders of substantially all of our capital stock and securities convertible into or exchangeable for our capital stock (including the shares of common stock to be issued in the concurrent private placement) have entered into lock-up agree…\" Re-read 2026-11-06 (initial research): the full clause says \"not less than 180 days from the date of this prospectus without the prior written consent of Leerink Partners LLC and BofA Securities, Inc.\" with no earnings, price or blackout release, and the Q2 10-Q (filed 2026-08-13) amends nothing. 2026-12-06 is a Sunday, so the first session insiders may sell is Monday 2026-12-07.",
   "impact": "medium",
-  "symbols": [
-    "PBLS"
-  ],
+  "symbols": ["PBLS"],
   "notes": "$670M base offering (33.5M shares at $20); the full over-allotment made it 38.5M shares ($770.5M) plus $75M from Regeneron in a concurrent private placement. Insiders may sell from the next session, Monday 2026-12-07; the pullback the lockup-expiry playbook studies (#5912) is the supply that unlocks then."
 }
