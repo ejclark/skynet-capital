@@ -243,8 +243,8 @@ export function linkCensus(links: readonly CampaignLink[]): LinkCensus {
 
 // ── The loader ────────────────────────────────────────────────────────────────────────────────
 
-const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
-const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
+export const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
+export const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 const CLAIM_RE = /^\d+[a-z]?$/;
 const GICS_NAMES: ReadonlySet<string> = new Set(GICS_SECTORS.map((s) => s.name));
 
@@ -262,7 +262,7 @@ const EVENT_KINDS: ReadonlySet<string> = new Set<EventKind>([
   "geopolitical",
 ]);
 
-const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
+export const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 const isTextList = (v: unknown): v is string[] => Array.isArray(v) && v.every(isText);
 
 type Raw = Record<string, unknown>;

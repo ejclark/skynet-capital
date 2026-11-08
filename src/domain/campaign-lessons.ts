@@ -31,7 +31,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { campaignById } from "./campaigns.js";
+import { campaignById, isText, SLUG_RE, SYMBOL_RE } from "./campaigns.js";
 
 export const LESSON_KINDS = ["tested", "killed", "on-watch"] as const;
 export type LessonKind = (typeof LESSON_KINDS)[number];
@@ -137,8 +137,6 @@ export function proposable(
 
 // ── The loader ────────────────────────────────────────────────────────────────────────────────
 
-const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
-const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A real calendar day in YYYY-MM-DD, so "2027-02-30" is refused rather than compared as text. */
@@ -147,8 +145,6 @@ function isDate(v: unknown): v is string {
   const d = new Date(`${v}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
 }
-
-const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 
 type Raw = Record<string, unknown>;
 type Fail = (what: string) => never;
