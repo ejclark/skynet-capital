@@ -41,6 +41,7 @@ import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
 import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
+import { serveQuestsApi } from "./quests-route.js";
 import { serveQuoteStream } from "./quote-stream-route.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
 import { serveSavedPositionsApi } from "./saved-positions-api-routes.js";
@@ -213,6 +214,7 @@ async function serveWriteApis(
   if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
   if (await serveOptionLifecycleApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
+  if (await serveQuestsApi(req, res, path, config, session)) return true;
   if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;
