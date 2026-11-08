@@ -90,7 +90,7 @@ describe("drift-wave — which branches land", () => {
 });
 
 describe("drift-wave — one branch per item", () => {
-  it("lets a -r2 re-run supersede the branch it re-runs, and skips the wave branch", () => {
+  it("reads a -r2 re-run before the branch it re-runs, and skips the wave branch", () => {
     const at = "9875838";
     const p = `docs/instruction-drift-${at}-`;
     expect(
@@ -98,6 +98,6 @@ describe("drift-wave — one branch per item", () => {
         [`${p}docs-a-md`, `${p}docs-a-md-r2`, `${p}docs-b-md`, `${p}wave`, "docs/other-branch"],
         at,
       ),
-    ).toEqual([`${p}docs-a-md-r2`, `${p}docs-b-md`]);
+    ).toEqual([[`${p}docs-a-md-r2`, `${p}docs-a-md`], [`${p}docs-b-md`]]);
   });
 });

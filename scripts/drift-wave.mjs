@@ -16,6 +16,7 @@
 // verdicts are on it and every finding they killed has been reverted. A check commit alone is a
 // proposal; verdicts with a refuted finding and no apply commit still carry the refuted rewrite.
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { isMain } from "./is-main.mjs";
 
 const PROPOSE = "docs(drift): propose rewrites in ";
@@ -82,20 +83,26 @@ function heldFlags(proposalBody, verdictLines) {
 }
 
 /**
- * Item branches on origin for one round, one per item: a `-r<n>` re-run supersedes the branch it
- * re-runs, and the wave branch itself is not an item.
+ * Item branches on origin for one round, grouped per item and newest re-run first: a `-r<n>` re-run
+ * is read before the branch it re-runs, and the wave branch itself is not an item. The caller takes
+ * the first branch in a group that carries a proposal, so a re-run that died before committing
+ * never hides the finished branch it was meant to replace.
  */
 export function itemBranches(names, at7) {
   const prefix = `docs/instruction-drift-${at7}-`;
-  const best = new Map();
+  const groups = new Map();
   for (const name of names) {
     if (!name.startsWith(prefix) || name === `${prefix}wave`) continue;
     const m = name.match(/^(.*?)(?:-r(\d+))?$/);
-    const base = m[1];
     const run = Number(m[2] ?? 1);
-    if (!best.has(base) || best.get(base).run < run) best.set(base, { name, run });
+    groups.set(m[1], [...(groups.get(m[1]) ?? []), { name, run }]);
   }
-  return [...best.values()].map((v) => v.name).sort();
+  return [...groups.keys()].sort().map((base) =>
+    groups
+      .get(base)
+      .sort((a, b) => b.run - a.run)
+      .map((v) => v.name),
+  );
 }
 
 const git = (...a) =>
@@ -104,6 +111,13 @@ const git = (...a) =>
     env: { ...process.env, HUSKY: "0" },
     maxBuffer: 64 << 20,
   }).trim();
+
+/** Run a sibling script by its own path, so the cwd only has to be inside the repo. */
+const sibling = (file, args) =>
+  execFileSync("node", [fileURLToPath(new URL(file, import.meta.url)), ...args], {
+    encoding: "utf8",
+    maxBuffer: 64 << 20,
+  });
 
 function readBranch(name) {
   const ref = `origin/${name}`;
@@ -117,25 +131,11 @@ function readBranch(name) {
       return { subject, body };
     });
   const files = git("diff", "--name-only", `origin/main...${ref}`).split("\n").filter(Boolean);
-  let protectedFiles = [];
-  if (files.length) {
-    const scan = JSON.parse(
-      execFileSync("node", ["scripts/envelope-scan.mjs", "--check", "--", ...files], {
-        encoding: "utf8",
-      }),
-    );
-    protectedFiles = scan.filter((r) => r.protected).map((r) => r.path);
-  }
-  return { name, ...classify({ commits, files, protectedFiles }) };
+  return { name, commits, files };
 }
 
-function main(argv) {
-  const at = argv[argv.indexOf("--at") + 1];
-  if (!(argv.includes("--at") && /^[0-9a-f]{7,40}$/.test(at ?? ""))) {
-    console.error("usage: node scripts/drift-wave.mjs --at <sha7> [--json | --flags | --merge]");
-    return 2;
-  }
-  const at7 = at.slice(0, 7);
+/** One row per item: the newest branch in its group that carries a proposal, classified. */
+function plan(at7) {
   git(
     "fetch",
     "-q",
@@ -150,7 +150,75 @@ function main(argv) {
   )
     .split("\n")
     .filter(Boolean);
-  const rows = itemBranches(names, at7).map(readBranch);
+  const branches = itemBranches(names, at7).map((group) => {
+    const read = group.map(readBranch);
+    return read.find((b) => b.commits.some((c) => c.subject.startsWith(PROPOSE))) ?? read[0];
+  });
+  // One envelope scan over every file any branch touches, not one per branch.
+  const all = [...new Set(branches.flatMap((b) => b.files))];
+  const guarded = new Set(
+    all.length
+      ? JSON.parse(sibling("envelope-scan.mjs", ["--check", "--", ...all]))
+          .filter((r) => r.protected)
+          .map((r) => r.path)
+      : [],
+  );
+  return branches.map((b) => ({
+    name: b.name,
+    ...classify({ ...b, protectedFiles: b.files.filter((f) => guarded.has(f)) }),
+  }));
+}
+
+function merge(rows, at7) {
+  const wave = `docs/instruction-drift-${at7}-wave`;
+  const here = git("rev-parse", "--abbrev-ref", "HEAD");
+  if (here !== wave) {
+    console.error(`drift-wave: --merge runs on ${wave}, and this checkout is on ${here}`);
+    return 2;
+  }
+  let conflicts = 0;
+  for (const r of rows.filter((x) => x.state === "land")) {
+    try {
+      git("merge", "--no-ff", "--no-edit", "-m", `merge ${r.name}`, `origin/${r.name}`);
+      console.log(`merged     ${r.label}`);
+    } catch {
+      try {
+        git("merge", "--abort");
+      } catch {}
+      conflicts++;
+      console.log(
+        `conflict   ${r.label} — another item or main changed the same passage: keep the first, or catch it up on its own branch (git merge origin/main) and re-run`,
+      );
+    }
+  }
+  // An item whose findings all stood lands without an apply commit, so nothing proves its apply ran
+  // the doc-rot scan on its lines (the chore's apply step 4). Run it once here, on the union, and
+  // name any finding in a file this wave changed.
+  const changed = new Set(
+    git("diff", "--name-only", "origin/main...HEAD").split("\n").filter(Boolean),
+  );
+  let rot = "";
+  try {
+    rot = sibling("doc-rot-scan.mjs", []);
+  } catch (e) {
+    rot = `${e.stdout ?? ""}`;
+  }
+  const hits = rot
+    .split("\n")
+    .map((l) => l.trim().match(/^(\S+)\s+(\S+) → (.*)$/))
+    .filter((m) => m && changed.has(m[2]));
+  for (const m of hits) console.log(`doc-rot    ${m[2]} — ${m[1]}: ${m[3]}`);
+  return conflicts || hits.length ? 1 : 0;
+}
+
+function main(argv) {
+  const at = argv[argv.indexOf("--at") + 1];
+  if (!(argv.includes("--at") && /^[0-9a-f]{7,40}$/.test(at ?? ""))) {
+    console.error("usage: node scripts/drift-wave.mjs --at <sha7> [--json | --flags | --merge]");
+    return 2;
+  }
+  const at7 = at.slice(0, 7);
+  const rows = plan(at7);
 
   if (argv.includes("--json")) {
     console.log(JSON.stringify(rows, null, 2));
@@ -169,24 +237,7 @@ function main(argv) {
     );
     return 0;
   }
-  if (argv.includes("--merge")) {
-    let conflicts = 0;
-    for (const r of rows.filter((x) => x.state === "land")) {
-      try {
-        git("merge", "--no-ff", "--no-edit", "-m", `merge ${r.name}`, `origin/${r.name}`);
-        console.log(`merged     ${r.label}`);
-      } catch {
-        try {
-          git("merge", "--abort");
-        } catch {}
-        conflicts++;
-        console.log(
-          `conflict   ${r.label} — another item or main changed the same passage: keep the first, or catch it up on its own branch (git merge origin/main) and re-run`,
-        );
-      }
-    }
-    return conflicts ? 1 : 0;
-  }
+  if (argv.includes("--merge")) return merge(rows, at7);
   const tally = {};
   for (const r of rows) {
     tally[r.state] = (tally[r.state] ?? 0) + 1;
