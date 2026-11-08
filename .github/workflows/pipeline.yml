@@ -592,10 +592,25 @@ jobs:
         run: npx semantic-release
 
       - name: Set up flyctl
+        id: flyctl
+        # The download's own three tries span ~35s; a 5xx from GitHub's release-asset host can last
+        # longer (#7106: 504 ×3 on 2026-11-08, after 500s on 10-12 and 10-26). Not fatal here — the
+        # second attempt below runs after a pause, and only its failure fails the job.
+        continue-on-error: true
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
         with:
           # Pinned (2026-09-05, docs/LESSONS.md): `latest` is resolved through an unauthenticated
           # releases call that 403s under runner load; a pinned version downloads a fixed asset.
+          version: 0.4.99
+
+      - name: Pause before retrying the flyctl download
+        if: steps.flyctl.outcome == 'failure'
+        run: sleep 60
+
+      - name: Set up flyctl — second attempt
+        if: steps.flyctl.outcome == 'failure'
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+        with:
           version: 0.4.99
 
       - name: Preflight — does this push change what the dashboard runs?
@@ -712,10 +727,25 @@ jobs:
           fetch-depth: 0            # the preflight diffs from the machine's stamped GIT_SHA
 
       - name: Set up flyctl
+        id: flyctl
+        # The download's own three tries span ~35s; a 5xx from GitHub's release-asset host can last
+        # longer (#7106: 504 ×3 on 2026-11-08, after 500s on 10-12 and 10-26). Not fatal here — the
+        # second attempt below runs after a pause, and only its failure fails the job.
+        continue-on-error: true
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
         with:
           # Pinned (2026-09-05, docs/LESSONS.md): `latest` is resolved through an unauthenticated
           # releases call that 403s under runner load; a pinned version downloads a fixed asset.
+          version: 0.4.99
+
+      - name: Pause before retrying the flyctl download
+        if: steps.flyctl.outcome == 'failure'
+        run: sleep 60
+
+      - name: Set up flyctl — second attempt
+        if: steps.flyctl.outcome == 'failure'
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+        with:
           version: 0.4.99
 
       - name: Preflight — should the bots app deploy?
