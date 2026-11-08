@@ -192,7 +192,7 @@ function HeldStep({
  * THE WAY OUT (#6317): a member with no account now starts here from sign-in instead of on the
  * leaderboard, so the race stays one tap away — after the held steps, in the order #6271 set for
  * the 390px landing (step 1 · say hello · the leaderboard). Only while step 1 is open; once an
- * account is linked, sign-in lands on the leaderboard again.
+ * account is linked, sign-in lands on the day's market news (#7077).
  */
 function LookAround(): ReactElement {
   return (

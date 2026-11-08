@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
-// The Bots-vs-Humans standings board (#2321) — the app's real landing page (`/` redirects here).
+// The Bots-vs-Humans standings board (#2321). It was the landing page until #7077 gave `/` the
+// day's market news; an old `/?by=` bookmark or a shared compare link still lands here.
 //
 // NO SCREENSHOT ASSERTION HERE (yet). Measured 2026-09-19: even frozen client-side
 // (determinism.ts), the board's dollar figures, "seq N" counter, and "as of" timestamp still
@@ -10,9 +11,9 @@ import { expect, type Page, test } from "@playwright/test";
 // rule 1) — the real fix is pinning or pausing the server-side tick for e2e, which is its own
 // scoped follow-up, not patched in here. Behavioral coverage only until then.
 test.describe("leaderboard", () => {
-  test("/ redirects to /leaderboard", async ({ page }) => {
-    await page.goto("/app/");
-    await expect(page).toHaveURL(/\/app\/leaderboard(\?.*)?$/);
+  test("an old /?by= bookmark still opens the leaderboard, its ranking kept", async ({ page }) => {
+    await page.goto("/app/?by=return");
+    await expect(page).toHaveURL(/\/app\/leaderboard\?by=return$/);
   });
 
   test("renders the match bar and ranked rows", async ({ page }) => {
