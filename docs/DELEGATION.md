@@ -45,12 +45,12 @@ into separate lint, typecheck and per-suite calls (#5191).
    **The harness's worktree check reads every command an isolated agent runs, after hooks rewrite
    it.** It is Claude Code's, not this repo's, and it is the real protection: `git -C` or `cd` aimed
    at the shared checkout or another worktree is refused, and stays refused. The user-level rtk hook
-   used to trip it, by putting `rtk` in front of `git` (#5055); `scripts/hooks/guard-bash.mjs` now
-   hands those commands back as written, so `git status` and `git a && git b` work as typed (#6470).
+   trips it by putting `rtk` in front of `git` (#5055), so `scripts/hooks/guard-bash.mjs` hands
+   those commands back as written, and `git status` and `git a && git b` work as typed (#6470).
    If a refusal still names rtk (a glob, variable or quoted pipe handed to `rtk grep` or `rtk ls`),
    the absolute path passes: `/usr/bin/grep`, `/bin/ls`, `/usr/bin/git`. **What it still refuses on its own:** a loop
-   or `$(…)` around git, `bash file; echo $?`, `bash -c` with shell text, a variable as an argument
-   to sed or node. The 2026-10-11 token audit counted 285 such refusals in 79 agents, about 15.4M
+   or `$(…)` around git, `bash file; echo $?`, `bash -c` whose text names git, a variable as an
+   argument to sed or node, `find` with `( … )`. The 2026-10-11 token audit counted 285 such refusals in 79 agents, about 15.4M
    tokens a week. A non-zero exit is reported by the tool, so `echo $?` adds nothing. Anything longer
    goes in a script file in your scratchpad, run as `bash <file>`, still aimed at your own worktree
    (#5192). **An isolated agent never waits on a PR merge** — its dispatcher
