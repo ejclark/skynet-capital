@@ -1,10 +1,13 @@
 import { CAMPAIGNS } from "../../src/domain/campaigns.js";
 import {
+  askId,
+  cleanQuestion,
   type DiscoveryQueue,
   MAX_ASKERS,
   MAX_PER_MEMBER,
   MAX_QUEUED,
   passesUntil,
+  QUESTION_MAX,
   queueAsk,
   takeForPass,
   tellMember,
@@ -178,5 +181,122 @@ describe("passesUntil and tellMember — roughly when", () => {
   it("makes no promise the app can't keep: no article, no date", () => {
     const text = tellMember(queueAsk([], ask("PLTR"), CAMPAIGNS, none, AT), 6);
     expect(text).not.toMatch(/article|comes back|\d{4}-\d{2}-\d{2}/i);
+  });
+});
+
+describe("a question asked inside a campaign (#6952 slice 2c, criterion 9)", () => {
+  const inCampaign = (
+    subject: string,
+    campaign: string,
+    by = "m1",
+    question?: string,
+    kind: "name" | "sector" | "market" = "name",
+  ) => ({ kind, subject, by, campaign, ...(question ? { question } : {}) });
+
+  it("scopes the ask to its campaign and keeps the member's words", () => {
+    const out = queueAsk(
+      [],
+      inCampaign("PLTR", "ai-buildout", "m1", "Who buys its data?"),
+      CAMPAIGNS,
+      none,
+      AT,
+    );
+    expect(out.status).toBe("queued");
+    expect(out.queue[0]).toMatchObject({
+      id: "ai-buildout/name:PLTR",
+      campaign: "ai-buildout",
+      question: "Who buys its data?",
+    });
+    expect(askId("name", "PLTR")).toBe("name:PLTR");
+  });
+
+  it("queues a subject the campaign already covers, instead of answering covered", () => {
+    // NVDA is in ai-buildout's cast: a bare ask is covered, an ask inside it is a deeper question.
+    expect(queueAsk([], ask("NVDA"), CAMPAIGNS, none).status).toBe("covered");
+    const inside = queueAsk([], inCampaign("NVDA", "ai-buildout"), CAMPAIGNS, none);
+    expect(inside.status).toBe("queued");
+    expect(inside.queue[0]?.id).toBe("ai-buildout/name:NVDA");
+  });
+
+  it("still answers covered when a different house campaign holds the subject", () => {
+    const out = queueAsk([], inCampaign("NVDA", "energy-for-ai"), CAMPAIGNS, none);
+    expect(out).toMatchObject({ status: "covered", campaign: "ai-buildout" });
+  });
+
+  it("does not turn a researched name away inside a campaign, but still does for a bare ask", () => {
+    const researched = (s: string): boolean => s === "PLTR";
+    expect(queueAsk([], ask("PLTR"), CAMPAIGNS, researched).status).toBe("covered");
+    expect(queueAsk([], inCampaign("PLTR", "ai-buildout"), CAMPAIGNS, researched).status).toBe(
+      "queued",
+    );
+  });
+
+  it("makes the same subject in two campaigns two asks, and a bare ask a third", () => {
+    let q: DiscoveryQueue = [];
+    for (const campaign of ["ai-buildout", "energy-for-ai"])
+      q = queueAsk(q, inCampaign("PLTR", campaign), CAMPAIGNS, none).queue;
+    q = queueAsk(q, ask("PLTR"), CAMPAIGNS, none).queue;
+    expect(q.map((a) => a.id)).toEqual([
+      "ai-buildout/name:PLTR",
+      "energy-for-ai/name:PLTR",
+      "name:PLTR",
+    ]);
+  });
+
+  it("lets a second member asking the same thing in the same campaign join the first", () => {
+    const first = queueAsk(
+      [],
+      inCampaign("PLTR", "ai-buildout", "m1", "First words"),
+      CAMPAIGNS,
+      none,
+    );
+    const out = queueAsk(
+      first.queue,
+      inCampaign("PLTR", "ai-buildout", "m2", "Other words"),
+      CAMPAIGNS,
+      none,
+    );
+    expect(out).toMatchObject({ status: "joined", ahead: 0 });
+    expect(out.queue).toHaveLength(1);
+    expect(out.queue[0]?.askers).toEqual(["m1", "m2"]);
+    // The first asker's words stay: one ask never carries two.
+    expect(out.queue[0]?.question).toBe("First words");
+  });
+
+  it("lets a joiner's words fill a gap when the first asker gave none", () => {
+    const first = queueAsk([], inCampaign("PLTR", "ai-buildout"), CAMPAIGNS, none);
+    const out = queueAsk(
+      first.queue,
+      inCampaign("PLTR", "ai-buildout", "m2", "Why now?"),
+      CAMPAIGNS,
+      none,
+    );
+    expect(out.queue[0]?.question).toBe("Why now?");
+  });
+
+  it("holds the same per-member and whole-queue bounds as any ask", () => {
+    let q: DiscoveryQueue = [];
+    for (let i = 0; i < MAX_PER_MEMBER; i++)
+      q = queueAsk(q, inCampaign(`ZZ${i}`, "ai-buildout", "hog"), CAMPAIGNS, none).queue;
+    expect(queueAsk(q, inCampaign("EXTRA", "ai-buildout", "hog"), CAMPAIGNS, none).status).toBe(
+      "limit",
+    );
+    const full = Array.from({ length: MAX_QUEUED }, (_, i) => `ZZ${i}`).reduce<DiscoveryQueue>(
+      (acc, s, i) => queueAsk(acc, inCampaign(s, "ai-buildout", `m${i}`), CAMPAIGNS, none).queue,
+      [],
+    );
+    expect(queueAsk(full, inCampaign("NEWCO", "ai-buildout"), CAMPAIGNS, none).status).toBe("full");
+  });
+});
+
+describe("cleanQuestion", () => {
+  it("makes one tidy line and caps it at QUESTION_MAX characters", () => {
+    expect(cleanQuestion("  Who \n\t keeps the   windfall?  ")).toBe("Who keeps the windfall?");
+    expect(cleanQuestion("x".repeat(QUESTION_MAX + 50))).toHaveLength(QUESTION_MAX);
+  });
+
+  it("is undefined for nothing, whitespace, control characters or a non-string", () => {
+    for (const bad of [undefined, "", "   ", "\u0000\u0007", 42, {}])
+      expect(cleanQuestion(bad)).toBeUndefined();
   });
 });
