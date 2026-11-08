@@ -301,8 +301,8 @@ npm run steer:build -- <dir>/tp.json
   `comments`, Done can't tell you). One page per screen: round 1 creates it, later rounds republish
   to its `url`. Never publish over the steering page. The publish result must say this session
   watches the page; if it doesn't, watch it with ArtifactComments. Then stamp `tp/<id>` with
-  `listening` so the page's bar says you're listening (steer skill step 5); on a watch-lost
-  notice, stamp `listening.lost` and ask him to say "watch my page" (step 6).
+  `listening` so the page's bar says you're listening (steer skill step 6); on a watch-lost
+  notice, stamp `listening.lost` and ask him to say "watch my page" (step 7).
 - **Every round page carries "✎ Note about this page"** in its bar. He taps it, then the spot that
   bugged him (the intro, a button, a pin, the reveal), and writes a line. Marks on a frame are
   design feedback; notes on the page are process feedback, given at the moment of friction (Eric,
@@ -317,13 +317,13 @@ npm run steer:build -- <dir>/tp.json
 
 **f · On Done, read it back, then loop or build.**
 - The trigger is a comment sent to Claude that starts `Done with steering round <id>`, or "done"
-  from him in chat. Read back once per Done — the steer skill's step 6 rule. A session woken by
+  from him in chat. Read back once per Done — the steer skill's step 7 rule. A session woken by
   his "done" in chat reads the round back exactly as it would for a Done comment. Either way,
   first stamp `ackAt` and `ackFor` on `tp/<id>`, so the page says "✓ Received" before the read-back
   lands: `ackFor` is the time after `Pressed` in the comment, copied exactly (on a chat "done", the
   round's `doneAt`), because that match is what proves you read this press. No stamp within two
   minutes, and the page tells him no session has read it.
-- Run the steer skill's step 7 on this round's folder: the records, his comments
+- Run the steer skill's step 8 on this round's folder: the records, his comments
   (`comments.json`), then `npm run steer:readback`. Its comment quotes his picks and pinned notes on
   the screen's issue, word for word. Reply on each pinned thread with where it landed, resolve it,
   and write `readBackAt` and a one-line summary back to the page.
