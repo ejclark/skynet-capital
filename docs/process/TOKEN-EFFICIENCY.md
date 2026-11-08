@@ -22,7 +22,7 @@ never floor-lowering.
 | 2 | **Protect the prompt cache in every session** | free win | 2.5–3.7× on agent-loop cost at 81–90% hit rates (Anthropic's measurement) | Pick model + effort at the top of a session and don't touch them mid-task; `/clear` between unrelated tasks; `/rewind` over `/compact` when abandoning a path. Invalidator catalogue below |
 | 3 | ~~Compress CLAUDE.md (26.3KB → ~14–16KB)~~ **done 2026-08-28** | free win | ~2,500–3,000 tokens × *every* session and *every* CI lane run, zero information loss | #723 moved every trimmed item to its on-demand home (the ship skill, `docs/ENGINEERING.md`, `EVENT-RESEARCH.md`): 26.3KB → 21.7KB, zero rule loss. Map below; CLAUDE.md is Eric's file, so a compression ships as a reviewed proposal |
 | 4 | ~~Debounce the `claude.yml` comment lane~~ **withdrawn 2026-08-28** | — | comment-per-session cost is real, but the retrigger-on-new/edited-comment + cancel-in-progress IS Eric's steering directive (2026-08-20, in the workflow's own header) — the discarded partial work is the designed price of "any comment steers" | No change without Eric; the open question (should steering debounce rapid-fire edits?) is his, banked here |
-| 5 | ~~Pin model + turn caps on CI lanes~~ **done 2026-08-28** | hygiene | bounded worst case, deliberate routing | Every claude-code-action lane now passes `--model`; `claude.yml` and the research jobs also cap `--max-turns`. The pins are full model IDs, so revisit them at each model release |
+| 5 | ~~Pin model + turn caps on CI lanes~~ **done 2026-08-28** | hygiene | bounded worst case, deliberate routing | Every claude-code-action lane passes `--model`; `claude.yml` and the research jobs also cap `--max-turns`. The pins are full model IDs, so revisit them at each model release |
 | 6 | **Route structure questions to Graphify, not file reads** | free win | file reads dominate context (docs' own finding); one query replaces a grep + N candidate reads | `graphify explain/affected/query` before reading; the committed snapshot refreshes by hand, `npm run graph:refresh` ([`docs/GRAPHIFY.md`](../GRAPHIFY.md)) |
 | 7 | **Effort-tier the fan-outs we already run** | tradeoff | research-type effort curves are nearly flat: `medium` matched `high`'s accuracy for noticeably less in Anthropic's runs (curves are per model — re-sweep after a model change rather than carrying a level over) | Keep verify/judge stages at `xhigh`; run mechanical read/extract stages at `high` or below. Never silently — floors still apply |
 
@@ -33,7 +33,7 @@ done; 4 is withdrawn as written — see its row).
 
 ```mermaid
 flowchart LR
-    subgraph FIXED["Fixed context — every session, ~12.7k tokens"]
+    subgraph FIXED["Fixed context — every session, ~12.7k tokens (measured 2026-08-28)"]
         A["CLAUDE.md 26.3KB<br/>~6,580 tok = 52%"]
         B["Orient output style<br/>~2,260 tok"]
         C["Agent + skill roster<br/>descriptions ~3,700 tok"]
@@ -65,7 +65,7 @@ in the claude-api skill's shared/models.md, not here)
 ([prompt-caching](../vendor/claude-code/prompt-caching.md)).
 
 - **Set model and effort at the top of a session; change them only at task boundaries.** `/model`,
-  `/effort`, and fast-mode toggles each make the next request re-read the *entire* history uncached.
+  `/effort`, and turning fast mode on each make the next request re-read the *entire* history uncached.
   Need one-turn depth instead? Type `ultrathink` in the prompt — it doesn't touch the cache key.
 - **`/clear` between unrelated tasks — it costs nothing.** `/compact` is itself a large request (it
   reads everything it summarizes) — save it for natural breaks in one continuing task. Abandoning a
@@ -138,7 +138,7 @@ entirely out of the startup index; subagent description budget warns at 15k toke
    session spawns — the `digest-scan --due` pattern, which already made the digest no-op free. Still
    open: batch adjacent macro events sharing one adjacency sweep (the same CPI/FOMC/VIX facts are
    re-researched once per event per day; #2946). Events per session is settled the other way: one
-   event per matrix leg since 2026-08-29, bounded by `max-parallel`.
+   event per matrix leg, bounded by `max-parallel`.
 2. **`claude.yml` comment lane** — *cost confirmed, "fix" withdrawn (2026-08-28)*: it fires on
    every member comment created or edited, and cancel-in-progress restarts a fresh session per
    message. But that is the **deliberate steering primitive** Eric directed on 2026-08-20 ("listen
@@ -149,8 +149,10 @@ entirely out of the startup index; subagent description budget warns at 15k toke
    per issue in `scripts/moneypenny/model-tier.mjs` and `continuation.mjs`; the rest pin it in the workflow),
    and `claude.yml` plus the research jobs cap `--max-turns` per the
    [GitHub Actions cost guidance](../vendor/claude-code/github-actions.md).
-4. **Deploy churn**: every docs-only research row ships a full dashboard deploy (the bots app got a
-   diff-based preflight after the 08-26 restart storm; the dashboard has none).
+4. **Deploy churn**: both apps deploy behind a diff-based preflight
+   (`scripts/dashboard-deploy-preflight.mjs`, `scripts/bots-deploy-preflight.mjs`). A
+   `docs/research/**` row still ships a dashboard deploy, because the /research shelf is read from
+   the image at request time.
 5. **Banked, don't re-litigate**: GraphQL-bucket burn → `/ship` REST; empty Routine firings (~130)
    → event-driven Moneypenny; the $0.88 tool-less session → `--allowedTools`; metered-spend
    self-escalation → `envelope.json` on the feedback coach's model dial
@@ -192,7 +194,8 @@ entirely out of the startup index; subagent description budget warns at 15k toke
    map above, zero rule loss.
 3. ~~**Model pinning + `--max-turns` on `build-events` and `claude.yml`**~~ — done 2026-08-28
    (steering behavior untouched — see the withdrawal above).
-4. **Dashboard deploy preflight** — skip deploy when the diff is docs-only.
+4. ~~**Dashboard deploy preflight**~~ — built (#4839): `scripts/dashboard-deploy-preflight.mjs`
+   skips the deploy when the diff changes nothing the image ships.
 5. **Verify-output filter hook** — grep-to-failures on test output.
 6. **Repetition miner → `/charter` pipeline** — periodically mine `data/duel-log.jsonl`, digests,
    and `/insights` for recurring uncodified task shapes; each hit becomes a charter proposal (where
