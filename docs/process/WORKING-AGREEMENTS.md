@@ -1,6 +1,6 @@
 # Working agreements — the full text of rules CLAUDE.md states in one line
 
-These apply to specific task classes, so they load when that task comes up instead of in every session (#6470). Moved verbatim on 2026-11-01. A rule moved here that gets broken in the task class it governs goes back into `CLAUDE.md`: read this file before doing one of these tasks.
+These apply to specific task classes, so they load when that task comes up instead of in every session (#6470). A rule moved here that gets broken in the task class it governs goes back into `CLAUDE.md`: read this file before doing one of these tasks.
 
 ## A brain-dump is a planning session
 
@@ -12,7 +12,7 @@ grok", "not sure how to improve", "there's likely many talking points I have yet
 read it as a design conversation: each item is a *signal about an outcome*, the mechanism named
 beside it is a first guess, and the hedged items are the ones he most wants Claude to fill in. The
 deliverable is an assessment plus the IA decision written down (a `plan` issue, per the IA rule
-above) — never a build of the list verbatim, and never a paragraph per item echoing it back. Hunt
+in `CLAUDE.md`) — never a build of the list verbatim, and never a paragraph per item echoing it back. Hunt
 in proximity (the "talking points I have yet to see" are an explicit invitation for side quests),
 quantify the hunches against the corpus/code, and hand back the smallest vocabulary that turns his
 "feels out of place" into a precise request. Store the reasoning where it survives the session
@@ -64,8 +64,8 @@ issue comments instead of guessing — the richer the issue, the fewer intervent
 cadence is standing, not per-instance** (Eric, 2026-09-06: "my answer for 'whenever i want to bless
 work to proceed' remains consistent; now, always now"). Once a plan is `ready`, a slice closes, or a
 PR merges, the next slice starts without a fresh nod — re-asking "should I continue?" on work already
-inside the envelope is the same scaling failure as a recurring blessing-ask elsewhere in this file.
-This answers *when*, not *what*: the hard boundaries below (irreversible/governance/spend, a genuine
+inside the envelope is the same scaling failure as a recurring blessing-ask (`CLAUDE.md` → *Hard boundaries*).
+This answers *when*, not *what*: the hard boundaries in `CLAUDE.md` (irreversible/governance/spend, a genuine
 taste fork, a load-bearing decision only he can settle) still always stop for him — "always now" means
 never idle on ready, in-envelope work, not never ask at all. Label semantics
 (2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else
@@ -174,13 +174,11 @@ only when it is genuinely his (the irreversible class) or carries a key value-un
 worth his judgment, stated as such. **Step anatomy:** `N. <the do> — <the why, trailing, read only
 if wanted>` — imperative-first so the list is executable by scanning the left edge alone. Close
 with a one-or-two-line **gist** (what the steps accomplish together / the state after).
-**Better than a procedure: one line to paste** (Eric, 2026-09-30, after #4053's secrets went from
-a five-step list to `scripts/setup-dependabot-secrets.sh`: "copy/paste this script, copy/paste
-the output, profit… a far superior experience"). When his step is a *task* rather than a decision,
-script it: one command that is independent of his checkout state (`bash <(git show origin/main:…)`
-— his terminal may sit on a stale branch), does the work, verifies itself, and ends on a success
-line he can paste back. Prove it end to end against a stub before handing it over. A task is not a
-decision — never label it "needs your call". **And a decision gets the same short-circuit:**
-screenshots or rendered options he can judge by eye, never prose to parse.
-
-> **Superseded in part (Eric, 2026-10-24):** the paste-a-command path above no longer applies. "Running terminal commands is out of the question; I expect you to automate this piece through a web interface." A task for him is an in-app form or a committed config change, and even a credential goes through an owner-only form. The spirit stands: one action, self-verifying, works first time. #5955 asked him for a paste two days after that correction, because this paragraph still said to (#6470).
+**Better than a procedure: one action** (Eric, 2026-09-30: "a far superior experience" than a
+five-step list). When his step is a *task* rather than a decision, it is an in-app form or a
+committed config change, and even a credential goes through an owner-only form — never a terminal
+command (Eric, 2026-10-24: "Running terminal commands is out of the question; I expect you to
+automate this piece through a web interface"; #6470). The action is one step, verifies itself, and
+works the first time. A task is not a decision — never label it "needs your call". **And a decision
+gets the same short-circuit:** screenshots or rendered options he can judge by eye, never prose to
+parse.
