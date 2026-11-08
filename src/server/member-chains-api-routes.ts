@@ -6,6 +6,8 @@ import {
   formFromChain,
   parseChainForm,
 } from "../playbooks/chain-form.js";
+import { type ChainScorecard, scorecardFor } from "../playbooks/chain-scorecard.js";
+import scorecardFile from "../playbooks/chain-scorecards.json";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { creditFor } from "./feedback-attribution.js";
@@ -46,14 +48,24 @@ export interface MemberChainView {
   /** The form this was saved from, so Edit opens on exactly it. */
   readonly form: ChainForm;
   readonly updatedAt: string;
+  /** What the chain's shadow replay found (#6959 slice 4); absent when its links were never replayed. */
+  readonly scorecard?: ChainScorecard;
 }
 
-export function chainViewOf(record: MemberChainRecord): MemberChainView {
+/** The replays run so far, committed beside the chain code (`npm run research:chain -- --scorecard=…`). */
+const SCORECARDS: readonly ChainScorecard[] = scorecardFile.cards;
+
+export function chainViewOf(
+  record: MemberChainRecord,
+  cards: readonly ChainScorecard[] = SCORECARDS,
+): MemberChainView {
+  const scorecard = scorecardFor(record.chain, cards);
   return {
     id: record.chain.id,
     title: record.chain.title,
     form: formFromChain(record.chain),
     updatedAt: record.updatedAt,
+    ...(scorecard ? { scorecard } : {}),
   };
 }
 
@@ -120,7 +132,7 @@ export async function serveMemberChainsApi(
   if (path === "/api/playbook-chains") {
     if (!requireGet(req, res)) return true;
     const records = config.memberChains?.list(memberKey) ?? [];
-    sendJson(res, 200, { chains: records.map(chainViewOf) });
+    sendJson(res, 200, { chains: records.map((r) => chainViewOf(r)) });
     return true;
   }
   const raw = await readJsonPost(req, res, CHAINS_BODY_CAP_BYTES);
