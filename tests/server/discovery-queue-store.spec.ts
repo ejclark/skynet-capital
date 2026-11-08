@@ -26,6 +26,8 @@ describe("parseDiscoveryQueue", () => {
       { ...ask("RIVN"), id: "name:OTHER" },
       { ...ask("LCID"), kind: "planet" },
       { ...ask("SOFI"), askers: [1] },
+      { ...ask("HOOD"), askedAt: "garbage" },
+      { ...ask("COIN"), askers: ["x".repeat(65)] },
       ask("PLTR"),
       "junk",
     ]);

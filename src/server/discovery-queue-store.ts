@@ -29,7 +29,9 @@ function parseAsk(raw: unknown): DiscoveryAsk | undefined {
   const { id, kind, subject, askedAt, askers } = raw;
   if (!isKind(kind) || typeof subject !== "string" || subject.length === 0) return undefined;
   if (id !== `${kind}:${subject}` || typeof askedAt !== "string") return undefined;
-  if (!(Array.isArray(askers) && askers.every((a) => typeof a === "string"))) return undefined;
+  if (Number.isNaN(Date.parse(askedAt))) return undefined;
+  if (!(Array.isArray(askers) && askers.every((a) => typeof a === "string" && a.length <= 64)))
+    return undefined;
   return { id, kind, subject, askedAt, askers: askers.slice(0, MAX_ASKERS) };
 }
 

@@ -8,7 +8,8 @@
  * lesson record (campaign-lessons.ts), which `startDiscovery` reads before any of it starts.
  *
  * THE QUEUE NEVER RAISES THE CEILING. Three rules keep that true, each pinned by a spec:
- *   1. It is bounded (`MAX_QUEUED`): a flood of questions fills a short list, never the lane.
+ *   1. It is bounded (`MAX_QUEUED`, and `MAX_PER_MEMBER` so one asker can't take every slot): a
+ *      flood of questions fills a short list, never the lane.
  *   2. A drain takes at most the lane's per-pass ceiling (`npm run work-gate`'s `researchPerTick`)
  *      MINUS the slots event research already used that pass, and zero when the dial says halt.
  *   3. Asking twice is one ask: a second member asking about the same thing joins it, so a popular
@@ -29,6 +30,8 @@ export type DiscoveryKind = (typeof DISCOVERY_KINDS)[number];
 
 /** Asks waiting at once. A bound on member text, not a game rule; the lane drains it per pass. */
 export const MAX_QUEUED = 24;
+/** Asks one member may have waiting at once, so a single asker can't take every slot. */
+export const MAX_PER_MEMBER = 5;
 /** The most members one ask remembers; a popular question stops counting, never grows the file. */
 export const MAX_ASKERS = 20;
 
@@ -54,7 +57,8 @@ export type QueueOutcome =
       readonly ahead: number;
     }
   | { readonly status: "covered"; readonly queue: DiscoveryQueue; readonly campaign: string }
-  | { readonly status: "full"; readonly queue: DiscoveryQueue };
+  | { readonly status: "full"; readonly queue: DiscoveryQueue }
+  | { readonly status: "limit"; readonly queue: DiscoveryQueue };
 
 /** The house campaign that already covers the subject, if one does. A name counts when it is in a cast. */
 export function coveringCampaign(
@@ -107,6 +111,8 @@ export function queueAsk(
     return { status: "joined", queue: next, ahead: at0 };
   }
   if (queue.length >= MAX_QUEUED) return { status: "full", queue };
+  if (queue.filter((a) => a.askers.includes(input.by)).length >= MAX_PER_MEMBER)
+    return { status: "limit", queue };
   const ask: DiscoveryAsk = {
     id,
     kind: input.kind,
@@ -146,8 +152,10 @@ export function passesUntil(ahead: number, perPass: number): number {
 export function tellMember(outcome: QueueOutcome, perPass: number): string {
   if (outcome.status === "covered")
     return `The house already covers this in ${outcome.campaign}, so there is nothing new to look into.`;
-  if (outcome.status === "full")
-    return "The house has a full list of questions to look into right now. Ask again in a day or two.";
+  if (outcome.status === "full" || outcome.status === "limit")
+    return outcome.status === "full"
+      ? "The house has a full list of questions to look into right now. Ask again in a day or two."
+      : `You already have ${MAX_PER_MEMBER} questions waiting. Ask again once the house has looked into one.`;
   const passes = passesUntil(outcome.ahead, perPass);
   const lead =
     outcome.status === "joined" ? "Someone already asked this; you're on it with them." : "Queued.";

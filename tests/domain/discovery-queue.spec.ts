@@ -2,6 +2,7 @@ import { CAMPAIGNS } from "../../src/domain/campaigns.js";
 import {
   type DiscoveryQueue,
   MAX_ASKERS,
+  MAX_PER_MEMBER,
   MAX_QUEUED,
   passesUntil,
   queueAsk,
@@ -86,12 +87,28 @@ describe("queueAsk", () => {
   });
 
   it("is bounded: a full queue refuses a new ask unchanged, but a joined ask still joins", () => {
-    const full = queued(Array.from({ length: MAX_QUEUED }, (_, i) => `ZZ${i}`));
+    const full = Array.from({ length: MAX_QUEUED }, (_, i) => `ZZ${i}`).reduce<DiscoveryQueue>(
+      (q, s, i) => queueAsk(q, ask(s, `m${i}`), CAMPAIGNS, none, AT).queue,
+      [],
+    );
     expect(full).toHaveLength(MAX_QUEUED);
     const out = queueAsk(full, ask("NEWCO"), CAMPAIGNS, none);
     expect(out.status).toBe("full");
     expect(out.queue).toBe(full);
     expect(queueAsk(full, ask("ZZ3", "m9"), CAMPAIGNS, none).status).toBe("joined");
+  });
+});
+
+describe("one member can't take every slot", () => {
+  it("refuses a member's ask past MAX_PER_MEMBER, but still lets them join others' and others ask", () => {
+    let q: DiscoveryQueue = [];
+    for (let i = 0; i < MAX_PER_MEMBER; i++)
+      q = queueAsk(q, ask(`ZZ${i}`, "hog"), CAMPAIGNS, none).queue;
+    const out = queueAsk(q, ask("EXTRA", "hog"), CAMPAIGNS, none);
+    expect(out.status).toBe("limit");
+    expect(out.queue).toBe(q);
+    expect(queueAsk(q, ask("EXTRA", "other"), CAMPAIGNS, none).status).toBe("queued");
+    expect(tellMember(out, 6)).toMatch(/already have 5 questions waiting/);
   });
 });
 

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
@@ -493,5 +493,59 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     );
     expect(answer.body.ok).toBe(true);
     expect(answer.body.discovery).toBeUndefined();
+  });
+
+  it("stops one member taking every slot, and says so", async () => {
+    for (const t of ["AA", "BB", "CC", "DD", "EE"]) await askAbout({ kind: "name", subject: t });
+    const answer = await askAbout({ kind: "name", subject: "FF" });
+    expect(answer.body).toMatchObject({ ok: true, status: "limit" });
+    expect(answer.body.tell).toMatch(/already have 5 questions/);
+    expect(queue.load()).toHaveLength(5);
+    expect((await askAbout({ kind: "name", subject: "FF" }, grace)).body.status).toBe("queued");
+  });
+
+  it("says so when a saved campaign's names were only partly taken", async () => {
+    for (const t of ["AA", "BB", "CC", "DD"]) await askAbout({ kind: "name", subject: t });
+    const form = {
+      title: "Many",
+      anchor: { kind: "sector", id: "Energy" },
+      symbols: ["RIVN", "LCID"],
+      storyline: "Two new ones.",
+      mode: "explore",
+    };
+    const answer = await call("/api/campaigns/mine/save", post({ form }));
+    expect(answer.body.discovery.status).toBe("queued");
+    expect(answer.body.discovery.tell).toMatch(/1 more couldn't be taken/);
+  });
+
+  it("writes the queue only when it changed", async () => {
+    await askAbout({ kind: "sector", subject: "Utilities" });
+    expect(existsSync(join(dir, "discovery-queue.json"))).toBe(false);
+  });
+
+  it("still saves the campaign when the queue can't be written", async () => {
+    const broken = {
+      load: () => [],
+      write: () => {
+        throw new Error("disk full");
+      },
+    };
+    const form = {
+      title: "Disk full",
+      anchor: { kind: "sector", id: "Energy" },
+      symbols: ["XOM", "RIVN"],
+      storyline: "Write fails.",
+      mode: "explore",
+    };
+    const answer = await call(
+      "/api/campaigns/mine/save",
+      post({ form }),
+      ada,
+      config({ discoveryQueue: broken }),
+    );
+    expect(answer.status).toBe(200);
+    expect(answer.body.ok).toBe(true);
+    expect(answer.body.discovery).toBeUndefined();
+    expect(campaigns.list(ADA)).toHaveLength(1);
   });
 });

@@ -195,17 +195,32 @@ function queueDiscoveries(
   if (!store || subjects.length === 0) return undefined;
   const isResearched = config.campaignShelf ?? shelfResearched();
   const perPass = config.discoveryPerPass ?? discoveryPerPass();
-  let queue: DiscoveryQueue = store.load();
+  const before: DiscoveryQueue = store.load();
+  let queue = before;
   let last: QueueOutcome | undefined;
+  let refused = 0;
   // Report the one furthest back in line, so the "roughly when" is the longest the member waits.
   const place = (o: QueueOutcome): number => ("ahead" in o ? o.ahead : -1);
   for (const subject of subjects) {
     const outcome = queueAsk(queue, { kind, subject, by: memberKey }, CAMPAIGNS, isResearched);
     queue = outcome.queue;
+    if (outcome.status === "full" || outcome.status === "limit") refused++;
     if (!last || place(outcome) >= place(last)) last = outcome;
   }
-  store.write(queue);
-  return last ? { status: last.status, tell: tellMember(last, perPass) } : undefined;
+  // Best effort: the campaign is already saved, so a queue write that fails must not fail the save.
+  if (queue !== before) {
+    try {
+      store.write(queue);
+    } catch (err) {
+      process.emitWarning(`[discovery-queue] write failed: ${String((err as Error).message)}`);
+      return undefined;
+    }
+  }
+  if (!last) return undefined;
+  // A name the queue turned away is said out loud, never hidden behind the ones it took.
+  const note =
+    refused > 0 && place(last) >= 0 ? ` ${refused} more couldn't be taken right now.` : "";
+  return { status: last.status, tell: tellMember(last, perPass) + note };
 }
 
 /** The subject a member's ask names, checked against the catalogs the app already holds. */
