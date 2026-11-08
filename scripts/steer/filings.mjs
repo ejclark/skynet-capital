@@ -3,6 +3,7 @@
 // (tests/scripts/steer-readback.spec.ts runs the gate on both), ends with the lane FOOTER, and
 // carries the marker the next reel reads to say "because you said …". Pure.
 import { FOOTER } from "../moneypenny/labels.mjs";
+import { optionMarksBlock } from "./marks.mjs";
 import { steerMarker } from "./model.mjs";
 import { perPinBlock } from "./pins.mjs";
 
@@ -23,6 +24,8 @@ export function buildIssue(d, r, id) {
   const pins = perPinBlock(d, r, { option: opt.key });
   const said = r.optionNotes?.[opt.key];
   const optNote = typeof said === "string" && said.trim() ? said : "";
+  // The spots he tapped on the picked option's own frames, each with its note (marks.mjs, #7078).
+  const marks = optionMarksBlock(d, r, opt.key);
   const body = [
     `**Build option ${opt.key}, "${cut(opt.name, 60)}", from #${d.issue} — Eric picked it on the decisions page.**`,
     "",
@@ -41,9 +44,11 @@ export function buildIssue(d, r, id) {
     "",
     opt.delta ? `What changes: ${opt.delta}` : "",
     "",
-    noteBlock(r.note) || (optNote ? "" : "_No note — the pick is the whole answer._"),
+    noteBlock(r.note) || (optNote || marks ? "" : "_No note — the pick is the whole answer._"),
     // His note under the picked option itself (option-notes.mjs, #5429), word for word.
     ...(optNote ? ["", `Eric's note on this option:\n\n${quote(optNote)}`] : []),
+    // His marks on the picked option (#7078): a note tapped onto a spot is often the build's point.
+    ...(marks ? ["", marks] : []),
     // His reactions on the picked option's own pins (#5143): the build keeps a 👍 as drawn.
     ...(pins ? ["", pins] : []),
     "",
