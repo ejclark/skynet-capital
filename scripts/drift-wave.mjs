@@ -184,7 +184,9 @@ function merge(rows, at7) {
     } catch {
       try {
         git("merge", "--abort");
-      } catch {}
+      } catch {
+        // No merge in progress to abort: the merge failed before it started.
+      }
       conflicts++;
       console.log(
         `conflict   ${r.label} — another item or main changed the same passage: keep the first, or catch it up on its own branch (git merge origin/main) and re-run`,
