@@ -15,7 +15,8 @@ understand the journeys, how I think, my needs, etc."*
 
 - _hypothesis — he enjoys side quests: the proximity hunt is a standing ask of his (CLAUDE.md →
   "Side quests — Claude generates ideas too", and the brain-dump rule's "explicit invitation for
-  side quests", 2026-09-06), so a surface that offers the next adjacent thing keeps him longer than
+  side quests", `docs/process/WORKING-AGREEMENTS.md` → "A brain-dump is a planning session",
+  2026-09-06), so a surface that offers the next adjacent thing keeps him longer than
   one that ends. Proves it wrong: a dated note from him that a suggested detour on a member surface
   was noise._
 
@@ -28,9 +29,10 @@ the browser and adapt from there"*); he wants pictures before prose (2026-08-20:
 down and draw more pictures... I want some god damn pictures to hang on the fridge"*).
 
 - _hypothesis — he reads a page's left edge first and decides in seconds whether it is for him
-  (he asks for numbered procedures executable "by scanning the left edge alone", CLAUDE.md
-  2026-08-15). Proves it wrong: a live review after 2026-09-26 where he reacts first to something
-  in the right column or below the fold._
+  (he asks for numbered procedures executable "by scanning the left edge alone",
+  `docs/process/WORKING-AGREEMENTS.md` → "When Eric's action is needed", 2026-08-15). Proves it
+  wrong: a live review after 2026-09-26 where he reacts first to something in the right column or
+  below the fold._
 - _hypothesis — a page that makes him choose a mechanism (a strategy name, a chart setting) loses
   him; a page that shows him two rendered outcomes keeps him (CLAUDE.md → "Eric directs by
   outcome, not by technique"). Proves it wrong: a dated request from him for a specific technique
