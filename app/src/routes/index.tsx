@@ -12,8 +12,8 @@ import { PageFrame } from "../shell/frame";
  * Leaderboard keeps its route and leaves the tab bar; Profile's league card ("Full leaderboard ›")
  * is its door now.
  *
- * At 390, in order (#7077 constraints): the ask box (slice 2) · the lead story's key facts · its
- * ask (slice 2) · quests by source (slice 3, #7028) · what's next. This slice builds the news and
+ * At 390, in order (docs/IA.md §5.9): the question box (slice 2) · the lead story's coming reports,
+ * then what moved · its ask (slice 2) · quests by source (slice 3, #7028) · what's next. This slice builds the news and
  * what's next; the slots for the ask and the quests come with their slices, never as placeholders.
  *
  * An old bookmark or a shared compare link (`/?by=`, `?a=`, `?b=`) was always a member asking for

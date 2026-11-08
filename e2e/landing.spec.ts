@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 // Behavioural only: the edition is the latest one checked in, and the server cuts its dated items
 // against the real date, so the words change by design; the shape is what's held here.
 test.describe("landing page", () => {
-  test("opens on the news, with the lead story's key facts on the first phone screen", async ({
+  test("opens on the news, the lead story's reports then what moved on the first phone screen", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -12,8 +12,16 @@ test.describe("landing page", () => {
     await expect(page).toHaveURL(/\/app\/$/);
     const lead = page.locator(".story--lead");
     await expect(lead.locator(".story-headline")).toBeVisible();
-    // Criterion 8's news half: the lead story's key facts are on the first screen at 390.
+    // Criterion 8's news half, in §5.9's order: the coming reports lead, then what moved, both on
+    // the first screen at 390.
+    const reports = lead.locator(".story-reports");
     const facts = lead.locator(".story-facts");
+    await expect(reports).toBeInViewport();
+    const order = await reports.evaluate(
+      (r, f) => Boolean(f && r.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING),
+      await facts.elementHandle(),
+    );
+    expect(order).toBe(true);
     await expect(facts).toBeInViewport();
     const box = await facts.boundingBox();
     expect((box?.y ?? Number.POSITIVE_INFINITY) + (box?.height ?? 0)).toBeLessThanOrEqual(844);
@@ -31,12 +39,12 @@ test.describe("landing page", () => {
     await expect(lead.locator(".story-lines .story-mark").first()).toHaveText(/\w/);
   });
 
-  test("gives News the first tab, and the Leaderboard leaves the bar for Profile's card", async ({
+  test("gives Chronicles the first tab, and the Leaderboard leaves the bar for Profile's card", async ({
     page,
   }) => {
     await page.goto("/app/");
     const nav = page.locator("nav.topnav");
-    await expect(nav.getByRole("link", { name: "News", exact: true })).toHaveAttribute(
+    await expect(nav.getByRole("link", { name: "Chronicles", exact: true })).toHaveAttribute(
       "aria-current",
       "page",
     );
