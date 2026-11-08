@@ -44,7 +44,7 @@ map cleanly because the repo already committed to their preconditions:
    more moments.
 5. **Fanfare economy.** Ceremony cameras reserved for the behavior we want repeated (Peggle's
    "Extreme Fever" lesson); ceremony inflation destroys the instrument. Wins get ~3× the motion
-   budget (already a settled, checkable constant); losses get quiet honest ink, never spectacle —
+   budget (settled in `GAMEBOARD-PLAN.md`, item 5); losses get quiet honest ink, never spectacle —
    EVE's structure-loss churn and Habitica's backfiring punishments are the documented cautionary
    tales.
 
@@ -59,7 +59,7 @@ Each slice is small, reversible, and rides an existing seam. The APIs below were
 | 2 | **Landmark leveling, live** | The tower *is* the scoreboard | Wire real standings into the dials that already exist: `resolveTowerParams({prominence, health})`. The rank→0..1 function is `botLandmarkProminence` (`src/observatory/standings.ts`); it reaches the tower as `?power=` through `towerSrc` (`app/src/shell/sauron-card.tsx`). |
 | 3 | **Idle orbit + tour mode** | Visitability; the world as a place you show someone | `AutoRotationBehavior` for the idle observatory orbit; `Curve3.CreateCatmullRomSpline` + `Path3D` for an auto-camera tour through an empire's highlights. |
 | 4 | **Photo mode / share-a-moment** | Retention + distribution inside the invite gate | `shoot:tower` is already the deterministic capture rig. Add a "bank this moment" that renders a ceremony card (shot + honest caption: ticker, P/L, renown reason) into the group feed. |
-| 5 | **Construction sites** | Anticipation on the honest clock | A scaffold variant of the tower piece driven by position age / days-to-expiry from `StructureState`; completion ceremony = slice 1. Needs the history layer for *events* (the known blocker, THE-GAME.md). |
+| 5 | **Construction sites** | Anticipation on the honest clock | A scaffold variant of the tower piece driven by position age / days-to-expiry from `StructureState`; completion ceremony = slice 1. Needs per-fill *events*: the history layer records, but per-fill events remain S7+ (THE-GAME.md → *What this needs*). |
 | 6 | **The district → city scale-up** | LOD storytelling | `thinInstanceSetBuffer('matrix', …)` renders thousands of buildings in one draw call per material — with the verified caveat that thin instances cull all-or-nothing, so partition by district-parent. Per-building window-light/weathering via custom instance attributes read in a `NodeMaterial` (NME authors it visually, emits GLSL+WGSL). Babylon 9.0's clustered lighting is the enabler for many window/street lights. |
 | 7 | **Mass atmosphere** | The storm, embers, regime weather at city scale | `GPUParticleSystem` (tens of thousands of particles) — guard with `GPUParticleSystem.IsSupported` and fall back to the CPU `ParticleSystem` **manually**; the fallback is not automatic. The current embers (`src/three/pieces/embers.ts`: 260 seeded sparks, scaled by `stormDensity`) stay the pattern for hero pieces. |
 | 8 | **Diegetic labels** | The telestrator, in-world | `@babylonjs/gui`: fullscreen ADT + `label.linkWithMesh(tower)` + a `Line` with `connectedControl` *is* the callout mechanic natively; `AdvancedDynamicTexture.CreateForMesh` for true in-world steles/banners (fog and DOF apply — a leaderboard as a monument plaza). |
