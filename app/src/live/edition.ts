@@ -8,9 +8,13 @@ import { dayLabel } from "./book-events";
 
 export type EditionMark = "measured" | "reported" | "modeled" | "call";
 
+/** Which way a key fact moved. */
+export type EditionMove = "up" | "down" | "mixed";
+
 export interface EditionFact {
   readonly label: string;
   readonly value: string;
+  readonly move: EditionMove;
   readonly note?: string;
   readonly mark?: EditionMark;
   readonly n?: number;
@@ -64,6 +68,16 @@ export async function fetchEdition(): Promise<EditionView> {
   if (!res.ok) throw new Error(`edition ${res.status}`);
   return (await res.json()) as EditionView;
 }
+
+/** A move's shape and its word: the shape carries it at a glance, the word for a screen reader and
+ *  for anyone who cannot tell the shapes apart (docs/IA.md §5.9; BRAND.md → Accessibility). */
+export const MOVE_SHAPE: Readonly<
+  Record<EditionMove, { readonly glyph: string; readonly word: string }>
+> = {
+  up: { glyph: "▲", word: "up" },
+  down: { glyph: "▼", word: "down" },
+  mixed: { glyph: "∿", word: "mixed" },
+};
 
 /** The word a mark shows beside its line. A reported line says it is unconfirmed (#7077 c7). */
 export const MARK_WORD: Readonly<Record<EditionMark, string>> = {
