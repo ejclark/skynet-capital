@@ -617,13 +617,18 @@
       "department": "research",
       "name": "Campaigns",
       "kind": "service",
-      "job": "A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events; two exist (AI buildout, oil supply)",
-      "wakesOn": "A PR adding or editing src/domain/campaigns/<id>.json (a member form is slice 3, not built; no app code reads it yet)",
-      "speaksOn": "linked events marked measured, reported or estimated; scope for research and the narrator",
+      "job": "A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events and news; three house campaigns plus members' own, each answering one landscape read (what moved, what is scheduled, what is reported, what the house has tested)",
+      "wakesOn": "A PR adding or editing src/domain/campaigns/<id>.json, a member's saved form, or `npm run campaign:landscape`",
+      "speaksOn": "the landscape read, every line marked measured, reported or estimated; event-scan --due rows name the campaigns that link them, and research dispatch ranks those first",
       "cadence": "read at load",
       "invoker": "session",
       "status": "on trial",
-      "codeRoots": ["src/domain/campaigns.ts", "src/domain/campaigns/"],
+      "codeRoots": [
+        "src/domain/campaigns.ts",
+        "src/domain/campaigns/",
+        "src/domain/campaign-landscape.ts",
+        "scripts/campaign-links.mjs"
+      ],
       "cite": "src/domain/campaigns.ts:1-9 \"so research can be steered by it (slice 5's landscape read, the narrator's questions in #6948)\""
     },
     {
