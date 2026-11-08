@@ -65,7 +65,7 @@ in the claude-api skill's shared/models.md, not here)
 ([prompt-caching](../vendor/claude-code/prompt-caching.md)).
 
 - **Set model and effort at the top of a session; change them only at task boundaries.** `/model`,
-  `/effort`, and turning fast mode on each make the next request re-read the *entire* history uncached.
+  `/effort`, and fast-mode toggles each make the next request re-read the *entire* history uncached.
   Need one-turn depth instead? Type `ultrathink` in the prompt — it doesn't touch the cache key.
 - **`/clear` between unrelated tasks — it costs nothing.** `/compact` is itself a large request (it
   reads everything it summarizes) — save it for natural breaks in one continuing task. Abandoning a
