@@ -3,6 +3,7 @@
  *
  *   npm run research:chain
  *   npm run research:chain -- --json=out.json
+ *   npm run research:chain -- --scorecard=src/playbooks/chain-scorecards.json
  *
  * The chain is `AI_DIP_CHAIN` (`src/playbooks/chain.ts`): CRWV-WHEEL sells a put; if it expires,
  * the cash it secured passes to CRWV-LONG-CALL; if it is assigned, the wheel keeps the shares and
@@ -39,6 +40,7 @@ import {
   runChain,
   type Tape,
 } from "../playbooks/chain-replay.js";
+import { scorecardOf } from "../playbooks/chain-scorecard.js";
 
 const SYMBOL = "CRWV";
 const STEP = 5;
@@ -220,5 +222,21 @@ if (json) {
       2,
     ),
   );
+}
+
+// The scorecard the Store shows (`chain-scorecard.ts`): written from this same run, dated by the
+// tape's last session rather than the clock, so the same tape writes the same file.
+const scorecard = process.argv
+  .slice(2)
+  .find((a) => a.startsWith("--scorecard="))
+  ?.split("=")[1];
+if (scorecard) {
+  const card = scorecardOf(
+    AI_DIP_CHAIN,
+    runs,
+    { symbol: SYMBOL, from: dateOf(first), to: dateOf(crwv.closes.length - 1) },
+    { sessions, twoDeciders, unowned },
+  );
+  writeFileSync(scorecard, `${JSON.stringify({ cards: [card] }, null, 2)}\n`);
 }
 if (twoDeciders > 0 || unowned > 0) process.exitCode = 1;
