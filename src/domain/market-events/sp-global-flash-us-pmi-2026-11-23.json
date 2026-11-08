@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-flash-us-pmi-2026-11-23",
+  "kind": "macro-print",
+  "title": "S&P Global Flash US PMI (Nov 2026) — 09:45 ET, the date this survey's information actually lands",
+  "date": "2026-11-23",
+  "status": "estimate",
+  "source": "EST: read verbatim off S&P Global's own calendar listing, pmi.spglobal.com/Public/Release/ReleaseDates?language=en, fetched direct twice — 2026-10-26 by the proposing lane and again 2026-11-08 by this event's initial research (HTTP 200, 27,453 bytes, browser User-Agent): 'November 23 ... 14:45 UTC S&P Global Flash US PMI'. 14:45 UTC is 09:45 EST (US clocks changed 2026-11-01). The same slot has now printed on schedule for the 2026-10-23 flash (PDF masthead 'Embargoed until 0945 EDT (1345 UTC) 23 October 2026') and the 2026-11-02 final ('Embargoed until 0945 EST 2 November 2026'). Filed estimate on the standing schema gap for a private PMI compiler (no confirmed-source prefix exists for the publisher's primary), not on date doubt. Checked 2026-11-08",
+  "impact": "low",
+  "symbols": [],
+  "notes": "CANONICAL FILE WRITTEN BY THIS EVENT'S OWN INITIAL RESEARCH (2026-11-08), reading the single prior proposal (proposals/sp-global-flash-us-pmi-2026-11-23.from-sp-global-manufacturing-pmi-2026-11-02.json) as input; the proposal is now inert. READ IT, DO NOT TRADE IT. IMPACT KEPT low ON PURPOSE, with a rule rather than a hunch: the sibling 2026-09-23 flash was raised to medium on a 5-of-5 loud window, but the 2026-10-23 flash read mixed on the regime-robust within-day-share statistic (2 above median, 2 below, 1 tie) and the 2026-11-02 final retired 'the slot is quiet' as a general property, so the tier is unsettled at n=2 flash days. FT-sp-global-flash-us-pmi-2026-11-23-1 settles it: if the 09:45-10:00 window's share of the 09:30-10:30 move exceeds its trailing median in 3 or more counted instruments on 2026-11-23, the next amendment raises this entry to medium. Context that changed since the proposal: the 2026-11-05 risk-off shock took VIX from 16.61 to 28.18 (Cboe VIX_History.csv, 25.64 on 11-06), so the November panel (collected roughly mid-month, after the shock) answers inside a different volatility regime than the October one."
+}
