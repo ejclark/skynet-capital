@@ -9,10 +9,13 @@
  *
  * Honesty rules the record carries by shape, not by copy review (CLAUDE.md: "Never let a flourish
  * imply something false about markets or P/L"):
- *  - `baseRate` is either a tested rate WITH its sample size and worst decile, or `untested` — there
- *    is no third "looks good" state. An untested quest ranks below every tested one.
+ *  - `baseRate` is a tested rate WITH its sample size and worst decile, a MEASURED one (the numbers
+ *    from a study too small to claim an edge, said so in words), or `untested` — there is no "looks
+ *    good" state. A measured or untested quest ranks below every tested one.
  *  - `why` lines each name the rule that produced them, so a reason is auditable.
- *  - `houseCall` may be "stand aside": the house can offer a move and still say not to take it.
+ *  - `houseCall` may be "stand aside": the house can offer a move and still say not to take it. A
+ *    move whose study is too small to say either way is "no-edge": shown with its numbers, claimed
+ *    as nothing.
  */
 
 export type QuestSource = "position" | "conditions" | "event";
@@ -59,6 +62,29 @@ export type QuestBaseRate =
       readonly source: string;
     }
   | {
+      /**
+       * A study measured the move but could not separate it from chance (fewer episodes than its
+       * declared power needs, #7028 slice 2). The numbers are shown with their sample, and the
+       * quest says its edge is untested in words — it claims no edge and ranks below tested ones.
+       */
+      readonly kind: "measured";
+      /** Share of past entries where the move paid, 0..1. */
+      readonly rate: number;
+      /** Past entries measured, and the independent sell-offs (episodes) they fall in. */
+      readonly sample: number;
+      readonly episodes: number;
+      /** Episodes the study's declared power needed before it would claim an edge. */
+      readonly episodesNeeded: number;
+      /** The average outcome per entry, as a fraction of the capital the move ties up. */
+      readonly mean: number;
+      /** The worst tenth's outcome (fraction; −0.25 = lost a quarter) and the single worst. */
+      readonly worstDecile: number;
+      readonly worstSingle: number;
+      readonly source: string;
+      /** Said in words on the quest: that the edge is untested, and why. */
+      readonly note: string;
+    }
+  | {
       readonly kind: "untested";
       /** Said in words on the quest: why there is no number yet. */
       readonly note: string;
@@ -82,7 +108,7 @@ export interface Quest {
   /** The day (YYYY-MM-DD) after which the quest no longer holds, and why. A quest whose condition
    *  stops holding sooner is simply not derived on the next read. */
   readonly expires: { readonly date: string; readonly why: string };
-  readonly houseCall: "take" | "stand-aside";
+  readonly houseCall: "take" | "stand-aside" | "no-edge";
   readonly confidence: "high" | "medium" | "low";
   /** Market closed: a plan for the next open, never an instruction for now. */
   readonly atOpen: boolean;
@@ -91,15 +117,19 @@ export interface Quest {
 const CONFIDENCE_ORDER = { high: 0, medium: 1, low: 2 } as const;
 
 /**
- * Best first: a quest the house says to take before one it says to stand aside on; a tested quest
- * before an untested one (AC 5), the higher base rate first; then the higher confidence; then the
- * one that expires soonest, since it is the one that will not wait.
+ * Best first: a quest the house says to stand aside on goes last; a tested quest before a measured
+ * or untested one (AC 5), the house's call to take before one with no edge shown, the higher rate
+ * first; then the higher confidence; then the one that expires soonest, since it is the one that
+ * will not wait.
  */
 export function rankQuests(quests: readonly Quest[]): Quest[] {
-  const rate = (q: Quest): number => (q.baseRate.kind === "tested" ? q.baseRate.rate : -1);
+  const rate = (q: Quest): number => (q.baseRate.kind === "untested" ? -1 : q.baseRate.rate);
+  const tested = (q: Quest): number => Number(q.baseRate.kind !== "tested");
   return [...quests].sort(
     (a, b) =>
       Number(a.houseCall === "stand-aside") - Number(b.houseCall === "stand-aside") ||
+      tested(a) - tested(b) ||
+      Number(a.houseCall === "no-edge") - Number(b.houseCall === "no-edge") ||
       rate(b) - rate(a) ||
       CONFIDENCE_ORDER[a.confidence] - CONFIDENCE_ORDER[b.confidence] ||
       a.expires.date.localeCompare(b.expires.date) ||

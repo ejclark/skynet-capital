@@ -7,7 +7,8 @@ import type { DashboardServerConfig } from "../../src/server/dashboard-server-co
 import { QUESTS_PATH, serveQuestsApi } from "../../src/server/quests-route.js";
 
 /**
- * GET /api/quests (#7028 slice 1): a member's position quests, judged by position guidance over the
+ * GET /api/quests (#7028 slices 1 and 3): a member's position quests and, for a half-cash account
+ * under the drawdown study's condition, conditions quests. Position quests: judged by position guidance over the
  * same live market read the Guidance tab uses. Identity is the session's; a member holding no calls
  * costs no market read; a hold verdict yields no quest.
  */
@@ -166,5 +167,129 @@ describe("GET /api/quests — position quests", () => {
     const { res } = fakeRes();
     const cfg = config("ann-6", [], broker(1).client);
     expect(await serveQuestsApi(get("/api/other"), res, "/api/other", cfg, ann, deps)).toBe(false);
+  });
+});
+
+// ── conditions quests (slice 3) ───────────────────────────────────────────────────────────────────
+
+/** 300 weekday sessions ending 2026-09-24 (yesterday of NOW): flat at 100, then the last close. */
+function indexBars(lastClose: number, lastSession = "2026-09-24") {
+  const bars: { t: string; c: number }[] = [];
+  const d = new Date(`${lastSession}T00:00:00Z`);
+  while (bars.length < 300) {
+    if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6)
+      bars.unshift({ t: `${d.toISOString().slice(0, 10)}T04:00:00Z`, c: 100 });
+    d.setUTCDate(d.getUTCDate() - 1);
+  }
+  bars[bars.length - 1] = { t: bars[bars.length - 1]?.t as string, c: lastClose };
+  return bars;
+}
+
+/** A broker whose SPY and QQQ daily bars are given; CRWV's read stays the frozen world's. */
+function brokerWithIndexes(closes: { SPY: number; QQQ: number }, lastSession = "2026-09-24") {
+  const { client, reads } = broker(24);
+  const bars: string[] = [];
+  return {
+    reads: { ...reads, bars },
+    client: {
+      ...client,
+      getBars: (symbol: string) => {
+        bars.push(symbol);
+        return Promise.resolve(
+          symbol === "SPY" || symbol === "QQQ" ? indexBars(closes[symbol], lastSession) : [],
+        );
+      },
+    },
+  };
+}
+
+const vix =
+  (close: number, session = "2026-09-24") =>
+  () =>
+    Promise.resolve({ session, close });
+
+function configWithCash(id: string, cash: number, equity: number, client: unknown) {
+  const cfg = config(id, [], client);
+  return {
+    ...cfg,
+    hub: {
+      getState: () => ({ participants: [{ id, kind: "human", cash, equity, positions: [] }] }),
+    },
+  } as unknown as DashboardServerConfig;
+}
+
+async function conditions(cfg: DashboardServerConfig, readVix: () => Promise<unknown>) {
+  const { res, out } = fakeRes();
+  await serveQuestsApi(get(`${QUESTS_PATH}?refresh=1`), res, QUESTS_PATH, cfg, ann, {
+    ...deps,
+    vix: readVix,
+  } as never);
+  return JSON.parse(out.body ?? "{}") as { quests: Quest[]; unread: string[] };
+}
+
+describe("GET /api/quests — conditions quests", () => {
+  it("offers the put and the shares for the index under its high while VIX is 25 or more", async () => {
+    const { client } = brokerWithIndexes({ SPY: 98, QQQ: 86 });
+    const body = await conditions(configWithCash("c-1", 90_000, 100_000, client), vix(25.64));
+    expect(body.quests.map((q) => `${q.source} ${q.move.label}`)).toEqual([
+      "conditions Sell a cash-secured put on QQQ",
+      "conditions Buy QQQ shares",
+    ]);
+    expect(body.quests[0]?.baseRate).toMatchObject({ kind: "measured", sample: 76, episodes: 20 });
+    expect(body.unread).toEqual([]);
+  });
+
+  it("offers nothing while VIX is calm", async () => {
+    const { client } = brokerWithIndexes({ SPY: 98, QQQ: 86 });
+    const body = await conditions(configWithCash("c-2", 90_000, 100_000, client), vix(18));
+    expect(body.quests).toEqual([]);
+  });
+
+  it("costs no market read for an account under half cash", async () => {
+    const { client, reads } = brokerWithIndexes({ SPY: 98, QQQ: 86 });
+    let vixReads = 0;
+    const body = await conditions(configWithCash("c-3", 40_000, 100_000, client), () => {
+      vixReads++;
+      return Promise.resolve({ session: "2026-09-24", close: 30 });
+    });
+    expect(body.quests).toEqual([]);
+    expect(reads.bars).toEqual([]);
+    expect(vixReads).toBe(0);
+  });
+
+  it("says conditions went unread, and offers none, when the VIX read fails", async () => {
+    const { client } = brokerWithIndexes({ SPY: 98, QQQ: 86 });
+    const body = await conditions(configWithCash("c-4", 90_000, 100_000, client), () =>
+      Promise.resolve(undefined),
+    );
+    expect(body.quests).toEqual([]);
+    expect(body.unread).toEqual(["conditions"]);
+  });
+
+  it("refuses a VIX close from a different session than the index's", async () => {
+    const { client } = brokerWithIndexes({ SPY: 98, QQQ: 86 });
+    const body = await conditions(
+      configWithCash("c-5", 90_000, 100_000, client),
+      vix(30, "2026-09-23"),
+    );
+    expect(body.quests).toEqual([]);
+    expect(body.unread).toEqual(["conditions"]);
+  });
+
+  it("ranks conditions quests below a tested one and merges with position quests", async () => {
+    const { client } = brokerWithIndexes({ SPY: 98, QQQ: 86 });
+    const cfg = configWithCash("c-6", 90_000, 100_000, client);
+    const withCall = {
+      ...cfg,
+      hub: {
+        getState: () => ({
+          participants: [
+            { id: "c-6", kind: "human", cash: 90_000, equity: 100_000, positions: [longCall] },
+          ],
+        }),
+      },
+    } as unknown as DashboardServerConfig;
+    const body = await conditions(withCall, vix(25.64));
+    expect(body.quests.map((q) => q.source)).toEqual(["position", "conditions", "conditions"]);
   });
 });
