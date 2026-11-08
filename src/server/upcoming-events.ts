@@ -5,6 +5,7 @@ import {
   dateWordsOf,
   FAST_TRACK_HORIZON_DAYS,
   type FastTrackEvent,
+  KILL_SWITCHES_SHOWN,
   NOT_COVERED,
   NOT_RESEARCHED,
   rankEvents,
@@ -36,11 +37,13 @@ import { RESEARCH_DIR } from "./research-service.js";
 
 /** How many events one answer shows; the rest are counted, never dropped silently. */
 export const UPCOMING_ROWS = 5;
-/** Kill switches per row — enough for "what would prove it wrong", short enough for a chat turn. */
-const KILL_SWITCHES_SHOWN = 3;
 /** A sector event can name dozens of tickers; the row carries the first few and a count. */
 const SYMBOLS_SHOWN = 5;
-const LEDGER_SLUG = /^[a-z0-9][a-z0-9-]*$/;
+/** An event id as the calendar writes it: lowercase, hyphens, and a dotted ticker's dot (BRK.B's
+ *  print is `brk.b-<date>-print`). No slash, so no id can leave the events folder. */
+const LEDGER_SLUG = /^[a-z0-9][a-z0-9.-]*$/;
+/** A ledger that exists but can't be read is not "not researched yet" — that would be false. */
+export const STANCE_UNREADABLE = "the house's research on this couldn't be read right now";
 
 export interface UpcomingEventRow {
   readonly id: string;
@@ -64,6 +67,8 @@ export interface UpcomingEvents {
   readonly horizonDays: number;
   /** Set when the member asked about one ticker: only events naming it are listed. */
   readonly underlying?: string;
+  /** With `underlying`: market-wide prints in the window (CPI, FOMC, jobs), counted, not listed. */
+  readonly marketWide?: number;
   readonly events: readonly UpcomingEventRow[];
   /** Events in the window not shown here — a floor on what else is coming, never zero by omission. */
   readonly more: number;
@@ -89,10 +94,17 @@ export function heldNames(symbols: readonly string[]): string[] {
   return [...new Set(symbols.map((s) => parseOccSymbol(s)?.underlying ?? s))];
 }
 
-function ledgerOf(root: string, id: string): string | undefined {
-  if (!LEDGER_SLUG.test(id)) return undefined;
-  const file = join(root, "events", `${id}.md`);
-  return existsSync(file) ? readFileSync(file, "utf8") : undefined;
+/** The event with what its ledger says; a ledger that can't be read or parsed costs this row its
+ *  stance, never the member their answer (the same guard as `pair-forecast.ts`). */
+function withLedger(root: string, event: MarketEvent, asOf: string): FastTrackEvent {
+  const file = join(root, "events", `${event.id}.md`);
+  if (!(LEDGER_SLUG.test(event.id) && existsSync(file)))
+    return fastTrackEventOf(event, undefined, asOf);
+  try {
+    return fastTrackEventOf(event, readFileSync(file, "utf8"), asOf);
+  } catch {
+    return { event, stance: STANCE_UNREADABLE, killSwitches: [] };
+  }
 }
 
 function rowOf(item: FastTrackEvent, held: readonly string[]): UpcomingEventRow {
@@ -119,9 +131,8 @@ export function upcomingEvents(query: UpcomingEventsQuery): UpcomingEvents {
   const { asOf, underlying } = query;
   const root = query.root ?? RESEARCH_DIR();
   const held = heldNames(query.held);
-  const window = eventsWithin(asOf, FAST_TRACK_HORIZON_DAYS, query.events, query.prints).filter(
-    (e) => !underlying || e.symbols.includes(underlying),
-  );
+  const fortnight = eventsWithin(asOf, FAST_TRACK_HORIZON_DAYS, query.events, query.prints);
+  const window = fortnight.filter((e) => !underlying || e.symbols.includes(underlying));
   const ranked = rankEvents({
     asOf,
     events: window.map((event) => ({ event, killSwitches: [] })),
@@ -129,11 +140,24 @@ export function upcomingEvents(query: UpcomingEventsQuery): UpcomingEvents {
   });
   const shown = ranked
     .slice(0, UPCOMING_ROWS)
-    .map(({ event }) => rowOf(fastTrackEventOf(event, ledgerOf(root, event.id), asOf), held));
+    .map(({ event }) => rowOf(withLedger(root, event, asOf), held));
   return {
     asOf,
     horizonDays: FAST_TRACK_HORIZON_DAYS,
-    ...(underlying ? { underlying } : {}),
+    ...(underlying
+      ? {
+          underlying,
+          // A ticker's own list leaves out CPI and FOMC; the count keeps "nothing else" from
+          // reading as true when a market-wide print lands inside the same fortnight.
+          marketWide: rankEvents({
+            asOf,
+            events: fortnight
+              .filter((e) => e.symbols.length === 0)
+              .map((event) => ({ event, killSwitches: [] })),
+            book: { held: [], watched: [] },
+          }).length,
+        }
+      : {}),
     events: shown,
     more: ranked.length - shown.length,
     rankedBy:

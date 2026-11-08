@@ -36,7 +36,8 @@ const EVENTS_SHOWN = 3;
 export const FAST_TRACK_HORIZON_DAYS = 14;
 /** How many symbols of one event get their own actions — a sector event can list dozens. */
 const SYMBOLS_SHOWN = 3;
-const KILL_SWITCHES_SHOWN = 3;
+/** Kill switches a card offers — the chat's calendar lookup lists the same number. */
+export const KILL_SWITCHES_SHOWN = 3;
 
 export const NOT_COVERED = "News and lawsuits: not covered yet";
 export const NOT_RESEARCHED = "not researched yet";

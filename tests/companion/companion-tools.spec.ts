@@ -551,6 +551,7 @@ describe("get_upcoming_events — what's coming up on the calendar (#7034 slice 
     const { calls, readUpcomingEvents } = recording();
     const deps = depsFor({ readUpcomingEvents });
     await runCompanionTool("get_upcoming_events", deps, "acct-1", { underlying: " nvda " });
+    await runCompanionTool("get_upcoming_events", deps, "acct-1", { underlying: "  " });
     const refused = await runCompanionTool("get_upcoming_events", deps, "acct-1", {
       underlying: "NVDA261218C00200000",
     });
@@ -558,7 +559,10 @@ describe("get_upcoming_events — what's coming up on the calendar (#7034 slice 
       ok: false,
       error: "underlying must be a stock ticker like NVDA, never an option symbol",
     });
-    expect(calls).toEqual([{ held: ["AAPL"], underlying: "NVDA" }]);
+    expect(calls).toEqual([
+      { held: ["AAPL"], underlying: "NVDA" },
+      { held: ["AAPL"], underlying: undefined },
+    ]);
   });
 
   it("says 'not available' when the calendar isn't wired, never an empty fortnight", async () => {

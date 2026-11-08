@@ -89,6 +89,15 @@ export function parseFeedbackDraft(input: unknown): FeedbackDraft | undefined {
   return { kind: kind as FeedbackDraft["kind"], title, details };
 }
 
+const NOT_AN_UNDERLYING = "underlying must be a stock ticker like NVDA, never an option symbol";
+
+/** A stock ticker, trimmed and upper-cased, or undefined — the one check every tool's `underlying`
+ *  goes through, so an OCC symbol or order-shaped text never reaches a read. */
+function tickerOf(raw: unknown): string | undefined {
+  const symbol = typeof raw === "string" ? raw.trim().toUpperCase() : "";
+  return UNDERLYING_PATTERN.test(symbol) ? symbol : undefined;
+}
+
 const DIRECTIONS = new Set<Outlook["direction"]>(["bullish", "bearish", "neutral"]);
 const MAGNITUDES = new Set<Outlook["magnitude"]>(["slight", "moderate", "strong"]);
 
@@ -106,10 +115,8 @@ export function parseOutlook(input: unknown): Outlook | { readonly error: string
     magnitude?: unknown;
     horizonDays?: unknown;
   };
-  const symbol = typeof raw.underlying === "string" ? raw.underlying.trim().toUpperCase() : "";
-  if (!UNDERLYING_PATTERN.test(symbol)) {
-    return { error: "underlying must be a stock ticker like NVDA, never an option symbol" };
-  }
+  const symbol = tickerOf(raw.underlying);
+  if (!symbol) return { error: NOT_AN_UNDERLYING };
   const direction = raw.direction;
   if (typeof direction !== "string" || !DIRECTIONS.has(direction as Outlook["direction"])) {
     return { error: "direction must be one of bullish, bearish, neutral" };
@@ -218,7 +225,7 @@ export const COMPANION_TOOL_DEFS = [
   {
     name: "get_upcoming_events",
     description:
-      "What is coming up on the market-event calendar in the next 14 days — earnings prints, macro prints (CPI, FOMC, jobs), product launches, sector and rates events, options expiration — ranked with events on the member's own held names first, then by impact, then by date. Up to 5 events, each with its date and dateWords ('date confirmed' or 'date is an estimate'), impact, symbols (empty = market-wide), onYourBook (the member's held names it touches), stance (the house's written research stance, or 'not researched yet') and killSwitches (what would prove that stance wrong). more counts the events not shown; rankedBy says what the order used (the watchlist is not read); notCovered names the sources it does not read (news, lawsuits). Use it for 'what's coming up', 'what should I watch', 'when does NVDA report'. Pass underlying to list only events naming one ticker. Read-only.",
+      "What is coming up on the market-event calendar in the next 14 days — earnings prints, macro prints (CPI, FOMC, jobs), product launches, sector and rates events, options expiration — ranked with events on the member's own held names first, then by impact, then by date. Up to 5 events, each with its date and dateWords ('date confirmed' or 'date is an estimate'), impact, symbols (empty = market-wide), onYourBook (the member's held names it touches), stance (the house's written research stance, or 'not researched yet') and killSwitches (what would prove that stance wrong). more counts the events not shown; rankedBy says what the order used (the watchlist is not read); notCovered names the sources it does not read (news, lawsuits). Use it for 'what's coming up', 'what should I watch', 'when does NVDA report'. Pass underlying to list only events naming one ticker; marketWide then counts the market-wide prints (CPI, FOMC, jobs) in the same 14 days, which still bear on it. Read-only.",
     input_schema: {
       type: "object",
       properties: {
@@ -438,12 +445,11 @@ export function parseUnderlying(
   input: unknown,
 ): { readonly underlying?: string } | { readonly error: string } {
   const raw = (input as { underlying?: unknown } | null | undefined)?.underlying;
-  if (raw === undefined || raw === null || raw === "") return {};
-  const symbol = typeof raw === "string" ? raw.trim().toUpperCase() : "";
-  if (!UNDERLYING_PATTERN.test(symbol)) {
-    return { error: "underlying must be a stock ticker like NVDA, never an option symbol" };
+  if (raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "")) {
+    return {};
   }
-  return { underlying: symbol };
+  const symbol = tickerOf(raw);
+  return symbol ? { underlying: symbol } : { error: NOT_AN_UNDERLYING };
 }
 
 function upcomingEventsResult(

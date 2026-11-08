@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NOT_COVERED, NOT_RESEARCHED } from "../../src/domain/fast-track.js";
 import type { MarketEvent } from "../../src/domain/market-events.js";
-import { heldNames, UPCOMING_ROWS, upcomingEvents } from "../../src/server/upcoming-events.js";
+import {
+  heldNames,
+  STANCE_UNREADABLE,
+  UPCOMING_ROWS,
+  upcomingEvents,
+} from "../../src/server/upcoming-events.js";
 
 /**
  * The chat's calendar lookup (#7034 slice 3a): the fast track's fortnight, ranked the way the first
@@ -133,6 +138,26 @@ describe("upcomingEvents — the next fortnight, ranked like the fast track's fi
     const answer = read([], "AAPL");
     expect(answer.underlying).toBe("AAPL");
     expect(answer.events.map((e) => e.id)).toEqual(["launch"]);
+  });
+
+  it("counts the market-wide prints a ticker's own list leaves out", () => {
+    expect(read([], "AAPL").marketWide).toBe(1);
+    expect(read([]).marketWide).toBeUndefined();
+  });
+
+  it("reads a dotted ticker's ledger — brk.b's id is a real slug", () => {
+    const brk = event({ id: "brk.b-print", symbols: ["BRK.B"] });
+    writeFileSync(join(root, "events", "brk.b-print.md"), NVDA_LEDGER);
+    expect(read([], undefined, [brk]).events[0]?.stance).toMatch(/Stand aside/);
+  });
+
+  it("says the research couldn't be read, never 'not researched yet', when a ledger won't open", () => {
+    mkdirSync(join(root, "events", "broken.md"));
+    const broken = event({ id: "broken" });
+    expect(read([], undefined, [broken]).events[0]).toMatchObject({
+      stance: STANCE_UNREADABLE,
+      killSwitches: [],
+    });
   });
 
   it("never reads a path from an id outside the slug shape", () => {
