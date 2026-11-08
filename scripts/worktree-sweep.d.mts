@@ -12,10 +12,14 @@ export interface WorktreeEntry {
 }
 export function parseWorktrees(porcelain: string): WorktreeEntry[];
 export function lockPid(reason: string | null | undefined): number | null;
+/** The desktop app's session branch, `claude/<word>-<word>-<6 hex>` (#7102). */
+export function isAppSessionBranch(branch: string | null | undefined): boolean;
 
 export interface WorktreeFacts {
   primary: boolean;
   current: boolean;
+  /** Its branch is a desktop-app session's: kept unless `includeSessions`. */
+  appSession: boolean;
   lock: { pid: number | null; alive: boolean } | null;
   released: boolean;
   dirty: number;
@@ -31,4 +35,7 @@ export interface Verdict {
   reason: string;
   via?: string;
 }
-export function decide(w: WorktreeFacts, opts?: { minAgeMinutes?: number }): Verdict;
+export function decide(
+  w: WorktreeFacts,
+  opts?: { minAgeMinutes?: number; includeSessions?: boolean },
+): Verdict;
