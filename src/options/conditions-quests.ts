@@ -42,7 +42,7 @@ export const VIX_FLOOR = 25;
 /** Cash as a share of the account, at or above which the book matches the conditions table's row. */
 export const CASH_SHARE_FLOOR = 0.5;
 /** Shares a put contract covers. */
-const CONTRACT = 100;
+export const CONTRACT = 100;
 
 /** One studied index as the last completed session left it. */
 export interface IndexCondition {
@@ -86,7 +86,8 @@ const pct = (x: number): string => `${Math.round(Math.abs(x) * 100)}%`;
 const size = (x: number, digits: number): string => `${(Math.abs(x) * 100).toFixed(digits)}%`;
 const signed = (x: number, digits: number): string => `${x >= 0 ? "+" : "−"}${size(x, digits)}`;
 
-function href(deskId: string, symbol: string, play: "101" | "201"): string {
+/** The Trade form opened on a play (101 shares, 201 cash-secured put), for the member to review and fire. */
+export function href(deskId: string, symbol: string, play: "101" | "201"): string {
   return `/app/trade?desk=${encodeURIComponent(deskId)}&symbol=${symbol}&play=${play}`;
 }
 

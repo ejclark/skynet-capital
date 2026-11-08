@@ -17,6 +17,8 @@ import { parseOccSymbol } from "../trading/option-symbols.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { type EventStance, eventQuests } from "./event-quests.js";
+import { readEventStances } from "./event-stances.js";
 import { type GuidanceDeps, guidanceMarketFor } from "./guidance-route.js";
 import { requireGet, sendJson } from "./page-shell.js";
 import { type ReadVix, readVix } from "./vix-feed.js";
@@ -29,7 +31,9 @@ import { type ReadVix, readVix } from "./vix-feed.js";
  * the verdicts that ask for an order come back (`src/options/position-quests.ts`). CONDITIONS
  * (slice 3): when a studied index sits 10%+ under its year high with VIX at 25+ and the account is
  * half cash or more, the cash-secured put and the shares come back with the drawdown study's base
- * rate (`src/options/conditions-quests.ts`). Market events join in a later slice.
+ * rate (`src/options/conditions-quests.ts`). EVENTS (slice 4): a calendar event a house campaign
+ * links to a symbol, whose written ledger carries a buy signal, offers the cash-secured put it
+ * allows (`event-quests.ts`); it reads local files only and costs no market read.
  *
  * Privacy: a member's quests answer to that member alone — the target must be in the session's
  * owned set, or it does not exist for this caller (the alerts route's rule). The stake is read from
@@ -47,6 +51,8 @@ export const QUESTS_PATH = "/api/quests";
 /** What the route reads beyond guidance's deps — injectable so specs run offline. */
 export interface QuestsDeps extends GuidanceDeps {
   readonly vix?: ReadVix;
+  /** The campaign-linked events with their ledgers, for a given UTC day. Defaults to the repo's own. */
+  readonly eventStances?: (today: string) => readonly EventStance[];
 }
 /** A guidance read is ~30 broker calls; past this many names the rest are named, not read. */
 const MAX_SYMBOLS = 6;
@@ -199,6 +205,23 @@ async function conditionsQuestsFor(
   return { quests: conditionsQuests(id, market, desk), unread: [] };
 }
 
+/** One account's event quests — the ledgers are local files, so nothing here can go unread. */
+function eventQuestsFor(
+  id: string,
+  desk: { readonly cash: number },
+  asOf: Date,
+  deps: QuestsDeps | undefined,
+): Quest[] {
+  if (!(desk.cash > 0)) return [];
+  const today = asOf.toISOString().slice(0, 10);
+  try {
+    return eventQuests(id, (deps?.eventStances ?? readEventStances)(today), desk, today);
+  } catch {
+    // A ledger the reader cannot parse costs the member these quests, never the whole list.
+    return [];
+  }
+}
+
 /**
  * One account's quests from every source, ranked. `unread` names what was not judged this read: an
  * underlying past the cap or without a market read, or `conditions` when the index or VIX read failed.
@@ -221,7 +244,11 @@ export async function questsFor(
   return {
     kind: "ok",
     asOf,
-    quests: rankQuests([...positions.quests, ...conditions.quests]),
+    quests: rankQuests([
+      ...positions.quests,
+      ...conditions.quests,
+      ...eventQuestsFor(id, desk, asOf, deps),
+    ]),
     unread: [...positions.unread, ...conditions.unread].sort(),
   };
 }
