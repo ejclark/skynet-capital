@@ -9,7 +9,8 @@ agent, and the reference a session consults when deciding whether to escalate th
 
 - **Subagent frontmatter supports both dials.** `model` — `opus`/`sonnet`/`haiku`/`fable`/full-ID/`inherit`
   (default `inherit`); `effort` — `low`/`medium`/`high`/`xhigh`/`max`, overrides the session effort level,
-  default inherits. Every roster agent declares both.
+  default inherits. Every roster agent declares both, except `worker`, whose model each call sets
+  (*Roster floors* below).
 - **Resolution order:** `CLAUDE_CODE_SUBAGENT_MODEL` env → per-invocation param → frontmatter → inherit,
   checked against the org `availableModels` allowlist.
 - **Main session is advisory only.** Model is set by `/model`, effort by `/effort` — user-controlled, the
@@ -24,7 +25,8 @@ agent, and the reference a session consults when deciding whether to escalate th
 - **Write floors in aliases, never pinned IDs.** `opus`/`sonnet`/`haiku`/`fable` auto-resolve to the
   latest recommended version and update over time, so a new model release needs **zero** changes to the
   model column. Pin a full ID only to deliberately *freeze* a choice, and revisit every pin (the lanes'
-  `--model` strings, `scripts/moneypenny/model-tier.mjs`, `continuation.mjs`) at each release — a pin
+  `--model` strings, `scripts/moneypenny/model-tier.mjs`, whose default `continuation.mjs` reads by
+  reference) at each release — a pin
   nobody revisits silently keeps running the old model.
 - **The effort ladder degrades gracefully.** Setting a level a model doesn't support falls back to the
   highest supported level at or below it. New effort levels extend the top; a floor referencing a
@@ -96,7 +98,7 @@ if we fan out agent workflows. If we need to conserve tokens, it'll be an explic
   order: waste first (`docs/process/TOKEN-EFFICIENCY.md`), then fan-out width (fewer parallel
   items, not cheaper ones), then effort, then model — and say which cut was made. The durable
   carrier for that signal is the `work-mode:*` label on #4153, read by
-  `scripts/moneypenny/work-mode.mjs`. It now cuts width mechanically, in exactly that order and no
+  `scripts/moneypenny/work-mode.mjs`. It cuts width mechanically, in exactly that order and no
   further, across every lane the plan named: the build lanes' in-flight cap
   (`scripts/moneypenny/admission.mjs`), the research lane's per-tick ceiling
   (`scripts/moneypenny/events.mjs` → `researchCapNow`), a `/governor` cycle's athlete allowance
