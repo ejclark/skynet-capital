@@ -52,9 +52,13 @@ check with nothing found, apply with nothing left to land. Both are good results
 
 **After the run, the caller, once:**
 
-1. Land every `done` branch as one wave PR (`docs: retire instruction drift — <date>`, via
-   `/ship`) — merge them one at a time onto `docs/instruction-drift-<at7>-wave` off `origin/main`;
-   a conflict there is two items fixing one passage, so keep the first. The body names the issue
+1. Land the round as one wave PR (`docs: retire instruction drift — <date>`, via `/ship`). On
+   `docs/instruction-drift-<at7>-wave` off `origin/main`, `node scripts/drift-wave.mjs --at <at7>`
+   names each item branch's state, and `--merge` merges the landable ones one at a time. A branch
+   lands only when the refuter's verdicts are on it and every finding they killed is reverted: a
+   check commit alone is a proposal (2026-11-08: 36 reached a wave branch before anyone looked).
+   A conflict with another item is two items fixing one passage, so keep the first; one with
+   `main` is caught up on the item's own branch (`git merge origin/main`) and merged again. The body names the issue
    the run serves, `Closes #<n>` for the `[instruction-drift]` ticket the push tick filed
    (`scripts/moneypenny/drift-chore.mjs`), or `scripts/pr-provenance-scan.mjs` counts the wave as
    a PR with no issue.
@@ -65,7 +69,7 @@ check with nothing found, apply with nothing left to land. Both are good results
    each role's guidance adding `Protected item.` (so apply reports `done` · `platter` rather than
    `blocked`), and the surviving branch boarded on the platter.
 4. List every flag that held in the wave PR body under **Flags — a person decides**;
-   `git log origin/main..origin/<branch> --format=%B` prints them. Report the round's yield there
+   `node scripts/drift-wave.mjs --at <at7> --flags` prints them. Report the round's yield there
    too, or in the stamp's own PR when the round landed nothing: `Round <n> of 2: <applied> applied
    edits by <agents> agents, <per agent> per agent`, where `<agents>` counts every check, refute and
    apply that ran.
@@ -81,6 +85,14 @@ check with nothing found, apply with nothing left to land. Both are good results
    --after <the loop's latest plus the edits this round applied> --tokens-m <millions, or unknown>
    --changed "round <n>: <applied> applied by <agents> agents"`. The number is applied edits, so
    `npm run loop:ledger` prices the sweep per applied edit.
+
+**Verify once, on the wave** (2026-11-08): every role pushes with `--no-verify`, and the wave
+PR's CI runs the full verify on the union of every item. A verify per push queued each item behind
+one verify at a time on the machine (`scripts/verify-locked.sh`), and a red that had nothing to do
+with the item, a macOS-only spec (#7045), stopped 35 checks before any refuter ran. The edits are
+instruction text: the refuter's *dependent* test catches words a spec pins, and apply runs
+`doc-rot-scan` on its lines. This is wrong if, by 2027-01-31, a wave's union verify goes red on an
+item's own edit more than once; then apply verifies its branch again.
 
 **A sweep is at most two rounds:** round 1, then one re-read of what its wave changed, run from
 `--json` because `--due` answers only the weekly question. Stop after round 2 even when round 2
@@ -194,7 +206,7 @@ call, never a `&&` chain around git; `/usr/bin/git` where plain `git` is refused
 6. Commit as `docs(drift): propose rewrites in <item.label>`, one body paragraph per finding,
    `F<n> <conflict|stale|history> — <file>:<line>: <what is wrong, and the evidence>`, and one per
    flag, `FLAG<n> — <file>:<line> vs <file>:<line>: <why a person decides>`. A flags-only commit is
-   `--allow-empty`. `git push -u origin <item.branch>`, and report `done` with `item.branch` in
+   `--allow-empty`. `git push --no-verify -u origin <item.branch>`, and report `done` with `item.branch` in
    `branch` and `<f> findings · <g> flags` as the summary.
 
 ### Role: refute
@@ -224,8 +236,8 @@ You are the adversary: your job is to kill findings, not to improve them.
    each: `F<n> stands`, `F<n> refuted (<test>) — <evidence>`, `F<n> flag — <why>`,
    `FLAG<n> holds` or `FLAG<n> refuted — <evidence>`. Edit no file.
 5. `git diff --quiet HEAD~1 HEAD` must exit 0, proving the commit changes no file; then
-   `git push --no-verify origin HEAD:<item.branch>`. The tree is the one the check's push already
-   ran `npm run verify` on.
+   `git push --no-verify origin HEAD:<item.branch>`. No role runs the full verify (*Verify once,
+   on the wave*, above).
 6. Report `done` with `item.branch` in `branch` and `<s> stand · <r> refuted · <f> flagged`.
 
 ### Role: apply
@@ -243,7 +255,7 @@ You are the adversary: your job is to kill findings, not to improve them.
    — nothing to land`, and stop.
 6. If you reverted anything, commit as `docs(drift): apply verdicts for <item.label>` with one body
    line per finding (`F<n> applied`, `F<n> refuted — <test>`, `FLAG<n> — <why a person decides>`)
-   and `git push origin HEAD:<item.branch>`, whose hook runs `npm run verify` on the final tree.
+   and `git push --no-verify origin HEAD:<item.branch>`.
 7. Report `done` with `item.branch` in `branch` and `<a> applied · <f> flagged`, adding `platter`
    when the branch touches `CLAUDE.md`, or when the guidance says `Protected item.` A branch of
    any other item that touches a path `node scripts/envelope-scan.mjs --check` protects is

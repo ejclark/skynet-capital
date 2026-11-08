@@ -1,3 +1,4 @@
+import { displayName } from "../domain/campaign-questions.js";
 import { type Campaign, parseCampaign } from "../domain/campaigns.js";
 import { everyEvent } from "../domain/market-events.js";
 import { ledgerCoversSymbol } from "../domain/sector-coverage.js";
@@ -7,15 +8,20 @@ import { siblingPath } from "../storage/sibling-path.js";
 import { listResearch, RESEARCH_DIR } from "./research-service.js";
 
 /**
- * MEMBERS' OWN CAMPAIGNS (#6949 slice 3a) — the campaigns a member crafts from the form, held
- * PRIVATE to their author. Same shape as `authored-play-store.ts`: plain JSON on the volume (a
- * title, a storyline, a sector or market and some tickers — no credentials, no personal data),
- * atomic tmp+rename writes, total reads.
+ * MEMBERS' OWN CAMPAIGNS (#6949 slices 3a, 3b, 6) — the campaigns a member crafts from the form.
+ * Same shape as `authored-play-store.ts`: plain JSON on the volume (a title, a storyline, a sector
+ * or market and some tickers — no credentials, no personal data), atomic tmp+rename writes, total
+ * reads.
  *
- * Keyed by `opaqueMemberId(email)`: the key IS the author, and `list` reads by that key, so a
- * member's campaign reaches nobody else (criterion 8) until its author shares it with the party
- * (slice 3b). `listShared` is the one read across authors and returns only records carrying
- * `sharedAt`; unsharing deletes that field, so the next read stops returning the record.
+ * Keyed by `opaqueMemberId(email)`: the key IS the author, and every write reads by that key, so
+ * only the author ever changes a campaign's frame (criterion 11).
+ *
+ * THE PARTY'S BY DEFAULT (slice 6, criterion 8; Eric, 2026-11-07: "Campaigns are communal"). A new
+ * campaign is saved shared, carrying `sharedAt` and the author's display name, unless the author
+ * holds it back as a draft. `listShared` is the one read across authors and returns only records
+ * carrying `sharedAt`; holding one back deletes that field, so the next read stops returning it.
+ * A record saved before slice 6, under the old private default, has no `sharedAt` and stays a draft
+ * until its author shares it: the flip never publishes a campaign its author saved as private.
  *
  * Every record is re-checked through `parseCampaign` on load, the same parser the house files pass,
  * so a hand-edited or stale file drops the bad record rather than serving it.
@@ -33,15 +39,13 @@ export interface MemberCampaignRecord {
    */
   readonly researchAsk: readonly string[];
   /**
-   * Set when the author shares the campaign with the party (slice 3b), with the display name to
-   * show beside it. Both or neither: a record with one and not the other parses as private.
+   * Set while the campaign is the party's (slice 6: from its first save, unless held back as a
+   * draft), with the display name to show beside it. Both or neither: a record with one and not
+   * the other parses as a draft.
    */
   readonly sharedAt?: string;
   readonly sharedBy?: string;
 }
-
-/** The longest author name shown beside a shared campaign; a bound on member text. */
-export const MAX_SHARED_BY = 60;
 
 /** A shared campaign as the party reads it: the record plus who it belongs to. */
 export interface SharedCampaign {
@@ -65,7 +69,7 @@ function parseRecord(raw: unknown): MemberCampaignRecord | undefined {
     const { sharedAt, sharedBy } = raw;
     const shared =
       typeof sharedAt === "string" && typeof sharedBy === "string" && sharedBy.length > 0
-        ? { sharedAt, sharedBy: sharedBy.slice(0, MAX_SHARED_BY) }
+        ? { sharedAt, sharedBy: displayName(sharedBy) }
         : {};
     return { campaign, createdAt, updatedAt, researchAsk, ...shared };
   } catch {
@@ -116,7 +120,7 @@ export class MemberCampaignStore {
     });
   }
 
-  /** This author's campaigns. The only read: there is no list-all and no by-id across members. */
+  /** This author's campaigns, drafts included. Across authors, only `listShared` reads. */
   list(memberKey: string): readonly MemberCampaignRecord[] {
     return this.file.load()[memberKey] ?? [];
   }
@@ -125,14 +129,22 @@ export class MemberCampaignStore {
    * Save a campaign under its author. A new campaign whose id this author already uses is refused
    * with the reason, never silently replaced; `replaceId` is Edit and swaps that one campaign (the
    * id may change with the title). Ids are unique per author only — nobody else's list is read.
+   *
+   * `share` says who it goes to the party as: a display name shares it, `false` holds it back as a
+   * draft, and leaving it out keeps an edited campaign as it was (a new one with no `share` is a
+   * draft, so the default lives in one place: the route).
    */
   save(
     memberKey: string,
     campaign: Campaign,
     researchAsk: readonly string[],
-    replaceId?: string,
-    at = new Date(),
+    options: {
+      readonly replaceId?: string;
+      readonly share?: { readonly by: string } | false;
+      readonly at?: Date;
+    } = {},
   ): CampaignSaveOutcome {
+    const { replaceId, share, at = new Date() } = options;
     const state = this.file.load();
     const mine = state[memberKey] ?? [];
     const prior =
@@ -151,15 +163,21 @@ export class MemberCampaignStore {
       };
     }
     const iso = at.toISOString();
+    const by = share ? displayName(share.by) : "";
+    const shared =
+      share === undefined
+        ? prior?.sharedAt && prior.sharedBy
+          ? { sharedAt: prior.sharedAt, sharedBy: prior.sharedBy }
+          : {}
+        : by
+          ? { sharedAt: prior?.sharedAt ?? iso, sharedBy: prior?.sharedBy ?? by }
+          : {};
     const record: MemberCampaignRecord = {
       campaign,
       createdAt: prior?.createdAt ?? iso,
       updatedAt: iso,
       researchAsk: [...researchAsk],
-      // An edit by the author keeps the campaign shared; sharing is the author's own act.
-      ...(prior?.sharedAt && prior.sharedBy
-        ? { sharedAt: prior.sharedAt, sharedBy: prior.sharedBy }
-        : {}),
+      ...shared,
     };
     const next = prior ? mine.map((r) => (r === prior ? record : r)) : [...mine, record];
     this.file.write({ ...state, [memberKey]: next });
@@ -187,7 +205,7 @@ export class MemberCampaignStore {
   }
 
   /**
-   * Share one of this author's campaigns with the party, or take it back to private. Only the
+   * Share one of this author's campaigns with the party, or hold it back as a draft. Only the
    * author's own key reaches a record; another member's id is `not-found` here, the same answer as
    * a campaign that does not exist. Sharing again keeps the first `sharedAt`.
    */
@@ -202,7 +220,7 @@ export class MemberCampaignStore {
     const prior = mine.find((r) => r.campaign.id === id);
     if (!prior) return "not-found";
     const { sharedAt: _at, sharedBy: _by, ...rest } = prior;
-    const by = shared ? shared.by.trim().slice(0, MAX_SHARED_BY) : "";
+    const by = shared ? displayName(shared.by) : "";
     const next: MemberCampaignRecord =
       shared && by ? { ...rest, sharedAt: prior.sharedAt ?? at.toISOString(), sharedBy: by } : rest;
     this.file.write({ ...state, [memberKey]: mine.map((r) => (r === prior ? next : r)) });

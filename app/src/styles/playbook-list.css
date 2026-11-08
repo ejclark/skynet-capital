@@ -222,3 +222,46 @@
 .pbl-fold[open] > .pbl-rows {
   margin-top: 8px;
 }
+
+/* A chain's shadow-replay scorecard (#6959 slice 4): each link's own line, the total on its own line. */
+.pbc,
+.pbc-none {
+  margin: 0;
+  padding: 8px 14px 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pbc-head,
+.pbc-note {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+.pbc-rows {
+  margin: 0;
+}
+
+.pbc-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 3px 0;
+}
+
+.pbc-row dt,
+.pbc-row dd {
+  margin: 0;
+}
+
+.pbc-row b {
+  color: var(--text);
+}
+
+.pbc-total {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-weight: 650;
+}

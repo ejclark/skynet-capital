@@ -188,6 +188,72 @@ describe("research dispatch ceiling", () => {
   });
 });
 
+// CAMPAIGN RELEVANCE (#6949 criterion 5): "WHEN a campaign is active, the research lane SHALL order
+// due assessments by campaign relevance before impact × time-to-event, keeping the cadence floor."
+// A row's `campaigns` comes from event-scan --due (scripts/campaign-links.mjs). Relevance leads
+// among pulses; the two expiring classes keep their deadline order, which is the floor.
+describe("research dispatch puts campaign events first", () => {
+  const linked = (via: "cast" | "force") => [{ id: "ai-buildout", via }];
+  const withCampaigns = (
+    id: string,
+    impact: "critical" | "high" | "medium" | "low",
+    daysUntil: number,
+    campaigns: { id: string; via: "cast" | "force" }[],
+    reason = "interval-elapsed",
+  ) => ({ ...ev(id, impact, daysUntil, reason), campaigns });
+
+  it("ranks a pulse the cast names, then one a force matches, ahead of impact and proximity", () => {
+    const rows = [
+      withCampaigns("crit-unlinked", "critical", 1, []),
+      withCampaigns("low-force", "low", 20, linked("force")),
+      withCampaigns("medium-cast", "medium", 30, linked("cast")),
+      withCampaigns("high-force", "high", 40, linked("force")),
+    ];
+    expect(ids(dueForResearch(rows, [], 10))).toEqual([
+      "medium-cast",
+      "high-force",
+      "low-force",
+      "crit-unlinked",
+    ]);
+  });
+
+  it("keeps the cadence floor: a close-out's slack still beats a campaign event's", () => {
+    const rows = [
+      withCampaigns("campaign-close", "critical", -1, linked("cast"), "event-passed-unscored"),
+      withCampaigns("plain-close", "low", -5, [], "event-passed-unscored"),
+      withCampaigns("campaign-pulse", "critical", 2, linked("cast")),
+    ];
+    expect(ids(dueForResearch(rows, [], 10))).toEqual([
+      "plain-close",
+      "campaign-close",
+      "campaign-pulse",
+    ]);
+  });
+
+  it("keeps first coverage soonest first, and uses relevance only to break a tie", () => {
+    const rows = [
+      withCampaigns("campaign-later", "high", 9, linked("cast"), "never-assessed"),
+      withCampaigns("plain-sooner", "low", 3, [], "never-assessed"),
+      withCampaigns("plain-tied", "critical", 9, [], "never-assessed"),
+    ];
+    expect(ids(dueForResearch(rows, [], 10))).toEqual([
+      "plain-sooner",
+      "campaign-later",
+      "plain-tied",
+    ]);
+  });
+
+  it("orders a row with no campaigns field exactly as before this slice", () => {
+    expect(ids(dueForResearch(FIVE, [], 10))).toEqual([
+      "crit-near",
+      "crit-mid",
+      "crit-far",
+      "high-near",
+      "low-near",
+    ]);
+  });
+});
+
 // THE DIAL ON TOP OF THE CEILING (#3960 slice 2, criteria 2 and 3).
 //
 // Two controls bound one number, so these specs pin WHICH WINS and what survives of the other:

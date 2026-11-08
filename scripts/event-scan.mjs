@@ -19,6 +19,8 @@
 //                                             # event comes BACK as `forward-test-due` when one of
 //                                             # its registered forward tests reaches its score-by
 //                                             # (#2884) — closing is not resolving.
+//                                             # Each row names the campaigns that link it
+//                                             # (`campaigns`, #6949 criterion 5).
 //   node scripts/event-scan.mjs --validate    # enforce the contract (exit 1 on violation)
 //   node scripts/event-scan.mjs --dump        # extracted tables as JSON (the drift gate's input)
 //   ... --on-date=YYYY-MM-DD                  # every entry already on that date, retired ones
@@ -27,6 +29,7 @@
 //                                             # a title-similarity scan (#3360) does.
 //   ... --today=YYYY-MM-DD                    # deterministic date override for tests
 //   ... --events-file= --calendar-file= --cadence-file= --ledger-dir=   # fixture overrides (tests)
+//   ... --campaigns-dir=                      # campaign files override (tests)
 //
 // Enforced in CI via tests/arch/event-scan.spec.ts; consumed by .github/workflows/event-detect.yml
 // and the daily event-scan Routine (docs/ROUTINES.md). Dependency-free on purpose — the workflow
@@ -38,6 +41,7 @@
 // never an empty result — a scheduled caller must not mistake "broken" for "nothing due".
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { campaignsLinking, readCampaignDir } from "./campaign-links.mjs";
 import {
   compareEventOrder,
   DATE_RE,
@@ -61,6 +65,9 @@ const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "assessment-cadence.json"
 const LEDGER_DIR = arg("ledger-dir") ?? join(ROOT, "docs", "research", "events");
 const FORWARD_TESTS_DIR =
   arg("forward-tests-dir") ?? join(ROOT, "docs", "research", "forward-tests");
+// The house campaigns (#6949 slice 5, criterion 5): each `--due` row names the campaigns that link
+// it, so the research lane can rank campaign events first (scripts/moneypenny/events.mjs → sortKey).
+const CAMPAIGNS_DIR = arg("campaigns-dir") ?? join(ROOT, "src", "domain", "campaigns");
 
 /** Whole calendar days from today's UTC date to `date` (negative = past) — mirrors
  *  earnings-calendar.ts daysUntil, re-implemented because this script must not need `npm ci`. */
@@ -322,7 +329,7 @@ function assessmentDue(event, ledger, today, cadence) {
 // Contract validation (validateEvent, validateCadence, validateLedgers, runValidate) lives in
 // event-scan-validation.mjs — a distinct concern from extraction and cadence math below.
 
-function printDue(rows) {
+function printDue(rows, campaigns) {
   const due = rows
     .filter((r) => r.verdict.due)
     .map(({ e, ledger, days, verdict }) => ({
@@ -339,6 +346,11 @@ function printDue(rows) {
       intervalDays: verdict.intervalDays,
       reason: verdict.reason,
       ledger: ledger?.file ?? `docs/research/events/${e.id}.md`,
+      // The campaigns that link this event, each with its strongest reason (`cast` or `force`), so
+      // the dispatch ceiling can spend itself on the stories members are playing (#6949
+      // criterion 5). Every house campaign counts as active: the files are the house's own
+      // campaigns, and a member's campaign never reorders house research (criterion 9's spend rule).
+      campaigns: campaignsLinking(campaigns, e),
       // Present only on a close-out whose own forward tests score AFTER its window closes (#2988):
       // the session is told the conflict is structural rather than its own timing. The workflow's
       // matrix forwards `{id, reason}` only, so this reaches a human reading `--due`, not the
@@ -488,7 +500,7 @@ function main() {
     .filter((r) => r.verdict.due || r.days >= 0 || r.verdict.reason === HELD)
     .sort((a, b) => compareEventOrder(a.e, b.e));
 
-  if (has("due")) printDue(rows);
+  if (has("due")) printDue(rows, readCampaignDir(CAMPAIGNS_DIR));
   else printReport(rows);
 }
 

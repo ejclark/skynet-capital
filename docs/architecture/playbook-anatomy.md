@@ -156,8 +156,12 @@ it reaches an event from a closed menu (filled, take-profit, stopped, assigned, 
 It is a record, not a `Playbook`: `parseChain` refuses any key off the form, so it carries no
 condition, and `nextOwner` keeps the current owner when no link names the event. Nothing live reads a
 chain yet; `src/playbooks/chain-replay.ts` runs one on price history in shadow, asking only the owner
-each session, and `npm run research:chain` prints the AI-dip chain's replay on CRWV. Live handoff
-waits on per-playbook ledgers (#4269).
+each session, and `npm run research:chain` prints the AI-dip chain's replay on CRWV. The replay
+needs a ticker's history, which only that script fetches, so the Store's **scorecard** (slice 4,
+`chain-scorecard.ts`) is a replay committed as `chain-scorecards.json` (`--scorecard=…`): a saved
+chain shows the card whose links match its own (`chainShape`), each link's result on its own line
+with the total beneath, and "no replay yet" when none does. Live handoff waits on per-playbook
+ledgers (#4269).
 
 Around the playbook, in order of wrapping: the conviction check filters new entries; expiry hygiene
 adds its closes **beside** the playbook's intents (outside the conviction check, so it is never

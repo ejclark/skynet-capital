@@ -13,12 +13,14 @@ import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createAuthoredPlayStore } from "../server/authored-play-store.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
+import { createCampaignQuestionsStore } from "../server/campaign-questions-store.js";
 import { createCouncilRepliesStore } from "../server/council-replies-store.js";
 import { createCouncilStore } from "../server/council-store.js";
 import { createDiscoveryQueueStore } from "../server/discovery-queue-store.js";
 import { createExitPlanStore } from "../server/exit-plan-store.js";
 import { createFilingCommentsStore } from "../server/filing-comments-store.js";
 import { createMemberCampaignStore } from "../server/member-campaign-store.js";
+import { createMemberChainStore } from "../server/member-chain-store.js";
 import { createMemberConvictionStore } from "../server/member-conviction-store.js";
 import {
   createOwnerLinkStore,
@@ -42,7 +44,9 @@ export interface AccessSetup {
   exitPlans: ReturnType<typeof createExitPlanStore>;
   authoredPlays: ReturnType<typeof createAuthoredPlayStore>;
   memberCampaigns: ReturnType<typeof createMemberCampaignStore>;
+  memberChains: ReturnType<typeof createMemberChainStore>;
   discoveryQueue: ReturnType<typeof createDiscoveryQueueStore>;
+  campaignQuestions: ReturnType<typeof createCampaignQuestionsStore>;
   memberConvictions: ReturnType<typeof createMemberConvictionStore>;
   playMilestones: ReturnType<typeof createPlayMilestoneLedger>;
   knownPersonaIds: Set<string>;
@@ -106,8 +110,11 @@ export function setupAccess(
   const authoredPlays = createAuthoredPlayStore(env, (m) => console.error(m));
   // Members' own campaigns (#6949 slice 3a) — private to their author, a sibling of the same file.
   const memberCampaigns = createMemberCampaignStore(env, (m) => console.error(m));
+  // Members' own chains (#6959 slice 3b) — shadow only, a sibling of the same file.
+  const memberChains = createMemberChainStore(env, (m) => console.error(m));
   // Questions waiting for the research lane (#6952 slice 2b), another sibling file; appending starts nothing.
   const discoveryQueue = createDiscoveryQueueStore(env, (m) => console.error(m));
+  const campaignQuestions = createCampaignQuestionsStore(env, (m) => console.error(m));
   // What happened to those plays (#5457 slice 5) — the Activity feed's playbook rows, beside them.
   const playMilestones = createPlayMilestoneLedger(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
@@ -156,7 +163,9 @@ export function setupAccess(
     exitPlans,
     authoredPlays,
     memberCampaigns,
+    memberChains,
     discoveryQueue,
+    campaignQuestions,
     memberConvictions,
     playMilestones,
     knownPersonaIds,
