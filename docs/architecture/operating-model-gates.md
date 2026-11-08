@@ -80,7 +80,7 @@ _Caption — components of Fitness gates and coaches, from the paths on each ele
 |---|---|---|
 | **Verify entry** | `package.json (verify), .husky/pre-push` | run-p typecheck lint test typecheck:app test:app — the same gate locally (pre-push) and in CI |
 | **Arch spec seam** | `tests/arch/*.spec.ts, tests/support/advisory-scan.ts` | 46 rstest specs that invoke the scan scripts; advisoryScan() logs debt-class findings without failing; contract-class specs fail the suite |
-| **Lint and format** | `biome.json, .husky/pre-commit` | biome check . ; noExcessiveLinesPerFile off, noExcessiveCognitiveComplexity warn; pre-commit auto-formats staged files |
+| **Lint and format** | `biome.json, scripts/lint.sh, .husky/pre-commit` | scripts/lint.sh runs biome check . and, on failure, reprints only the errors last; noExcessiveLinesPerFile off, noExcessiveCognitiveComplexity warn; pre-commit auto-formats staged files |
 | **Commit lint** | `commitlint.config.js, .husky/commit-msg, scripts/commit-msg-reflow.mjs` | Conventional Commits on every local commit; pipeline lints the PR title (the squash subject) via npx commitlint |
 | **Size coach** | `scripts/arch-scan.mjs, scripts/code-lines.mjs, arch-grandfather.json, tests/arch/god-file.spec.ts` | 300 code lines (src, app/src, scripts) / 500 (tests) and junk-drawer names; advisory; drill /decompose, run by the governor chore |
 | **Duplication and clone coach** | `scripts/dupe-scan.mjs, scripts/clone-scan.mjs, .jscpd.json, .jscpd.app.json, dupe-budget.json, clone-budget.json` | Same symbol in N files (dupe) and jscpd token clones, root src and app/src on separate budgets; advisory; drill /dedupe, run by the governor chore |

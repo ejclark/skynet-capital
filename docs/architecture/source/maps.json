@@ -1467,8 +1467,8 @@
           {
             "id": "biome",
             "label": "Lint and format",
-            "path": "biome.json, .husky/pre-commit",
-            "responsibility": "biome check . ; noExcessiveLinesPerFile off, noExcessiveCognitiveComplexity warn; pre-commit auto-formats staged files"
+            "path": "biome.json, scripts/lint.sh, .husky/pre-commit",
+            "responsibility": "scripts/lint.sh runs biome check . and, on failure, reprints only the errors last; noExcessiveLinesPerFile off, noExcessiveCognitiveComplexity warn; pre-commit auto-formats staged files"
           },
           {
             "id": "commitlint",

@@ -97,6 +97,12 @@
   gap: 4px 8px;
   margin: 0;
 }
+/* The move's shape leads the number. Weight and size, not hue: ▲ ▼ ∿ differ by outline. */
+.story-move {
+  font-size: var(--text-sm);
+  line-height: 1;
+  color: var(--text);
+}
 .story-fact-value {
   font-size: var(--text-lg);
   font-weight: 700;

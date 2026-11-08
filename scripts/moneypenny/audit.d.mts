@@ -70,6 +70,8 @@ export interface AuditDeps {
   stuckBranches?: import("./stuck-branch-update.mjs").StuckBranch[];
   /** Green, unarmed PRs whose arm job failed — the re-arm act stage (stranded-pr.mjs). */
   stranded?: import("./stranded-pr.mjs").StrandedPr[];
+  /** PRs whose head never got a required check run — the new-head act stage (headless-pr.mjs, #7112). */
+  headless?: import("./headless-pr.mjs").HeadlessPr[];
   /** `research/*` PRs open past 6h (research-pr-sweep.mjs, #5689) — null when unreadable. */
   researchPrs?: import("./research-pr-sweep.mjs").ResearchPr[] | null;
   /** Lane PRs red past the age limit, their sessions over (red-lane-pr.mjs). */

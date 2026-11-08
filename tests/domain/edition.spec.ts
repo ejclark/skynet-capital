@@ -25,7 +25,7 @@ function valid(): Record<string, unknown> {
         headline: "Chip stocks fell hard.",
         narrator: "Sensors logged a hard hit.",
         symbols: ["SMH"],
-        facts: [{ label: "SMH", value: "−11.2%" }],
+        facts: [{ label: "SMH", value: "−11.2%", move: "down" }],
         reports: [
           { date: "2026-11-10", when: "after the close", what: "CRWV Q3", status: "confirmed" },
         ],
@@ -68,7 +68,7 @@ describe("the edition record", () => {
     const line = { text: "It filled 38% of the time.", mark: "measured", source: "study" };
     expect(() => parse(withStory({ more: [line] }))).toThrow(/base rate with no sample size/);
     expect(parse(withStory({ more: [{ ...line, n: 65 }] })).stories[0]?.more[0]?.n).toBe(65);
-    const fact = { label: "Fill rate", value: "38%", note: "38% of the time" };
+    const fact = { label: "Fill rate", value: "38%", move: "up", note: "38% of the time" };
     expect(() => parse(withStory({ facts: [fact] }))).toThrow(/sample size/);
   });
 
@@ -106,6 +106,15 @@ describe("the edition record", () => {
     expect(() => parse(withStory({ narrator: "One.\nTwo." }))).toThrow(/one line/);
   });
 
+  it("draws every key fact's move as a shape, so it needs one (docs/IA.md §5.9)", () => {
+    expect(() => parse(withStory({ facts: [{ label: "SMH", value: "1" }] }))).toThrow(
+      /move must be/,
+    );
+    expect(() =>
+      parse(withStory({ facts: [{ label: "SMH", value: "1", move: "sideways" }] })),
+    ).toThrow(/move must be/);
+  });
+
   it("names the list when an entry is not an object, never a bare TypeError", () => {
     expect(() => parse({ ...valid(), next: [null] })).toThrow(
       /2026-11-06\.json: next must be a list of objects/,
@@ -117,7 +126,7 @@ describe("the edition record", () => {
   });
 
   it("refuses a repeat in a list the page keys its rows by", () => {
-    const fact = { label: "NVDA", value: "1" };
+    const fact = { label: "NVDA", value: "1", move: "up" };
     expect(() => parse(withStory({ facts: [fact, fact] }))).toThrow(/lists "NVDA" twice/);
     const line = { text: "Up.", mark: "measured", source: "x" };
     expect(() => parse(withStory({ more: [line, line] }))).toThrow(/twice/);
@@ -127,7 +136,7 @@ describe("the edition record", () => {
 
   it("keeps key facts to one to four", () => {
     expect(() => parse(withStory({ facts: [] }))).toThrow(/1 to 4/);
-    const fact = { label: "A", value: "1" };
+    const fact = { label: "A", value: "1", move: "up" };
     expect(() => parse(withStory({ facts: [fact, fact, fact, fact, fact] }))).toThrow(/1 to 4/);
   });
 

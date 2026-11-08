@@ -101,6 +101,7 @@ import { executeDialTap, executeDialTidy, routeDial } from "./dial-tap.mjs";
 import { dueForResearch, RECEIPT_TITLE_RE, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
+import { nudgeHeadless } from "./headless-pr.mjs";
 import {
   boardedReason,
   ensureLabel,
@@ -1592,6 +1593,7 @@ function executeSweepIntent(i) {
  */
 const ONE_CALL_INTENTS = {
   "update-stuck-branch": (i) => updateStuckBranch(i),
+  "nudge-headless": (i) => nudgeHeadless(i),
   noop: (i) => {
     console.log(`· nothing to do (${i.reason})`);
     return `noop — ${i.reason}`;

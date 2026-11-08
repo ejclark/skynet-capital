@@ -32,7 +32,7 @@
         {
           "id": "s1",
           "goto": "/app/",
-          "sees": "the landing page: today's market news, the lead story's key facts first (#7077); the topbar's Profile tab one tap away — it always lands on the Profile page, which opens on the connect guide for a member with no account (#3807 slice 2b)",
+          "sees": "the landing page (the Chronicles tab): the day's market news, the lead story's coming reports then what moved (#7077); the topbar's Profile tab one tap away — it always lands on the Profile page, which opens on the connect guide for a member with no account (#3807 slice 2b)",
           "ears": "WHEN a signed-in member with no linked account opens the app, the app shall keep a one-tap way into onboarding on screen: the Profile tab, landing on the connect guide.",
           "expect": [
             { "role": "link", "name": "Profile", "within": "nav.topnav", "href": "/app/accounts" }
