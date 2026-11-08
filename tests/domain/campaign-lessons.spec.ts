@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   LESSON_RECORDS,
   type LessonRecord,
+  lessonsAnswering,
   lessonsFor,
   loadLessonRecords,
   parseLessonRecord,
@@ -196,6 +197,13 @@ describe("a campaign's lesson record (#6952 slice 2, criterion 8)", () => {
       expect(() => parseLessonRecord(raw({}), "other.json", "other")).toThrow(/file name/);
     });
 
+    it("accepts a finding that names the ask it answers, and refuses one that names nothing real", () => {
+      expect(parse({ answers: "name:PLTR" }).lessons[0]?.answers).toBe("name:PLTR");
+      expect(parse({ answers: "energy-for-ai/sector:Utilities" }).lessons).toHaveLength(1);
+      expect(() => parse({ answers: "who knows" })).toThrow(/answers must be an ask id/);
+      expect(() => parse({ answers: "" })).toThrow(/answers must be an ask id/);
+    });
+
     it("refuses the same lesson id twice", () => {
       const twice = raw({});
       twice.lessons = [...(twice.lessons as unknown[]), ...(twice.lessons as unknown[])];
@@ -216,5 +224,18 @@ describe("a campaign's lesson record (#6952 slice 2, criterion 8)", () => {
         rmSync(dir, { recursive: true, force: true });
       }
     });
+  });
+});
+
+describe("a finding names the ask it answers (#6952 slice 2c, criterion 9)", () => {
+  it("lessonsAnswering returns only the findings for that ask, in that campaign", () => {
+    // No house record answers an ask yet; the lookup is total and empty rather than throwing.
+    expect(lessonsAnswering("energy-for-ai", "energy-for-ai/name:PLTR")).toEqual([]);
+    expect(lessonsAnswering("no-such-campaign", "name:PLTR")).toEqual([]);
+  });
+
+  it("every house finding that names an ask uses the id the queue would have made", () => {
+    for (const r of LESSON_RECORDS)
+      for (const l of r.lessons) if (l.answers) expect(l.answers).toMatch(/^[a-z0-9~/-]*\w+:/);
   });
 });

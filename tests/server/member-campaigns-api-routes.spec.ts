@@ -549,3 +549,141 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     expect(campaigns.list(ADA)).toHaveLength(1);
   });
 });
+
+describe("a question asked inside a campaign (#6952 slice 2c)", () => {
+  let dir: string;
+  let queue: DiscoveryQueueStore;
+  let campaigns: MemberCampaignStore;
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "skynet-campaign-ask-"));
+    queue = new DiscoveryQueueStore(join(dir, "discovery-queue.json"));
+    campaigns = new MemberCampaignStore(join(dir, "member-campaigns.json"));
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  const cfg = (): DashboardServerConfig =>
+    ({
+      memberCampaigns: campaigns,
+      discoveryQueue: queue,
+      campaignShelf: () => false,
+      discoveryPerPass: 6,
+    }) as unknown as DashboardServerConfig;
+  const askIn = async (body: unknown, who: unknown = ada) => {
+    const { res, out } = fakeRes();
+    await serveMemberCampaignsApi(post(body), res, "/api/campaigns/ask", cfg(), who as never);
+    return { status: out.status, body: JSON.parse(out.body || "{}") };
+  };
+  const saveAs = async (who: unknown, title: string) => {
+    const { res } = fakeRes();
+    await serveMemberCampaignsApi(
+      post({ form: { ...FORM, title, symbols: ["XOM"] } }),
+      res,
+      "/api/campaigns/mine/save",
+      cfg(),
+      who as never,
+    );
+  };
+  const shareAs = async (who: unknown, id: string) => {
+    const { res } = fakeRes();
+    await serveMemberCampaignsApi(
+      post({ id, shared: true }),
+      res,
+      "/api/campaigns/mine/share",
+      cfg(),
+      who as never,
+    );
+  };
+
+  it("queues a covered name when asked inside the house campaign that covers it, with the words", async () => {
+    const bare = await askIn({ kind: "name", subject: "NVDA" });
+    expect(bare.body.status).toBe("covered");
+    const answer = await askIn({
+      kind: "name",
+      subject: "NVDA",
+      campaign: "ai-buildout",
+      question: "  Who\nsupplies   its power?  ",
+    });
+    expect(answer.body).toMatchObject({ ok: true, status: "queued" });
+    expect(queue.load()).toMatchObject([
+      {
+        id: "ai-buildout/name:NVDA",
+        campaign: "ai-buildout",
+        question: "Who supplies its power?",
+        askers: [ADA],
+      },
+    ]);
+  });
+
+  it("reads a member campaign that shares a house campaign's id as the house one", async () => {
+    await saveAs(ada, "Energy for AI");
+    await askIn({ kind: "name", subject: "PLTR", campaign: "energy-for-ai" }, grace);
+    expect(queue.load()[0]?.campaign).toBe("energy-for-ai");
+  });
+
+  it("caps the words at 200 characters", async () => {
+    await askIn({
+      kind: "name",
+      subject: "NVDA",
+      campaign: "ai-buildout",
+      question: "q".repeat(900),
+    });
+    expect(queue.load()[0]?.question).toHaveLength(200);
+  });
+
+  it("lets a second member asking the same thing in the same campaign join the first", async () => {
+    await askIn({ kind: "name", subject: "NVDA", campaign: "ai-buildout", question: "First" });
+    const answer = await askIn(
+      { kind: "name", subject: "NVDA", campaign: "ai-buildout", question: "Second" },
+      grace,
+    );
+    expect(answer.body.status).toBe("joined");
+    expect(queue.load()).toHaveLength(1);
+    expect(queue.load()[0]).toMatchObject({ question: "First" });
+    expect(queue.load()[0]?.askers).toHaveLength(2);
+  });
+
+  it("scopes an ask in a campaign a member shared with the party, for every member", async () => {
+    await saveAs(ada, "Grid watchers");
+    const id = campaigns.list(ADA)[0]?.campaign.id as string;
+    await shareAs(ada, id);
+    const answer = await askIn(
+      { kind: "name", subject: "PLTR", campaign: id, question: "Why?" },
+      grace,
+    );
+    expect(answer.body).toMatchObject({ ok: true, status: "queued" });
+    expect(queue.load()[0]?.campaign).toBe(`${ADA}~${id}`);
+  });
+
+  it("answers a member's own private campaign for them, and never for another member", async () => {
+    await saveAs(ada, "Private notes");
+    const id = campaigns.list(ADA)[0]?.campaign.id as string;
+    const mine = await askIn({ kind: "name", subject: "PLTR", campaign: id }, ada);
+    expect(mine.body.ok).toBe(true);
+    const theirs = await askIn({ kind: "name", subject: "PLTR", campaign: id }, grace);
+    expect(theirs.body).toMatchObject({ ok: false });
+    // The same words as a campaign that doesn't exist, so a private one is never confirmed.
+    const nowhere = await askIn(
+      { kind: "name", subject: "PLTR", campaign: "no-such-campaign" },
+      grace,
+    );
+    expect(nowhere.body).toEqual(theirs.body);
+    expect(queue.load().map((a) => a.askers)).toEqual([[ADA]]);
+  });
+
+  it("refuses an over-long or non-string campaign id and writes nothing", async () => {
+    for (const bad of ["x".repeat(61), 5, ""]) {
+      expect((await askIn({ kind: "name", subject: "PLTR", campaign: bad })).body.ok).toBe(false);
+    }
+    expect(queue.load()).toEqual([]);
+  });
+
+  it("keeps the per-member bound for asks inside a campaign", async () => {
+    for (const t of ["AA", "BB", "CC", "DD", "EE"])
+      await askIn({ kind: "name", subject: t, campaign: "ai-buildout" });
+    const answer = await askIn({ kind: "name", subject: "FF", campaign: "ai-buildout" });
+    expect(answer.body).toMatchObject({ ok: true, status: "limit" });
+    expect(queue.load()).toHaveLength(5);
+  });
+});

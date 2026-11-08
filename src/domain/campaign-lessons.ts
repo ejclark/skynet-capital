@@ -52,6 +52,12 @@ export interface Lesson {
   readonly falsifier?: string;
   /** The research file the finding came from. */
   readonly source: string;
+  /**
+   * The member's ask this finding answers (a discovery queue `ask.id`, slice 2c, criterion 9), so
+   * every member who reads the campaign can see which question it came from. Absent for a finding
+   * the house reached on its own.
+   */
+  readonly answers?: string;
 }
 
 export interface LessonRecord {
@@ -138,6 +144,12 @@ export function proposable(
 // ── The loader ────────────────────────────────────────────────────────────────────────────────
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** An ask id (`askId` in discovery-queue.ts): `[<campaign>/]<kind>:<subject>`. */
+const ANSWERS_RE = /^([a-z0-9~-]+\/)?(sector|market|name):\S.{0,59}$/;
+
+function isAskId(v: unknown): v is string {
+  return isText(v) && ANSWERS_RE.test(v);
+}
 
 /** A real calendar day in YYYY-MM-DD, so "2027-02-30" is refused rather than compared as text. */
 function isDate(v: unknown): v is string {
@@ -172,6 +184,8 @@ function checkLesson(l: Raw, fail: Fail): void {
   if (l.kind === "on-watch" && l.recheckOn === undefined)
     fail(`lesson "${id}": a name on watch needs the date it gets checked again`);
   if (!isText(l.source)) fail(`lesson "${id}" names no source`);
+  if (l.answers !== undefined && !isAskId(l.answers))
+    fail(`lesson "${id}": answers must be an ask id like "name:PLTR"`);
 }
 
 /** Parse one lesson record, loud on the first problem and naming the file (campaigns.ts's shape). */
@@ -216,6 +230,11 @@ export function loadLessonRecords(
 }
 
 export const LESSON_RECORDS: readonly LessonRecord[] = loadLessonRecords();
+
+/** The findings that answer one ask in this campaign, so a member sees what their question found. */
+export function lessonsAnswering(campaign: string, ask: string): readonly Lesson[] {
+  return lessonsFor(campaign).filter((l) => l.answers === ask);
+}
 
 /** A campaign's lessons, or an empty list when it has none yet. */
 export function lessonsFor(campaign: string): readonly Lesson[] {

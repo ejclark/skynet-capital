@@ -13,10 +13,12 @@ import {
   anchorOf,
   CAMPAIGNS,
   type CampaignMode,
+  campaignById,
   castSymbols,
   SYMBOL_RE,
 } from "../domain/campaigns.js";
 import {
+  cleanQuestion,
   type DiscoveryKind,
   type DiscoveryQueue,
   type QueueOutcome,
@@ -76,6 +78,13 @@ import {
  * (`domain/discovery-queue.ts`) and the reply says it is queued and roughly when. The queue is
  * bounded and drained per pass inside the lane's ceiling, so asking can never raise it; the route
  * only appends to a short list and starts nothing.
+ *
+ * A QUESTION ASKED INSIDE A CAMPAIGN (#6952 slice 2c, criterion 9). `ask` may carry `campaign` (an
+ * id the member can read: a house campaign, one of their own, or one shared with the party) and
+ * `question` (their words, capped at 200 characters). The ask is scoped to that campaign, so a
+ * subject the campaign already covers still queues, and a second member's identical ask joins the
+ * first. A campaign the member cannot read gets the same answer as one that doesn't exist, so the
+ * route never confirms another member's private campaign. The words are kept on the volume only.
  *
  * Same auth invariant as the other member APIs: `!session` means the route doesn't exist
  * (`false`), before anything else runs.
@@ -190,6 +199,7 @@ function queueDiscoveries(
   memberKey: string,
   kind: DiscoveryKind,
   subjects: readonly string[],
+  scope: { readonly campaign?: string; readonly question?: string } = {},
 ): { readonly status: string; readonly tell: string } | undefined {
   const store = config.discoveryQueue;
   if (!store || subjects.length === 0) return undefined;
@@ -202,7 +212,12 @@ function queueDiscoveries(
   // Report the one furthest back in line, so the "roughly when" is the longest the member waits.
   const place = (o: QueueOutcome): number => ("ahead" in o ? o.ahead : -1);
   for (const subject of subjects) {
-    const outcome = queueAsk(queue, { kind, subject, by: memberKey }, CAMPAIGNS, isResearched);
+    const outcome = queueAsk(
+      queue,
+      { kind, subject, by: memberKey, ...scope },
+      CAMPAIGNS,
+      isResearched,
+    );
     queue = outcome.queue;
     if (outcome.status === "full" || outcome.status === "limit") refused++;
     if (!last || place(outcome) >= place(last)) last = outcome;
@@ -242,6 +257,24 @@ function askSubject(
   return undefined;
 }
 
+/**
+ * The scope an ask in `id` carries, or undefined when the member cannot read that campaign. A house
+ * campaign is its id; a member's own or a party-shared one is `<author key>~<id>`, because member
+ * campaign ids are unique per author only. Own campaigns win over shared ones with the same id.
+ */
+function readableScope(
+  config: DashboardServerConfig,
+  memberKey: string,
+  id: string,
+): string | undefined {
+  if (campaignById(id)) return id;
+  const store = config.memberCampaigns;
+  if (!store) return undefined;
+  if (store.list(memberKey).some((r) => r.campaign.id === id)) return `${memberKey}~${id}`;
+  const shared = store.listShared().find((s) => s.record.campaign.id === id);
+  return shared ? `${shared.memberKey}~${id}` : undefined;
+}
+
 function askRoute(
   res: ServerResponse,
   raw: string,
@@ -258,7 +291,18 @@ function askRoute(
     sendJson(res, 200, { ok: false, error: "Questions aren't wired in this deployment." });
     return;
   }
-  const told = queueDiscoveries(config, memberKey, named.kind, [named.subject]);
+  let scope: { campaign?: string; question?: string } = {};
+  if (body?.campaign !== undefined) {
+    const id = boundedString(body.campaign, CAMPAIGN_MAX_ID);
+    const campaign = id ? readableScope(config, memberKey, id) : undefined;
+    if (!campaign) {
+      sendJson(res, 200, { ok: false, error: "That campaign isn't one you can ask in." });
+      return;
+    }
+    const question = cleanQuestion(body.question);
+    scope = { campaign, ...(question ? { question } : {}) };
+  }
+  const told = queueDiscoveries(config, memberKey, named.kind, [named.subject], scope);
   sendJson(res, 200, { ok: true, ...told });
 }
 

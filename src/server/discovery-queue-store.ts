@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  askId,
+  CAMPAIGN_SCOPE_MAX,
+  cleanQuestion,
   DISCOVERY_KINDS,
   type DiscoveryAsk,
   type DiscoveryKind,
@@ -21,18 +24,32 @@ import { siblingPath } from "../storage/sibling-path.js";
  * The rules that keep it from raising the research ceiling live in `domain/discovery-queue.ts`.
  */
 
+const SCOPE_RE = new RegExp(`^[a-z0-9][a-z0-9~-]{0,${CAMPAIGN_SCOPE_MAX - 1}}$`);
+
 const isKind = (v: unknown): v is DiscoveryKind =>
   (DISCOVERY_KINDS as readonly unknown[]).includes(v);
 
 function parseAsk(raw: unknown): DiscoveryAsk | undefined {
   if (!isRecord(raw)) return undefined;
-  const { id, kind, subject, askedAt, askers } = raw;
+  const { id, kind, subject, askedAt, askers, campaign, question } = raw;
   if (!isKind(kind) || typeof subject !== "string" || subject.length === 0) return undefined;
-  if (id !== `${kind}:${subject}` || typeof askedAt !== "string") return undefined;
+  // A campaign scope is a slug-ish word or two, never free text; anything else drops the whole ask.
+  if (campaign !== undefined && !(typeof campaign === "string" && SCOPE_RE.test(campaign)))
+    return undefined;
+  if (id !== askId(kind, subject, campaign) || typeof askedAt !== "string") return undefined;
   if (Number.isNaN(Date.parse(askedAt))) return undefined;
   if (!(Array.isArray(askers) && askers.every((a) => typeof a === "string" && a.length <= 64)))
     return undefined;
-  return { id, kind, subject, askedAt, askers: askers.slice(0, MAX_ASKERS) };
+  const words = cleanQuestion(question);
+  return {
+    id,
+    kind,
+    subject,
+    askedAt,
+    askers: askers.slice(0, MAX_ASKERS),
+    ...(campaign ? { campaign } : {}),
+    ...(words ? { question: words } : {}),
+  };
 }
 
 export function parseDiscoveryQueue(raw: unknown): DiscoveryQueue | undefined {
