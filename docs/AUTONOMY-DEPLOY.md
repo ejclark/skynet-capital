@@ -11,8 +11,9 @@ one day restarted the shared bots machine ~every 15 minutes and Sauron never acc
 signal to trade once):
 
 - **`skynet-capital`** — the dashboard app (`app` process, HTTP 8787, owns the `/data` volume, and
-  the 6PN-only insight/controls bridge listener on 8788). Deploys on **every** merge — its state is
-  volume-backed and docs merges need it (the `/research` shelf is read from the image).
+  the 6PN-only insight/controls bridge listener on 8788). Releases on every merge, and restarts
+  only when the push changes what its image ships (`scripts/dashboard-deploy-preflight.mjs`) —
+  `docs/research/**` counts, since the `/research` shelf is read from the image.
 - **`skynet-capital-bots`** (`fly.bots.toml`) — the trader loop, alone. Deploys **only** when
   `scripts/bot-relevant.mjs` classifies the push as touching the bots runtime, reusing the image
   the dashboard deploy just built (one build per push). **Safe by default:** boots in **observe**
@@ -50,7 +51,7 @@ is the whole list):
    is `SKYNET_AUTONOMOUS_BOTS` in `fly.bots.toml`. Turn on Sauron's hardcore build on its
    Settings card if research mode is wanted (applies at the next poll, no restart). The `SKYNET_BOT_*` env credentials are break-glass only (a bot the bridge can't
    serve boots on them) and are set from a terminal with `flyctl secrets set`, never from a button —
-   no autonomy-ops action sets credentials (#1180 slice F).
+   no autonomy-ops action sets a bot's credentials (#1180 slice F).
 5. Click **Actions → Pipeline → Run workflow → check `force_bots_deploy`** — stands the machine up
    in **observe** mode; the bots smoke verifies boot + the controls bridge automatically.
 6. Click **Autonomy ops → `flip-mode`, mode `live`** — during a market open, watching the logs.
@@ -58,9 +59,9 @@ is the whole list):
    check, not vigilance, is what prevents double-trading.
 
 **Gist:** one terminal command mints the org token (the genuinely credentialed part); everything
-after — app creation, credentials, deploy, go-live — is reviewer-gated buttons runnable from a
-phone. End state: the dashboard deploys on every merge exactly as before; the bots machine
-restarts only when bot code actually changes.
+after is runnable from a phone — app creation, deploy and go-live as reviewer-gated buttons, a
+bot's credentials in the app. End state: the dashboard restarts only when a merge changes what its
+image ships; the bots machine restarts only when bot code actually changes.
 
 **Token trade-off, on the record:** `FLY_ORG_TOKEN` is org-wide deploy power sitting in repo
 secrets — usable by any workflow that names it, gated by workflow-file review (the envelope) and
