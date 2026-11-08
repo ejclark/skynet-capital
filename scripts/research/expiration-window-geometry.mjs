@@ -60,6 +60,7 @@
 
 import { rmSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "../is-main.mjs";
 import { expirations } from "./expiration-displacement.mjs";
 import { bars } from "./market-data.mjs";
 
@@ -305,7 +306,7 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   main().catch((error) => {
     console.error(`expiration-window-geometry failed: ${error.message}`);
     process.exit(1);

@@ -19,7 +19,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isMain } from "./compat.mjs";
 import { CHUNK, matchReport, runMatch } from "./match-core.mjs";
 import { FILES } from "./round-contract.mjs";
 import { expectEntries } from "./round-control.mjs";
@@ -120,7 +120,7 @@ export async function main(argv) {
   return 0;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2)).then(
     (code) => {
       process.exitCode = code;

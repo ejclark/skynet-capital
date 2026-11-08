@@ -21,6 +21,7 @@
 // agent, skill, workflow, lane prompt and output style is covered by a seat. Dependency-free.
 
 import { readFileSync, writeFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 
 export const SOURCE = "docs/agents/seats.json";
 export const PAGE = "docs/architecture/org-chart.md";
@@ -175,7 +176,7 @@ output style has no seat. What starts a seat (\`invoker\`): ${Object.entries(INV
 `;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const reg = JSON.parse(readFileSync(SOURCE, "utf8"));
   const page = render(reg);
   if (process.argv.includes("--check")) {

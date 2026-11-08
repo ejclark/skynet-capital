@@ -13,6 +13,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 /**
  * The differences between a lockfile and the hidden lockfile of an install, as readable lines.
@@ -51,7 +52,7 @@ function readJson(path) {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const [lockPath, modules] = process.argv.slice(2);
   if (!(lockPath && modules)) {
     console.error(

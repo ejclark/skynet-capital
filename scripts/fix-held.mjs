@@ -24,6 +24,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -221,7 +222,7 @@ function readRuns(days) {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   const days = Number(args[args.indexOf("--days") + 1]) || 30;
   const lessons = parseLessons(readFileSync(join(ROOT, "docs/LESSONS.md"), "utf8"));

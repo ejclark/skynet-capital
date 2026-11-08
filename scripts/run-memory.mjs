@@ -43,6 +43,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LockBusyError, withFileLock } from "./file-lock.mjs";
+import { isMain } from "./is-main.mjs";
 
 export const BUDGET_PER_CLASS = 3;
 export const EMPTY_FILE_HASH = "absent";
@@ -263,7 +264,7 @@ function promote(f) {
   console.log(outcome.hash);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const [command, ...rest] = process.argv.slice(2);
   const f = flags(rest);
   const commands = {

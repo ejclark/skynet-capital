@@ -11,7 +11,15 @@
 // Each fallback is a verbatim copy of the helper as it first landed, with the commit that moved
 // it, so it can be deleted once no pin worth running predates that commit.
 
+import { realpathSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import * as steps from "../crawl/steps.mjs";
+
+// scripts/is-main.mjs landed with #7046, so a pin older than that has no such FILE, and a static
+// import of a missing module fails where a missing name would not. Imported dynamically instead,
+// with a missing module read as an empty namespace, so `pick` below falls back.
+const entry = await import("../is-main.mjs").catch(() => ({}));
 
 /** Fallbacks in use in this process, `name: why` — printed under a pinned parity table. */
 export const FALLBACKS = [];
@@ -47,4 +55,22 @@ export const settle = pick(
   "settle",
   settleFallback,
   "scripts/crawl/steps.mjs has no `settle` here (exported by #4973); the harness's copy is used",
+);
+
+/** Was this module run as `node <file>`? Compared by real path, so a symlinked path still counts.
+ *  Added as scripts/is-main.mjs by #7046; verbatim. */
+function isMainFallback(metaUrl, argv1 = process.argv[1]) {
+  if (!argv1) return false;
+  try {
+    return realpathSync(resolve(argv1)) === realpathSync(fileURLToPath(metaUrl));
+  } catch {
+    return false;
+  }
+}
+
+export const isMain = pick(
+  entry,
+  "isMain",
+  isMainFallback,
+  "scripts/is-main.mjs is missing here (added by #7046); the harness's copy is used",
 );

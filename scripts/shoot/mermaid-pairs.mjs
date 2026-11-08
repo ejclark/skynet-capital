@@ -33,6 +33,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { marked } from "marked";
+import { isMain } from "../is-main.mjs";
 import { GITHUB_MERMAID_VERSION, lintMermaid } from "../mermaid-lint.mjs";
 import { resolveChromium } from "./lib.mjs";
 import {
@@ -333,4 +334,4 @@ async function main() {
   report(sidecars, opts);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (isMain(import.meta.url)) await main();

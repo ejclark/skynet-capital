@@ -30,7 +30,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { posix } from "node:path";
-
+import { isMain } from "../is-main.mjs";
 import { routeLabel } from "./maps.mjs";
 import { loadJourneys, stepRunsAt, viewportsFor } from "./steps.mjs";
 
@@ -451,4 +451,4 @@ function main() {
   if (result.unjudged.length > 0 || result.stale.length > 0) process.exitCode = 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

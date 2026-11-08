@@ -22,6 +22,7 @@
 // Enforced in CI via tests/arch/architecture-pages.spec.ts. Dependency-free (node built-ins).
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 const ROOT = process.cwd();
 const OUT = join(ROOT, "docs", "architecture");
@@ -334,4 +335,4 @@ function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

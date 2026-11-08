@@ -38,6 +38,7 @@
 //
 // Token: GH_TOKEN or GITHUB_TOKEN (REST core bucket), else `gh auth token` (ensureGhToken). Repo: GITHUB_REPOSITORY or ejclark/skynet-capital.
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 import { lintIssue } from "./issue-lint.mjs";
 import { missingDecisionCallout } from "./moneypenny/decision-callout.mjs";
 import { ensureGhToken, ghRest, ghRestAll, sh } from "./moneypenny/gh.mjs";
@@ -468,7 +469,7 @@ function show({ positional, flags }) {
 
 const COMMANDS = { create, update, search, show, link };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = parseArgs(process.argv.slice(2));
   const run = COMMANDS[args.cmd];
   if (!run) {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "./is-main.mjs";
 // LAST-SLICE SCAN — which closed plans still have an open sub-issue? (#4056's "Only the last slice
 // closes" loop row.)
 //
@@ -61,4 +62,4 @@ function main() {
   console.log(renderReport(rows, openSlices));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

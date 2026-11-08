@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // A touch point publishes the week's reading (#6470).
 //
 //   npm run steer:reading -- --used 34 --resets-at 2026-11-03T05:00:00Z [--read-at ISO] [--dry-run]
@@ -52,4 +53,4 @@ function main(argv) {
   console.log(dryRun ? next : "steer/publish-reading: published on the dial's issue");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

@@ -50,6 +50,8 @@
 // pick like #5707's (`retryHold`, `sweepHold`). A build that fails frees its slot, the freed slot
 // wakes the sweep, and the sweep picks the same top-ranked issue again: #4621 started every 3 minutes
 // for 38 minutes on 2026-10-27 and held the queue behind it the whole time.
+
+import { isMain } from "../is-main.mjs";
 import { classOf } from "../rank.mjs";
 import { ensureGhToken, ghRest, ghRestAll, sh } from "./gh.mjs";
 import {
@@ -733,7 +735,7 @@ function checkOne(issue, { inFlight, mode, readPlans, readHold }) {
   return hold ? { admit: false, reason: `not buildable now: ${hold}` } : verdict;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   // A session signed in only through `gh` has no token for the curl reads. Every plan row then read
   // as a 401, failed open and stayed listed, so --queue named plans --check refused (#6326's audit).
   ensureGhToken();

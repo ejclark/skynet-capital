@@ -23,7 +23,7 @@
 // an empty picture).
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 import { LOG_FORMAT, landings, parseLog } from "./platter-merge-scan.mjs";
 
 /** The frontmatter every picture shares: tight packing so a phone shows bigger text (rule 13). */
@@ -180,5 +180,4 @@ function main(argv) {
   process.exit(1);
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1])
-  main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

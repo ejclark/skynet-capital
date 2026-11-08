@@ -31,6 +31,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 /** `git worktree list --porcelain` -> one record per worktree. */
 export function parseWorktrees(porcelain) {
@@ -362,4 +363,4 @@ function main(argv) {
   return failed ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

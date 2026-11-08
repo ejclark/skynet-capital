@@ -49,6 +49,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 
 /** The repo this script lives in — the registry is read from here, not from the caller's cwd, so
  *  ship.sh and the specs see the same page wherever they run. */
@@ -425,4 +426,4 @@ async function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (isMain(import.meta.url)) await main();

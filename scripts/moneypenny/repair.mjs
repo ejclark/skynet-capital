@@ -58,6 +58,7 @@
 // fresh repair session: the fix is known and waits on a session that can land it.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { isMain } from "../is-main.mjs";
 import { raiseAlarmIfBurst } from "./burst-alarm.mjs";
 import { LABELS } from "./labels.mjs";
 import { CAPSULE_SLOT, gatherRedSessionPr, routeRedSessionPr, sayOnPr } from "./red-session-pr.mjs";
@@ -917,4 +918,4 @@ function closedIssues() {
   ]).map((i) => ({ ...i, labels: (i.labels ?? []).map((l) => l.name) }));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

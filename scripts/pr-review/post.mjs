@@ -24,8 +24,7 @@
 //   node scripts/pr-review/post.mjs --pr N --review review.json --tier T [--patch ID]
 //                                    [--tokens N] [--gate] [--dry-run]
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "../is-main.mjs";
 import { ghRestAll } from "../moneypenny/gh.mjs";
 import { FOOTER } from "../moneypenny/labels.mjs";
 import { workGate } from "../moneypenny/work-gate.mjs";
@@ -341,7 +340,7 @@ export function runPost(args, { api = defaultApi(), gate = workGate } = {}) {
   return `round ${round} on #${number}: ${kept.length} posted, ${dropped.length} dropped, status ${built.status.state}`;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     console.log(runPost(process.argv.slice(2)));
   } catch (err) {

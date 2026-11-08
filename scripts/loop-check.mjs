@@ -36,6 +36,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 import { readLedger, slugOf, unrecordedChecks } from "./loop-ledger.mjs";
 import { buriedDates, overdueLoops, parseLoopList } from "./loop-list-decide.mjs";
 
@@ -288,7 +289,7 @@ export function loopCheck({
   return due.length;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const post = process.argv.includes("--post");
   const at = process.argv.indexOf("--registry");
   const ledgerAt = process.argv.indexOf("--ledger");

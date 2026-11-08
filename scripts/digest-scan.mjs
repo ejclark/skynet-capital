@@ -59,6 +59,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "./is-main.mjs";
 import { pullable } from "./moneypenny/labels.mjs";
 import { stuckLine } from "./stuck-pr-decide.mjs";
 
@@ -453,4 +454,4 @@ async function main() {
 }
 
 // CLI only — comms-scan.mjs imports `latestDigestDate` and must not trigger a report.
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (isMain(import.meta.url)) await main();
