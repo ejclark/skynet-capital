@@ -277,6 +277,7 @@ async function main(): Promise<void> {
     exitPlans,
     authoredPlays,
     memberCampaigns,
+    discoveryQueue,
     memberConvictions,
     playMilestones,
     knownPersonaIds,
@@ -405,6 +406,7 @@ async function main(): Promise<void> {
     exitPlans,
     authoredPlays,
     memberCampaigns,
+    discoveryQueue,
     memberConvictions,
     playMilestones,
     // The feed reads the ledger after posting any pass the bots have reported (#5457 slice 5).

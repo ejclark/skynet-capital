@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
+import { DiscoveryQueueStore } from "../../src/server/discovery-queue-store.js";
 import { opaqueMemberId } from "../../src/server/feedback-issue.js";
 import { MemberCampaignStore } from "../../src/server/member-campaign-store.js";
 import { serveMemberCampaignsApi } from "../../src/server/member-campaigns-api-routes.js";
@@ -339,5 +340,158 @@ describe("MemberCampaignStore", () => {
     onDisk[ADA][0].sharedAt = "2026-11-07T00:00:00.000Z";
     writeFileSync(file, JSON.stringify(onDisk));
     expect(new MemberCampaignStore(file).listShared()).toEqual([]);
+  });
+});
+
+describe("a question starts discovery (#6952 slice 2b)", () => {
+  let dir: string;
+  let queue: DiscoveryQueueStore;
+  let campaigns: MemberCampaignStore;
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "skynet-discovery-routes-"));
+    queue = new DiscoveryQueueStore(join(dir, "discovery-queue.json"));
+    campaigns = new MemberCampaignStore(join(dir, "member-campaigns.json"));
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  const config = (over: Record<string, unknown> = {}): DashboardServerConfig =>
+    ({
+      memberCampaigns: campaigns,
+      discoveryQueue: queue,
+      campaignShelf: (symbol: string) => symbol === "XOM",
+      discoveryPerPass: 6,
+      ...over,
+    }) as unknown as DashboardServerConfig;
+
+  const call = async (path: string, req: IncomingMessage, who: unknown = ada, cfg = config()) => {
+    const { res, out } = fakeRes();
+    const handled = await serveMemberCampaignsApi(req, res, path, cfg, who as never);
+    return { handled, status: out.status, body: JSON.parse(out.body || "{}") };
+  };
+  const askAbout = (body: unknown, who: unknown = ada, cfg = config()) =>
+    call("/api/campaigns/ask", post(body), who, cfg);
+
+  it("queues a name no campaign covers and tells the member it is queued", async () => {
+    const answer = await askAbout({ kind: "name", subject: "pltr" });
+    expect(answer.status).toBe(200);
+    expect(answer.body).toMatchObject({ ok: true, status: "queued" });
+    expect(answer.body.tell).toMatch(/^Queued\. It is next/);
+    expect(queue.load().map((a) => a.id)).toEqual(["name:PLTR"]);
+    expect(queue.load()[0]?.askers).toEqual([ADA]);
+  });
+
+  it("queues a sector or a market no campaign covers, by the names the catalogs use", async () => {
+    expect((await askAbout({ kind: "sector", subject: "healthcare" })).body.status).toBe("queued");
+    expect((await askAbout({ kind: "market", subject: "gold" })).body.status).toBe("queued");
+    expect(queue.load().map((a) => a.id)).toEqual(["sector:Healthcare", "market:gold"]);
+  });
+
+  it("starts nothing for a subject a campaign covers", async () => {
+    const answer = await askAbout({ kind: "sector", subject: "Utilities" });
+    expect(answer.body).toMatchObject({ ok: true, status: "covered" });
+    expect(answer.body.tell).toMatch(/energy-for-ai/);
+    expect(queue.load()).toEqual([]);
+  });
+
+  it("lets a second member join the same question instead of queueing it twice", async () => {
+    await askAbout({ kind: "name", subject: "PLTR" });
+    const answer = await askAbout({ kind: "name", subject: "PLTR" }, grace);
+    expect(answer.body.status).toBe("joined");
+    expect(queue.load()).toHaveLength(1);
+    expect(queue.load()[0]?.askers).toHaveLength(2);
+  });
+
+  it("estimates the wait from the per-pass ceiling, never promising sooner than it can", async () => {
+    for (const s of ["AA", "BB", "CC"]) await askAbout({ kind: "name", subject: s });
+    const answer = await askAbout(
+      { kind: "name", subject: "DD" },
+      ada,
+      config({ discoveryPerPass: 2 }),
+    );
+    expect(answer.body.tell).toMatch(/3 ahead of it, so about 2 research passes/);
+  });
+
+  it("refuses a malformed or unknown ask with 400 and writes nothing", async () => {
+    for (const bad of [
+      { kind: "name", subject: "not a ticker!" },
+      { kind: "sector", subject: "Mordor" },
+      { kind: "market", subject: "nope" },
+      { kind: "planet", subject: "X" },
+      { kind: "name" },
+    ]) {
+      expect((await askAbout(bad)).status).toBe(400);
+    }
+    expect(queue.load()).toEqual([]);
+  });
+
+  it("answers not-wired, and writes nothing, when the queue is off", async () => {
+    const answer = await askAbout(
+      { kind: "name", subject: "PLTR" },
+      ada,
+      config({ discoveryQueue: undefined }),
+    );
+    expect(answer.body).toMatchObject({ ok: false });
+    expect(queue.load()).toEqual([]);
+  });
+
+  it("is a member route: no session, no route", async () => {
+    const { res } = fakeRes();
+    expect(
+      await serveMemberCampaignsApi(
+        post({ kind: "name", subject: "PLTR" }),
+        res,
+        "/api/campaigns/ask",
+        config(),
+        undefined,
+      ),
+    ).toBe(false);
+  });
+
+  it("queues the uncovered names of a saved campaign and tells the author", async () => {
+    const form = {
+      title: "My watchlist",
+      anchor: { kind: "sector", id: "Energy" },
+      symbols: ["XOM", "RIVN"],
+      storyline: "Where the EV pull hits the pumps.",
+      mode: "explore",
+    };
+    const answer = await call("/api/campaigns/mine/save", post({ form }));
+    expect(answer.body.ok).toBe(true);
+    expect(answer.body.discovery.status).toBe("queued");
+    expect(queue.load().map((a) => a.id)).toEqual(["name:RIVN"]);
+  });
+
+  it("a saved campaign whose names are all covered queues nothing and says nothing", async () => {
+    const form = {
+      title: "Plain oil",
+      anchor: { kind: "sector", id: "Energy" },
+      symbols: ["XOM", "CVX"],
+      storyline: "The majors.",
+      mode: "play",
+    };
+    const answer = await call("/api/campaigns/mine/save", post({ form }));
+    expect(answer.body.ok).toBe(true);
+    expect(answer.body.discovery).toMatchObject({ status: "covered" });
+    expect(queue.load()).toEqual([]);
+  });
+
+  it("saves fine, queueing nothing, when the queue is off", async () => {
+    const form = {
+      title: "No queue",
+      anchor: { kind: "sector", id: "Energy" },
+      symbols: ["XOM", "RIVN"],
+      storyline: "Offline.",
+      mode: "explore",
+    };
+    const answer = await call(
+      "/api/campaigns/mine/save",
+      post({ form }),
+      ada,
+      config({ discoveryQueue: undefined }),
+    );
+    expect(answer.body.ok).toBe(true);
+    expect(answer.body.discovery).toBeUndefined();
   });
 });

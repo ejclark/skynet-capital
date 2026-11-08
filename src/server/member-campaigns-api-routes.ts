@@ -8,9 +8,26 @@ import {
   parseCampaignForm,
   researchAskFor,
 } from "../domain/campaign-form.js";
-import { type Anchor, anchorOf, type CampaignMode, castSymbols } from "../domain/campaigns.js";
+import {
+  type Anchor,
+  anchorOf,
+  CAMPAIGNS,
+  type CampaignMode,
+  castSymbols,
+  SYMBOL_RE,
+} from "../domain/campaigns.js";
+import {
+  type DiscoveryKind,
+  type DiscoveryQueue,
+  type QueueOutcome,
+  queueAsk,
+  tellMember,
+} from "../domain/discovery-queue.js";
+import { marketById } from "../domain/market-catalog.js";
+import { GICS_SECTORS } from "../domain/sector-coverage.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { discoveryPerPass } from "./discovery-queue-store.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import {
   type MemberCampaignRecord,
@@ -34,6 +51,7 @@ import {
  *   POST /api/campaigns/mine/delete  → { ok: true } | { ok: false, error }
  *   POST /api/campaigns/mine/share   → { ok: true, campaign } | { ok: false, error }   body { id, shared }
  *   GET  /api/campaigns/party        → { campaigns: PartyCampaignView[] }
+ *   POST /api/campaigns/ask          → { ok: true, status, tell } | { ok: false, error }   body { kind, subject }
  *
  * A save is the form compiled by `campaignFromForm`, which runs `parseCampaign`, the parser the
  * house campaign files pass, so the record is the same record (criterion 7). A field outside the
@@ -52,6 +70,12 @@ import {
  * campaign's research ask. It starts nothing — no route here dispatches research — so a member's
  * campaign can never raise the work spigot's ceiling; a lane that reads asks takes them inside its
  * own per-run limit.
+ *
+ * A QUESTION STARTS DISCOVERY (#6952 slice 2b, criterion 7). Those uncovered names, and a direct
+ * `ask` about a sector, market or name no house campaign covers, join the discovery queue
+ * (`domain/discovery-queue.ts`) and the reply says it is queued and roughly when. The queue is
+ * bounded and drained per pass inside the lane's ceiling, so asking can never raise it; the route
+ * only appends to a short list and starts nothing.
  *
  * Same auth invariant as the other member APIs: `!session` means the route doesn't exist
  * (`false`), before anything else runs.
@@ -160,6 +184,69 @@ function parseSaveBody(
   return replaceId ? { form, replaceId } : undefined;
 }
 
+/** Put each subject on the discovery queue and say, in the member's words, where it stands. */
+function queueDiscoveries(
+  config: DashboardServerConfig,
+  memberKey: string,
+  kind: DiscoveryKind,
+  subjects: readonly string[],
+): { readonly status: string; readonly tell: string } | undefined {
+  const store = config.discoveryQueue;
+  if (!store || subjects.length === 0) return undefined;
+  const isResearched = config.campaignShelf ?? shelfResearched();
+  const perPass = config.discoveryPerPass ?? discoveryPerPass();
+  let queue: DiscoveryQueue = store.load();
+  let last: QueueOutcome | undefined;
+  // Report the one furthest back in line, so the "roughly when" is the longest the member waits.
+  const place = (o: QueueOutcome): number => ("ahead" in o ? o.ahead : -1);
+  for (const subject of subjects) {
+    const outcome = queueAsk(queue, { kind, subject, by: memberKey }, CAMPAIGNS, isResearched);
+    queue = outcome.queue;
+    if (!last || place(outcome) >= place(last)) last = outcome;
+  }
+  store.write(queue);
+  return last ? { status: last.status, tell: tellMember(last, perPass) } : undefined;
+}
+
+/** The subject a member's ask names, checked against the catalogs the app already holds. */
+function askSubject(
+  kind: unknown,
+  raw: unknown,
+): { kind: DiscoveryKind; subject: string } | undefined {
+  const text = boundedString(raw, 60);
+  if (!text) return undefined;
+  if (kind === "sector") {
+    const hit = GICS_SECTORS.find((s) => s.name.toLowerCase() === text.toLowerCase());
+    return hit ? { kind, subject: hit.name } : undefined;
+  }
+  if (kind === "market") return marketById(text) ? { kind, subject: text } : undefined;
+  if (kind === "name") {
+    const symbol = text.toUpperCase();
+    return SYMBOL_RE.test(symbol) ? { kind, subject: symbol } : undefined;
+  }
+  return undefined;
+}
+
+function askRoute(
+  res: ServerResponse,
+  raw: string,
+  config: DashboardServerConfig,
+  memberKey: string,
+): void {
+  const body = parseJsonRecord(raw);
+  const named = body ? askSubject(body.kind, body.subject) : undefined;
+  if (!named) {
+    sendJson(res, 400, { error: "malformed ask body" });
+    return;
+  }
+  if (!config.discoveryQueue) {
+    sendJson(res, 200, { ok: false, error: "Questions aren't wired in this deployment." });
+    return;
+  }
+  const told = queueDiscoveries(config, memberKey, named.kind, [named.subject]);
+  sendJson(res, 200, { ok: true, ...told });
+}
+
 function save(
   res: ServerResponse,
   raw: string,
@@ -188,7 +275,12 @@ function save(
     sendJson(res, 200, { ok: false, refusals: [{ field: saved.field, reason: saved.reason }] });
     return;
   }
-  sendJson(res, 200, { ok: true, campaign: campaignViewOf(saved.record) });
+  const discovery = queueDiscoveries(config, memberKey, "name", ask);
+  sendJson(res, 200, {
+    ok: true,
+    campaign: campaignViewOf(saved.record),
+    ...(discovery ? { discovery } : {}),
+  });
 }
 
 /** Handle `/api/campaigns/mine*` and `/api/campaigns/party`. Returns true when answered, false when the route doesn't apply. */
@@ -205,6 +297,7 @@ export async function serveMemberCampaignsApi(
     path !== "/api/campaigns/mine/save" &&
     path !== "/api/campaigns/mine/delete" &&
     path !== "/api/campaigns/mine/share" &&
+    path !== "/api/campaigns/ask" &&
     path !== "/api/campaigns/party"
   ) {
     return false;
@@ -229,6 +322,10 @@ export async function serveMemberCampaignsApi(
   if (raw === undefined) return true;
   if (path === "/api/campaigns/mine/save") {
     save(res, raw, config, memberKey);
+    return true;
+  }
+  if (path === "/api/campaigns/ask") {
+    askRoute(res, raw, config, memberKey);
     return true;
   }
   if (path === "/api/campaigns/mine/share") {
