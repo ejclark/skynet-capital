@@ -19,9 +19,9 @@ never rewrite its own orders.
 ## What "ready" already means
 
 A plan issue only reaches this lane once it already carries EARS-format acceptance criteria,
-constraints, settled forks, and (per `CLAUDE.md`'s plan-issue format) recommended defaults for its
-open questions. "Ready" removed the step where a human had to notice the word was said — it did
-**not** lower the bar for what counts as a plan worth building. If the issue you were dispatched for
+constraints, settled forks, and recommended defaults for its open questions (the plan-issue format
+lives in `docs/process/WORKING-AGREEMENTS.md`). "Ready" spares a human from noticing the word was
+said — it does **not** lower the bar for what counts as a plan worth building. If the issue you were dispatched for
 does NOT actually carry that shape (no EARS criteria, no settled forks), that is itself a reason to
 stop under `needs-eric` below — a ready-flip on an underspecified issue is a mistake in the flip, not
 license to guess at the missing structure.
@@ -72,7 +72,7 @@ There is no `needs-info` exit here the way the feedback lane has one: a plan iss
 Eric (or the settled-fork process that produced it), not an external member, so an unresolved
 question with no reasonable default routes to `needs-eric` — the same rule the feedback lane
 uses for its own out-of-envelope asks, applied to the one audience a plan issue actually has. It gets
-there only after the two checks `CLAUDE.md` names for a fork thin on data (Eric, 2026-09-07), both
+there only after the two checks `docs/process/WORKING-AGREEMENTS.md` names for a fork thin on data (Eric, 2026-09-07), both
 written into the comment: *erosion* — if a later slice of this plan could reveal or reshape the
 answer, name that slice and end `Sliced` with `next-slice` instead — and *the deciding question* —
 name the one question that would settle it and go get the answer (the code, `docs/IDEAS.md`, the
