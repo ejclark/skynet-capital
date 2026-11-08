@@ -34,13 +34,30 @@
         "smci-fq1-2027-results-2026-11-03",
         "intc-fq3-2026-results-2026-10-29",
         "cbrs-q3-2026-results-2026-11-11"
+      ],
+      "names": [
+        "AI capex",
+        "AI spending",
+        ["capex", "AI"],
+        ["capital expenditure", "AI"],
+        ["data center", "spending"]
       ]
     },
     {
       "id": "power",
       "name": "Power and the grid",
       "why": "Data centers wait on power: PJM capacity prices it, and ERCOT, NERC and the Texas PUC set the rules for connecting large loads (docs/research/ai-energy-constraint.md).",
-      "prefixes": ["pjm-", "ercot-", "nerc-computational-load-", "puct-", "texas-puct-"]
+      "prefixes": ["pjm-", "ercot-", "nerc-computational-load-", "puct-", "texas-puct-"],
+      "names": [
+        "PJM",
+        "ERCOT",
+        "NERC",
+        "capacity auction",
+        "large load",
+        ["data center", "power"],
+        ["data center", "grid"],
+        ["data centre", "power"]
+      ]
     },
     {
       "id": "ratepayers",
@@ -50,6 +67,12 @@
         "georgia-psc-data-center-cost-shift-",
         "house-vote-ratepayer-protection-act-",
         "midterm-elections-2026-11-03"
+      ],
+      "names": [
+        "Ratepayer Protection Act",
+        ["ratepayer", "data center"],
+        ["electricity bill", "data center"],
+        ["utility bill", "data center"]
       ]
     },
     {
@@ -57,7 +80,8 @@
       "name": "Rates",
       "why": "Yields move long-duration AI names (the `rates` kind's own definition in src/domain/market-events-types.ts); the Fed's decisions and Treasury supply set them.",
       "prefixes": ["fomc-"],
-      "kinds": ["rates"]
+      "kinds": ["rates"],
+      "names": ["FOMC", "federal funds rate", "Treasury yield", "Treasury auction", ["Fed", "rate"]]
     },
     {
       "id": "export-controls",
@@ -68,6 +92,14 @@
         "us-china-tariff-truce-expiry-",
         "china-retaliation-suspension-expiry-",
         "apec-leaders-shenzhen-"
+      ],
+      "names": [
+        "export control",
+        ["chip", "export"],
+        "Entity List",
+        ["tariff", "China"],
+        "Trump-Xi",
+        ["Xi Jinping", "Trump"]
       ]
     },
     {
@@ -78,13 +110,15 @@
         "ndx-annual-reconstitution-",
         "sp-select-sector-secondary-reweight-",
         "sp-rebalance-reference-close-"
-      ]
+      ],
+      "names": [["Nasdaq-100", "rebalance"], ["Nasdaq 100", "rebalance"], ["rebalance", "S&P"]]
     },
     {
       "id": "ai-labor",
       "name": "AI replacing workers",
       "why": "Eric's view that employers cut salary budgets to pay for AI, with layoffs, unemployment and relief to follow (docs/research/convictions/ai-labor-2026-11.md). Challenger's monthly report counts the cuts that cite AI (claim 1); the 120th Congress's first day seats the majority any relief bill needs (claim 6).",
-      "prefixes": ["challenger-job-cuts-", "congress-120th-convenes-2027-01-03"]
+      "prefixes": ["challenger-job-cuts-", "congress-120th-convenes-2027-01-03"],
+      "names": [["layoff", "AI"], ["job cut", "AI"], ["Challenger", "job cut"]]
     }
   ],
   "openQuestions": [

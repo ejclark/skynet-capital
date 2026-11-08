@@ -85,6 +85,7 @@
     "steer:reading": "node scripts/steer/publish-reading.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "research:lockups": "node scripts/research/lockup-discovery.mjs",
+    "news:collect": "tsx src/scripts/news-collect.ts",
     "research:claims": "tsx src/scripts/claim-studies.ts",
     "research:chain": "tsx src/scripts/chain-replay.ts",
     "research:signals": "tsx src/scripts/signal-schedule.ts",
