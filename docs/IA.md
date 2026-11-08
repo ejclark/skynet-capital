@@ -795,7 +795,7 @@ placed by #7018's redesign rounds (2026-11-07/08); the build is #7077.
 | | |
 |---|---|
 | **Home** | `/app/` (today a redirect to `/leaderboard`, `app/src/routes/index.tsx:21`; a member with no account still lands on onboarding). The first tab ("Chronicles", his name; fork d on #7018). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
-| **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests; the questions you asked) |
+| **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests) · what the party asked in a campaign: each question, who asked it by display name and what its research found, for every member who can read the campaign (#6949 slice 6, `GET /api/campaigns/questions`) |
 | **Holds, each with one owner** | the edition: each story leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, quick questions as fallbacks, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
 | **Hands on** | the owner-fired ticket with exits → Trade · a story's ledger → R&D · who you are → the character sheet (#7019) · standings → the Leaderboard |
 | **At 390, in order** | your question box · the lead story's coming reports, then what moved · its ask · quests by source |

@@ -711,6 +711,15 @@ duplication instantly once someone looked. _(src: Claude · while: fixing the ou
 herself "Joe", a later member adding "Joe" gets the free id `human-joe` and the board shows two
 Joes. Reuse the same check on the add path. _(src: Claude · while: #6077 rename-guard fix)_
 
+### A party campaign needs a reference its author's title can't collide on
+Member campaign ids are slugs of the title, unique per author only, and a house id wins
+(`readableCampaign` in `src/server/campaign-questions-api.ts`). Since #6949 slice 6 made every
+saved campaign the party's, two members titling a campaign "AI plays", or a member titling one
+"Energy for AI" (a house id), means a question asked in it by id lands in the other one. No
+screen exists yet, so nobody can hit it; before #6948's screen ships, give the party view an
+author-scoped reference that never exposes the member key (a hash of the scope), and accept it on
+`ask` and `questions`. _(src: Claude · while: #6949 slice 6, a spec fixture titled "Energy for AI")_
+
 ### Boot-time quarantine for a store row that collides with the roster
 The owner-link PR (#466) closed the write-time hole (`addParticipant` now refuses an id already
 claimed by an env-configured account), but a row written *before* that fix shipped — none should
