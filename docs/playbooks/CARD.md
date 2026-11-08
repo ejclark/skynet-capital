@@ -182,9 +182,9 @@ calendar) counts as data, not a rule.
   the house bar (#6772); MU's and NBIS's next reports are missing from the calendar the dip-to-bounce
   reads (#6773); the CRWV wheel's Store text quotes a superseded study run (#6774).
 
-## Exit, required (#6954 slice 4, 2026-11-07)
+## Exit, now required (#6954 slice 4, 2026-11-07)
 
-Field 8 is required. A strategy carries its exit plan before it executes (Eric,
+Field 8 is no longer optional. A strategy carries its exit plan before it executes (Eric,
 2026-11-01): a stop, a profit target or a time exit. A live bot's guards refuse an opening order
 `no-exit-plan` from a pair that declares none of the three in its mode (`src/engine/guards.ts`,
 `src/playbooks/exit-plan.ts`).
