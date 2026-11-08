@@ -58,10 +58,9 @@ argued away. No wake-up has ever fired from the calendar, and no live issue carr
 **#431 closed as completed on 2026-09-20 without shipping them**. Beside the Wake, the digest's
 daily Routine says so (`scripts/digest-scan.mjs --due`, reason `quiet-with-work`; a failed read of
 that work answers `due:null` and reaches the phone too, never `due:false`), and the scan button is
-the one-line restart. Three clocks survive, each argued in its row and each Eric's own arming: the
+the one-line restart. Two clocks survive, each argued in its row and each Eric's own arming: the
 digest's daily Routine, whose deliverable is the push notification only a claude.ai Routine can
-send; the weekly newsletter Routine, whose ISO-week close is a calendar moment no repository event
-marks; and the bots deploy catch-up, whose debounced redeploy has no repository event to wake it.
+send, and the bots deploy catch-up, whose debounced redeploy has no repository event to wake it.
 The catch-up clock is itself watched only from the
 push tick (its row), so a stopped clock during a merge-quiet stretch is noticed at the next merge
 — that residual stands, one level down.
