@@ -1,0 +1,109 @@
+{
+  "campaign": "energy-for-ai",
+  "lessons": [
+    {
+      "id": "bwxt-backlog-converts",
+      "kind": "killed",
+      "idea": "BWXT, the naval and nuclear-fuel monopoly: its backlog turns into revenue while new orders keep up.",
+      "symbols": ["BWXT"],
+      "on": "2026-11-07",
+      "recheckOn": "2027-02-22",
+      "falsifier": "A Q4 book-to-bill of 1.0 or better (report about 2027-02-22, estimated). That would open a new case, not revive this one: the kill condition set in advance fired, with book-to-bill at 0.72 in Q2 and 0.56 in Q3.",
+      "source": "docs/research/energy-ai-encounters.md"
+    },
+    {
+      "id": "cmi-power-inside-trucks",
+      "kind": "on-watch",
+      "idea": "CMI, the generator maker inside a truck-engine company: power margins rose and the stock got cheaper. Nearest to enterable of the five.",
+      "symbols": ["CMI"],
+      "on": "2026-11-07",
+      "recheckOn": "2027-02-05",
+      "falsifier": "CMI closes above $500.10 (its 10-30 close) before its Q4 report (about 2027-02-05, estimated): waiting cost the entry.",
+      "source": "docs/research/energy-ai-encounters.md"
+    },
+    {
+      "id": "ceg-nuclear-contracts",
+      "kind": "on-watch",
+      "idea": "CEG, the nuclear fleet selling to hyperscalers on long contracts priced outside the auction cap. Watch until its report.",
+      "symbols": ["CEG"],
+      "on": "2026-11-07",
+      "recheckOn": "2026-11-09",
+      "falsifier": "The report cuts full-year guidance (kill), or holds it and the stock is back above $300.40 within 20 sessions (waiting cost the entry).",
+      "source": "docs/research/energy-ai-encounters.md"
+    },
+    {
+      "id": "spxc-cooling-towers",
+      "kind": "on-watch",
+      "idea": "SPXC, the cooling-tower maker: the backlog grows, but the cooling margin outlook was cut and the stock trades with the crowded AI names.",
+      "symbols": ["SPXC"],
+      "on": "2026-11-07",
+      "recheckOn": "2027-02-23",
+      "falsifier": "SPXC closes above $165.20 (its 10-28 close, before its report) by 2027-02-23 while its margin outlook keeps falling.",
+      "source": "docs/research/energy-ai-encounters.md"
+    },
+    {
+      "id": "et-pipeline-to-data-centers",
+      "kind": "on-watch",
+      "idea": "ET, the pipeline feeding data centers: guidance raised, but its data-center customer (Oracle) is borrowing at 7–8.65%.",
+      "symbols": ["ET"],
+      "on": "2026-11-07",
+      "recheckOn": "2027-02-17",
+      "falsifier": "A rating agency cuts Oracle below investment grade before ET's Q4 report (about 2027-02-17, estimated): kill.",
+      "source": "docs/research/energy-ai-encounters.md"
+    },
+    {
+      "id": "one-trade-in-eight-costumes",
+      "kind": "tested",
+      "idea": "The 28 energy-for-AI names trade as one bet on hyperscaler spending: all 28 fell on 11-05, and 25 of 28 fell on 11-04 while the S&P rose.",
+      "symbols": [],
+      "on": "2026-11-07",
+      "falsifier": "The next session where the median name falls 5% or more has fewer than 20 of the 28 down.",
+      "source": "docs/research/energy-ai-encounters.md"
+    },
+    {
+      "id": "d-cheap-utility",
+      "kind": "killed",
+      "idea": "Dominion (D) as a cheap regulated utility: the cheap claim rested on a miscited baseline, and the market reprices it monthly.",
+      "symbols": ["D"],
+      "on": "2026-08-12",
+      "falsifier": "Reopens only on new evidence: the 08-12 study's kill list says never re-propose it from this evidence.",
+      "source": "docs/research/ai-energy-constraint.md"
+    },
+    {
+      "id": "smr-nuscale-liquidity-floor",
+      "kind": "killed",
+      "idea": "NuScale (SMR) on a liquidity floor: its real burn is 3.7 times the misquoted figure, and the floor is kept up by the dilution that is the risk.",
+      "symbols": ["SMR"],
+      "on": "2026-08-12",
+      "falsifier": "Reopens only on new evidence: the 08-12 study's kill list says never re-propose it from this evidence.",
+      "source": "docs/research/ai-energy-constraint.md"
+    },
+    {
+      "id": "uec-uranium-miner",
+      "kind": "killed",
+      "idea": "UEC as a uranium-miner play on AI power: uranium miners were an exhausted class with zero survivors.",
+      "symbols": ["UEC"],
+      "on": "2026-08-12",
+      "falsifier": "Reopens only on new evidence: the 08-12 study's kill list says never re-propose it from this evidence.",
+      "source": "docs/research/ai-energy-constraint.md"
+    },
+    {
+      "id": "mod-crowded-cooling",
+      "kind": "killed",
+      "idea": "MOD as a cooling play: up 730%, the crowded cooling proxy since January 2025.",
+      "symbols": ["MOD"],
+      "on": "2026-08-12",
+      "falsifier": "Reopens only on new evidence: the 08-12 study's kill list says never re-propose it from this evidence.",
+      "source": "docs/research/ai-energy-constraint.md"
+    },
+    {
+      "id": "ceg-midterm-catalyst",
+      "kind": "killed",
+      "idea": "CEG as a midterm-election catalyst: the auction cap holds through the 2029/30 delivery year whoever wins. Kills this angle only, so it names no symbol and CEG stays on watch for its contracts.",
+      "symbols": [],
+      "on": "2026-08-12",
+      "falsifier": "The cap is lifted before the 2029/30 delivery year ends, so an election result could move the capacity price again.",
+      "source": "docs/research/ai-energy-constraint.md"
+    }
+  ]
+}

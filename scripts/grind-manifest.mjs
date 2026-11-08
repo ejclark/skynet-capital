@@ -19,7 +19,7 @@
 // wrong tier is a broken contract, not debt to ratchet).
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 
 const ROOT = process.cwd();
 const CHORE_DIR = "docs/grind";
@@ -276,5 +276,4 @@ function main(argv) {
   console.log(JSON.stringify(argsFor(manifest, items, itemSource), null, 2));
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

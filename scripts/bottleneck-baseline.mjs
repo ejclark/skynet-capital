@@ -22,7 +22,7 @@
 //   node scripts/bottleneck-baseline.mjs --fixture f.json # score a saved issue list, no network
 //   node scripts/bottleneck-baseline.mjs --json           # the report as JSON
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 import { ghRestAll } from "./moneypenny/gh.mjs";
 
 /** The first full day the Before line is required (#4063 landed 2026-09-30). Earlier is legacy: reported,
@@ -97,6 +97,6 @@ function main(argv) {
   else console.log(renderReport(report));
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2));
 }

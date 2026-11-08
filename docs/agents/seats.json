@@ -161,7 +161,7 @@
       "channel": "the feedback status badge; the chat's work-status lookup",
       "what": "A member hears back about their ask only by revisiting: no push about asks reaches them (trade alerts by email are opt-in).",
       "number": "unmeasured (no member filings to measure against)",
-      "cite": "src/companion/companion-tools.ts:190",
+      "cite": "src/companion/companion-tools.ts:197",
       "change": "'Your ask shipped' becomes a moment on the landing page, with a Try it quest",
       "tracked": "#7029"
     },
@@ -329,7 +329,7 @@
       "department": "front-desk",
       "name": "Companion chat (Moneypenny in the app)",
       "kind": "service",
-      "job": "Answers member questions with Claude using a closed list of eight read-only lookups and two draft hand-offs; has no code path that places an order",
+      "job": "Answers member questions with Claude using a closed list of nine read-only lookups and two draft hand-offs; has no code path that places an order",
       "wakesOn": "POST /api/companion/chat from the rail",
       "speaksOn": "streamed SSE reply; draft_feedback and draft_conviction cards for the rail",
       "cadence": "per turn, throttled",
@@ -344,7 +344,7 @@
         "app/src/live/moneypenny.ts",
         "app/src/live/moneypenny-script.ts"
       ],
-      "cite": "src/companion/companion-tools.ts:22-27 \"a CLOSED allow-list of eight read-only lookups plus two hand-offs\"; src/server/companion-routes.ts:28-34; docs/MONEYPENNY.md:17-31 ('She cannot place an order (no such tool exists'; draft_feedback 'files nothing'); app/src/live/moneypenny.ts:26-38 \"General questions go to Moneypenny herself — the companion chat... the scripted lines are the fallback without a key\"",
+      "cite": "src/companion/companion-tools.ts:23-28 \"a CLOSED allow-list of nine read-only lookups plus two hand-offs\"; src/server/companion-routes.ts:28-34; docs/MONEYPENNY.md:17-31 ('She cannot place an order (no such tool exists'; draft_feedback 'files nothing'); app/src/live/moneypenny.ts:26-38 \"General questions go to Moneypenny herself — the companion chat... the scripted lines are the fallback without a key\"",
       "station": "The front desk: quick answers in chat; drafts, never acts"
     },
     {

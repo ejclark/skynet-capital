@@ -22,6 +22,7 @@
 
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { isMain } from "./compat.mjs";
 
 const norm = (s) =>
   s
@@ -144,4 +145,4 @@ function main(argv) {
   process.exit(failed ? 1 : 0);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

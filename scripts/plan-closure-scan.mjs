@@ -14,6 +14,7 @@
 // Pure number/keyword extraction is exported and unit-tested offline (tests/arch/plan-closure-scan.spec.ts).
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
@@ -94,4 +95,4 @@ async function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (isMain(import.meta.url)) await main();

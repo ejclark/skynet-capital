@@ -40,6 +40,7 @@
 // skip, exit 0 and one line, like incident-scan and pr-provenance-scan: nothing was asked of GitHub.
 // A token GitHub refuses is the loud case above.
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 import { ghRest } from "./moneypenny/gh.mjs";
 import { isReadySignal } from "./moneypenny/plan-claim.mjs";
 
@@ -273,4 +274,4 @@ function main() {
   console.log(renderReport(summary, { since, today }));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

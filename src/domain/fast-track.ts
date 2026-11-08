@@ -32,10 +32,12 @@ export const WHATS_COMING_UP = "What's coming up that I should watch?";
 
 /** How many events the first card shows at 390px; the rest fold behind a count (criterion 1). */
 const EVENTS_SHOWN = 3;
-const HORIZON_DAYS = 14;
+/** The fortnight every fast track reads — the card and the chat's calendar lookup share it. */
+export const FAST_TRACK_HORIZON_DAYS = 14;
 /** How many symbols of one event get their own actions — a sector event can list dozens. */
 const SYMBOLS_SHOWN = 3;
-const KILL_SWITCHES_SHOWN = 3;
+/** Kill switches a card offers — the chat's calendar lookup lists the same number. */
+export const KILL_SWITCHES_SHOWN = 3;
 
 export const NOT_COVERED = "News and lawsuits: not covered yet";
 export const NOT_RESEARCHED = "not researched yet";
@@ -193,7 +195,7 @@ export function rankEvents(input: FastTrackInput): FastTrackEvent[] {
   return input.events
     .filter(({ event }) => {
       const days = daysUntil(input.asOf, event.date);
-      return days >= 0 && days <= HORIZON_DAYS && !event.supersededBy;
+      return days >= 0 && days <= FAST_TRACK_HORIZON_DAYS && !event.supersededBy;
     })
     .sort(
       (a, b) =>
@@ -248,13 +250,19 @@ function actionsOf(item: FastTrackEvent, book: MemberBook): CardOption[] {
   return actions;
 }
 
+/** Whether an event's date is confirmed, in words — the card and the chat's calendar lookup share it
+ *  (criterion 2), so the two can never word one date two ways. */
+export function dateWordsOf(event: MarketEvent): EventRow["dateWords"] {
+  return event.status === "confirmed" ? "date confirmed" : "date is an estimate";
+}
+
 function eventsCard(input: FastTrackInput): EventsCard {
   const ranked = rankEvents(input).map(
     (item): EventRow => ({
       id: item.event.id,
       title: item.event.title,
       date: item.event.date,
-      dateWords: item.event.status === "confirmed" ? "date confirmed" : "date is an estimate",
+      dateWords: dateWordsOf(item.event),
       stance: item.stance ?? NOT_RESEARCHED,
       actions: actionsOf(item, input.book),
     }),

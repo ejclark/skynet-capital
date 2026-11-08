@@ -23,9 +23,8 @@
 // on one sha, so the caller re-posts the last round's `pr-review` state on the new head (S6 owns it).
 //
 //   node scripts/pr-review/triage.mjs --pr N     # prints the verdict as JSON
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { breachOf } from "../envelope-scan.mjs";
+import { isMain } from "../is-main.mjs";
 import { ghRestAll, sh } from "../moneypenny/gh.mjs";
 import { workGate } from "../moneypenny/work-gate.mjs";
 import { DOCS_ONLY, isDeepPath } from "../review-roots.mjs";
@@ -175,7 +174,7 @@ export function gatherTriage(
   };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const number = Number(flag(process.argv.slice(2), "--pr"));
   if (!Number.isInteger(number) || number <= 0) {
     console.error("usage: node scripts/pr-review/triage.mjs --pr N");

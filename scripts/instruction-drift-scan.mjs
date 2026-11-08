@@ -42,10 +42,10 @@
 // a quiet "nothing changed": deepen the fetch, or pass --release for a full run.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { breachOf } from "./envelope-scan.mjs";
 import { doNotEditReason, instructionFiles } from "./instructions/scope.mjs";
+import { isMain } from "./is-main.mjs";
 
 const ROOT = process.cwd();
 const STAMP_FILE = "instruction-drift-stamp.json";
@@ -362,6 +362,6 @@ function main(argv) {
   if (opts.due && s.due) process.exit(1);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2));
 }

@@ -3,6 +3,7 @@
   "title": "Oil supply and the majors",
   "storyline": "The oil majors and drillers, and the cartel meetings, inventory reports and chokepoint risks that set the price they sell into.",
   "sector": "Energy",
+  "mode": "play",
   "cast": [
     {
       "role": "Majors",

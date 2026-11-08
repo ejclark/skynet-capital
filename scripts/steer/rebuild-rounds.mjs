@@ -40,7 +40,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isMain } from "../is-main.mjs";
 import { commonsPaths } from "../redesign/commons.mjs";
 import { openRounds } from "./open-rounds.mjs";
 import { renderPage } from "./render.mjs";
@@ -344,7 +345,7 @@ async function main(argv) {
   console.log(argv.includes("--json") ? JSON.stringify(result, null, 1) : reportText(result));
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2)).catch((err) => {
     console.error(err.message);
     process.exit(2);

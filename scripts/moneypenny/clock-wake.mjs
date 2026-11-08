@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // THE CLOCK WAKES THE LANES (2026-11-01, #6470's study: lanes-stop-when-pushes-stop).
 //
 //   node scripts/moneypenny/clock-wake.mjs      # one tick, from bots-catchup.yml's 15-minute clock
@@ -143,4 +144,4 @@ function main() {
   console.log(`::notice::${line}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

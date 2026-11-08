@@ -21,8 +21,8 @@
 import { createReadStream, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { fileURLToPath } from "node:url";
 import { createGunzip } from "node:zlib";
+import { isMain } from "./is-main.mjs";
 
 /** How many sessions placing paper orders a bot is judged over. */
 export const TALLY_SESSIONS = 5;
@@ -111,7 +111,7 @@ export async function tallyJournals(dir) {
   return { tally: 1, bots };
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   tallyJournals(process.argv[2] ?? "/data/audit").then(
     (tally) => console.log(JSON.stringify(tally)),
     (error) => {

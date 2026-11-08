@@ -20,7 +20,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isMain } from "../is-main.mjs";
 import { boardFiles, boardHtml, boardScreens, FRAMES } from "./board-page.mjs";
 import { imageSize } from "./pin-rules.mjs";
 import { findScreen, loadScreens } from "./shoot.mjs";
@@ -130,7 +131,7 @@ function main() {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   try {
     main();
   } catch (e) {

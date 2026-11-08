@@ -3,6 +3,7 @@
   "title": "The AI buildout",
   "storyline": "The chips, the neoclouds and the hyperscalers that buy from them, racing power, rates and export rules to build AI capacity.",
   "sector": "Technology",
+  "mode": "play",
   "cast": [
     {
       "role": "Chips",

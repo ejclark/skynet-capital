@@ -108,8 +108,9 @@ export interface Campaign {
   readonly researchOnly?: boolean;
   /**
    * The mode the campaign starts in (#6952): explore a sector, find names, build a strategy, or
-   * play. Optional so the house files predating it still load; a member's form always sets it
-   * (#6949 criterion 7), and #6952 slice 2 owns giving the house campaigns theirs.
+   * play. Optional, and read as play when absent; a member's form always sets it (#6949
+   * criterion 7), and every house file names its own (#6952 slice 2: the AI buildout and oil start
+   * in play, energy for AI in explore).
    */
   readonly mode?: CampaignMode;
 }
@@ -257,8 +258,8 @@ export function linkCensus(links: readonly CampaignLink[]): LinkCensus {
 
 // ── The loader ────────────────────────────────────────────────────────────────────────────────
 
-const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
-const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
+export const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
+export const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 const CLAIM_RE = /^\d+[a-z]?$/;
 const GICS_NAMES: ReadonlySet<string> = new Set(GICS_SECTORS.map((s) => s.name));
 
@@ -276,7 +277,7 @@ const EVENT_KINDS: ReadonlySet<string> = new Set<EventKind>([
   "geopolitical",
 ]);
 
-const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
+export const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 const isTextList = (v: unknown): v is string[] => Array.isArray(v) && v.every(isText);
 
 type Raw = Record<string, unknown>;

@@ -30,6 +30,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 /** Every line of a JSONL text that parses — a half-written tail line is skipped, not an error. */
 export function parseJsonl(text) {
@@ -350,7 +351,7 @@ function countDone(run) {
   return `${finished}/${run.agents.length} done${failed ? ` (${failed} failed)` : ""}`;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   // Same exit contract as the error paths inside main: a bad flag could not do its job either.
   try {
     const { code, out } = main(process.argv.slice(2));

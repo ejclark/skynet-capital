@@ -22,6 +22,7 @@
 //   node scripts/moneypenny/answer-readback.mjs --ledger [--apply]   # rows for ALIGNMENT.md
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "../is-main.mjs";
 import { ASSIGN_MARKER, cardOf, UNASSIGN_MARKER } from "./ask-card.mjs";
 import { ERIC, NEEDS_ERIC, withoutLaneAsk, writeIssueBody } from "./decision-callout.mjs";
 import { ghRest, ghRestAll, sh, trustedComment, withRetry } from "./gh.mjs";
@@ -285,4 +286,4 @@ function main(argv) {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

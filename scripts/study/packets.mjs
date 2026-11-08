@@ -14,6 +14,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { isMain } from "./compat.mjs";
 import { shingles } from "./lint.mjs";
 
 const KEEP = new Set(["1", "3", "4"]);
@@ -141,4 +142,4 @@ function main(argv) {
   console.log(`packets: ${members.length} cards → ${out}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

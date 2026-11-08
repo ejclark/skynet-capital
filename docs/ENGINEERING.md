@@ -422,6 +422,10 @@ written as history; its check C has a before/after for rule 2.
   never skip the spec to get green. The verify queue's specs were skipped on macOS in #6324 because
   they failed there. They were right: the queue did nothing on a Mac for six days, and that is where
   the fan-outs run (`docs/LESSONS.md`, 2026-11-01).
+- **A script's direct-run check is `if (isMain(import.meta.url))`** from `scripts/is-main.mjs`
+  (#7046; `scripts/study/` takes it from `./compat.mjs`). Node resolves `import.meta.url` through
+  symlinks and leaves `process.argv[1]` as typed, so a raw comparison of the two skips `main()` and
+  exits 0 silently on every macOS `/tmp` path. `tests/arch/is-main.spec.ts` fails on a raw one.
 
 - **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever
   (the recurring TS1005 trap: the embedded script lives inside a template string, so those tokens
