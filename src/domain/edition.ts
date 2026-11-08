@@ -25,10 +25,10 @@
  *
  * NOTHING LOADS AT IMPORT. The server's whole import graph reaches this module, and the study
  * worlds run that graph inside a corpus pinned to an older commit (scripts/study/worlds/
- * compose.mjs), where neither `editions/` nor `campaigns/` exists. (It is also why the small
- * regexes and `isText` below are local: importing campaigns.ts loads every campaign file.) So the files are read on the
- * first request (`editions()`), and the campaign's title is handed in by the caller rather than
- * imported; the spec proves every edition's campaign is a real record.
+ * compose.mjs), where neither `editions/` nor `campaigns/` exists. So the files are read on the
+ * first request (`editions()`), the campaign's title is handed in by the caller, and the spec
+ * proves every edition's campaign is a real record. It is also why the small regexes and `isText`
+ * below are local: importing campaigns.ts loads every campaign file.
  *
  * Paper only; educational. An edition never places an order and never sizes one.
  */
