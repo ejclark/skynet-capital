@@ -64,8 +64,9 @@ export function isProfilePath(pathname: string): boolean {
 }
 
 /**
- * THE PROFILE TAB (#1119, the canvas's top bar: News · Profile · Trade · Activity · Research —
- * News took the Leaderboard's place in #7077, and the Leaderboard is reached from Profile's league
+ * THE PROFILE TAB (#1119, the canvas's top bar: Chronicles · Profile · Trade · Activity · Research —
+ * Chronicles, the day's market news, took the Leaderboard's place in #7077 (docs/IA.md §5.9: Eric's
+ * name for the page, fork d on #7018), and the Leaderboard is reached from Profile's league
  * card). Profile is a family of routes, not one, so its active state is computed from the
  * location rather than a single route match. It ALWAYS lands on the Profile page (#3807 slice 2b):
  * the page itself opens on Milestones while onboarding is open — the natural next step for a new
@@ -137,7 +138,7 @@ function RootShell(): ReactElement {
               activeProps={{ "aria-current": "page" }}
               activeOptions={{ exact: true, includeSearch: false }}
             >
-              News
+              Chronicles
             </Link>
             <ProfileTab />
             <Link

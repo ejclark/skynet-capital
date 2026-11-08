@@ -7,6 +7,7 @@
  * until a user expresses interest." So a story is held in two halves: its KEY FACTS (what moved, by
  * how much, and the dated reports that bear on it) shown on the tile, and the REST (`more`), opened
  * only on a tap. One narrator line rides each story in a mission voice; the headline stays news.
+ * The tile leads with the reports, then works back to what moved (docs/IA.md §5.9, #7081).
  *
  * WRITTEN BY HAND, FOR NOW. Nothing produces an edition yet: #6949 slice 5 (the landscape read)
  * will, and #6948 slice 4 voices it. Until then each edition is a checked-in JSON file,
@@ -41,12 +42,18 @@ import { marketDayKey } from "./market-day.js";
 export const EDITION_MARKS = ["measured", "reported", "modeled", "call"] as const;
 export type EditionMark = (typeof EDITION_MARKS)[number];
 
+/** Which way a key fact moved: drawn ▲ ▼ ∿ beside its word, never by hue (docs/IA.md §5.9). */
+export const EDITION_MOVES = ["up", "down", "mixed"] as const;
+export type EditionMove = (typeof EDITION_MOVES)[number];
+
 /** One key fact on a story's tile: what moved and by how much. */
 export interface EditionFact {
   /** What it is, in plain words ("SMH, the chip fund"). */
   readonly label: string;
   /** The number, preformatted with its sign ("−11.2%", "186.64"). */
   readonly value: string;
+  /** Which way it moved over the story's span; `mixed` when it went both ways. */
+  readonly move: EditionMove;
   /** When, and against what ("Thu Nov 5 · worst day since Mar 16, 2020"). */
   readonly note?: string;
   /** Absent means measured. */
@@ -174,6 +181,8 @@ function checkFact(f: Raw, where: string, fail: Fail): void {
   if (!(isText(f.label) && isText(f.value))) fail(`${where}: a fact needs a label and a value`);
   if (f.note !== undefined && !isText(f.note)) fail(`${where}: note must be text`);
   if (f.mark !== undefined && !isMark(f.mark)) fail(`${where}: unknown mark "${String(f.mark)}"`);
+  if (!(EDITION_MOVES as readonly unknown[]).includes(f.move))
+    fail(`${where}: move must be one of ${EDITION_MOVES.join(", ")}`);
   const copy = `${String(f.label)} ${String(f.value)} ${String(f.note ?? "")}`;
   checkBaseRate(copy, f.n, where, fail);
   checkCopy(copy, where, fail);

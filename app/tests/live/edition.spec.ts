@@ -3,6 +3,7 @@ import {
   dateLine,
   type Edition,
   MARK_WORD,
+  MOVE_SHAPE,
   STALE_AFTER_DAYS,
   staleLine,
 } from "../../src/live/edition";
@@ -45,5 +46,11 @@ describe("the edition's words", () => {
   it("marks a reported line as unconfirmed and a modeled one as modeled (criterion 7)", () => {
     expect(MARK_WORD.reported).toMatch(/unconfirmed/);
     expect(MARK_WORD.modeled).toBe("Modeled");
+  });
+
+  it("draws each move as a distinct shape with its word, never a colour (docs/IA.md §5.9)", () => {
+    const glyphs = Object.values(MOVE_SHAPE).map((m) => m.glyph);
+    expect(new Set(glyphs).size).toBe(3);
+    expect(MOVE_SHAPE.mixed).toEqual({ glyph: "∿", word: "mixed" });
   });
 });
