@@ -193,6 +193,32 @@ undocumented and gets one.
 | **A card for a canned action** | A card (the step · one line on why · its button) only for a canned action such as the onboarding step; one card per cohesive path, and while onboarding the card stays on onboarding. Two cards for unrelated tasks in one thread is the failure. | — | #5156 round 2 — Eric: "I like the cards for canned action. I don't like having two cards for unrelated tasks. When onboarding, the focus should remain on onboarding." | seeded — two cards per thread declined here |
 | **The card asks for what it lacks** | When a call can't be given because one input is missing, the row says which ("Needs your goal ↓") and asks that one input in place, directly under it; everything else it holds stays folded to one line with Edit. Never a how-to sentence, never the whole form for one answer. | — (drawn on a scratch branch, `app/src/shell/saved-position-card.tsx`) | #5181 round 1, question 3 | seeded — awaiting his pick |
 
+## The ledger — the landing page (#6948, #7018)
+
+The shapes #6948's round 1 and #7018's rounds 0–2 named for the signed-in landing page. Eric's
+words are quoted where he gave them; round 2 was decided on his behalf at his ask (2026-11-08:
+"make judgement calls on my behalf to get this movement rolling").
+
+| Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
+|---|---|---|---|---|
+| **The landing page is home** | Sign-in opens the day's market news, each story carrying ask · steer · act, instead of the standings. | `/app/` (#7077) | #6948 round 1 shape 1 — Eric, 2026-11-07: "the view that provides the gist of the environment conditions seems best" | placed — decided; building in #7077 |
+| **The narrator in the ✦ rail as home** | The narrated campaign lives in the assistant's side panel. | — | #6948 round 1 shape 2 | declined here — ✦ keeps quick answers and can read the day's edition |
+| **Quest board as home** | A board of quests is the first page. | — | #6948 round 1 shape 3 | declined here as home — quests are placed by their source instead (below) |
+| **Party thread as home** | A play-by-post thread is the first page. | — | #6948 round 1 shape 4 | declined here — its "new since you were here" line carries over |
+| **The map is the hub** | The city map is the first page; a deck as hub (#7018 comment 3) is the same shape. | — | #6948 round 1 shape 5 | declined here |
+| **Your question first** | The page opens on the member's own question box; canned quick questions sit under it as fallbacks. | #7077 slice 2 | #7018 round 1 Q1 C (More) — Eric: "I like how the default is \"whatever the customer wants to do\", it's a subtle nudge to let the user drive first, canned selections as fallbacks." | placed — round 2 confirmed (decided on his behalf) |
+| **An ask beside each story** | Each story carries a quick question and "Ask your own" under it. | #7077 slice 2 | #7018 round 1 Q1 A (More) | placed — round 2 confirmed |
+| **The page asks you before a move** | Before any move the page asks what would prove you wrong; the answer fills the stop. | — | #7018 round 1 Q1 B | declined here (Not) — banked for the ticket's walk (#7034) |
+| **You on the landing page** | One line or a card with your rank, points and cash, opening your full sheet. | — | #7018 round 1 Q2 A/B | seeded — no signal; waits on the character sheet round (#7019) |
+| **What's new for you** | A part listing what's new and a way to suggest a change. | — | #7018 round 1 Q2 C | declined here — "vague, ambiguous direction. no thanks" |
+| **Quests by their source** | A market quest sits under its story; the member's account quests sit in one part after the news. | #7077 slice 3 (#7028 supplies them) | #7018 round 1 Q3 (Build) — "This shows opportunity.. I want the capability to do this, but in an organic cohesive way that fits with all the other features" | placed — picked; building in #7077 |
+| **All quests in one list** | Every quest in one list after the news. | — | #7018 round 1 Q3 A | declined here |
+| **News headline, mission narrator** | The headline speaks plain news; one narrator line carries the mission-into-the-unknown voice. | #7077 | #7018 round 1 Q4 (Build) | placed — picked; building in #7077 |
+| **Mission voice throughout** | Headline and deck both read as a mission briefing. | — | #7018 round 1 Q4 B | declined here (Not) |
+| **Key facts first, the rest on tap** | Each story shows what moved, by how much and the next dated event; the bulk opens only when the member asks. | #7077 | #7018 round 1, Eric on the lead story: "apply progressive disclosure to withold the bulk of the information until a user expresses interest" | placed — round 2 confirmed |
+| **Dates on the story** | The reports that bear on a story sit on its tile, not in a separate card. | #7077 | #7018 round 1 — "this information can be associated to the tile above" | placed — round 2 B (decided on his behalf) |
+| **The instinct as a question** | A story's quick question carries the member's hunch ("Is this a chance to buy?"); the answer is the record, and the page never calls it a buy. | #7077 | #7018 round 1 — his "buy the dip opportunity" note, held to the honesty rule | seeded — drawn in round 2 |
+
 ## The ledger — trading surfaces
 
 The milestone ↔ feature grammar (#1461, "The Rail Over the Form") and the Fidelity ticket study
