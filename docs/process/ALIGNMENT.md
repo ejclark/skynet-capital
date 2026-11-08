@@ -65,6 +65,7 @@ graduation PR when a class meets rule 3, are the next piece; until then a sessio
 | 2026-11-08 | screen design (taste) | #7018 round 1 Q2 · what joins the news at the top? | One line on you, under the news (medium) | Not "what's new"; no signal on the line or the card | pending |
 | 2026-11-08 | screen design (taste) | #7018 forks (c) whose question led to an article, (d) the name "Skynet Chronicles" | (c) yes, members only (medium-low); (d) the landing page takes the name (medium) | Drawn on every round-1 frame; no mark on either | pending |
 | 2026-11-08 | screen design (taste) | #6948 · the landing page's first round: close, he adds or cuts a section? | Close; he adds or cuts a section (medium) | Cut "what's new"; asked each story to fold to its key facts | match |
-| 2026-11-08 | screen design (taste) | #7018 round 2 · confirm the question box and where the reports sit | Question box as drawn; reports on the story (high, medium) | Not answered: "make judgement calls on my behalf to get this movement rolling" — decided as predicted | decided on his behalf |
+| 2026-11-08 | screen design (taste) | #7018 round 2 Q2 · where do the coming reports sit? | On the story they bear on (medium) | Build "Dates on the story"; lead with the events and add up / down / volatile icons | match |
+| 2026-11-08 | screen design (taste) | #7018 round 2 Q1 · confirm your own question first | As drawn (high) | Unanswered; decided on his behalf at his ask ("make judgement calls on my behalf to get this movement rolling") | decided on his behalf |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.

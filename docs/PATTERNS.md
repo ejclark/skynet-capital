@@ -196,8 +196,8 @@ undocumented and gets one.
 ## The ledger — the landing page (#6948, #7018)
 
 The shapes #6948's round 1 and #7018's rounds 0–2 named for the signed-in landing page. Eric's
-words are quoted where he gave them; round 2 was decided on his behalf at his ask (2026-11-08:
-"make judgement calls on my behalf to get this movement rolling").
+words are quoted where he gave them. Round 2's question box was decided on his behalf at his ask
+(2026-11-08: "make judgement calls on my behalf to get this movement rolling"); he picked the rest.
 
 | Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
 |---|---|---|---|---|
@@ -216,7 +216,8 @@ words are quoted where he gave them; round 2 was decided on his behalf at his as
 | **News headline, mission narrator** | The headline speaks plain news; one narrator line carries the mission-into-the-unknown voice. | #7077 | #7018 round 1 Q4 (Build) | placed — picked; building in #7077 |
 | **Mission voice throughout** | Headline and deck both read as a mission briefing. | — | #7018 round 1 Q4 B | declined here (Not) |
 | **Key facts first, the rest on tap** | Each story shows what moved, by how much and the next dated event; the bulk opens only when the member asks. | #7077 | #7018 round 1, Eric on the lead story: "apply progressive disclosure to withold the bulk of the information until a user expresses interest" | placed — round 2 confirmed |
-| **Dates on the story** | The reports that bear on a story sit on its tile, not in a separate card. | #7077 | #7018 round 1 — "this information can be associated to the tile above" | placed — round 2 B (decided on his behalf) |
+| **Dates on the story** | The reports that bear on a story lead its tile, then the tile works back to what moved. | #7077 | #7018 round 2 B (Build) — "Look forward to the events, work back to current state" | placed — picked; building in #7077 |
+| **A shape for each line's direction** | Every line on a story's tile carries ▲ up · ▼ down · ∿ volatile with a word; a coming event gets ∿ only when its record shows large moves either way, never a direction the record doesn't hold. | #7077 (criterion 9) | #7018 round 2 — "up/bull, bear/down, volatile (sign wave?) icons would carry a TON of weight for a very small sliver of real estate" | placed — in #7077's criteria |
 | **The instinct as a question** | A story's quick question carries the member's hunch ("Is this a chance to buy?"); the answer is the record, and the page never calls it a buy. | #7077 | #7018 round 1 — his "buy the dip opportunity" note, held to the honesty rule | seeded — drawn in round 2 |
 
 ## The ledger — trading surfaces

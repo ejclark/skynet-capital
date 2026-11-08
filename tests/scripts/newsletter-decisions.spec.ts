@@ -244,9 +244,9 @@ describe("the report, beside last week", () => {
     expect(by("artifactMissing").value).toBe(1);
     expect(by("predictedShare")).toMatchObject({ value: 0.5, detail: "1 of 2" });
     expect(by("oldestBotAskDays")).toMatchObject({ value: 23, detail: "#5452, 1 open" });
-    // The live ledger, rows dated before 11-09: 8 matches of 13 decided (a row added this week
-    // moves it; #7018's eight rows took it from 5 of 8).
-    expect(by("ledgerMatchRate")).toMatchObject({ value: 0.62, detail: "8 of 13 decided rows" });
+    // The live ledger, rows dated before 11-09: 9 matches of 14 decided (a row added this week
+    // moves it; #7018's nine rows took it from 5 of 8).
+    expect(by("ledgerMatchRate")).toMatchObject({ value: 0.64, detail: "9 of 14 decided rows" });
   });
 
   it("reads a week with nothing closed as no answer share, never as zero or full", () => {
