@@ -51,12 +51,12 @@ work (interrupt economics: avoid death by 10,000 cuts).
      *Read this narrowly — the list is `envelope.json`, and `node scripts/envelope-scan.mjs --check
      <paths>` answers it mechanically.* "Outward-facing" means reachable by a non-member or changing
      an external contract, **and hard to reverse** — not "a user can see it". This is a web app, so
-     the loose reading fires on every copy change, which is how the gate came to over-trigger.
+     the loose reading fires on every copy change and over-triggers the gate.
    - Correctness/requirements doubt on a diff → **`/code-review`, scoped to correctness/requirements
      only** (never "find gaps" — a reviewer told to find gaps manufactures them).
    - Then **consult the loaded skill/agent roster's own `Use when` triggers and route to the owner if one
      exists** — the roster self-describes; don't reinvent it. (`/telestrator`, `/charter`, `/governor`,
-     `/vision`, the debt agents, etc. each state their own trigger.)
+     `/vision`, the debt drills `/decompose` · `/dedupe` · `/bury` · `/backfill`, etc. each state their own trigger.)
    - **Long exchange, durable thinking, no code — and the session is winding down?** → `/journey`
      before it ends; the reasoning dies with the context otherwise (journeys are perishable — the
      least-instrumented capture surface, per the 2026-08-20 hat-team research).
@@ -126,7 +126,7 @@ varies; only depth does.
 - **End with one doable next step, stated as what happens next — never as a question gating it.**
   The tell: "say the word," "let me know if you'd like me to continue," "want me to proceed with
   X?" — each makes already-authorized, in-envelope work wait on a reply it doesn't need
-  (`CLAUDE.md` → *the blessing cadence is standing*). If nothing blocks the step — no open fork, no
+  (`docs/process/WORKING-AGREEMENTS.md` → *Plans live in GitHub issues*: the blessing cadence is standing). If nothing blocks the step — no open fork, no
   irreversible action, no taste call — name it as already in motion ("moving into X next") or just
   do it in the same turn; do not offer it as one of two options. Reserve an actual question for a
   real block: a taste fork, the irreversible class, or genuine ambiguity one fact would resolve —

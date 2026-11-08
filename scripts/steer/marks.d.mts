@@ -51,6 +51,11 @@ export function decisionMarks(d: Partial<Decision>, r: Saved | null | undefined)
 export function marksSaid(d: Partial<Decision>, r: Saved | null | undefined): boolean;
 export function markLine(m: SaidMark): string;
 export function marksBlock(d: Partial<Decision>, r: Saved | null | undefined): string;
+export function optionMarksBlock(
+  d: Partial<Decision>,
+  r: Saved | null | undefined,
+  option: string,
+): string;
 export function markClauses(d: Partial<Decision>, r: Saved | null | undefined): string;
 export function revealLine(
   d: Partial<Decision>,

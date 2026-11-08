@@ -1,0 +1,11 @@
+{
+  "id": "japan-balance-of-payments-2026-11-10",
+  "kind": "macro-print",
+  "title": "Japan Balance of Payments (September 2026, preliminary) — the same series as the 12-08 print, one cycle earlier, and the next out-of-sample read of its yen tail",
+  "date": "2026-11-10",
+  "status": "estimate",
+  "source": "EST: mof.go.jp/english/policy/international_policy/reference/balance_of_payments/, fetched direct 2026-11-08 and re-fetched by the initial-research session 2026-11-08 (HTTP 200, 21,047 bytes; the row reads 'November 10, 2026（8:50 am） Balance of Payments, September 2026 (Preliminary)') — the schedule lists 'November 10, 2026 (8:50 am) | Balance of Payments, September 2026 (Preliminary); 1st half of FY2026 (Preliminary); Regional Balance of Payments, Q2 2026', with the page's own note that the schedule is subject to change. Same publisher and 08:50 JST slot as the 12-08 release already tracked as japan-balance-of-payments-2026-12-08. Filed estimate: the confirmed-prefix taxonomy has no slot for Japan's Ministry of Finance, and this lane never self-confirms an event it discovered in-sweep. Corroborated by the 6th-Tokyo-trading-day rule (Nov 2, 4, 5, 6, 9, 10; Nov 3 is Culture Day) and by an aggregator calendar row at 2026-11-09 23:50 GMT = 08:50 JST",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Canonical file written by the initial-research session 2026-11-08; shadows the proposal from the japan-balance-of-payments-2026-12-08 lane, which stays where it is. Why it earns a slot: the 12-08 ledger registered a yen-tail observation (FT-japan-balance-of-payments-2026-12-08-3) that accumulates across releases, and this is the next one, two days out. The same morning carries US CPI (08:30 ET = 22:30 JST), the BoJ Summary of Opinions at the same 08:50 JST minute, a 30-year JGB auction and the US-China tariff truce expiry, so any USD/JPY or Nikkei move on 11-10 is a confounded read of the print. Impact is LOW: symbols is empty, no house playbook is FX-keyed."
+}

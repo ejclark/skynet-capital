@@ -44,7 +44,7 @@ named as the reason to codify in the first place. Every future domain reuses the
 only what goes *in* them differs.
 
 **State** is not a field of the template — it lives on the owning issue and in the list's `State`
-column: `piloting` · `running` · `blocked-on-fix` · `scaling`, or ended as `closed` · `killed` ·
+column: `planned` · `piloting` · `running` · `blocked-on-fix` · `scaling`, or ended as `closed` · `killed` ·
 `pivoted` (the pivot is a new row) · `replaced`.
 
 **The double-loop question, asked at every close or kill:** *was the aim, the cycle gate or the
@@ -92,7 +92,7 @@ remember) · `missing`.
 1. **A recurring manual check is the first thing to automate.** Rank by how often the human stage
    recurs × what it costs when it is late. Automate the *check*, keep the *decision* where it
    belongs: a taste call or the irreversible class stays Eric's, but its check still runs itself
-   and arrives pre-verified (`CLAUDE.md` → *When Eric's action IS needed*).
+   and arrives pre-verified (`docs/process/WORKING-AGREEMENTS.md` → *When Eric's action is needed*).
 2. **Automate an act only behind a mechanical verify** — a spec, a gate, a script's number, a filed
    falsifier. An automated check with no oracle is false assurance (`docs/members/study/README.md`:
    the crawl passed every screen the owner then found broken). Where verify is judgment, the act

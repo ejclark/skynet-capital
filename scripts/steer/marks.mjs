@@ -241,6 +241,15 @@ export function marksBlock(d, r) {
     .join("\n\n");
 }
 
+/** The marks on one option, for the build issue a Build pick files (#7078): every answer he left
+ *  on that option's frames, word for word, in the comment's own lines — focus is not split here,
+ *  because the build is the whole option. "" when he left none on it. Marks on other options stay
+ *  on the comment only. */
+export function optionMarksBlock(d, r, option) {
+  const mine = decisionMarks(d, r).filter((m) => m.option === option);
+  return mine.length ? ["Eric's marks on this option:", ...answerLines(mine)].join("\n") : "";
+}
+
 /** What one mark says, for a next-round clause: what he thinks, his note. */
 const wordsOf = (m) =>
   [m.reaction ? MARK_WORDS[m.reaction].toLowerCase() : "", m.note ? `“${m.note}”` : ""]

@@ -35,6 +35,19 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A drift round stopped after its first step on a Mac, and a session counted 36 unrefuted proposals as fixes
+- **SHA:** n/a   **DATE:** 2026-11-08   **STATUS:** closed
+- **SIGNAL:** Eric, 2026-11-08 00:41Z: "any reason the task stalled/stopped? why not finish?" The run started about 21:30Z on 2026-11-07. Its first `blocked` check, a red pre-push verify on `tests/arch/ship-platter.spec.ts`, was in the journal within half an hour. At 23:54Z the session read 35 such results as finished fixes, put them on a wave branch and reported "36 fixes". Detection took about 3 hours, and his question, not a check.
+- **ROOT CAUSE:** Three mechanisms.
+  (1) The chore verified per push. Check and apply each pushed through the full pre-push verify, which `scripts/verify-locked.sh` runs one at a time per machine, so the run moved one item per verify. On macOS that verify always failed on one spec: `tmpdir()` is a symlink into `/private`, so `envelope-scan.mjs`'s raw direct-run check never matched (#7045, #7068). A `blocked` check ends grind's chain, so no refute or apply ran.
+  (2) "Land every `done` branch" was a sentence, and nothing tested that a branch had been refuted, so commits existing were counted as work done. That is the census entry's shape (2026-10-09): it measured "did a step leave something", not "did the item reach the state it was meant to".
+  (3) grind suffixed the chain's trailing outcome script `· check`, the check role's own label, so a journal tally read script results as checks.
+  What else crosses this system: every push an agent makes (check, apply, `ship open`, a platter board) runs the same pre-push verify, so one platform-only red stopped them all at once. A DNS outage then killed 44 agents mid-step; each item was re-run from the step it had reached.
+- **PREVENTION:** script + spec. `scripts/drift-wave.mjs` builds the wave from git alone and lands a branch only when the refuter's verdicts are on it and every killed finding is reverted (`tests/scripts/drift-wave.spec.ts`; four planted bugs each turn it red). The chore (`docs/grind/instruction-drift.instructions.md`) pushes every role with `--no-verify` and verifies once, on the wave PR's union, with a dated falsifier, and its after-run steps call the script. `.claude/workflows/grind.js` now suffixes an unlabelled script step `· script`. The macOS red itself: #7045, #7068, and the protected half on #7080.
+- **SIDE QUESTS:** a grind breaker for many items blocked by one cause, and one end-of-run retry for agents an outage killed (→ docs/IDEAS.md).
+
+---
+
 ### A lo-fi round format became a standing rule before Eric had judged it, and failed the same day
 - **SHA:** n/a   **DATE:** 2026-11-07   **STATUS:** closed
 - **SIGNAL:** Eric on the redrawn #6948 round page, 2026-11-07: "The format is still difficult for me to understand". The format had reached `main` as a rule within the hour (#7007 → PR #7011), so detection took hours, and only because he opened the page.
