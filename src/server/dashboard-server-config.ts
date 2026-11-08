@@ -33,6 +33,7 @@ import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { CouncilDeps } from "./council-form.js";
 import type { CouncilRepliesDeps } from "./council-replies-form.js";
+import type { DiscoveryQueueStore } from "./discovery-queue-store.js";
 import type { SubmitDraftOrder } from "./draft-trade-service.js";
 import type { ExitPlanStore } from "./exit-plan-store.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
@@ -384,6 +385,14 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * research shelf on each save (`shelfResearched`); specs pass a fixed answer.
    */
   readonly campaignShelf?: (symbol: string) => boolean;
+  /**
+   * THE DISCOVERY QUEUE (#6952 slice 2b) — questions about things no campaign covers, waiting for
+   * the research lane. Omit to disable (offline mode): an ask answers "not wired in this
+   * deployment" and a campaign save queues nothing. Appending to it starts no research.
+   */
+  readonly discoveryQueue?: DiscoveryQueueStore;
+  /** Asks the lane takes per pass, for the "roughly when". Omit to read `work-mode.json`. */
+  readonly discoveryPerPass?: number;
   /**
    * MEMBERS' CONVICTIONS (#5482 slice 6a) — the views a member states and keeps as drafts. Omit to
    * disable (offline mode): the list answers empty and a save answers "not wired in this

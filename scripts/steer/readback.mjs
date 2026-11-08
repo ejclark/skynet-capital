@@ -61,6 +61,7 @@
 //     ({ what, where }), for `scripts/redesign/commons.mjs add --kind process`.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { isMain } from "../is-main.mjs";
 import { FOOTER } from "../moneypenny/labels.mjs";
 import { CLAUDE_READY_LINE } from "../moneypenny/plan-claim.mjs";
 import { buildIssue, noteBlock, quote, revisitIssue } from "./filings.mjs";
@@ -550,4 +551,4 @@ function main() {
   process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

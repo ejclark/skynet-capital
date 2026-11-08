@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // MONEYPENNY — THE RELAY (#3818 slice 4, sub-issue #4287). The one job: **a remainder never dies
 // with the issue that captured it.**
 //
@@ -427,4 +428,4 @@ function main(argv = process.argv.slice(2)) {
   for (const i of intents) console.log(executeRelay(i));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

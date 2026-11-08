@@ -8,6 +8,7 @@ import type { Recommendation } from "../options/recommend.js";
 import type { FindSimilarFeedback } from "../server/feedback-similar.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
 import type { ReadRoadmap } from "../server/roadmap.js";
+import type { UpcomingEvents } from "../server/upcoming-events.js";
 import { MAX_ISSUES_PER_LOOKUP, type ReadWorkStatus } from "../server/work-status.js";
 import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import {
@@ -20,12 +21,12 @@ import {
 } from "./companion-convictions.js";
 
 /**
- * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of eight read-only lookups plus two
+ * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of nine read-only lookups plus two
  * hand-offs (`draft_feedback`, which files nothing: it hands the rail a draft the member still has
  * to send; `draft_conviction`, which saves nothing: it hands the rail a view's card the member
  * still has to tap — `companion-convictions.ts`), and nothing else. This is the structural half of
  * the "never fires an order" invariant (the other
- * half is the system prompt): `runCompanionTool` is a `switch` over ten literal string cases
+ * half is the system prompt): `runCompanionTool` is a `switch` over eleven literal string cases
  * with no default fallthrough to anything callable, so there is no code path here — not a typo,
  * not a hallucinated tool name, not a crafted `tool_use` block — that reaches an order-placing
  * function. This file does not import `trade-service.ts`, `option-trade-service.ts`,
@@ -48,6 +49,10 @@ import {
  * with every string filtered to trusted authors in `server/work-status.ts` and
  * `server/roadmap.ts`, because on a public repo anyone on the internet can write a title or a
  * comment. `get_roadmap` returns no bodies and no comments at all.
+ *
+ * `get_upcoming_events` (#7034 slice 3a) reads the checked-in event calendar and the house's
+ * research ledgers — repo content, reviewed in PRs — and uses the member's own held names only to
+ * put their events first. It reads no one else's desk.
  */
 
 export const COMPANION_TOOL_NAMES = [
@@ -58,6 +63,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_structures_for_outlook",
   "get_work_status",
   "get_roadmap",
+  "get_upcoming_events",
   "draft_feedback",
   ...CONVICTION_TOOL_NAMES,
 ] as const;
@@ -83,6 +89,15 @@ export function parseFeedbackDraft(input: unknown): FeedbackDraft | undefined {
   return { kind: kind as FeedbackDraft["kind"], title, details };
 }
 
+const NOT_AN_UNDERLYING = "underlying must be a stock ticker like NVDA, never an option symbol";
+
+/** A stock ticker, trimmed and upper-cased, or undefined — the one check every tool's `underlying`
+ *  goes through, so an OCC symbol or order-shaped text never reaches a read. */
+function tickerOf(raw: unknown): string | undefined {
+  const symbol = typeof raw === "string" ? raw.trim().toUpperCase() : "";
+  return UNDERLYING_PATTERN.test(symbol) ? symbol : undefined;
+}
+
 const DIRECTIONS = new Set<Outlook["direction"]>(["bullish", "bearish", "neutral"]);
 const MAGNITUDES = new Set<Outlook["magnitude"]>(["slight", "moderate", "strong"]);
 
@@ -100,10 +115,8 @@ export function parseOutlook(input: unknown): Outlook | { readonly error: string
     magnitude?: unknown;
     horizonDays?: unknown;
   };
-  const symbol = typeof raw.underlying === "string" ? raw.underlying.trim().toUpperCase() : "";
-  if (!UNDERLYING_PATTERN.test(symbol)) {
-    return { error: "underlying must be a stock ticker like NVDA, never an option symbol" };
-  }
+  const symbol = tickerOf(raw.underlying);
+  if (!symbol) return { error: NOT_AN_UNDERLYING };
   const direction = raw.direction;
   if (typeof direction !== "string" || !DIRECTIONS.has(direction as Outlook["direction"])) {
     return { error: "direction must be one of bullish, bearish, neutral" };
@@ -130,11 +143,12 @@ export type CompanionToolName = (typeof COMPANION_TOOL_NAMES)[number];
 const DESKLESS_TOOLS: ReadonlySet<CompanionToolName> = new Set([
   "get_work_status",
   "get_roadmap",
+  "get_upcoming_events",
   "draft_feedback",
 ]);
 
 /** The tool names one turn declares: every tool for a member with a linked desk, otherwise only
- *  the deskless two. The request's `tools` array (`companion-tool-rounds.ts`) and the unknown-name
+ *  the deskless four. The request's `tools` array (`companion-tool-rounds.ts`) and the unknown-name
  *  refusal both read this, so the refusal never names a tool the turn didn't offer. */
 export function declaredToolNames(participantId: string | undefined): readonly CompanionToolName[] {
   return participantId
@@ -209,6 +223,20 @@ export const COMPANION_TOOL_DEFS = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "get_upcoming_events",
+    description:
+      "What is coming up on the market-event calendar in the next 14 days — earnings prints, macro prints (CPI, FOMC, jobs), product launches, sector and rates events, options expiration — ranked with events on the member's own held names first, then by impact, then by date. Up to 5 events, each with its date and dateWords ('date confirmed' or 'date is an estimate'), impact, symbols (empty = market-wide), onYourBook (the member's held names it touches), stance (the house's written research stance, or 'not researched yet') and killSwitches (what would prove that stance wrong). more counts the events not shown; rankedBy says what the order used (the watchlist is not read); notCovered names the sources it does not read (news, lawsuits). Use it for 'what's coming up', 'what should I watch', 'when does NVDA report'. Pass underlying to list only events naming one ticker; marketWide then counts the market-wide prints (CPI, FOMC, jobs) in the same 14 days, which still bear on it. Read-only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        underlying: {
+          type: "string",
+          description: "Optional: one stock ticker, e.g. NVDA, to list only its events.",
+        },
+      },
+    },
+  },
+  {
     name: "draft_feedback",
     description:
       "Hand the member a DRAFT feedback filing (bug, feature, or idea) distilled from this whole conversation. Files NOTHING: the rail shows the draft and only the member's own reply sends it. Call it once the member has agreed, in their latest message, to report something. Returns captured: true and a status line, plus `similar` open feedback issues when any look like duplicates; returns an error when title or details is missing (a missing or unrecognized kind is drafted as an idea).",
@@ -254,6 +282,13 @@ export interface CompanionDeskDeps {
   /** #3952 slice 3: what is coming — the open plan queue grouped Now / Next / Later, same token.
    *  Optional — without it `get_roadmap` says "not available", never guesses. */
   readonly readRoadmap?: ReadRoadmap;
+  /** #7034 slice 3a: the next fortnight's market events, the held names first
+   *  (`server/upcoming-events.ts`). Optional — without it `get_upcoming_events` says "not
+   *  available", never guesses a date. */
+  readonly readUpcomingEvents?: (
+    held: readonly string[],
+    underlying: string | undefined,
+  ) => UpcomingEvents;
   /** #5482 criterion 9: the session's own conviction reads, bound per turn by the chat route (they
    *  need the session, which boot wiring does not have). Reads only — no save, no hand-over. */
   readonly convictions?: CompanionConvictions;
@@ -404,14 +439,40 @@ async function roadmapResult(read: ReadRoadmap | undefined): Promise<CompanionTo
   return { ok: true, result: roadmap };
 }
 
+/** The optional ticker, checked like the outlook's: absent is fine, anything else must be an
+ *  underlying — an OCC symbol or order-shaped text is refused before any read. */
+export function parseUnderlying(
+  input: unknown,
+): { readonly underlying?: string } | { readonly error: string } {
+  const raw = (input as { underlying?: unknown } | null | undefined)?.underlying;
+  if (raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "")) {
+    return {};
+  }
+  const symbol = tickerOf(raw);
+  return symbol ? { underlying: symbol } : { error: NOT_AN_UNDERLYING };
+}
+
+function upcomingEventsResult(
+  read: CompanionDeskDeps["readUpcomingEvents"],
+  snapshot: ParticipantSnapshot | undefined,
+  input: unknown,
+): CompanionToolResult {
+  const parsed = parseUnderlying(input);
+  if ("error" in parsed) return { ok: false, error: parsed.error };
+  if (!read) return { ok: false, error: "the event calendar isn't available on this deployment" };
+  const held = snapshot?.positions.map((p) => p.symbol) ?? [];
+  return { ok: true, result: read(held, parsed.underlying) };
+}
+
 /**
- * Run ONE of the ten allow-listed tools. Any other name — including anything a compromised or
+ * Run ONE of the eleven allow-listed tools. Any other name — including anything a compromised or
  * confused model might invent, like `place_order` or `submit_trade` — falls through to the
  * refusal below and touches nothing. `participantId` is the SESSION's own linked desk, resolved
  * upstream (`resolveOwnerId`) — never a client-supplied id, so this can never be pointed at
  * another member's account. `participantId` may be absent (no linked desk yet): the desk lanes
- * then refuse honestly, and only `draft_feedback`, `get_work_status` and `get_roadmap` — which
- * read no member data, only the public issue queue — still answer.
+ * then refuse honestly, and only `draft_feedback`, `get_work_status`, `get_roadmap` and
+ * `get_upcoming_events` — which read no member data, only the public issue queue and the checked-in
+ * calendar — still answer.
  */
 export async function runCompanionTool(
   name: string,
@@ -459,6 +520,8 @@ export async function runCompanionTool(
       return workStatusResult(deps.readWorkStatus, input);
     case "get_roadmap":
       return roadmapResult(deps.readRoadmap);
+    case "get_upcoming_events":
+      return upcomingEventsResult(deps.readUpcomingEvents, snapshot, input);
     case "get_my_convictions":
     case "draft_conviction":
       // Desk tools: offered only with a linked desk, and refused the same way without one.

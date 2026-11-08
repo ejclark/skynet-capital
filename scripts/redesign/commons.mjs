@@ -27,7 +27,8 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isMain } from "../is-main.mjs";
 
 export const KINDS = ["component", "pattern", "wording", "data", "request", "ia-move", "process"];
 /** His words are kept whole on a process line: the 140-character cap is for findings. */
@@ -235,7 +236,7 @@ function main(argv) {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   try {
     main(process.argv.slice(2));
   } catch (e) {

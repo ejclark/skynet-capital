@@ -32,8 +32,8 @@
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, posix } from "node:path";
-import { fileURLToPath } from "node:url";
 import { crc32, inflateRawSync } from "node:zlib";
+import { isMain } from "./is-main.mjs";
 import { ensureGhToken, ghRest, sh } from "./moneypenny/gh.mjs";
 
 /** pipeline.yml's `integration tests` job runs on ubuntu, so every committed baseline is Linux's. */
@@ -463,7 +463,7 @@ function main(argv) {
   console.log(`  node scripts/rebaseline-from-ci.mjs ${args.pr} --run ${run.id} --apply --commit`);
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (isMain(import.meta.url)) {
   try {
     main(process.argv.slice(2));
   } catch (err) {

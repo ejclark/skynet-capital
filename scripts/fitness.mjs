@@ -49,7 +49,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import nodeModule, { createRequire } from "node:module";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ASSIGNED_MARKER,
@@ -62,6 +62,7 @@ import {
   whatHappensNext,
   whoHearsBlind,
 } from "./fitness-rungs.mjs";
+import { isMain } from "./is-main.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Deadlines. The exec also gets flyctl's own --timeout, because its session can outlive ours.
@@ -1218,7 +1219,7 @@ function probeAll(nowMs, here) {
   return { results, crashed };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const here = whereAmI();
   const { results, crashed } = probeAll(Date.now(), here);
   if (process.argv.includes("--json")) console.log(JSON.stringify(results, null, 2));

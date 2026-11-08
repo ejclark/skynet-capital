@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -14,6 +15,12 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 import { run } from "../support/ship-run.js";
+
+// The real temp folder. On macOS tmpdir() is /var/folders/…, a symlink into /private/var, and a
+// script's direct-run check (import.meta.url === `file://${process.argv[1]}`) compares the real
+// path with the symlinked one, so envelope-scan.mjs never ran and ship.sh read empty JSON. Every
+// local verify on a Mac went red here while CI on Linux stayed green (2026-11-07).
+const TMP = realpathSync(tmpdir());
 
 /**
  * The platter (#1343) — one held PR per cadence instead of one per protected change.
@@ -50,7 +57,7 @@ describe("ship platter — the ledger is a pure function of the boarded commits"
   };
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), "ship-platter-"));
+    dir = mkdtempSync(join(TMP, "ship-platter-"));
     git(["init", "-q", "-b", "main", "."]);
     git(["config", "user.email", "spec@example.com"]);
     git(["config", "user.name", "spec"]);
@@ -238,7 +245,7 @@ describe("ship platter — only boarded items become rows, whatever else the ran
   };
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), "ship-platter-range-"));
+    dir = mkdtempSync(join(TMP, "ship-platter-range-"));
     git(["init", "-q", "-b", "main", "."]);
     git(["config", "user.email", "spec@example.com"]);
     git(["config", "user.name", "spec"]);
@@ -305,7 +312,7 @@ describe("ship platter — refusals that keep the platter an assembly point, not
   // open` runs `npm run verify` on the staged union while HEAD *is* a platter branch, so the
   // refusal this test expects is exactly the one that cannot fire there.
   it("refuses to board while HEAD is not a platter branch", () => {
-    const dir = mkdtempSync(join(tmpdir(), "ship-board-refusal-"));
+    const dir = mkdtempSync(join(TMP, "ship-board-refusal-"));
     const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
     const git = (args: string[]) =>
       execFileSync("git", args, { cwd: dir, encoding: "utf8", env, stdio: "pipe" });
@@ -339,7 +346,7 @@ describe("ship platter — refusals that keep the platter an assembly point, not
   // with a revert sha that would have reverted all of them.
   // Since #5390 `board` merges main in first; --no-merge keeps this refusal for whoever wants it.
   it("refuses an item based on a newer main than the platter under --no-merge, before squashing anything", () => {
-    const root = mkdtempSync(join(tmpdir(), "ship-board-stale-"));
+    const root = mkdtempSync(join(TMP, "ship-board-stale-"));
     const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
     const git = (cwd: string, args: string[]) =>
       execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
@@ -387,7 +394,7 @@ describe("ship platter — refusals that keep the platter an assembly point, not
   // 2026-10-26, #5852 again: the refusal above merged at 10:57 and an item boarded past it at
   // 11:52, because `board` ran the platter's own checkout of this script, cut before the guard.
   it("refuses to board while the running ship.sh is not origin/main's copy", () => {
-    const root = mkdtempSync(join(tmpdir(), "ship-board-stale-script-"));
+    const root = mkdtempSync(join(TMP, "ship-board-stale-script-"));
     const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
     const git = (cwd: string, args: string[]) =>
       execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
@@ -472,7 +479,7 @@ printf '%s\\n__SHIP_HTTP__%s' "$out" "$code"
 `;
 
   const boardWith = (itemPrs: string) => {
-    const root = mkdtempSync(join(tmpdir(), "ship-board-close-"));
+    const root = mkdtempSync(join(TMP, "ship-board-close-"));
     const bin = join(root, "bin");
     const log = join(root, "curl.log");
     mkdirSync(bin);
@@ -571,7 +578,7 @@ printf '%s\\n__SHIP_HTTP__200' "$out"
 `;
 
   const boardWithVerify = (rc: number) => {
-    const root = mkdtempSync(join(tmpdir(), "ship-board-verify-"));
+    const root = mkdtempSync(join(TMP, "ship-board-verify-"));
     const bin = join(root, "bin");
     mkdirSync(bin);
     writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });
@@ -699,7 +706,7 @@ printf '%s\\n__SHIP_HTTP__200' "$out"
   // mainEdit: what main writes to shared.txt after the platter was cut (the platter's earlier item
   // wrote "platter\n" there); the same text merges cleanly, a different one conflicts.
   const boardStale = (mainEdit: string) => {
-    const root = mkdtempSync(join(tmpdir(), "ship-board-catchup-"));
+    const root = mkdtempSync(join(TMP, "ship-board-catchup-"));
     const bin = join(root, "bin");
     mkdirSync(bin);
     writeFileSync(join(bin, "curl"), STUB_CURL, { mode: 0o755 });

@@ -17,8 +17,8 @@
 // What a score can and cannot say is in the set's own header: howThisCouldFlatterThePage.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { POSITION_SHAPES } from "./intents.mjs";
+import { isMain } from "./is-main.mjs";
 
 const SET_FILE = "docs/evals/how-he-writes-set.json";
 const PAGE_FILE = "docs/READERS.md";
@@ -373,7 +373,7 @@ function main(argv) {
   throw new Error("usage: intent-replay.mjs cases|prompt|score (see the file's header)");
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (error) {

@@ -236,6 +236,33 @@ async function readMarket(
   };
 }
 
+/**
+ * One symbol's market read through `requesterId`'s own account, coalesced: identical reads inside
+ * 15 seconds share one pull, and `refresh` forces a new one. The guidance route and the quests route
+ * (#7028) both read through here, so a member opening both pays for one read. A read that throws is
+ * forgotten at once, so the next ask tries again.
+ */
+export function guidanceMarketFor(
+  client: AlpacaOptionsClient,
+  config: DashboardServerConfig,
+  requesterId: string,
+  symbol: string,
+  deps: GuidanceDeps = LIVE,
+  refresh = false,
+): MarketRead["inputs"] {
+  const key = `${requesterId}:${symbol}`;
+  const cached = inflight.get(key);
+  if (cached && Date.now() - cached.at < COALESCE_MS && !refresh) return cached.inputs;
+  for (const [k, v] of inflight) if (Date.now() - v.at >= COALESCE_MS) inflight.delete(k);
+  const inputs = readMarket(client, config, requesterId, symbol, deps, refresh);
+  const read: MarketRead = { at: Date.now(), inputs };
+  inflight.set(key, read);
+  inputs.catch(() => {
+    if (inflight.get(key) === read) inflight.delete(key);
+  });
+  return inputs;
+}
+
 export async function serveGuidance(
   res: ServerResponse,
   url: string,
@@ -263,28 +290,14 @@ export async function serveGuidance(
   // priced — a "calls only" flag would itself say "holds 100+ shares, no cash" — and one read then
   // serves every stake, so changing the stake never re-fetches.
   const refresh = params.get("refresh") === "1";
-  const key = `${requesterId}:${symbol}`;
-  const cached = inflight.get(key);
-  const fresh = cached && Date.now() - cached.at < COALESCE_MS && !refresh;
-  const read: MarketRead = fresh
-    ? cached
-    : {
-        at: Date.now(),
-        inputs: readMarket(client, config, requesterId, symbol, deps, refresh),
-      };
-  if (!fresh) {
-    for (const [k, v] of inflight) if (Date.now() - v.at >= COALESCE_MS) inflight.delete(k);
-    inflight.set(key, read);
-  }
   try {
-    const market = await read.inputs;
+    const market = await guidanceMarketFor(client, config, requesterId, symbol, deps, refresh);
     if ("reason" in market) {
       sendJson(res, 200, market);
       return;
     }
     sendJson(res, 200, { market });
   } catch {
-    inflight.delete(key);
     // A fixed sentence, never the exception text — a raw error can carry internals (desk-gate.ts).
     sendJson(res, 200, {
       reason: "failed",

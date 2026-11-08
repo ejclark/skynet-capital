@@ -30,7 +30,6 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import * as page$ from "./census-page.mjs";
 import {
   capControls,
@@ -47,6 +46,7 @@ import {
 } from "./census-plan.mjs";
 import { measured, readTree, revealed, SCREEN_MS, walk } from "./census-walk.mjs";
 import { parseClock } from "./clock.mjs";
+import { isMain } from "./compat.mjs";
 import { act, close, frame, open, settle } from "./session.mjs";
 import { remark, reopen } from "./session-fresh.mjs";
 import { loadWorld, rerunUnderTsx } from "./session-world.mjs";
@@ -299,7 +299,7 @@ async function main(argv) {
   console.log(`census: ${controls.length} control entries → ${join(opts.out, "census.json")}`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   const argv = process.argv.slice(2);
   const rerun = rerunUnderTsx(import.meta.url, argv);
   if (rerun !== null) process.exitCode = rerun;

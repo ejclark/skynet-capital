@@ -19,9 +19,8 @@
 // thread is the lane's to answer, and no other lane owns that answer.
 //
 //   node scripts/pr-review/respond-route.mjs --pr N --round R --important K   # prints the verdict
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { breachOf } from "../envelope-scan.mjs";
+import { isMain } from "../is-main.mjs";
 import { ghRestAll, trustedComment } from "../moneypenny/gh.mjs";
 import { LABELS } from "../moneypenny/labels.mjs";
 import { workGate } from "../moneypenny/work-gate.mjs";
@@ -112,7 +111,7 @@ export function gatherRespond(
 export const respondLine = (verdict, footer) =>
   `**A response session answers each Important thread:** ${verdict.reason}.\n\n${verdict.marker}\n\n${footer}`;
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   const number = Number(flag(args, "--pr"));
   if (!Number.isInteger(number) || number <= 0) {

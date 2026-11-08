@@ -180,7 +180,12 @@ describe("toolsFor — what the turn is allowed to call", () => {
   const names = (id: string | undefined) => (toolsFor(id) as { name: string }[]).map((t) => t.name);
 
   it("offers only the tools that read no member data when no desk is linked", () => {
-    expect(names(undefined).sort()).toEqual(["draft_feedback", "get_roadmap", "get_work_status"]);
+    expect(names(undefined).sort()).toEqual([
+      "draft_feedback",
+      "get_roadmap",
+      "get_upcoming_events",
+      "get_work_status",
+    ]);
   });
 
   it("offers the desk lookups on top when a desk is linked", () => {

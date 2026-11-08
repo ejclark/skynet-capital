@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // MONEYPENNY — CONTINUATION (#3818 slice 8, sub-issue #4295; criteria 9–10). The one job: **a ready
 // plan keeps going after its slice lands, without Eric re-queuing it.**
 //
@@ -547,4 +548,4 @@ function main(argv) {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

@@ -50,6 +50,7 @@
 // the first run after this lands; and a reading never overwrites a fresher one. No reading in the
 // file means nothing is written. The dial is never touched here, by anything.
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { isMain } from "../is-main.mjs";
 import { ghRest, sh } from "./gh.mjs";
 import { readingFrom, withReading } from "./pace-reading.mjs";
 import { loadWorkModeConfig, readWorkMode } from "./work-mode.mjs";
@@ -293,4 +294,4 @@ function main(argv) {
   console.log(line);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));
