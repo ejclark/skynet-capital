@@ -75,6 +75,8 @@ function broker(bid: number) {
 const deps = {
   edgar: { eightKs: () => Promise.resolve({ fetchedAt: NOW, filings: [] }) },
   now: () => NOW,
+  // The repo's own ledgers are not these specs' subject; the event source has its own spec.
+  eventStances: () => [],
 };
 
 function config(
@@ -291,5 +293,63 @@ describe("GET /api/quests — conditions quests", () => {
     } as unknown as DashboardServerConfig;
     const body = await conditions(withCall, vix(25.64));
     expect(body.quests.map((q) => q.source)).toEqual(["position", "conditions", "conditions"]);
+  });
+});
+
+describe("GET /api/quests — event quests", () => {
+  const asked: string[] = [];
+  const stances = (today: string) => {
+    asked.push(today);
+    return [
+      {
+        event: {
+          id: "crwv-2026-11-10-print",
+          kind: "earnings",
+          title: "CRWV earnings print",
+          date: "2026-11-10",
+          status: "confirmed",
+          source: "IR: CoreWeave",
+          impact: "critical",
+          symbols: ["CRWV"],
+        },
+        md: [
+          "**Last assessed:** 2026-09-24",
+          '<!-- probe-ref: {"symbols":{"CRWV":80},"vix":19.5} -->',
+          "## At a glance",
+          "| Horizon | Call | Confidence | Why | Proves it wrong |",
+          "|---|---|---|---|---|",
+          "| Today | Accumulate small | Medium | Guide held | CRWV closes under $70 |",
+          "**Signals & conditions** — the buy/sell/hold triggers:",
+          "- **Buy signal:** yes — guide held",
+        ].join("\n"),
+        campaigns: ["The AI buildout"],
+      },
+    ];
+  };
+
+  async function withEvents(cash: number) {
+    const { client } = broker(24);
+    const cfg = configWithCash("e-1", cash, 100_000, client);
+    const { res, out } = fakeRes();
+    await serveQuestsApi(get(QUESTS_PATH), res, QUESTS_PATH, cfg, ann, {
+      ...deps,
+      eventStances: stances,
+    } as never);
+    return JSON.parse(out.body ?? "{}") as { quests: Quest[]; unread: string[] };
+  }
+
+  it("offers a cash-secured put from a campaign event whose ledger licenses one", async () => {
+    // 40% cash: no conditions quest (it needs half), so the event quest stands alone.
+    const body = await withEvents(40_000);
+    expect(body.quests.map((q) => `${q.source} ${q.move.label}`)).toEqual([
+      "event Sell a cash-secured put on CRWV",
+    ]);
+    expect(body.quests[0]?.expires.date).toBe("2026-11-10");
+    expect(asked).toEqual(["2026-09-25"]);
+    expect(body.unread).toEqual([]);
+  });
+
+  it("offers nothing to an account whose cash cannot cover the contract", async () => {
+    expect((await withEvents(5_000)).quests).toEqual([]);
   });
 });
