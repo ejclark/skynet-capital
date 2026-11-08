@@ -1,0 +1,11 @@
+{
+  "id": "pbls-q3-2026-results-2026-11-12",
+  "kind": "sector",
+  "title": "Parabilis Medicines (PBLS) Q3 2026 results — its second report as a public company, 24 sessions before its lock-up ends",
+  "date": "2026-11-12",
+  "status": "estimate",
+  "source": "NEWS: no date announced by the company. Aggregators (WebSearch 2026-11-06) project 2026-11-12 before the market (Yahoo Finance, Earnings Whispers; TradingView shows 2026-12-02). Cross-checked against EDGAR (data.sec.gov submissions, fetched 2026-11-06): Q2 8-K Item 2.02 and the 10-Q were both filed 2026-08-13, a Thursday, 44 days after quarter end; 44 days after 2026-09-30 is 2026-11-13, so 11-12 or 11-13 are both on pattern. Filed estimate: the company has not announced it. Re-checked 2026-11-08: still no company announcement (EDGAR submissions show no 8-K after 2026-11-05's Item 1.01; WebSearch finds only aggregators: Yahoo and Earnings Whispers 11-12, TradingView 12-02, NextEarningsDate 11-17)",
+  "impact": "medium",
+  "symbols": ["PBLS"],
+  "notes": "Discovered during the pbls-lockup-expiry-2026-12-06 initial research (2026-11-06). It reacts before the lockup study's D-10 window opens (2026-11-20), and its 10-Q refreshes the share count behind the unlock arithmetic. PBLS closed 2026-11-05 at 27.88 with 20-day realized vol of 98%."
+}
