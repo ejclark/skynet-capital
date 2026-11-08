@@ -8,7 +8,7 @@ token, secret or key. 96 code PRs since 2026-10-01.
 the refuters, after 40 PRs: delete this file and leave the facet to `/security-review` and
 `.claude/agents/red-team.md`.
 
-**Size:** 3,834 characters.
+**Size:** 3,792 characters.
 
 Start from a goal: read another member's account, move the dial, run a build on a stranger's text,
 reach a token. Ask whether the diff adds a step toward it. A finding names a concrete failure: the
