@@ -1,4 +1,5 @@
 import type { ServerResponse } from "node:http";
+import { editions, editionView } from "../domain/edition.js";
 import { marketClosures } from "../domain/market-calendar.js";
 import { everyEvent } from "../domain/market-events.js";
 import { learnJsonView } from "../observatory/learn-json-view.js";
@@ -235,6 +236,16 @@ export async function serveJsonApi(
   }
   if (path === "/api/board") {
     serveBoardJson(res, url, config, channel);
+    return true;
+  }
+  if (path === "/api/edition") {
+    // The landing page's market news (#7077): the latest edition on or before today, with its
+    // passed dates cut. Market data only, no member's, so every signed-in member reads one body.
+    // Campaigns load on demand, never at import (edition.ts → NOTHING LOADS AT IMPORT).
+    const { campaignById } = await import("../domain/campaigns.js");
+    const view = editionView(editions(), new Date(), (id) => campaignById(id)?.title);
+    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+    res.end(JSON.stringify(view));
     return true;
   }
   if (path === "/api/accounts/networth") {
