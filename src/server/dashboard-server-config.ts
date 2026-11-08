@@ -41,6 +41,7 @@ import type { FilingCommentsDeps } from "./filing-comments-form.js";
 import type { GithubTokenDeps } from "./github-token.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { MemberCampaignStore } from "./member-campaign-store.js";
+import type { MemberChainStore } from "./member-chain-store.js";
 import type { MemberConvictionStore } from "./member-conviction-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
@@ -380,6 +381,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * wired in this deployment."
    */
   readonly memberCampaigns?: MemberCampaignStore;
+  /**
+   * MEMBERS' OWN CHAINS (#6959 slice 3b) — the playbook chains a member draws, private to their
+   * author and shadow only: nothing reads this store to trade. Omit to disable (offline mode): the
+   * list answers empty and a save answers "not wired in this deployment."
+   */
+  readonly memberChains?: MemberChainStore;
   /**
    * Whether the house has a ledger on a symbol, for a campaign's research ask. Omit to read the
    * research shelf on each save (`shelfResearched`); specs pass a fixed answer.

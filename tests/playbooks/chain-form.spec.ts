@@ -6,6 +6,7 @@ import {
   type ChainLinkForm,
   chainFromForm,
   chainHoldsProblems,
+  DISPLAY_NAMES,
   emptyChainForm,
   eventsFor,
   formFromChain,
@@ -37,6 +38,21 @@ describe("Given the playbooks on the chain menu", () => {
     for (const id of CHAINABLE_IDS) {
       expect(findPlaybook(id)?.symbols).toHaveLength(1);
     }
+  });
+
+  it("then the symbol each row carries is the registry's", () => {
+    // `chain-form.ts` copies the symbol because the registry reaches Node-only code and the chain
+    // screen bundles this file for the browser (#6959 slice 3b).
+    for (const [id, row] of Object.entries(CHAINABLE)) {
+      expect({ id, symbol: row.symbol }).toEqual({ id, symbol: findPlaybook(id)?.symbols[0] });
+    }
+  });
+
+  it("then the display names it copies are every name the registry holds", () => {
+    const held = Object.fromEntries(
+      registeredPlaybooks().flatMap((p) => (p.displayName ? [[p.id, p.displayName]] : [])),
+    );
+    expect(DISPLAY_NAMES).toEqual(held);
   });
 
   it("then what each event leaves agrees with what chain.ts says it passes", () => {
