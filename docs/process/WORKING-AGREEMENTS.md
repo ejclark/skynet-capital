@@ -174,11 +174,13 @@ only when it is genuinely his (the irreversible class) or carries a key value-un
 worth his judgment, stated as such. **Step anatomy:** `N. <the do> — <the why, trailing, read only
 if wanted>` — imperative-first so the list is executable by scanning the left edge alone. Close
 with a one-or-two-line **gist** (what the steps accomplish together / the state after).
-**Better than a procedure: one action** (Eric, 2026-09-30: "a far superior experience" than a
-five-step list). When his step is a *task* rather than a decision, it is an in-app form or a
-committed config change, and even a credential goes through an owner-only form — never a terminal
-command (Eric, 2026-10-24: "Running terminal commands is out of the question; I expect you to
-automate this piece through a web interface"; #6470). The action is one step, verifies itself, and
-works the first time. A task is not a decision — never label it "needs your call". **And a decision
-gets the same short-circuit:** screenshots or rendered options he can judge by eye, never prose to
-parse.
+**Better than a procedure: one line to paste** (Eric, 2026-09-30, after #4053's secrets went from
+a five-step list to `scripts/setup-dependabot-secrets.sh`: "copy/paste this script, copy/paste
+the output, profit… a far superior experience"). When his step is a *task* rather than a decision,
+script it: one command that is independent of his checkout state (`bash <(git show origin/main:…)`
+— his terminal may sit on a stale branch), does the work, verifies itself, and ends on a success
+line he can paste back. Prove it end to end against a stub before handing it over. A task is not a
+decision — never label it "needs your call". **And a decision gets the same short-circuit:**
+screenshots or rendered options he can judge by eye, never prose to parse.
+
+> **Superseded in part (Eric, 2026-10-24):** the paste-a-command path above no longer applies. "Running terminal commands is out of the question; I expect you to automate this piece through a web interface." A task for him is an in-app form or a committed config change, and even a credential goes through an owner-only form. The spirit stands: one action, self-verifying, works first time. #5955 asked him for a paste two days after that correction, because this paragraph still said to (#6470).
