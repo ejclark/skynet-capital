@@ -102,7 +102,7 @@ until something applies `ready`: Eric's own call, or a triage pass's clear-path 
 ([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
 
 Only once `ready` lands does `moneypenny-events.yml` pick the issue up and build it end to end in a
-fresh Claude session. What `ready` means, mechanically and for every puller — the six conditions,
+fresh Claude session. What `ready` means, mechanically and for every puller — the pull conditions,
 who may flip it, the plan lane's equivalent comment door — is defined once in
 [`ISSUES.md`](ISSUES.md) → *Ready — the one definition*; the two self-readies above are the cases where a
 session applies it to its own filing. The triage rules for *that* build session live in

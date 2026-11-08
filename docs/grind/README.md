@@ -425,8 +425,8 @@ appeared). Two consequences:
   its gate's own item list is not hand-picking: the gate's list *is* the gate picking. `.claude/` is a
   Claude Code protected directory: writes there are never auto-approved outside `bypassPermissions`,
   and `permissions.allow` does not override that. So an unattended lane cannot create or edit a
-  skill, an agent, or `grind.js` itself, even though `envelope-scan --check` (which lists only
-  `.claude/settings.json`) reports those paths open. A feedback-lane session can call grind but not
+  skill, an agent, or `grind.js` itself, even though `envelope-scan --check` (whose only `.claude/`
+  entries are `.claude/settings.json` and `.claude/hooks/**`) reports those paths open. A feedback-lane session can call grind but not
   change it; route such a change to an interactive session as its own issue.
   `scripts/grind-manifest.mjs`, and the dispatch-time resolution in `grind.js`, read
   `*.instructions.md` front matter only, never `SKILL.md`, so a `skill` step's tier stays

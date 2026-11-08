@@ -10,8 +10,10 @@ with its date; never silently replaced.
 
 **How to open:** double-click the `.html` file, or `open docs/design/lofi/trading-journeys.html`.
 Vanilla HTML/CSS/JS, no build step, no network. The URL hash is the state
-(`#arcade/4/390` = shape / step / viewport), so a link lands on a frame. The switchers are
-keyboard-operable (Tab to a group, ← → to move, Enter/Space to pick).
+(`#arcade/4/390` = shape / step / viewport; `trade-chain-composition.html` has no step, so
+`#workbench/390`), so a link lands on a frame. The switchers are keyboard-operable (Tab to a group,
+← → to move, Enter/Space to pick; `trade-chain-composition.html` has no ← →, so Tab reaches each
+button).
 
 **Published as** the private artifact **"Trading Journeys — Lo-fi"** (linked from the owning plan
 issue, #3407). The committed file is the source of truth; republish from it. A lo-fi carries no

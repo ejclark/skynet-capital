@@ -34,8 +34,8 @@ Open every listed definition and compare. Four cases:
 - **Divergent implementations** — the copies drifted and now behave differently. Decide the canonical
   behavior; if call sites genuinely need both behaviors, they're different functions — **rename** one to
   say what it does. Never silently pick a winner where behavior differs; note the divergence in the PR.
-- **Same name, unrelated things** (a false positive) → add the name to `IGNORE` in
-  `scripts/dupe-scan.mjs` with a one-line justification comment. That's a legitimate outcome.
+- **Same name, unrelated things** (a false positive) → add the name to its scope's `ignore`
+  set (`SCOPES` in `scripts/dupe-scan.mjs`) with a one-line justification comment. That's a legitimate outcome.
 
 ## 3. Consolidate
 

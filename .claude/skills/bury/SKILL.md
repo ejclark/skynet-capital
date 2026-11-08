@@ -90,5 +90,5 @@ parallel), the wave lands as **one** PR, and `dead-scan --update` runs once afte
 }
 ```
 
-Hand-written for now: `scripts/grind-manifest.mjs` reads `docs/grind/*.instructions.md` front matter
-only — teaching it to read a skill header is #1325's remaining half.
+Hand-written: `scripts/grind-manifest.mjs` reads `docs/grind/*.instructions.md` front matter
+only, never a skill header (`docs/grind/README.md` → *Known limitations*).

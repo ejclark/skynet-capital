@@ -17,7 +17,7 @@ coach). Nothing named who owns the whole board. This does.
 Members meet her directly: the ✦ button in the shell's top bar opens a right
 rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and files feedback.
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
-same key the feedback coach uses, with nine read-only lookups and two hand-offs (the member's own desk and progress,
+same key the feedback coach uses, with nine read-only lookups and two hand-offs (the member's own desk, progress and market views,
 the play catalog, a chain read through their own linked account, and the public work record,
 #3952, and the next fortnight's event calendar, #7034 — `COMPANION_TOOL_NAMES` in `companion-tools.ts`), their live
 onboarding/filing state injected every turn (`companion-context.ts`) along with the page they
@@ -88,7 +88,7 @@ flowchart TD
 ```
 
 _Caption — every trigger funnels through one of Moneypenny's four lanes; the Orchestration board
-(Status × Horizon, #3818 slice B) is the shared state all four read and write. The dotted paths are
+(Status × Horizon from #3818 slice B, Priority from #6871) is the shared state all four read and write. The dotted paths are
 the exception routes: a freeform (non-`curated`) filing waits in Backlog for `ready`, a red CI run
 escalates to repair, a repair capsule with no PR 24 hours after filing gets `stall-flagged` and
 a comment asking for a fix PR or `needs-eric`, and a capsule whose failing job has passed three
@@ -186,7 +186,7 @@ ran." Concretely:
 Everything above changes what gets *written*. It does not change the account the App posts *as* —
 today that's `skynet-envoy[bot]`, minted per job via `./.github/actions/app-token` (which wraps
 `actions/create-github-app-token`) in
-`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`/`board-sync.yml`. Renaming that account-level identity
+`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`/`board-sync.yml`/`bots-catchup.yml`. Renaming that account-level identity
 lives in GitHub App settings (the App's registered display name under Eric's GitHub org), which no
 amount of repo code can reach — governance of credentials and App identity is his call, per
 CLAUDE.md's hard boundaries.

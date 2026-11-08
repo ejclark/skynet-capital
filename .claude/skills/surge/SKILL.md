@@ -115,9 +115,8 @@ reverts.
   after the window resets — not archived, not respawned (respawning loses its context).
 - **Two sessions boarding the merge platter race.** On a rejected push: re-fetch, re-cut the item
   onto the new platter tip, re-verify. Never force-push the platter.
-- **A ready issue nothing builds.** Until #6219, `ready` without `feedback` sat unclaimed (#4953,
-  #4201). The lane now takes every ready non-plan issue; if one still sits Ready past a tick,
-  check `pullable()` before re-flipping it.
+- **A ready issue nothing builds.** The lane takes every ready non-plan issue (#6219); if one
+  still sits Ready past a tick, check `pullable()` before re-flipping it.
 - **Subagent text arrives HTML-escaped** (`&lt;`) — unescape before posting
   (`clear-path-post.mjs` does).
 

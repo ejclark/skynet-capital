@@ -38,8 +38,8 @@ their own reply path resumes the build with the reply as the answer. Nothing act
 a reply of "merge it" is never read as the merge.
 
 `node scripts/moneypenny/answer-readback.mjs --ledger [--apply]` collects the last week's rows into
-the table below, once each, with the row's key in a hidden comment. A weekly PR that runs it, and a
-graduation PR when a class meets rule 3, are the next piece; until then a session runs it.
+the table below, once each, with the row's key in a hidden comment. No scheduled lane runs it or
+opens rule 3's graduation PR: a session does both.
 
 ## Ledger
 
