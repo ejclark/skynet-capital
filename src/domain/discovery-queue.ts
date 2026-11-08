@@ -28,12 +28,19 @@
  *      lands in a different lesson record; a second member asking the same thing in the same
  *      campaign joins the first.
  *   2. A subject the campaign already covers is not "covered" when asked *in* that campaign: the
- *      member is asking for more than the cast already holds, so it queues. A different campaign
- *      that covers it still answers "covered", and so does the research shelf only for an unscoped ask.
+ *      member is asking for more than the cast already holds, so it queues, even when another
+ *      campaign holds it too (slice 6). A subject the campaign lacks and a different campaign
+ *      covers still answers "covered", and so does the research shelf only for an unscoped ask.
  *   3. A finding names the ask it answers (`Lesson.answers` in campaign-lessons.ts holds `ask.id`).
  * The words are text a member wrote: a lane reading them treats them as the question to research,
  * never as instructions. The same bounds as slice 2b (`MAX_QUEUED`, `MAX_PER_MEMBER`) apply, so
  * asking inside a campaign cannot raise the ceiling either.
+ *
+ * THE PARTY'S CAMPAIGNS COVER TOO (#6949 slice 6). A campaign a member shared with the party covers
+ * its subjects the way a house one does: a bare ask about a name in its cast answers `covered` and
+ * names the campaign, so the member asks in it and the answer lands where the party already reads.
+ * The question log beside this queue (`campaign-questions.ts`) keeps what was asked after the lane
+ * takes it.
  *
  * Paper only; educational. A discovery never places an order and never sizes one.
  */
@@ -95,29 +102,47 @@ export type QueueOutcome =
       /** Asks ahead of this one, 0 when it is next. */
       readonly ahead: number;
     }
-  | { readonly status: "covered"; readonly queue: DiscoveryQueue; readonly campaign: string }
+  | {
+      readonly status: "covered";
+      readonly queue: DiscoveryQueue;
+      /** The id the member asks in next (a house id, or a party campaign's own id). */
+      readonly campaign: string;
+      /** Set when a campaign the party shares covers it, so the member is pointed at it by name. */
+      readonly party?: { readonly title: string };
+    }
   | { readonly status: "full"; readonly queue: DiscoveryQueue }
   | { readonly status: "limit"; readonly queue: DiscoveryQueue };
 
 /**
- * The house campaign that already covers the subject, if one does. A name counts when it is in a
- * cast. `except` skips one campaign: the one the question is being asked in.
+ * A campaign that can cover a subject. A house campaign is its record as-is; a campaign a member
+ * shared with the party carries `scope` (`<author key>~<id>`, the scope an ask inside it carries)
+ * and `party: true` (#6949 slice 6: "a covered subject points at the campaign to ask in").
+ */
+export type CoveringCandidate = Campaign & { readonly scope?: string; readonly party?: true };
+
+/**
+ * The campaign that already covers the subject, if one does: the house's first, then the party's
+ * in the order given. A name counts when it is in a cast. `except` is the scope the question is
+ * asked in: that campaign never counts, and when it holds the subject itself nothing does, because
+ * the member is asking deeper inside the campaign they are reading rather than about something it
+ * lacks (#6949 slice 6, the tie slice 2c left open: a name in both their campaign and a house one).
  */
 export function coveringCampaign(
   kind: DiscoveryKind,
   subject: string,
-  campaigns: readonly Campaign[],
+  campaigns: readonly CoveringCandidate[],
   except?: string,
-): Campaign | undefined {
-  return campaigns.find(
-    (c) =>
-      c.id !== except &&
-      (kind === "sector"
-        ? c.sector === subject
-        : kind === "market"
-          ? c.market === subject
-          : castSymbols(c).includes(subject)),
-  );
+): CoveringCandidate | undefined {
+  const holds = (c: Campaign): boolean =>
+    kind === "sector"
+      ? c.sector === subject
+      : kind === "market"
+        ? c.market === subject
+        : castSymbols(c).includes(subject);
+  const scopeOf = (c: CoveringCandidate): string => c.scope ?? c.id;
+  const askedIn = except === undefined ? undefined : campaigns.find((c) => scopeOf(c) === except);
+  if (askedIn && holds(askedIn)) return undefined;
+  return campaigns.find((c) => scopeOf(c) !== except && holds(c));
 }
 
 export interface AskInput {
@@ -132,19 +157,26 @@ export interface AskInput {
 }
 
 /**
- * Put one question on the queue. A subject a house campaign covers is `covered` (there is nothing to
- * discover, so the member is pointed at it); one already waiting is `joined`; a full queue is `full`
- * and unchanged. `campaigns` is the house list, and `researched` says a name already has a ledger.
+ * Put one question on the queue. A subject a house or party campaign covers is `covered` (there is
+ * nothing to discover outside it, so the member is pointed at it to ask in); one already waiting is
+ * `joined`; a full queue is `full` and unchanged. `campaigns` is the house list followed by the
+ * party's, and `researched` says a name already has a ledger.
  */
 export function queueAsk(
   queue: DiscoveryQueue,
   input: AskInput,
-  campaigns: readonly Campaign[],
+  campaigns: readonly CoveringCandidate[],
   researched: (symbol: string) => boolean,
   at: Date = new Date(),
 ): QueueOutcome {
   const covering = coveringCampaign(input.kind, input.subject, campaigns, input.campaign);
-  if (covering) return { status: "covered", queue, campaign: covering.id };
+  if (covering)
+    return {
+      status: "covered",
+      queue,
+      campaign: covering.id,
+      ...(covering.party ? { party: { title: covering.title } } : {}),
+    };
   if (input.kind === "name" && !input.campaign && researched(input.subject)) {
     // The shelf already holds a ledger on this name; asking again would buy the same session twice.
     return { status: "covered", queue, campaign: "the research shelf" };
@@ -206,7 +238,9 @@ export function passesUntil(ahead: number, perPass: number): number {
 /** What the member is told: queued, where in line, and roughly when, in plain words. */
 export function tellMember(outcome: QueueOutcome, perPass: number): string {
   if (outcome.status === "covered")
-    return `The house already covers this in ${outcome.campaign}, so there is nothing new to look into.`;
+    return outcome.party
+      ? `"${outcome.party.title}", a campaign the party shares, already covers this. Ask in it to look further.`
+      : `The house already covers this in ${outcome.campaign}, so there is nothing new to look into.`;
   if (outcome.status === "full" || outcome.status === "limit")
     return outcome.status === "full"
       ? "The house has a full list of questions to look into right now. Ask again in a day or two."
