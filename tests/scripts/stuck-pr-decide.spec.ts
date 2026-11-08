@@ -219,6 +219,59 @@ describe("judgePr — the head only ever got the ghost (#4877)", () => {
   });
 });
 
+// 2026-11-08 (#7112): #7089 was opened at 02:19Z by the Actions job token, which emits no event, so
+// its head got no check suite and no check run at all — there was no ghost for the branch above to
+// find, `judgePr` returned null, and it sat 16h until Eric asked what was in flight. This fixture is
+// that head as the API returned it: an empty check-runs list, an empty check-suites list.
+describe("judgePr — the head never got a suite at all (#7089)", () => {
+  const opened = (h: number) => pr({ number: 7089, auto_merge: null, created_at: ago(h) });
+
+  it("WHEN a PR opened 16h ago has no suite and no run, names it headless", () => {
+    const out = judgePr({ pr: opened(16), checkRuns: [], suites: [], now: NOW });
+    expect(out?.kind).toBe("headless");
+    expect(out?.hours).toBe(16);
+    expect(out?.ghosts).toEqual([]);
+    expect(out?.fix).toContain("App identity");
+  });
+
+  it("names it at 30 minutes, not at the 3h a green stall waits", () => {
+    expect(judgePr({ pr: opened(0.4), checkRuns: [], suites: [], now: NOW })).toBeNull();
+    const out = judgePr({ pr: opened(0.6), checkRuns: [], suites: [], now: NOW });
+    expect(out?.kind).toBe("headless");
+    expect(out?.why).toContain("36 minutes");
+  });
+
+  it("ignores the claude and fly-io suites, which sit queued with no runs on every PR", () => {
+    const out = judgePr({
+      pr: opened(16),
+      checkRuns: [],
+      suites: [queuedClaude, queuedFly],
+      now: NOW,
+    });
+    expect(out?.kind).toBe("headless");
+  });
+
+  it("times a fresh push onto an old PR from the push, not the PR", () => {
+    const fresh = { pr: opened(16), checkRuns: [], suites: [], now: NOW, headAt: ago(0.1) };
+    expect(judgePr(fresh)).toBeNull();
+    expect(judgePr({ ...fresh, headAt: ago(2) })?.hours).toBe(2);
+  });
+
+  it("does not fire on a head whose Actions suite is real, or that has a required run", () => {
+    expect(judgePr({ pr: opened(16), checkRuns: [], suites: [realSuite], now: NOW })).toBeNull();
+    const running = [{ name: "verify", status: "in_progress", conclusion: null }];
+    expect(judgePr({ pr: opened(16), checkRuns: running, suites: [], now: NOW })).toBeNull();
+  });
+
+  it("leaves drafts and held PRs alone", () => {
+    const base = { checkRuns: [], suites: [], now: NOW };
+    expect(judgePr({ ...base, pr: { ...opened(16), draft: true } })).toBeNull();
+    expect(
+      judgePr({ ...base, pr: { ...opened(16), labels: [{ name: "hold-merge" }] } }),
+    ).toBeNull();
+  });
+});
+
 describe("judgePr — a re-run supersedes the run it replaced", () => {
   it("judges the latest run of each required check", () => {
     const rerun = [
