@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import { serveContentApi } from "../../src/server/content-api-routes.js";
+import { serveContentApi, serveJsonApi } from "../../src/server/content-api-routes.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 
 /** The content JSON family's dispatch: claims exactly its own paths, the journey resolves the
@@ -166,5 +166,21 @@ describe("serveContentApi — the fit finder (#4469 slice 4)", () => {
     expect(bad.body).toEqual({ symbol: "", fits: [] });
     const none = await serve("/api/research/fit");
     expect(none.body).toEqual({ symbol: "", fits: [] });
+  });
+});
+
+describe("/api/edition — the landing page's market news (#7077)", () => {
+  it("answers the latest edition on or before today, with the campaign's title", async () => {
+    const { res, out } = fakeRes();
+    const channel = {} as never;
+    expect(
+      await serveJsonApi(res, "/api/edition", "/api/edition", configWith(), channel, undefined),
+    ).toBe(true);
+    expect(out.status).toBe(200);
+    const view = JSON.parse(out.body ?? "{}");
+    expect(view.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(view.edition.date <= view.today).toBe(true);
+    expect(view.edition.stories.length).toBeGreaterThan(0);
+    if (view.edition.campaign) expect(view.edition.campaignTitle).toEqual(expect.any(String));
   });
 });
