@@ -17,9 +17,9 @@ coach). Nothing named who owns the whole board. This does.
 Members meet her directly: the ✦ button in the shell's top bar opens a right
 rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and files feedback.
 Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
-same key the feedback coach uses, with seven read-only tools (the member's own desk and progress,
+same key the feedback coach uses, with nine read-only lookups and two hand-offs (the member's own desk and progress,
 the play catalog, a chain read through their own linked account, and the public work record,
-#3952 — `COMPANION_TOOL_NAMES` in `companion-tools.ts`), their live
+#3952, and the next fortnight's event calendar, #7034 — `COMPANION_TOOL_NAMES` in `companion-tools.ts`), their live
 onboarding/filing state injected every turn (`companion-context.ts`) along with the page they
 asked from, reduced to fixed words (`companion-page.ts`, #2224), with their own holding on that
 page's symbol (`companion-holding.ts`), and a cached help desk

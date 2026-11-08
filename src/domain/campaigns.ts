@@ -92,7 +92,18 @@ export interface Campaign {
    * loader refuses a campaign with no tradable cast symbol unless this is true.
    */
   readonly researchOnly?: boolean;
+  /**
+   * The mode the campaign starts in (#6952): explore a sector, find names, build a strategy, or
+   * play. Optional, and read as play when absent; a member's form always sets it (#6949
+   * criterion 7), and every house file names its own (#6952 slice 2: the AI buildout and oil start
+   * in play, energy for AI in explore).
+   */
+  readonly mode?: CampaignMode;
 }
+
+/** The four campaign modes, in the order a campaign moves through them (#6952's table). */
+export const CAMPAIGN_MODES = ["explore", "find-names", "build-strategy", "play"] as const;
+export type CampaignMode = (typeof CAMPAIGN_MODES)[number];
 
 /** What a campaign is anchored on, and the fund it is played through. */
 export interface Anchor {
@@ -232,8 +243,8 @@ export function linkCensus(links: readonly CampaignLink[]): LinkCensus {
 
 // ── The loader ────────────────────────────────────────────────────────────────────────────────
 
-const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
-const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
+export const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
+export const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 const CLAIM_RE = /^\d+[a-z]?$/;
 const GICS_NAMES: ReadonlySet<string> = new Set(GICS_SECTORS.map((s) => s.name));
 
@@ -251,7 +262,7 @@ const EVENT_KINDS: ReadonlySet<string> = new Set<EventKind>([
   "geopolitical",
 ]);
 
-const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
+export const isText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 const isTextList = (v: unknown): v is string[] => Array.isArray(v) && v.every(isText);
 
 type Raw = Record<string, unknown>;
@@ -270,6 +281,8 @@ function checkHeader(c: Raw, expectedId: string, fail: Fail): void {
     fail(`sector "${String(c.sector)}" is not one of the 11 GICS sectors`);
   if (c.market !== undefined && !(isText(c.market) && marketById(c.market)))
     fail(`market "${String(c.market)}" is not in the market catalog`);
+  if (c.mode !== undefined && !(CAMPAIGN_MODES as readonly unknown[]).includes(c.mode))
+    fail(`mode "${String(c.mode)}" is not one of ${CAMPAIGN_MODES.join(", ")}`);
 }
 
 function checkCastRole(role: Raw, fail: Fail): void {
@@ -302,7 +315,8 @@ function checkQuestion(q: Raw, fail: Fail): void {
 
 /**
  * Parse one campaign file, loud on the first problem and naming the file. The record is data a
- * member's form will one day write (slice 3), so every field is checked here rather than trusted.
+ * member's form writes (slice 3, `campaign-form.ts`), so every field is checked here rather than
+ * trusted — the same function judges a house file and a member's save.
  */
 export function parseCampaign(raw: unknown, file: string, expectedId: string): Campaign {
   const fail: Fail = (what) => {

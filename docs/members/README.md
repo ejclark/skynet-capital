@@ -94,19 +94,22 @@ ratchet never fires (a promise with no target is `{ "text": "<the promise>", "ab
 ## How the spec and the crawl consume it
 
 - **`e2e/journeys.spec.ts`** reads every journey file at module load: one `describe` per journey ×
-  viewport, one `test` per step titled `<id> — <EARS line>`. Only its own config collects it
-  (the default `npm run test:e2e` lists it in `testIgnore` — no skipped tests); CI wiring is a
-  platter item, because workflow files are protected. The server picks one auth mode per boot, so
-  each run collects only the members its boot can serve:
-  - session fixtures: `npm run test:e2e:journeys` (OAuth with fake credentials +
+  viewport, one `test` per step titled `<id> — <EARS line>`. **CI plays every step before a PR
+  merges** (#7031 slice 1): the default `npx playwright test`, which the integration-tests job
+  runs, collects it in two projects, each against its own server, because the server picks one
+  auth mode per boot. Each journey is tagged by the mode its member needs and each project greps
+  for its tag, so a member is collected once, never as a skipped test:
+  - `journeys-session` (port 8792): OAuth with fake credentials +
     `scripts/crawl/fixtures/owner-links.json`; the spec mints the `skynet_session` cookie with
-    `scripts/crawl/mint-session.ts`)
-  - anonymous fixtures: `npm run test:e2e:journeys:open` (the OPEN boot)
-  Both are `playwright.journeys.config.ts` with `JOURNEYS_MODE` set, both serve a **frozen** copy
-  of the offline fixtures (no fill replay — `scripts/crawl/frozen-fixtures.mjs` says why). Run
-  them one after the other, never at once, and never with a stale server on 8787 in the other
-  mode. A step's `only` and a journey's `viewports` are honoured; everything else the schema says is
-  in `scripts/crawl/steps.mjs`, the one executable reading both consumers share.
+    `scripts/crawl/mint-session.ts`
+  - `journeys-open` (port 8790): the OPEN boot, anonymous fixtures
+  The projects live in `e2e/playwright.journeys.ts`. To run only the playthroughs, both modes at
+  once: `npm run test:e2e:journeys`; one mode: `npm run test:e2e:journeys:open` or
+  `JOURNEYS_MODE=session npm run test:e2e:journeys`. Both boots serve a **frozen** copy of the
+  offline fixtures (no fill replay — `scripts/crawl/frozen-fixtures.mjs` says why). A failing step
+  without `known_gap`, or a `known_gap` step that passes, fails the run. A step's `only` and a
+  journey's `viewports` are honoured; everything else the schema says is in
+  `scripts/crawl/steps.mjs`, the one executable reading both consumers share.
 - **`scripts/crawl/run.mjs`** (`npm run crawl`) walks the same files against the real offline server
   — both boots, sequentially — and per step writes a frame, runs the dead-end probes and the
   contrast pass, and records every expect as pass/fail without stopping. Output:

@@ -23,6 +23,7 @@ import { askRank, decisionLine } from "../moneypenny/ask-card.mjs";
 import { trustedComment } from "../moneypenny/gh.mjs";
 import { readCorpus, scorecard } from "../research-scorecard.mjs";
 import { ciCapsules, decisionsSnapshot, labelHistory, seriesRead } from "./decision-reads.mjs";
+import { journeyGaps, memberSurfacePrs, reactionIssues } from "./member-reads.mjs";
 import { previousWeek, windowOf } from "./week.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -186,10 +187,11 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
   const rest = createRest();
   const runsDir = process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs");
   const receipts = join(runsDir, "post-merge-audit.jsonl");
+  const prs = attempt(() => mergedPrs(rest, w));
   const inputs = {
     week,
     asOf: new Date(asOfMs).toISOString(),
-    prs: attempt(() => mergedPrs(rest, w)),
+    prs,
     tracker: attempt(() => tracker(rest, w)),
     usageNow: !stale,
     localReceipts: existsSync(receipts) ? parseRows(readFileSync(receipts, "utf8")).rows : [],
@@ -209,6 +211,11 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
         .map((r) => ({ event: r.event, conclusion: r.conclusion })),
     ),
     needsEric: snapshot(() => needsEric(rest)),
+    // Playthroughs and reactions (#7031 slice 3): the steps still expected to fail, the member-facing
+    // merges, and the Revisit and in-app filings that name them.
+    journeyGaps: attempt(() => journeyGaps(ROOT)),
+    memberPrs: Array.isArray(prs) ? attempt(() => memberSurfacePrs(rest, prs, w)) : prs,
+    memberIssues: attempt(() => reactionIssues(rest, w)),
     fitness: attempt(() => fitnessIssues(rest)),
     loopIterations: attempt(loopIterations),
     scorecard: attempt(() => scorecard({ ...readCorpus(), today: w.until.slice(0, 10) })),

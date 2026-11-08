@@ -13,6 +13,7 @@
 //   ... --explain   # {outputs: {<script>: output}, openPrFiles: {<file>: <pr>}} on stdin (specs)
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 import { ensureGhToken, ghRestAll } from "./moneypenny/gh.mjs";
 
 // One rep from any scan's candidate. Clone-scan's src paths are relative to src/, so they gain it
@@ -154,4 +155,4 @@ function main() {
   if (report.unreadable.length === EYES.length) process.exitCode = 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

@@ -150,6 +150,28 @@ suite runs whether or not anyone remembers:
 - Shared test data lives in `tests/support/builders.ts` — specs state only the fields they care
   about. No copy-pasted fixtures.
 
+### Member playthroughs — the acceptance line is the step (#7031)
+
+A change a member can see (a file under `.claude/rules/member-surfaces.md`'s paths, or a server
+response that surface renders) carries its acceptance line into a playthrough step. The steps live
+in `e2e/journeys/<member>.journey.json`; the schema is [`docs/members/README.md`](members/README.md),
+and CI plays every step before a PR merges (the default `npx playwright test`, which the
+integration-tests job runs).
+
+1. **Write the step first, from the acceptance line.** Add a step to the member the change is for,
+   or edit the step whose EARS line the change alters; its `ears` is the issue's or plan's line
+   word for word, and its `expect` asserts the outcome that line asks for.
+2. **Watch it fail on `origin/main` before the code.** Run it there
+   (`npm run test:e2e:journeys -- -g "<member>.*<step id> —"`) and say in the PR body that it was red. A step
+   that passes before the change proves nothing about the change.
+3. **Never mark it `known_gap`.** That mark is the ratchet for a defect already found and not yet
+   fixed; a step written for the PR's own acceptance line is expected to pass when the PR lands.
+   Deleting or loosening an existing step to get green is a finding, never a fix.
+4. **A change with no member-visible effect adds no step**, and says so in one line of the PR body.
+
+These steps are a regression net, not a stand-in for a person's look at the rendered screen: the
+journeys once passed every screen Eric then found broken (`docs/members/study/README.md`).
+
 ## DRY, with a bias toward one owner per concept
 
 - Valuation math lives once in `src/domain/portfolio.ts`. The engine, guards, and reports all
@@ -400,6 +422,10 @@ written as history; its check C has a before/after for rule 2.
   never skip the spec to get green. The verify queue's specs were skipped on macOS in #6324 because
   they failed there. They were right: the queue did nothing on a Mac for six days, and that is where
   the fan-outs run (`docs/LESSONS.md`, 2026-11-01).
+- **A script's direct-run check is `if (isMain(import.meta.url))`** from `scripts/is-main.mjs`
+  (#7046; `scripts/study/` takes it from `./compat.mjs`). Node resolves `import.meta.url` through
+  symlinks and leaves `process.argv[1]` as typed, so a raw comparison of the two skips `main()` and
+  exits 0 silently on every macOS `/tmp` path. `tests/arch/is-main.spec.ts` fails on a raw one.
 
 - **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever
   (the recurring TS1005 trap: the embedded script lives inside a template string, so those tokens

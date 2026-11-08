@@ -28,6 +28,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { latestDigestDate } from "./digest-scan.mjs";
+import { isMain } from "./is-main.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 const ROOT = process.cwd();
@@ -285,4 +286,4 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (isMain(import.meta.url)) await main();

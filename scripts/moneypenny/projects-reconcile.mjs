@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // THE BOARD'S SELF-HEALING SWEEP — #4393 slice 1, criterion 4. Recomputes Status for every board
 // item whose column disagrees with `statusForIssue()`, closed issues still outside Done included —
 // and adds any open blocked issue that never got a card at all (#4303, see `planReconcile`). Before
@@ -429,4 +430,4 @@ function main() {
   if (result.failed.length > 0) process.exit(1);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

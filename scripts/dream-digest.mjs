@@ -27,8 +27,8 @@ import {
   statSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 const PROJECT = "-Users-eric-Developer-skynet-capital";
 const MAX_USER_CHARS = 1200;
@@ -298,7 +298,7 @@ function checksums(dir) {
   );
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const [flag, value, option, optionValue] = process.argv.slice(2);
   if (flag === "--session" && existsSync(value)) {
     console.log(JSON.stringify(digestLines(readFileSync(value, "utf8").split("\n")), null, 1));

@@ -36,7 +36,7 @@ Treat v12-only shapes and v12 defaults as unavailable. The Mermaid Chart validat
 - Research call sheets (call · confidence · why · falsifier): the five-column table is already the picture. Wrapping it in nodes adds nothing and costs width.
 - Schemas or data models: erDiagram or classDiagram.
 - UI changes: before/after screenshots. A box diagram of a screen is misleading.
-- Anything over about 15 nodes, or long LR chains: unreadable at 390px. Split it, or collapse the detail with `@{ view: collapsed }` (v11.17; GitHub's 11.17.2 has it).
+- Anything taller than one phone screen at 390px, or with text under 12px there (`npm run shoot:mermaid-pairs` prints both; a TD chain of 8 nodes measured 1.06 screens, 20 measured 1.60, #4550), or long LR chains. Split it, or collapse the detail with `@{ view: collapsed }` (v11.17; GitHub's 11.17.2 has it).
 - Any diagram where colour (classDef fill) is the only carrier of pass/fail or risk. It violates the colourblind rule, and PICTURES.md bans improvised styling.
 - Interactive affordances (click, tooltips): GitHub renders in strict mode, so links and callbacks will not work there. Edge animation does move on github.com (see Emphasis below).
 

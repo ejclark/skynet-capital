@@ -6,8 +6,10 @@ import { SHARED_CONFIG } from "./e2e/playwright.shared";
 // config boots the dashboard with fake, non-secret OAuth credentials — the same pattern
 // scripts/shoot/login.mjs already uses. Every other route is easier to test the OPPOSITE way (see
 // playwright.config.ts) — the two configs can't merge into one because the server only picks one
-// auth mode per boot, and running both boots at once collides on the internal 8788 insights-bridge
-// port (src/scripts/dashboard-insights-bridge.ts hardcodes it). Run sequentially, not concurrently.
+// auth mode per boot, and this boot takes the same 8787 dashboard port and default 8788
+// insights-bridge port as the default config's main boot. Run the two sequentially, not
+// concurrently. (The member playthroughs run beside the main boot because they take their own
+// ports — e2e/playwright.journeys.ts.)
 export default defineConfig({
   ...SHARED_CONFIG,
   testMatch: ["**/login.spec.ts"],

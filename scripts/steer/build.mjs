@@ -22,6 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
+import { isMain } from "../is-main.mjs";
 import { renderPage } from "./render.mjs";
 import { builtStamp, decisionPictures, INPUT_FILE, inputToPublish } from "./round-input.mjs";
 
@@ -90,4 +91,4 @@ function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

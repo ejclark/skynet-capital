@@ -1,0 +1,11 @@
+{
+  "id": "congress-120th-convenes-2027-01-03",
+  "kind": "geopolitical",
+  "title": "The 120th Congress convenes",
+  "date": "2027-01-03",
+  "status": "estimate",
+  "source": "EST: the 20th Amendment, section 2, sets noon on January 3 unless Congress sets another day by law; 2027-01-03 is a Sunday, and the 117th Congress met on Sunday 2021-01-03. The 2027 date is also reported by K&L Gates' post-midterm note (2026-11-04). No law setting a different day was searched for, so the date stays an estimate",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Linked by docs/research/convictions/ai-labor-2026-11.md (#7033) claim 6: Eric's view that a Democratic Congress makes federal relief for AI job loss likely. The first day is when the midterm result (midterm-elections-2026-11-03; Democrats projected to win both chambers, not yet certified, per ABC News) takes its seats. The president is Republican to 2029-01-20 and an override needs two thirds of both chambers, so a relief bill can pass a chamber but not easily become law. The claim's falsifier is a bill aimed at AI job loss passing either chamber by 2027-12-31. Impact `low`: the opening day is procedural; the market-moving fights (funding, the debt limit) carry their own entries."
+}

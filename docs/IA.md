@@ -785,6 +785,26 @@ not one of §3's ten keys; the "via beta-scout" chip explains itself only in a `
 (`decisions-section.tsx:117-122`). It joins the book to the loop by order (joint 5) and is MISSING
 20 — an eleventh key the lift names, not a group.
 
+### 5.9 The landing page — the day's news, your question, quests by their source (#6948, #7018)
+
+Not one of the seven wargamed groups: a **home of homes**, the page sign-in opens, holding each
+group's answer as a joint line and copying no group's section. Decided on #6948 (2026-11-07) and
+placed by #7018's redesign rounds (2026-11-07/08); the build is #7077.
+
+| | |
+|---|---|
+| **Home** | `/app/` (today a redirect to `/leaderboard`, `app/src/routes/index.tsx:21`; a member with no account still lands on onboarding). The first tab ("Chronicles", his name; fork d on #7018). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
+| **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests; the questions you asked) |
+| **Holds, each with one owner** | the edition: each story leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, quick questions as fallbacks, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
+| **Hands on** | the owner-fired ticket with exits → Trade · a story's ledger → R&D · who you are → the character sheet (#7019) · standings → the Leaderboard |
+| **At 390, in order** | your question box · the lead story's coming reports, then what moved · its ask · quests by source |
+| **Not here** | a "what's new" part (#7018 r1: "vague, ambiguous direction. no thanks"); a humans-vs-bots grouping or cross-account metrics (#5157: "humans/bots is a property/filter.. not a grouping"); anything about how the app gets built (#7018 comment 1) |
+| **Falsifier** | by 2026-12-15, members open the Leaderboard before the landing page's first story on most sign-ins → home is the standings after all; or two child plans build the same piece of this page → the owner map is wrong |
+
+Eric, round 0 (2026-11-07): *"I don't care for the leaderboard as the landing page."* Round 1
+(2026-11-08): *"I like having actionable items at the top.. like the search engine experience as
+the entry point to direct you to where you want."*
+
 ## 6. The joints — where two groups meet, and what renders on whose page
 
 The wargame's twelve group-level joints. A joint is a shared key rendered on a host page as a
@@ -1209,6 +1229,9 @@ its evidence, and the row points at it. Until then it waits here, with its conte
 | U12 | **A record can't open the trades that made it** — Pulse's weeks, runs and biggest dip are dated, but Activity takes no date in its address (`narrowingFromSearch` reads only `symbol` and `playbook`, `app/src/shell/account-ledger.tsx:40`), so the Pulse × Activity joint (13/13, §5.1) stays unrendered (§3: date/range has no URL carrier on the account's Activity) | member-pulse (#5180 round 1, 2026-10-18: "a week can't open its trades"; the +$55 week of Sep 28 is a −$230 loss and a +$285 win, visible only by filtering Activity by hand) | The fix is a date key on Activity's route and its list; Pulse can only link to it once that exists | none — round 1 writes what made each week under its bar ("1 won · 1 lost") | waiting (1 screen) |
 | U13 | **The owner's tools have no home of their own** — every bot's switches, Moneypenny's model and the unclaimed accounts render inside one member's Account section, under that member's own account card (§5.8 places fleet controls in "Settings, never a page") | settings (#5170 round 1, 2026-10-18: the switch that stops every bot sits under Eric's own card at 390; Eric, 2026-10-10: "more features are being pushed into drawers/section where they belong"); #5462 (Eric, 2026-10-16: "Similar to an admin panel with application the ability to manage app level feature toggles, configurations.") | An owner's area of its own adds a section or a route, a nav move; #5462's admin panel would hold the same tools and its grants, so the home is decided there, not in one screen | Settings round 1 draws a folded drawer inside Account (works around U13) | waiting (1 screen; joins #5462) |
 | U14 | **Options tools offered before options open, and beside a stock ticket**: the bench docks the chain under whatever ticket is open, Buy stock included, and the section switch offers Chain and Outlook on every rung; neither reads the member's rungs (§5.3 the bench, §5.5 the ladder) | trade-chain (#5171 round 2, 2026-10-18: with options rungs 201–501 locked, the desktop frame docks the full chain under a Buy stock ticket and the phone switch offers Chain; Eric, round 1: "I don't like how features for options are available when 1) \"buying stock\" is selected, 2) options trading hasn't been unlocked"), trade-ticket (#5174, the order form that frame showed) | Which sections dock beside the ticket, and which tabs the switch offers, is the bench's rule (`trade.tsx`), shared by the ticket, chain and outlook; the chain alone can only stop trading from itself | the chain's round 2 draws it read-only with one line naming the rung that opens options (proposed, awaiting his pick) | waiting (2 screens) |
+| U15 | **Nothing writes the day's edition** — the landing page's stories, key facts and dated reports are hand-fed; the landscape read is unbuilt (§5.9, §7) | landing (#7018 round 1, 2026-11-08: every frame drawn on hand-fetched closes) | The edition is #6949 slice 5's data and #6948 slice 4's voice; a screen can only render what they write | #7077 slice 1 renders hand-fed data | waiting (1 screen; owned by #6949, #6948) |
+| U16 | **No reward a quest can carry** — a quest record has no reward field (#7028); the only honest reward today is a ladder rung's first fill (`src/domain/curriculum.ts`); loot and Renown are designed, unbuilt (`docs/THE-GAME.md` Moves 2–3, forks 1–2) | landing (#7018 round 0, Eric: "quests to steer research/development, level up, and acquire loot") | Rewards are a game-layer entity (§2d) behind Eric's open THE-GAME forks; a screen can only show what is earned | the cash quest shows "+35 pts on your first real put sale" | waiting (1 screen; Eric's forks 1–2) |
+| U17 | **A member's question has no route** — an ask is stored and read by nothing, and no line says who holds it (#7034 slices 3–4, #6952 slice 2b) | landing (#7018 rounds 1–2: "R&D is on it" drawn as proposed) | Routing a question to research is a lane and a queue inside the work gate, not a page | none — the frames caption it proposed | waiting (owned by #7034, #6952) |
 
 Seeded from the commons digest posted on #5143 (2026-10-11, 16 IA moves from 10 screens); later
 rows are added by redesign sessions as they find them.

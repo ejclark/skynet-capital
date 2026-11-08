@@ -26,6 +26,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 /** Where specs and their fixtures live. A path resolved outside these is not a fixture here. */
 export const SPEC_ROOTS = ["tests/", "e2e/", "app/tests/", "app/playwright/"];
@@ -145,4 +146,4 @@ function main() {
   process.exitCode = findings.length ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

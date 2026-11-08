@@ -28,7 +28,8 @@ import { SauronCard } from "./sauron-card";
  * Balance section on your Accounts page (slice 3) — bot or human, since idle cash and a name over
  * its share are findings on any book. Anyone else's reads the counts as plain words (a finding
  * names a playbook, and which playbooks an account runs is its owner's, #885). The old rail's way back to the Leaderboard stays
- * gone — the topbar's Leaderboard tab is that.
+ * gone. The topbar's Leaderboard tab was that until #7077 gave the tab to the day's news; the
+ * door now is Profile's league card ("Full leaderboard ›"), as that issue decided.
  *
  * OWNERSHIP decides what is offered (#785, dead end 4). Settings is always the VIEWER's own
  * account, so it appears only on a page the session owns — ownership from the same

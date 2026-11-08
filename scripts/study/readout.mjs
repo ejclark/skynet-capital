@@ -31,7 +31,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isMain } from "./compat.mjs";
 import { parseGold } from "./grade-core.mjs";
 import {
   rankStructural,
@@ -290,7 +290,7 @@ export function buildReadout(opts) {
   return { page, shots, markdown };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   try {
     const { page, shots } = buildReadout(readoutArgs(process.argv.slice(2)));
     console.log(`readout: ${page} (frames in ${shots})`);

@@ -24,6 +24,7 @@
 // the exit status, never through `| tail` (a pipeline reports the last command's status).
 // Token: GH_TOKEN or GITHUB_TOKEN, else `gh auth token`. REST core bucket, curl so HTTPS_PROXY holds.
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 import { ensureGhToken, ghRest, sh } from "./moneypenny/gh.mjs";
 import { FOOTER } from "./moneypenny/labels.mjs";
 
@@ -173,4 +174,4 @@ function main(argv) {
   return failed ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

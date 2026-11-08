@@ -61,7 +61,10 @@ into separate lint, typecheck and per-suite calls (#5191).
    scratchpad; on 2026-10-11 one agent overwrote another's PR body and commit message mid-ship
    (#5240, #5245). **A long or retried task keeps run memory:** `scripts/run-memory.mjs` gives a run
    a contract, an attempt log that refuses a retry changing nothing, and one scratch pad per agent,
-   outside any worktree so a resumed session or sibling agent can pick it up (#6470). A workflow agent's
+   outside any worktree so a resumed session or sibling agent can pick it up (#6470). **A running
+   workflow agent has no inbox:** a message sent to one resumes a second copy from its transcript, in
+   the same worktree (2026-10-11). To change what a running agent does, put the change where it reads
+   between steps (its run-memory pad), or stop it and relaunch. A workflow agent's
    own folder is `runs/<run>/<agent>` in the session scratchpad, carried in its prompt (grind,
    post-merge-audit, symbol-sweep), because `.claude` is a protected path whose writes are never
    auto-approved. Reach shared files through `promote`, which refuses when the target changed since it

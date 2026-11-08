@@ -25,6 +25,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { digestFiles } from "./digest-scan.mjs";
+import { isMain } from "./is-main.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { ensureGhToken, ghRest, ghRestAll } from "./moneypenny/gh.mjs";
 import { PRIORITY_LABELS, parkedBy } from "./moneypenny/labels.mjs";
@@ -255,7 +256,7 @@ function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   // A laptop session has no token in its environment, only a gh login; without this every read was
   // a 401 (#6676, found by #6470's load test). With neither, one line says how to sign in.
   try {

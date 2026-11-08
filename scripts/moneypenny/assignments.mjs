@@ -42,6 +42,7 @@
 // writes land — and `digest-scan.mjs --needs-you` prints exactly that list. One selector, two
 // readers; tests/scripts/moneypenny/needs-you.spec.ts fails if they ever disagree.
 
+import { isMain } from "../is-main.mjs";
 import { executeReadback, ledgerRows, readbackComment, readbackFor } from "./answer-readback.mjs";
 import {
   ASSIGN_MARKER,
@@ -671,4 +672,4 @@ function main(argv) {
   for (const i of intents) console.log(askOnce(i));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

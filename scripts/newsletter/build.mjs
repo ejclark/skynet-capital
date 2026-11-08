@@ -6,6 +6,7 @@
 // the metric reads unknown, and the rest of the object is unaffected.
 import { asksDue, openAsks } from "./asks.mjs";
 import { decisionsReport } from "./decisions.mjs";
+import { knownGaps, memberChanges } from "./member-changes.mjs";
 import {
   defects,
   failureToFix,
@@ -110,6 +111,8 @@ export function buildNewsletter(inputs) {
             ? paceReading(tracker.title, tracker.body)
             : inputs.tracker,
       needsEric: over(inputs.needsEric, (r) => needsEric(r, asOfMs)),
+      playthroughGaps: knownGaps(inputs.journeyGaps),
+      memberChanges: memberChanges(inputs.memberPrs, inputs.memberIssues, w),
       fitness: over(inputs.fitness, (f) => fitness(f.contracts, f.issues, w)),
       loops: over(inputs.loopIterations, (r) => loopsMoved(r, w)),
       research: scorecard(inputs.scorecard),

@@ -8,7 +8,7 @@
 //
 //   node scripts/moneypenny/priority-labels.mjs            # PATCH the labels that differ
 //   node scripts/moneypenny/priority-labels.mjs --dry-run  # print what would change
-import { pathToFileURL } from "node:url";
+import { isMain } from "../is-main.mjs";
 import { ensureGhToken, ghRest, sh } from "./gh.mjs";
 import { LABELS, PRIORITY_LABELS } from "./labels.mjs";
 
@@ -47,7 +47,7 @@ export function applyPriorityLabels({
   return patches;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   ensureGhToken();
   applyPriorityLabels({ dryRun: process.argv.includes("--dry-run") });
 }

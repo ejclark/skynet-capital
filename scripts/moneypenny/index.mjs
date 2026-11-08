@@ -56,6 +56,7 @@
 // its original name and signature; anything that moved
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { isMain } from "../is-main.mjs";
 import { loopCheck } from "../loop-check.mjs";
 import {
   gateAdmission,
@@ -1933,4 +1934,4 @@ function postLoopChecks() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

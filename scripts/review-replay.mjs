@@ -19,7 +19,7 @@
 // for nothing, so its score is read after the refuter, with the number before it beside.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 import {
   changedFilesOf,
   PASS_BAR,
@@ -240,7 +240,7 @@ function main(argv) {
   );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (error) {

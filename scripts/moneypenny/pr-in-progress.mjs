@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // THE ONE WRITER OF `in-progress` FOR PR-BACKED WORK — #4393 slice 1, criteria 1 and 2. When a PR
 // opens that names an open issue, the issue gets `in-progress`; when that PR closes or merges and
 // nothing else is still building it, the label comes off. Every build path opens a PR, so this one
@@ -181,4 +182,4 @@ function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

@@ -24,7 +24,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   agentSummary,
   listDirs,
@@ -57,6 +56,7 @@ import {
   renderJobs,
   renderWorkerStages,
 } from "./agent-meter/render.mjs";
+import { isMain } from "./is-main.mjs";
 
 export { quantile };
 
@@ -450,7 +450,7 @@ async function main(args) {
   return args.includes("--json") ? JSON.stringify(m, null, 2) : render(m);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     console.log(await main(process.argv.slice(2)));
   } catch (err) {
