@@ -474,7 +474,10 @@ function dispatch(step, stepPosition, { item, position }, prev) {
 function suffixFor(step) {
   if (step === ENVELOPE_STEP) return 'envelope'
   if (step === VERIFY_BRANCH_STEP) return 'verify'
-  if (step.kind === 'script' && !step.label) return 'check'
+  // Not 'check': a chain whose first step is labelled check (instruction-drift) then logged its
+  // trailing outcome script under the same label, and a session read the script's results as the
+  // check role's (2026-11-08, docs/LESSONS.md).
+  if (step.kind === 'script' && !step.label) return 'script'
   return stepName(step)
 }
 
