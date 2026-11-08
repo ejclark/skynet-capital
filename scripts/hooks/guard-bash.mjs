@@ -19,7 +19,7 @@
 //
 // Exit codes: 0 allow (stdin unreadable, another tool, or no match) · 2 refuse (the reason on stderr).
 // A command the rtk hook would break also exits 0, with the input back as JSON on stdout (see below).
-import { fileURLToPath } from "node:url";
+import { isMain } from "../is-main.mjs";
 
 /** The banned commands, each with the doctrine line that bans it and the alternative to offer. */
 export const BANNED = [
@@ -204,4 +204,4 @@ async function main() {
   );
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) await main();
+if (isMain(import.meta.url)) await main();
