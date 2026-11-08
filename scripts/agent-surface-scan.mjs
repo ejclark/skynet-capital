@@ -25,8 +25,8 @@
 // (no vendored hooks doc, unreadable settings.json), so the verdict is not an answer.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, sep } from "node:path";
-import { fileURLToPath } from "node:url";
 import { historyNotes, isRuleFile } from "./instructions/history.mjs";
+import { isMain } from "./is-main.mjs";
 
 const argOf = (name) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -348,4 +348,4 @@ function main() {
   if (result.errors.length) process.exit(1);
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();
+if (isMain(import.meta.url)) main();

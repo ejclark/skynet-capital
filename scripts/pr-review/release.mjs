@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // RELEASE — lift any review hold nobody is answering (#6870 S2). The reviewer may slow a merge, never
 // strand one: a `pr-review` failure older than HOLD_MS with no response session running is set to
 // success, with a one-line notice on the PR and an `outcome: released` row in the ledger.
@@ -14,8 +15,6 @@
 // S6 runs this on each push to main, beside `rearmStranded` in scripts/moneypenny/index.mjs.
 //
 //   node scripts/pr-review/release.mjs [--apply]   # prints what it would lift; --apply lifts it
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { ghRestAll, withRetry } from "../moneypenny/gh.mjs";
 import { FOOTER } from "../moneypenny/labels.mjs";
 import { appendLedgerRows, ledgerPath, ledgerRow } from "./ledger.mjs";
@@ -103,7 +102,7 @@ export function applyRelease(lifts, { api = defaultApi() } = {}) {
   return rows.length;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const api = defaultApi();
   const lifts = releasable(gatherHolds({ api }));
   if (process.argv.includes("--apply")) applyRelease(lifts, { api });

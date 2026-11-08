@@ -32,6 +32,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { isMain } from "../is-main.mjs";
 import { sh } from "./gh.mjs";
 import { LABELS } from "./labels.mjs";
 
@@ -520,7 +521,7 @@ export function draftLesson(intent) {
 
 // `--preview <n>`: the whole read path against a real capsule, printing the entry it would land —
 // how this was proven on #4658 before it ever wrote, and how a `/retro` session can start from it.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const n = Number(process.argv[process.argv.indexOf("--preview") + 1]);
   if (!(process.argv.includes("--preview") && n)) {
     console.error("usage: lesson-draft.mjs --preview <capsule number>");

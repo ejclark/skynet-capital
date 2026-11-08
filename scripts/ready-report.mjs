@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "./is-main.mjs";
 // READY REPORT — one row per open issue carrying `ready`, with the readiness notes the lint would
 // give it (#4056 slice 1). Read-only, REST core bucket, always exits 0: a report, never a gate.
 //
@@ -61,4 +62,4 @@ function main() {
   console.log(argv.includes("--json") ? JSON.stringify(rows, null, 2) : renderReport(rows, label));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

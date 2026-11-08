@@ -23,6 +23,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { readBaseline } from "./bottleneck-baseline.mjs";
+import { isMain } from "./is-main.mjs";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
 import { readinessNotes } from "./issue-readiness.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
@@ -534,4 +535,4 @@ async function main() {
   console.log("issue-lint: ✓ body satisfies the capsule contract.");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (isMain(import.meta.url)) await main();

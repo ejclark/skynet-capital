@@ -18,7 +18,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isMain } from "../is-main.mjs";
 import { parseGold } from "./grade-core.mjs";
 import { gradeRound } from "./grade-round.mjs";
 import { FILES } from "./round-contract.mjs";
@@ -142,7 +142,7 @@ function main(argv) {
   return grade.problems.length ? 1 : 0;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (err) {

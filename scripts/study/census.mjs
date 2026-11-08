@@ -30,7 +30,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isMain } from "../is-main.mjs";
 import * as page$ from "./census-page.mjs";
 import {
   capControls,
@@ -299,7 +299,7 @@ async function main(argv) {
   console.log(`census: ${controls.length} control entries → ${join(opts.out, "census.json")}`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   const argv = process.argv.slice(2);
   const rerun = rerunUnderTsx(import.meta.url, argv);
   if (rerun !== null) process.exitCode = rerun;

@@ -31,6 +31,7 @@
 // Exit 0 = archive is a yes; exit 1 = it is not (the rows say why); exit 2 = bad manifest.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 
 const ARCHIVED = "SESSION_STATUS_ARCHIVED";
 
@@ -167,4 +168,4 @@ function main() {
   process.exit(result.ok ? 0 : 1);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

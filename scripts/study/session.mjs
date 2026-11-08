@@ -46,8 +46,8 @@
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { VIEWPORTS } from "../crawl/steps.mjs";
+import { isMain } from "../is-main.mjs";
 import { shooter } from "../shoot/lib.mjs";
 import { openShell } from "../shoot/shell.mjs";
 import { parseClock } from "./clock.mjs";
@@ -386,7 +386,7 @@ async function main(argv) {
   if (smoke && trace.length !== 2) process.exitCode = 1;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   const argv = process.argv.slice(2);
   // A composed world's server imports TypeScript: under plain node, re-run under tsx.
   const rerun = arg(argv, "--run") ? rerunUnderTsx(import.meta.url, argv) : null;

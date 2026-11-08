@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // RE-EVALUATE — is every Important thread answered, so the merge may go ahead? (#6870 S2)
 //
 // Plain code, no model: the author's answer is either checkable or it is not an answer.
@@ -15,8 +16,6 @@
 // ahead, and the ledger records each still-open finding as `open` so the weekly review sees it.
 //
 //   node scripts/pr-review/reeval.mjs --pr N [--apply]   # --apply sets the status and writes rows
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { ghRestAll } from "../moneypenny/gh.mjs";
 import { appendLedgerRows, ledgerPath, ledgerRow } from "./ledger.mjs";
 import { readPrMarkers, roundOf } from "./markers.mjs";
@@ -129,7 +128,7 @@ export function gatherReeval(number, { api = defaultApi() } = {}) {
   return { markers, commits, commitFiles, head: api.get(`pulls/${number}`)?.head?.sha };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2);
   const number = Number(args[args.indexOf("--pr") + 1]);
   if (!(args.includes("--pr") && Number.isInteger(number)) || number <= 0) {

@@ -38,8 +38,8 @@
 // Exit codes: 0 every site grandfathered · 1 a new site, or a stale grandfather entry · 2 could not
 // do its job (the grandfather file is missing or unreadable, or a scoped tree is absent).
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join, relative } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 const ROOT = process.cwd();
 const GRANDFATHER_FILE = "intl-grandfather.json";
@@ -201,4 +201,4 @@ function main() {
   console.log(`✓ every site is grandfathered in ${GRANDFATHER_FILE}`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();
+if (isMain(import.meta.url)) main();

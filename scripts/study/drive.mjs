@@ -39,8 +39,8 @@
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { VIEWPORTS } from "../crawl/steps.mjs";
+import { isMain } from "../is-main.mjs";
 import { actorMessage, easeMessage } from "./actor-sealed.mjs";
 import { easeProblems, parseScript, toAction, turnProblems } from "./actor-turn.mjs";
 import { parseClock } from "./clock.mjs";
@@ -295,7 +295,7 @@ async function dryRun(actor, session, out, cap) {
   return 0;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2)).then(
     (code) => {
       process.exitCode = code;

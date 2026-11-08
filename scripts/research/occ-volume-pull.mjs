@@ -18,6 +18,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "../is-main.mjs";
 import { bars } from "./market-data.mjs";
 import { parseVolume } from "./occ-volume-math.mjs";
 
@@ -44,7 +45,7 @@ async function pull(date) {
   return { out };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const from = process.argv[2] ?? "2024-10-01";
   mkdirSync(OCC_CACHE, { recursive: true });
   const sessions = (await bars("QQQ")).map((b) => b.date).filter((d) => d >= from);

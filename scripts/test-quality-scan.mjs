@@ -21,6 +21,7 @@
 // exported and unit-tested offline (tests/arch/test-quality-scan.spec.ts).
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 
 const SMELLS = [
   {
@@ -113,4 +114,4 @@ function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

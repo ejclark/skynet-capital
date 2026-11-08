@@ -34,6 +34,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -312,7 +313,7 @@ export function readCorpus(root = ROOT) {
   };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (isMain(import.meta.url)) {
   const today = new Date().toISOString().slice(0, 10);
   const card = scorecard({ ...readCorpus(), today });
   if (process.argv.includes("--json")) console.log(JSON.stringify(card, null, 2));

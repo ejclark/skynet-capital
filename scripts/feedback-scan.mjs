@@ -21,6 +21,7 @@
 // malformed skynet-spec block, is named with a `·` note on stderr — stdout stays the report.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 import { ghRest, ghRestAll } from "./moneypenny/gh.mjs";
 import { LABELS } from "./moneypenny/index.mjs";
 
@@ -349,4 +350,4 @@ function main(argv) {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

@@ -41,6 +41,7 @@
 // GitHub about the issue instead of about the board, and only a caller already holding a board list
 // (a sweep) uses one.
 import { readFileSync } from "node:fs";
+import { isMain } from "../is-main.mjs";
 import { withOpenSubIssues } from "./admission.mjs";
 import { missingDecisionCallout } from "./decision-callout.mjs";
 import { ghRateLimit, ghRest, ghRestAll, isTransientGhError, sh, withRetry } from "./gh.mjs";
@@ -954,4 +955,4 @@ function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();
