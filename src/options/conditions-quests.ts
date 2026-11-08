@@ -42,7 +42,7 @@ export const VIX_FLOOR = 25;
 /** Cash as a share of the account, at or above which the book matches the conditions table's row. */
 export const CASH_SHARE_FLOOR = 0.5;
 /** Shares a put contract covers. */
-const CONTRACT = 100;
+export const CONTRACT = 100;
 
 /** One studied index as the last completed session left it. */
 export interface IndexCondition {

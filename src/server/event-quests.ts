@@ -1,7 +1,7 @@
 import { isTradable } from "../domain/campaigns.js";
 import type { MarketEvent } from "../domain/market-events-types.js";
 import type { Quest } from "../domain/quest.js";
-import { href } from "../options/conditions-quests.js";
+import { CONTRACT, href } from "../options/conditions-quests.js";
 import { dayText } from "../options/position-guidance-rules.js";
 import { readLedger } from "./ledger-stance.js";
 
@@ -39,9 +39,6 @@ export interface EventStance {
   /** Titles of the campaigns that link this event. */
   readonly campaigns: readonly string[];
 }
-
-/** Shares a put contract covers. */
-const CONTRACT = 100;
 
 const UNTESTED = {
   kind: "untested",
