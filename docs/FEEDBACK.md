@@ -95,10 +95,9 @@ build immediately: `moneypenny-events.yml`'s triage step (`--triage-feedback`,
 — the guided rail path already attaches `curated` + a `skynet-spec` block, per *The coach is what
 makes the wide envelope safe* below — self-readies and keeps the near-zero-friction path for the
 common case. So does a `bug` + `fast-track` filing that is not a `plan` (#5667): CLAUDE.md files a mid-build bug that way and
-says it is "pulled next", and the triage step also runs when `fast-track` lands. Everything else
-sits in **Backlog** on the Orchestration board — or in **Waiting on a person** when it already
-carries `needs-info`/`needs-design`, or `needs-eric` with its written ask (Status/Horizon populated
-the same way every other issue's is — `statusForIssue` in `scripts/moneypenny/projects.mjs`) —
+says it is "pulled next", and the triage step also runs when `fast-track` lands. Everything else,
+including anything already `needs-eric`/`needs-info`/`needs-design`, sits in **Backlog** on the Orchestration
+board (Status/Horizon populated the same way every other issue's is — `scripts/moneypenny/projects.mjs`)
 until something applies `ready`: Eric's own call, or a triage pass's clear-path flip
 ([`ISSUES.md`](ISSUES.md) → *Who may flip it*, 2026-10-19).
 
