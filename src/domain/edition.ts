@@ -23,10 +23,10 @@
  *   - borrows a franchise's catchphrase in the narrator line (criterion 4). A deny-list is a floor,
  *     not a proof: the narrator is still written to be original.
  *
- * NOTHING LOADS AT IMPORT (and why the small regexes and `isText` below are local, not imported
- * from campaigns.ts: importing that module loads every campaign file). The server's whole import graph reaches this module, and the study
+ * NOTHING LOADS AT IMPORT. The server's whole import graph reaches this module, and the study
  * worlds run that graph inside a corpus pinned to an older commit (scripts/study/worlds/
- * compose.mjs), where neither `editions/` nor `campaigns/` exists. So the files are read on the
+ * compose.mjs), where neither `editions/` nor `campaigns/` exists. (It is also why the small
+ * regexes and `isText` below are local: importing campaigns.ts loads every campaign file.) So the files are read on the
  * first request (`editions()`), and the campaign's title is handed in by the caller rather than
  * imported; the spec proves every edition's campaign is a real record.
  *
