@@ -34,6 +34,40 @@ describe("parseDiscoveryQueue", () => {
     expect(parsed?.map((a) => a.subject)).toEqual(["PLTR"]);
   });
 
+  it("keeps a campaign scope and the words, and drops an ask whose scope does not match its id", () => {
+    const scoped = {
+      ...ask("PLTR"),
+      id: "ai-buildout/name:PLTR",
+      campaign: "ai-buildout",
+      question: "  Who buys\nits data?  ",
+    };
+    const parsed = parseDiscoveryQueue([
+      scoped,
+      { ...ask("RIVN"), campaign: "ai-buildout" },
+      { ...ask("LCID"), id: "<b>/name:LCID", campaign: "<b>" },
+      { ...ask("SOFI"), id: "x/name:SOFI", campaign: 7 },
+    ]);
+    expect(parsed).toEqual([
+      {
+        id: "ai-buildout/name:PLTR",
+        kind: "name",
+        subject: "PLTR",
+        askedAt: "2026-11-08T12:00:00.000Z",
+        askers: ["m1"],
+        campaign: "ai-buildout",
+        question: "Who buys its data?",
+      },
+    ]);
+  });
+
+  it("cuts a hand-edited question to 200 characters and ignores a non-string one", () => {
+    const long = parseDiscoveryQueue([{ ...ask("PLTR"), question: "x".repeat(500) }]);
+    expect(long?.[0]?.question).toHaveLength(200);
+    expect(parseDiscoveryQueue([{ ...ask("PLTR"), question: 5 }])?.[0]).not.toHaveProperty(
+      "question",
+    );
+  });
+
   it("is undefined for a non-list and never longer than MAX_QUEUED", () => {
     expect(parseDiscoveryQueue({})).toBeUndefined();
     const many = Array.from({ length: MAX_QUEUED + 6 }, (_, i) => ask(`Z${i}`));

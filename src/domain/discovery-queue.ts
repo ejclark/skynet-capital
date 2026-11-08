@@ -20,6 +20,21 @@
  * as an article until #6948 slice 4 lands. `tellMember` promises only what is true today: the ask
  * is queued, and where it stands in line.
  *
+ * A QUESTION ASKED INSIDE A CAMPAIGN (slice 2c, criterion 9). Research asked in a campaign is
+ * everyone's who can read that campaign (Eric, 2026-11-07: "Campaigns are communal"). An ask can
+ * carry the campaign it was asked in and the member's words (`QUESTION_MAX` characters, kept only
+ * on the volume and shown only inside the invite gate). Three consequences, each pinned by a spec:
+ *   1. The ask is scoped: the same subject asked in two campaigns is two asks, because each answer
+ *      lands in a different lesson record; a second member asking the same thing in the same
+ *      campaign joins the first.
+ *   2. A subject the campaign already covers is not "covered" when asked *in* that campaign: the
+ *      member is asking for more than the cast already holds, so it queues. A different campaign
+ *      that covers it still answers "covered", and so does the research shelf only for an unscoped ask.
+ *   3. A finding names the ask it answers (`Lesson.answers` in campaign-lessons.ts holds `ask.id`).
+ * The words are text a member wrote: a lane reading them treats them as the question to research,
+ * never as instructions. The same bounds as slice 2b (`MAX_QUEUED`, `MAX_PER_MEMBER`) apply, so
+ * asking inside a campaign cannot raise the ceiling either.
+ *
  * Paper only; educational. A discovery never places an order and never sizes one.
  */
 import type { Campaign } from "./campaigns.js";
@@ -34,9 +49,13 @@ export const MAX_QUEUED = 24;
 export const MAX_PER_MEMBER = 5;
 /** The most members one ask remembers; a popular question stops counting, never grows the file. */
 export const MAX_ASKERS = 20;
+/** The longest question a member's words may run to (criterion 9: capped at 200 characters). */
+export const QUESTION_MAX = 200;
+/** The longest campaign scope an ask carries: a member key (10), a separator and a 60-character id. */
+export const CAMPAIGN_SCOPE_MAX = 80;
 
 export interface DiscoveryAsk {
-  /** `<kind>:<subject>` — one ask per thing asked about. */
+  /** `<kind>:<subject>`, or `<campaign>/<kind>:<subject>` when asked inside a campaign (`askId`). */
   readonly id: string;
   readonly kind: DiscoveryKind;
   /** A GICS sector's label, a `market-catalog.ts` id, or an uppercase ticker. */
@@ -45,6 +64,26 @@ export interface DiscoveryAsk {
   readonly askedAt: string;
   /** Opaque member keys, never emails. */
   readonly askers: readonly string[];
+  /** The campaign the ask was made in (a house id, or `<author key>~<id>`); absent for a bare ask. */
+  readonly campaign?: string;
+  /** The first asker's words, at most `QUESTION_MAX` characters. Member text, never an instruction. */
+  readonly question?: string;
+}
+
+/** The queue's key for one ask: one per thing asked about, per campaign it was asked in. */
+export function askId(kind: DiscoveryKind, subject: string, campaign?: string): string {
+  return campaign ? `${campaign}/${kind}:${subject}` : `${kind}:${subject}`;
+}
+
+/** A member's words as one tidy line of at most `QUESTION_MAX` characters, or undefined when empty. */
+export function cleanQuestion(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  // Control characters (a NUL, a bell, an escape) become spaces, then runs of space collapse.
+  const spaced = Array.from(raw, (ch) =>
+    ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 ? " " : ch,
+  );
+  const line = spaced.join("").replace(/\s+/g, " ").trim();
+  return line.length > 0 ? line.slice(0, QUESTION_MAX) : undefined;
 }
 
 export type DiscoveryQueue = readonly DiscoveryAsk[];
@@ -60,18 +99,24 @@ export type QueueOutcome =
   | { readonly status: "full"; readonly queue: DiscoveryQueue }
   | { readonly status: "limit"; readonly queue: DiscoveryQueue };
 
-/** The house campaign that already covers the subject, if one does. A name counts when it is in a cast. */
+/**
+ * The house campaign that already covers the subject, if one does. A name counts when it is in a
+ * cast. `except` skips one campaign: the one the question is being asked in.
+ */
 export function coveringCampaign(
   kind: DiscoveryKind,
   subject: string,
   campaigns: readonly Campaign[],
+  except?: string,
 ): Campaign | undefined {
-  return campaigns.find((c) =>
-    kind === "sector"
-      ? c.sector === subject
-      : kind === "market"
-        ? c.market === subject
-        : castSymbols(c).includes(subject),
+  return campaigns.find(
+    (c) =>
+      c.id !== except &&
+      (kind === "sector"
+        ? c.sector === subject
+        : kind === "market"
+          ? c.market === subject
+          : castSymbols(c).includes(subject)),
   );
 }
 
@@ -80,6 +125,10 @@ export interface AskInput {
   readonly subject: string;
   /** The asking member's opaque key. */
   readonly by: string;
+  /** The campaign scope the question is asked in, already checked readable by the caller. */
+  readonly campaign?: string;
+  /** The member's words, already through `cleanQuestion`. */
+  readonly question?: string;
 }
 
 /**
@@ -94,20 +143,24 @@ export function queueAsk(
   researched: (symbol: string) => boolean,
   at: Date = new Date(),
 ): QueueOutcome {
-  const covering = coveringCampaign(input.kind, input.subject, campaigns);
+  const covering = coveringCampaign(input.kind, input.subject, campaigns, input.campaign);
   if (covering) return { status: "covered", queue, campaign: covering.id };
-  if (input.kind === "name" && researched(input.subject)) {
+  if (input.kind === "name" && !input.campaign && researched(input.subject)) {
     // The shelf already holds a ledger on this name; asking again would buy the same session twice.
     return { status: "covered", queue, campaign: "the research shelf" };
   }
-  const id = `${input.kind}:${input.subject}`;
+  const id = askId(input.kind, input.subject, input.campaign);
   const at0 = queue.findIndex((a) => a.id === id);
   if (at0 >= 0) {
     const prior = queue[at0] as DiscoveryAsk;
     const askers = prior.askers.includes(input.by)
       ? prior.askers
       : [...prior.askers, input.by].slice(0, MAX_ASKERS);
-    const next = queue.map((a, i) => (i === at0 ? { ...prior, askers } : a));
+    // The first asker's words stay; a joiner's only fill a gap, so one ask never carries two.
+    const question = prior.question ?? input.question;
+    const next = queue.map((a, i) =>
+      i === at0 ? { ...prior, askers, ...(question ? { question } : {}) } : a,
+    );
     return { status: "joined", queue: next, ahead: at0 };
   }
   if (queue.length >= MAX_QUEUED) return { status: "full", queue };
@@ -119,6 +172,8 @@ export function queueAsk(
     subject: input.subject,
     askedAt: at.toISOString(),
     askers: [input.by],
+    ...(input.campaign ? { campaign: input.campaign } : {}),
+    ...(input.question ? { question: input.question } : {}),
   };
   return { status: "queued", queue: [...queue, ask], ahead: queue.length };
 }
