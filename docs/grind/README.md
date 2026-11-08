@@ -352,7 +352,7 @@ a table of contents"), so every name is a terse line item that must not repeat t
 |---|---|
 | workflow description | a title, ≤ 60 chars — `grind — one chore, many items` |
 | phase | the chore name (`interrogate`, `fix-doc-rot`); `meta` declares no `phases`, so no dead `Grind` row |
-| agent label | the item plus an optional nickname from `args.labels` (`{"1351": "listener slice 2"}`); **no step suffix** on the run's one named step, a one-word suffix on the automatic ones (`· envelope`, `· verify`) |
+| agent label | the item plus an optional nickname from `args.labels` (`{"1351": "listener slice 2"}`); **no step suffix** on the run's one named step, a one-word suffix on the automatic ones (`· envelope`, `· verify`), and `· script` on a script step with no `label` |
 | narrator line | `interrogate · 1/2 done · 0 blocked`, updated as each item finishes |
 | agent summary | one line, ≤ 120 chars, plus a URL — the schema says so, and the ledger cell truncates past 140 |
 
