@@ -59,10 +59,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { resolveChromium } from "../shoot/lib.mjs";
 import { roundClock } from "./clock.mjs";
+import { isMain } from "./compat.mjs";
 import { FILES, SESSIONS } from "./round-contract.mjs";
 import { adoptSource } from "./round-control.mjs";
 import {
@@ -293,7 +294,7 @@ export async function runRound(argv, seams = {}) {
   return 0;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   runRound(process.argv.slice(2)).then(
     (code) => {
       process.exitCode = code;

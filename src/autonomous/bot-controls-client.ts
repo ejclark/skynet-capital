@@ -6,12 +6,17 @@ import {
   CONTROLS_BRIDGE_PATH,
   type ControlsState,
   EMPTY_CONTROLS,
+  effectiveMode,
+  opensHeldReason,
   parseControlsState,
   suspendedReason,
 } from "./bot-controls.js";
 import {
+  type BotMode,
   controlsPollGateHeaders,
   controlsPollHeaders,
+  controlsPollModeHeaders,
+  ownerNarrowed,
   type PersonaGateVerdict,
 } from "./controls-poll-wire.js";
 import { type ConvictionsWire, parseConvictionsWire } from "./convictions-wire.js";
@@ -41,6 +46,12 @@ export interface BotControlsClient {
   stop(): void;
   /** The dynamic check for the `blockedReason` seam. Non-null = do not trade this bot. */
   suspendedReason(botId: string): string | null;
+  /** The owner's "stop opening, keep exits" as of the last poll (#6954 slice 5b) — non-null holds
+   *  this bot's opens and keeps its exits. Read every cycle, never cached. */
+  opensHeldReason(botId: string): string | null;
+  /** The owner's "watch only" as of the last poll (#6954 slice 5b): true = this bot records what it
+   *  would do and places nothing. Narrow-only — false never widens a watching bot. */
+  watchOnly(botId: string): boolean;
   /** The owner's stored forced-pick count for this bot, as of the last poll (#4535 slice 2b);
    *  undefined = none stored, so the env count stands. Read at every scout scan, never cached. */
   betaPicks(botId: string): number | undefined;
@@ -54,6 +65,13 @@ export interface BotControlsClient {
    * disabled client. `buildLiveBot` calls this once per bot as it wires each one.
    */
   reportPersonaGate(verdict: PersonaGateVerdict): void;
+  /**
+   * Records the house mode this process runs under (#6954 slice 1), reported on every subsequent
+   * poll so the fleet health card can say whether the bots place paper orders or only watch,
+   * without anyone reading a Fly secret. Same shape as `reportPersonaGate`: safe before `start()`,
+   * a no-op on the disabled client, latest call wins.
+   */
+  reportProcessMode(mode: BotMode): void;
   /**
    * Records this boot's `SKYNET_PLAYBOOKS` house roster and the bot accounts it runs on, reported
    * on every subsequent poll so the dashboard can seed each house bot's own subscriptions from it
@@ -88,8 +106,8 @@ function relay<T>(
 }
 
 /** The kind a refused subscriptions snapshot claimed, for its warning: since #5482's contract
- *  step closed the bots read `subscriptions.v4` only, so an app rolled back past #6000 (or one
- *  ahead of its bots) is named in the log instead of leaving the roster frozen without a word. */
+ *  step closed the bots read `subscriptions.v4` (and v5 since #6954 slice 5c) only, so an app rolled
+ *  back past #6000 (or one ahead of its bots) is named in the log instead of leaving the roster frozen without a word. */
 function subscriptionsKind(body: unknown): string {
   const raw = isRecord(body) ? body.subscriptions : undefined;
   const kind = isRecord(raw) ? raw.kind : undefined;
@@ -101,9 +119,12 @@ const DISABLED_CLIENT: BotControlsClient = {
   start: () => undefined,
   stop: () => undefined,
   suspendedReason: () => null,
+  opensHeldReason: () => null,
+  watchOnly: () => false,
   betaPicks: () => undefined,
   betaStage: () => undefined,
   reportPersonaGate: () => undefined,
+  reportProcessMode: () => undefined,
   reportHouseRoster: () => undefined,
   enabled: false,
 };
@@ -157,9 +178,11 @@ export function resolveBotControls(
   // Filled in by `reportPersonaGate` as `buildLiveBot` wires each bot; read fresh on every poll
   // (not captured once like `selfReport`) since it only settles after boot has built the roster.
   const gateVerdicts = new Map<string, PersonaGateVerdict>();
+  let processMode: BotMode | undefined;
   let houseRoster: HouseRosterReport | undefined;
 
   let snapshot: ControlsState = EMPTY_CONTROLS;
+  const watches = (botId: string) => effectiveMode(snapshot, botId, "live") === "observe";
   let timer: ReturnType<typeof setInterval> | undefined;
 
   const fetchOnce = async (): Promise<ControlsState | null> => {
@@ -173,9 +196,14 @@ export function resolveBotControls(
           {
             [INSIGHTS_BRIDGE_SECRET_HEADER]: bridgeSecret,
             ...selfReport,
+            // Each verdict with the owner's watch-only folded in, as of the snapshot every cycle
+            // reads — so the card names the hold the bots are actually applying (#6954 slice 5b).
             ...controlsPollGateHeaders(
-              gateVerdicts.size > 0 ? [...gateVerdicts.values()] : undefined,
+              gateVerdicts.size > 0
+                ? [...gateVerdicts.values()].map((v) => ownerNarrowed(v, watches(v.id)))
+                : undefined,
             ),
+            ...controlsPollModeHeaders(processMode),
             ...controlsPollRosterHeaders(houseRoster),
           },
           undefined,
@@ -229,10 +257,15 @@ export function resolveBotControls(
       timer = undefined;
     },
     suspendedReason: (botId) => suspendedReason(snapshot, botId),
+    opensHeldReason: (botId) => opensHeldReason(snapshot, botId),
+    watchOnly: watches,
     betaPicks: (botId) => snapshot.bots[botId]?.betaPicks,
     betaStage: (botId) => snapshot.bots[botId]?.betaStage,
     reportPersonaGate: (verdict) => {
       gateVerdicts.set(verdict.id, verdict);
+    },
+    reportProcessMode: (mode) => {
+      processMode = mode;
     },
     reportHouseRoster: (report) => {
       houseRoster = report;

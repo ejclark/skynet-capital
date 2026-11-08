@@ -374,3 +374,78 @@
 .pba-check-word {
   font-weight: 650;
 }
+
+/* ── Your chains (#6959 slice 3b, `playbook-chains.tsx`, `playbook-chain-author.tsx`) ──────────────
+   A chain's links are cards of three stacked picks on a phone; a wide container sets the picks in a
+   row. The form reuses `.pba-form`, `.pba-col` and `.field` above. A refusal is a ✕ sentence under
+   its link (the shared `InlineResult`), a playbook that can't take over is marked in words in the
+   list ("— can't take this over"), never by colour. */
+
+.pbc-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pbc-link {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.pbc-link-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+
+.pbc-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pbc-why {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.pbc-why summary {
+  cursor: pointer;
+  min-height: 24px;
+}
+
+.pbc-why ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.pba .pbc-add {
+  align-self: flex-start;
+  min-height: 44px;
+}
+
+.pbc-remove {
+  min-height: 36px;
+}
+
+@container pbsec (min-width: 640px) {
+  .pbc-picks {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .pbc-picks > .field {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+}

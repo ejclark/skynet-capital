@@ -258,3 +258,115 @@ describe("serveSettingsApi bot-control (#738 phase 9b)", () => {
     expect(parsed.fleetSuspended).toBe(false);
   });
 });
+
+describe("serveSettingsApi breaker-reset (#6954 slice 3b)", () => {
+  const records = (halted?: string) => async () => [{ at: 1, ...(halted ? { halted } : {}) }];
+
+  function rigged(halted: string | undefined, resetAt?: string) {
+    const stamps: { editor: string; at: string }[] = [];
+    const logged: { id: string; setting: string; after: unknown; proposedBy: string }[] = [];
+    const config = configWith({
+      resolveOwnerIds: () => ["bot-mine"],
+      now: () => new Date("2026-11-09T15:00:00.000Z"),
+      hub: {
+        getState: () => ({
+          participants: [
+            { id: "bot-mine", displayName: "Mine", kind: "bot" },
+            { id: "bot-theirs", displayName: "Theirs", kind: "bot" },
+          ],
+        }),
+      } as never,
+      readDecisions: records(halted),
+      controls: {
+        store: {
+          load: () => ({ bots: {}, ...(resetAt ? { breakerResetAt: resetAt } : {}) }),
+          stampBreakerReset: (editor: string, at: Date) => {
+            stamps.push({ editor, at: at.toISOString() });
+            return { bots: {} };
+          },
+          restoreBreakerReset: () => undefined,
+        },
+        changes: {
+          record: (id: string, changes: readonly (typeof logged)[number][]) =>
+            logged.push(...changes.map((c) => ({ ...c, id }))),
+          list: () => [],
+        },
+        isOwner: () => false,
+        bots: () => [],
+      } as never,
+    });
+    return { config, stamps, logged };
+  }
+
+  it("stamps the reset and logs who and when, when the owner's bot is held by a breaker", async () => {
+    const { config, stamps, logged } = rigged("daily-loss");
+    const { res, out } = fakeRes();
+    await serveSettingsApi(
+      post({ id: "bot-mine", editor: "attacker" }),
+      res,
+      "/api/settings/breaker-reset",
+      config,
+      session,
+    );
+    expect(answered(out)).toEqual({ ok: true });
+    expect(stamps).toEqual([{ editor: "eric@example.com", at: "2026-11-09T15:00:00.000Z" }]);
+    expect(logged).toMatchObject([
+      {
+        id: "bot-mine",
+        setting: "breakerReset",
+        after: "2026-11-09T15:00:00.000Z",
+        proposedBy: "eric@example.com",
+      },
+    ]);
+  });
+
+  it("refuses someone else's bot, and a bot no breaker is holding, before writing anything", async () => {
+    for (const [halted, id, words] of [
+      ["daily-loss", "bot-theirs", "your own bot"],
+      [undefined, "bot-mine", "No breaker"],
+      ["manual", "bot-mine", "No breaker"], // the kill switch is not a breaker an owner can reset
+      ["suspended by owner", "bot-mine", "No breaker"],
+    ] as const) {
+      const { config, stamps } = rigged(halted);
+      const { res, out } = fakeRes();
+      await serveSettingsApi(post({ id }), res, "/api/settings/breaker-reset", config, session);
+      expect(String(answered(out).error)).toContain(words);
+      expect(stamps).toEqual([]);
+    }
+  });
+
+  it("says a reset is already on its way, and refuses a second press, until a newer pass lands", async () => {
+    const { config, stamps } = rigged("daily-loss", "2026-11-09T15:00:00.000Z"); // pass at ms 1
+    const index = fakeRes();
+    await serveSettingsApi(get(), index.res, "/api/settings", config, session);
+    expect((answered(index.out).accounts as Record<string, unknown>[])[0]).toMatchObject({
+      breaker: "the daily-loss breaker",
+      rearming: true,
+    });
+    const press = fakeRes();
+    await serveSettingsApi(
+      post({ id: "bot-mine" }),
+      press.res,
+      "/api/settings/breaker-reset",
+      config,
+      session,
+    );
+    expect(String(answered(press.out).error)).toContain("Already reset");
+    expect(stamps).toEqual([]);
+  });
+
+  it("names the breaker on the settings index only while one holds the bot", async () => {
+    const held = rigged("errors");
+    const a = fakeRes();
+    await serveSettingsApi(get(), a.res, "/api/settings", held.config, session);
+    expect((answered(a.out).accounts as Record<string, unknown>[])[0]?.breaker).toBe(
+      "the errors breaker",
+    );
+    const clear = rigged(undefined);
+    const b = fakeRes();
+    await serveSettingsApi(get(), b.res, "/api/settings", clear.config, session);
+    expect((answered(b.out).accounts as Record<string, unknown>[])[0]).not.toHaveProperty(
+      "breaker",
+    );
+  });
+});

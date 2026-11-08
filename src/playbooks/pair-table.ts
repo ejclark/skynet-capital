@@ -546,8 +546,9 @@ export function withPairNames(text: string): string {
   });
 }
 
-/** Whether a verdict misses the house bar: its own `weakened`, or the one it borrows. */
-function belowHouseBar(evidence: PairEvidence): boolean {
+/** Whether a verdict misses the house bar: its own `weakened`, or the one it borrows. The one rule
+ *  the △ mark and the below-bar floor (`fit-floor.ts`, #6954 slice 5) both read. */
+export function belowHouseBar(evidence: PairEvidence): boolean {
   if (evidence.qualifier === "weakened") return true;
   const source = evidence.borrowedFrom ? findPair(evidence.borrowedFrom) : undefined;
   return source?.evidence.qualifier === "weakened";

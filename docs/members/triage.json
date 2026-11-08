@@ -106,8 +106,8 @@
   },
   {
     "screen": "/ (SPA index)",
-    "verdict": "redirect-only",
-    "target": "/leaderboard (keeps by/a/b)"
+    "verdict": "keep",
+    "mustBeSeenBy": "anyone signed in (the landing page, #7077; ?by=/a=/b= still go to /leaderboard)"
   },
   {
     "screen": "/activity",
@@ -269,7 +269,7 @@
   {
     "screen": "server / and /index.html",
     "verdict": "redirect-only",
-    "target": "/app/ (then /leaderboard); /app/accounts for a session with no linked account (#6317)"
+    "target": "/app/ (the landing page, #7077); /app/accounts for a session with no linked account (#6317)"
   },
   {
     "screen": "server /add, /onboarding, /app/onboarding",

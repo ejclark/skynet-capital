@@ -352,7 +352,7 @@ a table of contents"), so every name is a terse line item that must not repeat t
 |---|---|
 | workflow description | a title, ≤ 60 chars — `grind — one chore, many items` |
 | phase | the chore name (`interrogate`, `fix-doc-rot`); `meta` declares no `phases`, so no dead `Grind` row |
-| agent label | the item plus an optional nickname from `args.labels` (`{"1351": "listener slice 2"}`); **no step suffix** on the run's one named step, a one-word suffix on the automatic ones (`· envelope`, `· verify`) |
+| agent label | the item plus an optional nickname from `args.labels` (`{"1351": "listener slice 2"}`); **no step suffix** on the run's one named step, a one-word suffix on the automatic ones (`· envelope`, `· verify`), and `· script` on a script step with no `label` |
 | narrator line | `interrogate · 1/2 done · 0 blocked`, updated as each item finishes |
 | agent summary | one line, ≤ 120 chars, plus a URL — the schema says so, and the ledger cell truncates past 140 |
 
@@ -425,8 +425,8 @@ appeared). Two consequences:
   its gate's own item list is not hand-picking: the gate's list *is* the gate picking. `.claude/` is a
   Claude Code protected directory: writes there are never auto-approved outside `bypassPermissions`,
   and `permissions.allow` does not override that. So an unattended lane cannot create or edit a
-  skill, an agent, or `grind.js` itself, even though `envelope-scan --check` (which lists only
-  `.claude/settings.json`) reports those paths open. A feedback-lane session can call grind but not
+  skill, an agent, or `grind.js` itself, even though `envelope-scan --check` (whose only `.claude/`
+  entries are `.claude/settings.json` and `.claude/hooks/**`) reports those paths open. A feedback-lane session can call grind but not
   change it; route such a change to an interactive session as its own issue.
   `scripts/grind-manifest.mjs`, and the dispatch-time resolution in `grind.js`, read
   `*.instructions.md` front matter only, never `SKILL.md`, so a `skill` step's tier stays

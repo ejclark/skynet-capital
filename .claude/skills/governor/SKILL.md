@@ -20,8 +20,9 @@ earned after the policy proves out over reps.
 2. **SPIGOT.** `npm run work-gate` — the work spigot's dial and the #2946 spend breaker in one answer
    (`scripts/moneypenny/work-gate.mjs`, #3960). JSON on stdout, exit **0** cleared / **3** refused.
    - **Exit 3 → dispatch nothing this cycle.** Say which control refused, quoting its `reason`: the
-     dial reads `halt`, or the spend breaker is tripped and only a human clears that one. A refused
-     cycle is still a cycle — report it and stop, never work around it.
+     dial reads `halt`; the spend breaker is tripped, and only a human clears that one, or its
+     state is unreadable; or GitHub's REST allowance is used up (`restEmptyUntil`), which refills
+     by itself. A refused cycle is still a cycle — report it and stop, never work around it.
    - **`caps.governorDispatches` is this cycle's athlete allowance.** `normal` 4 is one per coach.
      `conserve` 1 — walk the roster as usual, dispatch only the first in the order step 3 reads, and
      name the ones deferred. `surge` 8 — a coach may be dispatched

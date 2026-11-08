@@ -13,12 +13,15 @@
 //      fast-track "lets an urgent bug/CVE build under conserve; never under halt").
 //   2. `conserve` refuses anything without `fast-track`.
 //   3. The in-flight cap: `mode.caps.inFlightCap` open issues already carrying `in-progress`
-//      (this issue excluded) refuses anything without `fast-track`.
+//      (this issue excluded) refuses anything without `fast-track` — and a `fast-track` card too
+//      while another `fast-track` card is in flight (#6871 call 6: one urgent build over the cap
+//      at a time). Under the cap, `fast-track` needs no exception and gets none.
 //   4. THE STARTED-PLAN CAP (#4393 criterion 6): when `mode.caps.startedPlanCap` plans already sit
-//      in the board's Waiting column (started, work left, nobody building), a FRESH plan is
+//      in the board's Next part queued column (started, work left a lane can pull, nobody
+//      building), a FRESH plan is
 //      refused — the next slice of a started plan never is. Stop starting, start finishing.
 //      `fast-track` bypasses it, as it does the in-flight cap. Asked only when the caller passes
-//      the Waiting list (`waiting`); a continuation (already started by definition) does not.
+//      the Next part queued list (`waiting`); a continuation (already started by definition) does not.
 //   5. THE SURFACE FENCE (criterion 7): an in-flight issue on the same capsule `Surface` refuses,
 //      and `fast-track` does NOT bypass it. Urgency changes how soon a build may start, never
 //      whether two builds may race the same files — an urgent fix colliding with a half-built
@@ -47,6 +50,8 @@
 // pick like #5707's (`retryHold`, `sweepHold`). A build that fails frees its slot, the freed slot
 // wakes the sweep, and the sweep picks the same top-ranked issue again: #4621 started every 3 minutes
 // for 38 minutes on 2026-10-27 and held the queue behind it the whole time.
+
+import { isMain } from "../is-main.mjs";
 import { classOf } from "../rank.mjs";
 import { ensureGhToken, ghRest, ghRestAll, sh } from "./gh.mjs";
 import {
@@ -59,7 +64,13 @@ import {
 } from "./labels.mjs";
 import { nextUnheld, readPickupHold } from "./pickup-hold.mjs";
 import { derivePrIssues, platterClosesByIssue } from "./pr-issues.mjs";
-import { isStartedPlan, statusForIssue, subIssueCounts, WAITING } from "./projects.mjs";
+import {
+  holdsCapSeat,
+  isStartedPlan,
+  NEXT_QUEUED,
+  statusForIssue,
+  subIssueCounts,
+} from "./projects.mjs";
 import {
   mayRetryThroughOutage,
   noteRetryHold,
@@ -106,25 +117,10 @@ export function isFreshPlan(issue) {
   );
 }
 
-/**
- * DOES THIS STARTED PLAN HOLD ONE OF THE CAP'S SEATS? Only while a lane could pull its next work
- * (2026-10-18 loop census). The cap's decision is unchanged — "finish one before starting a new
- * plan", `startedPlanCap` 4 — but it counted every Waiting plan, and 9 of the 10 Waiting that day
- * had nothing any lane could pull: their open sub-issues were unready sub-plans or unlabelled
- * stories, or (#3959) every sub-issue was closed. Nothing could finish them, so every fresh plan
- * was refused, a P1 among them — and #5494 held a seat against its own sub-plan #5482. A plan
- * nobody can work is waiting on someone to ready its remainder, not on a builder.
- *
- * Pullable = the plan carries `ready` itself (its next slice is the plan lane's), or one of its
- * open sub-issues carries `ready` and is not itself a plan. A row `readOpenPlans` could not enrich
- * with its sub-issues (`openSubIssues` absent) keeps its seat — the old count, never a looser one.
- */
-export function holdsCapSeat(plan) {
-  const subs = plan?.openSubIssues;
-  if (!Array.isArray(subs)) return true;
-  if (hasLabel(plan, LABELS.ready.name)) return true;
-  return subs.some((s) => hasLabel(s, LABELS.ready.name) && !hasLabel(s, LABELS.plan.name));
-}
+// `holdsCapSeat` — does a started plan hold one of the cap's seats? — lives in projects.mjs since
+// #6871 slice 2, beside the board rule that splits Next part queued from Next part needs approval
+// on it; re-exported here for the callers that ask the gate.
+export { holdsCapSeat };
 
 /** The parent issue's number from a REST row's `parent_issue_url`, or null. */
 export function parentNumberOf(issue) {
@@ -133,27 +129,28 @@ export function parentNumberOf(issue) {
 }
 
 /**
- * The open plans the board shows in **Waiting** — the same `statusForIssue` the board's columns
- * come from, so the cap and the column a human reads never disagree (the in-flight cap's rule:
- * `normal.inFlightCap` 3 is the board's own WIP limit). A blocked plan reads Blocked, not
- * Waiting, and so is not counted: it is waiting on a decision, not on a builder.
+ * The open plans the board shows in **Next part queued** — the same `statusForIssue` the board's
+ * columns come from, so the cap and the column a human reads never disagree, and the column's
+ * description prints the cap (`dialSentences`, projects.mjs). A plan waiting on a person reads
+ * Waiting on a person, and one whose remainder nobody has approved reads Next part needs approval;
+ * neither is counted, since no builder can finish them.
  *
- * THE ONE PLACE THE TWO PART, ON PURPOSE. A parked plan with no callout reads Waiting on the board
- * until someone writes the ask (rule 7), but it holds no seat here. `needs-eric` makes it unpullable
- * however the label landed, so no builder can finish it, and whether the ask is worded yet cannot
- * change that. When the seat followed the callout, four parked plans under his login could refuse
- * every fresh plan with `queued: 4 started plans waiting` (#6584).
+ * #6584's parked plan with no callout: `needs-eric` makes it unpullable however the label landed,
+ * so no builder can finish it, and whether the ask is worded yet cannot change that — it holds no
+ * seat. Since #6871 the board agrees: it reads Backlog until the ask is written, never a next-part
+ * column, so this list and the column are one set with no exception.
  */
 export function waitingPlans(openPlans = []) {
   return (openPlans ?? []).filter((p) => {
-    if (!(p && holdsCapSeat(p))) return false;
-    const labels = labelNames(p.labels);
+    if (!p) return false;
     const column = statusForIssue({
+      number: p.number,
       state: String(p.state ?? "open").toLowerCase(),
-      labels,
+      labels: labelNames(p.labels),
       subIssues: subIssueCounts(p),
+      openSubIssues: p.openSubIssues,
     });
-    return column === WAITING;
+    return column === NEXT_QUEUED;
   });
 }
 
@@ -172,8 +169,18 @@ export function admitBuild({ issue, inFlight = [], mode, waiting }) {
   }
   const others = (inFlight ?? []).filter((i) => i && i.number !== issue?.number);
   const cap = mode?.caps?.inFlightCap ?? 0;
-  if (others.length >= cap && !fastTrack) {
-    return { admit: false, reason: `queued: ${others.length} of ${cap} in flight` };
+  if (others.length >= cap) {
+    if (!fastTrack) return { admit: false, reason: `queued: ${others.length} of ${cap} in flight` };
+    // One fast-track build over the cap at a time (#6871 §6, call 6): a second urgent card waits
+    // for the first, so `fast-track` cannot grow the in-flight count without bound.
+    const urgent = others.find((i) => hasLabel(i, LABELS.fastTrack.name));
+    if (urgent) {
+      return {
+        admit: false,
+        reason: `queued: ${others.length} of ${cap} in flight, and fast-track #${urgent.number} is already building`,
+        queuedBehind: urgent.number,
+      };
+    }
   }
   const planCap = mode?.caps?.startedPlanCap;
   // A fresh plan whose parent holds a seat IS that parent's remaining work — refusing it refuses
@@ -367,8 +374,8 @@ export function queueNote(reason) {
     reasonLine(reason),
     "",
     "This issue keeps `ready`; the lane retries it on a later tick — nothing to do here. " +
-      "An urgent bug or CVE can take `fast-track` to skip the queue (never the halt, never the " +
-      "same-surface fence).",
+      "An urgent bug or CVE can take `fast-track` to skip the queue (one fast-track build over " +
+      "the cap at a time; never the halt, never the same-surface fence).",
     "",
     FOOTER,
   ].join("\n");
@@ -413,8 +420,8 @@ export function readOpenIssues(label, exec = sh) {
 
 /**
  * Every open `plan` issue, PAGINATED (85 were open on 2026-10-05 — one page of 100 is not enough
- * headroom, and a truncated list would undercount Waiting and let a fresh plan through). Same row
- * shape as `readOpenIssues`. `ghRestAll` throws rather than hand back half a list.
+ * headroom, and a truncated list would undercount Next part queued and let a fresh plan through).
+ * Same row shape as `readOpenIssues`. `ghRestAll` throws rather than hand back half a list.
  */
 export function readOpenPlans(readAll = ghRestAll) {
   return readAll(`issues?state=open&labels=${LABELS.plan.name}`)
@@ -436,9 +443,10 @@ export function readOpenPlans(readAll = ghRestAll) {
  * Attach a started plan's open sub-issues (number + labels) — what `holdsCapSeat` reads. One REST
  * read per started plan with open sub-issues (about ten), none for the rest; a started plan with
  * no open sub-issue gets `[]` for free. A failed read leaves the row un-enriched, which keeps its
- * seat: the cap never loosens on a read it could not make.
+ * seat: the cap never loosens on a read it could not make. The board's one-issue sync asks the
+ * same question of one plan (projects-sync.mjs, #6871 slice 2).
  */
-function withOpenSubIssues(plan, readAll) {
+export function withOpenSubIssues(plan, readAll = ghRestAll) {
   const subIssues = subIssueCounts(plan);
   if (!isStartedPlan({ labels: labelNames(plan.labels), subIssues })) return plan;
   if (subIssues.total - subIssues.completed <= 0) return { ...plan, openSubIssues: [] };
@@ -455,8 +463,8 @@ function withOpenSubIssues(plan, readAll) {
 }
 
 /**
- * What the cap needs for one issue: the Waiting list, and the issue with its own sub-issue counts
- * taken from the plan list when the caller's copy lacks them (an event payload or `gh issue view`
+ * What the cap needs for one issue: the Next part queued list, and the issue with its own
+ * sub-issue counts taken from the plan list when the caller's copy lacks them (an event payload or `gh issue view`
  * JSON may; the REST plan list always carries `sub_issues_summary`). Pure.
  */
 export function startedPlanInputs(issue, openPlans = []) {
@@ -727,7 +735,7 @@ function checkOne(issue, { inFlight, mode, readPlans, readHold }) {
   return hold ? { admit: false, reason: `not buildable now: ${hold}` } : verdict;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   // A session signed in only through `gh` has no token for the curl reads. Every plan row then read
   // as a 401, failed open and stayed listed, so --queue named plans --check refused (#6326's audit).
   ensureGhToken();

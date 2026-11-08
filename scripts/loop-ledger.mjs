@@ -30,9 +30,10 @@
 // The cost is self-reported and `unknown` is said out loud, stored as null, and never 0: a real 0 is
 // a codemod's price, and the two must not read alike. Pure core + thin I/O shell, like loop-check.mjs.
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { isMain } from "./is-main.mjs";
 import { overdueLoops } from "./loop-list-decide.mjs";
 
 export const LEDGER_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "loop-iterations");
@@ -284,6 +285,6 @@ function main(argv) {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2));
 }

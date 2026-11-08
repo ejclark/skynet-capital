@@ -77,6 +77,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // node_modules come from the checkout this script lives in, so a --root fixture needs none.
@@ -403,7 +404,7 @@ function print(report) {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   let report;
   try {
     const opts = parseArgs(process.argv.slice(2));

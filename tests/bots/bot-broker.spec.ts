@@ -66,7 +66,7 @@ describe("createBotBroker", () => {
     }
   });
 
-  it("honors a bot's custom baseUrl instead of the paper default", async () => {
+  it("honors a bot's own baseUrl instead of the paper default (an offline stand-in)", async () => {
     const { fetchFn, requests } = fakeFetch({
       "/v2/account": {
         status: 200,
@@ -77,13 +77,19 @@ describe("createBotBroker", () => {
     const original = globalThis.fetch;
     globalThis.fetch = fetchFn;
     try {
-      const broker = createBotBroker(bot({ baseUrl: "https://custom.example.com" }));
+      const broker = createBotBroker(bot({ baseUrl: "http://stand-in:8080" }));
       await broker.getPortfolio();
 
-      expect(requests[0]?.url.startsWith("https://custom.example.com")).toBe(true);
+      expect(requests[0]?.url.startsWith("http://stand-in:8080")).toBe(true);
     } finally {
       globalThis.fetch = original;
     }
+  });
+
+  it("refuses to build a broker for a bot whose baseUrl is not paper trading (paper-only, #6954)", () => {
+    expect(() => createBotBroker(bot({ baseUrl: "https://api.alpaca.markets" }))).toThrow(
+      /paper-only/,
+    );
   });
 
   // BUG: createBotBroker builds the FetchAlpacaTradingTransport with only

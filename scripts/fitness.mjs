@@ -49,7 +49,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import nodeModule, { createRequire } from "node:module";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ASSIGNED_MARKER,
@@ -62,6 +62,7 @@ import {
   whatHappensNext,
   whoHearsBlind,
 } from "./fitness-rungs.mjs";
+import { isMain } from "./is-main.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // Deadlines. The exec also gets flyctl's own --timeout, because its session can outlive ours.
@@ -102,6 +103,13 @@ const JOURNAL_FILE = /^[\w.-]+\.jsonl$/;
 // nothing about the bots' cycles, so its record must not read as the fleet deciding. Matched on the
 // name before its first dot, which also covers a scout's plain archive.
 const SCOUT_JOURNALS = new Set(["beta-scout", "cond-scout"]);
+// The tally runs on the bots machine itself (scripts/journal-tally.mjs, shipped in the image), so
+// five sessions of journal never cross flyctl as text. Its argument is the journal folder.
+const TALLY_COMMAND = `node /app/scripts/journal-tally.mjs ${JOURNAL_DIR}`;
+// A bot is judged over its last five sessions placing paper orders, and only while the newest of
+// them is recent: a bot the house moved to watching last month is not silent today.
+const SILENT_SESSIONS = 5;
+const SILENT_RECENT_MS = 10 * 24 * 60 * 60_000;
 // The node .nvmrc names, and the one the session clock is proven on. The clock job's own pin is on a
 // held platter PR, so until it lands this contract reads unknown and says why.
 const SESSION_CLOCK_NODE = 24;
@@ -256,6 +264,71 @@ export function parseDecisionLine(text) {
   }
   if (!Number.isFinite(record?.at) || record.at <= 0) return null;
   return { at: record.at, halted: Boolean(record.halted), bytes: Buffer.byteLength(text) };
+}
+
+/**
+ * What journal-tally.mjs printed, or null for anything short of its exact shape. Only ids and counts
+ * survive: a field this does not name never reaches a judge, a log or an issue.
+ */
+export function parseTally(text) {
+  let raw;
+  try {
+    raw = JSON.parse(String(text ?? "").trim());
+  } catch {
+    return null;
+  }
+  if (raw?.tally !== 1 || !Array.isArray(raw.bots)) return null;
+  const whole = (n) => Number.isInteger(n) && n >= 0;
+  const bots = [];
+  for (const bot of raw.bots) {
+    if (typeof bot?.id !== "string" || !/^[\w-]{1,64}$/.test(bot.id)) return null;
+    if (!Array.isArray(bot.sessions)) return null;
+    const sessions = [];
+    for (const day of bot.sessions) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day?.day ?? "")) return null;
+      if (![day.proposed, day.placed, day.explained].every(whole)) return null;
+      sessions.push({
+        day: day.day,
+        proposed: day.proposed,
+        placed: day.placed,
+        explained: day.explained,
+      });
+    }
+    bots.push({ id: bot.id, sessions });
+  }
+  return { bots };
+}
+
+/**
+ * Judge each bot placing paper orders on its last five sessions doing so (#6954 slice 1): it fails
+ * when a bot proposed orders across them, placed none and recorded no reason, which is the live but
+ * silent bot the decision-cycle contract passes. A guard's refusal, a broker rejection and a
+ * cooldown skip are each a reason, so a bot held by the subscribed-only guard passes here and says
+ * why on its decision records. A bot with fewer than five such sessions, or whose newest is older
+ * than ten days, is not judged: a bot moved to watching is the paper-orders row's to report.
+ */
+export function judgeLiveSilent(tally, nowMs) {
+  if (!tally) return unknown("the journal tally is unreadable");
+  const judged = tally.bots.filter(
+    (bot) =>
+      bot.sessions.length >= SILENT_SESSIONS &&
+      nowMs - Date.parse(`${bot.sessions[0].day}T00:00:00Z`) <= SILENT_RECENT_MS,
+  );
+  if (!judged.length) return quiet("no bot has five recent sessions placing paper orders");
+  const sum = (bot, key) =>
+    bot.sessions.slice(0, SILENT_SESSIONS).reduce((n, day) => n + day[key], 0);
+  const silent = judged.filter(
+    (bot) => sum(bot, "proposed") > 0 && sum(bot, "placed") === 0 && sum(bot, "explained") === 0,
+  );
+  if (silent.length) {
+    const names = silent.map((bot) => `${bot.id} (${sum(bot, "proposed")} proposed)`).join(", ");
+    return fail(
+      `over five sessions placing paper orders, ${names} placed none and recorded no reason`,
+    );
+  }
+  return pass(
+    `${judged.length} bot(s) over five sessions placing paper orders: each placed or said why not`,
+  );
 }
 
 /**
@@ -551,7 +624,7 @@ export const CONTRACTS = [
     budget: "none: past restarts did not fix this class, so it needs a named cause first",
     rung: "wait",
     reaches: ISSUE_TO_OWNER,
-    gap: "A fresh record from one bot passes for the whole fleet, a cycle that decided on frozen prices passes, a fleet in observe mode passes because it decides and places nothing, a fleet held by a breaker reads quiet, which includes every evaluation failing once five in a row trip the errors breaker, a running machine still carrying a person's halt mark reads quiet, a stall reads quiet for the first ten minutes of a session, and one in the session's last twenty minutes, which the 15-minute clock cannot read ten minutes on, stays quiet until ten minutes past the next open. A journal write that fails on a full volume reads as a stall while cycles run",
+    gap: "A fresh record from one bot passes for the whole fleet, a cycle that decided on frozen prices passes, a fleet in observe mode passes because it decides and places nothing (the fleet health card's paper-orders row now names it, and live-bots-place reads a live bot that proposes and never places), a fleet held by a breaker reads quiet, which includes every evaluation failing once five in a row trip the errors breaker, a running machine still carrying a person's halt mark reads quiet, a stall reads quiet for the first ten minutes of a session, and one in the session's last twenty minutes, which the 15-minute clock cannot read ten minutes on, stays quiet until ten minutes past the next open. A journal write that fails on a full volume reads as a stall while cycles run",
     // Reads the outcome's own trace, "every decision cycle is a durable line". The older reads pass
     // the 10-08 class: started and polling, with no decision for days. Class: an atomic read of a
     // fleet-wide outcome (the gap above is the difference), continual on the 15-minute clock, dynamic,
@@ -583,6 +656,49 @@ export const CONTRACTS = [
       return verdict.status === "fail" && startedOnceWithin(primary, rule.stallAfterMs, nowMs)
         ? quiet("the machine just started, so it has not had the stall window yet")
         : verdict;
+    },
+  },
+  {
+    id: "live-bots-place",
+    mustBeTrue:
+      "A bot placing paper orders on its own places them, or records why it did not, within five sessions",
+    home: "clock",
+    reads: "the decision journal",
+    // A silent bot has no script: the cause could be a guard, a broker or a playbook, and a restart
+    // is a state-destroying action, never a probe. Add a corrector only after a /retro names one.
+    corrector: null,
+    budget: "none: a bot that proposes and never places needs a named cause first",
+    rung: "wait",
+    reaches: ISSUE_TO_OWNER,
+    gap: "A bot that proposes nothing for five sessions passes, which is a quiet trigger and not a silent bot. A bot the house, its owner or its readiness gate holds to watching is not judged; the fleet health card's paper-orders row names that. One placed order or one recorded reason in five sessions passes the bot, however many proposals went unexplained beside it. It judges after the close only, so a bot that falls silent mid-session is read that evening",
+    // Reads the outcome's own trace, the decision journal, through a tally run on the machine:
+    // journal-tally.mjs prints ids and counts only. Class: an atomic read of a per-bot outcome,
+    // continual on the 15-minute clock outside the session, automated.
+    //
+    // Wrong if, by 2026-12-31, this fails for a bot whose decision records in those five sessions
+    // carry a placed order or a refusal (a tally that miscounts); or if a live bot proposes for five
+    // sessions, places nothing and records no reason, and no [fitness] live-bots-place issue opens
+    // by the next morning. Retires when the bots alert on a silent bot themselves, read from outside.
+    probe: (nowMs) => {
+      const rule = loadStallRule();
+      if (rule.why) return unknown(rule.why);
+      // Outside the session only: the tally reads megabytes on a one-CPU machine, and a trading
+      // cycle must never wait on it. outsideSession is null in session and quiet when closed.
+      const outside = outsideSession(nowMs, rule);
+      if (!outside) return quiet("judged after the close, so the read never slows a trading cycle");
+      if (outside.status === "unknown") return outside;
+      const machines = json(FLY, ["machine", "list", "-a", BOTS_APP, "--json"]);
+      if (!Array.isArray(machines)) return { ...unknown("cannot read Fly"), reads: "Fly" };
+      const primary = machines.find((m) => (m.config?.standbys ?? []).length === 0);
+      if (!primary) return quiet("no primary machine: bots-running reports this");
+      if (primary.state !== "started") {
+        return quiet(`machine is ${primary.state}: bots-running reports this`);
+      }
+      const out = journalRead(primary.id, TALLY_COMMAND);
+      if (out === null) return unknown("cannot read the decision journal");
+      const tally = parseTally(out);
+      if (!tally) readFailures.push("the tally printed something it does not know");
+      return judgeLiveSilent(tally, nowMs);
     },
   },
   {
@@ -1103,7 +1219,7 @@ function probeAll(nowMs, here) {
   return { results, crashed };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const here = whereAmI();
   const { results, crashed } = probeAll(Date.now(), here);
   if (process.argv.includes("--json")) console.log(JSON.stringify(results, null, 2));

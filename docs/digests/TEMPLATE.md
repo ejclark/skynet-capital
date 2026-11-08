@@ -1,6 +1,6 @@
 # Digest — <YYYY-MM-DD>
 
-**Period:** <last digest date or "start"> → <YYYY-MM-DD> · **Landed:** <n> change(s) · **Trigger:** <threshold | heartbeat | requested>
+**Period:** <last digest date or "start"> → <YYYY-MM-DD> · **Landed:** <n> change(s) · **Trigger:** <threshold | heartbeat | quiet-with-work | requested>
 
 <!-- The secretary's three tiers (.claude/skills/secretary). Filename is the date: YYYY-MM-DD.md.
      Every claim traceable to a diff/log; no surprises — anything Eric should have heard in real
@@ -23,6 +23,7 @@
 <!-- One line per shipped OUTCOME ("X now does Y", never "worked on X"). Cap ~5, ranked. -->
 
 -
+- This week so far (<YYYY-Www>, partial): <the line from `node scripts/newsletter.mjs --week "$(date -u +%G-W%V)"`, in the form .claude/skills/secretary section 1 gives; on a Monday, a link to the edition that closed the week>
 
 ## Noise absorbed
 

@@ -45,7 +45,6 @@ import {
   type ControlsState,
   effectiveBetaPicks,
   effectiveBetaStage,
-  effectiveMode,
 } from "../autonomous/bot-controls.js";
 import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
 import {
@@ -63,6 +62,7 @@ import type { LiveBot } from "../autonomous/live-cycle.js";
 import { BETA_SCOUT_PERSONA_ID, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { scoutHostGates } from "../autonomous/scout-host-gates.js";
 import { scoutSignalsFrom } from "../autonomous/scout-stand-down.js";
 import { signalWindows } from "../autonomous/signal-windows.js";
 import { createSubscriptionSync, type SubscriptionSync } from "../autonomous/subscription-sync.js";
@@ -107,6 +107,7 @@ import {
   seedDailyLossBaseline,
   seedDecisionDb,
   tradingRoster,
+  wireBreakerReset,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
 import {
@@ -187,11 +188,14 @@ async function runLive(): Promise<void> {
   let onScoutPicksPolled: (() => void) | undefined;
   // Set once the traders exist: swaps a bot's build when the owner flips its hardcore setting.
   let onHardcorePolled: ((state: ControlsState) => void) | undefined;
+  // Set once the safety controller exists: re-arms the breakers when the owner presses reset.
+  let onBreakerPolled: ((state: ControlsState) => void) | undefined;
   const { controls, bootControls, health } = await bootMissionControl(
     (state) => {
       void credentials.reconcile(state);
       onScoutPicksPolled?.();
       onHardcorePolled?.(state);
+      onBreakerPolled?.(state);
     },
     undefined,
     (cursor) => replication.onPoll(cursor),
@@ -203,6 +207,10 @@ async function runLive(): Promise<void> {
     (wire) => promotedPlays.accept(wire),
     (wire) => memberConvictions.accept(wire),
   );
+  // The house mode rides every poll from here on, idle or trading, so the fleet health card says
+  // whether the bots place paper orders without anyone reading the Fly secret (#6954 slice 1).
+  const mode = traderMode(process.env);
+  controls.reportProcessMode(mode);
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
   // registry would also have qualified.
@@ -295,7 +303,6 @@ async function runLive(): Promise<void> {
   await pollNews();
   setInterval(() => void pollNews(), NEWS_POLL_MS);
 
-  const mode = traderMode(process.env);
   const audit = auditStore(process.env);
   const decisionDb = seedDecisionDb(process.env);
   decisionDbRef = decisionDb;
@@ -315,14 +322,31 @@ async function runLive(): Promise<void> {
   const onSettled = settlements.onSettled;
   const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
-  const safety = new SafetyController();
+  // The ladder rides the same equity feed: the bots are `actor: "bot"`, so its bottom rung closes
+  // their books, and a rung change is said in the log (#6954 slice 3).
+  const safety = new SafetyController({
+    actor: "bot",
+    onRiskAlert: (alert) => console.warn(`[risk-ladder] ${alert.title}`),
+  });
   const haltFile = process.env.SKYNET_HALT_FILE;
-  const blockedReason = () => {
-    if (haltFile && existsSync(haltFile)) safety.halt("manual");
-    // The owner's global suspend gates everything this seam gates — the beta scout included.
-    // Empty id = only the all-bots switch can match; per-bot suspends compose in buildLiveBot.
-    return safety.blockedReason() ?? controls.suspendedReason("");
+  // STOP EVERYTHING: the kill switch and the owner's all-bots suspend place nothing, exits included.
+  // Per-bot suspends compose in buildLiveBot. The kill switch reads "manual" so the bot-watch alert
+  // still names it (`HaltReason`).
+  // Latched like any breaker: once the file has been seen the switch stays thrown until the bots
+  // restart, even if the file is removed ("a breaker never silently re-arms").
+  let killSwitchThrown = false;
+  const stopEverything = () => {
+    if (haltFile && existsSync(haltFile)) killSwitchThrown = true;
+    return killSwitchThrown ? "manual" : controls.suspendedReason("");
   };
+  // STOP OPENING: a tripped breaker refuses new risk and never an exit (#6954 slice 3) — a bot that
+  // cannot sell is stuck in the drawdown the breaker tripped on.
+  const openBlockedReason = () => safety.blockedReason();
+  // The owner's "reset breaker" (Settings card) re-arms the breakers on the next poll; it never
+  // clears the kill switch or a suspend (#6954 slice 3b).
+  onBreakerPolled = wireBreakerReset(bots, safety);
+  // Anything that opens (the forced pick, the shadow scouts) stops under either.
+  const blockedReason = () => stopEverything() ?? openBlockedReason();
   controls.start();
   console.log(
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
@@ -425,7 +449,8 @@ async function runLive(): Promise<void> {
     buildLiveBot(botRoster.bot, {
       mode,
       trading: rosterFor(botRoster),
-      blockedReason,
+      blockedReason: stopEverything,
+      openBlockedReason,
       safety,
       onDecision,
       hardcore: hardcoreRoster.hardcore,
@@ -474,7 +499,8 @@ async function runLive(): Promise<void> {
   onHardcorePolled = watchHardcore({
     ids: botRosters.map((r) => r.bot.persona.id),
     initial: hardcoreRoster.hardcore,
-    wantedMode: (id) => effectiveMode(bootControls, id, mode),
+    // The house mode: the owner's "watch only" narrows each cycle on top (#6954 slice 5b).
+    wantedMode: () => mode,
     report: controls.reportPersonaGate,
     apply: (id, persona, tuning) => {
       const i = botRosters.findIndex((r) => r.bot.persona.id === id);
@@ -583,16 +609,21 @@ async function runLive(): Promise<void> {
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
   // fully spec'd in tests/autonomous/live-cycle.spec.ts. Everything below is wiring: real
   // brokers, the halt-file-aware blockedReason, and console/audit sinks for its hooks.
+  // The forced pick obeys its host bot's owner too: the suspend, "stop opening" and "watch only"
+  // (#6954 slice 5b) — it trades on that bot's account, so the bot's settings are its settings.
+  const scoutGates = scoutHostGates(controls, scoutHostId, { stopEverything, openBlockedReason });
   const runner = new LiveCycleRunner({
     traders,
     safety,
-    blockedReason,
+    blockedReason: scoutGates.blockedReason,
+    exitBlockedReason: scoutGates.exitBlockedReason,
     ...(botsStateDb ? { scoutState: scoutStateStore(botsStateDb) } : {}),
     scout: buildScoutDeps(scoutPicks, scoutBroker, {
       universe: UNIVERSE,
       managedSymbols,
       risk,
       mode,
+      watchOnly: scoutGates.watchOnly,
       subscriptions: () => botRosters[0]?.subscriptions ?? [],
       ...(botRosters[0] ? { hostId: botRosters[0].bot.persona.id } : {}),
       settlementOf: settlements.settlementOf,

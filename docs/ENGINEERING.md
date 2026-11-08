@@ -111,16 +111,33 @@ matching specs. Anti-patterns EARS kills: vague "should/support/handle", compoun
 **A shared cap over a growing set of entities gets its arithmetic run at design time, not
 discovered live** (Eric, 2026-09-17, on `/api/wire`'s 30-row page cap silently hiding a member's
 own older trades: "our concern is identifying constraints at scale... one user having more than 30
-trades, two users having 15 trades, 5 users having 6 trades — basic math problems"). The framing
-that matters is not "how much data exists" (volume is a red herring — a five-person league with
-modest activity crosses the exact same cap a thousand-user one would) but "how many entities share
-this one fixed budget, and what does each one's slice look like at plausible N." When an EARS
-criterion introduces a limit/cap/page size shared across participants, personas, symbols, or any
-other growing set, state the per-entity math in the same breath — a sentence, not a model: "at 5
-active participants this is 6 rows each," caught by reading the requirement, never by waiting for
-real accounts to hit it. `tests/arch/pagination-consumer.spec.ts` catches the one specific failure
-mode this produced (a paginated contract with zero client consumers); it cannot catch the design
-gap itself — that's a review habit, not a mechanical gate.
+trades, two users having 15 trades, 5 users having 6 trades — basic math problems"). For a cap,
+the question is not "how much data exists" (a five-person league with modest activity crosses the
+exact same cap a thousand-user one would) but "how many entities share this one fixed budget, and
+what does each one's slice look like at plausible N." When an EARS criterion introduces a
+limit/cap/page size shared across participants, personas, symbols, or any other growing set, state
+the per-entity math in the same breath — a sentence, not a model: "at 5 active participants this is
+6 rows each," caught by reading the requirement, never by waiting for real accounts to hit it.
+`tests/arch/pagination-consumer.spec.ts` catches the one specific failure mode this produced (a
+paginated contract with zero client consumers); it cannot catch the design gap itself — that's a
+review habit, not a mechanical gate.
+
+**For runtime cost, volume is the question: price a read at the ledger's length a year out, not
+today's** (#4612 slice 10). The cap rule above sets volume aside; cost cannot. The reads that
+OOM-killed production twice (#4425, #4519), and 10 of the 16 defects #4612's audit traced, each
+merged with only empty or fixture-sized data as runtime evidence. Every append-only store here
+grows with no retention, so a request or boot path that reads a whole ledger, or builds an object
+per row, gets slower and heavier each day with no code changing. Three checks price it, so review doesn't have
+to remember:
+- `npm run stability:budget` runs the built server in a 512 MB container on 180 days × 12
+  participants and clicks what a member clicks. CI runs it on every PR that changes what the server
+  ships, and memory and breakage block.
+- `scripts/whole-read-scan.mjs` fails a new whole read on a request or boot path.
+- `scripts/intl-scan.mjs` fails an `Intl` formatter built inside a function body.
+
+A heap cap (`--max-old-space-size`) is not memory evidence: formatter memory is native, so measure
+RSS. A held fold that falls back to a whole read when its store lacks `since` is still a whole
+read in production if a wrapper drops the method (#6597).
 
 **Automated enforcement.** The red-green-refactor loop is backed by deterministic gates, so the
 suite runs whether or not anyone remembers:
@@ -131,6 +148,28 @@ suite runs whether or not anyone remembers:
   reports that never turn it red (`tests/support/advisory-scan.ts`).
 - Shared test data lives in `tests/support/builders.ts` — specs state only the fields they care
   about. No copy-pasted fixtures.
+
+### Member playthroughs — the acceptance line is the step (#7031)
+
+A change a member can see (a file under `.claude/rules/member-surfaces.md`'s paths, or a server
+response that surface renders) carries its acceptance line into a playthrough step. The steps live
+in `e2e/journeys/<member>.journey.json`; the schema is [`docs/members/README.md`](members/README.md),
+and CI plays every step before a PR merges (the default `npx playwright test`, which the
+integration-tests job runs).
+
+1. **Write the step first, from the acceptance line.** Add a step to the member the change is for,
+   or edit the step whose EARS line the change alters; its `ears` is the issue's or plan's line
+   word for word, and its `expect` asserts the outcome that line asks for.
+2. **Watch it fail on `origin/main` before the code.** Run it there
+   (`npm run test:e2e:journeys -- -g "<member>.*<step id> —"`) and say in the PR body that it was red. A step
+   that passes before the change proves nothing about the change.
+3. **Never mark it `known_gap`.** That mark is the ratchet for a defect already found and not yet
+   fixed; a step written for the PR's own acceptance line is expected to pass when the PR lands.
+   Deleting or loosening an existing step to get green is a finding, never a fix.
+4. **A change with no member-visible effect adds no step**, and says so in one line of the PR body.
+
+These steps are a regression net, not a stand-in for a person's look at the rendered screen: the
+journeys once passed every screen Eric then found broken (`docs/members/study/README.md`).
 
 ## DRY, with a bias toward one owner per concept
 
@@ -382,6 +421,10 @@ written as history; its check C has a before/after for rule 2.
   never skip the spec to get green. The verify queue's specs were skipped on macOS in #6324 because
   they failed there. They were right: the queue did nothing on a Mac for six days, and that is where
   the fan-outs run (`docs/LESSONS.md`, 2026-11-01).
+- **A script's direct-run check is `if (isMain(import.meta.url))`** from `scripts/is-main.mjs`
+  (#7046; `scripts/study/` takes it from `./compat.mjs`). Node resolves `import.meta.url` through
+  symlinks and leaves `process.argv[1]` as typed, so a raw comparison of the two skips `main()` and
+  exits 0 silently on every macOS `/tmp` path. `tests/arch/is-main.spec.ts` fails on a raw one.
 
 - **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever
   (the recurring TS1005 trap: the embedded script lives inside a template string, so those tokens

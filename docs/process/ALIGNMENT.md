@@ -27,6 +27,20 @@ alignment has come — and the evidence that lets a class stop asking.
    accountability and recoverability, not because alignment is short. That boundary moves only when
    he moves it.
 
+## How rows get recorded (#6953 slice 3)
+
+The assignment card (`scripts/moneypenny/ask-card.mjs`) carries each question's options and Claude's
+prediction. When Eric's first reply under an ask is a letter on the card, `yes`, `no` or `not now`,
+the lane (`answer-readback.mjs`) answers "Read as: …", takes `needs-eric` off, unassigns him and
+leaves a scored row in that comment: `match` or `miss` against the predicted letter, `unclear` for a
+deferral, "score by hand" when the prediction was prose. Plan and feedback issues are skipped, since
+their own reply path resumes the build with the reply as the answer. Nothing acts on the answer:
+a reply of "merge it" is never read as the merge.
+
+`node scripts/moneypenny/answer-readback.mjs --ledger [--apply]` collects the last week's rows into
+the table below, once each, with the row's key in a hidden comment. No scheduled lane runs it or
+opens rule 3's graduation PR: a session does both.
+
 ## Ledger
 
 | Date | Class | The ask | Predicted (confidence) | Eric's answer | Score |
@@ -44,5 +58,14 @@ alignment has come — and the evidence that lets a class stop asking.
 | 2026-11-01 | credentials | #4621 · press the button that sets the bridge password, and approve the run it starts? (first wording) | Yes (high) | "what is there to approve?" | unclear |
 | 2026-11-01 | credentials | #4621 · Same, asked again in chat | Yes (high) | Yes, in chat | match |
 | 2026-11-05 | session housekeeping | #6870 S1 done and its replay failed the bar: archive the session, or run iteration 2 (the Nit line, ~5.3M tokens) here first? | Archive; iteration 2 in its own session (medium) | Run iteration 2 here first | miss |
+| 2026-11-07 | screen design (taste) | #7018 round 0 · which problem to fix first on today's landing? | No market on screen (medium) | Asking is out of sight | miss |
+| 2026-11-08 | screen design (taste) | #7018 fork (a) · a newspaper or a mission briefing? | One page: newspaper format, mission narrator (medium) | Build "News, mission narrator" | match |
+| 2026-11-08 | screen design (taste) | #7018 fork (b) · where do quests sit? | Under each story, plus a part from the member's own book (medium) | Build "Each by its source" | match |
+| 2026-11-08 | screen design (taste) | #7018 round 1 Q1 · where do you ask? | Under each story (medium) | More of both under-each-story and one ask up top; "canned selections as fallbacks" | miss |
+| 2026-11-08 | screen design (taste) | #7018 round 1 Q2 · what joins the news at the top? | One line on you, under the news (medium) | Not "what's new"; no signal on the line or the card | pending |
+| 2026-11-08 | screen design (taste) | #7018 forks (c) whose question led to an article, (d) the name "Skynet Chronicles" | (c) yes, members only (medium-low); (d) the landing page takes the name (medium) | Drawn on every round-1 frame; no mark on either | pending |
+| 2026-11-08 | screen design (taste) | #6948 · the landing page's first round: close, he adds or cuts a section? | Close; he adds or cuts a section (medium) | Cut "what's new"; asked each story to fold to its key facts | match |
+| 2026-11-08 | screen design (taste) | #7018 round 2 Q2 · where do the coming reports sit? | On the story they bear on (medium) | Build "Dates on the story"; lead with the events and add up / down / volatile icons | match |
+| 2026-11-08 | screen design (taste) | #7018 round 2 Q1 · confirm your own question first | As drawn (high) | Unanswered; decided on his behalf at his ask ("make judgement calls on my behalf to get this movement rolling") | decided on his behalf |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.

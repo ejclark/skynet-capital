@@ -7,6 +7,7 @@ import type { SymbolFacts } from "../domain/symbol-facts.js";
 import type {
   MarketContext,
   OrderIntent,
+  PlaybookMode,
   PlaybookSubscription,
   Portfolio,
 } from "../domain/types.js";
@@ -17,6 +18,7 @@ import {
   committedToPlaybook,
   type OpenBuy,
   openBuysSpend,
+  openCeilingUsd,
   openLedger,
   soldShares,
   spendableCash,
@@ -79,6 +81,21 @@ export interface RiskConfig {
    */
   readonly accountTier?: RiskTier;
   /**
+   * A tripped safety breaker is holding this account's opens (#6954 slice 3): every order that
+   * ADDS risk is refused `breaker-halt`, and exits still pass — the same shape as the ladder's
+   * block rung, which this sits beside. Set per cycle by the trader from the breaker's own answer;
+   * absent means no breaker is holding, so evals, the readiness gate and every other caller are
+   * untouched.
+   */
+  readonly opensHalted?: true;
+  /**
+   * The bot's owner set "stop opening, keep exits" on its Settings card (#6954 slice 5b): every
+   * order that ADDS risk is refused `opens-held`, and exits still pass — the breaker's shape above,
+   * chosen by a person rather than tripped by a loss. Set per cycle by the trader; absent leaves
+   * every other caller untouched.
+   */
+  readonly opensHeld?: true;
+  /**
    * This account's active playbook subscriptions. Scoped to one account already —
    * `RiskConfig` is built per-bot — so a buy's `playbookId` looks itself up here rather than the
    * guard taking an `accountId`. Absent or no match = no sub-allocation clamp, unchanged from
@@ -114,6 +131,22 @@ export interface RiskConfig {
    * daily pick; absent everywhere else (evals, the readiness gate), which behave exactly as before.
    */
   readonly subscribedOnly?: true;
+  /**
+   * Whether an opening order's playbook carries an exit plan in the order's mode — a stop, a target
+   * or a time exit (#6954 slice 4, `exitPlannedFor` in `playbooks/exit-plan.ts`). An open it answers
+   * `false` for, or one with no playbook at all, is refused `no-exit-plan`; exits always pass. Set
+   * beside `subscribedOnly` by the live bots' roster and the forced daily pick; absent everywhere
+   * else (evals, the readiness gate), which behave exactly as before.
+   */
+  readonly exitPlanned?: (playbookId: string, mode?: PlaybookMode) => boolean;
+  /**
+   * The most ONE opening order from a playbook may risk, as a share of account equity — the
+   * below-bar floor (#6954 slice 5, `openCeilingFor` in `playbooks/fit-floor.ts`). It is one more
+   * bound beside cash, the position cap and the budget, so it only ever shrinks an order; one whose
+   * single unit costs more is refused `below-bar-floor`. `undefined` for a playbook means no
+   * ceiling. Exits are never sized by it. Set by the live bots' roster; absent everywhere else.
+   */
+  readonly openCeiling?: (playbookId: string) => number | undefined;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -130,6 +163,12 @@ export type GuardRefusalReason =
   /** The graduated risk ladder's BLOCK rung (opens only — see `applyGuards`'s own comment on why
    *  gating opens alone is sufficient). */
   | "ladder-block"
+  /** A tripped safety breaker (daily loss, order rate, errors, data gap) is holding opens (#6954
+   *  slice 3). Opens only: a breaker never blocks an exit, so a bot can always get out. */
+  | "breaker-halt"
+  /** The bot's owner is holding its opens ("stop opening, keep exits", #6954 slice 5b). Opens only:
+   *  the owner's hold never blocks an exit. */
+  | "opens-held"
   /** S2: the symbol is inside its protected window (`domain/protected-window.ts`) and the intent
    *  didn't claim `allowThroughPrint`. */
   | "s2-print"
@@ -171,13 +210,21 @@ export type GuardRefusalReason =
   | "collateral-reserved"
   /** An order that would open a position, from no playbook the bot is subscribed to and has on
    *  (#4642 slice 10, `subscribed-only.ts`). Never an exit. */
-  | "unsubscribed";
+  | "unsubscribed"
+  /** An order that would open a position, from a playbook that declares no stop, no target and no
+   *  time exit in its mode (#6954 slice 4). Never an exit. */
+  | "no-exit-plan"
+  /** An order that would open a position from a pair below its playbook's evidence bar, whose one
+   *  unit costs more than the below-bar floor lets it risk (#6954 slice 5). Never an exit. */
+  | "below-bar-floor";
 
 /** The single source of truth for the reason literals above — so a validator crossing a process
  *  boundary (`decision-wire-parts.ts`, on the bots↔app replication bridge) can check a foreign
  *  string against the real set instead of re-typing it a third time. */
 export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "ladder-block",
+  "breaker-halt",
+  "opens-held",
   "s2-print",
   "e1-open",
   "subscription-filter",
@@ -198,6 +245,8 @@ export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
   "uncovers-short-call",
   "collateral-reserved",
   "unsubscribed",
+  "no-exit-plan",
+  "below-bar-floor",
 ];
 
 /** One raw intent the guards refused outright this cycle — the persona's own ask, unfiltered,
@@ -260,6 +309,7 @@ type BuySizingOutcome =
         | "position-cap"
         | "subscription-budget"
         | "collateral-reserved"
+        | "below-bar-floor"
       >;
     };
 
@@ -310,6 +360,10 @@ function clampBuy(
   const spendable = spendableCash(portfolio, ledger, book);
   const affordable = Math.floor(spendable / unitPrice);
   const withinPosition = Math.floor(positionBudget / unitPrice);
+  // The below-bar floor (#6954 slice 5): a per-order ceiling, so the position already held does
+  // not count against it — the position cap above already bounds the whole holding. `Infinity`
+  // when the playbook has no ceiling, so it never binds.
+  const withinFloor = Math.floor(openCeilingUsd(intent, equity, config.openCeiling) / unitPrice);
 
   // The subscription's budget is shared across its playbook's WHOLE basket — shares held, the
   // collateral its sold puts hold, its long contracts and this batch's earlier claims — so a
@@ -337,6 +391,7 @@ function clampBuy(
 
   const bounds = [intent.quantity, affordable, withinPosition];
   if (subscriptionBudgetShares !== undefined) bounds.push(subscriptionBudgetShares);
+  bounds.push(withinFloor);
   const quantity = Math.min(...bounds);
 
   if (quantity > 0) {
@@ -355,6 +410,8 @@ function clampBuy(
     return { ok: false, reason: reserved ? "collateral-reserved" : "insufficient-cash" };
   }
   if (withinPosition <= 0) return { ok: false, reason: "position-cap" };
+  if (withinFloor !== undefined && withinFloor <= 0)
+    return { ok: false, reason: "below-bar-floor" };
   return { ok: false, reason: "subscription-budget" };
 }
 
@@ -429,6 +486,40 @@ function clampOne(
     : clampSell(intent, portfolio, batch);
 }
 
+/** An opening order with no exit plan behind it, when the rule is on (`RiskConfig.exitPlanned`). */
+function lacksExitPlan(intent: OrderIntent, config: RiskConfig): boolean {
+  if (!config.exitPlanned) return false;
+  return !(intent.playbookId && config.exitPlanned(intent.playbookId, intent.playbookMode));
+}
+
+/**
+ * Why an order that ADDS risk is refused before it is sized, if it is — checked in this order:
+ *  1. no exit plan (#6954 slice 4): a play with no way out opens nothing;
+ *  2. the ladder's BLOCK rung, ahead of sizing: no point sizing an order that is refused. A share
+ *     sell can only ever be risk-reducing, because `clampSell` refuses to sell more than is held,
+ *     and an option close only closes what is held. So blocking opens alone satisfies the rung: new
+ *     risk is refused, EXISTING POSITIONS ARE UNTOUCHED, and exits stay open — including the
+ *     force-flatten sells the bottom rung emits;
+ *  3. a tripped breaker, which holds opens the same way and for the same reason (#6954 slice 3; it
+ *     used to stop the whole cycle, exits included);
+ *  4. the owner's "stop opening, keep exits" (#6954 slice 5b), after the breaker: a safety stop is
+ *     named first when both hold;
+ *  5. trade discipline (S2/E1): a dropped entry needs no sizing. S2 keys on `intent.symbol`, which
+ *     for an option order is the underlying.
+ */
+function openRefusal(
+  intent: OrderIntent,
+  context: MarketContext,
+  config: RiskConfig,
+  ladderBlocks: boolean,
+): GuardRefusalReason | undefined {
+  if (lacksExitPlan(intent, config)) return "no-exit-plan";
+  if (ladderBlocks) return "ladder-block";
+  if (config.opensHalted) return "breaker-halt";
+  if (config.opensHeld) return "opens-held";
+  return config.discipline ? disciplineReason(intent, context, config.discipline) : undefined;
+}
+
 /** Share orders still open at the broker this cycle — see `applyGuardsWithVerdicts`. */
 export interface OpenAtBroker {
   readonly sells?: ReadonlyMap<string, number>;
@@ -481,23 +572,11 @@ export function applyGuardsWithVerdicts(
       continue;
     }
     // Whether this order ADDS risk: a share buy, or any option open (a sold put is a sell that opens
-    // risk). For a share intent this is exactly `side === "buy"`.
-    const opens = opensRisk(intent);
-    // The ladder's BLOCK rung, ahead of everything else: no point sizing an order that is refused.
-    // A share sell can only ever be risk-reducing, because `clampSell` refuses to sell more than is
-    // held, and an option close only closes what is held. So blocking opens alone satisfies the
-    // rung: new risk is refused, EXISTING POSITIONS ARE UNTOUCHED, and exits stay open — including
-    // the force-flatten sells the bottom rung emits.
-    if (opens && ladderBlocks) {
-      refused.push({ intent, reason: "ladder-block" });
-      continue;
-    }
-    // Trade discipline next (S2/E1, opens only): a dropped entry needs no sizing. S2 keys on
-    // `intent.symbol`, which for an option order is the underlying.
-    const discipline =
-      opens && config.discipline ? disciplineReason(intent, context, config.discipline) : undefined;
-    if (discipline) {
-      refused.push({ intent, reason: discipline });
+    // risk). For a share intent this is exactly `side === "buy"`. Every refusal past this point is
+    // for opens alone — an exit is never refused before it is sized.
+    const held = opensRisk(intent) ? openRefusal(intent, context, config, ladderBlocks) : undefined;
+    if (held) {
+      refused.push({ intent, reason: held });
       continue;
     }
     const outcome = clampOne(intent, portfolio, context, config, batch);

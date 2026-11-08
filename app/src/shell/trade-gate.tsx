@@ -1,10 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useId, useState } from "react";
-import { type DeskOrderEvent, useOrderFill } from "../live/desk-events";
-import { fillHeadline } from "../live/fill-headline";
 import { marketSession } from "../live/market-session";
 import type { PlayInfo } from "../live/options";
+import type { SentOrder } from "../live/order-receipt";
 import { quoteQuery } from "../live/quote-query";
 import {
   buildDraft,
@@ -22,10 +21,10 @@ import {
   type TicketResult,
   tifLabel,
 } from "../live/ticket";
-import { useFillFlare } from "./fill-flare";
-import { DisarmNote, DoneNote, GateHead, keepFocus } from "./gate-frame";
+import { DisarmNote, GateHead, keepFocus } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
 import { useNow } from "./market-session";
+import { OrderReceipt } from "./order-receipt";
 import { QuoteHeader } from "./quote-header";
 import { RecentOrdersStrip } from "./recent-orders-strip";
 import { SymbolField } from "./symbol-field";
@@ -47,7 +46,8 @@ type GateState =
   | { readonly step: "reviewing" }
   | { readonly step: "reviewed"; readonly preview: TicketPreview }
   | { readonly step: "submitting"; readonly preview: TicketPreview }
-  | { readonly step: "done"; readonly result: TicketResult }
+  /** `sent` rides with an accepted order — what the receipt states (`order-receipt.tsx`). */
+  | { readonly step: "done"; readonly result: TicketResult; readonly sent?: SentOrder }
   | { readonly step: "error"; readonly message: string };
 
 /** What the member asked for, echoed back in the review — the order class by its unambiguous name
@@ -119,14 +119,7 @@ function readyHeadline(preview: TicketPreview): string {
   return "All checks passed — ready to submit";
 }
 
-function GateStatus({
-  state,
-  fill,
-}: {
-  readonly state: GateState;
-  /** The stream's frame for this ticket's order, once one arrived (#3407 P4 slice 2). */
-  readonly fill?: DeskOrderEvent;
-}): ReactElement | null {
+function GateStatus({ state }: { readonly state: GateState }): ReactElement | null {
   if (state.step === "draft") return null;
   if (state.step === "reviewing") return <GateHead tone="checks">Reviewing…</GateHead>;
   if (state.step === "reviewed" || state.step === "submitting")
@@ -140,18 +133,8 @@ function GateStatus({
     );
   if (state.step === "error")
     return <GateHead tone="refused">{`The gate is unreachable — ${state.message}`}</GateHead>;
-  if (state.result.ok)
-    return (
-      <>
-        <GateHead tone="filled">{fillHeadline(state.result, fill)}</GateHead>
-        <div className="gate-body">
-          <DoneNote fill={fill}>
-            Working orders below update now; the blotter and timeline pick the fill up on the next
-            read.
-          </DoneNote>
-        </div>
-      </>
-    );
+  // An accepted order renders as the receipt in the form's place (`order-receipt.tsx`).
+  if (state.result.ok) return null;
   return (
     <>
       <GateHead tone="refused">The gate refused at submit</GateHead>
@@ -285,36 +268,58 @@ export function TradeGate({
     }
   };
 
-  const fill = useOrderFill(
-    deskId,
-    state.step === "done" && state.result.ok ? state.result.orderId : undefined,
-  );
-  useFillFlare(fill);
-
   const submit = async (preview: TicketPreview) => {
     setState({ step: "submitting", preview });
     try {
       const result = await submitTicket(draft());
-      setState({ step: "done", result });
-      // The working-orders section (#3407 P1 slice 2) reads the broker; a sent order should show
-      // up there on the same screen, not on the next visit.
-      if (result.ok) await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
+      if (!result.ok) {
+        setState({ step: "done", result });
+        return;
+      }
+      // The receipt states the order as the server reviewed it — its side, size and prices.
+      const sent: SentOrder = {
+        orderId: result.orderId,
+        status: result.status,
+        symbol: result.symbol,
+        side: preview.action,
+        quantity: preview.quantity,
+        unit: "shares",
+        orderType: preview.orderType,
+        ...(preview.limitPrice === undefined ? {} : { limitPrice: preview.limitPrice }),
+        ...(preview.stopPrice === undefined ? {} : { stopPrice: preview.stopPrice }),
+        timeInForce: result.timeInForce ?? preview.timeInForce,
+      };
+      setState({ step: "done", result, sent });
+      // The order list (#3407 P1 slice 2) reads the broker; the receipt finds the order there at
+      // once, and the Orders pane shows it on the same visit.
+      await queryClient.invalidateQueries({ queryKey: ["desk-orders", deskId] });
     } catch (error) {
       setState({ step: "error", message: String(error) });
     }
   };
 
+  /** "New ticket" on the receipt: the order's entries clear and the symbol (the page's context,
+   *  in the URL) stays — the limit re-seeds at the mid on the next quote, as on a fresh ticket. */
+  const newTicket = () => {
+    setFields((f) => ({
+      symbol: f.symbol,
+      quantity: "",
+      action: f.action,
+      orderType: "market",
+      limitPrice: "",
+      stopPrice: "",
+    }));
+    setPriced(false);
+    setSeed(undefined);
+    setState({ step: "draft" });
+  };
+
   if (play?.locked) return <LockedPanel header={header} play={play} />;
 
   const busy = state.step === "reviewing" || state.step === "submitting";
-  return (
-    <section className="panel gate-panel" aria-label="New trade">
-      {header}
-      <h2 className="panel-title">New trade</h2>
-      <p className="panel-sub">
-        Paper account · market, limit or stop · the gate reviews before anything is sent
-      </p>
-      <QuoteHeader symbol={quoteSym} />
+  const sent = state.step === "done" && state.result.ok ? state.sent : undefined;
+  const form = (
+    <>
       <div className="gate-fields">
         <SymbolField
           id={symId}
@@ -406,7 +411,7 @@ export function TradeGate({
       <RecentOrdersStrip symbol={quoteSym} deskId={deskId} />
 
       <div className="gate" aria-live="polite">
-        <GateStatus state={state} fill={fill} />
+        <GateStatus state={state} />
       </div>
 
       {state.step === "reviewed" && state.preview.ok ? (
@@ -420,8 +425,9 @@ export function TradeGate({
           Submit order{state.preview.estNotional ? ` — ${money(state.preview.estNotional)}` : ""}
         </button>
       ) : state.step === "done" ? (
+        // Only a refusal at submit is left here — the entries stayed for the fix.
         <button type="button" className="btn" onClick={() => setState({ step: "draft" })}>
-          Start another ticket
+          Edit and review again
         </button>
       ) : (
         <button
@@ -434,6 +440,19 @@ export function TradeGate({
           {state.step === "reviewing" ? "Reviewing…" : "Review order"}
         </button>
       )}
+    </>
+  );
+  return (
+    <section className="panel gate-panel" aria-label="New trade">
+      {header}
+      <h2 className="panel-title">New trade</h2>
+      <p className="panel-sub">
+        Paper account · market, limit or stop · the gate reviews before anything is sent
+      </p>
+      <QuoteHeader symbol={quoteSym} />
+      {/* Sent, the form steps aside for the receipt — an order that went out never sits under
+          fields that still hold it (Eric, 2026-11-06). */}
+      {sent ? <OrderReceipt deskId={deskId} order={sent} onNewTicket={newTicket} /> : form}
     </section>
   );
 }

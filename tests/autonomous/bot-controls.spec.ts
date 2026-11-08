@@ -91,12 +91,23 @@ describe("suspendedReason — the blockedReason seam", () => {
 });
 
 describe("effective overrides — the store decides; only mode keeps an env default", () => {
-  it("mode: the store override narrows the env default in both directions", () => {
+  it("mode: a stored observe narrows a live house to watching", () => {
     expect(effectiveMode({ bots: { sauron: { mode: "observe" } } }, "sauron", "live")).toBe(
       "observe",
     );
-    expect(effectiveMode({ bots: { sauron: { mode: "live" } } }, "sauron", "observe")).toBe("live");
     expect(effectiveMode(EMPTY_CONTROLS, "sauron", "live")).toBe("live");
+    expect(effectiveMode({ bots: { sauron: { mode: "live" } } }, "sauron", "live")).toBe("live");
+  });
+
+  it("mode: a stored live never widens an observe house (#6954 slice 1)", () => {
+    expect(effectiveMode({ bots: { sauron: { mode: "live" } } }, "sauron", "observe")).toBe(
+      "observe",
+    );
+    expect(effectiveMode(EMPTY_CONTROLS, "sauron", "observe")).toBe("observe");
+    // another bot's stored live is not this bot's either
+    expect(effectiveMode({ bots: { banker: { mode: "live" } } }, "sauron", "observe")).toBe(
+      "observe",
+    );
   });
 
   it("hardcore: only a stored true arms a bot — no stored setting is standard (#4535 slice 4c-2)", () => {

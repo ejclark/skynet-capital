@@ -82,7 +82,16 @@ describe("RecentOrdersStrip", () => {
     render(withClient(<RecentOrdersStrip symbol="NVDA" deskId="desk-1" />));
 
     expect(
-      await screen.findByText("No recorded orders for NVDA in the ledger's window."),
+      await screen.findByText("No orders on NVDA in your recent history."),
+    ).toBeInTheDocument();
+  });
+
+  // Eric, 2026-11-06: the option ticket printed "CRWV261127P00050000" here.
+  it("names an option contract in words, never its OCC symbol", async () => {
+    nextActivity = { available: true, activity: [] };
+    render(withClient(<RecentOrdersStrip symbol="CRWV261127P00050000" deskId="desk-1" />));
+    expect(
+      await screen.findByText("No orders on CRWV $50 PUT · 27 NOV 26 in your recent history."),
     ).toBeInTheDocument();
   });
 
@@ -125,7 +134,7 @@ describe("RecentOrdersStrip", () => {
       render(withClient(<RecentOrdersStrip symbol="NVDA" deskId="desk-1" />));
 
       expect(
-        await screen.findByText("No recorded orders for NVDA in the ledger's window."),
+        await screen.findByText("No orders on NVDA in your recent history."),
       ).toBeInTheDocument();
       expect(screen.queryByText("$3.35")).not.toBeInTheDocument();
     });

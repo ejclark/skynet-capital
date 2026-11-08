@@ -10,9 +10,10 @@ import { findPlaybook } from "../playbooks/registry.js";
  *
  * The ladder's two stages are #3186's own ask ("Stage 1: mixed signals auto-suspend new entries;
  * Stage 2: a tripped invalidator auto-starts systematic exit"), and both mechanisms now exist:
- * `mixed-signals.ts` (step 5) and `playbook.ts`'s `exitSafetyIntents` (step 4). Neither is armed
- * on any house play today, which is exactly why this readout has to exist before the toggle that
- * arms them (slice 6b): a member cannot consent to a safety net they cannot see.
+ * `mixed-signals.ts` (step 5) and `playbook.ts`'s `exitSafetyIntents` (step 4). Stage 2 is armed
+ * on every house share play that places orders since #6954 slice 4 (`HOUSE_STOP_LOSS`, `exit-plan.ts`), and this
+ * readout is how a member sees it: a member cannot consent to a safety net they cannot see. An
+ * option play carries no stop; its stage 2 names the target and time rules it sells on instead.
  *
  * THE HONESTY INVARIANT THIS MODULE EXISTS TO HOLD. Every stage reports what the CODE does right
  * now, never what the stage is named after:
@@ -98,11 +99,15 @@ function stageOne(playbook: Playbook): SafeguardStageView {
 function stageTwo(playbook: Playbook, mode: PlaybookMode): SafeguardStageView {
   const dial = playbook.exitSafety?.[mode];
   if (!dial) {
+    const own = [playbook.exits?.target, playbook.exits?.time].filter(Boolean);
     return {
       stage: 2,
       name: STAGE_2_NAME,
       state: "off",
-      does: `No automatic exit on ${mode}. This play sells only when its own rule says to.`,
+      does:
+        own.length > 0
+          ? `No stop on a losing position on ${mode}. This play gets out on its own rules: it ${own.join("; it ")}.`
+          : `No automatic exit on ${mode}. This play sells only when its own rule says to.`,
     };
   }
   const trip = fixedPct(dial.drawdownTripPct, 1);

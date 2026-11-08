@@ -61,6 +61,9 @@ export interface PlaybookStoreCardView {
    *  who. Absent when the deployment has no subscription store wired. */
   readonly subscribers?: number;
   readonly subscription?: SubscriptionView;
+  /** The house below-bar floor, a share of equity — present only when this pair sits below its
+   *  playbook's evidence bar, the one place an owner's smaller floor applies (#6954 slice 5c-ii). */
+  readonly houseFloorPct?: number;
 }
 
 /** One account's own subscription to one playbook, as the server sends it to its owner. */
@@ -81,6 +84,9 @@ export interface SubscriptionView {
   /** The conviction view this subscription points at (#5482). A pointed subscription carries no
    *  `conviction`: its check is the view's, read from the row's `steeredBy` when the ids match. */
   readonly convictionId?: string;
+  /** The owner's smaller below-bar floor, a share of equity (#6954 slice 5c-ii). Absent = the
+   *  house floor (`houseFloorPct` on the card). */
+  readonly belowBarFloorPct?: number;
 }
 
 /** An owner's conviction — mirrors `SubscriptionConviction` in `src/domain/types.ts`. */
@@ -264,6 +270,8 @@ export const subscribeRequest = (input: {
   readonly compoundAllocation?: boolean;
   /** Required by a pair the study does not back (`PairRowView.needsConviction`). */
   readonly conviction?: ConvictionView;
+  /** The owner's smaller below-bar floor, a share of equity (`houseFloorPct` pairs only). */
+  readonly belowBarFloorPct?: number;
 }): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/subscribe", input);
 
 /** State a conviction on a pair the account holds, or set its next check day: the whole conviction
@@ -291,6 +299,8 @@ export const configureRequest = (input: {
   readonly capitalAllocated: number | null;
   readonly symbols: readonly string[];
   readonly compoundAllocation: boolean;
+  /** A share sets the owner's below-bar floor, `null` clears it; absent keeps it. */
+  readonly belowBarFloorPct?: number | null;
 }): Promise<SubscriptionWriteResult> => postJson("/api/playbook-store/configure", input);
 
 export const unsubscribeRequest = (input: {

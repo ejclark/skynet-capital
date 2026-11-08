@@ -145,5 +145,10 @@ export function claimPlan(
 ): ClaimResult;
 /** The shipped sweep, degrading to `[]` on an exhausted budget and rethrowing anything else. */
 export function sweepShipped(readIssues: () => unknown[], deps: ShippedDeps): ShippedRow[];
+/** The audit tick's reads, `null` (and one warning) on an exhausted budget; anything else rethrows. */
+export function auditIntentsOrSkip<T>(
+  readIntents: () => T[],
+  log?: (line: string) => void,
+): T[] | null;
 /** The pure router: an event (and its gathered deps) in, the intents to execute out. */
 export function route(ctx: unknown, deps?: unknown): Record<string, unknown>[];

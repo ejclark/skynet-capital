@@ -56,9 +56,37 @@ import { type AllocationsState, parseAllocations } from "../subscriptions/subscr
  * "not reported": the bots keep the roster in force, or at boot the kept one (`subscriptions-cache.ts`),
  * and never apply a pair under a version that did not vouch for its pointer. The next behavioral
  * field adds a kind again, expand first: the bots read both before the app sends the new one.
+ *
+ * V5 (#6954 slice 5c): a subscription's `belowBarFloorPct`, the owner's own smaller below-bar
+ * floor, joins the version. Expand first (5c-i, #7016): the bots read v4 and v5. Then the switch
+ * (5c-ii): the app sends v5, and the Store writes the floor. A v5 version names the floor only where
+ * one is set, so a state with no floor hashes byte for byte as v4 does and the switch swaps no
+ * roster. A v4 snapshot never vouched for a floor, so one is stripped from it before it is applied:
+ * a floor reaches a bot only under a version that would move if it changed. The bots keep reading
+ * v4 for one release, so an app rolled back past the switch still steers them (without floors).
  */
 
-export const SUBSCRIPTIONS_SNAPSHOT_KIND = "subscriptions.v4";
+/** The kind an app before the switch sent, still read for a rollback past it. */
+export const SUBSCRIPTIONS_SNAPSHOT_KIND_V4 = "subscriptions.v4";
+
+/** The kind whose version names the owner's below-bar floor (#6954 slice 5c). */
+export const SUBSCRIPTIONS_SNAPSHOT_KIND_V5 = "subscriptions.v5";
+
+/** The kind the app sends (#6954 slice 5c-ii). */
+export const SUBSCRIPTIONS_SNAPSHOT_KIND = SUBSCRIPTIONS_SNAPSHOT_KIND_V5;
+
+/** Every kind the bots read. */
+export type SubscriptionsSnapshotKind =
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V4
+  | typeof SUBSCRIPTIONS_SNAPSHOT_KIND_V5;
+
+const READ_KINDS: readonly SubscriptionsSnapshotKind[] = [
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V4,
+  SUBSCRIPTIONS_SNAPSHOT_KIND_V5,
+];
+
+const isReadKind = (kind: unknown): kind is SubscriptionsSnapshotKind =>
+  READ_KINDS.some((read) => read === kind);
 
 /**
  * Defensive bounds on a snapshot. This app's roster is a handful of bots and its registry a
@@ -74,7 +102,7 @@ const MAX_SUBSCRIPTIONS_PER_ACCOUNT = 64;
 const VERSION = /^[0-9a-f]{16}$/;
 
 export interface SubscriptionsSnapshot {
-  readonly kind: typeof SUBSCRIPTIONS_SNAPSHOT_KIND;
+  readonly kind: SubscriptionsSnapshotKind;
   /**
    * Epoch ms, stamped by the APP as it read its own store. The ordering the bots side uses to
    * refuse a snapshot older than the one already in force — a reordered response, or an app that
@@ -94,10 +122,14 @@ export interface SubscriptionsSnapshot {
  * the version answers "is the fleet trading something different now?", and a toggle flipped off and
  * back on is the same roster with newer timestamps. Bumping the version there would churn a swap
  * (and, from slice 2, every `DecisionRecord`'s `subscriptionsVersion`) for no behavioral change.
- * The last term is the retired inline conviction's bit, frozen at what "none" always hashed to.
+ * The eighth term is the retired inline conviction's bit, frozen at what "none" always hashed to.
+ * Under v5 an owner's below-bar floor follows it, only where one is set (this file's header).
  */
-function behavioralFields(sub: PlaybookSubscription): readonly unknown[] {
-  return [
+function behavioralFields(
+  sub: PlaybookSubscription,
+  kind: SubscriptionsSnapshotKind,
+): readonly unknown[] {
+  const v4 = [
     sub.playbookId,
     sub.mode,
     sub.capitalAllocated,
@@ -107,6 +139,20 @@ function behavioralFields(sub: PlaybookSubscription): readonly unknown[] {
     sub.convictionId ?? null,
     false,
   ];
+  return kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V5 && sub.belowBarFloorPct !== undefined
+    ? [...v4, sub.belowBarFloorPct]
+    : v4;
+}
+
+/** A state with every owner floor taken off — what a v4 snapshot is applied as, since its version
+ *  never named one. */
+function withoutOwnerFloors(state: SubscriptionsState): SubscriptionsState {
+  return Object.fromEntries(
+    Object.entries(state).map(([accountId, subs]) => [
+      accountId,
+      subs.map(({ belowBarFloorPct: _unvouched, ...sub }) => sub),
+    ]),
+  );
 }
 
 /**
@@ -115,14 +161,17 @@ function behavioralFields(sub: PlaybookSubscription): readonly unknown[] {
  * filters sorted) so the same roster written in a different order is the same version — otherwise
  * a rewrite of the store file would look like a change and swap every bot's roster for nothing.
  */
-export function subscriptionsVersion(state: SubscriptionsState): string {
+export function subscriptionsVersion(
+  state: SubscriptionsState,
+  kind: SubscriptionsSnapshotKind = SUBSCRIPTIONS_SNAPSHOT_KIND,
+): string {
   const canonical = Object.keys(state)
     .sort()
     .map((accountId) => [
       accountId,
       [...(state[accountId] ?? [])]
         .sort((a, b) => a.playbookId.localeCompare(b.playbookId))
-        .map((sub) => behavioralFields(sub)),
+        .map((sub) => behavioralFields(sub, kind)),
     ]);
   return createHash("sha256").update(JSON.stringify(canonical)).digest("hex").slice(0, 16);
 }
@@ -136,7 +185,7 @@ export function buildSubscriptionsSnapshot(
   return {
     kind: SUBSCRIPTIONS_SNAPSHOT_KIND,
     at,
-    version: subscriptionsVersion(state),
+    version: subscriptionsVersion(state, SUBSCRIPTIONS_SNAPSHOT_KIND),
     accounts: state,
     ...(allocations && Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
@@ -171,18 +220,18 @@ function withinBounds(accounts: Record<string, unknown>): boolean {
 export function parseSubscriptionsSnapshot(value: unknown): SubscriptionsSnapshot | undefined {
   if (!isRecord(value)) return undefined;
   const { kind, at, version, accounts } = value;
-  if (kind !== SUBSCRIPTIONS_SNAPSHOT_KIND) return undefined;
+  if (!isReadKind(kind)) return undefined;
   if (typeof at !== "number" || !Number.isFinite(at) || at <= 0) return undefined;
   if (typeof version !== "string" || !VERSION.test(version)) return undefined;
   if (!(isRecord(accounts) && withinBounds(accounts))) return undefined;
   const parsed = parseSubscriptionsState(accounts);
-  if (!parsed || subscriptionsVersion(parsed) !== version) return undefined;
+  if (!parsed || subscriptionsVersion(parsed, kind) !== version) return undefined;
   const allocations = parseAllocations(value.allocations);
   return {
-    kind: SUBSCRIPTIONS_SNAPSHOT_KIND,
+    kind,
     at,
     version,
-    accounts: parsed,
+    accounts: kind === SUBSCRIPTIONS_SNAPSHOT_KIND_V5 ? parsed : withoutOwnerFloors(parsed),
     ...(Object.keys(allocations).length > 0 ? { allocations } : {}),
   };
 }

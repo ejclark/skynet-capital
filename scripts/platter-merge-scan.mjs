@@ -26,6 +26,7 @@
 // only is what keeps them out of the report.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 
 /** The `git log` format this scan parses: sha, parents, subject, body — one record per commit. */
 export const LOG_FORMAT = "%H%x00%P%x00%s%x00%B%x1e";
@@ -226,4 +227,4 @@ function main() {
   else report(found, reads !== null);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

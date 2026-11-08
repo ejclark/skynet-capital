@@ -16,8 +16,7 @@
 // What it prints: per round, its date, question, picks (Fix first · Pick · More of · Not · Build) and his
 // notes word for word (pin notes, notes under an option, and quoted notes), then the ledger row's
 // numbers.
-
-import { pathToFileURL } from "node:url";
+import { isMain } from "../is-main.mjs";
 
 /** A read-back comment's first line, carrying the round id. */
 const READBACK = /Answered on the decisions page, design-(\d+)-r([\w-]+)\./;
@@ -139,7 +138,7 @@ async function main(argv) {
   );
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2)).catch((e) => {
     console.error(e.message);
     process.exit(1);

@@ -22,6 +22,7 @@ import { type DelegationGateView, delegationGateView } from "../domain/playbook-
 import type { PlaybookSubscription, SubscriptionConviction } from "../domain/types.js";
 import { ADOPTED_HOLD } from "../playbooks/conviction-adoptions.js";
 import { CONVICTION_NOT_ON_VIEW, type ConvictionLookup } from "../playbooks/conviction-store.js";
+import { BELOW_BAR_FLOOR_PCT, belowBar } from "../playbooks/fit-floor.js";
 import { findPair, type Pair, type StrategyId } from "../playbooks/pair-table.js";
 import { findPlaybook } from "../playbooks/registry.js";
 import type { OwnerReadSubscription } from "../subscriptions/pair-conviction.js";
@@ -55,6 +56,8 @@ interface SubscriptionView {
   /** The conviction view this subscription points at (#5482). A resolved pointer carries no
    *  `conviction` beside it, so the row reads its check from the view (`steeredBy`) with this id. */
   readonly convictionId?: string;
+  /** The owner's smaller below-bar floor, a share of equity (#6954 slice 5c-ii). Absent = none. */
+  readonly belowBarFloorPct?: number;
 }
 
 /** The account's allocation for a strategy, and what its tickers' budgets add up to inside it. */
@@ -67,6 +70,10 @@ interface StrategyAllocationView {
 /** The old per-playbook card — kept one release beside `strategies` (#4469 slice 3a). */
 interface PlaybookStoreCardView extends PlaybookStoreEntry {
   readonly subscription?: SubscriptionView;
+  /** The house floor, a share of equity, sent only when this pair sits below its playbook's
+   *  evidence bar (`belowBar`, the bots' own test): the form offers an owner's smaller one only
+   *  there (#6954 slice 5c-ii). */
+  readonly houseFloorPct?: number;
 }
 
 /** One pair on a strategy card, joined to the viewer's own account. */
@@ -147,6 +154,7 @@ function subscriptionView(sub: OwnerReadSubscription): SubscriptionView {
       ? { conviction: { reason: sub.conviction.reason, checkOn: sub.conviction.checkOn } }
       : {}),
     ...(sub.convictionId !== undefined ? { convictionId: sub.convictionId } : {}),
+    ...(sub.belowBarFloorPct !== undefined ? { belowBarFloorPct: sub.belowBarFloorPct } : {}),
   };
 }
 
@@ -288,6 +296,7 @@ export function playbookStoreView(
       ...entry,
       ...(whipsaw ? { metrics: [...entry.metrics, whipsawMetric(whipsaw)] } : {}),
       ...(sub ? { subscription: subscriptionView(sub) } : {}),
+      ...(belowBar(entry.id) ? { houseFloorPct: BELOW_BAR_FLOOR_PCT } : {}),
     };
   });
   const capitalUnderManagement = (subscriptions ?? [])

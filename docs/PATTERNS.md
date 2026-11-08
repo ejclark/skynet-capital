@@ -41,15 +41,22 @@ after its interrogation on PR #3406). A structural decision — what the *home* 
 sits on one page versus a sheet or a drawer, the order of steps — arrives as 3–5 **greybox** shapes:
 no brand tokens, no colour, no motion, but **real values** (real tickers, a real chain slice, real
 bid/ask/greek strings, the real order sentence), because the defects that motivate a redesign are
-density defects and boxes without values hide them. One artifact, three switchers — **shape × journey
-step × viewport (390 first, then 1280)** — built on the same `render()`-and-state-buttons skeleton as
-*The Rail Over the Form*. Each shape names the patterns it borrows (a row here, a row in the study),
+density defects and boxes without values hide them. **A round is built with the redesign kit,
+never hand-built** ([`process/REDESIGN.md`](process/REDESIGN.md), `/redesign`): a real Today frame
+for comparison, one named change per shape, pins and Done (Eric, 2026-10-15, #5143: "the new
+process is solid - it allows for faster and more confident reviews"). Two hand-built formats failed
+on the #6948 round page on 2026-11-07 — one frame at a time behind shape × step × width switchers
+("i don't know the difference in getting with each option"), then every shape side by side with
+*You get / You give up / Pick it if* lines ("The format is still difficult for me to understand").
+Both ran one scene for every shape, showed no frame a member would recognise, and asked for answers
+in chat instead of pins (#7017). Each shape names the patterns it borrows (a row here, a row in the study),
 and any prior decision it overturns: a fork settled in **Eric's own words** is rendered as an A/B on
 the frame, flagged "reverses your call of <date>", never silently replaced; a Claude-derived mechanism
 is overturnable with the row cited. A shape may borrow only rows graded `frame` or `vendor-quote` in the
 study it comes from. Red and tiger passes run against each shape before Eric sees them. The greybox
-HTML is committed (`docs/design/lofi/`) and the artifact is published from it — a lo-fi carries no
-account data, so the teardown ban on frames does not apply. Lo-fi settles template and flow; hi-fi
+HTML under `docs/design/lofi/` is the record of earlier hand-built rounds
+([`design/lofi/README.md`](design/lofi/README.md)) — a lo-fi carries no account data, so the
+teardown ban on frames does not apply. Lo-fi settles template and flow; hi-fi
 (`/design`, the synced components) settles placement and polish. A pick is written into the owning
 plan issue's decision log the moment it happens — the issue is the record; what Eric answers on a
 round page is read back into it ([`process/REDESIGN.md`](process/REDESIGN.md)).
@@ -71,7 +78,7 @@ falsifier is written on the frame — if the docked bench reads as a mess on the
 every width. A section that grows into a full page graduates to a sub-view — the legacy desk's `?tab=performance`
 became `/u/:id/pulse` this way (`src/server/legacy-redirects.ts`). A tab strip as a fourth
 navigation band was rejected: at phone width the topbar and the page's head (it holds the
-rail's jobs since #3810) are already each a horizontal row, and a third band before content is what the mobile-first rule forbids.
+rail's jobs, #3810) are already each a horizontal row, and a third band before content is what the mobile-first rule forbids.
 
 ## The vocabulary — four words for fire
 
@@ -128,7 +135,7 @@ undocumented and gets one.
 | **Member menu** | Actions on your own session (Settings, Sign out) leave the bar for one round button wearing your initial; each item is an icon and a word. | `app/src/shell/member-menu.tsx` | #5037 round 2, question 9 ("too many icons available all the time") | placed — falsifier (from the round-2 write-up): a crawl member cannot find Settings within two taps by 2026-11-15 → the button gains the word "Menu" |
 | **Hovercard** | A detail card on hover, suppressed where hover doesn't exist. | `app/src/styles/hovercard.css` | #738 | placed |
 | **Fog of war** | Withhold a *capability* behind an earnable rung, never information a member needs to stay safe; the door is visible · named · disabled · counted. | [`FOG-OF-WAR.md`](FOG-OF-WAR.md) (tree + its own instance ledger) | Eric, 2026-09-06: "a spot on / perfect scenario" | placed |
-| **Propose-then-place** | Claude proposes a pattern rendered on a candidate surface; Eric places it. A rejected placement banks the pattern, never the idea. | CLAUDE.md → *Fog of war is a first-class reveal pattern* | fog of war: declined for the ticket 2026-09-05, landed on the research day lens 2026-09-06 | placed (process) |
+| **Propose-then-place** | Claude proposes a pattern rendered on a candidate surface; Eric places it. A rejected placement banks the pattern, never the idea. | [`process/WORKING-AGREEMENTS.md`](process/WORKING-AGREEMENTS.md) → *Fog of war* | fog of war: declined for the ticket 2026-09-05, landed on the research day lens 2026-09-06 | placed (process) |
 | **"Build me" placeholder** | A planned item is visible but disabled and reads as "help shape it", not broken; the same treatment on a rail item and a trade type. | #784 (Trade rail, `src/domain/trade-types.ts` ladder) | Eric, 2026-08-29 | seeded |
 | **Onramp fold** | A how-to for an outside system (GitHub) folded behind a `<details>`, reference not front matter. | `app/src/routes/activity.tsx` (`.wire-onramp`) | #738 | placed — Eric, 2026-08-28: "feels out of place" (#784) |
 | **Mobile-first curation** | What survives 390px is the curated set; desktop adds room for what was one swipe away, never new concepts. | CLAUDE.md → *Mobile-first on every information surface* | Eric, 2026-09-05, from Fidelity's ticket | placed (rule) — widened from trading to every information surface, Eric 2026-09-26 |
@@ -186,6 +193,33 @@ undocumented and gets one.
 | **A suggestion chip that goes to a place** | The first suggestion chip under the thread navigates instead of sending a message. | — | #5156 round 1 | declined here (Not) |
 | **A card for a canned action** | A card (the step · one line on why · its button) only for a canned action such as the onboarding step; one card per cohesive path, and while onboarding the card stays on onboarding. Two cards for unrelated tasks in one thread is the failure. | — | #5156 round 2 — Eric: "I like the cards for canned action. I don't like having two cards for unrelated tasks. When onboarding, the focus should remain on onboarding." | seeded — two cards per thread declined here |
 | **The card asks for what it lacks** | When a call can't be given because one input is missing, the row says which ("Needs your goal ↓") and asks that one input in place, directly under it; everything else it holds stays folded to one line with Edit. Never a how-to sentence, never the whole form for one answer. | — (drawn on a scratch branch, `app/src/shell/saved-position-card.tsx`) | #5181 round 1, question 3 | seeded — awaiting his pick |
+
+## The ledger — the landing page (#6948, #7018)
+
+The shapes #6948's round 1 and #7018's rounds 0–2 named for the signed-in landing page. Eric's
+words are quoted where he gave them. Round 2's question box was decided on his behalf at his ask
+(2026-11-08: "make judgement calls on my behalf to get this movement rolling"); he picked the rest.
+
+| Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
+|---|---|---|---|---|
+| **The landing page is home** | Sign-in opens the day's market news, each story carrying ask · steer · act, instead of the standings. | `/app/` (#7077) | #6948 round 1 shape 1 — Eric, 2026-11-07: "the view that provides the gist of the environment conditions seems best" | placed — decided; building in #7077 |
+| **The narrator in the ✦ rail as home** | The narrated campaign lives in the assistant's side panel. | — | #6948 round 1 shape 2 | declined here — ✦ keeps quick answers and can read the day's edition |
+| **Quest board as home** | A board of quests is the first page. | — | #6948 round 1 shape 3 | declined here as home — quests are placed by their source instead (below) |
+| **Party thread as home** | A play-by-post thread is the first page. | — | #6948 round 1 shape 4 | declined here — its "new since you were here" line carries over |
+| **The map is the hub** | The city map is the first page; a deck as hub (#7018 comment 3) is the same shape. | — | #6948 round 1 shape 5 | declined here |
+| **Your question first** | The page opens on the member's own question box; canned quick questions sit under it as fallbacks. | #7077 slice 2 | #7018 round 1 Q1 C (More) — Eric: "I like how the default is \"whatever the customer wants to do\", it's a subtle nudge to let the user drive first, canned selections as fallbacks." | placed — round 2 confirmed (decided on his behalf) |
+| **An ask beside each story** | Each story carries a quick question and "Ask your own" under it. | #7077 slice 2 | #7018 round 1 Q1 A (More) | placed — round 2 confirmed |
+| **The page asks you before a move** | Before any move the page asks what would prove you wrong; the answer fills the stop. | — | #7018 round 1 Q1 B | declined here (Not) — banked for the ticket's walk (#7034) |
+| **You on the landing page** | One line or a card with your rank, points and cash, opening your full sheet. | — | #7018 round 1 Q2 A/B | seeded — no signal; waits on the character sheet round (#7019) |
+| **What's new for you** | A part listing what's new and a way to suggest a change. | — | #7018 round 1 Q2 C | declined here — "vague, ambiguous direction. no thanks" |
+| **Quests by their source** | A market quest sits under its story; the member's account quests sit in one part after the news. | #7077 slice 3 (#7028 supplies them) | #7018 round 1 Q3 (Build) — "This shows opportunity.. I want the capability to do this, but in an organic cohesive way that fits with all the other features" | placed — picked; building in #7077 |
+| **All quests in one list** | Every quest in one list after the news. | — | #7018 round 1 Q3 A | declined here |
+| **News headline, mission narrator** | The headline speaks plain news; one narrator line carries the mission-into-the-unknown voice. | #7077 | #7018 round 1 Q4 (Build) | placed — picked; building in #7077 |
+| **Mission voice throughout** | Headline and deck both read as a mission briefing. | — | #7018 round 1 Q4 B | declined here (Not) |
+| **Key facts first, the rest on tap** | Each story shows what moved, by how much and the next dated event; the bulk opens only when the member asks. | #7077 | #7018 round 1, Eric on the lead story: "apply progressive disclosure to withold the bulk of the information until a user expresses interest" | placed — round 2 confirmed |
+| **Dates on the story** | The reports that bear on a story lead its tile, then the tile works back to what moved. | #7077 | #7018 round 2 B (Build) — "Look forward to the events, work back to current state" | placed — picked; building in #7077 |
+| **A shape for each line's direction** | Every line on a story's tile carries ▲ up · ▼ down · ∿ volatile with a word; a coming event gets ∿ only when its record shows large moves either way, never a direction the record doesn't hold. | #7077 (criterion 9) | #7018 round 2 — "up/bull, bear/down, volatile (sign wave?) icons would carry a TON of weight for a very small sliver of real estate" | placed — in #7077's criteria |
+| **The instinct as a question** | A story's quick question carries the member's hunch ("Is this a chance to buy?"); the answer is the record, and the page never calls it a buy. | #7077 | #7018 round 1 — his "buy the dip opportunity" note, held to the honesty rule | seeded — drawn in round 2 |
 
 ## The ledger — trading surfaces
 
@@ -279,6 +313,7 @@ re-make.
 | **Window strip** | Inside the recap card, the next ~90 days as back-to-back segments, each a glyph and a word as well as a colour — ▲ Open · ◆ Caution · ■ Protected · ○ No view — with earnings marked; protected means no new entries anywhere, exits always run. | data: `src/research/symbol-outlook-shape.ts` (`WINDOW_STATES`, the windows list); drawn in `symbol-recap.tsx` | #4807 decision 3 | placed (#4807 slice 3) — each state also gets its own fill (outline · hatching · solid · dotted), so the strip reads in greyscale; earnings are named in the protected window's row rather than marked on the bar. Falsifier: a crawl member at 390 cannot say which days are protected without reading the colour |
 | **Symbol page** | A dedicated route per ticker that gathers its research. | — (`/research/sym/:SYM`, retired) | #4807's shapes table | declined here — it was retired once in #3816's phone-first triage; one symbol's full story, if it needs a home, is a section of R&D, never a resurrected route |
 | **Board by symbol** | R&D's board grouped by symbol instead of by event — a sub-view of the board, not a new place. | — | #4807's shapes table | placed (#4807 slice 4) — naming a symbol in R&D's filter (a chip or `sym:`) leads the board with that symbol's recap card, up to three; the board itself stays grouped by event. Falsifier: by 2026-11-15 a member who scopes R&D to a symbol still asks where its call is |
+| **The ticket becomes its receipt** | A sent order replaces the form's entry fields with one card: where it stands in words (placed · partly filled · filled · cancelled), the contract as a person reads it over side · size · price · TIF, then the next act for that state — Modify and Cancel order while it works, Close or roll once it fills — and a "New ticket" that hands back an empty form. A refusal at submit keeps the form, so the fix is one edit away. The order's id is a small reference line, never the headline. | `app/src/shell/order-receipt.tsx`, the sentences in `app/src/live/order-receipt.ts` | Eric, 2026-11-06, after placing orders by hand: entries that persisted after a submit "send signals that the trade didn't execute"; an unfilled order should be one you can "modify or cancel", a filled one "roll or close". Neighbours considered: reset the form under a toast (the confirmation scrolls away), lock the filled form with a SENT stamp (still reads as a form), jump to the Orders pane (leaves the page the member was on) | placed on the share and option tickets — falsifier: by 2026-12-06 a member places a second order on the same contract and has to re-pick what the receipt cleared more often than they act on the receipt itself |
 
 ## The ledger — discovery (gleaned from the retired Collections, #3623)
 

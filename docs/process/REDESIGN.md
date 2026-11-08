@@ -301,8 +301,8 @@ npm run steer:build -- <dir>/tp.json
   `comments`, Done can't tell you). One page per screen: round 1 creates it, later rounds republish
   to its `url`. Never publish over the steering page. The publish result must say this session
   watches the page; if it doesn't, watch it with ArtifactComments. Then stamp `tp/<id>` with
-  `listening` so the page's bar says you're listening (steer skill step 5); on a watch-lost
-  notice, stamp `listening.lost` and ask him to say "watch my page" (step 6).
+  `listening` so the page's bar says you're listening (steer skill step 6); on a watch-lost
+  notice, stamp `listening.lost` and ask him to say "watch my page" (step 7).
 - **Every round page carries "✎ Note about this page"** in its bar. He taps it, then the spot that
   bugged him (the intro, a button, a pin, the reveal), and writes a line. Marks on a frame are
   design feedback; notes on the page are process feedback, given at the moment of friction (Eric,
@@ -317,13 +317,13 @@ npm run steer:build -- <dir>/tp.json
 
 **f · On Done, read it back, then loop or build.**
 - The trigger is a comment sent to Claude that starts `Done with steering round <id>`, or "done"
-  from him in chat. Read back once per Done — the steer skill's step 6 rule. A session woken by
+  from him in chat. Read back once per Done — the steer skill's step 7 rule. A session woken by
   his "done" in chat reads the round back exactly as it would for a Done comment. Either way,
   first stamp `ackAt` and `ackFor` on `tp/<id>`, so the page says "✓ Received" before the read-back
   lands: `ackFor` is the time after `Pressed` in the comment, copied exactly (on a chat "done", the
   round's `doneAt`), because that match is what proves you read this press. No stamp within two
   minutes, and the page tells him no session has read it.
-- Run the steer skill's step 7 on this round's folder: the records, his comments
+- Run the steer skill's step 8 on this round's folder: the records, his comments
   (`comments.json`), then `npm run steer:readback`. Its comment quotes his picks and pinned notes on
   the screen's issue, word for word. Reply on each pinned thread with where it landed, resolve it,
   and write `readBackAt` and a one-line summary back to the page.
@@ -516,6 +516,7 @@ five screens average as many rounds to a build as the sessions before this ledge
 | Round page (#5350, the loop's test screen) | design rounds done 2026-10-15 (r0–r4); builds #5392, #5418, #5417 | 1 (round 0 picked a problem; "proceed" set the scope) | 2 (#5391 at r2), then r3 (#5411) and r4 (#5417) | 6 | his reader profile gains *tools with modes over a single pick* and *shapes point, words explain*; two opening questions proposed on #5143 for when the test settles; `retro.mjs` reads a read-back's `Pick:` line |
 | R&D Playbooks (#5163, the loop's second test screen) | design rounds done 2026-10-15 (r0–r15); builds #5432, #5435, #5442, #5444, #5445, #5448 | 1 (round 0 picked problems; scope written from his notes) | 4 (#5432 at r4), then r5, r9, r12, r13, r15 | 20 | his reader profile gains *a word's second meaning*, *now before history* and *caveats in the caption*; three patterns land; U6 gains a third screen; opening questions and the confirm-round count proposed on #5143 |
 | R&D Playbooks v2 (#5451, the autonomy test) | design rounds done 2026-10-16 (r0–r3); no build of its own: O1–O2 carried into #5442 as additions; O3–O7 wait on #5457, #5462, #5452 | 0 (scope harvested from his round-0 marks, no "that's the list") | none: r3 found the top already settled in #5442 | 10 | a redesign reads the asks of the open builds on its surface (not their titles) and draws on top of them; his words bank at every read-back; the back-tested rules (`docs/design/decision-rules.md`) join the critic pass and never pick Build |
+| Landing page (#7018, a new screen) | design rounds done 2026-11-08 (r0–r2; r2 decided on his behalf at his ask); build #7077 | 2 (scope drawn from his r0 pick and marks and his r1 picks; no "that's the list") | 1 (#7077 from r1, ready after r2) | 9 | a Build pick that overlaps an owning plan becomes one build under that plan (#6948's owner map); the read-back dropped his mark notes on a picked option (#7078); four critics caught 60 defects lint passed (labels over copy, a second change in a shape, two ladder states on one member), so a pin-clearance check is proposed for the kit; he answered on pictures, never the `ask` text's questions |
 
 ## Process changes
 
@@ -528,7 +529,10 @@ all open redesigns yet.. i'd like to settle on the process first which requires 
 can use open redesigns to test the process, but should only be one at a time"). A change still being
 tried runs on **one** screen at a time, the test screen named on #5143. It lives in that screen's
 state block and round pages, and it reaches this list only once it's settled. Every other running
-session keeps drawing from the lines below.
+session keeps drawing from the lines below. The same holds one step earlier: an issue that would
+write a round format into this page or `docs/PATTERNS.md` is filed without `ready` until Eric's
+read-back on that format settles it (#7017 — #7007 went `ready`, merged within the hour as #7011,
+and the format failed the same day).
 
 - 2026-11-01 · **Stamp `ackFor` with `ackAt`, so the bar can say "✓ Received"** (#6606; he typed "done" in chat 5 more times after pressing it). The Done comment now carries `Pressed <time>`. Copy that time exactly into `ackFor` when you stamp `ackAt`; on a chat "done", use the round's `doneAt`. Stamp first, before anything else on the round. With no stamp, the bar says after two minutes that no session has read it and to say "done" in the session; a page opened later says so at once. Pages drawn before this change keep their old bar until they are rebuilt.
 - 2026-10-14 · **A screenshot of another screen invites feedback on that screen — route it, don't ask** (#5350 round 0: the round page's test frame showed the R&D card, and five of Eric's seven marks were about the app, not the round page). When his marks land on content the round isn't about, route each where it belongs — the screen's own redesign issue, an existing plan (search first: his "symbols as configuration" note was #4469's evidence), or a row in `docs/IA.md` §7/§10 — say so in the read-back, and keep the round on its scope. The focus view (#5363) keeps this rare; it doesn't make it wrong.

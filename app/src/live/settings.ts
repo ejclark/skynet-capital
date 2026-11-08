@@ -15,6 +15,12 @@ export interface OwnedAccount {
   readonly profile: { readonly displayName: string; readonly timezone?: string } | null;
   /** The own-bot switch's state — present exactly when this is your bot and controls are wired. */
   readonly suspended?: boolean;
+  /** The breaker, in words, holding this bot's newest pass — present only while an owner can reset
+   *  it (#6954 slice 3b). The kill switch is never one. */
+  readonly breaker?: string;
+  /** True once an owner pressed reset after that pass: the bots have been told and the next pass
+   *  confirms, so the card says so instead of offering the button again. */
+  readonly rearming?: boolean;
   /** The bot's own settings and their change log (#4535 slice 3b) — same presence as `suspended`. */
   readonly settings?: BotSettings;
 }
@@ -48,6 +54,10 @@ export interface BotSettings {
   readonly betaPicks?: number | null;
   /** Present exactly when this bot runs the forced daily pick; `null` = not set here. */
   readonly betaStage?: boolean | null;
+  /** The owner's "watch only" (#6954 slice 5b) — every bot. */
+  readonly watchOnly: boolean;
+  /** The owner's "stop opening, keep exits" (#6954 slice 5b) — every bot. */
+  readonly holdOpens: boolean;
   readonly maxBetaPicks: number;
   readonly changes: readonly BotSettingChange[];
 }
@@ -113,12 +123,22 @@ export const botControlRequest = (input: {
 }): Promise<{ readonly ok: true; readonly suspended: boolean } | { ok: false; error: string }> =>
   postJson("/api/settings/bot-control", input);
 
-/** Change your OWN bot's hardcore build, forced-pick count or after-close staging; `null` hands it
- *  back to the operations setting. Ownership is the server's check, same tier as the switch above. */
+/** Change your OWN bot's hardcore build, forced-pick count or after-close staging (`null` hands it
+ *  back to the operations setting), or its two steering switches, watch only and stop opening.
+ *  Ownership is the server's check, same tier as the switch above. */
 export const botSettingsRequest = (input: {
   readonly id: string;
   readonly hardcore?: boolean | null;
   readonly betaPicks?: number | null;
   readonly betaStage?: boolean | null;
+  readonly watchOnly?: boolean;
+  readonly holdOpens?: boolean;
 }): Promise<{ readonly ok: true } | { ok: false; error: string }> =>
   postJson("/api/settings/bot-settings", input);
+
+/** Re-arm the tripped breakers on your OWN bot's newest pass; the bots hear it within ~30 seconds.
+ *  Ownership is the server's check, and it refuses unless a breaker is actually holding the bot. */
+export const breakerResetRequest = (input: {
+  readonly id: string;
+}): Promise<{ readonly ok: true } | { ok: false; error: string }> =>
+  postJson("/api/settings/breaker-reset", input);

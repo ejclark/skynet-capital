@@ -1,4 +1,5 @@
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
+import { assertPaperOrDataHost } from "./paper-host.js";
 
 /**
  * Network seam for the Alpaca Trading API (paper). Injected everywhere above, so the
@@ -29,7 +30,9 @@ export interface AlpacaTradingConfig {
 export class FetchAlpacaTradingTransport implements AlpacaTradingTransport {
   private readonly config: AlpacaTradingConfig;
 
+  /** Throws (paper-only, `paper-host.ts`) for any host but paper trading or market data. */
   constructor(config: AlpacaTradingConfig) {
+    assertPaperOrDataHost(config.baseUrl);
     this.config = config;
   }
 

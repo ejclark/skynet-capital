@@ -1,0 +1,73 @@
+{
+  "id": "oil-supply",
+  "title": "Oil supply and the majors",
+  "storyline": "The oil majors and drillers, and the cartel meetings, inventory reports and chokepoint risks that set the price they sell into.",
+  "sector": "Energy",
+  "mode": "play",
+  "cast": [
+    {
+      "role": "Majors",
+      "symbols": ["XOM", "CVX"],
+      "source": "src/domain/ticker-directory/energy.ts (the Energy bucket, filed by GICS)"
+    },
+    {
+      "role": "Drillers",
+      "symbols": ["COP", "OXY", "EOG"],
+      "source": "src/domain/ticker-directory/energy.ts (the Energy bucket, filed by GICS)"
+    },
+    {
+      "role": "Oil services",
+      "symbols": ["SLB"],
+      "source": "src/domain/ticker-directory/energy.ts (the Energy bucket, filed by GICS)"
+    },
+    {
+      "role": "Benchmarks",
+      "symbols": ["XLE", "USO"],
+      "source": "XLE: the Energy fund in src/domain/sector-coverage.ts; USO: the Crude oil market in src/domain/market-catalog.ts (it tracks the oil price itself, not the companies); both are named in docs/research/multi-symbol-sweep.md"
+    }
+  ],
+  "forces": [
+    {
+      "id": "opec",
+      "name": "OPEC+ quota decisions",
+      "why": "The cartel's monthly and ministerial meetings set how much crude reaches the market; src/domain/sector-coverage.ts files OPEC+ supply decisions under Energy.",
+      "prefixes": ["opec-"],
+      "names": ["OPEC"]
+    },
+    {
+      "id": "inventories",
+      "name": "US inventories and the EIA outlook",
+      "why": "The EIA's weekly stock report and its monthly outlook are the official read on US supply and demand; sector-coverage.ts files both under Energy.",
+      "prefixes": ["eia-"],
+      "names": [
+        ["EIA", "crude"],
+        ["EIA", "oil"],
+        ["EIA", "gasoline"],
+        "crude inventories",
+        "crude stockpile",
+        "oil inventories"
+      ]
+    },
+    {
+      "id": "chokepoints",
+      "name": "Sanctions and chokepoints",
+      "why": "Gulf export routes and sanctions on Iran decide how much oil can physically move; the calendar dates the Saudi pipeline repair window and the UN sanctions-panel decisions.",
+      "prefixes": ["saudi-east-west-pipeline-", "unsc-iran-panel-"],
+      "names": ["Hormuz", "Red Sea", ["Iran", "sanction"], ["sanction", "oil"]]
+    },
+    {
+      "id": "gas",
+      "name": "Gas and LNG policy",
+      "why": "Natural gas and LNG sit in the same sector and move the same companies; the calendar dates the G20 energy ministerial and the gas industry's main conference.",
+      "prefixes": ["g20-energy-", "gastech"],
+      "names": [
+        "LNG",
+        ["natural gas", "supply"],
+        ["natural gas", "supplies"],
+        ["natural gas", "price"],
+        ["natural gas", "export"]
+      ]
+    }
+  ],
+  "openQuestions": []
+}

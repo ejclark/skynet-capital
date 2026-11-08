@@ -5,6 +5,7 @@ import {
   type BotWatchInput,
   botAlerts,
   durationWords,
+  resettableBreaker,
 } from "../../src/alerts/bot-watch.js";
 
 /**
@@ -81,7 +82,7 @@ describe("botAlerts — a halted safety controller", () => {
     expect(alerts[0]).toMatchObject({
       source: BOT_WATCH_SOURCE,
       priority: "critical",
-      title: `Sauron is halted by ${words}, so it places no orders`,
+      title: `Sauron is halted by ${words}, so it opens no new positions`,
       data: { botId: "sauron", breaker: reason },
     });
   });
@@ -138,5 +139,18 @@ describe("durationWords", () => {
     expect(durationWords(10 * MIN + 59_000)).toBe("10 min");
     expect(durationWords(60 * MIN)).toBe("1 h");
     expect(durationWords(65 * MIN)).toBe("1 h 5 min");
+  });
+});
+
+describe("resettableBreaker (#6954 slice 3b)", () => {
+  it("names the four breakers an owner can reset, and nothing else", () => {
+    expect(resettableBreaker("daily-loss")).toBe("the daily-loss breaker");
+    expect(resettableBreaker("errors")).toBe("the errors breaker");
+    expect(resettableBreaker("order-rate")).toBe("the order-rate breaker");
+    expect(resettableBreaker("data-gap")).toBe("the data-gap breaker");
+    // The kill switch and an owner's suspend are not breakers: a restart, or the owner's own switch.
+    expect(resettableBreaker("manual")).toBeUndefined();
+    expect(resettableBreaker("suspended by owner")).toBeUndefined();
+    expect(resettableBreaker(undefined)).toBeUndefined();
   });
 });

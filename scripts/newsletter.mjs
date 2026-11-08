@@ -17,8 +17,7 @@
 // (#4153 reports, state blocks, plan blocks), metrics.mjs, split.mjs (tokens per role and bucket),
 // asks.mjs (human steps due), build.mjs (pure), gather.mjs (reads), series.mjs (the data branch).
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 import { buildNewsletter } from "./newsletter/build.mjs";
 import { gather } from "./newsletter/gather.mjs";
 import { appendSeries, seriesEntry } from "./newsletter/series.mjs";
@@ -66,7 +65,7 @@ export function main(args, nowMs = Date.now()) {
   return JSON.stringify(newsletter, null, 2);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     console.log(main(process.argv.slice(2)));
   } catch (err) {

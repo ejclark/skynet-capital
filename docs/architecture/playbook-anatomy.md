@@ -151,6 +151,18 @@ report (`recordPasses`, `play-milestone-sync.ts`), and the row is worded by `pla
 signed-in members only. Subscribing to another member's play is not part of this (it waits on #809's
 review slice).
 
+A **chain** (#6959 slice 1, `src/playbooks/chain.ts`) hands one playbook's position to the next when
+it reaches an event from a closed menu (filled, take-profit, stopped, assigned, expired, on a date).
+It is a record, not a `Playbook`: `parseChain` refuses any key off the form, so it carries no
+condition, and `nextOwner` keeps the current owner when no link names the event. Nothing live reads a
+chain yet; `src/playbooks/chain-replay.ts` runs one on price history in shadow, asking only the owner
+each session, and `npm run research:chain` prints the AI-dip chain's replay on CRWV. The replay
+needs a ticker's history, which only that script fetches, so the Store's **scorecard** (slice 4,
+`chain-scorecard.ts`) is a replay committed as `chain-scorecards.json` (`--scorecard=…`): a saved
+chain shows the card whose links match its own (`chainShape`), each link's result on its own line
+with the total beneath, and "no replay yet" when none does. Live handoff waits on per-playbook
+ledgers (#4269).
+
 Around the playbook, in order of wrapping: the conviction check filters new entries; expiry hygiene
 adds its closes **beside** the playbook's intents (outside the conviction check, so it is never
 filtered); then every intent passes the guards. The guards refuse opens and never refuse a close.
@@ -308,7 +320,9 @@ inside a file that did not shrink is not caught, so a PR that edits a cited file
 
 | Claim | Cited at | Verdict |
 |---|---|---|
-| The `Playbook` interface: `desiredState`, `rulesOf`, `optionDemand`, `decide`, `options`, `exitSafety`, `derivesFrom`, `mixedSignals` | `src/playbooks/playbook.ts:135-218` | grounded |
+| The `Playbook` interface: `desiredState`, `rulesOf`, `optionDemand`, `decide`, `options`, `exitSafety`, `exits`, `derivesFrom`, `mixedSignals` | `src/playbooks/playbook.ts:191-314` | grounded |
+| No opening order without an exit plan (a stop, a target or a time exit), refused `no-exit-plan` on a live bot; share plays carry `HOUSE_STOP_LOSS` | `src/playbooks/exit-plan.ts`, `src/engine/guards.ts`, `src/playbooks/templates.ts` | grounded |
+| A pair below its playbook's evidence bar (the △ tier) opens at most 1% of the account per order (`RiskConfig.openCeiling`), or the owner's smaller floor off its subscription (`belowBarFloorPct`, written by the Store's configure and subscribe with `ownerFloorRefusal`, sent and read under `subscriptions.v5` only), refused `below-bar-floor` when one unit costs more; its opens are labelled "below its bar" with the percent applied | `src/playbooks/fit-floor.ts`, `src/engine/guard-batch.ts`, `src/engine/option-guards.ts`, `src/scripts/autonomous-live-wiring.ts`, `src/autonomous/subscriptions-wire.ts`, `src/server/subscriptions-api-routes.ts`, `app/src/shell/playbook-subscribe-form.tsx` | grounded |
 | Order: `decide`, then `desiredState`; exit-safety first | `src/playbooks/playbook.ts:445-484` | grounded |
 | `decide` intents kept only on own tickers, stamped here | `src/playbooks/playbook.ts:386-400` | grounded |
 | A `rulesOf` playbook runs the persona itself, never `decide` | `src/playbooks/playbook.ts:182-189`, `src/playbooks/playbook.ts:441-443` | grounded |

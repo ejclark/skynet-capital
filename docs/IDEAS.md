@@ -18,6 +18,37 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **grind could stop a run when many items block on one cause.** On 2026-11-08 the drift run
+  blocked 35 checks over about two hours with the same summary (a macOS-only spec red in the
+  pre-push verify), and kept dispatching. A breaker in `.claude/workflows/grind.js`, say three
+  items blocked at one step whose summaries share a cause, would stop dispatching and return,
+  naming the cause. The cause match is the hard part: summaries are free text.
+  _(src: Claude · while: retro on the 2026-11-08 instruction-drift run)_
+- **grind could re-run agents an outage killed, once, before it returns.** A DNS outage killed 44
+  drift agents mid-step on 2026-11-08 ("agent failed after retries"). Re-running them needed a
+  hand-built plan, because a re-run must start from the step each item had reached, not the first.
+  grind knows each item's last finished step, so one pass over `errored` items at the end could
+  resume each from there.
+  _(src: Claude · while: retro on the 2026-11-08 instruction-drift run)_
+- **An option play's stop, priced on the contract's own premium.** #6954 slice 4 put a stop on every share play, but `exitSafetyIntents` reads share positions only, so the long call, the LEAP and the spread exit on their target and time rules alone, and a long call can lose its whole premium before 45 days are left. A stop that closes a long contract once its bid is some fraction under its cost (and never on the wheel's sold contracts, which its owner holds to expiry on purpose) would close that gap. The open question is the level: no study prices how far these contracts fall before they pay. Also parked: stop orders held at the broker for shares, so a gap while the bots are down is managed (#6954 gate list). _(src: Claude · while: #6954 slice 4, 2026-11-07)_
+- **A held fold could say so when it falls back to a whole read in live mode.** #6597: a wrapper
+  dropped `since`, and two folds quietly re-read whole audits in production for hours. The
+  fallback is right for offline mode and specs and silent everywhere else. One `emitWarning` per
+  store, only when the mode is live, would have named it in the first request's log. A spec now
+  guards the publishing wrappers (`tests/observatory/activity-publishing-forwarding.spec.ts`), so
+  this is worth building only if a second fallback appears outside that file.
+  _(src: Claude · while: retro on #6597, #4612 slice 10)_
+- **Dupe and clone budgets can spread a costly helper to every caller.** Both scans count
+  definitions, not calls. #599 made `marketDayKey` the one shared helper, and it built an `Intl`
+  formatter per call, because a second copy "would have tripped dupe:scan". The `Intl` scan now
+  catches that one cost. The general question is whether a consolidation PR should say what the
+  shared helper allocates per call.
+  _(src: Claude · while: retro on #4612's audit, slice 10)_
+- **The bots app still runs under tsx on a 512 MB machine, and no budget measures it.**
+  `fly.bots.toml` starts `npm run run:autonomous`, which is the npm → tsx → node chain that #4425
+  measured at about 295 MB at boot for the dashboard. #4425 left the bots as a follow-up because
+  the trader is stateful. Measure its RSS first; slice 6's gauge only runs in the dashboard.
+  _(src: Claude · while: retro on #4425, #4612 slice 10)_
 - **A board view by digital team member: each lane's queue and what it ships.** Eric, 2026-11-05:
   "one view in our project could be geared around digital team members roles/personas.. the work in
   their queue that they pump out. This provides an interesting visual." Cheap once two things exist:
@@ -145,7 +176,8 @@ picks it up starts from the fork, not the wish.
   goes to (playbook, sleeve) instead of the account, and the parent's guards cap the sum. The
   deciding question before slicing: should two sleeves ever hold the same symbol at once? If not,
   nesting is just roster composition plus a capital split. `playbooks/registry.ts` and
-  `engine/guards.ts` are envelope-protected, so the build boards the platter.
+  `engine/guards.ts` are not protected (`envelope.json` `$openOnPurpose`, since #928), so the build
+  is an ordinary PR. Chaining, the handoff cousin of this, is #6959.
   _(src: Eric · while: brain-dump on trading mechanics)_
 - **Eric as game master: recruit Tony or Phil to run bot accounts, up to 6 bots in S1, as teams.**
   This changes a written frame. Era 1 says the only autonomous bots are Eric-account bots
@@ -678,6 +710,15 @@ duplication instantly once someone looked. _(src: Claude · while: fixing the ou
 `account-service.ts`), but `addParticipant` still checks only the derived id. If Ann renames
 herself "Joe", a later member adding "Joe" gets the free id `human-joe` and the board shows two
 Joes. Reuse the same check on the add path. _(src: Claude · while: #6077 rename-guard fix)_
+
+### A party campaign needs a reference its author's title can't collide on
+Member campaign ids are slugs of the title, unique per author only, and a house id wins
+(`readableCampaign` in `src/server/campaign-questions-api.ts`). Since #6949 slice 6 made every
+saved campaign the party's, two members titling a campaign "AI plays", or a member titling one
+"Energy for AI" (a house id), means a question asked in it by id lands in the other one. No
+screen exists yet, so nobody can hit it; before #6948's screen ships, give the party view an
+author-scoped reference that never exposes the member key (a hash of the scope), and accept it on
+`ask` and `questions`. _(src: Claude · while: #6949 slice 6, a spec fixture titled "Energy for AI")_
 
 ### Boot-time quarantine for a store row that collides with the roster
 The owner-link PR (#466) closed the write-time hole (`addParticipant` now refuses an id already
@@ -1560,11 +1601,11 @@ check is automatic rather than remembered. _(src: Claude · while: research-lab 
 - **`PRINT_WINDOWS` should DRIVE the guards, not mirror them.** The chain's earnings badge needs the
   same day-counts the S2 entry guard and the playbooks trade on, so `domain/earnings-calendar.ts`
   now names them (`entryFlatDays` 2 · `postPrintFlatDays` 3 · `deadZoneDays` 5) — but
-  `engine/guards.ts` and `playbooks/registry.ts` are envelope-protected, so they still hold their
-  own literals and the new constants are copies pinned by spec (`tests/domain/earnings-calendar.spec.ts`).
+  `engine/guards.ts` and `playbooks/registry.ts` were envelope-protected then, so they still hold
+  their own literals and the new constants are copies pinned by spec (`tests/domain/earnings-calendar.spec.ts`).
   The pins make drift loud, not impossible. The end state is a three-line change inside those two
-  files to import the constants instead; it is behaviour-identical, but it lands in the protected
-  class, so it wants Eric's eyes rather than an autonomous PR.
+  files to import the constants instead; it is behaviour-identical, and since #928 neither file is
+  protected (`envelope.json` `$openOnPurpose`), so it is an ordinary autonomous PR.
   _(src: Claude · while: badging the options chain with earnings proximity, #575, 2026-08-26)_
 
 - **The `ci-medic` repair lane still has no token that can push, generally, not just for #655.**

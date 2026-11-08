@@ -73,6 +73,24 @@ export function commonGets(botId) {
   ];
 }
 
+/**
+ * R&D's GETs: the shell's own route, the Board section's calendar and shelf, Coverage, and the
+ * forward-test register. The research corpus is the other growing store — the research lane adds
+ * to it every day — and it OOM-killed the dashboard once already (#4519). The first hit after a
+ * boot builds the corpus memo, a cost paid once per process by design, so this phase is judged on
+ * breakage and the run's peak only, never on what one GET adds (#4612 slice 10). The register is
+ * the largest of them, about 5 MB of HTML from 674 fragments (#6957).
+ */
+export function researchGets() {
+  return [
+    "/app/research",
+    "/api/research/calendar",
+    "/api/research",
+    "/api/research/coverage",
+    "/research/forward-tests",
+  ];
+}
+
 /** How many times the runner fires each common GET: the time judged is the median of these, so
  *  one slow answer on a noisy host never fails the run, and the memory judged is the largest. */
 export const COMMON_REPEAT = 3;

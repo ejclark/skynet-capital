@@ -28,6 +28,7 @@
 //      (#6605), which leaves this lane's own PRs alone and spends one session per PR at most.
 //   3. One open issue per failure signature: a recurrence comments, it never files again — and a
 //      matrix job's legs fold onto one signature (`normalizeJobName`), so one fault is one issue.
+//      A capsule closed within `REOPEN_DAYS` still owns its signature: the fault reopens it.
 //   4. Once a signature carries `needs-eric`, this lane goes quiet on it entirely.
 //   And one thing that is not a fault at all: a leg whose log shows a usage limit ended it
 //   (`limitRejected`) neither files, comments nor dispatches — a repair session cannot fix a
@@ -46,8 +47,18 @@
 // the close, and files normally. It reads only closes a fix made: the audit tick also closes a
 // capsule once its job has gone green, with no fix anywhere, and a run overlapping THAT close is
 // not stale (#6579). See `fixedWhileInFlight`.
+//
+// ONE FAULT, ONE NUMBER, ACROSS CLOSES (#6953 slice 2). Guard 3 reads only OPEN capsules, so a fault
+// that stops for a while — long enough for the audit tick to prove it green and close it — and
+// then comes back was filed as a brand-new issue. Measured: the breaker's `route` failure was filed
+// 9 times in 5 days (#6640 → #6942), its question to Eric worded 4 ways under 9 numbers, and each
+// filing dispatched a repair session to re-derive the same answer. A signature whose capsule closed
+// within `REOPEN_DAYS` now REOPENS that capsule with a recurrence count instead (`reopenable`). One
+// whose ask was handed to a session on close (`needs-session`, capsule-stall.mjs) reopens without a
+// fresh repair session: the fix is known and waits on a session that can land it.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { isMain } from "../is-main.mjs";
 import { raiseAlarmIfBurst } from "./burst-alarm.mjs";
 import { LABELS } from "./labels.mjs";
 import { CAPSULE_SLOT, gatherRedSessionPr, routeRedSessionPr, sayOnPr } from "./red-session-pr.mjs";
@@ -216,7 +227,7 @@ const CLOSED_AS_DONE = "COMPLETED";
  * started? If so the fix merged while the run was still in flight, so the run tested a commit that
  * predates it — a stale report, not a new fault. A capsule closed any other way had no fix for the
  * run to predate: the audit tick rides every push, so its proof close overlaps that push's own runs,
- * and one of them failing is the fault coming back, which capsule-stall.mjs promises files fresh.
+ * and one of them failing is the fault coming back, which reopens that capsule (`reopenable`).
  *
  * Fail-safe direction is deliberate: a missing or unparseable `run_started_at`/`closedAt`, or a
  * close that does not say it was done, returns `null`, which falls through to filing. This guard may
@@ -246,6 +257,74 @@ function staleEchoBody(run, failure, issue) {
     `Run [${run.id}](${run.html_url}) failed at job \`${failure.job}\`, step \`${failure.step ?? "unknown"}\`, but it started at \`${run.run_started_at}\` on \`${(run.head_sha ?? "").slice(0, 8)}\` — before this issue was closed at \`${issue.closedAt}\`. The fix merged while the run was already in flight, so it was testing a commit that predates it.`,
     "",
     `No capsule filed and no repair session dispatched. If this signature survives the fix, the next failing run will start *after* this close and file normally.`,
+  ].join("\n");
+}
+
+/** How far back a closed capsule still owns its signature: a fault back within this reopens it. */
+export const REOPEN_DAYS = 14;
+/** Left on every reopen, so capsule-stall.mjs reads only what was said since (its `sinceReopen`). */
+export const REOPEN_MARKER = "<!-- moneypenny:capsule-reopened -->";
+/** The body row that counts the closes a fault has come back from. */
+const CAME_BACK = /^\| \*\*Came back after a close\*\* \| (\d+) times? \|$/m;
+/** Labels that describe the capsule's last life, and would mislead on its next one. */
+const STALE_ON_REOPEN = [LABELS.inProgress.name, LABELS.stall.name];
+
+/** How many times this capsule has been reopened by a returning fault, read from its body. Pure. */
+export function recurrenceCount(body) {
+  return Number(CAME_BACK.exec(String(body ?? ""))?.[1] ?? 0);
+}
+
+/**
+ * `body` with its recurrence row set to `n`: replaced where it exists, else added below the `Run`
+ * row (or `Legs failed`, which follows it) so it reads with the rest of the metadata table. A body
+ * with no table is returned unchanged — the reopen comment carries the count anyway. Pure.
+ */
+export function withRecurrence(body, n) {
+  const text = String(body ?? "");
+  const row = `| **Came back after a close** | ${n} ${n === 1 ? "time" : "times"} |`;
+  if (CAME_BACK.test(text)) return text.replace(CAME_BACK, row);
+  const lines = text.split("\n");
+  const run = lines.findIndex((l) => l.startsWith("| **Run** |"));
+  if (run === -1) return text;
+  const at = lines[run + 1]?.startsWith("| **Legs failed** |") ? run + 2 : run + 1;
+  lines.splice(at, 0, row);
+  return lines.join("\n");
+}
+
+/**
+ * The capsule a returning fault reopens: the newest one with this signature closed within
+ * `REOPEN_DAYS` of the run's start — or after it, which is the audit tick's proof close overlapping
+ * the run (#6579) — and not closed as a duplicate. Runs after the staleness guard, so a fix's close the run predates never gets
+ * here. A run with no readable start, or a capsule with no readable close, files fresh: that is the
+ * status quo, and loud either way. Pure.
+ *
+ * @returns the closed capsule to reopen, or `null`
+ */
+export function reopenable(run, closedIssues, title, days = REOPEN_DAYS) {
+  const started = Date.parse(run?.run_started_at ?? "");
+  if (!Number.isFinite(started)) return null;
+  const from = started - days * 864e5;
+  let best = null;
+  for (const issue of closedIssues ?? []) {
+    // A duplicate's number was retired in favour of another; the fault never lives there again.
+    if (issue.title !== title || issue.stateReason === "DUPLICATE") continue;
+    const closed = Date.parse(issue.closedAt ?? "");
+    if (!Number.isFinite(closed) || closed < from) continue;
+    if (!best || closed > Date.parse(best.closedAt)) best = issue;
+  }
+  return best;
+}
+
+/** The reopen comment. Starts with the recurrence line capsule-stall.mjs keys its proof cut on. */
+function reopenBody(run, failure, issue, count, waiting) {
+  return [
+    `Failed again — run [${run.id}](${run.html_url}), job \`${failure.job}\`, step \`${failure.step ?? "unknown"}\`. Same signature as this capsule, closed \`${issue.closedAt}\`, so it is reopened rather than filed under a new number. It has now come back after a close ${count} ${count === 1 ? "time" : "times"}.`,
+    "",
+    waiting
+      ? `This capsule carries \`${waiting}\`: its next step was already handed off when it closed, so no new repair session is dispatched to work it out again.`
+      : "A repair session is dispatched from this issue, as for a new fault.",
+    "",
+    REOPEN_MARKER,
   ].join("\n");
 }
 
@@ -359,6 +438,27 @@ export function routeFailure(ctx, deps = {}) {
           type: "comment",
           issue: echoed.number,
           body: staleEchoBody(run, failure, echoed),
+        });
+        continue;
+      }
+      const back = reopenable(run, deps.closedIssues, title);
+      if (back) {
+        const labels = (back.labels ?? []).map((l) => (typeof l === "string" ? l : l?.name));
+        // Guard 4 carried across the close: a capsule whose next step is a session's, or Eric's,
+        // reopens quiet — a repair session would only re-derive the hand-off it already made.
+        const waiting = [LABELS.needsSession.name, LABELS.needsEric.name].find((l) =>
+          labels.includes(l),
+        );
+        const count = recurrenceCount(back.body) + 1;
+        const counted = back.body == null ? undefined : withRecurrence(back.body, count);
+        intents.push({
+          type: "reopen-issue",
+          issue: back.number,
+          title,
+          body: reopenBody(run, failure, back, count, waiting),
+          issueBody: counted === back.body ? undefined : counted,
+          removeLabels: STALE_ON_REOPEN.filter((l) => labels.includes(l)),
+          dispatch: !waiting,
         });
         continue;
       }
@@ -654,6 +754,41 @@ function execute(intents) {
       console.log(`::notice::commented recurrence on #${intent.issue}`);
       continue;
     }
+    if (intent.type === "reopen-issue") {
+      // The reopen and its comment are the act: one number, and the recurrence line the proof cut
+      // reads. The count row and the label cleanup are soft — the comment already carries the count.
+      sh("gh", ["issue", "reopen", String(intent.issue), "--comment", intent.body]);
+      console.log(`::notice::reopened #${intent.issue} — ${intent.title} came back`);
+      const soft = (what, args) => {
+        try {
+          sh("gh", args);
+        } catch (err) {
+          console.log(`::warning::#${intent.issue} ${what} — ${String(err.message).slice(0, 200)}`);
+        }
+      };
+      if (intent.issueBody) {
+        soft("kept its old count row", [
+          "issue",
+          "edit",
+          String(intent.issue),
+          "--body",
+          intent.issueBody,
+        ]);
+      }
+      for (const label of intent.removeLabels ?? []) {
+        const path = `repos/{owner}/{repo}/issues/${intent.issue}/labels/${encodeURIComponent(label)}`;
+        soft(`kept \`${label}\``, ["api", "-X", "DELETE", path]);
+      }
+      if (intent.dispatch) {
+        dispatch.push(String(intent.issue));
+        filed.push({
+          number: intent.issue,
+          title: intent.title,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      continue;
+    }
     if (intent.type === "say-on-pr") {
       sayOnPr(intent.number, intent.body);
       console.log(`::notice::said why not on #${intent.number}`);
@@ -758,14 +893,15 @@ function openIssues() {
 }
 
 /**
- * This lane's CLOSED capsules, for the staleness guard. Same label-only scope as `openIssues` — it
- * never reads the wider backlog. `stateReason` is what tells a fix's close from a proof close.
+ * This lane's CLOSED capsules, for the staleness guard and the reopen. Same label-only scope as
+ * `openIssues` — it never reads the wider backlog. `stateReason` is what tells a fix's close from a
+ * proof close; `labels` and `body` are what a reopen carries over (its hand-off, its count).
  *
  * Over-fetching is harmless and under-fetching only costs loudness: the guard's own `closedAt >
  * run_started_at` test is exact, so every row that cannot satisfy it is discarded anyway, and a
- * capsule missed by the window simply gets reported as a fresh fault — the status quo. Only an
- * issue closed in the last few minutes can ever match, and `ci-failure` runs at tens of issues
- * total, so 50 is comfortably past the horizon that matters.
+ * capsule missed by the window simply gets reported as a fresh fault — the status quo. The staleness
+ * guard only matches a close from the last few minutes; the reopen looks back `REOPEN_DAYS`, and the
+ * 2026-11-06 read found 12 `ci-failure` capsules closed in the 5 days before it, so 50 covers it.
  */
 function closedIssues() {
   return json("gh issue list", [
@@ -778,8 +914,8 @@ function closedIssues() {
     "--limit",
     "50",
     "--json",
-    "number,title,closedAt,stateReason",
-  ]);
+    "number,title,closedAt,stateReason,labels,body",
+  ]).map((i) => ({ ...i, labels: (i.labels ?? []).map((l) => l.name) }));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

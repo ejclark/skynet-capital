@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // Open a PR for the deterministic screen's ledger commit, and try to arm auto-merge — the
 // PR-based replacement for a direct `git push origin HEAD:main` (issue #915, Eric: "some merge to
 // main, open PRs for research; non-negotiable").
@@ -235,4 +236,4 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (isMain(import.meta.url)) await main();

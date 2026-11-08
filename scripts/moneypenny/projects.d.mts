@@ -3,18 +3,41 @@
 export const PROJECT_TITLE: string;
 export const STATUS_OPTIONS: string[];
 export const BUILDING: "Building now";
-export const WAITING: "Waiting";
+export const WAITING_ON_PERSON: "Waiting on a person";
+export const NEXT_QUEUED: "Next part queued";
+export const NEXT_NEEDS_APPROVAL: "Next part needs approval";
 export const RENAMED_STATUS_OPTIONS: Record<string, string>;
 export const PRIORITY_OPTIONS: string[];
 /** The hidden text field recording each Priority the sync wrote (#6871). */
 export const SYNCED_PRIORITY: "Synced priority";
 export const HORIZON_OPTIONS: string[];
+/** The Kind field's options, in lane-sort order; equal to rank.mjs's `KINDS` (#6871 slice 3). */
+export const KIND_OPTIONS: string[];
+export const KIND: "Kind";
+export const WAITING_ON: "Waiting on";
+export const IN_COLUMN_SINCE: "In this column since";
 
 export interface StatusFieldOption {
   name: string;
   color: "GRAY" | "BLUE" | "YELLOW" | "RED" | "GREEN" | "ORANGE" | "PINK" | "PURPLE";
-  description: string;
+  /** Undefined only for a dial column with no dial reading: keep what the board shows. */
+  description: string | undefined;
 }
+
+/** The dial reading the two limit columns print (`readWorkMode()`'s result, or a test's). */
+export interface DialReading {
+  position?: string;
+  unreadable?: boolean;
+  caps?: { inFlightCap?: number; startedPlanCap?: number };
+}
+
+/** Building now's and Next part queued's descriptions for a dial reading; null when unreadable. */
+export function dialSentences(
+  mode?: DialReading | null,
+): { "Building now": string; "Next part queued": string } | null;
+
+/** The Status options to write for one dial reading. */
+export function statusFieldOptions(mode?: DialReading | null): StatusFieldOption[];
 
 export const STATUS_FIELD_OPTIONS: StatusFieldOption[];
 
@@ -22,9 +45,9 @@ export function statusOptionsMatch(currentNames?: string[]): boolean;
 
 /** The option list to write so the live field matches, ids kept for survivors — or null. */
 export function statusFieldUpdate(
-  current?: { id?: string; name?: string }[],
-  opts?: { keepExtras?: boolean },
-): (StatusFieldOption & { id?: string })[] | null;
+  current?: { id?: string; name?: string; color?: string; description?: string }[],
+  opts?: { keepExtras?: boolean; mode?: DialReading | null },
+): (Omit<StatusFieldOption, "description"> & { id?: string; description: string })[] | null;
 
 export interface SubIssueCounts {
   total: number;
@@ -51,14 +74,44 @@ export interface ProjectField {
 
 export const FIELDS: ProjectField[];
 
+type Label = string | { name?: string };
+
+/** A started plan holds a cap seat only while a lane could pull its next work (2026-10-18). */
+export function holdsCapSeat(
+  plan:
+    | {
+        labels?: readonly Label[];
+        openSubIssues?: ReadonlyArray<{ number?: number; labels?: readonly Label[] }>;
+      }
+    | undefined,
+): boolean;
+
+export type StatusColumn =
+  | "Backlog"
+  | "Ready"
+  | "Building now"
+  | "Waiting on a person"
+  | "Next part queued"
+  | "Next part needs approval"
+  | "Done"
+  // the pre-#6871 names a lagging board still carries (the `columns` fallback)
+  | "In Progress"
+  | "Waiting"
+  | "Blocked";
+
 export function statusForIssue(issue?: {
-  state?: "open" | "closed";
+  number?: number;
+  state?: string;
   labels?: string[];
   hasOpenLinkedPr?: boolean;
   decisionCalloutMissing?: boolean;
   subIssues?: Partial<SubIssueCounts>;
+  openSubIssues?: ReadonlyArray<{ number?: number; labels?: readonly Label[] }>;
+  blockedBy?: number;
+  boardedOn?: ReadonlyMap<number, number>;
+  namedByOpenPr?: boolean;
   columns?: readonly string[];
-}): "Backlog" | "Ready" | "Building now" | "In Progress" | "Waiting" | "Blocked" | "Done";
+}): StatusColumn;
 
 export function isBacklogCandidate(issue?: { labels?: string[] }): boolean;
 
@@ -137,10 +190,16 @@ export function planBoardSweep(budget?: {
 export interface BoardItem {
   id: string;
   content?: { type?: string; number?: number; url?: string };
+  /** The card's Status option name, when the read carried it (#6871 slice 2). */
+  status?: string | null;
   /** The card's Priority option name, when set (#6871). */
   priority?: string;
   /** The card's "Synced priority" record, when set (#6871). */
   syncedPriority?: string;
+  /** The card's Kind option name, when set (#6871 slice 3). */
+  kind?: string;
+  /** The card's "Waiting on" text, when set (#6871 slice 3). */
+  waitingOn?: string;
 }
 
 export function findBoardItem(items?: BoardItem[], issueUrl?: string): BoardItem | undefined;
@@ -150,6 +209,17 @@ export interface PriorityNode {
   synced?: { text?: string } | null;
 }
 
+export interface CardFieldNode {
+  kind?: { name?: string } | null;
+  waiting?: { text?: string } | null;
+}
+
+/** `{kind, waitingOn}` from a GraphQL node's aliases — only the keys GitHub set (#6871). */
+export function cardFieldValues(node?: CardFieldNode | null): {
+  kind?: string;
+  waitingOn?: string;
+};
+
 /** `{priority, syncedPriority}` from a GraphQL node's aliases — only the keys GitHub set. */
 export function priorityValues(node?: PriorityNode | null): {
   priority?: string;
@@ -157,7 +227,11 @@ export function priorityValues(node?: PriorityNode | null): {
 };
 
 export function boardItemsFromProjectItems(args?: {
-  nodes?: (({ id?: string; project?: { number?: number } } & PriorityNode) | null | undefined)[];
+  nodes?: (
+    | ({ id?: string; project?: { number?: number } } & PriorityNode & CardFieldNode)
+    | null
+    | undefined
+  )[];
   projectNumber?: number;
   issueUrl?: string;
 }): BoardItem[];

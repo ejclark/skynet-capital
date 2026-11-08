@@ -71,6 +71,24 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"Solve the print's thresholds from the published index levels and they hold to the release" (FT-productivity-costs-q3-2026-11-05-1, -2, -3)** — added 2026-11-06 from the
+  [productivity-costs-q3-2026-11-05 close-out](events/productivity-costs-q3-2026-11-05.md). The ledger's identity arithmetic was exact (151.663 ÷ 121.922 × 100 = 124.393), but every anchor
+  came from a vintage the 2026 NIPA annual update then revised: ULC y/y printed **2.4%** (called <2.0%), productivity y/y **2.1%** (called 1.0–2.0%), labor-share index **93.729**
+  (called <93.446). Do not register a level-keyed threshold on a BLS productivity release without checking whether BEA's annual update lands before it, and key it to the q/q SAAR instead.
+
+- **"The strip is pricing a hike no forecaster the Bank asks expects, so the meeting holds" (FT-boe-decision-2026-11-05-1)** — added 2026-11-06 from the
+  [boe-decision-2026-11-05 close-out](events/boe-decision-2026-11-05.md). The MPC raised Bank Rate 25bp to **4%** on an **8–1** vote. Do not take the under on a central-bank strip off surveys and
+  polls that close before the bank resets its own projection: the 17 Sep reset moved the strip from 54% to 85% hike and every hold-side read pre-dated it.
+
+- **"A forecast round's two-year modal CPI prints below 2.0% because the curve rose" (FT-boe-decision-2026-11-05-2)** — added 2026-11-06 from the
+  [boe-decision-2026-11-05 close-out](events/boe-decision-2026-11-05.md). Table 3.B read **2.0%** at 2028 Q4 (July: 1.9) and the Bank's conditioning path rose to 4.9% end-2027. Do not read a
+  higher market curve as a deeper projected undershoot: an energy shock raises the projection and the curve together. The registered baseline also had no like-for-like cell (July's Q3-2028 1.8%
+  against a Report that prints year-end quarters only); register the printed quarter.
+
+- **"The hawkish dissent is a stable minority of three or fewer through a forecast round" (FT-boe-decision-2026-11-05-3)** — added 2026-11-06 from the
+  [boe-decision-2026-11-05 close-out](events/boe-decision-2026-11-05.md). All **nine** voted to raise (8 for +25bp, Mann for +50bp). Do not carry a bloc size across a meeting where the committee's
+  own projection reset; three consecutive meetings of growth plus two hold-side speeches (09-24) were the trend, and the registration called it the weakest test.
+
 - **"The Construction Spending headline carries Census's not-significant asterisk because 27 of 29 editions did" (FT-construction-spending-2026-11-02-3)** — added 2026-11-06 from the
   [construction-spending-2026-11-02 close-out](events/construction-spending-2026-11-02.md). Census CB26-176 (September 2026) read **-1.9% (±0.7%)**, no asterisk: 2.7x its own margin of error,
   driven by residential (-5.5% ±1.3%). Do not register a significance call on a series-level base rate when the reference month's own components are already moving (housing starts printed

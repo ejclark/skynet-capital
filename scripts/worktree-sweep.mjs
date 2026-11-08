@@ -12,6 +12,9 @@
 //                        finished. Every agent worktree is locked to the harness process that
 //                        spawned it, which outlives the agent, so without this a live session could
 //                        never sweep its own agents' worktrees. Clean + pushed is still required.
+//          --include-sessions  also judge desktop-app session folders (branch
+//                        `claude/<word>-<word>-<6 hex>`) by the rules below; without it they are
+//                        always kept, because an idle open session holds no lock (#7102)
 //          --json        the verdicts as JSON
 //
 // WHY. An isolated agent's worktree cost ~1.2GB before node_modules were shared and ~130MB after;
@@ -22,6 +25,7 @@
 // commit on it stay in the repository. So the only things that can be lost are uncommitted work and
 // the commits of a detached HEAD. A worktree is removed only when none of these hold:
 //   - it is the primary checkout, or the worktree this command runs in
+//   - it is a desktop-app session folder (unless --include-sessions)
 //   - its lock names a live process (a lock with no readable pid is treated as live)
 //   - it has uncommitted changes, untracked files included (a new file is work too)
 //   - it is younger than --min-age (a workflow worktree is unlocked and starts out clean at main)
@@ -31,6 +35,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 /** `git worktree list --porcelain` -> one record per worktree. */
 export function parseWorktrees(porcelain) {
@@ -63,17 +68,36 @@ export function lockPid(reason) {
 }
 
 /**
+ * The desktop app's session worktree branch: `claude/<word>-<word>-<6 hex>` (#7102). An idle open
+ * session holds no lock, so without this it meets every removal condition — on 2026-11-08 a sweep
+ * removed one. Archiving a session removes its own worktree, so a survivor is most likely still
+ * open; keeping it costs only disk. Checked against every branch on origin that day: no agent
+ * (`worktree-agent-<hex>`) or role (`docs/…`, `feat/…`, other `claude/…`) branch matches.
+ */
+const APP_SESSION_BRANCH = /^claude\/[a-z]+-[a-z]+-[0-9a-f]{6}$/;
+export const isAppSessionBranch = (branch) => APP_SESSION_BRANCH.test(branch ?? "");
+
+/** Why this worktree is never a candidate, whatever its state; null when it is one. */
+function pinned(w, includeSessions) {
+  if (w.primary) return "primary checkout";
+  if (w.current) return "the worktree this runs in";
+  if (w.appSession && !includeSessions) return "app session folder";
+  return null;
+}
+
+/**
  * Remove this worktree or keep it? One verdict from facts already gathered; no I/O.
  *
- * w: { primary, current, lock: null | { pid: number|null, alive: boolean }, released, dirty: number,
- *      ageMinutes: number|null, inMain, onRemote, patchApplied, mergedPr }
+ * w: { primary, current, appSession, lock: null | { pid: number|null, alive: boolean }, released,
+ *      dirty: number, ageMinutes: number|null, inMain, onRemote, patchApplied, mergedPr }
  * returns { remove, unlock, reason, via? } — `unlock` when the lock must come off first.
  * `released` is the caller's word that this agent is finished (--only): it waives the live-lock
  * check for that one worktree and nothing else — dirty, unpushed and fresh still keep it.
+ * `includeSessions` (--include-sessions) judges app session folders by the same rules as the rest.
  */
-export function decide(w, { minAgeMinutes = 60 } = {}) {
-  if (w.primary) return { remove: false, unlock: false, reason: "primary checkout" };
-  if (w.current) return { remove: false, unlock: false, reason: "the worktree this runs in" };
+export function decide(w, { minAgeMinutes = 60, includeSessions = false } = {}) {
+  const pin = pinned(w, includeSessions);
+  if (pin) return { remove: false, unlock: false, reason: pin };
   const live = w.lock && (w.lock.pid === null || w.lock.alive) && !w.released;
   if (live) {
     const reason =
@@ -234,6 +258,7 @@ function facts(primary, here, w, { useGh, hasMain, released }) {
   return {
     primary: false,
     current: here === path,
+    appSession: isAppSessionBranch(w.branch),
     lock,
     released,
     dirty,
@@ -254,6 +279,7 @@ function parseArgs(argv) {
     apply: argv.includes("--apply"),
     useGh: argv.includes("--gh"),
     json: argv.includes("--json"),
+    includeSessions: argv.includes("--include-sessions"),
     only: new Set(argv.flatMap((a, i) => (a === "--only" && argv[i + 1] ? [argv[i + 1]] : []))),
     minAgeMinutes: value("--min-age") === undefined ? 60 : Number(value("--min-age")),
   };
@@ -288,7 +314,8 @@ function judge(primary, here, opts) {
     const named = opts.only.has(basename(w.path)) || (w.branch !== null && opts.only.has(w.branch));
     if (opts.only.size > 0 && !named) continue;
     const f = facts(primary, here, w, { useGh: opts.useGh, hasMain, released: named });
-    rows.push({ ...w, ...decide(f, { minAgeMinutes: opts.minAgeMinutes }) });
+    const { minAgeMinutes, includeSessions } = opts;
+    rows.push({ ...w, ...decide(f, { minAgeMinutes, includeSessions }) });
   }
   const sizes = sizesKb(
     primary,
@@ -362,4 +389,4 @@ function main(argv) {
   return failed ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
+if (isMain(import.meta.url)) process.exit(main(process.argv.slice(2)));

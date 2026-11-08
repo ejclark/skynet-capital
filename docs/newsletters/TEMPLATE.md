@@ -1,7 +1,8 @@
 # Weekly newsletter — template
 
-One newsletter per ISO week, archived here as `docs/newsletters/YYYY-Www.md` and posted Sunday at
-18:00 CT. The plan is #6872. It sits above the daily digest (`docs/digests/`), which keeps what is
+One newsletter per ISO week, archived here as `docs/newsletters/YYYY-Www.md` and posted on the
+pinned issue #7024 at the week's close, Monday 00:05Z (Sunday 6:05 pm CT, 7:05 pm in summer). The
+plan is #6872. It sits above the daily digest (`docs/digests/`), which keeps what is
 urgent; the newsletter carries what is important but not urgent, and steers the week ahead.
 
 **Who writes what.** `npm run newsletter -- --week YYYY-Www` writes the numbers as one JSON object
@@ -12,16 +13,42 @@ as unknown is printed as unknown.
 ## Sections, in order
 
 1. **Pictures first** — week-over-week trend lines from the series on the `data/newsletter` branch.
+   Cloud runs cannot write that branch, so until the generator reads past editions back, the
+   picture is this week's numbers alone.
 2. **Numbers** — the metric set, one line each, every line linking to where it came from.
+   **Decisions reaching Eric** (`metrics.decisions`, #6953 slice 4) is a small table of its own:
+   each measure with this week's value beside `lastWeek` (read from the series; `null` is "no
+   reading", never zero) and its target. The first row, open asks that need him, is the one to
+   watch; the rest explain why it moved. `unread` names any read that failed.
+   **Playthroughs and reactions** (#7031 slice 3) is two lines. `metrics.playthroughGaps` is the
+   count of journey steps still marked `known_gap` (expected to fail), by member; a falling count
+   is the ratchet working, and a step written for a PR's own acceptance line never carries one.
+   `metrics.memberChanges` is the member-facing changes merged in the week (a `feat`, `fix` or
+   `perf` PR touching `app/src/**` or `src/ui/**`) and how many drew a reaction: Eric's is a
+   Revisit filing, a member's is an in-app filing naming the PR, and both are a floor until the
+   app has a per-change reaction (#7029 slice 4). `memberFilings` is the in-app filings of the
+   week, the volume line the member-facing slices wait on (2 a week). Unread PRs, and a count that
+   reads as words, are printed as unknown, never as zero. The open `needs-eric` count and its
+   median age are `metrics.needsEric`.
 3. **Milestones** — closed sub-issues and plan Log lines dated in the week.
 4. **Last week's plan, checked** — each commitment from the previous plan block marked done,
    partial or slipped, with the reason, and plan accuracy as a percentage.
 5. **Constraints** — the top 3 things binding progress: what each cost this week, and what would
    remove it, asked as named options.
 6. **Next week** — 3–7 commitments, each with a done line and its Horizon. Written again,
-   machine-readable, in the plan block.
-7. **Your part this week** — the human steps due, at most 5 asks, plus how many rolled over.
+   machine-readable, in the plan block. Then **the week ahead in markets**: at most five high-
+   and critical-impact research events dated in the coming seven days, each with its stance and
+   the PR that set it, and the rest folded with their count.
+7. **Your part this week** — the human steps due, at most 5 asks, plus how many rolled over,
+   and the decisions he holds now: `humanSteps.openAsks` (the count, and the oldest by how long it
+   has carried `needs-eric`), from the same selector as the digest's Needs you.
 8. **Steering** — up to 3 direction questions with named options.
+
+## The numbers block
+
+After the plan block, the edition ends with one more HTML comment: `<!-- newsletter-numbers {…} -->`,
+holding the JSON's `metrics` and `humanSteps`. It keeps the week's raw readings in the archive
+without a `.json` file, which would make the PR a code PR.
 
 ## The plan block
 

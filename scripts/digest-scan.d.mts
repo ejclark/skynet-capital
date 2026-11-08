@@ -25,6 +25,9 @@ export function quietReason(
 export function digestFiles(): string[];
 export function latestDigestDate(): string | null;
 export function needsYouLines(planned: Pick<Planned, "needsYou">): string[];
+/** The "needs a session" line for "Noise absorbed" (#6953 slice 2). */
+export function calloutIncompleteLine(planned: Partial<Pick<Planned, "incomplete">>): string;
+export function needsSessionLine(planned: Partial<Pick<Planned, "needsSession">>): string;
 /** The "Noise absorbed" line for unlearned incidents (#4212); `unlearnedRuns: null` = unknown. */
 export function learningLine(count: {
   days?: number;

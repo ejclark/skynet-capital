@@ -26,6 +26,8 @@ export const ETFS: readonly TickerEntry[] = [
   { symbol: "ARKK", name: "ARK Innovation ETF", sector: "ETF" },
   { symbol: "GLD", name: "SPDR Gold Shares", sector: "ETF" },
   { symbol: "SLV", name: "iShares Silver Trust", sector: "ETF" },
+  { symbol: "USO", name: "United States Oil Fund", sector: "ETF" },
+  { symbol: "EWJ", name: "iShares MSCI Japan ETF", sector: "ETF" },
   { symbol: "TLT", name: "iShares 20+ Year Treasury Bond ETF", sector: "ETF" },
   { symbol: "HYG", name: "iShares iBoxx High Yield Corporate Bond ETF", sector: "ETF" },
   { symbol: "EEM", name: "iShares MSCI Emerging Markets ETF", sector: "ETF" },

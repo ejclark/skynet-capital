@@ -118,8 +118,8 @@ what hides or disables it (the fog ledger: `docs/FOG-OF-WAR.md`).
 | Needs-a-decision card | `Decision` `app/src/live/desk.ts:76` (`src/observatory/decisions-view.ts:43`) | rides `GET /api/desk/:id` | account · symbol · position · decision · date (as words: `clocks`, `decisions-view.ts:116-130`) | `primary.href` → `/trade?desk=&symbol=` (`decisions-view.ts:217`) | `MapLens` column `positions-lens.tsx:116` · the row's fact badge (`app/src/live/position-mark.ts`, drawn by `position-guidance-slot.tsx`; #5070) | — |
 | Consideration chip | `ConsiderationChip` `app/src/live/desk.ts:105` (`src/observatory/considerations-view.ts:24`) | rides `GET /api/desk/:id` (`desk-json-routes.ts:223-228`) | account · symbol · playbook | a house playbook matching a held symbol | **served, not rendered** — no component reads `Desk.considerations` (`desk.ts:195`) | — |
 | Activity event (fill) + reasoning | `DeskActivityEvent` / `ActivityReasoning` `app/src/live/desk.ts:256,279` (`src/observatory/desk-json-view.ts:312`) | `GET /api/desk/:id/activity` `src/server/desk-json-routes.ts:107,122` | account · order · symbol · date (`at`) · playbook (`reasoning.playbookId`) · decision (`reasoning`) | anchor `#act-<orderId>` (`desk.ts:332`) | `LedgerTable` `app/src/shell/ledger-table.tsx:24` (`accounts.tsx:107-123`) · `RecentOrdersStrip` `app/src/shell/recent-orders-strip.tsx:30` (`option-gate.tsx:535`, `trade-gate.tsx:386`) · `FormStrip` `app/src/shell/form-strip.tsx:57` (`networth-card.tsx:68`) | `available:false` without a ledger |
-| Order (working / recent) | `DeskOrderRow` / `DeskOrders` `app/src/live/orders.ts:19,44` | `GET /api/trade/orders?participantId=` `src/server/trade-orders-routes.ts:286`; cancel/replace `:290,277` | account · order · symbol · date (`submittedAt`) | `replaces` / `replacedBy` chain | `OrdersSection` `app/src/shell/orders-section.tsx:18` (`trade.tsx:339`) | unlinked / unreachable |
-| Order event (live) | `DeskOrderEvent` `app/src/live/desk-events.ts:18` | `GET /api/trade/events?participantId=` (SSE) `src/server/desk-events-route.ts:30` | account · order | promotes the ticket's headline to "filled" | `fillHeadline` `app/src/live/fill-headline.ts:24` | bus wired |
+| Order (working / recent) | `DeskOrderRow` / `DeskOrders` `app/src/live/orders.ts:19,44` | `GET /api/trade/orders?participantId=` `src/server/trade-orders-routes.ts:286`; cancel/replace `:290,277` | account · order · symbol · date (`submittedAt`) | `replaces` / `replacedBy` chain | `OrdersSection` `app/src/shell/orders-section.tsx:18` (`trade.tsx:339`) · `OrderReceipt` `app/src/shell/order-receipt.tsx:44` (the sent ticket, follows `replacedBy`) | unlinked / unreachable |
+| Order event (live) | `DeskOrderEvent` `app/src/live/desk-events.ts:18` | `GET /api/trade/events?participantId=` (SSE) `src/server/desk-events-route.ts:30` | account · order | promotes the sent ticket's receipt to "filled" | `readReceipt` `app/src/live/order-receipt.ts:123` | bus wired |
 | Alert | `DeskAlert` `app/src/live/alerts.ts:11` (`src/server/desk-alerts-route.ts:38`) | `GET /api/trade/alerts?participantId=` `src/server/desk-alerts-route.ts:31` | account · symbol? · date (`at`) | dismissed by `fingerprint` | `DeskAlerts` `app/src/shell/desk-alerts.tsx:67` (`orders-section.tsx:34`) | `dismissable` |
 | Pulse (recap) | `DeskPulse` `app/src/live/pulse.ts:61` (`src/observatory/pulse-json-view.ts:62`) | `GET /api/desk/:id/pulse` `src/server/desk-json-routes.ts:107` | account · date/range (weeks, curve) | streaks; the doubling race | `PulseBody` `app/src/routes/u.$id.pulse.tsx:129` — **desk only** | — |
 | Heartbeat | `Heartbeat` / `PlaybookHeartbeat` `app/src/live/heartbeat.ts:18,10` (`src/observatory/bot-heartbeat-view.ts:34,24`) | `GET /api/desk/:id/heartbeat` `src/server/desk-json-routes.ts:107` | account (bot) · playbook · date (`since`, `lastPassAt`) | one verdict per subscribed playbook | `PlaybooksHeadLine` `app/src/shell/heartbeat.tsx:33` — "● Running · 7 playbooks ›" on the Profile head's account row (`cockpit-head.tsx`, #5072) and on `/u/:id`'s head (`account-head.tsx`) · `BotPlaybooksSection` `app/src/shell/bot-playbooks.tsx:26` (`accounts.tsx:263`; the Heartbeat section merged into Playbooks, #5073) | bot accounts only (`accounts.tsx:78`) |
@@ -404,8 +404,9 @@ never leaves Settings**.
 **Settled 2026-10-05 — the subscription row stays on R&D** (#4642's settled fork "Homes: configure
 on R&D → Playbooks; observe on Activity + Heartbeat. No new route", built in #4649). The move above
 is not taken. The row stays on its card and leads it (`playbook-subscription-row.tsx:53`, subscribed
-cards first), and the bot's Heartbeat roll call links to it: "Change this bot's playbooks →",
-`/research?section=playbooks&account=<bot>`, owner-only (`heartbeat.tsx`, inside `showPlaybooks`).
+cards first), and the bot's roll call on its Playbooks section links to it: "Change in R&D ›"
+(an opened card's "Change or pause it in R&D ›"), `/research?section=playbooks&account=<bot>`,
+owner-only (`playbook-cards.tsx`, drawn only when `named`, the owner's `showPlaybooks`).
 The link joins observing to configuring without a sixth home. Revisit only if the roll call itself
 needs the controls, not just the way to them.
 
@@ -434,8 +435,8 @@ needs the controls, not just the way to them.
   (`app/src/live/heartbeat.ts:7`); `no-window` is a *playbook verdict* state (`:8`) and `halted` is
   a detail string (`bot-heartbeat-view.ts:40`). A suspended bot's passes still write records with
   `halted = "suspended by owner"`, so in market hours it reads "● Running · checked the market 20s
-  ago · halted: suspended by owner" — the fault word with no until. (The chip said "Beating" until
-  #5044 renamed the words; the enum value is unchanged.) MISSING 11 is specified against this enum.
+  ago · halted: suspended by owner" — the fault word with no until. (The word members read for
+  `beating` is "Running", `heartbeat.ts` `WORD`, #5044; the enum value stays `beating`.) MISSING 11 is specified against this enum.
 - ◆ **390 (a phase-3 note, not a grouping change):** the per-playbook row renders as a card ≤860
   (the verdict table is already four columns); the own-bot switch rides the chip's popover for
   owners (`git show 84ef017a4:app/src/shell/heartbeat.tsx`, lines 80-96; the chip has since retired into `PlaybooksHeadLine`, #5073) — beside the state it changes, no header growth (#3687's budget);
@@ -500,8 +501,8 @@ beside PATTERNS:117's falsifier.
   #1749), not a screen; the option ticket is the 390 pane and already carries Quote and the chain
   by construction; the lever-call line and the held contract are the two rows the scenarios ask it
   to carry; Bars stays a tap away (the returning trader skips the chart).
-- ◆ **Order event's order key is the joint to the book and the ladder**, with `fill-headline.ts`
-  as its carrier: Ticket × Order event is 9 steps where the fill, the rung and the book meet on
+- ◆ **Order event's order key is the joint to the book and the ladder**, with `order-receipt.ts`
+  (was `fill-headline.ts`) as its carrier: Ticket × Order event is 9 steps where the fill, the rung and the book meet on
   one order id ("filled" and rung 102 in the same fill).
 - ◆ **The incoming carrier is dry where it hurts.** The pager's `tradeHref` builds
   `?symbol=&strike=&exp=` — an *open* preset — for a held contract and bare `?symbol=` for shares
@@ -633,8 +634,8 @@ Claude-derived fork it overturns, row cited) ◆.
   Falsifier: Eric reading the two lists as one system and asking which he subscribes to → the
   chapter returns to Profile.
 - ◆ **The fill-row celebration renders only where the fill's account is the ladder's account** —
-  the ticket's `fillHeadline` already knows the traded account, so #469's ceremony rides there
-  first; `ledger-table.tsx` and `fill-headline.ts` render no earned/milestone today (verified,
+  the ticket's receipt (`readReceipt`) already knows the traded account, so #469's ceremony rides there
+  first; `ledger-table.tsx` and `order-receipt.tsx` render no earned/milestone today (verified,
   zero references), and once they do a bot's fill row would celebrate against `ownedIds[0]`'s
   ledger. The claim (`POST /api/learn/claim`) stays on the viewer-level surface until MISSING 33
   lands. `Journey.celebrating` mounts in the cockpit head (viewer-level, every section) with its
@@ -696,10 +697,10 @@ answer, fast").
 - ◆ **Two MISSING entities that make the two rows one thing:** the filing's comment thread (the
   lane's needs-info question is a GitHub comment; the member's reply is `POST /api/feedback/followup`;
   `RecentFiling` carries `status` only, `feedback.ts:15-22` — one conversation, three stores,
-  MISSING 31) and the fix's release + the issue's close reason (`statusFromIssue` maps *any*
-  closed state to shipped, `feedback-status.ts:40-49`, stamped with the running `APP_VERSION`,
-  `feedback-api-routes.ts:69-76` — false during a deploy, after a rollback, and for
-  closed-as-not-planned; the league's mirror uses the same map, MISSING 31).
+  MISSING 31) and the fix's release (`statusFromIssue` maps a closed issue to shipped unless it
+  was closed as not planned or still carries `next-slice`, `src/domain/feedback-status.ts:51-58`,
+  stamped with the running `APP_VERSION`, `feedback-api-routes.ts:69-76` — false during a deploy
+  and after a rollback; the league's mirror uses the same map, MISSING 31).
 - ◆ **The third home's cites, corrected:** `app/src/shell/prefs.ts` (under `shell/`, not
   `live/`); `dashboard-identity.ts:9`, not `dashboard-access.ts:92`; and the
   timezone is **per account** (`saveProfile({ id: account.id, … timezone })`, `settings.tsx:47-70`),
@@ -740,7 +741,7 @@ CLAUDE.md's shared-universe boundary (#885's playbook fog is the one exception).
 **Amendments applied (the red pass).**
 - ◆ **Ops status leaves for the shell.** It is keyless and lives on every route by Eric's own call
   (#1296: "This is the home — group-visible by construction, on every route", the pill's own
-  header; a line in the status line since #5037 round 2, `fleet-health.tsx`); its six steps split 2 league · 2 book · 2 feedback, every one answered by the pill on
+  header; a line in the status line, #5037 round 2, `fleet-health.tsx`); its six steps split 2 league · 2 book · 2 feedback, every one answered by the pill on
   the route the member is on.
 - ◆ **`Council.mine` is the book's joint.** The viewer's own line is read or written in ~25 steps
   beside net worth 7D, their fills, the store card and the research call; everyone's `entries` in
@@ -785,6 +786,26 @@ not one of §3's ten keys; the "via beta-scout" chip explains itself only in a `
 (`decisions-section.tsx:117-122`). It joins the book to the loop by order (joint 5) and is MISSING
 20 — an eleventh key the lift names, not a group.
 
+### 5.9 The landing page — the day's news, your question, quests by their source (#6948, #7018)
+
+Not one of the seven wargamed groups: a **home of homes**, the page sign-in opens, holding each
+group's answer as a joint line and copying no group's section. Decided on #6948 (2026-11-07) and
+placed by #7018's redesign rounds (2026-11-07/08); the build is #7077.
+
+| | |
+|---|---|
+| **Home** | `/app/` (today a redirect to `/leaderboard`, `app/src/routes/index.tsx:21`; a member with no account still lands on onboarding). The first tab ("Chronicles", his name; fork d on #7018). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
+| **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests) · what the party asked in a campaign: each question, who asked it by display name and what its research found, for every member who can read the campaign (#6949 slice 6, `GET /api/campaigns/questions`) |
+| **Holds, each with one owner** | the edition: each story leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, quick questions as fallbacks, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
+| **Hands on** | the owner-fired ticket with exits → Trade · a story's ledger → R&D · who you are → the character sheet (#7019) · standings → the Leaderboard |
+| **At 390, in order** | your question box · the lead story's coming reports, then what moved · its ask · quests by source |
+| **Not here** | a "what's new" part (#7018 r1: "vague, ambiguous direction. no thanks"); a humans-vs-bots grouping or cross-account metrics (#5157: "humans/bots is a property/filter.. not a grouping"); anything about how the app gets built (#7018 comment 1) |
+| **Falsifier** | by 2026-12-15, members open the Leaderboard before the landing page's first story on most sign-ins → home is the standings after all; or two child plans build the same piece of this page → the owner map is wrong |
+
+Eric, round 0 (2026-11-07): *"I don't care for the leaderboard as the landing page."* Round 1
+(2026-11-08): *"I like having actionable items at the top.. like the search engine experience as
+the entry point to direct you to where you want."*
+
 ## 6. The joints — where two groups meet, and what renders on whose page
 
 The wargame's twelve group-level joints. A joint is a shared key rendered on a host page as a
@@ -806,7 +827,7 @@ scenarios found it joined on the wrong field; "no" means a field the server know
 | 9 | The league × the book — my standing beside my own book; everyone's fills beside mine | account (row key ↔ my owned ids) · date/range (the metric window) · order (the fill on the wire is my fill) | 33 scenarios, weight 99: Leaderboard × Net worth 11/10, Activity × Wire 11/10, Pulse × Wire 7/7, Council × Net worth 7/5, Equity curve × Leaderboard 6/6, Landmark × Leaderboard 6/6. A rank change to the curve that caused it and the fill that booked it; "who else traded this" filtered to held symbols; "mine" on the wire; a member's several rows as one member. Rendered by the league card (#3727) and `Council.mine` on the Overview | **Yes** for row × desk (the hovercard, desktop-only) and wire × my accounts (`is:bot`/`is:human`, no "mine", `wire.ts:115`). The per-symbol wire is served and never called (`wire.ts:106`); Compare carries market value only (`board.ts:65-71`); another member's equity curve 404s while their Pulse is open; the board has no week metric, no prior rank and no owning member (`board.ts:32`); the league card's metric is component state; the rail's only exit forces `by=equity` and drops `?a=&b=`; `WirePnl` is one realized total per who with no symbol; `/api/accounts/networth` is owned-only so a non-owned account has no all-time high; the ladder fails open on an errored participant (MISSING 36) |
 | 10 | The league × R&D — this week's council lines against the calls and the store; the wire against a call's week | date/range (the week — four vocabularies) · playbook (the council tag, the store id) · event | 24 scenarios, weight 57: Council × Research call 8/5, Council × Store card 8/8, Council × Day range 5/4, Wire × Call 5/5. A committed line against the newest call on the same playbook and symbol; a kept refusal scored on Friday. *"The council entry carries only a `playbookId` plus its symbol, so nothing marks the line as contradicted"* (the call refutes this week's council line, s1) | **Yes for lines × playbooks** (`plays[]` ships with the selector). Not for the rest: `CouncilEntry` is `{text, at, playbookId?}` with no symbol, account, horizon or outcome (`council.ts:8-15`); `GET /api/council` answers only the current week, keyed as an ISO week in UTC (`council-store.ts:75-85`) so a Sunday-afternoon line lands in the ending week; the tag selector offers every house playbook with no rung check (`council-form.ts:60`); wire rows carry preformatted `when` (`wire-json-view.ts:70,79`) — a raw `at` + `since`/`until` is the panel's next-slice (MISSING 25); no payload grades a call (MISSING 18) |
 | 11 | Me × every group — the thread and the filing carry no page keys | member (only) — the join every scenario wanted was member + the keys on screen (account · symbol · position · range · rung) | Thread contacts: 14 scenarios to the book, 7 to the name, 6 to the ladder, 7 to R&D (Moneypenny × Guidance 4/4, × Decision card 3/3, × Clock 3/3, × Onboarding 3/3; Filing × Ticket 3/2). A question about the contract on screen; a filing that reproduces the state it describes; her answer citing the book's number | **No** — the chat request carries `{ messages }` only (`companion.ts:72`); her tools bind to `resolveCurrentId`, the session's default account (`companion-routes.ts:155`), not the account on screen; her market context is "weekdays", not the calendar (`companion-context.ts:86`); the thread lives in one browser (`moneypenny-storage.ts:14`) and the parked draft in memory; `FeedbackInput` carries `area` only and `FeedbackLogEntry` does not persist it (`feedback-log.ts:25-34`); Follow up is owner-only per filing so a post-merge reaction becomes a new issue. The amendment is the context stamp (MISSING 31) |
-| 12 | The shell's clock and R&D's closures × the book and the workbench — today, the session, the next open, against the cards, the working orders and the ticket | date (today · the session · last close → next open) · position (expiration, sessions left) | 35 scenarios carry the clock: Clock × Needs-a-decision 13/11, × Option position 11/7, × Position 11/10, × Ticket 10/10, × Net worth 10/9; Closure × Clock 11/6, × Order 6/4. "Expires in 4 days" as 2 full sessions plus a 3-hour one; a queued order's first eligible session; "today" meaning one date across the clock, the 7D window and a card's clock for a member 13 hours ahead. *"He plans a 15:45 Friday exit that does not exist"* (Thanksgiving week, s1) | **The clock is client-side** (`market-session.ts`, reading `src/domain/market-calendar.ts`) and knows today's closure and an early close only for today (`:56`), `nextOpen` as a string (`:26`); `sessionsIn` exists client-side only for R&D's head (`horizon-range.ts:148-151`); decision clocks are prose that knows no closures (`decisions-view.ts:116-130`) and `Decision` has no `dueOn`; the ticket warns only when the market is closed right now and names no day (`order-ticket.ts:264-265`); the Order row carries `submittedAt` only; the stored member timezone is read only by the legacy card (MISSING 24) — the SPA's clock and calendar are ET-only (`market-session.ts:32`, `horizon-range.ts:37`); the `NewHighCeremony` overlay covers the topbar clock (#3689 flagged). The range a closure needs — last close → next open — does not exist (MISSING 5) |
+| 12 | The shell's clock and R&D's closures × the book and the workbench — today, the session, the next open, against the cards, the working orders and the ticket | date (today · the session · last close → next open) · position (expiration, sessions left) | 35 scenarios carry the clock: Clock × Needs-a-decision 13/11, × Option position 11/7, × Position 11/10, × Ticket 10/10, × Net worth 10/9; Closure × Clock 11/6, × Order 6/4. "Expires in 4 days" as 2 full sessions plus a 3-hour one; a queued order's first eligible session; "today" meaning one date across the clock, the 7D window and a card's clock for a member 13 hours ahead. *"He plans a 15:45 Friday exit that does not exist"* (Thanksgiving week, s1) | **The clock is client-side** (`market-session.ts`, reading `src/domain/market-calendar.ts`) and knows today's closure and an early close only for today (`:56`), `nextOpen` as a string (`:26`); `sessionsIn` exists client-side only for R&D's head (`horizon-range.ts:148-151`); decision clocks are prose that knows no closures (`decisions-view.ts:116-130`) and `Decision` has no `dueOn`; the ticket warns only when the market is closed right now and names no day (`order-ticket.ts:264-265`); the Order row carries `submittedAt` only; the stored member timezone is read by nothing (MISSING 24) — the SPA's clock and calendar are ET-only (`market-session.ts:32`, `horizon-range.ts:37`); the `NewHighCeremony` overlay covers the topbar clock (#3689 flagged). The range a closure needs — last close → next open — does not exist (MISSING 5) |
 
 ## 7. Missing entities — what the scenarios reached for and no type or endpoint holds
 
@@ -998,8 +1019,9 @@ scenarios asked; 33–36 were added by the red passes; 37 by plan #5496.
     posts `{ messages }`, `companion.ts:72`); ◆ the filing's comment thread — the lane's needs-info
     question (a GitHub comment) and the member's follow-ups (`POST /api/feedback/followup`,
     owner-only), member-keyed and read by both the section and the rail (`RecentFiling` carries
-    `status` only, `feedback.ts:15-22`); ◆ the fix's release and the issue's close reason
-    (`statusFromIssue` maps any closed state to shipped, `feedback-status.ts:40-49`, stamped with
+    `status` only, `feedback.ts:15-22`); ◆ the fix's release
+    (`statusFromIssue` maps a closed issue to shipped unless it was closed as not planned or still
+    carries `next-slice`, `src/domain/feedback-status.ts:51-58`, stamped with
     the running `APP_VERSION`, `feedback-api-routes.ts:69-76`; Moneypenny closes on the push to main
     before the deploy, `feedback-build.md` → step 1 *Receipt*, and a rollback never reopens it).
 32. **The guest list and claims as IA entities** — `GuestEntry` (`admin.ts:9`, `GET /api/admin/invite`)
@@ -1095,7 +1117,7 @@ fill). **Me** (member — the Moneypenny thread and my filings) is the rail on e
 viewer-level Feedback section. **The league** (account across members — standing, everyone's
 fills, this week's council lines) stays outside Profile on Leaderboard + Activity, joined into
 the book by the league card and the viewer's own council line. Three every-route entities (the
-clock, the fleet's status — one status line since #5037 round 2 — and the rail) are the shell, not a group; the persona key is an eleventh key
+clock, the fleet's status — one status line, #5037 round 2 — and the rail) are the shell, not a group; the persona key is an eleventh key
 the lift names. The rail dimension leaves the frame on every non-Settings route because every
 rail today carries either a group's sub-nav (which the group's home now holds as sections) or a
 control on a stage that is full width once the column is gone; the tower's form (the panel's
@@ -1206,9 +1228,12 @@ its evidence, and the row points at it. Until then it waits here, with its conte
 | U9 | **A call's words go stale while its date stays fresh** — a ledger's horizon row is authored once and each later check appends a new *Last assessed* stamp without rewording the call, so a card can say "read the 2026-09-09 September edition" under "checked Oct 7" (§5.4; `docs/process/EVENT-RESEARCH.md`) | research (#5158 round 1, 2026-10-18: the EIA card; its why line "Still 15 days out" on an event already past) | The board shows calls exactly as authored and never rewrites one; only the research lane's check (or the contract) can reword a row or mark it unchanged-since | none — the card shows *checked* beside the call | waiting (1 screen) |
 | U10 | **The ladder opens every rung for an account that traded before it existed** — the seed rule turns training wheels off for any account with a filled order when its progression record is first created (`src/server/progression-service-support.ts:31`), so that member climbs nothing (§5.5, §2d) | learn-trading (#5176 round 3, 2026-10-18: Eric's own account reads "nothing is locked", so the chapter's locks and "what opens each level" never show him; Eric, 2026-10-11 on #5171's page: "This section is intended to be a progression the blocks functionality until it has been manually executed"); trade-chain (#5171, the same note: options offered "when … options trading hasn't been unlocked") | The lock is the progression service's seed rule and a policy call (should pre-ladder accounts climb from rung 101?); the chapter and the chain only draw what the server decides | none — round 3 draws the chapter with training wheels on, labelled illustrative | waiting (2 screens; the deciding question is on #5176, 2026-10-11) |
 | U11 | **The human playbook chapter sits apart from the playbook catalog** — Profile → Milestones carries a Playbooks chapter ("prove a play by hand, then arm it") while R&D → Playbooks lists the playbooks a member would prove and arm (§5.5 amendments: the chapter card becomes a link into R&D's page, unbuilt) | profile-milestones (#5169 round 0 redraw, 2026-10-13, and round 1, 2026-10-18: the chapter reads "0 / 4" and "Season 1" with nothing to do on this page) | Joining the chapter to the catalog moves content across two groups (§5.5 ladder, §5.4 R&D) and their routes; Milestones can only link out | none — the card stays as it is | waiting (1 screen; related to U7) |
-| U12 | **A record can't open the trades that made it** — Pulse's weeks, runs and biggest dip are dated, but Activity takes no date in its address (`narrowingFromSearch` reads only `symbol` and `playbook`, `app/src/shell/account-ledger.tsx:40`), so the Pulse × Activity joint (13/13, §5.1) stays unrendered (§3: date/range has no URL carrier on the account's Activity) | member-pulse (#5180 round 1, 2026-10-18: "a week can't open its trades"; the +$55 week of Sep 28 is a −$230 loss and a +$285 win, visible only by filtering Activity by hand) | The fix is a date key on Activity's route and its list; Pulse can only link to it once that exists | none — round 1 writes what made each week under its bar ("1 won · 1 lost") | waiting (1 screen) |
+| U12 | **A record can't open the trades that made it** — Pulse's weeks, runs and biggest dip are dated, but the Ledger takes no date in its address (`narrowingFromSearch` reads only `symbol` and `playbook`, `app/src/shell/account-ledger.tsx:40`), so the Pulse × Activity joint (13/13, §5.1) stays unrendered (§3: date/range has no URL carrier on the account's Ledger) | member-pulse (#5180 round 1, 2026-10-18: "a week can't open its trades"; the +$55 week of Sep 28 is a −$230 loss and a +$285 win, visible only by filtering Activity by hand) | The fix is a date key on Activity's route and its list; Pulse can only link to it once that exists | none — round 1 writes what made each week under its bar ("1 won · 1 lost") | waiting (1 screen) |
 | U13 | **The owner's tools have no home of their own** — every bot's switches, Moneypenny's model and the unclaimed accounts render inside one member's Account section, under that member's own account card (§5.8 places fleet controls in "Settings, never a page") | settings (#5170 round 1, 2026-10-18: the switch that stops every bot sits under Eric's own card at 390; Eric, 2026-10-10: "more features are being pushed into drawers/section where they belong"); #5462 (Eric, 2026-10-16: "Similar to an admin panel with application the ability to manage app level feature toggles, configurations.") | An owner's area of its own adds a section or a route, a nav move; #5462's admin panel would hold the same tools and its grants, so the home is decided there, not in one screen | Settings round 1 draws a folded drawer inside Account (works around U13) | waiting (1 screen; joins #5462) |
 | U14 | **Options tools offered before options open, and beside a stock ticket**: the bench docks the chain under whatever ticket is open, Buy stock included, and the section switch offers Chain and Outlook on every rung; neither reads the member's rungs (§5.3 the bench, §5.5 the ladder) | trade-chain (#5171 round 2, 2026-10-18: with options rungs 201–501 locked, the desktop frame docks the full chain under a Buy stock ticket and the phone switch offers Chain; Eric, round 1: "I don't like how features for options are available when 1) \"buying stock\" is selected, 2) options trading hasn't been unlocked"), trade-ticket (#5174, the order form that frame showed) | Which sections dock beside the ticket, and which tabs the switch offers, is the bench's rule (`trade.tsx`), shared by the ticket, chain and outlook; the chain alone can only stop trading from itself | the chain's round 2 draws it read-only with one line naming the rung that opens options (proposed, awaiting his pick) | waiting (2 screens) |
+| U15 | **Nothing writes the day's edition** — the landing page's stories, key facts and dated reports are hand-fed; the landscape read is unbuilt (§5.9, §7) | landing (#7018 round 1, 2026-11-08: every frame drawn on hand-fetched closes) | The edition is #6949 slice 5's data and #6948 slice 4's voice; a screen can only render what they write | #7077 slice 1 renders hand-fed data | waiting (1 screen; owned by #6949, #6948) |
+| U16 | **No reward a quest can carry** — a quest record has no reward field (#7028); the only honest reward today is a ladder rung's first fill (`src/domain/curriculum.ts`); loot and Renown are designed, unbuilt (`docs/THE-GAME.md` Moves 2–3, forks 1–2) | landing (#7018 round 0, Eric: "quests to steer research/development, level up, and acquire loot") | Rewards are a game-layer entity (§2d) behind Eric's open THE-GAME forks; a screen can only show what is earned | the cash quest shows "+35 pts on your first real put sale" | waiting (1 screen; Eric's forks 1–2) |
+| U17 | **A member's question has no route** — an ask is stored and read by nothing, and no line says who holds it (#7034 slices 3–4, #6952 slice 2b) | landing (#7018 rounds 1–2: "R&D is on it" drawn as proposed) | Routing a question to research is a lane and a queue inside the work gate, not a page | none — the frames caption it proposed | waiting (owned by #7034, #6952) |
 
 Seeded from the commons digest posted on #5143 (2026-10-11, 16 IA moves from 10 screens); later
 rows are added by redesign sessions as they find them.

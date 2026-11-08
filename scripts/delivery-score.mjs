@@ -22,6 +22,7 @@
 // rework detector's precision at about 6 in 10, so compare cohorts scored by the same code, never a
 // live number against a hand count.
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 import { declaredPrs, readinessNotes, sizeCell } from "./issue-readiness.mjs";
 import { ensureGhToken, ghRest } from "./moneypenny/gh.mjs";
 
@@ -273,4 +274,4 @@ function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

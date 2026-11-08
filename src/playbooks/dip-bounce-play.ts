@@ -32,6 +32,8 @@ export function dipBounce(setting: {
     evidence: `${DIP_BOUNCE_STUDY} §2: ${setting.finding}`,
     size: { conservative: 0, standard: 0, aggressive: 0 },
     horizon: "short",
+    // Its exit plan, for the day it goes live (#6954 slice 4): each tranche rests its target sell.
+    exits: { target: "sells each tranche one 5-minute range above its buy" },
     observeOnly: true,
     // What it would have done, from the 5-minute bars the pass can see: recorded, never ordered.
     observe: ({ bars, asOf, quotes, calendar }) => {

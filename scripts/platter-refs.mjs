@@ -28,6 +28,7 @@
 //      #n open (#5837's item on #5852, hand-closed). The lane is the one session that knows whether
 //      its item finishes the issue, so the board asks it to say so instead of guessing either way.
 import { readFileSync } from "node:fs";
+import { isMain } from "./is-main.mjs";
 import { derivePrIssues, keywordIssuesOf } from "./moneypenny/pr-issues.mjs";
 
 const CLOSES_TRAILER = "Platter-Closes";
@@ -200,4 +201,4 @@ function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

@@ -59,8 +59,8 @@ and the first button, never the rail. They skip anything that names a concept th
    open — step 1 (connect Alpaca) first, then "Say hello now", then "Not ready to connect yet?
    See the leaderboard ›". **WHEN a signed-in session with zero linked accounts arrives on the
    sign-in hop, the app shall open its Profile on the onboarding chapter, with a link to the
-   leaderboard.** _Fixed — #6317 (#6271 outcome 1): sign-in used to land here on the standings,
-   with no way in to connect._ A member with an account, and a typed `/app/leaderboard`, keep
+   leaderboard.** _Fixed — #6317 (#6271 outcome 1): the first screen after sign-in is the way in
+   to connect, not the standings._ A member with an account, and a typed `/app/leaderboard`, keep
    the leaderboard. Judge: can this reader tell what to do first, and where the race is, in ten
    seconds?
 1. `/app/` — the league table, ranked rows; the topbar's Profile tab is one tap away and lands on
@@ -99,9 +99,11 @@ and the first button, never the rail. They skip anything that names a concept th
    how to say hello, in ten seconds?
 
 5. `/app/trade` — "No accounts are linked to your session yet — connect one in Onboarding." — the
-   words are the link to the connect guide. **WHEN a member with no linked account opens Trade, the
-   app shall link the empty state to onboarding.** _Fixed — #3807 slice 2e._ Judge: can this reader
-   tell what to do next in ten seconds?
+   words are the link to the connect guide; the ladder strip above it says "Locked — link an
+   account first", never "nothing is locked". **WHEN a member with no linked account opens Trade,
+   the app shall link the empty state to onboarding, and the ladder strip shall not say nothing is
+   locked.** _Fixed — #3807 slice 2e; the strip, #6257._ Judge: can this reader tell what to do
+   next in ten seconds?
 
 ### j2 — the first rung, read before it is earned
 

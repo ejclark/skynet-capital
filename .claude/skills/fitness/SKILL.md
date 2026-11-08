@@ -11,9 +11,9 @@ description: >-
 
 # Fitness — is this check any good?
 
-A check that passes while the outcome fails is worse than no check: it buys silence. 13 of the
-126 lessons in `docs/LESSONS.md` are a check that passed, stayed silent, or told no one while the
-outcome failed. This is the procedure for one check, from intent to proof. The rubric it scores
+A check that passes while the outcome fails is worse than no check: it buys silence. On 2026-11-01,
+13 of the 126 lessons in `docs/LESSONS.md` were a check that passed, stayed silent, or told no one
+while the outcome failed. This is the procedure for one check, from intent to proof. The rubric it scores
 against lives in [`rubric.md`](rubric.md) beside this file: open it at step 9, not before.
 
 The script half is free and runs first: `node scripts/fitness-audit.mjs --bugs <file>` breaks the

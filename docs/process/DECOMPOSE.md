@@ -1,6 +1,6 @@
 # DECOMPOSE
 
-The split playbook is now a first-class, invocable **skill** — the single source of truth lives at
+The split playbook is a first-class, invocable **skill** — the single source of truth lives at
 [`.claude/skills/decompose/SKILL.md`](../../.claude/skills/decompose/SKILL.md).
 
 Invoke it interactively with `/decompose`, or let the governor chore

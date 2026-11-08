@@ -1,8 +1,9 @@
 // Type surface for scripts/moneypenny/projects-reconcile.mjs — the hourly board sweep (#4393 slice
 // 1), driven by a spec through injected IO. The scripts/ tree is plain ESM with `allowJs` off.
-import type { BoardItem } from "./projects.d.mts";
+import type { BoardItem, DialReading } from "./projects.d.mts";
+import type { CardFieldWrite } from "./projects-fields.d.mts";
 import type { PriorityPlan } from "./projects-priority.d.mts";
-import type { BoardContext } from "./projects-sync.d.mts";
+import type { BoardContext, ColumnContext } from "./projects-sync.d.mts";
 
 export interface ReconcileItem extends BoardItem {
   status?: string | null;
@@ -14,11 +15,14 @@ export interface MergedDrift {
   have?: string | null;
   want?: string;
   priority?: PriorityPlan;
+  /** Kind / "Waiting on" writes the card is due (#6871 slice 3). */
+  fields?: CardFieldWrite[];
 }
 
 export function mergeDrift(
   statusDrift?: Drift[],
   priorityDrift?: { number: number; plan: PriorityPlan }[],
+  fieldDrift?: { number: number; writes: CardFieldWrite[] }[],
 ): MergedDrift[];
 
 export interface RestIssue {
@@ -29,7 +33,8 @@ export interface RestIssue {
   labels?: ({ name?: string } | string)[];
   pull_request?: unknown;
   sub_issues_summary?: { total?: number; completed?: number };
-  issue_dependencies_summary?: { blocking?: number } | null;
+  issue_dependencies_summary?: { blocking?: number; blocked_by?: number } | null;
+  parent_issue_url?: string | null;
 }
 
 export interface Drift {
@@ -49,7 +54,29 @@ export function boardItemsOrThrow(board: {
 
 export function boardIssueNumber(item: ReconcileItem | undefined, repo?: string): number | null;
 
-export function wantedStatusOf(issue: RestIssue, columns?: readonly string[]): string | null;
+export function wantedStatusOf(
+  issue: RestIssue,
+  columns?: readonly string[],
+  context?: ColumnContext,
+): string | null;
+
+/** The sweep's shared reads, once: sub-issues grouped by parent, and the open PRs (#6871 slice 2). */
+export function sweepContext(
+  openIssues?: RestIssue[],
+  deps?: {
+    readAll?: (path: string) => unknown[];
+    readPulls?: () => unknown[];
+    log?: (line: string) => void;
+  },
+): ColumnContext;
+
+/** One log line: open cards per column, from the same rule. */
+export function columnCounts(input: {
+  items?: ReconcileItem[];
+  openIssues?: RestIssue[];
+  columns?: readonly string[];
+  context?: ColumnContext;
+}): string;
 
 export interface StatusFieldOption {
   id?: string;
@@ -60,6 +87,7 @@ export interface StatusFieldOption {
 
 export function ensureStatusColumns(deps: {
   board: BoardContext;
+  mode?: DialReading | null;
   write?: (fieldId: string, options: StatusFieldOption[]) => unknown;
   dryRun?: boolean;
   log?: (line: string) => void;
@@ -71,6 +99,7 @@ export function planReconcile(input?: {
   statusOf?: (item: ReconcileItem) => string | null | undefined;
   repo?: string;
   columns?: readonly string[];
+  context?: ColumnContext;
 }): Drift[];
 
 export function reconcileBoard(deps?: {
@@ -79,7 +108,7 @@ export function reconcileBoard(deps?: {
   rateLimit?: () => { remaining?: number; reset?: number };
   sync?: (
     number: number,
-    opts: { board: BoardContext },
+    opts: { board: BoardContext; context: ColumnContext },
   ) => {
     skipped?: boolean;
     reason?: string;
@@ -88,9 +117,12 @@ export function reconcileBoard(deps?: {
   };
   ensureColumns?: (deps: {
     board: BoardContext;
+    mode?: DialReading | null;
     dryRun: boolean;
     log: (line: string) => void;
   }) => readonly string[];
+  readMode?: () => DialReading & { warning?: string };
+  buildContext?: (openIssues: RestIssue[]) => ColumnContext;
   statusOf?: (item: ReconcileItem) => string | null | undefined;
   horizons?: Record<string, string>;
   dryRun?: boolean;

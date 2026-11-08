@@ -13,7 +13,7 @@ import { buildAuthoredPlaysWire } from "../autonomous/authored-plays-wire.js";
 import { buildShadowOrders, type ShadowReport } from "../autonomous/authored-shadow-wire.js";
 import { stampCredentialVersions } from "../autonomous/bot-controls.js";
 import type { CondScoutSnapshot } from "../autonomous/cond-scout-wire.js";
-import type { PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
+import type { BotMode, PersonaGateVerdict } from "../autonomous/controls-poll-wire.js";
 import { buildConvictionsWire } from "../autonomous/convictions-wire.js";
 import {
   type DecisionDb,
@@ -78,6 +78,9 @@ export interface InsightsBridgeHandle {
    *  build, no live bots wired, or a malformed payload. Re-read from every poll, same posture as
    *  `botsRunningSha`. */
   readonly botsGate: () => readonly PersonaGateVerdict[] | undefined;
+  /** The house mode the bots process reported on its most recent poll (#6954 slice 1) —
+   *  `undefined` from a build that predates the header. Re-read from every poll like `botsGate`. */
+  readonly botsProcessMode: () => BotMode | undefined;
   /** The app-side decision store's own read, for `readDecisions` wiring in `serve-dashboard.ts` —
    *  `undefined` when `SKYNET_INSIGHTS_DIR` is unset, exactly mirroring `seedAppDecisionDb`. */
   readonly readDecisions?: (
@@ -139,10 +142,10 @@ const CHECK_WEEK_TTL_MS = 15_000;
  *  last ten sessions, behind a card nobody can tell is a minute old. */
 const PLAYBOOK_FUNNEL_TTL_MS = 60_000;
 
-/** The Playbook Store as the bots receive it on every poll: `subscriptions.v4`, with each
- *  subscription's pointer at a conviction record in the version (#5482 contract piece 4). Its
- *  inline-copy bit is frozen at `false` since the field was retired, and v4 is the only kind the
- *  wire knows since the contract step's close (`subscriptions-wire.ts`). */
+/** The Playbook Store as the bots receive it on every poll: `subscriptions.v5`, with each
+ *  subscription's pointer at a conviction record (#5482 contract piece 4) and its owner's below-bar
+ *  floor, where one is set (#6954 slice 5c-ii), in the version. Its inline-copy bit is frozen at
+ *  `false` since the field was retired (`subscriptions-wire.ts`). */
 export function subscriptionsOnTheWire(store: SubscriptionStore, at = Date.now()) {
   return buildSubscriptionsSnapshot(store.load(), at, store.loadAllocations());
 }
@@ -178,6 +181,7 @@ export function startInsightsBridge(
   let lastControlsPollAt: string | undefined;
   let botsRunningSha: string | undefined;
   let botsGate: readonly PersonaGateVerdict[] | undefined;
+  let botsProcessMode: BotMode | undefined;
   let houseRoster: HouseRosterReport | undefined;
   let condScout: CondScoutSnapshot | undefined;
   let authoredShadow: ShadowReport | undefined;
@@ -231,6 +235,7 @@ export function startInsightsBridge(
       lastControlsPollAt = new Date().toISOString();
       botsRunningSha = report.gitSha;
       botsGate = report.gate;
+      botsProcessMode = report.processMode;
       houseRoster = report.houseRoster;
       for (const line of seed(report)) console.log(line);
     },
@@ -256,6 +261,7 @@ export function startInsightsBridge(
     lastControlsPollAt: () => lastControlsPollAt,
     botsRunningSha: () => botsRunningSha,
     botsGate: () => botsGate,
+    botsProcessMode: () => botsProcessMode,
     readCondScout: () => condScout,
     readAuthoredShadow: () => authoredShadow,
     readHouseRoster: () => houseRoster,

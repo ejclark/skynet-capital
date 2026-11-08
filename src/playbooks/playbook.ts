@@ -46,10 +46,10 @@
  *
  * STEP 4 — THE MECHANISM IS NOW LIVE, OPT-IN PER PLAYBOOK/MODE. `exitSafetyIntents` (below) reads
  * `exitSafety` and can, for the FIRST time in this rollout, autonomously close a position — but
- * only for a playbook+mode pair that actually declares a dial. `S1_NVDA`, `G1_GOOG`, and
- * `TACO_DJT` declare none as of this step, so this PR changes zero live behavior; opting one in
- * is deliberately left to its own follow-up PR, gated by the characterization specs proving every
- * OTHER playbook stays untouched (#3194's step-1 safety net, still doing its job).
+ * only for a playbook+mode pair that actually declares a dial. Since #6954 slice 4 every house
+ * share play that places orders declares one in every mode (`HOUSE_STOP_LOSS`, `exit-plan.ts`): a strategy carries
+ * its exit plan before it executes (Eric, 2026-11-01). The option plays declare none — this reads
+ * share positions only — and carry their exit plan as their own target and time rules (`exits`).
  */
 
 import type { DailyHighOf } from "../domain/daily-high.js";
@@ -123,6 +123,18 @@ export type PlaybookKey = "earnings" | "event";
 export interface ExitSafetyDial {
   readonly drawdownTripPct: number;
   readonly enforcement: "enforce" | "alert-only";
+}
+
+/**
+ * A play's own non-stop exits, each a verb phrase whose subject is the play ("sells everything with
+ * 45 days left"), so a surface can say "it …" before each. Words, not a second mechanism: the rule that sells lives in the play's own `decide` or
+ * `desiredState`, and this says what it is so the guards can require one and the Store can show it.
+ */
+export interface PlaybookExits {
+  /** Sells on a price reached — a profit target. */
+  readonly target?: string;
+  /** Sells on the clock — a window closing, days left to expiry, the next session. */
+  readonly time?: string;
 }
 
 /**
@@ -213,6 +225,10 @@ export interface Playbook {
    *  dial can never trip `exitSafetyIntents` below — this is opt-in, one mode at a time, not a
    *  playbook-wide switch. */
   readonly exitSafety?: Readonly<Partial<Record<PlaybookMode, ExitSafetyDial>>>;
+  /** Optional — the exits this play's own rules take besides a stop, in a member's words, declared
+   *  beside the rule that takes them (#6954 slice 4). Together with `exitSafety` it is the play's
+   *  exit plan (`exit-plan.ts`); a play with neither opens nothing on a live bot. */
+  readonly exits?: PlaybookExits;
   /** Optional — the sole declared exception to decision isolation (#3194): the id of the
    *  playbook this one is an explicit derivative of. Absent means fully isolated (the default
    *  for every playbook today). Unverified by any audit until step 3. */

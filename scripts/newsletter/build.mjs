@@ -4,7 +4,9 @@
 //
 // A source gather could not read arrives as its own words ("unavailable: …") and leaves as them:
 // the metric reads unknown, and the rest of the object is unaffected.
-import { asksDue } from "./asks.mjs";
+import { asksDue, openAsks } from "./asks.mjs";
+import { decisionsReport } from "./decisions.mjs";
+import { knownGaps, memberChanges } from "./member-changes.mjs";
 import {
   defects,
   failureToFix,
@@ -83,6 +85,13 @@ export function buildNewsletter(inputs) {
   );
   const previous = typeof inputs.previous === "string" ? null : inputs.previous;
   const carriedIn = previous ? (planBlock(previous.md).rolledOver ?? []) : [];
+  const decisions = inputs.decisions
+    ? decisionsReport(
+        { ...inputs.decisions, needsEric: inputs.needsEric },
+        { w, asOfMs, priorWeek: previousWeek(w.week) },
+      )
+    : null;
+  const steps = over(inputs.registry, (r) => asksDue({ rows: r, week: w.week, carriedIn }));
 
   return {
     schema: SCHEMA,
@@ -102,9 +111,12 @@ export function buildNewsletter(inputs) {
             ? paceReading(tracker.title, tracker.body)
             : inputs.tracker,
       needsEric: over(inputs.needsEric, (r) => needsEric(r, asOfMs)),
+      playthroughGaps: knownGaps(inputs.journeyGaps),
+      memberChanges: memberChanges(inputs.memberPrs, inputs.memberIssues, w),
       fitness: over(inputs.fitness, (f) => fitness(f.contracts, f.issues, w)),
       loops: over(inputs.loopIterations, (r) => loopsMoved(r, w)),
       research: scorecard(inputs.scorecard),
+      decisions,
     },
     tokenSplit: tokenSplit(rows),
     milestones: {
@@ -112,6 +124,9 @@ export function buildNewsletter(inputs) {
       planLog: over(inputs.stateBlocks, (b) => planLog(b, w)),
     },
     lastWeek: lastWeek(previous, w.week),
-    humanSteps: over(inputs.registry, (r) => asksDue({ rows: r, week: w.week, carriedIn })),
+    humanSteps:
+      steps && typeof steps === "object" && decisions
+        ? { ...steps, openAsks: openAsks(inputs.decisions.snapshot, inputs.needsEric, asOfMs) }
+        : steps,
   };
 }

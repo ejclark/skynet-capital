@@ -19,7 +19,11 @@ import { parseRows } from "../agent-meter/jobs.mjs";
 import { createRest, listRuns, REPO } from "../agent-meter/lanes.mjs";
 import { CONTRACTS } from "../fitness.mjs";
 import { parseLoopList } from "../loop-list-decide.mjs";
+import { askRank, decisionLine } from "../moneypenny/ask-card.mjs";
+import { trustedComment } from "../moneypenny/gh.mjs";
 import { readCorpus, scorecard } from "../research-scorecard.mjs";
+import { ciCapsules, decisionsSnapshot, labelHistory, seriesRead } from "./decision-reads.mjs";
+import { journeyGaps, memberSurfacePrs, reactionIssues } from "./member-reads.mjs";
 import { previousWeek, windowOf } from "./week.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -78,9 +82,15 @@ function mergedPrs(rest, w) {
   }));
 }
 
-function tracker(rest, w) {
+// The repo is public, so anyone can comment, file an issue or post text shaped like a state block
+// or an audit receipt. Each read below keeps only what this repo's people and bots wrote
+// (trustedComment): a stranger's text must not become a public edition's numbers or lines.
+
+export function tracker(rest, w) {
   const issue = rest.api(`repos/${REPO}/issues/${TRACKER}`);
-  const comments = pages(rest, `repos/${REPO}/issues/${TRACKER}/comments?since=${w.since}`);
+  const comments = pages(rest, `repos/${REPO}/issues/${TRACKER}/comments?since=${w.since}`).filter(
+    trustedComment,
+  );
   return {
     title: issue.title,
     body: issue.body,
@@ -88,26 +98,37 @@ function tracker(rest, w) {
   };
 }
 
-/** When each open `needs-eric` issue last gained the label; its filing date is not its ask's age. */
+/**
+ * When each open `needs-eric` issue last gained the label; its filing date is not its ask's age.
+ * `rank` is the assignment card's (askRank), so the oldest ask between watching and trading bots
+ * can be named (#6953 slice 4).
+ */
 function needsEric(rest) {
   return pages(rest, `repos/${REPO}/issues?labels=needs-eric&state=open`)
     .filter((i) => !i.pull_request)
     .map((i) => {
       const events = pages(rest, `repos/${REPO}/issues/${i.number}/events`);
       const labeled = events.filter((e) => e.event === "labeled" && e.label?.name === "needs-eric");
-      return { number: i.number, labeledAt: labeled.at(-1)?.created_at ?? null };
+      const rank = askRank({
+        labels: i.labels,
+        title: i.title,
+        decision: decisionLine(i.body) ?? "",
+      });
+      return { number: i.number, labeledAt: labeled.at(-1)?.created_at ?? null, rank };
     });
 }
 
-function fitnessIssues(rest) {
+export function fitnessIssues(rest) {
   return {
     contracts: CONTRACTS.map((c) => c.id),
-    issues: searchIssues(rest, `"[fitness]" in:title is:issue`).map((i) => ({
-      number: i.number,
-      title: i.title,
-      createdAt: i.created_at,
-      closedAt: i.closed_at,
-    })),
+    issues: searchIssues(rest, `"[fitness]" in:title is:issue`)
+      .filter(trustedComment)
+      .map((i) => ({
+        number: i.number,
+        title: i.title,
+        createdAt: i.created_at,
+        closedAt: i.closed_at,
+      })),
   };
 }
 
@@ -135,11 +156,11 @@ function subIssues(rest, w) {
 }
 
 /** Every state block edited since the week began, with its issue's title. */
-function stateBlocks(rest, w) {
+export function stateBlocks(rest, w) {
   const comments = pages(
     rest,
     `repos/${REPO}/issues/comments?sort=updated&direction=asc&since=${w.since}`,
-  ).filter((c) => /^#{1,6}[ \t]+State block\b/im.test(c.body ?? ""));
+  ).filter((c) => trustedComment(c) && /^#{1,6}[ \t]+State block\b/im.test(c.body ?? ""));
   const titles = new Map();
   return comments.map((c) => {
     const issue = Number(/\/issues\/(\d+)$/.exec(c.issue_url)?.[1]);
@@ -166,15 +187,18 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
   const rest = createRest();
   const runsDir = process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs");
   const receipts = join(runsDir, "post-merge-audit.jsonl");
+  const prs = attempt(() => mergedPrs(rest, w));
   const inputs = {
     week,
     asOf: new Date(asOfMs).toISOString(),
-    prs: attempt(() => mergedPrs(rest, w)),
+    prs,
     tracker: attempt(() => tracker(rest, w)),
     usageNow: !stale,
     localReceipts: existsSync(receipts) ? parseRows(readFileSync(receipts, "utf8")).rows : [],
     defectIssues: attempt(() =>
-      defectIssues(rest, w.sinceMs).map((i) => ({ created_at: i.created_at, body: i.body })),
+      defectIssues(rest, w.sinceMs)
+        .filter(trustedComment)
+        .map((i) => ({ created_at: i.created_at, body: i.body })),
     ),
     failureToFix: attempt(() => meter(["--failure-to-fix"], w)),
     jobs: attempt(() => meter(["--jobs"], w)),
@@ -187,6 +211,11 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
         .map((r) => ({ event: r.event, conclusion: r.conclusion })),
     ),
     needsEric: snapshot(() => needsEric(rest)),
+    // Playthroughs and reactions (#7031 slice 3): the steps still expected to fail, the member-facing
+    // merges, and the Revisit and in-app filings that name them.
+    journeyGaps: attempt(() => journeyGaps(ROOT)),
+    memberPrs: Array.isArray(prs) ? attempt(() => memberSurfacePrs(rest, prs, w)) : prs,
+    memberIssues: attempt(() => reactionIssues(rest, w)),
     fitness: attempt(() => fitnessIssues(rest)),
     loopIterations: attempt(loopIterations),
     scorecard: attempt(() => scorecard({ ...readCorpus(), today: w.until.slice(0, 10) })),
@@ -196,6 +225,17 @@ export function gather(week, asOfMs, nowMs = Date.now()) {
       parseLoopList(readFileSync(join(ROOT, "docs", "process", "LEARNING-LOOP.md"), "utf8")),
     ),
     previous: attempt(() => previous(week)),
+    // "Decisions reaching Eric" (#6953 slice 4): the asks as they stand now, the week's label
+    // history, the CI capsules, the ledger as written, and the series for last week's values.
+    decisions: {
+      snapshot: snapshot(() => decisionsSnapshot(rest, asOfMs)),
+      episodes: attempt(() => labelHistory(rest, w)),
+      capsules: attempt(() => ciCapsules(rest, w)),
+      ledger: attempt(() => ({
+        text: readFileSync(join(ROOT, "docs", "process", "ALIGNMENT.md"), "utf8"),
+      })),
+      series: attempt(() => seriesRead(rest)),
+    },
   };
   return { inputs, restCalls: rest.calls };
 }

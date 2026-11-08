@@ -80,14 +80,14 @@ describe("a plan the lane parks is in his queue, stated once, and holds no seat"
     expect(patch).toBeLessThan(label);
   });
 
-  it("reads Blocked, takes no seat and draws no gap comment once parked (the audit's repro)", () => {
+  it("reads Waiting on a person, takes no seat and draws no gap comment once parked (the audit's repro)", () => {
     const { calls, run, retry } = stubGithub();
     const live = { ...parkedPlan(1), labels: [{ name: "plan" }, { name: "ready" }] };
     executeStopContinuation(STOP, { run, retry, read: () => live, assign: () => "assigned" });
     const [body] = bodyWrites(calls);
     const issue = { ...parkedPlan(1, body as string) };
 
-    expect(wantedStatusOf(issue)).toBe("Blocked");
+    expect(wantedStatusOf(issue)).toBe("Waiting on a person");
     expect(waitingPlans([issue])).toEqual([]);
     expect(
       shouldPostCalloutGap({
@@ -155,7 +155,7 @@ describe("a plan the lane parks is in his queue, stated once, and holds no seat"
     expect(waitingPlans([idle]).map((p) => p.number)).toEqual([1]);
     expect(
       statusForIssue({ labels: ["plan", "ready"], subIssues: { total: 3, completed: 1 } }),
-    ).toBe("Waiting");
+    ).toBe("Next part queued");
   });
 });
 
@@ -169,10 +169,11 @@ describe("the rule binds every issue with the label, whoever filed it", () => {
     expect(shouldPostCalloutGap({ ...issue, comments: [] })).toBe(true);
   });
 
+  // #6871 §3: an ask not written yet is a session's job, so the card reads Backlog, not Ready.
   it("wiring: the board sweep reads the same rule on a REST row under his login", () => {
     const labels = [{ name: "needs-eric" }, { name: "plan" }, { name: "ready" }];
     const row = { number: 1, state: "open", labels, body: CAPSULE, user: { login: "ejclark" } };
-    expect(wantedStatusOf(row)).toBe("Ready");
+    expect(wantedStatusOf(row)).toBe("Backlog");
   });
 });
 
@@ -250,7 +251,7 @@ describe("a lane that comments and labels gets its ask lifted into the body", ()
     };
   };
 
-  it("takes the lane's own newest comment, drops the gap comment, and reads Blocked after", () => {
+  it("takes the lane's own newest comment, drops the gap comment, and reads Waiting on a person after", () => {
     const { writes, posts, deps } = spy([said("**Merge #5 or close it?** It is protected.")]);
     expect(checkCallout(labeled(), deps)).toMatchObject({ lifted: true, posted: false });
     expect(posts).toEqual([]);
@@ -262,7 +263,7 @@ describe("a lane that comments and labels gets its ask lifted into the body", ()
       labels: ["needs-eric", "ready"],
       body: writes[0]?.[1],
     };
-    expect(wantedStatusOf(after)).toBe("Blocked");
+    expect(wantedStatusOf(after)).toBe("Waiting on a person");
   });
 
   it("writes from the live body, so an edit since the event is not lost", () => {

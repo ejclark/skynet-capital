@@ -11,7 +11,7 @@ import {
 } from "../live/playbook-store";
 import { InlineResult } from "../ui";
 import { ConvictionPanel } from "./playbook-conviction";
-import { SubscribeForm } from "./playbook-subscribe-form";
+import { asPercent, SubscribeForm } from "./playbook-subscribe-form";
 
 /**
  * An owned account's subscription to one playbook, drawn FIRST on its card (#4649). This follows
@@ -26,12 +26,15 @@ import { SubscribeForm } from "./playbook-subscribe-form";
  * leaving is never gated, but it has no Edit: tuning is delegation, and only bots take that for now.
  */
 
-/** The words after the state, in the phone order: mode · capital · symbols · compounding. */
+/** The words after the state, in the phone order: mode · capital · symbols · compounding · the
+ *  owner's limit on each new order, said only while the pair is below its bar (`belowBar`), the one
+ *  place the bots apply it (#6954 slice 5c-ii). */
 function subscriptionFacts(
   sub: SubscriptionView,
   basket: readonly string[],
   human: boolean,
   movesNoCapital = false,
+  belowBar = false,
 ): string[] {
   // A playbook that sends no order has no mode that matters and no money to show: it says what it
   // does, then which names it reads.
@@ -51,6 +54,9 @@ function subscriptionFacts(
     sub.capitalAllocated === undefined ? "uncapped" : `$${sub.capitalAllocated.toLocaleString()}`,
     ...symbols,
     ...(sub.compoundAllocation ? ["compounding"] : []),
+    ...(belowBar && sub.belowBarFloorPct !== undefined
+      ? [`each new order at most ${asPercent(sub.belowBarFloorPct)}% of the account`]
+      : []),
     // A human subscription's state word is "never trades", so its pause has to be said here.
     ...(human && !sub.enabled ? ["paused"] : []),
   ];
@@ -138,6 +144,7 @@ export function SubscriptionRow({
           card.pickFrom ?? card.symbols,
           human,
           card.movesNoCapital === true,
+          card.houseFloorPct !== undefined,
         ).map((fact) => (
           <span key={fact}> · {fact}</span>
         ))}

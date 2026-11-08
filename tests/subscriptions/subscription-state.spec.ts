@@ -254,3 +254,23 @@ describe("parseSubscriptionsState", () => {
     });
   });
 });
+
+describe("an owner's below-bar floor (#6954 slice 5c)", () => {
+  it("parses one between 0 and the whole account, and carries it on a re-subscribe", () => {
+    const [sub] =
+      parseSubscriptionsState({ "acct-1": [{ ...valid, belowBarFloorPct: 0.005 }] })?.["acct-1"] ??
+      [];
+    expect(sub?.belowBarFloorPct).toBe(0.005);
+    expect(sub && carriedOnResubscribe(sub)).toEqual({ belowBarFloorPct: 0.005 });
+  });
+
+  it.each([0, -0.01, 1.01, "0.005", null, true])(
+    "drops a floor of %s and keeps the subscription, as a garbled symbols filter does",
+    (belowBarFloorPct) => {
+      const subs = parseSubscriptionsState({ "acct-1": [{ ...valid, belowBarFloorPct }] })?.[
+        "acct-1"
+      ];
+      expect(subs).toEqual([{ ...valid, accountId: "acct-1" }]);
+    },
+  );
+});

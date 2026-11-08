@@ -38,8 +38,8 @@ this chore — this chore only produces one side of the comparison.
    against. If its content is seen anyway (e.g. surfaced by a search result), disregard it and do
    not let it influence the answer produced.
 4. Do real research via WebSearch/WebFetch per the protocol's instrument list for the event's kind
-   (earnings/symbol-keyed vs. macro-print/sector/geopolitical) — consensus expectation, reaction
-   function to surprises, sensitivity of tracked names.
+   (earnings/symbol-keyed, ipo-listing, lockup-expiry, or macro-print/sector/geopolitical) —
+   consensus expectation, reaction function to surprises, sensitivity of tracked names.
 5. Produce an independent stance: a call (stand aside vs. a specific play), confidence
    (High/Medium/Low), and a falsifier — a specific, checkable condition that would prove the stance
    wrong.

@@ -44,7 +44,7 @@ named as the reason to codify in the first place. Every future domain reuses the
 only what goes *in* them differs.
 
 **State** is not a field of the template — it lives on the owning issue and in the list's `State`
-column: `piloting` · `running` · `blocked-on-fix` · `scaling`, or ended as `closed` · `killed` ·
+column: `planned` · `piloting` · `running` · `blocked-on-fix` · `scaling`, or ended as `closed` · `killed` ·
 `pivoted` (the pivot is a new row) · `replaced`.
 
 **The double-loop question, asked at every close or kill:** *was the aim, the cycle gate or the
@@ -92,7 +92,7 @@ remember) · `missing`.
 1. **A recurring manual check is the first thing to automate.** Rank by how often the human stage
    recurs × what it costs when it is late. Automate the *check*, keep the *decision* where it
    belongs: a taste call or the irreversible class stays Eric's, but its check still runs itself
-   and arrives pre-verified (`CLAUDE.md` → *When Eric's action IS needed*).
+   and arrives pre-verified (`docs/process/WORKING-AGREEMENTS.md` → *When Eric's action is needed*).
 2. **Automate an act only behind a mechanical verify** — a spec, a gate, a script's number, a filed
    falsifier. An automated check with no oracle is false assurance (`docs/members/study/README.md`:
    the crawl passed every screen the owner then found broken). Where verify is judgment, the act
@@ -194,6 +194,7 @@ Urgent decisions stay in the daily digest's Needs you; these are the important, 
 | Priority only with a reader | Do lanes read the priority Eric sets? `npm run queue` (the sweep's pick order; each row says its class and whether a hand set it) | #4056 | running | 2026-10-31 — wrong if `npm run rank` ships as the first reader and Eric's hand-set Priority is still unseen by lanes | — | — |
 | No age-based closing | Are old entries still wanted, so an age expiry would bury them? | #4056 | running | 2026-11-15 — wrong (age expiry OK, IDEAS.md only) if the 30-oldest probe finds <10% still wanted and none re-dictated; 2026-09-30 sweep: 14 retired, 16 parked, none expired by age alone | — | — |
 | Lane work leaves Needs-you | Does the digest's Needs-you hold only decisions Eric alone can make? | #4056 | closed | none — ended 2026-10-26: held. The 10-15 digest's Needs-you had 3 items, none of them retro, repair or code-applied: a platter merge (a workflow file), a design pick, and a gate-budget fork. #4056 is closed and the check was a single date. | — | — |
+| Decisions reaching Eric | Do the asks that reach Eric fall to the ones only he can answer, and get answered faster? `npm run newsletter` (`metrics.decisions`: each of #6953's section-5 measures beside last week) | #6953 | running | 2026-11-20 — wrong if 40% or more of the `needs-eric` labels added 2026-11-07..11-20 clear without his answer, or one question appears under two numbers in a week; then 2026-12-04, wrong if the median assignment→answer is not under 48h (baseline 85h) | — | — |
 | Issue-centric orchestration | Do #3818's dated falsifiers hold? | #3818 | running | 2026-10-31 — second falsifier: wrong if the median assignment→reply is ≥24h, or a `needs-session` remainder waits >24h three times. The 10-10 falsifier held: #3665's continued slices shipped and the plan closed 10-02, with nothing idle 48h. | — | — |
 | Research kill list | Does each killed hypothesis stay dead? (`docs/research/multi-symbol-sweep.md`) | #3955 | running | on each sweep Eric names tickers for — a kill reopens only on its stated condition | — | — |
 | Capability adoption | Does a full-adoption pass cost what we predicted? (#3748, #3769 differed 13× in tokens) | #3769 | running | before the next run — write its predicted token cost first | — | — |

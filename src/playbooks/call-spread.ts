@@ -455,6 +455,8 @@ export function callSpread(setting: CallSpreadSetting, lookup: typeof pairFor = 
     keyedOn: "earnings",
     ...(runUp ? { derivesFrom: runUp } : {}),
     options: { underlyings: [symbol], holdsShortToExpiry: [], requiredLevel: 3 },
+    // Its exit plan (#6954 slice 4): the window closing, which sells the spread as one order.
+    exits: { time: `sells the spread ${spread.exit} trading sessions before the earnings report` },
     desiredState: spreadWindow(spread),
     optionDemand(
       asOfIso: string,

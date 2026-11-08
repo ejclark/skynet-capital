@@ -11,6 +11,7 @@
 //   node scripts/digest-scan.mjs --due         # JSON {due, reason, ...} (due:false = no-op, due:null = could not tell)
 //   node scripts/digest-scan.mjs --validate    # digest docs satisfy the template contract
 //   node scripts/digest-scan.mjs --needs-you   # the "Needs you" list, from the assignment query
+//   node scripts/digest-scan.mjs --needs-session  # the "needs a session" line, from the same plan()
 //   node scripts/digest-scan.mjs --learning    # the unlearned-incident line for "Noise absorbed"
 //   node scripts/digest-scan.mjs --stuck       # the green-but-not-merging PR line (stuck-pr-scan.mjs)
 //   node scripts/digest-scan.mjs --member-filings  # the unseen-member-filings line (feedback-scan.mjs)
@@ -39,6 +40,15 @@
 // selector here. Imported lazily, so the importers of `digestFiles`/`latestDigestDate` (comms,
 // rank, thrash) stay git-only; tests/scripts/moneypenny/needs-you.spec.ts fails on any divergence.
 //
+// NEEDS A SESSION (#6953 slice 2): the asks his answer cannot complete yet — a merge of a branch
+// with no PR, a PR that carries only a patch — plus every `needs-session` issue. `plan().needsSession`,
+// the same call as Needs you, printed as one "Noise absorbed" line: the actor it waits on is a
+// session, so it is never a Needs-you item, and listing it is what keeps it from being lost.
+//
+// UNSEEN (#6953 slice 4): `--needs-you` ends with one line naming the asks no list can see. The
+// four cases, and every rule that tells them apart, live in scripts/moneypenny/unseen-asks.mjs, so
+// this file keeps no selector of its own (tests/scripts/moneypenny/needs-you.spec.ts holds it to that).
+//
 // LEARNING (#4212, #4056 slice 7): unlearned incidents are a count line under "Noise absorbed",
 // never a Needs-you item — a repair capsule's close drafts its own ledger entry
 // (scripts/moneypenny/lesson-draft.mjs), so draining them is the system's job, not Eric's. The
@@ -49,6 +59,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "./is-main.mjs";
 import { pullable } from "./moneypenny/labels.mjs";
 import { stuckLine } from "./stuck-pr-decide.mjs";
 
@@ -216,6 +227,20 @@ export function needsYouLines({ needsYou }) {
   );
 }
 
+/** The "callout incomplete" line: asks he holds or is about to, whose callout lacks part of the card (#6953 slice 3). */
+export function calloutIncompleteLine({ incomplete = [] }) {
+  if (!incomplete.length) return "- Callout incomplete: every ask carries its full card.";
+  const items = incomplete.map((c) => `#${c.number} lacks ${c.missing.join(", ")}`).join("; ");
+  return `- Callout incomplete: ${incomplete.length} ask${incomplete.length === 1 ? "" : "s"} lack part of the card — ${items}.`;
+}
+
+/** The "needs a session" line from `plan()` output: a count, each item and why. Pure. */
+export function needsSessionLine({ needsSession = [] }) {
+  if (!needsSession.length) return "- Needs a session: nothing is waiting on a session.";
+  const items = needsSession.map((s) => `#${s.number} ${s.why}`).join("; ");
+  return `- Needs a session: ${needsSession.length} waiting on a session, not on you — ${items}.`;
+}
+
 /**
  * The "Noise absorbed" line for unlearned incidents, from `incident-scan.mjs --count`. Pure.
  * `unlearnedRuns: null` means the scan could not reach GitHub — said as unknown, never as zero.
@@ -340,6 +365,27 @@ function validate() {
   console.log(`✓ ${digestFiles().length} digest(s) satisfy the contract.`);
 }
 
+/** `--needs-you`: the list, the callout-incomplete line, and the unseen line (#6953 slice 4). */
+async function needsYouReport() {
+  const { gather, plan } = await import("./moneypenny/assignments.mjs");
+  const { gatherUnseen, unseenLine } = await import("./moneypenny/unseen-asks.mjs");
+  const read = gather();
+  const planned = plan(read);
+  // The unseen scan reuses the gather's listings; a failed read costs its own line, never the list.
+  let unseen = null;
+  let why = null;
+  try {
+    const listed = planned.needsYou.map((n) => n.number);
+    unseen = gatherUnseen({ issues: read.issues, prs: read.prs, listed });
+  } catch (err) {
+    why = String(err?.message ?? err)
+      .split("\n")[0]
+      .slice(0, 200);
+  }
+  const lines = [...needsYouLines(planned), calloutIncompleteLine(planned)];
+  return [...lines, unseenLine(unseen, why)].join("\n");
+}
+
 async function main() {
   const nowMs = arg("now") ? Date.parse(arg("now")) : Date.now();
   if (!Number.isFinite(nowMs)) throw new Error("digest-scan: --now must be an ISO instant.");
@@ -382,8 +428,12 @@ async function main() {
     return;
   }
   if (has("needs-you")) {
+    console.log(await needsYouReport());
+    return;
+  }
+  if (has("needs-session")) {
     const { gather, plan } = await import("./moneypenny/assignments.mjs");
-    console.log(needsYouLines(plan(gather())).join("\n"));
+    console.log(needsSessionLine(plan(gather())));
     return;
   }
 
@@ -404,4 +454,4 @@ async function main() {
 }
 
 // CLI only — comms-scan.mjs imports `latestDigestDate` and must not trigger a report.
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (isMain(import.meta.url)) await main();

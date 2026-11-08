@@ -22,6 +22,7 @@
 // Enforced in CI via tests/arch/architecture-pages.spec.ts. Dependency-free (node built-ins).
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMain } from "./is-main.mjs";
 
 const ROOT = process.cwd();
 const OUT = join(ROOT, "docs", "architecture");
@@ -52,6 +53,13 @@ export const HAND_KEPT_PAGES = [
       "src/engine/option-guards.ts",
       "src/subscriptions/strategy-budgets.ts",
     ],
+  },
+  {
+    file: "org-chart.md",
+    title: "The org chart",
+    covers:
+      "Every seat, human or agent, by department; the channels between them and their measured friction (reverse Conway); generated from docs/agents/seats.json by scripts/org-chart.mjs",
+    roots: ["docs/agents/seats.json", "scripts/org-chart.mjs"],
   },
 ];
 
@@ -327,4 +335,4 @@ function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isMain(import.meta.url)) main();

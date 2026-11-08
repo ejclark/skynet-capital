@@ -12,6 +12,7 @@ import {
   procMemory,
   remeasured,
   repeatedRow,
+  researchGets,
   summary,
   verdict,
 } from "../../scripts/stability/budget-lib.mjs";
@@ -115,6 +116,37 @@ describe("commonGets / repeatedRow — the other GETs, each fired several times"
     expect(
       verdict({ phases: [phase({ name: "common", rows: [died] })], state: alive, budgets }).ok,
     ).toBe(false);
+  });
+});
+
+describe("researchGets — R&D over the real research shelf (#4519's class, #4612 slice 10)", () => {
+  it("clicks the calendar, the shelf, Coverage and the forward-test register (#6957)", () => {
+    expect(researchGets()).toEqual(
+      expect.arrayContaining([
+        "/api/research/calendar",
+        "/api/research",
+        "/api/research/coverage",
+        "/research/forward-tests",
+      ]),
+    );
+  });
+
+  const research = (status: number, addMb: number, peakMb: number) =>
+    phase({
+      name: "research",
+      rows: [{ path: "/api/research", status, ms: 900, addMb }],
+      peakMb,
+    });
+
+  it("lets the once-per-boot corpus build add memory and take time, inside the peak", () => {
+    expect(verdict({ phases: [research(200, 60, 280)], state: alive, budgets }).ok).toBe(true);
+  });
+
+  it("fails a 5xx there, and a peak over budget", () => {
+    expect(verdict({ phases: [research(500, 1, 200)], state: alive, budgets }).failures).toEqual([
+      "research: /api/research answered 500",
+    ]);
+    expect(verdict({ phases: [research(200, 60, 320)], state: alive, budgets }).ok).toBe(false);
   });
 });
 

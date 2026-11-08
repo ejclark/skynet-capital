@@ -53,7 +53,10 @@ export const BOT_STALL_AFTER_MS = 10 * 60_000;
 /** The breaker, in the words an owner reads. Typed over `HaltReason`, so a new breaker fails the
  *  build here until someone names it. */
 const BREAKERS: Record<HaltReason, { readonly name: string; readonly why: string }> = {
-  manual: { name: "the kill switch", why: "Someone threw it on purpose." },
+  manual: {
+    name: "the kill switch",
+    why: "Someone threw it on purpose. It stops every order, exits too.",
+  },
   "daily-loss": {
     name: "the daily-loss breaker",
     why: "Account equity fell past the day's loss cap.",
@@ -68,6 +71,12 @@ const BREAKERS: Record<HaltReason, { readonly name: string; readonly why: string
 
 function isBreaker(reason: string): reason is HaltReason {
   return Object.hasOwn(BREAKERS, reason);
+}
+
+/** The breaker a halted decision record names, in words, when an owner's "reset breaker" can clear
+ *  it (#6954 slice 3b). The kill switch reads `manual` and is not one: only a restart clears it. */
+export function resettableBreaker(halted: string | undefined): string | undefined {
+  return halted && halted !== "manual" && isBreaker(halted) ? BREAKERS[halted].name : undefined;
 }
 
 /** One bot as the watch sees it: who it is, and its decision records in any order. */
@@ -134,8 +143,8 @@ function haltedAlert(
     at: now,
     source: BOT_WATCH_SOURCE,
     priority: "critical",
-    title: `${bot.name} is halted by ${breaker.name}, so it places no orders`,
-    body: `${breaker.why} A breaker never re-arms on its own, so the bot stays halted until someone resets it.`,
+    title: `${bot.name} is halted by ${breaker.name}, so it opens no new positions`,
+    body: `${breaker.why} Its exits keep running, so it can still get out of what it holds. A breaker never re-arms on its own: reset it from this bot's Settings card, or restart the bots.`,
     dedupeKey: `halted:${bot.botId}:${reason}:${session}`,
     data: { botId: bot.botId, breaker: reason, passAt },
   };

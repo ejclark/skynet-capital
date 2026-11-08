@@ -11,6 +11,7 @@ import type { Persona } from "../../src/personas/persona.js";
 import { applyHardcore } from "../../src/personas/registry.js";
 import { SauronPersona } from "../../src/personas/sauron.js";
 import { SauronHardcorePersona } from "../../src/personas/sauron-hardcore.js";
+import { HOUSE_STOP_LOSS } from "../../src/playbooks/exit-plan.js";
 import { claimOptionUnderlyings } from "../../src/playbooks/option-ownership.js";
 import { type EnabledPlaybook, playbookVerdicts } from "../../src/playbooks/playbook.js";
 import {
@@ -295,8 +296,8 @@ describe("the SAURON definition", () => {
     ]);
   });
 
-  it("carries no exit-safety dial and no window — a trip would add a sell his rules never make", () => {
-    expect(SAURON.exitSafety).toBeUndefined();
+  it("carries the house stop and no window — a stop is a sell his rules never make, on purpose (#6954 slice 4)", () => {
+    expect(SAURON.exitSafety).toBe(HOUSE_STOP_LOSS);
     expect(SAURON.options).toBeUndefined();
     expect(
       playbookVerdicts([{ playbook: SAURON, mode: "standard" }], "2026-10-06T15:00:00Z", []),

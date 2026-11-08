@@ -1,0 +1,248 @@
+{
+  "date": "2026-11-06",
+  "campaign": "ai-buildout",
+  "writtenBy": "Written by hand from the research ledgers and Yahoo daily closes fetched 2026-11-07 (#7018). Nothing writes the edition on its own yet.",
+  "stories": [
+    {
+      "id": "chip-drop",
+      "headline": "Chip stocks had their worst day since March 2020. The companies that buy the chips held up.",
+      "narrator": "Sensors logged the chip sector's hardest hit in over six years. Three earnings reports are inbound before the picture clears.",
+      "symbols": ["SMH", "NVDA", "AMD", "CRWV"],
+      "facts": [
+        {
+          "label": "SMH, the chip fund",
+          "value": "−11.2%",
+          "note": "Thu Nov 5 · its worst day since Mar 16, 2020"
+        },
+        {
+          "label": "NVDA",
+          "value": "186.64",
+          "note": "−9.3% Thu, +2.8% Fri · −8.8% on the week"
+        },
+        {
+          "label": "VIX, expected volatility",
+          "value": "25.64",
+          "note": "28.18 at Thursday's close, 16.61 the day before"
+        }
+      ],
+      "reports": [
+        {
+          "date": "2026-11-10",
+          "when": "after the close",
+          "what": "CoreWeave (CRWV) Q3 results",
+          "status": "confirmed"
+        },
+        {
+          "date": "2026-11-12",
+          "when": "before the open",
+          "what": "Nebius (NBIS) Q3 results",
+          "status": "confirmed"
+        },
+        {
+          "date": "2026-11-17",
+          "when": "after the close",
+          "what": "NVIDIA (NVDA) Q3 results",
+          "status": "confirmed"
+        }
+      ],
+      "more": [
+        {
+          "text": "On Thursday SMH, the fund that holds the chip stocks, fell 11.2%. NVDA fell 9.3%, AMD 17.3%, MU 17.5% and CRWV 9.8%. QQQ fell 6.5%.",
+          "mark": "measured",
+          "source": "Yahoo daily closes, 2026-11-04 to 2026-11-05, fetched 2026-11-07"
+        },
+        {
+          "text": "Press tied the drop to Tuesday's midterms: Democrats swept Congress, and voters rejected data-center construction in 40 of 41 local ballot measures. Press also cited a weak forecast from Qualcomm.",
+          "mark": "reported",
+          "source": "CNBC 2026-11-05, as cited in docs/research/events/crwv-2026-11-10-print.md"
+        },
+        {
+          "text": "The one check set in advance asked whether stocks that sell power to data centers beat the market on a political day. On Thursday they beat it by 0.7 points, inside the 4.39-point line that would count, so the election link is not measured.",
+          "mark": "measured",
+          "source": "docs/research/drop-exits-nvda-crwv-2026-11.md (#6951)"
+        },
+        {
+          "text": "On Friday NVDA opened 5.2% higher and closed at 186.64. CRWV closed at 46.40, up 6.3%.",
+          "mark": "measured",
+          "source": "Yahoo daily closes, 2026-11-06, fetched 2026-11-07"
+        },
+        {
+          "text": "After NVDA's past drops of 7% or more, a +5% take-profit set at the close filled 38% of the time, against 12% from an ordinary day. A filled exit is not a profit: the same rule made money 52% of the time, against 53% from any day.",
+          "mark": "measured",
+          "source": "scripts/research/drop-exit-study.mjs, docs/research/drop-exits-nvda-crwv-2026-11.md (#6951)",
+          "n": 65
+        },
+        {
+          "text": "The house holds nothing through these three reports, and it records dips rather than trading them.",
+          "mark": "call",
+          "source": "docs/research/dip-entries-nvda-crwv.md; docs/research/events/crwv-2026-11-10-print.md; docs/research/events/nvda-2026-11-18-print.md"
+        }
+      ]
+    },
+    {
+      "id": "makers-and-buyers",
+      "headline": "The chip makers fell for the week. The companies that buy their chips rose.",
+      "narrator": "The makers and the buyers are drifting apart. The next report shows which side pulls harder.",
+      "symbols": ["NVDA", "AMD", "AVGO", "TSM", "MSFT", "GOOG", "AMZN", "META", "CRWV", "NBIS"],
+      "facts": [
+        {
+          "label": "Chip makers: NVDA, AMD, AVGO, TSM",
+          "value": "−9.3%",
+          "note": "average, the week to Fri Nov 6"
+        },
+        {
+          "label": "Buyers: MSFT, GOOG, AMZN, META",
+          "value": "+2.7%",
+          "note": "average, same week · AMZN +7.9%"
+        },
+        {
+          "label": "Neoclouds: CRWV, NBIS",
+          "value": "−15.7%",
+          "note": "average, same week"
+        }
+      ],
+      "reports": [
+        {
+          "date": "2026-11-10",
+          "when": "after the close",
+          "what": "CoreWeave (CRWV) Q3 results",
+          "status": "confirmed"
+        },
+        {
+          "date": "2026-11-17",
+          "when": "after the close",
+          "what": "NVIDIA (NVDA) Q3 results",
+          "status": "confirmed"
+        }
+      ],
+      "more": [
+        {
+          "text": "On Thursday alone the buyers fell 2.9% on average, the makers 11.9% and the neoclouds 12.4%.",
+          "mark": "measured",
+          "source": "Yahoo daily closes, 2026-11-04 to 2026-11-05, fetched 2026-11-07"
+        },
+        {
+          "text": "AMD's Nov 3 results beat, with data-center sales up 97%, yet AMD fell 17.3% two sessions later. Meta's capex raise on Oct 21 is where press dates the start of this run of chip selling.",
+          "mark": "reported",
+          "source": "docs/research/events/nvda-2026-11-18-print.md (11-05 row); docs/research/events/midterm-elections-2026-11-03.md (10-27 row)"
+        },
+        {
+          "text": "CRWV moved with Nebius (correlation 0.886 over 39 sessions) far more than with NVDA (0.608), and CoreWeave has filed no company news since Sep 22. It is trading with its group, not on its own story.",
+          "mark": "measured",
+          "source": "docs/research/forward-tests/crwv-2026-11-10-print.md (FT-2, scored 2026-11-07)"
+        }
+      ]
+    },
+    {
+      "id": "rates",
+      "headline": "Hiring beat forecasts by a wide margin, and the 10-year yield still fell on the week.",
+      "narrator": "Rates stayed the steady current under the storm. Tuesday's inflation print tests that next.",
+      "symbols": [],
+      "facts": [
+        {
+          "label": "10-year Treasury yield",
+          "value": "4.86%",
+          "note": "−0.07 points on the week"
+        },
+        {
+          "label": "October payrolls",
+          "value": "+165k",
+          "note": "against about +65k expected",
+          "mark": "reported"
+        }
+      ],
+      "reports": [
+        {
+          "date": "2026-11-10",
+          "when": "08:30 ET",
+          "what": "October consumer prices (CPI)",
+          "status": "confirmed"
+        },
+        {
+          "date": "2026-11-13",
+          "what": "October producer prices (PPI)",
+          "status": "confirmed"
+        },
+        {
+          "date": "2026-11-18",
+          "what": "Minutes of the Fed's October meeting",
+          "status": "confirmed"
+        }
+      ],
+      "more": [
+        {
+          "text": "The 10-year yield fell on each of the week's big down days, so Thursday was not a rate shock.",
+          "mark": "measured",
+          "source": "Yahoo ^TNX daily closes, fetched 2026-11-07"
+        },
+        {
+          "text": "The Fed held on Oct 28 with two votes for a hike. Secondary sources put the odds of a December hike at 66–80%.",
+          "mark": "reported",
+          "source": "docs/research/events/umich-sentiment-final-2026-11-20.md (press figures; BLS returned 403 to the lane)"
+        },
+        {
+          "text": "CoreWeave's test of whether rates drive its daily moves passed on Nov 6 (correlation with rate changes +0.326 over 44 sessions), which retires that story for now.",
+          "mark": "measured",
+          "source": "docs/research/forward-tests/crwv-2026-11-10-print.md (FT-1, scored 2026-11-07, #6972)"
+        }
+      ]
+    }
+  ],
+  "next": [
+    {
+      "date": "2026-11-09",
+      "what": "Cerebras (CBRS) lockup ends for all remaining IPO shares",
+      "status": "confirmed"
+    },
+    {
+      "date": "2026-11-10",
+      "when": "08:30 ET",
+      "what": "October consumer prices (CPI)",
+      "status": "confirmed"
+    },
+    {
+      "date": "2026-11-10",
+      "when": "after the close",
+      "what": "CoreWeave (CRWV) Q3 results",
+      "status": "confirmed"
+    },
+    {
+      "date": "2026-11-11",
+      "what": "Veterans Day: the bond market is closed, stocks trade a full session",
+      "status": "confirmed"
+    },
+    {
+      "date": "2026-11-12",
+      "when": "before the open",
+      "what": "Nebius (NBIS) Q3 results",
+      "status": "confirmed"
+    },
+    {
+      "date": "2026-11-12",
+      "when": "after the close",
+      "what": "Cerebras (CBRS) Q3 results",
+      "status": "confirmed"
+    },
+    {
+      "date": "2026-11-13",
+      "what": "October producer prices (PPI)",
+      "status": "confirmed"
+    },
+    {
+      "date": "2026-11-17",
+      "when": "after the close",
+      "what": "NVIDIA (NVDA) Q3 results",
+      "status": "confirmed"
+    },
+    {
+      "date": "2026-11-18",
+      "what": "Minutes of the Fed's October meeting",
+      "status": "confirmed"
+    },
+    {
+      "date": "2026-11-20",
+      "what": "Monthly options expiration",
+      "status": "confirmed"
+    }
+  ]
+}

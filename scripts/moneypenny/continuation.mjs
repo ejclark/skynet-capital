@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMain } from "../is-main.mjs";
 // MONEYPENNY — CONTINUATION (#3818 slice 8, sub-issue #4295; criteria 9–10). The one job: **a ready
 // plan keeps going after its slice lands, without Eric re-queuing it.**
 //
@@ -48,12 +49,7 @@ import { ghRest, ghRestAll, sh, withRetry } from "./gh.mjs";
 import { FOOTER, LABELS, labelNames, notPullableReason } from "./labels.mjs";
 import { DEFAULT_MODEL } from "./model-tier.mjs";
 import { BLOCKER_READS, nextSubIssue, withoutBoarded } from "./pickup-hold.mjs";
-import {
-  derivePrIssues,
-  keywordIssuesOf,
-  laneClassOf,
-  platterClosesByIssue,
-} from "./pr-issues.mjs";
+import { derivePrIssues, openPrsByIssue, platterClosesByIssue } from "./pr-issues.mjs";
 import {
   allReceiptsOf,
   blockFingerprint,
@@ -416,36 +412,8 @@ const restOr = (path, fallback) => {
   }
 };
 
-/**
- * Which open PR, if any, is still building each issue — `derivePrIssues` (pr-issues.mjs, #4393's
- * "observe, don't remember"), not the branch name.
- *
- * The branch was the obvious oracle and it is the wrong one: a plan's slices are not all built on
- * `plan/<n>`. #4450's slice 1 shipped on `feat/playbook-roll-call` and its slice 2 on `plan/4450`,
- * so a branch-only check would have read "nothing in flight" while an interactive session was
- * mid-slice — two builds on one plan, both editing the same state block. The PR-names-the-issue
- * rules already cover every build path (`Closes #n`, `Part of #n`, a bare `#n` in the title, the
- * branch's own number), which is exactly the gap #4393 closed for the in-flight cap.
- *
- * A HELD PLATTER NAMES ONLY WHAT IT CLOSES (#6282). Since #6144 its body carries a `Part of #n`
- * bullet per boarded item with work left, and the item's own PR is closed on boarding (#6266), so
- * reading that bullet as "a build of #n" parked #n for the platter's whole hold — up to a digest
- * week. `platterClosesByIssue`'s rule (#6193) applies instead: a `Closes #n` issue waits on the
- * merge; a `Part of #n` issue still has work left, which a puller may take. The slices such a
- * plan's platter closes are screened separately, as `boardedOn` (#6530): the plan continues, but
- * never into a sub-issue whose build is already boarded.
- */
-export function openPrsByIssue(openPrs = []) {
-  const byIssue = new Map();
-  for (const pr of openPrs) {
-    const named =
-      laneClassOf(pr?.head?.ref) === "platter"
-        ? keywordIssuesOf(pr?.body ?? "").closes
-        : derivePrIssues({ title: pr?.title, body: pr?.body, headRef: pr?.head?.ref });
-    for (const n of named) if (!byIssue.has(n)) byIssue.set(n, pr.number);
-  }
-  return byIssue;
-}
+// `openPrsByIssue` (issue → the open PR naming it) lives in pr-issues.mjs since #6871 slice 2, so
+// the board sync reads the same map without importing this module.
 
 /**
  * Which plans could be continuing right now, and everything the decision needs about each.
@@ -493,6 +461,21 @@ export function gatherContinuationDeps({ now = Date.now(), mode = readWorkMode()
   return { candidates, caps: mode.caps ?? {} };
 }
 
+/** The job a continued slice runs in (`moneypenny-events.yml`, `build-plan`). */
+export const BUILD_JOB = "build plan issue";
+
+/**
+ * A continued slice's outcome is its build job's, not its run's. The same `moneypenny-events` run
+ * also carries that tick's research legs, and one cancelled research leg reads the whole run as
+ * `cancelled` while the build succeeded: on 2026-11-07 #6953's slice 3 merged as #6996, and this
+ * lane still stopped the plan and assigned Eric over run 42318429910. With no build job in the list,
+ * the run's own conclusion stands. Pure, so the spec pins it without a GitHub read.
+ */
+export function buildJobOutcome(run, jobs = []) {
+  const job = jobs.find((j) => j?.name === BUILD_JOB);
+  return job?.status === "completed" ? { ...run, conclusion: job.conclusion } : run;
+}
+
 /**
  * The last dispatched run's outcome, with a READ FAILURE told apart from a missing run.
  * `judgePriorRun`'s header says why the difference matters; `withRetry` is what makes `unreadable`
@@ -501,7 +484,12 @@ export function gatherContinuationDeps({ now = Date.now(), mode = readWorkMode()
 function readRunOutcome(runId) {
   try {
     const r = withRetry(() => ghRest(`actions/runs/${runId}`));
-    return r ? { status: r.status, conclusion: r.conclusion, url: r.html_url } : { status: "none" };
+    if (!r) return { status: "none" };
+    const run = { status: r.status, conclusion: r.conclusion, url: r.html_url };
+    // A green run needs no job read: every job in it, the build included, is green.
+    if (run.status !== "completed" || run.conclusion === "success") return run;
+    const jobs = withRetry(() => ghRest(`actions/runs/${runId}/jobs?per_page=100`))?.jobs ?? [];
+    return buildJobOutcome(run, jobs);
   } catch (err) {
     const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
     return /\b404\b/.test(text) ? { status: "none" } : { status: "unreadable" };
@@ -560,4 +548,4 @@ function main(argv) {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));
+if (isMain(import.meta.url)) main(process.argv.slice(2));

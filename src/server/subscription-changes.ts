@@ -1,5 +1,6 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { Conviction } from "../playbooks/conviction-record.js";
+import { floorPercent } from "../playbooks/fit-floor.js";
 import type { StrategyId } from "../playbooks/pair-table.js";
 import { pointerMove } from "../subscriptions/conviction-pointer.js";
 import { asOwnConviction, type OwnerReadSubscription } from "../subscriptions/pair-conviction.js";
@@ -54,6 +55,10 @@ export function subscriptionSummary(
     sub.capitalAllocated === undefined ? "no budget" : usdWhole(sub.capitalAllocated),
     ...(named ? [named] : []),
     ...(sub.compoundAllocation ? ["compounding"] : []),
+    // The owner's below-bar floor (#6954 slice 5c-ii): it sizes what the bot opens, so it is logged.
+    ...(sub.belowBarFloorPct !== undefined
+      ? [`each new order at most ${floorPercent(sub.belowBarFloorPct)}`]
+      : []),
     ...(sub.conviction ? [`conviction checked ${sub.conviction.checkOn}`] : []),
   ];
   const text = parts.join(" · ");

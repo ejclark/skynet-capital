@@ -171,6 +171,8 @@ ln -sf ../foo/bin.js "$dir/.bin/biome"; ln -sf ../foo/bin.js "$dir/.bin/rstest"
     put(join(primary, "app/package-lock.json"), lockOf("1.0.0"));
     mkdirSync(join(primary, "scripts"), { recursive: true });
     copyFileSync(MATCH, join(primary, "scripts/worktree-lock-match.mjs"));
+    // its direct-run check is the shared helper (#7046), so the helper travels with it
+    copyFileSync(resolve("scripts/is-main.mjs"), join(primary, "scripts/is-main.mjs"));
     git(["add", "-A"], primary);
     git(["commit", "-q", "-m", "chore: seed"], primary);
     install(join(primary, "node_modules"), "1.0.0", "foo/PRIMARY");

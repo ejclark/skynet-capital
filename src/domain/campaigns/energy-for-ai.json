@@ -1,0 +1,60 @@
+{
+  "id": "energy-for-ai",
+  "title": "Energy for AI",
+  "storyline": "Who profits when data centers need more power than the grid can supply: the generators, the equipment makers and the pipelines, and the auctions and rules that cap the windfall.",
+  "sector": "Utilities",
+  "mode": "explore",
+  "cast": [
+    {
+      "role": "Merchant power",
+      "symbols": ["CEG", "VST"],
+      "source": "docs/research/energy-ai-encounters.md (Explore 1 and Find names 5); docs/research/ai-energy-constraint.md"
+    },
+    {
+      "role": "Regulated utilities",
+      "symbols": ["D"],
+      "source": "docs/research/energy-ai-encounters.md (Explore 1: the regulated side of who keeps the windfall)"
+    },
+    {
+      "role": "Equipment makers",
+      "symbols": ["SPXC", "CMI", "BWXT"],
+      "source": "docs/research/energy-ai-encounters.md (Find names 1–3); docs/research/ai-energy-constraint.md"
+    },
+    {
+      "role": "Gas and pipelines",
+      "symbols": ["ET"],
+      "source": "docs/research/energy-ai-encounters.md (Explore 3 and Find names 4)"
+    },
+    {
+      "role": "Benchmarks",
+      "symbols": ["XLU", "XLE"],
+      "source": "XLU and XLE: the Utilities and Energy funds in src/domain/sector-coverage.ts; both are in the tape table of docs/research/energy-ai-encounters.md"
+    }
+  ],
+  "forces": [
+    {
+      "id": "power",
+      "name": "Power and the grid",
+      "why": "PJM's capacity auction prices scarcity (capped at $325 a megawatt-day), and ERCOT, NERC and the Texas PUC set the rules for connecting large loads (docs/research/energy-ai-encounters.md, Explore 2; docs/research/ai-energy-constraint.md).",
+      "prefixes": ["pjm-", "ercot-", "nerc-computational-load-", "puct-", "texas-puct-"]
+    },
+    {
+      "id": "ratepayers",
+      "name": "Ratepayer and data-center politics",
+      "why": "Who pays for the grid data centers need is on ballots and in bills, and it decides how much of the windfall a utility may keep; the midterm ledger's leg 6 tracks it (docs/research/events/midterm-elections-2026-11-03.md).",
+      "prefixes": [
+        "georgia-psc-data-center-cost-shift-",
+        "house-vote-ratepayer-protection-act-",
+        "midterm-elections-2026-11-03"
+      ]
+    },
+    {
+      "id": "rates",
+      "name": "Rates",
+      "why": "Utilities and pipelines borrow heavily to build, so yields move them (the `rates` kind's own definition in src/domain/market-events-types.ts); the Fed's decisions set them.",
+      "prefixes": ["fomc-"],
+      "kinds": ["rates"]
+    }
+  ],
+  "openQuestions": []
+}

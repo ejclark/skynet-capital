@@ -187,6 +187,19 @@ can differ per surface.
 
 ---
 
+## Home — the landing page is where the game starts (#6948, #7018)
+
+Decided 2026-11-07, placed 2026-11-08: sign-in opens the day's market news, not the standings
+(Eric: *"I don't care for the leaderboard as the landing page"*). It is a briefing on conditions in
+a newspaper format with one narrator line in a mission voice, and every story carries the game's
+verbs: **ask** (your own question first, quick questions as fallbacks), **steer** (anyone, by
+asking; a GM's post marked as the GM's) and **act** (a quest with its base rate, sample size and
+exits, fired by the owner). Quests come from three sources (a market event, a position to change,
+cash × conditions) and sit by their source. *Level up* is today's ladder: a rung's first fill earns
+its points and opens the next move. *Loot* has no mechanic yet; the honest stand-in is the move a
+rung opens, never a reward tied to market outcomes or to how many trades a member makes. The IA is
+`docs/IA.md` §5.9; the build is #7077.
+
 ## What this needs, and which parts are built
 
 1. **The history / persistence layer — recording, now being consumed.** Renown, discipline scoring,
@@ -196,8 +209,8 @@ can differ per surface.
    realized-P/L continuity across deploys ✅, a restart-safe ceremony data path ✅, then windowed reads
    and the board metrics. Per-fill *events* (win rate, "which plays worked") remain S7+.
 2. **A `renown` module** — pure, tested, one source of truth, over history + curriculum + trades.
-3. **Thesis capture** — built: the Council's write surface, one line per member per week
-   (`/api/council`, `src/server/council-store.ts`).
+3. **Thesis capture** — retired with the Council (#5992): `/api/council` answers 410, "write
+   your thesis into a playbook", so Called it has no input today.
 4. **Server-side academy progression** — built: `src/server/progression-service.ts` re-derives a
    learner's rungs, points and rank from fills, and training wheels lock the desk to the unlocked
    ladder (`playLocked`).

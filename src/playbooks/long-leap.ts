@@ -41,6 +41,7 @@ import {
   LEAP_EXIT_DTE,
   LEAP_MAX_DTE,
   LEAP_MIN_DTE,
+  LEAP_TRIM_AT,
   longLeapExit,
 } from "./long-leap-rules.js";
 import { optionCloseIntent, optionOpenIntent } from "./option-intent.js";
@@ -374,6 +375,11 @@ export function longLeap(
     size: { conservative: 0, standard: 0, aggressive: 0 },
     options: { underlyings: [symbol], holdsShortToExpiry: [], requiredLevel: 2 },
     horizon: "long",
+    // Its exit plan (#6954 slice 4) is the two rules it sells on (`long-leap-rules.ts`).
+    exits: {
+      target: `sells half, once, when the bid first reaches ${LEAP_TRIM_AT}× the cost`,
+      time: `sells the rest with ${LEAP_EXIT_DTE} days left to expiry`,
+    },
     ...(steering
       ? {}
       : {

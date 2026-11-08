@@ -60,7 +60,7 @@ Copy-paste skeleton. Everything above the fold fits one phone screen; everything
 
 | | |
 |---|---|
-| **Status** | Blocked · waiting on a decision (needs-eric) |
+| **Status** | Waiting on a person · a decision (needs-eric) |
 | **Surface** | Moneypenny's rail (filings listed at `/app/accounts?section=feedback`) |
 | **Size** | ~2 PRs |
 
@@ -108,19 +108,30 @@ Rules that make it work, in priority order:
    exists to prevent (Eric, 2026-08-30: issues bury the action-required item behind a fold instead
    of surfacing it below the context). The rule holds **after filing too**: the label usually
    lands later, from another lane, so `issues.mjs update --add needs-eric` refuses a body with no
-   callout, and the board keeps such an issue out of Blocked until the callout exists
+   callout, and the board keeps such an issue in Backlog, out of Waiting on a person, until the
+   callout exists
    (`scripts/moneypenny/decision-callout.mjs`, #3913). It binds every issue with the label, whoever
    filed it: sessions post under Eric's login, so neither the author nor a footer can tell whose words
    an issue is (#6584). A lane writes its ask into the callout when it applies the label. A parked plan
    holds no started-plan seat, with or without the callout.
 8. **One decision, one line, no paragraph.** Each `Needs from you` item is numbered, phrased as a
    closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
-   after an em dash — same anatomy as the procedure steps in CLAUDE.md's *When Eric's action IS
+   after an em dash — same anatomy as the procedure steps in
+   [`docs/process/WORKING-AGREEMENTS.md`](process/WORKING-AGREEMENTS.md) → *When Eric's action is
    needed* (`<the do> — <the why>`). A reader should get the ask from the first four words alone.
    Below the fold, `### Predicted answers` gives Claude's expected answer to each item and a
    confidence, written before he answers; the row is scored in
    [`docs/process/ALIGNMENT.md`](process/ALIGNMENT.md) when he does (Eric, 2026-10-18: alignment
    is the asymptote, so its distance is measured).
+   **The callout speaks one more grammar, so the assignment card can carry the whole ask**
+   (`scripts/moneypenny/ask-card.mjs`, #6953 slice 3). Under a numbered item, indented sub-lines:
+   `- A (predicted, medium): <what happens>`, `- B: <what happens>`, `- On silence: <what the lane
+   will actually do>`, `- Unblocks: <what moves>`. The card shows every numbered item (up to 3),
+   each option, the prediction and the silence line; his reply, if its first line is an option
+   letter, `yes`, `no` or `not now`, is read back by the lane, which takes the label off and logs a
+   scored ledger row (`answer-readback.mjs`). A callout without them still assigns, and the digest
+   lists it under "callout incomplete"; `issue-lint` adds a note, never a refusal. An `On silence:`
+   line must name something that will really happen — the card quotes it to him as a promise.
 9. **A multi-slice plan's Slicing sketch names which slice closes it.** #928 and #885 both shipped
    their final slice without a `Closes #N`, so GitHub never auto-closed them and the issue sat open
    describing already-superseded state (found in the 2026-08-30 `/work-issues` pass). Mark the
@@ -130,9 +141,10 @@ Rules that make it work, in priority order:
    ranked list of what the page shows first at phone width (`At 390, in order: balance · open
    positions · the trade button`). The PR's first phone screenshot is checked against it
    (CLAUDE.md → "Mobile-first on every information surface": the ranking is the product).
-11. **The Status row leads with the board's word, then free text.** One of Backlog · Ready ·
-   Building now · Waiting · Blocked · Done (the board's columns, `scripts/moneypenny/projects.mjs`;
-   `In Progress`, Building now's older name, still reads as it — `RENAMED_STATUS_OPTIONS`, #4393),
+11. **The Status row leads with the board's word, then free text.** One of Backlog · Waiting on a
+   person · Next part needs approval · Ready · Next part queued · Building now · Done (the board's
+   columns, `scripts/moneypenny/projects.mjs`; the older names `In Progress` and `Blocked` still read
+   as Building now and Waiting on a person — `RENAMED_STATUS_OPTIONS`, #4393, #6871),
    then a `·` and whatever a reader needs: `Ready · plan, no decision needed`. The labels and the board move
    after filing; the row is typed once, and #3748 and #3407 were found saying `ready` and
    `needs-eric` with neither label on them. `issue-lint --labels` notes a first word the labels
@@ -146,7 +158,7 @@ settled, not ready for `/journey` (which needs an actual claim → challenge →
 bank, not a one-way brainstorm). For that case, add a **"Raw idea (verbatim)"** subsection inside the
 fold, first, before "Where it stands today": quote the originating message(s) completely unedited —
 typos, fragments, trailing thoughts and all, the same discipline `/journey`'s rule 2 uses for exactly
-this reason. Mark the issue `Status: draft` in the metadata table and leave `ready` off it: nothing
+this reason. Lead the metadata table's Status row with `Backlog · draft` and leave `ready` off it: nothing
 pulls from Backlog (*Ready — the one definition*, below), so `/work-issues` and Moneypenny both skip
 it until a human flips it.
 Worked example: #1977.
@@ -237,7 +249,7 @@ can sit in Backlog for weeks. The word was said in dozens of plan issues before 
 writing it down once is that the label, the comment and the code now agree.
 
 **Mechanically, "in the board's Ready column" — `pullable()` in `scripts/moneypenny/labels.mjs`.**
-Six conditions, asked in this order so the refusal names the first one that fails
+Seven conditions, asked in this order so the refusal names the first one that fails
 (`notPullableReason`). Every puller asks exactly this function — both claim lanes, the push-tick
 retry sweep (`nextAdmissible`), and `/work-issues` — so the async lane and a live session can never
 disagree about what may be built:
@@ -250,7 +262,9 @@ disagree about what may be built:
 4. **not `in-progress`** — another lane or session already holds it.
 5. **not `needs-session`**, for the automated pullers only — its remainder waits on an interactive
    session, so `/work-issues` (which passes `interactive: true`) still sees it.
-6. **not blocked** — no open `blocked-by` issue (`openBlockers`); it starts when they close.
+6. **not boarded on a held platter** — an open platter PR already closes it, so a pull would build
+   nothing (`boardedReason`, #6191).
+7. **not blocked** — no open `blocked-by` issue (`openBlockers`); it starts when they close.
 
 **Ready names no lane label.** A `ready` issue is the plan lane's if it carries `plan` and the
 feedback lane's otherwise (`inFeedbackLane`), which adds `feedback` when it claims one without it.
@@ -292,7 +306,7 @@ that remainder is invisible to every puller while still reading, on the issue it
 
 So the push sweep relays them. A closed issue still carrying `next-slice` or `needs-session` gets a
 fresh `[relay] #N remainder — …` issue that links back, and the remainder label comes off the
-source (with a receipt comment, which is what makes the sweep idempotent). Three properties worth
+source (with a receipt comment, which is what makes the sweep idempotent). Four properties worth
 knowing:
 
 - **It lands in Backlog, never `ready`.** A remainder's shape is the thing nobody has judged yet;

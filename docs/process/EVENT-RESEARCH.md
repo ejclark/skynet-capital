@@ -595,7 +595,14 @@ rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges
 - **Estimates only widen caution.** A cadence estimate may pull an assessment earlier or extend a
   flat window; it never licenses an entry.
 - **Source prefixes are the audit trail** — see the header of `market-events-data.ts`. `--validate`
-  enforces them in CI.
+  enforces them in CI. Campaign news items (`src/domain/news/`, `npm run news:collect`, #6949
+  slice 4) use the same marks: `SEC:` and `FED:` only on the publisher's own host (measured),
+  `NEWS:` for every press headline (reported), and a news item is never `EST:`. An item links to a
+  campaign only when its own title names a cast company or a force's `names` — the search that
+  found it is never the evidence (`src/domain/campaign-news.ts`). The landscape read
+  (`npm run campaign:landscape`, slice 5) carries those marks into words: a date is "confirmed"
+  only on a `confirmed` status from a primary source, and a claim is "tested" only when its record
+  says so (`src/domain/campaign-landscape.ts`).
 - **Blocked sources are recorded, never substituted silently.** When a fetch of a cited source
   fails — egress block, 403, 5xx — the ledger's `probe-ref.blocked` array gets a
   `{"url", "status", "at"}` entry (`TEMPLATE.md`) and the source prefix downgrades to the

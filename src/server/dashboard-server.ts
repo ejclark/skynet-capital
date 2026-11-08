@@ -33,6 +33,8 @@ import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
+import { serveMemberCampaignsApi } from "./member-campaigns-api-routes.js";
+import { serveMemberChainsApi } from "./member-chains-api-routes.js";
 import { serveMemberConvictionsApi } from "./member-convictions-api-routes.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
@@ -40,6 +42,7 @@ import { serveOptionLifecycleApi } from "./option-lifecycle-route.js";
 import { serveOptionPositionsApi } from "./option-positions-route.js";
 import { servePlaybooksApi } from "./playbooks-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
+import { serveQuestsApi } from "./quests-route.js";
 import { serveQuoteStream } from "./quote-stream-route.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
 import { serveSavedPositionsApi } from "./saved-positions-api-routes.js";
@@ -183,7 +186,7 @@ async function servePlaybookReads(
 }
 
 /** What a member does to playbooks: subscribe a bot to the house's (#885), write their own (#5457),
- *  or state a conviction that would steer them (#5482 slice 6a). */
+ *  state a conviction that would steer them (#5482 slice 6a), or craft a campaign (#6949 slice 3a). */
 async function servePlaybookWrites(
   req: IncomingMessage,
   res: ServerResponse,
@@ -193,6 +196,8 @@ async function servePlaybookWrites(
 ): Promise<boolean> {
   if (await serveSubscriptionsApi(req, res, path, config, session)) return true;
   if (await serveMemberConvictionsApi(req, res, path, config, session)) return true;
+  if (await serveMemberCampaignsApi(req, res, path, config, session)) return true;
+  if (await serveMemberChainsApi(req, res, path, config, session)) return true;
   return serveAuthoredPlaysApi(req, res, path, config, session);
 }
 
@@ -211,6 +216,7 @@ async function serveWriteApis(
   if (await serveOptionPositionsApi(req, res, path, config, session)) return true;
   if (await serveOptionLifecycleApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
+  if (await serveQuestsApi(req, res, path, config, session)) return true;
   if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;

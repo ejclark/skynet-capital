@@ -2,7 +2,7 @@
 
 **Technology:** GitHub Actions workflow_run + workflow_dispatch, Node ESM router (scripts/moneypenny/repair.mjs), claude-code-action on claude-opus-5-5
 
-**Responsibility:** Watches the other lanes: a failed run on main files one ci-failure issue per signature and dispatches a repair session; a failed Pipeline run on a session's open PR files one capsule per PR and dispatches one session, or posts one line saying why not (red-session-pr.mjs, #6605); workflow_dispatch entry points repair a conflicted PR (pr_number) or a stalled event-research issue (issue_number); four loop guards keep it from feeding itself
+**Responsibility:** Watches the other lanes: a failed run on main files one ci-failure issue per signature and dispatches a repair session, and a signature whose capsule closed within 14 days reopens that capsule with a recurrence count instead (#6953); a failed Pipeline run on a session's open PR files one capsule per PR and dispatches one session, or posts one line saying why not (red-session-pr.mjs, #6605); workflow_dispatch entry points repair a conflicted PR (pr_number) or a stalled event-research issue (issue_number); four loop guards keep it from feeding itself
 
 **Code roots:** `.github/workflows/moneypenny-repair.yml` · `scripts/moneypenny/repair.mjs` · `scripts/moneypenny/red-session-pr.mjs` · `scripts/moneypenny/repair-logs.mjs` · `.github/prompts/moneypenny-ci-repair.md` · `.github/prompts/moneypenny-conflict-repair.md` · `.github/prompts/moneypenny-event-stall-repair.md` · `scripts/repair-watchlist-scan.mjs` · `tests/scripts/moneypenny/repair.spec.ts`
 

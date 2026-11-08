@@ -94,6 +94,20 @@ describe("raisesDelegation (#4649) — only an edit that hands the bot MORE is b
     expect(raisesDelegation(prior, next)).toBe(true);
   });
 
+  it("an owner's below-bar floor (#6954 slice 5c-ii): setting or lowering one delegates nothing more", () => {
+    expect(raisesDelegation(prior, { ...same, belowBarFloorPct: 0.005 })).toBe(false);
+    const floored = { ...prior, belowBarFloorPct: 0.005 };
+    expect(raisesDelegation(floored, { ...same, belowBarFloorPct: 0.005 })).toBe(false);
+    expect(raisesDelegation(floored, { ...same, belowBarFloorPct: 0.002 })).toBe(false);
+  });
+
+  it.each([
+    ["raising the owner's below-bar floor", { ...same, belowBarFloorPct: 0.008 }],
+    ["clearing it back to the house floor", same],
+  ])("%s delegates more", (_label, next) => {
+    expect(raisesDelegation({ ...prior, belowBarFloorPct: 0.005 }, next)).toBe(true);
+  });
+
   it("capping an uncapped subscription is a reduction, at any figure", () => {
     const { capitalAllocated: _cap, ...uncapped } = prior;
     expect(raisesDelegation(uncapped, { ...same, capitalAllocated: 50_000 })).toBe(false);

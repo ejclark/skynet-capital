@@ -1,0 +1,1601 @@
+{
+  "$comment": "THE SEAT REGISTRY (#6886 slice 1) and the org chart's source (Eric, 2026-11-07: an outline of our agentic systems as a company org chart, humans included, that also compacts context for agent workflows). One row per seat: a role that does work, filled by a lane, skill, agent, workflow, routine, gate, service, hook or person. `invoker` names what starts it (event · schedule · lane · session · member · eric · self · none); `none` means nothing calls it, which the page lists. `links` draw the picture between departments and people; `friction` records measured breakdowns on a communication edge (reverse Conway). Edit this file, then run `node scripts/org-chart.mjs` to rewrite docs/architecture/org-chart.md; tests/arch/org-chart.spec.ts fails on drift, a missing code root, or a roster file no seat covers.",
+  "asOf": "2026-11-07 · main caf8770cc",
+  "depts": [
+    {
+      "id": "people",
+      "name": "People",
+      "job": "Decide, play, and (one day) contribute code"
+    },
+    {
+      "id": "front-desk",
+      "name": "Front desk (in the app)",
+      "job": "Every surface a member touches: chat, filings, the trade desk, the landing page"
+    },
+    {
+      "id": "trading",
+      "name": "Trading floor",
+      "job": "The bots, their personas and playbooks, all on paper"
+    },
+    {
+      "id": "research",
+      "name": "Research desk",
+      "job": "The event calendar, the research ledgers, position guidance, campaigns"
+    },
+    {
+      "id": "build",
+      "name": "Builders",
+      "job": "Turn ready issues and plans into merged pull requests"
+    },
+    {
+      "id": "quality",
+      "name": "Quality",
+      "job": "Gates, repair lanes, reviewers and the debt coach"
+    },
+    {
+      "id": "staff",
+      "name": "Chief of staff",
+      "job": "Pace the work, route decisions to Eric, report at altitude"
+    },
+    {
+      "id": "platform",
+      "name": "Platform",
+      "job": "The router, the App identity, merge, deploy, sessions and their hooks"
+    }
+  ],
+  "people": [
+    {
+      "id": "owner",
+      "label": "Eric · owner and game master"
+    },
+    {
+      "id": "members",
+      "label": "Members"
+    },
+    {
+      "id": "contributors",
+      "label": "Code contributors · none yet"
+    }
+  ],
+  "links": [
+    {
+      "from": "members",
+      "to": "front-desk",
+      "label": "chat · filings · trades"
+    },
+    {
+      "from": "front-desk",
+      "to": "build",
+      "label": "a feedback issue"
+    },
+    {
+      "from": "build",
+      "to": "members",
+      "label": "status badge only, no push",
+      "weak": true
+    },
+    {
+      "from": "build",
+      "to": "staff",
+      "label": "needs-eric"
+    },
+    {
+      "from": "quality",
+      "to": "staff",
+      "label": "needs-eric"
+    },
+    {
+      "from": "staff",
+      "to": "owner",
+      "label": "ask cards · 15 of 27 needed no answer"
+    },
+    {
+      "from": "staff",
+      "to": "owner",
+      "label": "digest · newsletter · steering"
+    },
+    {
+      "from": "owner",
+      "to": "staff",
+      "label": "replies · labels · the work dial"
+    },
+    {
+      "from": "build",
+      "to": "live-sessions",
+      "label": "needs-session · 5 waiting"
+    },
+    {
+      "from": "owner",
+      "to": "live-sessions",
+      "label": "opens one"
+    },
+    {
+      "from": "build",
+      "to": "quality",
+      "label": "pull requests"
+    },
+    {
+      "from": "quality",
+      "to": "platform",
+      "label": "green checks"
+    },
+    {
+      "from": "platform",
+      "to": "build",
+      "label": "one App identity · claims"
+    },
+    {
+      "from": "research",
+      "to": "front-desk",
+      "label": "ledgers · guidance"
+    },
+    {
+      "from": "trading",
+      "to": "front-desk",
+      "label": "fills · decisions"
+    },
+    {
+      "from": "front-desk",
+      "to": "trading",
+      "label": "convictions · bot controls"
+    },
+    {
+      "from": "contributors",
+      "to": "owner",
+      "label": "access is his call",
+      "weak": true
+    }
+  ],
+  "friction": [
+    {
+      "edge": "Members → front desk → builders",
+      "channel": "the in-app rail and coach, filed as a GitHub issue",
+      "what": "Members almost never file from the app. One untested reading (Conway): the intake is shaped like the build team's issue capsule (app/src/live/moneypenny-filing.ts:30-34), not like play.",
+      "number": "2 in-app filings since 2026-10-01 (#4861, #6007), both Eric's; the last other member filing is #716 (2026-08-28). Nearly all of the 238 feedback issues since 10-01 were filed by sessions under Eric's account",
+      "cite": "#7031",
+      "change": "Feedback becomes a game act: a one-tap reaction and a Suggest a change that knows the quest",
+      "tracked": "#7029"
+    },
+    {
+      "edge": "Builders → members",
+      "channel": "the feedback status badge; the chat's work-status lookup",
+      "what": "A member hears back about their ask only by revisiting: no push about asks reaches them (trade alerts by email are opt-in).",
+      "number": "unmeasured (no member filings to measure against)",
+      "cite": "src/companion/companion-tools.ts:197",
+      "change": "'Your ask shipped' becomes a moment on the landing page, with a Try it quest",
+      "tracked": "#7029"
+    },
+    {
+      "edge": "Every lane → Eric",
+      "channel": "the needs-eric label, then an assigned ask card",
+      "what": "Lanes send questions that are not his to answer; most clear later without him, so the real ones wait.",
+      "number": "31 of 46 lane asks 09-26 to 10-26 were not decisions, 17 of them from conflict repair, since rerouted by #6010 (#6079); then 15 of 27 cleared without his answer, median ask 85h before #6953's fixes",
+      "cite": "#6079; #6953",
+      "change": "Ask 'only his?' before an edge points at Eric; a class whose predictions keep matching graduates (docs/process/ALIGNMENT.md)",
+      "tracked": "docs/process/LEARNING-LOOP.md → Decisions reaching Eric (checks 11-20, 12-04)"
+    },
+    {
+      "edge": "Lanes and sessions → live sessions",
+      "channel": "the needs-session label",
+      "what": "Lanes hand work to a live session, but no session is scheduled to read the label.",
+      "number": "8 open on 2026-11-07, the oldest waiting 12 days, 1 of them from a repair lane; 5 after a live session cleared 3 (#7036)",
+      "cite": ".github/prompts/moneypenny-conflict-repair.md:26; #4555",
+      "change": "Staff it: a scheduled cloud routine pulls needs-session oldest first, or lanes may edit .claude/skills/ behind the envelope check",
+      "tracked": "#7032"
+    },
+    {
+      "edge": "Chief of staff → Eric",
+      "channel": "a push, a comment on #7024, a private steering page",
+      "what": "Several report pipes to one reader. The one he answered most, pictures with taps, needs a live session to publish.",
+      "number": "steering pages drew 87 answers 2026-10-10 to 10-16, then none (#6953); #7024's reply path has carried 0 replies (first edition due 2026-11-08)",
+      "cite": "#6953",
+      "change": "Shipped: the digest, steering page and newsletter read one source of 'needs you' (#6953). Still untracked: publishing the tap page from a routine",
+      "tracked": "docs/process/LEARNING-LOOP.md → Decisions reaching Eric"
+    },
+    {
+      "edge": "Builder ↔ builder",
+      "channel": "the admission gate's surface fence, which compares issue prose",
+      "what": "Two builds of the same code run at once; one is wasted and often lands in conflict repair.",
+      "number": "3 of 3 closed lane PRs in the week to 2026-10-26 were superseded duplicates (#6250)",
+      "cite": "scripts/moneypenny/admission.mjs:25-32",
+      "change": "Fence by the files a build will touch, not by its words",
+      "tracked": "#6250"
+    },
+    {
+      "edge": "Every lane → GitHub",
+      "channel": "the App identity and the event router; every label and comment is an event",
+      "what": "In a surge hour the lanes' talk exhausts the App's hourly REST budget.",
+      "number": "162 runs in one hour on 2026-10-27; 11 failed, 14 by 03:03Z, on the rate limit (#6319)",
+      "cite": "#6319",
+      "change": "Fewer, richer messages: the router skips events it will not act on; conditional reads",
+      "tracked": "#6319"
+    },
+    {
+      "edge": "Live session → a running workflow agent",
+      "channel": "none sanctioned",
+      "what": "Messaging a running workflow agent starts a second copy in the same worktree. The lesson lived in one machine's private memory.",
+      "number": "one incident (2026-10-11)",
+      "cite": "docs/DELEGATION.md rail 2 (moved from private memory, 2026-11-07)",
+      "change": "Workers read a file between steps; the lesson now sits in docs/DELEGATION.md rail 2, which CLAUDE.md sends every session to",
+      "tracked": "docs/DELEGATION.md rail 2 (done)"
+    },
+    {
+      "edge": "Sessions → reviewers and coaches",
+      "channel": "an agent call, or a phrase from Eric",
+      "what": "Seats with no reporting line don't run, so the check each one stands for doesn't happen.",
+      "number": "review agents ran 4 times in 45 days (docs/review/README.md:10); the linguist 0 times (docs/COACHES.md:535); the debt coach only when a surge started it (7 cycles, 10-26 to 11-02, #4527)",
+      "cite": "docs/review/README.md:10; docs/COACHES.md:535; #4527",
+      "change": "Every seat names its invoker or is benched; this page lists the ones nothing starts",
+      "tracked": "#6886"
+    },
+    {
+      "edge": "Board lanes → the board",
+      "channel": "the owner's personal Projects board",
+      "what": "Lanes cannot create or regroup views, so each view change waits for Eric's click.",
+      "number": "4 of 4 view creates refused with 404 (2026-11-05)",
+      "cite": "#6883",
+      "change": "Settle whether the API can; if not, one card with the clicks, once",
+      "tracked": "#6883"
+    },
+    {
+      "edge": "Learning-loop checks → owners",
+      "channel": "a comment on tracker #5724",
+      "what": "Loop checks sat unread on tracker #5724 until their decide step was routed (fixed 2026-10-26, scripts/loop-check.mjs); other lanes still post output only to tracker comments.",
+      "number": "5 checks 4 to 16 days past due before the fix (2026-10-26)",
+      "cite": "docs/LESSONS.md:200-205",
+      "change": "Re-run the loop census for the other tracker-comment outputs",
+      "tracked": "docs/LESSONS.md side quest"
+    }
+  ],
+  "target": [
+    "Peers decide what is reversible and in-envelope; only the irreversible class and taste calls reach Eric, once, with a prediction.",
+    "The live-session department has staff on a schedule, so a hand-off never waits on Eric opening a laptop.",
+    "Members speak through play (reactions, quests, Try it) and hear back where they play.",
+    "Builds coordinate by the files they touch, and the lanes talk to GitHub in fewer, richer messages.",
+    "Every seat names what starts it; a seat nothing starts is benched or given an invoker."
+  ],
+  "seats": [
+    {
+      "id": "owner",
+      "department": "people",
+      "name": "Owner and game master (Eric)",
+      "kind": "human",
+      "job": "Makes the decisions only he can: needs-eric asks, merging held and platter PRs, approving ops runs, turning the work dial to surge or conserve",
+      "wakesOn": "A GitHub assignment carrying an ask card; the digest push notification; the newsletter",
+      "speaksOn": "A reply comment on the issue, labels, a merge click, an Environment approval, a work-mode label on #4153",
+      "cadence": "Two short steering sittings a day; on demand",
+      "invoker": "self",
+      "status": "hired",
+      "codeRoots": [
+        "scripts/moneypenny/assignments.mjs",
+        "scripts/moneypenny/work-mode.mjs",
+        "src/server/auth/allowlist-store.ts",
+        "src/server/invite-form.ts",
+        "src/server/dashboard-auth-gate.ts"
+      ],
+      "cite": "scripts/moneypenny/assignments.mjs:1-5 ('send Eric only decisions, as GitHub assignments'); scripts/moneypenny/work-mode.mjs:365-371 (surge 'eric-only', conserve 'after-eric-phrase'); .github/workflows/autonomy-ops.yml:71 (environment: autonomy-ops); src/server/auth/allowlist-store.ts:17-19 \"env-listed identities are the owners who may invite; file-listed identities are members who may not\"; docs/architecture/README.md:22; CLAUDE.md hard boundaries",
+      "station": "The owner's office: who joins, and whether the bots run"
+    },
+    {
+      "id": "members",
+      "department": "people",
+      "name": "League members",
+      "kind": "human",
+      "job": "Invite-only friends and family who sign in, trade their own paper account, chat with Moneypenny, give views to their own bots and file feedback",
+      "wakesOn": "the in-app rail, feedback status badges, the follow-up form when an issue goes needs-info",
+      "speaksOn": "orders on their own desk, rail messages, feedback filings, conviction card taps, follow-up answers",
+      "cadence": "whenever they open the app; async",
+      "invoker": "self",
+      "status": "hired",
+      "codeRoots": [
+        "src/server/auth",
+        "src/server/trade-orders-routes.ts",
+        "src/server/feedback-service.ts",
+        "app/src/shell/moneypenny-rail.tsx"
+      ],
+      "cite": "docs/architecture/README.md:21 \"Invited friend or family on the allowlist... trades a paper account, chats with Moneypenny, files feedback\"; src/server/trade-orders-routes.ts:171 ownsAccount check; docs/MONEYPENNY.md:28-30 (member's own reply posts through /api/feedback); .github/workflows/moneypenny-events.yml:511-516 (authorized reply resumes a needs-info build)"
+    },
+    {
+      "id": "contributors",
+      "department": "people",
+      "name": "Would-be code contributors",
+      "kind": "human",
+      "job": "People who may want to improve the app through code; the repo is public, but granting repo or app access is Eric's call",
+      "wakesOn": "the public repo, the weekly newsletter archive",
+      "speaksOn": "comments on issues and PRs (the human-directed lane answers only OWNER/MEMBER/COLLABORATOR)",
+      "cadence": "ad hoc",
+      "invoker": "self",
+      "status": "planned",
+      "codeRoots": [".github/workflows/claude.yml"],
+      "cite": "CLAUDE.md:52-55 \"granting anyone repo or app access stays Eric's call\"; #7024 \"This repo is public\"; #6872 \"intended for human consumption (me, possibly other human contributors)\""
+    },
+    {
+      "id": "game-masters",
+      "department": "people",
+      "name": "Game masters",
+      "kind": "human",
+      "job": "Steer the narrated campaign by posting into a scene, marked as the GM's post",
+      "wakesOn": "the landing page scenes",
+      "speaksOn": "GM posts on a scene",
+      "cadence": "async",
+      "invoker": "none",
+      "status": "planned",
+      "codeRoots": [],
+      "cite": "#6948 \"AI narrator, GMs has the ability to steer/step in.\"; #7018 \"steer (a GM's post, marked as the GM's)\"",
+      "station": "The game master's chair: steers the story, posts marked as the GM's"
+    },
+    {
+      "id": "companion",
+      "department": "front-desk",
+      "name": "Companion chat (Moneypenny in the app)",
+      "kind": "service",
+      "job": "Answers member questions with Claude using a closed list of nine read-only lookups and two draft hand-offs; has no code path that places an order",
+      "wakesOn": "POST /api/companion/chat from the rail",
+      "speaksOn": "streamed SSE reply; draft_feedback and draft_conviction cards for the rail",
+      "cadence": "per turn, throttled",
+      "invoker": "member",
+      "status": "hired",
+      "codeRoots": [
+        "src/server/companion-routes.ts",
+        "src/companion/companion-tools.ts",
+        "src/companion/companion-convictions.ts",
+        "src/companion",
+        "app/src/shell/moneypenny-rail.tsx",
+        "app/src/live/moneypenny.ts",
+        "app/src/live/moneypenny-script.ts"
+      ],
+      "cite": "src/companion/companion-tools.ts:23-28 \"a CLOSED allow-list of nine read-only lookups plus two hand-offs\"; src/server/companion-routes.ts:28-34; docs/MONEYPENNY.md:17-31 ('She cannot place an order (no such tool exists'; draft_feedback 'files nothing'); app/src/live/moneypenny.ts:26-38 \"General questions go to Moneypenny herself — the companion chat... the scripted lines are the fallback without a key\"",
+      "station": "The front desk: quick answers in chat; drafts, never acts"
+    },
+    {
+      "id": "feedback-intake",
+      "department": "front-desk",
+      "name": "Feedback intake: rail filing, coach and filer",
+      "kind": "in-app",
+      "job": "The one place the rail files feedback: a draft the member said send to, or their own words, shaped once by the feedback coach",
+      "wakesOn": "the member's 'send' on a drafted filing",
+      "speaksOn": "POST /api/feedback; a system line saying filed and triaged",
+      "cadence": "per filing",
+      "invoker": "member",
+      "status": "hired",
+      "codeRoots": [
+        "app/src/live/moneypenny-filing.ts",
+        "src/server/feedback-coach.ts",
+        "src/server/feedback-coach-model.ts",
+        "src/server/feedback-coach-limits.ts",
+        "src/server/feedback-service.ts",
+        "src/server/feedback-api-routes.ts"
+      ],
+      "cite": "app/src/live/moneypenny-filing.ts:20-34 \"Two ways in, one door out (/api/feedback)... THE COACH STILL SHAPES EVERY ISSUE\"; src/server/feedback-coach.ts:1-9 \"The coach only DRAFTS... the member's explicit submit stays the only path that posts anything anywhere\"; src/server/feedback-service.ts:2-4 \"files a labelled issue on the repo via a bot token — so friends and family never need a GitHub account\""
+    },
+    {
+      "id": "feedback-followup",
+      "department": "front-desk",
+      "name": "Feedback status and follow-up",
+      "kind": "in-app",
+      "job": "Lets a member answer a needs-info question from inside the app and restarts the build",
+      "wakesOn": "an issue going needs-info",
+      "speaksOn": "POST /api/feedback/followup; the ready label is removed and re-applied for the restart",
+      "cadence": "per follow-up",
+      "invoker": "member",
+      "status": "hired",
+      "codeRoots": ["src/server/feedback-followup.ts", "src/server/feedback-status.ts"],
+      "cite": "docs/architecture/README.md:142 \"files feedback and needs-info answers... /api/feedback/followup\"; src/server/feedback-followup.ts:140"
+    },
+    {
+      "id": "conviction-card",
+      "department": "front-desk",
+      "name": "Conviction hand-off card",
+      "kind": "in-app",
+      "job": "Shows a market view Moneypenny drafted and acts only on the member's exact tap: hand it to my bots, save as draft, or not now",
+      "wakesOn": "a draft_conviction card from the companion chat; the member's chip tap",
+      "speaksOn": "/save and /hand-over posts that steer the member's own bots",
+      "cadence": "per card",
+      "invoker": "member",
+      "status": "hired",
+      "codeRoots": ["app/src/live/moneypenny-conviction.ts"],
+      "cite": "app/src/live/moneypenny-conviction.ts:10-24 \"Her own words can never act on it either... a view narrows a pair's settings and never places an order\""
+    },
+    {
+      "id": "desk-gate",
+      "department": "front-desk",
+      "name": "Desk ownership gate (only the owner fires orders)",
+      "kind": "gate",
+      "job": "Only the account's owner places orders on it or sees which playbooks a bot runs; other members see state and verdicts with playbook ids withheld",
+      "wakesOn": "every per-account read and order",
+      "speaksOn": "redacted desk JSON; refused orders",
+      "cadence": "per request",
+      "invoker": "member",
+      "status": "hired",
+      "codeRoots": ["src/server/desk-owner-gate.ts", "src/server/trade-orders-routes.ts"],
+      "cite": "src/server/desk-owner-gate.ts:12-21 \"WHICH PLAYBOOKS A BOT RUNS IS ITS OWNER'S TO SEE\"; src/server/trade-orders-routes.ts:171",
+      "station": "Your trade desk: only you place orders on your own account"
+    },
+    {
+      "id": "invites",
+      "department": "front-desk",
+      "name": "Invites and claims (owner cards)",
+      "kind": "in-app",
+      "job": "Owner-only settings cards to add members to the guest list and manage account claims",
+      "wakesOn": "Eric",
+      "speaksOn": "allowlist.json on the volume (encrypted)",
+      "cadence": "on demand",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [
+        "src/server/invite-form.ts",
+        "src/server/claim-form.ts",
+        "src/server/admin-api-routes.ts"
+      ],
+      "cite": "src/server/invite-form.ts:8 \"SKYNET_ALLOWED_* env vars are owners: they may sign in AND invite\"; docs/architecture/README.md:22"
+    },
+    {
+      "id": "landing",
+      "department": "front-desk",
+      "name": "Landing page briefing and narrator",
+      "kind": "in-app",
+      "job": "Signed-in home: the gist of market conditions in a newspaper format, with three actions on every scene: ask and research, steer, act",
+      "wakesOn": "campaigns, research ledgers, prices",
+      "speaksOn": "a briefing; questions; tickets with exits",
+      "cadence": "daily edition",
+      "invoker": "member",
+      "status": "planned",
+      "codeRoots": [],
+      "cite": "#7018 \"Members land on a briefing of market conditions, like Skynet Chronicles\"; \"today sign-in lands on Profile → Overview, /app/accounts\"; #6948 \"An AI narrator turns collected events into encounters; members and bots answer async; a GM can steer.\" and caption \"proposed end-state, nothing built\"",
+      "station": "The briefing desk: the day's market conditions, and what you make of them"
+    },
+    {
+      "id": "bot-runtime",
+      "department": "trading",
+      "name": "Bot runtime (paper)",
+      "kind": "bot",
+      "job": "Autonomous trader loop: market data and news feed momentum and sentiment; every 15s while the market is open each enabled persona assesses, guards filter, and paper orders go out only in live mode",
+      "wakesOn": "Alpaca ticks and a 60s news poll; GET /controls every 30s",
+      "speaksOn": "paper orders (live mode), decisions replicated to the app over POST /decisions",
+      "cadence": "15s cycles in market hours",
+      "invoker": "schedule",
+      "status": "hired",
+      "codeRoots": ["src/scripts/run-autonomous.ts", "src/autonomous", "src/bots"],
+      "cite": "docs/architecture/runtime-bots.md:5; fly.bots.toml:48 SKYNET_AUTONOMOUS_MODE = \"observe\"; fly.bots.toml:52 SKYNET_AUTONOMOUS_BOTS = \"sauron\"; docs/architecture/source/maps.json:1025; docs/architecture/README.md (runtime C4Container, Bot runtime)",
+      "station": "The trading floor: your bots, each a character with a strategy"
+    },
+    {
+      "id": "personas",
+      "department": "trading",
+      "name": "Bot personas",
+      "kind": "bot",
+      "job": "Nine strategy characters (Sauron, News Fader, Retail Investor, Futurist, Gold Bug, Day Trader, Rumor Trader, Banker, Prospector), each with a thesis and a lore line; members pick one as a character class when they add a bot",
+      "wakesOn": "the bot runtime's cycle",
+      "speaksOn": "intents per cycle; display identity on the observatory",
+      "cadence": "per cycle",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": [
+        "src/personas",
+        "src/observatory/persona-lore.ts",
+        "src/server/persona-classes.ts"
+      ],
+      "cite": "src/observatory/persona-lore.ts:1-12 and :64 sauron; src/server/persona-classes.ts:4-8 \"selectable character class in the /add flow\""
+    },
+    {
+      "id": "playbooks",
+      "department": "trading",
+      "name": "Playbooks and subscriptions",
+      "kind": "bot",
+      "job": "A playbook is a strategy run on a ticker (a pair); a subscription turns a pair on inside an account's allocation and points at the owner's dated conviction",
+      "wakesOn": "subscriptions and convictions carried on the controls poll",
+      "speaksOn": "what the book should hold each cycle; a failed conviction check stops new entries",
+      "cadence": "per cycle",
+      "invoker": "member",
+      "status": "hired",
+      "codeRoots": ["src/playbooks", "docs/architecture/playbook-anatomy.md"],
+      "cite": "docs/architecture/playbook-anatomy.md:54 and :81"
+    },
+    {
+      "id": "bot-controls",
+      "department": "trading",
+      "name": "Owner bot controls",
+      "kind": "in-app",
+      "job": "Owner toggles to suspend or resume bots and set the companion model, stored durably on the app volume and read by the bots",
+      "wakesOn": "Eric",
+      "speaksOn": "bot-controls.json, served on GET /controls",
+      "cadence": "on demand",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": ["src/server/bot-controls-store.ts"],
+      "cite": "src/server/bot-controls-store.ts:12 \"the durable state behind the Mission Control page\"; docs/architecture/README.md:22"
+    },
+    {
+      "id": "bots-catchup",
+      "department": "trading",
+      "name": "Bots deploy catch-up clock",
+      "kind": "workflow",
+      "job": "The one repo cron: starts a stopped bots machine, deploys a stranded bot fix via force_bots_deploy, reads pace, wakes the lanes, runs fitness contracts",
+      "wakesOn": "cron 7,22,37,52 * * * *; dispatch",
+      "speaksOn": "A pipeline dispatch, a machine start, [fitness] issues, a scan dispatch",
+      "cadence": "Every 15 minutes",
+      "invoker": "schedule",
+      "status": "hired",
+      "codeRoots": [
+        ".github/workflows/bots-catchup.yml",
+        "scripts/bots-start-stopped.sh",
+        "scripts/bots-deploy-preflight.mjs"
+      ],
+      "cite": ".github/workflows/bots-catchup.yml:31-34, 82-129; docs/ROUTINES.md:47"
+    },
+    {
+      "id": "calendar",
+      "department": "research",
+      "name": "Market-event calendar",
+      "kind": "service",
+      "job": "Forward calendar of dated things that move the traded names (prints, macro, launches, Treasury supply, geopolitics), one JSON file per event",
+      "wakesOn": "research PRs that add or amend event files",
+      "speaksOn": "query functions the app and campaigns read",
+      "cadence": "as files merge",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": [
+        "src/domain/market-events.ts",
+        "src/domain/market-events-data.ts",
+        "src/domain/market-events/"
+      ],
+      "cite": "src/domain/market-events.ts:1-15 \"an estimate may only WIDEN caution; date-keyed action requires confirmed\"",
+      "station": "The research desk: what is coming up, and what the house has written about it"
+    },
+    {
+      "id": "event-research",
+      "department": "research",
+      "name": "Event research lane",
+      "kind": "lane",
+      "job": "One Sonnet session per due event (matrix, max-parallel 8) writes the ledger and opens a research/<id> PR",
+      "wakesOn": "scan dispatch with a non-empty due list",
+      "speaksOn": "A research PR; a quota reading published to #4153",
+      "cadence": "Per tick, up to researchPerTick (normal 6)",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/prompts/event-research.md",
+        "research-dispatch-budget.json",
+        ".github/workflows/moneypenny-events.yml",
+        "scripts/moneypenny/events.mjs",
+        "docs/research/events/",
+        "scripts/event-scan.mjs"
+      ],
+      "cite": ".github/workflows/moneypenny-events.yml:564-600, 672 (sonnet, max-turns 150), 677-678, 772; research-dispatch-budget.json:3 (maxPerTick 6); .github/workflows/moneypenny-events.yml:564 build-events; docs/ROUTINES.md:44 May NOT \"trade; edit playbooks, guards, or earnings-calendar entries\"; scripts/moneypenny/events.mjs:154-165, 189-197 (RECONCILE_CAP 20)"
+    },
+    {
+      "id": "pulse-screen",
+      "department": "research",
+      "name": "Pulse screen (no model)",
+      "kind": "lane",
+      "job": "Screens interval-elapsed pulses without a model and opens a moneypenny/screen-* PR with the ledger rows",
+      "wakesOn": "push or scan",
+      "speaksOn": "A screen PR, auto-merge attempted",
+      "cadence": "Every push with due pulses",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": ["scripts/moneypenny/open-screen-pr.mjs", "scripts/event-material-scan.mjs"],
+      "cite": ".github/workflows/moneypenny-events.yml:337-388; scripts/moneypenny/open-screen-pr.mjs:1-4"
+    },
+    {
+      "id": "research-repair",
+      "department": "research",
+      "name": "Research PR sweep and stall repair",
+      "kind": "lane",
+      "job": "Finds an open research/<id> PR that stopped moving and frees the event it holds",
+      "wakesOn": "Push audit",
+      "speaksOn": "Rearm or close intents",
+      "cadence": "Every push",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": [
+        "scripts/moneypenny/research-pr-sweep.mjs",
+        ".github/prompts/moneypenny-event-stall-repair.md"
+      ],
+      "cite": "scripts/moneypenny/research-pr-sweep.mjs:1-4; scripts/moneypenny/audit.mjs:12; .github/workflows/moneypenny-repair.yml:227-246; .github/prompts/moneypenny-event-stall-repair.md:3-7"
+    },
+    {
+      "id": "guidance",
+      "department": "research",
+      "name": "Position guidance",
+      "kind": "service",
+      "job": "Reads market inputs live through the member's own account, checks each one's freshness against its source, adds the nearest research ledger's summary; the stake math runs in the browser",
+      "wakesOn": "GET /api/trade/guidance?symbol=",
+      "speaksOn": "market half of guidance plus freshness rows",
+      "cadence": "per request, 15s coalesce",
+      "invoker": "member",
+      "status": "hired",
+      "codeRoots": [
+        "src/server/guidance-route.ts",
+        "src/server/guidance-pulse.ts",
+        "src/server/guidance-market.ts"
+      ],
+      "cite": "src/server/guidance-route.ts:40-56 and :148 \"its nearest ledger... feeds the levers below\"; src/server/guidance-pulse.ts:6-14"
+    },
+    {
+      "id": "campaigns",
+      "department": "research",
+      "name": "Campaigns",
+      "kind": "service",
+      "job": "A market or sector people want to play, held as a record (storyline, sector, cast of symbols, forces, open questions) that links calendar events and news; three house campaigns plus members' own, each answering one landscape read (what moved, what is scheduled, what is reported, what the house has tested)",
+      "wakesOn": "A PR adding or editing src/domain/campaigns/<id>.json, a member's saved form, or `npm run campaign:landscape`",
+      "speaksOn": "the landscape read, every line marked measured, reported or estimated; event-scan --due rows name the campaigns that link them, and research dispatch ranks those first",
+      "cadence": "read at load",
+      "invoker": "session",
+      "status": "on trial",
+      "codeRoots": [
+        "src/domain/campaigns.ts",
+        "src/domain/campaigns/",
+        "src/domain/campaign-landscape.ts",
+        "scripts/campaign-links.mjs"
+      ],
+      "cite": "src/domain/campaigns.ts:1-9 \"so research can be steered by it (slice 5's landscape read, the narrator's questions in #6948)\""
+    },
+    {
+      "id": "symbol-sweep",
+      "department": "research",
+      "name": "Ticker sweep (symbol-sweep)",
+      "kind": "workflow",
+      "job": "Runs earnings-cycle + intraday-edges instruments per ticker, red-teams each, judges playbook fit",
+      "wakesOn": "'research X, Y, Z', 'run the sweep on'",
+      "speaksOn": "research docs under docs/research/",
+      "cadence": "on request",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".claude/workflows/symbol-sweep.js", "docs/research/multi-symbol-sweep.md"],
+      "cite": ".claude/workflows/symbol-sweep.js:7"
+    },
+    {
+      "id": "teardown",
+      "department": "research",
+      "name": "Reference teardown (teardown)",
+      "kind": "skill",
+      "job": "Redacts and decomposes another app's screens into named patterns with a borrow/adapt/skip call sheet",
+      "wakesOn": "screenshots of someone else's app",
+      "speaksOn": "comment on the plan issue; images in a private artifact",
+      "cadence": "on request",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".claude/skills/teardown/SKILL.md", "scripts/teardown/redact.mjs"],
+      "cite": "CLAUDE.md:426-431; scripts/teardown/redact.mjs:4"
+    },
+    {
+      "id": "intake",
+      "department": "research",
+      "name": "Link intake (intake)",
+      "kind": "skill",
+      "job": "Reads a dropped post/video/talk without an account, finds the primary source, records what it changes",
+      "wakesOn": "Eric pastes a link 'to scan'",
+      "speaksOn": "findings applied to process docs",
+      "cadence": "on request",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".claude/skills/intake/SKILL.md"],
+      "cite": ".claude/skills/intake/SKILL.md:3"
+    },
+    {
+      "id": "triage",
+      "department": "build",
+      "name": "Feedback triage",
+      "kind": "lane",
+      "job": "On a fresh feedback or fast-track label, self-readies a curated filing or a bug+fast-track; everything else waits in Backlog",
+      "wakesOn": "issues labeled feedback or fast-track",
+      "speaksOn": "The ready label, or nothing",
+      "cadence": "Per filing",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": ["scripts/moneypenny/index.mjs"],
+      "cite": ".github/workflows/moneypenny-events.yml:440-446; scripts/moneypenny/index.mjs:571-593 (triageFeedbackDecision)"
+    },
+    {
+      "id": "feedback-build",
+      "department": "build",
+      "name": "Feedback build lane (with reply resume)",
+      "kind": "lane",
+      "job": "Builds a ready feedback/bug issue end to end on a feedback/<n> branch and opens a PR; model picked from the issue's skynet-spec block: Haiku for one criterion and no assumptions, Sonnet for up to 3 criteria, Opus otherwise, including any issue with no spec block",
+      "wakesOn": "ready label, an unpark (needs-* or hold-merge removed), the retry sweep",
+      "speaksOn": "A PR, a receipt comment, one of four endings; needs-session via the guard",
+      "cadence": "Per ready issue, behind the admission gate",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": [
+        ".github/workflows/moneypenny-events.yml",
+        ".github/prompts/feedback-build.md",
+        "scripts/moneypenny/model-tier.mjs",
+        "scripts/moneypenny/feedback-guard.mjs",
+        "scripts/moneypenny/reply-resume.mjs",
+        "scripts/moneypenny/index.mjs"
+      ],
+      "cite": ".github/workflows/moneypenny-events.yml:483-492, 787-856 (build-feedback reads feedback-build.md; --model from route output at :846); scripts/moneypenny/model-tier.mjs:14-23; scripts/moneypenny/index.mjs:418-446 (claimFeedbackReply, three writes in order); .github/workflows/moneypenny-events.yml:511-521"
+    },
+    {
+      "id": "plan-build",
+      "department": "build",
+      "name": "Plan build lane (with continuation and relay)",
+      "kind": "lane",
+      "job": "Builds the slice a ready plan issue's state block names, on a plan/<n> branch",
+      "wakesOn": "A ready comment from OWNER/MEMBER/COLLABORATOR, the ready label, an unpark, the retry or continuation sweep",
+      "speaksOn": "A slice PR, a state-block edit, needs-eric when stuck",
+      "cadence": "Per ready plan",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": [
+        ".github/prompts/plan-build.md",
+        "scripts/moneypenny/plan-claim.mjs",
+        "scripts/moneypenny/continuation.mjs",
+        "scripts/moneypenny/state-block.mjs",
+        "scripts/moneypenny/relay.mjs"
+      ],
+      "cite": ".github/workflows/moneypenny-events.yml:531-541, 962-1014; .github/prompts/plan-build.md:112 ('Branch plan/<issue-number>'); scripts/moneypenny/continuation.mjs:2-3, 14-20; scripts/moneypenny/events.mjs:160-165; work-mode.json:25-31; scripts/moneypenny/relay.mjs:1-3, 9-16 ('24 closed issues still carry a remainder label'); scripts/moneypenny/events.mjs:154-175"
+    },
+    {
+      "id": "retry-sweep",
+      "department": "build",
+      "name": "Retry sweep (claims the next ready issue)",
+      "kind": "lane",
+      "job": "Claims the top-ranked admissible ready issue in either lane; on a push it only peeks, then re-dispatches itself as scan",
+      "wakesOn": "workflow_dispatch scan (from the push re-dispatch, the wake, or the clock)",
+      "speaksOn": "A lease and a build job",
+      "cadence": "Every push that finds work; every wake",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": ["scripts/moneypenny/index.mjs", "scripts/moneypenny/labels.mjs"],
+      "cite": ".github/workflows/moneypenny-events.yml:416-429, 550-555; scripts/moneypenny/index.mjs:767, 794 (peekNext, claimNext); scripts/moneypenny/labels.mjs:306 (notPullableReason)"
+    },
+    {
+      "id": "design-build",
+      "department": "build",
+      "name": "Design build lane",
+      "kind": "routine",
+      "job": "Builds the artboards marked build on a design canvas and leaves the receipt on the canvas",
+      "wakesOn": "A one-tap POST of the canvas URL to the routine's API trigger",
+      "speaksOn": "A PR and a canvas receipt",
+      "cadence": "Per tap",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".github/prompts/design-build.md"],
+      "cite": "docs/HANDOFFS.md:29-30, 74-79 ('Read .github/prompts/design-build.md'); docs/ROUTINES.md:44 ('the design canvas lane runs as a claude.ai routine, not here')"
+    },
+    {
+      "id": "human-lane",
+      "department": "build",
+      "name": "Human-directed lane (@claude on an issue)",
+      "kind": "workflow",
+      "job": "Any comment from OWNER/MEMBER/COLLABORATOR on an issue or PR thread, or a new issue with @claude, starts or steers an Opus session",
+      "wakesOn": "issues opened/labeled with @claude, issue_comment, PR review comment",
+      "speaksOn": "Comments, PRs",
+      "cadence": "Per comment; cancel-in-progress per thread",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".github/workflows/claude.yml", ".github/prompts/interactive.md"],
+      "cite": ".github/workflows/claude.yml:85-91, 110-120, 182 (claude-opus-5-5, max-turns 80), 189-190"
+    },
+    {
+      "id": "issue-shaper",
+      "department": "build",
+      "name": "Issue shaper (issue)",
+      "kind": "skill",
+      "job": "Files or rewrites a GitHub issue as a capsule for a human and a zero-context build session",
+      "wakesOn": "'file this as an issue'; any fan-out route; bottleneck capture",
+      "speaksOn": "a GitHub issue, linted by issue-lint.mjs",
+      "cadence": "many times a day",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/skills/issue/SKILL.md", "scripts/issue-lint.mjs", "docs/ISSUES.md"],
+      "cite": "CLAUDE.md:422-423; docs/grind/interrogate.instructions.md:20"
+    },
+    {
+      "id": "ears",
+      "department": "build",
+      "name": "Requirements writer (ears)",
+      "kind": "skill",
+      "job": "Turns a raw request into EARS-format requirements and scaffolds matching BDD specs",
+      "wakesOn": "/fitness step 1 (an outcome or incident becomes one EARS line); writing acceptance criteria",
+      "speaksOn": "acceptance criteria and spec scaffolds",
+      "cadence": "on demand",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/skills/ears/SKILL.md"],
+      "cite": "docs/COACHES.md:161-163"
+    },
+    {
+      "id": "work-issues",
+      "department": "build",
+      "name": "Live backlog burn-down (work-issues)",
+      "kind": "skill",
+      "job": "Pulls the next Ready issue the admission gate admits, echoes the ask, builds in a worktree, ships, repeats",
+      "wakesOn": "'work through the backlog', 'burn down issues'; needs-session issues",
+      "speaksOn": "echo comment on the issue, PRs",
+      "cadence": "per live session",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".claude/skills/work-issues/SKILL.md", "scripts/moneypenny/admission.mjs"],
+      "cite": ".github/prompts/moneypenny-conflict-repair.md:34; scripts/moneypenny/admission.mjs:650"
+    },
+    {
+      "id": "redesign",
+      "department": "build",
+      "name": "Screen redesign loop and its board (redesign)",
+      "kind": "skill",
+      "job": "Align, scope, design rounds (1-5 shapes), learn-forward retro for one screen",
+      "wakesOn": "'redesign the trade form'; a 'Start redesign: <id> (<route>)' comment from the feedback board",
+      "speaksOn": "round pages (steer machinery), a filed build issue, docs/PATTERNS.md rows",
+      "cadence": "per screen",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [
+        ".claude/skills/redesign/SKILL.md",
+        "scripts/redesign/",
+        "docs/process/REDESIGN.md",
+        "scripts/redesign/board.mjs"
+      ],
+      "cite": "scripts/redesign/board-client.js:4, 86; .claude/skills/redesign/SKILL.md:28; docs/process/REDESIGN.md:466-471 \"Each Start press arrives as a comment... open one redesign session for that screen\"; #5143"
+    },
+    {
+      "id": "telestrator",
+      "department": "build",
+      "name": "Render-note translator (telestrator)",
+      "kind": "skill",
+      "job": "Turns 'this looks terrible / a 30/100' into a named technical cause and fix",
+      "wakesOn": "any reaction to a rendered frame",
+      "speaksOn": "cause -> fix table in session",
+      "cadence": "on 3D feedback",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".claude/skills/telestrator/SKILL.md"],
+      "cite": "CLAUDE.md:424-425"
+    },
+    {
+      "id": "vision",
+      "department": "build",
+      "name": "Art direction writer (vision)",
+      "kind": "skill",
+      "job": "Writes forged-epic art direction and compiles it into buildable contracts and generator prompts",
+      "wakesOn": "'make it feel alive', a new 3D piece brief",
+      "speaksOn": "prose -> mechanics table, bounded prompts (e.g. docs/art/EYE.md)",
+      "cadence": "rare; docs/art/EYE.md last touched 2026-09-25",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".claude/skills/vision/SKILL.md", "docs/art/"],
+      "cite": ".claude/output-styles/orient.md:58-59; CLAUDE.md:425"
+    },
+    {
+      "id": "mermaid",
+      "department": "build",
+      "name": "Diagram expert (mermaid)",
+      "kind": "skill",
+      "job": "Picks the Mermaid type by story and proves it renders on GitHub; loads one reference card on demand",
+      "wakesOn": "any mermaid block being written or reviewed",
+      "speaksOn": "diagrams in PRs, issues, architecture pages",
+      "cadence": "on demand",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/skills/mermaid/", "scripts/mermaid-skill-scan.mjs"],
+      "cite": "CLAUDE.md:441-444; scripts/ship.sh:256"
+    },
+    {
+      "id": "pipeline",
+      "department": "quality",
+      "name": "Pipeline checks: verify, integration tests, stability budget",
+      "kind": "gate",
+      "job": "PR checks: commitlint, typecheck, lint, tests; Playwright against an offline build; memory budget in a 512 MB container",
+      "wakesOn": "pull_request opened/synchronize/reopened/ready_for_review/edited; e2e also on push main",
+      "speaksOn": "Required checks",
+      "cadence": "Per PR push",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [".github/workflows/pipeline.yml", "e2e/"],
+      "cite": ".github/workflows/pipeline.yml:24-41, 68-69, 205-215, 274-290"
+    },
+    {
+      "id": "envelope",
+      "department": "quality",
+      "name": "Envelope gate (the irreversible class)",
+      "kind": "gate",
+      "job": "Mechanical answer to 'is this the irreversible class?': protected path globs plus a no-new-runtime-dependency rule; red on feedback/, research/, design/ branches",
+      "wakesOn": "Every arm attempt; ship.sh checkarm; a lane's verify",
+      "speaksOn": "Refuses to arm; red check on lane branches",
+      "cadence": "Per PR",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": ["envelope.json", "scripts/envelope-scan.mjs"],
+      "cite": "envelope.json:4-5 (lanes, allowNewRuntimeDeps false), :8, :16, :88; .github/workflows/pipeline.yml:494"
+    },
+    {
+      "id": "fitness-contracts",
+      "department": "quality",
+      "name": "Fitness contracts and their writer (fitness)",
+      "kind": "gate",
+      "job": "Runs the must-stay-true contracts and keeps one [fitness] <id> issue per failing contract",
+      "wakesOn": "The 15-minute clock",
+      "speaksOn": "[fitness] issues, assigned once the fix budget is spent",
+      "cadence": "Every 15 minutes",
+      "invoker": "schedule",
+      "status": "hired",
+      "codeRoots": [
+        "scripts/fitness.mjs",
+        ".claude/skills/fitness/SKILL.md",
+        "scripts/fitness-audit.mjs"
+      ],
+      "cite": ".github/workflows/bots-catchup.yml:160-171; docs/ROUTINES.md:47; .claude/skills/retro/SKILL.md:68; scripts/fitness-audit.mjs:8; docs/COACHES.md:558-559"
+    },
+    {
+      "id": "ci-repair",
+      "department": "quality",
+      "name": "CI repair lane",
+      "kind": "workflow",
+      "job": "A failed run on main of five watched workflows files or reopens one ci-failure capsule per signature and dispatches an Opus repair session; four loop guards",
+      "wakesOn": "workflow_run completed for Events, Pipeline, Autonomy ops, Fly logs, Companion eval",
+      "speaksOn": "A ci-failure issue, a repair PR",
+      "cadence": "Per failure",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/workflows/moneypenny-repair.yml",
+        "scripts/moneypenny/repair.mjs",
+        ".github/prompts/moneypenny-ci-repair.md",
+        "scripts/moneypenny/red-session-pr.mjs",
+        "scripts/moneypenny/red-lane-pr.mjs"
+      ],
+      "cite": ".github/workflows/moneypenny-repair.yml:59-66, 98-120, 189-193; scripts/moneypenny/repair.mjs:24-31 (loop guards); scripts/moneypenny/red-session-pr.mjs:3-22 ('One attempt per PR, behind the work dial and the spend breaker'); scripts/moneypenny/repair.mjs:63; scripts/moneypenny/red-lane-pr.mjs:3-15 ('THE ACT IS TO CLOSE IT AND RELEASE THE ISSUE')"
+    },
+    {
+      "id": "conflict-repair",
+      "department": "quality",
+      "name": "Conflict repair",
+      "kind": "lane",
+      "job": "Resolves a PR conflicted against main with a merge commit",
+      "wakesOn": "workflow_dispatch pr_number from the stall audit",
+      "speaksOn": "A pushed merge commit for a disjoint conflict; a needs-session hand-off on an issue (or a closed machine-lane PR) for a same-logic one; needs-eric only for the irreversible class. The stall audit stops re-dispatching after 3 repairs and labels needs-eric.",
+      "cadence": "Per conflict",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": [".github/prompts/moneypenny-conflict-repair.md"],
+      "cite": ".github/workflows/moneypenny-repair.yml:202-217; docs/architecture/source/maps.json:1316 ('pr_number, up to 3 attempts then needs-eric')"
+    },
+    {
+      "id": "stall-audit",
+      "department": "quality",
+      "name": "Stall audit and watchdogs",
+      "kind": "lane",
+      "job": "Flags stalled receipts, silent feedback, unclaimed plan flips and conflicted PRs; clears stale in-progress; hands conflicts and stalls to repair",
+      "wakesOn": "push to main (--audit)",
+      "speaksOn": "Comments, labels, repair dispatches",
+      "cadence": "Every push",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        "scripts/moneypenny/audit.mjs",
+        "scripts/moneypenny/capsule-stall.mjs",
+        "scripts/moneypenny/burst-alarm.mjs",
+        "scripts/moneypenny/clock-watch.mjs"
+      ],
+      "cite": ".github/workflows/moneypenny-events.yml:247-253; scripts/moneypenny/audit.mjs:145, 178-290 (flag-stall, flag-silent-feedback, flag-plan-stall, flag-conflict, clear-in-progress); docs/MONEYPENNY.md:90-96; scripts/moneypenny/burst-alarm.mjs:1-3; scripts/moneypenny/capsule-stall.mjs:1-4; scripts/moneypenny/clock-watch.mjs:1-4; scripts/moneypenny/audit.mjs:6; docs/ROUTINES.md:47"
+    },
+    {
+      "id": "lesson-drafter",
+      "department": "quality",
+      "name": "Lessons: drafter and blameless retro (retro)",
+      "kind": "lane",
+      "job": "When a repair capsule closes, drafts its docs/LESSONS.md entry and opens it as a PR",
+      "wakesOn": "issues closed on a ci-failure capsule",
+      "speaksOn": "A LESSONS PR",
+      "cadence": "Per capsule close",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        "scripts/moneypenny/lesson-draft.mjs",
+        ".claude/skills/retro/SKILL.md",
+        "scripts/incident-scan.mjs",
+        "docs/LESSONS.md"
+      ],
+      "cite": "scripts/moneypenny/lesson-draft.mjs:1-4; scripts/moneypenny/index.mjs:180; docs/COACHES.md:169; CLAUDE.md:445, 511"
+    },
+    {
+      "id": "dep-warden",
+      "department": "quality",
+      "name": "Dependency PR reviewer (dep-warden)",
+      "kind": "agent",
+      "job": "Reads changelogs on dependabot PRs, verifies, merges patch/minor on green, escalates majors",
+      "wakesOn": "dependabot opening a PR",
+      "speaksOn": "auto-merge via ship.sh automerge, or escalation",
+      "cadence": "27 PRs since 2026-10-01",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [".claude/agents/dep-warden.md", ".github/workflows/moneypenny-events.yml"],
+      "cite": ".github/workflows/moneypenny-events.yml:140-141; docs/COACHES.md:534"
+    },
+    {
+      "id": "reviewer",
+      "department": "quality",
+      "name": "House-standards reviewer (reviewer)",
+      "kind": "agent",
+      "job": "Reads a diff against this repo's standards; process-file lens reads a rule diff as the next session will",
+      "wakesOn": "/ship when CLAUDE.md, .claude/** or .github/prompts/*.md is in the diff; secretary Blue team; 'review this'",
+      "speaksOn": "findings returned to the session; 'Process-file lens: <n> findings' in the PR body",
+      "cadence": "3-4 runs by 2026-11-01",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/agents/reviewer.md"],
+      "cite": ".claude/skills/ship/SKILL.md:36-37; docs/COACHES.md:532"
+    },
+    {
+      "id": "red-team",
+      "department": "quality",
+      "name": "Security attacker (red-team)",
+      "kind": "agent",
+      "job": "Adversarially attacks a bounded diff on auth, invite gate, input parsing; returns an attack/defense matrix",
+      "wakesOn": "diffs touching auth/credentials/parsing; secretary Red team; reviewer's recommendation",
+      "speaksOn": "attack/defense matrix to the caller",
+      "cadence": "1 run by 2026-11-01",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/agents/red-team.md"],
+      "cite": "docs/COACHES.md:533; .claude/skills/secretary/SKILL.md:138; .claude/agents/reviewer.md:93"
+    },
+    {
+      "id": "linguist",
+      "department": "quality",
+      "name": "Reader-comprehension checker (linguist)",
+      "kind": "agent",
+      "job": "Checks whether persona copy or an issue/PR fold lands for its cold reader",
+      "wakesOn": "named by orient.md, reviewer boundary, issue-lint hint",
+      "speaksOn": "comprehension findings",
+      "cadence": "0 runs in 1,048 transcripts",
+      "invoker": "none",
+      "status": "hired",
+      "codeRoots": [".claude/agents/linguist.md"],
+      "cite": "docs/COACHES.md:535 'nothing runs it | 0'"
+    },
+    {
+      "id": "evals-expert",
+      "department": "quality",
+      "name": "Evals expert (evals-expert)",
+      "kind": "agent",
+      "job": "Author mode writes a check; blind grader mode writes deliberate bugs without reading the spec",
+      "wakesOn": "/fitness steps 7 and 10; 'how would we know if this broke'",
+      "speaksOn": "bug list + attack returned to the caller",
+      "cadence": "new 2026-11-01; nothing automatic",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/agents/evals-expert.md"],
+      "cite": "docs/COACHES.md:531; .claude/skills/fitness/SKILL.md:74 'nothing starts it on its own'"
+    },
+    {
+      "id": "post-merge-audit",
+      "department": "quality",
+      "name": "Post-merge correctness audit",
+      "kind": "workflow",
+      "job": "Reviews merged PRs against main per lens, refutes each high/medium finding twice",
+      "wakesOn": "after a surge wave, governor cycle or burn-down",
+      "speaksOn": "confirmed findings for a session to file as bug + fast-track; receipts in post-merge-audit.jsonl",
+      "cadence": "per wave",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/workflows/post-merge-audit.js", "docs/review/"],
+      "cite": ".claude/skills/surge/SKILL.md:89; scripts/agent-meter.mjs:311; scripts/newsletter/gather.mjs:188"
+    },
+    {
+      "id": "review-lenses",
+      "department": "quality",
+      "name": "Review lenses and their replay",
+      "kind": "workflow",
+      "job": "Replays one review lens over labelled PRs and scores it before it runs for real",
+      "wakesOn": "a lens under docs/review/lenses changes",
+      "speaksOn": "results scored by scripts/review-replay.mjs",
+      "cadence": "per lens change",
+      "invoker": "session",
+      "status": "on trial",
+      "codeRoots": [
+        ".claude/workflows/review-replay.js",
+        "scripts/review-replay.mjs",
+        "docs/review/lenses/"
+      ],
+      "cite": "docs/review/README.md:37, 40-45; docs/review/README.md:11 'no lens below has run on any PR'; docs/review/README.md:35"
+    },
+    {
+      "id": "intent-replay",
+      "department": "quality",
+      "name": "How-Eric-writes replay (intent-replay)",
+      "kind": "workflow",
+      "job": "Replays real messages with and without the how-he-writes page, one blind judge",
+      "wakesOn": "docs/READERS.md page or the eval set changes; dated check in LEARNING-LOOP",
+      "speaksOn": "results scored by scripts/intent-replay.mjs",
+      "cadence": "per change / dated check",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/workflows/intent-replay.js", "docs/evals/how-he-writes-set.json"],
+      "cite": ".claude/workflows/intent-replay.js:5-8"
+    },
+    {
+      "id": "governor",
+      "department": "quality",
+      "name": "Debt head coach and drills (governor)",
+      "kind": "skill",
+      "job": "One dispatch cycle per coach: WIP check, gate-named target, collision check, cheap athlete via the governor chore, one cycle PR; also owns the merge-policy table",
+      "wakesOn": "'run the coaches', 'clean up the code', 'burn down debt'",
+      "speaksOn": "a cycle PR; ratcheted *-budget.json",
+      "cadence": "0 cycles in the 30-day sunset window; nothing schedules it",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [
+        ".claude/skills/governor/SKILL.md",
+        "docs/grind/governor.instructions.md",
+        ".claude/skills/decompose/SKILL.md",
+        ".claude/skills/dedupe/SKILL.md",
+        ".claude/skills/bury/SKILL.md",
+        ".claude/skills/backfill/SKILL.md"
+      ],
+      "cite": "CLAUDE.md:383-384; docs/COACHES.md:464-466, 471; #4527 'nothing triggers the debt correction loop — 0 ratchets in 30 days' (OPEN); docs/COACHES.md:434-435, 473, 536-539; docs/grind/README.md:178"
+    },
+    {
+      "id": "config-audit",
+      "department": "quality",
+      "name": "Unused-capability check (config-audit)",
+      "kind": "gate",
+      "job": "Reference-counts .claude capabilities nothing routes to, owner-claim contradictions, recurring corrections",
+      "wakesOn": "daily digest Routine ride-along",
+      "speaksOn": "digest Needs-you tier",
+      "cadence": "daily",
+      "invoker": "schedule",
+      "status": "hired",
+      "codeRoots": ["scripts/config-audit.mjs"],
+      "cite": "scripts/config-audit.mjs:2-4, 16-21; docs/digests/2026-11-07.md:17 'Orphan ... sections were empty'"
+    },
+    {
+      "id": "admission",
+      "department": "staff",
+      "name": "Admission gate",
+      "kind": "gate",
+      "job": "Between ready and a build start: refuses on halt; on conserve unless fast-track; at the in-flight cap (one fast-track may go over it at a time); at the started-plan cap for a fresh plan; and on the surface fence (another build on the same Surface), which fast-track does not bypass. A refused issue keeps ready and holds no lease",
+      "wakesOn": "Every claim attempt (feedback, plan, retry sweep, continuation)",
+      "speaksOn": "admit / one queue note on the issue",
+      "cadence": "Per claim",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": ["scripts/moneypenny/admission.mjs"],
+      "cite": "scripts/moneypenny/admission.mjs:1-4, 161-200 (admitBuild); work-mode.json:25-31 (normal inFlightCap 3, startedPlanCap 4)"
+    },
+    {
+      "id": "work-dial",
+      "department": "staff",
+      "name": "Work dial and spend breaker",
+      "kind": "gate",
+      "job": "One work-mode:<halt|conserve|normal|surge> label on #4153 sets every lane's caps; a tap clears the other label and writes an end date",
+      "wakesOn": "A work-mode label added to #4153: halt or normal by anyone, conserve by a session after Eric's phrase, surge by Eric alone; the spend breaker trips itself when 4h spend crosses research-circuit-breaker.json's line",
+      "speaksOn": "Caps every lane reads; #4153's title",
+      "cadence": "Read before every pull",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [
+        "work-mode.json",
+        "scripts/moneypenny/work-mode.mjs",
+        "scripts/moneypenny/dial-tap.mjs",
+        "scripts/moneypenny/work-mode-title.mjs",
+        "research-circuit-breaker.json",
+        "scripts/moneypenny/circuit-breaker.mjs",
+        "scripts/moneypenny/work-gate.mjs"
+      ],
+      "cite": "work-mode.json:4 (trackingIssue 4153), :25-40; scripts/moneypenny/work-mode.mjs:365-371; scripts/moneypenny/dial-tap.mjs:1-4; research-circuit-breaker.json:3-5; scripts/moneypenny/work-gate.mjs:1-4"
+    },
+    {
+      "id": "assignments",
+      "department": "staff",
+      "name": "Decisions for Eric: ask cards, assignment, read-back",
+      "kind": "lane",
+      "job": "needs-eric plus a Needs-from-you callout becomes a GitHub assignment to ejclark with a card of options, prediction and what silence does; at most 3 new a tick",
+      "wakesOn": "Push sweep",
+      "speaksOn": "An assignment and one comment; unassign when the label goes",
+      "cadence": "Every push",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        "scripts/moneypenny/assignments.mjs",
+        "scripts/moneypenny/ask-card.mjs",
+        "scripts/moneypenny/answer-readback.mjs",
+        "scripts/moneypenny/decision-callout.mjs"
+      ],
+      "cite": "scripts/moneypenny/assignments.mjs:1-5, 18-29 (ASSIGN_CAP); scripts/moneypenny/ask-card.mjs:1-4; scripts/moneypenny/answer-readback.mjs:1-14; .github/workflows/moneypenny-events.yml:463-467; scripts/moneypenny/decision-callout.mjs:1-4"
+    },
+    {
+      "id": "closers",
+      "department": "staff",
+      "name": "Shipped and plan closers",
+      "kind": "lane",
+      "job": "Close feedback and research issues whose work merged, and plans whose sub-issues are all done",
+      "wakesOn": "Push sweep",
+      "speaksOn": "Issue closes",
+      "cadence": "Every push",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": ["scripts/moneypenny/shipped.mjs", "scripts/moneypenny/plan-close.mjs"],
+      "cite": "scripts/moneypenny/shipped.mjs:1-5; scripts/moneypenny/plan-close.mjs:1-4"
+    },
+    {
+      "id": "digest",
+      "department": "staff",
+      "name": "Daily digest (secretary)",
+      "kind": "routine",
+      "job": "When digest-scan says due, writes the three-tier digest with ride-along audits and ships it; push-notifies the needs-you count",
+      "wakesOn": "claude.ai Routine daily 12:00",
+      "speaksOn": "docs/digests/<date>.md via /ship; a push notification",
+      "cadence": "Daily",
+      "invoker": "schedule",
+      "status": "hired",
+      "codeRoots": [
+        ".claude/skills/secretary/SKILL.md",
+        "scripts/digest-scan.mjs",
+        "scripts/newsletter.mjs",
+        "docs/digests/"
+      ],
+      "cite": "docs/ROUTINES.md:45; scripts/digest-scan.mjs:370 (folds in unseen asks); docs/ROUTINES.md:45-46; scripts/digest-scan.mjs:450 'DUE (...); run /secretary'"
+    },
+    {
+      "id": "newsletter",
+      "department": "staff",
+      "name": "Weekly newsletter",
+      "kind": "routine",
+      "job": "Writes the closed ISO week's edition, or posts the week so far",
+      "wakesOn": "claude.ai Routine Monday 00:05 UTC, or Run now",
+      "speaksOn": "docs/newsletters/<week>.md, one comment on #7024, a push line",
+      "cadence": "Weekly",
+      "invoker": "schedule",
+      "status": "hired",
+      "codeRoots": ["scripts/newsletter.mjs"],
+      "cite": "docs/ROUTINES.md:46"
+    },
+    {
+      "id": "steer",
+      "department": "staff",
+      "name": "Steering pages (steer)",
+      "kind": "skill",
+      "job": "Gathers shipped / needs-Eric / queued, builds one page of pictures, publishes, reads his taps back into issue comments and label moves",
+      "wakesOn": "'steer', 'the morning page', 'what needs me', 'steered'",
+      "speaksOn": "a published steering page; footed issue comments and label moves",
+      "cadence": "per touch point (twice daily by working agreement; no Routine row)",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".claude/skills/steer/SKILL.md", "scripts/steer/"],
+      "cite": ".claude/skills/steer/SKILL.md:3-6; scripts/steer/round-header.mjs:20"
+    },
+    {
+      "id": "board",
+      "department": "staff",
+      "name": "Orchestration board sync and setup",
+      "kind": "service",
+      "job": "Keeps the 'Skynet Capital — Orchestration' project's Status, Priority and card fields matching each issue's labels and state",
+      "wakesOn": "Every issues event",
+      "speaksOn": "Board cards (PROJECTS_PAT, not the App token)",
+      "cadence": "Per issue event",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        "scripts/moneypenny/projects-sync.mjs",
+        "scripts/moneypenny/projects.mjs",
+        "scripts/moneypenny/projects-priority.mjs",
+        "scripts/moneypenny/projects-fields.mjs",
+        ".github/workflows/board-sync.yml",
+        "scripts/moneypenny/pr-in-progress.mjs",
+        "scripts/moneypenny/projects-reconcile.mjs",
+        ".github/workflows/projects-setup.yml",
+        "scripts/moneypenny/projects-setup.mjs",
+        "scripts/moneypenny/projects-views.mjs",
+        "scripts/moneypenny/projects-backfill.mjs"
+      ],
+      "cite": ".github/workflows/moneypenny-events.yml:1077-1094; scripts/moneypenny/projects.mjs:19-44, 390-420 (statusForIssue); .github/workflows/board-sync.yml:10-29, 48-92; .github/workflows/projects-setup.yml:32-84; scripts/moneypenny/projects-views.mjs:1-4"
+    },
+    {
+      "id": "pace",
+      "department": "staff",
+      "name": "Weekly pace reading",
+      "kind": "service",
+      "job": "Report-only reading of the week's quota use, kept on #4153's title and body",
+      "wakesOn": "The 15-minute clock; build legs publishing usage",
+      "speaksOn": "#4153 title (e.g. 'pace: week 43% used')",
+      "cadence": "Every 15 minutes",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": ["scripts/moneypenny/quota.mjs", "scripts/moneypenny/pace-reading.mjs"],
+      "cite": ".github/workflows/bots-catchup.yml:134-142; scripts/moneypenny/quota.mjs:1-4; .github/workflows/moneypenny-events.yml:772"
+    },
+    {
+      "id": "orient",
+      "department": "staff",
+      "name": "Opening-move router (Orient output style)",
+      "kind": "other",
+      "job": "Loads on every prompt: names the situation, interrogates compounding directives, routes to the skill/agent whose 'Use when' matches",
+      "wakesOn": "every user prompt (default output style)",
+      "speaksOn": "the response shape; routes to /grind interrogate chore, /journey, /code-review, /security-review",
+      "cadence": "every turn",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/output-styles/orient.md"],
+      "cite": ".claude/settings.json:2 \"outputStyle\": \"Orient\"; .claude/output-styles/orient.md:57-60"
+    },
+    {
+      "id": "interrogate",
+      "department": "staff",
+      "name": "Directive interrogation chore",
+      "kind": "workflow",
+      "job": "Red/blue/tiger/yellow pass on a compounding directive; one call sheet on the issue plus a routing label",
+      "wakesOn": "Orient step 2 when an objection survives; the plan build lane",
+      "speaksOn": "call sheet comment + routing label on the issue",
+      "cadence": "per compounding directive",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": ["docs/grind/interrogate.instructions.md"],
+      "cite": ".claude/output-styles/orient.md:31-32; .github/prompts/plan-build.md:79"
+    },
+    {
+      "id": "clear-path",
+      "department": "staff",
+      "name": "Clear-path readiness judge",
+      "kind": "workflow",
+      "job": "Judges issues against four clear-path checks, refutes each positive twice, returns survivors; posts nothing",
+      "wakesOn": "surge pass over the triage backlog, or a session batch",
+      "speaksOn": "a JSON result a session feeds to scripts/clear-path-post.mjs (ready label + footed comment)",
+      "cadence": "per surge wave",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/workflows/clear-path-flip.js"],
+      "cite": ".claude/workflows/clear-path-flip.js:5-8; .claude/skills/surge/SKILL.md:83"
+    },
+    {
+      "id": "dream",
+      "department": "staff",
+      "name": "Memory review (dream)",
+      "kind": "skill",
+      "job": "Reviews auto-memory against recent sessions, hands back at most 5 evidence-backed changes; changes nothing itself",
+      "wakesOn": "'dream', 'review memory', 'the same correction keeps coming back'",
+      "speaksOn": "a take/discard page; promoted changes via run-memory.mjs and a PR",
+      "cadence": "on request; SKILL says do not schedule until score clears 30% taken",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [
+        ".claude/skills/dream/SKILL.md",
+        ".claude/workflows/dream.js",
+        "scripts/dream-digest.mjs",
+        "scripts/run-memory.mjs"
+      ],
+      "cite": ".claude/skills/dream/SKILL.md:6-8, 15, 36-37; CLAUDE.md:421"
+    },
+    {
+      "id": "charter",
+      "department": "staff",
+      "name": "Roster gatekeeper: hire, bench, retire (charter)",
+      "kind": "skill",
+      "job": "Researches and specifies a new agent or re-scopes/sunsets one; REJECT is a normal verdict",
+      "wakesOn": "'we need an agent for X'; sunset passes",
+      "speaksOn": "an agent file or a recorded reject in docs/COACHES.md",
+      "cadence": "rare; last roster pass 2026-11-01, linguist re-pass due 2026-12-31",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".claude/skills/charter/SKILL.md", "docs/COACHES.md"],
+      "cite": "CLAUDE.md:432; docs/COACHES.md:535, 545-546"
+    },
+    {
+      "id": "journey",
+      "department": "staff",
+      "name": "Reasoning record (journey)",
+      "kind": "skill",
+      "job": "Banks a long code-free reasoning exchange as a human-readable record",
+      "wakesOn": "Orient's wind-down check; 'capture our journey'",
+      "speaksOn": "docs/JOURNEYS/<slug>.md, validated by journey-scan",
+      "cadence": "rare: 3 records on main",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [
+        ".claude/skills/journey/SKILL.md",
+        "scripts/journey-scan.mjs",
+        "docs/JOURNEYS/"
+      ],
+      "cite": ".claude/output-styles/orient.md:60; scripts/journey-scan.mjs:19 JOURNEY_DIR; docs/JOURNEYS/ holds 3 records + TEMPLATE.md"
+    },
+    {
+      "id": "surge",
+      "department": "staff",
+      "name": "Quota surge (surge)",
+      "kind": "skill",
+      "job": "Turns the work-mode dial to surge until the reset, runs waves of child sessions, flips clear-path issues and audits what merged",
+      "wakesOn": "Eric's own words only: 'use it or lose it', 'surge'",
+      "speaksOn": "child sessions, flips via clear-path-post.mjs, bug + fast-track issues, one digest on #4153",
+      "cadence": "before a weekly quota reset, on his word",
+      "invoker": "eric",
+      "status": "hired",
+      "codeRoots": [".claude/skills/surge/SKILL.md"],
+      "cite": ".claude/skills/surge/SKILL.md:3-10, 83, 89"
+    },
+    {
+      "id": "router",
+      "department": "platform",
+      "name": "Event router and its wakes (Moneypenny Events)",
+      "kind": "workflow",
+      "job": "One router for every issue-driven automation: decides intents purely, then executes them with the App token",
+      "wakesOn": "Every push to main, issue labeled/unlabeled/closed/reopened, new issue comments, dependabot PR opened, scan/audit/release-claim dispatch",
+      "speaksOn": "Issues, labels, comments, claim leases, a re-dispatch of itself as scan",
+      "cadence": "Every merge is the tick; no cron",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/workflows/moneypenny-events.yml",
+        "scripts/moneypenny/index.mjs",
+        "scripts/moneypenny/wake.mjs",
+        "scripts/moneypenny/clock-wake.mjs"
+      ],
+      "cite": ".github/workflows/moneypenny-events.yml:53-111 (triggers, 'EVERY MERGE TO MAIN IS THE TICK — no cron'); scripts/moneypenny/index.mjs:175-186 (route()); scripts/moneypenny/wake.mjs:4-12; scripts/moneypenny/index.mjs:176-180; docs/ROUTINES.md:69-73; .github/workflows/bots-catchup.yml:144-158; docs/ROUTINES.md:47 (bounds the 75.8h gap at about 2h15m)"
+    },
+    {
+      "id": "claim-lease",
+      "department": "platform",
+      "name": "Claim lease (one builder per issue)",
+      "kind": "service",
+      "job": "A 2h compare-and-set lease under refs/tags/claim/<slug> so one issue is built by one run",
+      "wakesOn": "A claim step or a live session's --hold",
+      "speaksOn": "A tag ref; release on failure; --release-claim dispatch button",
+      "cadence": "Per claim",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": ["scripts/moneypenny/index.mjs", "scripts/moneypenny/claim-lease.mjs"],
+      "cite": "scripts/moneypenny/index.mjs:206-223 ('THE LEASE LIVES UNDER refs/tags/'); scripts/moneypenny/index.mjs:188-198 (release is a dispatch button only)"
+    },
+    {
+      "id": "app-identity",
+      "department": "platform",
+      "name": "GitHub App identity (Moneypenny)",
+      "kind": "service",
+      "job": "The token every lane writes with; its writes start further workflow runs where GITHUB_TOKEN's do not",
+      "wakesOn": "Minted per job",
+      "speaksOn": "Every lane comment, label, PR and arm",
+      "cadence": "Per job",
+      "invoker": "lane",
+      "status": "hired",
+      "codeRoots": [".github/actions/app-token/action.yml", "docs/MONEYPENNY.md"],
+      "cite": "docs/MONEYPENNY.md:184-192 ('today that's skynet-envoy[bot]'); .github/workflows/bots-catchup.yml:72"
+    },
+    {
+      "id": "arm-merge",
+      "department": "platform",
+      "name": "Auto-merge arm and stranded-PR rearm",
+      "kind": "workflow",
+      "job": "The only arming path: after verify and integration tests (and stability) pass, re-reads live hold-merge, runs the envelope check, arms squash with the App token",
+      "wakesOn": "Pipeline PR events",
+      "speaksOn": "Native auto-merge armed",
+      "cadence": "Per PR",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/workflows/pipeline.yml",
+        "scripts/arm-merge.mjs",
+        "scripts/moneypenny/stranded-pr.mjs",
+        "scripts/moneypenny/stuck-branch-update.mjs"
+      ],
+      "cite": ".github/workflows/pipeline.yml:351-364, 398, 418-424, 494, 510; scripts/moneypenny/stranded-pr.mjs:3-16; scripts/moneypenny/stuck-branch-update.mjs:1-4"
+    },
+    {
+      "id": "deploy",
+      "department": "platform",
+      "name": "Release and deploy",
+      "kind": "workflow",
+      "job": "On push to main: semantic-release, deploy the dashboard when the image changed, smoke, roll back; deploy the bots app when bot-relevant, reusing the image",
+      "wakesOn": "push main; force_bots_deploy dispatch",
+      "speaksOn": "A release tag, Fly deploys",
+      "cadence": "Every merge",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/workflows/pipeline.yml",
+        "scripts/bots-deploy-preflight.mjs",
+        "scripts/fly-deploy.mjs"
+      ],
+      "cite": ".github/workflows/pipeline.yml:512-520, 685-705"
+    },
+    {
+      "id": "ops-buttons",
+      "department": "platform",
+      "name": "Ops buttons (autonomy ops, Fly logs, companion eval)",
+      "kind": "workflow",
+      "job": "Phone-operable ops: status, machine-status, logs, bootstrap, flip-mode observe/live, set-bridge-secret; filtered log pull; companion replay eval",
+      "wakesOn": "workflow_dispatch from a session; autonomy-ops and companion-eval then wait on Eric's autonomy-ops Environment approval",
+      "speaksOn": "Fly secrets and status, job logs",
+      "cadence": "On demand",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [
+        ".github/workflows/autonomy-ops.yml",
+        ".github/workflows/fly-logs.yml",
+        ".github/workflows/companion-eval.yml"
+      ],
+      "cite": ".github/workflows/autonomy-ops.yml:26-58, 71; .github/workflows/fly-logs.yml:1-14; .github/workflows/companion-eval.yml:1-10"
+    },
+    {
+      "id": "live-sessions",
+      "department": "platform",
+      "name": "Live sessions (interactive Claude Code)",
+      "kind": "other",
+      "job": "Does what unattended lanes cannot: edits under .claude/, taste rounds, the held batch of protected changes, needs-session hand-offs",
+      "wakesOn": "Eric opening a session, or a session another one started",
+      "speaksOn": "Pull requests, issue comments, private pages",
+      "cadence": "When Eric or another session opens one; nothing scheduled reads needs-session",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/settings.json", "docs/DELEGATION.md"],
+      "cite": ".github/prompts/moneypenny-conflict-repair.md:26 (nothing reads needs-session); #4555 (lanes cannot edit .claude/**)"
+    },
+    {
+      "id": "platter",
+      "department": "platform",
+      "name": "Held batch of protected changes (the platter)",
+      "kind": "workflow",
+      "job": "Collects every green change to protected paths onto one held PR with a ledger, merged by Eric with one commit per item",
+      "wakesOn": "a protected-path change that is green on its own branch",
+      "speaksOn": "one held PR per cadence",
+      "cadence": "one touch per cadence",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": ["scripts/ship.sh", "envelope.json"],
+      "cite": "scripts/ship.sh:850 \"the platter — one held PR per cadence, not one per protected change (#1343)\""
+    },
+    {
+      "id": "ship",
+      "department": "platform",
+      "name": "PR lander (ship)",
+      "kind": "skill",
+      "job": "Local verify + integration tests -> push -> REST PR open -> stop; pipeline arms auto-merge",
+      "wakesOn": "any session opening a PR",
+      "speaksOn": "a PR",
+      "cadence": "every PR",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/skills/ship/SKILL.md", "scripts/ship.sh"],
+      "cite": "CLAUDE.md:485-486; .github/prompts/design-build.md:130; .claude/agents/dep-warden.md:39"
+    },
+    {
+      "id": "grind",
+      "department": "platform",
+      "name": "Batch chore fan-out and stage runner (grind, worker)",
+      "kind": "workflow",
+      "job": "Fans a check -> fix -> re-check chain across many items, gated by the work spigot",
+      "wakesOn": "'grind through a batch'; governor dispatch; interrogate route",
+      "speaksOn": "per-item branches/results",
+      "cadence": "on demand",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/workflows/grind.js", "docs/grind/", ".claude/agents/worker.md"],
+      "cite": "CLAUDE.md:387-388; .claude/skills/governor/SKILL.md:65; .claude/workflows/grind.js:165, 229; .claude/workflows/dream.js:87; docs/COACHES.md:530"
+    },
+    {
+      "id": "hooks",
+      "department": "platform",
+      "name": "Session hooks: setup, guard, intent log, memory history",
+      "kind": "hook",
+      "job": "Prepares each session (signing key, pinned toolchain, fresh origin/main), refuses banned Bash commands before they run, logs prompts and agent fan-outs for config-audit, and versions the shared memory folder on every edit",
+      "wakesOn": "SessionStart; every Bash call; every agent call; every prompt; every Write/Edit",
+      "speaksOn": "git config; a refused command (exit 2); duel-log lines; a memory-history commit",
+      "cadence": "every session",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [
+        "scripts/setup-commit-signing.sh",
+        ".claude/hooks/session-start.sh",
+        "scripts/hooks/guard-bash.mjs",
+        "scripts/duel-log.mjs",
+        "scripts/hooks/memory-history.mjs"
+      ],
+      "cite": ".claude/settings.json:9; scripts/setup-commit-signing.sh:4-8; .claude/settings.json:13; .claude/hooks/session-start.sh:39-42; .claude/settings.json:31-35; scripts/hooks/guard-bash.mjs:25-45; .claude/settings.json:25, 46; scripts/duel-log.mjs:3-8; read by scripts/config-audit.mjs:9; .claude/settings.json:52-56; scripts/hooks/memory-history.mjs:2-8"
+    },
+    {
+      "id": "focus",
+      "department": "platform",
+      "name": "Skip-orientation style (Focus)",
+      "kind": "other",
+      "job": "Same response shape as Orient minus the orient-and-route step, for fully decided execution",
+      "wakesOn": "a person switching output style by hand",
+      "speaksOn": "response shape only",
+      "cadence": "manual",
+      "invoker": "session",
+      "status": "hired",
+      "codeRoots": [".claude/output-styles/focus.md"],
+      "cite": ".claude/output-styles/focus.md:3-7; settings.json:2 sets Orient as the only default"
+    }
+  ]
+}

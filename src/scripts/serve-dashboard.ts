@@ -54,6 +54,7 @@ import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import type { DashboardServerConfig } from "../server/dashboard-server-config.js";
 import { resolveDevelopmentActivity } from "../server/development-activity.js";
+import { discoveryPerPass } from "../server/discovery-queue-store.js";
 import { bootGithubToken } from "../server/github-token.js";
 import { installGracefulShutdown } from "../server/graceful-shutdown.js";
 import { heldActivity, heldOrderOrigins } from "../server/held-activity.js";
@@ -276,6 +277,10 @@ async function main(): Promise<void> {
     savedPositions,
     exitPlans,
     authoredPlays,
+    memberCampaigns,
+    memberChains,
+    discoveryQueue,
+    campaignQuestions,
     memberConvictions,
     playMilestones,
     knownPersonaIds,
@@ -403,6 +408,11 @@ async function main(): Promise<void> {
     savedPositions,
     exitPlans,
     authoredPlays,
+    memberCampaigns,
+    memberChains,
+    discoveryQueue,
+    campaignQuestions,
+    discoveryPerPass: discoveryPerPass(),
     memberConvictions,
     playMilestones,
     // The feed reads the ledger after posting any pass the bots have reported (#5457 slice 5).
