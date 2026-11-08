@@ -54,7 +54,7 @@ that gets a well-shaped issue filed without a second pass.
 8. **Everything after filing uses the same command**, never the GraphQL MCP for bulk work:
    `update N --add a --remove b --body-file f --comment-file c --close completed`,
    `search "words" --label x`, `show N`. The board column follows labels (the sync job maps
-   `needs-eric`/`needs-info` → Blocked, `ready` → Ready, closed → Done), so "mark it blocked" is
+   `needs-eric`/`needs-info` → Waiting on a person, `ready` → Ready, closed → Done), so "mark it blocked" is
    `update N --add needs-info` when a member owes the answer, or `--add needs-eric` for a decision
    only Eric can make — refused unless the body carries a `Needs from you` callout
    (`docs/ISSUES.md` rule 7). Full usage: the header of `scripts/issues.mjs`.
