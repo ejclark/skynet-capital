@@ -94,8 +94,9 @@ export interface Campaign {
   readonly researchOnly?: boolean;
   /**
    * The mode the campaign starts in (#6952): explore a sector, find names, build a strategy, or
-   * play. Optional so the house files predating it still load; a member's form always sets it
-   * (#6949 criterion 7), and #6952 slice 2 owns giving the house campaigns theirs.
+   * play. Optional, and read as play when absent; a member's form always sets it (#6949
+   * criterion 7), and every house file names its own (#6952 slice 2: the AI buildout and oil start
+   * in play, energy for AI in explore).
    */
   readonly mode?: CampaignMode;
 }
