@@ -61,9 +61,9 @@ import {
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { isMain } from "../is-main.mjs";
 import { resolveChromium } from "../shoot/lib.mjs";
 import { roundClock } from "./clock.mjs";
+import { isMain } from "./compat.mjs";
 import { FILES, SESSIONS } from "./round-contract.mjs";
 import { adoptSource } from "./round-control.mjs";
 import {

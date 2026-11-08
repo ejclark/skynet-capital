@@ -31,7 +31,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
-import { isMain } from "../is-main.mjs";
+import { isMain } from "./compat.mjs";
 import { parseGold } from "./grade-core.mjs";
 import {
   rankStructural,

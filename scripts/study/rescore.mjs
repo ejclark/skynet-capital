@@ -12,7 +12,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { isMain } from "../is-main.mjs";
+import { isMain } from "./compat.mjs";
 import { gradeAnswer, SEEN_MIN } from "./oracle.mjs";
 import { SESSIONS } from "./round-contract.mjs";
 

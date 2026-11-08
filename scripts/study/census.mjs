@@ -30,7 +30,6 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { isMain } from "../is-main.mjs";
 import * as page$ from "./census-page.mjs";
 import {
   capControls,
@@ -47,6 +46,7 @@ import {
 } from "./census-plan.mjs";
 import { measured, readTree, revealed, SCREEN_MS, walk } from "./census-walk.mjs";
 import { parseClock } from "./clock.mjs";
+import { isMain } from "./compat.mjs";
 import { act, close, frame, open, settle } from "./session.mjs";
 import { remark, reopen } from "./session-fresh.mjs";
 import { loadWorld, rerunUnderTsx } from "./session-world.mjs";

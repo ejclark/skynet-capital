@@ -18,7 +18,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { isMain } from "../is-main.mjs";
+import { isMain } from "./compat.mjs";
 import { parseGold } from "./grade-core.mjs";
 import { gradeRound } from "./grade-round.mjs";
 import { FILES } from "./round-contract.mjs";

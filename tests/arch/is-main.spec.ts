@@ -1,5 +1,14 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -49,10 +58,36 @@ describe("isMain — compares real paths", () => {
 
   it("does not run main() when the script is imported as a module", () => {
     const entry = join(tmp, "importer.mjs");
-    writeFileSync(entry, `import ${JSON.stringify(pathToFileURL(join(SCRIPTS, "issue-lint.mjs")).href)};\n`);
+    writeFileSync(
+      entry,
+      `import ${JSON.stringify(pathToFileURL(join(SCRIPTS, "issue-lint.mjs")).href)};\n`,
+    );
     const run = spawnSync(process.execPath, [entry], { encoding: "utf8" });
     expect(`${run.stdout}${run.stderr}`).not.toContain("issue-lint:");
     expect(run.status).toBe(0);
+  });
+});
+
+describe("the study harness on a pin older than scripts/is-main.mjs", () => {
+  it("falls back to its own copy, names the fallback, and still follows a symlink", () => {
+    // scripts/study/pin.mjs overlays only scripts/study/ onto an older commit (#4943), so the
+    // harness reaches isMain through compat.mjs, which survives the helper's FILE being absent.
+    const pin = join(tmp, "pin");
+    mkdirSync(join(pin, "scripts/study"), { recursive: true });
+    mkdirSync(join(pin, "scripts/crawl"), { recursive: true });
+    copyFileSync(join(SCRIPTS, "study/compat.mjs"), join(pin, "scripts/study/compat.mjs"));
+    copyFileSync(join(SCRIPTS, "crawl/steps.mjs"), join(pin, "scripts/crawl/steps.mjs"));
+    writeFileSync(
+      join(pin, "scripts/study/probe.mjs"),
+      'import { FALLBACKS, isMain } from "./compat.mjs";\n' +
+        "if (isMain(import.meta.url)) console.log(JSON.stringify(FALLBACKS));\n",
+    );
+    symlinkSync(pin, join(tmp, "pin-link"));
+    const run = spawnSync(process.execPath, [join(tmp, "pin-link/scripts/study/probe.mjs")], {
+      encoding: "utf8",
+    });
+    expect(run.stderr).toBe("");
+    expect(JSON.parse(run.stdout)).toEqual([expect.stringMatching(/^isMain: .*#7046/)]);
   });
 });
 
@@ -70,7 +105,8 @@ const AWAITING_PLATTER = [
 ];
 
 /** A line that compares the entry path to this module's URL or path with a raw string equality. */
-const RAW = /process\.argv\[1\][^\n]*[!=]==?[^\n]*import\.meta\.url|import\.meta\.url[^\n]*[!=]==?[^\n]*process\.argv\[1\]/;
+const RAW =
+  /process\.argv\[1\][^\n]*[!=]==?[^\n]*import\.meta\.url|import\.meta\.url[^\n]*[!=]==?[^\n]*process\.argv\[1\]/;
 
 function scriptFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {

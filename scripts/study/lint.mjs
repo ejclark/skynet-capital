@@ -22,7 +22,7 @@
 
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { isMain } from "../is-main.mjs";
+import { isMain } from "./compat.mjs";
 
 const norm = (s) =>
   s

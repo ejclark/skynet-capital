@@ -14,7 +14,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { isMain } from "../is-main.mjs";
+import { isMain } from "./compat.mjs";
 import { shingles } from "./lint.mjs";
 
 const KEEP = new Set(["1", "3", "4"]);

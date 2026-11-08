@@ -9,3 +9,5 @@ export function pick<F extends (...args: never[]) => unknown>(
   into?: string[],
 ): F;
 export function settle(page: unknown): Promise<void>;
+/** True when `metaUrl` is the entry script, by real path: scripts/is-main.mjs's, or the harness's copy on an older pin. */
+export function isMain(metaUrl: string, argv1?: string): boolean;

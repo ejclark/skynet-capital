@@ -19,7 +19,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { isMain } from "../is-main.mjs";
+import { isMain } from "./compat.mjs";
 import { CHUNK, matchReport, runMatch } from "./match-core.mjs";
 import { FILES } from "./round-contract.mjs";
 import { expectEntries } from "./round-control.mjs";
