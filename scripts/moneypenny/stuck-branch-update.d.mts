@@ -36,6 +36,12 @@ export function stuckBranchesOrNone(
   nowMs: number,
   opts?: GatherOpts & { log?: (line: string) => void },
 ): StuckBranch[];
+/** A same-tree commit on top of the head, the branch moved onto it without force. */
+export function emptyCommitOnHead(
+  i: { headSha: string; headRef: string },
+  run: (cmd: string, args: string[]) => string,
+  message?: string,
+): void;
 export function updateStuckBranch(
   i: UpdateStuckIntent,
   opts?: { run?: (cmd: string, args: string[]) => string; log?: (line: string) => void },

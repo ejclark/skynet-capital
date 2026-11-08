@@ -27,7 +27,9 @@ import {
   DEFAULT_HOURS,
   describe,
   exemptReason,
+  HEADLESS_MINUTES,
   judgePr,
+  needsHeadAt,
 } from "./stuck-pr-decide.mjs";
 
 const args = process.argv.slice(2);
@@ -62,7 +64,9 @@ async function api(path) {
  *  Eric's merge on purpose, so it is not stuck (#5381–#5383, 2026-10-26). */
 async function scan() {
   const open = await api("pulls?state=open&per_page=100");
-  const cutoff = Date.now() - hours * 3.6e6;
+  // A head with no suite at all is named after 30 minutes, not `hours` (#7112), so a PR that young
+  // is read too; a green stall still has to wait out `hours` inside judgePr.
+  const cutoff = Date.now() - Math.min(hours * 60, HEADLESS_MINUTES) * 6e4;
   const rules = JSON.parse(readFileSync("envelope.json", "utf8")).protected ?? [];
   const isProtected = (path) => breachOf(path, rules) !== null;
   const isBoarded = boardedBranches(open);
@@ -74,14 +78,17 @@ async function scan() {
       api(`commits/${sha}/check-runs?per_page=100`),
       api(`commits/${sha}/check-suites?per_page=100`),
     ]);
+    const checkRuns = checks.check_runs ?? [];
+    const suiteList = suites.check_suites ?? [];
+    // Younger than `hours`, only the no-suite rule can name it, so a head with a run stops here.
+    const young = Date.parse(listed.created_at) > Date.now() - hours * 3.6e6;
+    if (young && !needsHeadAt(checkRuns, suiteList)) continue;
     // `mergeable_state` is only on the single-PR read, and only worth a call once the checks are in.
     const pr = await api(`pulls/${listed.number}`);
-    const verdict = judgePr({
-      pr,
-      checkRuns: checks.check_runs ?? [],
-      suites: suites.check_suites ?? [],
-      hours,
-    });
+    const headAt = needsHeadAt(checkRuns, suiteList)
+      ? (await api(`commits/${sha}`)).commit?.committer?.date
+      : null;
+    const verdict = judgePr({ pr, checkRuns, suites: suiteList, hours, headAt });
     if (!verdict) continue;
     const files = (await api(`pulls/${listed.number}/files?per_page=100`)).map((f) => f.filename);
     if (exemptReason({ pr, files, isProtected, isBoarded })) continue;

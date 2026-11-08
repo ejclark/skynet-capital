@@ -198,6 +198,12 @@ waits for Eric's merge by design — so the scan skips both.
 pipeline's own arm path, which re-checks `hold-merge` and the envelope — once per head sha, with a
 `<!-- moneypenny:rearm sha= -->` marker comment as memory. It never arms directly; a second failure
 on the same head is real and stays in the scan's report.
+**A PR with no checks at all gets a new head** (2026-11-08, #7112: #7089 sat 16h with no suite and
+no run, because the Actions job token that opened it sends no event). The scan names a head with no
+required run and no Actions suite `headless` after 30 minutes, and the same audit
+(`scripts/moneypenny/headless-pr.mjs`) gives it one commit from the App identity — `update-branch`,
+else a same-tree commit — once per head sha, at most 3 heads per PR, with a
+`<!-- moneypenny:headless sha= -->` marker. Never a close, never a force push.
 **Research PRs get a sweep beside it** (#5689; `scripts/moneypenny/research-pr-sweep.mjs`): an open
 `research/<id>` PR makes the research lane skip its event, so one past 6h that conflicts while `main`'s
 ledger is already assessed on or after its own is closed, naming its successor; a red one is flagged

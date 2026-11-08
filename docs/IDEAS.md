@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- **A headless PR might start its checks with a body edit, not a commit.** `pipeline.yml` lists
+  `edited` in its `pull_request` types, and an edit from the App token starts workflows, so writing
+  the headless marker into the PR body (not a comment) could start `verify` with no new commit on
+  the branch, and so nothing a still-running session's push could collide with. #7112 shipped
+  `update-branch` and a same-tree commit because the brief asked for them; test whether one
+  App-token body edit starts a Pipeline run on a job-token PR, then swap if it does.
+  _(src: Claude · while: building #7112's act stage; code review flagged the push race)_
 - **grind could stop a run when many items block on one cause.** On 2026-11-08 the drift run
   blocked 35 checks over about two hours with the same summary (a macOS-only spec red in the
   pre-push verify), and kept dispatching. A breaker in `.claude/workflows/grind.js`, say three

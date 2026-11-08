@@ -35,6 +35,14 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### A PR with no checks at all sat 16 hours: the watcher looked only for a ghost suite
+- **SHA:** n/a   **DATE:** 2026-11-08   **STATUS:** closed
+- **RECURS:** The same severance, one hop over — a PR opened by `GITHUB_TOKEN` gets no checks at all
+- **SIGNAL:** #7089 (`feedback/7077`) opened 02:19Z with no check runs and no check suite. Nothing named it, and #7077's next two parts waited behind it. Eric asked "what is the current WIP?" at ~18:20Z, and only then did a session look. Detection lag about 16h. Close and reopen from a real account ran `verify` green in minutes.
+- **ROOT CAUSE:** the 08-17 entry's side quest ("PR open N minutes with zero check runs") was built as `stuck-pr-decide.mjs`'s `headless` kind, keyed on a ghost suite. A PR opened by the Actions job token emits no event, so it has no suite, and `judgePr` returned null. `headless` also had no act: its fix was advice text in a digest. Upstream, #5936: a build that outlives its 1-hour App token falls back to the job token (#5935, #7084, #7089).
+- **PREVENTION:** rank 1. `judgePr` names a head with zero required runs and zero Actions suites `headless` after 30 minutes, and the audit's act stage gives it one commit from the App identity (`update-branch`, else an empty commit), once per head SHA. Detection lag goes from "until someone asks" to the next push to main after 30 minutes.
+- **SIDE QUESTS:** main was red 08:46Z–13:22Z; a PR whose `verify` ran in that window stays red after main recovers, because red is "somebody else's signal" here (#7108 is the lead).
+
 ### A drift round stopped after its first step on a Mac, and a session counted 36 unrefuted proposals as fixes
 - **SHA:** n/a   **DATE:** 2026-11-08   **STATUS:** closed
 - **SIGNAL:** Eric, 2026-11-08 00:41Z: "any reason the task stalled/stopped? why not finish?" The run started about 21:30Z on 2026-11-07. Its first `blocked` check, a red pre-push verify on `tests/arch/ship-platter.spec.ts`, was in the journal within half an hour. At 23:54Z the session read 35 such results as finished fixes, put them on a wave branch and reported "36 fixes". Detection took about 3 hours, and his question, not a check.

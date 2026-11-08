@@ -1467,9 +1467,10 @@
         ".github/workflows/pipeline.yml",
         "scripts/arm-merge.mjs",
         "scripts/moneypenny/stranded-pr.mjs",
-        "scripts/moneypenny/stuck-branch-update.mjs"
+        "scripts/moneypenny/stuck-branch-update.mjs",
+        "scripts/moneypenny/headless-pr.mjs"
       ],
-      "cite": ".github/workflows/pipeline.yml:351-364, 398, 418-424, 494, 510; scripts/moneypenny/stranded-pr.mjs:3-16; scripts/moneypenny/stuck-branch-update.mjs:1-4"
+      "cite": ".github/workflows/pipeline.yml:351-364, 398, 418-424, 494, 510; scripts/moneypenny/stranded-pr.mjs:3-16; scripts/moneypenny/stuck-branch-update.mjs:1-4; scripts/moneypenny/headless-pr.mjs:1-3"
     },
     {
       "id": "deploy",
