@@ -116,7 +116,8 @@ Rules that make it work, in priority order:
    holds no started-plan seat, with or without the callout.
 8. **One decision, one line, no paragraph.** Each `Needs from you` item is numbered, phrased as a
    closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
-   after an em dash — same anatomy as the procedure steps in CLAUDE.md's *When Eric's action IS
+   after an em dash — same anatomy as the procedure steps in
+   [`docs/process/WORKING-AGREEMENTS.md`](process/WORKING-AGREEMENTS.md) → *When Eric's action is
    needed* (`<the do> — <the why>`). A reader should get the ask from the first four words alone.
    Below the fold, `### Predicted answers` gives Claude's expected answer to each item and a
    confidence, written before he answers; the row is scored in
@@ -157,7 +158,7 @@ settled, not ready for `/journey` (which needs an actual claim → challenge →
 bank, not a one-way brainstorm). For that case, add a **"Raw idea (verbatim)"** subsection inside the
 fold, first, before "Where it stands today": quote the originating message(s) completely unedited —
 typos, fragments, trailing thoughts and all, the same discipline `/journey`'s rule 2 uses for exactly
-this reason. Mark the issue `Status: draft` in the metadata table and leave `ready` off it: nothing
+this reason. Lead the metadata table's Status row with `Backlog · draft` and leave `ready` off it: nothing
 pulls from Backlog (*Ready — the one definition*, below), so `/work-issues` and Moneypenny both skip
 it until a human flips it.
 Worked example: #1977.
@@ -248,7 +249,7 @@ can sit in Backlog for weeks. The word was said in dozens of plan issues before 
 writing it down once is that the label, the comment and the code now agree.
 
 **Mechanically, "in the board's Ready column" — `pullable()` in `scripts/moneypenny/labels.mjs`.**
-Six conditions, asked in this order so the refusal names the first one that fails
+Seven conditions, asked in this order so the refusal names the first one that fails
 (`notPullableReason`). Every puller asks exactly this function — both claim lanes, the push-tick
 retry sweep (`nextAdmissible`), and `/work-issues` — so the async lane and a live session can never
 disagree about what may be built:
@@ -261,7 +262,9 @@ disagree about what may be built:
 4. **not `in-progress`** — another lane or session already holds it.
 5. **not `needs-session`**, for the automated pullers only — its remainder waits on an interactive
    session, so `/work-issues` (which passes `interactive: true`) still sees it.
-6. **not blocked** — no open `blocked-by` issue (`openBlockers`); it starts when they close.
+6. **not boarded on a held platter** — an open platter PR already closes it, so a pull would build
+   nothing (`boardedReason`, #6191).
+7. **not blocked** — no open `blocked-by` issue (`openBlockers`); it starts when they close.
 
 **Ready names no lane label.** A `ready` issue is the plan lane's if it carries `plan` and the
 feedback lane's otherwise (`inFeedbackLane`), which adds `feedback` when it claims one without it.
@@ -303,7 +306,7 @@ that remainder is invisible to every puller while still reading, on the issue it
 
 So the push sweep relays them. A closed issue still carrying `next-slice` or `needs-session` gets a
 fresh `[relay] #N remainder — …` issue that links back, and the remainder label comes off the
-source (with a receipt comment, which is what makes the sweep idempotent). Three properties worth
+source (with a receipt comment, which is what makes the sweep idempotent). Four properties worth
 knowing:
 
 - **It lands in Backlog, never `ready`.** A remainder's shape is the thing nobody has judged yet;

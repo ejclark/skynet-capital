@@ -78,8 +78,9 @@ fly tokens create deploy --app skynet-capital
 #    New repository secret → Name: FLY_API_TOKEN, Value: <paste the token>
 ```
 
-That's it. From now on: open a PR → CI runs → merge when green → the Deploy workflow fires and
-runs `flyctl deploy`. Watch it under the repo's **Actions** tab. The first manual `fly deploy`
+That's it. From now on: open a PR → CI runs → merge when green → Pipeline's `release · deploy` job fires
+and redeploys the dashboard whenever the push changed something the image ships
+(`scripts/dashboard-deploy-preflight.mjs`). Watch it under the repo's **Actions** tab. The first manual `fly deploy`
 above is still needed once (to create the app, volume, and secrets); CD handles every deploy after.
 
 ### The bots app (the deploy split)
@@ -111,7 +112,7 @@ app-scoped token, mint an org-scoped deploy token for `FLY_API_TOKEN_BOTS` inste
 provisioning step includes this check.
 
 If the bots app was wrongly skipped or its deploy failed, the recovery lever is
-**Actions → Pipeline → Run workflow → `force_bots_deploy`**; `node scripts/deploy-lag.mjs` now
+**Actions → Pipeline → Run workflow → `force_bots_deploy`**; `node scripts/deploy-lag.mjs`
 reports both apps' lag separately.
 
 ## Self-service onboarding (`/add`)
@@ -119,8 +120,7 @@ reports both apps' lag separately.
 Once deployed, anyone with the dashboard link can add their own Alpaca **paper** account —
 no `.env` edit, no redeploy:
 
-1. They open `https://<app>.fly.dev/add?key=<password>` (the "+ Add your account" link on the
-   board carries the key through).
+1. They open `https://<app>.fly.dev/add?key=<password>`.
 2. They paste their Alpaca paper API key/secret and a display name, and submit.
 3. The server validates the key by reading the account, stores it **encrypted** on the `/data`
    volume, and the account appears on the board live via SSE — no restart.

@@ -8,8 +8,8 @@ implement."
 one reference per reviewer, the same two refuters, each lens kept or killed by its own number. Not
 one agent told to look for six things, which is the "find gaps" prompt restated. Not six standing
 agents: the two review agents on the roster ran 4 times in 45 days, because nothing calls them.
-Confidence medium: no lens below has run on any PR. Wrong if, by 2026-12-15, the first two added each
-ran on 40 PRs and either trips its kill rule.
+Confidence medium: of the lenses below, only performance has run on live PRs, in the audit. Wrong
+if, by 2026-12-15, the first two added each ran on 40 PRs and either trips its kill rule.
 
 **The warning every lens carries:** a reviewer told to find gaps manufactures them. So each lens asks
 for a concrete failure or cost, and zero findings is a normal answer.
@@ -98,5 +98,6 @@ Nothing here runs in CI yet: the job that calls it is S3, on the platter.
 Adversarial, context and loop, security and reuse have not been replayed, so their recall and
 manufacture are unmeasured. Reading a miss by hand is what moved performance from 5 of 8 to 8 of 8:
 `score` matches on file, and a reviewer often names the route where the label names the view behind
-it. Replay has no refuters, so whether the lens survives them is the 40-PR keep or kill above. The
-path counts come from one census of 650 code PRs since 2026-10-01, and they will drift.
+it. A post-merge lens's replay has no refuters, so whether the lens survives them is the 40-PR keep
+or kill above. The path counts come from one census of 650 code PRs since 2026-10-01, and they will
+drift.

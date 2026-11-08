@@ -36,8 +36,8 @@ so the routing catches it; the skill never decompiles, scrapes, or copies assets
 - **Every call carries its falsifier.** Same contract as `docs/process/EVENT-RESEARCH.md` — the
   call · confidence · why · what proves it wrong — so a teardown is a decision sheet, not a mood
   board. "Skip" is a first-class call.
-- **"Ours today" cites code, never memory.** The greeks-dropped finding (`OptionChainRow` carries
-  delta–rho; the shell's `ChainRow` drops them) came from reading, and it changed the size of the
+- **"Ours today" cites code, never memory.** The greeks-dropped finding (`OptionChainRow` carried
+  delta–rho; the shell's `ChainRow` dropped them) came from reading, and it changed the size of the
   work from "new plumbing" to "presentation." A gap table that guesses is worth less than none.
 - **It lands, or it rots.** A study that lives only in chat dies with the session (the journey
   lesson). The images go to a private artifact; the decisions go onto the plan issue.
@@ -71,7 +71,8 @@ so the routing catches it; the skill never decompiles, scrapes, or copies assets
 7. **Hand back the vocabulary.** A short list — five words, not fifty — of the named concepts
    the reader can use next time ("straddle view", "stacked view", "sheet, not dropdown",
    "preset, not drive"). If a term is contested or has a decompile connotation, say which one
-   we use and why.
+   we use and why. Each term becomes a row in `docs/PATTERNS.md` in the same PR or comment that
+   names it (`docs/PATTERNS.md` → _How a pattern enters_).
 8. **Land it.** Frames + call sheet + gap table + vocabulary → a **private artifact** (images
    inline, redacted). Decisions → the owning plan issue as a `thought:` comment with the link,
    or a new `plan` issue via `/issue` if no issue owns the surface. Constraints the teardown

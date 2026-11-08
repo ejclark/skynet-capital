@@ -8,8 +8,8 @@ in front of it.
 **Route.** A session that hears an outcome plus a date, an event id, a window or a reservation
 writes one record here, opens it as a one-file PR, and echoes one line back in its reply:
 `Declared → <slug>: <outcome> · until <date> · check: <command> · steers: <…>`, so he can correct it
-there. An outcome with no date is not an intent; it routes as it did before (a brain-dump to a plan
-issue, a build ask to `/issue`).
+there. An outcome with no date is not an intent; it routes like any other ask (a brain-dump to a
+plan issue, a build ask to `/issue`).
 
 **Reader.** `node scripts/intents.mjs [--json] [--today=YYYY-MM-DD] [--event=<event-id>]
 [--issue=<n>] [--reserve]`. It is pure and reads this folder; no other code parses these files.

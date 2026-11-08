@@ -66,12 +66,10 @@ nothing. After the run, merge every green branch into one `refactor/governed-cyc
 `docs/COACHES.md` → *How the loop runs*. Never `scripts/ship.sh platter` — that is a different
 mechanism, reserved for the irreversible class.
 
-**What has actually been checked, and what has not** (2026-10-03, when this chore landed —
-"partial beats false shipped", `docs/COACHES.md` → *Defensive roster*). Steps 1–4 were dry-run by
-hand against live repo state for all four coaches: 7 open PRs, 46 changed files, no WIP hit, each
-eye naming a target, no collision, nothing envelope-blocking. The preflight above emits exactly the
-`steps` array shown. **Not yet proven:** a real dispatch — steps 5–8, the drill, the push, and the
-caller's cycle PR. The first run is the test, and the honest thing to do with its ledger is paste it
+**What has been checked** ("partial beats false shipped", `docs/COACHES.md` → *Defensive roster*).
+The preflight above emits exactly the `steps` array shown, and steps 1–8, the drill, the push and
+the caller's cycle PR have all run in real dispatches: the `refactor: governed cycle <n>` PRs on
+`main` and the rows in `loop-iterations/governor-<drill>.jsonl` are the record. Paste a run's ledger
 onto whatever issue asked for the cycle.
 
 ## Goal
@@ -134,8 +132,8 @@ cycle branch its coach's first rep was merged into. Without one, your base is `m
    never drop `--fresh`, which would resume that stale branch (#6272). After it, one plain command per call — never a
    `&&` chain around git; `/usr/bin/git` where plain `git` is refused (`docs/DELEGATION.md`
    rail 2). A later tool exiting 127 means this step was skipped or failed — read what it says
-   rather than hand-rolling a `node_modules` workaround. The drill's own step 1 (branch and set
-   up) is this step — skip it in step 6.
+   rather than hand-rolling a `node_modules` workaround. The drill's own branch-and-set-up step
+   (step 1 of `bury` and `backfill`) is this step — skip it in step 6.
 6. **Run the drill, following its own spec exactly.** Read `.claude/skills/<drill>/SKILL.md` and
    carry it out against the target, including its ratchet step. That file is the single copy of the
    loop — do not reconstruct it from this chore, and do not improvise past a guardrail it states.
