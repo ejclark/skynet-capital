@@ -43,7 +43,7 @@ describe("alignSeries", () => {
     const index = [bar(0, 100), bar(1, 101), bar(2, 102)];
     const vix = [bar(0, 20), bar(2, 30)];
     const series = alignSeries(index, vix);
-    expect(series.dates).toEqual([index[0].date, index[2].date]);
+    expect(series.dates).toEqual([index[0]?.date, index[2]?.date]);
     expect(series.close).toEqual([100, 102]);
     expect(series.vixAvg).toEqual([null, null]);
   });
@@ -91,7 +91,7 @@ describe("pickEntries and episodesOf", () => {
     const series = tape(Array(100).fill(85), 30);
     const entries = pickEntries(series, ["both"], 21);
     expect(entries[0]).toBe(260);
-    expect(entries.slice(1).every((t, k) => t - entries[k] >= 21)).toBe(true);
+    expect(entries.slice(1).every((t, k) => t - (entries[k] ?? 0) >= 21)).toBe(true);
     expect(entries.length).toBe(5);
   });
 
