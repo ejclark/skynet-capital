@@ -180,3 +180,63 @@ describe("Your chains", () => {
     expect(screen.getByLabelText("What the chain does")).toHaveValue(SOUND.title);
   });
 });
+
+describe("a chain's shadow-replay scorecard (#6959 slice 4)", () => {
+  const card = {
+    shape: "CRWV-WHEEL>expired>CRWV-LONG-CALL",
+    symbol: "CRWV",
+    from: "2025-06-27",
+    to: "2026-11-06",
+    runs: 52,
+    open: 21,
+    links: [
+      { playbook: "CRWV-WHEEL", runs: 52, mean: -185 },
+      { playbook: "CRWV-LONG-CALL", runs: 39, mean: -1448 },
+    ],
+    total: { mean: -1271, won: 13 },
+    ownership: { sessions: 5277, twoDeciders: 0, unowned: 0 },
+  };
+  const mount = () =>
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <YourChains />
+      </QueryClientProvider>,
+    );
+
+  it("shows each link's own result and the total on a line of its own, signs as words", async () => {
+    listed = [view({ scorecard: card })];
+    mount();
+    const results = await screen.findByLabelText("Shadow replay results");
+    expect(results.textContent).toContain("−$185");
+    expect(results.textContent).toContain("−$1,448");
+    expect(results.textContent).toContain("Chain total");
+    expect(results.textContent).toContain("−$1,271");
+    expect(results.textContent).toContain("ended ahead in 13 of 52");
+    expect(results.textContent).toContain("21 runs were still open");
+    expect(results.textContent).toContain("Doesn't trade");
+  });
+
+  it("says a link that never owned a position had no result, not $0", async () => {
+    listed = [
+      view({
+        scorecard: {
+          ...card,
+          links: [
+            { playbook: "CRWV-WHEEL", runs: 52, mean: -185 },
+            { playbook: "CRWV-LONG-CALL", runs: 0, mean: null },
+          ],
+        },
+      }),
+    ];
+    mount();
+    const results = await screen.findByLabelText("Shadow replay results");
+    expect(results.textContent).toContain("never owned one");
+  });
+
+  it("says plainly when the chain was never replayed, with no numbers", async () => {
+    listed = [view()];
+    mount();
+    expect(await screen.findByText("No shadow replay of this chain yet.")).toBeTruthy();
+    expect(screen.queryByLabelText("Shadow replay results")).toBeNull();
+  });
+});

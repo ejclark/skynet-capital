@@ -9,6 +9,7 @@ import {
 } from "../live/playbook-chains";
 import { InlineResult } from "../ui";
 import { AuthorChain } from "./playbook-chain-author";
+import { ChainScorecardView } from "./playbook-chain-scorecard";
 
 /**
  * YOUR CHAINS (#6959 slice 3b) — the member's own playbook chains and the door to draw one, under
@@ -18,7 +19,8 @@ import { AuthorChain } from "./playbook-chain-author";
  *
  * One row per chain, one tap to open it: its name, each link as a sentence, and its standing as a
  * glyph and a word ("◌ Shadow only · doesn't trade") — shadow only is criterion 5, said on every
- * row, because no chain trades in Season 1. Unlike a single playbook, drawing a chain needs no bot:
+ * row, because no chain trades in Season 1. Under it, the chain's shadow-replay scorecard (slice 4):
+ * each link's own result, the total beside them. Unlike a single playbook, drawing a chain needs no bot:
  * nothing runs it. Discard lives in the form, asking once.
  *
  * A failed read says nothing here: the catalog is the page, and a member who cannot reach their
@@ -89,6 +91,7 @@ export function YourChains(): ReactElement {
                       ›
                     </span>
                   </button>
+                  <ChainScorecardView card={chain.scorecard} />
                 </li>
               ))}
             </ul>

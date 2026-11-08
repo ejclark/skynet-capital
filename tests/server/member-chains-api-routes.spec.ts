@@ -99,6 +99,25 @@ describe("serveMemberChainsApi", () => {
     expect(store.list(ADA)[0]?.chain.source).toBe("Ada Lovelace");
   });
 
+  it("attaches the replay scorecard to a chain whose links were replayed, and only to that one", async () => {
+    await save(FORM);
+    const [mine] = (await list()).body.chains;
+    expect(mine.scorecard).toMatchObject({ symbol: "CRWV" });
+    expect(mine.scorecard.links.map((l: { playbook: string }) => l.playbook)).toEqual([
+      "CRWV-WHEEL",
+      "CRWV-LONG-CALL",
+    ]);
+    await save({
+      title: "Take the call's profit, then sell a put",
+      links: [{ from: "CRWV-LONG-CALL", on: "take-profit", date: "", to: "CRWV-WHEEL" }],
+    });
+    const other = (await list()).body.chains.find(
+      (c: { title: string }) => c.title === "Take the call's profit, then sell a put",
+    );
+    expect(other).toBeDefined();
+    expect(other.scorecard).toBeUndefined();
+  });
+
   it("returns a chain to its author and to nobody else", async () => {
     await save(FORM);
     expect((await list()).body.chains).toHaveLength(1);
