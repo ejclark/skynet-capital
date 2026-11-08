@@ -191,6 +191,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
     expect(fetchCalls[0]?.tools?.map((t) => t.name)).toEqual([
       "get_work_status",
       "get_roadmap",
+      "get_upcoming_events",
       "draft_feedback",
     ]);
     expect(streamCalls).toEqual([]);
@@ -214,6 +215,7 @@ describe("no desk linked — only the draft hand-off is on offer, never a desk l
     expect(fetchCalls[0]?.tools?.map((t) => t.name)).toEqual([
       "get_work_status",
       "get_roadmap",
+      "get_upcoming_events",
       "draft_feedback",
     ]);
   });
