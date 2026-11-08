@@ -37,8 +37,8 @@ costs a round trip you can avoid by writing it now:
     >    - **On silence:** <what happens if he never answers, from when; "nothing proceeds" for a credential, spend, workflow-file or bot-safety decision>
 
 The options, the predicted answer and the silence line let him answer in one word from his watch,
-and they are what gets scored in `docs/process/ALIGNMENT.md` (#6953). Once #6953's slice 3 lands, a
-question without them is listed as "callout incomplete".
+and they are what gets scored in `docs/process/ALIGNMENT.md` (#6953). A question without them is
+listed under "callout incomplete" in the digest (`scripts/digest-scan.mjs`).
 
 The comment in state (b) explains the blocker; the callout states the choice. Both, always.
 
@@ -82,6 +82,5 @@ Commit the fix to its own branch, push it, then run
 or `scripts/ship.sh platter open <branch> --closes <this issue>` when no platter PR is open. The
 platter PR is held for Eric's one merge and is the ask: name it in this issue's callout and comment,
 and do not assign him here. Only when the push itself is refused (the App token cannot push
-`.github/workflows/`) is it state (b): say so, name the branch and the files, and stop. This
-ends the pattern where one protected fix was asked for seven times while no PR existed
-(#6942, 2026-11-06).
+`.github/workflows/`) is it state (b): say so, name the branch and the files, and stop. The
+platter is why a protected fix waits as a held PR, not as an ask repeated with no PR behind it (#6942).
