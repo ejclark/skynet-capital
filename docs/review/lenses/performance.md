@@ -7,15 +7,16 @@ since 2026-10-01 touched one.
 **Kill rule:** under 0.1 confirmed findings per reviewed PR, or fewer than one in three surviving
 the refuters, after 40 PRs: delete this file and leave the facet to the budget run.
 
-**Size:** 3,564 characters.
+**Size:** 3,610 characters.
 
 A finding needs a concrete cost: the route or boot step, the store it reads, why the read grows with
 history, and the budget row it moves. "This looks slow" is not a finding. Zero findings is a normal
 answer: a reviewer told to find gaps manufactures them.
 
 The number this serves is `npm run stability:budget` (`scripts/stability/budget-run.mjs`): 180 days x
-12 accounts in 512 MB, every common GET at p50 under 150 ms, peak memory under 300 MB. It is not in
-CI. This lens reads for the mechanism; the budget run is the oracle.
+12 accounts in 512 MB, every common GET at p50 under 150 ms, peak memory under 300 MB. CI runs it on
+PRs that change the server; latency is advisory. This lens reads for the mechanism; the budget run
+is the oracle.
 
 ## Smells
 
