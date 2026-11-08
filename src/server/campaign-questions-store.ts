@@ -1,21 +1,15 @@
 import {
   type Asker,
   type CampaignQuestion,
-  MAX_NAME,
+  MAX_DISPLAY_NAME,
   MAX_PER_CAMPAIGN,
   type QuestionLog,
 } from "../domain/campaign-questions.js";
-import {
-  askId,
-  CAMPAIGN_SCOPE_MAX,
-  cleanQuestion,
-  DISCOVERY_KINDS,
-  type DiscoveryKind,
-  MAX_ASKERS,
-} from "../domain/discovery-queue.js";
+import { askId, cleanQuestion, MAX_ASKERS } from "../domain/discovery-queue.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
 import { isRecord } from "../storage/parse-guards.js";
 import { siblingPath } from "../storage/sibling-path.js";
+import { isKind, SCOPE_RE } from "./discovery-queue-store.js";
 
 /**
  * THE QUESTIONS ASKED IN CAMPAIGNS, ON THE VOLUME (#6949 slice 6) — the log `domain/campaign-questions.ts`
@@ -25,17 +19,12 @@ import { siblingPath } from "../storage/sibling-path.js";
  * never served.
  */
 
-const SCOPE_RE = new RegExp(`^[a-z0-9][a-z0-9~-]{0,${CAMPAIGN_SCOPE_MAX - 1}}$`);
-
-const isKind = (v: unknown): v is DiscoveryKind =>
-  (DISCOVERY_KINDS as readonly unknown[]).includes(v);
-
 function parseAsker(raw: unknown): Asker | undefined {
   if (!isRecord(raw)) return undefined;
   const { key, name } = raw;
   if (typeof key !== "string" || key.length === 0 || key.length > 64) return undefined;
   if (typeof name !== "string" || name.length === 0 || name.includes("@")) return undefined;
-  return { key, name: name.slice(0, MAX_NAME) };
+  return { key, name: name.slice(0, MAX_DISPLAY_NAME) };
 }
 
 function parseQuestion(raw: unknown): CampaignQuestion | undefined {

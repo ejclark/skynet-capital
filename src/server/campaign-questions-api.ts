@@ -25,7 +25,8 @@ import { boundedString, requireGet, sendJson } from "./page-shell.js";
  * before this file runs, so a signed-out request never reads a campaign's text (#2224's gate).
  */
 
-const CAMPAIGN_MAX_ID = 60;
+/** The longest campaign id a request may name (a member id is a 60-character slug at most). */
+export const CAMPAIGN_MAX_ID = 60;
 
 /** A campaign the member can read: its scope (the id an ask inside it carries) and its record. */
 export interface Readable {

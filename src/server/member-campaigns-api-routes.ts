@@ -30,6 +30,7 @@ import { marketById } from "../domain/market-catalog.js";
 import { GICS_SECTORS } from "../domain/sector-coverage.js";
 import type { Session } from "./auth/session.js";
 import {
+  CAMPAIGN_MAX_ID,
   coveringCandidates,
   logAsked,
   type Readable,
@@ -109,7 +110,6 @@ import {
  */
 
 const CAMPAIGNS_BODY_CAP_BYTES = 4_096;
-const CAMPAIGN_MAX_ID = 60;
 
 export interface MemberCampaignView {
   readonly id: string;

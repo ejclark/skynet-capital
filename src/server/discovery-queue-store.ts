@@ -24,9 +24,10 @@ import { siblingPath } from "../storage/sibling-path.js";
  * The rules that keep it from raising the research ceiling live in `domain/discovery-queue.ts`.
  */
 
-const SCOPE_RE = new RegExp(`^[a-z0-9][a-z0-9~-]{0,${CAMPAIGN_SCOPE_MAX - 1}}$`);
+/** A campaign scope on disk: a slug-ish word or two, never free text (the question log reads it too). */
+export const SCOPE_RE = new RegExp(`^[a-z0-9][a-z0-9~-]{0,${CAMPAIGN_SCOPE_MAX - 1}}$`);
 
-const isKind = (v: unknown): v is DiscoveryKind =>
+export const isKind = (v: unknown): v is DiscoveryKind =>
   (DISCOVERY_KINDS as readonly unknown[]).includes(v);
 
 function parseAsk(raw: unknown): DiscoveryAsk | undefined {

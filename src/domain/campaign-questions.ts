@@ -21,7 +21,7 @@
  * read, so the author adding the name is what settles it.
  *
  * Bounds, on member text and never a game rule: `MAX_PER_CAMPAIGN` questions per campaign (the
- * oldest leaves first), `MAX_ASKERS` askers per question, `MAX_NAME` characters per name.
+ * oldest leaves first), `MAX_ASKERS` askers per question, `MAX_DISPLAY_NAME` characters per name.
  *
  * Paper only; educational. A question never places an order and never sizes one.
  */
@@ -39,7 +39,7 @@ import {
 /** The most questions one campaign keeps; the oldest leaves first. A bound on member text. */
 export const MAX_PER_CAMPAIGN = 200;
 /** The longest display name kept beside a question (the same bound a shared campaign's author has). */
-export const MAX_NAME = 60;
+export const MAX_DISPLAY_NAME = 60;
 /** The name shown when the session has none, or has one that looks like an email address. */
 export const NEUTRAL_NAME = "A member";
 
@@ -71,7 +71,7 @@ export type QuestionLog = readonly CampaignQuestion[];
  * an email in front of the party).
  */
 export function displayName(raw: string | undefined): string {
-  const name = (raw ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_NAME);
+  const name = (raw ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_DISPLAY_NAME);
   return name.length > 0 && !name.includes("@") ? name : NEUTRAL_NAME;
 }
 
