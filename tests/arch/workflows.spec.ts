@@ -907,3 +907,64 @@ describe("deploy — a failed deploy step rolls back exactly as a failed smoke d
     expect(rollsBack("failure", "skipped", "")).toBe(false);
   });
 });
+
+// #7106 (2026-11-08): `release · deploy` went red in `Set up flyctl` on three 504s from GitHub's
+// release-asset host — the third such download failure (500s on 10-12 and 10-26). The pin already
+// skips the "latest" lookup, so what is left is a host blip longer than the action's own ~35s of
+// tries. Each Fly job therefore gets one more attempt after a pause, and only that one may fail it.
+describe("pipeline — a failed flyctl download gets a second attempt before the deploy goes red", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const jobs = {
+    deploy: pipeline.slice(pipeline.indexOf("\n  deploy:"), pipeline.indexOf("\n  deploy-bots:")),
+    "deploy-bots": pipeline.slice(pipeline.indexOf("\n  deploy-bots:")),
+  };
+  const stepsOf = (job: string) =>
+    job
+      .split(/\n(?= {6}- )/)
+      .slice(1)
+      .map((text) => ({ text, name: /- (?:name: )?(.*)/.exec(text)?.[1] ?? "" }));
+  const setupUse = /uses: (superfly\/flyctl-actions\/setup-flyctl@\S+)/;
+
+  for (const [jobName, job] of Object.entries(jobs)) {
+    describe(jobName, () => {
+      const steps = stepsOf(job);
+      const setups = steps.filter((s) => setupUse.test(s.text));
+      const [first, second] = setups;
+
+      it("sets up flyctl exactly twice: a first attempt and a conditional second", () => {
+        expect(setups.map((s) => s.name)).toEqual([
+          "Set up flyctl",
+          "Set up flyctl — second attempt",
+        ]);
+      });
+
+      it("lets the first attempt fail without failing the job, under the id the retry reads", () => {
+        expect(first?.text).toMatch(/^\s+id: flyctl$/m);
+        expect(first?.text).toMatch(/^\s+continue-on-error: true$/m);
+      });
+
+      it("runs the second attempt only after the first failed, and never forgives it", () => {
+        expect(second?.text).toMatch(/^\s+if: steps\.flyctl\.outcome == 'failure'$/m);
+        expect(second?.text).not.toMatch(/continue-on-error/);
+      });
+
+      it("pauses between the attempts, so the retry is not inside the same host blip", () => {
+        const at = (s: (typeof steps)[number] | undefined) =>
+          steps.indexOf(s as (typeof steps)[number]);
+        const between = steps.slice(at(first) + 1, at(second));
+        expect(between).toHaveLength(1);
+        expect(between[0]?.text).toMatch(/^\s+if: steps\.flyctl\.outcome == 'failure'$/m);
+        expect(Number(/run: sleep (\d+)/.exec(between[0]?.text ?? "")?.[1])).toBeGreaterThanOrEqual(
+          30,
+        );
+      });
+
+      it("retries the same pinned action and the same pinned flyctl version", () => {
+        expect(second?.text.match(setupUse)?.[1]).toBe(first?.text.match(setupUse)?.[1]);
+        const version = (t = "") => /^\s+version: (\S+)$/m.exec(t)?.[1];
+        expect(version(first?.text)).toMatch(/^\d+\.\d+\.\d+$/);
+        expect(version(second?.text)).toBe(version(first?.text));
+      });
+    });
+  }
+});

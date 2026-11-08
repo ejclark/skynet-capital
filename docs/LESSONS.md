@@ -35,6 +35,16 @@ counts those against each entry's prevention type (the "Did the fix hold?" loop,
 
 ---
 
+### `release · deploy` red on main: a third flyctl download failure, so the Fly jobs retry it once after a pause
+- **SHA:** 35c754d   **DATE:** 2026-11-08   **STATUS:** closed
+- **RECURS:** Three one-off infra failures in the Claude-lane window: a lost runner and two flyctl downloads
+- **SIGNAL:** run 42464350852 failed in `Set up flyctl` with "Unexpected HTTP response: 504" three times in 35 seconds (08:47:14–08:47:49Z), before flyctl ran; capsule #7106 within minutes. `35c754d` adds a `docs/research/**` page, a runtime change for the dashboard, so production stayed one research page behind `main` until the next push, and `deploy-bots` was skipped behind it.
+- **ROOT CAUSE:** GitHub's release-asset host returned 5xx for longer than the action's own three tries cover. The version was already pinned, so this is the asset download, as on 10-12 and 10-26. The earlier entry chose ledger-only because catch-up re-runs every 15 minutes; `release · deploy` has no tick, so each failure there leaves production behind until the next push and costs a red `main`, a capsule and a repair session.
+- **PREVENTION:** script, held for Eric (workflow file, boards the platter). Both Fly jobs in `pipeline.yml` keep the first `Set up flyctl` on `continue-on-error` under `id: flyctl`, pause 60 seconds, and run one more attempt that alone can fail the job. `tests/arch/workflows.spec.ts` pins the shape: id, the conditional, the pause, the same pinned action and version (10 assertions, all red against the old file).
+- **SIDE QUESTS:** `bots-catchup.yml`, `autonomy-ops.yml`, `fly-logs.yml` and `companion-eval.yml` set up flyctl once each. Catch-up re-ticks; the rest can take the same shape if a download failure turns up there.
+
+---
+
 ### A drift round stopped after its first step on a Mac, and a session counted 36 unrefuted proposals as fixes
 - **SHA:** n/a   **DATE:** 2026-11-08   **STATUS:** closed
 - **SIGNAL:** Eric, 2026-11-08 00:41Z: "any reason the task stalled/stopped? why not finish?" The run started about 21:30Z on 2026-11-07. Its first `blocked` check, a red pre-push verify on `tests/arch/ship-platter.spec.ts`, was in the journal within half an hour. At 23:54Z the session read 35 such results as finished fixes, put them on a wave branch and reported "36 fixes". Detection took about 3 hours, and his question, not a check.
