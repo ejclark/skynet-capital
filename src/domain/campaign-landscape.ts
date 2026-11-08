@@ -38,6 +38,7 @@ import {
   linkEvents,
 } from "./campaigns.js";
 import type { MarketEvent } from "./market-events-types.js";
+import { DAY_MS } from "./time.js";
 
 /** One daily close, oldest first in a series (claim-score.ts → TapeBar has the same shape). */
 export interface Close {
@@ -139,7 +140,6 @@ export interface Landscape {
   readonly tested: readonly Tested[];
 }
 
-const DAY_MS = 86_400_000;
 const dayNumber = (date: string): number => Date.parse(`${date.slice(0, 10)}T00:00:00Z`) / DAY_MS;
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
