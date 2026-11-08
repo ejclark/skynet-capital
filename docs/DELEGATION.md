@@ -82,7 +82,9 @@ into separate lint, typecheck and per-suite calls (#5191).
    keep or remove, and why) **then `npm run worktree:sweep -- --apply`.** It removes a worktree
    only when its HEAD is in `origin/main` or a remote branch, it has no uncommitted or untracked
    files, it has sat untouched for an hour, and its lock names no live process; it never removes
-   the primary or the worktree it runs in, and removing one deletes the directory only — the
+   the primary, the worktree it runs in, or a desktop-app session's folder (branch
+   `claude/<word>-<word>-<6 hex>`: an idle open session holds no lock, #7102; `--include-sessions`
+   judges those by the same rules), and removing one deletes the directory only — the
    branch and its commits stay. A squash merge leaves no ancestor of `main` and usually deletes
    the remote branch, so pass `--gh` to also accept "a PR merged at exactly this head". Every
    agent worktree is locked to the harness process that spawned it, which outlives the agent, so
