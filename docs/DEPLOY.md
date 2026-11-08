@@ -59,9 +59,8 @@ green PR ships automatically.
 
 ## Continuous deployment (merge → deploy)
 
-The `release · deploy` job in `.github/workflows/pipeline.yml` deploys to Fly automatically **on every push to `main`**,
-without re-running the suite: branch protection requires `verify` to pass before a PR merges, so
-merging a green PR ships the exact commit CI validated. A failed CI run never deploys.
+The `release · deploy` job in `.github/workflows/pipeline.yml` deploys to Fly automatically **after CI passes on `main`**:
+merge a green PR and the exact commit CI validated is shipped. A failed CI run never deploys.
 
 The only thing GitHub needs is a Fly **deploy token** — your app secrets
 (`SKYNET_DASHBOARD_PASSWORD`, `SKYNET_STORE_SECRET`, any Alpaca keys) stay on Fly and are
