@@ -23,7 +23,8 @@
  *   - borrows a franchise's catchphrase in the narrator line (criterion 4). A deny-list is a floor,
  *     not a proof: the narrator is still written to be original.
  *
- * NOTHING LOADS AT IMPORT. The server's whole import graph reaches this module, and the study
+ * NOTHING LOADS AT IMPORT (and why the small regexes and `isText` below are local, not imported
+ * from campaigns.ts: importing that module loads every campaign file). The server's whole import graph reaches this module, and the study
  * worlds run that graph inside a corpus pinned to an older commit (scripts/study/worlds/
  * compose.mjs), where neither `editions/` nor `campaigns/` exists. So the files are read on the
  * first request (`editions()`), and the campaign's title is handed in by the caller rather than
@@ -33,6 +34,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { daysBetween } from "./market-calendar.js";
 import { marketDayKey } from "./market-day.js";
 
 /** How a line knows what it says. `reported` renders as unconfirmed, `modeled` says so. */
@@ -293,11 +295,6 @@ export interface EditionView {
 /** Today's date in New York, through market-day.ts, the one place an instant becomes a market day. */
 export function marketToday(now: Date): string {
   return marketDayKey(now.toISOString());
-}
-
-/** Whole calendar days from `from` to `to`, both YYYY-MM-DD. */
-function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
 /**
