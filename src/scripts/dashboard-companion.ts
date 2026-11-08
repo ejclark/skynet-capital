@@ -12,6 +12,7 @@ import { assembleChain } from "../adapters/alpaca-recommend-chain.js";
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { resolveCompanionChat } from "../companion/companion-chat.js";
 import type { CompanionDeskDeps } from "../companion/companion-tools.js";
+import { marketDayKey } from "../domain/market-day.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { rankStructures } from "../options/recommend.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
@@ -28,6 +29,7 @@ import {
 } from "../server/progression-service.js";
 import { createProgressionStore } from "../server/progression-store.js";
 import { resolveRoadmap } from "../server/roadmap.js";
+import { upcomingEvents } from "../server/upcoming-events.js";
 import { resolveWorkStatus } from "../server/work-status.js";
 
 export interface CompanionSetupDeps {
@@ -83,6 +85,14 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     ...(findSimilarFeedback ? { findSimilarFeedback } : {}),
     ...(readWorkStatus ? { readWorkStatus } : {}),
     ...(readRoadmap ? { readRoadmap } : {}),
+    // The calendar and the ledgers are baked into the image, so this is always wired; the market
+    // day is New York's, so an evening question doesn't read tomorrow's fortnight.
+    readUpcomingEvents: (held, underlying) =>
+      upcomingEvents({
+        asOf: marketDayKey(new Date().toISOString()),
+        held,
+        ...(underlying ? { underlying } : {}),
+      }),
     ...(optionsClientFor
       ? {
           rankFor: async (participantId, outlook) => {

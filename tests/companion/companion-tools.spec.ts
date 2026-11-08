@@ -315,18 +315,19 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
     },
   );
 
-  // An unlinked member's turn declares only the two deskless tools, so the refusal must not invite
+  // An unlinked member's turn declares only the deskless tools, so the refusal must not invite
   // a call to a desk lookup that turn never offered.
   it("names only this turn's declared tools when the member has no linked desk", async () => {
     const result = await runCompanionTool("bogus", depsFor(), undefined);
     expect(result).toEqual({
       ok: false,
       error:
-        "no such tool: bogus (the declared tools are get_work_status, get_roadmap, draft_feedback)",
+        "no such tool: bogus (the declared tools are get_work_status, get_roadmap, get_upcoming_events, draft_feedback)",
     });
     expect(declaredToolNames(undefined)).toEqual([
       "get_work_status",
       "get_roadmap",
+      "get_upcoming_events",
       "draft_feedback",
     ]);
     expect(declaredToolNames("acct-1")).toEqual(COMPANION_TOOL_NAMES);
@@ -507,5 +508,67 @@ describe("get_roadmap — what is coming next (#3952 slice 3)", () => {
       "acct-1",
     );
     expect(blip).toEqual({ ok: false, error: "couldn't read the build queue right now" });
+  });
+});
+
+describe("get_upcoming_events — what's coming up on the calendar (#7034 slice 3a)", () => {
+  const answer = {
+    asOf: "2026-11-09",
+    horizonDays: 14,
+    events: [],
+    more: 0,
+    rankedBy: "impact, then date",
+    notCovered: "News and lawsuits: not covered yet",
+  };
+
+  function recording() {
+    const calls: { held: readonly string[]; underlying: string | undefined }[] = [];
+    const readUpcomingEvents: CompanionDeskDeps["readUpcomingEvents"] = (held, underlying) => {
+      calls.push({ held, underlying });
+      return answer;
+    };
+    return { calls, readUpcomingEvents };
+  }
+
+  it("ranks by the member's own held names, and answers with no linked desk too", async () => {
+    const { calls, readUpcomingEvents } = recording();
+    const deps = depsFor({ readUpcomingEvents });
+    expect(await runCompanionTool("get_upcoming_events", deps, "acct-1")).toEqual({
+      ok: true,
+      result: answer,
+    });
+    expect(await runCompanionTool("get_upcoming_events", deps, undefined)).toEqual({
+      ok: true,
+      result: answer,
+    });
+    expect(calls).toEqual([
+      { held: ["AAPL"], underlying: undefined },
+      { held: [], underlying: undefined },
+    ]);
+  });
+
+  it("narrows to one ticker, upper-cased, and refuses an option symbol before any read", async () => {
+    const { calls, readUpcomingEvents } = recording();
+    const deps = depsFor({ readUpcomingEvents });
+    await runCompanionTool("get_upcoming_events", deps, "acct-1", { underlying: " nvda " });
+    await runCompanionTool("get_upcoming_events", deps, "acct-1", { underlying: "  " });
+    const refused = await runCompanionTool("get_upcoming_events", deps, "acct-1", {
+      underlying: "NVDA261218C00200000",
+    });
+    expect(refused).toEqual({
+      ok: false,
+      error: "underlying must be a stock ticker like NVDA, never an option symbol",
+    });
+    expect(calls).toEqual([
+      { held: ["AAPL"], underlying: "NVDA" },
+      { held: ["AAPL"], underlying: undefined },
+    ]);
+  });
+
+  it("says 'not available' when the calendar isn't wired, never an empty fortnight", async () => {
+    expect(await runCompanionTool("get_upcoming_events", depsFor(), "acct-1")).toEqual({
+      ok: false,
+      error: "the event calendar isn't available on this deployment",
+    });
   });
 });
