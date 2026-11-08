@@ -49,8 +49,9 @@ export const NUDGE_MARKER = /<!-- moneypenny:headless sha=(\S+) -->/;
 /** The empty commit's message, when update-branch has nothing to merge. Lowercase-led for commitlint. */
 const NUDGE_MESSAGE = "chore: a new head so this pr's checks start (#7112)";
 
-/** GitHub's answer to update-branch on a branch that already holds main's tip. */
-const ALREADY_CURRENT = /no new commits|up.to.date/i;
+/** GitHub's answer to update-branch on a branch that already holds main's tip. Any other refusal is
+ *  reported, never answered with a commit. */
+const ALREADY_CURRENT = /There are no new commits on the base branch/i;
 
 /** Pure: which headless PRs get a commit, and the comment each carries. */
 export function nudgeIntents(candidates = []) {
@@ -63,7 +64,7 @@ export function nudgeIntents(candidates = []) {
       headSha: c.headSha,
       headRef: c.headRef,
       hours: c.hours,
-      body: `🔁 **Giving this PR a new head so its checks start** (try ${c.triedShas.length + 1} of ${NUDGE_CAP}): ${c.why}. One commit from Moneypenny's App sends the event that starts \`verify\`; the Pipeline then decides as it always does. This happens once per head. If the checks still do not start, this PR stays in \`npm run pr:stuck\`.\n\n<!-- moneypenny:headless sha=${c.headSha} -->\n\n${FOOTER}`,
+      body: `🔁 **Asking for a new head on this PR so its checks start** (try ${c.triedShas.length + 1} of ${NUDGE_CAP}): ${c.why}. One commit from Moneypenny's App sends the event that starts \`verify\`; the Pipeline then decides as it always does. This is asked once per head. If GitHub refuses it, or the checks still do not start, this PR stays in \`npm run pr:stuck\`.\n\n<!-- moneypenny:headless sha=${c.headSha} -->\n\n${FOOTER}`,
     }));
 }
 
@@ -89,6 +90,8 @@ export function gatherHeadless(nowMs, { rest = ghRest } = {}) {
   for (const listed of open) {
     if (listed.draft || listed.auto_merge || Date.parse(listed.created_at) > cutoff) continue;
     if (listed.base?.ref !== "main") continue; // Pipeline runs only on PRs into main
+    // A fork's branch is not ours to move, and its runs wait on an approval for their own reason.
+    if (listed.head?.repo?.full_name !== listed.base?.repo?.full_name) continue;
     if ((listed.labels ?? []).some((l) => l.name === LABELS.holdMerge.name)) continue;
     const sha = listed.head.sha;
     const checkRuns = read(`commits/${sha}/check-runs?per_page=100`).check_runs ?? [];

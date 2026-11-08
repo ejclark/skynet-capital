@@ -626,7 +626,8 @@ export function gatherAuditDeps(nowMs, hourly = {}) {
     // One REST call on a tick with no armed PR past 3h; the rest of its reads run at most hourly.
     stuckBranches: stuckBranchesOrNone(nowMs, hourly),
     stranded: strandedOrNone(nowMs),
-    // One list call; an unarmed PR past 30 minutes costs one more unless its head has no `verify`.
+    // One list call, one check-runs read per unarmed PR past 30 minutes, and a few more only for a
+    // head with no `verify` run.
     headless: headlessOrNone(nowMs),
     // One REST call; the open issue comes from the `issues` list already in hand.
     clock: clockOrUnknown(nowMs, issues),

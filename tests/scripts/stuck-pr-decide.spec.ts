@@ -263,6 +263,11 @@ describe("judgePr — the head never got a suite at all (#7089)", () => {
     expect(judgePr({ pr: opened(16), checkRuns: running, suites: [], now: NOW })).toBeNull();
   });
 
+  it("leaves a conflicted PR to the conflict flag: GitHub starts no run on one either", () => {
+    const dirty = { ...opened(16), mergeable_state: "dirty" };
+    expect(judgePr({ pr: dirty, checkRuns: [], suites: [], now: NOW })).toBeNull();
+  });
+
   it("leaves drafts and held PRs alone", () => {
     const base = { checkRuns: [], suites: [], now: NOW };
     expect(judgePr({ ...base, pr: { ...opened(16), draft: true } })).toBeNull();

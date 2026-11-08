@@ -172,7 +172,9 @@ export function judgePr({
     const oldest = Math.min(...ghosts.map((g) => Date.parse(g.created_at ?? 0) || now));
     return judgeHeadless({ pr, ghosts, age: (now - oldest) / 3.6e6, hours });
   }
-  if (runs.length === 0 && !(suites ?? []).some(isActionsSuite)) {
+  // A conflicted PR gets no `pull_request` run either, for its own reason, and the conflict flag
+  // (audit.mjs) already owns it, so "dirty" is not this class.
+  if (runs.length === 0 && !(suites ?? []).some(isActionsSuite) && pr.mergeable_state !== "dirty") {
     const since = Math.max(Date.parse(pr.created_at ?? "") || 0, Date.parse(headAt ?? "") || 0);
     return since ? judgeNoSuite({ pr, age: (now - since) / 3.6e6 }) : null;
   }

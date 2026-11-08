@@ -104,6 +104,20 @@ describe("nudgeHeadless — comment first, then one App-identity commit", () => 
     expect(flat.some((c) => /force|close/.test(c))).toBe(false);
   });
 
+  it("does not read an unrelated refusal that says 'up to date' as the branch being current", () => {
+    const calls: string[][] = [];
+    nudgeHeadless(intent(), {
+      log: () => undefined,
+      run: (_c, args) => {
+        calls.push(args);
+        if (args.join(" ").includes("update-branch"))
+          throw refuse("ruleset: keep up-to-date (HTTP 422)");
+        return "";
+      },
+    });
+    expect(calls).toHaveLength(2);
+  });
+
   it("WHEN GitHub refuses for any other reason, reports it and does not throw", () => {
     const logs: string[] = [];
     const calls: string[][] = [];
@@ -130,8 +144,8 @@ describe("gatherHeadless — the #7089 head, read through REST", () => {
     auto_merge: null,
     labels: [],
     created_at: ago(16),
-    base: { ref: "main" },
-    head: { sha: "a1b2c3d", ref: "feedback/7077" },
+    base: { ref: "main", repo: { full_name: "ejclark/skynet-capital" } },
+    head: { sha: "a1b2c3d", ref: "feedback/7077", repo: { full_name: "ejclark/skynet-capital" } },
     body: "",
     ...over,
   });
@@ -162,13 +176,14 @@ describe("gatherHeadless — the #7089 head, read through REST", () => {
     expect(c?.triedShas).toEqual(["a1b2c3d"]);
   });
 
-  it("skips a PR that is young, armed, held, a draft or not into main", () => {
+  it("skips a PR that is young, armed, held, a draft, not into main, or from a fork", () => {
     for (const over of [
       { created_at: ago(0.2) },
       { auto_merge: { enabled_by: {} } },
       { labels: [{ name: "hold-merge" }] },
       { draft: true },
-      { base: { ref: "platter/x" } },
+      { base: { ref: "platter/x", repo: { full_name: "ejclark/skynet-capital" } } },
+      { head: { sha: "a1b2c3d", ref: "fix-x", repo: { full_name: "someone/fork" } } },
     ]) {
       expect(gatherHeadless(NOW, { rest: restFor([open(over)]) })).toEqual([]);
     }

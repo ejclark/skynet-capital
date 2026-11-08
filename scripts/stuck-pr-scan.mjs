@@ -78,10 +78,13 @@ async function scan() {
       api(`commits/${sha}/check-runs?per_page=100`),
       api(`commits/${sha}/check-suites?per_page=100`),
     ]);
-    // `mergeable_state` is only on the single-PR read, and only worth a call once the checks are in.
-    const pr = await api(`pulls/${listed.number}`);
     const checkRuns = checks.check_runs ?? [];
     const suiteList = suites.check_suites ?? [];
+    // Younger than `hours`, only the no-suite rule can name it, so a head with a run stops here.
+    const young = Date.parse(listed.created_at) > Date.now() - hours * 3.6e6;
+    if (young && !needsHeadAt(checkRuns, suiteList)) continue;
+    // `mergeable_state` is only on the single-PR read, and only worth a call once the checks are in.
+    const pr = await api(`pulls/${listed.number}`);
     const headAt = needsHeadAt(checkRuns, suiteList)
       ? (await api(`commits/${sha}`)).commit?.committer?.date
       : null;
