@@ -38,12 +38,15 @@ import {
   type PlaybookChain,
   parseChain,
 } from "./chain.js";
-import { findPlaybook } from "./registry.js";
 
 /** What a playbook can hold, in kinds the chain can name. */
 export type HoldingKind = "short-put" | "shares" | "covered-call" | "long-call" | "call-spread";
 
 export interface ChainableRow {
+  /** The one symbol it trades. The registry's `symbols[0]` is the source; a spec holds the two
+   *  equal. It is copied here because the registry reaches Node-only code (`symbol-facts.ts`), and
+   *  this file is bundled into the browser by the chain screen (#6959 slice 3b). */
+  readonly symbol: string;
   /** The events this playbook's position can reach, and what each leaves. `on-date` is not
    *  listed: a date reaches every position, and hands on whatever `holds` says it may hold. */
   readonly hands: Readonly<Partial<Record<Exclude<HandoffKind, "on-date">, HoldingKind | "cash">>>;
@@ -52,6 +55,7 @@ export interface ChainableRow {
 }
 
 const WHEEL: ChainableRow = {
+  symbol: "CRWV",
   // `chain-replay.ts` wheelModel: the put sale fills; at expiry it is assigned (the shares) or
   // expires (the collateral freed). `wheelPhase` reads its state from the positions alone, so a
   // put, shares or a covered call handed to a wheel on its own symbol is a phase it already runs.
@@ -61,6 +65,7 @@ const WHEEL: ChainableRow = {
 };
 
 const LONG_CALL: ChainableRow = {
+  symbol: "CRWV",
   // `long-call-rules.ts` longCallExit: "profit" at double the cost, "time" with 45 days left —
   // each sells the whole position. It reads the calls it holds on its symbol (`long-call.ts`).
   hands: { filled: "long-call", "take-profit": "cash", stopped: "cash" },
@@ -70,11 +75,12 @@ const LONG_CALL: ChainableRow = {
 
 /** Shares bought inside a window and sold at its end by the calendar: no event on the menu ends
  *  them, and the window would not keep shares it did not buy. */
-const SHARES_WINDOW: ChainableRow = {
+const SHARES_WINDOW = (symbol: string): ChainableRow => ({
+  symbol,
   hands: { filled: "shares" },
   holds: ["shares"],
   receives: [],
-};
+});
 
 export const CHAINABLE: Readonly<Record<string, ChainableRow>> = {
   "CRWV-WHEEL": WHEEL,
@@ -83,14 +89,20 @@ export const CHAINABLE: Readonly<Record<string, ChainableRow>> = {
   // sold at double is half, not the position, so it hands nothing on. It receives nothing: that
   // half-sale happens once per contract, remembered against its own buys.
   "NVDA-LONG-LEAP": {
+    symbol: "NVDA",
     hands: { filled: "long-call", stopped: "cash" },
     holds: ["long-call"],
     receives: [],
   },
-  "S1-NVDA": SHARES_WINDOW,
-  "G1-GOOG": SHARES_WINDOW,
+  "S1-NVDA": SHARES_WINDOW("NVDA"),
+  "G1-GOOG": SHARES_WINDOW("GOOG"),
   // `call-spread.ts`: opened and closed by its window, like the shares plays.
-  "NVDA-CALL-SPREAD": { hands: { filled: "call-spread" }, holds: ["call-spread"], receives: [] },
+  "NVDA-CALL-SPREAD": {
+    symbol: "NVDA",
+    hands: { filled: "call-spread" },
+    holds: ["call-spread"],
+    receives: [],
+  },
 };
 
 /** The ids on the menu, in the order the form draws them. */
@@ -114,8 +126,17 @@ const HOLDING_WORDS: Readonly<Record<HoldingKind, string>> = {
   "call-spread": "a call spread",
 };
 
-const nameOf = (id: string): string => findPlaybook(id)?.displayName ?? id;
-const symbolOf = (id: string): string | undefined => findPlaybook(id)?.symbols[0];
+/** The display names a member reads in a refusal, copied from the registry for the reason
+ *  `ChainableRow.symbol` gives; a spec holds this table equal to every registered `displayName`, so a
+ *  playbook that gains one fails it until the name is added here. The menu's own playbooks have none
+ *  yet (#5205), so they read as their ids; SAURON is here because a crafted request can name it. */
+export const DISPLAY_NAMES: Readonly<Record<string, string>> = {
+  SAURON: "Buy the rumor, sell the news",
+};
+
+/** A playbook as the member reads it: its display name, else its id. */
+export const nameOf = (id: string): string => DISPLAY_NAMES[id] ?? id;
+const symbolOf = (id: string): string | undefined => CHAINABLE[id]?.symbol;
 
 /** The events a playbook's position can reach, in menu order (`on-date` always). */
 export function eventsFor(id: string): readonly HandoffKind[] {
@@ -317,6 +338,17 @@ export function chainFromForm(form: ChainForm, source: string): ChainFormResult 
     : { ok: true, chain: parsed.chain };
 }
 
+/** One link as a sentence: "CRWV-WHEEL: when its sold contract expires worthless, CRWV-LONG-CALL takes over." */
+export function linkSentence(link: ChainLinkForm): string {
+  const when =
+    link.on === ""
+      ? "…"
+      : link.on === "on-date"
+        ? `${link.date || "the date"} arrives`
+        : EVENT_WORDS[link.on];
+  return `${nameOf(link.from)}: when ${when}, ${nameOf(link.to)} takes over.`;
+}
+
 /** The form a saved chain was made from — so Edit opens on what was saved. */
 export function formFromChain(chain: PlaybookChain): ChainForm {
   return {
@@ -328,4 +360,32 @@ export function formFromChain(chain: PlaybookChain): ChainForm {
       to: l.to,
     })),
   };
+}
+
+/**
+ * A request body as a `ChainForm`, or undefined when it isn't the form's shape at all. Only the
+ * SHAPE is checked here (strings of sane length, at most `MAX_FORM_LINKS` rows); whether the picks
+ * make a chain is `chainFromForm`'s, which the save runs next.
+ */
+export const MAX_FORM_LINKS = 6;
+
+function parseLinkForm(link: unknown): ChainLinkForm | undefined {
+  if (typeof link !== "object" || link === null || Array.isArray(link)) return undefined;
+  const { from, on, date, to } = link as Record<string, unknown>;
+  if (typeof from !== "string" || from.length > 60) return undefined;
+  if (typeof to !== "string" || to.length > 60) return undefined;
+  if (typeof date !== "string" || date.length > 20) return undefined;
+  if (on !== "" && !(HANDOFF_EVENTS as readonly unknown[]).includes(on)) return undefined;
+  return { from, on: on as HandoffKind | "", date, to };
+}
+
+export function parseChainForm(raw: unknown): ChainForm | undefined {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
+  const { title, links } = raw as Record<string, unknown>;
+  if (typeof title !== "string" || title.length > 400) return undefined;
+  if (!Array.isArray(links) || links.length > MAX_FORM_LINKS) return undefined;
+  const picks = links.map(parseLinkForm);
+  return picks.every((l): l is ChainLinkForm => l !== undefined)
+    ? { title, links: picks }
+    : undefined;
 }

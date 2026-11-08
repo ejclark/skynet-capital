@@ -34,6 +34,7 @@ import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveMemberCampaignsApi } from "./member-campaigns-api-routes.js";
+import { serveMemberChainsApi } from "./member-chains-api-routes.js";
 import { serveMemberConvictionsApi } from "./member-convictions-api-routes.js";
 import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
@@ -196,6 +197,7 @@ async function servePlaybookWrites(
   if (await serveSubscriptionsApi(req, res, path, config, session)) return true;
   if (await serveMemberConvictionsApi(req, res, path, config, session)) return true;
   if (await serveMemberCampaignsApi(req, res, path, config, session)) return true;
+  if (await serveMemberChainsApi(req, res, path, config, session)) return true;
   return serveAuthoredPlaysApi(req, res, path, config, session);
 }
 
