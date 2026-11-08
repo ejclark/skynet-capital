@@ -94,8 +94,7 @@ export function alignSeries(index, vix) {
 export function underHigh(close, t) {
   if (t < HIGH_WINDOW - 1) return null;
   let high = 0;
-  for (let j = t - HIGH_WINDOW + 1; j <= t; j++)
-    high = Math.max(high, close[j]);
+  for (let j = t - HIGH_WINDOW + 1; j <= t; j++) high = Math.max(high, close[j]);
   return 1 - close[t] / high;
 }
 
@@ -103,7 +102,8 @@ export function underHigh(close, t) {
 export function stateAt(series, t) {
   const under = underHigh(series.close, t);
   if (under == null) return null;
-  const deep = under >= DRAWDOWN;
+  // 1 - 90/100 is 0.0999…98 in floating point; a tenth of a cent either way is not the question.
+  const deep = under >= DRAWDOWN - 1e-9;
   const fearful = series.vix[t] >= VIX_FLOOR;
   if (deep && fearful) return "both";
   if (deep) return "drawdown";
@@ -139,17 +139,14 @@ export function shareReturn(close, t, hold) {
 }
 
 const d1Of = (spot, strike, vol, years) =>
-  (Math.log(spot / strike) + 0.5 * vol * vol * years) /
-  (vol * Math.sqrt(years));
+  (Math.log(spot / strike) + 0.5 * vol * vol * years) / (vol * Math.sqrt(years));
 
 /** Standard normal CDF (Abramowitz-Stegun 7.1.26). */
 function normCdf(x) {
   const t = 1 / (1 + 0.3275911 * Math.abs(x) * Math.SQRT1_2);
   const y =
     1 -
-    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) *
-      t +
-      0.254829592) *
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) *
       t *
       Math.exp(-(x * x) / 2);
   return x >= 0 ? 0.5 * (1 + y) : 0.5 * (1 - y);
@@ -189,13 +186,7 @@ function strikeFor(spot, deltaAt, delta, falling) {
  *
  * @returns {{premium: number, assigned: boolean, pnl: number} | null}
  */
-export function putCycle({
-  close,
-  vol,
-  t,
-  sessions = PUT_SESSIONS,
-  delta = PUT_DELTA,
-}) {
+export function putCycle({ close, vol, t, sessions = PUT_SESSIONS, delta = PUT_DELTA }) {
   if (t + sessions >= close.length) return null;
   const years = sessions / YEAR;
   const spot = close[t];
@@ -235,20 +226,14 @@ export function callLegs({
   if (t + hold >= close.length) return null;
   const spot = close[t];
   const v0 = volAt(t);
-  const strike = strikeFor(
-    spot,
-    (k) => normCdf(d1Of(spot, k, v0, years)),
-    delta,
-    true,
-  );
+  const strike = strikeFor(spot, (k) => normCdf(d1Of(spot, k, v0, years)), delta, true);
   const paid = callValue(spot, strike, v0, years) * (1 + SLIPPAGE);
   let ran = 0;
   let sold = null;
   let days = null;
   for (let k = 1; k <= hold; k++) {
     const left = years - k / YEAR;
-    const mark =
-      callValue(close[t + k], strike, volAt(t + k), left) * (1 - SLIPPAGE);
+    const mark = callValue(close[t + k], strike, volAt(t + k), left) * (1 - SLIPPAGE);
     if (sold == null && mark >= takeProfit * paid) {
       sold = mark / paid - 1;
       days = k;
@@ -295,6 +280,7 @@ export function summarize(values, episodes) {
     median: quantile(values, 0.5),
     win: values.filter((v) => v > 0).length / values.length,
     p10: quantile(values, 0.1),
+    min: Math.min(...values),
   };
 }
 
@@ -324,8 +310,7 @@ export function gapInterval(rows, base, { draws = 2000, seed = 7028 } = {}) {
       drawn.push(...groups[Math.floor(rand() * groups.length)]);
     return drawn.reduce((s, v) => s + v, 0) / drawn.length;
   };
-  const mean = (list) =>
-    list.flat().reduce((s, v) => s + v, 0) / list.flat().length;
+  const mean = (list) => list.flat().reduce((s, v) => s + v, 0) / list.flat().length;
   const gaps = [];
   for (let d = 0; d < draws; d++) gaps.push(resample(a) - resample(b));
   return {
@@ -354,19 +339,12 @@ export function moveVerdict(rows, controlMean) {
   const clusters = clusterByDate(
     [...byEpisode.values()].map((e) => ({
       date: e.date,
-      value:
-        (e.values.reduce((s, v) => s + v, 0) / e.values.length - controlMean) *
-        100,
+      value: (e.values.reduce((s, v) => s + v, 0) / e.values.length - controlMean) * 100,
     })),
   );
-  const all = clusters.length
-    ? clusters.reduce((s, c) => s + c.value, 0) / clusters.length
-    : 0;
+  const all = clusters.length ? clusters.reduce((s, c) => s + c.value, 0) / clusters.length : 0;
   const recent = clusters.filter((c) => c.date >= LATEST_ERA);
-  const recentMean = recent.length
-    ? recent.reduce((s, c) => s + c.value, 0) / recent.length
-    : 0;
-  const sameSign =
-    recent.length > 0 && Math.sign(recentMean) === Math.sign(all);
+  const recentMean = recent.length ? recent.reduce((s, c) => s + c.value, 0) / recent.length : 0;
+  const sameSign = recent.length > 0 && Math.sign(recentMean) === Math.sign(all);
   return backtestVerdict(clusters, POWER, sameSign);
 }

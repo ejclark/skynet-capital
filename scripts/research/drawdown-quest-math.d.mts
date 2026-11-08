@@ -66,6 +66,7 @@ export function summarize(
   median?: number;
   win?: number;
   p10?: number;
+  min?: number;
 };
 export function gapInterval(
   rows: readonly Row[],
