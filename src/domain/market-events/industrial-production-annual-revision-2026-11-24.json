@@ -1,0 +1,11 @@
+{
+  "id": "industrial-production-annual-revision-2026-11-24",
+  "kind": "macro-print",
+  "title": "Federal Reserve G.17 annual revision of industrial production and capacity utilization — 2022 base year, 2023 and 2024 Census benchmarks, seven days after the October print",
+  "date": "2026-11-24",
+  "status": "estimate",
+  "source": "EST: federalreserve.gov/feeds/g17.html re-fetched direct 2026-11-09 (HTTP 200, 619,956 bytes). The Board's own 2026-09-18 notice, titled 'G.17 Annual Revision Planned to be Released on November 24, 2026', reads: 'The Federal Reserve Board plans to issue its annual revision to the indexes of industrial production (IP) and the related measures of capacity utilization on November 24, 2026. The base year for the revised indexes will be 2022. New annual benchmark data for manufacturing from the U.S. Census Bureau for 2023 and 2024 will be incorporated'. The verb is 'plans to issue' and the notice states no release time; the feed has no later revision item as of 2026-11-09 (newest item: the 2026-10-16 September-data release). Kept estimate on purpose: the Board's own precedent for time-bearing revision notices is noon (2017, 2021, 2022, 2023, 2025) and the time notice has not yet been posted, so this id promotes to confirmed when the Board posts it or when the release itself appears. Checked 2026-11-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "CANONICAL FILE WRITTEN 2026-11-09 by this event's own initial research, after reading the single proposal that existed for this id (proposals/industrial-production-annual-revision-2026-11-24.from-industrial-production-2026-11-17.json, now shadowed and inert). Every claim in that proposal was re-derived against the Board feed and survives; the date, base year and Census benchmark years are verbatim. Impact stays LOW and symbols [] on measured grounds: no house playbook is macro-keyed, and on the 11 revision dates since 2014 SPY's daily range ran a median 1.285% against 0.871% (permutation p=0.051, n=11) but only 2 of 11 exceeded the baseline p90 and the median close-to-close move was indistinguishable (0.493% vs 0.489%) — read against a VIX that closed 25.64 on 2026-11-06 after 28.18 on 11-05, none of it licenses an entry. Nothing here is a position. Thanksgiving week: PCE and Q3 GDP second estimate follow on 11-25."
+}
