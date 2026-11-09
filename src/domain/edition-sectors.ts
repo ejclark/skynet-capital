@@ -1,0 +1,140 @@
+/**
+ * THE WHOLE MARKET ON THE LANDING PAGE (#7077 slice 1b, round 3). Eric's live review of the shipped
+ * page (#7018 round 3, 2026-11-08): "Shouldn't we start with a wholestick overview - there are 11
+ * official GICS stock market sectors. At the sector level, aggregated information only seems
+ * necessary." AT1–AT3: the first screen shows all 11 sectors and the S&P 500, one SPDR fund each,
+ * with its move over Day · Week · Month · YTD.
+ *
+ * CLOSES, NOT MOVES, ARE CHECKED IN. An edition carries each fund's closing price on its own date and
+ * on every period's starting date; the moves are worked out here, so a hand-typed percentage can never
+ * disagree with the prices it came from. The closes are fetched by `scripts/edition-sectors.mjs`
+ * (Yahoo daily closes, split-adjusted, dividends not added back, so a move is a price change) and
+ * written beside the stories, the same way the edition itself is fed by hand until #6949 slice 5.
+ *
+ * THE PERIODS ARE FIXED BY THE CALENDAR, so the loader can check them rather than trust them:
+ *   - Day: since the session before the edition's close.
+ *   - Week: since the last close of the week before (Friday, or earlier on a holiday).
+ *   - Month: since the last close on or before the same date a month back.
+ *   - YTD: since the last close of the year before.
+ *
+ * Which fund stands for which sector is `GICS_SECTORS` in `sector-coverage.ts`, one table for the
+ * whole app. SPY stands for the S&P 500. Paper only; nothing here places or sizes an order.
+ */
+import { isSession, sessionsBefore } from "./market-calendar.js";
+import { GICS_SECTORS } from "./sector-coverage.js";
+
+/** The S&P 500's row: the whole market, drawn apart from the sectors (round 3's run 2 fix: "6 of 9
+ *  notes had missed the grey line"). */
+export const MARKET_FUND = { name: "S&P 500", fund: "SPY" } as const;
+
+/** Every fund the overview draws: the market first, then the 11 sectors in `GICS_SECTORS` order. */
+export const SECTOR_FUNDS: readonly { readonly name: string; readonly fund: string }[] = [
+  MARKET_FUND,
+  ...GICS_SECTORS,
+];
+
+export const SECTOR_PERIODS = ["day", "week", "month", "ytd"] as const;
+export type SectorPeriod = (typeof SECTOR_PERIODS)[number];
+
+/** What an edition carries: each fund's closes by date, and where they came from. */
+export interface EditionSectors {
+  /** Where the closes come from, said plainly, with the day they were fetched. */
+  readonly source: string;
+  /** `closes[fund][YYYY-MM-DD]`: the edition's own close and each period's starting close. */
+  readonly closes: Readonly<Record<string, Readonly<Record<string, number>>>>;
+}
+
+const DAY_MS = 86_400_000;
+
+const iso = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
+const at = (date: string): number => Date.parse(`${date}T00:00:00Z`);
+
+/** The last session on or before `date`. */
+function lastSessionOnOrBefore(date: string): string {
+  return isSession(date) ? date : sessionsBefore(date, 1);
+}
+
+/** The same day a month back, held to the month's last day (Mar 31 → Feb 28). */
+function monthBack(date: string): string {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const year = m === 1 ? y - 1 : y;
+  const month = m === 1 ? 12 : m - 1;
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${String(month).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+}
+
+/** The close each period's move is measured from, for an edition dated `date` (a session). */
+export function sectorBases(date: string): Readonly<Record<SectorPeriod, string>> {
+  const weekday = new Date(at(date)).getUTCDay();
+  const sunday = iso(at(date) - weekday * DAY_MS);
+  return {
+    day: sessionsBefore(date, 1),
+    week: lastSessionOnOrBefore(sunday),
+    month: lastSessionOnOrBefore(monthBack(date)),
+    ytd: lastSessionOnOrBefore(`${Number(date.slice(0, 4)) - 1}-12-31`),
+  };
+}
+
+type Fail = (what: string) => never;
+
+const isPrice = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v > 0;
+
+/** Check an edition's `sectors` block: every fund, and for each one exactly its needed closes. */
+export function checkSectors(raw: unknown, date: string, fail: Fail): void {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) fail("sectors: not an object");
+  const s = raw as Record<string, unknown>;
+  if (!(typeof s.source === "string" && s.source.trim())) fail("sectors: name the source");
+  if (!isSession(date)) fail(`sectors: ${date} is not a session, so it has no close`);
+  const closes = s.closes;
+  if (typeof closes !== "object" || closes === null) fail("sectors: closes must be an object");
+  const byFund = closes as Record<string, unknown>;
+  const wanted = SECTOR_FUNDS.map((f) => f.fund);
+  const extra = Object.keys(byFund).find((k) => !wanted.includes(k));
+  if (extra !== undefined) fail(`sectors: ${extra} is not one of the overview's funds`);
+  const needed = [...new Set([date, ...Object.values(sectorBases(date))])].sort();
+  for (const fund of wanted) {
+    const row = byFund[fund];
+    if (typeof row !== "object" || row === null) fail(`sectors: no closes for ${fund}`);
+    const got = row as Record<string, unknown>;
+    const keys = Object.keys(got).sort();
+    if (needed.join() !== keys.join())
+      fail(`sectors: ${fund} needs closes on exactly ${needed.join(", ")}`);
+    for (const d of keys) if (!isPrice(got[d])) fail(`sectors: ${fund} ${d} must be a price`);
+  }
+}
+
+/** One row of the overview: a fund and its move, in percent, over each period. */
+export interface SectorRow {
+  readonly name: string;
+  readonly fund: string;
+  /** True on the S&P 500's row. */
+  readonly market?: true;
+  /** Percent change, close to close, rounded to two places. */
+  readonly moves: Readonly<Record<SectorPeriod, number>>;
+}
+
+/** What the page reads: the rows (the market first), each period's starting date, the source. */
+export interface SectorsView {
+  readonly source: string;
+  readonly from: Readonly<Record<SectorPeriod, string>>;
+  readonly rows: readonly SectorRow[];
+}
+
+const pct = (now: number, then: number): number => Math.round((now / then - 1) * 10_000) / 100;
+
+/** Work the moves out of the closes. Assumes `checkSectors` passed. */
+export function sectorsView(sectors: EditionSectors, date: string): SectorsView {
+  const from = sectorBases(date);
+  return {
+    source: sectors.source,
+    from,
+    rows: SECTOR_FUNDS.map((f) => {
+      const c = sectors.closes[f.fund] as Readonly<Record<string, number>>;
+      const close = c[date] as number;
+      const moves = Object.fromEntries(
+        SECTOR_PERIODS.map((p) => [p, pct(close, c[from[p]] as number)]),
+      ) as Record<SectorPeriod, number>;
+      return { name: f.name, fund: f.fund, ...(f === MARKET_FUND ? { market: true } : {}), moves };
+    }),
+  };
+}

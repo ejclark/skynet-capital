@@ -35,6 +35,12 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import {
+  checkSectors,
+  type EditionSectors,
+  type SectorsView,
+  sectorsView,
+} from "./edition-sectors.js";
 import { daysBetween } from "./market-calendar.js";
 import { marketDayKey } from "./market-day.js";
 
@@ -88,6 +94,8 @@ export interface EditionStory {
   readonly id: string;
   /** The headline, in the news voice. */
   readonly headline: string;
+  /** The headline cut to one line at 390, drawn beside the lead fact's number (round 3, AT4). */
+  readonly line: string;
   /** At most one line in the mission voice (criterion 4). */
   readonly narrator?: string;
   /** The tickers the story is about. */
@@ -111,6 +119,8 @@ export interface Edition {
   readonly stories: readonly EditionStory[];
   /** What's next for the week, in date order. */
   readonly next: readonly EditionDate[];
+  /** The whole market's closes for the sector overview (round 3, AT1–AT3; `edition-sectors.ts`). */
+  readonly sectors?: EditionSectors;
 }
 
 // ── The honesty checks ──────────────────────────────────────────────────────────────────────────
@@ -132,6 +142,9 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 const MAX_NARRATOR = 160;
+/** A story's one line: about what fits at 390 beside a glyph and its number (AT4). The page still
+ *  cuts a longer one with an ellipsis rather than wrap it; this keeps the words whole. */
+const MAX_LINE = 34;
 const MAX_FACTS = 4;
 
 type Raw = Record<string, unknown>;
@@ -201,6 +214,9 @@ function checkStory(s: Raw, fail: Fail): void {
   if (!(isText(s.id) && SLUG_RE.test(s.id))) fail("a story id must be a slug");
   if (!isText(s.headline)) fail(`story "${id}" has no headline`);
   checkCopy(s.headline as string, `story "${id}" headline`, fail);
+  if (!isText(s.line) || s.line.length > MAX_LINE || s.line.includes("\n"))
+    fail(`story "${id}": line must be one line of at most ${MAX_LINE} characters`);
+  checkCopy(s.line as string, `story "${id}" line`, fail);
   if (s.narrator !== undefined) {
     if (!isText(s.narrator)) fail(`story "${id}": narrator must be one line of text`);
     const line = s.narrator as string;
@@ -249,6 +265,7 @@ export function parseEdition(raw: unknown, file: string, expectedDate: string): 
   const next = objects(e.next, "next", fail);
   for (const [i, d] of next.entries()) checkDate(d, `next ${i + 1}`, fail);
   distinct(next, dateKey, "next", fail);
+  if (e.sectors !== undefined) checkSectors(e.sectors, e.date as string, fail);
   return raw as Edition;
 }
 
@@ -290,11 +307,13 @@ export type EditionStoryView = Omit<EditionStory, "reports"> & {
  *  age. `edition: null` is the honest empty state. */
 export interface EditionView {
   readonly edition:
-    | (Omit<Edition, "stories"> & {
+    | (Omit<Edition, "stories" | "sectors"> & {
         readonly campaignTitle?: string;
         /** Calendar days from the close it describes to today. */
         readonly ageDays: number;
         readonly stories: readonly EditionStoryView[];
+        /** Each fund's move over each period, worked out of the closes. */
+        readonly sectors?: SectorsView;
       })
     | null;
   /** Today in New York (YYYY-MM-DD), the day the dates were read against. */
@@ -322,11 +341,13 @@ export function editionView(
   if (!latest) return { edition: null, today };
   const ahead = (d: EditionDate) => d.date >= today;
   const title = latest.campaign ? campaignTitle(latest.campaign) : undefined;
+  const { sectors, ...rest } = latest;
   return {
     today,
     edition: {
-      ...latest,
+      ...rest,
       ...(title ? { campaignTitle: title } : {}),
+      ...(sectors ? { sectors: sectorsView(sectors, latest.date) } : {}),
       ageDays: daysBetween(latest.date, today),
       stories: latest.stories.map((s) => ({
         ...s,

@@ -32,14 +32,11 @@ function SampleSize({ n }: { readonly n: number | undefined }): ReactElement | n
 
 function Fact({ fact }: { readonly fact: EditionFact }): ReactElement {
   const mark = fact.mark && fact.mark !== "measured" ? MARK_WORD[fact.mark] : undefined;
-  const move = MOVE_SHAPE[fact.move];
   return (
     <div className="story-fact">
       <dt>{fact.label}</dt>
       <dd>
-        <span className={`story-move story-move--${fact.move}`} role="img" aria-label={move.word}>
-          {move.glyph}
-        </span>
+        <Shape move={fact.move} />
         <span className="story-fact-value num">{fact.value}</span>
         {fact.note || mark || fact.n ? (
           <span className="story-fact-note">
@@ -75,49 +72,75 @@ function Line({ line }: { readonly line: EditionLine }): ReactElement {
   );
 }
 
-export function EditionStoryTile({
+/** The ▲ ▼ ∿ shape of a move, with its word for a screen reader. */
+function Shape({ move }: { readonly move: EditionFact["move"] }): ReactElement {
+  const shape = MOVE_SHAPE[move];
+  return (
+    <span className={`story-move story-move--${move}`} role="img" aria-label={shape.word}>
+      {shape.glyph}
+    </span>
+  );
+}
+
+/**
+ * One story as one line (round 3, AT4): its shape, its one-line headline, and its lead fact's
+ * number, which never shrinks, so a long line is cut with an ellipsis and the number stays whole.
+ * A tap opens the whole story: headline, narrator, its reports, then what moved, then the rest and
+ * its asks. Stories load closed.
+ */
+export function EditionStoryLine({
   story,
   lead = false,
   children,
 }: {
   readonly story: EditionStory;
   readonly lead?: boolean;
-  /** The story's asks (slice 2), drawn under the rest so the tile stays key facts first. */
+  /** The story's asks (slice 2), drawn under the rest so the story stays key facts first. */
   readonly children?: ReactNode;
 }): ReactElement {
   const headingId = `story-${story.id}`;
+  const [first] = story.facts;
   return (
-    <article className={lead ? "story story--lead" : "story"} aria-labelledby={headingId}>
-      <h2 id={headingId} className="story-headline">
-        {story.headline}
-      </h2>
-      {story.narrator ? <p className="story-narrator">{story.narrator}</p> : null}
-      {story.reports.length > 0 ? (
-        <section className="story-reports" aria-label="Reports on this story">
-          <h3 className="story-sub">Reports on this story</h3>
-          <ul className="dated-list">
-            {story.reports.map((r) => (
-              <DatedItem key={`${r.date}-${r.what}`} item={r} />
+    <li className={lead ? "story story--lead" : "story"}>
+      <details className="story-row">
+        <summary className="ecal-line">
+          <span className="ecal-mark">{first ? <Shape move={first.move} /> : null}</span>
+          <span className="ecal-text">{story.line}</span>
+          <span className="ecal-figure num">{first?.value}</span>
+        </summary>
+        <article className="story-body" aria-labelledby={headingId}>
+          <h4 id={headingId} className="story-headline">
+            {story.headline}
+          </h4>
+          {story.narrator ? <p className="story-narrator">{story.narrator}</p> : null}
+          {story.reports.length > 0 ? (
+            <section className="story-reports" aria-label="Reports on this story">
+              <h5 className="story-sub">Reports on this story</h5>
+              <ul className="dated-list">
+                {story.reports.map((r) => (
+                  <DatedItem key={`${r.date}-${r.what}`} item={r} />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          <dl className="story-facts">
+            {story.facts.map((f) => (
+              <Fact key={f.label} fact={f} />
             ))}
-          </ul>
-        </section>
-      ) : null}
-      <dl className="story-facts">
-        {story.facts.map((f) => (
-          <Fact key={f.label} fact={f} />
-        ))}
-      </dl>
-      {story.more.length > 0 ? (
-        <details className="story-more">
-          <summary>More on this story</summary>
-          <ul className="story-lines">
-            {story.more.map((l) => (
-              <Line key={l.text} line={l} />
-            ))}
-          </ul>
-        </details>
-      ) : null}
-      {children}
-    </article>
+          </dl>
+          {story.more.length > 0 ? (
+            <details className="story-more">
+              <summary>More on this story</summary>
+              <ul className="story-lines">
+                {story.more.map((l) => (
+                  <Line key={l.text} line={l} />
+                ))}
+              </ul>
+            </details>
+          ) : null}
+          {children}
+        </article>
+      </details>
+    </li>
   );
 }

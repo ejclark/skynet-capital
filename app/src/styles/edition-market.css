@@ -1,0 +1,326 @@
+/* The landing page's whole market and its calendar (#7077 slice 1b, #7018 round 3):
+ * `shell/sector-overview.tsx`, `shell/edition-calendar.tsx`. Curated at 390 first: twelve fund rows,
+ * the S&P 500's included, fit the first phone screen under the question box (AT1), and every story
+ * and event is one line whose number never shrinks (AT4). Never hue alone (BRAND.md →
+ * Accessibility): a move is ▲ ▼ ▬ plus a signed figure, a down bar or tile is hatched and an up one
+ * solid, and a pressed control steps up in weight and border. Tokens only. */
+
+.sectors {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--space-4);
+}
+.sectors-head,
+.ecal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.sectors-head .section-title,
+.ecal-head .section-title {
+  margin: 0;
+}
+.sectors-since,
+.ecal-key {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Period on the left, view on the right, one row at 390. */
+.sectors-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+}
+.sectors-seg {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.sectors-seg button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.sectors-seg button:last-child {
+  border-right: 0;
+}
+/* Pressed: full-strength text, bold, and an inset ring, so the pick reads without hue. */
+.sectors-seg button[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.sectors-seg button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.sectors-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sector-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+.sector-move {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.sector-glyph {
+  font-size: var(--text-xs);
+}
+.sector-fund {
+  font-family: var(--mono);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* The S&P 500 is the whole market: bold, and ruled off from the sectors under it. */
+.sector-bar-row--market,
+.sector-line-row--market {
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+}
+.sector-bar-row--market .sector-name,
+.sector-line-row--market .sector-name,
+.sector-tile--market .sector-name {
+  font-weight: 700;
+}
+
+/* Bars: name · a bar either side of the zero line · the move. */
+.sector-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 9.5rem) minmax(48px, 1fr) 4.75rem;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+}
+.sector-track {
+  position: relative;
+  height: 12px;
+}
+.sector-track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--muted);
+}
+.sector-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--bar);
+  min-width: 2px;
+}
+.sector-bar--up {
+  left: 50%;
+  background: var(--pos);
+}
+.sector-bar--down {
+  right: 50%;
+  border: 1px solid var(--neg);
+  background: repeating-linear-gradient(135deg, var(--neg) 0 2px, transparent 2px 5px);
+}
+.sector-bar--level {
+  left: calc(50% - 1px);
+  width: 3px;
+  background: var(--muted);
+}
+
+/* Lines: the move first, then the name and the fund's code, as plain text. */
+.sector-line-row {
+  display: grid;
+  grid-template-columns: 4.75rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 22px;
+}
+.sector-line-row .sector-move {
+  justify-content: flex-start;
+}
+
+/* Tiles: three across, the market spanning the top. */
+.sectors-rows--tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+@media (min-width: 640px) {
+  .sectors-rows--tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.sector-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2px;
+  min-height: 46px;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.sector-tile .sector-move {
+  justify-content: flex-start;
+}
+/* A tile has room for two lines of name, so "Consumer Discretionary" is never cut. */
+.sector-tile .sector-name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+.sector-tile--market {
+  grid-column: 1 / -1;
+  min-height: 0;
+  flex-direction: row;
+  align-items: baseline;
+}
+.sector-tile--up {
+  border-left: 4px solid var(--pos);
+}
+.sector-tile--down {
+  border-left: 4px solid var(--neg);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--neg) 18%, transparent) 0 2px,
+      transparent 2px 6px
+    ),
+    var(--surface);
+}
+.sector-tile--level {
+  border-left: 4px solid var(--muted);
+}
+
+.sectors-foot {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* The calendar: days down a rail, each story and event one line. */
+.ecal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ecal-days,
+.ecal-lines {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ecal-days {
+  gap: 10px;
+}
+.ecal-day-title {
+  margin: 0 0 2px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ecal-line {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto 10px;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 34px;
+  align-content: center;
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--text-base);
+}
+.ecal-line::-webkit-details-marker {
+  display: none;
+}
+/* The chevron: › closed, turned down when open. Shape, not hue. */
+.ecal-line::after {
+  content: "›";
+  color: var(--muted);
+  transition: transform 120ms ease;
+}
+.story-row[open] > .ecal-line::after {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ecal-line::after {
+    transition: none;
+  }
+}
+.ecal-line:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.ecal-mark {
+  text-align: center;
+  font-size: var(--text-sm);
+}
+.ecal-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.story .ecal-text {
+  font-weight: 600;
+}
+/* The number is never cut: it holds its width and the words give way. */
+.ecal-figure {
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.ecal-event .ecal-figure {
+  font-weight: 400;
+  color: var(--muted);
+}
+.ecal-detail {
+  margin: 0 0 8px 22px;
+  font-size: var(--text-sm);
+}
+.ecal-detail p {
+  margin: 0 0 2px;
+}
+.ecal-status {
+  color: var(--muted);
+}

@@ -3,9 +3,10 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { parseBoardMetric } from "../live/board";
 import { asOfLine, type EditionView, fetchEdition, staleLine } from "../live/edition";
-import { DatedItem, EditionStoryTile } from "../shell/edition-story";
+import { EditionCalendar } from "../shell/edition-calendar";
 import { PageFrame } from "../shell/frame";
 import { AskBox, StoryAsk } from "../shell/landing-ask";
+import { SectorOverview } from "../shell/sector-overview";
 
 /**
  * THE LANDING PAGE (#7077, parent #6948 slice 4): sign-in opens the day's market news, not the
@@ -13,10 +14,12 @@ import { AskBox, StoryAsk } from "../shell/landing-ask";
  * Leaderboard keeps its route and leaves the tab bar; Profile's league card ("Full leaderboard ›")
  * is its door now.
  *
- * At 390, in order (docs/IA.md §5.9): the question box · the lead story's coming reports, then what
- * moved · its ask · quests by source (slice 3, #7028) · what's next. Slice 1 built the news and
- * what's next; slice 2 the question box and each story's ask (`shell/landing-ask.tsx`). The quests'
- * slot comes with slice 3, never as a placeholder.
+ * At 390, in order: the question box · the whole market, all 11 sectors and the S&P 500
+ * (`shell/sector-overview.tsx`, round 3's AT1–AT3) · the calendar: the week's stories one line each,
+ * then each coming trading day's events (`shell/edition-calendar.tsx`, AT4–AT5). A story opens on a
+ * tap to its reports, what moved, the rest and its asks (slice 2, `shell/landing-ask.tsx`). Round 3
+ * replaced slice 1's story cards (#7018: "the sections in the screenshot need heavily condense").
+ * The quests' slot comes with slice 3 (#7028), under their one-line stories, never as a placeholder.
  *
  * An old bookmark or a shared compare link (`/?by=`, `?a=`, `?b=`) was always a member asking for
  * the board, so it still goes there with its query intact (#2321's promise).
@@ -70,29 +73,18 @@ function Landing(): ReactElement {
       <Masthead view={view.data} />
       {edition ? (
         <>
-          <div className="edition-stories">
-            {edition.stories.map((s, i) => (
-              <EditionStoryTile key={s.id} story={s} lead={i === 0}>
-                <StoryAsk
-                  story={s}
-                  campaign={edition.campaign}
-                  campaignTitle={edition.campaignTitle}
-                />
-              </EditionStoryTile>
-            ))}
-          </div>
-          {edition.next.length > 0 ? (
-            <section className="edition-next" aria-labelledby="edition-next-title">
-              <h2 id="edition-next-title" className="section-title">
-                What's next
-              </h2>
-              <ul className="dated-list">
-                {edition.next.map((d) => (
-                  <DatedItem key={`${d.date}-${d.what}`} item={d} />
-                ))}
-              </ul>
-            </section>
-          ) : null}
+          {edition.sectors ? <SectorOverview view={edition.sectors} /> : null}
+          <EditionCalendar
+            edition={edition}
+            today={view.data.today}
+            storyAsk={(s) => (
+              <StoryAsk
+                story={s}
+                campaign={edition.campaign}
+                campaignTitle={edition.campaignTitle}
+              />
+            )}
+          />
           <footer className="obs-foot">{edition.writtenBy}</footer>
         </>
       ) : (
