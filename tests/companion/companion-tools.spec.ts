@@ -197,9 +197,43 @@ describe("runCompanionTool — the four real lanes", () => {
       result: {
         cash: 500,
         equity: 1500,
-        positions: [{ symbol: "AAPL", quantity: 10, avgPrice: 100, marketValue: 1000 }],
+        positions: [
+          {
+            symbol: "AAPL",
+            kind: "stock",
+            side: "long",
+            quantity: 10,
+            avgPrice: 100,
+            marketValue: 1000,
+            costBasis: 1000,
+            unrealizedPl: 0,
+          },
+        ],
       },
     });
+  });
+
+  it("get_my_positions hands her the server's P/L on a written option, signs and all", async () => {
+    // The live case (#7018, 2026-11-09): 20 written CRWV puts, $16,200 collected, $15,500 to buy
+    // back. Given only the price pair she called it "down $16,200"; it is a $700 gain.
+    const put = {
+      symbol: "CRWV251120P00050000",
+      quantity: -20,
+      avgPrice: 810,
+      marketValue: -15500,
+    };
+    const deps = depsFor({ snapshotFor: () => ({ ...snapshot, positions: [put] }) });
+    const result = await runCompanionTool("get_my_positions", deps, "acct-1");
+    const row = (result as { result: { positions: readonly Record<string, unknown>[] } }).result
+      .positions[0];
+    expect(row).toMatchObject({
+      kind: "option",
+      side: "short",
+      costBasis: -16200,
+      unrealizedPl: 700,
+    });
+    const description = COMPANION_TOOL_DEFS.find((d) => d.name === "get_my_positions")?.description;
+    for (const key of Object.keys(row ?? {})) expect(description).toContain(key);
   });
 
   it("get_my_positions refuses honestly when the session owns no linked desk", async () => {
