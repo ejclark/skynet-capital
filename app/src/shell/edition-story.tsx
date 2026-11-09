@@ -7,6 +7,7 @@ import {
   type EditionStory,
   MARK_WORD,
   MOVE_SHAPE,
+  rowFigure,
 } from "../live/edition";
 
 /**
@@ -84,7 +85,7 @@ function Shape({ move }: { readonly move: EditionFact["move"] }): ReactElement {
 
 /**
  * One story as one line (round 3, AT4): its shape, its one-line headline, and its lead fact's
- * number, which never shrinks, so a long line is cut with an ellipsis and the number stays whole.
+ * move (a level's `change`, never the bare level, #7182), which never shrinks, so a long line is cut with an ellipsis and the number stays whole.
  * A tap opens the whole story: headline, narrator, its reports, then what moved, then the rest and
  * its asks. Stories load closed.
  */
@@ -106,7 +107,7 @@ export function EditionStoryLine({
         <summary className="ecal-line">
           <span className="ecal-mark">{first ? <Shape move={first.move} /> : null}</span>
           <span className="ecal-text">{story.line}</span>
-          <span className="ecal-figure num">{first?.value}</span>
+          <span className="ecal-figure num">{first ? rowFigure(first) : null}</span>
         </summary>
         <article className="story-body" aria-labelledby={headingId}>
           <h4 id={headingId} className="story-headline">

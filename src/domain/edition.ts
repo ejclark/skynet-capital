@@ -56,8 +56,13 @@ export type EditionMove = (typeof EDITION_MOVES)[number];
 export interface EditionFact {
   /** What it is, in plain words ("SMH, the chip fund"). */
   readonly label: string;
-  /** The number, preformatted with its sign ("−11.2%", "186.64"). */
+  /** The number, preformatted: a change carries its sign ("−11.2%"), a level does not ("186.64",
+   *  a yield's "4.86%"). */
   readonly value: string;
+  /** A level's move over the story's span, signed and with its unit ("−0.07 pts"). The one-line row
+   *  shows it in place of the level, so "▼ 4.86%" never reads as a 4.86% fall (#7182); required on a
+   *  story's lead fact when its value is a level. */
+  readonly change?: string;
   /** Which way it moved over the story's span; `mixed` when it went both ways. */
   readonly move: EditionMove;
   /** When, and against what ("Thu Nov 5 · worst day since Mar 16, 2020"). */
@@ -146,6 +151,13 @@ const MAX_NARRATOR = 160;
  *  cuts a longer one with an ellipsis rather than wrap it; this keeps the words whole. */
 const MAX_LINE = 34;
 const MAX_FACTS = 4;
+/** A value that opens with a sign is a change; one that doesn't is a level (#7182). A negative level
+ *  (a real yield below zero) would read as a change here; none is written yet, and the honest fix
+ *  then is an explicit field, not a looser sign rule. */
+const SIGNED_RE = /^[+\-−]/;
+
+/** Whether a fact's value is a level (a price, a yield, the VIX) rather than a change. */
+export const isLevel = (f: Pick<EditionFact, "value">): boolean => !SIGNED_RE.test(f.value);
 
 type Raw = Record<string, unknown>;
 type Fail = (what: string) => never;
@@ -193,12 +205,21 @@ function checkDate(d: Raw, where: string, fail: Fail): void {
 function checkFact(f: Raw, where: string, fail: Fail): void {
   if (!(isText(f.label) && isText(f.value))) fail(`${where}: a fact needs a label and a value`);
   if (f.note !== undefined && !isText(f.note)) fail(`${where}: note must be text`);
+  if (f.change !== undefined && !(isText(f.change) && SIGNED_RE.test(f.change)))
+    fail(`${where}: change must be signed text with its unit ("−0.07 pts")`);
   if (f.mark !== undefined && !isMark(f.mark)) fail(`${where}: unknown mark "${String(f.mark)}"`);
   if (!(EDITION_MOVES as readonly unknown[]).includes(f.move))
     fail(`${where}: move must be one of ${EDITION_MOVES.join(", ")}`);
   const copy = `${String(f.label)} ${String(f.value)} ${String(f.note ?? "")}`;
   checkBaseRate(copy, f.n, where, fail);
   checkCopy(copy, where, fail);
+}
+
+/** The one-line row shows the lead fact's figure as the story's move, so a level there needs its
+ *  change beside it (#7182): a bare "4.86%" in that column reads as a 4.86% move. */
+function checkLeadFact(lead: Raw | undefined, id: string, fail: Fail): void {
+  if (!lead || lead.change !== undefined || !isLevel(lead as Pick<EditionFact, "value">)) return;
+  fail(`story "${id}": its lead fact "${String(lead.value)}" is a level; give it a change to show`);
 }
 
 function checkLine(l: Raw, where: string, fail: Fail): void {
@@ -231,6 +252,7 @@ function checkStory(s: Raw, fail: Fail): void {
   if (facts.length === 0 || facts.length > MAX_FACTS)
     fail(`story "${id}": key facts must be 1 to ${MAX_FACTS}`);
   for (const [i, f] of facts.entries()) checkFact(f, `story "${id}" fact ${i + 1}`, fail);
+  checkLeadFact(facts[0], id, fail);
   distinct(facts, (f) => String(f.label), `story "${id}": facts`, fail);
   const reports = objects(s.reports, `story "${id}": reports`, fail);
   for (const [i, d] of reports.entries()) checkDate(d, `story "${id}" report ${i + 1}`, fail);

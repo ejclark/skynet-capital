@@ -15,10 +15,19 @@ export type EditionMove = "up" | "down" | "mixed";
 export interface EditionFact {
   readonly label: string;
   readonly value: string;
+  /** A level's signed move with its unit ("−0.07 pts"); the server's check requires it on a lead
+   *  fact whose value is a level (#7182). */
+  readonly change?: string;
   readonly move: EditionMove;
   readonly note?: string;
   readonly mark?: EditionMark;
   readonly n?: number;
+}
+
+/** The figure a story's one-line row shows: the move, never a bare level (#7182). A level's
+ *  `change` stands in for it; a change's own value already is the move. */
+export function rowFigure(fact: EditionFact): string {
+  return fact.change ?? fact.value;
 }
 
 export interface EditionDate {

@@ -6,6 +6,7 @@ import {
   type Edition,
   editions,
   editionView,
+  isLevel,
   loadEditions,
   marketToday,
   parseEdition,
@@ -123,6 +124,34 @@ describe("the edition record", () => {
     ).toThrow(/move must be/);
   });
 
+  it("never puts a bare level in the row's change column (#7182)", () => {
+    // The one-line row shows the lead fact's figure as the story's move. A level ("4.86%", a
+    // yield) there reads as a 4.86% move, so it must carry its change.
+    const yieldFact = { label: "10-year Treasury yield", value: "4.86%", move: "down" };
+    expect(() => parse(withStory({ facts: [yieldFact] }))).toThrow(/is a level; give it a change/);
+    const fixed = { ...yieldFact, change: "−0.07 pts" };
+    expect(parse(withStory({ facts: [fixed] })).stories[0]?.facts[0]?.change).toBe("−0.07 pts");
+    // An unsigned change is no move at all.
+    expect(() => parse(withStory({ facts: [{ ...yieldFact, change: "0.07 pts" }] }))).toThrow(
+      /change must be signed/,
+    );
+    // A level behind the lead fact is fine: only the lead's figure rides the row.
+    const facts = [{ label: "SMH", value: "−11.2%", move: "down" }, yieldFact];
+    expect(parse(withStory({ facts })).stories[0]?.facts).toHaveLength(2);
+  });
+
+  it("gives the 2026-11-06 edition's 10-year line its move, not its level (#7182)", () => {
+    const rates = editions()
+      .find((e) => e.date === "2026-11-06")
+      ?.stories.find((s) => s.id === "rates");
+    const [lead] = rates?.facts ?? [];
+    expect(lead?.label).toBe("10-year Treasury yield");
+    expect(lead && isLevel(lead)).toBe(true);
+    expect(lead?.value).toBe("4.86%");
+    expect(lead?.change).toBe("−0.07 pts");
+    expect(lead?.note).toBe("−0.07 points on the week");
+  });
+
   it("names the list when an entry is not an object, never a bare TypeError", () => {
     expect(() => parse({ ...valid(), next: [null] })).toThrow(
       /2026-11-06\.json: next must be a list of objects/,
@@ -134,7 +163,7 @@ describe("the edition record", () => {
   });
 
   it("refuses a repeat in a list the page keys its rows by", () => {
-    const fact = { label: "NVDA", value: "1", move: "up" };
+    const fact = { label: "NVDA", value: "+1%", move: "up" };
     expect(() => parse(withStory({ facts: [fact, fact] }))).toThrow(/lists "NVDA" twice/);
     const line = { text: "Up.", mark: "measured", source: "x" };
     expect(() => parse(withStory({ more: [line, line] }))).toThrow(/twice/);
