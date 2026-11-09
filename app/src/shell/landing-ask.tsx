@@ -31,24 +31,21 @@ import { InlineResult } from "../ui";
  * record in place (a native disclosure, nothing to build), and "Ask your own" opens a one-line form.
  */
 
-/** Hand a question to the chat: open the rail and send it as the member's own message. */
-async function askChat(text: string): Promise<boolean> {
-  const mp = useMoneypenny.getState();
-  await mp.openRail();
-  return mp.send(text);
-}
+/** Hand a question to the chat as the member's own message. The rail opens with it already on
+ *  screen; it never waits on the panel's own loading (#7165). False when refused. */
+const askChat = (text: string): boolean => useMoneypenny.getState().ask(text);
 
 /** The top of the page: the member's own question first, two quick questions as fallbacks. */
 export function AskBox(): ReactElement {
   const [text, setText] = useState("");
   const inputId = useId();
-  const submit = async (e: FormEvent): Promise<void> => {
+  const submit = (e: FormEvent): void => {
     e.preventDefault();
-    if (text.trim() && (await askChat(text))) setText("");
+    if (text.trim() && askChat(text)) setText("");
   };
   return (
     <section className="ask-box" aria-label="Ask">
-      <form className="ask-form" onSubmit={(e) => void submit(e)}>
+      <form className="ask-form" onSubmit={submit}>
         <label className="ask-label" htmlFor={inputId}>
           What do you want to do today?
         </label>
@@ -71,7 +68,7 @@ export function AskBox(): ReactElement {
       <ul className="ask-quick" aria-label="Quick questions">
         {QUICK_QUESTIONS.map((q) => (
           <li key={q}>
-            <button type="button" className="ask-chip" onClick={() => void askChat(q)}>
+            <button type="button" className="ask-chip" onClick={() => askChat(q)}>
               {q}
             </button>
           </li>
@@ -146,14 +143,14 @@ function OwnQuestion({
         void client.invalidateQueries({ queryKey: ["party-questions", target.campaign] });
     },
   });
-  const submit = async (e: FormEvent): Promise<void> => {
+  const submit = (e: FormEvent): void => {
     e.preventDefault();
     if (!text.trim()) return;
     if (target.kind === "campaign") ask.mutate();
-    else if (await askChat(chatQuestion(story, text))) setText("");
+    else if (askChat(chatQuestion(story, text))) setText("");
   };
   return (
-    <form className="ask-own" onSubmit={(e) => void submit(e)}>
+    <form className="ask-own" onSubmit={submit}>
       <label className="visually-hidden" htmlFor={inputId}>
         Your question about this story
       </label>

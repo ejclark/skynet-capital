@@ -88,6 +88,8 @@ export function MoneypennyRail(): ReactElement | null {
   const messages = useMoneypenny((s) => s.messages);
   const typing = useMoneypenny((s) => s.typing);
   const streaming = useMoneypenny((s) => s.streaming);
+  // A question from the landing page's ask box, drawn at once while the thread binds (#7165).
+  const pending = useMoneypenny((s) => s.pending);
   const flow = useMoneypenny((s) => s.flow);
   const draft = useMoneypenny((s) => s.draft);
   const conviction = useMoneypenny((s) => s.conviction);
@@ -104,15 +106,16 @@ export function MoneypennyRail(): ReactElement | null {
   const list = useRef<HTMLDivElement>(null);
   const atEnd = useRef(true);
   const queryClient = useQueryClient();
-  const busy = typing || streaming;
+  const waiting = typing || pending !== undefined;
+  const busy = waiting || streaming;
   const chipsShown = !busy && (flow === "idle" || draft !== undefined || conviction !== undefined);
 
   // Follow the thread: every append scrolls the list to its end.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: messages/typing ARE the trigger
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages/waiting ARE the trigger
   useEffect(() => {
     const el = list.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, typing]);
+  }, [messages, waiting]);
 
   // The chips come back when `streaming` ends — a render where neither trigger above changes —
   // and shorten the list from below, hiding her last line (#5182). Re-pin before paint, but only
@@ -238,7 +241,12 @@ export function MoneypennyRail(): ReactElement | null {
             </div>
           );
         })}
-        {typing ? <div className="mp-typing num">Moneypenny · typing ···</div> : null}
+        {pending !== undefined ? (
+          <div className="mp-entry">
+            <Message m={{ role: "user", text: pending }} />
+          </div>
+        ) : null}
+        {waiting ? <div className="mp-typing num">Moneypenny · typing ···</div> : null}
       </div>
       {chips.length ? (
         <div className="mp-chips">
