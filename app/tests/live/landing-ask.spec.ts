@@ -1,8 +1,12 @@
+import { readFileSync } from "node:fs";
+
 import type { EditionStory } from "../../src/live/edition";
 import {
   askedByLine,
   askTarget,
   chatQuestion,
+  HOLDER,
+  holderLine,
   NO_RECORD,
   type PartyQuestion,
   QUICK_QUESTIONS,
@@ -128,6 +132,30 @@ describe("what other members asked", () => {
     expect(questionState(question({ state: "no-finding-yet" }))).toBe("No finding yet");
     const found = { idea: "x", on: "2026-11-08", source: "s" };
     expect(questionState(question({ state: "found", found: [found] }))).toBe("Answered");
+  });
+
+  it("names the job of whoever holds a question, and promises no wait (criterion 9)", () => {
+    expect(holderLine(question())).toBe("The research desk holds this question about NVDA.");
+    expect(holderLine(question({ state: "found", found: [] }))).toBe(
+      "The research desk answered this question about NVDA.",
+    );
+    expect(holderLine(question({ state: "no-finding-yet" }))).toBe(
+      "The research desk looked at NVDA and has nothing yet.",
+    );
+    // Only the job is named: never a time, a lane or a build seat.
+    for (const state of ["waiting", "found", "no-finding-yet"] as const) {
+      expect(holderLine(question({ state }))).not.toMatch(
+        /\d|minute|pass|soon|next|ahead|lane|builder|issue/i,
+      );
+    }
+  });
+
+  it("words the holder from a station the crew page really lists", () => {
+    const seats = JSON.parse(readFileSync("../docs/agents/seats.json", "utf8")) as {
+      seats: { station?: string }[];
+    };
+    const stations = seats.seats.flatMap((s) => (s.station ? [s.station.toLowerCase()] : []));
+    expect(stations.some((st) => st.startsWith(HOLDER.toLowerCase()))).toBe(true);
   });
 
   it("leaves the server's own sentence under the form", () => {
