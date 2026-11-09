@@ -179,6 +179,76 @@
   justify-content: flex-end;
 }
 
+/* AT12's wide chart (round 8 Q4 B), above the tablet width only: the range mark's column takes the
+ * room on the right and draws the 20 closes inside their band. The band is a shaded strip edged in
+ * the muted colour, the line and the last close's dot in the text colour: never the up/down hues,
+ * because it describes where a price has been and sits, never a buy or sell. The two dates sit once,
+ * over the column, at its ends. */
+.sectors-rows--trails .sector-line-row,
+.sectors-axis {
+  grid-template-columns: minmax(0, 16rem) 4rem minmax(120px, 1fr);
+  gap: 16px;
+}
+.sectors-rows--trails .sector-line-row {
+  min-height: 30px;
+}
+.sectors-axis {
+  display: grid;
+  align-items: end;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.sectors-axis-what {
+  grid-column: 1 / 3;
+}
+.sectors-axis-ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+.sector-trail {
+  position: relative;
+  display: block;
+  height: 26px;
+  min-width: 0;
+}
+/* Inset by the dot's radius and a little, so the last close's dot is never cut at the edge. */
+.sector-trail svg {
+  position: absolute;
+  inset: 0 5px;
+  width: calc(100% - 10px);
+  height: 100%;
+  overflow: visible;
+}
+.sector-trail-band {
+  fill: var(--surface-2);
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+.sector-trail-line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.sector-trail-dot {
+  position: absolute;
+  left: calc(5px + (100% - 10px) * var(--x));
+  top: calc(100% * var(--y));
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
 /* Tiles: three across, the market spanning the top. */
 .sectors-rows--tiles {
   display: grid;
