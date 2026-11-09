@@ -1,6 +1,6 @@
 /**
  * CAMPAIGN ENCOUNTERS — the explore and find-names questions a campaign's landscape and lesson
- * record generate (#6952 slice 3, criteria 2–4).
+ * record generate (#6952 slice 3, criteria 2–4), and the door to build a strategy's (slice 4).
  *
  * The ask (Eric, 2026-11-06): "use a campaign to drive education through this process to discover
  * opportunities with specific stocks". Slice 1 wrote energy for AI's encounters by hand
@@ -8,8 +8,9 @@
  * campaign, house or member, gets them the day it exists.
  *
  * A MODE IS A SET OF ENCOUNTERS, NEVER A SCREEN (criterion 6). `encountersFor` returns what the
- * narrator posts in the campaign's mode: explore questions, or find-names candidates. Build a
- * strategy (slice 4) and play (#6948) post nothing from here yet, and say so.
+ * narrator posts in the campaign's mode: explore questions, find-names candidates, or build a
+ * strategy's names, each handed to a form that already exists (campaign-strategy.ts). Play posts
+ * live encounters from #6948, not from here, and says so.
  *
  * THE QUESTION COMES FIRST (criterion 2). An explore encounter is a question and its choices; the
  * house's answer is only reachable through `reveal`, which takes the member's pick. `pose` is the
@@ -22,11 +23,8 @@
  *
  * OLD RESEARCH IS SAID TO BE OLD (criterion 3). Research older than `STALE_AFTER_DAYS` is labelled
  * with its age, and lands in `rechecks`: the list a discovery takes before anything resting on it is
- * shown as current. The lesson record has no "enterable" kind, so the house's verdict here is
- * watch, stand aside, or check first. A watch past the line is check first. A kill past the line
- * still stands aside and says its age: criterion 8 reopens a kill only on its re-check date or on
- * prints that contradict it, never by age, and standing aside is the direction a stale call is
- * safe to err in.
+ * shown as current. The house's verdict on a name, and why a stale one reads "check first" or still
+ * stands aside, is campaign-verdicts.ts's, shared with build a strategy.
  *
  * STANDING ASIDE IS A REAL ANSWER (criterion 4). Every find-names candidate offers the same three
  * choices in the same shape: watch, enter at starter paper size, stand aside. No choice is marked
@@ -38,46 +36,29 @@
  * or recommends an order: "enter at starter paper size" is the member's pick to be scored, and
  * orders come only from play mode's own ticket (#6948).
  */
-import {
-  type DateMark,
-  dayNumber,
-  type Landscape,
-  type Move,
-  type Scheduled,
-  type Tested,
-} from "./campaign-landscape.js";
+import type { DateMark, Landscape, Move, Scheduled, Tested } from "./campaign-landscape.js";
 import { scheduledShown, signed } from "./campaign-landscape-lines.js";
-import { type DiscoveryBrief, type Lesson, proposable, type Withheld } from "./campaign-lessons.js";
+import { type DiscoveryBrief, proposable, type Withheld } from "./campaign-lessons.js";
 import {
-  anchorOf,
-  type Campaign,
-  type CampaignMode,
-  castSymbols,
-  type Evidence,
-} from "./campaigns.js";
-import { TICKER_DIRECTORY } from "./ticker-directory/index.js";
-
-/** Research older than this many days is labelled stale and re-checked (criterion 3). */
-export const STALE_AFTER_DAYS = 30;
-
-/** One statement in an answer or a check, with how sure its record is. */
-export interface Claim {
-  readonly text: string;
-  readonly mark: Evidence;
-  readonly source: string;
-  /** YYYY-MM-DD: the day the record behind it says it was true. */
-  readonly date: string;
-}
+  type StrategyEncounter,
+  type StrategyMember,
+  strategyEncounters,
+} from "./campaign-strategy.js";
+import {
+  type Claim,
+  type HouseCall,
+  houseCall,
+  isFund,
+  lessonClaim,
+  lessonsNaming,
+  type Stale,
+  staleOf,
+} from "./campaign-verdicts.js";
+import { type Campaign, type CampaignMode, castSymbols, type Evidence } from "./campaigns.js";
 
 export interface Choice {
   readonly id: string;
   readonly label: string;
-}
-
-/** Research past the line: its age, and what a discovery re-checks before it is shown as current. */
-export interface Stale {
-  readonly since: string;
-  readonly days: number;
 }
 
 export const EXPLORE_TOPICS = ["moved-most", "together", "date", "evidence", "tested"] as const;
@@ -92,8 +73,6 @@ export interface ExploreEncounter {
   readonly answer: { readonly choice: string; readonly claims: readonly Claim[] };
   readonly stale?: Stale;
 }
-
-export type HouseVerdict = "watch" | "stand-aside" | "check-first";
 
 /** The same three choices on every candidate, in the same shape (criterion 4). */
 export const NAME_CHOICES: readonly Choice[] = [
@@ -118,18 +97,13 @@ export interface NameEncounter {
   readonly question: string;
   readonly choices: readonly Choice[];
   readonly checks: readonly Check[];
-  readonly house: {
-    readonly verdict: HouseVerdict;
-    readonly why: string;
+  readonly house: HouseCall & {
     /** Every lesson that names the symbol, as claims: part of the reveal, never the posed screen. */
     readonly record: readonly Claim[];
-    /** The lesson the verdict rests on, when one does. */
-    readonly lesson?: string;
-    readonly stale?: Stale;
   };
 }
 
-export type Encounter = ExploreEncounter | NameEncounter;
+export type Encounter = ExploreEncounter | NameEncounter | StrategyEncounter;
 
 /** Something a discovery checks again before it is shown as current. */
 export interface Recheck {
@@ -156,6 +130,8 @@ export interface EncounterInputs {
   readonly mode?: CampaignMode;
   /** Sweep results by symbol. A symbol with none says the instrument has not run, never "no edge". */
   readonly sweep?: Readonly<Record<string, readonly SweepResult[]>>;
+  /** The member's picks, pairs and bots: what build a strategy's doors open on (campaign-strategy.ts). */
+  readonly member?: StrategyMember;
 }
 
 export interface EncounterSet {
@@ -169,22 +145,6 @@ export interface EncounterSet {
   /** Why a mode posts nothing here, when it does not. */
   readonly note?: string;
 }
-
-const ageOf = (date: string, today: string): number =>
-  Math.round(dayNumber(today) - dayNumber(date));
-
-function staleOf(date: string, today: string): Stale | undefined {
-  const days = ageOf(date, today);
-  return days > STALE_AFTER_DAYS ? { since: date.slice(0, 10), days } : undefined;
-}
-
-const FUNDS: ReadonlySet<string> = new Set(
-  TICKER_DIRECTORY.filter((e) => e.sector === "ETF").map((e) => e.symbol.toUpperCase()),
-);
-
-/** A fund is a benchmark the campaign is read against, not a name to find. */
-const isFund = (campaign: Campaign, symbol: string): boolean =>
-  FUNDS.has(symbol) || symbol === anchorOf(campaign).fund;
 
 // ── Explore ───────────────────────────────────────────────────────────────────────────────────
 
@@ -407,78 +367,6 @@ function exploreEncounters(campaign: Campaign, l: Landscape): ExploreEncounter[]
 
 // ── Find names ────────────────────────────────────────────────────────────────────────────────
 
-/** A lesson as a claim: its idea and the day it was recorded. Shown with the verdict, never before. */
-const lessonClaim = (lesson: Lesson): Claim => ({
-  text: lesson.idea,
-  mark: "reported",
-  source: lesson.source,
-  date: lesson.on,
-});
-
-/** The lessons that name a symbol, closed kills first, as the brief sorts them. */
-const lessonsNaming = (symbol: string, brief: DiscoveryBrief): readonly Lesson[] =>
-  [...brief.closed, ...brief.reopened, ...brief.due, ...brief.watching].filter((x) =>
-    x.symbols.includes(symbol),
-  );
-
-/** The house's verdict on one name, from the lesson that names it. A watch past the line → check first. */
-function verdictOf(symbol: string, brief: DiscoveryBrief, today: string): NameEncounter["house"] {
-  const house = verdictOnly(symbol, brief, today);
-  return { ...house, record: lessonsNaming(symbol, brief).map(lessonClaim) };
-}
-
-function verdictOnly(
-  symbol: string,
-  brief: DiscoveryBrief,
-  today: string,
-): Omit<NameEncounter["house"], "record"> {
-  const names = (l: Lesson): boolean => l.symbols.includes(symbol);
-  const closed = brief.closed.find(names);
-  if (closed) {
-    const stale = staleOf(closed.on, today);
-    return {
-      verdict: "stand-aside",
-      why: `Killed on ${closed.on}.${closed.recheckOn ? ` Next re-check ${closed.recheckOn}.` : ""}${closed.falsifier ? ` What would reopen it: ${closed.falsifier}` : ""}`,
-      lesson: closed.id,
-      ...(stale ? { stale } : {}),
-    };
-  }
-  const reopened = brief.reopened.find(names);
-  if (reopened)
-    return {
-      verdict: "check-first",
-      why: `Killed on ${reopened.on}, and that kill is open again: its re-check date passed or new prints contradict it.`,
-      lesson: reopened.id,
-    };
-  const due = brief.due.find(names);
-  if (due)
-    return {
-      verdict: "check-first",
-      why: `On watch since ${due.on}, and due for its re-check on ${due.recheckOn}.`,
-      lesson: due.id,
-    };
-  const watching = brief.watching.find(names);
-  if (watching) {
-    const stale = staleOf(watching.on, today);
-    if (stale)
-      return {
-        verdict: "check-first",
-        why: `On watch since ${watching.on}, ${stale.days} days ago: past the ${STALE_AFTER_DAYS}-day line.`,
-        lesson: watching.id,
-        stale,
-      };
-    return {
-      verdict: "watch",
-      why: `On watch since ${watching.on}; next re-check ${watching.recheckOn}.${watching.falsifier ? ` What would prove the watch wrong: ${watching.falsifier}` : ""}`,
-      lesson: watching.id,
-    };
-  }
-  return {
-    verdict: "check-first",
-    why: "No finding on record yet: the house checks it before it says anything.",
-  };
-}
-
 function checksFor(
   symbol: string,
   l: Landscape,
@@ -572,7 +460,10 @@ function nameEncounters(
     question: `${symbol}${role ? `, ${role.toLowerCase()}` : ""}: watch it, enter at starter paper size, or stand aside?`,
     choices: NAME_CHOICES,
     checks: checksFor(symbol, l, brief, inputs.sweep?.[symbol] ?? []),
-    house: verdictOf(symbol, brief, l.today),
+    house: {
+      ...houseCall(symbol, brief, l.today),
+      record: lessonsNaming(symbol, brief).map(lessonClaim),
+    },
   }));
   return { encounters, withheld };
 }
@@ -590,8 +481,6 @@ function recheckOf(e: Encounter): Recheck | undefined {
 }
 
 const NOTHING_YET: Partial<Record<CampaignMode, string>> = {
-  "build-strategy":
-    "Build a strategy posts its encounters in #6952 slice 4 (convictions and the playbook form).",
   play: "Play posts live encounters on market moves (#6948), not from here.",
 };
 
@@ -604,17 +493,27 @@ export function encountersFor(campaign: Campaign, inputs: EncounterInputs): Enco
       ? { encounters: exploreEncounters(campaign, inputs.landscape), withheld: [] }
       : mode === "find-names"
         ? nameEncounters(campaign, inputs)
-        : undefined;
+        : mode === "build-strategy"
+          ? { encounters: [...strategyEncounters(campaign, inputs)], withheld: [] }
+          : undefined;
   if (!built)
     return { ...base, encounters: [], withheld: [], rechecks: [], note: NOTHING_YET[mode] };
   const rechecks = built.encounters.map(recheckOf).filter((r): r is Recheck => r !== undefined);
   return { ...base, encounters: built.encounters, withheld: built.withheld, rechecks };
 }
 
-/** An encounter as a screen shows it before the member answers: no answer, no verdict. */
-export type Posed = Omit<ExploreEncounter, "answer" | "stale"> | Omit<NameEncounter, "house">;
+/**
+ * An encounter as a screen shows it before the member answers: no answer, no verdict. A
+ * build-strategy encounter hides nothing: it is not a question the tape scores, and the house's word
+ * belongs beside the doors the member is choosing between.
+ */
+export type Posed =
+  | Omit<ExploreEncounter, "answer" | "stale">
+  | Omit<NameEncounter, "house">
+  | StrategyEncounter;
 
 export function pose(e: Encounter): Posed {
+  if (e.kind === "build-strategy") return e;
   if (e.kind === "explore") {
     const { answer: _a, stale: _s, ...posed } = e;
     return posed;
@@ -627,7 +526,8 @@ export interface Revealed {
   readonly picked: string;
   /**
    * For explore: the pick matched the house's answer. For a name: it matched the house's verdict.
-   * Absent when the house holds no verdict yet (check first): there is nothing to match.
+   * Absent when the house holds no verdict yet (check first), and on a build-strategy pick, which
+   * opens a form (campaign-strategy.ts → `handOff`) rather than answering a question.
    */
   readonly matched?: boolean;
   readonly encounter: Encounter;
@@ -637,6 +537,7 @@ export interface Revealed {
 export function reveal(e: Encounter, picked: string): Revealed {
   if (!e.choices.some((c) => c.id === picked))
     throw new Error(`campaign-encounters: "${picked}" is not a choice on ${e.id}`);
+  if (e.kind === "build-strategy") return { picked, encounter: e };
   const house = e.kind === "explore" ? e.answer.choice : e.house.verdict;
   if (house === "check-first") return { picked, encounter: e };
   return { picked, matched: picked === house, encounter: e };
