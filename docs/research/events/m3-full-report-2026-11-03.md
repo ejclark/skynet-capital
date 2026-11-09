@@ -496,3 +496,64 @@ this doc goes quiet.
 
 **Last assessed:** 2026-11-03
 <!-- probe-ref: {"symbols":{},"vix":20.58,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","midterm-elections-2026-11-03","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","jobs-2026-11-06","pce-2026-10-29"],"screenStreak":2} -->
+
+## Outcome
+
+**Close-out (2026-11-09, D+6; filed under `event-passed-unscored`).** Macro-print mode runs no
+`earnings-cycle` / `intraday-edges` instrument (`symbols: []`); the cache was busted first
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and nothing here reads
+it. The tape is Yahoo daily bars pulled fresh today; the nowcast is the Atlanta Fed workbooks re-pulled
+today; the report text is Census (`www.census.gov`, browser headers: the plain-curl user agent got 404s
+on pages that load). Date label unchanged: `confirmed`, `CENSUS:`.
+
+| Test | Registered | Measured | Verdict |
+|---|---|---|---|
+| FT-1 | No 11-03 GDPNow vintage in `ContribArchives` | `ContribArchives` ends 10-28; the Q4 tabs **do** carry 11-03 (3.7383 to 3.7213) | **kill** |
+| FT-2 | SPY 11-03 range above 1.600% | **0.620%** | **kill** |
+| FT-3 | SPY 11-04 range above its 11-03 range | **1.695%** vs 0.620% | **pass** |
+| FT-4 | Revision to the September durable-goods headline of 0.9pp or less | full report's durable figure not reachable | **unscoreable** |
+
+**The tape, Yahoo fetched 2026-11-09.**
+
+| | 11-02 close | 11-03 range, close | 11-04 range, close | 11-05 close |
+|---|---|---|---|---|
+| SPY | 752.10 | **0.620%**, 754.35 | **1.695%**, 766.81 | 733.00 |
+| VIX | 21.15 | 20.83 | 16.61 | 28.18 |
+
+The overnight gap into 11-04 was SPY **+1.145%** (754.35 to 762.99 open), which is larger than the
+whole 11-03 session. The 11-05 session ranged 4.538% (VIX high 28.36); it landed two sessions after this
+print and is **not attributed to it or to anything else here**, and it belongs to whichever sibling
+ledger owns 11-05 and a later adjacency sweep.
+
+**What the nowcast did, and the correction to this ledger's Leg 4.** The Atlanta Fed's own forward
+schedule still lists 11-03 under `InternalUpdates` only (the file is byte-identical to the 09-06 pull).
+Leg 4 inferred from that that no vintage could be observed. That inference was wrong: the workbook's
+current-quarter history publishes an **11-03 vintage naming "M3-2 Manufacturing (Full report)" alone**,
+and the archive already holds vintages on four 2026 internal-update dates (06-03, 07-02, 09-02, 10-02).
+So an internal row is a vintage; it was the registration's reading of the workbook that was off, not the
+Atlanta Fed's schedule. The vintage itself was inert, as Leg 3 said M3-2 would be: GDPNow **-0.0170pp**,
+equipment **+0.0021pp** (class median 0.0033pp, the registered 0.05pp bar not close), change in
+inventory investment contribution **-0.0187pp**. The December twin's first kill switch named 11-03 as a
+candidate and it can now be read: 0.0021pp is far under its 0.05pp bar. That ledger's owner records it
+on its own pulse; this lane writes only its own file.
+
+**The stance, scored.** *Stand aside, no instrument* held at zero cost: nothing was traded and nothing
+would have been. The "unmeasurable, not quiet" frame for the 11-03 session did **not** hold. The session
+was quiet (0.620%, below the 0.968% ordinary-day median), which is this ledger's third kill switch
+firing. What the election moved was the **overnight into 11-04**, which agrees with the 5-in-6
+next-session pattern (FT-3 pass) and with the sibling `jolts-2026-11-03` close-out's narrower claim: the
+print is separable from the session in 2026 and not from the next morning. Two election-day M3-2 sessions (2020 wide, 2026 quiet) are
+not a base rate. Kill switches: the "trigger release moves onto 11-03" one
+did not fire, but its premise is the Leg 4 error above; the 0.05pp one did not fire (0.0021pp).
+
+**FT-1 and FT-2 are kills** and move to the sweep doc's kill list. **FT-3 passes**, which makes the
+next-session-wider pattern 6 of 7 election days. **FT-4 stays an open question for a reader with the
+table**: the 10-27 advance printed September durable-goods new orders at +1.8% to $345.4B, and the full
+report's own text moved August total new orders from +0.1% (10-02 edition) to +0.3%, which is a
+different series and not the measure.
+Scored in its fragment, [`forward-tests/m3-full-report-2026-11-03.md`](../forward-tests/m3-full-report-2026-11-03.md).
+Conviction proposals naming this event: none (`conviction-proposals.mjs --event`). Declared intents
+naming it: none (`intents.mjs --event`). Nothing proposed: no uncalendared dated event found.
+
+**Last assessed:** 2026-11-09
+<!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"low:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","boe-decision-2026-11-05","boe-dmp-2026-10-30","boj-decision-2026-10-30","boj-minutes-2026-11-05","chicago-pmi-2026-10-30","construction-spending-2026-11-02","dallas-fed-trimmed-mean-2026-10-29","dhi-q4-fy2026-2026-10-29","ecb-decision-2026-10-29","ecb-spf-q4-2026-10-30","eci-q3-2026-10-30","eurostat-hicp-flash-2026-11-04","g20-foreign-ministers-atlanta-2026-10-30","gdp-q3-2026-advance-2026-10-29","intc-fq3-2026-results-2026-10-29","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","japan-cpi-tokyo-flash-2026-10-30","jgb-10y-auction-2026-11-05","jgb-2y-auction-2026-10-29","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","midterm-elections-2026-11-03","nar-metro-home-prices-2026-10-29","opec-plus-meeting-2026-11-01","pce-2026-10-29","productivity-costs-q3-2026-11-05","russell-style-month-end-capping-effective-2026-10-30","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","tic-shca-annual-final-2026-10-30","treasury-7y-note-2026-10-29","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-buyback-1mo2y-2026-11-05","treasury-refunding-2026-11-04","uk-blue-book-2026-10-30","uk-pink-book-2026-10-30","umich-sentiment-prelim-2026-11-06"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","amzn-2026-10-29-print","eci-q3-2026-10-30","gdp-q3-2026-advance-2026-10-29","ism-manufacturing-2026-11-02","jobs-2026-11-06","pce-2026-10-29"],"screenStreak":0} -->

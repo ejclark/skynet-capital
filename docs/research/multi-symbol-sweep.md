@@ -71,6 +71,15 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **"An M3-2 update the Atlanta Fed lists as internal-only leaves no observable GDPNow vintage" (FT-m3-full-report-2026-11-03-1)** — added 2026-11-09 from the
+  [m3-full-report-2026-11-03 close-out](events/m3-full-report-2026-11-03.md). The workbook's current-quarter tabs carry an **11-03** column ("M3-2 Manufacturing (Full report)", GDPNow 3.7383 to 3.7213),
+  and `ContribArchives` already holds vintages on the 2026-06-03, 07-02, 09-02 and 10-02 internal dates. Do not infer "no vintage" from `InternalUpdates`; read the vintage tabs. The registered cell,
+  `ContribArchives`, does not hold the current quarter at all until it rolls.
+
+- **"A midterm Election Day session clears the M3-2-day SPY range p75 of 1.600% because control is in play" (FT-m3-full-report-2026-11-03-2)** — added 2026-11-09 from the
+  [m3-full-report-2026-11-03 close-out](events/m3-full-report-2026-11-03.md). SPY ranged **0.620%** on 2026-11-03 and then gapped **+1.145%** overnight into 11-04. Do not register a session-range
+  test off election-day ranges dominated by the two contested years (2020, 2022); register the overnight gap, or the next session, which is where the dispersion landed.
+
 - **"Solve the print's thresholds from the published index levels and they hold to the release" (FT-productivity-costs-q3-2026-11-05-1, -2, -3)** — added 2026-11-06 from the
   [productivity-costs-q3-2026-11-05 close-out](events/productivity-costs-q3-2026-11-05.md). The ledger's identity arithmetic was exact (151.663 ÷ 121.922 × 100 = 124.393), but every anchor
   came from a vintage the 2026 NIPA annual update then revised: ULC y/y printed **2.4%** (called <2.0%), productivity y/y **2.1%** (called 1.0–2.0%), labor-share index **93.729**
