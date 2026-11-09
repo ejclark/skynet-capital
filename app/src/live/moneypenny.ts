@@ -10,7 +10,7 @@ import {
 import { marketIsOpen } from "./market-hours";
 import { answerFor, convictionCardText, createConvictionLane } from "./moneypenny-conviction";
 import { createFilingLane, NEVER_MIND, SEND_AS_IS } from "./moneypenny-filing";
-import { plainLine } from "./moneypenny-links";
+import { plainReply } from "./moneypenny-markdown";
 import {
   answerFailed,
   DRAFT_DROPPED,
@@ -56,7 +56,7 @@ export interface MpMessage {
  *  words she linked (`[open Trade](/trade)` → "open Trade"), the way the rail shows them. */
 export function formatTranscript(messages: readonly MpMessage[]): string {
   return messages
-    .map((m) => (m.role === "user" ? `You: ${m.text}` : plainLine(m.text)))
+    .map((m) => (m.role === "user" ? `You: ${m.text}` : plainReply(m.text)))
     .join("\n\n");
 }
 
