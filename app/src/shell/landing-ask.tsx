@@ -8,6 +8,7 @@ import {
   askInCampaign,
   askTarget,
   chatQuestion,
+  FAST_TRACK_QUESTION,
   fetchPartyQuestions,
   INSTINCT_QUESTION,
   NO_RECORD,
@@ -22,6 +23,7 @@ import {
 } from "../live/landing-ask";
 import { useMoneypenny } from "../live/moneypenny";
 import { InlineResult } from "../ui";
+import { FastTrackWalk } from "./fast-track-walk";
 
 /**
  * THE LANDING PAGE'S ASKS, DRAWN (#7077 slice 2). The words and where each ask goes live in
@@ -29,6 +31,9 @@ import { InlineResult } from "../ui";
  * kept to one field and one row of quick questions so the lead story's key facts still reach the
  * first screen (criterion 8). A story's ask sits under its tile: the quick question opens the
  * record in place (a native disclosure, nothing to build), and "Ask your own" opens a one-line form.
+ *
+ * The first quick question opens its card walk in place under the chips (#7034 slice 2,
+ * `fast-track-walk.tsx`); the second still goes to the chat.
  */
 
 /** Hand a question to the chat as the member's own message. The rail opens with it already on
@@ -38,7 +43,9 @@ const askChat = (text: string): boolean => useMoneypenny.getState().ask(text);
 /** The top of the page: the member's own question first, two quick questions as fallbacks. */
 export function AskBox(): ReactElement {
   const [text, setText] = useState("");
+  const [walking, setWalking] = useState(false);
   const inputId = useId();
+  const walkId = useId();
   const submit = (e: FormEvent): void => {
     e.preventDefault();
     if (text.trim() && askChat(text)) setText("");
@@ -66,14 +73,33 @@ export function AskBox(): ReactElement {
         </div>
       </form>
       <ul className="ask-quick" aria-label="Quick questions">
-        {QUICK_QUESTIONS.map((q) => (
-          <li key={q}>
-            <button type="button" className="ask-chip" onClick={() => askChat(q)}>
-              {q}
-            </button>
-          </li>
-        ))}
+        {QUICK_QUESTIONS.map((q) =>
+          q === FAST_TRACK_QUESTION ? (
+            <li key={q}>
+              <button
+                type="button"
+                className="ask-chip"
+                aria-expanded={walking}
+                aria-controls={walkId}
+                onClick={() => setWalking((open) => !open)}
+              >
+                {q}
+              </button>
+            </li>
+          ) : (
+            <li key={q}>
+              <button type="button" className="ask-chip" onClick={() => askChat(q)}>
+                {q}
+              </button>
+            </li>
+          ),
+        )}
       </ul>
+      {walking ? (
+        <div id={walkId}>
+          <FastTrackWalk onAsk={(q) => Promise.resolve(askChat(q))} />
+        </div>
+      ) : null}
     </section>
   );
 }

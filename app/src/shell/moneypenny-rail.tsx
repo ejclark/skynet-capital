@@ -1,11 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { myConvictionsKey } from "../live/member-convictions";
 import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { CONVICTION_CHIPS } from "../live/moneypenny-conviction";
 import { linkPieces } from "../live/moneypenny-links";
+import { type Run, readMarkdown } from "../live/moneypenny-markdown";
 import { chipsFor } from "../live/moneypenny-script";
 import { usePhoneWidth } from "./use-media";
 
@@ -77,8 +78,63 @@ function linkify(text: string): readonly ReactNode[] {
   });
 }
 
+/** One run of her line: its links, wrapped in bold or italic when she marked it (#7166). */
+function RunView({ run }: { readonly run: Run }): ReactElement {
+  const body = <>{linkify(run.text)}</>;
+  const em = run.em ? <em>{body}</em> : body;
+  return run.strong ? <strong>{em}</strong> : em;
+}
+
+const runs = (rs: readonly Run[]) =>
+  // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable line — position is identity
+  rs.map((r, i) => <RunView key={i} run={r} />);
+
+/** Her reply, its markdown read as structure (`moneypenny-markdown.ts`) — elements, never HTML. */
+function Reply({ text }: { readonly text: string }): ReactElement {
+  return (
+    <>
+      {readMarkdown(text).map((b, i) => {
+        if (b.kind === "list") {
+          const items = b.items.map((it, j) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable list
+            <li key={j}>{runs(it)}</li>
+          ));
+          return b.ordered ? (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable reply
+            <ol key={i} start={b.start}>
+              {items}
+            </ol>
+          ) : (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable reply
+            <ul key={i}>{items}</ul>
+          );
+        }
+        // No wrapper: a list beside these lines is a block, so they break around it on their own,
+        // and a reply with no list stays plain text in the message itself.
+        return (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable reply
+          <Fragment key={i}>
+            {b.lines.map((l, j) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: a parsed, immutable reply
+              <Fragment key={j}>
+                {j > 0 ? "\n" : null}
+                {runs(l)}
+              </Fragment>
+            ))}
+          </Fragment>
+        );
+      })}
+    </>
+  );
+}
+
+/** The member's own words stay exactly as typed; hers (and system notes) get her formatting. */
 function Message({ m }: { readonly m: MpMessage }): ReactElement {
-  return <div className={`mp-msg mp-${m.role}`}>{linkify(m.text)}</div>;
+  return (
+    <div className={`mp-msg mp-${m.role}`}>
+      {m.role === "user" ? linkify(m.text) : <Reply text={m.text} />}
+    </div>
+  );
 }
 
 const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : undefined);

@@ -392,7 +392,8 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     const answer = await askAbout({ kind: "name", subject: "pltr" });
     expect(answer.status).toBe(200);
     expect(answer.body).toMatchObject({ ok: true, status: "queued" });
-    expect(answer.body.tell).toMatch(/^Queued\. It is next/);
+    expect(answer.body.tell).toMatch(/^Kept\. The house's research doesn't read this list yet/);
+    expect(answer.body.tell).not.toMatch(/passes|next in line/i);
     expect(queue.load().map((a) => a.id)).toEqual(["name:PLTR"]);
     expect(queue.load()[0]?.askers).toEqual([ADA]);
   });
@@ -418,14 +419,16 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     expect(queue.load()[0]?.askers).toHaveLength(2);
   });
 
-  it("estimates the wait from the per-pass ceiling, never promising sooner than it can", async () => {
+  it("gives no estimate while nothing reads the queue, however deep the ask sits", async () => {
     for (const s of ["AA", "BB", "CC"]) await askAbout({ kind: "name", subject: s });
     const answer = await askAbout(
       { kind: "name", subject: "DD" },
       ada,
       config({ discoveryPerPass: 2 }),
     );
-    expect(answer.body.tell).toMatch(/3 ahead of it, so about 2 research passes/);
+    // Nothing reads the queue yet, so no count of passes is promised (#7034 slice 3b).
+    expect(answer.body.tell).toMatch(/no wait to promise/);
+    expect(answer.body.tell).not.toMatch(/passes/);
   });
 
   it("refuses a malformed or unknown ask with 400 and writes nothing", async () => {

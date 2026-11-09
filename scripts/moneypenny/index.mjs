@@ -687,6 +687,13 @@ export function checkCallout(ctx, deps = {}) {
  * refusals now apply `ready` before returning, as `unpark` does for a reply: the label records the
  * go the comment already gave, the board shows it in Ready, and the sweep claims it once admitted
  * (blockers honoured by `notPullableReason`). A parked or `in-progress` plan is never labelled.
+ *
+ * AN ADMITTED COMMENT-FLIP IS RECORDED TOO (2026-11-08). Only refusals used to write the label, so a
+ * flip that started a build at once left the plan with no `ready` — and continuation.mjs carries a
+ * plan to its next slice only while it is `ready`. After that first slice the plan fell into the
+ * board's "Next part needs approval" column with nobody owning the next flip: #5912, #6340 and
+ * #5992 sat there 1–3 weeks after a "ready" comment ISSUES.md calls equivalent to the label. The
+ * label now records every go the comment door gives, so both doors leave a plan in the same state.
  */
 export function claimPlan(
   ctx,
@@ -730,22 +737,22 @@ export function claimPlan(
   const out = process.env.GITHUB_OUTPUT;
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed plan issue #${issue.number} — building in this run`);
+  // Before `in-progress`: the go outlives this slice, so continuation can carry the next one.
+  recordPlanFlip(ctx, issue, edit);
   setInProgress(issue.number, true); // #3960 — same in-flight signal as the feedback claim
   console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
 }
 
 /**
- * `ready` on a plan whose comment-flip was refused (#5334, see `claimPlan`). Only for the comment
- * door — a label event already carries the label — and only when the issue lacks it, so a re-posted
- * flip writes nothing. Best-effort, `unpark`'s doctrine.
+ * `ready` on a plan whose comment-flip was refused (#5334) or admitted (2026-11-08) — see
+ * `claimPlan`. Only for the comment door — a label event already carries the label — and only when
+ * the issue lacks it, so a re-posted flip writes nothing. Best-effort, `unpark`'s doctrine.
  */
 function recordPlanFlip(ctx, issue, edit) {
   if (!ctx.payload?.comment || labelNames(issue.labels).includes(LABELS.ready.name)) return;
   if (edit(issue.number, ["--add-label", LABELS.ready.name])) {
-    console.log(
-      `::notice::plan #${issue.number} — refused flip recorded as \`ready\` for the sweep`,
-    );
+    console.log(`::notice::plan #${issue.number} — comment flip recorded as \`ready\``);
   }
 }
 

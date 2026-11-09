@@ -3,6 +3,7 @@ import {
   askId,
   cleanQuestion,
   type DiscoveryQueue,
+  LANE_READS_QUEUE,
   MAX_ASKERS,
   MAX_PER_MEMBER,
   MAX_QUEUED,
@@ -165,10 +166,21 @@ describe("passesUntil and tellMember — roughly when", () => {
 
   it("tells a member the ask is queued, where in line, and that nothing is traded", () => {
     const first = queueAsk([], ask("PLTR"), CAMPAIGNS, none, AT);
-    expect(tellMember(first, 6)).toMatch(/^Queued\. It is next/);
-    expect(tellMember(first, 6)).toMatch(/Nothing is bought or sold/);
+    expect(tellMember(first, 6, true)).toMatch(/^Queued\. It is next/);
+    expect(tellMember(first, 6, true)).toMatch(/Nothing is bought or sold/);
     const deep = queueAsk(queued(["A1", "B1", "C1"]), ask("D1"), CAMPAIGNS, none, AT);
-    expect(tellMember(deep, 1)).toMatch(/3 ahead of it, so about 4 research passes/);
+    expect(tellMember(deep, 1, true)).toMatch(/3 ahead of it, so about 4 research passes/);
+  });
+
+  it("promises no wait while no lane reads the queue (#7034 slice 3b)", () => {
+    expect(LANE_READS_QUEUE).toBe(false);
+    const deep = queueAsk(queued(["A1", "B1", "C1"]), ask("D1"), CAMPAIGNS, none, AT);
+    const text = tellMember(deep, 1);
+    expect(text).toMatch(/doesn't read this list yet, so there is no wait to promise/);
+    expect(text).not.toMatch(/passes|next in line|ahead|Queued/i);
+    const joined = tellMember({ status: "joined", queue: deep.queue, ahead: 3 }, 1);
+    expect(joined).toMatch(/^Someone already asked this/);
+    expect(joined).not.toMatch(/passes|ahead/i);
   });
 
   it("says plainly when it is covered or the list is full, promising nothing", () => {
