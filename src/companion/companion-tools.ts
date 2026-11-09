@@ -2,7 +2,11 @@ import { lockedOnLadder } from "../domain/progression.js";
 import { TRADE_TYPES } from "../domain/trade-types.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { deskLedger } from "../observatory/desk-data.js";
-import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import {
+  costBasis,
+  type ParticipantSnapshot,
+  unrealizedPl,
+} from "../observatory/participant-snapshot.js";
 import type { Outlook } from "../options/outlook.js";
 import type { Recommendation } from "../options/recommend.js";
 import type { FindSimilarFeedback } from "../server/feedback-similar.js";
@@ -10,7 +14,7 @@ import type { ParticipantProgression, ProgressionService } from "../server/progr
 import type { ReadRoadmap } from "../server/roadmap.js";
 import type { UpcomingEvents } from "../server/upcoming-events.js";
 import { MAX_ISSUES_PER_LOOKUP, type ReadWorkStatus } from "../server/work-status.js";
-import { UNDERLYING_PATTERN } from "../trading/option-symbols.js";
+import { isOccSymbol, UNDERLYING_PATTERN } from "../trading/option-symbols.js";
 import {
   type ChatConvictionDraft,
   CONVICTION_TOOL_DEFS,
@@ -161,7 +165,7 @@ export const COMPANION_TOOL_DEFS = [
   {
     name: "get_my_positions",
     description:
-      "The member's own current holdings on their linked paper account: cash, equity, and one row per open position with symbol, quantity, avgPrice and marketValue. Use it when a question is about what they hold or what a holding is worth now and the MEMBER CONTEXT block doesn't already answer it. Covers only this member's account; returns 'no linked desk' when they have no linked account. Read-only.",
+      "The member's own current holdings on their linked paper account: cash, equity, and one row per open position with symbol, kind ('option', quantity in contracts, or 'stock'), side ('long', or 'short' for a written option), quantity (negative when short), avgPrice, marketValue, costBasis and unrealizedPl (dollars). Read each position's gain or loss from unrealizedPl, never from the price pair: on a written option costBasis is the premium collected and marketValue the cost to buy it back, both signed negative. Use it when a question is about what they hold or what a holding is worth now and the MEMBER CONTEXT block doesn't already answer it. Covers only this member's account; returns 'no linked desk' when they have no linked account. Read-only.",
     input_schema: { type: "object", properties: {} },
   },
   {
@@ -300,6 +304,9 @@ export type CompanionToolResult =
   | { readonly ok: true; readonly result: unknown }
   | { readonly ok: false; readonly error: string };
 
+/** Dollars to the cent, so a tool row never carries float noise into her answer. */
+const cents = (n: number): number => Math.round(n * 100) / 100;
+
 function positionsResult(snapshot: ParticipantSnapshot | undefined): CompanionToolResult {
   if (!snapshot) return { ok: false, error: "no linked desk" };
   return {
@@ -307,11 +314,18 @@ function positionsResult(snapshot: ParticipantSnapshot | undefined): CompanionTo
     result: {
       cash: snapshot.cash,
       equity: snapshot.equity,
+      // The server's own P/L, never the model's arithmetic: given only the price pair she
+      // misread a written put's signs and reported a $700 gain as "down $16,200" (#7018 live
+      // review, 2026-11-09). The same two functions price the Profile's positions table.
       positions: snapshot.positions.map((p) => ({
         symbol: p.symbol,
+        kind: isOccSymbol(p.symbol) ? "option" : "stock",
+        side: p.quantity < 0 ? "short" : "long",
         quantity: p.quantity,
         avgPrice: p.avgPrice,
         marketValue: p.marketValue,
+        costBasis: cents(costBasis(p)),
+        unrealizedPl: cents(unrealizedPl(p)),
       })),
     },
   };
