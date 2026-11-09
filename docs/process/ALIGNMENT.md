@@ -70,5 +70,6 @@ opens rule 3's graduation PR: a session does both.
 | 2026-11-08 | screen design (taste) | #7018 round 3 Q1 · how do the 11 sectors read: lines, tiles or bars? | C, bars (no confidence stated; the simulated Eric's pick, #7118) | More of all three; on his second read, bars "fully redundant with the percentage change" | miss |
 | 2026-11-08 | screen design (taste) | #7018 round 3 Q2 · how do the stories sit on the calendar? | A, today then the days (no confidence stated; the simulated Eric's pick, #7118) | More of A, Not the week strip; his second read added B's grouping by day | match |
 | 2026-11-09 | screen design (taste) | #7018 round 3 · does round 1's "actionable items at the top" put the question box back above the overview (AT9)? | — (no prediction recorded; AT9 shipped as the default) | No: that note "was geared towards singular-ish path oriented workflows" | not predicted |
+| 2026-11-09 | screen design (taste) | #7018 live review · his notes list the mission box first: does it lead again, or does AT9 stand? | AT9 stands; the list was the design method, not the page order (medium) | Overview first | match |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.
