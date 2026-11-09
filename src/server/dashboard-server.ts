@@ -27,6 +27,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskAlertsApi } from "./desk-alerts-route.js";
 import { serveDeskEventsApi } from "./desk-events-route.js";
 import { serveDraftOrderApi } from "./draft-order-route.js";
+import { serveFastTrackApi } from "./fast-track-route.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveFilingCommentsApi } from "./filing-comments-api-routes.js";
@@ -217,6 +218,7 @@ async function serveWriteApis(
   if (await serveOptionLifecycleApi(req, res, path, config, session)) return true;
   if (await serveDeskAlertsApi(req, res, path, config, session)) return true;
   if (await serveQuestsApi(req, res, path, config, session)) return true;
+  if (await serveFastTrackApi(req, res, path, config, session)) return true;
   if (await serveAlertDeliveryApi(req, res, path, config, session)) return true;
   if (await serveWatchlistApi(req, res, path, config, session)) return true;
   if (await serveOptionApi(req, res, path, config, session)) return true;

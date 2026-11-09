@@ -1,0 +1,192 @@
+/* THE FAST TRACK'S CARDS (#7034 slice 2) — "What's coming up?" opened under the landing page's
+ * quick questions, and the plan it carries onto the trade form. Phone first: one column at 390, each
+ * action a 44px tap. Every signal leads with a word (the date's "confirmed / an estimate", "House
+ * stance", "Proves you wrong") — a standing reader is red/green colourblind, so hue never carries it. */
+
+.ft-walk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.ft-question {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+.ft-taps {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--muted);
+}
+.ft-events {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ft-event {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+.ft-event:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.ft-event-title,
+.ft-event-date,
+.ft-stance,
+.ft-context,
+.ft-uncovered,
+.ft-hint,
+.ft-carried-head {
+  margin: 0;
+}
+.ft-event-title {
+  font-weight: 600;
+}
+.ft-event-date,
+.ft-uncovered,
+.ft-hint,
+.ft-context {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.ft-stance {
+  font-size: var(--text-sm);
+}
+.ft-stance .story-mark {
+  margin-right: 4px;
+}
+/* No research yet reads in italics as well as muted, so the absence has a shape of its own. */
+.ft-stance--none {
+  color: var(--muted);
+  font-style: italic;
+}
+.ft-actions,
+.ft-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ft-options {
+  flex-direction: column;
+}
+.ft-action,
+.ft-option,
+.ft-restart {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+/* "Plan a move" is the walk's way forward: a heavier border and weight, not just a tint. */
+.ft-action--plan {
+  border: 2px solid var(--accent);
+  font-weight: 700;
+}
+.ft-option {
+  width: 100%;
+}
+.ft-restart {
+  align-self: flex-start;
+  min-height: 36px;
+  background: transparent;
+  color: var(--muted);
+}
+.ft-action:focus-visible,
+.ft-option:focus-visible,
+.ft-restart:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.ft-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ft-words .ask-row {
+  margin-top: 6px;
+}
+.ft-notes {
+  font-size: var(--text-sm);
+}
+.ft-notes p {
+  margin: 0;
+}
+.ft-notes ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.ft-done {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ft-done p {
+  margin: 0;
+}
+.ft-ticket-head {
+  font-weight: 700;
+}
+.ft-plan {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.ft-plan dt {
+  font-weight: 700;
+}
+.ft-plan dd {
+  margin: 0;
+}
+.ft-fire.btn {
+  align-self: flex-start;
+  width: auto;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  text-decoration: none;
+}
+
+/* The plan on the trade form: the same two lines, above the ticket. */
+.ft-carried {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+@media (max-width: 420px) {
+  .ft-plan {
+    grid-template-columns: 1fr;
+  }
+  .ft-plan dd {
+    margin-bottom: 4px;
+  }
+}

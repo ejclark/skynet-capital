@@ -40,6 +40,7 @@
 @import "./draft-builder.css";
 @import "./order-event-line.css";
 @import "./feedback.css";
+@import "./fast-track.css";
 @import "./form-strip.css";
 @import "./gate.css";
 /* after gate.css, not alphabetical: the exit plan's Carry / Skip pair restyles its `.btn`. */
