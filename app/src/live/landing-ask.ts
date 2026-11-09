@@ -1,3 +1,4 @@
+import { LANE_READS_QUEUE } from "../../../src/domain/discovery-lane";
 import { WHATS_COMING_UP } from "../../../src/domain/fast-track";
 import type { EditionLine, EditionStory } from "./edition";
 import { postJson } from "./post";
@@ -136,8 +137,10 @@ export function askedByLine(names: readonly string[]): string {
 }
 
 /** Where a question stands, in words; never a guess at a finding that isn't there. */
-export function questionState(q: PartyQuestion): string {
+export function questionState(q: PartyQuestion, laneReads: boolean = LANE_READS_QUEUE): string {
   if (q.state === "found") return q.found.length === 1 ? "Answered" : `${q.found.length} findings`;
+  // No lane reads the queue yet, so "in line" would promise a turn nothing gives (#7034 slice 3b).
+  if (q.state === "waiting" && !laneReads) return "Kept; research doesn't read the list yet";
   if (q.state === "waiting")
     return q.ahead ? `In line, ${q.ahead} ahead` : "Next in line for research";
   return "No finding yet";
