@@ -161,6 +161,25 @@ describe("a mode is a set of encounters, never a screen (criterion 6)", () => {
     expect(build(AI).map((e) => [e.symbol, e.from])).toEqual([["CRWV", "house-watch"]]);
   });
 
+  it("builds only on picks this campaign holds: a pick from another campaign stays there", () => {
+    expect(build(ENERGY, { picks: { NVDA: "watch", CMI: "enter" } }).map((e) => e.symbol)).toEqual([
+      "CMI",
+    ]);
+  });
+
+  it("queues no rechecks: build a strategy hands names to forms, it presents no research", () => {
+    const set = encountersFor(ENERGY, {
+      landscape: landscape(ENERGY),
+      brief: startDiscovery(ENERGY.id, TODAY, RECORDS),
+      mode: "build-strategy",
+      member: { picks: { VST: "enter" } },
+    });
+    expect(set.encounters.map((e) => (e.kind === "build-strategy" ? e.symbol : ""))).toContain(
+      "VST",
+    );
+    expect(set.rechecks).toEqual([]);
+  });
+
   it("never builds on a stand-aside pick or a fund", () => {
     const symbols = build(AI, ADA).map((e) => e.symbol);
     expect(symbols).not.toContain("AMD");
@@ -220,6 +239,10 @@ describe("a view opens only on a playbook the member's bot runs (criterion 5)", 
     const view = door(on(build(AI, ADA), "NVDA"), "view");
     expect(view.open).toBe(false);
     expect(view.why).toMatch(/subscribe a bot to .*NVDA/);
+  });
+
+  it("with no member, says the read has none instead of telling nobody to subscribe", () => {
+    expect(door(on(build(AI), "CRWV"), "view").why).toContain("this read has no member");
   });
 
   it("is shut on a name no view-taking playbook trades", () => {
@@ -308,6 +331,11 @@ describe("a play is a draft that shadow-tests first (criterion 5)", () => {
     );
     const estimated = { ...report, dateIs: "estimated" as const };
     expect(door(on(build(AI, ADA, [estimated]), "NVDA"), "play").why).toContain(
+      "stays quiet until one is",
+    );
+    // A later confirmed print never stands in for the next one, still estimated.
+    const later = { ...report, id: "nvda-earnings-q1", date: "2027-02-24" };
+    expect(door(on(build(AI, ADA, [estimated, later]), "NVDA"), "play").why).toContain(
       "stays quiet until one is",
     );
   });
@@ -431,6 +459,25 @@ describe("a member leaves build a strategy with a view or a shadow test, never a
       links: [{ from: "CRWV-WHEEL", on: { kind: "assigned" }, to: "CRWV-LONG-CALL" }],
     };
     expect(leaveBuildStrategy(ES, { chains: [chain] }).ok).toBe(true);
+  });
+
+  it("a view the conviction form would refuse never counts: an undated falsifier", () => {
+    const undated = view("If it goes down.");
+    const bare = {
+      ...undated,
+      claims: undated.claims.map(({ scoreBy: _s, ...c }) => ({
+        ...c,
+        bucket: "untestable" as const,
+      })),
+    };
+    expect(leaveBuildStrategy(ES, { views: [bare] }).ok).toBe(false);
+  });
+
+  it("with no name to build on, says so instead of asking for one", () => {
+    const leave = leaveBuildStrategy([], { plays: [play("shadow")] });
+    expect(leave.ok).toBe(false);
+    if (!leave.ok)
+      expect(leave.problems).toEqual([expect.stringContaining("no name to build on yet")]);
   });
 
   it("records on names outside this campaign's encounters belong to other campaigns", () => {

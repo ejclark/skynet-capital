@@ -470,7 +470,9 @@ function nameEncounters(
 
 // ── The set, and the question-first contract ───────────────────────────────────────────────────
 
+/** Rechecks belong to the research modes: build a strategy only hands names to forms. */
 function recheckOf(e: Encounter): Recheck | undefined {
+  if (e.kind === "build-strategy") return undefined;
   if (e.kind === "explore")
     return e.stale
       ? { subject: e.id, why: `rests on research from ${e.stale.since}, ${e.stale.days} days old` }

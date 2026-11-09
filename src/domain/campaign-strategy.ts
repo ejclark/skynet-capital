@@ -42,7 +42,7 @@ import { type Pair, pairName, pairTable } from "../playbooks/pair-table.js";
 import type { Landscape } from "./campaign-landscape.js";
 import type { DiscoveryBrief, Lesson } from "./campaign-lessons.js";
 import { type HouseCall, houseCall, isFund, lessonsNaming } from "./campaign-verdicts.js";
-import type { Campaign } from "./campaigns.js";
+import { type Campaign, castSymbols } from "./campaigns.js";
 
 /** The forms a name can be handed to, in the order the encounter lists them. */
 export const STRATEGY_DOORS = ["view", "play", "chain"] as const;
@@ -118,20 +118,43 @@ export interface StrategyInputs {
 
 const BUILT_ON: ReadonlySet<string> = new Set(["watch", "enter"]);
 
-/** The names to build on: the member's watch and enter picks first, then names the house watches. */
-function subjects(
-  campaign: Campaign,
-  inputs: StrategyInputs,
-): readonly { symbol: string; from: StrategyEncounter["from"] }[] {
+interface Subject {
+  readonly symbol: string;
+  readonly from: StrategyEncounter["from"];
+  readonly house: HouseCall;
+}
+
+/**
+ * The names to build on: the member's watch and enter picks first, then names the house watches.
+ * A pick counts only on a name this campaign holds (its cast, or a name its lesson record names):
+ * a pick carried in from another campaign is that campaign's to build on.
+ */
+function subjects(campaign: Campaign, inputs: StrategyInputs): readonly Subject[] {
+  const { brief } = inputs;
+  const today = inputs.landscape.today;
+  const held = new Set([
+    ...castSymbols(campaign),
+    ...[...brief.closed, ...brief.reopened, ...brief.due, ...brief.watching].flatMap(
+      (l) => l.symbols,
+    ),
+  ]);
   const picked = Object.entries(inputs.member?.picks ?? {})
-    .filter(([s, pick]) => BUILT_ON.has(pick) && !isFund(campaign, s))
-    .map(([symbol]) => ({ symbol, from: "your-pick" as const }));
+    .filter(([s, pick]) => BUILT_ON.has(pick) && held.has(s) && !isFund(campaign, s))
+    .map(([symbol]) => ({
+      symbol,
+      from: "your-pick" as const,
+      house: houseCall(symbol, brief, today),
+    }));
   const taken = new Set(picked.map((p) => p.symbol));
-  const watched = inputs.brief.watching
+  const watched = brief.watching
     .flatMap((l) => l.symbols)
     .filter((s, i, all) => all.indexOf(s) === i && !taken.has(s) && !isFund(campaign, s))
-    .filter((s) => houseCall(s, inputs.brief, inputs.landscape.today).verdict === "watch")
-    .map((symbol) => ({ symbol, from: "house-watch" as const }));
+    .map((symbol) => ({
+      symbol,
+      from: "house-watch" as const,
+      house: houseCall(symbol, brief, today),
+    }))
+    .filter((x) => x.house.verdict === "watch");
   return [...picked, ...watched];
 }
 
@@ -157,12 +180,15 @@ function viewDoor(
     };
   const subscribed = inputs.member?.subscribed ?? new Set<string>();
   const steers = pairs.filter((p) => subscribed.has(p.id));
+  const runs = pairs.map(pairName).join(" or ");
   if (steers.length === 0)
     return {
       door: {
         ...base,
         open: false,
-        why: `A view narrows a playbook your bot already runs: subscribe a bot to ${pairs.map(pairName).join(" or ")} first.`,
+        why: inputs.member
+          ? `A view narrows a playbook your bot already runs: subscribe a bot to ${runs} first.`
+          : `A view narrows a playbook the member's bot already runs (${runs}), and this read has no member.`,
       },
     };
   const lesson = newestLesson(symbol, inputs.brief);
@@ -183,14 +209,16 @@ function viewDoor(
   };
 }
 
-/** The next confirmed report for a name, when the landscape holds one: a pre-print play opens on it. */
+/**
+ * The name's next report, when the landscape holds one and it is confirmed: a pre-print play opens
+ * only on a confirmed date. The next report is the first row, as find names' "Next report" check
+ * reads it, so a later confirmed date never stands in for an earlier estimated one.
+ */
 function confirmedReport(symbol: string, l: Landscape): string | undefined {
-  return l.scheduled.find(
-    (s) =>
-      s.kind === "earnings" &&
-      s.dateIs === "confirmed" &&
-      s.reasons.some((r) => r.via === "cast" && r.symbol === symbol),
-  )?.date;
+  const next = l.scheduled.find(
+    (s) => s.kind === "earnings" && s.reasons.some((r) => r.via === "cast" && r.symbol === symbol),
+  );
+  return next?.dateIs === "confirmed" ? next.date : undefined;
 }
 
 function playDoor(
@@ -264,7 +292,7 @@ export function strategyEncounters(
   const roleOf = new Map<string, string>();
   for (const r of campaign.cast)
     for (const s of r.symbols) if (!roleOf.has(s)) roleOf.set(s, r.role);
-  return subjects(campaign, inputs).map(({ symbol, from }) => {
+  return subjects(campaign, inputs).map(({ symbol, from, house }) => {
     const view = viewDoor(symbol, inputs);
     const play = playDoor(symbol, inputs);
     const chain = chainDoor(symbol);
@@ -288,7 +316,7 @@ export function strategyEncounters(
         ...(play.seed ? { play: play.seed } : {}),
         ...(chain.seed ? { chain: chain.seed } : {}),
       },
-      house: houseCall(symbol, inputs.brief, inputs.landscape.today),
+      house,
     };
   });
 }

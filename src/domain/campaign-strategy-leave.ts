@@ -15,7 +15,7 @@
 import type { AuthoredPlayRecord } from "../playbooks/authored-play-draft.js";
 import type { PlaybookChain } from "../playbooks/chain.js";
 import { CHAINABLE } from "../playbooks/chain-form.js";
-import type { Conviction } from "../playbooks/conviction-record.js";
+import { type Conviction, convictionProblems } from "../playbooks/conviction-record.js";
 import { findPair, type Pair } from "../playbooks/pair-table.js";
 import type { StrategyDoor, StrategyEncounter } from "./campaign-strategy.js";
 import { CAMPAIGN_MODES, type CampaignMode } from "./campaigns.js";
@@ -53,7 +53,12 @@ function viewHolds(
   lookup: (id: string) => Pair | undefined,
 ): Held[] {
   return views.flatMap((v) => {
-    const falsified = v.claims.length > 0 && v.claims.every((c) => c.falsifier.trim().length > 0);
+    // The conviction form's own rules (a dated falsifier per claim, a pair it may steer), so the
+    // exit and the form can never judge one view differently; plus a falsifier on every claim.
+    const falsified =
+      convictionProblems(v, lookup).length === 0 &&
+      v.claims.length > 0 &&
+      v.claims.every((c) => c.falsifier.trim().length > 0);
     const symbol = v.steers.flatMap((id) => lookup(id)?.symbols ?? []).find((s) => names.has(s));
     return falsified && symbol ? [{ door: "view" as const, id: v.id, symbol }] : [];
   });
@@ -68,13 +73,26 @@ function playHolds(
   for (const p of plays) {
     const symbol = p.spec.symbols[0];
     if (symbol === undefined || !names.has(symbol)) continue;
-    if (p.status === "shadow") holds.push({ door: "play", id: p.id, symbol });
-    else if (p.status === "draft")
-      notes.push(`"${p.name}" is saved as a draft: start its shadow test and it counts.`);
-    else
-      notes.push(
-        `"${p.name}" is promoted and can trade, so it does not count: this mode hands on views and shadow tests, never a play that trades.`,
-      );
+    switch (p.status) {
+      case "shadow":
+        holds.push({ door: "play", id: p.id, symbol });
+        break;
+      case "draft":
+        notes.push(`"${p.name}" is saved as a draft: start its shadow test and it counts.`);
+        break;
+      case "promoted":
+        notes.push(
+          `"${p.name}" is promoted and can trade, so it does not count: this mode hands on views and shadow tests, never a play that trades.`,
+        );
+        break;
+      default: {
+        // A status added later must be placed here on purpose, never read as one of the above.
+        const unplaced: never = p.status;
+        throw new Error(
+          `campaign-strategy-leave: no rule for a play whose status is ${String(unplaced)}`,
+        );
+      }
+    }
   }
   return { holds, notes };
 }
@@ -100,6 +118,13 @@ export function leaveBuildStrategy(
   lookup: (id: string) => Pair | undefined = findPair,
 ): Leave {
   const names = new Set(encounters.map((e) => e.symbol));
+  if (names.size === 0)
+    return {
+      ok: false,
+      problems: [
+        "There is no name to build on yet: pick one to watch or enter in find names, and it comes here.",
+      ],
+    };
   const plays = playHolds(built.plays ?? [], names);
   const holds = [
     ...viewHolds(built.views ?? [], names, lookup),
