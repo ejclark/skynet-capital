@@ -21,6 +21,12 @@
 // the line. So the page's own meta writes MERGE (`update`), never replace: a `set` would erase what
 // the session wrote. Done is one way; Reopen is its own control.
 //
+// ONE DONE COVERS ONE SET OF ANSWERS (#7119; Eric, 2026-11-09: "The done button was already
+// checked and did nothing.. I reopned and closed to trigger the action"). An answer, mark or note
+// changed after the read-back on the bar re-arms Done and says so — no Reopen — and the press sends
+// a fresh Done with its own stamp. Nothing is sent until he presses it. A page opened later finds
+// the same from the records' `at` stamps (and the page notes'), newer than `readBackAt`.
+//
 // IS ANYONE LISTENING (Eric, 2026-10-13: "is there a way to get a more responsive 'reconnected to
 // session' feedback?"). The session also stamps that document: `listening` after each publish or
 // re-watch and on a watch-lost notice (ear-client.js draws that line), and `ackAt` with `ackFor` (the
@@ -95,6 +101,7 @@
     ACK,
     LIFECYCLE,
     MAYBE,
+    NEWER,
     NO_REACH,
     QUIET_MS,
     REOPENED,
@@ -126,6 +133,28 @@
   let ackSeen = ackKey(null);
   /** The `doneAt` whose read-back is showing: its ack, landing late, never covers it. */
   let readBackFor = null;
+  /** Has an answer changed since the read-back showing for the Done that stands? Done re-arms. */
+  let since = false;
+  /** The newest `at` among the stored answers as loaded, in ms: a reload's test for `since`. */
+  let newestAt = -Infinity;
+  /** A stored record's (or page note's) `at`, in ms; -Infinity when it has none it can read. */
+  const msOf = (v) => {
+    const ms = typeof v?.at === "string" ? Date.parse(v.at) : Number.NaN;
+    return Number.isNaN(ms) ? -Infinity : ms;
+  };
+  /** The newest page note on the round's document (page-notes-client.js), in ms. */
+  const notesAt = (d) => {
+    const notes = d?.pageNotes && typeof d.pageNotes === "object" ? d.pageNotes : {};
+    return Math.max(-Infinity, ...Object.values(notes).map(msOf));
+  };
+  /** An answer changed here: after a read-back of the Done that stands, Done is armed again. */
+  function changedSince() {
+    if (since || !meta.doneAt || readBackFor !== meta.doneAt) return;
+    since = true;
+    stopWaiting();
+    turn++;
+    tell(NEWER);
+  }
 
   const rec = (sec, key) => {
     state[sec][key] = state[sec][key] || blank();
@@ -195,7 +224,8 @@
     focusUi?.paint(); // after the marks: a mark painted back outside a focused crop is hidden
     outcomesUi?.paint();
     notesUi?.paint(locked() || connecting);
-    const isDone = Boolean(meta.doneAt);
+    // A Done whose answers changed since its read-back is armed again, as an unpressed one is.
+    const isDone = Boolean(meta.doneAt) && !since;
     doneBtn.setAttribute("aria-pressed", isDone ? "true" : "false");
     doneBtn.textContent = isDone ? "Done" : "I'm done";
     // Done waits for the store too: pressed while connecting, the saved meta would overwrite it.
@@ -335,6 +365,7 @@
       return status("Sending once your answers load");
     }
     if (!db) return status("");
+    changedSince();
     const keyed =
       sec === "decisions" && paths.every((p) => MAPS.includes(split(p)[0]) || MERGED.includes(p));
     if (!keyed) return save(sec, key);
@@ -384,6 +415,7 @@
   function savePageNote(id, entry) {
     if (!db || locked()) return Promise.resolve(false);
     tap();
+    changedSince();
     status("Saving");
     return chain(`tp/${ID}`, (ref) => putMeta(ref, { pageNotes: { [id]: entry } }));
   }
@@ -410,10 +442,11 @@
 
   /** Done: save it, then tell the watching session — from this press, never again on a timer. */
   function done() {
-    if (meta.doneAt || locked() || connecting) return;
+    if ((meta.doneAt && !since) || locked() || connecting) return;
     const focused = document.activeElement === doneBtn;
     flushNotes();
     tap();
+    since = false;
     meta.doneAt = new Date().toISOString();
     const pressedAt = Date.now();
     const saved = saveMeta(true);
@@ -482,6 +515,7 @@
     stopWaiting();
     turn++;
     tap();
+    since = false;
     meta.doneAt = null;
     saveMeta(true);
     tell(REOPENED);
@@ -501,6 +535,9 @@
     if (rb && (Number.isNaN(doneMs) || rb.ms >= doneMs)) {
       readBackFor = meta.doneAt;
       toldLine = rb.line;
+      // An answer or a page note saved after that read-back: Done is armed again (#7119).
+      since = Boolean(meta.doneAt) && Math.max(newestAt, notesAt(d)) > rb.ms;
+      if (since) toldLine = NEWER;
     } else if (acks(d, meta.doneAt, false)) toldLine = ACK;
     else if (!Number.isNaN(doneMs)) {
       toldLine = `Done at ${clock(doneMs)}. ${waiting()}`;
@@ -519,6 +556,7 @@
       heardKey = rb.key;
       // One landing now is the session answering, whatever time it claims (`acks`, status-client.js).
       readBackFor = meta.doneAt;
+      since = false; // a new read-back reads the store as it stands, changes and all
       stopWaiting();
       turn++;
       return tell(rb.line);
@@ -571,6 +609,8 @@
    *  replaced the record it was typed into (#5243). */
   function typed(sec, key, path, text, also = []) {
     const k = `${sec}/${key}/${path}`;
+    // Armed at the first key, not the save: a Done pressed mid-note saves it first (flushNotes).
+    changedSince();
     status("Typing");
     clearTimeout(timers[k]);
     // A mark's spot claimed by an earlier keystroke still rides this note's first write.
@@ -718,6 +758,7 @@
         (snap) => {
           for (const doc of snap.docs) {
             state[sec][doc.id] = fromDoc(doc.data());
+            newestAt = Math.max(newestAt, msOf(doc.data()));
             stored.add(`tp/${ID}/${sec}/${doc.id}`);
           }
           return true;
@@ -759,6 +800,7 @@
     dropNotes();
     for (const sec of Object.keys(state)) state[sec] = {};
     meta.doneAt = null;
+    since = false;
     stopWaiting();
     earUi?.off();
     turn++; // a send still pending must not report on a page that has gone dark
