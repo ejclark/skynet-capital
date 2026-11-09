@@ -1,7 +1,7 @@
 import { daysBetween, marketClosures } from "../../../src/domain/market-calendar";
 import { dayLabel } from "./book-events";
-import { addDays } from "./horizon-range";
 import type { SectorsView } from "./edition-sectors";
+import { addDays } from "./horizon-range";
 
 /**
  * The day's edition, client side (#7077) — mirrors `EditionView` in `src/domain/edition.ts`. The
