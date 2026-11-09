@@ -564,6 +564,26 @@
       "cite": ".github/workflows/moneypenny-events.yml:564-600, 672 (sonnet, max-turns 150), 677-678, 772; research-dispatch-budget.json:3 (maxPerTick 6); .github/workflows/moneypenny-events.yml:564 build-events; docs/ROUTINES.md:44 May NOT \"trade; edit playbooks, guards, or earnings-calendar entries\"; scripts/moneypenny/events.mjs:154-165, 189-197 (RECONCILE_CAP 20)"
     },
     {
+      "id": "discovery-research",
+      "department": "research",
+      "name": "Discovery research lane",
+      "kind": "lane",
+      "job": "One Sonnet session per member question no campaign covers (matrix, max-parallel 3) writes a research-shelf write-up and opens a discovery/<slug> PR",
+      "wakesOn": "daily schedule, or a manual dispatch",
+      "speaksOn": "A discovery PR; the dashboard drops the answered ask once the write-up deploys",
+      "cadence": "Once a day, up to researchPerTick less the research PRs already open",
+      "invoker": "event",
+      "status": "hired",
+      "codeRoots": [
+        ".github/prompts/discovery-research.md",
+        ".github/workflows/moneypenny-discovery.yml",
+        "src/domain/discovery-pass.ts",
+        "src/domain/discovery-queue.ts",
+        "docs/research/discovery/"
+      ],
+      "cite": ".github/workflows/moneypenny-discovery.yml:28 (daily cron), :145 (sonnet, max-turns 150); src/domain/discovery-queue.ts:takeForPass (ceiling less spentByEvents); src/domain/discovery-pass.ts:planPass (skips answered and open-PR asks)"
+    },
+    {
       "id": "pulse-screen",
       "department": "research",
       "name": "Pulse screen (no model)",

@@ -20,7 +20,7 @@ flowchart TD
   owner(["Eric · owner and game master"])
   live_sessions["Live sessions"]
   platform["Platform · 12 seats"]
-  research["Research desk · 9 seats"]
+  research["Research desk · 10 seats"]
   trading["Trading floor · 5 seats"]
   contributors(["Code contributors · none yet"])
   members e0@-->|"chat · filings · trades"| front_desk
@@ -164,6 +164,7 @@ The event calendar, the research ledgers, position guidance, campaigns.
 |---|---|---|---|---|---|
 | Market-event calendar | Forward calendar of dated things that move the traded names (prints, macro, launches, Treasury supply, geopolitics), one JSON file per event | research PRs that add or amend event files | query functions the app and campaigns read | hired | `src/domain/market-events.ts` `src/domain/market-events-data.ts` `src/domain/market-events/` |
 | Event research lane | One Sonnet session per due event (matrix, max-parallel 8) writes the ledger and opens a research/<id> PR | scan dispatch with a non-empty due list | A research PR; a quota reading published to #4153 | hired | `.github/prompts/event-research.md` `research-dispatch-budget.json` `.github/workflows/moneypenny-events.yml` `scripts/moneypenny/events.mjs` `docs/research/events/` `scripts/event-scan.mjs` |
+| Discovery research lane | One Sonnet session per member question no campaign covers (matrix, max-parallel 3) writes a research-shelf write-up and opens a discovery/<slug> PR | daily schedule, or a manual dispatch | A discovery PR; the dashboard drops the answered ask once the write-up deploys | hired | `.github/prompts/discovery-research.md` `.github/workflows/moneypenny-discovery.yml` `src/domain/discovery-pass.ts` `src/domain/discovery-queue.ts` `docs/research/discovery/` |
 | Pulse screen (no model) | Screens interval-elapsed pulses without a model and opens a moneypenny/screen-* PR with the ledger rows | push or scan | A screen PR, auto-merge attempted | hired | `scripts/moneypenny/open-screen-pr.mjs` `scripts/event-material-scan.mjs` |
 | Research PR sweep and stall repair | Finds an open research/<id> PR that stopped moving and frees the event it holds | Push audit | Rearm or close intents | hired | `scripts/moneypenny/research-pr-sweep.mjs` `.github/prompts/moneypenny-event-stall-repair.md` |
 | Position guidance | Reads market inputs live through the member's own account, checks each one's freshness against its source, adds the nearest research ledger's summary; the stake math runs in the browser | GET /api/trade/guidance?symbol= | market half of guidance plus freshness rows | hired | `src/server/guidance-route.ts` `src/server/guidance-pulse.ts` `src/server/guidance-market.ts` |

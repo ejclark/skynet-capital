@@ -101,7 +101,7 @@ export interface PartyQuestion {
   /** Display names, first asker first. Never an email. */
   readonly askedBy: readonly string[];
   readonly askedAt: string;
-  readonly state: "found" | "waiting" | "no-finding-yet";
+  readonly state: "found" | "waiting" | "on-the-shelf" | "no-finding-yet";
   readonly ahead?: number;
   readonly found: readonly PartyFinding[];
 }
@@ -143,6 +143,7 @@ export function questionState(q: PartyQuestion, laneReads: boolean = LANE_READS_
   if (q.state === "waiting" && !laneReads) return "Kept; research doesn't read the list yet";
   if (q.state === "waiting")
     return q.ahead ? `In line, ${q.ahead} ahead` : "Next in line for research";
+  if (q.state === "on-the-shelf") return "Written up on the research shelf";
   return "No finding yet";
 }
 
@@ -158,6 +159,7 @@ export const HOLDER = "The research desk";
 
 export function holderLine(q: PartyQuestion): string {
   if (q.state === "found") return `${HOLDER} answered this question about ${q.subject}.`;
+  if (q.state === "on-the-shelf") return `${HOLDER} wrote up ${q.subject} on the research shelf.`;
   if (q.state === "no-finding-yet") return `${HOLDER} looked at ${q.subject} and has nothing yet.`;
   return `${HOLDER} holds this question about ${q.subject}.`;
 }

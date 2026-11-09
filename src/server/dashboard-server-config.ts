@@ -394,6 +394,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * research shelf on each save (`shelfResearched`); specs pass a fixed answer.
    */
   readonly campaignShelf?: (symbol: string) => boolean;
+  /** Whether the lane wrote this ask up on the research shelf; specs pass a fixture (#7034 slice 3b). */
+  readonly campaignShelfAnswered?: (ask: {
+    readonly kind: "sector" | "market" | "name";
+    readonly subject: string;
+    readonly campaign?: string;
+  }) => boolean;
   /**
    * THE DISCOVERY QUEUE (#6952 slice 2b) — questions about things no campaign covers, waiting for
    * the research lane. Omit to disable (offline mode): an ask answers "not wired in this
