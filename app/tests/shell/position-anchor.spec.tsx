@@ -169,6 +169,32 @@ describe("PositionsBlotter — the position a link points at", () => {
     expect(scroll.mock.contexts.at(-1)).toHaveAttribute("id", "pos-SPY");
   });
 
+  // #7167 criterion 3: a link to one position (Moneypenny's, an Events row's) scrolls to it, OPENS
+  // it and outlines it — the member came for that position's detail.
+  it("opens the row a link points at, on arrival", () => {
+    breakpoint(".pos-cards");
+    window.location.hash = "#pos-EEM";
+    const { container } = render(blotter());
+    const chevron = (sym: string) =>
+      container.querySelector(`#pos-${sym} button[aria-expanded]`) as HTMLElement;
+    expect(chevron("EEM")).toHaveAttribute("aria-expanded", "true");
+    expect(chevron("SPY")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opens the row an in-page link names later, and leaves the member's own toggle alone", () => {
+    breakpoint(".pos-cards");
+    const { container } = render(blotter());
+    const chevron = () => container.querySelector("#pos-SPY button[aria-expanded]") as HTMLElement;
+    expect(chevron()).toHaveAttribute("aria-expanded", "false");
+    act(() => {
+      window.location.hash = "#pos-SPY";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(chevron()).toHaveAttribute("aria-expanded", "true");
+    act(() => chevron().click());
+    expect(chevron()).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("leaves the page where it is with no position in the hash", () => {
     window.location.hash = "#act-ord-1";
     render(blotter());

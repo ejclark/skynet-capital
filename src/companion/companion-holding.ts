@@ -1,5 +1,6 @@
 import type { PositionView } from "../observatory/broker-positions.js";
 import { humanizeOptionSymbol, isOccSymbol, parseOccSymbol } from "../trading/option-symbols.js";
+import { positionRow } from "./places.js";
 
 /**
  * WHAT THEY HOLD ON THE PAGE'S SYMBOL — the position half of the chat's context stamp (#2224
@@ -31,16 +32,19 @@ function onSymbol(position: PositionView, symbol: string): boolean {
   return parseOccSymbol(position.symbol)?.underlying === symbol;
 }
 
+/** Each line ends on its row's address (#7167), so she links the row by the desk's own symbol
+ *  rather than rebuilding an option's contract symbol from the humanized words before it. */
 function holdingLine(position: PositionView): string {
   const side = position.quantity < 0 ? "short " : "";
   const count = Math.abs(position.quantity);
   const worth = `now worth ${signedUsd(position.marketValue)}`;
+  const row = `its row ${positionRow(position.symbol)}`;
   if (isOccSymbol(position.symbol)) {
     const noun = count === 1 ? "contract" : "contracts";
-    return `${side}${count} ${humanizeOptionSymbol(position.symbol)} ${noun} at ${signedUsd(position.avgPrice)} each, ${worth}`;
+    return `${side}${count} ${humanizeOptionSymbol(position.symbol)} ${noun} at ${signedUsd(position.avgPrice)} each, ${worth}, ${row}`;
   }
   const noun = count === 1 ? "share" : "shares";
-  return `${side}${count} ${noun} at ${signedUsd(position.avgPrice)} avg, ${worth}`;
+  return `${side}${count} ${noun} at ${signedUsd(position.avgPrice)} avg, ${worth}, ${row}`;
 }
 
 export interface DeskRead {

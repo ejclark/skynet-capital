@@ -38,7 +38,7 @@ tr[data-landed] > td:first-child {
   tr[data-landed],
   .pos-card[data-landed],
   .pbb-card[data-landed] {
-    animation: pos-landed 2.4s ease-out both;
+    animation: pos-landed 4s ease-out both;
   }
 }
 @keyframes pos-landed {
