@@ -289,9 +289,11 @@ posts only those, adding `feedback` to a non-plan issue that lacks it. A `plan` 
 an OWNER/MEMBER/COLLABORATOR (`isReadySignal()` in `scripts/moneypenny/plan-claim.mjs` — "ready",
 "go", "ready — use the proposed defaults"). Neither door retires the other. A comment carrying the
 Claude footer counts only when its first line is exactly `ready — take slice 1 per the state block`,
-so a lane quoting the word in prose can never flip itself. When admission queues a comment-flip (cap,
-work-mode) or open blockers hold it back, `claimPlan` applies `ready` to *record* that go — not to
-grant one — so the retry sweep starts it later instead of dropping it (#5334).
+so a lane quoting the word in prose can never flip itself. Every comment-flip ends with `ready` on
+the plan: `claimPlan` applies it to *record* that go — not to grant one — whether admission queues
+the flip (cap, work-mode), open blockers hold it back, or it starts at once. A queued flip then
+starts later instead of dropping (#5334), and a started one keeps its go for the next slice, as a
+label-flip does (2026-11-08: three comment-flipped plans stalled after slice 1 without it).
 
 **Clearing a parking label re-asks the question.** Removing `needs-eric` from an issue that already
 carries `ready` wakes a claim on its own (the unpark path) — the flip was already on record and
