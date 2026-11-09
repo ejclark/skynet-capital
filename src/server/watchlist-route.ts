@@ -62,8 +62,9 @@ function unavailable(reason: string): WatchlistAnswer {
 /** The member whose list this is, or nothing. An unauthenticated deployment (local, offline) has
  *  exactly one reader, so it gets one list — `desk-alerts-route.ts`'s own rule for the same case,
  *  rather than the quote stream's decline, because a list that refuses to save anything offline
- *  would make the pane untestable by hand. */
-function memberFor(
+ *  would make the pane untestable by hand. The fast track reads the list through this too
+ *  (`fast-track-route.ts`), so the list it ranks by is the one Watch writes to. */
+export function memberFor(
   config: DashboardServerConfig,
   session: Session | undefined,
 ): string | undefined {

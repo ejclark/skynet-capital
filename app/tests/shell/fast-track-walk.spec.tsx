@@ -154,7 +154,6 @@ describe("the first fast track's card walk", () => {
     expect(url.searchParams.get("plan")).toBe("NVDA");
     expect(url.searchParams.get("stop")).toBe("A guide below consensus by 2026-11-19");
     expect(url.searchParams.get("exit")).toMatch(/^Close before it/);
-    expect(url.searchParams.get("by")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("fills a field with the member's own answer, and keeps added context as a note on the ticket", async () => {
@@ -183,11 +182,43 @@ describe("the first fast track's card walk", () => {
     expect(watched).toEqual(["NVDA"]);
   });
 
+  it("says the member's names lead only when one of them does", async () => {
+    mount();
+    expect(
+      await screen.findByText("The next 14 days: your names first, then by impact"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the tap count on the path when a note is added", async () => {
+    mount();
+    fireEvent.click(await screen.findByRole("button", { name: "Plan a move on NVDA" }));
+    const context = screen.getByLabelText("Add context");
+    fireEvent.change(context, { target: { value: "small size" } });
+    fireEvent.submit(context.closest("form") as HTMLFormElement);
+    expect(screen.getByText("· tap 3 of 5")).toBeInTheDocument();
+  });
+
+  it("says plainly when the chat didn't take the question", async () => {
+    asked.length = 0;
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <FastTrackWalk onAsk={() => Promise.resolve(false)} />
+      </QueryClientProvider>,
+    );
+    const nvda = (await screen.findByText("NVDA earnings print")).closest("li");
+    if (!nvda) throw new Error("no nvda row");
+    fireEvent.click(within(nvda).getByRole("button", { name: "Ask what we know" }));
+    expect(await screen.findByText(/The chat didn't open/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Asked in the chat/)).toBeNull();
+  });
+
   it("hands Ask what we know to the chat", async () => {
     mount();
     const nvda = (await screen.findByText("NVDA earnings print")).closest("li");
     if (!nvda) throw new Error("no nvda row");
     fireEvent.click(within(nvda).getByRole("button", { name: "Ask what we know" }));
     expect(asked).toEqual(["What do we know about NVDA earnings print?"]);
+    expect(await screen.findByText(/^Asked in the chat/)).toBeInTheDocument();
   });
 });

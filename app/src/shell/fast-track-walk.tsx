@@ -11,14 +11,24 @@ import {
   FAST_TRACK_TAP_BUDGET,
   type FastTrackInput,
   type FieldCard,
+  type MemberBook,
+  NOT_RESEARCHED,
   nextStep,
   type Outcome,
+  rankEvents,
   startFastTrack,
   type Walk,
 } from "../../../src/domain/fast-track";
-import { eventDateLine, fastTrackKey, fetchFastTrack, ticketSearch } from "../live/fast-track";
+import {
+  eventDateLine,
+  fastTrackKey,
+  fetchFastTrack,
+  PLAN_TEXT_MAX,
+  ticketSearch,
+} from "../live/fast-track";
 import { setWatching, watchlistKey } from "../live/watchlist";
 import { InlineResult } from "../ui";
+import { PlanLines } from "./fast-track-plan";
 
 /**
  * "WHAT'S COMING UP THAT I SHOULD WATCH?", AS CARDS (#7034 slice 2). The first quick question under
@@ -84,7 +94,7 @@ function WordsForm({
           className="ask-input"
           type="text"
           value={text}
-          maxLength={400}
+          maxLength={PLAN_TEXT_MAX}
           onChange={(e) => setText(e.target.value)}
           placeholder="In your own words"
           autoComplete="off"
@@ -123,7 +133,7 @@ function EventItem({
   readonly row: EventRow;
   readonly onPick: (id: string) => void;
 }): ReactElement {
-  const researched = row.stance !== "not researched yet";
+  const researched = row.stance !== NOT_RESEARCHED;
   return (
     <li className="ft-event">
       <p className="ft-event-title">{row.title}</p>
@@ -212,8 +222,10 @@ function Notes({ notes }: { readonly notes: readonly string[] }): ReactElement |
     <div className="ft-notes">
       <p className="story-mark">Your notes, kept with the move</p>
       <ul>
-        {notes.map((n) => (
-          <li key={n}>{n}</li>
+        {notes.map((n, i) => (
+          // A note can repeat; its place in the list is what tells two apart.
+          // biome-ignore lint/suspicious/noArrayIndexKey: the list only ever grows at its end
+          <li key={`${i}-${n}`}>{n}</li>
         ))}
       </ul>
     </div>
@@ -224,8 +236,11 @@ function Notes({ notes }: { readonly notes: readonly string[] }): ReactElement |
 function Done({
   outcome,
   watched,
+  asked,
 }: {
   readonly outcome: Outcome;
+  /** Whether the chat took the question: pending, sent, or it didn't open. */
+  readonly asked: "pending" | "sent" | "failed";
   /** The watchlist's answer to the tap: pending, kept, or the reason it wasn't. */
   readonly watched:
     | { readonly state: "pending" | "ok" }
@@ -249,7 +264,15 @@ function Done({
   if (outcome.kind === "research-ask") {
     return (
       <div className="ft-done">
-        <p>Asked in the chat: "{outcome.question}"</p>
+        {asked === "failed" ? (
+          <InlineResult tone="err">
+            The chat didn't open, so "{outcome.question}" wasn't sent. Start over to try again.
+          </InlineResult>
+        ) : (
+          <p>
+            {asked === "sent" ? "Asked in the chat" : "Asking in the chat"}: "{outcome.question}"
+          </p>
+        )}
         <Notes notes={outcome.notes} />
       </div>
     );
@@ -259,12 +282,7 @@ function Done({
       <p className="ft-ticket-head">
         Your move on <b className="num">{outcome.symbol}</b>
       </p>
-      <dl className="ft-plan">
-        <dt>Proves you wrong</dt>
-        <dd>{outcome.stop.text}</dd>
-        <dt>Exit</dt>
-        <dd>{outcome.exit.text}</dd>
-      </dl>
+      <PlanLines stop={outcome.stop.text} exit={outcome.exit.text} />
       <Notes notes={outcome.notes} />
       <Link className="btn btn-primary ft-fire" to="/trade" search={ticketSearch(outcome)}>
         Open it in the trade form
@@ -277,14 +295,23 @@ function Done({
   );
 }
 
-/** The events card's heading says how it ranked; a field card asks its own question. */
+const onBook = (symbols: readonly string[], book: MemberBook): boolean =>
+  symbols.some((s) => book.held.includes(s) || book.watched.includes(s));
+
+/** The events card's heading says how it ranked — "your names first" only when one of the member's
+ *  names actually leads the list; a field card asks its own question. */
 function headingOf(card: Card, input: FastTrackInput): string {
   if (card.field !== "event") return card.question;
-  const mine = input.book.held.length + input.book.watched.length > 0;
+  const first = rankEvents(input)[0];
+  const mine = first !== undefined && onBook(first.event.symbols, input.book);
   return mine
     ? "The next 14 days: your names first, then by impact"
     : "The next 14 days, by impact";
 }
+
+/** Where each field card sits on the shortest path: the question, "Plan a move", then the stop,
+ *  the exit, and the trade form. Fixed, so an added note never reads as a tap past the budget. */
+const PATH_TAP = { stop: 3, exit: 4 } as const;
 
 /** The walk over one read of the fortnight. */
 function WalkOver({
@@ -295,6 +322,7 @@ function WalkOver({
   readonly onAsk: (text: string) => Promise<boolean>;
 }): ReactElement {
   const [walk, setWalk] = useState<Walk>(startFastTrack);
+  const [asked, setAsked] = useState<"pending" | "sent" | "failed">("pending");
   const client = useQueryClient();
   const watch = useMutation({
     mutationFn: (symbol: string) => setWatching(symbol, true),
@@ -308,7 +336,13 @@ function WalkOver({
     const done = nextStep(next, input);
     if (!("complete" in done)) return;
     if (done.complete.kind === "watchlist") watch.mutate(done.complete.symbol);
-    if (done.complete.kind === "research-ask") void onAsk(done.complete.question);
+    if (done.complete.kind === "research-ask") {
+      setAsked("pending");
+      void onAsk(done.complete.question).then(
+        (sent) => setAsked(sent ? "sent" : "failed"),
+        () => setAsked("failed"),
+      );
+    }
   };
   const watched = watch.isError
     ? { state: "err" as const, why: watch.error.message }
@@ -324,7 +358,7 @@ function WalkOver({
   if ("complete" in step) {
     return (
       <>
-        <Done outcome={step.complete} watched={watched} />
+        <Done outcome={step.complete} watched={watched} asked={asked} />
         {restart}
       </>
     );
@@ -337,7 +371,7 @@ function WalkOver({
         {card.field !== "event" ? (
           <span className="ft-taps num">
             {" "}
-            · tap {walk.taps + 1} of {FAST_TRACK_TAP_BUDGET}
+            · tap {PATH_TAP[card.field]} of {FAST_TRACK_TAP_BUDGET}
           </span>
         ) : null}
       </p>

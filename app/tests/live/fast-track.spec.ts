@@ -30,9 +30,15 @@ describe("ticketSearch", () => {
       plan: "NVDA",
       stop: "A guide below consensus",
       exit: "Close before it, by the close on Nov 18",
-      by: "2026-11-18",
       note: "I hold it into Ignite · small size",
     });
+  });
+
+  it("never cuts an emoji in half at the cap, so the link can still be encoded", () => {
+    const text = `${"x".repeat(PLAN_TEXT_MAX - 1)}😀 after`;
+    const { stop } = ticketSearch({ ...ticket, stop: { text, source: "member" as const } });
+    expect(stop).toBe("x".repeat(PLAN_TEXT_MAX - 1));
+    expect(() => encodeURIComponent(stop)).not.toThrow();
   });
 
   it("caps a long answer so the link stays usable", () => {
@@ -55,7 +61,7 @@ describe("planSearch", () => {
     );
   });
 
-  it("drops a malformed day rather than showing it", () => {
+  it("reads the name in capitals and ignores params it doesn't carry", () => {
     expect(planSearch({ plan: "nvda", stop: "a", exit: "b", by: "soon" })).toEqual({
       plan: "NVDA",
       stop: "a",

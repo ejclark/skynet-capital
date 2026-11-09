@@ -10,7 +10,7 @@ import { dayText } from "../../../src/options/position-guidance-rules";
  * request or a model token.
  *
  * THE HAND-OFF. A finished ticket opens the trade form with the stop and the exit carried in the URL
- * (`?plan=<symbol>&stop=…&exit=…&by=…&note=…`). The trade form keeps the move type, the contract and
+ * (`?plan=<symbol>&stop=…&exit=…&note=…`). The trade form keeps the move type, the contract and
  * the size — the slice 1 default that holds the walk at 5 taps — and shows the carried plan above
  * the ticket, in the member's or the ledger's own words. It is a written plan, not an order rule:
  * nothing sells on it, and the trade form's review is still the gate.
@@ -26,7 +26,6 @@ export async function fetchFastTrack(): Promise<FastTrackInput> {
 
 /** A plan's words in the URL are capped, so a pasted essay can't make the link unusable. */
 export const PLAN_TEXT_MAX = 400;
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const TICKER = /^[A-Z][A-Z0-9.]{0,9}$/;
 
 /** The plan the trade form carries, read back from its search params. */
@@ -34,9 +33,15 @@ export interface CarriedPlan {
   readonly symbol: string;
   readonly stop: string;
   readonly exit: string;
-  /** The time exit's day, when the exit is one. */
-  readonly by?: string;
   readonly note?: string;
+}
+
+/** Cut to the cap without splitting a surrogate pair: a lone half can't be URI-encoded, and the
+ *  link that carries the plan would throw while rendering. */
+export function capText(raw: string): string {
+  const cut = raw.slice(0, PLAN_TEXT_MAX);
+  const last = cut.charCodeAt(cut.length - 1);
+  return last >= 0xd800 && last <= 0xdbff ? cut.slice(0, -1) : cut;
 }
 
 /** The trade form's search for a finished ticket: its symbol, and the plan beside it. */
@@ -45,16 +50,14 @@ export function ticketSearch(outcome: Extract<Outcome, { kind: "ticket" }>): {
   plan: string;
   stop: string;
   exit: string;
-  by?: string;
   note?: string;
 } {
-  const note = outcome.notes.join(" · ").slice(0, PLAN_TEXT_MAX);
+  const note = capText(outcome.notes.join(" · "));
   return {
     symbol: outcome.symbol,
     plan: outcome.symbol,
-    stop: outcome.stop.text.slice(0, PLAN_TEXT_MAX),
-    exit: outcome.exit.text.slice(0, PLAN_TEXT_MAX),
-    ...(outcome.exit.by ? { by: outcome.exit.by } : {}),
+    stop: capText(outcome.stop.text),
+    exit: capText(outcome.exit.text),
     ...(note ? { note } : {}),
   };
 }
@@ -70,9 +73,8 @@ export function planSearch(
   const stop = text(search.stop);
   const exit = text(search.exit);
   if (!(TICKER.test(plan) && stop && exit)) return {};
-  const by = typeof search.by === "string" && ISO_DAY.test(search.by) ? search.by : undefined;
   const note = text(search.note);
-  return { plan, stop, exit, ...(by ? { by } : {}), ...(note ? { note } : {}) };
+  return { plan, stop, exit, ...(note ? { note } : {}) };
 }
 
 /** The carried plan for the ticket's current symbol; a plan for another name shows nothing. */
@@ -81,14 +83,13 @@ export function carriedPlan(
     readonly plan?: string;
     readonly stop?: string;
     readonly exit?: string;
-    readonly by?: string;
     readonly note?: string;
   },
   symbol: string | undefined,
 ): CarriedPlan | undefined {
-  const { plan, stop, exit, by, note } = search;
+  const { plan, stop, exit, note } = search;
   if (!(plan && stop && exit && symbol === plan)) return undefined;
-  return { symbol: plan, stop, exit, ...(by ? { by } : {}), ...(note ? { note } : {}) };
+  return { symbol: plan, stop, exit, ...(note ? { note } : {}) };
 }
 
 /** "Nov 17 · date confirmed": an event's day, and whether it is known, in words (criterion 2). */

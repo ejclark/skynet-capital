@@ -190,3 +190,8 @@
     margin-bottom: 4px;
   }
 }
+
+.ft-carried-note {
+  margin: 0;
+  font-size: var(--text-sm);
+}

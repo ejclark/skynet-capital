@@ -14,6 +14,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { requireGet, sendJson } from "./page-shell.js";
 import { RESEARCH_DIR } from "./research-service.js";
 import { heldNames, withLedger } from "./upcoming-events.js";
+import { memberFor } from "./watchlist-route.js";
 
 /**
  * GET /api/fast-track — what the landing page's first fast track reads (#7034 slice 2): the
@@ -63,7 +64,7 @@ export function fortnightEvents(asOf: string, deps: FastTrackDeps = {}): readonl
 }
 
 /** The session's own names: its account's positions (a contract reads as its underlying), then its
- *  watchlist. An unauthenticated deployment has one reader, the watchlist route's "local". */
+ *  watchlist, keyed exactly as the watchlist route keys it (`memberFor`). */
 async function bookFor(
   config: DashboardServerConfig,
   session: Session | undefined,
@@ -71,7 +72,7 @@ async function bookFor(
   const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
   const desk = id ? config.hub.getState().participants.find((p) => p.id === id) : undefined;
   const held = heldNames((desk?.positions ?? []).map((p) => p.symbol));
-  const member = config.auth ? id : "local";
+  const member = memberFor(config, session);
   let watched: string[] = [];
   if (member && config.watchlist) {
     try {
