@@ -34,9 +34,10 @@
     {
       "statement": "4. Election-season sentiment against AI spending is a headwind priced as lasting.",
       "score": {
-        "outcome": "pending",
-        "basis": "Not due: scored on 2026-11-09.",
-        "dueOn": "2026-11-09"
+        "outcome": "pass",
+        "basis": "FT-midterm-elections-2026-11-03-3 (registered from ai-dip-2026-10/P6) was killed: this claim held.",
+        "dueOn": "2026-11-09",
+        "scoredOn": "2026-11-09"
       }
     },
     {

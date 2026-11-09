@@ -17,6 +17,8 @@ globalThis.steerStatus = (() => {
   const NOT_REACHED =
     "Done — saved. Claude couldn't be reached just now; the next page reads it back.";
   const REOPENED = "Reopened — press Done again when you're finished.";
+  /** An answer changed after the read-back on the bar (#7119): Done is armed again to send it. */
+  const NEWER = "New answers since Claude read this back — press Done to send them.";
   /** The session stamped the round after this Done: it read the press, and the read-back follows. */
   const ACK = "✓ Received — Claude is reading your answers back…";
   // A sent Done no session answers (Eric, 2026-10-13: "I've had to click 'done'.. nothing
@@ -89,6 +91,7 @@ globalThis.steerStatus = (() => {
     ACK,
     LIFECYCLE,
     MAYBE,
+    NEWER,
     NOT_LISTENING,
     NOT_REACHED,
     NO_REACH,
