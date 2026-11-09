@@ -10,9 +10,11 @@
  *   npm run campaign:landscape -- energy-for-ai --encounters                  # its mode's encounters
  *   npm run campaign:landscape -- energy-for-ai --encounters --mode find-names
  *
- * `--encounters` prints what the narrator would post in the campaign's mode (#6952 slice 3,
- * campaign-encounters.ts): explore questions or find-names candidates, generated from this same
- * read and the campaign's lesson record, each question before its answer.
+ * `--encounters` prints what the narrator would post in the campaign's mode (#6952 slices 3–4,
+ * campaign-encounters.ts): explore questions, find-names candidates, or build a strategy's names
+ * with the forms each can be handed to, generated from this same read and the campaign's lesson
+ * record, each question before its answer. Build a strategy is read here with no member, so every
+ * door that needs a member's bot reads shut.
  *
  * The closes come from Yahoo's free daily chart (no key, no account; the source the research
  * instruments already use, scripts/research/market-data.mjs), fetched fresh for the last month and

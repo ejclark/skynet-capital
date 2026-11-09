@@ -8,7 +8,6 @@ import {
   type NameEncounter,
   pose,
   reveal,
-  STALE_AFTER_DAYS,
 } from "../../src/domain/campaign-encounters.js";
 import type {
   Landscape,
@@ -18,6 +17,7 @@ import type {
   Tested,
 } from "../../src/domain/campaign-landscape.js";
 import { type LessonRecord, startDiscovery } from "../../src/domain/campaign-lessons.js";
+import { STALE_AFTER_DAYS } from "../../src/domain/campaign-verdicts.js";
 import { type Campaign, campaignById } from "../../src/domain/campaigns.js";
 
 /**
@@ -182,12 +182,21 @@ describe("a mode is a set of encounters, never a screen (criterion 6)", () => {
     expect(set.mode).toBe("explore");
   });
 
-  it("posts nothing in build-a-strategy or play, and says where those encounters come from", () => {
-    for (const mode of ["build-strategy", "play"] as const) {
-      const set = encountersFor(ENERGY, { landscape: landscape(), brief: brief(), mode });
-      expect(set.encounters).toEqual([]);
-      expect(set.note).toMatch(/#69(52|48)/);
-    }
+  it("posts build-a-strategy's names in that mode, and only them", () => {
+    const set = encountersFor(ENERGY, {
+      landscape: landscape(),
+      brief: brief(),
+      mode: "build-strategy",
+    });
+    expect(set.encounters.length).toBeGreaterThan(0);
+    expect(set.encounters.every((e) => e.kind === "build-strategy")).toBe(true);
+    expect(set.note).toBeUndefined();
+  });
+
+  it("posts nothing in play, and says where those encounters come from", () => {
+    const set = encountersFor(ENERGY, { landscape: landscape(), brief: brief(), mode: "play" });
+    expect(set.encounters).toEqual([]);
+    expect(set.note).toMatch(/#6948/);
   });
 });
 
