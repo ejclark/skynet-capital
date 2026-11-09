@@ -140,7 +140,8 @@ export interface Landscape {
   readonly tested: readonly Tested[];
 }
 
-const dayNumber = (date: string): number => Date.parse(`${date.slice(0, 10)}T00:00:00Z`) / DAY_MS;
+export const dayNumber = (date: string): number =>
+  Date.parse(`${date.slice(0, 10)}T00:00:00Z`) / DAY_MS;
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 /** The move over the last `sessions` closes on or before `today`, or undefined when too few. */
