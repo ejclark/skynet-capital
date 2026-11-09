@@ -136,6 +136,9 @@ export interface SectorRow {
   readonly moves: Readonly<Record<SectorPeriod, number>>;
   /** AT8: the 20-day band and the close it is read against, in dollars, to two places. */
   readonly range: SectorRange;
+  /** AT12 (round 8 Q4 B): the 20 closes the band is drawn from, oldest first, to two places, so a
+   *  wide screen can draw them inside their band. Their dates are the view's `rangeSpan`. */
+  readonly trail: readonly number[];
 }
 
 /** The 20-session Bollinger band: the average two standard deviations either side, and the close. */
@@ -164,6 +167,8 @@ export function bollinger(closes: readonly number[]): SectorRange {
 export interface SectorsView {
   readonly source: string;
   readonly from: Readonly<Record<SectorPeriod, string>>;
+  /** The first and last of the band's 20 sessions: the dates at the wide chart's two ends (AT12). */
+  readonly rangeSpan: { readonly from: string; readonly to: string };
   readonly rows: readonly SectorRow[];
 }
 
@@ -176,19 +181,21 @@ export function sectorsView(sectors: EditionSectors, date: string): SectorsView 
   return {
     source: sectors.source,
     from,
+    rangeSpan: { from: span[0] as string, to: span.at(-1) as string },
     rows: SECTOR_FUNDS.map((f) => {
       const c = sectors.closes[f.fund] as Readonly<Record<string, number>>;
       const close = c[date] as number;
       const moves = Object.fromEntries(
         SECTOR_PERIODS.map((p) => [p, pct(close, c[from[p]] as number)]),
       ) as Record<SectorPeriod, number>;
-      const range = bollinger(span.map((d) => c[d] as number));
+      const trail = span.map((d) => c[d] as number);
       return {
         name: f.name,
         fund: f.fund,
         ...(f === MARKET_FUND ? { market: true } : {}),
         moves,
-        range,
+        range: bollinger(trail),
+        trail: trail.map(cents),
       };
     }),
   };

@@ -18,6 +18,7 @@ import {
   type SectorsView,
   sinceLine,
   storedLook,
+  trailChart,
 } from "../../src/live/edition-sectors";
 
 // The landing page's whole market and calendar, client side (#7077 slice 1b; #7018 round 3's
@@ -26,14 +27,16 @@ import {
 
 const moves = (week: number) => ({ day: 0, week, month: 0, ytd: 0 });
 const range = { low: 90, mid: 100, high: 110, close: 100 };
+const trail = [100, 100];
 const view: SectorsView = {
   source: "spec",
   from: { day: "2026-11-05", week: "2026-10-30", month: "2026-10-06", ytd: "2025-12-31" },
+  rangeSpan: { from: "2026-10-12", to: "2026-11-06" },
   rows: [
-    { name: "S&P 500", fund: "SPY", market: true, moves: moves(-2.7), range },
-    { name: "Technology", fund: "XLK", moves: moves(-8.23), range },
-    { name: "Energy", fund: "XLE", moves: moves(-12), range },
-    { name: "Communication Services", fund: "XLC", moves: moves(4.89), range },
+    { name: "S&P 500", fund: "SPY", market: true, moves: moves(-2.7), range, trail },
+    { name: "Technology", fund: "XLK", moves: moves(-8.23), range, trail },
+    { name: "Energy", fund: "XLE", moves: moves(-12), range, trail },
+    { name: "Communication Services", fund: "XLC", moves: moves(4.89), range, trail },
   ],
 };
 
@@ -114,6 +117,51 @@ describe("the 20-day range mark (AT8)", () => {
   it("draws a band with no width as the middle, never dividing by zero", () => {
     const flat = { low: 50, mid: 50, high: 50, close: 50 };
     expect(rangeMark(flat)).toMatchObject({ zone: "within", at: 0.5 });
+  });
+});
+
+describe("the wide chart: the 20 closes inside their band (AT12, round 8 Q4 B)", () => {
+  const row = (closes: readonly number[], band: typeof range) => ({
+    name: "Energy",
+    fund: "XLE",
+    moves: moves(0),
+    range: band,
+    trail: closes,
+  });
+
+  it("runs the closes oldest to newest across the whole width, the dot on the last", () => {
+    const chart = trailChart(row([95, 100, 105], range));
+    expect(chart.points.map((p) => p.x)).toEqual([0, 50, 100]);
+    expect(chart.last).toEqual(chart.points[2]);
+  });
+
+  it("draws a higher price higher up, and the band from its ceiling down to its floor", () => {
+    const chart = trailChart(row([95, 100, 105], range));
+    const [a, b, c] = chart.points.map((p) => p.y) as [number, number, number];
+    expect(a).toBeGreaterThan(b);
+    expect(b).toBeGreaterThan(c);
+    expect(chart.bandTop).toBeLessThan(chart.bandBottom);
+    // Inside the band, every close sits between its edges.
+    for (const p of chart.points) {
+      expect(p.y).toBeGreaterThan(chart.bandTop);
+      expect(p.y).toBeLessThan(chart.bandBottom);
+    }
+  });
+
+  it("draws a close below the band below it, and never past the chart's own edge", () => {
+    const chart = trailChart(row([100, 102, 80], range));
+    expect(chart.last.y).toBeGreaterThan(chart.bandBottom);
+    for (const y of [...chart.points.map((p) => p.y), chart.bandTop, chart.bandBottom]) {
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it("draws a band with no width and level closes across the middle, never dividing by zero", () => {
+    const flat = { low: 50, mid: 50, high: 50, close: 50 };
+    const chart = trailChart(row([50, 50], flat));
+    expect(chart.points.every((p) => p.y === 50)).toBe(true);
+    expect(chart.bandTop).toBe(50);
   });
 });
 

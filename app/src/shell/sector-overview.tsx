@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactElement, useState } from "react";
+import { dayLabel } from "../live/book-events";
 import {
   DEFAULT_PERIOD,
   LOOKS,
@@ -14,7 +15,9 @@ import {
   type SectorsView,
   sinceLine,
   storedLook,
+  trailChart,
 } from "../live/edition-sectors";
+import { usePhoneWidth } from "./use-media";
 
 /**
  * THE WHOLE MARKET, FIRST (#7077 slices 1b and 1c; #7018 round 3). Eric: "Shouldn't we start with a
@@ -33,6 +36,14 @@ import {
  * usual range"). It is drawn in the text colour, never the up/down hues, because it describes where a
  * price sits and must never read as a buy or sell signal. The pattern is meant for the app's other
  * price charts.
+ *
+ * THE WIDE CHART (AT12, #7018 round 8 Q4 B, "More"). Eric, live: "There is a lot of real esate on the
+ * right side of the picture.. the spectrum chart could possibly make use of that to paint more
+ * context." Above the tablet width (860, `widths.ts`) a Lines row's range mark widens into the 20
+ * closes its band is drawn from, over time, with that band shaded behind and a dot at the last close.
+ * The dates at the chart's two ends sit once, over the column, not on every row. Same numbers, same
+ * colours as the small mark: the room is added, never a new concept (`.claude/rules/
+ * member-surfaces.md`). At 390 the small mark stays, so AT1's twelve rows keep the first screen.
  *
  * NEVER HUE ALONE (BRAND.md → Accessibility; a standing reader is red/green colourblind): a move is a
  * signed figure, a down tile is hatched and an up one solid, and the range mark is position and shape.
@@ -86,6 +97,38 @@ function RangeMark({ row }: { readonly row: SectorRow }): ReactElement {
   );
 }
 
+/** AT12: the 20 closes inside their band, at desktop width. The line and the band stretch with the
+ *  column; the dot is drawn apart from the SVG so it stays round at any width. */
+function RangeTrail({ row }: { readonly row: SectorRow }): ReactElement {
+  const mark = rangeMark(row.range);
+  const chart = trailChart(row);
+  return (
+    <span
+      className={`sector-trail sector-range--${mark.zone}`}
+      role="img"
+      aria-label={`${row.name} ${mark.label}; its last ${row.trail.length} closes drawn over time`}
+    >
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <rect
+          className="sector-trail-band"
+          x="0"
+          width="100"
+          y={chart.bandTop}
+          height={Math.max(0, chart.bandBottom - chart.bandTop)}
+        />
+        <polyline
+          className="sector-trail-line"
+          points={chart.points.map((p) => `${p.x},${p.y}`).join(" ")}
+        />
+      </svg>
+      <span
+        className="sector-trail-dot"
+        style={{ "--x": chart.last.x / 100, "--y": chart.last.y / 100 } as CSSProperties}
+      />
+    </span>
+  );
+}
+
 /** The words, only at the extremes. Hidden from screen readers: the mark's label already says it. */
 function RangeWord({ row }: { readonly row: SectorRow }): ReactElement | null {
   const { word } = rangeMark(row.range);
@@ -102,9 +145,11 @@ const rowClass = (row: SectorRow, base: string): string =>
 function LineRow({
   row,
   period,
+  wide,
 }: {
   readonly row: SectorRow;
   readonly period: SectorPeriod;
+  readonly wide: boolean;
 }): ReactElement {
   return (
     <li className={rowClass(row, "sector-line-row")}>
@@ -116,7 +161,7 @@ function LineRow({
         <RangeWord row={row} />
       </span>
       <Move percent={row.moves[period]} />
-      <RangeMark row={row} />
+      {wide ? <RangeTrail row={row} /> : <RangeMark row={row} />}
     </li>
   );
 }
@@ -152,21 +197,34 @@ function Rows({
   readonly period: SectorPeriod;
   readonly look: SectorLook;
 }): ReactElement {
+  const wide = !usePhoneWidth();
   const { market, sectors } = ranked(view, period);
   const rows = market ? [market, ...sectors] : sectors;
   const draw = (r: SectorRow): ReactElement =>
     look === "lines" ? (
-      <LineRow key={r.fund} row={r} period={period} />
+      <LineRow key={r.fund} row={r} period={period} wide={wide} />
     ) : (
       <Tile key={r.fund} row={r} period={period} />
     );
+  const trails = wide && look === "lines";
   return (
-    <ul
-      className={`sectors-rows sectors-rows--${look}`}
-      aria-label="The S&P 500 and its 11 sectors"
-    >
-      {rows.map(draw)}
-    </ul>
+    <>
+      {trails ? (
+        <p className="sectors-axis">
+          <span className="sectors-axis-what">The last 20 closes</span>
+          <span className="sectors-axis-ends">
+            <span>{dayLabel(view.rangeSpan.from)}</span>
+            <span>{dayLabel(view.rangeSpan.to)}</span>
+          </span>
+        </p>
+      ) : null}
+      <ul
+        className={`sectors-rows sectors-rows--${look}${trails ? " sectors-rows--trails" : ""}`}
+        aria-label="The S&P 500 and its 11 sectors"
+      >
+        {rows.map(draw)}
+      </ul>
+    </>
   );
 }
 
@@ -193,8 +251,9 @@ export function SectorOverview({ view }: { readonly view: SectorsView }): ReactE
       <p className="sectors-foot">
         Beside each name, the ticker of the SPDR fund that tracks it; SPY tracks the S&P 500. A move
         is the change in price between closes. The small bar is the fund's usual range, its 20-day
-        average two standard deviations either side, and the tick is its last close. It shows where
-        a price sits, not where it goes. {view.source}.
+        average two standard deviations either side, and the tick is its last close. On a wide
+        screen it widens into those 20 closes, the band shaded behind them and a dot at the last. It
+        shows where a price sits, not where it goes. {view.source}.
       </p>
     </section>
   );
