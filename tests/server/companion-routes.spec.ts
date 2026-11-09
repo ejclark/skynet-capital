@@ -333,7 +333,7 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
   it("tells her what the member holds on the ticket's symbol, from their own desk", async () => {
     const context = await contextWithDesk("/trade?symbol=NVDA");
     expect(context).toContain(
-      "Position: on NVDA they hold 50 shares at $110.00 avg, now worth $6,000.00.",
+      "Position: on NVDA they hold 50 shares at $110.00 avg, now worth $6,000.00, its row /accounts#pos-NVDA.",
     );
     expect(context).not.toContain("999");
   });

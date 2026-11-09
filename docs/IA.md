@@ -195,6 +195,21 @@ what hides or disables it (the fog ledger: `docs/FOG-OF-WAR.md`).
 | **decision** | needs-a-decision card (`id`) · decision cycle (bot) · lever call / manage call (guidance) · research call (house) · thesis call | `/accounts` overview (the row's fact badge) · `/accounts?section=playbooks` · `/trade?section=guidance` · `/research` board | **none** — cards link out to `/trade?desk=&symbol=` |
 | **member** | owned accounts (the list) · journey · onboarding (`viewerId`) · filing · Moneypenny thread · council (`mine`) · board (`meId`) · plays (via the linked account) | `/accounts?section=milestones\|feedback` (viewer-level; `/learn`, `/learn/trading`, `/onboarding`, `/playbooks`, `/feedback` redirect there), `/settings`, the rail | **none** — always the session; never a param |
 
+**One vocabulary, so n to n costs 2n (#7167).** Every system that points at another — the chat
+at a row, a calendar row at a position, the character sheet at an event — speaks these keys, never
+a link wired to one other system. Four parts: the keys above; every item on screen addressable by
+its key as an anchor (`#pos-<symbol>`, `#act-<orderId>`); the page publishing what it shows on
+those keys (the chat's context stamp, MISSING 31); and intents on the same keys (show, highlight,
+later filter), whose effect the receiving page owns. Each system connects to the vocabulary once,
+so the wiring grows as 2n adapters, not n² pairs. **The boundary it draws:** the page owns the
+numbers (its specs check them); the chat owns intent and pointers, and a figure it does state is a
+tool field quoted verbatim. Eric, 2026-11-09: "That feels like a useful system structure to enable
+highly performant solutions that are also highly efficient as a byproduct of performance." First
+instance: Moneypenny links a position as `/accounts#pos-<symbol>` (`src/companion/places.ts`
+`positionRow`), and the row lands, opens and outlines (`app/src/shell/position-anchor.ts`).
+**Falsifier:** the character sheet (#7019) reuses these addresses with no new plumbing; if it needs
+bespoke wiring, the vocabulary is wrong.
+
 **Two vocabulary clashes the lift must resolve** (slice 2a's `useHorizonRange()`): `?lens=` on
 `/accounts` is a positions *view* (`positions-lens.tsx:18`) while `lens:` on `/research` is a *time
 span* (`research.ts:100`); and "playbook" names two catalogs — the store (`playbook-store.ts:18`,
