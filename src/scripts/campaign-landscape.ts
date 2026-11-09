@@ -7,6 +7,12 @@
  *   npm run campaign:landscape -- --no-prices         # offline: no fetch, every symbol reads unread
  *   npm run campaign:landscape -- --today 2026-11-07  # read as of a day
  *   npm run campaign:landscape -- --json              # the read itself, for a script
+ *   npm run campaign:landscape -- energy-for-ai --encounters                  # its mode's encounters
+ *   npm run campaign:landscape -- energy-for-ai --encounters --mode find-names
+ *
+ * `--encounters` prints what the narrator would post in the campaign's mode (#6952 slice 3,
+ * campaign-encounters.ts): explore questions or find-names candidates, generated from this same
+ * read and the campaign's lesson record, each question before its answer.
  *
  * The closes come from Yahoo's free daily chart (no key, no account; the source the research
  * instruments already use, scripts/research/market-data.mjs), fetched fresh for the last month and
@@ -17,10 +23,13 @@
  * Paper only; educational.
  */
 
+import { encounterSetLines } from "../domain/campaign-encounter-lines.js";
+import { encountersFor } from "../domain/campaign-encounters.js";
 import { type Close, landscapeOf } from "../domain/campaign-landscape.js";
 import { landscapeLines } from "../domain/campaign-landscape-lines.js";
+import { startDiscovery } from "../domain/campaign-lessons.js";
 import { loadNews } from "../domain/campaign-news.js";
-import { CAMPAIGNS, castSymbols } from "../domain/campaigns.js";
+import { CAMPAIGN_MODES, CAMPAIGNS, type CampaignMode, castSymbols } from "../domain/campaigns.js";
 import { everyEvent } from "../domain/market-events.js";
 import { SEEDED_CONVICTIONS } from "../playbooks/conviction-seeds.js";
 import { flag } from "./cli-flag.js";
@@ -68,7 +77,14 @@ async function readCloses(symbols: readonly string[]): Promise<Record<string, Cl
 
 async function main(argv: readonly string[]): Promise<void> {
   const today = flag(argv, "today") ?? new Date().toISOString().slice(0, 10);
-  const only = argv.find((a) => !a.startsWith("--") && a !== flag(argv, "today"));
+  const mode = flag(argv, "mode");
+  if (mode !== undefined && !(CAMPAIGN_MODES as readonly string[]).includes(mode)) {
+    console.error(`[campaign-landscape] --mode must be one of ${CAMPAIGN_MODES.join(", ")}`);
+    process.exitCode = 1;
+    return;
+  }
+  const values = new Set([flag(argv, "today"), mode]);
+  const only = argv.find((a) => !(a.startsWith("--") || values.has(a)));
   const campaigns = only ? CAMPAIGNS.filter((c) => c.id === only) : CAMPAIGNS;
   if (campaigns.length === 0) {
     console.error(`[campaign-landscape] no house campaign "${only}"`);
@@ -86,6 +102,21 @@ async function main(argv: readonly string[]): Promise<void> {
     closesSource: CLOSES_SOURCE,
   };
   const reads = campaigns.map((c) => landscapeOf(c, inputs));
+  if (argv.includes("--encounters")) {
+    const sets = campaigns.map((c, i) => {
+      const landscape = reads[i];
+      if (!landscape) throw new Error(`[campaign-landscape] no read for ${c.id}`);
+      const brief = startDiscovery(c.id, today);
+      return encountersFor(c, {
+        landscape,
+        brief,
+        ...(mode ? { mode: mode as CampaignMode } : {}),
+      });
+    });
+    if (argv.includes("--json")) console.log(JSON.stringify(sets, null, 2));
+    else for (const set of sets) console.log(`${encounterSetLines(set).join("\n")}\n`);
+    return;
+  }
   if (argv.includes("--json")) {
     console.log(JSON.stringify(reads, null, 2));
     return;
