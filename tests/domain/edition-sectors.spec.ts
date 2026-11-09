@@ -152,4 +152,15 @@ describe("sectorsView — the moves, worked out of the closes", () => {
       close: 735.29,
     });
   });
+
+  it("serves the 20 closes the band is drawn from, oldest first, and their two dates (AT12)", () => {
+    const view = editionView(editions(), new Date("2026-11-08T15:00:00Z"), () => undefined);
+    const sectors = view.edition?.sectors;
+    expect(sectors?.rangeSpan).toEqual({ from: "2026-10-12", to: "2026-11-06" });
+    for (const row of sectors?.rows ?? []) {
+      expect(row.trail).toHaveLength(RANGE_SESSIONS);
+      expect(row.trail.at(-1)).toBe(row.range.close);
+      expect(bollinger(row.trail)).toEqual(row.range);
+    }
+  });
 });

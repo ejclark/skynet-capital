@@ -207,6 +207,34 @@ test.describe("landing page", () => {
     await expect(cal.locator(".ecal-grid .eh-legend")).toContainText("a story waits on it");
   });
 
+  // AT12's wide chart (#7018 round 8 Q4 B): at desktop width each Lines row's range mark widens into
+  // its 20 closes over time, the band shaded behind and a dot at the last close; the two dates sit
+  // once, over the column. At 390 the small mark stays (the first test holds that).
+  test("draws each row's 20 closes inside its band at desktop width, the dates at the ends (AT12)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/app/");
+    await page.evaluate(() => window.localStorage.removeItem("skynet.landing.sector-look"));
+    await page.reload();
+    const rows = page.locator(".sectors-rows--lines > li");
+    await expect(rows).toHaveCount(12);
+    await expect(page.locator(".sectors-rows .sector-range")).toHaveCount(0);
+    for (const row of await rows.all()) {
+      const trail = row.locator(".sector-trail");
+      await expect(trail).toHaveAttribute("aria-label", /20-day range .*last 20 closes/);
+      const points = await trail.locator("polyline").getAttribute("points");
+      expect(points?.trim().split(/\s+/)).toHaveLength(20);
+      await expect(trail.locator(".sector-trail-band")).toHaveCount(1);
+      await expect(trail.locator(".sector-trail-dot")).toBeVisible();
+      // The room on the right goes to the chart: wider than the name's column at 1280.
+      expect((await trail.boundingBox())?.width ?? 0).toBeGreaterThan(200);
+    }
+    const ends = page.locator(".sectors-axis-ends > span");
+    await expect(ends).toHaveCount(2);
+    for (const end of await ends.all()) await expect(end).toHaveText(/\w{3}, \w{3} \d{1,2}/);
+  });
+
   test("offers at most two quick questions under the member's own (criterion 2)", async ({
     page,
   }) => {

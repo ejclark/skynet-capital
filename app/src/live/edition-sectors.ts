@@ -22,11 +22,15 @@ export interface SectorRow {
     readonly high: number;
     readonly close: number;
   };
+  /** AT12: the 20 closes the band is drawn from, oldest first, in dollars. */
+  readonly trail: readonly number[];
 }
 
 export interface SectorsView {
   readonly source: string;
   readonly from: Readonly<Record<SectorPeriod, string>>;
+  /** The first and last of the 20 sessions the band is drawn from. */
+  readonly rangeSpan: { readonly from: string; readonly to: string };
   readonly rows: readonly SectorRow[];
 }
 
@@ -148,4 +152,41 @@ export function rememberLook(look: SectorLook): void {
   } catch {
     // Without storage the overview opens on Lines next time.
   }
+}
+
+/** AT12's wide chart, in percent of its box: the 20 closes as points, the band's top and bottom,
+ *  and the last close's dot. Y runs down the page, so a higher price has a smaller `y`. */
+export interface TrailChart {
+  readonly points: readonly { readonly x: number; readonly y: number }[];
+  readonly bandTop: number;
+  readonly bandBottom: number;
+  readonly last: { readonly x: number; readonly y: number };
+}
+
+/** Room above and below the highest and lowest of band and closes, so neither touches the edge. */
+const CHART_PAD = 10;
+
+/**
+ * Where to draw a row's 20 closes and their band (AT12, round 8 Q4 B: "the 20 closes inside the
+ * band"). One scale per row, from the lower of its band's floor and its lowest close to the higher
+ * of its band's ceiling and its highest close, so a close outside the band is drawn outside it and
+ * never clipped. Rows are not on a shared scale: each one shows its own range, as the small mark does.
+ */
+export function trailChart(row: SectorRow): TrailChart {
+  const lo = Math.min(row.range.low, ...row.trail);
+  const hi = Math.max(row.range.high, ...row.trail);
+  const span = hi - lo;
+  const y = (v: number): number =>
+    span > 0 ? CHART_PAD + ((hi - v) / span) * (100 - 2 * CHART_PAD) : 50;
+  const n = row.trail.length;
+  const points = row.trail.map((v, i) => ({
+    x: n > 1 ? (i / (n - 1)) * 100 : 50,
+    y: y(v),
+  }));
+  return {
+    points,
+    bandTop: y(row.range.high),
+    bandBottom: y(row.range.low),
+    last: points.at(-1) ?? { x: 100, y: 50 },
+  };
 }
