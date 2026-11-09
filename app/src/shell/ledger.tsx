@@ -6,7 +6,8 @@ import { LedgerCards } from "./ledger-cards";
 import { LedgerTable } from "./ledger-table";
 import { OrderDeepDive } from "./order-deep-dive";
 import { useMediaQuery } from "./use-media";
-import { BENCH_QUERY, PHONE_QUERY, TABLET_QUERY } from "./widths";
+import { useTowerColumn } from "./use-tower-column";
+import { PHONE_QUERY, TABLET_QUERY } from "./widths";
 
 /**
  * AN ACCOUNT'S ORDERS, AT EITHER WIDTH (#5101). At or below the phone width the ledger is one card
@@ -16,8 +17,8 @@ import { BENCH_QUERY, PHONE_QUERY, TABLET_QUERY } from "./widths";
  * `matchMedia` is missing the table is the default, as everywhere else (`use-media.ts`).
  *
  * THE DEEP DIVE (#5101, R2-deep): with `detail` naming a loaded order, its full detail opens — on a
- * desktop as a non-modal side panel beside the list (the list stays live; from 1280 it docks in the
- * frame's own right-hand column), at tablet width and below as a page in the list's place. Closing it brings the member back to the same row, opened as they
+ * desktop as a non-modal side panel beside the list (the list stays live; where the frame draws the
+ * tower's column, on the left since #7216, it docks over it), at tablet width and below as a page in the list's place. Closing it brings the member back to the same row, opened as they
  * left it, with focus on its control. A `detail` the loaded rows do not hold opens nothing: the list
  * stays, and the page's own note says the linked order is older than what is loaded.
  */
@@ -38,7 +39,9 @@ export function Ledger({
 }): ReactElement {
   const phone = useMediaQuery(PHONE_QUERY);
   const narrow = useMediaQuery(TABLET_QUERY);
-  const bench = useMediaQuery(BENCH_QUERY);
+  // Where the frame draws the tower's column (the window less Moneypenny's rail while it is open):
+  // the panel docks over that column, so it asks the frame's own answer, never the bare width.
+  const bench = useTowerColumn();
   const opened =
     onDetail && detail ? events.find((e) => e.orderId === detail && !e.lifecycle) : undefined;
   const reopen = useReturnTo(opened?.orderId);
@@ -61,8 +64,8 @@ export function Ledger({
       />
     ) : null;
   // One tree whether or not a detail is open, so a panel opening beside the table never remounts
-  // it (its opened rows and its place stay); a page takes the list's own slot. From the bench width
-  // the frame already keeps a column beside the stage (the tower's, `tower-column.css`), and the
+  // it (its opened rows and its place stay); a page takes the list's own slot. Where the frame
+  // keeps a column beside the stage (the tower's, `tower-column.css`), and the
   // panel docks there, so the list keeps its full width; between tablet and bench the list makes
   // room for it.
   // Docked, the panel is portalled to the body: the stage is a size container (`cqw` widths), and a
