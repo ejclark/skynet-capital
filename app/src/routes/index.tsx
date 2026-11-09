@@ -3,9 +3,9 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { parseBoardMetric } from "../live/board";
 import { asOfLine, type EditionView, fetchEdition, staleLine } from "../live/edition";
-import { EditionCalendar } from "../shell/edition-calendar";
 import { PageFrame } from "../shell/frame";
 import { AskBox, StoryAsk } from "../shell/landing-ask";
+import { LandingCalendar } from "../shell/landing-calendar";
 import { SectorOverview } from "../shell/sector-overview";
 
 /**
@@ -14,11 +14,13 @@ import { SectorOverview } from "../shell/sector-overview";
  * Leaderboard keeps its route and leaves the tab bar; Profile's league card ("Full leaderboard ›")
  * is its door now.
  *
- * At 390, in order (docs/IA.md §5.9): the whole market, all 11 sectors and the S&P 500, each with
- * its 20-day range mark (`shell/sector-overview.tsx`, round 3's AT1–AT3, AT8) · the question box,
- * one line under it (AT9: an entry point leads with its overview) · the calendar: the week's stories
- * one line each, then each coming trading day's events, under week headers that name closures
- * (`shell/edition-calendar.tsx`, AT4–AT5b). A story opens on a
+ * At 390, in order (docs/IA.md §5.9): the question box and its two canned paths on one row (AT9 as
+ * revised on the drawn frame, #7018 round 5: "the search menu, canned input for paths to explore
+ * should be listed first") · the whole market, all 11 sectors and the S&P 500, each with its 20-day
+ * range mark, every row above the 844px fold (`shell/sector-overview.tsx`, AT1–AT3, AT8, AT12) · the
+ * calendar, R&D's own: its ‹ › arrows and Day · Week · Month lens over the week's stories one line
+ * each and each coming day's events under week headers that name closures, with R&D's month grid
+ * beside them at desktop width (`shell/landing-calendar.tsx`, AT4–AT5b, AT10, AT11). A story opens on a
  * tap to its reports, what moved, the rest and its asks (slice 2, `shell/landing-ask.tsx`). Round 3
  * replaced slice 1's story cards (#7018: "the sections in the screenshot need heavily condense").
  * The quests' slot comes with slice 3 (#7028), under their one-line stories, never as a placeholder.
@@ -72,11 +74,11 @@ function Landing(): ReactElement {
   return (
     <PageFrame>
       <Masthead view={view.data} />
-      {edition?.sectors ? <SectorOverview view={edition.sectors} /> : null}
       <AskBox />
+      {edition?.sectors ? <SectorOverview view={edition.sectors} /> : null}
       {edition ? (
         <>
-          <EditionCalendar
+          <LandingCalendar
             edition={edition}
             today={view.data.today}
             storyAsk={(s) => (

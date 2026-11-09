@@ -1,7 +1,7 @@
 import { daysBetween, marketClosures } from "../../../src/domain/market-calendar";
 import { dayLabel } from "./book-events";
 import type { SectorsView } from "./edition-sectors";
-import { addDays } from "./horizon-range";
+import { addDays, type DayRange, inRange } from "./horizon-range";
 
 /**
  * The day's edition, client side (#7077) — mirrors `EditionView` in `src/domain/edition.ts`. The
@@ -225,3 +225,29 @@ export const waitingOn = (
   stories: readonly EditionStory[],
 ): readonly EditionStory[] =>
   stories.filter((s) => s.reports.some((r) => r.date === event.date && r.what === event.what));
+
+/**
+ * The day the landing calendar's range is built around when the member has pinned none (#7077
+ * AT10): today, or on a weekend the coming Monday — the same week the headers call "This week",
+ * since a member reading on Sunday plans the week ahead, and the week just closed has nothing
+ * coming in it.
+ */
+export function planningDay(today: string): string {
+  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
+  if (weekday === 6) return addDays(today, 2);
+  if (weekday === 0) return addDays(today, 1);
+  return today;
+}
+
+/** The edition's coming dates inside the calendar's range, and the first one after it — what an
+ *  empty range names, so a member can move onto it in one tap. */
+export function datesIn(
+  next: readonly EditionDate[],
+  range: DayRange,
+): { readonly inside: readonly EditionDate[]; readonly after: EditionDate | undefined } {
+  const sorted = [...next].sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    inside: sorted.filter((d) => inRange(d.date, range)),
+    after: sorted.find((d) => d.date > range.end),
+  };
+}

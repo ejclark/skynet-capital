@@ -21,7 +21,9 @@ import {
  * wholestick overview - there are 11 official GICS stock market sectors... At the sector level,
  * aggregated information only seems necessary." It leads the page (AT9), one set of numbers in two
  * views (AT3, revised: Bars were "fully redundant with the percentage change"):
- *   - Lines (the default): ranked plain text, each fund's code beside its name;
+ *   - Lines (the default): ranked plain text reading name · its fund's ticker, muted, beside the
+ *     name · the move · the range mark (AT12; Eric: "what is \"spy\"? … a label that should be
+ *     colocated next to the sector");
  *   - Tiles: a grid, the market spanning the top.
  * The member's last view is kept in this browser. Periods Day · Week · Month · YTD, Week first (AT2).
  * At 390 the whole overview, S&P 500 row included, sits on the first screen (AT1).
@@ -106,13 +108,15 @@ function LineRow({
 }): ReactElement {
   return (
     <li className={rowClass(row, "sector-line-row")}>
-      <RangeMark row={row} />
-      <Move percent={row.moves[period]} />
       <span className="sector-label">
-        <span className="sector-name">{row.name}</span>
+        <span className="sector-title">
+          <span className="sector-name">{row.name}</span>
+          <span className="sector-fund">{row.fund}</span>
+        </span>
         <RangeWord row={row} />
       </span>
-      <span className="sector-fund">{row.fund}</span>
+      <Move percent={row.moves[period]} />
+      <RangeMark row={row} />
     </li>
   );
 }
@@ -187,10 +191,10 @@ export function SectorOverview({ view }: { readonly view: SectorsView }): ReactE
       </div>
       <Rows view={view} period={period} look={look} />
       <p className="sectors-foot">
-        Each sector is its SPDR fund, the S&P 500 is SPY: the change in price between closes. The
-        small bar is the fund's usual range, its 20-day average two standard deviations either side,
-        and the tick is its last close. It shows where a price sits, not where it goes.{" "}
-        {view.source}.
+        Beside each name, the ticker of the SPDR fund that tracks it; SPY tracks the S&P 500. A move
+        is the change in price between closes. The small bar is the fund's usual range, its 20-day
+        average two standard deviations either side, and the tick is its last close. It shows where
+        a price sits, not where it goes. {view.source}.
       </p>
     </section>
   );

@@ -1,15 +1,16 @@
 import { expect, test } from "@playwright/test";
 
 // The landing page (#7077): sign-in opens the day's market news at /app/, not the Leaderboard.
-// Round 3 (#7018, slices 1b and 1c): the whole market first, the question box under it, then a
-// calendar of one-line stories and events under week headers.
+// Slice 1d: the question box and its canned paths first (AT9 as revised), the whole market under it
+// (#7018 round 3), then R&D's market calendar: its arrows and lens over one-line stories and events
+// under week headers (AT10), with R&D's month grid beside them at desktop width (AT11).
 // Behavioural only: the edition is the latest one checked in, and the server cuts its dated items
 // against the real date, so the words change by design; the shape is what's held here.
 test.describe("landing page", () => {
-  // Round 3's AT1, AT8 and AT9 (#7018; slice 1c): the whole market leads — all 11 sectors and the
-  // S&P 500, each with its 20-day range mark and a whole figure, on the first 390×844 screen — and the
-  // question box is one line under it.
-  test("opens on all 11 sectors and the S&P 500 above the fold, each with its range mark, the question under them", async ({
+  // AT9 as revised (#7018 round 5) with AT1 and AT8: the question box and its two canned paths lead,
+  // on one row each, and all 11 sectors and the S&P 500 still end above the 844px fold at 390, each
+  // with its 20-day range mark and a whole figure (#7018 round 6's geometry: ~838px).
+  test("opens on the question box, then all 11 sectors and the S&P 500 above the fold, each with its range mark", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -20,6 +21,20 @@ test.describe("landing page", () => {
     const rows = page.locator(".sectors-rows--lines > li");
     await expect(rows).toHaveCount(12);
     await expect(rows.first()).toContainText("S&P 500");
+    // AT9: the question box leads the overview, one line, its canned paths on one row.
+    const ask = page.getByLabel("What do you want to do today?");
+    const before = await page
+      .locator(".sectors")
+      .evaluate(
+        (s, a) => Boolean(a && s.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING),
+        await ask.elementHandle(),
+      );
+    expect(before).toBe(true);
+    const form = await page.locator(".ask-form").boundingBox();
+    expect(form?.height ?? 0).toBeLessThanOrEqual(52);
+    const chips = await page.locator(".ask-quick .ask-chip").all();
+    const tops = await Promise.all(chips.map(async (c) => (await c.boundingBox())?.y ?? -1));
+    expect(new Set(tops).size).toBe(1);
     for (const row of await rows.all()) {
       const box = await row.boundingBox();
       expect((box?.y ?? Number.POSITIVE_INFINITY) + (box?.height ?? 0)).toBeLessThanOrEqual(844);
@@ -38,17 +53,18 @@ test.describe("landing page", () => {
     await expect(words).toHaveCount(await extremes.count());
     for (const w of await words.allInnerTexts())
       expect(w).toMatch(/^(above|below) its usual range$/);
-    // AT9: the question box follows the overview, as one line.
-    const ask = page.getByLabel("What do you want to do today?");
-    const after = await page
-      .locator(".sectors")
-      .evaluate(
-        (s, a) => Boolean(a && s.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING),
-        await ask.elementHandle(),
-      );
-    expect(after).toBe(true);
-    const form = await page.locator(".ask-form").boundingBox();
-    expect(form?.height ?? 0).toBeLessThanOrEqual(52);
+    // AT12: each row reads name · its fund's ticker beside it · the move · the range mark.
+    const first = rows.first();
+    const x = async (sel: string) => (await first.locator(sel).boundingBox())?.x ?? -1;
+    const [name, fund, move, mark] = [
+      await x(".sector-name"),
+      await x(".sector-fund"),
+      await x(".sector-move"),
+      await x(".sector-range"),
+    ];
+    expect(name).toBeLessThan(fund);
+    expect(fund).toBeLessThan(move);
+    expect(move).toBeLessThan(mark);
   });
 
   test("redraws every move for the period chosen, Week first (AT2)", async ({ page }) => {
@@ -143,6 +159,52 @@ test.describe("landing page", () => {
     await expect(more.locator(".story-lines")).toBeVisible();
     // Every line wears its mark as a word, never a colour alone.
     await expect(more.locator(".story-lines .story-mark").first()).toHaveText(/\w/);
+  });
+
+  // AT10: the calendar is R&D's — its head steps the range a week at a time at 390, Day · Week ·
+  // Month offered and none fogged, and the rows below it still hold AT4, AT5 and AT5b.
+  test("steps the calendar a week at a time with R&D's arrows, nothing fogged (AT10)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/");
+    const cal = page.locator(".ecal");
+    const lenses = cal.locator(".eh-lens");
+    await expect(lenses).toHaveText(["Day", "Week", "Month"]);
+    for (const lens of await lenses.all()) await expect(lens).toBeEnabled();
+    await expect(cal.locator(".eh-fog")).toHaveCount(0);
+    await expect(cal.getByRole("button", { name: "Week", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    const range = cal.locator(".eh-range");
+    const thisWeek = await range.innerText();
+    await expect(range).toHaveText(/^[A-Z][a-z]{2} \d+ – [A-Z][a-z]{2} \d+$/);
+    await cal.getByRole("button", { name: "Next week" }).click();
+    await expect(range).not.toHaveText(thisWeek);
+    await expect(page).toHaveURL(/[?&]on=\d{4}-\d{2}-\d{2}/);
+    // The stories are the news, so they lead whichever week is in range; every line stays one line.
+    await expect(cal.locator(".ecal-days > li").first().locator(".story").first()).toBeVisible();
+    for (const line of await cal.locator(".ecal-line").all())
+      expect((await line.boundingBox())?.height ?? 0).toBeLessThanOrEqual(40);
+    await cal.getByRole("button", { name: "Previous week" }).click();
+    await expect(range).toHaveText(thisWeek);
+    // At 390 the rows are the whole calendar: no grid (AT11).
+    await expect(cal.locator(".eh-grid")).toHaveCount(0);
+  });
+
+  // AT11: at desktop width R&D's month grid sits beside the rows, the range banded on it.
+  test("adds R&D's month grid beside the rows at desktop width (AT11)", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/app/");
+    const cal = page.locator(".ecal");
+    const grid = cal.locator(".ecal-grid .eh-grid");
+    await expect(grid).toBeVisible();
+    expect(await grid.locator(".eh-band").count()).toBeGreaterThan(0);
+    const rows = await cal.locator(".ecal-agenda").boundingBox();
+    const beside = await cal.locator(".ecal-grid").boundingBox();
+    expect(beside?.x ?? 0).toBeGreaterThan((rows?.x ?? 0) + (rows?.width ?? 0) - 1);
+    await expect(cal.locator(".ecal-grid .eh-legend")).toContainText("a story waits on it");
   });
 
   test("offers at most two quick questions under the member's own (criterion 2)", async ({

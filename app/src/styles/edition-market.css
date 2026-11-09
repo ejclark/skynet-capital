@@ -1,6 +1,6 @@
-/* The landing page's whole market and its calendar (#7077 slices 1b and 1c, #7018 round 3):
- * `shell/sector-overview.tsx`, `shell/edition-calendar.tsx`. Curated at 390 first: twelve fund rows,
- * the S&P 500's included, lead the page and fit the first phone screen (AT1, AT9), and every story
+/* The landing page's whole market and its calendar (#7077 slices 1b–1d, #7018 rounds 3–8):
+ * `shell/sector-overview.tsx`, `shell/landing-calendar.tsx`. Curated at 390 first: under the question
+ * box, twelve fund rows, the S&P 500's included, fit the first phone screen (AT1, AT9), and every story
  * and event is one line whose number never shrinks (AT4). Never hue alone (BRAND.md →
  * Accessibility): a move is a signed figure, a down tile is hatched and an up one solid, the range
  * mark is position and shape (AT8), and a pressed control steps up in weight and border. Tokens only. */
@@ -158,10 +158,19 @@
   background: var(--text);
 }
 
-/* Lines: the range mark, the move, then the name and the fund's code, as plain text. */
+/* Lines (AT12): the name with its fund's ticker muted beside it, the move, then the range mark. */
+.sector-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.sector-title .sector-fund {
+  flex: none;
+}
 .sector-line-row {
   display: grid;
-  grid-template-columns: 40px 4rem minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 4rem 40px;
   align-items: center;
   gap: 8px;
   min-height: 22px;
@@ -343,4 +352,79 @@
 }
 .ecal-status {
   color: var(--muted);
+}
+
+/* The calendar's head is R&D's (`calendar-head.tsx`, AT10): the section's heading takes the label's
+ * place on its own row, then the arrows and the range, then the Day · Week · Month lens. */
+.ecal-cal-head {
+  margin-bottom: 4px;
+}
+.ecal-cal-head .ecal-head {
+  flex: 1 1 100%;
+}
+.ecal-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.ecal-empty .note {
+  margin: 0;
+}
+.ecal-jump {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.ecal-jump:hover {
+  border-color: var(--accent);
+}
+.ecal-jump:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ◆ on the grid: a day a story waits on, the same shape the rows carry (never a hue alone). */
+.eh-waits {
+  font-style: normal;
+  font-family: var(--sans);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text);
+}
+.eh-day .eh-waits {
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.eh-day[aria-pressed="true"] .eh-waits {
+  color: var(--accent-contrast);
+}
+
+/* At desktop width R&D's month grid sits beside the rows (AT11), held in view while they scroll.
+ * At 390 it is not rendered at all: the rows are the whole calendar there. */
+.ecal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@media (min-width: 861px) {
+  .ecal-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    align-items: start;
+    gap: 28px;
+  }
+  .ecal-grid {
+    position: sticky;
+    top: calc(var(--landing-clear, 64px) + 8px);
+  }
 }
