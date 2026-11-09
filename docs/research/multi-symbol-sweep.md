@@ -1110,6 +1110,11 @@ robust, alpha fragile — is the finding.
   (cover 3.84), the lowest of the 5-year line. Do not register a "bid volume is constant, so cover is arithmetic" claim off a range fitted to
   prints at larger offerings; the ¥250bn prints (¥1,155.6bn, ¥875.9bn, ¥959.9bn) sit below it.
 
+- **"The election night lifts the AI-infra basket: EW NVDA/CRWV/NBIS/MU/AVGO/AMD beats QQQ by more than +3.81pp over the three sessions after the result" (FT-midterm-elections-2026-11-03-3)** — added 2026-11-09 from the
+  [midterm-elections-2026-11-03 close-out](events/midterm-elections-2026-11-03.md). The basket lost **12.68%** against QQQ's **4.26%** (excess **−8.42pp**, 11-03 → 11-06), with the AMD print confound not rescuing it (AMD was the smallest loser). Do not register a
+  "removed political overhang" lift off a result whose own winners campaigned on the overhang: Democrats took both chambers and the Texas governor's race on a pledge to halt new data centers,
+  and the power sleeve fell −10.65% on 11-04 alone while the S&P rose 1.58%.
+
 ## Portfolio-level critique — what no single-symbol view sees
 
 1. **Multiple testing.** ~40–70 statistical looks across eight tickers; the family-corrected bar
