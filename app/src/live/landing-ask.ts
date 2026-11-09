@@ -1,3 +1,4 @@
+import { WHATS_COMING_UP } from "../../../src/domain/fast-track";
 import type { EditionLine, EditionStory } from "./edition";
 import { postJson } from "./post";
 
@@ -9,8 +10,9 @@ import { postJson } from "./post";
  * nudge to let the user drive first, canned selections as fallbacks." So the page opens on the
  * member's own question, and at most two quick questions sit under it (criterion 2). Both go to the
  * chat, which already answers them with its tools: the calendar (`get_upcoming_events`, #7076) and
- * the member's book (`get_my_positions`). The card walk for "What's coming up?" (#7034 slice 2)
- * replaces the first one's target when it lands; the words stay.
+ * the member's book (`get_my_positions`). The first one opens its card walk in place instead
+ * (#7034 slice 2, `shell/fast-track-walk.tsx`): the events, then one card per empty field of the
+ * move, ending in the trade form with the stop and the exit filled in.
  *
  * Beside each story (criterion 5), two asks:
  *   - "Is this a chance to buy?" — the member's hunch as a question. The answer is THE RECORD, read
@@ -25,11 +27,11 @@ import { postJson } from "./post";
  *     referent.
  */
 
+/** The quick question that opens the fast track's card walk — the engine's own words. */
+export const FAST_TRACK_QUESTION = WHATS_COMING_UP;
+
 /** The fallbacks under the member's own question. At most two (criterion 2). */
-export const QUICK_QUESTIONS = [
-  "What's coming up that I should watch?",
-  "How are my positions doing?",
-] as const;
+export const QUICK_QUESTIONS = [FAST_TRACK_QUESTION, "How are my positions doing?"] as const;
 
 /** A story's quick question: the member's instinct, answered by the record. */
 export const INSTINCT_QUESTION = "Is this a chance to buy?";

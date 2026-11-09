@@ -7,6 +7,7 @@ import { parseOccSymbol } from "../../../src/trading/option-symbols";
 import { fetchDesk } from "../live/desk";
 import type { DraftLeg, NewLeg } from "../live/draft-order";
 import { normalizeExpiration } from "../live/expiration";
+import { carriedPlan, planSearch } from "../live/fast-track";
 import { focusFrom, manageSearch, ROLL_TO } from "../live/manage-handoff";
 import { fetchPlays, type PlayInfo } from "../live/options";
 import { navForPlay } from "../live/plays";
@@ -21,6 +22,7 @@ import {
   chainPickTarget,
   lockedTapNote,
 } from "../shell/chain-section";
+import { FastTrackPlan } from "../shell/fast-track-plan";
 import { PageFrame } from "../shell/frame";
 import { MilestoneStrip } from "../shell/milestone-strip";
 import {
@@ -122,7 +124,10 @@ function TradePage(): ReactElement {
     section: askedSection,
     manage,
     rollTo,
+    ...carried
   } = Route.useSearch();
+  // A fast track's stop and exit, shown while the ticket is on the name they were written for.
+  const plan = carriedPlan(carried, symbol);
   const navigate = Route.useNavigate();
   const section = resolveSection(SECTIONS, askedSection);
   const docked = useBenchWidth();
@@ -389,6 +394,7 @@ function TradePage(): ReactElement {
       ) : (
         guidanceLink
       )}
+      {plan ? <FastTrackPlan plan={plan} /> : null}
       {settings.isLoading ? null : accounts.length === 0 ? (
         <p className="note">
           No accounts are linked to your session yet —{" "}
@@ -439,6 +445,8 @@ export const Route = createFileRoute("/trade")({
       ...(exp !== undefined ? { exp } : {}),
       ...(manage !== undefined ? { manage } : {}),
       ...(rollTo !== undefined ? { rollTo } : {}),
+      // `?plan=&stop=&exit=` (#7034 slice 2): a fast track's carried plan, kept only whole.
+      ...planSearch(search),
       // `?section=` (#2017 Phase 1 chart build-out): only a known section id passes, exactly as
       // `activity.tsx` narrows its own; anything else is dropped and `resolveSection` falls back.
       ...(typeof search.section === "string" && SECTIONS.some((s) => s.id === search.section)
