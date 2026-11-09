@@ -75,5 +75,10 @@ opens rule 3's graduation PR: a session does both.
 | 2026-11-09 | screen design (taste) | #7018 round 5 Q1 · the refined page as drawn, the overview first | Build as drawn (medium) | The question box and canned paths first, "after seeing the visual"; a desktop calendar grid. Reverses his chat answer above | miss |
 | 2026-11-09 | screen design (taste) | #7018 round 5 Q2 · an outline, or the Eye's light? | B, the Eye's light (medium) | Build B | match |
 | 2026-11-09 | screen design (taste) | #7018 round 5 Q3 · where does a side thread live? | A, under each answer (low) | More of C, on its row; collapsible, with dividers | miss |
+| 2026-11-09 | screen design (taste) | #7018 round 6 Q3 · how does the light travel: a sweep, a spark, or a spotlight? | B, the spark (medium) | Build B; More of C, the spotlight, banked | match |
+| 2026-11-09 | screen design (taste) | #7018 round 8 Q1 · the page with your goal first, as drawn | Build as drawn (medium) | Build A | match |
+| 2026-11-09 | screen design (taste) | #7018 round 8 Q2 · where does the Eye watch from while the chat is open? | A, between the chat and the page (medium) | Build A | match |
+| 2026-11-09 | screen design (taste) | #7018 round 8 Q3 · the spark with the spotlight folded in, as drawn | Build as drawn (medium) | Build A | match |
+| 2026-11-09 | screen design (taste) | #7018 round 8 Q4 · a priced band, or the 20 closes inside the band? | B, the 20 closes (medium) | More of B | match |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.
