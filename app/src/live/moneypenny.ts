@@ -37,7 +37,12 @@ import { fetchOnboarding, type Onboarding } from "./onboarding";
  * without a key. Failures are reported in their own words, a dropped stream marked cut off.
  */
 
-export const timing = { typingMs: 650, opsMs: 1800 };
+/** `bindWaitMs`: how long a question asked from outside the rail waits on the onboarding read
+ *  before it is sent anyway (#7165 — a hung read once held a landing-page question for 30 s). */
+export const timing = { typingMs: 650, opsMs: 1800, bindWaitMs: 5000 };
+
+/** The onboarding read did not answer inside `bindWaitMs`. */
+const LATE: unique symbol = Symbol("late");
 
 export type MpRole = "user" | "mp" | "sys" | "draft";
 
@@ -87,6 +92,9 @@ export interface MoneypennyState extends Persisted {
   readonly conviction?: ChatConvictionDraft;
   /** Bumps on every saved view — the rail refreshes the Playbooks screen's list on it. */
   readonly convictionSeq: number;
+  /** A question asked from outside the rail (`ask`), shown at once with her typing line while the
+   *  thread is still being bound to its member — in memory only, never persisted (#7165). */
+  readonly pending?: string;
   /** Bumps on every successful filing — the rail invalidates the gate-bearing queries on it. */
   readonly filedSeq: number;
   /** Open the rail; with `intro`, play her intro script once per member (the `introDone` flag). */
@@ -98,11 +106,15 @@ export interface MoneypennyState extends Persisted {
   /** The member's turn — a typed message or a chip's canned one. False when not accepted (a
    *  reply is still arriving), so the composer keeps the text. */
   readonly send: (text: string) => Promise<boolean>;
+  /** A question from outside the rail (the landing page's ask box): open the rail and show it at
+   *  once, then send it once the thread is bound — or after `bindWaitMs`, whichever comes first.
+   *  True when accepted, false when a turn is still under way (the caller keeps the text). */
+  readonly ask: (text: string) => boolean;
   /** Forget everything for this member — for specs and the new-conversation control. */
   readonly reset: () => void;
 }
 
-export const useMoneypenny = create<MoneypennyState>((set, get) => {
+export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   const save = (patch: Partial<Persisted>) => {
     set(patch);
     const s = get();
@@ -133,13 +145,22 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
     }
   };
 
-  /** Bind the thread to the signed-in member and refresh the facts the intro and chips read. */
-  const bind = async (): Promise<Onboarding | undefined> => {
-    const ob = await fetchOnboarding().catch(() => undefined);
+  /** Bind the thread to `ob`'s member and refresh the facts the intro and chips read. `carry` is
+   *  the lines a question added before its member was known (an `ask` that stopped waiting): on a
+   *  member switch they move into that member's thread instead of staying behind in `anon`'s. */
+  const applyBind = (
+    ob: Onboarding | undefined,
+    carry: readonly MpMessage[] = [],
+  ): Onboarding | undefined => {
     const member = ob?.viewerId ?? "anon";
-    if (get().member !== member) {
+    const was = get().member;
+    if (was !== member) {
       forgetOthers(member);
-      set({ ...load(member), member, draft: undefined, conviction: undefined });
+      const thread = load(member);
+      set({ ...thread, member, draft: undefined, conviction: undefined });
+      // An unbound store saves under "anon", so loading "anon" already holds the carried lines.
+      if (carry.length > 0 && (was ?? "anon") !== member)
+        save({ messages: [...thread.messages, ...carry] });
     }
     set({
       connected: ob?.account !== undefined,
@@ -147,6 +168,38 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       messaged: ob?.steps.some((s) => s.id === "first-message" && s.done) ?? false,
     });
     return ob;
+  };
+  const bind = async (): Promise<Onboarding | undefined> =>
+    applyBind(await fetchOnboarding().catch(() => undefined));
+
+  /** Resolves once no turn is under way (an intro or a reply still landing). */
+  const idle = () =>
+    new Promise<void>((ok) => {
+      const free = () => !(get().typing || get().streaming);
+      if (free()) return ok();
+      const off = api.subscribe(() => {
+        if (!free()) return;
+        off();
+        ok();
+      });
+    });
+
+  /** `ask`'s second half: bind (waiting at most `bindWaitMs`), then send the question for real.
+   *  If the read was late, the question goes out under the member already known, and the read's
+   *  answer is applied after the turn — carrying the question and her reply with it. */
+  const sendPending = async (note: string) => {
+    const reading = fetchOnboarding().catch(() => undefined);
+    const first = await Promise.race([
+      reading,
+      sleep(timing.bindWaitMs).then((): typeof LATE => LATE),
+    ]);
+    if (first !== LATE) applyBind(first);
+    await idle();
+    if (get().pending !== note) return; // a new conversation dropped it
+    const from = get().messages.length;
+    set({ pending: undefined });
+    await get().send(note);
+    if (first === LATE) applyBind(await reading, get().messages.slice(from));
   };
 
   /** Her lines, after the typing beat. */
@@ -310,9 +363,19 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       await playIntro(ob);
     },
 
+    ask: (text) => {
+      const note = text.trim();
+      const s = get();
+      if (!note || s.typing || s.streaming || s.pending !== undefined) return false;
+      set({ open: true, pending: note });
+      void companionOn();
+      void sendPending(note);
+      return true;
+    },
+
     send: async (text) => {
       const note = text.trim();
-      if (!note || get().typing || get().streaming) return false;
+      if (!note || get().typing || get().streaming || get().pending !== undefined) return false;
       append("user", [note]);
       // The ladder gate's whole bar: a real message, said once, regardless of how it routes —
       // ack the server (it records the evidence) and celebrate locally the first time this
@@ -349,6 +412,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
         ...EMPTY,
         draft: undefined,
         conviction: undefined,
+        pending: undefined,
         typing: false,
         streaming: false,
         companionEnabled: undefined,
