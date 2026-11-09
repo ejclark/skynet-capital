@@ -121,8 +121,10 @@ describe("what other members asked", () => {
   });
 
   it("says where a question stands in words, never a finding that isn't there", () => {
-    expect(questionState(question())).toBe("In line, 2 ahead");
-    expect(questionState(question({ ahead: 0 }))).toBe("Next in line for research");
+    expect(questionState(question(), true)).toBe("In line, 2 ahead");
+    expect(questionState(question({ ahead: 0 }), true)).toBe("Next in line for research");
+    // No lane reads the queue yet, so a waiting question promises no turn (#7034 slice 3b).
+    expect(questionState(question())).toBe("Kept; research doesn't read the list yet");
     expect(questionState(question({ state: "no-finding-yet" }))).toBe("No finding yet");
     const found = { idea: "x", on: "2026-11-08", source: "s" };
     expect(questionState(question({ state: "found", found: [found] }))).toBe("Answered");

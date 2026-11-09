@@ -46,6 +46,9 @@
  */
 import type { Campaign } from "./campaigns.js";
 import { castSymbols } from "./campaigns.js";
+import { LANE_READS_QUEUE } from "./discovery-lane.js";
+
+export { LANE_READS_QUEUE };
 
 export const DISCOVERY_KINDS = ["sector", "market", "name"] as const;
 export type DiscoveryKind = (typeof DISCOVERY_KINDS)[number];
@@ -235,8 +238,15 @@ export function passesUntil(ahead: number, perPass: number): number {
   return Math.floor(Math.max(0, ahead) / per) + 1;
 }
 
-/** What the member is told: queued, where in line, and roughly when, in plain words. */
-export function tellMember(outcome: QueueOutcome, perPass: number): string {
+/**
+ * What the member is told: queued, where in line, and roughly when, in plain words. While no lane
+ * reads the queue (`LANE_READS_QUEUE`), it says the question is kept and gives no time.
+ */
+export function tellMember(
+  outcome: QueueOutcome,
+  perPass: number,
+  laneReads: boolean = LANE_READS_QUEUE,
+): string {
   if (outcome.status === "covered")
     return outcome.party
       ? `"${outcome.party.title}", a campaign the party shares, already covers this. Ask in it to look further.`
@@ -245,9 +255,11 @@ export function tellMember(outcome: QueueOutcome, perPass: number): string {
     return outcome.status === "full"
       ? "The house has a full list of questions to look into right now. Ask again in a day or two."
       : `You already have ${MAX_PER_MEMBER} questions waiting. Ask again once the house has looked into one.`;
+  const joined = outcome.status === "joined";
+  if (!laneReads)
+    return `${joined ? "Someone already asked this; you're on it with them." : "Kept."} The house's research doesn't read this list yet, so there is no wait to promise. Your question stays on it for when it does. Nothing is bought or sold.`;
   const passes = passesUntil(outcome.ahead, perPass);
-  const lead =
-    outcome.status === "joined" ? "Someone already asked this; you're on it with them." : "Queued.";
+  const lead = joined ? "Someone already asked this; you're on it with them." : "Queued.";
   const when =
     passes === 1
       ? "It is next in line for the house's research pass, which runs whenever new work lands."
