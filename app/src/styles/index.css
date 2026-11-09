@@ -130,5 +130,6 @@
 @import "./activity-feed.css";
 @import "./edition.css";
 @import "./edition-market.css";
+@import "./landing-quests.css";
 /* last on purpose: its hover and focus ring wins over the landing page's and R&D calendar's own (#7212) */
 @import "./click-target.css";
