@@ -9,6 +9,7 @@ import { type ReactElement, useRef } from "react";
 import { horizonSearch } from "../live/horizon-params";
 import { useMoneypenny } from "../live/moneypenny";
 import { BrandEye } from "../shell/brand-eye";
+import { EyeLight } from "../shell/eye-light-layer";
 import { KeyboardChords } from "../shell/keyboard";
 import { MemberMenu } from "../shell/member-menu";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
@@ -169,6 +170,7 @@ function RootShell(): ReactElement {
         </header>
         <Outlet />
         <Vantage root={app} />
+        <EyeLight root={app} />
         <KeyboardChords />
       </div>
       <MoneypennyRail />
