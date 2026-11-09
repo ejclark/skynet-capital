@@ -32,3 +32,18 @@ screenshot is the phone frame (`docs/PICTURES.md` → *Screenshots*), and every 
 these surfaces carries the constraint. Study the apps that already solved the density problem
 before inventing — the reference lives with the plan issue (#1461, #1481), never in the repo
 (a brokerage screenshot carries account data).
+- **The top slot goes to whatever the surface's job values most, and "actionable at the top" is
+one case of it** (Eric, 2026-11-09, settling the landing page's question box: "This was geared
+towards singular-ish path oriented workflows. The view we're working on is very high level entry
+point, with the ability to search and drill into more granular views. In general, the highest
+impact/value (i.e. actionable items) want to be the most accessible, at the top. it is not a hard
+rule.."). State the surface's job in its IA decision, then rank the content by that job:
+  - A **path workflow** (a ticket, a walk, a guided fix) leads with the next action.
+  - An **entry point** (the landing page, a section's front page) leads with the overview that
+  shows a member where to go. Its search or question box sits right under the overview, as the
+  way to drill in.
+  - When an earlier note of his says "at the top" and a later one moves something down, first ask
+  which kind of surface each note was about. It may not be a conflict at all (#7018 round 3, AT9).
+  - Held as a hypothesis, confidence medium. It is wrong if, by 2026-12-15, members type in the
+  landing page's question box before opening any sector or story on most visits, since that
+  would make the ask the entry point's highest-value item after all.

@@ -196,9 +196,11 @@ undocumented and gets one.
 
 ## The ledger — the landing page (#6948, #7018)
 
-The shapes #6948's round 1 and #7018's rounds 0–2 named for the signed-in landing page. Eric's
+The shapes #6948's round 1 and #7018's rounds 0–3 named for the signed-in landing page. Eric's
 words are quoted where he gave them. Round 2's question box was decided on his behalf at his ask
 (2026-11-08: "make judgement calls on my behalf to get this movement rolling"); he picked the rest.
+Round 3 placed its shapes through acceptance tests rather than a picked frame (his note: "this is
+defining acceptance criteria/outcomes"), so its rows point at #7077's AT numbers.
 
 | Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
 |---|---|---|---|---|
@@ -207,7 +209,7 @@ words are quoted where he gave them. Round 2's question box was decided on his b
 | **Quest board as home** | A board of quests is the first page. | — | #6948 round 1 shape 3 | declined here as home — quests are placed by their source instead (below) |
 | **Party thread as home** | A play-by-post thread is the first page. | — | #6948 round 1 shape 4 | declined here — its "new since you were here" line carries over |
 | **The map is the hub** | The city map is the first page; a deck as hub (#7018 comment 3) is the same shape. | — | #6948 round 1 shape 5 | declined here |
-| **Your question first** | The page opens on the member's own question box; canned quick questions sit under it as fallbacks. | #7077 slice 2 | #7018 round 1 Q1 C (More) — Eric: "I like how the default is \"whatever the customer wants to do\", it's a subtle nudge to let the user drive first, canned selections as fallbacks." | placed — built in #7077 slice 2 |
+| **Your question first** | The page opens on the member's own question box; canned quick questions sit under it as fallbacks. | #7077 slice 2 | #7018 round 1 Q1 C (More) — Eric: "I like how the default is \"whatever the customer wants to do\", it's a subtle nudge to let the user drive first, canned selections as fallbacks." | placed — built in #7077 slice 2, then moved one line under the market overview (round 3 AT9). Eric, 2026-11-09: his "actionable items at the top" "was geared towards singular-ish path oriented workflows" |
 | **An ask beside each story** | Each story carries a quick question and "Ask your own" under it. | #7077 slice 2 | #7018 round 1 Q1 A (More) | placed — round 2 confirmed |
 | **The page asks you before a move** | Before any move the page asks what would prove you wrong; the answer fills the stop. | — | #7018 round 1 Q1 B | declined here (Not) — banked for the ticket's walk (#7034) |
 | **You on the landing page** | One line or a card with your rank, points and cash, opening your full sheet. | — | #7018 round 1 Q2 A/B | seeded — no signal; waits on the character sheet round (#7019) |
@@ -220,6 +222,15 @@ words are quoted where he gave them. Round 2's question box was decided on his b
 | **Dates on the story** | The reports that bear on a story lead its tile, then the tile works back to what moved. | #7077 | #7018 round 2 B (Build) — "Look forward to the events, work back to current state" | placed — picked; building in #7077 |
 | **A shape for each line's direction** | Every line on a story's tile carries ▲ up · ▼ down · ∿ volatile with a word; a coming event gets ∿ only when its record shows large moves either way, never a direction the record doesn't hold. | #7077 (criterion 9) | #7018 round 2 — "up/bull, bear/down, volatile (sign wave?) icons would carry a TON of weight for a very small sliver of real estate" | placed — in #7077's criteria |
 | **The instinct as a question** | A story's quick question carries the member's hunch ("Is this a chance to buy?"); the answer is the record, and the page never calls it a buy. | #7077 slice 2 | #7018 round 1 — his "buy the dip opportunity" note, held to the honesty rule | placed — built in #7077 slice 2: the answer is the story's base rates and house call, read from the checked edition |
+| **The whole market first** | The first phone screen shows all 11 GICS sectors and the S&P 500, one SPDR fund each, with each one's move over Day · Week · Month · YTD. | #7077 slice 1b (AT1, AT2) | #7018 round 3 — "Shouldn't we start with a wholestick overview - there are 11 official GICS stock market sectors." | placed — in #7077's tests |
+| **Sectors as lines** | One row per sector: its name, its fund and its move. | #7077 (AT3, the default) | #7018 round 3 Q1 A (More) | placed — one of two views of the same numbers |
+| **Sectors as tiles** | The same numbers as a grid of tiles. | #7077 (AT3) | #7018 round 3 Q1 B (More) — "more compact that the previous example, but this still feels secondary" | placed — the second view |
+| **Sectors as bars** | One bar per sector, its length the move. | — | #7018 round 3 Q1 C — "it looks fully redundant with the percentage change; not a good use of real estate" | declined here |
+| **A range mark beside the move** | Where the price sits in its 20-day range, as a small Bollinger band with a mark (or a candle); words only at the extremes ("above its usual range"); never a buy or sell signal. | #7077 (AT8), replacing the ▲ ▼ that repeated the sign | #7018 round 3 — "Is there a bolinger/candlestick like chart we can replace this with to outline where things are at in the cycle (overbought/oversold). This should carry over to other charts too." | placed — in #7077's tests; seeded for every other price chart |
+| **One line each, details on tap** | Every story and dated event fits on one line at phone width with its number whole, loads closed and opens on tap. | #7077 (AT4) | #7018 round 3 — "compact this to one liners… progressive disclosure to expand on details below the fold" | placed — in #7077's tests |
+| **Today, then the days** | This week's stories, then each coming trading day's dated events in order down the page. | #7077 (AT5) | #7018 round 3 Q2 A (More) | placed — in #7077's tests |
+| **Week headers** | Days sit under a header per week that names its market closures ("This week · Mon 9 – Fri 13"). | #7077 (AT5b) | #7018 round 3 Q2 B — "I like the layout grouped by day. I would like visual communication about week level grouping when in a weekly view." | placed — in #7077's tests |
+| **A week strip** | The week runs across the screen, one column per day. | — | #7018 round 3 Q2 C (Not) — "our primary view date axis is y-axis, to enable us to scale for the information… I feel like where we should use this will surface at some point" | declined here — banked for a surface with few events a day |
 
 ## The ledger — trading surfaces
 
