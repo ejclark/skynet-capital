@@ -10,6 +10,7 @@ import {
   chatQuestion,
   FAST_TRACK_QUESTION,
   fetchPartyQuestions,
+  holderLine,
   INSTINCT_QUESTION,
   NO_RECORD,
   type PartyQuestion,
@@ -139,6 +140,7 @@ function PartyQuestionItem({ q }: { readonly q: PartyQuestion }): ReactElement {
         <span className="num">{q.subject}</span> · asked by {askedByLine(q.askedBy)} ·{" "}
         <span className="story-mark">{questionState(q)}</span>
       </p>
+      <p className="party-q-holder">{holderLine(q)}</p>
       {finding ? <p className="party-q-found">{finding.idea}</p> : null}
     </li>
   );

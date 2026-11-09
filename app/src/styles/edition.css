@@ -326,6 +326,9 @@
   gap: 4px;
   color: var(--muted);
 }
+.party-q-holder {
+  color: var(--muted);
+}
 .party-q-found {
   padding-left: 10px;
   border-left: 3px solid var(--border);
