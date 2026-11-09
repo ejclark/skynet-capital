@@ -17,6 +17,13 @@
  *   - Month: since the last close on or before the same date a month back.
  *   - YTD: since the last close of the year before.
  *
+ * WHERE EACH PRICE SITS IN ITS 20-DAY RANGE (slice 1c, AT8). Eric, round 3: "a small Bollinger band
+ * with a mark". The range is the 20-session Bollinger band, the 20-day average of the closes two
+ * standard deviations either side (population deviation, Bollinger's own definition), and the mark is
+ * the edition's close. So an edition also carries its last 20 closes per fund, and the band is worked
+ * out here from them, never typed. It describes where a price sits, never where it goes: no buy or
+ * sell reading is drawn from it anywhere in the app.
+ *
  * Which fund stands for which sector is `GICS_SECTORS` in `sector-coverage.ts`, one table for the
  * whole app. SPY stands for the S&P 500. Paper only; nothing here places or sizes an order.
  */
@@ -63,6 +70,22 @@ function monthBack(date: string): string {
   return `${year}-${String(month).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
 }
 
+/** The band's window: 20 sessions, Bollinger's default and the length AT8 names. */
+export const RANGE_SESSIONS = 20;
+
+/** The edition's own session and the 19 before it, oldest first: the closes the band is drawn from. */
+export function rangeDates(date: string): readonly string[] {
+  const out = [date];
+  while (out.length < RANGE_SESSIONS) out.unshift(sessionsBefore(out[0] as string, 1));
+  return out;
+}
+
+/** Every date an edition dated `date` must carry a close for: its own, each period's start, and the
+ *  band's 20 sessions. Sorted, no repeats. */
+export function neededCloses(date: string): readonly string[] {
+  return [...new Set([date, ...Object.values(sectorBases(date)), ...rangeDates(date)])].sort();
+}
+
 /** The close each period's move is measured from, for an edition dated `date` (a session). */
 export function sectorBases(date: string): Readonly<Record<SectorPeriod, string>> {
   const weekday = new Date(at(date)).getUTCDay();
@@ -91,7 +114,7 @@ export function checkSectors(raw: unknown, date: string, fail: Fail): void {
   const wanted = SECTOR_FUNDS.map((f) => f.fund);
   const extra = Object.keys(byFund).find((k) => !wanted.includes(k));
   if (extra !== undefined) fail(`sectors: ${extra} is not one of the overview's funds`);
-  const needed = [...new Set([date, ...Object.values(sectorBases(date))])].sort();
+  const needed = neededCloses(date);
   for (const fund of wanted) {
     const row = byFund[fund];
     if (typeof row !== "object" || row === null) fail(`sectors: no closes for ${fund}`);
@@ -111,6 +134,30 @@ export interface SectorRow {
   readonly market?: true;
   /** Percent change, close to close, rounded to two places. */
   readonly moves: Readonly<Record<SectorPeriod, number>>;
+  /** AT8: the 20-day band and the close it is read against, in dollars, to two places. */
+  readonly range: SectorRange;
+}
+
+/** The 20-session Bollinger band: the average two standard deviations either side, and the close. */
+export interface SectorRange {
+  readonly low: number;
+  readonly mid: number;
+  readonly high: number;
+  readonly close: number;
+}
+
+const cents = (v: number): number => Math.round(v * 100) / 100;
+
+/** The band over `closes` (the window, oldest first) and the last of them. */
+export function bollinger(closes: readonly number[]): SectorRange {
+  const mid = closes.reduce((a, b) => a + b, 0) / closes.length;
+  const sd = Math.sqrt(closes.reduce((a, c) => a + (c - mid) ** 2, 0) / closes.length);
+  return {
+    low: cents(mid - 2 * sd),
+    mid: cents(mid),
+    high: cents(mid + 2 * sd),
+    close: cents(closes.at(-1) as number),
+  };
 }
 
 /** What the page reads: the rows (the market first), each period's starting date, the source. */
@@ -125,6 +172,7 @@ const pct = (now: number, then: number): number => Math.round((now / then - 1) *
 /** Work the moves out of the closes. Assumes `checkSectors` passed. */
 export function sectorsView(sectors: EditionSectors, date: string): SectorsView {
   const from = sectorBases(date);
+  const span = rangeDates(date);
   return {
     source: sectors.source,
     from,
@@ -134,7 +182,14 @@ export function sectorsView(sectors: EditionSectors, date: string): SectorsView 
       const moves = Object.fromEntries(
         SECTOR_PERIODS.map((p) => [p, pct(close, c[from[p]] as number)]),
       ) as Record<SectorPeriod, number>;
-      return { name: f.name, fund: f.fund, ...(f === MARKET_FUND ? { market: true } : {}), moves };
+      const range = bollinger(span.map((d) => c[d] as number));
+      return {
+        name: f.name,
+        fund: f.fund,
+        ...(f === MARKET_FUND ? { market: true } : {}),
+        moves,
+        range,
+      };
     }),
   };
 }

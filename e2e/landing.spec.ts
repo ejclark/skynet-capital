@@ -1,13 +1,15 @@
 import { expect, test } from "@playwright/test";
 
 // The landing page (#7077): sign-in opens the day's market news at /app/, not the Leaderboard.
-// Round 3 (#7018, slice 1b): the whole market first, then a calendar of one-line stories and events.
+// Round 3 (#7018, slices 1b and 1c): the whole market first, the question box under it, then a
+// calendar of one-line stories and events under week headers.
 // Behavioural only: the edition is the latest one checked in, and the server cuts its dated items
 // against the real date, so the words change by design; the shape is what's held here.
 test.describe("landing page", () => {
-  // Round 3's AT1 (#7018): the question box, then the whole market — all 11 sectors and the S&P 500,
-  // each with a shape and a whole figure — on the first 390×844 screen.
-  test("opens on the member's question, then all 11 sectors and the S&P 500 above the fold", async ({
+  // Round 3's AT1, AT8 and AT9 (#7018; slice 1c): the whole market leads — all 11 sectors and the
+  // S&P 500, each with its 20-day range mark and a whole figure, on the first 390×844 screen — and the
+  // question box is one line under it.
+  test("opens on all 11 sectors and the S&P 500 above the fold, each with its range mark, the question under them", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -15,18 +17,38 @@ test.describe("landing page", () => {
     await page.evaluate(() => window.localStorage.removeItem("skynet.landing.sector-look"));
     await page.reload();
     await expect(page).toHaveURL(/\/app\/$/);
-    await expect(page.getByLabel("What do you want to do today?")).toBeInViewport();
-    const rows = page.locator(".sectors-rows--bars > li");
+    const rows = page.locator(".sectors-rows--lines > li");
     await expect(rows).toHaveCount(12);
     await expect(rows.first()).toContainText("S&P 500");
     for (const row of await rows.all()) {
       const box = await row.boundingBox();
       expect((box?.y ?? Number.POSITIVE_INFINITY) + (box?.height ?? 0)).toBeLessThanOrEqual(844);
-      await expect(row.locator(".sector-glyph")).toHaveText(/^[▲▼▬]$/);
+      // AT8: the range mark replaced the ▲ ▼, and says where the close sits for a screen reader.
+      await expect(row.locator(".sector-range")).toHaveAttribute("aria-label", /20-day range/);
+      await expect(row.locator(".sector-glyph")).toHaveCount(0);
       const move = row.locator(".sector-move");
       const whole = await move.evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
       expect(whole).toBe(true);
     }
+    // Words only at the extremes, and only those words.
+    const extremes = page.locator(
+      ".sectors-rows .sector-range--above, .sectors-rows .sector-range--below",
+    );
+    const words = page.locator(".sectors-rows .sector-range-word");
+    await expect(words).toHaveCount(await extremes.count());
+    for (const w of await words.allInnerTexts())
+      expect(w).toMatch(/^(above|below) its usual range$/);
+    // AT9: the question box follows the overview, as one line.
+    const ask = page.getByLabel("What do you want to do today?");
+    const after = await page
+      .locator(".sectors")
+      .evaluate(
+        (s, a) => Boolean(a && s.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING),
+        await ask.elementHandle(),
+      );
+    expect(after).toBe(true);
+    const form = await page.locator(".ask-form").boundingBox();
+    expect(form?.height ?? 0).toBeLessThanOrEqual(52);
   });
 
   test("redraws every move for the period chosen, Week first (AT2)", async ({ page }) => {
@@ -44,24 +66,24 @@ test.describe("landing page", () => {
     expect(await figures()).not.toEqual(week);
   });
 
-  test("draws the same numbers as Bars, Lines or Tiles, and keeps the last view (AT3)", async ({
+  test("draws the same numbers as Lines or Tiles, Lines first, and keeps the last view (AT3)", async ({
     page,
   }) => {
     await page.goto("/app/");
-    await page.evaluate(() => window.localStorage.removeItem("skynet.landing.sector-look"));
+    await page.evaluate(() => window.localStorage.setItem("skynet.landing.sector-look", "bars"));
     await page.reload();
-    await expect(page.locator(".sectors-rows--bars")).toBeVisible();
-    // Down bars hatched, up bars solid: never colour alone.
-    const down = page.locator(".sector-bar--down").first();
-    expect(await down.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain(
-      "repeating-linear-gradient",
-    );
-    const up = page.locator(".sector-bar--up").first();
-    if ((await up.count()) > 0)
-      expect(await up.evaluate((el) => getComputedStyle(el).backgroundImage)).toBe("none");
+    // Bars are gone (AT3 revised): a member who had picked them opens on Lines.
+    await expect(page.locator(".sectors-rows--lines")).toBeVisible();
     const viewGroup = page.getByRole("group", { name: "View" });
+    await expect(viewGroup.getByRole("button")).toHaveText(["Lines", "Tiles"]);
     await viewGroup.getByRole("button", { name: "Tiles" }).click();
     await expect(page.locator(".sectors-rows--tiles > li")).toHaveCount(12);
+    // Down tiles hatched: never colour alone.
+    const down = page.locator(".sector-tile--down").first();
+    if ((await down.count()) > 0)
+      expect(await down.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain(
+        "repeating-linear-gradient",
+      );
     await page.reload();
     await expect(page.locator(".sectors-rows--tiles")).toBeVisible();
     await viewGroup.getByRole("button", { name: "Lines" }).click();
@@ -83,6 +105,18 @@ test.describe("landing page", () => {
     );
     expect(below).toBe(true);
     await expect(cal.locator(".ecal-key")).toContainText("◆");
+    // AT5b: the days sit under week headers, and the weeks run down the page, never across.
+    const weeks = cal.locator(".ecal-week-title");
+    expect(await weeks.count()).toBeGreaterThan(0);
+    let lastY = -1;
+    for (const w of await weeks.all()) {
+      await expect(w).toHaveText(
+        /^(.+ weeks? ago|Last week|This week|Next week|In \d+ weeks) · Mon \d+/,
+      );
+      const y = (await w.boundingBox())?.y ?? -1;
+      expect(y).toBeGreaterThan(lastY);
+      lastY = y;
+    }
     const days = cal.locator(".ecal-days > li");
     await expect(days.first().locator(".story").first()).toBeVisible();
     const lines = cal.locator(".ecal-line");
