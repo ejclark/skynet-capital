@@ -220,6 +220,41 @@ describe("the question comes before the answer (criterion 2)", () => {
     expect(e?.answer.choice).toBe("SPXC");
   });
 
+  it("a name tied with the top move is left out, so moved-most has one right answer", () => {
+    const tied = landscape({
+      moved: {
+        sessions: 5,
+        moves: [move("CEG", -4.2), move("VST", 4.2), move("ET", -3), move("D", 1)],
+      },
+    });
+    const e = exploreOf(explore(tied)).find((x) => x.topic === "moved-most");
+    expect(e?.answer.choice).toBe("CEG");
+    expect(e?.choices.map((c) => c.id)).toEqual(["CEG", "D", "ET"]);
+  });
+
+  it("a fund a lesson names is still a benchmark, never a candidate", () => {
+    const record: LessonRecord = {
+      campaign: ENERGY.id,
+      lessons: [
+        {
+          id: "xlu-watch",
+          kind: "on-watch",
+          idea: "Utilities as a group.",
+          symbols: ["SPY"],
+          on: "2026-11-07",
+          recheckOn: "2027-01-01",
+          source: "fixture.md",
+        },
+      ],
+    };
+    const set = encountersFor(ENERGY, {
+      landscape: landscape(),
+      brief: startDiscovery(ENERGY.id, TODAY, { records: [record] }),
+      mode: "find-names",
+    });
+    expect(namesOf(set).map((n) => n.symbol)).not.toContain("SPY");
+  });
+
   it("a fund is a benchmark, not a name: XLU never appears as a choice or a candidate", () => {
     const ids = exploreOf(explore()).flatMap((e) => e.choices.map((c) => c.id));
     expect(ids).not.toContain("XLU");
@@ -430,10 +465,26 @@ describe("every candidate shows the house's checks and a stand-aside of equal we
     expect(vst?.text).toMatch(/No closes read/);
   });
 
-  it("the record check holds the idea and its date, and leaves the verdict for the reveal", () => {
-    const rec = nameFor(findNames(), "BWXT").checks.find((c) => c.label === "The house's record");
-    expect(rec?.claim).toMatchObject({ text: "BWXT's backlog converts.", date: "2026-11-07" });
-    expect(rec?.text).not.toMatch(/killed/i);
+  it("the record check says a finding exists and when; what it says waits for the reveal", () => {
+    const cmi = nameFor(findNames(), "CMI");
+    const rec = cmi.checks.find((c) => c.label === "The house's record");
+    expect(rec?.text).toContain("2026-11-07");
+    expect(rec?.claim).toBeUndefined();
+    expect(JSON.stringify(cmi.checks)).not.toContain("power margins rose");
+    expect(JSON.stringify(pose(cmi))).not.toContain("power margins rose");
+    expect(cmi.house.record).toEqual([
+      {
+        text: "CMI's power margins rose.",
+        mark: "reported",
+        source: "fixture.md",
+        date: "2026-11-07",
+      },
+    ]);
+  });
+
+  it("a verdict's next re-check is in the future tense, never 're-checked'", () => {
+    for (const n of namesOf(findNames())) expect(n.house.why).not.toMatch(/re-checked on/i);
+    expect(nameFor(findNames(), "BWXT").house.why).toContain("Next re-check 2027-02-22.");
   });
 
   it("a killed cast name stays a candidate, and the house stands aside on it", () => {

@@ -23,19 +23,30 @@
  * OLD RESEARCH IS SAID TO BE OLD (criterion 3). Research older than `STALE_AFTER_DAYS` is labelled
  * with its age, and lands in `rechecks`: the list a discovery takes before anything resting on it is
  * shown as current. The lesson record has no "enterable" kind, so the house's verdict here is
- * watch, stand aside, or check first; a verdict past the line is always check first.
+ * watch, stand aside, or check first. A watch past the line is check first. A kill past the line
+ * still stands aside and says its age: criterion 8 reopens a kill only on its re-check date or on
+ * prints that contradict it, never by age, and standing aside is the direction a stale call is
+ * safe to err in.
  *
  * STANDING ASIDE IS A REAL ANSWER (criterion 4). Every find-names candidate offers the same three
  * choices in the same shape: watch, enter at starter paper size, stand aside. No choice is marked
- * as the default or the recommendation; the house's verdict is revealed after the pick, like an
- * explore answer.
+ * as the default or the recommendation. The house's verdict, and the lesson it rests on, are
+ * revealed after the pick, like an explore answer: a lesson's words often carry its verdict ("nearest
+ * to enterable"), so before the pick a check says only that a finding exists, and when.
  *
  * Pure: everything it reads is handed in. Paper only; educational. An encounter never places, sizes
  * or recommends an order: "enter at starter paper size" is the member's pick to be scored, and
  * orders come only from play mode's own ticket (#6948).
  */
-import type { DateMark, Landscape, Move, Scheduled, Tested } from "./campaign-landscape.js";
-import { scheduledShown } from "./campaign-landscape-lines.js";
+import {
+  type DateMark,
+  dayNumber,
+  type Landscape,
+  type Move,
+  type Scheduled,
+  type Tested,
+} from "./campaign-landscape.js";
+import { scheduledShown, signed } from "./campaign-landscape-lines.js";
 import { type DiscoveryBrief, type Lesson, proposable, type Withheld } from "./campaign-lessons.js";
 import {
   anchorOf,
@@ -45,7 +56,6 @@ import {
   type Evidence,
 } from "./campaigns.js";
 import { TICKER_DIRECTORY } from "./ticker-directory/index.js";
-import { DAY_MS } from "./time.js";
 
 /** Research older than this many days is labelled stale and re-checked (criterion 3). */
 export const STALE_AFTER_DAYS = 30;
@@ -111,6 +121,8 @@ export interface NameEncounter {
   readonly house: {
     readonly verdict: HouseVerdict;
     readonly why: string;
+    /** Every lesson that names the symbol, as claims: part of the reveal, never the posed screen. */
+    readonly record: readonly Claim[];
     /** The lesson the verdict rests on, when one does. */
     readonly lesson?: string;
     readonly stale?: Stale;
@@ -158,10 +170,8 @@ export interface EncounterSet {
   readonly note?: string;
 }
 
-const dayNumber = (date: string): number => Date.parse(`${date.slice(0, 10)}T00:00:00Z`) / DAY_MS;
 const ageOf = (date: string, today: string): number =>
   Math.round(dayNumber(today) - dayNumber(date));
-const signed = (n: number): string => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
 
 function staleOf(date: string, today: string): Stale | undefined {
   const days = ageOf(date, today);
@@ -187,9 +197,18 @@ const moveClaim = (m: Move): Claim => ({
 
 /** Which of up to four names moved furthest. The choices are alphabetical, so order gives nothing away. */
 function movedMost(l: Landscape, names: readonly Move[]): ExploreEncounter | undefined {
-  const shown = names.slice(0, 4);
-  const top = shown[0];
-  if (!top || shown.length < 2) return undefined;
+  const top = names[0];
+  if (!top) return undefined;
+  // A name tied with the top move (to the tenth the read rounds to) would be a second right answer.
+  const far = Math.abs(top.changePct);
+  const shown = [
+    top,
+    ...names
+      .slice(1)
+      .filter((m) => Math.abs(m.changePct) !== far)
+      .slice(0, 3),
+  ];
+  if (shown.length < 2) return undefined;
   return {
     kind: "explore",
     id: `${l.campaign.id}:moved-most:${l.today}`,
@@ -348,7 +367,12 @@ function testedClaim(t: Tested, today: string): Claim {
   const s = t.score;
   const date = s?.scoredOn ?? today;
   if (t.statement === undefined)
-    return { text: "No such claim is on record.", mark: "measured", source, date: today };
+    return {
+      text: "No such claim is on record, so nothing has tested it.",
+      mark: "measured",
+      source,
+      date: today,
+    };
   if (t.tested)
     return { text: t.evidence ?? "The record cites its study.", mark: "reported", source, date };
   if (t.untestable !== undefined) return { text: t.untestable, mark: "reported", source, date };
@@ -383,7 +407,7 @@ function exploreEncounters(campaign: Campaign, l: Landscape): ExploreEncounter[]
 
 // ── Find names ────────────────────────────────────────────────────────────────────────────────
 
-/** A lesson as a check: the idea and its date. Its kind is the verdict, so it waits for the reveal. */
+/** A lesson as a claim: its idea and the day it was recorded. Shown with the verdict, never before. */
 const lessonClaim = (lesson: Lesson): Claim => ({
   text: lesson.idea,
   mark: "reported",
@@ -391,15 +415,30 @@ const lessonClaim = (lesson: Lesson): Claim => ({
   date: lesson.on,
 });
 
-/** The house's verdict on one name, from the lesson that names it. Past the line → check first. */
+/** The lessons that name a symbol, closed kills first, as the brief sorts them. */
+const lessonsNaming = (symbol: string, brief: DiscoveryBrief): readonly Lesson[] =>
+  [...brief.closed, ...brief.reopened, ...brief.due, ...brief.watching].filter((x) =>
+    x.symbols.includes(symbol),
+  );
+
+/** The house's verdict on one name, from the lesson that names it. A watch past the line → check first. */
 function verdictOf(symbol: string, brief: DiscoveryBrief, today: string): NameEncounter["house"] {
+  const house = verdictOnly(symbol, brief, today);
+  return { ...house, record: lessonsNaming(symbol, brief).map(lessonClaim) };
+}
+
+function verdictOnly(
+  symbol: string,
+  brief: DiscoveryBrief,
+  today: string,
+): Omit<NameEncounter["house"], "record"> {
   const names = (l: Lesson): boolean => l.symbols.includes(symbol);
   const closed = brief.closed.find(names);
   if (closed) {
     const stale = staleOf(closed.on, today);
     return {
       verdict: "stand-aside",
-      why: `Killed on ${closed.on}.${closed.recheckOn ? ` Re-checked on ${closed.recheckOn}.` : ""}${closed.falsifier ? ` What would reopen it: ${closed.falsifier}` : ""}`,
+      why: `Killed on ${closed.on}.${closed.recheckOn ? ` Next re-check ${closed.recheckOn}.` : ""}${closed.falsifier ? ` What would reopen it: ${closed.falsifier}` : ""}`,
       lesson: closed.id,
       ...(stale ? { stale } : {}),
     };
@@ -430,7 +469,7 @@ function verdictOf(symbol: string, brief: DiscoveryBrief, today: string): NameEn
       };
     return {
       verdict: "watch",
-      why: `On watch since ${watching.on}, re-checked on ${watching.recheckOn}.${watching.falsifier ? ` What would prove the watch wrong: ${watching.falsifier}` : ""}`,
+      why: `On watch since ${watching.on}; next re-check ${watching.recheckOn}.${watching.falsifier ? ` What would prove the watch wrong: ${watching.falsifier}` : ""}`,
       lesson: watching.id,
     };
   }
@@ -446,20 +485,18 @@ function checksFor(
   brief: DiscoveryBrief,
   sweep: readonly SweepResult[],
 ): Check[] {
-  const lessons = [...brief.closed, ...brief.reopened, ...brief.due, ...brief.watching].filter(
-    (x) => x.symbols.includes(symbol),
-  );
-  const checks: Check[] = lessons.length
-    ? lessons.map((x) => ({
-        label: "The house's record",
-        text: lessonClaim(x).text,
-        claim: lessonClaim(x),
-      }))
-    : [{ label: "The house's record", text: "No finding names it yet." }];
+  // What a lesson says is its verdict, so before the pick the record check says only when and where.
+  const checks: Check[] = lessonsNaming(symbol, brief).map((x) => ({
+    label: "The house's record",
+    text: `A finding from ${x.on} names it (${x.source}); what it says comes with the verdict.`,
+  }));
+  if (checks.length === 0)
+    checks.push({ label: "The house's record", text: "No finding names it yet." });
   const move = l.moved.moves.find((m) => m.symbol === symbol);
+  const moved = move ? moveClaim(move) : undefined;
   checks.push(
-    move
-      ? { label: "Price", text: moveClaim(move).text, claim: moveClaim(move) }
+    moved
+      ? { label: "Price", text: moved.text, claim: moved }
       : { label: "Price", text: "No closes read: nothing here says how it moved." },
   );
   const report = l.scheduled.find(
@@ -508,7 +545,7 @@ function candidates(
   const cast = castSymbols(campaign).filter((s) => !isFund(campaign, s));
   const extra = [...brief.due, ...brief.watching, ...brief.reopened, ...brief.closed]
     .flatMap((x) => x.symbols)
-    .filter((s, i, all) => !roleOf.has(s) && all.indexOf(s) === i);
+    .filter((s, i, all) => !(roleOf.has(s) || isFund(campaign, s)) && all.indexOf(s) === i);
   // A cast name stays a candidate even when killed: it is in the story, and standing aside is the
   // lesson. A name outside the cast that a live kill closes is withheld, never proposed (criterion 8).
   const { propose, withheld } = proposable(brief, extra);

@@ -42,7 +42,9 @@ function encounterLines(e: Encounter): string[] {
   out.push("   Reveal:");
   if (e.kind === "explore") {
     const i = e.choices.findIndex((c) => c.id === e.answer.choice);
-    out.push(`     ${letter(i)}. ${e.choices[i]?.label ?? e.answer.choice}`);
+    if (i === -1)
+      throw new Error(`campaign-encounters: ${e.id}'s answer is not one of its choices`);
+    out.push(`     ${letter(i)}. ${e.choices[i]?.label}`);
     out.push(...e.answer.claims.map((c) => `     - ${claimLine(c)}`));
     if (e.stale)
       out.push(
@@ -51,6 +53,7 @@ function encounterLines(e: Encounter): string[] {
     return out;
   }
   out.push(`     ${VERDICT_WORDS[e.house.verdict]}. ${e.house.why}`);
+  out.push(...e.house.record.map((c) => `     - The house's record: ${claimLine(c)}`));
   if (e.house.stale && e.house.verdict !== "check-first")
     out.push(`     - That verdict is ${e.house.stale.days} days old (${e.house.stale.since}).`);
   return out;
