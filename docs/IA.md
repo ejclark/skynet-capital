@@ -794,17 +794,21 @@ placed by #7018's redesign rounds (2026-11-07/08); the build is #7077.
 
 | | |
 |---|---|
-| **Home** | `/app/` (today a redirect to `/leaderboard`, `app/src/routes/index.tsx:21`; a member with no account still lands on onboarding). The first tab ("Chronicles", his name; fork d on #7018). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
+| **Home** | `/app/` (`app/src/routes/index.tsx`; a member with no account still lands on onboarding). The first tab ("Chronicles", his name; fork d on #7018). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
 | **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests) · what the party asked in a campaign: each question, who asked it by display name and what its research found, for every member who can read the campaign (#6949 slice 6, `GET /api/campaigns/questions`) |
-| **Holds, each with one owner** | the edition: each story leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, quick questions as fallbacks, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
+| **Holds, each with one owner** | the whole market: all 11 GICS sectors and the S&P 500, one SPDR fund each, over Day · Week · Month · YTD, drawn as Bars · Lines · Tiles (round 3, AT1–AT3; closes checked in beside the edition, `src/domain/edition-sectors.ts`) · the calendar: the edition's stories one line each, then each coming trading day's events, ◆ on one a story waits on (AT4–AT5) · the edition: each story, opened from its line, leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, quick questions as fallbacks, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
 | **Hands on** | the owner-fired ticket with exits → Trade · a story's ledger → R&D · who you are → the character sheet (#7019) · standings → the Leaderboard |
-| **At 390, in order** | your question box · the lead story's coming reports, then what moved · its ask · quests by source |
+| **At 390, in order** | your question box · the whole market, every row above the fold · the calendar: the week's stories, then the coming days · a story opened: its reports, then what moved, the rest, its ask · quests by source (under their one-line story, #7028) |
 | **Not here** | a "what's new" part (#7018 r1: "vague, ambiguous direction. no thanks"); a humans-vs-bots grouping or cross-account metrics (#5157: "humans/bots is a property/filter.. not a grouping"); anything about how the app gets built (#7018 comment 1) |
 | **Falsifier** | by 2026-12-15, members open the Leaderboard before the landing page's first story on most sign-ins → home is the standings after all; or two child plans build the same piece of this page → the owner map is wrong |
 
 Eric, round 0 (2026-11-07): *"I don't care for the leaderboard as the landing page."* Round 1
 (2026-11-08): *"I like having actionable items at the top.. like the search engine experience as
-the entry point to direct you to where you want."*
+the entry point to direct you to where you want."* Round 3 (2026-11-08, on the shipped page):
+*"Shouldn't we start with a wholestick overview - there are 11 official GICS stock market
+sectors... If we're able to compact this to one liners, we'd be able to leverage/integrate a
+vertical calendar format."* Its acceptance tests AT1–AT5 are on #7077; AT6 (a sector opens its
+stories and lessons) waits on #6952.
 
 ## 6. The joints — where two groups meet, and what renders on whose page
 

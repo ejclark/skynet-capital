@@ -20,6 +20,7 @@ import {
 const story = (patch: Partial<EditionStory> = {}): EditionStory => ({
   id: "chip-drop",
   headline: "Chip stocks had their worst day since March 2020.",
+  line: "Chips' worst day since March 2020",
   symbols: ["SMH", "NVDA"],
   facts: [{ label: "NVDA", value: "−9.3%", move: "down" }],
   reports: [],

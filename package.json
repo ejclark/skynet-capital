@@ -115,6 +115,7 @@
     "shoot:moneypenny-conviction": "tsx scripts/shoot/moneypenny-conviction.mjs",
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
     "shoot:landing": "tsx scripts/shoot/landing.mjs",
+    "edition:sectors": "tsx scripts/edition-sectors.mjs",
     "shoot:steady": "tsx --import ./scripts/shoot/steady-preload.mjs",
     "shoot:diff": "node scripts/shoot/frame-diff.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",
