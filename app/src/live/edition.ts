@@ -1,5 +1,6 @@
 import { daysBetween, marketClosures } from "../../../src/domain/market-calendar";
 import { dayLabel } from "./book-events";
+import { addDays } from "./horizon-range";
 import type { SectorsView } from "./edition-sectors";
 
 /**
@@ -158,11 +159,8 @@ export interface CalendarWeek {
   readonly days: readonly CalendarDay[];
 }
 
-const DAY_MS = 86_400_000;
-const shift = (date: string, days: number): string =>
-  new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 const mondayOf = (date: string): string =>
-  shift(date, -((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7));
+  addDays(date, -((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7));
 
 const WEEKDAY = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
 const MONTH = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
@@ -175,7 +173,7 @@ const shortDay = (date: string, month: boolean): string =>
  *  Sunday plans the week ahead and calls the one just closed "last week". */
 function currentMonday(today: string): string {
   const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
-  return weekday === 6 || weekday === 0 ? mondayOf(shift(today, 2)) : mondayOf(today);
+  return weekday === 6 || weekday === 0 ? mondayOf(addDays(today, 2)) : mondayOf(today);
 }
 
 /** "This week", "Next week", "In 3 weeks", "Last week", "2 weeks ago": counted from today's week. */
@@ -209,7 +207,7 @@ export function calendarWeeks(
     ...new Set([mondayOf(editionDate), ...days.map((d) => mondayOf(d.date))]),
   ].sort();
   return mondays.map((monday) => {
-    const friday = shift(monday, 4);
+    const friday = addDays(monday, 4);
     const crosses = monday.slice(5, 7) !== friday.slice(5, 7);
     return {
       monday,
