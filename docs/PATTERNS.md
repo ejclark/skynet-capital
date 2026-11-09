@@ -232,6 +232,7 @@ defining acceptance criteria/outcomes"), so its rows point at #7077's AT numbers
 | **Today, then the days** | This week's stories, then each coming trading day's dated events in order down the page. | #7077 (AT5) | #7018 round 3 Q2 A (More) | placed — in #7077's tests |
 | **Week headers** | Days sit under a header per week that names its market closures ("This week · Mon 9 – Fri 13"). | #7077 (AT5b) | #7018 round 3 Q2 B — "I like the layout grouped by day. I would like visual communication about week level grouping when in a weekly view." | placed — in #7077's tests |
 | **A week strip** | The week runs across the screen, one column per day. | — | #7018 round 3 Q2 C (Not) — "our primary view date axis is y-axis, to enable us to scale for the information… I feel like where we should use this will surface at some point" | declined here — banked for a surface with few events a day |
+| **The page pivots as you explore** | A question asked in chat or on a canned button opens the view that answers it, like a room in a dungeon crawl. Each pivot is a page address, so Back retraces the steps and the history is the map. | — | #7018 live review — Eric, 2026-11-09: "this is an emerging pattern to dynamically pivot the page templates as we are exploring in the page. This also highly overlaps with D&D style game play of exploring dungeons, another pattern to model gameplay experience" | seeded — candidate: #7167 slice 3, after its own interrogation (what chat may change, how the member undoes it) |
 
 ## The ledger — trading surfaces
 
