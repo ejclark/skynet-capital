@@ -6,6 +6,7 @@
     {
       "id": "chip-drop",
       "headline": "Chip stocks had their worst day since March 2020. The companies that buy the chips held up.",
+      "line": "Chips' worst day since March 2020",
       "narrator": "Sensors logged the chip sector's hardest hit in over six years. Three earnings reports are inbound before the picture clears.",
       "symbols": ["SMH", "NVDA", "AMD", "CRWV"],
       "facts": [
@@ -85,6 +86,7 @@
     {
       "id": "makers-and-buyers",
       "headline": "The chip makers fell for the week. The companies that buy their chips rose.",
+      "line": "Chip makers fell, buyers rose",
       "narrator": "The makers and the buyers are drifting apart. The next report shows which side pulls harder.",
       "symbols": ["NVDA", "AMD", "AVGO", "TSM", "MSFT", "GOOG", "AMZN", "META", "CRWV", "NBIS"],
       "facts": [
@@ -142,6 +144,7 @@
     {
       "id": "rates",
       "headline": "Hiring beat forecasts by a wide margin, and the 10-year yield still fell on the week.",
+      "line": "Hiring beat; the 10-year fell",
       "narrator": "Rates stayed the steady current under the storm. Tuesday's inflation print tests that next.",
       "symbols": [],
       "facts": [
@@ -252,5 +255,94 @@
       "what": "Monthly options expiration",
       "status": "confirmed"
     }
-  ]
+  ],
+  "sectors": {
+    "source": "Yahoo daily closes (split-adjusted, dividends not added back), fetched 2026-11-09",
+    "closes": {
+      "SPY": {
+        "2025-12-31": 681.92,
+        "2026-10-06": 779.09,
+        "2026-10-30": 755.72,
+        "2026-11-05": 733,
+        "2026-11-06": 735.29
+      },
+      "XLK": {
+        "2025-12-31": 143.97,
+        "2026-10-06": 202,
+        "2026-10-30": 179.51,
+        "2026-11-05": 162.38,
+        "2026-11-06": 164.74
+      },
+      "XLC": {
+        "2025-12-31": 117.72,
+        "2026-10-06": 111.65,
+        "2026-10-30": 99.9,
+        "2026-11-05": 104.34,
+        "2026-11-06": 104.79
+      },
+      "XLV": {
+        "2025-12-31": 154.8,
+        "2026-10-06": 167.09,
+        "2026-10-30": 184.87,
+        "2026-11-05": 184.91,
+        "2026-11-06": 184.8
+      },
+      "XLF": {
+        "2025-12-31": 54.77,
+        "2026-10-06": 54.01,
+        "2026-10-30": 56.51,
+        "2026-11-05": 57.5,
+        "2026-11-06": 57.16
+      },
+      "XLE": {
+        "2025-12-31": 44.71,
+        "2026-10-06": 63.75,
+        "2026-10-30": 70.02,
+        "2026-11-05": 61.63,
+        "2026-11-06": 61.62
+      },
+      "XLY": {
+        "2025-12-31": 119.41,
+        "2026-10-06": 111.72,
+        "2026-10-30": 115.38,
+        "2026-11-05": 117.64,
+        "2026-11-06": 117.58
+      },
+      "XLP": {
+        "2025-12-31": 77.68,
+        "2026-10-06": 81.8,
+        "2026-10-30": 89.42,
+        "2026-11-05": 91.25,
+        "2026-11-06": 90.08
+      },
+      "XLI": {
+        "2025-12-31": 155.12,
+        "2026-10-06": 171.58,
+        "2026-10-30": 167.4,
+        "2026-11-05": 162.47,
+        "2026-11-06": 162.67
+      },
+      "XLU": {
+        "2025-12-31": 42.69,
+        "2026-10-06": 41.16,
+        "2026-10-30": 43.43,
+        "2026-11-05": 43.3,
+        "2026-11-06": 43.13
+      },
+      "XLRE": {
+        "2025-12-31": 40.35,
+        "2026-10-06": 41.1,
+        "2026-10-30": 43.17,
+        "2026-11-05": 44.3,
+        "2026-11-06": 44
+      },
+      "XLB": {
+        "2025-12-31": 45.35,
+        "2026-10-06": 49.73,
+        "2026-10-30": 52.74,
+        "2026-11-05": 52.33,
+        "2026-11-06": 51.95
+      }
+    }
+  }
 }

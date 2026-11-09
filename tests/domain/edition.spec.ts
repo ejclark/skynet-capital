@@ -23,6 +23,7 @@ function valid(): Record<string, unknown> {
       {
         id: "lead",
         headline: "Chip stocks fell hard.",
+        line: "Chips fell hard",
         narrator: "Sensors logged a hard hit.",
         symbols: ["SMH"],
         facts: [{ label: "SMH", value: "−11.2%", move: "down" }],
@@ -94,6 +95,13 @@ describe("the edition record", () => {
     expect(() => parse(withStory({ more: [{ text: "Up.", mark: "measured" }] }))).toThrow(
       /no source/,
     );
+  });
+
+  it("holds each story's one line to what fits beside its number at 390 (round 3, AT4)", () => {
+    expect(() => parse(withStory({ line: undefined }))).toThrow(/line must be one line/);
+    expect(() => parse(withStory({ line: "x".repeat(35) }))).toThrow(/at most 34/);
+    expect(() => parse(withStory({ line: "Chips fell\nhard" }))).toThrow(/one line/);
+    expect(() => parse(withStory({ line: "A chance to buy" }))).toThrow(/good to buy/);
   });
 
   it("holds the narrator to one original line (criterion 4)", () => {

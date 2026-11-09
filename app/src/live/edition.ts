@@ -1,4 +1,5 @@
 import { dayLabel } from "./book-events";
+import type { SectorsView } from "./edition-sectors";
 
 /**
  * The day's edition, client side (#7077) — mirrors `EditionView` in `src/domain/edition.ts`. The
@@ -40,6 +41,8 @@ export type EditionReport = EditionDate & { readonly passed?: true };
 export interface EditionStory {
   readonly id: string;
   readonly headline: string;
+  /** The headline cut to one line, drawn beside the lead fact's number (AT4). */
+  readonly line: string;
   readonly narrator?: string;
   readonly symbols: readonly string[];
   readonly facts: readonly EditionFact[];
@@ -56,6 +59,8 @@ export interface Edition {
   readonly ageDays: number;
   readonly stories: readonly EditionStory[];
   readonly next: readonly EditionDate[];
+  /** The whole market's moves, when the edition carries its closes (AT1–AT3). */
+  readonly sectors?: SectorsView;
 }
 
 export interface EditionView {
@@ -112,3 +117,27 @@ export function staleLine(edition: Edition): string | undefined {
   if (edition.ageDays <= STALE_AFTER_DAYS) return undefined;
   return `No newer edition has been written yet, so this news is ${edition.ageDays} days old.`;
 }
+
+/** One coming trading day on the calendar, and its dated events in order (AT5). */
+export interface CalendarDay {
+  readonly date: string;
+  readonly events: readonly EditionDate[];
+}
+
+/** What's next, grouped by day, in date order (the server already cut the passed ones). */
+export function calendarDays(next: readonly EditionDate[]): CalendarDay[] {
+  const days: CalendarDay[] = [];
+  for (const d of [...next].sort((a, b) => a.date.localeCompare(b.date))) {
+    const last = days.at(-1);
+    if (last?.date === d.date) days[days.length - 1] = { ...last, events: [...last.events, d] };
+    else days.push({ date: d.date, events: [d] });
+  }
+  return days;
+}
+
+/** The stories that wait on a dated event: the ones that list it among their reports (◆, AT5). */
+export const waitingOn = (
+  event: EditionDate,
+  stories: readonly EditionStory[],
+): readonly EditionStory[] =>
+  stories.filter((s) => s.reports.some((r) => r.date === event.date && r.what === event.what));
