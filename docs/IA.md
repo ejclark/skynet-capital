@@ -790,21 +790,34 @@ not one of §3's ten keys; the "via beta-scout" chip explains itself only in a `
 
 Not one of the seven wargamed groups: a **home of homes**, the page sign-in opens, holding each
 group's answer as a joint line and copying no group's section. Decided on #6948 (2026-11-07) and
-placed by #7018's redesign rounds (2026-11-07/08); the build is #7077.
+placed by #7018's redesign rounds (2026-11-07/09); the build is #7077, and round 3's acceptance
+tests (AT1–AT9) are its slice 1b.
 
 | | |
 |---|---|
 | **Home** | `/app/` (today a redirect to `/leaderboard`, `app/src/routes/index.tsx:21`; a member with no account still lands on onboarding). The first tab ("Chronicles", his name; fork d on #7018). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
 | **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests) · what the party asked in a campaign: each question, who asked it by display name and what its research found, for every member who can read the campaign (#6949 slice 6, `GET /api/campaigns/questions`) |
-| **Holds, each with one owner** | the edition: each story leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, quick questions as fallbacks, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
+| **Holds, each with one owner** | the market overview: all 11 GICS sectors and the S&P 500, one SPDR fund each, with each one's move over Day · Week · Month · YTD and where its price sits in its 20-day range, as lines or tiles (#7077 slice 1b, AT1–AT3 and AT8) · the edition as one line per story and dated event on a vertical calendar, under week headers that name closures, details on tap: each story leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), with one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question in a one-line box after the overview, quick questions as fallbacks, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
 | **Hands on** | the owner-fired ticket with exits → Trade · a story's ledger → R&D · who you are → the character sheet (#7019) · standings → the Leaderboard |
-| **At 390, in order** | your question box · the lead story's coming reports, then what moved · its ask · quests by source |
+| **At 390, in order** | the market overview, all 12 rows on the first screen · your question box, one line · this week's stories, then each coming trading day's events, one line each · quests by source |
 | **Not here** | a "what's new" part (#7018 r1: "vague, ambiguous direction. no thanks"); a humans-vs-bots grouping or cross-account metrics (#5157: "humans/bots is a property/filter.. not a grouping"); anything about how the app gets built (#7018 comment 1) |
 | **Falsifier** | by 2026-12-15, members open the Leaderboard before the landing page's first story on most sign-ins → home is the standings after all; or two child plans build the same piece of this page → the owner map is wrong |
 
 Eric, round 0 (2026-11-07): *"I don't care for the leaderboard as the landing page."* Round 1
 (2026-11-08): *"I like having actionable items at the top.. like the search engine experience as
-the entry point to direct you to where you want."*
+the entry point to direct you to where you want."* Round 3, on the shipped page (2026-11-08):
+*"Shouldn't we start with a wholestick overview - there are 11 official GICS stock market sectors…
+If we're able to compact this to one liners, we'd be able to leverage/integrate a vertical calendar
+format."*
+
+**Why the question box sits under the overview, not on top.** Round 3's AT9 moved it, and Eric
+settled the clash with his round-1 note on 2026-11-09: *"This was geared towards singular-ish path
+oriented workflows. The view we're working on is very high level entry point, with the ability to
+search and drill into more granular views. In general, the highest impact/value (i.e. actionable
+items) want to be the most accessible, at the top. it is not a hard rule.."* This page is an entry
+point, so its highest-value item is the whole market at a glance, and the question box is how a
+member drills in from it. The general rule, a path workflow leading with its next step and an
+entry point leading with its overview, is in `.claude/rules/member-surfaces.md`.
 
 ## 6. The joints — where two groups meet, and what renders on whose page
 

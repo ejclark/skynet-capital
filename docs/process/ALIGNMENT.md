@@ -67,5 +67,8 @@ opens rule 3's graduation PR: a session does both.
 | 2026-11-08 | screen design (taste) | #6948 · the landing page's first round: close, he adds or cuts a section? | Close; he adds or cuts a section (medium) | Cut "what's new"; asked each story to fold to its key facts | match |
 | 2026-11-08 | screen design (taste) | #7018 round 2 Q2 · where do the coming reports sit? | On the story they bear on (medium) | Build "Dates on the story"; lead with the events and add up / down / volatile icons | match |
 | 2026-11-08 | screen design (taste) | #7018 round 2 Q1 · confirm your own question first | As drawn (high) | Unanswered; decided on his behalf at his ask ("make judgement calls on my behalf to get this movement rolling") | decided on his behalf |
+| 2026-11-08 | screen design (taste) | #7018 round 3 Q1 · how do the 11 sectors read: lines, tiles or bars? | C, bars (no confidence stated; the simulated Eric's pick, #7118) | More of all three; on his second read, bars "fully redundant with the percentage change" | miss |
+| 2026-11-08 | screen design (taste) | #7018 round 3 Q2 · how do the stories sit on the calendar? | A, today then the days (no confidence stated; the simulated Eric's pick, #7118) | More of A, Not the week strip; his second read added B's grouping by day | match |
+| 2026-11-09 | screen design (taste) | #7018 round 3 · does round 1's "actionable items at the top" put the question box back above the overview (AT9)? | — (no prediction recorded; AT9 shipped as the default) | No: that note "was geared towards singular-ish path oriented workflows" | not predicted |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.
