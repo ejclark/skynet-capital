@@ -63,7 +63,13 @@ function Masthead({ view }: { readonly view: EditionView }): ReactElement {
 function Landing(): ReactElement {
   const view = useQuery({ queryKey: ["edition"], queryFn: fetchEdition, staleTime: 60_000 });
   // The member's quests load beside the news and never hold it up; one that fails shows nothing.
-  const quests = useQuery({ queryKey: ["quests"], queryFn: fetchQuests, staleTime: 60_000 });
+  // A read can cost ~30 broker calls per held name (the guidance read), so focus never refetches.
+  const quests = useQuery({
+    queryKey: ["quests"],
+    queryFn: fetchQuests,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
   if (view.isPending)
     return (
       <PageFrame>
