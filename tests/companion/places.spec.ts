@@ -1,6 +1,7 @@
 import { COMPANION_SYSTEM_PROMPT } from "../../src/companion/companion-system-prompt.js";
 import {
   BOARD_RANKINGS,
+  LANDING_ROW_RULE,
   PLACE_LINK_RULE,
   PLACES,
   POSITION_ROW_RULE,
@@ -93,7 +94,8 @@ describe("PLACES — the list itself", () => {
 
   it("holds router paths: rooted, with no basepath, query or fragment", () => {
     for (const { path } of PLACES) {
-      expect(path).toMatch(/^\/[a-z-]+(\/[a-z-]+)*$/);
+      // The landing page is the root, `/` (#7167); every other place is a named segment.
+      expect(path).toMatch(/^\/([a-z-]+(\/[a-z-]+)*)?$/);
       expect(path.startsWith("/app")).toBe(false);
     }
   });
@@ -187,5 +189,28 @@ describe("POSITION_ROW_RULE — link the row, never retype or compute its figure
   it("quotes a figure verbatim from the tool and never computes one", () => {
     expect(POSITION_ROW_RULE).toContain("quote the tool's field verbatim (unrealizedPl");
     expect(POSITION_ROW_RULE).toContain("Never compute a P/L, a change, a percentage or a total");
+  });
+});
+
+// #7167 slice 2: asked from the landing page, she links a story or an event's row by its key.
+describe("the landing page's rows", () => {
+  it("lets her link a story, an event and the calendar on the landing page", () => {
+    expect(placeHref("/#story-ai-capex")).toBe("/#story-ai-capex");
+    expect(placeHref("/#event-2026-11-10-coreweave-q3-results")).toBe(
+      "/#event-2026-11-10-coreweave-q3-results",
+    );
+    expect(placeHref("/#calendar")).toBe("/#calendar");
+  });
+
+  it("still refuses a protocol-relative path dressed as the landing page", () => {
+    expect(placeHref("//evil.com/#story-x")).toBeUndefined();
+  });
+
+  it("tells her to link the rows the On screen line lists, name at most 3, and not restate them", () => {
+    expect(LANDING_ROW_RULE).toContain('"On screen" line');
+    expect(LANDING_ROW_RULE).toContain("at most 3");
+    expect(LANDING_ROW_RULE).toContain("(/#calendar)");
+    expect(LANDING_ROW_RULE).toMatch(/Don't restate a date, price, percentage or dollar figure/);
+    expect(COMPANION_SYSTEM_PROMPT).toContain(LANDING_ROW_RULE);
   });
 });

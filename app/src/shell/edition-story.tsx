@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { storyAnchor } from "../../../src/domain/edition-keys";
 import {
   dateLine,
   type EditionFact,
@@ -99,10 +100,12 @@ export function EditionStoryLine({
   /** The story's asks (slice 2), drawn under the rest so the story stays key facts first. */
   readonly children?: ReactNode;
 }): ReactElement {
-  const headingId = `story-${story.id}`;
+  // The row carries the story's key as its anchor (#7167): Moneypenny's `/#story-<id>` lands here.
+  const anchor = storyAnchor(story.id);
+  const headingId = `${anchor}-headline`;
   const [first] = story.facts;
   return (
-    <li className={lead ? "story story--lead" : "story"}>
+    <li id={anchor} className={lead ? "story story--lead" : "story"}>
       <details className="story-row">
         <summary className="ecal-line">
           <span className="ecal-mark">{first ? <Shape move={first.move} /> : null}</span>

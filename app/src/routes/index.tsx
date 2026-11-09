@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+import { editionEventKey } from "../../../src/domain/edition-keys";
 import { parseBoardMetric } from "../live/board";
-import { asOfLine, type EditionView, fetchEdition, staleLine } from "../live/edition";
+import { asOfLine, type Edition, type EditionView, fetchEdition, staleLine } from "../live/edition";
+import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
+import { useLandOnEdition } from "../shell/edition-anchor";
 import { EditionCalendar } from "../shell/edition-calendar";
 import { PageFrame } from "../shell/frame";
 import { AskBox, StoryAsk } from "../shell/landing-ask";
@@ -22,6 +25,10 @@ import { SectorOverview } from "../shell/sector-overview";
  * tap to its reports, what moved, the rest and its asks (slice 2, `shell/landing-ask.tsx`). Round 3
  * replaced slice 1's story cards (#7018: "the sections in the screenshot need heavily condense").
  * The quests' slot comes with slice 3 (#7028), under their one-line stories, never as a placeholder.
+ *
+ * Moneypenny points into this page by key (#7167): the page publishes the stories and events it
+ * shows with every chat question (`live/page-keys.ts`), and her `/#story-<id>` and `/#event-<key>`
+ * links land on those rows (`shell/edition-anchor.ts`).
  *
  * An old bookmark or a shared compare link (`/?by=`, `?a=`, `?b=`) was always a member asking for
  * the board, so it still goes there with its query intact (#2321's promise).
@@ -54,8 +61,22 @@ function Masthead({ view }: { readonly view: EditionView }): ReactElement {
   );
 }
 
+/** What this page shows, by key (#7167 slice 1): every story, and every event on the calendar. */
+function editionKeys(edition: Edition | null | undefined): PageKeys | undefined {
+  if (!edition) return undefined;
+  return {
+    edition: edition.date,
+    stories: edition.stories.map((s) => s.id),
+    events: edition.next.map(editionEventKey),
+  };
+}
+
 function Landing(): ReactElement {
   const view = useQuery({ queryKey: ["edition"], queryFn: fetchEdition, staleTime: 60_000 });
+  const keys = editionKeys(view.data?.edition);
+  // The chat sends these with a question asked from here, and her links land on the same rows.
+  usePublishPageKeys(keys);
+  useLandOnEdition(keys ? `${keys.edition}:${keys.stories.length}:${keys.events.length}` : "");
   if (view.isPending)
     return (
       <PageFrame>

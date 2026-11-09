@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { CALENDAR_ANCHOR, editionEventKey, eventAnchor } from "../../../src/domain/edition-keys";
 import { dayLabel } from "../live/book-events";
 import {
   type CalendarDay,
@@ -28,7 +29,9 @@ import { EditionStoryLine } from "./edition-story";
  * Fri 20", each naming the market's closures and early closes that week, so a member planning around
  * Thanksgiving sees the shut day before the days themselves. Dates run down the page, never across.
  * Slice 1d replaces this component with R&D's market calendar (AT10); `calendarWeeks` is the part
- * that carries over.
+ * that carries over, and so are the anchors (#7167): each event row's `event-<key>`, the section's
+ * `calendar`, and the story rows' `story-<id>` (in `edition-story.tsx`). Moneypenny's links land on
+ * them; `app/tests/shell/edition-anchor.spec.tsx` fails if the page stops carrying them.
  */
 
 const DIAMOND = "◆";
@@ -48,7 +51,7 @@ function EventLine({
   const waiting = waitingOn(event, stories);
   const status = STATUS[event.status];
   return (
-    <li className="ecal-event">
+    <li id={eventAnchor(editionEventKey(event))} className="ecal-event">
       <details className="story-row">
         <summary className="ecal-line">
           <span className="ecal-mark">
@@ -170,7 +173,7 @@ export function EditionCalendar({
 }): ReactElement {
   const weeks = calendarWeeks(edition.date, calendarDays(edition.next), today);
   return (
-    <section className="ecal" aria-labelledby="ecal-title">
+    <section id={CALENDAR_ANCHOR} className="ecal" aria-labelledby="ecal-title">
       <div className="ecal-head">
         <h2 id="ecal-title" className="section-title">
           The calendar
