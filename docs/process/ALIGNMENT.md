@@ -80,5 +80,6 @@ opens rule 3's graduation PR: a session does both.
 | 2026-11-09 | screen design (taste) | #7018 round 8 Q2 · where does the Eye watch from while the chat is open? | A, between the chat and the page (medium) | Build A | match |
 | 2026-11-09 | screen design (taste) | #7018 round 8 Q3 · the spark with the spotlight folded in, as drawn | Build as drawn (medium) | Build A | match |
 | 2026-11-09 | screen design (taste) | #7018 round 8 Q4 · a priced band, or the 20 closes inside the band? | B, the 20 closes (medium) | More of B | match |
+| 2026-11-09 | screen design (taste) | #7018 round 9 · where does the tower live: right then between, or a left rail? | B, a left rail (low) | Build B | match |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.
