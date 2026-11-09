@@ -28,10 +28,11 @@ import { FastTrackWalk } from "./fast-track-walk";
 
 /**
  * THE LANDING PAGE'S ASKS, DRAWN (#7077 slice 2). The words and where each ask goes live in
- * `live/landing-ask.ts`; this file draws them. The ask box is a one-line entry right under the whole
- * market (slice 1c, AT9): the page is an entry point, so the overview leads and the box is how a
- * member drills in (`.claude/rules/member-surfaces.md`). Its question is the field's own words, read
- * aloud through a hidden label, with the quick questions under it as fallbacks. A story's ask sits under its tile: the quick question opens the
+ * `live/landing-ask.ts`; this file draws them. The ask box leads the page (slice 1d, AT9 as revised
+ * on the drawn frame): the page is an entry point whose job is the member's goal, and the market is
+ * one avenue to it (`.claude/rules/member-surfaces.md`). Its question is the field's own words, read
+ * aloud through a hidden label, with the quick questions under it as fallbacks, on ONE row that
+ * scrolls sideways at 390 so all 12 market rows still clear the fold (AT1; #7018 round 6's check). A story's ask sits under its tile: the quick question opens the
  * record in place (a native disclosure, nothing to build), and "Ask your own" opens a one-line form.
  *
  * The first quick question opens its card walk in place under the chips (#7034 slice 2,
@@ -42,7 +43,7 @@ import { FastTrackWalk } from "./fast-track-walk";
  *  screen; it never waits on the panel's own loading (#7165). False when refused. */
 const askChat = (text: string): boolean => useMoneypenny.getState().ask(text);
 
-/** Under the whole market: the member's own question first, two quick questions as fallbacks. */
+/** Atop the page: the member's own question first, two quick questions as fallbacks. */
 export function AskBox(): ReactElement {
   const [text, setText] = useState("");
   const [walking, setWalking] = useState(false);

@@ -200,8 +200,8 @@
 }
 
 /* The ask box (#7077 slice 2): the member's own question first, two quick questions under it.
- * Since slice 1c (AT9) a one-line field under the whole market, its question its placeholder, then
- * one wrapping row of chips. The chips are outlined buttons: shape and words, never a colour alone. */
+ * Since slice 1d (AT9 as revised) a one-line field atop the page, its question its placeholder, then
+ * one row of chips. The chips are outlined buttons: shape and words, never a colour alone. */
 .ask-box {
   display: flex;
   flex-direction: column;
@@ -254,15 +254,23 @@
   font-family: var(--mono);
   font-size: var(--text-sm);
 }
+/* The canned paths sit on ONE row that scrolls sideways (#7077 AT9 as revised): two lines of chips
+ * pushed the 12th market row to 887px, past the 844px fold; one row lands it at ~838 (AT1). */
 .ask-quick {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
+  scrollbar-width: none;
+}
+.ask-quick > li {
+  flex: none;
 }
 .ask-chip {
+  white-space: nowrap;
   min-height: 36px;
   padding: 6px 12px;
   border: 1px solid var(--border);

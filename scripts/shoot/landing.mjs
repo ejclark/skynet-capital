@@ -1,17 +1,18 @@
-// Visual harness for the landing page (/app/, #7077): the whole market, then the calendar of
-// one-line stories and events (round 3, slices 1b and 1c), from the REAL built shell over a stub API. The
+// Visual harness for the landing page (/app/, #7077): the question box, the whole market, then R&D's
+// market calendar over one-line stories and events (slices 1b–1d), from the REAL built shell over a stub API. The
 // edition is the checked-in one, read through the same `editionView` the server answers with, at a
 // pinned instant so its dated items are cut the same way every run. Frames:
-//   · landing-phone          — 390, the first screen: all 12 fund rows (Lines, Week) with their 20-day
-//                              range marks, the question box one line under them
+//   · landing-phone          — 390, the first screen: the question box and its canned paths on one
+//                              row, then all 12 fund rows (Lines, Week) with their 20-day range marks
 //   · landing-phone-lines    — 390, the same numbers as Lines, period Month
 //   · landing-phone-tiles    — 390, the same numbers as Tiles, period YTD
-//   · landing-phone-calendar — 390, the calendar: week headers naming closures, the week's stories,
-//                              then the coming days, ◆ marked
+//   · landing-phone-calendar — 390, the calendar: R&D's head (arrows, range, Day · Week · Month),
+//                              week headers naming closures, the week's stories, then the coming days, ◆ marked
 //   · landing-phone-story    — 390, the lead story opened from its one line
 //   · landing-phone-ask      — 390, the lead story's asks: "Is this a chance to buy?" answered by the
 //                              record, and what members asked about its names (#7077 slice 2)
 //   · landing-desktop        — 1280, the same page given room, no new concepts
+//   · landing-desktop-calendar — 1280, the calendar with R&D's month grid beside its rows (AT11)
 // JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && npm run shoot:landing [outdir]
 import { campaignById } from "../../src/domain/campaigns.ts";
@@ -93,5 +94,12 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await page.reload();
 await page.locator(".sectors-rows--lines").waitFor();
 await shoot("landing-desktop");
+
+await page.evaluate(() => {
+  const top = document.querySelector(".ecal")?.getBoundingClientRect().top ?? 0;
+  window.scrollBy(0, top - 80);
+});
+await page.locator(".ecal-grid .eh-grid").waitFor();
+await shoot("landing-desktop-calendar");
 
 await close();
