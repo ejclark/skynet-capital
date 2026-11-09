@@ -10,6 +10,7 @@ import {
   chatQuestion,
   FAST_TRACK_QUESTION,
   fetchPartyQuestions,
+  holderLine,
   INSTINCT_QUESTION,
   NO_RECORD,
   type PartyQuestion,
@@ -36,12 +37,9 @@ import { FastTrackWalk } from "./fast-track-walk";
  * `fast-track-walk.tsx`); the second still goes to the chat.
  */
 
-/** Hand a question to the chat: open the rail and send it as the member's own message. */
-async function askChat(text: string): Promise<boolean> {
-  const mp = useMoneypenny.getState();
-  await mp.openRail();
-  return mp.send(text);
-}
+/** Hand a question to the chat as the member's own message. The rail opens with it already on
+ *  screen; it never waits on the panel's own loading (#7165). False when refused. */
+const askChat = (text: string): boolean => useMoneypenny.getState().ask(text);
 
 /** The top of the page: the member's own question first, two quick questions as fallbacks. */
 export function AskBox(): ReactElement {
@@ -49,13 +47,13 @@ export function AskBox(): ReactElement {
   const [walking, setWalking] = useState(false);
   const inputId = useId();
   const walkId = useId();
-  const submit = async (e: FormEvent): Promise<void> => {
+  const submit = (e: FormEvent): void => {
     e.preventDefault();
-    if (text.trim() && (await askChat(text))) setText("");
+    if (text.trim() && askChat(text)) setText("");
   };
   return (
     <section className="ask-box" aria-label="Ask">
-      <form className="ask-form" onSubmit={(e) => void submit(e)}>
+      <form className="ask-form" onSubmit={submit}>
         <label className="ask-label" htmlFor={inputId}>
           What do you want to do today?
         </label>
@@ -91,7 +89,7 @@ export function AskBox(): ReactElement {
             </li>
           ) : (
             <li key={q}>
-              <button type="button" className="ask-chip" onClick={() => void askChat(q)}>
+              <button type="button" className="ask-chip" onClick={() => askChat(q)}>
                 {q}
               </button>
             </li>
@@ -100,7 +98,7 @@ export function AskBox(): ReactElement {
       </ul>
       {walking ? (
         <div id={walkId}>
-          <FastTrackWalk onAsk={askChat} />
+          <FastTrackWalk onAsk={(q) => Promise.resolve(askChat(q))} />
         </div>
       ) : null}
     </section>
@@ -141,6 +139,7 @@ function PartyQuestionItem({ q }: { readonly q: PartyQuestion }): ReactElement {
         <span className="num">{q.subject}</span> · asked by {askedByLine(q.askedBy)} ·{" "}
         <span className="story-mark">{questionState(q)}</span>
       </p>
+      <p className="party-q-holder">{holderLine(q)}</p>
       {finding ? <p className="party-q-found">{finding.idea}</p> : null}
     </li>
   );
@@ -172,14 +171,14 @@ function OwnQuestion({
         void client.invalidateQueries({ queryKey: ["party-questions", target.campaign] });
     },
   });
-  const submit = async (e: FormEvent): Promise<void> => {
+  const submit = (e: FormEvent): void => {
     e.preventDefault();
     if (!text.trim()) return;
     if (target.kind === "campaign") ask.mutate();
-    else if (await askChat(chatQuestion(story, text))) setText("");
+    else if (askChat(chatQuestion(story, text))) setText("");
   };
   return (
-    <form className="ask-own" onSubmit={(e) => void submit(e)}>
+    <form className="ask-own" onSubmit={submit}>
       <label className="visually-hidden" htmlFor={inputId}>
         Your question about this story
       </label>

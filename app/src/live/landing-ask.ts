@@ -146,6 +146,22 @@ export function questionState(q: PartyQuestion, laneReads: boolean = LANE_READS_
   return "No finding yet";
 }
 
+/**
+ * WHO HOLDS IT (#7034 slice 4, criterion 9): one plain line naming the job of whoever has the
+ * question, worded from the "research desk" station in docs/agents/seats.json (the market-event
+ * calendar seat; org-chart.md → *The crew on the deck*). It says who and what, never when:
+ * the wait stays `questionState`'s to state, so the line can't promise a turn the lane isn't
+ * giving (LANE_READS_QUEUE). Build seats never show here (#6948: the game never explains how the app
+ * gets built).
+ */
+export const HOLDER = "The research desk";
+
+export function holderLine(q: PartyQuestion): string {
+  if (q.state === "found") return `${HOLDER} answered this question about ${q.subject}.`;
+  if (q.state === "no-finding-yet") return `${HOLDER} looked at ${q.subject} and has nothing yet.`;
+  return `${HOLDER} holds this question about ${q.subject}.`;
+}
+
 // ── Asking in the campaign (POST /api/campaigns/ask) ────────────────────────────────────────────
 
 export type AskReply =
