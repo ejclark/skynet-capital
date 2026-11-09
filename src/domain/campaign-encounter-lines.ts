@@ -10,8 +10,9 @@
  *
  * Paper only; educational. Nothing here recommends a move; the member picks, the tape scores it.
  */
-import type { Claim, Encounter, EncounterSet, HouseVerdict } from "./campaign-encounters.js";
-import { STALE_AFTER_DAYS } from "./campaign-encounters.js";
+import type { Encounter, EncounterSet } from "./campaign-encounters.js";
+import type { StrategyEncounter } from "./campaign-strategy.js";
+import { type Claim, type HouseVerdict, STALE_AFTER_DAYS } from "./campaign-verdicts.js";
 import type { Evidence } from "./campaigns.js";
 
 const MARK_WORDS: Readonly<Record<Evidence, string>> = {
@@ -32,7 +33,22 @@ const letter = (i: number): string => String.fromCharCode(65 + i);
 export const claimLine = (c: Claim): string =>
   `${c.text} (${MARK_WORDS[c.mark]} · ${c.source} · ${c.date})`;
 
+/**
+ * A build-strategy encounter: the question, its choices, every door with why it is open or shut,
+ * and the house's word on the name. No reveal: a pick opens a form, it is not scored.
+ */
+function strategyLines(e: StrategyEncounter): string[] {
+  return [
+    `Q. ${e.question}`,
+    ...e.choices.map((c, i) => `   ${letter(i)}. ${c.label}`),
+    "   The doors:",
+    ...e.doors.map((d) => `     - ${d.label} (${d.open ? "open" : "shut"}): ${d.why}`),
+    `   The house's word: ${VERDICT_WORDS[e.house.verdict]}. ${e.house.why}`,
+  ];
+}
+
 function encounterLines(e: Encounter): string[] {
+  if (e.kind === "build-strategy") return strategyLines(e);
   const out = [`Q. ${e.question}`, ...e.choices.map((c, i) => `   ${letter(i)}. ${c.label}`)];
   if (e.kind === "find-names")
     out.push(

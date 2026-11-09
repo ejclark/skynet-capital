@@ -20,8 +20,8 @@ const countIn = (category: CompanionFixtureCategory) =>
 
 describe("COMPANION_FIXTURES", () => {
   describe("when read as a suite", () => {
-    it("holds the fifteen scripted conversations", () => {
-      expect(COMPANION_FIXTURES).toHaveLength(15);
+    it("holds the sixteen scripted conversations", () => {
+      expect(COMPANION_FIXTURES).toHaveLength(16);
     });
 
     it("gives every fixture a unique id", () => {
@@ -36,7 +36,7 @@ describe("COMPANION_FIXTURES", () => {
         unknown: countIn("unknown"),
         size: countIn("size"),
         filing: countIn("filing"),
-      }).toEqual({ grounding: 5, pushback: 3, unknown: 3, size: 2, filing: 2 });
+      }).toEqual({ grounding: 6, pushback: 3, unknown: 3, size: 2, filing: 2 });
     });
 
     it("prefixes each id with its own category so a report line names what failed", () => {
@@ -88,6 +88,15 @@ describe("COMPANION_FIXTURES", () => {
       const { context } = byId("grounding-trade-count");
       expect(context).toContain("ladder rungs earned 2 of 6");
       expect(context).toContain("next up 201 Sell a cash-secured put");
+    });
+  });
+
+  describe("when a fixture asks about a held position (#7167)", () => {
+    it("hands her each row's address, built by the real holding line", () => {
+      const { context } = byId("grounding-position-row-link");
+      expect(context).toContain("its row /accounts#pos-NVDA;");
+      expect(context).toContain("its row /accounts#pos-NVDA261218P00100000");
+      expect(context).toContain("the trade ticket for NVDA");
     });
   });
 

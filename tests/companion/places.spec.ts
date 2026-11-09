@@ -1,4 +1,12 @@
-import { BOARD_RANKINGS, PLACE_LINK_RULE, PLACES, placeHref } from "../../src/companion/places.js";
+import { COMPANION_SYSTEM_PROMPT } from "../../src/companion/companion-system-prompt.js";
+import {
+  BOARD_RANKINGS,
+  PLACE_LINK_RULE,
+  PLACES,
+  POSITION_ROW_RULE,
+  placeHref,
+  positionRow,
+} from "../../src/companion/places.js";
 
 // #5238 — the one allow-list of places Moneypenny may link. The panel's link check and the chat
 // prompt both read it; a path not on it never becomes a link, so her words stay plain text.
@@ -147,5 +155,37 @@ describe("PLACE_LINK_RULE — what the prompt tells the model", () => {
   it("keeps the honesty rule: a link goes somewhere and does nothing, and a ticket link never orders", () => {
     expect(PLACE_LINK_RULE).toContain("lands on the review screen, never an order");
     expect(PLACE_LINK_RULE).toContain("never word it as if tapping it did anything");
+  });
+});
+
+// #7167: the page owns the numbers, she owns the pointers. Her link to a position meets the
+// blotter row on one key, `/accounts#pos-<symbol>` (app/src/shell/position-anchor.ts).
+describe("positionRow — a position's address on Profile", () => {
+  it("is the blotter row's own anchor on /accounts, and an allowed link", () => {
+    expect(positionRow("NVDA")).toBe("/accounts#pos-NVDA");
+    expect(placeHref(positionRow("NVDA261218P00100000"))).toBe("/accounts#pos-NVDA261218P00100000");
+  });
+});
+
+describe("POSITION_ROW_RULE — link the row, never retype or compute its figures", () => {
+  it("rides in her system prompt", () => {
+    expect(COMPANION_SYSTEM_PROMPT).toContain(POSITION_ROW_RULE);
+  });
+
+  it("teaches the row link with the symbol exactly as her tool writes it", () => {
+    expect(POSITION_ROW_RULE).toContain(`[your words](${positionRow("SYMBOL")})`);
+    expect(POSITION_ROW_RULE).toContain(
+      "exactly as get_my_positions or the Position line wrote it",
+    );
+  });
+
+  it("caps a reply at 3 named positions, the rest as one link", () => {
+    expect(POSITION_ROW_RULE).toContain("at most 3 positions");
+    expect(POSITION_ROW_RULE).toContain("[N more on Profile](/accounts)");
+  });
+
+  it("quotes a figure verbatim from the tool and never computes one", () => {
+    expect(POSITION_ROW_RULE).toContain("quote the tool's field verbatim (unrealizedPl");
+    expect(POSITION_ROW_RULE).toContain("Never compute a P/L, a change, a percentage or a total");
   });
 });

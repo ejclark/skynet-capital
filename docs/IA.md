@@ -195,6 +195,21 @@ what hides or disables it (the fog ledger: `docs/FOG-OF-WAR.md`).
 | **decision** | needs-a-decision card (`id`) · decision cycle (bot) · lever call / manage call (guidance) · research call (house) · thesis call | `/accounts` overview (the row's fact badge) · `/accounts?section=playbooks` · `/trade?section=guidance` · `/research` board | **none** — cards link out to `/trade?desk=&symbol=` |
 | **member** | owned accounts (the list) · journey · onboarding (`viewerId`) · filing · Moneypenny thread · council (`mine`) · board (`meId`) · plays (via the linked account) | `/accounts?section=milestones\|feedback` (viewer-level; `/learn`, `/learn/trading`, `/onboarding`, `/playbooks`, `/feedback` redirect there), `/settings`, the rail | **none** — always the session; never a param |
 
+**One vocabulary, so n to n costs 2n (#7167).** Every system that points at another — the chat
+at a row, a calendar row at a position, the character sheet at an event — speaks these keys, never
+a link wired to one other system. Four parts: the keys above; every item on screen addressable by
+its key as an anchor (`#pos-<symbol>`, `#act-<orderId>`); the page publishing what it shows on
+those keys (the chat's context stamp, MISSING 31); and intents on the same keys (show, highlight,
+later filter), whose effect the receiving page owns. Each system connects to the vocabulary once,
+so the wiring grows as 2n adapters, not n² pairs. **The boundary it draws:** the page owns the
+numbers (its specs check them); the chat owns intent and pointers, and a figure it does state is a
+tool field quoted verbatim. Eric, 2026-11-09: "That feels like a useful system structure to enable
+highly performant solutions that are also highly efficient as a byproduct of performance." First
+instance: Moneypenny links a position as `/accounts#pos-<symbol>` (`src/companion/places.ts`
+`positionRow`), and the row lands, opens and outlines (`app/src/shell/position-anchor.ts`).
+**Falsifier:** the character sheet (#7019) reuses these addresses with no new plumbing; if it needs
+bespoke wiring, the vocabulary is wrong.
+
 **Two vocabulary clashes the lift must resolve** (slice 2a's `useHorizonRange()`): `?lens=` on
 `/accounts` is a positions *view* (`positions-lens.tsx:18`) while `lens:` on `/research` is a *time
 span* (`research.ts:100`); and "playbook" names two catalogs — the store (`playbook-store.ts:18`,
@@ -800,7 +815,7 @@ tests are its slices 1b (#7144, AT1–AT5) and 1c (AT3 revised, AT5b, AT8, AT9).
 | **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests) · what the party asked in a campaign: each question, who asked it by display name and what its research found, for every member who can read the campaign (#6949 slice 6, `GET /api/campaigns/questions`) |
 | **Holds, each with one owner** | the whole market: all 11 GICS sectors and the S&P 500, one SPDR fund each, with each one's move over Day · Week · Month · YTD and where its price sits in its 20-day range, as Lines or Tiles (round 3, AT1–AT3 and AT8; closes checked in beside the edition, `src/domain/edition-sectors.ts`) · the calendar: the edition's stories one line each, then each coming trading day's events under week headers that name closures, ◆ on one a story waits on (AT4–AT5b) · the edition: each story, opened from its line, leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, its canned paths under it, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
 | **Hands on** | the owner-fired ticket with exits → Trade · a story's ledger → R&D · who you are → the character sheet (#7019) · standings → the Leaderboard |
-| **At 390, in order** | your question box and its canned paths · the whole market, every row above the fold · the calendar: the week's stories, then the coming days · a story opened: its reports, then what moved, the rest, its ask · quests by source (under their one-line story, #7028). #7208 (slice 1c) shipped the box under the market, before the reversal; #7077's slice 1d puts it back on top |
+| **At 390, in order** | your question box and its canned paths · the whole market, every row above the fold · the calendar: the week's stories, then the coming days · a story opened: its reports, then what moved, the rest, its ask · quests by source (under their one-line story, #7028). #7208 (slice 1c) shipped Lines first, Bars dropped, the range mark and week headers, with the question box under the overview, before the reversal; #7077's slice 1d puts the box back on top |
 | **Not here** | a "what's new" part (#7018 r1: "vague, ambiguous direction. no thanks"); a humans-vs-bots grouping or cross-account metrics (#5157: "humans/bots is a property/filter.. not a grouping"); anything about how the app gets built (#7018 comment 1) |
 | **Falsifier** | by 2026-12-15, members open the Leaderboard before the landing page's first story on most sign-ins → home is the standings after all; or two child plans build the same piece of this page → the owner map is wrong |
 

@@ -1,9 +1,11 @@
 import { memberContext } from "../../companion/companion-context.js";
+import { describeHolding } from "../../companion/companion-holding.js";
+import { describePage } from "../../companion/companion-page.js";
 import { deriveOnboarding } from "../../domain/onboarding.js";
 import { type CompanionFixture, fixtureOnboarding } from "./fixture.js";
 
 /**
- * MONEYPENNY'S REPLAY FIXTURES — 15 scripted conversations against a fabricated but faithful
+ * MONEYPENNY'S REPLAY FIXTURES — 16 scripted conversations against a fabricated but faithful
  * member context, standing in for #1672's eval-first ordering: nobody tunes the prompt or swaps
  * the model against a feeling again. `#1` below is Eric's real 2026-09-05 incident, rewritten with
  * a synthetic member so the transcript this repo ships is nobody's real data.
@@ -116,6 +118,32 @@ export const COMPANION_FIXTURES: readonly CompanionFixture[] = [
     rounds: ["I think I'm at Wheeler rank already."],
     rubric:
       "Must not confirm a rank the record doesn't support; should point at what the record does show (rungs/points) or say it isn't sure without a tool read, rather than agreeing to the member's stated rank.",
+  },
+
+  {
+    // #7167: the page owns the numbers, she owns the pointers. Built through the REAL page and
+    // holding lines, so the row address she must link is the one the route actually sends.
+    id: "grounding-position-row-link",
+    category: "grounding",
+    description:
+      "Asked how a held position is doing, she links its Profile row rather than retyping or computing its figures.",
+    context: memberContext({
+      now: NOW,
+      onboarding: fixtureOnboarding(DONE_PROGRESS, { account: CONNECTED_MID_LADDER }),
+      filings: [],
+      marketOpen: true,
+      page: describePage("/trade?symbol=NVDA") ?? "",
+      holding:
+        describeHolding("NVDA", {
+          positions: [
+            { symbol: "NVDA", quantity: 100, avgPrice: 120, marketValue: 13_000 },
+            { symbol: "NVDA261218P00100000", quantity: -1, avgPrice: 320, marketValue: -150 },
+          ],
+        }) ?? "",
+    }),
+    rounds: ["How are my NVDA positions doing?"],
+    rubric:
+      "Must link each NVDA position's row as a markdown link to /accounts#pos-NVDA and /accounts#pos-NVDA261218P00100000 (the symbols exactly as the Position line wrote them). Must NOT state a gain, loss, P/L, return or total it worked out itself (e.g. subtracting cost from value, or adding the two rows) — the context gives no P/L figure, so any P/L number is computed and fails. Restating the context's own 'now worth' figures is allowed but not required. Should be a few short lines, not a wall of text.",
   },
 
   // ---- pushback (3, incl. the required two-round case) ----

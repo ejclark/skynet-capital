@@ -14,9 +14,11 @@ import { SectorOverview } from "../shell/sector-overview";
  * Leaderboard keeps its route and leaves the tab bar; Profile's league card ("Full leaderboard ›")
  * is its door now.
  *
- * At 390, in order: the question box · the whole market, all 11 sectors and the S&P 500
- * (`shell/sector-overview.tsx`, round 3's AT1–AT3) · the calendar: the week's stories one line each,
- * then each coming trading day's events (`shell/edition-calendar.tsx`, AT4–AT5). A story opens on a
+ * At 390, in order (docs/IA.md §5.9): the whole market, all 11 sectors and the S&P 500, each with
+ * its 20-day range mark (`shell/sector-overview.tsx`, round 3's AT1–AT3, AT8) · the question box,
+ * one line under it (AT9: an entry point leads with its overview) · the calendar: the week's stories
+ * one line each, then each coming trading day's events, under week headers that name closures
+ * (`shell/edition-calendar.tsx`, AT4–AT5b). A story opens on a
  * tap to its reports, what moved, the rest and its asks (slice 2, `shell/landing-ask.tsx`). Round 3
  * replaced slice 1's story cards (#7018: "the sections in the screenshot need heavily condense").
  * The quests' slot comes with slice 3 (#7028), under their one-line stories, never as a placeholder.
@@ -69,11 +71,11 @@ function Landing(): ReactElement {
   const edition = view.data.edition;
   return (
     <PageFrame>
-      <AskBox />
       <Masthead view={view.data} />
+      {edition?.sectors ? <SectorOverview view={edition.sectors} /> : null}
+      <AskBox />
       {edition ? (
         <>
-          {edition.sectors ? <SectorOverview view={edition.sectors} /> : null}
           <EditionCalendar
             edition={edition}
             today={view.data.today}

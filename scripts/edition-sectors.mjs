@@ -10,7 +10,7 @@
 // Usage: npm run edition:sectors -- <YYYY-MM-DD>   (an edition file must already exist for that date)
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { SECTOR_FUNDS, sectorBases } from "../src/domain/edition-sectors.ts";
+import { neededCloses, SECTOR_FUNDS } from "../src/domain/edition-sectors.ts";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 // Node's fetch ignores HTTPS_PROXY; behind an agent proxy every request would fail (proxy-reexec.mjs).
@@ -22,8 +22,8 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
   process.exit(2);
 }
 const file = join(process.cwd(), "src", "domain", "editions", `${date}.json`);
-const bases = sectorBases(date);
-const needed = [...new Set([date, ...Object.values(bases)])].sort();
+// Each period's starting close and the 20 sessions the range band (AT8, slice 1c) is drawn from.
+const needed = neededCloses(date);
 
 /** The New York trading day a Yahoo bar's timestamp falls on. */
 const nyDay = (seconds) =>
@@ -61,5 +61,5 @@ edition.sectors = {
 };
 writeFileSync(file, `${JSON.stringify(edition, null, 2)}\n`);
 process.stdout.write(
-  `${file}: ${SECTOR_FUNDS.length} funds, closes on ${needed.join(", ")}. Run biome format on it.\n`,
+  `${file}: ${SECTOR_FUNDS.length} funds, ${needed.length} closes each, ${needed[0]} to ${date}. Run biome format on it.\n`,
 );
