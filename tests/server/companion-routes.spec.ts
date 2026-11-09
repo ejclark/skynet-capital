@@ -354,7 +354,9 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
       : undefined;
 
     it("lists the stories on screen with their row links", async () => {
-      if (!(served && keys)) return; // no edition checked in on or before today: nothing to list
+      // Editions are checked in and the clock only moves forward, so one is always served.
+      expect(served).toBeTruthy();
+      if (!(served && keys)) return;
       const context = await contextFor({ page: "/app/", keys });
       expect(context).toContain(
         "Page: they sent this from the landing page (the day's market news and its calendar).",
@@ -370,6 +372,7 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
       });
       expect(madeUp).not.toContain("On screen:");
       expect(madeUp).not.toContain("ignore-previous");
+      expect(keys).toBeTruthy();
       if (!keys) return;
       const elsewhere = await contextFor({ page: "/app/leaderboard", keys });
       expect(elsewhere).not.toContain("On screen:");

@@ -16,17 +16,19 @@ export interface KeyedDate {
   readonly what: string;
 }
 
-/** The longest stretch of an event's name its key keeps. */
-const KEY_WORDS_MAX = 40;
+/** The longest stretch of an event's name its key keeps: past any name the calendar carries, so
+ *  two events on one day never meet in a cut (`edition.ts` bounds no name, but none runs near). */
+const KEY_WORDS_MAX = 120;
 
-/** A key: lower-case letters, digits and single hyphens. Story ids are already slugs
- *  (`SLUG_RE` in `edition.ts`); an event key is built to the same shape. */
-export const KEY_RE = /^[a-z0-9][a-z0-9-]{0,79}$/;
+/** A key: lower-case letters, digits and hyphens. Story ids are already slugs (`SLUG_RE` in
+ *  `edition.ts`); an event key is built to the same shape. 160 characters holds either. */
+export const KEY_RE = /^[a-z0-9][a-z0-9-]{0,159}$/;
 
 /**
- * A calendar event's key: its date, then its name as a slug, e.g. `2026-11-10-crwv-q3-results`.
- * The edition gives events no id of their own, and the date plus the name is what makes one
- * event distinct on the calendar already (`edition-calendar.tsx` keys its rows the same way).
+ * A calendar event's key: its date, then its whole name as a slug, e.g.
+ * `2026-11-10-coreweave-q3-results`. The edition gives events no id of their own, and the date plus
+ * the name is what tells two apart (`edition-calendar.tsx`'s React key is the raw pair). Only two
+ * names on one day that differ in case or punctuation alone would share a key.
  */
 export function editionEventKey(event: KeyedDate): string {
   const words = event.what

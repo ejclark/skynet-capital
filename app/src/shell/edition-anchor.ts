@@ -18,7 +18,8 @@ export function targetedEditionAnchor(hash: string): string | undefined {
   return (
     targetedAnchor("story-", hash) ??
     targetedAnchor("event-", hash) ??
-    (hash.replace(/^#/, "") === CALENDAR_ANCHOR ? CALENDAR_ANCHOR : undefined)
+    // Decoded the way the two above are, so `#%63alendar` lands like `#calendar`.
+    (targetedAnchor("", hash) === CALENDAR_ANCHOR ? CALENDAR_ANCHOR : undefined)
   );
 }
 

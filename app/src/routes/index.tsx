@@ -76,7 +76,7 @@ function Landing(): ReactElement {
   const keys = editionKeys(view.data?.edition);
   // The chat sends these with a question asked from here, and her links land on the same rows.
   usePublishPageKeys(keys);
-  useLandOnEdition(keys ? `${keys.edition}:${keys.stories.length}:${keys.events.length}` : "");
+  useLandOnEdition(keys ? JSON.stringify(keys) : "");
   if (view.isPending)
     return (
       <PageFrame>

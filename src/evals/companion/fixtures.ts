@@ -28,7 +28,6 @@ const CONNECTED_MID_LADDER = {
   nextUp: { code: "201", title: "Sell a cash-secured put" },
 } as const;
 
-/** Onboarding fully done (connect + messaged + first trade) — the shape of Eric's real incident. */
 /** The landing page's edition, as the server would serve it (#7167): two stories and a week of
  *  events, more than she may name, so the rubric can see whether she curates or retells. */
 const LANDING_EDITION = {
@@ -46,6 +45,7 @@ const LANDING_EDITION = {
   ],
 };
 
+/** Onboarding fully done (connect + messaged + first trade) — the shape of Eric's real incident. */
 const DONE_PROGRESS = deriveOnboarding({ connected: true, messaged: true, firstFillEarned: true });
 
 function doneContext(filings: readonly { issueNumber: number; title: string; filedAt: string }[]) {

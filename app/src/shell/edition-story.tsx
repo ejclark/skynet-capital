@@ -102,7 +102,8 @@ export function EditionStoryLine({
 }): ReactElement {
   // The row carries the story's key as its anchor (#7167): Moneypenny's `/#story-<id>` lands here.
   const anchor = storyAnchor(story.id);
-  const headingId = `${anchor}-headline`;
+  // Not `story-…`: a heading under that prefix could equal another story's row anchor.
+  const headingId = `edition-headline-${story.id}`;
   const [first] = story.facts;
   return (
     <li id={anchor} className={lead ? "story story--lead" : "story"}>

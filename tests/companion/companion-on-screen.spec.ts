@@ -31,13 +31,17 @@ describe("editionEventKey — an event's key", () => {
     );
   });
 
-  it("cuts a long name without leaving a trailing hyphen", () => {
-    const key = editionEventKey({
+  it("keeps the whole of a long name, so two names that share a start keep apart", () => {
+    const a = editionEventKey({
       date: "2026-11-20",
-      what: "Federal Reserve chair speaks at the economic club of new york",
+      what: "Fed speakers: Powell at the Economic Club of New York",
     });
-    expect(key.length).toBeLessThanOrEqual(51);
-    expect(key).not.toMatch(/-$/);
+    const b = editionEventKey({
+      date: "2026-11-20",
+      what: "Fed speakers: Powell at the Economic Club of Chicago",
+    });
+    expect(a).not.toBe(b);
+    expect(a).toMatch(/new-york$/);
   });
 });
 

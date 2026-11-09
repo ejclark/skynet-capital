@@ -57,7 +57,7 @@ describe("the landing page's anchors (#7167)", () => {
   it("keeps the story's opened headline on its own id, so the row's anchor stays unique", () => {
     renderCalendar();
     expect(document.querySelectorAll('[id="story-ai-capex"]')).toHaveLength(1);
-    expect(document.getElementById("story-ai-capex-headline")?.tagName).toBe("H5");
+    expect(document.getElementById("edition-headline-ai-capex")?.tagName).toBe("H5");
   });
 });
 
@@ -68,6 +68,7 @@ describe("landing on a row she linked", () => {
       "event-2026-11-10-coreweave-q3-results",
     );
     expect(targetedEditionAnchor("#calendar")).toBe("calendar");
+    expect(targetedEditionAnchor("#%63alendar")).toBe("calendar");
     expect(targetedEditionAnchor("#pos-NVDA")).toBeUndefined();
     expect(targetedEditionAnchor("#calendar-x")).toBeUndefined();
     expect(targetedEditionAnchor("")).toBeUndefined();
