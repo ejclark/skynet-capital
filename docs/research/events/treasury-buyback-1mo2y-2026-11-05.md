@@ -307,3 +307,75 @@ memory — after which this doc goes quiet.
 
 **Last assessed:** 2026-11-05
 <!-- probe-ref: {"symbols":{},"vix":16.61,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-investment-manager-index-2026-11-10","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-refunding-2026-11-04","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","cpi-2026-11-10","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0,"blocked":[]} -->
+
+## Outcome
+
+**Assessed 2026-11-09 (D+4, inside the close-out window).** `rates` event, `symbols: []`, so no
+`earnings-cycle`/`intraday-edges` target applies; the instrument caches were busted (`rm -rf`) with
+nothing to refill. Every figure is a fresh pull this session: `api.fiscaldata.treasury.gov`
+`buybacks_operations` and `buybacks_security_details` (plain curl, HTTP 200), Treasury's daily par
+yield curve CSV (HTTP 200) and Yahoo VIX closes. The calendar entry stays `estimate`: no
+Treasury-buyback primary prefix exists and this lane may not self-confirm. No trade, no
+calendar-entry edit.
+
+**Verdict: the base case held on both registered tests (2 pass, 0 kill) — with one soft miss:
+the operation filled the cap on the thinnest issue count this bucket has printed.**
+
+| Field | Value |
+|---|---|
+| Announced maximum | **$4,000,000,000** (tentative schedule: `$0 $4 billion`) |
+| Total par offered | **$47,319,000,000** |
+| Total par accepted | **$4,000,000,000** |
+| Cover (offered ÷ max) | **11.83x** (prior range 6.95x–17.25x) |
+| Fill (accepted ÷ max) | **100%** |
+| Issues | **4 accepted of 65 eligible** (eligible maturities 2026-12-31 to 2028-10-31) |
+| Window / settlement | 1:40–2:00pm ET **2026-11-05**, settled 2026-11-06 |
+
+Accepted par by line: 91282CNL1 (3.750% 2027-06-30) **$3.082B** @ 99.664 · 912828ZV5 (0.500%
+2027-06-30) $0.564B @ 97.609 · 91282CEW7 (3.250% 2027-06-30) $0.254B @ 99.355 · 91282CLG4 (3.750%
+2027-08-15) $0.100B @ 99.559. Sum $4.000B; cash ≈ $3.974B, cash/par **0.9935** (08-06: 0.9964).
+Three of four lines mature the same day, 2027-06-30, and carry **97.5%** of the par; one line alone
+carries 77%. Lifetime in this bucket: **11 full fills in 11** operations, **9 of 9** on the $4B cap.
+
+### Forward tests scored
+
+- **`FT-…-1` — PASS.** The 11-05 row exists in `buybacks_operations` as Liquidity Support · Nominal
+  Coupons · 1Mo to 2Y · max $4,000,000,000, every eligible maturity inside 12/06/2026 – 11/05/2028.
+  The November-2025 skip did **not** repeat. The 11:00am-11-04 announcement time itself was not
+  re-read as a timestamp this session (the 11-05 pulse row had the entry listed with null results);
+  the row's existence and its parameters are what the test names.
+- **`FT-…-2` — PASS, with one descriptive miss recorded.** Accepted **$4.000B of $4.000B = 100%** on
+  **$47.319B** offered (cover 11.83x), well above the $15B line. Weighted-average prices **97.609 –
+  99.664** sat inside 95–101 and cash/par 0.9935 matches "≈ 0.99". The registration also said
+  "across roughly **5–16 issues**": **4** were taken, one under the range and the lowest count in this
+  bucket (prior $4B operations 5–16). That clause is descriptive ("roughly"), not the pass line, so
+  the row scores pass; it is recorded as the first sign of concentration, not as a kill. Control
+  update: at a fixed $4B cap this sector now fills **9 of 9** against **5 of 33** elsewhere
+  (unchanged: no other sector's $4B operation ran this quarter).
+
+No new forward test is registered. Nothing here moves a kill list: no row was killed.
+`npm run research:claims -- --event treasury-buyback-1mo2y-2026-11-05` is run and reported in the PR.
+
+### Tape, for context only (no attribution to a 1:40pm, $4B operation)
+
+The window sat one day after the Quarterly Refunding statement and two after the midterms.
+Treasury par curve (11-04 → 11-05 → 11-06): 1Mo **4.01 → 4.03 → 4.02** · 2Y **4.58 → 4.46 → 4.51** ·
+10Y **4.90 → 4.84 → 4.86**. VIX **16.61 (11-04) → 28.18 (11-05) → 25.64 (11-06)**; the cause of the
+11-05 jump is not established here. A $4B purchase is under 6% of one 2-year auction, so none of this
+is claimed to belong to it. The front end was calm at the 1Mo point (4.01–4.03) while the 2Y rallied
+12bp on the day.
+
+### What the exercise taught the loop
+
+- **Existence risk is spent for this quarter.** The one thing the ledger flagged as the real
+  uncertainty (a November skip) resolved the benign way; the bucket is now 1-skip-in-9 quarterly slots.
+- **The next thing to watch is concentration, not size.** 4 issues and 97.5% in a single maturity is
+  a different shape from the 5–16-issue prints; if the next 1Mo-2Y operation (the August-2027
+  quarter, schedule not yet published as of this read) again takes under 5 issues it earns a row of
+  its own. Falsifier: any later 1Mo-2Y operation accepting 8 or more issues.
+- **Loop stage a person still did (LEARNING-LOOP):** *sense* — scoring the issue-count clause meant
+  reading `buybacks_security_details` by hand; the sibling 10Y-20Y ledger asked for the same scripted
+  per-operation scorecard (cap, fill, cover, issues, concentration). Two ledgers asking is the signal.
+
+**Last assessed:** 2026-11-09
+<!-- probe-ref: {"symbols":{},"vix":25.64,"daysBand":"medium:0+","adjacentIds":["aapl-2026-10-29-print","adp-employment-2026-11-04","amd-fq3-2026-results-2026-11-03","boe-decision-2026-11-05","boj-minutes-2026-11-05","boj-summary-of-opinions-2026-11-10","bxdc-lockup-expiry-2026-11-09","cbrs-lockup-expiry-2026-11-09","construction-spending-2026-11-02","cpi-2026-11-10","crwv-2026-11-10-print","eia-steo-2026-11-10","eurostat-hicp-flash-2026-11-04","intl-trade-full-report-2026-11-04","ism-manufacturing-2026-11-02","ism-services-2026-11-04","jgb-10y-auction-2026-11-05","jgb-30y-auction-2026-11-10","jgb-climate-transition-5y-auction-2026-11-02","jobs-2026-11-06","jolts-2026-11-03","m3-full-report-2026-11-03","midterm-elections-2026-11-03","opec-plus-meeting-2026-11-01","productivity-costs-q3-2026-11-05","sloos-2026-11-02","smci-fq1-2027-results-2026-11-03","sp-global-investment-manager-index-2026-11-10","sp-global-manufacturing-pmi-2026-11-02","sp-global-pmi-commodity-price-supply-2026-11-02","treasury-10y-note-2026-11-10","treasury-3y-note-2026-11-09","treasury-borrowing-estimates-2026-11-02","treasury-buyback-10y20y-2026-11-04","treasury-refunding-2026-11-04","uk-gilt-auction-long-2026-11-10","umich-sentiment-prelim-2026-11-06","us-china-tariff-truce-expiry-2026-11-10","wholesale-trade-2026-11-09"],"adjacentStrongIds":["amd-fq3-2026-results-2026-11-03","cbrs-lockup-expiry-2026-11-09","cpi-2026-11-10","ism-manufacturing-2026-11-02","jobs-2026-11-06"],"screenStreak":0,"blocked":[]} -->
