@@ -3,9 +3,11 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { parseBoardMetric } from "../live/board";
 import { asOfLine, type EditionView, fetchEdition, staleLine } from "../live/edition";
+import { fetchQuests, placeQuests } from "../live/quests";
 import { PageFrame } from "../shell/frame";
 import { AskBox, StoryAsk } from "../shell/landing-ask";
 import { LandingCalendar } from "../shell/landing-calendar";
+import { AccountQuests, StoryQuests } from "../shell/landing-quests";
 import { SectorOverview } from "../shell/sector-overview";
 
 /**
@@ -23,7 +25,9 @@ import { SectorOverview } from "../shell/sector-overview";
  * beside them at desktop width (`shell/landing-calendar.tsx`, AT4–AT5b, AT10, AT11). A story opens on a
  * tap to its reports, what moved, the rest and its asks (slice 2, `shell/landing-ask.tsx`). Round 3
  * replaced slice 1's story cards (#7018: "the sections in the screenshot need heavily condense").
- * The quests' slot comes with slice 3 (#7028), under their one-line stories, never as a placeholder.
+ * Quests sit by their source (slice 3, #7028 slice 5, `shell/landing-quests.tsx`): a market quest
+ * inside the story it came from, after its asks, and the account's quests in one part after the
+ * news. They are the signed-in member's own (`GET /api/quests`); a viewer with no account sees none.
  *
  * An old bookmark or a shared compare link (`/?by=`, `?a=`, `?b=`) was always a member asking for
  * the board, so it still goes there with its query intact (#2321's promise).
@@ -58,6 +62,8 @@ function Masthead({ view }: { readonly view: EditionView }): ReactElement {
 
 function Landing(): ReactElement {
   const view = useQuery({ queryKey: ["edition"], queryFn: fetchEdition, staleTime: 60_000 });
+  // The member's quests load beside the news and never hold it up; one that fails shows nothing.
+  const quests = useQuery({ queryKey: ["quests"], queryFn: fetchQuests, staleTime: 60_000 });
   if (view.isPending)
     return (
       <PageFrame>
@@ -71,6 +77,8 @@ function Landing(): ReactElement {
       </PageFrame>
     );
   const edition = view.data.edition;
+  const answer = quests.data?.available ? quests.data : undefined;
+  const placed = placeQuests(answer?.quests ?? [], edition?.stories ?? []);
   return (
     <PageFrame>
       <Masthead view={view.data} />
@@ -82,17 +90,24 @@ function Landing(): ReactElement {
             edition={edition}
             today={view.data.today}
             storyAsk={(s) => (
-              <StoryAsk
-                story={s}
-                campaign={edition.campaign}
-                campaignTitle={edition.campaignTitle}
-              />
+              <>
+                <StoryAsk
+                  story={s}
+                  campaign={edition.campaign}
+                  campaignTitle={edition.campaignTitle}
+                />
+                <StoryQuests quests={placed.byStory.get(s.id)} />
+              </>
             )}
           />
+          {answer ? <AccountQuests quests={placed.account} unread={answer.unread} /> : null}
           <footer className="obs-foot">{edition.writtenBy}</footer>
         </>
       ) : (
-        <p className="note">No edition has been written yet.</p>
+        <>
+          <p className="note">No edition has been written yet.</p>
+          {answer ? <AccountQuests quests={placed.account} unread={answer.unread} /> : null}
+        </>
       )}
     </PageFrame>
   );

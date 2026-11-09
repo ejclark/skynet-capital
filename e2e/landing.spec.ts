@@ -258,6 +258,85 @@ test.describe("landing page", () => {
     await expect(record.locator(".story-record-coda")).toContainText("Nothing here calls it a buy");
   });
 
+  // Slice 3 (#7028 slice 5): quests sit by their source. The offline server owns no signed-in
+  // account, so `/api/quests` answers 404 and the page draws none; this test answers it with one
+  // market quest on the lead story's first name and four account quests, ranked as the route ranks.
+  test("puts a market quest under its story and the account's quests after the news, 3 shown (slice 3)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const edition = (await (await page.request.get("/api/edition")).json()) as {
+      edition: { stories: { symbols: string[] }[] };
+    };
+    const symbol = edition.edition.stories[0]?.symbols[0] ?? "SPY";
+    const base = {
+      why: [{ rule: "r", text: "The rule that produced it." }],
+      baseRate: { kind: "untested", note: "No study has tested this yet." },
+      exits: [],
+      expires: { date: "2026-12-19", why: "the call expires" },
+      houseCall: "take",
+      confidence: "medium",
+      atOpen: false,
+    };
+    const move = (label: string, sym: string) => ({
+      kind: "sell-to-close",
+      label,
+      symbol: sym,
+      href: `/app/trade?desk=me&symbol=${sym}`,
+    });
+    const quests = [
+      {
+        ...base,
+        id: "e1",
+        source: "event",
+        move: move(`Sell a cash-secured put on ${symbol}`, symbol),
+      },
+      ...["A", "B", "C", "D"].map((n) => ({
+        ...base,
+        id: `p${n}`,
+        source: "position",
+        move: move(`Sell your 1 ${n} call`, "XYZ"),
+      })),
+    ];
+    await page.route("**/api/quests", (route) =>
+      route.fulfill({
+        json: { available: true, asOf: "2026-11-09T12:00:00Z", quests, unread: [] },
+      }),
+    );
+    await page.goto("/app/");
+    const part = page.locator("section.quests");
+    await expect(part.getByRole("heading", { name: "Your quests" })).toBeVisible();
+    // After the news: the calendar comes before the account's quests.
+    const after = await page
+      .locator(".ecal")
+      .evaluate(
+        (c, q) => Boolean(q && c.compareDocumentPosition(q) & Node.DOCUMENT_POSITION_FOLLOWING),
+        await part.elementHandle(),
+      );
+    expect(after).toBe(true);
+    await expect(part.locator(":scope > .quest-list > .quest")).toHaveCount(3);
+    await expect(part.locator(".quest-rest > summary")).toHaveText("1 more quest");
+    for (const line of await part.locator(".quest-line").all())
+      expect((await line.boundingBox())?.height ?? 0).toBeLessThanOrEqual(44);
+    await part.scrollIntoViewIfNeeded();
+    await part.screenshot({ path: "test-results/landing-quests-390.png" });
+    // The market quest sits inside the lead story, closed until tapped, opening on a draft ticket.
+    await page.locator(".story--lead > .story-row > summary").click();
+    const inStory = page.locator(".story--lead .story-quests");
+    await expect(inStory.locator(".quest-label")).toHaveText(
+      `Sell a cash-secured put on ${symbol}`,
+    );
+    // The symbol is never cut: the label takes a second line instead of an ellipsis.
+    const whole = await inStory
+      .locator(".quest-label")
+      .evaluate((el) => el.scrollHeight <= el.clientHeight + 1);
+    expect(whole).toBe(true);
+    await inStory.locator(".quest-line").click();
+    await expect(inStory.locator("a.quest-open")).toHaveAttribute("href", /\/app\/trade\?/);
+    await expect(inStory).toContainText("Untested");
+    await inStory.screenshot({ path: "test-results/landing-story-quest-390.png" });
+  });
+
   test("gives Chronicles the first tab, and the Leaderboard leaves the bar for Profile's card", async ({
     page,
   }) => {
