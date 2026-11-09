@@ -15,6 +15,13 @@ export interface SectorRow {
   readonly market?: true;
   /** Percent change, close to close. */
   readonly moves: Readonly<Record<SectorPeriod, number>>;
+  /** AT8: the 20-day band (average ± two standard deviations) and the close, in dollars. */
+  readonly range: {
+    readonly low: number;
+    readonly mid: number;
+    readonly high: number;
+    readonly close: number;
+  };
 }
 
 export interface SectorsView {
@@ -32,14 +39,14 @@ export const PERIODS: readonly (readonly [SectorPeriod, string])[] = [
 ];
 export const DEFAULT_PERIOD: SectorPeriod = "week";
 
-/** AT3: three views of the same numbers, Bars first (round 3's members' pick). */
-export type SectorLook = "bars" | "lines" | "tiles";
+/** AT3, revised (slice 1c): two views of the same numbers, Lines first. Bars were dropped as "fully
+ *  redundant with the percentage change" (Eric, #7018 round 3), so a kept "bars" opens on Lines. */
+export type SectorLook = "lines" | "tiles";
 export const LOOKS: readonly (readonly [SectorLook, string])[] = [
-  ["bars", "Bars"],
   ["lines", "Lines"],
   ["tiles", "Tiles"],
 ];
-export const DEFAULT_LOOK: SectorLook = "bars";
+export const DEFAULT_LOOK: SectorLook = "lines";
 
 /** One decimal everywhere on the overview, so a shape and its figure always agree. */
 const DIGITS = 1;
@@ -54,6 +61,52 @@ const SHAPES = {
 /** A move's shape and its word (AT1: ▲ ▼ ▬). A move that rounds to 0.0% is level, never "up". */
 export function moveShape(percent: number): { readonly glyph: string; readonly word: string } {
   return SHAPES[percentTone(percent, DIGITS)];
+}
+
+/** Where a close sits against its 20-day band (AT8). */
+export type RangeZone = "above" | "within" | "below";
+
+export interface RangeMark {
+  readonly zone: RangeZone;
+  /** Where to draw the mark across the track, 0–1: the band spans `BAND_FROM`–`BAND_TO`, and a close
+   *  outside it sits in the margin beyond, pinned short of the edge. */
+  readonly at: number;
+  /** Words only at the extremes (AT8); inside the band the mark speaks for itself. */
+  readonly word?: string;
+  /** The whole reading for a screen reader, figures included. */
+  readonly label: string;
+}
+
+export const BAND_FROM = 0.2;
+export const BAND_TO = 0.8;
+const MARGIN = 0.04;
+
+const usd = (v: number): string => `$${v.toFixed(2)}`;
+
+/**
+ * The 20-day range mark (AT8). Its words describe where the price sits, never what to do about it:
+ * "above its usual range", never "overbought" or "stretched" (the honesty line on AT8: a range mark
+ * never reads as a buy or sell signal).
+ */
+export function rangeMark(range: SectorRow["range"]): RangeMark {
+  const width = range.high - range.low;
+  const b = width > 0 ? (range.close - range.low) / width : 0.5;
+  const zone: RangeZone = b > 1 ? "above" : b < 0 ? "below" : "within";
+  const at = Math.min(1 - MARGIN, Math.max(MARGIN, BAND_FROM + b * (BAND_TO - BAND_FROM)));
+  const word =
+    zone === "above"
+      ? "above its usual range"
+      : zone === "below"
+        ? "below its usual range"
+        : undefined;
+  const part = b >= 2 / 3 ? "upper third" : b <= 1 / 3 ? "lower third" : "middle";
+  const where = word ?? `in its usual range, ${part}`;
+  return {
+    zone,
+    at,
+    ...(word ? { word } : {}),
+    label: `${where}: closed at ${usd(range.close)}, 20-day range ${usd(range.low)} to ${usd(range.high)}`,
+  };
 }
 
 /** The figure beside a row: "+4.9%", "−12.0%", "0.0%". */
@@ -77,10 +130,6 @@ export function ranked(
   };
 }
 
-/** The largest move in the period, the bars' full half-width. Never zero, so a level day draws. */
-export const scaleOf = (view: SectorsView, period: SectorPeriod): number =>
-  Math.max(0.1, ...view.rows.map((r) => Math.abs(r.moves[period])));
-
 const LOOK_KEY = "skynet.landing.sector-look";
 
 /** AT3: the view the member picked last, in this browser. A way of looking, never a record. */
@@ -97,6 +146,6 @@ export function rememberLook(look: SectorLook): void {
   try {
     window.localStorage.setItem(LOOK_KEY, look);
   } catch {
-    // Without storage the overview opens on Bars next time.
+    // Without storage the overview opens on Lines next time.
   }
 }

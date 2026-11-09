@@ -27,9 +27,10 @@ import { FastTrackWalk } from "./fast-track-walk";
 
 /**
  * THE LANDING PAGE'S ASKS, DRAWN (#7077 slice 2). The words and where each ask goes live in
- * `live/landing-ask.ts`; this file draws them. At 390 the ask box is the first thing on the page,
- * kept to one field and one row of quick questions so the lead story's key facts still reach the
- * first screen (criterion 8). A story's ask sits under its tile: the quick question opens the
+ * `live/landing-ask.ts`; this file draws them. The ask box is a one-line entry right under the whole
+ * market (slice 1c, AT9): the page is an entry point, so the overview leads and the box is how a
+ * member drills in (`.claude/rules/member-surfaces.md`). Its question is the field's own words, read
+ * aloud through a hidden label, with the quick questions under it as fallbacks. A story's ask sits under its tile: the quick question opens the
  * record in place (a native disclosure, nothing to build), and "Ask your own" opens a one-line form.
  *
  * The first quick question opens its card walk in place under the chips (#7034 slice 2,
@@ -40,7 +41,7 @@ import { FastTrackWalk } from "./fast-track-walk";
  *  screen; it never waits on the panel's own loading (#7165). False when refused. */
 const askChat = (text: string): boolean => useMoneypenny.getState().ask(text);
 
-/** The top of the page: the member's own question first, two quick questions as fallbacks. */
+/** Under the whole market: the member's own question first, two quick questions as fallbacks. */
 export function AskBox(): ReactElement {
   const [text, setText] = useState("");
   const [walking, setWalking] = useState(false);
@@ -53,7 +54,7 @@ export function AskBox(): ReactElement {
   return (
     <section className="ask-box" aria-label="Ask">
       <form className="ask-form" onSubmit={submit}>
-        <label className="ask-label" htmlFor={inputId}>
+        <label className="visually-hidden" htmlFor={inputId}>
           What do you want to do today?
         </label>
         <div className="ask-row">
@@ -63,7 +64,7 @@ export function AskBox(): ReactElement {
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Ask in your own words"
+            placeholder="What do you want to do today?"
             autoComplete="off"
             enterKeyHint="send"
           />

@@ -110,9 +110,9 @@ export function EditionStoryLine({
           <span className="ecal-figure num">{first ? rowFigure(first) : null}</span>
         </summary>
         <article className="story-body" aria-labelledby={headingId}>
-          <h4 id={headingId} className="story-headline">
+          <h5 id={headingId} className="story-headline">
             {story.headline}
-          </h4>
+          </h5>
           {story.narrator ? <p className="story-narrator">{story.narrator}</p> : null}
           {story.reports.length > 0 ? (
             <section className="story-reports" aria-label="Reports on this story">

@@ -2,7 +2,9 @@ import type { ReactElement, ReactNode } from "react";
 import { dayLabel } from "../live/book-events";
 import {
   type CalendarDay,
+  type CalendarWeek,
   calendarDays,
+  calendarWeeks,
   type Edition,
   type EditionDate,
   type EditionStory,
@@ -21,6 +23,12 @@ import { EditionStoryLine } from "./edition-story";
  * An event a story waits on (it is among that story's reports) carries ◆, keyed in the header; the
  * opened event names the stories waiting. Confirmed and estimated dates keep the ⬢ ⬡ the Events and
  * R&D calendars already speak.
+ *
+ * WEEK HEADERS (slice 1c, AT5b): the days sit under "This week · Mon 9 – Fri 13", "Next week · Mon 16 –
+ * Fri 20", each naming the market's closures and early closes that week, so a member planning around
+ * Thanksgiving sees the shut day before the days themselves. Dates run down the page, never across.
+ * Slice 1d replaces this component with R&D's market calendar (AT10); `calendarWeeks` is the part
+ * that carries over.
  */
 
 const DIAMOND = "◆";
@@ -90,15 +98,62 @@ function Day({
   const id = `ecal-day-${day.date}`;
   return (
     <li className="ecal-day">
-      <h3 id={id} className="ecal-day-title">
+      <h4 id={id} className="ecal-day-title">
         {dayLabel(day.date)}
         {day.date === today ? " · today" : ""}
-      </h3>
+      </h4>
       <ul className="ecal-lines" aria-labelledby={id}>
         {day.events.map((e) => (
           <EventLine key={`${e.date}-${e.what}`} event={e} stories={stories} />
         ))}
       </ul>
+    </li>
+  );
+}
+
+function Week({
+  week,
+  edition,
+  today,
+  storyAsk,
+}: {
+  readonly week: CalendarWeek;
+  readonly edition: Edition;
+  readonly today: string;
+  readonly storyAsk: (story: EditionStory) => ReactNode;
+}): ReactElement {
+  const id = `ecal-week-${week.monday}`;
+  return (
+    <li className="ecal-week">
+      <h3 id={id} className="ecal-week-title">
+        {week.title}
+      </h3>
+      {week.closures.length > 0 ? (
+        <ul className="ecal-closures" aria-label="Market closures this week">
+          {week.closures.map((c) => (
+            <li key={c}>{c}</li>
+          ))}
+        </ul>
+      ) : null}
+      <ol className="ecal-days" aria-labelledby={id}>
+        {week.stories ? (
+          <li className="ecal-day">
+            <h4 id="ecal-stories" className="ecal-day-title">
+              The stories, to the {dayLabel(edition.date)} close
+            </h4>
+            <ul className="ecal-lines" aria-labelledby="ecal-stories">
+              {edition.stories.map((s, i) => (
+                <EditionStoryLine key={s.id} story={s} lead={i === 0}>
+                  {storyAsk(s)}
+                </EditionStoryLine>
+              ))}
+            </ul>
+          </li>
+        ) : null}
+        {week.days.map((d) => (
+          <Day key={d.date} day={d} today={today} stories={edition.stories} />
+        ))}
+      </ol>
     </li>
   );
 }
@@ -113,7 +168,7 @@ export function EditionCalendar({
   /** A story's asks, drawn inside it once opened (slice 2). */
   readonly storyAsk: (story: EditionStory) => ReactNode;
 }): ReactElement {
-  const days = calendarDays(edition.next);
+  const weeks = calendarWeeks(edition.date, calendarDays(edition.next), today);
   return (
     <section className="ecal" aria-labelledby="ecal-title">
       <div className="ecal-head">
@@ -124,21 +179,9 @@ export function EditionCalendar({
           <span aria-hidden="true">{DIAMOND}</span> a story waits on it
         </span>
       </div>
-      <ol className="ecal-days">
-        <li className="ecal-day">
-          <h3 id="ecal-week" className="ecal-day-title">
-            The week to {dayLabel(edition.date)}
-          </h3>
-          <ul className="ecal-lines" aria-labelledby="ecal-week">
-            {edition.stories.map((s, i) => (
-              <EditionStoryLine key={s.id} story={s} lead={i === 0}>
-                {storyAsk(s)}
-              </EditionStoryLine>
-            ))}
-          </ul>
-        </li>
-        {days.map((d) => (
-          <Day key={d.date} day={d} today={today} stories={edition.stories} />
+      <ol className="ecal-weeks">
+        {weeks.map((w) => (
+          <Week key={w.monday} week={w} edition={edition} today={today} storyAsk={storyAsk} />
         ))}
       </ol>
     </section>

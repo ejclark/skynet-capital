@@ -5,31 +5,35 @@ import {
   moveFigure,
   moveShape,
   PERIODS,
+  rangeMark,
   ranked,
   rememberLook,
   type SectorLook,
   type SectorPeriod,
   type SectorRow,
   type SectorsView,
-  scaleOf,
   sinceLine,
   storedLook,
 } from "../live/edition-sectors";
 
 /**
- * THE WHOLE MARKET, FIRST (#7077 slice 1b; #7018 round 3). Eric: "Shouldn't we start with a
+ * THE WHOLE MARKET, FIRST (#7077 slices 1b and 1c; #7018 round 3). Eric: "Shouldn't we start with a
  * wholestick overview - there are 11 official GICS stock market sectors... At the sector level,
- * aggregated information only seems necessary." He marked More on all three ways of drawing it
- * ("it really depends on what I do"), so the overview is one set of numbers with three views:
- *   - Bars (the default, the members' pick): a bar either side of zero, ranked;
- *   - Lines: the same ranking as plain text, each fund's code beside its name;
+ * aggregated information only seems necessary." It leads the page (AT9), one set of numbers in two
+ * views (AT3, revised: Bars were "fully redundant with the percentage change"):
+ *   - Lines (the default): ranked plain text, each fund's code beside its name;
  *   - Tiles: a grid, the market spanning the top.
- * The member's last view is kept in this browser (AT3). Periods Day · Week · Month · YTD, Week first
- * (AT2). At 390 the whole overview, S&P 500 row included, sits on the first screen (AT1).
+ * The member's last view is kept in this browser. Periods Day · Week · Month · YTD, Week first (AT2).
+ * At 390 the whole overview, S&P 500 row included, sits on the first screen (AT1).
  *
- * NEVER HUE ALONE (BRAND.md → Accessibility; a standing reader is red/green colourblind): every row
- * carries ▲ ▼ ▬, a signed figure, and in Bars a direction from the zero line; a down bar or tile is
- * hatched, an up one solid. The colour rides on top of all that.
+ * THE RANGE MARK (AT8) replaces the ▲ ▼ that repeated the figure's sign: a small band, the fund's
+ * 20-day Bollinger band, with a tick where the last close sits. Words only at the extremes ("below its
+ * usual range"). It is drawn in the text colour, never the up/down hues, because it describes where a
+ * price sits and must never read as a buy or sell signal. The pattern is meant for the app's other
+ * price charts.
+ *
+ * NEVER HUE ALONE (BRAND.md → Accessibility; a standing reader is red/green colourblind): a move is a
+ * signed figure, a down tile is hatched and an up one solid, and the range mark is position and shape.
  */
 
 function Segmented<T extends string>({
@@ -55,44 +59,43 @@ function Segmented<T extends string>({
   );
 }
 
-/** The ▲ ▼ ▬ shape and the signed figure, never split across a line. */
+/** The signed figure. Its sign carries the direction; the range mark sits beside it. */
 function Move({ percent }: { readonly percent: number }): ReactElement {
-  const shape = moveShape(percent);
   return (
-    <span className={`sector-move sector-move--${shape.word}`}>
-      <span className="sector-glyph" role="img" aria-label={shape.word}>
-        {shape.glyph}
-      </span>
+    <span className={`sector-move sector-move--${moveShape(percent).word}`}>
       <span className="num">{moveFigure(percent)}</span>
     </span>
   );
 }
 
-const rowClass = (row: SectorRow, base: string): string =>
-  row.market ? `${base} ${base}--market` : base;
-
-function BarRow({
-  row,
-  period,
-  scale,
-}: {
-  readonly row: SectorRow;
-  readonly period: SectorPeriod;
-  readonly scale: number;
-}): ReactElement {
-  const move = row.moves[period];
-  const shape = moveShape(move);
-  const style = { "--bar": `${(Math.abs(move) / scale) * 50}%` } as CSSProperties;
+/** AT8: the band, and a tick where the close sits; outside the band the tick sits in the margin. */
+function RangeMark({ row }: { readonly row: SectorRow }): ReactElement {
+  const mark = rangeMark(row.range);
   return (
-    <li className={rowClass(row, "sector-bar-row")} title={`${row.name} · ${row.fund}`}>
-      <span className="sector-name">{row.name}</span>
-      <span className="sector-track" aria-hidden="true">
-        <span className={`sector-bar sector-bar--${shape.word}`} style={style} />
-      </span>
-      <Move percent={move} />
-    </li>
+    <span
+      className={`sector-range sector-range--${mark.zone}`}
+      role="img"
+      aria-label={`${row.name} ${mark.label}`}
+      style={{ "--at": `${mark.at * 100}%` } as CSSProperties}
+    >
+      <span className="sector-range-band" />
+      <span className="sector-range-tick" />
+    </span>
   );
 }
+
+/** The words, only at the extremes. Hidden from screen readers: the mark's label already says it. */
+function RangeWord({ row }: { readonly row: SectorRow }): ReactElement | null {
+  const { word } = rangeMark(row.range);
+  return word ? (
+    <span className="sector-range-word" aria-hidden="true">
+      {word}
+    </span>
+  ) : null;
+}
+
+const rowClass = (row: SectorRow, base: string): string =>
+  row.market ? `${base} ${base}--market` : base;
 
 function LineRow({
   row,
@@ -103,8 +106,12 @@ function LineRow({
 }): ReactElement {
   return (
     <li className={rowClass(row, "sector-line-row")}>
+      <RangeMark row={row} />
       <Move percent={row.moves[period]} />
-      <span className="sector-name">{row.name}</span>
+      <span className="sector-label">
+        <span className="sector-name">{row.name}</span>
+        <RangeWord row={row} />
+      </span>
       <span className="sector-fund">{row.fund}</span>
     </li>
   );
@@ -120,8 +127,14 @@ function Tile({
   const shape = moveShape(row.moves[period]);
   return (
     <li className={`${rowClass(row, "sector-tile")} sector-tile--${shape.word}`}>
-      <span className="sector-name">{row.name}</span>
-      <Move percent={row.moves[period]} />
+      <span className="sector-label">
+        <span className="sector-name">{row.name}</span>
+        <RangeWord row={row} />
+      </span>
+      <span className="sector-tile-figures">
+        <RangeMark row={row} />
+        <Move percent={row.moves[period]} />
+      </span>
     </li>
   );
 }
@@ -137,11 +150,8 @@ function Rows({
 }): ReactElement {
   const { market, sectors } = ranked(view, period);
   const rows = market ? [market, ...sectors] : sectors;
-  const scale = scaleOf(view, period);
   const draw = (r: SectorRow): ReactElement =>
-    look === "bars" ? (
-      <BarRow key={r.fund} row={r} period={period} scale={scale} />
-    ) : look === "lines" ? (
+    look === "lines" ? (
       <LineRow key={r.fund} row={r} period={period} />
     ) : (
       <Tile key={r.fund} row={r} period={period} />
@@ -177,7 +187,9 @@ export function SectorOverview({ view }: { readonly view: SectorsView }): ReactE
       </div>
       <Rows view={view} period={period} look={look} />
       <p className="sectors-foot">
-        Each sector is its SPDR fund, the S&P 500 is SPY: the change in price between closes.{" "}
+        Each sector is its SPDR fund, the S&P 500 is SPY: the change in price between closes. The
+        small bar is the fund's usual range, its 20-day average two standard deviations either side,
+        and the tick is its last close. It shows where a price sits, not where it goes.{" "}
         {view.source}.
       </p>
     </section>

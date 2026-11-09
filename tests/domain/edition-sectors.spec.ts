@@ -1,7 +1,11 @@
 import { editions, editionView, parseEdition } from "../../src/domain/edition.js";
 import {
+  bollinger,
   checkSectors,
   type EditionSectors,
+  neededCloses,
+  RANGE_SESSIONS,
+  rangeDates,
   SECTOR_FUNDS,
   sectorBases,
   sectorsView,
@@ -17,9 +21,9 @@ const fail: Fail = (what) => {
   throw new Error(what);
 };
 
-/** Every fund at 100 on each starting date and `close` on the edition's own date. */
+/** Every fund at 100 on each needed date and `close` on the edition's own date. */
 function flat(date: string, close = 100): EditionSectors {
-  const dates = [date, ...Object.values(sectorBases(date))];
+  const dates = neededCloses(date);
   const row = Object.fromEntries(dates.map((d) => [d, d === date ? close : 100]));
   return {
     source: "spec",
@@ -69,7 +73,7 @@ describe("checkSectors — what an edition must carry", () => {
     expect(() =>
       checkSectors({ ...ok, closes: { ...ok.closes, SPY: noYtd } }, "2026-11-06", fail),
     ).toThrow(/SPY needs closes on exactly/);
-    const plus = { ...ok.closes.SPY, "2026-11-02": 99 };
+    const plus = { ...ok.closes.SPY, "2026-09-01": 99 };
     expect(() =>
       checkSectors({ ...ok, closes: { ...ok.closes, SPY: plus } }, "2026-11-06", fail),
     ).toThrow(/SPY needs closes on exactly/);
@@ -95,6 +99,34 @@ describe("checkSectors — what an edition must carry", () => {
   });
 });
 
+describe("the 20-day range (AT8)", () => {
+  it("draws from the edition's session and the 19 before it, holidays skipped", () => {
+    const span = rangeDates("2026-11-06");
+    expect(span).toHaveLength(RANGE_SESSIONS);
+    expect(span[0]).toBe("2026-10-12");
+    expect(span.at(-1)).toBe("2026-11-06");
+    // Thanksgiving (Thu Nov 26) is no session, so the window ending Mon Nov 30 steps over it.
+    expect(rangeDates("2026-11-30")).not.toContain("2026-11-26");
+  });
+
+  it("needs every band close as well as each period's start, and refuses an edition without them", () => {
+    const needed = neededCloses("2026-11-06");
+    for (const d of rangeDates("2026-11-06")) expect(needed).toContain(d);
+    for (const d of Object.values(sectorBases("2026-11-06"))) expect(needed).toContain(d);
+    const ok = flat("2026-11-06");
+    const { "2026-10-20": _, ...gap } = ok.closes.XLB as Record<string, number>;
+    expect(() =>
+      checkSectors({ ...ok, closes: { ...ok.closes, XLB: gap } }, "2026-11-06", fail),
+    ).toThrow(/XLB needs closes on exactly/);
+  });
+
+  it("is the 20-day average two population standard deviations either side, and the last close", () => {
+    // Mean 5, population deviation 2 (Bollinger's own definition), so the band is 1 to 9.
+    expect(bollinger([2, 4, 4, 4, 5, 5, 7, 9])).toEqual({ low: 1, mid: 5, high: 9, close: 9 });
+    expect(bollinger([100, 100, 100])).toEqual({ low: 100, mid: 100, high: 100, close: 100 });
+  });
+});
+
 describe("sectorsView — the moves, worked out of the closes", () => {
   it("works each period's move in percent, to two places, the market first", () => {
     const view = sectorsView(flat("2026-11-06", 97.531), "2026-11-06");
@@ -112,5 +144,12 @@ describe("sectorsView — the moves, worked out of the closes", () => {
     expect(sectors).not.toHaveProperty("closes");
     // SPY closed at 755.72 on Oct 30 and 735.29 on Nov 6 (Yahoo, fetched 2026-11-09).
     expect(sectors?.rows[0]?.moves.week).toBe(-2.7);
+    // Nov 6's close sat under SPY's 20-day band (739.54 to 787.19) after the week's fall.
+    expect(sectors?.rows[0]?.range).toEqual({
+      low: 739.54,
+      mid: 763.36,
+      high: 787.19,
+      close: 735.29,
+    });
   });
 });

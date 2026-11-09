@@ -200,8 +200,8 @@
 }
 
 /* The ask box (#7077 slice 2): the member's own question first, two quick questions under it.
- * One field and one wrapping row of chips, so the lead story's key facts still reach the first
- * phone screen. The chips are outlined buttons: shape and words, never a colour alone. */
+ * Since slice 1c (AT9) a one-line field under the whole market, its question its placeholder, then
+ * one wrapping row of chips. The chips are outlined buttons: shape and words, never a colour alone. */
 .ask-box {
   display: flex;
   flex-direction: column;
@@ -212,10 +212,6 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-.ask-label {
-  font-size: var(--text-md);
-  font-weight: 700;
 }
 .ask-row {
   display: flex;
