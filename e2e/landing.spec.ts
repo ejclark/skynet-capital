@@ -319,7 +319,7 @@ test.describe("landing page", () => {
     for (const line of await part.locator(".quest-line").all())
       expect((await line.boundingBox())?.height ?? 0).toBeLessThanOrEqual(44);
     await part.scrollIntoViewIfNeeded();
-    await part.screenshot({ path: "test-results/landing-quests-390.png" });
+    await part.screenshot({ path: "test-results/landing-quests-390.jpg", quality: 85 });
     // The market quest sits inside the lead story, closed until tapped, opening on a draft ticket.
     await page.locator(".story--lead > .story-row > summary").click();
     const inStory = page.locator(".story--lead .story-quests");
@@ -334,7 +334,7 @@ test.describe("landing page", () => {
     await inStory.locator(".quest-line").click();
     await expect(inStory.locator("a.quest-open")).toHaveAttribute("href", /\/app\/trade\?/);
     await expect(inStory).toContainText("Untested");
-    await inStory.screenshot({ path: "test-results/landing-story-quest-390.png" });
+    await inStory.screenshot({ path: "test-results/landing-story-quest-390.jpg", quality: 85 });
   });
 
   test("gives Chronicles the first tab, and the Leaderboard leaves the bar for Profile's card", async ({
