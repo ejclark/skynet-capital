@@ -795,12 +795,12 @@ tests are its slices 1b (#7144, AT1–AT5) and 1c (AT3 revised, AT5b, AT8, AT9).
 
 | | |
 |---|---|
-| **Job** | An entry point (`.claude/rules/member-surfaces.md`): show the whole market and what's coming, take the member's mission in their own words, and send them where they want to go. What belongs follows from that job: the whole market · the mission box with its quick questions · the event calendar, R&D's own (#7077 AT10). Anything that restates what the page already shows does not belong, a chat answer included (#7167). Eric, 2026-11-09: *"The first objective is to understand the goal; present options. This shoudl help outline features that do/don't belong to help us shape the page template"*. The same day he kept the overview above the mission box |
+| **Job** | An entry point whose first job is the member's goal (`.claude/rules/member-surfaces.md`): take the mission in their own words or a canned path, then show the whole market and what's coming as avenues to explore, and send them where they want to go. What belongs follows from that job: the mission box with its canned paths · the whole market · the event calendar, R&D's own, with its grid at desktop width (#7077 AT10, AT11). Anything that restates what the page already shows does not belong, a chat answer included (#7167). Eric, 2026-11-09: *"The first objective is to understand the goal; present options. This shoudl help outline features that do/don't belong to help us shape the page template"*. He first kept the overview above the mission box, then reversed it the same day on seeing it drawn (below) |
 | **Home** | `/app/` (`app/src/routes/index.tsx`; a member with no account still lands on onboarding). The first tab ("Chronicles", his name; fork d on #7018). The Leaderboard leaves the tab bar and keeps its route, reached from Profile's league card ("Full leaderboard ›") |
 | **Keys** | date (today's edition) · campaign (#6949) · symbol (a story's cast) · member (your account → quests) · what the party asked in a campaign: each question, who asked it by display name and what its research found, for every member who can read the campaign (#6949 slice 6, `GET /api/campaigns/questions`) |
-| **Holds, each with one owner** | the whole market: all 11 GICS sectors and the S&P 500, one SPDR fund each, with each one's move over Day · Week · Month · YTD and where its price sits in its 20-day range, as Lines or Tiles (round 3, AT1–AT3 and AT8; closes checked in beside the edition, `src/domain/edition-sectors.ts`) · the calendar: the edition's stories one line each, then each coming trading day's events under week headers that name closures, ◆ on one a story waits on (AT4–AT5b) · the edition: each story, opened from its line, leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question in a one-line box after the overview, quick questions as fallbacks, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
+| **Holds, each with one owner** | the whole market: all 11 GICS sectors and the S&P 500, one SPDR fund each, with each one's move over Day · Week · Month · YTD and where its price sits in its 20-day range, as Lines or Tiles (round 3, AT1–AT3 and AT8; closes checked in beside the edition, `src/domain/edition-sectors.ts`) · the calendar: the edition's stories one line each, then each coming trading day's events under week headers that name closures, ◆ on one a story waits on (AT4–AT5b) · the edition: each story, opened from its line, leads with the reports that bear on it, then works back to what moved (a ▲ ▼ ∿ shape on each line), the rest on tap, one narrator line in a mission voice (#6948 slice 4, sources #6949 slices 4–5) · your own question first, its canned paths under it, an ask beside each story (#7034; discovery #6952) · quests by their source: a market quest under its story, your account's quests after the news (#7028) · who holds an open question (#7034 criterion 9) |
 | **Hands on** | the owner-fired ticket with exits → Trade · a story's ledger → R&D · who you are → the character sheet (#7019) · standings → the Leaderboard |
-| **At 390, in order** | the whole market, every row above the fold · your question box, one line · the calendar: the week's stories, then the coming days · a story opened: its reports, then what moved, the rest, its ask · quests by source (under their one-line story, #7028). #7144 shipped AT1–AT5 as first written, with Bars and the question box on top; #7077's slice 1c brings the page to this order |
+| **At 390, in order** | your question box and its canned paths · the whole market, every row above the fold · the calendar: the week's stories, then the coming days · a story opened: its reports, then what moved, the rest, its ask · quests by source (under their one-line story, #7028). #7208 (slice 1c) shipped the box under the market, before the reversal; #7077's slice 1d puts it back on top |
 | **Not here** | a "what's new" part (#7018 r1: "vague, ambiguous direction. no thanks"); a humans-vs-bots grouping or cross-account metrics (#5157: "humans/bots is a property/filter.. not a grouping"); anything about how the app gets built (#7018 comment 1) |
 | **Falsifier** | by 2026-12-15, members open the Leaderboard before the landing page's first story on most sign-ins → home is the standings after all; or two child plans build the same piece of this page → the owner map is wrong |
 
@@ -812,14 +812,14 @@ If we're able to compact this to one liners, we'd be able to leverage/integrate 
 format."* Its acceptance tests AT1–AT9 are on #7077; AT6 (a sector opens its stories and
 lessons) waits on #6952.
 
-**Why the question box sits under the overview, not on top.** Round 3's AT9 moved it, and Eric
-settled the clash with his round-1 note on 2026-11-09: *"This was geared towards singular-ish path
-oriented workflows. The view we're working on is very high level entry point, with the ability to
-search and drill into more granular views. In general, the highest impact/value (i.e. actionable
-items) want to be the most accessible, at the top. it is not a hard rule.."* This page is an entry
-point, so its highest-value item is the whole market at a glance, and the question box is how a
-member drills in from it. The general rule, a path workflow leading with its next step and an
-entry point leading with its overview, is in `.claude/rules/member-surfaces.md`.
+**Why the question box leads: decided twice on 2026-11-09, and the frame won.** Round 3's AT9 moved
+it under the market, and in chat he kept that order: his round-1 *"actionable items at the top"*
+*"was geared towards singular-ish path oriented workflows"*. Round 5 drew it that way, and on the
+frame he reversed it: *"after seeing the visual, i feel that the search menu, canned input for paths
+to explore should be listed first. The market conditions is another possible avenue to provide
+information that could provoke curiousity and engagement from users."* So this page's first job is
+the member's goal, and the market is one avenue to it. Lesson for the loop: settle an order on a
+drawn frame, not in words (`.claude/rules/member-surfaces.md`).
 
 ## 6. The joints — where two groups meet, and what renders on whose page
 

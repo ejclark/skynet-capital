@@ -71,5 +71,9 @@ opens rule 3's graduation PR: a session does both.
 | 2026-11-08 | screen design (taste) | #7018 round 3 Q2 · how do the stories sit on the calendar? | A, today then the days (no confidence stated; the simulated Eric's pick, #7118) | More of A, Not the week strip; his second read added B's grouping by day | match |
 | 2026-11-09 | screen design (taste) | #7018 round 3 · does round 1's "actionable items at the top" put the question box back above the overview (AT9)? | — (no prediction recorded; AT9 shipped as the default) | No: that note "was geared towards singular-ish path oriented workflows" | not predicted |
 | 2026-11-09 | screen design (taste) | #7018 live review · his notes list the mission box first: does it lead again, or does AT9 stand? | AT9 stands; the list was the design method, not the page order (medium) | Overview first | match |
+| 2026-11-09 | screen design (taste) | #7018 round 4 Q2 · after her answer, outline one row or pivot the page? | B, the pivot (medium) | More of B, with notes on the Eye's light and threads | match |
+| 2026-11-09 | screen design (taste) | #7018 round 5 Q1 · the refined page as drawn, the overview first | Build as drawn (medium) | The question box and canned paths first, "after seeing the visual"; a desktop calendar grid. Reverses his chat answer above | miss |
+| 2026-11-09 | screen design (taste) | #7018 round 5 Q2 · an outline, or the Eye's light? | B, the Eye's light (medium) | Build B | match |
+| 2026-11-09 | screen design (taste) | #7018 round 5 Q3 · where does a side thread live? | A, under each answer (low) | More of C, on its row; collapsible, with dividers | miss |
 
 The 2026-11-01 predictions are copied from each issue, where they were written before he answered; the rows themselves were added after, on the day the ledger was caught up.
