@@ -8,7 +8,9 @@
  *   1. THE CEILING HOLDS. A pass takes at most `takeForPass`'s room: the work spigot's per-tick
  *      number less the slots event research spent, and nothing when the dial says halt.
  *   2. NOTHING IS TAKEN TWICE. An ask whose finding is already on the research shelf, or whose
- *      branch is already an open PR, is skipped.
+ *      branch is already an open PR, is skipped. An open PR that went red or conflicted is the push
+ *      audit's to close (scripts/moneypenny/discovery-pr-sweep.mjs, #7341), which frees the ask and
+ *      its slot for the next pass; a healthy one keeps both.
  *   3. THE LANE NEVER WRITES THE VOLUME. A taken ask leaves the queue because the dashboard drops
  *      an ask whose shelf file exists (`withoutAnswered`), after the finding's PR merges and deploys.
  *   4. THE MEMBER'S WORDS STAY ON THE VOLUME. The queue holds the first asker's sentence and opaque
