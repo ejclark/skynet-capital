@@ -400,6 +400,25 @@ describe("arm-auto-merge — a hold applied after the triggering event still hol
   });
 });
 
+// #3621, the twin of #4169's fix above: `verify` is PR-only, so on a push to `main` it is skipped,
+// and the implicit `success()` that `needs: verify` adds skipped `integration tests` with it. The
+// push leg of the `if:` (#3333, the header's "ALSO runs on push to main") never got evaluated.
+describe("integration tests — a push to main runs them though verify is skipped", () => {
+  const pipeline = readFileSync(".github/workflows/pipeline.yml", "utf8");
+  const job = pipeline.slice(pipeline.indexOf("\n  e2e:"), pipeline.indexOf("\n  arm-auto-merge:"));
+  const condition = job.slice(job.indexOf("if: >-"), job.indexOf("runs-on:"));
+
+  it("evaluates its condition when verify was skipped", () => {
+    expect(condition).toContain("!cancelled()");
+    expect(condition).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'");
+  });
+
+  it("still requires verify's success on a PR, now that the implicit gate is gone", () => {
+    const prLeg = condition.slice(condition.indexOf("github.event_name == 'pull_request'"));
+    expect(prLeg.slice(0, prLeg.indexOf("||"))).toContain("needs.verify.result == 'success'");
+  });
+});
+
 // #4939 (retro #5589), #5932, #6093: the arm step's fallbacks — a direct merge when GitHub says the
 // PR is already clean/unstable or the base moved under the arm call, three tries on a moved base or
 // a GitHub hiccup, an immediate fail on anything else — moved out of inline bash into
