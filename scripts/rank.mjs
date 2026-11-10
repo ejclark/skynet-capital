@@ -31,25 +31,28 @@ import { ensureGhToken, ghRest, ghRestAll } from "./moneypenny/gh.mjs";
 import { PRIORITY_LABELS, parkedBy } from "./moneypenny/labels.mjs";
 
 const H = 3600e3;
-const HORIZONS = new URL("./moneypenny/projects-horizons.json", import.meta.url);
 
 /** The class, its one-line why, and whether a person set it. `blocks` lists the open issue numbers
- *  this one blocks (native dependencies); `horizon` is the board's hand triage, if any.
+ *  this one blocks (native dependencies).
  *
- *  `bug` is P0 and `expedite` (Eric, 2026-09-30: "bug resolution opportunities discovered during
- *  development should be weighted with higher priority to expedite to completion compared to other
- *  work in queue and/or WIP"). It is checked before the other derived P0s so its why says so, and
- *  `rankOrder` sorts it first inside P0. A hand-set label still wins over it. */
-export function classOf({ labels = [], blocks = [], horizon = null }) {
+ *  THE LANES (#6871 §4, Eric's tap on PR-A). A hand-set `P0`–`P3` label always wins (#4064). After
+ *  that: `fast-track` is P0, "fix first" (it skips the queue by definition); a bug, a blocker, a
+ *  `bottleneck` or a `member-*` ask is P1; an `idea` is P3; everything else is P2. A bug is P1, no
+ *  longer P0 (it still pulls ahead of standard work and of blockers: `kindOf` sorts it first inside
+ *  the lane, which keeps Eric's 2026-09-30 call that "bug resolution opportunities discovered during
+ *  development should be weighted with higher priority to expedite to completion"). The board's
+ *  Horizon no longer reaches the class: deferring work is a drag to P3. */
+export function classOf({ labels = [], blocks = [] }) {
   const hand = PRIORITY_LABELS.find((p) => labels.includes(p));
   if (hand) return { cls: hand, why: "set by hand", hand: true };
-  if (labels.includes("bug"))
-    return { cls: "P0", why: "something is broken — expedite", expedite: true };
-  if (blocks.length) return { cls: "P0", why: `unblocks #${blocks.join(", #")}` };
-  if (labels.includes("bottleneck")) return { cls: "P0", why: "a measured constraint on delivery" };
+  if (labels.includes("fast-track"))
+    return { cls: "P0", why: "fix first — pulled before all other work" };
+  if (labels.includes("bug")) return { cls: "P1", why: "something is broken" };
+  if (blocks.length) return { cls: "P1", why: `unblocks #${blocks.join(", #")}` };
+  if (labels.includes("bottleneck")) return { cls: "P1", why: "a measured constraint on delivery" };
   if (labels.some((l) => l.startsWith("member-")))
     return { cls: "P1", why: "a member asked for it" };
-  if (labels.includes("idea") || horizon === "Later") return { cls: "P3", why: "parked for later" };
+  if (labels.includes("idea")) return { cls: "P3", why: "parked for later" };
   return { cls: "P2", why: "improves a surface or a process" };
 }
 
@@ -67,16 +70,25 @@ export const KINDS = [
 ];
 
 /** The Kind of one issue. A hand-set P label moves the lane, never the Kind: the card still says
- *  what it is. `blocks` lists the open issues this one blocks; `horizon` is the hand triage. */
-export function kindOf({ labels = [], blocks = [], horizon = null }) {
+ *  what it is. `blocks` lists the open issues this one blocks. */
+export function kindOf({ labels = [], blocks = [] }) {
   if (labels.includes("fast-track")) return KINDS[0];
   if (labels.includes("bug")) return KINDS[1];
   if (blocks.length) return KINDS[2];
   if (labels.includes("bottleneck")) return KINDS[3];
   if (labels.some((l) => l.startsWith("member-"))) return KINDS[4];
-  if (labels.includes("idea") || horizon === "Later") return KINDS[6];
+  if (labels.includes("idea")) return KINDS[6];
   return KINDS[5];
 }
+
+/** The `blocks` list of a REST issue, from `issue_dependencies_summary.blocking` — the count of open
+ *  issues it blocks, which the row already carries, so no per-issue dependency read. `classOf` and
+ *  `kindOf` only count the list; the "unblocks #N" numbers are `npm run rank`'s own read. */
+export const blocksOf = (issue) =>
+  Array.from({ length: Number(issue?.issue_dependencies_summary?.blocking) || 0 }, () => 0);
+
+/** Where a Kind sits in the lane order: 0 first. */
+export const kindIndex = (kind) => KINDS.indexOf(kind);
 
 /** The labels that put an issue in the buildable backlog. `bottleneck` and `bug` are in on purpose:
  *  they carry the P0 signals, and a queue that only read plan/feedback left every bottleneck out
@@ -87,7 +99,7 @@ const inQueue = (labels) =>
 
 /** One rank row. Returns null for what is not a buildable backlog item: outside the queue, parked,
  *  or a parent whose work now lives in open sub-issues (the children are ranked instead). */
-export function rankRow(issue, { readyAt = null, blocks = [], horizon = null, now }) {
+export function rankRow(issue, { readyAt = null, blocks = [], now }) {
   const labels = (issue.labels ?? []).map((l) => (typeof l === "string" ? l : l.name));
   if (!inQueue(labels)) return null;
   if (parkedBy(labels).length) return null;
@@ -95,14 +107,14 @@ export function rankRow(issue, { readyAt = null, blocks = [], horizon = null, no
   if (subs && subs.total > subs.completed) return null;
   const body = issue.body ?? "";
   const notes = readinessNotes({ title: issue.title, body, labels });
-  const { cls, why, hand = false, expedite = false } = classOf({ labels, blocks, horizon });
+  const { cls, why, hand = false } = classOf({ labels, blocks });
   return {
     number: issue.number,
     title: issue.title,
     cls,
     why,
     hand,
-    expedite,
+    kind: kindOf({ labels, blocks }),
     ready: labels.includes("ready"),
     readyHours: readyAt ? Math.round((now - readyAt) / H) : null,
     splitFirst: notes.some((n) => n.includes("past one delivery unit")),
@@ -110,13 +122,13 @@ export function rankRow(issue, { readyAt = null, blocks = [], horizon = null, no
   };
 }
 
-/** Class, then an expedited bug first, then ready before not-ready, then one delivery unit before
- *  split-first, then oldest. */
+/** Class, then Kind (the board's order inside a lane), then ready before not-ready, then one
+ *  delivery unit before split-first, then oldest. */
 export function rankOrder(rows) {
   return [...rows].sort(
     (a, b) =>
       a.cls.localeCompare(b.cls) ||
-      Number(Boolean(b.expedite)) - Number(Boolean(a.expedite)) ||
+      kindIndex(a.kind) - kindIndex(b.kind) ||
       Number(b.ready) - Number(a.ready) ||
       Number(a.splitFirst) - Number(b.splitFirst) ||
       (b.readyHours ?? -1) - (a.readyHours ?? -1) ||
@@ -199,14 +211,6 @@ export function digestLine(prev, curr, since) {
 
 function liveRows() {
   const now = Date.now();
-  // A local file, not the API: the board is unreadable from sessions (#4056's L2 study), and this
-  // hand triage is the only Horizon data a script can see.
-  let horizons = {};
-  try {
-    horizons = JSON.parse(readFileSync(HORIZONS, "utf8"));
-  } catch {
-    horizons = {};
-  }
   const open = ghRestAll("issues?state=open").filter((i) => !i.pull_request);
   const openNumbers = new Set(open.map((i) => i.number));
   const rows = [];
@@ -223,7 +227,6 @@ function liveRows() {
     const row = rankRow(issue, {
       readyAt: labels.includes("ready") && readyTimes.length ? Math.max(...readyTimes) : null,
       blocks,
-      horizon: horizons[String(issue.number)] ?? null,
       now,
     });
     if (row) rows.push(row);

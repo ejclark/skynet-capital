@@ -1,5 +1,6 @@
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { AuthoredRoster } from "../playbooks/authored-play.js";
+import type { HoldLookup } from "../playbooks/conviction-adoptions.js";
 import {
   CONVICTION_NOT_ON_VIEW,
   type ConvictionLookup,
@@ -44,11 +45,15 @@ function authoredPlay(
  * narrowing that would widen a bound is `refused` whole and the pair runs exits-only, so nothing
  * new opens on a conviction that did not hold. So does a subscription whose conviction is on no
  * view (`isConvictionOffView`): a ◆ pair with no pointer, which trades only on a conviction.
+ *
+ * `holds` defaults to the committed adoptions ledger, as `steeredBy`'s does; a spec passes its own
+ * so it tests the narrowing rule, not whichever pair the live ledger holds today.
  */
 export function subscriptionRoster(
   subscriptions: readonly PlaybookSubscription[],
   authored?: AuthoredRoster,
   convictionOf?: ConvictionLookup,
+  holds?: HoldLookup,
 ): {
   readonly enabled: readonly EnabledPlaybook[];
   readonly rejected: readonly string[];
@@ -67,7 +72,7 @@ export function subscriptionRoster(
       rejected.push(sub.playbookId);
       continue;
     }
-    const result = rosterSteering(house, sub, convictionOf, own !== undefined);
+    const result = rosterSteering(house, sub, convictionOf, own !== undefined, holds);
     if ("refused" in result) {
       steeringRefused.push(`${sub.playbookId}: ${result.refused}`);
       enabled.push({ playbook: house, mode: sub.mode, exitsOnly: true });
@@ -94,10 +99,11 @@ export function rosterSteering(
   sub: Pick<PlaybookSubscription, "convictionId" | "playbookId">,
   convictionOf?: ConvictionLookup,
   authored = false,
+  holds?: HoldLookup,
 ): SteeredPlaybook {
   if (isConvictionOffView(sub)) return { playbook, refused: CONVICTION_NOT_ON_VIEW };
   if (authored && sub.convictionId === undefined) return { playbook, says: [] };
-  return steeredBy(playbook, sub, convictionOf);
+  return steeredBy(playbook, sub, convictionOf, holds);
 }
 
 /**

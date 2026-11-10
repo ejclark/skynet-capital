@@ -34,7 +34,8 @@ describe("wantedPriorityOf: the same answer `npm run rank` prints", () => {
   });
 
   it("derives the class when no P label is set", () => {
-    expect(wantedPriorityOf(issue(1, ["bug"]))).toBe("P0");
+    expect(wantedPriorityOf(issue(1, ["fast-track"]))).toBe("P0");
+    expect(wantedPriorityOf(issue(1, ["bug"]))).toBe("P1");
     expect(wantedPriorityOf(issue(1, ["member-ask"]))).toBe("P1");
     expect(wantedPriorityOf(issue(1, ["plan"]))).toBe("P2");
     expect(wantedPriorityOf(issue(1, ["idea"]))).toBe("P3");
@@ -42,11 +43,11 @@ describe("wantedPriorityOf: the same answer `npm run rank` prints", () => {
 
   it("reads blocking from the REST issue's dependency summary — no per-issue read", () => {
     const blocker = issue(1, ["plan"], { issue_dependencies_summary: { blocking: 2 } });
-    expect(wantedPriorityOf(blocker)).toBe("P0");
+    expect(wantedPriorityOf(blocker)).toBe("P1");
   });
 
-  it("reads Later from the hand Horizon triage, as rank does", () => {
-    expect(wantedPriorityOf(issue(7, ["plan"]), { horizons: { "7": "Later" } })).toBe("P3");
+  it("a hand-set P label holds a fast-track card in its lane", () => {
+    expect(wantedPriorityOf(issue(1, ["fast-track", "P3"]))).toBe("P3");
   });
 });
 
@@ -74,7 +75,12 @@ describe("planPriority: a drag, a label change, a failed sync, a field never set
   it("a failed sync: Priority written, record not — read as a lagging record, never a drag", () => {
     // The sync writes Priority first, record second. Its second write died: card says P0 (what the
     // labels say), record still says P2. That is the sync's own half-write.
-    const plan = planPriority({ current: "P0", synced: "P2", wanted: "P0", labels: ["bug"] });
+    const plan = planPriority({
+      current: "P0",
+      synced: "P2",
+      wanted: "P0",
+      labels: ["fast-track"],
+    });
     expect(plan).toEqual({ action: "record", value: "P0" });
   });
 
@@ -135,7 +141,7 @@ function recorder(fresh?: { priority?: string; syncedPriority?: string }) {
 describe("syncPriority: the order of writes is what makes a failure safe", () => {
   it("writes Priority before its record", () => {
     const { calls, io } = recorder();
-    syncPriority({ issue: issue(1, ["bug"]), item: { id: "PVTI_1" }, fresh: true, io });
+    syncPriority({ issue: issue(1, ["fast-track"]), item: { id: "PVTI_1" }, fresh: true, io });
     expect(calls).toEqual(["priority=P0", "record=P0"]);
   });
 
@@ -156,7 +162,7 @@ describe("syncPriority: the order of writes is what makes a failure safe", () =>
     const card = { id: "PVTI_1", priority: "P2", syncedPriority: "P2" };
     expect(() =>
       syncPriority({
-        issue: issue(1, ["bug"]),
+        issue: issue(1, ["fast-track"]),
         item: card,
         fresh: true,
         io: {
@@ -172,7 +178,12 @@ describe("syncPriority: the order of writes is what makes a failure safe", () =>
     ).toThrow(/went wrong/);
     // Next sync, labels unchanged: the card now says P0, the record P2.
     const next = recorder();
-    const plan = syncPriority({ issue: issue(1, ["bug"]), item: card, fresh: true, io: next.io });
+    const plan = syncPriority({
+      issue: issue(1, ["fast-track"]),
+      item: card,
+      fresh: true,
+      io: next.io,
+    });
     expect(plan).toEqual({ action: "record", value: "P0" });
     expect(next.calls).toEqual(["record=P0"]);
   });
@@ -352,7 +363,6 @@ describe("reconcileBoard: a drag is carried back before anything overwrites", ()
       ensureColumns: () => STATUS_OPTIONS,
       readMode: () => ({ position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } }),
       buildContext: () => ({}),
-      horizons: {},
       sync: (n) => {
         synced.push(n);
         return {
@@ -387,12 +397,11 @@ describe("reconcileBoard: a drag is carried back before anything overwrites", ()
           content: { type: "Issue", url: URL(3) },
         },
       ]),
-      readOpenIssues: () => [issue(1, ["bug"]), issue(3, ["idea", "P3"])],
+      readOpenIssues: () => [issue(1, ["fast-track"]), issue(3, ["idea", "P3"])],
       rateLimit: () => ({ remaining: 5000 }),
       ensureColumns: () => STATUS_OPTIONS,
       readMode: () => ({ position: "normal", caps: { inFlightCap: 3, startedPlanCap: 4 } }),
       buildContext: () => ({}),
-      horizons: {},
       dryRun: true,
       sync: () => {
         calls += 1;

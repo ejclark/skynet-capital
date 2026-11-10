@@ -392,8 +392,7 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     const answer = await askAbout({ kind: "name", subject: "pltr" });
     expect(answer.status).toBe(200);
     expect(answer.body).toMatchObject({ ok: true, status: "queued" });
-    expect(answer.body.tell).toMatch(/^Kept\. The house's research doesn't read this list yet/);
-    expect(answer.body.tell).not.toMatch(/passes|next in line/i);
+    expect(answer.body.tell).toMatch(/^Queued\. It is next in line .* runs once a day/);
     expect(queue.load().map((a) => a.id)).toEqual(["name:PLTR"]);
     expect(queue.load()[0]?.askers).toEqual([ADA]);
   });
@@ -419,16 +418,15 @@ describe("a question starts discovery (#6952 slice 2b)", () => {
     expect(queue.load()[0]?.askers).toHaveLength(2);
   });
 
-  it("gives no estimate while nothing reads the queue, however deep the ask sits", async () => {
+  it("counts the research passes in days for a deep ask, from the lane's per-pass number", async () => {
     for (const s of ["AA", "BB", "CC"]) await askAbout({ kind: "name", subject: s });
     const answer = await askAbout(
       { kind: "name", subject: "DD" },
       ada,
       config({ discoveryPerPass: 2 }),
     );
-    // Nothing reads the queue yet, so no count of passes is promised (#7034 slice 3b).
-    expect(answer.body.tell).toMatch(/no wait to promise/);
-    expect(answer.body.tell).not.toMatch(/passes/);
+    // The discovery lane reads the queue once a day (#7034 slice 3b): 3 ahead at 2 a pass is 2 passes.
+    expect(answer.body.tell).toMatch(/3 ahead of it, so about 2 research passes .* once a day/);
   });
 
   it("refuses a malformed or unknown ask with 400 and writes nothing", async () => {
