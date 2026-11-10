@@ -108,11 +108,11 @@
         {
           "id": "s3",
           "goto": "/app/trade?desk=human-eric&symbol=EEM&section=guidance",
-          "sees": "a per-position sheet; nothing says what taking profit here does to the whole book",
-          "ears": "WHEN a lever call says take profit, the app shall celebrate the rung beside the explanation of why it was right.",
-          "expect": [{ "text": "Lock in profit", "within": "main" }],
-          "known_gap": "profit-take exists only as a row's fact badge (app/src/live/position-mark.ts 'Consider', #5070), which the Map lens's cards wear too (#5083); no celebration is paired with its explanation on the guidance sheet",
-          "where": "app/src/live/position-mark.ts",
+          "sees": "a per-position sheet; a close placed from it on a position marked Consider ▲ that fills at a gain opens 'Profit locked in' — the dollars, what they were on, whether the rest is still running, and why the call was right (app/src/shell/lock-in-ceremony.tsx)",
+          "ears": "WHEN a close of a position the app marked Consider fills at a gain, the app shall celebrate it beside the explanation of why it was right.",
+          "expect": [{ "role": "dialog", "name": "Profit locked in" }],
+          "known_gap": "built in #4609 and specified in app/tests/shell/lock-in-ceremony.spec.tsx and lock-in-guidance-close.spec.tsx, but the walk cannot reach it: the frozen offline fixtures replay no fill and hold no position past the Consider bar, so no step can place and fill a close",
+          "where": "scripts/crawl/frozen-fixtures.mjs",
           "severity": "low",
           "fix": "M",
           "judge": "does this reader feel the win and know why it was earned?"

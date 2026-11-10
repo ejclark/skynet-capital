@@ -144,8 +144,8 @@ is still open is its step's `known_gap` in `e2e/journeys/eric.journey.json`):
   per position. The calendar of what he holds is a cockpit section (Events, j1 s3b). Even so, the split of his
   money (`app/src/shell/money-strip.tsx`) has no target to be measured against, a "wait"
   (`src/options/position-guidance-rules.ts`, `CALL_WORDS.WAIT`) has no book-level home and no
-  reopen date, and "Lock in profit" is a decision kind (`lock-in`, `app/src/live/desk.ts`),
-  not a rung celebrated beside its explanation.
+  reopen date. (Taking profit is now celebrated beside its explanation when a close of a
+  position marked Consider fills at a gain, #4609.)
 
 - **2026-10-08 — his own walk of the profile, in his words.** Kept out of this file until the blind
   member study (#4943) had been graded, so no member card could carry it; the study then found all
@@ -220,11 +220,14 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    `tests/options/position-guidance*.spec.ts`, which the crawl cannot reach without a quote).
    **WHEN the owner opens a position's guidance, the app shall open the guidance pane for that
    symbol and say when it cannot advise.** Judge: can this reader tell whether to take profit today?
-3. same page — a per-position sheet; nothing says what taking profit here does to the whole book,
-   and no win is celebrated. **WHEN a lever call says take profit, the app shall celebrate the rung
-   beside the explanation of why it was right.** _known gap — "Lock in profit" is a card kind, not
-   a celebrated rung (BRAND: celebration pairs with explanation)._ Judge: does this reader feel the
-   win and know why it was earned?
+3. same page — a per-position sheet; nothing says what taking profit here does to the whole book.
+   A close placed from it, on a position marked **Consider ▲**, that fills at a gain opens "Profit
+   locked in": the dollars, what they were on, whether the rest is still running, and why the call
+   was right (`app/src/shell/lock-in-ceremony.tsx`, #4609). **WHEN a close of a position the app
+   marked Consider fills at a gain, the app shall celebrate it beside the explanation of why it was
+   right.** _Fixed in the app; still a known gap for the walk — the frozen offline fixtures replay
+   no fill, so no step can reach the moment (its specs: `app/tests/shell/lock-in-ceremony.spec.tsx`)._
+   Judge: does this reader feel the win and know why it was earned?
 
 ### j3 — rebalance
 
