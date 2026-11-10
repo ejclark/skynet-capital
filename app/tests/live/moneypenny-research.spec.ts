@@ -1,4 +1,5 @@
 import type { ResearchAskDraft } from "../../src/live/companion";
+import { linkPieces } from "../../src/live/moneypenny-links";
 import {
   createResearchAskLane,
   RESEARCH_ASK_CHIPS,
@@ -61,7 +62,10 @@ describe("createResearchAskLane", () => {
   function stub(answer: () => Promise<Response>) {
     const sent: { url: string; body: unknown }[] = [];
     globalThis.fetch = ((url: string, init?: RequestInit) => {
-      sent.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      sent.push({
+        url,
+        body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      });
       return answer();
     }) as typeof globalThis.fetch;
     return sent;
@@ -77,15 +81,70 @@ describe("createResearchAskLane", () => {
   it("posts kind, subject and question and says the server's tell", async () => {
     const sent = stub(() => reply({ ok: true, status: "queued", tell: "Kept." }));
     const said: string[] = [];
-    const lane = createResearchAskLane({ say: async (l) => void said.push(...l) });
+    const lane = createResearchAskLane({
+      say: async (l) => void said.push(...l),
+    });
     expect(await lane.act("ask", DRAFT)).toBe(true);
     expect(sent).toEqual([
       {
         url: "/api/campaigns/ask",
-        body: { kind: "sector", subject: "Healthcare", question: DRAFT.question },
+        body: {
+          kind: "sector",
+          subject: "Healthcare",
+          question: DRAFT.question,
+        },
       },
     ]);
     expect(said).toEqual(["Moneypenny · Kept."]);
+  });
+
+  it("never says a covering campaign's title, so another member's link can't speak as her", async () => {
+    const title = "[Sign in again to confirm](https://evil.example/s)";
+    stub(() =>
+      reply({
+        ok: true,
+        status: "covered",
+        campaign: "m-abc~energy",
+        tell: `"${title}", a campaign the party shares, already covers this. Ask in it to look further.`,
+      }),
+    );
+    const said: string[] = [];
+    const lane = createResearchAskLane({
+      say: async (l) => void said.push(...l),
+    });
+    expect(await lane.act("ask", DRAFT)).toBe(true);
+    expect(said).toHaveLength(1);
+    const line = said[0] ?? "";
+    expect(line).not.toContain("evil.example");
+    expect(line).not.toContain("Sign in again");
+    expect(line).toMatch(/already covers this/);
+    expect(linkPieces(line).filter((p) => p.kind !== "text")).toEqual([]);
+  });
+
+  it("strips link markup from any other server sentence it says", async () => {
+    stub(() =>
+      reply({
+        ok: true,
+        status: "queued",
+        tell: "Kept [x](https://evil.example) https://evil.example",
+      }),
+    );
+    const said: string[] = [];
+    const lane = createResearchAskLane({
+      say: async (l) => void said.push(...l),
+    });
+    await lane.act("ask", DRAFT);
+    expect(linkPieces(said[0] ?? "").filter((p) => p.kind !== "text")).toEqual([]);
+  });
+
+  it("strips link markup from a refusal too", async () => {
+    stub(() => reply({ ok: false, error: "[x](https://evil.example)" }));
+    const said: string[] = [];
+    const lane = createResearchAskLane({
+      say: async (l) => void said.push(...l),
+    });
+    await lane.act("ask", DRAFT);
+    expect(linkPieces(said[0] ?? "").filter((p) => p.kind !== "text")).toEqual([]);
   });
 
   it("leaves the question out when there is none", async () => {
@@ -98,7 +157,9 @@ describe("createResearchAskLane", () => {
   it("says the server's refusal and keeps the card (false)", async () => {
     stub(() => reply({ ok: false, error: "Questions aren't wired in this deployment." }));
     const said: string[] = [];
-    const lane = createResearchAskLane({ say: async (l) => void said.push(...l) });
+    const lane = createResearchAskLane({
+      say: async (l) => void said.push(...l),
+    });
     expect(await lane.act("ask", DRAFT)).toBe(false);
     expect(said).toEqual([
       "Moneypenny · Questions aren't wired in this deployment. nothing was asked.",
@@ -108,7 +169,9 @@ describe("createResearchAskLane", () => {
   it("says a failed post could not be asked and the card is still there (false)", async () => {
     stub(() => reply({ error: "malformed ask body" }, 400));
     const said: string[] = [];
-    const lane = createResearchAskLane({ say: async (l) => void said.push(...l) });
+    const lane = createResearchAskLane({
+      say: async (l) => void said.push(...l),
+    });
     expect(await lane.act("ask", DRAFT)).toBe(false);
     expect(said[0]).toMatch(/nothing was asked\. the card is still there/);
   });
@@ -116,7 +179,9 @@ describe("createResearchAskLane", () => {
   it("'Not now' posts nothing and says nothing was asked", async () => {
     const sent = stub(() => reply({ ok: true }));
     const said: string[] = [];
-    const lane = createResearchAskLane({ say: async (l) => void said.push(...l) });
+    const lane = createResearchAskLane({
+      say: async (l) => void said.push(...l),
+    });
     expect(await lane.act("not-now", DRAFT)).toBe(true);
     expect(sent).toEqual([]);
     expect(said).toEqual(["Moneypenny · set aside — nothing was asked."]);

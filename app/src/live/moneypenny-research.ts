@@ -21,8 +21,14 @@ import { postJson } from "./post";
 
 export type ResearchAnswer = "ask" | "not-now";
 
-const ANSWERS: readonly { readonly answer: ResearchAnswer; readonly chip: Chip }[] = [
-  { answer: "ask", chip: { label: "Ask the research desk", msg: "Ask the research desk" } },
+const ANSWERS: readonly {
+  readonly answer: ResearchAnswer;
+  readonly chip: Chip;
+}[] = [
+  {
+    answer: "ask",
+    chip: { label: "Ask the research desk", msg: "Ask the research desk" },
+  },
   { answer: "not-now", chip: { label: "Not now", msg: "Not now" } },
 ];
 
@@ -48,6 +54,27 @@ export function researchAskCardText(draft: ResearchAskDraft): string {
     draft.question ? `“${draft.question}”` : "no question text",
     `— tap “Ask the research desk” to put it on the house's research list, or “Not now”. nothing is asked until you tap.`,
   ].join("\n\n");
+}
+
+/**
+ * The server's sentence with nothing in it the rail would render as a link. Her lines go through
+ * the rail's link renderer (`moneypenny-links.ts`), which turns `[words](https://…)` and a bare
+ * URL into a live link — so text that is not hers never reaches it with link markup intact.
+ */
+function unlinked(text: string): string {
+  return text.replace(/[[\]]/g, "").replace(/:\/\//g, ": //");
+}
+
+/**
+ * What she says once the list took the ask. A `covered` reply is composed here from the status
+ * alone: the server's sentence for it quotes a party campaign's title, which another member wrote,
+ * and that text never speaks as her in this member's chat. Any other reply's sentence is the
+ * server's own words, with link markup stripped all the same.
+ */
+function askedLine(reply: Extract<AskReply, { ok: true }>): string {
+  if (reply.status === "covered")
+    return "a campaign already covers this, so nothing new was asked. ask about it inside that campaign to look further.";
+  return reply.tell ? unlinked(reply.tell) : "asked — it's on the house's research list.";
 }
 
 export interface ResearchLaneDeps {
@@ -78,12 +105,10 @@ export function createResearchAskLane(deps: ResearchLaneDeps) {
         return false;
       }
       if (!reply.ok) {
-        await deps.say([`Moneypenny · ${reply.error} nothing was asked.`]);
+        await deps.say([`Moneypenny · ${unlinked(reply.error)} nothing was asked.`]);
         return false;
       }
-      await deps.say([
-        `Moneypenny · ${reply.tell ?? "asked — it's on the house's research list."}`,
-      ]);
+      await deps.say([`Moneypenny · ${askedLine(reply)}`]);
       return true;
     },
   };
