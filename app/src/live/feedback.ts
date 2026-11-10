@@ -94,6 +94,25 @@ export type FollowupOutcome =
   | "stranded"
   | "unchanged";
 
+/** What a sent follow-up did (#5848): the server restarts the build only when the claim would
+ *  take it, and names why when it didn't, so the line never promises a build that isn't coming.
+ *  An unknown or missing outcome gets the plain line — the comment posted, nothing more claimed.
+ *  One copy for both doors that follow up — the Feedback screen's box and Moneypenny's card
+ *  (#7286 slice 8) — so the two never tell a member different things about the same build. */
+const SENT = "Sent — it's on your issue.";
+const SENT_LINES: Readonly<Record<FollowupOutcome, string>> = {
+  restarted: "Sent — it's on your issue, and the build starts again with it.",
+  backlog: "Sent — it's on your issue; it builds once it's picked from the queue.",
+  held: "Sent — it's on your issue; the build waits on a person first.",
+  building: "Sent — it's on your issue; it's being built right now.",
+  blocked: "Sent — it's on your issue; the build starts once the issues it waits on close.",
+  closed: "Sent — it's on your issue. This one is closed, so nothing rebuilds from it.",
+  stranded: "Sent — it's on your issue, but the build couldn't be restarted.",
+  unchanged: SENT,
+};
+export const followupSentLine = (outcome: FollowupOutcome | undefined): string =>
+  outcome && Object.hasOwn(SENT_LINES, outcome) ? SENT_LINES[outcome] : SENT;
+
 export const followupRequest = (input: {
   readonly issueNumber: number;
   readonly details: string;

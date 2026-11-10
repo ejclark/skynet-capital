@@ -10,6 +10,12 @@ import {
 import { marketIsOpen } from "./market-hours";
 import { answerFor, convictionCardText, createConvictionLane } from "./moneypenny-conviction";
 import { createFilingLane, NEVER_MIND, SEND_AS_IS } from "./moneypenny-filing";
+import {
+  createFollowupLane,
+  type FollowupDraft,
+  followupAnswerFor,
+  followupCardText,
+} from "./moneypenny-followup";
 import { plainReply } from "./moneypenny-markdown";
 import {
   answerFailed,
@@ -98,6 +104,9 @@ export interface MoneypennyState extends Persisted {
   /** A view she drafted (#5482 criterion 9), parked until the member taps one of its three exits —
    *  in memory only, never persisted, like `draft`. */
   readonly conviction?: ChatConvictionDraft;
+  /** A follow-up she drafted on the member's own filing (#7286 slice 8), parked until the member
+   *  taps "Post the follow-up" or "Not now" — in memory only, never persisted, like `draft`. */
+  readonly followup?: FollowupDraft;
   /** Bumps on every saved view — the rail refreshes the Playbooks screen's list on it. */
   readonly convictionSeq: number;
   /** A question asked from outside the rail (`ask`), shown at once with her typing line while the
@@ -194,7 +203,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       if (was !== undefined && was !== "anon") set({ thread: undefined });
       forgetOthers(member);
       const thread = load(member);
-      set({ ...thread, member, draft: undefined, conviction: undefined });
+      set({ ...thread, member, draft: undefined, conviction: undefined, followup: undefined });
       // An unbound store saves under "anon", so loading "anon" already holds the carried lines.
       if (carry.length > 0 && (was ?? "anon") !== member) {
         // A side thread the carried question was asked in moves with it, by name.
@@ -320,12 +329,22 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
           show();
         },
         (draft) => {
-          set({ draft, kind: draft.kind, conviction: undefined, parkedIn: key });
+          set({
+            draft,
+            kind: draft.kind,
+            conviction: undefined,
+            followup: undefined,
+            parkedIn: key,
+          });
           append("draft", [draftCard(draft)]);
         },
         (conviction) => {
-          set({ conviction, draft: undefined, parkedIn: key });
+          set({ conviction, draft: undefined, followup: undefined, parkedIn: key });
           append("draft", [convictionCardText(conviction)]);
+        },
+        (followup) => {
+          set({ followup, draft: undefined, conviction: undefined, parkedIn: key });
+          append("draft", [followupCardText(followup)]);
         },
       );
     } catch (err) {
@@ -366,6 +385,24 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     saved: () => set({ convictionSeq: get().convictionSeq + 1 }),
   });
 
+  /** The follow-up lane — the only thing here that posts a follow-up (`moneypenny-followup.ts`). */
+  const followups = createFollowupLane({ say });
+
+  /** A parked follow-up's exits: "Post the follow-up" or "Not now", exactly. Busy while the post
+   *  runs, like a view's tap; a failed or refused post parks the card again for another tap. */
+  const answeredFollowup = async (note: string): Promise<boolean> => {
+    const { followup, parkedIn } = get();
+    const answer = followup ? followupAnswerFor(note) : undefined;
+    if (!(followup && answer)) return false;
+    set({ followup: undefined, streaming: true });
+    try {
+      if (!(await followups.act(answer, followup))) set({ followup, parkedIn });
+    } finally {
+      set({ streaming: false });
+    }
+    return true;
+  };
+
   /** A parked card's exits. A view: one of its three exact answers acts on it. A filing draft:
    *  "send" files it, "never mind" drops it. Anything else leaves either parked and is a normal
    *  message (false). */
@@ -384,6 +421,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       }
       return true;
     }
+    // After the view's branch: the cards are exclusive (drafting one clears the others).
+    if (await answeredFollowup(note)) return true;
     if (draft && SEND_AS_IS.test(note)) {
       await lane.sendDraft(draft);
       return true;
@@ -493,6 +532,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
         ...EMPTY,
         draft: undefined,
         conviction: undefined,
+        followup: undefined,
         pending: undefined,
         thread: undefined,
         parkedIn: undefined,

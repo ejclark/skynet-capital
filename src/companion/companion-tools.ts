@@ -23,6 +23,12 @@ import {
   type ConvictionToolName,
   runConvictionTool,
 } from "./companion-convictions.js";
+import {
+  type CompanionFollowup,
+  FOLLOWUP_TOOL_DEFS,
+  FOLLOWUP_TOOL_NAMES,
+  runFollowupTool,
+} from "./companion-followup.js";
 
 /**
  * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of nine read-only lookups plus two
@@ -57,6 +63,9 @@ import {
  * `get_upcoming_events` (#7034 slice 3a) reads the checked-in event calendar and the house's
  * research ledgers — repo content, reviewed in PRs — and uses the member's own held names only to
  * put their events first. It reads no one else's desk.
+ *
+ * `draft_followup` (#7286 slice 8, `companion-followup.ts`) posts nothing: it hands the rail a
+ * follow-up comment on one of the member's OWN filings, which only their tap posts.
  */
 
 export const COMPANION_TOOL_NAMES = [
@@ -69,6 +78,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_roadmap",
   "get_upcoming_events",
   "draft_feedback",
+  ...FOLLOWUP_TOOL_NAMES,
   ...CONVICTION_TOOL_NAMES,
 ] as const;
 
@@ -258,6 +268,7 @@ export const COMPANION_TOOL_DEFS = [
       required: ["kind", "title", "details"],
     },
   },
+  ...FOLLOWUP_TOOL_DEFS,
   ...CONVICTION_TOOL_DEFS,
 ] as const;
 
@@ -286,6 +297,9 @@ export interface CompanionDeskDeps {
   /** #3952 slice 3: what is coming — the open plan queue grouped Now / Next / Later, same token.
    *  Optional — without it `get_roadmap` says "not available", never guesses. */
   readonly readRoadmap?: ReadRoadmap;
+  /** #7286 slice 8: the session's own filings and the rail's card hook, bound per turn by the chat
+   *  route. Absent: `draft_followup` says "not available". */
+  readonly followup?: CompanionFollowup;
   /** #7034 slice 3a: the next fortnight's market events, the held names first
    *  (`server/upcoming-events.ts`). Optional — without it `get_upcoming_events` says "not
    *  available", never guesses a date. */
@@ -534,6 +548,10 @@ export async function runCompanionTool(
       return workStatusResult(deps.readWorkStatus, input);
     case "get_roadmap":
       return roadmapResult(deps.readRoadmap);
+    case "draft_followup":
+      return participantId
+        ? runFollowupTool(input, deps.followup)
+        : { ok: false, error: "no linked desk" };
     case "get_upcoming_events":
       return upcomingEventsResult(deps.readUpcomingEvents, snapshot, input);
     case "get_my_convictions":

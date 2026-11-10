@@ -7,6 +7,7 @@ import {
   textDelta,
 } from "./companion-anthropic-stream.js";
 import type { ChatConvictionDraft, CompanionConvictions } from "./companion-convictions.js";
+import type { CompanionFollowup } from "./companion-followup.js";
 import {
   COMPANION_MAX_MESSAGE_CHARS,
   effortFor,
@@ -63,6 +64,9 @@ export interface CompanionTurnInput {
    *  they need the session, which the boot-time tools don't have. Absent: the two conviction
    *  tools answer "not available". */
   readonly convictions?: CompanionConvictions;
+  /** The session's own filings and the card hook for `draft_followup` (#7286 slice 8), bound by
+   *  the route for this turn like `convictions`. Absent: the tool answers "not available". */
+  readonly followup?: CompanionFollowup;
 }
 
 /** What kind of failure an `onError` was (#6214). `refused`: the model declined — any partial
@@ -248,6 +252,7 @@ export function createCompanionChat(
       {
         ...(config.tools ?? { snapshotFor: () => undefined }),
         ...(input.convictions ? { convictions: input.convictions } : {}),
+        ...(input.followup ? { followup: input.followup } : {}),
       },
       canUseDesk ? input.participantId : undefined,
       handlers,
