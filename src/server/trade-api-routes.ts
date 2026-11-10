@@ -12,6 +12,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import { playLocked } from "./progression-service.js";
+import { questIdOf, settleTakenQuest } from "./quest-taken.js";
 
 /**
  * THE TRADE API — the React shell's pre-trade gate, as two POST endpoints.
@@ -85,11 +86,12 @@ function parseTradeBody(raw: string): TradeApiBody | undefined {
   };
 }
 
-/** Read + gate one POST body. Returns undefined after answering the response itself. */
+/** Read + gate one POST body, with the quest it was drafted from (#7028 slice 6) kept apart from
+ *  the order itself. Returns undefined after answering the response itself. */
 async function readTradeBody(
   req: IncomingMessage,
   res: ServerResponse,
-): Promise<TradeApiBody | undefined> {
+): Promise<{ readonly body: TradeApiBody; readonly questId?: string } | undefined> {
   const raw = await readJsonPost(req, res, TRADE_BODY_CAP_BYTES);
   if (raw === undefined) return undefined;
   const body = parseTradeBody(raw);
@@ -97,7 +99,8 @@ async function readTradeBody(
     sendJson(res, 400, { error: "malformed order body" });
     return undefined;
   }
-  return body;
+  const questId = questIdOf(raw);
+  return { body, ...(questId ? { questId } : {}) };
 }
 
 /**
@@ -160,8 +163,9 @@ export async function serveTradeApi(
   session: Session | undefined,
 ): Promise<boolean> {
   if (path !== "/api/trade/review" && path !== "/api/trade/submit") return false;
-  const body = await readTradeBody(req, res);
-  if (!body) return true;
+  const read = await readTradeBody(req, res);
+  if (!read) return true;
+  const { body } = read;
 
   // Identity: the session and nowhere else — exactly `/trade`'s resolution. Compared against the
   // full owned set, not just the session's single default account, so a session owning more than
@@ -209,6 +213,14 @@ export async function serveTradeApi(
     });
     return true;
   }
-  sendJson(res, 200, await config.submitTrade(body, requesterId));
+  const result = await config.submitTrade(body, requesterId);
+  settleTakenQuest(
+    read.questId,
+    body.participantId,
+    { kind: "shares", action: body.action, symbol: normalizeSymbol(body.symbol) },
+    result,
+    config,
+  );
+  sendJson(res, 200, result);
   return true;
 }

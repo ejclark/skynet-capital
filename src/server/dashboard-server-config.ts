@@ -60,6 +60,7 @@ import type { ProgressionService } from "./progression-service.js";
 import type { QuoteStreamPort } from "./quote-stream-hub.js";
 import type { SavedPositionsStore } from "./saved-positions-store.js";
 import type { SubscriptionStore } from "./subscription-store.js";
+import type { TakenQuestStore } from "./taken-quest-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import type { WireRouteDeps } from "./wire-routes.js";
 
@@ -371,6 +372,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * mode): the review still shows the plan, and the receipt says it was not saved.
    */
   readonly exitPlans?: ExitPlanStore;
+  /**
+   * THE QUESTS MEMBERS TOOK (#7028 slice 6) — an accepted order a quest drafted, recorded with the
+   * base rate the quest carried, for `GET /api/quests/taken` to score. Omit to disable (offline
+   * mode): orders place as ever, and the scores answer empty.
+   */
+  readonly takenQuests?: TakenQuestStore;
   /**
    * THE AUTHORED PLAYS STORE (#5457 slice 1) — the drafts a member writes on R&D → Playbooks. Omit to
    * disable (offline mode): the list answers empty and a save answers "not wired in this deployment."

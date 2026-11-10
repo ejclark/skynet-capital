@@ -114,6 +114,22 @@ export interface Quest {
   readonly atOpen: boolean;
 }
 
+/**
+ * A ticket link that names the quest it drafts (#7028 slice 6): the Trade form keeps `?quest=` and
+ * sends it with the order, so an accepted order can be recorded as this quest taken
+ * (`src/server/quest-taken.ts`). Every quest href already carries a query string.
+ */
+export function withQuest(href: string, id: string): string {
+  return `${href}&quest=${encodeURIComponent(id)}`;
+}
+
+/** Ids are short, plain and built by this repo (`<source>:…:<move>`); anything else is not one. */
+export function isQuestId(value: unknown): value is string {
+  return (
+    typeof value === "string" && /^(position|conditions|event):[A-Za-z0-9._:-]{1,160}$/.test(value)
+  );
+}
+
 const CONFIDENCE_ORDER = { high: 0, medium: 1, low: 2 } as const;
 
 /**
