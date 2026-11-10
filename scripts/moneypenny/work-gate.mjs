@@ -22,6 +22,7 @@
 //     every lane reads the dial, so a GitHub blip must not halt the repo);
 //   - an unreadable BRAKE refuses outright (circuit-breaker.mjs throws; "broken must never read as
 //     clear" is the whole reason that file exists), and so does a malformed config on either side.
+import { isMain } from "../is-main.mjs";
 import { isBreakerTripped, loadBreakerConfig } from "./circuit-breaker.mjs";
 import { sh } from "./gh.mjs";
 import { noticeLine, readWorkMode } from "./work-mode.mjs";
@@ -125,4 +126,4 @@ export function runCli(io = {}) {
   return g.dispatch ? 0 : 3;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exitCode = runCli();
+if (isMain(import.meta.url)) process.exitCode = runCli();

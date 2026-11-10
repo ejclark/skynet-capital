@@ -18,8 +18,7 @@
 // here exits 0.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "../is-main.mjs";
 
 /** Pure: what to do with this checkout. `branch` is null on a detached head. */
 export function decide({
@@ -126,7 +125,7 @@ function warn(behind, why) {
   );
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   try {
     main();
   } catch (err) {

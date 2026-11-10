@@ -15,10 +15,11 @@
  *   3. Asking twice is one ask: a second member asking about the same thing joins it, so a popular
  *      question costs one discovery, not one per asker.
  *
- * WHAT THIS MODULE DOES NOT DO. It starts nothing: no lane reads the queue yet (the lane's workflow
- * is envelope-protected, so wiring it is its own platter item) and the finding does not come back
- * as an article until #6948 slice 4 lands. `tellMember` promises only what is true today: the ask
- * is queued, and where it stands in line.
+ * WHAT THIS MODULE DOES NOT DO. It starts nothing: the lane that takes from the queue is
+ * `moneypenny-discovery.yml`, planned by `discovery-pass.ts`, and the finding does not come back as
+ * an article until #6948 slice 4 lands (until then it is a shelf file and, in a house campaign, a
+ * lesson). `tellMember` promises only what is true: the ask is queued, where it stands in line, and
+ * that a pass runs once a day.
  *
  * A QUESTION ASKED INSIDE A CAMPAIGN (slice 2c, criterion 9). Research asked in a campaign is
  * everyone's who can read that campaign (Eric, 2026-11-07: "Campaigns are communal"). An ask can
@@ -262,7 +263,7 @@ export function tellMember(
   const lead = joined ? "Someone already asked this; you're on it with them." : "Queued.";
   const when =
     passes === 1
-      ? "It is next in line for the house's research pass, which runs whenever new work lands."
-      : `${outcome.ahead} ahead of it, so about ${passes} research passes from now; a pass runs whenever new work lands.`;
+      ? "It is next in line for the house's research pass, which runs once a day."
+      : `${outcome.ahead} ahead of it, so about ${passes} research passes from now; a pass runs once a day.`;
   return `${lead} ${when} Nothing is bought or sold.`;
 }
