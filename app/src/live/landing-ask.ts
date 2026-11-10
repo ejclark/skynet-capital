@@ -208,6 +208,20 @@ export function askInCampaign(input: {
   });
 }
 
+/**
+ * File one name on the research list with no campaign (a bare ask, #7034 slice 3c): "Ask what we
+ * know" on a calendar event. The server's reply carries the queue's own wait, so nothing here
+ * words a time.
+ */
+export function askForResearch(symbol: string): Promise<AskReply> {
+  return postJson<AskReply>("/api/campaigns/ask", { kind: "name", subject: symbol });
+}
+
+/** What a filed research ask tells the member: the queue's own sentence, never a guessed wait. */
+export function filedLine(reply: AskReply): string {
+  return reply.ok ? (reply.tell ?? "Kept on the research list.") : reply.error;
+}
+
 /** The sentence a reply leaves under the form: the server's own words when it sent some. */
 export function replyLine(reply: AskReply): string {
   if (!reply.ok) return reply.error;
