@@ -178,6 +178,8 @@ describe("the hook on a real checkout", () => {
     const { clone, stub } = fixture();
     mkdirSync(join(clone, "scripts", "hooks"), { recursive: true });
     copyFileSync(SCRIPT, join(clone, "scripts", "hooks", "fresh-checkout.mjs"));
+    // The hook imports its direct-run check, and a real checkout always ships the two together (#7046).
+    copyFileSync(resolve("scripts/is-main.mjs"), join(clone, "scripts", "is-main.mjs"));
     const start = (extra: Record<string, string>) =>
       spawnSync("bash", [resolve(".claude/hooks/session-start.sh")], {
         cwd: clone,

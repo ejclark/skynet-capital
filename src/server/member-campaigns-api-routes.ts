@@ -17,6 +17,7 @@ import {
   castSymbols,
   SYMBOL_RE,
 } from "../domain/campaigns.js";
+import { withoutAnswered } from "../domain/discovery-pass.js";
 import {
   type CoveringCandidate,
   cleanQuestion,
@@ -39,6 +40,7 @@ import {
   suggestionsFor,
 } from "./campaign-questions-api.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { shelfAnswered } from "./discovery-answered.js";
 import { discoveryPerPass } from "./discovery-queue-store.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import {
@@ -249,7 +251,9 @@ function queueDiscoveries(
   if (!store || subjects.length === 0) return undefined;
   const isResearched = config.campaignShelf ?? shelfResearched();
   const perPass = config.discoveryPerPass ?? discoveryPerPass();
-  const before: DiscoveryQueue = store.load();
+  // An ask the lane already answered (its shelf file is on main) has left the queue (discovery-pass.ts).
+  const loaded: DiscoveryQueue = store.load();
+  const before: DiscoveryQueue = withoutAnswered(loaded, shelfAnswered());
   let queue = before;
   let last: QueueOutcome | undefined;
   let refused = 0;
@@ -269,7 +273,7 @@ function queueDiscoveries(
     if (!last || place(outcome) >= place(last)) last = outcome;
   }
   // Best effort: the campaign is already saved, so a queue write that fails must not fail the save.
-  if (queue !== before) {
+  if (queue !== loaded) {
     try {
       store.write(queue);
     } catch (err) {
