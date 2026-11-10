@@ -138,19 +138,26 @@ export function mainFailuresByJob(runs) {
   return out;
 }
 
+/** Inside [sinceMs, untilMs]: a fixed past window must read the same on every run (#6690). */
+const inWindow = (at, sinceMs, untilMs) => {
+  const ms = Date.parse(at);
+  return ms >= sinceMs && ms <= untilMs;
+};
+
 /** Open-to-merge minutes for merged feat and fix PRs; research and docs merges would swamp it. */
-export function mergeMinutes(prs, sinceMs) {
+export function mergeMinutes(prs, sinceMs, untilMs = Number.POSITIVE_INFINITY) {
   const minutes = prs
     .filter(
-      (pr) => pr.mergedAt && Date.parse(pr.mergedAt) >= sinceMs && /^(feat|fix)\b/.test(pr.title),
+      (pr) =>
+        pr.mergedAt && inWindow(pr.mergedAt, sinceMs, untilMs) && /^(feat|fix)\b/.test(pr.title),
     )
     .map((pr) => (Date.parse(pr.mergedAt) - Date.parse(pr.createdAt)) / 60000);
   return { n: minutes.length, p50: quantile(minutes, 0.5), p90: quantile(minutes, 0.9) };
 }
 
 /** Counts of local verify outcomes from ship.sh's log, failures named by the step that failed. */
-export function localVerify(rows, sinceMs) {
-  const recent = rows.filter((row) => Date.parse(row.at) >= sinceMs);
+export function localVerify(rows, sinceMs, untilMs = Number.POSITIVE_INFINITY) {
+  const recent = rows.filter((row) => inWindow(row.at, sinceMs, untilMs));
   const bySteps = {};
   for (const row of recent.filter((r) => r.ok === false)) {
     const step =
@@ -323,12 +330,12 @@ async function measure(w, { maxRest }) {
           : { ...defectsFromIssues(issues, w.sinceMs, w.untilMs), audited },
       mainFailures: typeof pipeline === "string" ? pipeline : mainFailuresByJob(pipeline.main),
       ci: typeof pipeline === "string" ? pipeline : ciByTrigger(pipeline.all),
-      localVerify: localVerify(readJsonl(join(runsDir, "ship-verify.jsonl")), w.sinceMs),
+      localVerify: localVerify(readJsonl(join(runsDir, "ship-verify.jsonl")), w.sinceMs, w.untilMs),
       note: "pull_request CI is a floor; local verify is the other half; defects without an audit receipt read unknown, not zero",
     },
     lanes: typeof lanes === "string" ? lanes : { ...lanes, floorSec: SESSION_FLOOR_SEC },
     speed: {
-      openToMergeMinutes: typeof prs === "string" ? prs : mergeMinutes(prs, w.sinceMs),
+      openToMergeMinutes: typeof prs === "string" ? prs : mergeMinutes(prs, w.sinceMs, w.untilMs),
       runs: runRows,
       note: "open-to-merge excludes local verify and agent time; run rows are the fuller measure",
     },
