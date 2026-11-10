@@ -129,6 +129,19 @@ Still human: the *sense* that quota is spare (Eric's phrase starts it, by rule �
 the *act* of filing confirmed audit findings, which stays a session step until a finding's shape is
 stable enough to file mechanically.
 
+**2026-11-10 — the second surge.** A throughput study measured it (19 PRs merged in 82 minutes,
+6.9x the prior day's rate). The stage a person still did is named first.
+
+| Loop | Stage still by hand | Now automated by |
+|---|---|---|
+| Clear-path flip | sense: Eric saw "stalled" before any session did; the lanes had 0 buildable Ready items against a cap of 6. A session then readied 26 of 62 judged issues | #7311 slice 3 (a due-check when the queue runs dry) |
+| Post-merge audit | sense: a session started it when Eric asked for more threads; a workflow filed its 5 confirmed bugs and 1 reviewer line | #7311 slices 1–2 |
+| Held-PR merge (protected class) | sense: a session had to tell Eric that 4 green PRs blocked 3 plans (37.6 h median green); his 4 clicks took 93 s | the study's same-day ask proposal (#7313–#7317) |
+| Laptop build waves | sense: 2 of 3 waves launched only after his message; 3 of 5 built parts in wave 1 got no PR until a session opened them | the study's worktree proposal (#7313–#7317) |
+
+Still human: the *act* of merging the protected class (his, by rule), and the *sense* that a
+local wave has gone idle. The measured ceiling was the App's hourly API limit, not tokens.
+
 ## Starting a new loop
 
 1. Fill fields 1–9 before running anything — if the aim, baseline, prediction, pressure test,
