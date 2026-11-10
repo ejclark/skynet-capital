@@ -12,9 +12,10 @@
 // 412k per confirmed defect, on this basis. The meter's workflow section totals them in.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { listDirs, scanWorkflowAgents, stagesByType } from "./agents.mjs";
+import { scanWorkflowAgents, stagesByType } from "./agents.mjs";
 import { mergeReceipts } from "./defects.mjs";
 import { readFlow } from "./flow.mjs";
+import { projectFolders } from "./project.mjs";
 import { k } from "./render.mjs";
 
 const AUDIT_WORKFLOW = "post-merge-audit";
@@ -260,7 +261,7 @@ export async function readJobs({
   readFixes,
   sharedReceipts = [],
 }) {
-  let hasTranscripts = listDirs(projectsDir).some((name) => name.startsWith(project));
+  let hasTranscripts = projectFolders(projectsDir, project).length > 0;
   let agents = [];
   try {
     agents = await scanWorkflowAgents(
