@@ -26,8 +26,9 @@
 // and a long horizon's pass rate is the calls that resolved early (this quarter: 186 of 226 still
 // open). So the one comparison that may move the sizing rule is high against medium WITHIN a
 // horizon, over calls whose score-by date has passed. A cell with fewer than THIN_CELL decided
-// calls is printed as thin, never as a percentage: a lane reading 100% off two calls is the
-// misread this table exists to stop.
+// calls — or more open calls than decided ones — is printed as thin, never as a percentage: a
+// lane reading 100% off two calls is the misread this table exists to stop. A cell's open calls
+// are always shown beside it, since a decided-only rate hides how far they could move it (#6732).
 //
 // PURE TEXT, like forward-test-pending.mjs: no network, no token, no `npm ci`. Grades calls; never
 // changes sizing (#3955 constraint — paper-only, educational).
@@ -242,13 +243,33 @@ function table(title, groups) {
   return lines.join("\n");
 }
 
-/** One matured cell: a percentage once it holds THIN_CELL decided calls, `thin: p/d` under that,
- *  `—` with none decided. The thin form keeps the numbers visible without inviting a read. */
+/** A matured cell is thin when it has fewer than THIN_CELL decided calls, OR when its open calls
+ *  outnumber its decided ones — past that point the all-kill to all-pass range spans more than half
+ *  the scale, so the decided-only rate says less than the calls still waiting (#6732). */
+export function isThin(c) {
+  const decided = c.pass + c.kill;
+  return decided < THIN_CELL || c.open > decided;
+}
+
+/** The pass rate a cell would read if every open call killed, and if every one passed. */
+export function openRange(c) {
+  const n = c.pass + c.kill + c.open;
+  return n === 0 ? null : { low: c.pass / n, high: (c.pass + c.open) / n };
+}
+
+/** One matured cell: a percentage once it is not thin, `thin: p/d` when it is, `—` with none
+ *  decided. A cell holding open calls says how many, and beside a percentage the range they could
+ *  move it across (#6732: "81% (34/42)" hid 11 open calls, a true 64%–85%). The thin form keeps the
+ *  numbers visible without inviting a read. */
 export function maturedCell(c) {
   const decided = c.pass + c.kill;
-  if (decided === 0) return "—";
-  if (decided < THIN_CELL) return `thin: ${c.pass}/${decided}`;
-  return `${pct(passRate(c))} (${c.pass}/${decided})`;
+  const open = c.open > 0 ? ` · ${c.open} open` : "";
+  if (decided === 0) return c.open > 0 ? `—${open}` : "—";
+  if (isThin(c)) return `thin: ${c.pass}/${decided}${open}`;
+  const base = `${pct(passRate(c))} (${c.pass}/${decided})`;
+  if (c.open === 0) return base;
+  const r = openRange(c);
+  return `${base}${open}, ${pct(r.low)}–${pct(r.high)}`;
 }
 
 function maturedTable(card, today) {
@@ -264,7 +285,7 @@ function maturedTable(card, today) {
   }
   lines.push(
     "",
-    `Matured = the call's score-by date has passed; a cell is pass ÷ (pass + kill) over those, and reads thin with fewer than ${THIN_CELL} decided. Compare grades across one row, never down a column: horizon sets the base rate. ${m.pastDueOpen} matured call(s) still open past their date; ${m.notYet} not yet due; ${m.undated} with no dated score-by.`,
+    `Matured = the call's score-by date has passed; a cell is pass ÷ (pass + kill) over those, and reads thin with fewer than ${THIN_CELL} decided or more open than decided. A cell with open calls names them and, beside a rate, the range from all of them killing to all passing. Compare grades across one row, never down a column: horizon sets the base rate. ${m.pastDueOpen} matured call(s) still open past their date; ${m.notYet} not yet due; ${m.undated} with no dated score-by.`,
   );
   return lines.join("\n");
 }
