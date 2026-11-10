@@ -129,3 +129,63 @@
     padding: 12px 16px;
   }
 }
+
+/* Against your target split (#4607 slice 2): `shell/money-target.tsx`. Under the legend: a thin
+   bar of the target in the same slices as the bar above it, then one row per slice — actual,
+   target, and the gap as an arrow and a word — then the sentence of what to trim or add. Over and
+   under are told apart by ▲ / ▼ and the words, never by a hue (docs/BRAND.md → Accessibility).
+   Stays whole at phone width: this is the row's answer to "what do I do about it". */
+.money-target {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.money-target-head {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.money-bar--target {
+  height: 6px;
+}
+.money-target-rows {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  column-gap: 10px;
+  row-gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  align-items: baseline;
+}
+.money-target-row {
+  display: contents;
+}
+.money-target-name {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.money-target-row b.num {
+  font-family: var(--mono);
+  text-align: right;
+}
+.money-target-of {
+  color: var(--muted);
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.money-target-gap {
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.money-target-row--within .money-target-gap,
+.money-target-row--unread .money-target-gap {
+  font-weight: 400;
+  color: var(--muted);
+}
+.money-target-call {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+}

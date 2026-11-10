@@ -319,6 +319,18 @@ const { page, origin, out, close } = await openShell({
       },
       representative: true,
     },
+    // Eric's target split (#4607 slice 2): 60 / 15 / 25 with 5 points either side, against a book
+    // that is 81% cash, so the money row names what to trim and add in dollars.
+    "/api/target-split": {
+      wired: true,
+      target: {
+        sharesPct: 60,
+        optionsPct: 15,
+        cashPct: 25,
+        tolerancePct: 5,
+        updatedAt: "2026-11-10T12:00:00.000Z",
+      },
+    },
     "/api/accounts/networth": () => (atHigh ? networthAtHigh : networth),
     "/api/desk/human-eric": ericDesk,
     "/api/desk/bot-sauron": sauronDesk,
@@ -369,6 +381,14 @@ await shootCockpit("head-more-phone");
 await page.goto(`${origin}/app/accounts`);
 await page.getByText("Net worth · Eric").waitFor();
 await page.locator(".hero-chart-legend").waitFor({ state: "attached" });
+
+// Against the target split (#4607 slice 2): the money card scrolled to its target block, which,
+// unlike the legend above it, stays whole at phone width.
+await page.locator(".money-target").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, 160));
+await page.waitForTimeout(150);
+await shootCockpit("accounts-target-phone");
+await page.evaluate(() => window.scrollTo(0, 0));
 
 // The standing line (#3964): the member's own record inside the net-worth card — win rate, profit
 // factor, max drawdown, then the link to the rest of this account's Pulse. Its own frame at 390
@@ -471,6 +491,12 @@ await shootCockpit("events-next-landed-phone");
 
 // --- DESKTOP (1280px) ---
 await page.setViewportSize({ width: 1280, height: 900 });
+
+await page.goto(`${origin}/app/accounts`);
+await page.locator(".money-target").scrollIntoViewIfNeeded();
+await page.evaluate(() => window.scrollBy(0, 200));
+await page.waitForTimeout(150);
+await shootCockpit("accounts-target-desktop");
 
 await page.goto(`${origin}/app/accounts?section=events&on=2026-10-15&span=month`);
 await page.getByText("AAPL earnings print").waitFor();

@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import type { DeskAllocation } from "../live/desk";
 import { fetchOptionPositions, type OptionBookGreeks } from "../live/options";
 import { GlossaryTerm } from "./glossary-term";
+import { MoneyTarget } from "./money-target";
 
 /**
  * WHERE YOUR MONEY IS (#3689 slice 5, design handoff 3a): one row, three cells. Since #3725 it is
@@ -15,6 +16,9 @@ import { GlossaryTerm } from "./glossary-term";
  *     "dry powder" note).
  *  3. The book's two greeks that matter most to a beginner, in plain words with the Greek one hover
  *     away: time decay (theta, $/day) and market exposure (delta, in shares).
+ *
+ * #4607 slice 2: under the split's legend, the member's own target split beside it and what to trim
+ * or add in dollars (`money-target.tsx`); with no target set, one link to set one.
  *
  * The greeks come from `/api/trade/option-positions` (the same netted book the Trade page's option
  * card shows); the shares' own delta (one per share) comes from the desk's allocation. When the
@@ -65,10 +69,13 @@ export function MoneyStrip({
   accountId,
   allocation,
   hasOptions,
+  bookReadable = true,
 }: {
   readonly accountId: string;
   readonly allocation: DeskAllocation;
   readonly hasOptions: boolean;
+  /** False when the desk or its cash couldn't be read: the target comparison then reads "—". */
+  readonly bookReadable?: boolean;
 }): ReactElement {
   const statement = useQuery({
     queryKey: ["option-positions", accountId],
@@ -112,6 +119,7 @@ export function MoneyStrip({
             <b className="num">{allocation.cash}</b>
           </li>
         </ul>
+        <MoneyTarget allocation={allocation} bookReadable={bookReadable} />
       </div>
       <div className="money-cell">
         <span className="money-eyebrow">Cash ready to use</span>

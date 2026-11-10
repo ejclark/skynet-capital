@@ -232,10 +232,11 @@ Each step: `goto` · what he sees · the EARS acceptance line · the judge line.
    amount, with the cash ready to use. **WHEN the owner reads where the money is, the app shall
    show the split as amounts and shares of the whole.** _Fixed — crawl finding 9 (README → "Plus
    one run 0 found"); the step passes._ Judge: can this reader tell what is over- or under-weight?
-2. `/app/accounts` — the split, with nothing to compare it to. **WHEN the owner reads the split, the
-   app shall show it against a target allocation he set once, and name what to trim or add.**
-   _known gap — no target allocation exists anywhere; settings never asks for one._ Judge: can this
-   reader tell what to trim or add?
+2. `/app/accounts` — the split against the target split he set once in Settings → Target split.
+   **WHEN the owner reads the split, the app shall show it against a target allocation he set once,
+   and name what to trim or add.** _Fixed — #4607: each slice beside its target, ▲ over / ▼ under
+   in words, and what to trim or add in dollars; with no target yet, one link to set it. The step
+   passes._ Judge: can this reader tell what to trim or add?
 
 ### j4 — wait
 
@@ -291,7 +292,8 @@ One line each; routed to `docs/IDEAS.md` or a `feedback` issue by the plan's sli
   with confidence, why and what proves it wrong. _(src: Eric · while: j2 s3)_
 - **A target allocation he sets once** (settings: shares / options / cash, or by playbook) that
   rebalance guidance reads and the money strip is drawn against — "what to trim or add" in words.
-  _(src: Eric · while: j3 s2)_
+  _(src: Eric · while: j3 s2)_ _Shipped as #4607 (shares / options / cash); "by playbook" is not
+  built._
 - **"Wait" as a first-class call with the date that reopens it** — carried on the book, not only
   in one position's sheet; the reopen date is a day on the calendar. _(src: Eric · while: j4 s2)_
 - **Profit-take celebration with its explanation beside it** — the rung, the number, and the
