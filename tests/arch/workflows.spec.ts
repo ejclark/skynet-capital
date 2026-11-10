@@ -773,6 +773,25 @@ describe("moneypenny-events — build lanes push as the App, never the persisted
       expect(jobBody(name)).toContain("github_token: ${{ steps.app-token.outputs.token }}");
     });
   }
+
+  // #5936: a build past the hour opens its PR with the job token, which starts no CI. After the
+  // session, with the re-minted App token, the job edits that PR's body once so `verify` starts.
+  for (const [name, lane] of [
+    ["build-feedback", "feedback"],
+    ["build-plan", "plan"],
+  ] as const) {
+    it(`${name}: starts CI on a check-less lane PR with the re-minted App token, on every ending`, () => {
+      const body = jobBody(name);
+      const at = body.indexOf("scripts/moneypenny/rekick-pr.mjs");
+      expect(at).toBeGreaterThan(body.indexOf("id: app-token-late"));
+      const step = body.slice(body.lastIndexOf("\n      - ", at), at + 200);
+      expect(step).toContain(`if: always() && needs.route.outputs.${lane}_issue != ''`);
+      expect(step).toContain("GH_TOKEN: ${{ steps.app-token-late.outputs.token }}");
+      // A red step here would flip `failure()` and free the lease of a build that succeeded.
+      expect(step).toContain("continue-on-error: true");
+      expect(step).toContain(`rekick-pr.mjs ${lane}-\${{ needs.route.outputs.${lane}_issue }}`);
+    });
+  }
 });
 
 // The 2026-11-01 audit of #6476: the step that starts a stopped bots machine failed the job before
