@@ -17,10 +17,13 @@ import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import { rankStructures } from "../options/recommend.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
 import { createCompanionMessageLogStore } from "../server/companion-message-log.js";
+import { createDiscoveryQueueStore } from "../server/discovery-queue-store.js";
 import { opaqueMemberId } from "../server/feedback-issue.js";
 import type { FeedbackLogStore } from "../server/feedback-log.js";
 import { resolveSimilarFeedback } from "../server/feedback-similar.js";
+import { createHouseResearchReader } from "../server/house-research.js";
 import type { LadderEvidenceReader } from "../server/ladder-evidence.js";
+import { shelfResearched } from "../server/member-campaign-store.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
 import { logKeyFor } from "../server/owner-link-store.js";
 import {
@@ -78,6 +81,15 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
   const findSimilarFeedback = resolveSimilarFeedback(env);
   const readWorkStatus = resolveWorkStatus(env);
   const readRoadmap = resolveRoadmap(env);
+  // A read-only second handle on the research list's file (the access wiring holds the writing
+  // one, `dashboard-access.ts`); the store reads the file fresh on each load, so a new ask shows
+  // up on the next turn. The shelf is read fresh per call too, the way the ask route reads it.
+  const researchList = createDiscoveryQueueStore(env, (m) => console.error(m));
+  const readResearchOn = createHouseResearchReader({
+    shelf: () => shelfResearched(),
+    queue: () => researchList.load(),
+    today: () => marketDayKey(new Date().toISOString()),
+  });
   const tools: CompanionDeskDeps = {
     snapshotFor: (id) => deps.hub.getState().participants.find((p) => p.id === id),
     readTradeActivity: deps.readFills,
@@ -93,6 +105,8 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
         held,
         ...(underlying ? { underlying } : {}),
       }),
+    // The ledgers, campaigns and lessons are checked in; the research list is on the volume.
+    readResearchOn,
     ...(optionsClientFor
       ? {
           rankFor: async (participantId, outlook) => {

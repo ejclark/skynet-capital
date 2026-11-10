@@ -10,11 +10,13 @@ import {
 import type { Outlook } from "../options/outlook.js";
 import type { Recommendation } from "../options/recommend.js";
 import type { FindSimilarFeedback } from "../server/feedback-similar.js";
+import type { ReadResearchOn } from "../server/house-research.js";
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
 import type { ReadRoadmap } from "../server/roadmap.js";
 import type { UpcomingEvents } from "../server/upcoming-events.js";
 import { MAX_ISSUES_PER_LOOKUP, type ReadWorkStatus } from "../server/work-status.js";
 import { isOccSymbol, UNDERLYING_PATTERN } from "../trading/option-symbols.js";
+import { RESEARCH_READ_TOOL_DEF, researchReadResult } from "./assess-research.js";
 import {
   type ChatConvictionDraft,
   CONVICTION_TOOL_DEFS,
@@ -57,6 +59,11 @@ import {
  * `get_upcoming_events` (#7034 slice 3a) reads the checked-in event calendar and the house's
  * research ledgers — repo content, reviewed in PRs — and uses the member's own held names only to
  * put their events first. It reads no one else's desk.
+ *
+ * `get_research_on` (the Moneypenny operator plan, ASSESS — `assess-research.ts`) reads the house's
+ * own research on one company, sector or market: checked-in ledgers, campaigns and lessons, plus
+ * counts off the research list (never another member's key or words). Offered with a linked desk
+ * only, so it can also say whether the member holds the name.
  */
 
 export const COMPANION_TOOL_NAMES = [
@@ -67,6 +74,7 @@ export const COMPANION_TOOL_NAMES = [
   "get_structures_for_outlook",
   "get_work_status",
   "get_roadmap",
+  "get_research_on",
   "get_upcoming_events",
   "draft_feedback",
   ...CONVICTION_TOOL_NAMES,
@@ -226,6 +234,7 @@ export const COMPANION_TOOL_DEFS = [
       "What is coming on the Skynet Capital build queue: openPlans (how many open plans there are), then groups — Now, Next and Later, each with its meaning, its total, and up to 8 of its most recently touched items (number, quoted title, member-facing status, labels, url). Use it for 'what's coming next', 'what's on the roadmap', 'are you building X'. The grouping is SEQUENCING derived from each plan's own labels — never a delivery date, and never a promise that an item ships; say so if the member reads it that way. truncated: true (when present) means the queue outran what one read covers, so every total is a floor, not a count. Returns no issue bodies and no comments. Takes no input; read-only.",
     input_schema: { type: "object", properties: {} },
   },
+  RESEARCH_READ_TOOL_DEF,
   {
     name: "get_upcoming_events",
     description:
@@ -286,6 +295,10 @@ export interface CompanionDeskDeps {
   /** #3952 slice 3: what is coming — the open plan queue grouped Now / Next / Later, same token.
    *  Optional — without it `get_roadmap` says "not available", never guesses. */
   readonly readRoadmap?: ReadRoadmap;
+  /** The Moneypenny operator plan (ASSESS): what the house's own research holds on one subject
+   *  (`server/house-research.ts`). Optional — without it `get_research_on` says "not available",
+   *  never "the house has nothing". */
+  readonly readResearchOn?: ReadResearchOn;
   /** #7034 slice 3a: the next fortnight's market events, the held names first
    *  (`server/upcoming-events.ts`). Optional — without it `get_upcoming_events` says "not
    *  available", never guesses a date. */
@@ -534,6 +547,10 @@ export async function runCompanionTool(
       return workStatusResult(deps.readWorkStatus, input);
     case "get_roadmap":
       return roadmapResult(deps.readRoadmap);
+    case "get_research_on":
+      return participantId
+        ? researchReadResult(deps.readResearchOn, snapshot, input)
+        : { ok: false, error: "no linked desk" };
     case "get_upcoming_events":
       return upcomingEventsResult(deps.readUpcomingEvents, snapshot, input);
     case "get_my_convictions":
