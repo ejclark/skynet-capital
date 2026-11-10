@@ -126,9 +126,23 @@ export function notRelayableReason(issue, { relayFrom = RELAY_FROM, backfill = f
 export const CLOSE_WINDOW_MS = 10 * 60 * 1000;
 
 /** A comment that states work still to do. Loose on purpose: a false match costs one relay issue
- *  someone closes, a miss costs a remainder nobody can see — the asymmetry the relay exists for. */
+ *  someone closes, a miss costs a remainder nobody can see — the asymmetry the relay exists for.
+ *
+ *  #6880: but not so loose that a FINAL slice reads as unfinished. "remaining"/"remainder" alone is
+ *  how a last slice describes itself ("Closes #5214 — slice 2, the remaining 8 files"), so the word
+ *  counts only where it names work still to build: as a label ("Remaining: the stop-limit leg") or
+ *  in "remains to be built/done". Read through `statesRemainder`, which drops HTML comments first. */
 const REMAINDER_TEXT =
-  /\b(?:remain(?:s|ing|der)|next slice|slice \d+ (?:is )?(?:left|next)|left to (?:build|do)|still to (?:build|do)|not (?:yet )?built)\b/i;
+  /\b(?:remain(?:ing|der)(?: work)?\s*:|remains? to (?:be )?(?:built|build|done|do)\b|next slice|slice \d+ (?:is )?(?:left|next)|left to (?:build|do)|still to (?:build|do)|not (?:yet )?built)/i;
+
+/** HTML comments are what a PR template leaves behind, never what its author wrote. The template's
+ *  Follow-ups comment says "…, the next slice." and every build PR that follows it keeps it (#6880). */
+const HTML_COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
+
+/** Does this PR body or comment state work still to build? */
+function statesRemainder(text) {
+  return REMAINDER_TEXT.test(String(text ?? "").replace(HTML_COMMENT, " "));
+}
 
 /**
  * WAS THE REMAINDER BUILT BY THE PR THAT CLOSED THE ISSUE? Returns that PR's number, or null.
@@ -173,14 +187,14 @@ export function finalSliceBy(issue) {
     return keywordIssuesOf(pr.body ?? "").closes.includes(n);
   });
   if (!closer) return null;
-  if (REMAINDER_TEXT.test(String(closer.source.issue.body ?? ""))) return null;
+  if (statesRemainder(closer.source.issue.body)) return null;
   const openedMs = Date.parse(String(closer.created_at ?? ""));
   const restated = timeline.some(
     (row) =>
       row?.event === "commented" &&
       Date.parse(String(row.created_at ?? "")) > openedMs &&
       !String(row.body ?? "").includes("**Remainder relayed**") &&
-      REMAINDER_TEXT.test(String(row.body ?? "")),
+      statesRemainder(row.body),
   );
   return restated ? null : closer.source.issue.number;
 }
