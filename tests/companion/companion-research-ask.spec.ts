@@ -5,6 +5,7 @@ import {
   RESEARCH_ASK_TOOL_DEFS,
   type ResearchAskDraft,
   runResearchAskTool,
+  waitLine,
 } from "../../src/companion/companion-research-ask.js";
 import { COMPANION_SYSTEM_PROMPT } from "../../src/companion/companion-system-prompt.js";
 import { runCompanionTool } from "../../src/companion/companion-tools.js";
@@ -129,15 +130,22 @@ describe("draft_research_ask — a card the member's tap sends, never a write", 
     });
   });
 
-  it("while research does not read the list, the wait line says so and promises no time", () => {
+  it("carries the lane's state and the matching wait line", () => {
     const answer = runResearchAskTool({ kind: "name", subject: "NVDA" }, undefined);
     const result = (answer as { result: { laneReadsQueue: boolean; wait: string } }).result;
     expect(result.laneReadsQueue).toBe(LANE_READS_QUEUE);
-    if (!LANE_READS_QUEUE) {
-      expect(result.wait).toMatch(/does not read this list yet/);
-      expect(result.wait).toMatch(/no wait to promise/);
-    }
-    expect(result.wait).not.toMatch(/\d+\s*(pass|day|hour|minute)/i);
+    expect(result.wait).toBe(waitLine(LANE_READS_QUEUE));
+  });
+
+  it("while research does not read the list, the wait line says so and promises no time", () => {
+    expect(waitLine(false)).toMatch(/does not read this list yet/);
+    expect(waitLine(false)).toMatch(/no wait to promise/);
+  });
+
+  it("once research reads the list, the wait line still names no time of its own", () => {
+    expect(waitLine(true)).toMatch(/reply to their tap says roughly when/);
+    for (const line of [waitLine(true), waitLine(false)])
+      expect(line).not.toMatch(/\d+\s*(pass|day|hour|minute)/i);
   });
 
   it("takes exactly kind, subject and question — nothing that could carry an order", () => {

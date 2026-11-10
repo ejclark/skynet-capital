@@ -18,8 +18,9 @@ import { GICS_SECTORS } from "../domain/sector-coverage.js";
  * refused while the model can still fix its call, with the valid choices named, instead of
  * surfacing later as a card whose tap fails.
  *
- * Honest about the wait: while `LANE_READS_QUEUE` is false the house's research does not read the
- * list, so the result says so and the prompt forbids promising a time.
+ * Honest about the wait: the card's wait line never names a time. While `LANE_READS_QUEUE` is
+ * false the house's research does not read the list, and the line says so; once a lane reads it,
+ * only the reply to the member's tap (`tellMember`) says roughly when.
  */
 
 export const RESEARCH_ASK_TOOL_NAMES = ["draft_research_ask"] as const;
@@ -42,7 +43,13 @@ export const ASK_CARD_SHOWN =
 const WAIT_UNREAD =
   "The house's research does not read this list yet, so there is no wait to promise.";
 const WAIT_READ =
-  "Once asked, the research desk takes it in turn; the reply to their tap says where it stands.";
+  "The research desk reads this list once a day; the reply to their tap says roughly when, so give no time of your own.";
+
+/** The one sentence she passes on about the wait. Only the reply to the member's tap names a time
+ *  (`tellMember`), so this never does — and while research does not read the list, it says so. */
+export function waitLine(laneReadsQueue: boolean): string {
+  return laneReadsQueue ? WAIT_READ : WAIT_UNREAD;
+}
 
 const SECTOR_NAMES = GICS_SECTORS.map((s) => s.name).join(", ");
 const MARKET_CHOICES = MARKETS.map((m) => `${m.id} (${m.name})`).join(", ");
@@ -123,10 +130,10 @@ export function runResearchAskTool(
       shown: true,
       status: ASK_CARD_SHOWN,
       laneReadsQueue: LANE_READS_QUEUE,
-      wait: LANE_READS_QUEUE ? WAIT_READ : WAIT_UNREAD,
+      wait: waitLine(LANE_READS_QUEUE),
     },
   };
 }
 
 /** The system prompt's paragraph for this tool. */
-export const RESEARCH_ASK_RULE = `ASKING THE RESEARCH DESK: when a member asks an open question about a company, a sector or a market that your tools and the help desk do not answer (why something is moving, what to know about a sector, whether a name is worth a look), do not stop at "I don't have that". Say in one sentence what you do not hold, then offer to put the question to the house's research desk. Once they agree in their latest message, call draft_research_ask with kind (name, sector or market), the subject exactly as the tool lists it, and their question in their own words, at most 200 characters. The rail shows the question as a card; only their tap on "Ask the research desk" puts it on the list. You never put a question on the list yourself and never say it is asked, queued or being researched. After the card shows, pass on the tool's wait line: when it says research does not read the list yet, say exactly that and promise no time. News and lawsuits are still not covered. Research answers what is true; it never tells anyone to buy or sell.`;
+export const RESEARCH_ASK_RULE = `ASKING THE RESEARCH DESK: when a member asks an open question about a company, a sector or a market that your tools and the help desk do not answer (why something is moving, what to know about a sector, whether a name is worth a look), do not stop at "I don't have that". Say in one sentence what you do not hold, then offer to put the question to the house's research desk. Once they agree in their latest message, call draft_research_ask with kind (name, sector or market), the subject exactly as the tool lists it, and their question in their own words, at most 200 characters. The rail shows the question as a card; only their tap on "Ask the research desk" puts it on the list. You never put a question on the list yourself and never say it is asked, queued or being researched. After the card shows, pass on the tool's wait line: when it says research does not read the list yet, say exactly that and promise no time; otherwise any time comes only from the reply to their tap, never from you. News and lawsuits are still not covered. Research answers what is true; it never tells anyone to buy or sell.`;
