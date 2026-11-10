@@ -128,7 +128,9 @@ describe("what other members asked", () => {
     expect(questionState(question(), true)).toBe("In line, 2 ahead");
     expect(questionState(question({ ahead: 0 }), true)).toBe("Next in line for research");
     // No lane reads the queue yet, so a waiting question promises no turn (#7034 slice 3b).
-    expect(questionState(question())).toBe("Kept; research doesn't read the list yet");
+    expect(questionState(question())).toBe("In line, 2 ahead");
+    // If the lane is ever switched off, a waiting question promises no turn (#7034 slice 3b).
+    expect(questionState(question(), false)).toBe("Kept; research doesn't read the list yet");
     expect(questionState(question({ state: "no-finding-yet" }))).toBe("No finding yet");
     const found = { idea: "x", on: "2026-11-08", source: "s" };
     expect(questionState(question({ state: "found", found: [found] }))).toBe("Answered");
@@ -142,8 +144,14 @@ describe("what other members asked", () => {
     expect(holderLine(question({ state: "no-finding-yet" }))).toBe(
       "The research desk looked at NVDA and has nothing yet.",
     );
+    expect(holderLine(question({ state: "on-the-shelf" }))).toBe(
+      "The research desk wrote up NVDA on the research shelf.",
+    );
+    expect(questionState(question({ state: "on-the-shelf" }))).toBe(
+      "Written up on the research shelf",
+    );
     // Only the job is named: never a time, a lane or a build seat.
-    for (const state of ["waiting", "found", "no-finding-yet"] as const) {
+    for (const state of ["waiting", "found", "on-the-shelf", "no-finding-yet"] as const) {
       expect(holderLine(question({ state }))).not.toMatch(
         /\d|minute|pass|soon|next|ahead|lane|builder|issue/i,
       );

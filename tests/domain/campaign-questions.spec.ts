@@ -161,6 +161,15 @@ describe("questionsIn", () => {
     expect(nvda).toMatchObject({ state: "no-finding-yet", suggestion: false });
     expect(nvda).not.toHaveProperty("ahead");
   });
+
+  it("says a write-up is on the research shelf when no lesson carries it (#7034 slice 3b)", () => {
+    const shelved = (id: string): boolean => id === log.find((q) => q.subject === "NVDA")?.id;
+    const views = questionsIn(log, "ai-buildout", AI, queue, found, shelved);
+    expect(views.find((v) => v.subject === "NVDA")).toMatchObject({ state: "on-the-shelf" });
+    // A finding in the record still wins, and a question still waiting in line is still waiting.
+    expect(views.find((v) => v.subject === "PLTR")?.state).toBe("found");
+    expect(views.find((v) => v.subject === "AMD")?.state).toBe("waiting");
+  });
 });
 
 describe("coveringCampaign with the party's campaigns (#6949 slice 6)", () => {
