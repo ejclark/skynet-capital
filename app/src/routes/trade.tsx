@@ -11,6 +11,7 @@ import { carriedPlan, planSearch } from "../live/fast-track";
 import { focusFrom, manageSearch, ROLL_TO } from "../live/manage-handoff";
 import { fetchPlays, type PlayInfo } from "../live/options";
 import { navForPlay } from "../live/plays";
+import { questSearch } from "../live/quest-link";
 import { fetchSettings } from "../live/settings";
 import { normalizeStrike } from "../live/strike";
 import { normalizeSymbol } from "../live/symbol";
@@ -447,6 +448,8 @@ export const Route = createFileRoute("/trade")({
       ...(rollTo !== undefined ? { rollTo } : {}),
       // `?plan=&stop=&exit=` (#7034 slice 2): a fast track's carried plan, kept only whole.
       ...planSearch(search),
+      // `?quest=` (#7028 slice 6): the quest this ticket was opened from, sent with the order.
+      ...questSearch(search),
       // `?section=` (#2017 Phase 1 chart build-out): only a known section id passes, exactly as
       // `activity.tsx` narrows its own; anything else is dropped and `resolveSection` falls back.
       ...(typeof search.section === "string" && SECTIONS.some((s) => s.id === search.section)

@@ -157,8 +157,13 @@ describe("conditionsQuests", () => {
     });
 
     it("names the move by its job and drafts it on Trade for its owner to fire", () => {
-      expect(quests[0]?.move.href).toBe("/app/trade?desk=ann-1&symbol=QQQ&play=201");
-      expect(quests[1]?.move.href).toBe("/app/trade?desk=ann-1&symbol=QQQ&play=101");
+      // The link names the quest, so the order it drafts can be recorded as this quest taken (slice 6).
+      expect(quests[0]?.move.href).toBe(
+        "/app/trade?desk=ann-1&symbol=QQQ&play=201&quest=conditions%3AQQQ%3Asell-cash-secured-put",
+      );
+      expect(quests[1]?.move.href).toBe(
+        "/app/trade?desk=ann-1&symbol=QQQ&play=101&quest=conditions%3AQQQ%3Abuy-shares",
+      );
     });
   });
 
