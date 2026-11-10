@@ -377,6 +377,9 @@ jobs:
     # PR #4449 sat green, mergeable and unarmed for 29 hours that way. Keep this list and `types:`
     # in sync: the check still earns its place as a guard against a FUTURE `types:` addition (a
     # `labeled` event would arm off stale check results), which is why it is widened, not deleted.
+    # Two recovery paths depend on `edited` being in both lists: `scripts/ship.sh` (#4168), and the
+    # lane builds' post-build body edit (`scripts/moneypenny/rekick-pr.mjs`, #5936), which starts CI
+    # on a PR the job token opened. Drop `edited` from either list and both stop working silently.
     needs: [verify, e2e, stability]
     # `!cancelled()` is load-bearing (found by #4169, 2026-09-30): `e2e` is skipped on a docs-only PR,
     # and a job whose `needs:` include a skipped job is skipped too unless its `if:` calls a status
