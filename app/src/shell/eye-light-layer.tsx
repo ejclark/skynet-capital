@@ -1,5 +1,6 @@
 import { useRouterState } from "@tanstack/react-router";
 import { type ReactElement, type RefObject, useEffect, useId, useRef, useState } from "react";
+import { CALENDAR_ANCHOR } from "../../../src/domain/edition-keys";
 import {
   centre,
   DIM_MAX,
@@ -237,6 +238,10 @@ export function EyeLight({
     let raf = 0;
     setLit(undefined);
     setDrawn(undefined);
+    // Her link to the whole calendar only scrolls (#7337; `landing.css` says why: a ring round the
+    // whole calendar marks nothing). It still lets go of an earlier ring, as any newer link does, but
+    // lights nothing and never re-centres the section over the landing's top-aligned scroll.
+    if (request.anchor === CALENDAR_ANCHOR) return;
     const begun = performance.now();
     let lastTop: number | undefined;
     let stillSince = 0;
