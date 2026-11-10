@@ -1421,7 +1421,7 @@
             "id": "relay",
             "label": "Dropped-remainder relay",
             "path": "scripts/moneypenny/relay.mjs",
-            "responsibility": "routeRelay/notRelayableReason/executeRelay carry a CLOSED issue's unbuilt remainder to a fresh [relay] #N issue in Backlog (never ready), because pullable() reads open issues only; the source gets a receipt and loses the remainder label last, which is the idempotency. A not_planned close is never relayed; only closes from the RELAY_FROM watermark forward, RELAY_CAP 3 a tick, oldest first; --list / --apply --backfill drain the historical queue by hand"
+            "responsibility": "routeRelay/notRelayableReason/executeRelay carry a CLOSED issue's unbuilt remainder to a fresh [relay] #N issue in Backlog (never ready), because pullable() reads open issues only; the source gets a receipt and loses the remainder label last, which is the idempotency. A not_planned close is never relayed; only closes from the RELAY_FROM watermark forward, RELAY_CAP 3 a tick, oldest first; a close the closing PR built (finalSliceBy, which pages the issue's timeline) is not relayed but gets relay-clear-built, a receipt and the label removed, so its timeline is read once rather than on every push (#6888); --list / --apply --backfill drain the historical queue by hand"
           },
           {
             "id": "assign",

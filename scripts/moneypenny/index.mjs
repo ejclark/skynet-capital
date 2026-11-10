@@ -120,7 +120,7 @@ import { feedbackReadyIntent, planReadyIntent } from "./plan-claim.mjs";
 import { executePlanClose, gatherPlanCloseDeps } from "./plan-close.mjs";
 import { openPrsByIssue } from "./pr-issues.mjs";
 import { closeRedLanePr } from "./red-lane-pr.mjs";
-import { executeRelay, gatherRelayDeps, routeRelay } from "./relay.mjs";
+import { executeRelay, gatherRelayDeps, RELAY_KINDS, routeRelay } from "./relay.mjs";
 import { replyResumeIntent } from "./reply-resume.mjs";
 import {
   closeSupersededResearch,
@@ -1584,11 +1584,11 @@ function executeSweepIntent(i) {
     console.log(`::warning::${line}`);
     return line;
   }
-  if (i.kind === "relay-remainder") {
-    // The three writes (file the relay, receipt the source, clear the remainder label) live in
+  if (RELAY_KINDS.has(i.kind)) {
+    // The writes (file the relay or not, receipt the source, clear the remainder label) live in
     // relay.mjs so its own CLI can reuse them without importing this router.
     const line = executeRelay(i);
-    console.log(`::notice::relayed #${i.source}'s remainder — ${i.title}`);
+    console.log(`::notice::${line}`);
     return line;
   }
   return undefined;
