@@ -307,3 +307,12 @@
   background: none;
   cursor: pointer;
 }
+
+/* A question about this holding, and its side thread with Moneypenny (#7167, `position-thread.tsx`):
+ * the ask spans the opened guidance (which starts its children), the thread sits under the line. */
+.pos-ask {
+  align-self: stretch;
+}
+.pos-guide > .row-thread {
+  margin-top: 4px;
+}
