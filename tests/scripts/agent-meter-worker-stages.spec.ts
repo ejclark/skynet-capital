@@ -233,6 +233,8 @@ describe("npm run meter -- --worker-stages", () => {
           PATH: `${join(dir, "bin")}:${process.env.PATH}`,
           AGENT_PROJECTS_DIR: projects,
           AGENT_RUNS_DIR: join(dir, "runs"),
+          // The fixture folder is named for the laptop's checkout (#6689).
+          AGENT_CHECKOUT_DIR: "/Users/eric/Developer/skynet-capital",
         },
         timeout: 60000,
       },

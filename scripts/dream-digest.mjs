@@ -28,9 +28,9 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { currentProject, projectFolders } from "./agent-meter/project.mjs";
 import { isMain } from "./is-main.mjs";
 
-const PROJECT = "-Users-eric-Developer-skynet-capital";
 const MAX_USER_CHARS = 1200;
 const MAX_ERROR_CHARS = 300;
 const MAX_FINAL_CHARS = 1500;
@@ -172,13 +172,11 @@ export function memoryClaims(text) {
   };
 }
 
-/** The folders holding this project's session transcripts: the main checkout's and one per worktree. */
+/** The folders holding this checkout's session transcripts: the main one's and one per worktree (#6689). */
 function transcriptDirs() {
   if (process.env.AGENT_TRANSCRIPTS_DIR) return [process.env.AGENT_TRANSCRIPTS_DIR];
-  const root = join(homedir(), ".claude", "projects");
-  return readdirSync(root)
-    .filter((name) => name === PROJECT || name.startsWith(`${PROJECT}-`))
-    .map((name) => join(root, name));
+  const root = process.env.AGENT_PROJECTS_DIR ?? join(homedir(), ".claude", "projects");
+  return projectFolders(root, currentProject());
 }
 
 /** When a session started: the first timestamp in its transcript, read from the file's head. */

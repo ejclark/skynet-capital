@@ -20,13 +20,14 @@
 //   npm run meter -- --jobs [--json] [--days N | ...]    # tokens per verified result, per job (#6609)
 //
 // Seams (env, so a spec can drive it): AGENT_RUNS_DIR, AGENT_TRANSCRIPTS_DIR, AGENT_PROJECTS_DIR,
-// AGENT_MEMORY_DIR, AGENT_GIT_DIR; `gh` on PATH is the REST layer.
+// AGENT_MEMORY_DIR, AGENT_GIT_DIR, AGENT_CHECKOUT_DIR; `gh` on PATH is the REST layer. Transcripts are
+// read from the folders named for this checkout (agent-meter/project.mjs, #6689); with none, every
+// section that reads them says unknown, never zero.
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   agentSummary,
-  listDirs,
   scanWorkflowAgents,
   stagesByType,
   workerOracle,
@@ -49,6 +50,7 @@ import {
   SESSION_FLOOR_SEC,
   saveCache,
 } from "./agent-meter/lanes.mjs";
+import { currentProject, NO_TRANSCRIPTS, projectFolders } from "./agent-meter/project.mjs";
 import {
   render,
   renderFailureToFix,
@@ -61,7 +63,6 @@ import { isMain } from "./is-main.mjs";
 export { quantile };
 
 const CHARS_PER_TOKEN = 4;
-const PROJECT = "-Users-eric-Developer-skynet-capital";
 const HOUR = 3600000;
 /** GitHub's shared REST bucket also feeds the lanes; one meter run stays well under it. */
 const DEFAULT_MAX_REST = 250;
@@ -256,8 +257,14 @@ async function measure(w, { maxRest }) {
   const home = homedir();
   const runsDir = process.env.AGENT_RUNS_DIR ?? join(home, ".claude", "runs");
   const projectsDir = process.env.AGENT_PROJECTS_DIR ?? join(home, ".claude", "projects");
-  const transcripts = process.env.AGENT_TRANSCRIPTS_DIR ?? join(projectsDir, PROJECT);
+  const project = currentProject();
+  const transcripts = process.env.AGENT_TRANSCRIPTS_DIR ?? join(projectsDir, project);
   const memoryDir = process.env.AGENT_MEMORY_DIR ?? join(transcripts, "memory");
+  // No folder for this checkout is no reading, not a quiet window: a cloud session's sessions sit
+  // under its own checkout's name, and the laptop's name matched none of them (#6689).
+  const hasAgents = projectFolders(projectsDir, project).length > 0;
+  const hasStartup = existsSync(transcripts);
+  const hasMemory = Boolean(process.env.AGENT_MEMORY_DIR) || hasStartup;
   const rest = createRest();
   const cachePath = join(runsDir, "agent-meter-cache.json");
   const cache = loadCache(cachePath);
@@ -305,7 +312,9 @@ async function measure(w, { maxRest }) {
     .slice(0, 5)
     .map((file) => startupFromTranscript(readLines(file.path)))
     .filter(Boolean);
-  const agents = await scanWorkflowAgents(projectsDir, PROJECT, w.sinceMs, w.untilMs);
+  const agents = hasAgents
+    ? agentSummary(await scanWorkflowAgents(projectsDir, project, w.sinceMs, w.untilMs))
+    : NO_TRANSCRIPTS;
   const audited = auditedInWindow(
     mergeReceipts(
       readJsonl(join(runsDir, "post-merge-audit.jsonl")),
@@ -334,20 +343,25 @@ async function measure(w, { maxRest }) {
     },
     failureToFix,
     flow: await readFlow(w),
-    agents: agentSummary(agents),
-    startup: {
-      recentFirstCalls: startups.map((s) => s.firstCall),
-      newest: startups[0] ?? null,
-      note: "the first-call total is measured; the named source rows are chars/4 and run about 25% low, so unitemized reads high by the same amount",
-    },
+    agents,
+    startup: hasStartup
+      ? {
+          recentFirstCalls: startups.map((s) => s.firstCall),
+          newest: startups[0] ?? null,
+          note: "the first-call total is measured; the named source rows are chars/4 and run about 25% low, so unitemized reads high by the same amount",
+        }
+      : NO_TRANSCRIPTS,
     limits: {
       claudeMdBytes: fileBytes(resolve("CLAUDE.md")),
       orientBytes: fileBytes(resolve(".claude/output-styles/orient.md")),
-      memoryIndexLines: readLines(join(memoryDir, "MEMORY.md")).length,
+      // null when no transcript folder was found: the memory index lives inside it.
+      memoryIndexLines: hasMemory ? readLines(join(memoryDir, "MEMORY.md")).length : null,
       memoryIndexLimit: 200,
-      memoryFiles: existsSync(memoryDir)
-        ? readdirSync(memoryDir).filter((n) => n.endsWith(".md")).length
-        : 0,
+      memoryFiles: !hasMemory
+        ? null
+        : existsSync(memoryDir)
+          ? readdirSync(memoryDir).filter((n) => n.endsWith(".md")).length
+          : 0,
     },
     rest: { calls: rest.calls, cap: maxRest },
   };
@@ -356,14 +370,12 @@ async function measure(w, { maxRest }) {
 /** Local transcripts only, so the worker's oracle is free to read as often as a check wants. */
 async function workerStages(args, w) {
   const projectsDir = process.env.AGENT_PROJECTS_DIR ?? join(homedir(), ".claude", "projects");
-  const stages = stagesByType(await scanWorkflowAgents(projectsDir, PROJECT, w.sinceMs, w.untilMs));
+  const project = currentProject();
+  const stages = stagesByType(await scanWorkflowAgents(projectsDir, project, w.sinceMs, w.untilMs));
   // loop-check posts this from a runner, which holds no transcripts: unknown there, not "0 of 20".
-  const oracle = listDirs(projectsDir).some((name) => name.startsWith(PROJECT))
+  const oracle = projectFolders(projectsDir, project).length
     ? workerOracle(stages.find((row) => row.type === "worker"))
-    : {
-        verdict: "unknown",
-        line: "worker oracle: unknown: no transcripts on this machine; run it where the stages ran",
-      };
+    : { verdict: "unknown", line: `worker oracle: ${NO_TRANSCRIPTS}` };
   if (oracle.verdict === "fail") process.exitCode = 1;
   const reading = { window: w, stages, oracle };
   return args.includes("--json") ? JSON.stringify(reading, null, 2) : renderWorkerStages(reading);
@@ -392,7 +404,7 @@ async function jobsOnly(args, w, maxRest) {
   const reading = await readJobs({
     w,
     projectsDir,
-    project: PROJECT,
+    project: currentProject(),
     runsDir: process.env.AGENT_RUNS_DIR ?? join(homedir(), ".claude", "runs"),
     sharedReceipts: branchReceipts(createRest(), w.sinceMs, w.untilMs),
     readFixes: () => {
