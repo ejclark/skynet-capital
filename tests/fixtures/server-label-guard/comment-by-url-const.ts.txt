@@ -1,0 +1,3 @@
+const url = `https://api.github.com/repos/${repo}/issues/${n}/comments`;
+
+await doFetch("POST", url, headers, { body });
