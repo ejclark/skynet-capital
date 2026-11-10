@@ -968,3 +968,27 @@ describe("pipeline — a failed flyctl download gets a second attempt before the
     });
   }
 });
+
+// #6188 (retro in docs/LESSONS.md, #6174): claude.yml is the human-directed lane, but its gate
+// decided "human" from author_association plus the footer link, never from the sender's type. A
+// Moneypenny comment without the footer armed the lane twice, and the action's own bot refusal
+// turned each into a red run. The gate itself has to turn a bot sender away.
+describe("claude — the human-directed lane never arms on a bot's comment", () => {
+  const claude = readFileSync(".github/workflows/claude.yml", "utf8");
+  const gate = claude.slice(claude.indexOf("\n  gate:"), claude.indexOf("\n    runs-on:"));
+  const condition = /if: >-\n\s+\$\{\{([\s\S]*?)\}\}\s*$/.exec(gate)?.[1] ?? "";
+
+  it("refuses a sender whose type is Bot, as a top-level clause of the armed? gate", () => {
+    expect(gate).toContain("name: armed?");
+    expect(condition).toMatch(/&&\s*github\.event\.sender\.type != 'Bot'\s*&&/);
+  });
+
+  it("still arms on a member's own comment exactly as before", () => {
+    expect(condition).toContain("github.event_name == 'issue_comment'");
+    expect(condition).toContain("github.event_name == 'pull_request_review_comment'");
+    expect(condition).toContain("github.event.sender.login != 'claude[bot]'");
+    expect(condition).toContain(
+      `contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association || github.event.issue.author_association)`,
+    );
+  });
+});
