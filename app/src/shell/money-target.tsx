@@ -9,6 +9,7 @@ import {
   type TargetSplit,
 } from "../../../src/observatory/target-split";
 import type { DeskAllocation } from "../live/desk";
+import { wholeDollars } from "../live/symbol-book";
 import { fetchTargetSplit, targetSplitKey } from "../live/target-split";
 
 /**
@@ -30,18 +31,12 @@ import { fetchTargetSplit, targetSplitKey } from "../live/target-split";
  * owner's own setting, so another member's profile never draws it (the brief's third open question).
  */
 
-const money = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
-
 const pct = (n: number): string => `${Math.round(n)}%`;
 
 /** "▲ trim $4,100", "▼ add $3,000", "✓ within" — the arrow and the verb carry it, never a hue. */
 export function gapLabel(slice: SliceGap): string {
   if (slice.status === "within") return "✓ within";
-  const dollars = money.format(Math.abs(slice.gapDollars));
+  const dollars = wholeDollars(Math.abs(slice.gapDollars));
   return slice.status === "over" ? `▲ trim ${dollars}` : `▼ add ${dollars}`;
 }
 
@@ -61,14 +56,14 @@ export function rebalanceLine(comparison: SplitComparison, tolerancePct: number)
   const lower = (s: SliceGap) => s.label.toLowerCase();
   const trims = comparison.slices.filter((s) => s.gapDollars > 0);
   const adds = comparison.slices.filter((s) => s.gapDollars < 0);
-  const trimText = joinAnd(trims.map((s) => `${money.format(s.gapDollars)} of ${lower(s)}`));
+  const trimText = joinAnd(trims.map((s) => `${wholeDollars(s.gapDollars)} of ${lower(s)}`));
   // One slice out, one slice in, the same dollars: "trim $4,100 of options and add it to cash".
   const single = trims.length === 1 && adds.length === 1;
   const sameDollars = single && trims[0]?.gapDollars === -(adds[0]?.gapDollars ?? 0);
   const addText =
     single && sameDollars
       ? `it to ${lower(adds[0] as SliceGap)}`
-      : joinAnd(adds.map((s) => `${money.format(-s.gapDollars)} to ${lower(s)}`));
+      : joinAnd(adds.map((s) => `${wholeDollars(-s.gapDollars)} to ${lower(s)}`));
   if (trims.length === 0) return `To match your target, add ${addText}.`;
   if (adds.length === 0) return `To match your target, trim ${trimText}.`;
   // A comma once either side is a list, so the two halves don't run together on "and".
