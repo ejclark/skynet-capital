@@ -8,7 +8,8 @@
  *      or a filing's title, URL or issue number — counts and catalog subjects only.
  *   3. An ask that is on both the research list and the campaign question log SHALL count once, and a
  *      member who asked about one subject twice SHALL count as one member.
- *   4. An ask or filing older than the window, or with a time that does not parse, SHALL NOT count.
+ *   4. An ask or filing older than the window, or with a time that does not parse, SHALL NOT count;
+ *      an ask on both the list and the log SHALL count when either record's time is in the window.
  *   5. A subject that is not in the app's own catalogs (a ticker shape, a GICS sector, a market id)
  *      SHALL NOT be listed, so no free text from the volume reaches the answer.
  *   6. WHEN a source cannot be read, that source SHALL say `available: false`, never a zero, and the
@@ -170,6 +171,43 @@ describe("whatMembersAsk — counts what the league asked for, and nothing else"
       questions: 2,
       askedBy: 2,
       bySubject: [{ kind: "name", subject: "CRWV", questions: 2, askedBy: 2 }],
+    });
+  });
+
+  it("counts a campaign ask re-asked inside the window though the log dates it before (4)", () => {
+    // Asked 10 days ago, answered and drained off the list, asked again yesterday: the list record
+    // is yesterday's, the question log keeps the first date. The 7-day read must still see it.
+    const out = whatMembersAsk({
+      days: 7,
+      now: NOW,
+      queue: [
+        ask({
+          kind: "name",
+          subject: "CRWV",
+          campaign: "ai-dip-2026-10",
+          askedAt: ago(1),
+          askers: ["key-b"],
+        }),
+      ],
+      questions: [
+        logged({
+          kind: "name",
+          subject: "CRWV",
+          campaign: "ai-dip-2026-10",
+          askedAt: ago(10),
+          askers: [
+            { key: "key-a", name: "A" },
+            { key: "key-b", name: "B" },
+          ],
+        }),
+      ],
+      filings: [],
+    });
+    expect(out.researchList).toMatchObject({
+      available: true,
+      questions: 1,
+      askedBy: 2,
+      bySubject: [{ kind: "name", subject: "CRWV", questions: 1, askedBy: 2 }],
     });
   });
 

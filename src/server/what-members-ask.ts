@@ -121,7 +121,8 @@ function inWindow(at: string, from: number, to: number): boolean {
 interface JoinedAsk {
   readonly kind: DiscoveryKind;
   readonly subject: string;
-  readonly askedAt: string;
+  /** Every record's time: the list's and the question log's can differ (see `joinAsks`). */
+  readonly askedAts: string[];
   readonly keys: Set<string>;
 }
 
@@ -136,12 +137,15 @@ function joinAsks(queue: DiscoveryQueue, log: QuestionLog): Map<string, JoinedAs
   ) => {
     const prior = byId.get(id);
     if (!prior) {
-      byId.set(id, { kind, subject, askedAt, keys: new Set(keys) });
+      byId.set(id, { kind, subject, askedAts: [askedAt], keys: new Set(keys) });
       return;
     }
     for (const k of keys) prior.keys.add(k);
-    // The first time anyone asked is the ask's time, whichever record holds it.
-    if (Date.parse(askedAt) < Date.parse(prior.askedAt)) byId.set(id, { ...prior, askedAt });
+    // Keep both records' times. The question log keeps a campaign question's FIRST date and never
+    // refreshes it on a re-ask, while the list record is new each time it is asked after a research
+    // run drained it — so an ask counts when EITHER record falls inside the window. Keeping only the
+    // earlier one read "asked yesterday" as "nobody asked this week".
+    prior.askedAts.push(askedAt);
   };
   for (const a of queue) add(a.id, a.kind, a.subject, a.askedAt, [...a.askers]);
   for (const q of log as readonly CampaignQuestion[])
@@ -168,7 +172,8 @@ function countResearchList(
   const everyone = new Set<string>();
   let questions = 0;
   for (const a of joinAsks(queue, log).values()) {
-    if (!(inWindow(a.askedAt, from, to) && knownSubject(a.kind, a.subject))) continue;
+    if (!(a.askedAts.some((at) => inWindow(at, from, to)) && knownSubject(a.kind, a.subject)))
+      continue;
     questions += 1;
     const key = `${a.kind}:${a.subject}`;
     const row = bySubject.get(key) ?? { kind: a.kind, subject: a.subject, n: 0, keys: new Set() };
