@@ -21,6 +21,7 @@ import {
   routeNote,
 } from "./moneypenny-script";
 import { EMPTY, forgetOthers, keyFor, load, type Persisted, persist } from "./moneypenny-storage";
+import { linesOf, type MpThread, withThread } from "./moneypenny-threads";
 import { fetchOnboarding, type Onboarding } from "./onboarding";
 
 /**
@@ -41,6 +42,11 @@ import { fetchOnboarding, type Onboarding } from "./onboarding";
  *  before it is sent anyway (#7165 — a hung read once held a landing-page question for 30 s). */
 export const timing = { typingMs: 650, opsMs: 1800, bindWaitMs: 5000 };
 
+/** Where a line lands: the conversation on screen, or always the main one (her intro, the
+ *  one-time celebration — beats that belong to the member, never to one row). */
+type Conversation = "on-screen" | "main";
+const ON_SCREEN: Conversation = "on-screen";
+
 /** The onboarding read did not answer inside `bindWaitMs`. */
 const LATE: unique symbol = Symbol("late");
 
@@ -51,6 +57,8 @@ export interface MpMessage {
   readonly text: string;
   /** When it landed — the rail draws a day break where this crosses midnight. */
   readonly at?: number;
+  /** The side thread it belongs to, by its row's key (#7167 criterion 11); none = the main one. */
+  readonly thread?: string;
 }
 
 /** Plain-text rendering of the thread — the copy-to-clipboard affordance the rail offers before a
@@ -97,6 +105,17 @@ export interface MoneypennyState extends Persisted {
   readonly pending?: string;
   /** Bumps on every successful filing — the rail invalidates the gate-bearing queries on it. */
   readonly filedSeq: number;
+  /** The side thread the rail is showing (`moneypenny-threads.ts`); undefined = the main
+   *  conversation. In memory only: the rail always reopens on the main one after a reload. */
+  readonly thread?: MpThread;
+  /** The conversation a parked card (`draft`, `conviction`) was drafted in — its thread's key, or
+   *  undefined for the main one. Its exits answer only there, so a "send" typed elsewhere never
+   *  files a card the member cannot see. */
+  readonly parkedIn?: string;
+  /** Show `thread` in the rail, opening it — the row's "Continue in the chat". */
+  readonly openThread: (thread: MpThread) => void;
+  /** Back to the main conversation. */
+  readonly closeThread: () => void;
   /** Open the rail; with `intro`, play her intro script once per member (the `introDone` flag). */
   readonly openRail: (opts?: { readonly intro?: boolean }) => Promise<void>;
   readonly closeRail: () => void;
@@ -108,8 +127,9 @@ export interface MoneypennyState extends Persisted {
   readonly send: (text: string) => Promise<boolean>;
   /** A question from outside the rail (the landing page's ask box): open the rail and show it at
    *  once, then send it once the thread is bound — or after `bindWaitMs`, whichever comes first.
-   *  True when accepted, false when a turn is still under way (the caller keeps the text). */
-  readonly ask: (text: string) => boolean;
+   *  True when accepted, false when a turn is still under way (the caller keeps the text). With
+   *  `thread`, the question opens (or continues) that row's side thread instead of the main one. */
+  readonly ask: (text: string, thread?: MpThread) => boolean;
   /** Forget everything for this member — for specs and the new-conversation control. */
   readonly reset: () => void;
 }
@@ -125,12 +145,26 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       note: s.note,
       coach: s.coach,
       kind: s.kind,
+      threads: s.threads,
     });
   };
-  const append = (role: MpRole, texts: readonly string[]) =>
+  /** Lines land in the conversation on screen: the side thread the rail shows, else the main one.
+   *  A thread is remembered by name the first time a line lands in it, whoever's thread it was
+   *  bound under (a question asked before the member was known keeps its row). */
+  const append = (role: MpRole, texts: readonly string[], to: Conversation = ON_SCREEN) => {
+    const { threads } = get();
+    const thread = to === ON_SCREEN ? get().thread : undefined;
+    const key = thread?.key;
     save({
-      messages: [...get().messages, ...texts.map((text) => ({ role, text, at: Date.now() }))],
+      messages: [
+        ...get().messages,
+        ...texts.map((text) => ({ role, text, at: Date.now(), ...(key ? { thread: key } : {}) })),
+      ],
+      ...(thread && !threads.some((t) => t.key === thread.key)
+        ? { threads: withThread(threads, thread) }
+        : {}),
     });
+  };
 
   /** The live chat's switch and its disclosure — cached only once a read succeeds. */
   const companionOn = async (): Promise<boolean> => {
@@ -155,12 +189,21 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     const member = ob?.viewerId ?? "anon";
     const was = get().member;
     if (was !== member) {
+      // A thread open under another member is not this one's (no row of theirs to show it on);
+      // an unbound store's open thread is the question being carried, so it stays.
+      if (was !== undefined && was !== "anon") set({ thread: undefined });
       forgetOthers(member);
       const thread = load(member);
       set({ ...thread, member, draft: undefined, conviction: undefined });
       // An unbound store saves under "anon", so loading "anon" already holds the carried lines.
-      if (carry.length > 0 && (was ?? "anon") !== member)
-        save({ messages: [...thread.messages, ...carry] });
+      if (carry.length > 0 && (was ?? "anon") !== member) {
+        // A side thread the carried question was asked in moves with it, by name.
+        const side = get().thread;
+        save({
+          messages: [...thread.messages, ...carry],
+          ...(side ? { threads: withThread(thread.threads, side) } : {}),
+        });
+      }
     }
     set({
       connected: ob?.account !== undefined,
@@ -171,6 +214,14 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   };
   const bind = async (): Promise<Onboarding | undefined> =>
     applyBind(await fetchOnboarding().catch(() => undefined));
+
+  /** A known thread's title and place follow its row (a story re-cut under the same id); one never
+   *  asked about stays unknown until its first line lands (`append`). */
+  const renamed = (thread: MpThread) => {
+    const known = get().threads.find((t) => t.key === thread.key);
+    if (known && (known.title !== thread.title || known.path !== thread.path))
+      save({ threads: get().threads.map((t) => (t.key === thread.key ? thread : t)) });
+  };
 
   /** Resolves once no turn is under way (an intro or a reply still landing). */
   const idle = () =>
@@ -203,11 +254,11 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   };
 
   /** Her lines, after the typing beat. */
-  const say = async (lines: readonly string[]) => {
+  const say = async (lines: readonly string[], to: Conversation = ON_SCREEN) => {
     set({ typing: true });
     await sleep(timing.typingMs);
     set({ typing: false });
-    append("mp", lines);
+    append("mp", lines, to);
   };
 
   /** Her intro, once per member — a re-greeting mid-thread, the whole thing on a fresh one. */
@@ -219,14 +270,14 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       returning: get().messages.length > 0,
     });
     save({ introDone: true, flow: intro.flow });
-    await say(intro.lines);
+    await say(intro.lines, "main");
   };
 
   /** The thread as the companion sees it — her lines without the display prefix, system lines
    *  and draft cards left out, the member's latest note last. */
   const transcript = () =>
-    get()
-      .messages.filter((m) => m.role === "user" || m.role === "mp")
+    linesOf(get().messages, get().thread?.key)
+      .filter((m) => m.role === "user" || m.role === "mp")
       .slice(-10)
       .map((m) =>
         m.role === "user"
@@ -242,8 +293,15 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
     set({ typing: true, streaming: true });
     let text = "";
     let index = -1;
+    // The thread the question was asked in, held for the whole answer.
+    const key = get().thread?.key;
     const show = () => {
-      const line = { role: "mp" as const, text: `Moneypenny · ${text}`, at: Date.now() };
+      const line = {
+        role: "mp" as const,
+        text: `Moneypenny · ${text}`,
+        at: Date.now(),
+        ...(key ? { thread: key } : {}),
+      };
       const messages = get().messages;
       if (index < 0) {
         index = messages.length;
@@ -262,11 +320,11 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
           show();
         },
         (draft) => {
-          set({ draft, kind: draft.kind, conviction: undefined });
+          set({ draft, kind: draft.kind, conviction: undefined, parkedIn: key });
           append("draft", [draftCard(draft)]);
         },
         (conviction) => {
-          set({ conviction, draft: undefined });
+          set({ conviction, draft: undefined, parkedIn: key });
           append("draft", [convictionCardText(conviction)]);
         },
       );
@@ -312,7 +370,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
    *  "send" files it, "never mind" drops it. Anything else leaves either parked and is a normal
    *  message (false). */
   const answeredParked = async (note: string): Promise<boolean> => {
-    const { conviction, draft } = get();
+    const { conviction, draft, parkedIn, thread } = get();
+    if (parkedIn !== thread?.key) return false;
     const answer = conviction ? answerFor(note) : undefined;
     if (conviction && answer) {
       // Busy while the save and hand-over run, so the composer and chips wait and her answer
@@ -353,9 +412,27 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       if (opts?.intro && !get().introDone) await playIntro(ob);
     },
     closeRail: () => set({ open: false }),
+    openThread: (thread) => {
+      // Never mid-answer: her reply lands in the thread it was asked in, so the view waits for it.
+      if (get().typing || get().streaming || get().pending !== undefined) return;
+      set({ thread, open: true });
+      renamed(thread);
+      void companionOn();
+      void bind();
+    },
+    closeThread: () => {
+      if (get().typing || get().streaming || get().pending !== undefined) return;
+      set({ thread: undefined });
+    },
     toggleRail: () => {
       if (get().open) set({ open: false });
-      else void get().openRail({ intro: true });
+      else {
+        // ✦ is Moneypenny herself: it opens on the main conversation, its threads indexed atop it.
+        // Mid-answer the view stays put, so her reply is seen landing where it was asked.
+        if (!(get().typing || get().streaming || get().pending !== undefined))
+          set({ thread: undefined });
+        void get().openRail({ intro: true });
+      }
     },
     newConversation: async () => {
       get().reset();
@@ -363,11 +440,12 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       await playIntro(ob);
     },
 
-    ask: (text) => {
+    ask: (text, thread) => {
       const note = text.trim();
       const s = get();
       if (!note || s.typing || s.streaming || s.pending !== undefined) return false;
-      set({ open: true, pending: note });
+      set({ open: true, pending: note, thread });
+      if (thread) renamed(thread);
       void companionOn();
       void sendPending(note);
       return true;
@@ -383,10 +461,12 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       void ackMoneypennyMessage();
       if (!get().messaged) {
         set({ messaged: true });
-        append("sys", [MESSAGE_OPS_LINE]);
+        append("sys", [MESSAGE_OPS_LINE], "main");
       }
       if (await answeredParked(note)) return true;
-      let { flow } = get();
+      // A side thread is a question about its row: never the answer to a scripted beat (the setup
+      // offer, the feedback prompt) waiting in the main conversation.
+      let flow = get().thread ? "idle" : get().flow;
       // The setup offer waits on a yes or a no — a real question typed instead is just a question.
       if (flow === "setup" && !isSetupAnswer(note)) {
         save({ flow: "idle" });
@@ -394,7 +474,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
       }
       // With the live chat on, everything that isn't a scripted beat goes to Moneypenny herself.
       if (flow !== "setup" && flow !== "fb2" && (await companionOn())) {
-        save({ flow: "idle" });
+        // The main conversation's beat is the main conversation's: a thread leaves it waiting.
+        if (!get().thread) save({ flow: "idle" });
         await chat();
         return true;
       }
@@ -413,6 +494,8 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
         draft: undefined,
         conviction: undefined,
         pending: undefined,
+        thread: undefined,
+        parkedIn: undefined,
         typing: false,
         streaming: false,
         companionEnabled: undefined,

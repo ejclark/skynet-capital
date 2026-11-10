@@ -559,8 +559,8 @@
           {
             "id": "moneypenny",
             "label": "Moneypenny rail store",
-            "path": "app/src/live/moneypenny.ts, moneypenny-script.ts, moneypenny-filing.ts, moneypenny-storage.ts, companion.ts, app/src/shell/moneypenny-rail.tsx",
-            "responsibility": "Decides whether a member message is scripted, goes to the feedback coach, or streams from POST /api/companion; acks messages for the ladder gate; holds drafted filings the member must send."
+            "path": "app/src/live/moneypenny.ts, moneypenny-script.ts, moneypenny-filing.ts, moneypenny-storage.ts, moneypenny-threads.ts, companion.ts, app/src/shell/moneypenny-rail.tsx, rail-threads.tsx, row-thread.tsx, mp-message.tsx",
+            "responsibility": "Decides whether a member message is scripted, goes to the feedback coach, or streams from POST /api/companion; acks messages for the ladder gate; holds drafted filings the member must send. Keeps side threads on a page's rows (#7167 criterion 11): each line is tagged with its row's key, the rail shows one conversation at a time, and only that conversation's lines go to the chat."
           },
           {
             "id": "shell",

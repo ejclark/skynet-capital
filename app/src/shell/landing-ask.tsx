@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactElement, useId, useState } from "react";
-import type { EditionStory } from "../live/edition";
+import type { EditionDate, EditionStory } from "../live/edition";
 import { MARK_WORD } from "../live/edition";
 import {
   type AskTarget,
@@ -8,6 +8,8 @@ import {
   askInCampaign,
   askTarget,
   chatQuestion,
+  eventQuestion,
+  eventThread,
   FAST_TRACK_QUESTION,
   fetchPartyQuestions,
   holderLine,
@@ -21,10 +23,13 @@ import {
   recordAnswer,
   replyLine,
   storyQuestions,
+  storyThread,
 } from "../live/landing-ask";
 import { useMoneypenny } from "../live/moneypenny";
+import type { MpThread } from "../live/moneypenny-threads";
 import { InlineResult } from "../ui";
 import { FastTrackWalk } from "./fast-track-walk";
+import { RowAsk, RowThread } from "./row-thread";
 
 /**
  * THE LANDING PAGE'S ASKS, DRAWN (#7077 slice 2). The words and where each ask goes live in
@@ -37,11 +42,16 @@ import { FastTrackWalk } from "./fast-track-walk";
  *
  * The first quick question opens its card walk in place under the chips (#7034 slice 2,
  * `fast-track-walk.tsx`); the second still goes to the chat.
+ *
+ * A story's own question that goes to the chat starts the story's SIDE THREAD (#7167 criterion
+ * 11, `row-thread.tsx`), so it stays on the story's row instead of joining the main conversation.
  */
 
 /** Hand a question to the chat as the member's own message. The rail opens with it already on
- *  screen; it never waits on the panel's own loading (#7165). False when refused. */
-const askChat = (text: string): boolean => useMoneypenny.getState().ask(text);
+ *  screen; it never waits on the panel's own loading (#7165). With `thread`, it opens that row's
+ *  side thread (#7167 criterion 11). False when refused. */
+export const askChat = (text: string, thread?: MpThread): boolean =>
+  useMoneypenny.getState().ask(text, thread);
 
 /** Atop the page: the member's own question first, two quick questions as fallbacks. */
 export function AskBox(): ReactElement {
@@ -177,7 +187,7 @@ function OwnQuestion({
     e.preventDefault();
     if (!text.trim()) return;
     if (target.kind === "campaign") ask.mutate();
-    else if (askChat(chatQuestion(story, text))) setText("");
+    else if (askChat(chatQuestion(story, text), storyThread(story))) setText("");
   };
   return (
     <form className="ask-own" onSubmit={submit}>
@@ -220,7 +230,7 @@ function OwnQuestion({
       <p className="ask-hint">
         {target.kind === "campaign"
           ? `Asked in ${campaignTitle ?? "this story's campaign"}: every member sees your question, with your name, and its answer.`
-          : "Goes to the chat, with this story as the subject."}
+          : "Starts a thread with Moneypenny on this story. It stays here, under the story."}
       </p>
       {ask.data ? (
         <InlineResult tone={ask.data.ok ? "ok" : "err"}>{replyLine(ask.data)}</InlineResult>
@@ -273,6 +283,18 @@ export function StoryAsk({
           </ul>
         </details>
       ) : null}
+      <RowThread thread={storyThread(story)} />
+    </section>
+  );
+}
+
+/** An event's ask and its side thread (#7167 criterion 11), under the event's details. */
+export function EventThread({ event }: { readonly event: EditionDate }): ReactElement {
+  const thread = eventThread(event);
+  return (
+    <section className="story-ask event-ask" aria-label="Ask about this event">
+      <RowAsk thread={thread} question={(text) => eventQuestion(event, text)} />
+      <RowThread thread={thread} />
     </section>
   );
 }

@@ -61,7 +61,8 @@ const RESETS: Record<string, ReadonlyArray<readonly [snippet: string, why: strin
   "app/src/shell/use-position-page.ts": [
     ["position: symbol", "a position's Full page › is a new view, opened at its top (#5070)"],
   ],
-  "app/src/shell/moneypenny-rail.tsx": [
+  // Moved with her message rendering out of moneypenny-rail.tsx (#7167 criterion 11), unchanged.
+  "app/src/shell/mp-message.tsx": [
     ["{ href: path }", "a place Moneypenny names on another page (#5238); same-page keeps it"],
   ],
   // No Leaderboard entries: its compare toggles keep the scroll and move the view to the result
