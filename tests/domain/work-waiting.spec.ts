@@ -60,6 +60,18 @@ describe("what an open filing waits on", () => {
     }
   });
 
+  it("never says when or that it ships, even with a pull request open", () => {
+    for (const [, state, labels, prs] of ROWS) {
+      const w = waitingOn(state, labels, prs);
+      if (!w) continue;
+      expect(`${w.on} ${w.why} ${w.next}`).not.toMatch(/\bships?\b/i);
+    }
+    // A "Part of #N" slice PR counts as open work, so the words must not imply the issue is done.
+    expect(waitingOn("open", ["in-progress"], [])?.next).toBe(
+      "Nothing is needed from you. Its changes have to merge and a deploy has to land before any of it is live.",
+    );
+  });
+
   it("names Eric's decision and the filer's answer plainly", () => {
     expect(waitingOn("open", ["needs-eric"], [])?.why).toBe(
       "It waits on a decision only Eric can make.",

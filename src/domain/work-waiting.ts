@@ -13,8 +13,9 @@
  * `tests/domain/work-waiting.spec.ts` proves the two never contradict for any label set in its
  * table. Label meanings come from `scripts/moneypenny/labels.mjs` (`needs-session`: a remainder
  * the lane handed to a person's working session; nothing unattended builds it). The words never
- * name a label and never carry a date: what an issue waits on is honest, when it ships is not
- * knowable here.
+ * name a label and never carry a date or say that it ships: what an issue waits on is honest,
+ * when it ships is not knowable here. A pull request that references an issue may be one slice of
+ * several, so even "being built" never promises the issue is done when that pull request merges.
  */
 
 export interface Waiting {
@@ -62,7 +63,7 @@ const WORKING_SESSION: Waiting = {
 const BEING_BUILT: Waiting = {
   on: "nothing: a build session has it",
   why: "A build session has it.",
-  next: "It ships when its pull request merges and the next deploy lands.",
+  next: "Nothing is needed from you. Its changes have to merge and a deploy has to land before any of it is live.",
 };
 
 /** What an issue waits on, from its state, its FULL label list and the open pull requests that

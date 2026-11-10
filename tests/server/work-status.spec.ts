@@ -270,6 +270,7 @@ describe("what an open issue waits on, and for how long", () => {
     const s = await read({ labels: [{ name: "ready" }] });
     expect(Object.keys(s)).not.toContain("eta");
     expect(JSON.stringify(s.waiting)).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    expect(JSON.stringify(s.waiting)).not.toMatch(/\bships?\b/i);
   });
 });
 
