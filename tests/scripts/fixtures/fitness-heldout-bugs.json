@@ -11,8 +11,8 @@
     "id": "machine-stopped-passes",
     "contract": "bots-running",
     "file": "scripts/fitness.mjs",
-    "find": "primary.state === \"started\" ? pass(\"started\")",
-    "replace": "primary.state !== \"destroyed\" ? pass(\"started\")",
+    "find": "primary.state === \"started\") return pass(\"started\")",
+    "replace": "primary.state !== \"destroyed\") return pass(\"started\")",
     "why": "a stopped primary, the 10-22 outage flyctl called a good state, reads as running"
   },
   {
@@ -98,8 +98,8 @@
     "id": "probe-machine-list-no-json-flag",
     "contract": "bots-running",
     "file": "scripts/fitness.mjs",
-    "find": "BOTS_APP, \"--json\"]);\n      return machines ? judgeMachine(machines)",
-    "replace": "BOTS_APP]);\n      return machines ? judgeMachine(machines)",
+    "find": "BOTS_APP, \"--json\"]);\n      return machines ? judgeMachine(machines, nowMs)",
+    "replace": "BOTS_APP]);\n      return machines ? judgeMachine(machines, nowMs)",
     "why": "fly prints a table, the parse fails, and bots-running is unknown on every tick: blind forever, never a failure"
   },
   {
