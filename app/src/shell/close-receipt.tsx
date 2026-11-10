@@ -8,6 +8,7 @@ import { type DeskOrderEvent, invalidateDesk, useOrderFill } from "../live/desk-
 import { parseQuantity } from "../live/quantity";
 import { InlineResult } from "../ui";
 import { isCompletedFill, useFillFlare } from "./fill-flare";
+import { type LockInFlag, lockedIn } from "./locked-in";
 
 /**
  * WHAT A CLOSE DID, SAID ONCE IT IS SENT (#5959). Three gaps one report found:
@@ -35,6 +36,9 @@ export interface SentClose {
   readonly side: "buy" | "sell";
   readonly count: number;
   readonly estNotional?: number;
+  /** Set when the position was marked Consider for its gain as this close was sent (#4609): its
+   *  fill is then said as a locked-in profit, with the reason (`locked-in.ts`). */
+  readonly lockIn?: LockInFlag;
 }
 
 /** Every read of a desk's positions a close changes: the desk's own (Overview, `/u/:id`, the
@@ -167,6 +171,7 @@ export function CloseReceipt({
     return () => clearTimeout(timer);
   }, [queryClient, deskId]);
   const line = soldLine(sent, fill);
+  const kept = lockedIn(sent, fill);
   return (
     <div className="close-receipt">
       <InlineResult as="span" tone={line.tone} className="tkt-close-note">
@@ -175,6 +180,12 @@ export function CloseReceipt({
       <button type="button" className="btn mc-btn" onClick={onDismiss}>
         Dismiss
       </button>
+      {kept ? (
+        <p className="close-receipt-kept">
+          <strong>{kept.headline}.</strong> {kept.rest}{" "}
+          <span className="close-receipt-why">{kept.why}</span>
+        </p>
+      ) : null}
     </div>
   );
 }
