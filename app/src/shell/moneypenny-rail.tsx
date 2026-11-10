@@ -49,8 +49,10 @@ export function MoneypennyRail(): ReactElement | null {
   // A question from the landing page's ask box, drawn at once while the thread binds (#7165).
   const pending = useMoneypenny((s) => s.pending);
   const flow = useMoneypenny((s) => s.flow);
-  const draft = useMoneypenny((s) => s.draft);
-  const conviction = useMoneypenny((s) => s.conviction);
+  // A parked card answers only in the conversation it was drafted in (#7167 criterion 11).
+  const parkedHere = useMoneypenny((s) => s.parkedIn === s.thread?.key);
+  const draft = useMoneypenny((s) => (parkedHere ? s.draft : undefined));
+  const conviction = useMoneypenny((s) => (parkedHere ? s.conviction : undefined));
   const convictionSeq = useMoneypenny((s) => s.convictionSeq);
   const connected = useMoneypenny((s) => s.connected);
   const firstTradeDone = useMoneypenny((s) => s.firstTradeDone);
@@ -66,8 +68,9 @@ export function MoneypennyRail(): ReactElement | null {
   const queryClient = useQueryClient();
   const waiting = typing || pending !== undefined;
   const busy = waiting || streaming;
+  // A thread shows a parked card's exits, never the main conversation's own chips.
   const chipsShown =
-    !(busy || thread) && (flow === "idle" || draft !== undefined || conviction !== undefined);
+    !busy && (draft !== undefined || conviction !== undefined || (!thread && flow === "idle"));
 
   // Follow the thread: every append scrolls the list to its end.
   // biome-ignore lint/correctness/useExhaustiveDependencies: messages/waiting/thread ARE the trigger
@@ -173,7 +176,8 @@ export function MoneypennyRail(): ReactElement | null {
           className="mp-new"
           aria-label="New conversation"
           title="New conversation"
-          disabled={busy}
+          // It forgets every conversation, threads included, so it is offered on the main one only.
+          disabled={busy || thread !== undefined}
           onClick={() => void newConversation()}
         >
           +

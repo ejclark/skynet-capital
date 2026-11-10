@@ -1,7 +1,7 @@
 import type { CoachMessage, FeedbackKind } from "./feedback";
 import type { MpMessage } from "./moneypenny";
 import type { Flow } from "./moneypenny-script";
-import type { MpThread } from "./moneypenny-threads";
+import { isThread, type MpThread } from "./moneypenny-threads";
 
 /**
  * THE THREAD'S PERSISTENCE — split from `moneypenny.ts` at the 300-line cap. One blob per MEMBER
@@ -46,7 +46,7 @@ export function load(member: string): Persisted {
       ...parsed,
       messages: Array.isArray(parsed.messages) ? parsed.messages : [],
       // A blob saved before threads existed has none.
-      threads: Array.isArray(parsed.threads) ? parsed.threads : [],
+      threads: Array.isArray(parsed.threads) ? parsed.threads.filter(isThread) : [],
     };
   } catch {
     return EMPTY;

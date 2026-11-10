@@ -26,6 +26,7 @@ import {
   storyThread,
 } from "../live/landing-ask";
 import { useMoneypenny } from "../live/moneypenny";
+import type { MpThread } from "../live/moneypenny-threads";
 import { InlineResult } from "../ui";
 import { FastTrackWalk } from "./fast-track-walk";
 import { RowAsk, RowThread } from "./row-thread";
@@ -47,8 +48,10 @@ import { RowAsk, RowThread } from "./row-thread";
  */
 
 /** Hand a question to the chat as the member's own message. The rail opens with it already on
- *  screen; it never waits on the panel's own loading (#7165). False when refused. */
-const askChat = (text: string): boolean => useMoneypenny.getState().ask(text);
+ *  screen; it never waits on the panel's own loading (#7165). With `thread`, it opens that row's
+ *  side thread (#7167 criterion 11). False when refused. */
+export const askChat = (text: string, thread?: MpThread): boolean =>
+  useMoneypenny.getState().ask(text, thread);
 
 /** Atop the page: the member's own question first, two quick questions as fallbacks. */
 export function AskBox(): ReactElement {
@@ -184,8 +187,7 @@ function OwnQuestion({
     e.preventDefault();
     if (!text.trim()) return;
     if (target.kind === "campaign") ask.mutate();
-    else if (useMoneypenny.getState().ask(chatQuestion(story, text), storyThread(story)))
-      setText("");
+    else if (askChat(chatQuestion(story, text), storyThread(story))) setText("");
   };
   return (
     <form className="ask-own" onSubmit={submit}>

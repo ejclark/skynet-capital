@@ -1,4 +1,5 @@
 import { type FormEvent, type ReactElement, useId, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useMoneypenny } from "../live/moneypenny";
 import { type MpThread, messageCount, rowLines } from "../live/moneypenny-threads";
 import { Message } from "./mp-message";
@@ -17,9 +18,10 @@ import { Message } from "./mp-message";
  */
 
 export function RowThread({ thread }: { readonly thread: MpThread }): ReactElement | null {
-  const messages = useMoneypenny((s) => s.messages);
+  // Only this row's lines, compared line by line: a reply streaming into another row's thread
+  // (or the main conversation) re-renders nothing here.
+  const lines = useMoneypenny(useShallow((s) => rowLines(s.messages, thread.key)));
   const openThread = useMoneypenny((s) => s.openThread);
-  const lines = rowLines(messages, thread.key);
   if (lines.length === 0) return null;
   return (
     <details className="story-more row-thread">

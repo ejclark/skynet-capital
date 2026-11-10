@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { EditionDate } from "../../src/live/edition";
 import { timing, useMoneypenny } from "../../src/live/moneypenny";
-import { keyFor } from "../../src/live/moneypenny-storage";
+import { keyFor, load } from "../../src/live/moneypenny-storage";
 import { EventThread } from "../../src/shell/landing-ask";
 import { MoneypennyRail } from "../../src/shell/moneypenny-rail";
 import { flush, json, onboarding } from "./moneypenny-rail-harness";
@@ -158,5 +158,48 @@ describe("a side thread on its row", () => {
   it("shows nothing on a row nobody has asked about", () => {
     mount();
     expect(within(row()).queryByText(/Your thread with Moneypenny/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the main conversation's beats there: the celebration, and a filing it waits on", async () => {
+    mount();
+    // Bound to the member, the main conversation is waiting on the details of a filing.
+    await act(() => useMoneypenny.getState().openRail());
+    act(() => useMoneypenny.setState({ flow: "fb2" }));
+    await askOnRow("what's the setup?");
+    const sys = useMoneypenny.getState().messages.filter((m) => m.role === "sys");
+    expect(sys.map((m) => m.thread)).toEqual([undefined]);
+    // the row's question went to her, not into the filing, and the filing still waits
+    expect(chats).toHaveLength(1);
+    expect(useMoneypenny.getState().flow).toBe("fb2");
+  });
+
+  it("opens ✦ on the main conversation, with her intro there, never in a row's thread", async () => {
+    mount();
+    await askOnRow("what's the setup?");
+    act(() => useMoneypenny.getState().closeRail());
+    await act(async () => useMoneypenny.getState().toggleRail());
+    await flush();
+    expect(useMoneypenny.getState().thread).toBeUndefined();
+    const intro = useMoneypenny.getState().messages.filter((m) => m.role === "mp" && !m.thread);
+    expect(intro.length).toBeGreaterThan(0);
+    // the row's question and her answer, untouched
+    expect(useMoneypenny.getState().messages.filter((m) => m.thread === KEY)).toHaveLength(2);
+  });
+
+  it("offers a fresh start on the main conversation only, since it forgets every thread", async () => {
+    mount();
+    await askOnRow("what's the setup?");
+    expect(within(rail()).getByRole("button", { name: "New conversation" })).toBeDisabled();
+    fireEvent.click(within(rail()).getByRole("button", { name: "Main conversation" }));
+    expect(within(rail()).getByRole("button", { name: "New conversation" })).toBeEnabled();
+  });
+
+  it("drops a saved thread it cannot link to, keeping the good ones", () => {
+    const good = { key: KEY, title: "CoreWeave Q3 results", path: `/#${KEY}` };
+    localStorage.setItem(
+      keyFor("member-2"),
+      JSON.stringify({ messages: [], threads: [{}, good, { key: "x", title: "y" }] }),
+    );
+    expect(load("member-2").threads).toEqual([good]);
   });
 });

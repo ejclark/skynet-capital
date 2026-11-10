@@ -55,6 +55,19 @@ export function threadIndex(
     .map((thread) => ({ thread, count: count.get(thread.key) ?? 0 }));
 }
 
+/** A saved thread, checked: a blob from another version or a hand edit never reaches a link. */
+export function isThread(v: unknown): v is MpThread {
+  const t = v as Partial<MpThread> | null;
+  return (
+    typeof t === "object" &&
+    t !== null &&
+    typeof t.key === "string" &&
+    typeof t.title === "string" &&
+    typeof t.path === "string" &&
+    t.path.startsWith("/")
+  );
+}
+
 /** Remember `thread` (its title and place updated when the row renamed it), newest last. */
 export function withThread(threads: readonly MpThread[], thread: MpThread): MpThread[] {
   return [...threads.filter((t) => t.key !== thread.key), thread];
