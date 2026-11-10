@@ -123,6 +123,23 @@ describe("interactiveHandoff — the pure who-can-build-the-remainder decision",
     );
   });
 
+  // #7361: #6719's hand-off named the directory but used neither phrase, so no label landed and a
+  // second build session ran into the same wall. Naming a `.claude/` path is the hand-off.
+  it("fires when the parting comment names a .claude/ path in its own words (#6719)", () => {
+    const words =
+      "this run's Claude Code harness blocks edits under `.claude/`. A session that can edit `.claude/` can make the change in one line.";
+    expect(interactiveHandoff(sliced(words))).toBe(true);
+    expect(interactiveHandoff(sliced("Left: the edit to .claude/skills/ship/SKILL.md."))).toBe(
+      true,
+    );
+  });
+
+  it("does not fire on a word that only resembles the directory", () => {
+    expect(interactiveHandoff(sliced("Remaining: credit the Claude reviewer in the docs."))).toBe(
+      false,
+    );
+  });
+
   it("matches the marker regardless of case", () => {
     expect(interactiveHandoff(sliced("Handing off to an INTERACTIVE SESSION."))).toBe(true);
   });
