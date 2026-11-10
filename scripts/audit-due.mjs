@@ -198,9 +198,9 @@ export function render(v) {
   if (v.left)
     lines.push(`${v.left} more wait for the next audit (over the --max of ${v.prs.length})`);
   lines.push(
-    `run: the post-merge-audit workflow with ${JSON.stringify({ prs: v.prs, through: v.through })}`,
-    `then: node scripts/agent-meter.mjs --audit-receipt --prs <reviewed> --confirmed <N> --through ${v.through}`,
-    "  (--through only when every PR above came back reviewed or skipped: it moves the marker past them all)",
+    `run: the post-merge-audit workflow with ${JSON.stringify({ prs: v.prs, through: v.through, file: true })}`,
+    "  (file: true files the findings and proposals, records the receipt, and moves the marker past the PRs above,",
+    "  but only when every one came back reviewed or skipped: scripts/audit-file.mjs decides, #7311)",
   );
   return lines.join("\n");
 }

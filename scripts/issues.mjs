@@ -344,7 +344,7 @@ export function followUps({ child, parentNumber, blockers = [], afterLinks = [],
 
 // ─── IO (REST core bucket, curl so HTTPS_PROXY is honoured — see gh.mjs's ghRest header) ──────────
 
-function ghWrite(method, path, payload) {
+export function ghWrite(method, path, payload) {
   const out = sh(
     "curl",
     [
@@ -372,7 +372,7 @@ function ghWrite(method, path, payload) {
 }
 
 /** Every issue in `state` (PRs dropped — the issues endpoint returns both), newest first. */
-function listIssues(state = "open") {
+export function listIssues(state = "open") {
   return ghRestAll(`issues?state=${state}&sort=created&direction=desc`).filter(
     (i) => !i.pull_request,
   );

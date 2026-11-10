@@ -94,7 +94,11 @@ Triage routes by `scripts/review-roots.mjs`, the audit's `DEEP_ROOTS` and `DOCS_
 keeps its own copy because a workflow cannot import, and `tests/scripts/review-roots.spec.ts` fails
 when the two differ. The audit's receipts ride the same branch at `audit/YYYY-MM-DD.jsonl` (#6683),
 beside `audit/marker.json`: the main commit the last due-checked audit covered, which
-`scripts/audit-due.mjs` reads to say whether 6 or more code PRs have merged since (#7311).
+`scripts/audit-due.mjs` reads to say whether 6 or more code PRs have merged since (#7311). The
+workflow's `file: true` hands its result to `scripts/audit-file.mjs`, which files each confirmed
+finding (`bug` + `feedback`, `fast-track` only on member, money and state paths, five a run), each
+prevention proposal (`feedback`) and a comment on any duplicate, then records the receipt and moves
+the marker last, and only when no PR came back unreviewed.
 Nothing here runs in CI yet: the job that calls it is S3, on the platter.
 
 ## Not known yet
