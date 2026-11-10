@@ -1,12 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+import { editionEventKey } from "../../../src/domain/edition-keys";
 import { parseBoardMetric } from "../live/board";
-import { asOfLine, type EditionView, fetchEdition, staleLine } from "../live/edition";
+import { asOfLine, type Edition, type EditionView, fetchEdition, staleLine } from "../live/edition";
+import { useHorizonRange } from "../live/horizon-params";
+import { type PageKeys, usePublishPageKeys } from "../live/page-keys";
 import { fetchQuests, placeQuests } from "../live/quests";
+import { useLandOnEdition } from "../shell/edition-anchor";
 import { PageFrame } from "../shell/frame";
 import { AskBox, StoryAsk } from "../shell/landing-ask";
-import { LandingCalendar } from "../shell/landing-calendar";
+import { calendarShows, LandingCalendar } from "../shell/landing-calendar";
 import { AccountQuests, StoryQuests } from "../shell/landing-quests";
 import { SectorOverview } from "../shell/sector-overview";
 
@@ -28,6 +32,10 @@ import { SectorOverview } from "../shell/sector-overview";
  * Quests sit by their source (slice 3, #7028 slice 5, `shell/landing-quests.tsx`): a market quest
  * inside the story it came from, after its asks, and the account's quests in one part after the
  * news. They are the signed-in member's own (`GET /api/quests`); a viewer with no account sees none.
+ *
+ * Moneypenny points into this page by key (#7167): the page publishes the stories and events it
+ * shows with every chat question (`live/page-keys.ts`), and her `/#story-<id>` and `/#event-<key>`
+ * links land on those rows (`shell/edition-anchor.ts`).
  *
  * An old bookmark or a shared compare link (`/?by=`, `?a=`, `?b=`) was always a member asking for
  * the board, so it still goes there with its query intact (#2321's promise).
@@ -60,6 +68,25 @@ function Masthead({ view }: { readonly view: EditionView }): ReactElement {
   );
 }
 
+/**
+ * What this page shows, by key (#7167 slice 1): every story, and the events in the calendar's
+ * selected range. The range selector (#7220) filters `edition.next`, so an event outside it has no
+ * row to land on; publishing it would let Moneypenny link a row that isn't there. Stepping the range
+ * republishes. Her "N more on the calendar" still lands on the section.
+ */
+function editionKeys(
+  edition: Edition | null | undefined,
+  today: string | undefined,
+  horizon: ReturnType<typeof useHorizonRange>,
+): PageKeys | undefined {
+  if (!(edition && today)) return undefined;
+  return {
+    edition: edition.date,
+    stories: edition.stories.map((s) => s.id),
+    events: calendarShows(edition, today, horizon).inside.map(editionEventKey),
+  };
+}
+
 function Landing(): ReactElement {
   const view = useQuery({ queryKey: ["edition"], queryFn: fetchEdition, staleTime: 60_000 });
   // The member's quests load beside the news and never hold it up; one that fails shows nothing.
@@ -70,6 +97,11 @@ function Landing(): ReactElement {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
+  const horizon = useHorizonRange();
+  const keys = editionKeys(view.data?.edition, view.data?.today, horizon);
+  // The chat sends these with a question asked from here, and her links land on the same rows.
+  usePublishPageKeys(keys);
+  useLandOnEdition(keys ? JSON.stringify(keys) : "");
   if (view.isPending)
     return (
       <PageFrame>

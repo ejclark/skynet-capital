@@ -870,6 +870,12 @@ figures wrong that the Profile's table priced right. Eric: *"Reducing the footpr
 response likely cuts content that avoids/prevents this bug… we just need clearer boundaries to
 manage the API handoffs"*. The hand-off runs on the shared keys, so each surface connects once
 (the pattern *One set of keys, not a wire per pair*, docs/PATTERNS.md).
+The landing page is the first page to publish its keys (#7167 slice 1). A question asked there
+carries the edition's date, its story ids and its event keys (`app/src/live/page-keys.ts`). The
+server checks each key against its own edition and hands her each row's link
+(`src/companion/companion-on-screen.ts`), and her `/#story-<id>` and `/#event-<key>` links land on
+those rows (`src/domain/edition-keys.ts`). The same slice found that the Page line had never matched
+a real request: the browser sends `/app/trade`, and the server knew only `/trade`.
 
 ## 7. Missing entities — what the scenarios reached for and no type or endpoint holds
 

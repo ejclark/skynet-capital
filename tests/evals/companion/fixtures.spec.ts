@@ -20,8 +20,8 @@ const countIn = (category: CompanionFixtureCategory) =>
 
 describe("COMPANION_FIXTURES", () => {
   describe("when read as a suite", () => {
-    it("holds the sixteen scripted conversations", () => {
-      expect(COMPANION_FIXTURES).toHaveLength(16);
+    it("holds the seventeen scripted conversations", () => {
+      expect(COMPANION_FIXTURES).toHaveLength(17);
     });
 
     it("gives every fixture a unique id", () => {
@@ -36,7 +36,7 @@ describe("COMPANION_FIXTURES", () => {
         unknown: countIn("unknown"),
         size: countIn("size"),
         filing: countIn("filing"),
-      }).toEqual({ grounding: 6, pushback: 3, unknown: 3, size: 2, filing: 2 });
+      }).toEqual({ grounding: 7, pushback: 3, unknown: 3, size: 2, filing: 2 });
     });
 
     it("prefixes each id with its own category so a report line names what failed", () => {
@@ -97,6 +97,16 @@ describe("COMPANION_FIXTURES", () => {
       expect(context).toContain("its row /accounts#pos-NVDA;");
       expect(context).toContain("its row /accounts#pos-NVDA261218P00100000");
       expect(context).toContain("the trade ticket for NVDA");
+    });
+  });
+
+  describe("when a fixture asks from the landing page (#7167)", () => {
+    it("hands her each row's link, built by the real on-screen line", () => {
+      const { context } = byId("grounding-landing-row-link");
+      expect(context).toContain("Page: they sent this from the landing page");
+      expect(context).toContain("On screen: the edition of the 2026-09-09 close.");
+      expect(context).toContain("→ /#story-ai-capex");
+      expect(context).toContain("→ /#event-2026-09-16-fomc-decision");
     });
   });
 
