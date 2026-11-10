@@ -1,6 +1,14 @@
 {
-  "$comment": "THE SEAT REGISTRY (#6886 slice 1) and the org chart's source (Eric, 2026-11-07: an outline of our agentic systems as a company org chart, humans included, that also compacts context for agent workflows). One row per seat: a role that does work, filled by a lane, skill, agent, workflow, routine, gate, service, hook or person. `invoker` names what starts it (event · schedule · lane · session · member · eric · self · none); `none` means nothing calls it, which the page lists. `links` draw the picture between departments and people; `friction` records measured breakdowns on a communication edge (reverse Conway). Edit this file, then run `node scripts/org-chart.mjs` to rewrite docs/architecture/org-chart.md; tests/arch/org-chart.spec.ts fails on drift, a missing code root, or a roster file no seat covers.",
+  "$comment": "THE SEAT REGISTRY (#6886 slice 1) and the org chart's source (Eric, 2026-11-07: an outline of our agentic systems as a company org chart, humans included, that also compacts context for agent workflows). One row per seat: a role that does work, filled by a lane, skill, agent, workflow, routine, gate, service, hook or person. `invoker` names what starts it (event · schedule · lane · session · member · eric · self · none); `none` means nothing calls it, which the page lists. A seat that pulls cards off the Orchestration board also carries `role` (the board's Role option, named by the job) and `pulls` (the labels whose cards sit in its queue); `roleOrder` lists those seats, first match wins (#6886 slice 1b, scripts/moneypenny/projects-role.mjs). `links` draw the picture between departments and people; `friction` records measured breakdowns on a communication edge (reverse Conway). Edit this file, then run `node scripts/org-chart.mjs` to rewrite docs/architecture/org-chart.md; tests/arch/org-chart.spec.ts fails on drift, a missing code root, or a roster file no seat covers.",
   "asOf": "2026-11-07 · main caf8770cc",
+  "roleOrder": [
+    "live-sessions",
+    "design-build",
+    "event-research",
+    "plan-build",
+    "feedback-build",
+    "grind"
+  ],
   "depts": [
     {
       "id": "people",
@@ -553,6 +561,8 @@
       "cadence": "Per tick, up to researchPerTick (normal 6)",
       "invoker": "event",
       "status": "hired",
+      "role": "Event research",
+      "pulls": ["event-research"],
       "codeRoots": [
         ".github/prompts/event-research.md",
         "research-dispatch-budget.json",
@@ -700,6 +710,8 @@
       "cadence": "Per ready issue, behind the admission gate",
       "invoker": "lane",
       "status": "hired",
+      "role": "Feedback builds",
+      "pulls": ["feedback", "bug", "fast-track", "ready"],
       "codeRoots": [
         ".github/workflows/moneypenny-events.yml",
         ".github/prompts/feedback-build.md",
@@ -721,6 +733,8 @@
       "cadence": "Per ready plan",
       "invoker": "lane",
       "status": "hired",
+      "role": "Plan builds",
+      "pulls": ["plan"],
       "codeRoots": [
         ".github/prompts/plan-build.md",
         "scripts/moneypenny/plan-claim.mjs",
@@ -755,6 +769,8 @@
       "cadence": "Per tap",
       "invoker": "eric",
       "status": "hired",
+      "role": "Design builds",
+      "pulls": ["handoff", "needs-design"],
       "codeRoots": [".github/prompts/design-build.md"],
       "cite": "docs/HANDOFFS.md:29-30, 74-79 ('Read .github/prompts/design-build.md'); docs/ROUTINES.md:44 ('the design canvas lane runs as a claude.ai routine, not here')"
     },
@@ -1521,6 +1537,8 @@
       "cadence": "When Eric or another session opens one; nothing scheduled reads needs-session",
       "invoker": "session",
       "status": "hired",
+      "role": "Live sessions",
+      "pulls": ["needs-session"],
       "codeRoots": [".claude/settings.json", "docs/DELEGATION.md"],
       "cite": ".github/prompts/moneypenny-conflict-repair.md:26 (nothing reads needs-session); #4555 (lanes cannot edit .claude/**)"
     },
@@ -1563,6 +1581,8 @@
       "cadence": "on demand",
       "invoker": "session",
       "status": "hired",
+      "role": "Bottleneck research",
+      "pulls": ["bottleneck"],
       "codeRoots": [".claude/workflows/grind.js", "docs/grind/", ".claude/agents/worker.md"],
       "cite": "CLAUDE.md:387-388; .claude/skills/governor/SKILL.md:65; .claude/workflows/grind.js:165, 229; .claude/workflows/dream.js:87; docs/COACHES.md:530"
     },

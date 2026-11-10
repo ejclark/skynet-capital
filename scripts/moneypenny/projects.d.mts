@@ -16,6 +16,8 @@ export const KIND_OPTIONS: string[];
 export const KIND: "Kind";
 export const WAITING_ON: "Waiting on";
 export const IN_COLUMN_SINCE: "In this column since";
+/** The seat whose queue a card sits in; options come from the seat registry (#6886 slice 1b). */
+export const ROLE: "Role";
 
 export interface StatusFieldOption {
   name: string;
@@ -200,6 +202,8 @@ export interface BoardItem {
   kind?: string;
   /** The card's "Waiting on" text, when set (#6871 slice 3). */
   waitingOn?: string;
+  /** The card's Role option name, when set (#6886 slice 1b). */
+  role?: string;
 }
 
 export function findBoardItem(items?: BoardItem[], issueUrl?: string): BoardItem | undefined;
@@ -212,12 +216,14 @@ export interface PriorityNode {
 export interface CardFieldNode {
   kind?: { name?: string } | null;
   waiting?: { text?: string } | null;
+  role?: { name?: string } | null;
 }
 
-/** `{kind, waitingOn}` from a GraphQL node's aliases — only the keys GitHub set (#6871). */
+/** `{kind, waitingOn, role}` from a GraphQL node's aliases — only the keys GitHub set (#6871). */
 export function cardFieldValues(node?: CardFieldNode | null): {
   kind?: string;
   waitingOn?: string;
+  role?: string;
 };
 
 /** `{priority, syncedPriority}` from a GraphQL node's aliases — only the keys GitHub set. */

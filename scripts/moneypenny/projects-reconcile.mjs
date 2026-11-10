@@ -7,6 +7,8 @@ import { isMain } from "../is-main.mjs";
 // is written in place first (#4393 slice 4, `ensureStatusColumns`). Since #6871 it also keeps each
 // open card's Priority in step with its labels, and turns a human drag between priority lanes into
 // that lane's P label before anything overwrites it (projects-priority.mjs, `mergeDrift` below).
+// Since #6886 slice 1b it also makes the Role field and keeps its options equal to the seat
+// registry's (`ensureRoleField`), then fills each open card's Role beside Kind and "Waiting on".
 //
 // WHY A SWEEP AND NOT A BETTER EVENT JOB. On 2026-10-01 the In Progress column showed #3818, #3953,
 // #3977 and #4327 while zero open issues carried `in-progress` and two of them were closed. Cause:
@@ -48,22 +50,26 @@ import {
   isStartedPlan,
   KIND,
   planBoardSweep,
+  ROLE,
   STATUS_OPTIONS,
   statusFieldUpdate,
   subIssueCounts,
   WAITING_ON,
   WAITING_ON_PERSON,
 } from "./projects.mjs";
-import { describeCardFields, planCardFieldDrift, wantedCardFields } from "./projects-fields.mjs";
+import { describeCardFields, planCardFieldDrift } from "./projects-fields.mjs";
 import { describePriority, planPriorityDrift } from "./projects-priority.mjs";
+import { readSeatRegistry, roleFieldOptions, roleFieldUpdate } from "./projects-role.mjs";
 import {
   createBoardContext,
+  createSingleSelectField,
   localParentOf,
   openPrMaps,
   readHorizons,
   syncIssue,
   wantedCard,
   wantedColumn,
+  wantedLiveFields,
   writeStatusOptions,
 } from "./projects-sync.mjs";
 import { readWorkMode } from "./work-mode.mjs";
@@ -208,6 +214,51 @@ export function ensureStatusColumns({
   return (fresh?.options ?? options).map((o) => o.name);
 }
 
+/**
+ * THE ROLE FIELD, MADE AND KEPT IN STEP (#6886 slice 1b). The options are the seat registry's
+ * (`roleFieldUpdate`), so a seat hired or renamed in docs/agents/seats.json reaches the board on the
+ * push that merges it — no setup dispatch to remember, the same reasoning as `ensureStatusColumns`.
+ * Missing field → created with every seat's option; present → options added or re-described in
+ * place, ids kept, never one removed.
+ *
+ * FAIL-OPEN, unlike the columns: Role is a display nothing reads (lanes read labels, #4064), so a
+ * refused write logs a warning and the sweep goes on without Role rather than leaving Status and
+ * Priority unhealed. An exhausted quota is the exception: it is rethrown, as everywhere here.
+ *
+ * Returns the live Role field (`{id, name, options}`), or undefined when there is none to write to.
+ */
+export function ensureRoleField({
+  board,
+  seats = readSeatRegistry(),
+  write = writeStatusOptions,
+  create = createSingleSelectField,
+  dryRun = false,
+  log = console.log,
+} = {}) {
+  const find = (list) => (list ?? []).find((f) => f?.name === ROLE);
+  const field = find(board.fields());
+  const options = field ? roleFieldUpdate(field.options ?? [], seats) : roleFieldOptions(seats);
+  if (!options?.length) return field;
+  const names = options.map((o) => o.name).join(", ");
+  if (dryRun) {
+    log(`Role field: would ${field ? "update its options to" : "be created with"} (${names})`);
+    return field;
+  }
+  try {
+    if (field) write(field.id, options);
+    else create({ projectId: board.project().id, name: ROLE, options });
+  } catch (err) {
+    const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
+    if (isRateLimitExhausted(text)) throw err;
+    log(
+      `::warning title=Role field not written::${text.replace(/\s+/g, " ").trim().slice(0, 200)} — cards keep their Role this sweep`,
+    );
+    return field;
+  }
+  log(`Role field: ${field ? "options now" : "created with"} (${names})`);
+  return find(board.fields({ refresh: true }));
+}
+
 /** The person-waiting column, under its name or its pre-#6871 one during the rename window. */
 const isAskColumn = (column) => column === WAITING_ON_PERSON || column === "Blocked";
 
@@ -317,6 +368,9 @@ export function reconcileBoard({
   rateLimit = () => ghRateLimit().graphql ?? {},
   sync = (number, opts) => syncIssue(String(number), opts),
   ensureColumns = ensureStatusColumns,
+  // Read-only by default so a spec's injected board never reaches GitHub; `main` passes
+  // `ensureRoleField`, which makes the field and keeps its options in step.
+  ensureRole = ({ board: b }) => (b.fields() ?? []).find((f) => f?.name === ROLE),
   readMode = () => readWorkMode(),
   buildContext = (issues) => sweepContext(issues, { log }),
   statusOf,
@@ -335,6 +389,7 @@ export function reconcileBoard({
   const mode = readMode();
   if (mode?.unreadable) log(`::warning::${mode.warning} — the dial sentences are left as they are`);
   const columns = ensureColumns({ board, mode, dryRun, log });
+  const roleField = ensureRole({ board, dryRun, log });
   const items = boardItemsOrThrow(board);
   const context = buildContext(openIssues);
   const moved = planReconcile({
@@ -363,6 +418,8 @@ export function reconcileBoard({
   if (absent.length) {
     log(`board fields not made yet: ${absent.join(", ")} — projects-setup.yml creates them`);
   }
+  present[ROLE] = Boolean(roleField);
+  if (!roleField) log(`no ${ROLE} field on the board yet — the next sweep makes it (#6886)`);
   const { drift: fieldDrift, deferred: fieldsDeferred } = planCardFieldDrift({
     items,
     openIssues,
@@ -371,7 +428,9 @@ export function reconcileBoard({
     skip: new Set([...moved.map((d) => d.number), ...priorityDrift.map((d) => d.number)]),
     wantedFor: (issue) => {
       const card = wantedCard(issue, { ...context, columns });
-      return card && card.status !== "Done" ? wantedCardFields(issue, card, { horizons }) : null;
+      return card && card.status !== "Done"
+        ? wantedLiveFields(issue, card, roleField, { horizons })
+        : null;
     },
   });
   const drift = mergeDrift(moved, priorityDrift, fieldDrift);
@@ -424,7 +483,7 @@ export function reconcileBoard({
 
 function main() {
   const dryRun = process.argv.includes("--dry-run");
-  const result = reconcileBoard({ dryRun });
+  const result = reconcileBoard({ dryRun, ensureRole: ensureRoleField });
   if (!result.started) process.exit(1);
   console.log(
     `\nreconcile: ${result.drift.length} drifted, ${result.fixed.length} fixed, ` +

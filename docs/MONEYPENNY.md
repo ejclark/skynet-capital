@@ -113,6 +113,13 @@ day the sync last changed Status, written only on a real change, so a card the s
 since the field was made reads blank). A field the board does not carry yet is skipped with one log line; the
 `projects-setup.yml` dispatch creates it.
 
+**Role** (#6886 slice 1b, `scripts/moneypenny/projects-role.mjs`) is the seat whose queue the card
+sits in: "Plan builds", "Feedback builds", "Live sessions" and so on, from the seat registry's
+`role` / `pulls` / `roleOrder` (`docs/agents/seats.json`) and the issue's labels. It is one-way, a
+copy like Kind; a card no seat pulls has no Role. The reconcile sweep creates the field itself and
+keeps its options equal to the registry's, so hiring a seat that pulls cards needs no dispatch. The
+lanes are listed on the org chart (`docs/architecture/org-chart.md` → *The board's Role lanes*).
+
 ### Where an open ask lives — the board's Waiting on a person column
 
 The one place to look for "what is waiting on a person" is the Orchestration board's **Waiting on
