@@ -60,8 +60,9 @@ async function api(path) {
 }
 
 /** Every stuck open PR, newest facts only: one list call, then 2–3 calls per PR old enough to matter,
- *  plus one file list per PR judged stuck — an envelope-protected or platter-boarded diff is left to
- *  Eric's merge on purpose, so it is not stuck (#5381–#5383, 2026-10-26). */
+ *  plus one file list per PR judged `unarmed` — an envelope-protected or platter-boarded diff that is
+ *  green and unarmed is left to Eric's merge on purpose, so it is not stuck (#5381–#5383, 2026-10-26).
+ *  A headless or blocked one is still named: he cannot merge it either (#6881). */
 async function scan() {
   const open = await api("pulls?state=open&per_page=100");
   // A head with no suite at all is named after 30 minutes, not `hours` (#7112), so a PR that young
@@ -90,8 +91,13 @@ async function scan() {
       : null;
     const verdict = judgePr({ pr, checkRuns, suites: suiteList, hours, headAt });
     if (!verdict) continue;
-    const files = (await api(`pulls/${listed.number}/files?per_page=100`)).map((f) => f.filename);
-    if (exemptReason({ pr, files, isProtected, isBoarded })) continue;
+    // Only an `unarmed` PR waits for Eric's merge by design. A `headless` or `blocked` one cannot
+    // merge for him either (its required checks never ran, or the Merge box holds it), so a
+    // protected or boarded diff stays listed with its fix (#6881; stranded-pr.mjs narrows the same).
+    if (verdict.kind === "unarmed") {
+      const files = (await api(`pulls/${listed.number}/files?per_page=100`)).map((f) => f.filename);
+      if (exemptReason({ pr, files, isProtected, isBoarded })) continue;
+    }
     stuck.push({ ...verdict, title: pr.title, url: pr.html_url, branch: pr.head.ref });
   }
   return stuck;

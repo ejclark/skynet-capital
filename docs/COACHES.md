@@ -191,8 +191,9 @@ nothing, and two fortnight-apart incidents (29 hours, then 135) were found by lu
 takes (3 h) that is armed-and-`blocked`, never armed, or headless behind a check suite that ran no job
 — with the ghost suite named and the one-line clear. It rides `scripts/ship.sh` beside
 `incident-scan.mjs` and gives the digest a `--stuck` line; REST core only, advisory. A diff in
-envelope.json's protected class, or a branch already boarded on an open platter, is not stuck — it
-waits for Eric's merge by design — so the scan skips both.
+envelope.json's protected class, or a branch already boarded on an open platter, that is green and
+never armed is not stuck: it waits for Eric's merge by design, so the scan skips it. The same diff
+headless or armed-and-`blocked` is still named, because he cannot merge it either (#6881).
 **Its act stage closes the loop** (2026-10-26, #6093/#6019/#5940): Moneypenny's push-driven audit
 (`scripts/moneypenny/stranded-pr.mjs`) re-runs an `unarmed` PR's failed `arm auto-merge` job — the
 pipeline's own arm path, which re-checks `hold-merge` and the envelope — once per head sha, with a
