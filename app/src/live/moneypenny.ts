@@ -123,6 +123,10 @@ export interface MoneypennyState extends Persisted {
   readonly openRail: (opts?: { readonly intro?: boolean }) => Promise<void>;
   readonly closeRail: () => void;
   readonly toggleRail: () => void;
+  /** Load the member's saved conversation without opening the rail, so a row's thread shows on
+   *  page load (#7308). Binds only a store nothing else has touched yet, and only to a member the
+   *  read named: a failed read must never bind "anon", which would forget the member's own blob. */
+  readonly hydrate: () => Promise<void>;
   /** Forget this thread and start over — she introduces herself again. */
   readonly newConversation: () => Promise<void>;
   /** The member's turn — a typed message or a chip's canned one. False when not accepted (a
@@ -228,6 +232,21 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
   };
   const readOnboarding = () => fetchOnboarding().catch((): typeof READ_FAILED => READ_FAILED);
   const bind = async (): Promise<Onboarding | undefined> => applyBind(await readOnboarding());
+
+  /** `hydrate`'s one read in flight, shared by every row that mounts while it is out. */
+  let hydrating: Promise<void> | undefined;
+  /** Untouched: never bound, and no turn started — a question asked meanwhile binds on its own
+   *  path (`sendPending`), carrying its lines, which a bare load here would overwrite. */
+  const untouched = () => {
+    const s = get();
+    return (
+      s.member === undefined &&
+      s.pending === undefined &&
+      !s.typing &&
+      !s.streaming &&
+      s.messages.length === 0
+    );
+  };
 
   /** A known thread's title and place follow its row (a story re-cut under the same id); one never
    *  asked about stays unknown until its first line lands (`append`). */
@@ -447,6 +466,18 @@ export const useMoneypenny = create<MoneypennyState>((set, get, api) => {
           set({ thread: undefined });
         void get().openRail({ intro: true });
       }
+    },
+    hydrate: () => {
+      if (!untouched()) return Promise.resolve();
+      hydrating ??= fetchOnboarding()
+        .then((ob) => {
+          if (ob.viewerId !== undefined && untouched()) applyBind(ob);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          hydrating = undefined;
+        });
+      return hydrating;
     },
     newConversation: async () => {
       get().reset();
