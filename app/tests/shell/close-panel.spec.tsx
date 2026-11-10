@@ -160,6 +160,21 @@ describe("ClosePanel — a sold option", () => {
     expect(optionCalls[1]?.draft).toEqual(optionCalls[0]?.draft);
   });
 
+  it("hands the row's lock-in flag to the receipt with the sent order (#4609)", async () => {
+    const onDone = rstest.fn();
+    const lockIn = { fact: "up 30%", held: 130, buys: [{ qty: 130, unitCost: 223.98 }] };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ClosePanel deskId="sauron" position={position({})} lockIn={lockIn} onDone={onDone} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Close all" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(onDone.mock.calls[0]?.[0]).toMatchObject({ orderId: "stk-1", side: "sell", lockIn });
+  });
+
   it("confirms the contracts it reviewed, even when the holding refreshes underneath", async () => {
     shortOption = false;
     const client = new QueryClient();

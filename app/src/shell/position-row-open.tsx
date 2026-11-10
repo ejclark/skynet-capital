@@ -9,6 +9,7 @@ import { CloseReceipt, type SentClose } from "./close-receipt";
 import { buysLabel } from "./glossary";
 import { GlossaryTerm } from "./glossary-term";
 import type { HoldingGreeks } from "./holding-decay";
+import { type LockInFlag, lockInFlag } from "./locked-in";
 import { BestWorstContent, EventContent, GreeksContent } from "./position-columns";
 
 /**
@@ -60,12 +61,15 @@ function Buys({
   deskId,
   canTrade,
   refusedWhyId,
+  lockIn,
   onClosing,
   onClosed,
 }: {
   readonly position: DeskPosition;
   readonly deskId: string;
   readonly canTrade: boolean;
+  /** The row's lock-in flag: a buy's close comes out of the row's position (#4609). */
+  readonly lockIn?: LockInFlag;
   /** When the row's Close is off: the id of its visible reason, which every buy's Close cites. */
   readonly refusedWhyId?: string;
   /** A buy's close opened — the next action, which clears the last receipt. */
@@ -134,6 +138,7 @@ function Buys({
                   position={lotAsPosition(position, lot)}
                   buys={lots}
                   sellsOldestFirst={index > 0}
+                  {...(lockIn ? { lockIn } : {})}
                   onDone={(sent) => {
                     setClosing(undefined);
                     onClosed(sent);
@@ -175,6 +180,8 @@ export function PositionRowOpen({
   const whyId = useId();
   const refusal = closeRefusal(position);
   const many = (position.lots?.length ?? 0) > 0;
+  // Taken from the whole row, where the Consider badge is, before any close shrinks it (#4609).
+  const lockIn = lockInFlag(position);
   return (
     <div className="pos-open">
       {position.plainName ? <p className="pos-open-plain">{position.plainName}</p> : null}
@@ -217,6 +224,7 @@ export function PositionRowOpen({
         deskId={deskId}
         canTrade={canTrade}
         {...(refusal ? { refusedWhyId: whyId } : {})}
+        {...(lockIn ? { lockIn } : {})}
         onClosing={() => setReceipt(undefined)}
         onClosed={setReceipt}
       />
@@ -270,6 +278,7 @@ export function PositionRowOpen({
           deskId={deskId}
           position={position}
           {...(position.lots ? { buys: position.lots } : {})}
+          {...(lockIn ? { lockIn } : {})}
           onDone={(sent) => {
             setCloseOpen(false);
             setReceipt(sent);
