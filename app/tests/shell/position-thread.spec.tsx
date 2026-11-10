@@ -28,7 +28,10 @@ rstest.mock("@tanstack/react-router", () => ({
 
 const { GuidanceSlot } = await import("../../src/shell/position-guidance-slot");
 const { MoneypennyRail } = await import("../../src/shell/moneypenny-rail");
-const { positionQuestion } = await import("../../src/shell/position-thread");
+const { RowThread } = await import("../../src/shell/row-thread");
+const { PositionAsk, positionQuestion, positionThread, useOwnTradingAccount } = await import(
+  "../../src/shell/position-thread"
+);
 
 const PUT: DeskPosition = {
   symbol: "CRWV261106P00080000",
@@ -98,7 +101,12 @@ describe("a side thread on a position's row", () => {
             deskId="member-desk"
             canTrade={false}
             initialOpen
-            threaded={threaded}
+            {...(threaded
+              ? {
+                  ask: <PositionAsk position={PUT} />,
+                  thread: <RowThread thread={positionThread(PUT)} />,
+                }
+              : {})}
             onAside={() => undefined}
             onUndo={() => undefined}
           />
@@ -160,6 +168,28 @@ describe("a side thread on a position's row", () => {
   it("offers no ask on an account her positions tool doesn't read", () => {
     mount(false);
     expect(screen.queryByRole("textbox", { name: "Ask Moneypenny about this" })).toBeNull();
+  });
+
+  it("threads only the member's own trading account, the one onboarding names", async () => {
+    // The harness's connected member trades `human-joe`; a bot they own, or anyone else's, is not it.
+    const Probe = ({ deskId }: { readonly deskId: string }) => (
+      <p>{`${deskId}: ${useOwnTradingAccount(deskId) ? "threaded" : "not threaded"}`}</p>
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Probe deskId="human-joe" />
+        <Probe deskId="sauron" />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("human-joe: threaded")).toBeInTheDocument();
+    expect(screen.getByText("sauron: not threaded")).toBeInTheDocument();
+  });
+
+  it("names a share by its symbol alone, even when its display differs", () => {
+    const share = { ...PUT, symbol: "BRK.B", display: "BRK B", isOption: false };
+    expect(positionQuestion(share, " how's it doing? ")).toBe(
+      "About my BRK B position: how's it doing?",
+    );
   });
 
   it("names a share by its symbol alone", () => {

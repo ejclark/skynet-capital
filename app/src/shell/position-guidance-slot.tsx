@@ -11,7 +11,6 @@ import { priceRange } from "../live/price-context";
 import { CONFIDENCE_METER, type RowCall } from "../live/row-call";
 import { LessonTerm } from "./glossary-term";
 import { PositionActs } from "./position-act";
-import { PositionAsk, PositionThreadLine } from "./position-thread";
 import { SymbolRecapFor } from "./symbol-recap-for";
 import type { RowMark } from "./use-row-marks";
 
@@ -140,7 +139,8 @@ export function GuidanceSlot({
   onFullPage,
   onAside,
   onUndo,
-  threaded = false,
+  ask,
+  thread,
 }: {
   readonly position: DeskPosition;
   /** The account's positions: what a close frees depends on what else is held (slice 3). */
@@ -165,9 +165,10 @@ export function GuidanceSlot({
   /** Not now, with the price a share row watches while it is aside (`shareWatch`). */
   readonly onAside: (watch?: MarkWatch) => void;
   readonly onUndo: () => void;
-  /** The member's own trading account (`useOwnTradingAccount`): the opened guidance offers a
-   *  question to Moneypenny, and the row carries its side thread (#7167, `position-thread.tsx`). */
-  readonly threaded?: boolean;
+  /** A question to Moneypenny about this holding, inside the opened guidance — and its side thread,
+   *  collapsed under the line (#7167, `position-thread.tsx`). The member's own account only. */
+  readonly ask?: ReactNode;
+  readonly thread?: ReactNode;
 }): ReactElement {
   const [open, setOpen] = useState(initialOpen);
   const openId = useId();
@@ -225,7 +226,7 @@ export function GuidanceSlot({
               {call.word}, {call.confidence} confidence — from your guidance read at {call.readAt}.
             </p>
           ) : null}
-          {threaded ? <PositionAsk position={position} /> : null}
+          {ask}
           {canTrade ? (
             <PositionActs
               deskId={deskId}
@@ -266,7 +267,7 @@ export function GuidanceSlot({
         </div>
       ) : null}
       {playbook}
-      {threaded ? <PositionThreadLine position={position} /> : null}
+      {thread}
     </div>
   );
 }

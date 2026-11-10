@@ -21,10 +21,11 @@ import { PositionCards } from "./position-cards";
 import { GuidanceSlot } from "./position-guidance-slot";
 import { PositionPicture } from "./position-picture";
 import { PositionPlaybookTag, usePlaybookCards } from "./position-playbook-tag";
-import { useOwnTradingAccount } from "./position-thread";
+import { PositionAsk, positionThread, useOwnTradingAccount } from "./position-thread";
 import { PositionsHead } from "./positions-head";
 import { type Lens, LensSwitch, MapLens, RunwayLens } from "./positions-lens";
 import { PositionsTable } from "./positions-table";
+import { RowThread } from "./row-thread";
 import { decisionsByRow, lookOrder, shownKind, useRowMarks } from "./use-row-marks";
 import { ViewTabs } from "./view-tabs";
 
@@ -227,7 +228,12 @@ export function PositionsBlotter({
         {...(onFullPage ? { onFullPage: () => onFullPage(p.symbol) } : {})}
         onAside={(watch) => marks.setAside(p.symbol, watch)}
         onUndo={() => marks.undo(p.symbol)}
-        threaded={threaded}
+        {...(threaded
+          ? {
+              ask: <PositionAsk position={p} />,
+              thread: <RowThread thread={positionThread(p)} />,
+            }
+          : {})}
       />
     ) : null;
   };
