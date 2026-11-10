@@ -1,6 +1,5 @@
-import { SYMBOL_RE } from "../domain/campaigns.js";
+import { cleanQuestion, SYMBOL_RE } from "../domain/ask-input.js";
 import { LANE_READS_QUEUE } from "../domain/discovery-lane.js";
-import { cleanQuestion } from "../domain/discovery-queue.js";
 import { MARKETS, marketById } from "../domain/market-catalog.js";
 import { GICS_SECTORS } from "../domain/sector-coverage.js";
 
