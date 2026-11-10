@@ -658,19 +658,22 @@ jobs:
         # build started) failed the release and left `main` merged-but-undeployed. Connection-level
         # failures only — an auth refusal, a build error or failed health checks still fail at once.
         #
-        # GIT_SHA is stamped into the [env] block of the config in the workspace (the checkout is
-        # throwaway), the same mechanism deploy-bots uses and for the same reason: a line in the
-        # config file persists into `flyctl machine list --json`, the `--env` flag does not reliably.
-        # Inserted FIRST under `[env]` — TOML is order-sensitive, and the preflight above reads it.
+        # GIT_SHA is stamped into the [env] block of a COPY of fly.toml, the same mechanism
+        # deploy-bots uses and for the same reason: a line in the config file persists into
+        # `flyctl machine list --json`, the `--env` flag does not reliably. Inserted FIRST under
+        # `[env]` — TOML is order-sensitive, and the preflight above reads it. The copy sits beside
+        # fly.toml so the build context and [build] paths resolve as before; fly.toml itself stays
+        # unstamped, so the rollback below drops the stamp (#6697 — an in-place stamp let a rollback
+        # run the old image claiming this push's sha, and the next docs-only push skipped).
         # `[[http_service.checks]]` in fly.toml makes flyctl wait for the new machine to answer and
         # fail this step when it never does, instead of calling a booted-but-broken release healthy.
         if: ${{ steps.preflight.outputs.deploy == 'true' }}
         id: deploy
         run: |
-          sed -i "/^\[env\]/a\\
-            GIT_SHA = \"${{ github.sha }}\"" fly.toml
-          grep -A2 '^\[env\]' fly.toml
-          node scripts/fly-deploy.mjs --remote-only
+          sed "/^\[env\]/a\\
+            GIT_SHA = \"${{ github.sha }}\"" fly.toml > fly.deploy.toml
+          grep -A2 '^\[env\]' fly.deploy.toml
+          node scripts/fly-deploy.mjs --config fly.deploy.toml --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -693,11 +696,13 @@ jobs:
       # production-access gate) never passes /pulse, so flyctl fails the deploy step, smoke is then
       # skipped, and a smoke-only condition left the machine crash-looping on the refusing image.
       # A deploy that succeeded, or never ran (preflight said no), never matches either clause.
+      # It deploys with the committed, unstamped fly.toml, as the bots rollback does with
+      # fly.bots.toml: no GIT_SHA on the machine, so the next push's preflight fails open (#6697).
       - name: Roll back to previous image
         if: ${{ failure() && (steps.deploy.conclusion == 'failure' || steps.smoke.conclusion == 'failure') && steps.prev.outputs.image != '' }}
         run: |
           echo "${{ steps.deploy.conclusion == 'failure' && 'deploy' || 'smoke' }} failed — rolling back to ${{ steps.prev.outputs.image }}"
-          node scripts/fly-deploy.mjs -a skynet-capital --image "${{ steps.prev.outputs.image }}"
+          node scripts/fly-deploy.mjs --config fly.toml -a skynet-capital --image "${{ steps.prev.outputs.image }}"
           bash scripts/smoke.sh https://skynet-capital.fly.dev
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
