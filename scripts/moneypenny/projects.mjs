@@ -281,6 +281,49 @@ export function holdsCapSeat(plan) {
 // projects-priority.mjs. Backlog sorts by it; Flow and Roadmap lane by it.
 export const PRIORITY_OPTIONS = ["P0", "P1", "P2", "P3"];
 
+// THE LANE TEXT ON THE BOARD'S OWN OPTIONS (#6871 §12b: "each P label description shall equal its
+// Priority option description"). The words come from the labels' registry (labels.mjs `LABELS.p0..p3`,
+// one list), so a lane reads the same on the board as on the issue. Colours are not the meaning (the
+// name is, BRAND colorblind rule): a live option keeps the colour it has, a new one is gray.
+/** The Priority options the board should carry, each described as its P label is. Pure. */
+export function priorityFieldOptions() {
+  return PRIORITY_OPTIONS.map((name) => ({
+    name,
+    color: "GRAY",
+    description: Object.values(LABELS).find((l) => l.name === name)?.description ?? "",
+  }));
+}
+
+/**
+ * What to send `updateProjectV2Field` so the live Priority field carries `priorityFieldOptions()` —
+ * or null when every option already reads right. `updateProjectV2Field` REPLACES the whole list, so
+ * each surviving option keeps its id (a card keeps its lane) and its colour, and an option nobody
+ * here names is kept, never removed. `current` is `[{id, name, color, description}]`. Pure.
+ */
+export function priorityFieldUpdate(current = []) {
+  const live = new Map(current.filter((o) => o?.id && o?.name).map((o) => [o.name, o]));
+  const wanted = priorityFieldOptions();
+  const drifts = wanted.some((o) => {
+    const have = live.get(o.name);
+    return !have || (have.description ?? "") !== o.description;
+  });
+  if (!drifts) return null;
+  const names = new Set(wanted.map((o) => o.name));
+  const kept = wanted.map((o) => {
+    const have = live.get(o.name);
+    return have ? { id: have.id, ...o, color: have.color ?? o.color } : o;
+  });
+  const extras = [...live.values()]
+    .filter((o) => !names.has(o.name))
+    .map((o) => ({
+      id: o.id,
+      name: o.name,
+      color: o.color ?? "GRAY",
+      description: o.description ?? "",
+    }));
+  return [...kept, ...extras];
+}
+
 // The hidden text field that records each Priority the sync wrote, so a value that differs from it
 // is a human drag, not a sync (projects-priority.mjs's header). No view we create shows it.
 export const SYNCED_PRIORITY = "Synced priority";
